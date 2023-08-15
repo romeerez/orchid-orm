@@ -2,7 +2,7 @@ import { Code } from './code';
 import { RawSQLBase } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 import { QueryBaseCommon } from '../query';
-import { BaseOperators, ColumnOperatorBase } from './operators';
+import { BaseOperators, OperatorBase } from './operators';
 import { JSONType } from './json/jsonType';
 
 // type returned from a database and processed by `parse` function when it's defined.
@@ -58,7 +58,7 @@ export type NullableColumn<T extends ColumnTypeBase> = Omit<
     // allow `null` in .where({ column: { equals: null } }) and the same for `not`
     [K in keyof T['operators']]: K extends 'equals' | 'not'
       ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ColumnOperatorBase<T['type'] | null, any>
+        OperatorBase<T['type'] | null, any>
       : T['operators'][K];
   };
 };

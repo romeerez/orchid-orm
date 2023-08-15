@@ -1,5 +1,6 @@
 import { ColumnTypeBase, ColumnTypesBase } from './columns/columnType';
 import { EmptyObject } from './utils';
+import { OperatorToSQL } from './columns';
 
 // Base class for the raw SQL and other classes that can produce SQL
 export abstract class Expression<T extends ColumnTypeBase = ColumnTypeBase> {
@@ -7,11 +8,26 @@ export abstract class Expression<T extends ColumnTypeBase = ColumnTypeBase> {
   // Starts with underscore to allow having `type` method
   abstract _type: T;
 
+  _chain?: (OperatorToSQL<unknown, unknown> | unknown)[];
+
   // Produce SQL string, push query variables into given `values` array.
-  abstract toSQL(
-    ctx: { values: unknown[] },
-    quotedAs: string | undefined,
-  ): string;
+  toSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
+    let sql = this.makeSQL(ctx, quotedAs);
+    if (this._chain) {
+      const { _chain: chain } = this;
+      for (let i = 0, len = chain.length; i < len; i += 2) {
+        sql = (chain[i] as OperatorToSQL<unknown, unknown>)(
+          sql,
+          chain[i + 1],
+          ctx,
+          quotedAs,
+        );
+      }
+    }
+    return sql;
+  }
+
+  abstract makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string;
 }
 
 // Check if the unknown thing is an Expression
@@ -48,8 +64,12 @@ export abstract class RawSQLBase<
   // Column types are stored to be passed to the `type` callback.
   abstract columnTypes: CT;
 
+  toSQL(ctx: { values: unknown[] }): string {
+    return super.toSQL(ctx);
+  }
+
   // Produce SQL string, push query variables into given `values` array.
-  abstract toSQL(ctx: { values: unknown[] }): string;
+  abstract makeSQL(ctx: { values: unknown[] }): string;
 
   constructor(
     public _sql: string | TemplateLiteralArgs,

@@ -90,15 +90,14 @@ const processWhere = (
 
   if (typeof data === 'function') {
     const qb = table.internal.getWhereQueryBuilder(query as QueryData);
-    let res = data(qb);
-    if ('expr' in res.q && res.q.expr) res = res.q.expr;
-
-    if ('q' in res.q) {
-      const q = res.q.clone();
-      q.q.select = [res as FnExpression];
-      ands.push(`${prefix}(${makeSQL(q, ctx).text})`);
+    const res = data(qb);
+    const expr = res instanceof Expression ? res : res.q.expr;
+    if (!(res instanceof Expression) && res.q.expr) {
+      const q = res.clone();
+      q.q.select = [expr as FnExpression];
+      ands.push(`${prefix}(${makeSQL(q as Query, ctx).text})`);
     } else {
-      pushWhereToSql(ands, ctx, res as Query, res.q, quotedAs, not);
+      pushWhereToSql(ands, ctx, res as Query, (res as Query).q, quotedAs, not);
     }
 
     return;

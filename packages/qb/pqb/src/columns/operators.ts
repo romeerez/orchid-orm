@@ -1,14 +1,20 @@
 import { Query, SetQueryReturnsColumn } from '../query/query';
 import { ToSQLCtx } from '../sql';
 import { addValue } from '../sql/common';
-import { ColumnTypeBase, Expression, isExpression } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  Expression,
+  isExpression,
+  OperatorToSQL,
+} from 'orchid-core';
 import { FnExpression } from '../common/fn';
 import { BooleanColumn } from './boolean';
+import { extendQuery } from '../query/queryUtils';
 
 export type Operator<Value, Column extends ColumnTypeBase = ColumnTypeBase> = {
   <T extends Query>(this: T, arg: Value): SetQueryReturnsColumn<T, Column>;
   _opType: Value;
-  _op: (key: string, value: Value, ctx: ToSQLCtx, quotedAs?: string) => string;
+  _op: OperatorToSQL<Value, ToSQLCtx>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,8 +27,12 @@ const make = <Value = any>(
   return Object.assign(
     function (this: Query, value: Value) {
       const expr = this.q.expr as FnExpression;
-      expr._mods.push(_op, value);
-      return this;
+      (expr._chain ??= []).push(_op, value);
+
+      const q = extendQuery(this, boolean);
+      // TODO: move isSubQuery into queryData
+      q.isSubQuery = this.isSubQuery;
+      return q;
     },
     {
       _op,
@@ -138,11 +148,12 @@ const ops = {
       `${key} <@ ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
   and: make(
-    (key, value, ctx, quotedAs) => `${key} AND ${value.toSQL(ctx, quotedAs)}`,
+    (key, value, ctx, quotedAs) =>
+      `${key} AND ${value.q.expr.toSQL(ctx, quotedAs)}`,
   ),
   or: make(
     (key, value, ctx, quotedAs) =>
-      `(${key}) OR (${value.toSQL(ctx, quotedAs)})`,
+      `(${key}) OR (${value.q.expr.toSQL(ctx, quotedAs)})`,
   ),
 };
 

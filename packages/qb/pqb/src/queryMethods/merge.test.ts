@@ -11,8 +11,7 @@ import {
   UpdateQueryData,
 } from '../sql';
 import { assertType, expectSql, testDb } from 'test-utils';
-import { getValueKey } from 'orchid-core';
-import { SelectAggMethods } from './aggregate';
+import { Expression, getValueKey } from 'orchid-core';
 
 describe('merge queries', () => {
   describe('select', () => {
@@ -348,9 +347,8 @@ describe('merge queries', () => {
       s1.group = ['a'];
       s2.group = ['b'];
 
-      const agg = new SelectAggMethods();
-      const sum = [agg.sum('id' as never).gt(1)];
-      const avg = [agg.avg('id' as never).lt(10)];
+      const sum = [User.sum('id' as never).gt(1).q.expr as Expression];
+      const avg = [User.avg('id' as never).lt(10).q.expr as Expression];
       s1.having = [sum];
       s2.having = [avg];
 

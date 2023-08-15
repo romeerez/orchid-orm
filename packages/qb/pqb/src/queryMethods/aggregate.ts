@@ -19,24 +19,15 @@ import {
   XMLColumn,
 } from '../columns';
 import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
-import { SelectQueryData } from '../sql';
-import {
-  ColumnTypeBase,
-  emptyArray,
-  getValueKey,
-  NullableColumn,
-  setParserToQuery,
-} from 'orchid-core';
+import { ColumnTypeBase, emptyArray, NullableColumn } from 'orchid-core';
 import {
   AggregateOptions,
+  makeFnExpression,
   ColumnExpression,
   FnExpression,
-  FnExpressionArg,
-  makeColumnFn,
   Over,
 } from '../common/fn';
-import { BaseOperators } from '../columns/operators';
-import { extendQuery } from '../query/queryUtils';
+import { Operators } from '../columns/operators';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
@@ -83,7 +74,7 @@ type NullableJSONObject<
 > = NullableColumn<
   ColumnType<
     { [K in keyof Outputs]: Outputs[K]['type'] },
-    BaseOperators,
+    typeof Operators.any,
     { [K in keyof Outputs]: Outputs[K]['inputType'] },
     { [K in keyof Outputs]: Outputs[K]['outputType'] }
   >
@@ -95,32 +86,315 @@ const jsonbColumn = new JSONColumn().nullable();
 type NullableText = NullableColumn<TextColumn>;
 const nullableText = new TextColumn().nullable();
 
-// select a single aggregated value
-const get = <Q extends Query, T extends ColumnTypeBase>(
-  q: Q,
-  agg: ColumnExpression<T>,
-): SetQueryReturnsColumn<Q, T> => {
-  q.q.returnType = 'valueOrThrow';
-  (q.q as SelectQueryData).returnsOne = true;
-  (q.q as SelectQueryData)[getValueKey] = agg._type;
-  q.q.select = [agg];
-
-  if (agg._type.parseFn) {
-    setParserToQuery(q.q, getValueKey, agg._type.parseFn);
+// Query methods to get a single value for an aggregate function
+export class AggregateMethods {
+  /**
+   * See {@link SelectAggMethods.fn}
+   */
+  fn<T extends Query, Type = unknown, C extends ColumnType = ColumnType<Type>>(
+    this: T,
+    fn: string,
+    args: SelectableOrExpression<T>[],
+    options?: AggregateOptions<T>,
+    type?: (t: T['columnTypes']) => C,
+  ): SetQueryReturnsColumn<T, C> & C['operators'] {
+    return makeFnExpression(
+      this,
+      (type?.(this.columnTypes) || UnknownColumn.instance) as C,
+      fn,
+      args,
+      options,
+    );
   }
 
-  return q as unknown as SetQueryReturnsColumn<Q, T>;
-};
+  /**
+   * See {@link SelectAggMethods.count}
+   */
+  count<T extends Query>(
+    this: T,
+    arg: SelectableOrExpression<T> = '*',
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NumberColumn> & {
+    isCount: true;
+  } & NumberColumn['operators'] {
+    return makeFnExpression(
+      this,
+      int,
+      'count',
+      [arg],
+      options,
+    ) as SetQueryReturnsColumn<T, NumberColumn> & {
+      isCount: true;
+    } & NumberColumn['operators'];
+  }
 
-// Alias `makeColumnFn` to allow `SelectAggMethods` type instead of Query.
-// `SelectAggMethods` are instantiated in the `getSelectQueryBuilder` in the way that it extends the Query object.
-const make = makeColumnFn as <T extends ColumnType, Q extends Query>(
-  column: T,
-  q: Q | SelectAggMethods<Q>,
-  fn: string,
-  args: FnExpressionArg<Q>[],
-  options?: AggregateOptions<Q>,
-) => ColumnExpression<T>;
+  /**
+   * See {@link SelectAggMethods.avg}
+   */
+  avg<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+    return makeFnExpression(this, nullableFloat, 'avg', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.min}
+   */
+  min<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+    return makeFnExpression(this, nullableFloat, 'min', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.max}
+   */
+  max<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+    return makeFnExpression(this, nullableFloat, 'max', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.sum}
+   */
+  sum<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+    return makeFnExpression(this, nullableFloat, 'sum', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.bitAnd}
+   */
+  bitAnd<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+    return makeFnExpression(this, nullableFloat, 'bit_and', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.bitOr}
+   */
+  bitOr<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+    return makeFnExpression(this, nullableFloat, 'bit_or', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.boolAnd}
+   */
+  boolAnd<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, BooleanNullable> & BooleanNullable['operators'] {
+    return makeFnExpression(this, nullableBoolean, 'bool_and', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.boolOr}
+   */
+  boolOr<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, BooleanNullable> & BooleanNullable['operators'] {
+    return makeFnExpression(this, nullableBoolean, 'bool_or', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.every}
+   */
+  every<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, BooleanNullable> & BooleanNullable['operators'] {
+    return makeFnExpression(this, nullableBoolean, 'every', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.jsonAgg}
+   */
+  jsonAgg<T extends Query, Arg extends SelectableOrExpression<T>>(
+    this: T,
+    arg: Arg,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> &
+    ArrayColumn<ColumnTypeBase>['operators'] {
+    return makeFnExpression(
+      this,
+      jsonColumn as unknown as NullableJSONAgg<T, Arg>,
+      'json_agg',
+      [arg],
+      options,
+    );
+  }
+
+  /**
+   * See {@link SelectAggMethods.jsonAgg}
+   */
+  jsonbAgg<T extends Query, Arg extends SelectableOrExpression<T>>(
+    this: T,
+    arg: Arg,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> &
+    ArrayColumn<ColumnTypeBase>['operators'] {
+    return makeFnExpression(
+      this,
+      jsonbColumn as unknown as NullableJSONAgg<T, Arg>,
+      'jsonb_agg',
+      [arg],
+      options,
+    );
+  }
+
+  /**
+   * See {@link SelectAggMethods.xmlAgg}
+   */
+  xmlAgg<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, XMLColumn>,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableText> & NullableText['operators'] {
+    return makeFnExpression(this, nullableText, 'xmlagg', [arg], options);
+  }
+
+  /**
+   * See {@link SelectAggMethods.jsonObjectAgg}
+   */
+  jsonObjectAgg<
+    T extends Query,
+    Obj extends Record<string, SelectableOrExpression<T>>,
+  >(
+    this: T,
+    arg: Obj,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> &
+    typeof Operators.any {
+    return makeFnExpression(
+      this,
+      jsonColumn as NullableJSONObject<T, Obj>,
+      'json_object_agg',
+      [{ pairs: arg }],
+      options,
+    );
+  }
+
+  /**
+   * See {@link SelectAggMethods.jsonObjectAgg}
+   */
+  jsonbObjectAgg<
+    T extends Query,
+    Obj extends Record<string, SelectableOrExpression<T>>,
+  >(
+    this: T,
+    arg: Obj,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> &
+    typeof Operators.any {
+    return makeFnExpression(
+      this,
+      jsonbColumn as NullableJSONObject<T, Obj>,
+      'jsonb_object_agg',
+      [{ pairs: arg }],
+      options,
+    );
+  }
+
+  /**
+   * See {@link SelectAggMethods.stringAgg}
+   */
+  stringAgg<T extends Query>(
+    this: T,
+    arg: SelectableOrExpressionOfType<T, TextBaseColumn>,
+    delimiter: string,
+    options?: AggregateOptions<T>,
+  ): SetQueryReturnsColumn<T, NullableText> & NullableText['operators'] {
+    return makeFnExpression(
+      this,
+      nullableText,
+      'string_agg',
+      [arg, { value: delimiter }],
+      options,
+    );
+  }
+
+  /**
+   * See {@link SelectAggMethods.rowNumber}
+   */
+  rowNumber<T extends Query>(
+    this: T,
+    over?: Over<T>,
+  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
+    return makeFnExpression(this, nullableInt, 'row_number', emptyArray, {
+      over,
+    });
+  }
+
+  /**
+   * See {@link SelectAggMethods.rank}
+   */
+  rank<T extends Query>(
+    this: T,
+    over?: Over<T>,
+  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
+    return makeFnExpression(this, nullableInt, 'rank', emptyArray, { over });
+  }
+
+  /**
+   * See {@link SelectAggMethods.denseRank}
+   */
+  denseRank<T extends Query>(
+    this: T,
+    over?: Over<T>,
+  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
+    return makeFnExpression(this, nullableInt, 'dense_rank', emptyArray, {
+      over,
+    });
+  }
+
+  /**
+   * See {@link SelectAggMethods.percentRank}
+   */
+  percentRank<T extends Query>(
+    this: T,
+    over?: Over<T>,
+  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
+    return makeFnExpression(this, nullableInt, 'percent_rank', emptyArray, {
+      over,
+    });
+  }
+
+  /**
+   * See {@link SelectAggMethods.cumeDist}
+   */
+  cumeDist<T extends Query>(
+    this: T,
+    over?: Over<T>,
+  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+    return makeFnExpression(this, nullableFloat, 'cume_dist', emptyArray, {
+      over,
+    });
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const methods = AggregateMethods.prototype as any;
 
 // Methods that are available inside `select({ (qb) => *here* })` callback
 export class SelectAggMethods<T extends Query = Query> {
@@ -163,14 +437,7 @@ export class SelectAggMethods<T extends Query = Query> {
     options?: AggregateOptions<T>,
     type?: (t: T['columnTypes']) => C,
   ): ColumnExpression<C> {
-    return make(
-      // TS doesn't know, but `this` is actually a full and complete `Query` (see getSelectQueryBuilder)
-      type?.((this as unknown as Query).columnTypes) || UnknownColumn.instance,
-      this,
-      fn,
-      args,
-      options,
-    ) as unknown as ColumnExpression<C>;
+    return methods.fn.call(this, fn, args, options, type);
   }
 
   /**
@@ -201,13 +468,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpression<T> = '*',
     options?: AggregateOptions<T>,
   ): ColumnExpression<IntegerColumn> {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    return AggregateMethods.prototype.count.call(
-      this,
-      arg,
-      options as unknown as AggregateOptions<Query>,
-    ) as unknown as ColumnExpression<IntegerColumn>;
+    return methods.count.call(this, arg, options);
   }
 
   /**
@@ -235,7 +496,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableNumber> {
-    return make(nullableFloat, this, 'min', [arg], options);
+    return methods.min.call(this, arg, options);
   }
 
   /**
@@ -263,7 +524,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableNumber> {
-    return make(nullableFloat, this, 'max', [arg], options);
+    return methods.max.call(this, arg, options);
   }
 
   /**
@@ -290,7 +551,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableNumber> {
-    return make(nullableFloat, this, 'sum', [arg], options);
+    return methods.sum.call(this, arg, options);
   }
 
   /**
@@ -314,7 +575,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableNumber> {
-    return make(nullableFloat, this, 'avg', [arg], options);
+    return methods.avg.call(this, arg, options);
   }
 
   /**
@@ -341,7 +602,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableNumber> {
-    return make(nullableFloat, this, 'bit_and', [arg], options);
+    return methods.bitAnd.call(this, arg, options);
   }
 
   /**
@@ -365,7 +626,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableNumber> {
-    return make(nullableFloat, this, 'bit_or', [arg], options);
+    return methods.bitOr.call(this, arg, options);
   }
 
   /**
@@ -392,7 +653,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, BooleanColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<BooleanNullable> {
-    return make(nullableBoolean, this, 'bool_and', [arg], options);
+    return methods.boolAnd.call(this, arg, options);
   }
 
   /**
@@ -419,7 +680,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, BooleanColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<BooleanNullable> {
-    return make(nullableBoolean, this, 'bool_or', [arg], options);
+    return methods.boolOr.call(this, arg, options);
   }
 
   /**
@@ -429,7 +690,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, BooleanColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<BooleanNullable> {
-    return make(nullableBoolean, this, 'every', [arg], options);
+    return methods.every.call(this, arg, options);
   }
 
   /**
@@ -460,13 +721,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: Arg,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableJSONAgg<T, Arg>> {
-    return make(
-      jsonColumn,
-      this,
-      'json_agg',
-      [arg],
-      options,
-    ) as unknown as ColumnExpression<NullableJSONAgg<T, Arg>>;
+    return methods.jsonAgg.call(this, arg, options);
   }
 
   /**
@@ -476,13 +731,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: Arg,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableJSONAgg<T, Arg>> {
-    return make(
-      jsonbColumn,
-      this,
-      'jsonb_agg',
-      [arg],
-      options,
-    ) as unknown as ColumnExpression<NullableJSONAgg<T, Arg>>;
+    return methods.jsonbAgg.call(this, arg, options);
   }
 
   /**
@@ -521,13 +770,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: Obj,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableJSONObject<T, Obj>> {
-    return make(
-      jsonColumn,
-      this,
-      'json_object_agg',
-      [{ pairs: arg }],
-      options,
-    ) as unknown as ColumnExpression<NullableJSONObject<T, Obj>>;
+    return methods.jsonObjectAgg.call(this, arg, options);
   }
 
   /**
@@ -537,13 +780,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: Obj,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableJSONObject<T, Obj>> {
-    return make(
-      jsonbColumn,
-      this,
-      'jsonb_object_agg',
-      [{ pairs: arg }],
-      options,
-    ) as unknown as ColumnExpression<NullableJSONObject<T, Obj>>;
+    return methods.jsonbObjectAgg.call(this, arg, options);
   }
 
   /**
@@ -573,13 +810,7 @@ export class SelectAggMethods<T extends Query = Query> {
     delimiter: string,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableText> {
-    return make(
-      nullableText,
-      this,
-      'string_agg',
-      [arg, { value: delimiter }],
-      options,
-    ) as ColumnExpression<NullableText>;
+    return methods.stringAgg.call(this, arg, delimiter, options);
   }
 
   /**
@@ -603,7 +834,7 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpressionOfType<T, XMLColumn>,
     options?: AggregateOptions<T>,
   ): ColumnExpression<NullableText> {
-    return make(nullableText, this, 'xmlagg', [arg], options);
+    return methods.xmlAgg.call(this, arg, options);
   }
 
   /**
@@ -625,7 +856,7 @@ export class SelectAggMethods<T extends Query = Query> {
    * @param over - OVER clause config
    */
   rowNumber(over?: Over<T>): ColumnExpression<NullableInteger> {
-    return make(nullableInt, this, 'row_number', emptyArray, { over });
+    return methods.rowNumber.call(this, over);
   }
 
   /**
@@ -647,7 +878,7 @@ export class SelectAggMethods<T extends Query = Query> {
    * @param over - OVER clause config
    */
   rank(over?: Over<T>): ColumnExpression<NullableInteger> {
-    return make(nullableInt, this, 'rank', emptyArray, { over });
+    return methods.rank.call(this, over);
   }
 
   /**
@@ -669,7 +900,7 @@ export class SelectAggMethods<T extends Query = Query> {
    * @param over - OVER clause config
    */
   denseRank(over?: Over<T>): ColumnExpression<NullableInteger> {
-    return make(nullableInt, this, 'dense_rank', emptyArray, { over });
+    return methods.denseRank.call(this, over);
   }
 
   /**
@@ -691,7 +922,7 @@ export class SelectAggMethods<T extends Query = Query> {
    * @param over - OVER clause config
    */
   percentRank(over?: Over<T>): ColumnExpression<NullableInteger> {
-    return make(nullableInt, this, 'percent_rank', emptyArray, { over });
+    return methods.percentRank.call(this, over);
   }
 
   /**
@@ -713,335 +944,6 @@ export class SelectAggMethods<T extends Query = Query> {
    * @param over - OVER clause config
    */
   cumeDist(over?: Over<T>): ColumnExpression<NullableNumber> {
-    return make(nullableFloat, this, 'cume_dist', emptyArray, { over });
-  }
-}
-
-const fns = SelectAggMethods.prototype;
-
-// Query methods to get a single value for an aggregate function
-export class AggregateMethods {
-  /**
-   * See {@link SelectAggMethods.count}
-   */
-  count<T extends Query>(
-    this: T,
-    arg: SelectableOrExpression<T> = '*',
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NumberColumn> & {
-    isCount: true;
-  } & NumberColumn['operators'] {
-    const type = int;
-    const q = extendQuery(this, type.operators);
-
-    q.isSubQuery = this.isSubQuery;
-    q.q.returnType = 'valueOrThrow';
-    (q.q as SelectQueryData).returnsOne = true;
-    (q.q as SelectQueryData)[getValueKey] = type;
-    q.q.expr = new FnExpression<Query, ColumnTypeBase>(
-      q,
-      'count',
-      [arg],
-      options as AggregateOptions<Query> | undefined,
-      type,
-    );
-
-    if (type.parseFn) {
-      setParserToQuery(q.q, getValueKey, type.parseFn);
-    }
-
-    return q as SetQueryReturnsColumn<T, NumberColumn> & {
-      isCount: true;
-    } & NumberColumn['operators'];
-  }
-
-  /**
-   * See {@link SelectAggMethods.avg}
-   */
-  avg<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return this.clone()._avg(arg, options);
-  }
-  _avg<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return get(this, fns.avg.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.min}
-   */
-  min<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return this.clone()._min(arg, options);
-  }
-  _min<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return get(this, fns.min.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.max}
-   */
-  max<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return this.clone()._max(arg, options);
-  }
-  _max<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return get(this, fns.max.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.sum}
-   */
-  sum<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return this.clone()._sum(arg, options);
-  }
-  _sum<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return get(this, fns.sum.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.bitAnd}
-   */
-  bitAnd<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return this.clone()._bitAnd(arg, options);
-  }
-  _bitAnd<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return get(this, fns.bitAnd.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.bitOr}
-   */
-  bitOr<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return this.clone()._bitOr(arg, options);
-  }
-  _bitOr<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> {
-    return get(this, fns.bitOr.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.boolAnd}
-   */
-  boolAnd<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> {
-    return this.clone()._boolAnd(arg, options);
-  }
-  _boolAnd<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> {
-    return get(this, fns.boolAnd.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.boolOr}
-   */
-  boolOr<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> {
-    return this.clone()._boolOr(arg, options);
-  }
-  _boolOr<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> {
-    return get(this, fns.boolOr.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.every}
-   */
-  every<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> {
-    return this.clone()._every(arg, options);
-  }
-  _every<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> {
-    return get(this, fns.every.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.jsonAgg}
-   */
-  jsonAgg<T extends Query, Arg extends SelectableOrExpression<T>>(
-    this: T,
-    arg: Arg,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> {
-    return this.clone()._jsonAgg(arg, options);
-  }
-  _jsonAgg<T extends Query, Arg extends SelectableOrExpression<T>>(
-    this: T,
-    arg: Arg,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> {
-    return get(this, fns.jsonAgg.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.jsonAgg}
-   */
-  jsonbAgg<T extends Query, Arg extends SelectableOrExpression<T>>(
-    this: T,
-    arg: Arg,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> {
-    return this.clone()._jsonbAgg(arg, options);
-  }
-  _jsonbAgg<T extends Query, Arg extends SelectableOrExpression<T>>(
-    this: T,
-    arg: Arg,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> {
-    return get(this, fns.jsonbAgg.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.xmlAgg}
-   */
-  xmlAgg<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, XMLColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableText> {
-    return this.clone()._xmlAgg(arg, options);
-  }
-  _xmlAgg<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, XMLColumn>,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableText> {
-    return get(this, fns.xmlAgg.call(this, arg, options));
-  }
-
-  /**
-   * See {@link SelectAggMethods.jsonObjectAgg}
-   */
-  jsonObjectAgg<
-    T extends Query,
-    Obj extends Record<string, SelectableOrExpression<T>>,
-  >(
-    this: T,
-    arg: Obj,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> {
-    return this.clone()._jsonObjectAgg(arg, options);
-  }
-  _jsonObjectAgg<
-    T extends Query,
-    Obj extends Record<string, SelectableOrExpression<T>>,
-  >(
-    this: T,
-    arg: Obj,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> {
-    return get(
-      this,
-      fns.jsonObjectAgg.call(this, arg, options),
-    ) as SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>>;
-  }
-
-  /**
-   * See {@link SelectAggMethods.jsonObjectAgg}
-   */
-  jsonbObjectAgg<
-    T extends Query,
-    Obj extends Record<string, SelectableOrExpression<T>>,
-  >(
-    this: T,
-    arg: Obj,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> {
-    return this.clone()._jsonbObjectAgg(arg, options);
-  }
-  _jsonbObjectAgg<
-    T extends Query,
-    Obj extends Record<string, SelectableOrExpression<T>>,
-  >(
-    this: T,
-    arg: Obj,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> {
-    return get(
-      this,
-      fns.jsonbObjectAgg.call(this, arg, options),
-    ) as SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>>;
-  }
-
-  /**
-   * See {@link SelectAggMethods.stringAgg}
-   */
-  stringAgg<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, TextBaseColumn>,
-    delimiter: string,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableText> {
-    return this.clone()._stringAgg(arg, delimiter, options);
-  }
-  _stringAgg<T extends Query>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, TextBaseColumn>,
-    delimiter: string,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableText> {
-    return get(this, fns.stringAgg.call(this, arg, delimiter, options));
+    return methods.cumeDist.call(this, over);
   }
 }

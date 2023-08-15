@@ -41,7 +41,7 @@ const makeInjector =
 // Simplified SQL type that returns raw SQL as it is, without dealing with SQL variables.
 class SimpleRawSQL extends RawSQLBase {
   columnTypes!: ColumnTypesBase;
-  toSQL(): string {
+  makeSQL(): string {
     return this._sql as string;
   }
 }

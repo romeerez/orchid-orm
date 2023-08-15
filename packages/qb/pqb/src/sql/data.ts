@@ -28,7 +28,6 @@ import {
   Expression,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
-import { FnExpression } from '../common/fn';
 
 // Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
 export type JoinedShapes = Record<string, ColumnsShapeBase>;
@@ -68,7 +67,7 @@ export type CommonQueryData = {
   joinOverrides?: JoinOverrides;
   schema?: string;
   select?: SelectItem[];
-  expr?: FnExpression<Query, ColumnTypeBase>;
+  expr?: Expression;
   as?: string;
   from?: string | Query | Expression;
   sources?: Record<string, QuerySourceItem>;

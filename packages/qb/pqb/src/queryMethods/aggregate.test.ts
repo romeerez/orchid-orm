@@ -449,11 +449,6 @@ describe('aggregate', () => {
       const expectedSql = getSql('"user"."id"');
       expectSql(q[method as 'avg']('id').toSQL(), expectedSql);
       expectQueryNotMutated(q);
-
-      if (method !== 'count') {
-        q[`_${method}` as `_avg`]('id');
-        expectSql(q.toSQL({ clearCache: true }), expectedSql);
-      }
     });
 
     it('should support raw sql parameter', () => {
@@ -536,16 +531,12 @@ describe('aggregate', () => {
 
     it(`should perform ${method} query for a column`, () => {
       const q = User.clone();
-      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") FROM "user"`;
       expectSql(
         q[method as 'jsonObjectAgg']({ alias: 'name' }).toSQL(),
-        expectedSql,
+        `SELECT ${functionName}($1::text, "user"."name") FROM "user"`,
         ['alias'],
       );
       expectQueryNotMutated(q);
-
-      q[`_${method}` as '_jsonObjectAgg']({ alias: 'name' });
-      expectSql(q.toSQL({ clearCache: true }), expectedSql, ['alias']);
     });
 
     it('should support raw sql parameter', () => {
@@ -637,12 +628,12 @@ describe('aggregate', () => {
 
     it('makes stringAgg query', () => {
       const q = User.clone();
-      const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;
-      expectSql(q.stringAgg('name', ' & ').toSQL(), expectedSql, [' & ']);
+      expectSql(
+        q.stringAgg('name', ' & ').toSQL(),
+        `SELECT string_agg("user"."name", $1) FROM "user"`,
+        [' & '],
+      );
       expectQueryNotMutated(q);
-
-      q._stringAgg('name', ' & ');
-      expectSql(q.toSQL({ clearCache: true }), expectedSql, [' & ']);
     });
 
     it('should support raw sql parameter', async () => {
