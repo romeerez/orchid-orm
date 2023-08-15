@@ -1,8 +1,6 @@
 import { Query } from '../query/query';
-import { SelectAggMethods } from './aggregate';
 import { ColumnTypeBase, Expression, TemplateLiteralArgs } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
-import { getSubQueryBuilder } from '../query/subQueryBuilder';
 
 // Arguments of `having`:
 // can be a SQL template literal or one or multiple callbacks returning a boolean expression.
@@ -11,7 +9,7 @@ type HavingArgs<T extends Query> = TemplateLiteralArgs | HavingArgFn<T>[];
 // Function argument of `having`:
 // the same query builder as in `select` is passed in, boolean expression is expected to be returned.
 type HavingArgFn<T extends Query> = (
-  q: SelectAggMethods<T>,
+  q: T,
 ) => Query | Expression<ColumnTypeBase<boolean | null>>;
 
 export class Having {
@@ -79,9 +77,8 @@ export class Having {
     if ('raw' in args[0]) {
       data = args;
     } else {
-      const qb = getSubQueryBuilder(this);
       data = args.map((arg) => {
-        const q = (arg as HavingArgFn<T>)(qb);
+        const q = (arg as HavingArgFn<T>)(this);
         // TODO: remove condition
         return 'q' in q ? q.q.expr || q : q;
       });

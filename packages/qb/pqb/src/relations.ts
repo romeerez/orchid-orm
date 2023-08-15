@@ -2,7 +2,6 @@ import { Query, QueryWithTable } from './query/query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
 import { EmptyObject, StringKey } from 'orchid-core';
 import { QueryBase } from './query/queryBase';
-import { SubQueryBuilder } from './query/subQueryBuilder';
 
 export type RelationConfigBase = {
   table: QueryWithTable;
@@ -59,11 +58,3 @@ export type RelationQuery<
     join<T extends Query>(this: T): T;
   },
 > = ((params: Config['params']) => Q) & Q;
-
-/**
- * Map relations into a Record where each relation aggregate methods can be chained with column operators.
- * Used in `where` callback argument, see {@link WhereQueryBuilder}.
- */
-export type RelationSubQueries<T extends QueryBase> = {
-  [K in keyof T['relations']]: SubQueryBuilder<T['relations'][K]>;
-};

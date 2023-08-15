@@ -2,9 +2,6 @@ import {
   GetStringArg,
   OnQueryBuilder,
   QueryMethods,
-  SelectQueryBuilder,
-  WhereQueryBase,
-  WhereQueryBuilder,
   WhereResult,
 } from '../queryMethods';
 import { QueryData } from '../sql';
@@ -47,10 +44,6 @@ export type WithDataBase = Record<never, WithDataItem>;
 
 export type Query = QueryBase &
   QueryMethods<ColumnTypesBase> & {
-    internal: {
-      selectQueryBuilder?: SelectQueryBuilder<Query>;
-      getWhereQueryBuilder(q: QueryData): WhereQueryBuilder<WhereQueryBase>;
-    };
     queryBuilder: Db;
     columnTypes: ColumnTypesBase;
     onQueryBuilder: typeof OnQueryBuilder;

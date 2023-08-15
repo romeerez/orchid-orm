@@ -26,12 +26,12 @@ describe('aggregate', () => {
   });
 
   describe('agg', () => {
-    it('should select aggregating function', async () => {
+    it('should select aggregating function', () => {
       const q = User.select({
         count: (q) => q.fn('count', ['*'], {}, (t) => t.integer()).gt(5),
       }).take();
 
-      assertType<Awaited<typeof q>, { count: boolean | null }>();
+      assertType<Awaited<typeof q>, { count: boolean }>();
 
       expectSql(
         q.toSQL(),
@@ -50,7 +50,7 @@ describe('aggregate', () => {
             .gt(q.sql`2 + 2`),
       }).take();
 
-      assertType<Awaited<typeof q>, { count: boolean | null }>();
+      assertType<Awaited<typeof q>, { count: boolean }>();
 
       expectSql(
         q.toSQL(),

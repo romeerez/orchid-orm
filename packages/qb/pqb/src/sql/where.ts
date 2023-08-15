@@ -9,7 +9,7 @@ import {
   WhereSearchItem,
 } from './types';
 import { addValue, q, qc, columnToSql } from './common';
-import { getQueryAs } from '../common/utils';
+import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData } from './data';
@@ -89,7 +89,10 @@ const processWhere = (
   const prefix = not ? 'NOT ' : '';
 
   if (typeof data === 'function') {
-    const qb = table.internal.getWhereQueryBuilder(query as QueryData);
+    const qb = Object.create(table);
+    qb.q = getClonedQueryData(query as QueryData);
+    qb.q.and = qb.q.or = undefined;
+
     const res = data(qb);
     const expr = res instanceof Expression ? res : res.q.expr;
     if (!(res instanceof Expression) && res.q.expr) {

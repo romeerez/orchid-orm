@@ -1,7 +1,7 @@
 import { Query, SelectableOrExpressionOfType } from '../query/query';
 import { ColumnExpression } from '../common/fn';
 import { TextColumn } from '../columns';
-import { SelectAggMethods } from './aggregate';
+import { AggregateMethods, SelectAggMethods } from './aggregate';
 import { Expression, MaybeArray } from 'orchid-core';
 import {
   OrderTsQueryConfig,
@@ -110,6 +110,14 @@ declare module './aggregate' {
       options?: HeadlineParams<T>,
     ): ColumnExpression<TextColumn>;
   }
+
+  interface AggregateMethods {
+    headline<T extends Query>(
+      this: T,
+      search: HeadlineSearchArg<T>,
+      options?: HeadlineParams<T>,
+    ): ColumnExpression<TextColumn>;
+  }
 }
 
 // type of `search` argument
@@ -206,7 +214,7 @@ class Headline extends Expression<TextColumn> {
   }
 }
 
-SelectAggMethods.prototype.headline = function (this: Query, search, params) {
+AggregateMethods.prototype.headline = function (this: Query, search, params) {
   const source = this.q.sources?.[search];
   if (!source)
     throw new OrchidOrmInternalError(
@@ -220,6 +228,8 @@ SelectAggMethods.prototype.headline = function (this: Query, search, params) {
     params as HeadlineParams<Query> | undefined,
   ) as unknown as ColumnExpression<TextColumn>;
 };
+
+SelectAggMethods.prototype.headline = AggregateMethods.prototype.headline;
 
 export class SearchMethods {
   /**

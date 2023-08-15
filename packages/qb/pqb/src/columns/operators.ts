@@ -12,7 +12,8 @@ import { BooleanColumn } from './boolean';
 import { extendQuery } from '../query/queryUtils';
 
 export type Operator<Value, Column extends ColumnTypeBase = ColumnTypeBase> = {
-  <T extends Query>(this: T, arg: Value): SetQueryReturnsColumn<T, Column>;
+  <T extends Query>(this: T, arg: Value): SetQueryReturnsColumn<T, Column> &
+    Column['operators'];
   _opType: Value;
   _op: OperatorToSQL<Value, ToSQLCtx>;
 };
@@ -164,16 +165,22 @@ type Base<Value> = {
   notIn: Operator<Value[] | Query | Expression, BooleanColumn>;
 };
 
-const base: Base<unknown> = {
+const base = {
   equals: ops.equals,
   not: ops.not,
   in: ops.in,
   notIn: ops.notIn,
-};
+} as Base<unknown>;
 
 type Bool = Base<boolean> & {
-  and: Operator<Expression<ColumnTypeBase<boolean | null>>, BooleanColumn>;
-  or: Operator<Expression<ColumnTypeBase<boolean | null>>, BooleanColumn>;
+  and: Operator<
+    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
+    BooleanColumn
+  >;
+  or: Operator<
+    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
+    BooleanColumn
+  >;
 };
 
 const boolean = {
@@ -230,12 +237,12 @@ type Json = Base<unknown> & {
   jsonSubsetOf: Operator<unknown | Query | Expression, BooleanColumn>;
 };
 
-const json: Json = {
+const json = {
   ...base,
   jsonPath: ops.jsonPath,
   jsonSupersetOf: ops.jsonSupersetOf,
   jsonSubsetOf: ops.jsonSubsetOf,
-};
+} as Json;
 
 export const Operators = {
   any: base,
