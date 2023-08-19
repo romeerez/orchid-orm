@@ -14,6 +14,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
+import { UUIDColumn } from './string';
 
 describe('column type', () => {
   useTestDatabase();
@@ -317,6 +318,15 @@ describe('column type', () => {
       expect(
         column.default(raw`sql`.values({ key: 'value' })).toCode('t'),
       ).toBe(`t.column().default(t.sql\`sql\`.values({"key":"value"}))`);
+    });
+
+    describe('value is null', () => {
+      it('should not be added by toCode', () => {
+        const uuid = new UUIDColumn().primaryKey();
+        expect(uuid.default(null).toCode('t')).toBe(
+          `t.uuid().primaryKey().default(null)`,
+        );
+      });
     });
   });
 

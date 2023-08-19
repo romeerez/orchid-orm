@@ -23,6 +23,12 @@ change(async (db) => {
 });
 ```
 
+[uuid().primaryKey()](/guide/columns-types.html#uuid) has a default `gen_random_uuid()` by default, and if you'd like to drop it use `default(null)`:
+
+```ts
+id: t.uuid().primaryKey().default(null),
+```
+
 ## nullable
 
 By default, `NOT NULL` is added to every column. Use `nullable` to prevent this:

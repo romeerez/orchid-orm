@@ -368,6 +368,12 @@ export class Table extends BaseTable {
 db.table.create({ name: 'Joe' });
 ```
 
+To discard the default, use `default(null)`:
+
+```ts
+id: t.uuid().primaryKey().default(null),
+```
+
 If you'd like to use a different default, `primaryKey` will respect it:
 
 ```ts

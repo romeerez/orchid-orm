@@ -75,13 +75,13 @@ export type ParseColumn<T extends ColumnTypeBase, Output> = {
 };
 
 // adds default type to the column
-export type ColumnWithDefault<T extends ColumnTypeBase, Value> = Omit<
-  T,
-  'data'
-> & {
-  data: Omit<T['data'], 'default'> & {
-    default: Value;
-  };
+// removes the default if the Value is null
+export type ColumnWithDefault<T extends ColumnTypeBase, Value> = {
+  [K in keyof T]: K extends 'data'
+    ? Omit<T['data'], 'default'> & {
+        default: Value extends null ? never : Value;
+      }
+    : T[K];
 };
 
 // marks the column as hidden
@@ -364,11 +364,7 @@ export abstract class ColumnTypeBase<
     T extends ColumnTypeBase,
     Value extends T['type'] | null | RawSQLBase | (() => T['inputType']),
   >(this: T, value: Value): ColumnWithDefault<T, Value> {
-    return setColumnData(
-      this,
-      'default',
-      value as unknown,
-    ) as ColumnWithDefault<T, Value>;
+    return setColumnData(this, 'default', value) as ColumnWithDefault<T, Value>;
   }
 
   /**

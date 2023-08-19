@@ -429,6 +429,7 @@ export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
       this,
       t,
       `uuid()`,
+      // don't output the default default
       data.default instanceof RawSQLBase && data.default._sql === uuidDefaultSQL
         ? { ...data, default: undefined }
         : data,

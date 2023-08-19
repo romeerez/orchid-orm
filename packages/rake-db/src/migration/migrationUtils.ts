@@ -62,11 +62,12 @@ export const columnToSql = (
     line.push(checkToSql(item.data.check, values));
   }
 
-  if (item.data.default !== undefined) {
-    if (isRawSQL(item.data.default)) {
-      line.push(`DEFAULT ${item.data.default.toSQL({ values })}`);
+  const def = item.data.default;
+  if (def !== undefined && def !== null) {
+    if (isRawSQL(def)) {
+      line.push(`DEFAULT ${def.toSQL({ values })}`);
     } else {
-      line.push(`DEFAULT ${quote(item.data.default)}`);
+      line.push(`DEFAULT ${quote(def)}`);
     }
   }
 

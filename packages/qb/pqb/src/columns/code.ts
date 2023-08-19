@@ -450,7 +450,7 @@ export const columnCode = (
 
   if (data.as) addCode(code, `.as(${data.as.toCode(t)})`);
 
-  if (data.default !== undefined && data.default !== null) {
+  if (data.default !== undefined) {
     addCode(code, `.default(${columnDefaultArgumentToCode(t, data.default)})`);
   }
 

@@ -535,7 +535,9 @@ const astToQueries = (
         }
 
         const expr =
-          value === undefined ? 'DROP DEFAULT' : `SET DEFAULT ${value}`;
+          value === undefined || value === null
+            ? 'DROP DEFAULT'
+            : `SET DEFAULT ${value}`;
 
         alterTable.push(`ALTER COLUMN "${name}" ${expr}`);
       }
