@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.2
+
+### Patch Changes
+
+- 64873aca: Fix generating code for json column shape (#158)
+
 ## 0.18.1
 
 ### Patch Changes

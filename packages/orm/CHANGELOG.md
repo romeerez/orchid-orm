@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.17.2
+
+### Patch Changes
+
+- 64873aca: Fix generating code for json column shape (#158)
+- Updated dependencies [64873aca]
+  - pqb@0.18.2
+
 ## 1.17.1
 
 ### Patch Changes

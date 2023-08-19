@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.10.31
+
+### Patch Changes
+
+- 64873aca: Fix generating code for json column shape (#158)
+- Updated dependencies [64873aca]
+  - pqb@0.18.2
+
 ## 2.10.30
 
 ### Patch Changes
