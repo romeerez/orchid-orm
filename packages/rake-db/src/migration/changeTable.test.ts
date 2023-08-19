@@ -97,17 +97,17 @@ describe('changeTable', () => {
     it('should add DEFAULT gen_random_uuid() for uuid primary key', async () => {
       await testUpAndDown(
         (action) =>
-          db.changeTable('schema.table', (t) => ({
+          db.changeTable('table', (t) => ({
             id: t[action](t.uuid().primaryKey()),
           })),
         () =>
           expectSql(`
-          ALTER TABLE "schema"."table"
+          ALTER TABLE "table"
             ADD COLUMN "id" uuid PRIMARY KEY DEFAULT gen_random_uuid()
         `),
         () =>
           expectSql(`
-          ALTER TABLE "schema"."table"
+          ALTER TABLE "table"
             DROP COLUMN "id"
         `),
       );
@@ -116,17 +116,41 @@ describe('changeTable', () => {
     it('should not add DEFAULT to uuid primary key if user specifies default(null)', async () => {
       await testUpAndDown(
         (action) =>
-          db.changeTable('schema.table', (t) => ({
+          db.changeTable('table', (t) => ({
             id: t[action](t.uuid().primaryKey().default(null)),
           })),
         () =>
           expectSql(`
-          ALTER TABLE "schema"."table"
+          ALTER TABLE "table"
             ADD COLUMN "id" uuid PRIMARY KEY
         `),
         () =>
           expectSql(`
-          ALTER TABLE "schema"."table"
+          ALTER TABLE "table"
+            DROP COLUMN "id"
+        `),
+      );
+    });
+
+    it('should now add DEFAULT if the provided default is a function', async () => {
+      await testUpAndDown(
+        (action) =>
+          db.changeTable('table', (t) => ({
+            id: t[action](
+              t
+                .uuid()
+                .primaryKey()
+                .default(() => '123'),
+            ),
+          })),
+        () =>
+          expectSql(`
+          ALTER TABLE "table"
+            ADD COLUMN "id" uuid PRIMARY KEY
+        `),
+        () =>
+          expectSql(`
+          ALTER TABLE "table"
             DROP COLUMN "id"
         `),
       );

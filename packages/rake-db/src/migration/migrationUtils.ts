@@ -63,7 +63,7 @@ export const columnToSql = (
   }
 
   const def = item.data.default;
-  if (def !== undefined && def !== null) {
+  if (def !== undefined && def !== null && typeof def !== 'function') {
     if (isRawSQL(def)) {
       line.push(`DEFAULT ${def.toSQL({ values })}`);
     } else {

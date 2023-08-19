@@ -23,6 +23,21 @@ change(async (db) => {
 });
 ```
 
+If you provide a function to the `default`, it will be called by ORM before creating records, and it won't have any default value on a database level.
+
+```ts
+import { change } from '../dbScript';
+import { uuidv7 } from 'uuidv7';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    // uuidv7 is a function, it is ignored by `rake-db`,
+    // column won't have a `DEFAULT` on a database level:
+    id: t.uuid().primaryKey().default(uuidv7),
+  }));
+});
+```
+
 [uuid().primaryKey()](/guide/columns-types.html#uuid) has a default `gen_random_uuid()` by default, and if you'd like to drop it use `default(null)`:
 
 ```ts

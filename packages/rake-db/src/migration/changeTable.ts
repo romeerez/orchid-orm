@@ -521,23 +521,20 @@ const astToQueries = (
 
       if (from.default !== to.default) {
         const value =
-          to.default === undefined
-            ? undefined
-            : typeof to.default === 'object' &&
-              to.default &&
-              isRawSQL(to.default)
+          to.default === undefined ||
+          to.default === null ||
+          typeof to.default === 'function'
+            ? null
+            : typeof to.default === 'object' && isRawSQL(to.default)
             ? to.default.toSQL({ values })
             : quote(to.default);
 
         // when changing type, need to first drop an existing default before setting a new one
-        if (changeType && value !== undefined) {
+        if (changeType && value !== null) {
           alterTable.push(`ALTER COLUMN "${name}" DROP DEFAULT`);
         }
 
-        const expr =
-          value === undefined || value === null
-            ? 'DROP DEFAULT'
-            : `SET DEFAULT ${value}`;
+        const expr = value === null ? 'DROP DEFAULT' : `SET DEFAULT ${value}`;
 
         alterTable.push(`ALTER COLUMN "${name}" ${expr}`);
       }
