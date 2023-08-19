@@ -184,6 +184,7 @@ describe('createTable', () => {
           column: t.name('name').integer(),
           domain: t.domain('domainName').as(t.integer()),
           custom: t.type('customType').as(t.integer()),
+          json: t.json((t) => t.object({ foo: t.string() })),
         },
       },
     });
@@ -194,6 +195,11 @@ describe('createTable', () => {
     column: t.name('name').integer(),
     domain: t.domain('domainName').as(t.integer()),
     custom: t.type('customType').as(t.integer()),
+    json: t.json((t) =>
+      t.object({
+        foo: t.string(),
+      }),
+    ),
   }`,
       }),
     );

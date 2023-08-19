@@ -1,17 +1,23 @@
-import { JSONColumn, JSONTextColumn } from './json';
+import { columnTypes } from './columnTypes';
+import { codeToString } from 'orchid-core';
+
+const t = columnTypes;
 
 describe('json columns', () => {
   describe('json', () => {
     it('should have toCode', () => {
-      expect(new JSONColumn((t) => t.string()).toCode('t')).toBe(
-        't.json((t) => t.string())',
-      );
+      const code = t.json((t) => t.object({ foo: t.string() })).toCode('t');
+      expect(codeToString(code, '', '  ')).toBe(`t.json((t) =>
+  t.object({
+    foo: t.string(),
+  }),
+)`);
     });
   });
 
   describe('jsonText', () => {
     it('should have toCode', () => {
-      expect(new JSONTextColumn().toCode('t')).toBe('t.jsonText()');
+      expect(t.jsonText().toCode('t')).toBe('t.jsonText()');
     });
   });
 });

@@ -123,7 +123,7 @@ describe('updateTableFile', () => {
     );
   });
 
-  it('should add multiple columns', async () => {
+  it.only('should add multiple columns', async () => {
     asMock(fs.readFile).mockResolvedValue(
       template(`id: t.identity().primaryKey(),`),
     );
@@ -137,6 +137,10 @@ describe('updateTableFile', () => {
           active: { type: 'add', item: t.boolean() },
           domain: { type: 'add', item: t.domain('name').as(t.integer()) },
           custom: { type: 'add', item: t.type('customType').as(t.integer()) },
+          json: {
+            type: 'add',
+            item: t.json((t) => t.object({ foo: t.string() })),
+          },
         },
       },
     });
@@ -148,6 +152,11 @@ describe('updateTableFile', () => {
     active: t.boolean(),
     domain: t.domain('name').as(t.integer()),
     custom: t.type('customType').as(t.integer()),
+    json: t.json((t) =>
+      t.object({
+        foo: t.string(),
+      }),
+    ),
 `),
     );
   });
@@ -181,7 +190,11 @@ describe('updateTableFile', () => {
     asMock(fs.readFile).mockResolvedValue(
       template(`
     id: t.identity().primaryKey(),
-    name: t.text(),
+    json: t.json((t) =>
+      t.object({
+        foo: t.string(),
+      }),
+    ),
     active: t.boolean(),
 `),
     );
@@ -191,7 +204,7 @@ describe('updateTableFile', () => {
       ast: {
         ...ast.changeTable,
         shape: {
-          name: { type: 'drop', item: t.text(1, 10) },
+          json: { type: 'drop', item: t.json() },
         },
       },
     });

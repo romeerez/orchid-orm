@@ -1,7 +1,15 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import { columnCode } from './code';
-import { Code, JSONType, JSONTypes, jsonTypes, JSONUnknown } from 'orchid-core';
+import {
+  addCode,
+  Code,
+  JSONType,
+  JSONTypes,
+  jsonTypes,
+  JSONUnknown,
+  toArray,
+} from 'orchid-core';
 
 export class JSONColumn<Type extends JSONType = JSONUnknown> extends ColumnType<
   Type['type'],
@@ -24,7 +32,9 @@ export class JSONColumn<Type extends JSONType = JSONUnknown> extends ColumnType<
 
   toCode(t: string): Code {
     const { schema } = this.data;
-    return columnCode(this, t, `json((t) => ${schema.toCode('t')})`);
+    const schemaCode = toArray(schema.toCode(t));
+    addCode(schemaCode, ',');
+    return columnCode(this, t, [`json((${t}) =>`, schemaCode, ')']);
   }
 }
 
