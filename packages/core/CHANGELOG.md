@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.2
+
+### Patch Changes
+
+- 52ee35f4: Better support of default(null) (#159)
+
 ## 0.10.1
 
 ### Patch Changes

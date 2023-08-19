@@ -1,5 +1,12 @@
 # myqb
 
+## 0.2.34
+
+### Patch Changes
+
+- Updated dependencies [52ee35f4]
+  - orchid-core@0.10.2
+
 ## 0.2.33
 
 ### Patch Changes

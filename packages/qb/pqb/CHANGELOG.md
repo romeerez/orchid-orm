@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.1
+
+### Patch Changes
+
+- 52ee35f4: Better support of default(null) (#159)
+- Updated dependencies [52ee35f4]
+  - orchid-core@0.10.2
+
 ## 0.18.0
 
 ### Minor Changes

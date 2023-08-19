@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.10.29
+
+### Patch Changes
+
+- 52ee35f4: Better support of default(null) (#159)
+- Updated dependencies [52ee35f4]
+  - pqb@0.18.1
+  - orchid-core@0.10.2
+
 ## 2.10.28
 
 ### Patch Changes
