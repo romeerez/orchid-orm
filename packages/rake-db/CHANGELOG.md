@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.30
+
+### Patch Changes
+
+- b79f647e: Don't add database `DEFAULT` to the column if default value is a function (#160)
+
 ## 2.10.29
 
 ### Patch Changes
