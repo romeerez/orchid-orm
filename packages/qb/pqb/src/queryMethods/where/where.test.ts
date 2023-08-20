@@ -8,6 +8,7 @@ import {
 import { testWhere, testWhereExists } from './testWhere';
 import { expectSql, testDb } from 'test-utils';
 import { RelationQueryBase } from '../../relations';
+import { Query } from '../../query/query';
 
 describe('where', () => {
   it('should ignore undefined values', () => {
@@ -117,8 +118,8 @@ describe('where sub query', () => {
   it('should handle boolean operator on aggregate sub query', () => {
     const messageRelation = Object.assign(Object.create(Message), {
       relationConfig: {
-        joinQuery() {
-          return Message;
+        joinQuery(_: Query, q: Query) {
+          return q;
         },
       },
     });
@@ -146,7 +147,8 @@ describe('where sub query', () => {
       q.toSQL(),
       `
         SELECT * FROM "user" WHERE (
-          SELECT count(*) = $1 FROM "message"
+          SELECT count(*) = $1
+          FROM "message"
           WHERE "message"."text" IN ($2, $3, $4)
         )
       `,

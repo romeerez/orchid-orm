@@ -249,7 +249,7 @@ export const addParserForSelectItem = <T extends Query>(
   key: string,
   arg: SelectableOrExpression<T> | Query,
 ): string | Expression | Query => {
-  if (typeof arg === 'object') {
+  if (typeof arg === 'object' || typeof arg === 'function') {
     if (isExpression(arg)) {
       addParserForRawExpression(q, key, arg);
     } else {
@@ -277,6 +277,9 @@ export const addParserForSelectItem = <T extends Query>(
 
   return arg;
 };
+
+// reuse SQL for empty array for JSON agg expressions
+const emptyArrSQL = new RawSQL("'[]'");
 
 // process select argument: add parsers, join relations when needed
 export const processSelectArg = <T extends Query>(
@@ -306,12 +309,13 @@ export const processSelectArg = <T extends Query>(
         const returnType = value.q.returnType;
         if (!returnType || returnType === 'all') {
           query = value.json(false);
-          value.q.coalesceValue = new RawSQL("'[]'");
+          value.q.coalesceValue = emptyArrSQL;
         } else if (returnType === 'pluck') {
           query = value
             .wrap(value.baseQuery.clone())
-            ._jsonAgg(value.q.select[0]);
-          value.q.coalesceValue = new RawSQL("'[]'");
+            .jsonAgg(value.q.select[0]);
+
+          value.q.coalesceValue = emptyArrSQL;
         } else {
           if (
             (returnType === 'value' || returnType === 'valueOrThrow') &&

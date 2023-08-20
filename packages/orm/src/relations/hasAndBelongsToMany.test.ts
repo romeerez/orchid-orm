@@ -1570,8 +1570,8 @@ describe('hasAndBelongsToMany', () => {
         SELECT ${userSelectAll} FROM "user" WHERE (
           SELECT count(*) = $1
           FROM "chat" AS "chats"
-          WHERE
-            EXISTS (
+          WHERE "chats"."title" IN ($2, $3)
+            AND EXISTS (
               SELECT 1
               FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
@@ -1579,7 +1579,6 @@ describe('hasAndBelongsToMany', () => {
                 AND "chatUser"."userId" = "user"."id"
                 AND "chatUser"."userKey" = "user"."userKey"
             )
-            AND "chats"."title" IN ($2, $3)
         )
       `,
       [10, 'a', 'b'],

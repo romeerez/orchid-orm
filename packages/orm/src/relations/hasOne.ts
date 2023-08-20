@@ -402,7 +402,8 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         items[i] = data;
       }
 
-      await t._count()._createMany(items as Record<string, unknown>[]);
+      // TODO: optimize calling count
+      await t.count()._createMany(items as Record<string, unknown>[]);
     }
   }) as HasOneNestedInsert;
 };
@@ -439,7 +440,8 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
           obj[foreignKeys[i]] = record[primaryKeys[i]];
         }
 
-        await t._count()._create(obj);
+        // TODO: optimize calling count
+        await t.count()._create(obj);
       }
 
       if (params.set) {

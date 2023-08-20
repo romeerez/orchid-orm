@@ -1458,9 +1458,9 @@ describe('belongsTo', () => {
         SELECT ${profileSelectAll} FROM "profile" WHERE (
           SELECT count(*) = $1
           FROM "user"
-          WHERE "user"."id" = "profile"."userId"
+          WHERE "user"."name" IN ($2, $3)
+            AND "user"."id" = "profile"."userId"
             AND "user"."userKey" = "profile"."profileKey"
-            AND "user"."name" IN ($2, $3)
         )
       `,
       [1, 'a', 'b'],

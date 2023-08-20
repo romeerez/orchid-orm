@@ -121,7 +121,8 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
   }
 
   if (query.expr) {
-    sql.push(query.expr.toSQL(ctx, quotedAs));
+    const exprSQL = query.expr.toSQL(ctx, quotedAs);
+    sql.push(ctx.aliasValue ? `${exprSQL} r` : exprSQL);
   } else {
     pushSelectSql(ctx, table, query, quotedAs);
   }

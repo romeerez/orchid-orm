@@ -126,6 +126,7 @@ export const selectToSql = (
             )}`,
           );
         } else if (isExpression(item)) {
+          // TODO: check if this branch evaluating
           const sql = item.toSQL(ctx, quotedAs);
           list.push(ctx.aliasValue ? `${sql} r` : sql);
         }

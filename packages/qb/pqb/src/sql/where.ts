@@ -14,7 +14,6 @@ import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData } from './data';
 import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
-import { FnExpression } from '../common/fn';
 import { Operator } from '../columns/operators';
 
 export const pushWhereStatementSql = (
@@ -92,12 +91,17 @@ const processWhere = (
     const qb = Object.create(table);
     qb.q = getClonedQueryData(query as QueryData);
     qb.q.and = qb.q.or = undefined;
+    qb.isSubQuery = true;
 
     const res = data(qb);
     const expr = res instanceof Expression ? res : res.q.expr;
     if (!(res instanceof Expression) && res.q.expr) {
-      const q = res.clone();
-      q.q.select = [expr as FnExpression];
+      const q =
+        'relationConfig' in res
+          ? res.relationConfig.joinQuery(table, res)
+          : res.clone();
+
+      q.q.select = [expr as Expression];
       ands.push(`${prefix}(${makeSQL(q as Query, ctx).text})`);
     } else {
       pushWhereToSql(ands, ctx, res as Query, (res as Query).q, quotedAs, not);
@@ -168,13 +172,15 @@ const processWhere = (
         const joinTo = getJoinItemSource(item.joinTo);
         const joinedShape = (query.joinedShapes as JoinedShapes)[joinTo];
 
-        const [op, rightColumn] =
-          item.on.length === 2
-            ? ['=', columnToSql(query, joinedShape, item.on[1], q(joinTo))]
-            : [
-                item.on[1],
-                columnToSql(query, joinedShape, item.on[2], q(joinTo)),
-              ];
+        let op;
+        let rightColumn;
+        if (item.on.length === 2) {
+          op = '=';
+          rightColumn = columnToSql(query, joinedShape, item.on[1], q(joinTo));
+        } else {
+          op = item.on[1];
+          rightColumn = columnToSql(query, joinedShape, item.on[2], q(joinTo));
+        }
 
         ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
       }

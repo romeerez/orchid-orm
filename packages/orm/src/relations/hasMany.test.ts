@@ -1851,9 +1851,9 @@ describe('hasMany', () => {
           SELECT ${userSelectAll} FROM "user" WHERE (
             SELECT count(*) = $1
             FROM "message" AS "messages"
-            WHERE "messages"."authorId" = "user"."id"
+            WHERE "messages"."text" IN ($2, $3)
+              AND "messages"."authorId" = "user"."id"
               AND "messages"."messageKey" = "user"."userKey"
-              AND "messages"."text" IN ($2, $3)
           )
         `,
       [10, 'a', 'b'],
@@ -2343,7 +2343,7 @@ describe('hasMany through', () => {
                       AND "chatUser"."userKey" = "user"."userKey"
                     )
                   AND "user"."id" = "p"."userId"
-                    AND "user"."userKey" = "p"."profileKey"
+                  AND "user"."userKey" = "p"."profileKey"
                 )
               ) AS "t"  
             ) "chats" ON true
@@ -2553,8 +2553,8 @@ describe('hasMany through', () => {
           SELECT ${profileSelectAll} FROM "profile" WHERE (
             SELECT count(*) = $1
             FROM "chat" AS "chats"
-            WHERE
-              EXISTS (
+            WHERE "chats"."title" IN ($2, $3)
+              AND EXISTS (
                 SELECT 1
                 FROM "user"
                 WHERE
@@ -2569,7 +2569,6 @@ describe('hasMany through', () => {
                   AND "user"."id" = "profile"."userId"
                   AND "user"."userKey" = "profile"."profileKey"
               )
-              AND "chats"."title" IN ($2, $3)
           )
         `,
         [10, 'a', 'b'],
@@ -3111,8 +3110,8 @@ describe('hasMany through', () => {
             SELECT ${chatSelectAll} FROM "chat" WHERE (
               SELECT count(*) = $1
               FROM "profile" AS "profiles"
-              WHERE
-                EXISTS (
+              WHERE "profiles"."bio" IN ($2, $3)
+                AND EXISTS (
                   SELECT 1
                   FROM "user" AS "users"
                   WHERE "profiles"."userId" = "users"."id"
@@ -3126,7 +3125,6 @@ describe('hasMany through', () => {
                         AND "chatUser"."chatKey" = "chat"."chatKey"
                     )
                 )
-                AND "profiles"."bio" IN ($2, $3)
             )
           `,
         [10, 'a', 'b'],

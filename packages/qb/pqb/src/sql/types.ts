@@ -206,7 +206,7 @@ export type WhereItem =
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
     })
-  | ((q: unknown) => QueryBase | Expression)
+  | ((q: unknown) => QueryBase | RelationQuery | Expression)
   | Query
   | Expression;
 
