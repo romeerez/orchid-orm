@@ -149,7 +149,6 @@ export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
   const { _type: type } = expr;
   const q = extendQuery(self, type.operators);
 
-  q.isSubQuery = self.isSubQuery;
   q.q.returnType = 'valueOrThrow';
   (q.q as SelectQueryData).returnsOne = true;
   (q.q as SelectQueryData)[getValueKey] = type;

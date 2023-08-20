@@ -91,7 +91,7 @@ const processWhere = (
     const qb = Object.create(table);
     qb.q = getClonedQueryData(query as QueryData);
     qb.q.and = qb.q.or = undefined;
-    qb.isSubQuery = true;
+    qb.q.isSubQuery = true;
 
     const res = data(qb);
     const expr = res instanceof Expression ? res : res.q.expr;

@@ -113,7 +113,6 @@ export interface Db<
     length: number,
     name: QueryErrorName,
   ) => QueryError<this>;
-  isSubQuery: false;
   meta: {
     kind: 'select';
     defaults: Record<

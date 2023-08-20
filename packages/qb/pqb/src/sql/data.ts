@@ -117,6 +117,10 @@ export type CommonQueryData = {
   transform?: ((input: unknown) => unknown)[];
   // default language for the full text search
   language?: string;
+  // is true for query arg inside `select`, `where`, and others callbacks.
+  // it is used by ORM to skip applying a join to the query when `isSubQuery` is true,
+  // the join will be applied after callback is resolved.
+  isSubQuery?: true;
 };
 
 export type SelectQueryData = CommonQueryData & {

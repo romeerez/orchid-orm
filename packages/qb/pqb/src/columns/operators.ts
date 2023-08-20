@@ -30,10 +30,7 @@ const make = <Value = any>(
       const expr = this.q.expr as FnExpression;
       (expr._chain ??= []).push(_op, value);
 
-      const q = extendQuery(this, boolean);
-      // TODO: move isSubQuery into queryData
-      q.isSubQuery = this.isSubQuery;
-      return q;
+      return extendQuery(this, boolean);
     },
     {
       _op,

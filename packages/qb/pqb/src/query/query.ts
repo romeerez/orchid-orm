@@ -66,7 +66,6 @@ export type Query = QueryBase &
       length: number,
       name: QueryErrorName,
     ) => QueryError;
-    isSubQuery: boolean;
   };
 
 export type SelectableOfType<T extends QueryBase, Type> = StringKey<

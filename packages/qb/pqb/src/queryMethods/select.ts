@@ -355,7 +355,7 @@ export const processSelectArg = <T extends Query>(
           (q) => q,
           key,
         );
-      } else if (value.isSubQuery && value.q?.expr) {
+      } else if (value.q?.isSubQuery && value.q.expr) {
         value = value.q.expr;
       }
     }
