@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.32
+
+### Patch Changes
+
+- 8468dbc3: Fix order of calling `change` functions in rake-db `redo` command (#161)
+
 ## 2.10.31
 
 ### Patch Changes
