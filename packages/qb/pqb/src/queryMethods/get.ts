@@ -5,15 +5,22 @@ import {
   SetQueryReturnsValue,
   SetQueryReturnsValueOptional,
 } from '../query/query';
-import { addParserForRawExpression, processSelectArg } from './select';
+import {
+  addParserForRawExpression,
+  setParserForSelectedString,
+} from './select';
 import {
   ColumnTypeBase,
-  getValueKey,
   Expression,
+  getValueKey,
   StringKey,
 } from 'orchid-core';
 import { SelectQueryData } from '../sql';
 import { QueryBase } from '../query/queryBase';
+import { Operators, setQueryOperators } from '../columns/operators';
+import { SelectItemExpression } from '../common/selectItemExpression';
+import { UnknownColumn } from '../columns';
+import { getQueryAs } from '../common/utils';
 
 // `get` method argument, accepts a string for a column name or a raw SQL
 export type GetArg<T extends QueryBase> = GetStringArg<T> | Expression;
@@ -53,10 +60,10 @@ const _get = <
 ): R extends 'value' ? GetResultOptional<T, Arg> : GetResult<T, Arg> => {
   q.q.returnType = returnType;
 
+  let type: ColumnTypeBase | undefined;
   if (typeof arg === 'string') {
-    let type = q.q.shape[arg] as ColumnTypeBase | undefined;
-    if (type) {
-    } else {
+    type = q.q.shape[arg];
+    if (!type) {
       const index = arg.indexOf('.');
       if (index !== -1) {
         const table = arg.slice(0, index);
@@ -72,21 +79,22 @@ const _get = <
 
     (q.q as SelectQueryData)[getValueKey] = type;
 
-    q.q.select = [
-      processSelectArg(
-        q,
-        q.q.as || q.table,
-        arg as unknown as Exclude<GetArg<T>, Expression>,
-        getValueKey,
-      ),
-    ];
+    setParserForSelectedString(q, arg, getQueryAs(q), getValueKey);
+
+    q.q.expr = new SelectItemExpression(q, arg, type || UnknownColumn.instance);
   } else {
-    (q.q as SelectQueryData)[getValueKey] = arg._type;
+    type = arg._type;
+    (q.q as SelectQueryData)[getValueKey] = type;
     addParserForRawExpression(q, getValueKey, arg);
-    q.q.select = [arg];
+    q.q.expr = arg;
   }
 
-  return q as unknown as GetResult<T, Arg> & GetResultOptional<T, Arg>;
+  q.q.select = [q.q.expr];
+
+  return setQueryOperators(
+    q,
+    type?.operators || Operators.any,
+  ) as unknown as GetResult<T, Arg> & GetResultOptional<T, Arg>;
 };
 
 export class QueryGet {

@@ -272,7 +272,7 @@ export const addParserForSelectItem = <T extends Query>(
       }
     }
   } else {
-    setParserForStringArg(q, arg, as, key);
+    setParserForSelectedString(q, arg, as, key);
   }
 
   return arg;
@@ -289,7 +289,7 @@ export const processSelectArg = <T extends Query>(
   columnAs?: string | getValueKey,
 ): SelectItem => {
   if (typeof arg === 'string') {
-    setParserForStringArg(q, arg, as, columnAs);
+    setParserForSelectedString(q, arg, as, columnAs);
     return arg;
   }
 
@@ -369,7 +369,7 @@ export const processSelectArg = <T extends Query>(
 // process string select arg
 // adds a column parser for a column
 // when table.* string is provided, sets a parser for a joined table
-const setParserForStringArg = (
+export const setParserForSelectedString = (
   q: Query,
   arg: string,
   as: string | getValueKey | undefined,

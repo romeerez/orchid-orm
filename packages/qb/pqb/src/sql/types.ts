@@ -102,12 +102,11 @@ export type JsonItem<
       ];
 };
 
-export type SelectItem =
-  | string
-  | RelationQuery
-  | { selectAs: Record<string, string | Query | Expression> }
-  | JsonItem
-  | Expression;
+export type SelectItem = string | SelectAs | JsonItem | Expression;
+
+export type SelectAs = {
+  selectAs: Record<string, string | Query | Expression>;
+};
 
 export type OrderTsQueryConfig =
   | true

@@ -8,9 +8,11 @@ export abstract class Expression<T extends ColumnTypeBase = ColumnTypeBase> {
   // Starts with underscore to allow having `type` method
   abstract _type: T;
 
+  // The chain array is used to store a sequence of operators and their arguments, one be one.
+  // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
   _chain?: (OperatorToSQL<unknown, unknown> | unknown)[];
 
-  // Produce SQL string, push query variables into given `values` array.
+  // Produce SQL string by calling `makeSQL` and applying operators from the `_chain`, push query variables into given `values` array.
   toSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
     let sql = this.makeSQL(ctx, quotedAs);
     if (this._chain) {
@@ -27,6 +29,8 @@ export abstract class Expression<T extends ColumnTypeBase = ColumnTypeBase> {
     return sql;
   }
 
+  // `makeSQL` should be implemented on subclasses of Expression to return SQL of the expression.
+  // Result of `makeSQL` will be chained with operators by `toSQL`.
   abstract makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string;
 }
 
@@ -41,6 +45,7 @@ export type TemplateLiteralArgs = [
   ...values: unknown[],
 ];
 
+// Check if arguments are a template literal.
 export const isTemplateLiteralArgs = (
   args: unknown[],
 ): args is TemplateLiteralArgs =>
@@ -51,6 +56,7 @@ export type RawSQLArgs =
   | TemplateLiteralArgs
   | [{ raw: string; values?: RawSQLValues }];
 
+// Record of values to pass and store in a RawSQL instance.
 export type RawSQLValues = Record<string, unknown>;
 
 // Base class for raw SQL
@@ -63,10 +69,6 @@ export abstract class RawSQLBase<
 
   // Column types are stored to be passed to the `type` callback.
   abstract columnTypes: CT;
-
-  toSQL(ctx: { values: unknown[] }): string {
-    return super.toSQL(ctx);
-  }
 
   // Produce SQL string, push query variables into given `values` array.
   abstract makeSQL(ctx: { values: unknown[] }): string;

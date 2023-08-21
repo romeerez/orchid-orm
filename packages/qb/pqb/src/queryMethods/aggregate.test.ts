@@ -5,9 +5,21 @@ import {
   Snake,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import { Operators } from '../columns/operators';
 
 describe('aggregate', () => {
   useTestDatabase();
+
+  it('should discard previous query extension when extending query with other type', () => {
+    const int = User.count();
+    assertType<typeof int.gt, typeof Operators.number.gt>();
+    expect(int.gt).toEqual(expect.any(Function));
+
+    const bool = int.gt(5);
+    // @ts-expect-error bool should not have gt method
+    bool.gt;
+    expect((bool as unknown as { gt: unknown }).gt).toBe(undefined);
+  });
 
   describe('chaining with operators', () => {
     it('should allow to chain agg method with operators', () => {

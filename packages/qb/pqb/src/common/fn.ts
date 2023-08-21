@@ -15,8 +15,7 @@ import { whereToSql } from '../sql/where';
 import { windowToSql } from '../sql/window';
 import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
 import { BooleanNullable } from '../columns';
-import { BaseOperators } from '../columns/operators';
-import { extendQuery } from '../query/queryUtils';
+import { BaseOperators, setQueryOperators } from '../columns/operators';
 
 export type AggregateOptions<T extends Query> = {
   distinct?: boolean;
@@ -147,12 +146,13 @@ export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
   expr: Expression,
 ): SetQueryReturnsColumn<T, C> & C['operators'] => {
   const { _type: type } = expr;
-  const q = extendQuery(self, type.operators);
+  const q = setQueryOperators(self, type.operators);
 
   q.q.returnType = 'valueOrThrow';
   (q.q as SelectQueryData).returnsOne = true;
   (q.q as SelectQueryData)[getValueKey] = type;
   q.q.expr = expr;
+  q.q.select = [expr];
 
   if (type.parseFn) {
     setParserToQuery(q.q, getValueKey, type.parseFn);
@@ -171,7 +171,7 @@ export function makeFnExpression<T extends Query, C extends ColumnTypeBase>(
   options?: AggregateOptions<T>,
 ): SetQueryReturnsColumn<T, C> & C['operators'] {
   return makeExpression(
-    self,
+    self.clone(),
     new FnExpression<Query, ColumnTypeBase>(
       self,
       fn,

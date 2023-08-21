@@ -191,7 +191,7 @@ describe('relations', () => {
         SELECT "bio".r "bio"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT "profile"."bio" AS "r"
+          SELECT "profile"."bio" r
           FROM "profile"
           WHERE "profile"."userId" = "user"."id"
             AND "profile"."profileKey" = "user"."userKey"

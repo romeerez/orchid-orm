@@ -242,15 +242,12 @@ export type SetQueryReturnsValue<
   T extends Query,
   Arg extends GetStringArg<T>,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-> = SetQueryReturnsColumn<
-  T,
-  Arg extends keyof T['selectable']
+  Column extends ColumnTypeBase = Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']
     : Arg extends Query
     ? Arg['result']['value']
     : never,
-  ReturnType
->;
+> = SetQueryReturnsColumn<T, Column, ReturnType> & Column['operators'];
 
 export type SetQueryReturnsColumnOptional<
   T extends QueryBase,

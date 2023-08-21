@@ -7,30 +7,60 @@ import {
   isExpression,
   OperatorToSQL,
 } from 'orchid-core';
-import { FnExpression } from '../common/fn';
 import { BooleanColumn } from './boolean';
 import { extendQuery } from '../query/queryUtils';
 
+// Operator function type.
+// Table.count().gt(10) <- here `.gt(10)` is this operator function.
+// It discards previously defined column type operators and applies new ones,
+// for a case when operator gives a different column type.
 export type Operator<Value, Column extends ColumnTypeBase = ColumnTypeBase> = {
-  <T extends Query>(this: T, arg: Value): SetQueryReturnsColumn<T, Column> &
+  <T extends Query>(this: T, arg: Value): Omit<
+    SetQueryReturnsColumn<T, Column>,
+    keyof T['result']['value']['operators']
+  > &
     Column['operators'];
+  // argument type of the function
   _opType: Value;
+  // function to turn the operator expression into SQL
   _op: OperatorToSQL<Value, ToSQLCtx>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BaseOperators = Record<string, Operator<any>>;
+// any column has 'operators' record that implements this type
+export type BaseOperators = Record<string, Operator<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
+// Extend query object with given operator methods, so that user can call `gt` after calling `count`.
+// If query already has the same operators, nothing is changed.
+// Previously defined operators, if any, are dropped form the query.
+// Adds new operators, saves `Query.baseQuery` into `QueryData.originalQuery`, saves operators to `QueryData.operators`.
+export function setQueryOperators(q: Query, operators: BaseOperators) {
+  if (q.q.operators) {
+    if (q.q.operators === operators) return q;
+
+    q.baseQuery = q.q.originalQuery as Query;
+  } else {
+    q.q.originalQuery = q.baseQuery;
+  }
+
+  q.q.operators = operators;
+  return extendQuery(q, operators);
+}
+
+/**
+ * Makes operator function that has `_op` property.
+ *
+ * @param _op - function to turn the operator call into SQL.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const make = <Value = any>(
   _op: (key: string, value: Value, ctx: ToSQLCtx, quotedAs?: string) => string,
 ): Operator<Value> => {
   return Object.assign(
     function (this: Query, value: Value) {
-      const expr = this.q.expr as FnExpression;
+      const expr = this.q.expr as Expression;
       (expr._chain ??= []).push(_op, value);
 
-      return extendQuery(this, boolean);
+      return setQueryOperators(this, boolean);
     },
     {
       _op,
@@ -38,6 +68,8 @@ const make = <Value = any>(
   ) as unknown as Operator<Value>;
 };
 
+// Handles array, expression object, query object to insert into sql.
+// Saves values to `ctx.values`.
 const quoteValue = (
   arg: unknown,
   ctx: ToSQLCtx,
@@ -61,6 +93,7 @@ const quoteValue = (
   return addValue(ctx.values, arg);
 };
 
+// defining all operators for all types
 const ops = {
   equals: make((key, value, ctx, quotedAs) =>
     value === null
@@ -155,6 +188,7 @@ const ops = {
   ),
 };
 
+// common operators that exist for any types
 type Base<Value> = {
   equals: Operator<Value | Query | Expression, BooleanColumn>;
   not: Operator<Value | Query | Expression, BooleanColumn>;
@@ -169,6 +203,7 @@ const base = {
   notIn: ops.notIn,
 } as Base<unknown>;
 
+// Boolean type operators
 type Bool = Base<boolean> & {
   and: Operator<
     SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
@@ -186,7 +221,8 @@ const boolean = {
   or: ops.or,
 } as Bool;
 
-type Numeric<Value> = Base<Value> & {
+// Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
+type Ord<Value> = Base<Value> & {
   lt: Operator<Value | Query | Expression, BooleanColumn>;
   lte: Operator<Value | Query | Expression, BooleanColumn>;
   gt: Operator<Value | Query | Expression, BooleanColumn>;
@@ -206,6 +242,7 @@ const numeric = {
   between: ops.between,
 };
 
+// Text type operators
 type Text = Base<string> & {
   contains: Operator<string | Query | Expression, BooleanColumn>;
   containsSensitive: Operator<string | Query | Expression, BooleanColumn>;
@@ -225,6 +262,7 @@ const text = {
   endsWithSensitive: ops.endsWithSensitive,
 } as Text;
 
+// JSON type operators
 type Json = Base<unknown> & {
   jsonPath: Operator<
     [path: string, op: string, value: unknown | Query | Expression],
@@ -241,6 +279,7 @@ const json = {
   jsonSubsetOf: ops.jsonSubsetOf,
 } as Json;
 
+// `Operators` has operators grouped by types. To be used by column classes.
 export const Operators = {
   any: base,
   boolean,
@@ -254,9 +293,9 @@ export const Operators = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   any: Base<any>;
   boolean: Bool;
-  number: Numeric<number>;
-  date: Numeric<number>;
-  time: Numeric<number>;
+  number: Ord<number>;
+  date: Ord<number>;
+  time: Ord<number>;
   text: Text;
   json: Json;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

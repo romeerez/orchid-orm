@@ -28,6 +28,7 @@ import {
   Expression,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
+import { BaseOperators } from '../columns/operators';
 
 // Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
 export type JoinedShapes = Record<string, ColumnsShapeBase>;
@@ -121,6 +122,8 @@ export type CommonQueryData = {
   // it is used by ORM to skip applying a join to the query when `isSubQuery` is true,
   // the join will be applied after callback is resolved.
   isSubQuery?: true;
+  operators?: BaseOperators;
+  originalQuery?: Query;
 };
 
 export type SelectQueryData = CommonQueryData & {

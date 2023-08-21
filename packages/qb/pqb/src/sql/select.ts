@@ -6,7 +6,7 @@ import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
-import { isExpression } from 'orchid-core';
+import { Expression, isExpression } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 
 const jsonColumnOrMethodToSql = (
@@ -88,48 +88,34 @@ export const selectToSql = (
     const list: string[] = [];
     for (const item of query.select) {
       if (typeof item === 'string') {
-        list.push(
-          item === '*'
-            ? selectAllSql(table, query, quotedAs)
-            : columnToSqlWithAs(table.q, item, quotedAs, true),
-        );
-      } else {
-        if ('selectAs' in item) {
-          const obj = item.selectAs as Record<
-            string,
-            SelectableOrExpression | Query
-          >;
-          for (const as in obj) {
-            const value = obj[as];
-            if (typeof value === 'object' || typeof value === 'function') {
-              if (isExpression(value)) {
-                list.push(`${value.toSQL(ctx, quotedAs)} AS ${q(as)}`);
-              } else {
-                pushSubQuerySql(ctx, value as Query, as, list, quotedAs);
-              }
+        list.push(selectedStringToSQL(table, query, quotedAs, item));
+      } else if ('selectAs' in item) {
+        const obj = item.selectAs as Record<
+          string,
+          SelectableOrExpression | Query
+        >;
+        for (const as in obj) {
+          const value = obj[as];
+          if (typeof value === 'object' || typeof value === 'function') {
+            if (isExpression(value)) {
+              list.push(`${value.toSQL(ctx, quotedAs)} AS ${q(as)}`);
             } else {
-              list.push(
-                `${columnToSql(
-                  table.q,
-                  table.q.shape,
-                  value as string,
-                  quotedAs,
-                  true,
-                )} AS ${q(as)}`,
-              );
+              pushSubQuerySql(ctx, value as Query, as, list, quotedAs);
             }
+          } else {
+            list.push(
+              `${columnToSql(
+                table.q,
+                table.q.shape,
+                value as string,
+                quotedAs,
+                true,
+              )} AS ${q(as)}`,
+            );
           }
-        } else if ('__json' in item) {
-          list.push(
-            `${jsonToSql(table, item, ctx.values, quotedAs)} AS ${q(
-              item.__json[1],
-            )}`,
-          );
-        } else if (isExpression(item)) {
-          // TODO: check if this branch evaluating
-          const sql = item.toSQL(ctx, quotedAs);
-          list.push(ctx.aliasValue ? `${sql} r` : sql);
         }
+      } else {
+        list.push(selectedObjectToSQL(ctx, table, quotedAs, item));
       }
     }
     return list.join(', ');
@@ -137,6 +123,32 @@ export const selectToSql = (
 
   return selectAllSql(table, query, quotedAs);
 };
+
+export const selectedStringToSQL = (
+  table: Query,
+  query: Pick<SelectQueryData, 'select' | 'join'>,
+  quotedAs: string | undefined,
+  item: string,
+) =>
+  item === '*'
+    ? selectAllSql(table, query, quotedAs)
+    : columnToSqlWithAs(table.q, item, quotedAs, true);
+
+export function selectedObjectToSQL(
+  ctx: ToSQLCtx,
+  table: Query,
+  quotedAs: string | undefined,
+  item: JsonItem | Expression,
+) {
+  if ('__json' in item) {
+    return `${jsonToSql(table, item, ctx.values, quotedAs)} AS ${q(
+      item.__json[1],
+    )}`;
+  }
+
+  const sql = item.toSQL(ctx, quotedAs);
+  return ctx.aliasValue ? `${sql} r` : sql;
+}
 
 export const selectAllSql = (
   table: QueryBase,
