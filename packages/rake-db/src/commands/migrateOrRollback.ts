@@ -112,13 +112,22 @@ export const migrateOrRollback = async <CT extends ColumnTypesBase>(
   }
 };
 
+// Cache `change` functions of migrations. Key is a migration file name, value is array of `change` functions.
+// When migrating two or more databases, files are loaded just once due to this cache.
 export const changeCache: Record<string, ChangeCallback[] | undefined> = {};
 
+// SQL to start a transaction
 const begin = {
   text: 'BEGIN',
   values: emptyArray,
 };
 
+/**
+ * Process one migration file.
+ * It performs a db transaction, loads `change` functions from a file, executes them in order specified by `up` parameter.
+ * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
+ * After transaction is committed, will call `appCodeUpdater` if exists with the migrated changes.
+ */
 const processMigration = async <CT extends ColumnTypesBase>(
   db: Adapter,
   up: boolean,
@@ -166,23 +175,49 @@ const processMigration = async <CT extends ColumnTypesBase>(
   }
 };
 
+/**
+ * Will run all pending yet migrations, sequentially in order,
+ * will apply `change` functions top-to-bottom.
+ *
+ * @param options - options to construct db adapter with
+ * @param config - specifies how to load migrations, may have `appCodeUpdater`, callbacks, and logger.
+ * @param args - pass none or `all` to run all migrations, pass int for how many to migrate, `--code` to enable and `--code false` to disable `useCodeUpdater`.
+ */
 export const migrate = <CT extends ColumnTypesBase>(
   options: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
   args: string[] = [],
 ): Promise<void> => migrateOrRollback(options, config, args, true);
 
+/**
+ * Will roll back one latest applied migration,
+ * will apply `change` functions bottom-to-top.
+ *
+ * Takes the same options as {@link migrate}.
+ */
 export const rollback = <CT extends ColumnTypesBase>(
   options: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
   args: string[] = [],
 ): Promise<void> => migrateOrRollback(options, config, args, false);
 
+/**
+ * Calls {@link rollback} and then {@link migrate}.
+ *
+ * Takes the same options as {@link migrate}.
+ */
 export const redo = async <CT extends ColumnTypesBase>(
   options: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
   args: string[] = [],
 ): Promise<void> => {
   await migrateOrRollback(options, config, args, false);
+
+  // because we just called rollback, `change` functions are cached bottom-to-top.
+  // now we are about to migrate, and need to reverse cached functions.
+  for (const file in changeCache) {
+    changeCache[file]?.reverse();
+  }
+
   await migrateOrRollback(options, config, args, true);
 };

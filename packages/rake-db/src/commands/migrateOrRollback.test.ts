@@ -369,23 +369,60 @@ describe('migrateOrRollback', () => {
 
     it('should migrate just one if number argument is not provided', async () => {
       migrationFiles = files;
-      migratedVersions = files.slice(0, 2).map((file) => file.version);
+      migratedVersions = files.map((file) => file.version);
 
       await redo(
         options,
         {
           ...config,
           afterRollback: async () => {
-            migratedVersions = [files[0].version];
+            const last = migratedVersions[migratedVersions.length - 1];
+            migratedVersions = migratedVersions.filter(
+              (version) => version !== last,
+            );
           },
         },
-        ['1'],
+        [],
       );
 
       expect(asMock(config.logger?.log).mock.calls).toEqual([
-        [`Rolled back ${pathToLog('file2')}`],
-        [`Migrated ${pathToLog('file2')}`],
+        [`Rolled back ${pathToLog('file4')}`],
+        [`Migrated ${pathToLog('file4')}`],
       ]);
+    });
+
+    it('should rollback migration changes bottom to top, then migrate them top to bottom', async () => {
+      const executed: string[] = [];
+
+      const file = {
+        path: 'file1',
+        version: '1',
+        change() {
+          pushChange(async () => {
+            executed.push('top');
+          });
+
+          pushChange(async () => {
+            executed.push('bottom');
+          });
+        },
+      };
+
+      migrationFiles = [file];
+      migratedVersions = ['1'];
+
+      await redo(
+        options,
+        {
+          ...config,
+          afterRollback: async () => {
+            migratedVersions = [];
+          },
+        },
+        [],
+      );
+
+      expect(executed).toEqual(['bottom', 'top', 'top', 'bottom']);
     });
   });
 });
