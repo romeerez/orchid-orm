@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.33
+
+### Patch Changes
+
+- 7d11ab40: Fix order of migrations for rollback when passing migrations record to rake-db config (#162)
+
 ## 2.10.32
 
 ### Patch Changes
