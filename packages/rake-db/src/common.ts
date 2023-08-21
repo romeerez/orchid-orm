@@ -337,25 +337,51 @@ export type MigrationItem = {
   change(): Promise<unknown>;
 };
 
-export const getMigrations = async <CT extends ColumnTypesBase>(
-  config: RakeDbConfig<CT>,
+// If the config has a `migrations` object, it will be returned as array of migration items.
+// If `up` is false, will reverse the resulting array.
+// Otherwise, it will scan directory which is set in `migrationPath` and convert files into migration items.
+// `up` value determines sorting of files: `true` for ascending, `false` for descending.
+export const getMigrations = async (
+  {
+    migrations,
+    ...config
+  }: Pick<
+    RakeDbConfig,
+    'basePath' | 'migrations' | 'migrationsPath' | 'import'
+  >,
   up: boolean,
 ): Promise<MigrationItem[]> => {
-  if ('migrations' in config) {
-    const result: MigrationItem[] = [];
+  return migrations
+    ? getMigrationsFromConfig({ ...config, migrations }, up)
+    : getMigrationsFromFiles(config, up);
+};
 
-    const { migrations, basePath } = config;
-    for (const key in migrations) {
-      result.push({
-        path: path.resolve(basePath, key),
-        version: getVersion(path.basename(key)),
-        change: migrations[key],
-      });
-    }
+// Converts user-provided migrations object into array of migration items.
+function getMigrationsFromConfig(
+  config: { basePath: string; migrations: ModuleExportsRecord },
+  up: boolean,
+): MigrationItem[] {
+  const result: MigrationItem[] = [];
 
-    return result;
+  const { migrations, basePath } = config;
+  for (const key in migrations) {
+    result.push({
+      path: path.resolve(basePath, key),
+      version: getVersion(path.basename(key)),
+      change: migrations[key],
+    });
   }
 
+  if (!up) result.reverse();
+
+  return result;
+}
+
+// Scans files under `migrationsPath` to convert files into migration items.
+async function getMigrationsFromFiles(
+  config: Pick<RakeDbConfig, 'migrationsPath' | 'import'>,
+  up: boolean,
+): Promise<MigrationItem[]> {
   const { migrationsPath, import: imp } = config;
 
   let files: string[];
@@ -391,17 +417,19 @@ export const getMigrations = async <CT extends ColumnTypesBase>(
       },
     };
   });
-};
+}
 
+// Restrict supported file extensions to `.ts`, `.js`, and `.mjs`.
 function checkExt(filePath: string): void {
   const ext = path.extname(filePath);
   if (ext !== '.ts' && ext !== '.js' && ext !== '.mjs') {
     throw new Error(
-      `Only .ts and .js files are supported for migration, received: ${path}`,
+      `Only .ts, .js, and .mjs files are supported for migration, received: ${path}`,
     );
   }
 }
 
+// Extract a 14-chars long timestamp from a beginning of a file name.
 function getVersion(path: string): string {
   const timestampMatch = path.match(/^(\d{14})\D/);
   if (!timestampMatch) {
@@ -413,10 +441,13 @@ function getVersion(path: string): string {
   return timestampMatch[1];
 }
 
+// Just a default ascending sort.
 export const sortAsc = (arr: string[]) => arr.sort();
 
+// Reverse sort order, higher goes first.
 export const sortDesc = (arr: string[]) => arr.sort((a, b) => (a > b ? -1 : 1));
 
+// Join array of strings into a camelCased string.
 export const joinWords = (...words: string[]) => {
   return words
     .slice(1)

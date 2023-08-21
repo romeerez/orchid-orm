@@ -335,6 +335,21 @@ describe('common', () => {
       ]);
     });
 
+    it('should return migrations in a reverse order from an object with migrations for a rollback', async () => {
+      const version = '12345678901234';
+
+      const migrations = {
+        [`${version}_a.ts`]: async () => {},
+        [`${version}_b.ts`]: async () => {},
+      };
+
+      const result = await getMigrations({ ...config, migrations }, false);
+      expect(result.map((item) => item.path)).toEqual([
+        path.resolve(__dirname, `${version}_b.ts`),
+        path.resolve(__dirname, `${version}_a.ts`),
+      ]);
+    });
+
     it('should return empty array on error', async () => {
       (readdir as jest.Mock).mockRejectedValue(new Error());
 
@@ -349,11 +364,11 @@ describe('common', () => {
       expect(result).toEqual([]);
     });
 
-    it('should throw if file is not a .ts or .js file', async () => {
+    it('should throw if file is not a .ts, .js, and .mjs file', async () => {
       (readdir as jest.Mock).mockReturnValueOnce(['file.c']);
 
       await expect(getMigrations(config, true)).rejects.toThrow(
-        'Only .ts and .js files are supported',
+        'Only .ts, .js, and .mjs files are supported',
       );
     });
 
