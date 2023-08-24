@@ -189,6 +189,29 @@ export const pushColumnData = <
   );
 };
 
+// types to be assigned to the column with .asType
+type ColumnDataTypes<
+  Type,
+  InputType = Type,
+  OutputType = Type,
+  QueryType = Type,
+> = {
+  type: Type;
+  inputType: InputType;
+  outputType: OutputType;
+  queryType: QueryType;
+};
+
+// change the inner types of the column with .asType
+type SetColumnDataTypes<
+  T extends ColumnTypeBase,
+  Types extends ColumnDataTypes<unknown>,
+> = {
+  [K in keyof T]: K extends 'type' | 'inputType' | 'outputType' | 'queryType'
+    ? Types[K]
+    : T[K];
+};
+
 // base data of column
 export type ColumnDataBase = {
   // name of the column in the database, if different from the code
@@ -286,7 +309,8 @@ export abstract class ColumnTypeBase<
   OutputType = Type,
   QueryType = Type,
   Data extends ColumnDataBase = ColumnDataBase,
-> {
+> implements ColumnDataTypes<Type, InputType, OutputType, QueryType>
+{
   // name of the type in a database
   abstract dataType: string;
 
@@ -485,36 +509,6 @@ export abstract class ColumnTypeBase<
   }
 
   /**
-   * This method changes a column type without modifying its behavior.
-   * This is needed when converting columns to a validation schema, the converter will pick a different type specified by `.as`.
-   *
-   * Before calling `.as` need to use `.encode` with the input of the same type as the input of the target column,
-   * and `.parse` which returns the correct type.
-   *
-   * ```ts
-   * // column has the same type as t.integer()
-   * const column = t
-   *   .text(1, 100)
-   *   .encode((input: number) => input)
-   *   .parse((text) => parseInt(text))
-   *   .as(t.integer());
-   * ```
-   *
-   * @param column - other column type to inherit from
-   */
-  as<
-    T extends ColumnTypeBase,
-    C extends ColumnTypeBase<
-      unknown,
-      BaseOperators,
-      T['inputType'],
-      T['outputType']
-    >,
-  >(this: T, column: C): C {
-    return setColumnData(this, 'as', column) as unknown as C;
-  }
-
-  /**
    * Set a custom function to process value for the column when creating or updating a record.
    *
    * The type of `input` argument will be used as the type of the column when creating and updating.
@@ -592,6 +586,80 @@ export abstract class ColumnTypeBase<
       parseFn: fn,
       parseItem: fn,
     }) as unknown as ParseColumn<T, Output>;
+  }
+
+  /**
+   * This method changes a column type without modifying its behavior.
+   * This is needed when converting columns to a validation schema, the converter will pick a different type specified by `.as`.
+   *
+   * Before calling `.as` need to use `.encode` with the input of the same type as the input of the target column,
+   * and `.parse` which returns the correct type.
+   *
+   * ```ts
+   * // column has the same type as t.integer()
+   * const column = t
+   *   .text(1, 100)
+   *   .encode((input: number) => input)
+   *   .parse((text) => parseInt(text))
+   *   .as(t.integer());
+   * ```
+   *
+   * @param column - other column type to inherit from
+   */
+  as<
+    T extends ColumnTypeBase,
+    C extends ColumnTypeBase<
+      unknown,
+      BaseOperators,
+      T['inputType'],
+      T['outputType']
+    >,
+  >(this: T, column: C): C {
+    return setColumnData(this, 'as', column) as unknown as C;
+  }
+
+  /**
+   * Mark the column as to have specific Typescript type.
+   * This can be used to narrow generic column types, such as narrow `string` to a string literal union.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     size: t.text().asType((t) => t<'small' | 'medium' | 'large'>()),
+   *   }));
+   * }
+   *
+   * // size will be typed as 'small' | 'medium' | 'large'
+   * const size = await db.table.get('size');
+   * ```
+   *
+   * To alter the base, input, output and query types individually, pass them as generic parameters:
+   *
+   * ```ts
+   * const column = t
+   *   .text()
+   *   .asType((t) => t<Type, InputType, OutputType, QueryType>());
+   * ```
+   *
+   * - The first `Type` is the base one, used as a default for other types.
+   * - `InputType` is for `create`, `update` methods.
+   * - `OutputType` is for the data that is loaded from a database and parsed if the column has `parse`.
+   * - `QueryType` is used in `where` and other query methods, it should be compatible with the actual database column type.
+   */
+  asType<T extends ColumnTypeBase, Types extends ColumnDataTypes<unknown>>(
+    this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _fn: (
+      type: <
+        Type,
+        InputType = Type,
+        OutputType = Type,
+        QueryType = Type,
+      >() => ColumnDataTypes<Type, InputType, OutputType, QueryType>,
+    ) => Types,
+  ): SetColumnDataTypes<T, Types> {
+    return this as unknown as SetColumnDataTypes<T, Types>;
   }
 
   /**
