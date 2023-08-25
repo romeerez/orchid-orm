@@ -38,12 +38,15 @@ export class JSONNull extends JSONType<null> {
   }
 }
 
-export interface JSONNumber
-  extends JSONType<number, NumberTypeData>,
+export interface JSONNumber<T extends number = number>
+  extends JSONType<T, NumberTypeData>,
     NumberTypeMethods {}
 
 // JSON number type: it has the same validation methods as the numeric column type.
-export class JSONNumber extends JSONType<number, NumberTypeData> {
+export class JSONNumber<T extends number = number> extends JSONType<
+  T,
+  NumberTypeData
+> {
   declare kind: 'number';
 
   toCode(t: string): Code {
@@ -57,12 +60,15 @@ export class JSONNumber extends JSONType<number, NumberTypeData> {
 
 assignMethodsToClass(JSONNumber, numberTypeMethods);
 
-export interface JSONString
-  extends JSONType<string, StringTypeData>,
+export interface JSONString<T extends string = string>
+  extends JSONType<T, StringTypeData>,
     StringTypeMethods {}
 
 // JSON string type: it has the same validation methods as the text column type.
-export class JSONString extends JSONType<string, StringTypeData> {
+export class JSONString<T extends string = string> extends JSONType<
+  T,
+  StringTypeData
+> {
   declare kind: 'string';
 
   toCode(t: string): Code {

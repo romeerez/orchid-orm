@@ -65,6 +65,19 @@ describe('json type', () => {
     });
   });
 
+  describe('narrow', () => {
+    it('should narrow string type', () => {
+      type Type = 'foo' | 'bar';
+      const type = string<Type>();
+      assertType<(typeof type)['type'], Type>();
+    });
+    it('should narrow number type', () => {
+      type Type = 1024 | 2048;
+      const type = number<Type>();
+      assertType<(typeof type)['type'], Type>();
+    });
+  });
+
   describe('deepPartial', () => {
     it('should return the same column when the type is simple', () => {
       const type = string().deepPartial();
