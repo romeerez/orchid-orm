@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.3
+
+### Patch Changes
+
+- 07448a7f: Add `.asType` to column builder
+
 ## 0.10.2
 
 ### Patch Changes

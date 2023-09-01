@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.3
+
+### Patch Changes
+
+- 07448a7f: Add `.asType` to column builder
+- Updated dependencies [07448a7f]
+  - orchid-core@0.10.3
+
 ## 0.18.2
 
 ### Patch Changes
