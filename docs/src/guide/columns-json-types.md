@@ -251,6 +251,24 @@ export class Table extends BaseTable {
 }
 ```
 
+## narrow type
+
+Narrow string or number type to a literal union:
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    data: t.json((t) =>
+      t.object({
+        size: t.string<'small' | 'medium' | 'large'>(),
+        keyLength: t.number<1024 | 2048>(),
+      }),
+    ),
+  }));
+}
+```
+
 ## or and union
 
 Make a union (`oneType | otherType`) of several types by using `or` or `union`:

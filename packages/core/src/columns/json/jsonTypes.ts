@@ -29,8 +29,8 @@ export const jsonTypes = {
   unknown: () => new JSONUnknown(),
   boolean: () => new JSONBoolean(),
   null: () => new JSONNull(),
-  number: () => new JSONNumber(),
-  string: () => new JSONString(),
+  number: <T extends number = number>() => new JSONNumber<T>(),
+  string: <T extends string = string>() => new JSONString<T>(),
   array: <T extends JSONType>(item: T) => new JSONArray(item),
   object: <Shape extends JSONObjectShape>(shape: Shape) =>
     new JSONObject(shape),
