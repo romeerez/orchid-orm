@@ -205,6 +205,38 @@ const column = t
   .as(t.integer());
 ```
 
+## asType
+
+[//]: # 'has JSDoc'
+
+Mark the column as to have specific Typescript type.
+This can be used to narrow generic column types, such as narrow `string` to a string literal union.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    size: t.text().asType((t) => t<'small' | 'medium' | 'large'>()),
+  }));
+}
+
+// size will be typed as 'small' | 'medium' | 'large'
+const size = await db.table.get('size');
+```
+
+To alter the base, input, output and query types individually, pass them as generic parameters:
+
+```ts
+const column = t
+  .text()
+  .asType((t) => t<Type, InputType, OutputType, QueryType>());
+```
+
+- The first `Type` is the base one, used as a default for other types.
+- `InputType` is for `create`, `update` methods.
+- `OutputType` is for the data that is loaded from a database and parsed if the column has `parse`.
+- `QueryType` is used in `where` and other query methods, it should be compatible with the actual database column type.
+
 ## timestamps
 
 Adds `createdAt` and `updatedAt` columns of type `timestamp` (with time zone) with default SQL `now()`.

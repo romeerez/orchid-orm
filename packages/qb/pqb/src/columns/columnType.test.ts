@@ -307,6 +307,42 @@ describe('column type', () => {
     });
   });
 
+  describe('.asType', () => {
+    type Type = 'foo' | 'bar';
+    it('should use custom type', () => {
+      const withType = column.asType((t) => t<Type>());
+      assertType<typeof withType.type, Type>();
+      assertType<typeof withType.inputType, Type>();
+      assertType<typeof withType.outputType, Type>();
+      assertType<typeof withType.queryType, Type>();
+    });
+    it('should use custom type along with parse', () => {
+      const withType = column.asType((t) => t<Type>()).parse(() => 123);
+      assertType<typeof withType.type, Type>();
+      assertType<typeof withType.inputType, Type>();
+      assertType<typeof withType.outputType, number>();
+      assertType<typeof withType.queryType, Type>();
+    });
+    it('should use custom type along with encode', () => {
+      const withType = column
+        .asType((t) => t<Type>())
+        .encode((value: number) => '' + value);
+      assertType<typeof withType.type, Type>();
+      assertType<typeof withType.inputType, number>();
+      assertType<typeof withType.outputType, Type>();
+      assertType<typeof withType.queryType, Type>();
+    });
+    it('should use individual custom types', () => {
+      const withType = column.asType((t) =>
+        t<'type', 'input', 'output', 'query'>(),
+      );
+      assertType<typeof withType.type, 'type'>();
+      assertType<typeof withType.inputType, 'input'>();
+      assertType<typeof withType.outputType, 'output'>();
+      assertType<typeof withType.queryType, 'query'>();
+    });
+  });
+
   describe('.default', () => {
     it('should have toCode', () => {
       expect(column.default(123).toCode('t')).toBe(`t.column().default(123)`);
