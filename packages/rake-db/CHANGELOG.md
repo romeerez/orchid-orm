@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.36
+
+### Patch Changes
+
+- 5d693378: Add `rakeDb.lazy`, handle default exports in migrations (#167)
+
 ## 2.10.35
 
 ### Patch Changes
