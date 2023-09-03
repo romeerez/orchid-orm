@@ -73,7 +73,8 @@ export type CreateRelationsData<
 export type CreateRelationsDataOmittingFKeys<
   T extends Query,
   Relations extends RelationsBase,
-  // Collect a union of tuples for `belongsTo` relations
+  // Collect a union of `belongsTo` relation objects.
+  // Tuple is needed to preserve the inner union type of the object.
   Union extends [Record<string, unknown>] = {
     [K in keyof Relations]: CreateRelationDataOmittingFKeys<
       Relations[K]['relationConfig'],
@@ -84,14 +85,13 @@ export type CreateRelationsDataOmittingFKeys<
   // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (Union extends any ? (u: Union) => void : never) extends (
-    // `Union` is a union of tuples [{ fooId: number }, { foo: object }]
     u: [infer Obj],
   ) => void
     ? Obj
     : never;
 
-// Makes a tuple for a `belongsTo` relation:
-// [{ fooId: number }, { foo: object }]
+// Makes type for a `belongsTo` relation:
+// [{ fooId: number } | { foo: object }]
 export type CreateRelationDataOmittingFKeys<
   RelationConfig extends RelationConfigBase,
   Defaults extends PropertyKey,
