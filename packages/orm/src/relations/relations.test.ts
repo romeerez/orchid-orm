@@ -88,7 +88,7 @@ describe('relations', () => {
 
   it('should load nested relations, parse columns correctly', async () => {
     await db.message.create({
-      ...messageData,
+      Text: 'text',
       chat: {
         create: chatData,
       },
@@ -233,6 +233,9 @@ describe('relations', () => {
     assertType<Awaited<typeof first>, { Id: number; Name: string }[]>();
 
     const second = fn(db.profile.user.select('Id'));
-    assertType<Awaited<typeof second>, { Id: number; Name: string }>();
+    assertType<
+      Awaited<typeof second>,
+      { Id: number; Name: string } | undefined
+    >();
   });
 });

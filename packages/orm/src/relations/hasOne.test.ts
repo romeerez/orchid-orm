@@ -559,7 +559,6 @@ describe('hasOne', () => {
       describe('nested connect', () => {
         it('should support connect', async () => {
           await db.profile.create({
-            ...profileData,
             Bio: 'profile',
             user: {
               create: {
@@ -586,7 +585,6 @@ describe('hasOne', () => {
         it('should support connect many', async () => {
           await db.profile.createMany([
             {
-              ...profileData,
               Bio: 'profile 1',
               user: {
                 create: {
@@ -596,7 +594,6 @@ describe('hasOne', () => {
               },
             },
             {
-              ...profileData,
               Bio: 'profile 2',
               user: {
                 connect: { Name: 'tmp' },
@@ -702,7 +699,6 @@ describe('hasOne', () => {
       describe('connect or create', () => {
         it('should support connect or create', async () => {
           const profileId = await db.profile.get('Id').create({
-            ...profileData,
             Bio: 'profile 1',
             user: {
               create: {
@@ -754,7 +750,6 @@ describe('hasOne', () => {
 
         it('should support connect or create many', async () => {
           const profileId = await db.profile.get('Id').create({
-            ...profileData,
             Bio: 'profile 1',
             user: {
               create: {
@@ -945,7 +940,6 @@ describe('hasOne', () => {
             const { Id, UserId } = await db.profile
               .select('Id', 'UserId')
               .create({
-                ...profileData,
                 user: { create: userData },
               });
 
@@ -1033,7 +1027,7 @@ describe('hasOne', () => {
           it('should invoke callbacks', async () => {
             const { Id: prevId, UserId } = await db.profile
               .select('Id', 'UserId')
-              .create({ ...profileData, user: { create: userData } });
+              .create({ Bio: 'bio', user: { create: userData } });
 
             const newId = await db.profile.get('Id').create(profileData);
 
@@ -1100,7 +1094,7 @@ describe('hasOne', () => {
           it('should invoke callbacks', async () => {
             const { Id, UserId } = await db.profile
               .select('Id', 'UserId')
-              .create({ ...profileData, user: { create: userData } });
+              .create({ Bio: 'bio', user: { create: userData } });
 
             await db.user.find(UserId as number).update({
               profile: {
@@ -1117,8 +1111,8 @@ describe('hasOne', () => {
             resetMocks();
 
             const data = await db.profile.select('Id', 'UserId').createMany([
-              { ...profileData, user: { create: userData } },
-              { ...profileData, user: { create: userData } },
+              { Bio: 'bio', user: { create: userData } },
+              { Bio: 'bio', user: { create: userData } },
             ]);
 
             await db.user
@@ -1184,7 +1178,7 @@ describe('hasOne', () => {
           it('should invoke callbacks', async () => {
             const { Id, UserId } = await db.profile
               .select('Id', 'UserId')
-              .create({ ...profileData, user: { create: userData } });
+              .create({ Bio: 'bio', user: { create: userData } });
 
             await db.user.find(UserId as number).update({
               profile: {
@@ -1203,8 +1197,8 @@ describe('hasOne', () => {
             resetMocks();
 
             const data = await db.profile.select('Id', 'UserId').createMany([
-              { ...profileData, user: { create: userData } },
-              { ...profileData, user: { create: userData } },
+              { Bio: 'bio', user: { create: userData } },
+              { Bio: 'bio', user: { create: userData } },
             ]);
 
             await db.user
@@ -1322,7 +1316,7 @@ describe('hasOne', () => {
           it('should invoke callbacks when connecting', async () => {
             const { Id, UserId } = await db.profile
               .select('Id', 'UserId')
-              .create({ ...profileData, user: { create: userData } });
+              .create({ Bio: 'bio', user: { create: userData } });
 
             await db.user.find(UserId as number).update({
               profile: {
@@ -1420,7 +1414,7 @@ describe('hasOne', () => {
           it('should invoke callbacks to disconnect previous and create new', async () => {
             const { Id, UserId } = await db.profile
               .select('Id', 'UserId')
-              .create({ ...profileData, user: { create: userData } });
+              .create({ Bio: 'bio', user: { create: userData } });
 
             resetMocks();
 

@@ -87,12 +87,15 @@ export type HasOneInfo<
   one: true;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
-  dataForCreate: Relation['options'] extends RelationThroughOptions
+  requiredDataForCreate: EmptyObject;
+  optionalDataForCreate: Relation['options'] extends RelationThroughOptions
     ? EmptyObject
-    : RelationToOneDataForCreate<{
-        nestedCreateQuery: NestedCreateQuery;
-        table: Q;
-      }>;
+    : {
+        [P in K]?: RelationToOneDataForCreate<{
+          nestedCreateQuery: NestedCreateQuery;
+          table: Q;
+        }>;
+      };
   // `hasOne` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key of the related record
   // - `delete` to delete the related record
@@ -132,7 +135,8 @@ export type HasOneInfo<
     ? RelationConfig<
         T,
         Relations,
-        Relations[Relation['options']['through']]
+        Relations[Relation['options']['through']],
+        Relation['options']['through']
       >['params']
     : never;
   populate: Populate;

@@ -15,7 +15,7 @@ import {
   VirtualColumn,
   WhereArg,
 } from 'pqb';
-import { EmptyObject } from 'orchid-core';
+import { EmptyObject, StringKey } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
@@ -100,15 +100,15 @@ export type RelationConfig<
   T extends Table = Table,
   Relations extends RelationThunks = RelationThunks,
   Relation extends RelationThunk = RelationThunk,
-  K extends string = string,
+  K extends PropertyKey = PropertyKey,
   Result extends RelationConfigBase = Relation extends BelongsTo
-    ? BelongsToInfo<T, Relation, K>
+    ? BelongsToInfo<T, Relation, StringKey<K>>
     : Relation extends HasOne
-    ? HasOneInfo<T, Relations, Relation, K>
+    ? HasOneInfo<T, Relations, Relation, StringKey<K>>
     : Relation extends HasMany
-    ? HasManyInfo<T, Relations, Relation, K>
+    ? HasManyInfo<T, Relations, Relation, StringKey<K>>
     : Relation extends HasAndBelongsToMany
-    ? HasAndBelongsToManyInfo<T, Relation, K>
+    ? HasAndBelongsToManyInfo<T, Relation, StringKey<K>>
     : never,
 > = Result;
 
@@ -118,7 +118,12 @@ export type MapRelation<
   RelationName extends keyof Relations,
   Relation extends RelationThunk = Relations[RelationName],
   RelatedQuery extends Query = RelationScopeOrTable<Relation>,
-  Config extends RelationConfigBase = RelationConfig<T, Relations, Relation>,
+  Config extends RelationConfigBase = RelationConfig<
+    T,
+    Relations,
+    Relation,
+    RelationName
+  >,
 > = RelationQuery<
   RelationName,
   Config,

@@ -123,7 +123,7 @@ describe('updateTableFile', () => {
     );
   });
 
-  it.only('should add multiple columns', async () => {
+  it('should add multiple columns', async () => {
     asMock(fs.readFile).mockResolvedValue(
       template(`id: t.identity().primaryKey(),`),
     );

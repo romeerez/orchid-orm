@@ -71,7 +71,6 @@ export class ProfileTable extends BaseTable {
 
   relations = {
     user: this.belongsTo(() => UserTable, {
-      required: true,
       columns: ['UserId', 'ProfileKey'],
       references: ['Id', 'UserKey'],
     }),

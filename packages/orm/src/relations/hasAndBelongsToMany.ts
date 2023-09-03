@@ -75,10 +75,13 @@ export type HasAndBelongsToManyInfo<
   one: false;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
-  dataForCreate: RelationToManyDataForCreate<{
-    nestedCreateQuery: Q;
-    table: Q;
-  }>;
+  requiredDataForCreate: EmptyObject;
+  optionalDataForCreate: {
+    [P in K]?: RelationToManyDataForCreate<{
+      nestedCreateQuery: Q;
+      table: Q;
+    }>;
+  };
   // `hasAndBelongsToMany` relation data available for update. It supports:
   // - `disconnect` to delete join table records for related records found by conditions
   // - `set` to create join table records for related records found by conditions

@@ -13,9 +13,14 @@ export type RelationConfigBase = {
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
   // or with `db.book.create({ author: authorData })`.
-  // Other relation kinds has `never` for it.
+  // Other relation kinds have `omitForeignKeyInCreate: never`.
   omitForeignKeyInCreate: PropertyKey;
-  dataForCreate: unknown;
+  // Data for `create` method that may have required properties.
+  // Only `belongsTo` has it for required foreign keys.
+  requiredDataForCreate: unknown;
+  // Data for `create` method with all optional properties.
+  // Other than `belongsTo` relation kinds use it.
+  optionalDataForCreate: unknown;
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
   params: Record<string, unknown>;
@@ -34,7 +39,7 @@ export type RelationQuery<
   Name extends PropertyKey = PropertyKey,
   Config extends RelationConfigBase = RelationConfigBase,
   T extends Query = Query,
-  Q extends Query = (Config['chainedCreate'] extends true
+  Q extends Query = ((Config['chainedCreate'] extends true
     ? T
     : T & {
         [K in CreateMethodsNames]: never;
@@ -43,9 +48,7 @@ export type RelationQuery<
       ? EmptyObject
       : {
           [K in DeleteMethodsNames]: never;
-        }),
-> = ((params: Config['params']) => Q) &
-  Q & {
+        })) & {
     meta: Omit<T['meta'], 'as'> & {
       as: StringKey<Name>;
       defaults: Record<Config['populate'], true>;
@@ -54,7 +57,8 @@ export type RelationQuery<
     relationConfig: Config;
     // INNER JOIN the current relation instead of the default OUTER behavior
     join<T extends Query>(this: T): T;
-  };
+  },
+> = ((params: Config['params']) => Q) & Q;
 
 /**
  * Map relations into a Record where each relation aggregate methods can be chained with column operators.

@@ -679,13 +679,11 @@ describe('hasMany', () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
         await db.message.createMany([
           {
-            ...messageData,
             ChatId,
             user: { create: { ...userData, Name: 'tmp' } },
             Text: 'message 1',
           },
           {
-            ...messageData,
             ChatId,
             user: { connect: { Name: 'tmp' } },
             Text: 'message 2',
@@ -723,25 +721,21 @@ describe('hasMany', () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
         await db.message.createMany([
           {
-            ...messageData,
             ChatId,
             user: { create: { ...userData, Name: 'tmp' } },
             Text: 'message 1',
           },
           {
-            ...messageData,
             ChatId,
             user: { connect: { Name: 'tmp' } },
             Text: 'message 2',
           },
           {
-            ...messageData,
             ChatId,
             user: { connect: { Name: 'tmp' } },
             Text: 'message 3',
           },
           {
-            ...messageData,
             ChatId,
             user: { connect: { Name: 'tmp' } },
             Text: 'message 4',
@@ -885,7 +879,6 @@ describe('hasMany', () => {
       it('should support connect or create', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const messageId = await db.message.get('Id').create({
-          ...messageData,
           ChatId,
           user: { create: { ...userData, Name: 'tmp' } },
           Text: 'message 1',
@@ -928,13 +921,11 @@ describe('hasMany', () => {
           .select('Id')
           .createMany([
             {
-              ...messageData,
               ChatId,
               user: { create: { ...userData, Name: 'tmp' } },
               Text: 'message 1',
             },
             {
-              ...messageData,
               ChatId,
               user: { create: { ...userData, Name: 'tmp' } },
               Text: 'message 4',

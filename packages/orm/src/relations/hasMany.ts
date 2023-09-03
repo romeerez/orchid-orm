@@ -80,12 +80,15 @@ export type HasManyInfo<
   one: false;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
-  dataForCreate: Relation['options'] extends RelationThroughOptions
-    ? EmptyObject
-    : RelationToManyDataForCreate<{
-        nestedCreateQuery: NestedCreateQuery;
-        table: Q;
-      }>;
+  requiredDataForCreate: EmptyObject;
+  optionalDataForCreate: {
+    [P in K]?: Relation['options'] extends RelationThroughOptions
+      ? EmptyObject
+      : RelationToManyDataForCreate<{
+          nestedCreateQuery: NestedCreateQuery;
+          table: Q;
+        }>;
+  };
   // `hasMany` relation data available for update. It supports:
   // - `disconnect` to nullify foreign keys of the related records
   // - `delete` to delete related record found by conditions
@@ -119,7 +122,8 @@ export type HasManyInfo<
     ? RelationConfig<
         T,
         Relations,
-        Relations[Relation['options']['through']]
+        Relations[Relation['options']['through']],
+        Relation['options']['through']
       >['params']
     : never;
   populate: Populate;

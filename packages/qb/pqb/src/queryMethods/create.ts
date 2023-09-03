@@ -36,11 +36,12 @@ export type CreateData<
     keyof T['meta']['defaults']
   >,
 > = [keyof T['relations']] extends [never]
-  ? Data
-  : OmitForeignKeysForRelations<T['relations'], Data> & CreateRelationsData<T>;
+  ? // if no relations, don't load TS with extra calculations
+    Data
+  : CreateRelationsData<T, T['relations'], Data>;
 
 // Type of available variants to provide for a specific column when creating
-type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
+export type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
   | Expression
   | T['inputType'][Key]
   | {
@@ -49,58 +50,59 @@ type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
         : Query[K];
     };
 
-/**
- * Omit `belongsTo` foreign keys, see {@link BaseRelation.omitForeignKeyInCreate}.
- */
-type OmitForeignKeysForRelations<R extends RelationsBase, Data> = Omit<
+// Combine data of the table with data that can be set for relations
+export type CreateRelationsData<
+  T extends Query,
+  Relations extends RelationsBase,
   Data,
-  {
-    [K in keyof R]: R[K]['relationConfig']['omitForeignKeyInCreate'];
-  }[keyof R]
->;
-
-// Adds relation operations such as nested `create`, `connect`, and others to use when creating
-type CreateRelationsData<T extends Query> = {
-  [K in keyof T['relations']]: CreateRelationData<
-    T,
-    K,
-    T['relations'][K]['relationConfig']
-  >;
-}[keyof T['relations']];
-
-// Adds relation operations for a single relation
-type CreateRelationData<
-  T extends Query,
-  K extends PropertyKey,
-  R extends RelationConfigBase,
-> = [R['omitForeignKeyInCreate']] extends [never]
-  ? CreateRelationDataWithoutFKeys<K, R>
-  : CreateRelationDataWithFKeys<T, K, R>;
-
-// Adds relation operations for a relation that has 'omitForeignKeyInCreate'.
-// Resulting type will be like { someId: type } | { some: Relation['dataForCreate'] }
-type CreateRelationDataWithFKeys<
-  T extends Query,
-  K extends PropertyKey,
-  R extends RelationConfigBase,
-  FKeys = {
-    [K in R['omitForeignKeyInCreate']]: R['omitForeignKeyInCreate'] extends keyof T['inputType']
-      ? T['inputType'][R['omitForeignKeyInCreate']]
-      : never;
-  },
 > =
-  | {
-      [K in keyof FKeys]: K extends keyof T['meta']['defaults']
-        ? { [L in K]?: FKeys[L] }
-        : { [L in K]: FKeys[L] };
-    }[keyof FKeys]
-  | { [Key in K]: R['dataForCreate'] };
+  // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
+  Omit<
+    Data,
+    Relations[keyof Relations]['relationConfig']['omitForeignKeyInCreate']
+  > &
+    // Intersection of objects for `belongsTo` relations:
+    // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
+    CreateRelationsDataOmittingFKeys<T, Relations> &
+    // Union of the rest relations objects, intersection is not needed here because there are no required properties:
+    // { foo: object } | { bar: object }
+    Relations[keyof Relations]['relationConfig']['optionalDataForCreate'];
 
-// Adds relation operations for a relation that has no 'omitForeignKeyInCreate'.
-type CreateRelationDataWithoutFKeys<
-  K extends PropertyKey,
-  R extends RelationConfigBase,
-> = { [Key in K]?: R['dataForCreate'] };
+// Intersection of relations that may omit foreign key (belongsTo):
+// ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
+export type CreateRelationsDataOmittingFKeys<
+  T extends Query,
+  Relations extends RelationsBase,
+  // Collect a union of tuples for `belongsTo` relations
+  Union extends [Record<string, unknown>] = {
+    [K in keyof Relations]: CreateRelationDataOmittingFKeys<
+      Relations[K]['relationConfig'],
+      keyof T['meta']['defaults']
+    >;
+  }[keyof Relations],
+> =
+  // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (Union extends any ? (u: Union) => void : never) extends (
+    // `Union` is a union of tuples [{ fooId: number }, { foo: object }]
+    u: [infer Obj],
+  ) => void
+    ? Obj
+    : never;
+
+// Makes a tuple for a `belongsTo` relation:
+// [{ fooId: number }, { foo: object }]
+export type CreateRelationDataOmittingFKeys<
+  RelationConfig extends RelationConfigBase,
+  Defaults extends PropertyKey,
+  Data = RelationConfig['requiredDataForCreate'],
+> = [
+  {
+    [K in keyof Data]: K extends Defaults ? never : Data[K];
+  } & {
+    [K in keyof Data]?: K extends Defaults ? Data[K] : never;
+  },
+];
 
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
@@ -219,7 +221,11 @@ const mapColumnValues = (
   );
 };
 
-const handleOneData = (q: Query, data: CreateData<Query>, ctx: CreateCtx) => {
+const handleOneData = (
+  q: Query,
+  data: Record<string, unknown>,
+  ctx: CreateCtx,
+) => {
   const encoders: Record<string, Encoder> = {};
   const defaults = q.q.defaults;
 
@@ -237,7 +243,7 @@ const handleOneData = (q: Query, data: CreateData<Query>, ctx: CreateCtx) => {
 
 const handleManyData = (
   q: Query,
-  data: CreateData<Query>[],
+  data: Record<string, unknown>[],
   ctx: CreateCtx,
 ) => {
   const encoders: Record<string, Encoder> = {};

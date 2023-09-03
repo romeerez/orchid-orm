@@ -32,7 +32,7 @@ import {
   relationWhere,
   selectIfNotSelected,
 } from './common/utils';
-import { emptyArray } from 'orchid-core';
+import { emptyArray, EmptyObject } from 'orchid-core';
 import {
   RelationCommonOptions,
   RelationKeysOptions,
@@ -70,17 +70,24 @@ export type BelongsToInfo<
     DbTable<ReturnType<Relation['fn']>>,
     K
   >,
+  DataForCreate = RelationToOneDataForCreate<{
+    nestedCreateQuery: Q;
+    table: Q;
+  }>,
+  Required = Relation['options']['required'] extends true ? true : false,
 > = {
   table: Q;
   query: Q;
   joinQuery(fromQuery: Query, toQuery: Query): Query;
   one: true;
-  required: Relation['options']['required'] extends true ? true : false;
+  required: Required;
   omitForeignKeyInCreate: FK;
-  dataForCreate: RelationToOneDataForCreate<{
-    nestedCreateQuery: Q;
-    table: Q;
-  }>;
+  requiredDataForCreate:
+    | { [L in FK]: T['columns'][L]['inputType'] }
+    | (Required extends true
+        ? { [Key in K]: DataForCreate }
+        : { [Key in K]?: DataForCreate });
+  optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key for the relation
   // - `set` to update the foreign key with a relation primary key found by conditions
