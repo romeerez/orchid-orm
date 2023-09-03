@@ -135,6 +135,38 @@ yarn db new createSomeTable
 
 See [this instruction](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/express-esm) in case you're using [Vite](https://vitejs.dev/).
 
+## awaiting rakeDb
+
+`rakeDb` function starts executing immediately after it's called, `node.js` will keep the program alive until it has at least one pending promise, and it closes after `rakeDb` is finished.
+
+But some other environments may not wait for `rakeDb` to finish automatically, then you'll need to await for it manually in such a way:
+
+```ts
+export const change = rakeDb(dbConfig, rakeDbConfig);
+
+// wait for `rakeDb` to finish:
+await change.promise;
+```
+
+## rakeDb.lazy
+
+`rakeDb` is designed to be launched with CLI, it will execute one command, and finish.
+
+But in some cases you might want to run it programmatically, and you can do it with `rakeDb.lazy`:
+
+```ts
+export const { change, run } = rakeDb.lazy(dbConfig, rakeDbConfig);
+
+// run a command programmatically:
+await run(['migrate']);
+```
+
+`rakeDb.lazy` is accepting the same options as `rakeDb`, and returns two functions.
+
+`change` is to be used in migrations to wrap database changes with it.
+
+`run` is a function to execute a command, it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)), returns a `Promise<void>`.
+
 ## ReferenceError: require is not defined
 
 If you encounter the error `ReferenceError: require is not defined`,
@@ -228,6 +260,9 @@ type MigrationConfig = {
   }): Promise<void>;
 
   useCodeUpdater?: boolean;
+
+  // throw if a migration doesn't have a default export
+  forceDefaultExports?: boolean;
 
   beforeMigrate?(db: Db): Promise<void>;
   afterMigrate?(db: Db): Promise<void>;

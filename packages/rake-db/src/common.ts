@@ -58,12 +58,14 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
       options: AdapterOptions[],
       config: RakeDbConfig<CT>,
       args: string[],
-    ) => Promise<void>
+    ) => void | Promise<void>
   >;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: BaseTable<CT>;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
+  // throw if a migration doesn't have a default export
+  forceDefaultExports?: boolean;
   import(path: string): Promise<unknown>;
   beforeMigrate?(db: Db): Promise<void>;
   afterMigrate?(db: Db): Promise<void>;
@@ -334,7 +336,12 @@ export const getTextAfterFrom = (input: string): string | undefined => {
 export type MigrationItem = {
   path: string;
   version: string;
-  change(): Promise<unknown>;
+  /**
+   * Function that loads the migration content,
+   * can store lazy import of a migration file.
+   * Promise can return `{ default: x }` where `x` is a return of `change` or an array of such returns.
+   */
+  load(): Promise<unknown>;
 };
 
 // If the config has a `migrations` object, it will be returned as array of migration items.
@@ -368,7 +375,7 @@ function getMigrationsFromConfig(
     result.push({
       path: path.resolve(basePath, key),
       version: getVersion(path.basename(key)),
-      change: migrations[key],
+      load: migrations[key],
     });
   }
 
@@ -401,7 +408,7 @@ async function getMigrationsFromFiles(
     return {
       path: filePath,
       version: getVersion(file),
-      async change() {
+      async load() {
         try {
           await imp(filePath);
         } catch (err) {

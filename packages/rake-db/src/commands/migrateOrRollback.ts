@@ -24,6 +24,7 @@ import {
   removeMigratedVersion,
   saveMigratedVersion,
 } from '../migration/manageMigratedVersions';
+import { RakeDbError } from '../errors';
 
 const getDb = (adapter: Adapter) => createDb({ adapter });
 
@@ -141,8 +142,21 @@ const processMigration = async <CT extends ColumnTypesBase>(
 
     let changes = changeCache[file.path];
     if (!changes) {
-      await file.change();
-      changes = getCurrentChanges();
+      const module = (await file.load()) as
+        | {
+            default?: MaybeArray<ChangeCallback>;
+          }
+        | undefined;
+
+      const exported = module?.default && toArray(module.default);
+
+      if (config.forceDefaultExports && !exported) {
+        throw new RakeDbError(
+          `Missing a default export in ${file.path} migration`,
+        );
+      }
+
+      changes = exported || getCurrentChanges();
       changeCache[file.path] = changes;
     }
 

@@ -6,6 +6,8 @@ import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock } from 'test-utils';
+import { noop } from 'orchid-core';
+import { clearChanges, getCurrentChanges } from './migration/change';
 
 jest.mock('./common', () => ({
   processRakeDbConfig: (config: unknown) => config,
@@ -164,5 +166,40 @@ describe('rakeDb', () => {
 
     expect(errorLog).toBeCalledWith('message');
     expect(exit).toBeCalledWith(1);
+  });
+
+  it('should return a `change` function that saves a change callback, and also returns it', () => {
+    const change = rakeDb(options, { ...config, commands: { custom: noop } }, [
+      'custom',
+    ]);
+
+    const fn = async () => {};
+    const result = change(fn);
+
+    expect(getCurrentChanges()).toEqual([fn]);
+    expect(result).toBe(fn);
+  });
+
+  describe('rakeDb.lazy', () => {
+    beforeAll(clearChanges);
+
+    it('should return `change` and `run` functions', () => {
+      const custom = jest.fn();
+
+      const { change, run } = rakeDb.lazy(options, {
+        ...config,
+        commands: { custom },
+      });
+
+      const fn = async () => {};
+      const result = change(fn);
+
+      expect(getCurrentChanges()).toEqual([fn]);
+      expect(result).toBe(fn);
+
+      run(['custom']);
+
+      expect(custom).toBeCalled();
+    });
   });
 });

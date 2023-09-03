@@ -9,68 +9,125 @@ import { RakeDbError } from './errors';
 import { ChangeCallback, pushChange } from './migration/change';
 import { runRecurrentMigrations } from './commands/recurrent';
 
-export const rakeDb = <CT extends ColumnTypesBase = DefaultColumnTypes>(
+/**
+ * Type of {@link rakeDb} function
+ */
+export type RakeDbFn = (<C extends ColumnTypesBase = DefaultColumnTypes>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig: InputRakeDbConfig<CT> = {},
-  args: string[] = process.argv.slice(2),
-): ((fn: ChangeCallback<CT>) => void) & { promise: Promise<void> } => {
-  const config = processRakeDbConfig(partialConfig);
-  const promise = runCommand(options, config, args);
-
-  return Object.assign(
-    (fn: ChangeCallback<CT>) => {
-      pushChange(fn as unknown as ChangeCallback);
-    },
-    {
-      promise,
-    },
-  );
+  partialConfig?: InputRakeDbConfig<C>,
+  args?: string[],
+) => RakeDbChangeFn<C> & {
+  promise: Promise<void>;
+}) & {
+  /**
+   * Unlike the original `rakeDb` that executes immediately,
+   * `rakeDb.lazy` returns the `run` function to be later called programmatically.
+   *
+   * @param options - {@link AdapterOptions} or an array of such options to migrate multiple dbs
+   * @param config - {@link RakeDbConfig}
+   * @returns `change` is to be used in migrations, `run` takes an array cli args to execute a command
+   */
+  lazy: RakeDbLazyFn;
 };
 
-const runCommand = async <CT extends ColumnTypesBase = DefaultColumnTypes>(
+/**
+ * Type of {@link rakeDb.lazy} function
+ */
+export type RakeDbLazyFn = <C extends ColumnTypesBase = DefaultColumnTypes>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
-  args: string[] = process.argv.slice(2),
-): Promise<void> => {
-  const arg = args[0]?.split(':')[0];
+  partialConfig?: InputRakeDbConfig<C>,
+) => {
+  change: RakeDbChangeFn<C>;
+  run(args: string[]): Promise<void>;
+};
 
-  try {
-    if (arg === 'create') {
-      await createDb(options, config);
-    } else if (arg === 'drop') {
-      await dropDb(options, config);
-    } else if (arg === 'reset') {
-      await resetDb(options, config);
-    } else if (arg === 'up' || arg === 'migrate') {
-      await migrate(options, config, args.slice(1));
-    } else if (arg === 'down' || arg === 'rollback') {
-      await rollback(options, config, args.slice(1));
-    } else if (arg === 'redo') {
-      await redo(options, config, args.slice(1));
-    } else if (arg === 'new') {
-      await generate(config, args.slice(1));
-    } else if (arg === 'pull') {
-      await pullDbStructure(toArray(options)[0], config);
-    } else if (config.commands[arg]) {
-      await config.commands[arg](toArray(options), config, args.slice(1));
-    } else if (arg !== 'rec' && arg !== 'recurrent') {
-      config.logger?.log(help);
-    }
+/**
+ * Function to use in migrations to wrap database changes
+ * Saves the given callback to an internal queue,
+ * and also returns the callback in case you want to export it from migration.
+ */
+export type RakeDbChangeFn<C extends ColumnTypesBase> = (
+  fn: ChangeCallback<C>,
+) => ChangeCallback<C>;
 
-    if (
-      arg === 'migrate' ||
-      arg === 'rec' ||
-      arg === 'recurrent' ||
-      arg === 'redo'
-    ) {
-      await runRecurrentMigrations(options, config);
-    }
-  } catch (err) {
+/**
+ * Function to configure and run `rakeDb`.
+ *
+ * @param options - {@link AdapterOptions} or an array of such options to migrate multiple dbs
+ * @param config - {@link RakeDbConfig}
+ * @param args - optionally provide an array of cli args. Default is `process.argv.slice(2)`.
+ */
+export const rakeDb: RakeDbFn = ((
+  options,
+  partialConfig = {},
+  args = process.argv.slice(2),
+) => {
+  const config = processRakeDbConfig(partialConfig);
+  const promise = runCommand(options, config, args).catch((err) => {
     if (err instanceof RakeDbError) {
       config.logger?.error(err.message);
       process.exit(1);
     }
     throw err;
+  });
+
+  return Object.assign(change, {
+    promise,
+  });
+}) as RakeDbFn;
+
+rakeDb.lazy = ((options, partialConfig = {}) => {
+  const config = processRakeDbConfig(partialConfig);
+
+  return {
+    change,
+    run(args: string[]) {
+      return runCommand(options, config, args);
+    },
+  };
+}) as RakeDbLazyFn;
+
+function change(fn: ChangeCallback) {
+  pushChange(fn);
+  return fn;
+}
+
+const runCommand = async <C extends ColumnTypesBase = DefaultColumnTypes>(
+  options: MaybeArray<AdapterOptions>,
+  config: RakeDbConfig<C>,
+  args: string[] = process.argv.slice(2),
+): Promise<void> => {
+  const arg = args[0]?.split(':')[0];
+
+  if (arg === 'create') {
+    await createDb(options, config);
+  } else if (arg === 'drop') {
+    await dropDb(options, config);
+  } else if (arg === 'reset') {
+    await resetDb(options, config);
+  } else if (arg === 'up' || arg === 'migrate') {
+    await migrate(options, config, args.slice(1));
+  } else if (arg === 'down' || arg === 'rollback') {
+    await rollback(options, config, args.slice(1));
+  } else if (arg === 'redo') {
+    await redo(options, config, args.slice(1));
+  } else if (arg === 'new') {
+    await generate(config, args.slice(1));
+  } else if (arg === 'pull') {
+    await pullDbStructure(toArray(options)[0], config);
+  } else if (config.commands[arg]) {
+    await config.commands[arg](toArray(options), config, args.slice(1));
+  } else if (arg !== 'rec' && arg !== 'recurrent') {
+    config.logger?.log(help);
+  }
+
+  if (
+    arg === 'migrate' ||
+    arg === 'rec' ||
+    arg === 'recurrent' ||
+    arg === 'redo'
+  ) {
+    await runRecurrentMigrations(options, config);
   }
 };
 

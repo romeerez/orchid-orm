@@ -75,6 +75,39 @@ change(async (db, up) => {
 });
 ```
 
+## default export
+
+In some setups it may be required to load multiple migrations first, and execute them later.
+
+The problem is, `rakeDb` wouldn't know which db changes belong to which migration files, and you need to do default exports to solve it:
+
+```ts
+import { change } from '../src';
+
+export default change(async (db, up) => {
+  const { table } = await db.createTable('table', (t) => ({
+    // ...
+  }));
+});
+```
+
+If there are multiple changes in the same file, `export default` an array:
+
+```ts
+import { change } from '../src';
+
+export default [
+  change(async (db, up) => {
+    // change 1
+  }),
+  change(async (db, up) => {
+    // change 2
+  }),
+];
+```
+
+To accidentally not forgot to write a default export, set `forceDefaultExports` to `true` in a `rakeDb` config.
+
 ## createTable, dropTable
 
 [//]: # 'has JSDoc'

@@ -304,7 +304,7 @@ describe('common', () => {
         files.map((file) => ({
           path: path.resolve(config.migrationsPath, file),
           version,
-          change: expect.any(Function),
+          load: expect.any(Function),
         })),
       );
     });
@@ -325,12 +325,12 @@ describe('common', () => {
         {
           path: path.resolve(__dirname, `${version}_a.ts`),
           version,
-          change: fn1,
+          load: fn1,
         },
         {
           path: path.resolve(__dirname, `${version}_b.ts`),
           version,
-          change: fn2,
+          load: fn2,
         },
       ]);
     });
