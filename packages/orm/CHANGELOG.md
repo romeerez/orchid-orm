@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.17.4
+
+### Patch Changes
+
+- 93006a0e: Change type of `create` for case of having multiple `belongsTo` relations to require all needed foreign keys or relation objects (#170)
+- Updated dependencies [93006a0e]
+  - pqb@0.18.4
+
 ## 1.17.3
 
 ### Patch Changes
