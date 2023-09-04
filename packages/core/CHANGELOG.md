@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.4
+
+### Patch Changes
+
+- 2d383dc6: Add `hasDefault` column method (#168)
+
 ## 0.10.3
 
 ### Patch Changes
