@@ -50,6 +50,23 @@ export class Table extends BaseTable {
 }
 ```
 
+## hasDefault
+
+[//]: # 'has JSDoc'
+
+Use `hasDefault` to let the column be omitted when creating records.
+
+It's better to use [default](#default) instead so the value is explicit and serves as a hint.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    column: t.text().hasDefault(),
+  }));
+}
+```
+
 ## nullable
 
 [//]: # 'has JSDoc'

@@ -392,6 +392,17 @@ export abstract class ColumnTypeBase<
   }
 
   /**
+   * Use `hasDefault` to let the column be omitted when creating records.
+   *
+   * It's better to use {@link default} instead so the value is explicit and serves as a hint.
+   */
+  hasDefault<T extends ColumnTypeBase>(
+    this: T,
+  ): ColumnWithDefault<T, RawSQLBase> {
+    return this as ColumnWithDefault<T, RawSQLBase>;
+  }
+
+  /**
    * Set a database-level validation check to a column. `check` accepts a raw SQL.
    *
    * ```ts
