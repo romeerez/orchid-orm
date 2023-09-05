@@ -483,7 +483,6 @@ const astToQueries = (
       );
     } else if (item.type === 'drop') {
       const name = getColumnName(item.item, key, snakeCase);
-      addColumnIndex(dropIndexes, name, item.item);
 
       alterTable.push(
         `DROP COLUMN "${name}"${item.dropMode ? ` ${item.dropMode}` : ''}`,

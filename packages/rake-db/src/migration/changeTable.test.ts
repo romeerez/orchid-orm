@@ -521,7 +521,7 @@ describe('changeTable', () => {
             expectSql([
               `ALTER TABLE "table"
                 DROP COLUMN "withIndex"`,
-              toLine(`DROP INDEX "indexName"`),
+              // index is dropped automatically with the column
             ]),
         );
       });
@@ -549,7 +549,6 @@ describe('changeTable', () => {
             expectSql([
               `ALTER TABLE "table"
               DROP COLUMN "uniqueColumn"`,
-              toLine(`DROP INDEX "table_uniqueColumn_idx" CASCADE`),
             ]),
         );
       });
@@ -574,7 +573,6 @@ describe('changeTable', () => {
             expectSql([
               `ALTER TABLE "table"
                 DROP COLUMN "with_index"`,
-              toLine(`DROP INDEX "table_with_index_idx"`),
             ]),
         );
       });
@@ -1087,9 +1085,6 @@ describe('changeTable', () => {
                 ALTER TABLE "table"
                 DROP COLUMN "generated"
               `,
-              `
-                DROP INDEX "table_generated_idx"
-              `,
             ]),
         );
       });
@@ -1117,9 +1112,6 @@ describe('changeTable', () => {
               `
                 ALTER TABLE "table"
                 DROP COLUMN "generated"
-              `,
-              `
-                DROP INDEX "table_generated_idx"
               `,
             ]),
         );
@@ -1150,9 +1142,6 @@ describe('changeTable', () => {
               `
                 ALTER TABLE "table"
                 DROP COLUMN "generated"
-              `,
-              `
-                DROP INDEX "table_generated_idx"
               `,
             ]),
         );
@@ -1186,9 +1175,6 @@ describe('changeTable', () => {
               `
                 ALTER TABLE "table"
                 DROP COLUMN "generated"
-              `,
-              `
-                DROP INDEX "table_generated_idx"
               `,
             ]),
         );
