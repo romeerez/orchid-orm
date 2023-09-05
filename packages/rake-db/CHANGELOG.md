@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.39
+
+### Patch Changes
+
+- f4d2493a: Do not drop index when dropping a column in `changeTable` because it's done by db (#172)
+
 ## 2.10.38
 
 ### Patch Changes
