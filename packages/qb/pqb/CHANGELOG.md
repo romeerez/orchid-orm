@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.6
+
+### Patch Changes
+
+- 043f0fbd: Add `data` prop and pass update data to `create` callback in `upsert` (#169)
+
 ## 0.18.5
 
 ### Patch Changes
