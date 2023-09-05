@@ -118,6 +118,55 @@ describe('upsertOrCreate', () => {
         }),
       ).rejects.toThrow();
     });
+
+    it('should inject update data into create function', async () => {
+      const created = await User.find(1).upsert({
+        update: {
+          name: 'name',
+        },
+        create: (data) => ({
+          ...data,
+          password: 'password',
+        }),
+      });
+
+      expect(created).toMatchObject({
+        name: 'name',
+        password: 'password',
+      });
+    });
+
+    it('should use `data` for both update and create', async () => {
+      const created = await User.find(1).upsert({
+        data: {
+          name: 'name',
+        },
+        create: {
+          password: 'password',
+        },
+      });
+
+      expect(created).toMatchObject({
+        name: 'name',
+        password: 'password',
+      });
+    });
+
+    it('should use `data` for both update and create with function', async () => {
+      const created = await User.find(1).upsert({
+        data: {
+          name: 'name',
+        },
+        create: (data) => ({
+          password: data.name,
+        }),
+      });
+
+      expect(created).toMatchObject({
+        name: 'name',
+        password: 'name',
+      });
+    });
   });
 
   describe('orCreate', () => {

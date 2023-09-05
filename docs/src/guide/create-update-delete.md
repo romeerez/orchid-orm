@@ -588,12 +588,29 @@ It will implicitly wrap queries in a transaction if it was not wrapped yet.
 
 In case more than one row was updated, it will throw `MoreThanOneRowError` and the transaction will be rolled back.
 
-`update` and `create` properties are accepting the same type of objects as the `update` and `create` commands.
+It can take `update` and `create` objects, then they are used separately for update and create queries.
+Or, it can take `data` and `create` objects, `data` will be used for update and be mixed to `create` object.
 
-Not returning a value by default, place `select` or `selectAll` before `upsert` to specify returning columns.
+`data` and `update` objects are of the same type that's expected by `update` method, `create` object is of type of `create` method argument.
+
+It is not returning a value by default, place `select` or `selectAll` before `upsert` to specify returning columns.
 
 ```ts
-const user = await User.selectAll()
+await User.selectAll()
+  .find({ email: 'some@email.com' })
+  .upsert({
+    data: {
+      // update record's name
+      name: 'new name',
+    },
+    create: {
+      // create a new record with this email and a name 'new name'
+      email: 'some@email.com',
+    },
+  });
+
+// the same as above but using `update` and `create`
+await User.selectAll()
   .find({ email: 'some@email.com' })
   .upsert({
     update: {
@@ -601,6 +618,7 @@ const user = await User.selectAll()
     },
     create: {
       email: 'some@email.com',
+      // here we use a different name when creating a record
       name: 'created user',
     },
   });
@@ -609,7 +627,7 @@ const user = await User.selectAll()
 The data for `create` may be returned from a function, it won't be called if a record was updated:
 
 ```ts
-const user = await User.selectAll()
+await User.selectAll()
   .find({ email: 'some@email.com' })
   .upsert({
     update: {
@@ -618,6 +636,36 @@ const user = await User.selectAll()
     create: () => ({
       email: 'some@email.com',
       name: 'created user',
+    }),
+  });
+
+// the same as above using `data`
+await User.selectAll()
+  .find({ email: 'some@email.com' })
+  .upsert({
+    data: {
+      name: 'updated user',
+    },
+    create: () => ({
+      email: 'some@email.com',
+      // name in `create` is overriding the name from `data`
+      name: 'created user',
+    }),
+  });
+```
+
+Data from `data` or `update` is passed to the `create` function and can be used:
+
+```ts
+const user = await User.selectAll()
+  .find({ email: 'some@email.com' })
+  .upsert({
+    data: {
+      name: 'updated user',
+    },
+    // `updateData` has the exact type of what is passed to `data`
+    create: (updateData) => ({
+      email: `${updateData.name}@email.com`,
     }),
   });
 ```
