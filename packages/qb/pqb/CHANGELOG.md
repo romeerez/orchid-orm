@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.8
+
+### Patch Changes
+
+- d733e029: Encode JSON columns with JSON.stringify (#175)
+- Updated dependencies [d733e029]
+  - orchid-core@0.10.6
+
 ## 0.18.7
 
 ### Patch Changes

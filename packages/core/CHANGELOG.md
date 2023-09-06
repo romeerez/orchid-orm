@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.6
+
+### Patch Changes
+
+- d733e029: Encode JSON columns with JSON.stringify (#175)
+
 ## 0.10.5
 
 ### Patch Changes
