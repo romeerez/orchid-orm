@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.10.40
+
+### Patch Changes
+
+- Updated dependencies [5c3fb301]
+  - pqb@0.18.7
+  - orchid-core@0.10.5
+
 ## 2.10.39
 
 ### Patch Changes

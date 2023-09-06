@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.5
+
+### Patch Changes
+
+- 5c3fb301: Remove `default` type from the `primaryKey` column method result (#174)
+
 ## 0.10.4
 
 ### Patch Changes

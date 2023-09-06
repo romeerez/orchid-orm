@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.7
+
+### Patch Changes
+
+- 5c3fb301: Remove `default` type from the `primaryKey` column method result (#174)
+- Updated dependencies [5c3fb301]
+  - orchid-core@0.10.5
+
 ## 0.18.6
 
 ### Patch Changes
