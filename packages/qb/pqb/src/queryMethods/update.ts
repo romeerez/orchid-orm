@@ -336,15 +336,20 @@ export class Update {
           set[key] = value;
         }
 
-        if (!isExpression(value)) {
-          const encode = shape[key].encodeFn;
-          if (encode) set[key] = encode(value);
+        if (value !== null && value !== undefined && !isExpression(value)) {
+          if (value instanceof Db) {
+            // if it is not a select query,
+            // move it into `WITH` statement and select from it with a raw SQL
+            if (value.q.type) {
+              const as = saveSearchAlias(this, 'q', 'withShapes');
+              pushQueryValue(this, 'with', [as, emptyObject, value]);
 
-          if (value instanceof Db && value.q.type) {
-            const as = saveSearchAlias(this, 'q', 'withShapes');
-            pushQueryValue(this, 'with', [as, emptyObject, value]);
-
-            set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
+              set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
+            }
+          } else {
+            // encode if not a query object
+            const encode = shape[key].encodeFn;
+            if (encode) set[key] = encode(value);
           }
         }
       }

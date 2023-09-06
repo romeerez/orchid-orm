@@ -393,6 +393,7 @@ describe('json methods', () => {
               "data" = "user"."data" #- '{tags, 0}',
               "updatedAt" = now()
           `,
+          [],
         );
       });
     });

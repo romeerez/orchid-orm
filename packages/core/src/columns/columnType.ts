@@ -349,13 +349,13 @@ export abstract class ColumnTypeBase<
   }
 
   // encode value passed to `create` to an appropriate value for a database
-  encodeFn?: (input: any) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
+  encodeFn?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // parse value from a database into what is preferred by the app
-  parseFn?: (input: unknown) => unknown;
+  parseFn?(input: unknown): unknown;
 
   // parse value from a database when it is an element of database array type
-  parseItem?: (input: string) => unknown;
+  parseItem?(input: string): unknown;
 
   /**
    * Set a default value to a column. Columns that have defaults become optional when creating a record.

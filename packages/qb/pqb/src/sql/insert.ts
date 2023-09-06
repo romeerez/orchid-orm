@@ -44,6 +44,8 @@ export const pushInsertSql = (
     const column = q.shape[key];
     quotedColumns[0] = `"${column?.data.name || key}"`;
 
+    // for `create({})` case: `{}` is transformed into `[[]]`,
+    // we replace it with `[[undefined]]`, and it generates SQL `VALUES (DEFAULT)`
     if (Array.isArray(values) && Array.isArray(values[0])) {
       values = [[undefined]];
     }
@@ -54,15 +56,20 @@ export const pushInsertSql = (
   const QueryClass = ctx.queryBuilder.constructor as Db;
 
   if (query.kind === 'object') {
-    ctx.sql.push(
-      `VALUES ${(values as unknown[][]).reduce(
-        (sql, row, i) =>
-          sql +
-          (i ? ', ' : '') +
-          `(${encodeRow(ctx, q, QueryClass, row, runtimeDefaults, quotedAs)})`,
-        '',
-      )}`,
-    );
+    let sql = '';
+    for (let i = 0; i < (values as unknown[][]).length; i++) {
+      if (i) sql += ', ';
+      sql += `(${encodeRow(
+        ctx,
+        q,
+        QueryClass,
+        (values as unknown[][])[i],
+        runtimeDefaults,
+        quotedAs,
+      )})`;
+    }
+
+    ctx.sql.push(`VALUES ${sql}`);
   } else if (query.kind === 'raw') {
     if (isExpression(values)) {
       let valuesSql = values.toSQL(ctx, quotedAs);
