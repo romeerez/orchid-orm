@@ -170,6 +170,8 @@ change(async (db) => {
 
 ## foreignKey
 
+[//]: # 'has JSDoc'
+
 Set the foreignKey for the column.
 
 In `snakeCase` mode, columns of both tables are translated to a snake_case.

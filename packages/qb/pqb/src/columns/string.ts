@@ -13,6 +13,7 @@ import {
   RawSQLBase,
   RawSQLArgs,
   assignMethodsToClass,
+  ColumnTypeBase,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
@@ -417,10 +418,15 @@ export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'uuid' as const;
   operators = Operators.text;
 
-  primaryKey<T extends ColumnType>(this: T): PrimaryKeyColumn<T> {
+  primaryKey<T extends ColumnTypeBase>(
+    this: T,
+  ): // using & bc otherwise the return type doesn't match `primaryKey` in ColumnType and TS complains
+  PrimaryKeyColumn<T> & { data: { default: RawSQLBase } } {
     const column = super.primaryKey();
     if (!column.data.default) column.data.default = uuidDefault;
-    return column as unknown as PrimaryKeyColumn<T>;
+    return column as unknown as PrimaryKeyColumn<T> & {
+      data: { default: RawSQLBase };
+    };
   }
 
   toCode(t: string): Code {

@@ -36,10 +36,9 @@ export type ColumnShapeQueryType<Shape extends ColumnsShapeBase> = {
 export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
 
 // marks the column as a primary
-export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
-  data: Omit<T['data'], 'isPrimaryKey' | 'default'> & {
+export type PrimaryKeyColumn<T extends ColumnTypeBase> = T & {
+  data: {
     isPrimaryKey: true;
-    default: RawSQLBase;
   };
 };
 

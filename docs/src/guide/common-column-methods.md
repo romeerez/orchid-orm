@@ -4,6 +4,8 @@ All the following methods are available in any kind of column.
 
 ## primaryKey
 
+[//]: # 'has JSDoc'
+
 Mark the column as a primary key.
 This column type becomes an argument of the `.find` method.
 So if the primary key is of `integer` type (`identity` or `serial`), `.find` will accept the number,
