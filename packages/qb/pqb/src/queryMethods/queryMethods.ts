@@ -2,7 +2,6 @@ import {
   Query,
   SetQueryKind,
   SetQueryReturnsAll,
-  SetQueryReturnsColumn,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
   SetQueryReturnsPluck,
@@ -26,7 +25,6 @@ import {
   pushQueryValue,
 } from '../query/queryUtils';
 import { Then } from './then';
-import { BooleanColumn } from '../columns';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { From } from './from';
@@ -644,25 +642,6 @@ export class QueryMethods<CT extends ColumnTypesBase> {
   _offset<T extends Query>(this: T, arg: number | undefined): T {
     (this.q as SelectQueryData).offset = arg;
     return this;
-  }
-
-  /**
-   * Use `exists()` to check if there is at least one record-matching condition.
-   *
-   * It will discard previous `select` statements if any. Returns a boolean.
-   *
-   * ```ts
-   * const exists: boolean = await db.table.where(...conditions).exists();
-   * ```
-   */
-  exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
-    return this.clone()._exists();
-  }
-  _exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
-    const q = this._getOptional(new RawSQL('true'));
-    q.q.notFoundDefault = false;
-    q.q.coalesceValue = new RawSQL('false');
-    return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;
   }
 
   /**

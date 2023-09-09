@@ -4,6 +4,7 @@ import { addValue } from '../sql/common';
 import {
   ColumnTypeBase,
   Expression,
+  getValueKey,
   isExpression,
   OperatorToSQL,
 } from 'orchid-core';
@@ -59,6 +60,11 @@ const make = <Value = any>(
     function (this: Query, value: Value) {
       const expr = this.q.expr as Expression;
       (expr._chain ??= []).push(_op, value);
+
+      // parser might be set by a previous type, but is not needed for boolean
+      if (this.q.parsers?.[getValueKey]) {
+        this.q.parsers[getValueKey] = undefined;
+      }
 
       return setQueryOperators(this, boolean);
     },

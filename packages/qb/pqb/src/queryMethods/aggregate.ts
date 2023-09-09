@@ -27,6 +27,7 @@ import {
   Over,
 } from '../common/fn';
 import { Operators } from '../columns/operators';
+import { RawSQL } from '../sql/rawSql';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
@@ -134,6 +135,25 @@ export class AggregateMethods {
       args,
       options,
     );
+  }
+
+  /**
+   * Use `exists()` to check if there is at least one record-matching condition.
+   *
+   * It will discard previous `select` statements if any. Returns a boolean.
+   *
+   * ```ts
+   * const exists: boolean = await db.table.where(...conditions).exists();
+   * ```
+   */
+  exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
+    return this.clone()._exists();
+  }
+  _exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
+    const q = this._getOptional(new RawSQL('true'));
+    q.q.notFoundDefault = false;
+    q.q.coalesceValue = new RawSQL('false');
+    return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;
   }
 
   /**
