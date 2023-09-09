@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.3.136
+
+### Patch Changes
+
+- Updated dependencies [71a805af]
+  - pqb@0.18.9
+  - orchid-core@0.10.7
+  - orchid-orm@1.17.9
+  - orchid-orm-schema-to-zod@0.4.12
+
 ## 0.3.135
 
 ### Patch Changes

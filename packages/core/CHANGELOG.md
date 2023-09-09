@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.7
+
+### Patch Changes
+
+- 71a805af: Change db functions to be available equally on the query itself, in select, in having, and to be chainable with column operators
+
 ## 0.10.6
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.17.9
+
+### Patch Changes
+
+- 71a805af: Change db functions to be available equally on the query itself, in select, in having, and to be chainable with column operators
+- Updated dependencies [71a805af]
+  - pqb@0.18.9
+  - orchid-core@0.10.7
+
 ## 1.17.8
 
 ### Patch Changes
