@@ -68,6 +68,7 @@ export type CommonQueryData = {
   joinOverrides?: JoinOverrides;
   schema?: string;
   select?: SelectItem[];
+  // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
   as?: string;
   from?: string | Query | Expression;
@@ -118,11 +119,18 @@ export type CommonQueryData = {
   transform?: ((input: unknown) => unknown)[];
   // default language for the full text search
   language?: string;
-  // is true for query arg inside `select`, `where`, and others callbacks.
-  // it is used by ORM to skip applying a join to the query when `isSubQuery` is true,
+  // Is true for query arg inside `select`, `where`, and others callbacks.
+  // It is used by ORM to skip applying a join to the query when `isSubQuery` is true,
   // the join will be applied after callback is resolved.
   isSubQuery?: true;
+  /**
+   * Stores current operator functions available for the query.
+   * Is needed to remove these operators from query object when changing the query type, see {@link setQueryOperators}.
+   */
   operators?: BaseOperators;
+  /**
+   * Used by {@link setQueryOperators} to store the original `baseQuery` before extending it with operators.
+   */
   originalQuery?: Query;
 };
 

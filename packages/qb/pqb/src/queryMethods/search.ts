@@ -20,12 +20,15 @@ import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
 import { addValue, columnToSql } from '../sql/common';
 
-type HeadlineSearchArg<T extends Query> =
-  | string
-  | undefined extends T['meta']['tsQuery']
-  ? never
-  : Exclude<T['meta']['tsQuery'], undefined>;
+// `headline` first argument is a name of the search.
+type HeadlineSearchArg<T extends Query> = Exclude<
+  T['meta']['tsQuery'],
+  undefined
+>;
 
+// Options of the `headline` function:
+// - text: column name or a raw SQL with the full text to select headline from.
+// - options: string or an expression returning Postgres headline options (https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
 type HeadlineParams<T extends Query> = {
   text?: SelectableOrExpressionOfType<T, TextColumn>;
   options?: string | Expression;

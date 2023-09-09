@@ -17,29 +17,51 @@ import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
 import { BooleanNullable } from '../columns';
 import { BaseOperators, setQueryOperators } from '../columns/operators';
 
+// Additional SQL options that can be accepted by any aggregate function.
 export type AggregateOptions<T extends Query> = {
+  // Add DISTINCT inside of function call.
   distinct?: boolean;
+  // The same argument as in .order() to be set inside of function call.
   order?: OrderArg<T> | OrderArg<T>[];
+  // The same argument as in .where() to be set inside of function call.
   filter?: WhereArg<T>;
+  // The same argument as in .orWhere() to support OR logic of the filter clause.
   filterOr?: WhereArg<T>[];
+  // Adds WITHIN GROUP SQL statement.
   withinGroup?: boolean;
+  // defines OVER clause.
+  // Can be the name of a window defined by calling the .window() method,
+  // or object the same as the .window() method takes to define a window.
   over?: Over<T>;
 };
 
+// Window definition or name.
 export type Over<T extends Query> =
   | keyof T['windows']
   | WindowArgDeclaration<T>;
 
+// Arguments of function.
+// It can be a column name, expression,
+// `pairs` is for { key: value } which is translated to ('key', value) (used by `jsonObjectAgg`),
+// `value` is for a query variable (used by `stringAgg` for a delimiter).
 export type FnExpressionArgs<Q extends Query> = (
   | SelectableOrExpression<Q>
   | { pairs: Record<string, SelectableOrExpression<Q>> }
   | { value: unknown }
 )[];
 
+// Expression for SQL function calls.
 export class FnExpression<
   Q extends Query = Query,
   T extends ColumnTypeBase = ColumnTypeBase,
 > extends Expression<T> {
+  /**
+   * @param q - query object.
+   * @param fn - SQL function name.
+   * @param args - arguments of the function.
+   * @param options - aggregate options.
+   * @param _type - column type of the function result.
+   */
   constructor(
     public q: Q,
     public fn: string,
@@ -50,6 +72,7 @@ export class FnExpression<
     super();
   }
 
+  // Builds function SQL.
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     const sql: string[] = [`${this.fn}(`];
 
@@ -132,6 +155,7 @@ export class FnExpression<
   }
 }
 
+// Adds column operator functions to the expression.
 export type ColumnExpression<
   C extends ColumnTypeBase,
   Ops extends BaseOperators = C['operators'],
@@ -141,6 +165,8 @@ export type ColumnExpression<
   ) => ColumnExpression<BooleanNullable>;
 };
 
+// Applies Expression to the query.
+// The query returns a column of Expression type, and has column operators of this type.
 export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
   self: T,
   expr: Expression,
@@ -148,6 +174,7 @@ export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
   const { _type: type } = expr;
   const q = setQueryOperators(self, type.operators);
 
+  // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
   q.q.returnType = 'valueOrThrow';
   (q.q as SelectQueryData).returnsOne = true;
   (q.q as SelectQueryData)[getValueKey] = type;
@@ -158,11 +185,10 @@ export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
     setParserToQuery(q.q, getValueKey, type.parseFn);
   }
 
-  return q as SetQueryReturnsColumn<T, C> & {
-    isCount: true;
-  } & C['operators'];
+  return q as SetQueryReturnsColumn<T, C> & C['operators'];
 };
 
+// Applies a function expression to the query.
 export function makeFnExpression<T extends Query, C extends ColumnTypeBase>(
   self: T,
   type: C,

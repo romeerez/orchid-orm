@@ -6,22 +6,22 @@ Each aggregate function is accepting such options:
 
 ```ts
 type AggregateOptions = {
-  // add DISTINCT inside of function call
+  // Add DISTINCT inside of function call.
   distinct?: boolean;
 
-  // the same argument as in .order() to be set inside of function call
+  // The same argument as in .order() to be set inside of function call.
   order?: OrderArg | OrderArg[];
 
-  // the same argument as in .where() to be set inside of function call
+  // The same argument as in .where() to be set inside of function call.
   filter?: WhereArg;
 
-  // the same argument as in .or() to support OR logic of the filter clause
+  // The same argument as in .orWhere() to support OR logic of the filter clause.
   filterOr?: WhereArg[];
 
-  // adds WITHIN GROUP SQL statement
+  // Adds WITHIN GROUP SQL statement.
   withinGroup?: boolean;
 
-  // defines OVER clause.
+  // Defines OVER clause.
   // Can be the name of a window defined by calling the .window() method,
   // or object the same as the .window() method takes to define a window.
   over?: WindowName | OverOptions;
@@ -34,13 +34,46 @@ Calling aggregate function on a table will return a simple value:
 const result: number = await db.table.count();
 ```
 
-All functions described here can be called inside a `select` callback to select an aggregated value:
+All functions can be called inside a `select` callback to select an aggregated value:
 
 ```ts
 // avg can be null in case when no records
 const result: { count: number; avg: number | null }[] = await db.table.select({
   count: (q) => q.count(),
   avg: (q) => q.avg('price'),
+});
+```
+
+They can be used in [having](/guide/query-methods.html#having):
+
+```ts
+db.table.having((q) => q.count().gte(10));
+```
+
+Functions can be chained with [column operators](/guide/where.html#column-operators).
+Strictly according to the return type of the function, `count` can be chained with `gt` but not with `contains`.
+
+```ts
+// numeric functions can be chained with `gt`, `lt`, and other numeric operators:
+const bool = await db.table.sum('numericColumn').gt(5);
+
+await db.table.select({
+  someTitleContainsXXX: (q) => q.stringAgg('title').contains('xxx'),
+  notAllBooleansAreTrue: (q) => q.boolAnd('booleanColumn').not(true),
+});
+```
+
+Multiple aggregate functions can be joined with `and` or `or` in a such way:
+
+```ts
+// SELECT count(*) > 5 AND "numericColumn" < 100 FROM "table"
+const bool = await db.table
+  .count()
+  .gt(5)
+  .and(db.table.sum('numericColumn').lt(100));
+
+const { theSameBool } = await db.table.select({
+  theSameBool: (q) => q.count().gt(5).and(q.sum('numericColumn').lt(100)),
 });
 ```
 

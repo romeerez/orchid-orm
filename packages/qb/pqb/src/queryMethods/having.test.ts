@@ -17,6 +17,7 @@ describe('having', () => {
   });
 
   it('should support simple object as an argument', () => {
+    User.count().equals(5);
     const q = User.having((q) => q.count().equals(5));
 
     expectSql(

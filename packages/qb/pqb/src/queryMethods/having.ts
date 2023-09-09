@@ -1,6 +1,7 @@
 import { Query } from '../query/query';
-import { ColumnTypeBase, Expression, TemplateLiteralArgs } from 'orchid-core';
+import { TemplateLiteralArgs } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
+import { BooleanColumn, BooleanNullable } from '../columns';
 
 // Arguments of `having`:
 // can be a SQL template literal or one or multiple callbacks returning a boolean expression.
@@ -10,7 +11,7 @@ type HavingArgs<T extends Query> = TemplateLiteralArgs | HavingArgFn<T>[];
 // the same query builder as in `select` is passed in, boolean expression is expected to be returned.
 type HavingArgFn<T extends Query> = (
   q: T,
-) => Query | Expression<ColumnTypeBase<boolean | null>>;
+) => Query & { result: { value: BooleanColumn | BooleanNullable } };
 
 export class Having {
   /**
@@ -73,16 +74,12 @@ export class Having {
     return this.clone()._having(...args);
   }
   _having<T extends Query>(this: T, ...args: HavingArgs<T>): T {
-    let data;
-    if ('raw' in args[0]) {
-      data = args;
-    } else {
-      data = args.map((arg) => {
-        const q = (arg as HavingArgFn<T>)(this);
-        // TODO: remove condition
-        return 'q' in q ? q.q.expr || q : q;
-      });
-    }
-    return pushQueryValue(this, 'having', data);
+    return pushQueryValue(
+      this,
+      'having',
+      'raw' in args[0]
+        ? args
+        : args.map((arg) => (arg as HavingArgFn<T>)(this).q.expr),
+    );
   }
 }
