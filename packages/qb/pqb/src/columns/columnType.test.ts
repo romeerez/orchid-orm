@@ -1,5 +1,4 @@
 import { ColumnType, instantiateColumn } from './columnType';
-import { Operators } from './operators';
 import { User, userData } from '../test-utils/test-utils';
 import { createDb } from '../query/db';
 import { columnTypes } from './columnTypes';
@@ -14,6 +13,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
+import { Operators } from './operators';
 import { UUIDColumn } from './string';
 
 describe('column type', () => {

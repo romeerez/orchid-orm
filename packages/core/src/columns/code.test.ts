@@ -20,7 +20,7 @@ class RawSQL extends RawSQLBase {
   columnTypes!: EmptyObject;
   _type = UnknownColumn as unknown as ColumnTypeBase;
 
-  toSQL(): string {
+  makeSQL(): string {
     return 'mock sql';
   }
 }

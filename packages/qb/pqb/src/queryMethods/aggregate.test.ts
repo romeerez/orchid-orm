@@ -5,17 +5,45 @@ import {
   Snake,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import { Operators } from '../columns/operators';
 
 describe('aggregate', () => {
   useTestDatabase();
 
+  it('should discard previous query extension when extending query with other type', () => {
+    const int = User.count();
+    assertType<typeof int.gt, typeof Operators.number.gt>();
+    expect(int.gt).toEqual(expect.any(Function));
+
+    const bool = int.gt(5);
+    // @ts-expect-error bool should not have gt method
+    bool.gt;
+    expect((bool as unknown as { gt: unknown }).gt).toBe(undefined);
+  });
+
+  describe('chaining with operators', () => {
+    it('should allow to chain agg method with operators', () => {
+      const q = User.count().gt(3);
+
+      assertType<Awaited<typeof q>, boolean>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT count(*) > $1 FROM "user"
+        `,
+        [3],
+      );
+    });
+  });
+
   describe('agg', () => {
-    it('should select aggregating function', async () => {
+    it('should select aggregating function', () => {
       const q = User.select({
         count: (q) => q.fn('count', ['*'], {}, (t) => t.integer()).gt(5),
       }).take();
 
-      assertType<Awaited<typeof q>, { count: boolean | null }>();
+      assertType<Awaited<typeof q>, { count: boolean }>();
 
       expectSql(
         q.toSQL(),
@@ -34,7 +62,7 @@ describe('aggregate', () => {
             .gt(q.sql`2 + 2`),
       }).take();
 
-      assertType<Awaited<typeof q>, { count: boolean | null }>();
+      assertType<Awaited<typeof q>, { count: boolean }>();
 
       expectSql(
         q.toSQL(),
@@ -430,12 +458,9 @@ describe('aggregate', () => {
     it(`should perform ${method} query for a column`, () => {
       const q = User.clone();
 
-      const expectedSql = getSql('"user"."name"');
-      expectSql(q[method as 'count']('name').toSQL(), expectedSql);
+      const expectedSql = getSql('"user"."id"');
+      expectSql(q[method as 'avg']('id').toSQL(), expectedSql);
       expectQueryNotMutated(q);
-
-      q[`_${method}` as `_count`]('name');
-      expectSql(q.toSQL({ clearCache: true }), expectedSql);
     });
 
     it('should support raw sql parameter', () => {
@@ -518,16 +543,12 @@ describe('aggregate', () => {
 
     it(`should perform ${method} query for a column`, () => {
       const q = User.clone();
-      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") FROM "user"`;
       expectSql(
         q[method as 'jsonObjectAgg']({ alias: 'name' }).toSQL(),
-        expectedSql,
+        `SELECT ${functionName}($1::text, "user"."name") FROM "user"`,
         ['alias'],
       );
       expectQueryNotMutated(q);
-
-      q[`_${method}` as '_jsonObjectAgg']({ alias: 'name' });
-      expectSql(q.toSQL({ clearCache: true }), expectedSql, ['alias']);
     });
 
     it('should support raw sql parameter', () => {
@@ -619,12 +640,12 @@ describe('aggregate', () => {
 
     it('makes stringAgg query', () => {
       const q = User.clone();
-      const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;
-      expectSql(q.stringAgg('name', ' & ').toSQL(), expectedSql, [' & ']);
+      expectSql(
+        q.stringAgg('name', ' & ').toSQL(),
+        `SELECT string_agg("user"."name", $1) FROM "user"`,
+        [' & '],
+      );
       expectQueryNotMutated(q);
-
-      q._stringAgg('name', ' & ');
-      expectSql(q.toSQL({ clearCache: true }), expectedSql, [' & ']);
     });
 
     it('should support raw sql parameter', async () => {

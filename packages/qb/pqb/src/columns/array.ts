@@ -1,5 +1,4 @@
 import { ColumnData, ColumnType } from './columnType';
-import { Operators } from './operators';
 import {
   arrayTypeMethods,
   addCode,
@@ -10,6 +9,7 @@ import {
   assignMethodsToClass,
 } from 'orchid-core';
 import { columnCode } from './code';
+import { Operators } from './operators';
 
 export type ArrayData<Item extends ColumnTypeBase> = ColumnData &
   ArrayMethodsData & {

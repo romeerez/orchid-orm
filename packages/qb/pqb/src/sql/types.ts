@@ -9,7 +9,6 @@ import {
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
-import { FnExpression } from '../common/fn';
 
 // used in `from` logic to decide if convert query to sql or just write table name
 export const checkIfASimpleQuery = (q: Query) => {
@@ -103,12 +102,11 @@ export type JsonItem<
       ];
 };
 
-export type SelectItem =
-  | string
-  | RelationQuery
-  | { selectAs: Record<string, string | Query | Expression> }
-  | JsonItem
-  | Expression;
+export type SelectItem = string | SelectAs | JsonItem | Expression;
+
+export type SelectAs = {
+  selectAs: Record<string, string | Query | Expression>;
+};
 
 export type OrderTsQueryConfig =
   | true
@@ -207,7 +205,7 @@ export type WhereItem =
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
     })
-  | ((q: unknown) => QueryBase | FnExpression<Query, ColumnTypeBase>)
+  | ((q: unknown) => QueryBase | RelationQuery | Expression)
   | Query
   | Expression;
 
@@ -249,7 +247,7 @@ export type ColumnOperators<
   Column extends keyof S,
 > = {
   [O in keyof S[Column]['column']['operators']]?:
-    | S[Column]['column']['operators'][O]['type'];
+    | S[Column]['column']['operators'][O]['_opType'];
 };
 
 export type HavingItem = TemplateLiteralArgs | Expression[];

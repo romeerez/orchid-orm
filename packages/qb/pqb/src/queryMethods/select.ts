@@ -36,8 +36,6 @@ import {
   SelectableOrExpression,
 } from '../common/utils';
 import { RawSQL } from '../sql/rawSql';
-import { SelectAggMethods } from './aggregate';
-import { getSubQueryBuilder } from '../query/subQueryBuilder';
 
 // .select method argument
 export type SelectArg<T extends Query> =
@@ -52,25 +50,12 @@ type SelectAsArg<T extends Query> = Record<string, SelectAsValue<T>>;
 
 // .select method object argument value
 // can be column, raw, or a function returning query or raw
-type SelectAsValue<T extends Query, SB = SelectQueryBuilder<T>> =
+type SelectAsValue<T extends Query> =
   | StringKey<keyof T['selectable']>
   | Expression
-  | ((q: SB) => QueryBase)
-  | ((q: SB) => Expression)
-  | ((q: SB) => QueryBase | Expression);
-
-export type SelectQueryBuilder<T extends Query, Agg = SelectAggMethods<T>> = {
-  [K in
-    | keyof Agg
-    | 'columnTypes'
-    | 'sql'
-    | 'baseQuery'
-    | keyof T['relations']]: K extends keyof Agg
-    ? Agg[K]
-    : K extends keyof T
-    ? T[K]
-    : never;
-};
+  | ((q: T) => QueryBase)
+  | ((q: T) => Expression)
+  | ((q: T) => QueryBase | Expression);
 
 // tuple for the result of selected by objects args
 // the first element is shape of selected data
@@ -195,7 +180,7 @@ type SelectAsValueResult<
   ? T['selectable'][Arg]['column']
   : Arg extends Expression
   ? Arg['_type']
-  : Arg extends (q: SelectQueryBuilder<T>) => infer R
+  : Arg extends (q: never) => infer R
   ? R extends QueryBase
     ? SelectSubQueryResult<R>
     : R extends Expression
@@ -212,7 +197,7 @@ type SelectAsValueResult<
 // query that returns a single value becomes a column of that value
 // query that returns 'pluck' becomes a column with array type of specific value type
 // query that returns a single record becomes an object column, possibly nullable
-type SelectSubQueryResult<Arg extends QueryBase> = QueryReturnsAll<
+export type SelectSubQueryResult<Arg extends QueryBase> = QueryReturnsAll<
   Arg['returnType']
 > extends true
   ? ArrayOfColumnsObjects<Arg['result']>
@@ -264,7 +249,7 @@ export const addParserForSelectItem = <T extends Query>(
   key: string,
   arg: SelectableOrExpression<T> | Query,
 ): string | Expression | Query => {
-  if (typeof arg === 'object') {
+  if (typeof arg === 'object' || typeof arg === 'function') {
     if (isExpression(arg)) {
       addParserForRawExpression(q, key, arg);
     } else {
@@ -287,11 +272,14 @@ export const addParserForSelectItem = <T extends Query>(
       }
     }
   } else {
-    setParserForStringArg(q, arg, as, key);
+    setParserForSelectedString(q, arg, as, key);
   }
 
   return arg;
 };
+
+// reuse SQL for empty array for JSON agg expressions
+const emptyArrSQL = new RawSQL("'[]'");
 
 // process select argument: add parsers, join relations when needed
 export const processSelectArg = <T extends Query>(
@@ -301,7 +289,7 @@ export const processSelectArg = <T extends Query>(
   columnAs?: string | getValueKey,
 ): SelectItem => {
   if (typeof arg === 'string') {
-    setParserForStringArg(q, arg, as, columnAs);
+    setParserForSelectedString(q, arg, as, columnAs);
     return arg;
   }
 
@@ -312,9 +300,7 @@ export const processSelectArg = <T extends Query>(
     let value = (arg as SelectAsArg<T>)[key] as any;
 
     if (typeof value === 'function') {
-      const qb = getSubQueryBuilder(q);
-
-      value = resolveSubQueryCallback(qb as unknown as Query, value);
+      value = resolveSubQueryCallback(q, value);
 
       if (!isExpression(value) && value.joinQuery) {
         value = value.joinQuery(q, value);
@@ -323,12 +309,13 @@ export const processSelectArg = <T extends Query>(
         const returnType = value.q.returnType;
         if (!returnType || returnType === 'all') {
           query = value.json(false);
-          value.q.coalesceValue = new RawSQL("'[]'");
+          value.q.coalesceValue = emptyArrSQL;
         } else if (returnType === 'pluck') {
           query = value
             .wrap(value.baseQuery.clone())
-            ._jsonAgg(value.q.select[0]);
-          value.q.coalesceValue = new RawSQL("'[]'");
+            .jsonAgg(value.q.select[0]);
+
+          value.q.coalesceValue = emptyArrSQL;
         } else {
           if (
             (returnType === 'value' || returnType === 'valueOrThrow') &&
@@ -368,6 +355,8 @@ export const processSelectArg = <T extends Query>(
           (q) => q,
           key,
         );
+      } else if (value.q?.isSubQuery && value.q.expr) {
+        value = value.q.expr;
       }
     }
 
@@ -380,7 +369,7 @@ export const processSelectArg = <T extends Query>(
 // process string select arg
 // adds a column parser for a column
 // when table.* string is provided, sets a parser for a joined table
-const setParserForStringArg = (
+export const setParserForSelectedString = (
   q: Query,
   arg: string,
   as: string | getValueKey | undefined,

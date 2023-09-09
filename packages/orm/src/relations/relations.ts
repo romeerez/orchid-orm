@@ -374,7 +374,7 @@ const makeRelationQuery = (
     get() {
       const toTable = q.clone();
 
-      const query = this.isSubQuery
+      const query = this.q.isSubQuery
         ? toTable
         : toTable._whereExists(
             this.baseQuery,

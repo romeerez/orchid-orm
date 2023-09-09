@@ -9,19 +9,12 @@ import {
   WhereSearchItem,
 } from './types';
 import { addValue, q, qc, columnToSql } from './common';
-import { getQueryAs } from '../common/utils';
+import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData } from './data';
-import {
-  ColumnTypeBase,
-  Expression,
-  isExpression,
-  MaybeArray,
-  toArray,
-} from 'orchid-core';
+import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
 import { Operator } from '../columns/operators';
-import { FnExpression } from '../common/fn';
 
 export const pushWhereStatementSql = (
   ctx: ToSQLCtx,
@@ -95,14 +88,23 @@ const processWhere = (
   const prefix = not ? 'NOT ' : '';
 
   if (typeof data === 'function') {
-    const qb = table.internal.getWhereQueryBuilder(query as QueryData);
+    const qb = Object.create(table);
+    qb.q = getClonedQueryData(query as QueryData);
+    qb.q.and = qb.q.or = undefined;
+    qb.q.isSubQuery = true;
+
     const res = data(qb);
-    if ('q' in res.q) {
-      const q = res.q.clone();
-      q.q.select = [res as FnExpression<Query, ColumnTypeBase>];
-      ands.push(`${prefix}(${makeSQL(q, ctx).text})`);
+    const expr = res instanceof Expression ? res : res.q.expr;
+    if (!(res instanceof Expression) && res.q.expr) {
+      const q =
+        'relationConfig' in res
+          ? res.relationConfig.joinQuery(table, res)
+          : res.clone();
+
+      q.q.select = [expr as Expression];
+      ands.push(`${prefix}(${makeSQL(q as Query, ctx).text})`);
     } else {
-      pushWhereToSql(ands, ctx, res as Query, res.q, quotedAs, not);
+      pushWhereToSql(ands, ctx, res as Query, (res as Query).q, quotedAs, not);
     }
 
     return;
@@ -170,13 +172,15 @@ const processWhere = (
         const joinTo = getJoinItemSource(item.joinTo);
         const joinedShape = (query.joinedShapes as JoinedShapes)[joinTo];
 
-        const [op, rightColumn] =
-          item.on.length === 2
-            ? ['=', columnToSql(query, joinedShape, item.on[1], q(joinTo))]
-            : [
-                item.on[1],
-                columnToSql(query, joinedShape, item.on[2], q(joinTo)),
-              ];
+        let op;
+        let rightColumn;
+        if (item.on.length === 2) {
+          op = '=';
+          rightColumn = columnToSql(query, joinedShape, item.on[1], q(joinTo));
+        } else {
+          op = item.on[1];
+          rightColumn = columnToSql(query, joinedShape, item.on[2], q(joinTo));
+        }
 
         ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
       }
@@ -257,7 +261,7 @@ const processWhere = (
             if (value[op as keyof typeof value] === undefined) continue;
 
             ands.push(
-              `${prefix}${(operator as unknown as Operator<unknown>)(
+              `${prefix}${(operator as unknown as Operator<unknown>)._op(
                 quotedColumn as string,
                 value[op as keyof typeof value],
                 ctx,

@@ -14,7 +14,6 @@ import { BooleanNullable, ColumnsShape } from '../../columns';
 import { QueryBase } from '../../query/queryBase';
 import { RawSQL } from '../../sql/rawSql';
 import { ColumnExpression } from '../../common/fn';
-import { RelationSubQueries } from '../../relations';
 
 /*
 Argument of `where`:
@@ -72,7 +71,7 @@ export type WhereQueryBuilder<T extends WhereQueryBase> = Pick<
   T,
   keyof WhereQueryBase
 > &
-  RelationSubQueries<T>;
+  T['relations'];
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
 export type WhereArgs<T extends WhereQueryBase> =

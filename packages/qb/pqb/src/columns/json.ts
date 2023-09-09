@@ -1,6 +1,6 @@
 import { ColumnData, ColumnType } from './columnType';
-import { Operators } from './operators';
 import { columnCode } from './code';
+import { Operators } from './operators';
 import {
   addCode,
   Code,

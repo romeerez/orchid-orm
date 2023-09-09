@@ -234,7 +234,9 @@ db.table.where({
 });
 ```
 
-### Any type of column operators
+These operators are also available as functions that can be chained to queries, see [Aggregate functions](/guide/aggregate.html).
+
+## any operators
 
 `equals` is a simple `=` operator, it may be useful for comparing column value with JSON object:
 
@@ -275,7 +277,7 @@ db.table.where({
 
 `notIn` is for the `NOT IN` operator, and takes the same arguments as `in`
 
-### Numeric, Date, and Time column operators
+## numeric, date, time operators
 
 To compare numbers, dates, and times.
 
@@ -320,7 +322,7 @@ db.table.where({
 });
 ```
 
-### Text column operators
+## text operators
 
 For `text`, `char`, `varchar`, and `json` columns.
 
@@ -347,7 +349,7 @@ db.table.where({
 });
 ```
 
-### JSONB column operators
+## JSONB column operators
 
 For the `jsonb` column, note that the `json` type has text operators instead.
 

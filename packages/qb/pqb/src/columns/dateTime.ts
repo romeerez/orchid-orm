@@ -1,5 +1,4 @@
 import { ColumnData, ColumnType } from './columnType';
-import { Operators } from './operators';
 import {
   assignMethodsToClass,
   Code,
@@ -13,6 +12,7 @@ import {
 } from 'orchid-core';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';
+import { Operators } from './operators';
 
 // common interface for Date and DateTime columns
 export interface DateBaseColumn

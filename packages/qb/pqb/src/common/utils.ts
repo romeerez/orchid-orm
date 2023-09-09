@@ -53,10 +53,10 @@ export const resolveSubQueryCallback = (
   q: Query,
   cb: (q: Query) => Query,
 ): Query => {
-  const { isSubQuery } = q;
-  q.isSubQuery = true;
+  const { isSubQuery } = q.q;
+  q.q.isSubQuery = true;
   const result = cb(q);
-  q.isSubQuery = isSubQuery;
+  q.q.isSubQuery = isSubQuery;
   return result;
 };
 

@@ -2,9 +2,6 @@ import {
   GetStringArg,
   OnQueryBuilder,
   QueryMethods,
-  SelectQueryBuilder,
-  WhereQueryBase,
-  WhereQueryBuilder,
   WhereResult,
 } from '../queryMethods';
 import { QueryData } from '../sql';
@@ -47,10 +44,6 @@ export type WithDataBase = Record<never, WithDataItem>;
 
 export type Query = QueryBase &
   QueryMethods<ColumnTypesBase> & {
-    internal: {
-      selectQueryBuilder?: SelectQueryBuilder<Query>;
-      getWhereQueryBuilder(q: QueryData): WhereQueryBuilder<WhereQueryBase>;
-    };
     queryBuilder: Db;
     columnTypes: ColumnTypesBase;
     onQueryBuilder: typeof OnQueryBuilder;
@@ -73,7 +66,6 @@ export type Query = QueryBase &
       length: number,
       name: QueryErrorName,
     ) => QueryError;
-    isSubQuery: boolean;
   };
 
 export type SelectableOfType<T extends QueryBase, Type> = StringKey<
@@ -250,15 +242,12 @@ export type SetQueryReturnsValue<
   T extends Query,
   Arg extends GetStringArg<T>,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-> = SetQueryReturnsColumn<
-  T,
-  Arg extends keyof T['selectable']
+  Column extends ColumnTypeBase = Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']
     : Arg extends Query
     ? Arg['result']['value']
     : never,
-  ReturnType
->;
+> = SetQueryReturnsColumn<T, Column, ReturnType> & Column['operators'];
 
 export type SetQueryReturnsColumnOptional<
   T extends QueryBase,

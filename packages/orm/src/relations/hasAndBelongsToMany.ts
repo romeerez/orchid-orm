@@ -403,7 +403,8 @@ const insertToJoinTable = (
     }
   }
 
-  return joinTableTransaction._count()._createMany(records);
+  // TODO: optimize calling count
+  return joinTableTransaction.count()._createMany(records);
 };
 
 const nestedInsert = ({

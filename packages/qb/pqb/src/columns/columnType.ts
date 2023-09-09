@@ -17,8 +17,8 @@ import {
 } from 'orchid-core';
 import { TableData } from './columnTypes';
 import { raw, RawSQL } from '../sql/rawSql';
-import { BaseOperators } from './operators';
 import { SearchWeight } from '../sql';
+import { BaseOperators } from './operators';
 
 // type of data for ColumnType
 export type ColumnData = ColumnDataBase & {

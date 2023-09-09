@@ -5,7 +5,6 @@ import {
   OnQueryBuilder,
   logParamToLogObject,
   QueryLogOptions,
-  WhereQueryBuilder,
 } from '../queryMethods';
 import { QueryData, SelectQueryData, ToSQLOptions } from '../sql';
 import {
@@ -50,9 +49,7 @@ import { q } from '../sql/common';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from '../sql/rawSql';
-import { getSubQueryBuilder, SubQueryBuilder } from './subQueryBuilder';
-import { getClonedQueryData } from '../common/utils';
-import { RelationQueryBase, RelationsBase } from '../relations';
+import { RelationsBase } from '../relations';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -116,7 +113,6 @@ export interface Db<
     length: number,
     name: QueryErrorName,
   ) => QueryError<this>;
-  isSubQuery: false;
   meta: {
     kind: 'select';
     defaults: Record<
@@ -153,36 +149,11 @@ export class Db<
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
-    let whereQueryBuilder: WhereQueryBuilder<Query> | undefined;
     this.internal = {
       ...tableData,
       transactionStorage,
-      getWhereQueryBuilder(q: QueryData) {
-        if (!whereQueryBuilder) {
-          whereQueryBuilder = Object.create(self) as WhereQueryBuilder<Query>;
-          whereQueryBuilder.baseQuery = whereQueryBuilder as unknown as Query;
-
-          for (const key in self.relations) {
-            const rel = self.relations[key] as RelationQueryBase;
-
-            (
-              whereQueryBuilder as unknown as Record<
-                string,
-                SubQueryBuilder<Query>
-              >
-            )[key] = getSubQueryBuilder(
-              rel.relationConfig.joinQuery(self, rel.relationConfig.query),
-            );
-          }
-        }
-
-        const qb = Object.create(whereQueryBuilder);
-        qb.q = getClonedQueryData(q);
-        qb.q.and = qb.q.or = undefined;
-
-        return qb;
-      },
     };
+
     this.baseQuery = this as Query;
 
     const logger = options.logger || console;

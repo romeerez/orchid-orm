@@ -1506,9 +1506,9 @@ describe('hasOne', () => {
         SELECT ${userSelectAll} FROM "user" WHERE (
           SELECT count(*) = $1
           FROM "profile"
-          WHERE "profile"."userId" = "user"."id"
+          WHERE "profile"."bio" IN ($2, $3)
+            AND "profile"."userId" = "user"."id"
             AND "profile"."profileKey" = "user"."userKey"
-            AND "profile"."bio" IN ($2, $3)
         )
       `,
       [1, 'a', 'b'],
@@ -2141,8 +2141,8 @@ describe('hasOne through', () => {
         SELECT ${messageSelectAll} FROM "message" WHERE (
           SELECT count(*) = $1
           FROM "profile"
-          WHERE
-            EXISTS (
+          WHERE "profile"."bio" IN ($2, $3)
+            AND EXISTS (
               SELECT 1
               FROM "user"
               WHERE "profile"."userId" = "user"."id"
@@ -2150,7 +2150,6 @@ describe('hasOne through', () => {
                 AND "user"."id" = "message"."authorId"
                 AND "user"."userKey" = "message"."messageKey"
             )
-            AND "profile"."bio" IN ($2, $3)
         )
       `,
       [1, 'a', 'b'],

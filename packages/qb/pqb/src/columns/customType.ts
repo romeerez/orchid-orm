@@ -1,7 +1,7 @@
 import { ColumnType } from './columnType';
-import { Operators } from './operators';
 import { Code, singleQuote } from 'orchid-core';
 import { columnCode } from './code';
+import { Operators } from './operators';
 
 // for a user-defined type, or for unsupported yet type from some module
 export class CustomTypeColumn extends ColumnType<

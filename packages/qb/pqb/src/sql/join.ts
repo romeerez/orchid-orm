@@ -324,7 +324,7 @@ export const pushJoinSql = (
   },
   quotedAs?: string,
 ) => {
-  query.join.forEach((item) => {
+  for (const item of query.join) {
     if (Array.isArray(item)) {
       const q = item[1];
       const { aliasValue } = ctx;
@@ -348,7 +348,7 @@ export const pushJoinSql = (
       ctx.sql.push(item.type, target);
       if (conditions) ctx.sql.push('ON', conditions);
     }
-  });
+  }
 };
 
 const skipQueryKeysForSubQuery: Record<string, boolean> = {

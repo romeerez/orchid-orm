@@ -8,10 +8,10 @@ describe('get', () => {
   describe('get', () => {
     it('should select column and return a single value', async () => {
       const { id } = await User.select('id').create(userData);
-
       const q = User.get('id');
 
       const result = await q;
+
       assertType<typeof result, number>();
 
       expect(result).toBe(id);
@@ -23,6 +23,27 @@ describe('get', () => {
           FROM "user"
           LIMIT 1
         `,
+      );
+    });
+
+    it('should support chaining the value with operators', async () => {
+      await User.count().create(userData);
+      const q = User.get('id').gt(0);
+
+      const result = await q;
+
+      assertType<typeof result, boolean>();
+
+      expect(result).toBe(true);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id" > $1
+          FROM "user"
+          LIMIT 1
+        `,
+        [0],
       );
     });
 

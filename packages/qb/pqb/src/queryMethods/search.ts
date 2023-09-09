@@ -1,9 +1,15 @@
 import { Query, SelectableOrExpressionOfType } from '../query/query';
-import { ColumnExpression, makeColumnFnClass } from '../common/fn';
+import { ColumnExpression } from '../common/fn';
 import { TextColumn } from '../columns';
-import { SelectAggMethods } from './aggregate';
-import { ColumnTypeBase, Expression, MaybeArray } from 'orchid-core';
-import { OrderTsQueryConfig, SearchWeight, ToSQLCtx } from '../sql';
+import { AggregateMethods } from './aggregate';
+import { Expression, MaybeArray } from 'orchid-core';
+import {
+  OrderTsQueryConfig,
+  QueryData,
+  QuerySourceItem,
+  SearchWeight,
+  ToSQLCtx,
+} from '../sql';
 import { QueryBase } from '../query/queryBase';
 import {
   pushQueryValue,
@@ -14,10 +20,23 @@ import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
 import { addValue, columnToSql } from '../sql/common';
 
-// define a `headline` method in the select query builder
+// `headline` first argument is a name of the search.
+type HeadlineSearchArg<T extends Query> = Exclude<
+  T['meta']['tsQuery'],
+  undefined
+>;
+
+// Options of the `headline` function:
+// - text: column name or a raw SQL with the full text to select headline from.
+// - options: string or an expression returning Postgres headline options (https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
+type HeadlineParams<T extends Query> = {
+  text?: SelectableOrExpressionOfType<T, TextColumn>;
+  options?: string | Expression;
+};
+
+// define a `headline` method on a query builder
 declare module './aggregate' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface SelectAggMethods<T extends Query> {
+  interface AggregateMethods {
     /**
      * Give the `as` alias for the search, and it becomes possible to select a text with highlights of the matching words or phrases:
      *
@@ -88,14 +107,10 @@ declare module './aggregate' {
      * @param search - name of the search to use the query from
      * @param options - `text` for a text source, `options` for `ts_headline` options
      */
-    headline(
-      search: string | undefined extends T['meta']['tsQuery']
-        ? never
-        : Exclude<T['meta']['tsQuery'], undefined>,
-      options?: {
-        text?: SelectableOrExpressionOfType<T, TextColumn>;
-        options?: string | Expression;
-      },
+    headline<T extends Query>(
+      this: T,
+      search: HeadlineSearchArg<T>,
+      options?: HeadlineParams<T>,
     ): ColumnExpression<TextColumn>;
   }
 }
@@ -161,7 +176,40 @@ export type WhereSearchResult<T extends QueryBase, As extends string> = T & {
   meta: { tsQuery: string extends As ? never : As };
 };
 
-SelectAggMethods.prototype.headline = function (this: Query, search, params) {
+class Headline extends Expression<TextColumn> {
+  _type = TextColumn.instance;
+
+  constructor(
+    public q: QueryData,
+    public source: QuerySourceItem,
+    public params?: HeadlineParams<Query>,
+  ) {
+    super();
+  }
+
+  makeSQL(ctx: ToSQLCtx, quotedAs: string | undefined): string {
+    const { q, source, params } = this;
+    const lang = getSearchLang(ctx, q, source, quotedAs);
+
+    const text = params?.text
+      ? params.text instanceof Expression
+        ? params.text.toSQL(ctx, quotedAs)
+        : columnToSql(q, q.shape, params.text, quotedAs)
+      : getSearchText(ctx, q, source, quotedAs, true);
+
+    const options = params?.options
+      ? `, ${
+          params.options instanceof Expression
+            ? params.options.toSQL(ctx, quotedAs)
+            : addValue(ctx.values, params.options)
+        }`
+      : '';
+
+    return `ts_headline(${lang}, ${text}, "${source.as}"${options})`;
+  }
+}
+
+AggregateMethods.prototype.headline = function (this: Query, search, params) {
   const source = this.q.sources?.[search];
   if (!source)
     throw new OrchidOrmInternalError(
@@ -169,39 +217,10 @@ SelectAggMethods.prototype.headline = function (this: Query, search, params) {
       `Search \`${search}\` is not defined`,
     );
 
-  const { q } = this;
-  const data = source;
-
-  const column = TextColumn.instance;
-  class Headline extends makeColumnFnClass(column)<Query, ColumnTypeBase> {
-    toSQL(ctx: ToSQLCtx, quotedAs: string | undefined): string {
-      const lang = getSearchLang(ctx, q, data, quotedAs);
-
-      const text = params?.text
-        ? params.text instanceof Expression
-          ? params.text.toSQL(ctx, quotedAs)
-          : columnToSql(q, q.shape, params.text, quotedAs)
-        : getSearchText(ctx, q, data, quotedAs, true);
-
-      const options = params?.options
-        ? `, ${
-            params.options instanceof Expression
-              ? params.options.toSQL(ctx, quotedAs)
-              : addValue(ctx.values, params.options)
-          }`
-        : '';
-
-      const sql = `ts_headline(${lang}, ${text}, "${data.as}"${options})`;
-      return super.modifySQL(sql, ctx, quotedAs);
-    }
-  }
-
   return new Headline(
-    this,
-    'ts_headline',
-    [],
-    {},
-    column,
+    this.q,
+    source,
+    params as HeadlineParams<Query> | undefined,
   ) as unknown as ColumnExpression<TextColumn>;
 };
 
