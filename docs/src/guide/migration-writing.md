@@ -50,6 +50,7 @@ import { change } from '../src';
 change(async (db, up) => {
   const { table } = await db.createTable('languages', (t) => ({
     id: t.identity().primaryKey(),
+    // `string` is a varchar with a limit 255 by default.
     name: t.string().unique(),
     code: t.string().unique(),
   }));
@@ -297,7 +298,7 @@ import { change } from '../dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    // change column type from integer to string
+    // change column type from integer to varchar(255)
     column1: t.change(t.integer(), t.string()),
 
     // change column type using SQL expression to convert data

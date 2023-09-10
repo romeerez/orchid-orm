@@ -90,8 +90,8 @@ t.chat(limit?: number) // -> string
 // text variable unlimited length
 t.text(min: number, max: number) // -> string
 
-// Alias for t.text()
-t.string(min: number, max: number)
+// `varchar` column with optional limit defaulting to 255.
+t.string(limit?: number)
 ```
 
 Text type columns support the following `where` operators:

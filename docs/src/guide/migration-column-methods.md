@@ -232,7 +232,7 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.createTable('table', (t) => ({
     id: t.integer(),
-    name: t.string(),
+    name: t.string(), // string is varchar(255)
     ...t.foreignKey(
       ['id', 'name'],
       'otherTable',
@@ -308,8 +308,8 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.createTable('table', (t) => ({
     id: t.identity().primaryKey(),
-    title: t.string(),
-    body: t.string(),
+    title: t.text(),
+    body: t.text(),
     ...t.searchIndex(['title', 'body']),
   }));
 });
@@ -329,8 +329,8 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.createTable('table', (t) => ({
     id: t.identity().primaryKey(),
-    title: t.string(),
-    body: t.string(),
+    title: t.text(),
+    body: t.text(),
     generatedTsVector: t.tsvector().generated(['title', 'body']).searchIndex(),
   }));
 });

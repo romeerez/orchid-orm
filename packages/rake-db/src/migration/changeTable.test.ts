@@ -1640,7 +1640,7 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
-              ALTER COLUMN "column" TYPE text,
+              ALTER COLUMN "column" TYPE varchar(255),
               ALTER COLUMN "column" DROP DEFAULT,
               ALTER COLUMN "column" SET DEFAULT 'default'
             `),

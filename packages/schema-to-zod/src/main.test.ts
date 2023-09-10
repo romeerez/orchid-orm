@@ -29,7 +29,6 @@ import { assertType } from 'test-utils';
 const t = {
   ...columnTypes,
   text: (min = 0, max = Infinity) => columnTypes.text(min, max),
-  string: (min = 0, max = Infinity) => columnTypes.string(min, max),
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -476,19 +475,17 @@ describe('schema to zod', () => {
       testStringMethods(t[method as 'text']());
     });
 
-    if (method === 'varchar' || method === 'char') {
-      it('should convert to string with limit', () => {
-        const schema = columnToZod(t[method as 'varchar'](3));
+    it('should convert to string with limit', () => {
+      const schema = columnToZod(t[method as 'varchar']().length(3));
 
-        expect(() => schema.parse('')).toThrow(
-          'String must contain exactly 3 character(s)',
-        );
+      expect(() => schema.parse('')).toThrow(
+        'String must contain exactly 3 character(s)',
+      );
 
-        expect(() => schema.parse('1234')).toThrow(
-          'String must contain exactly 3 character(s)',
-        );
-      });
-    }
+      expect(() => schema.parse('1234')).toThrow(
+        'String must contain exactly 3 character(s)',
+      );
+    });
   });
 
   describe('bytea', () => {

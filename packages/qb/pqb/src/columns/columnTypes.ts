@@ -169,10 +169,6 @@ export const getColumnTypes = <
   return fn(types);
 };
 
-function text(min: number, max: number) {
-  return new TextColumn(min, max);
-}
-
 function sql(sql: TemplateStringsArray, ...values: unknown[]): RawSQLBase;
 function sql(sql: string): RawSQLBase;
 function sql(values: Record<string, unknown>, sql: string): RawSQLBase;
@@ -253,8 +249,13 @@ export const columnTypes = {
   char<Limit extends number | undefined = undefined>(limit?: Limit) {
     return new CharColumn(limit);
   },
-  text,
-  string: text,
+  text(min: number, max: number) {
+    return new TextColumn(min, max);
+  },
+  // `varchar` column with optional limit defaulting to 255.
+  string<Limit extends number = 255>(limit: Limit = 255 as Limit) {
+    return new VarCharColumn(limit);
+  },
   citext(min: number, max: number) {
     return new CitextColumn(min, max);
   },

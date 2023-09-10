@@ -379,7 +379,7 @@ const handleString = typeHandler((column: TextColumn | JSONString, errors) => {
 
   const { maxChars } = data as { maxChars?: number };
   if (maxChars !== undefined) {
-    type = type.length(maxChars, { message: errors?.length });
+    type = type.max(maxChars, { message: errors?.length });
   }
 
   return type;
