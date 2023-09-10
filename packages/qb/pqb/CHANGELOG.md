@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.12
+
+### Patch Changes
+
+- 2b467899: Override return type to optional when using `onConflict().ignore()` (#177)
+
 ## 0.18.11
 
 ### Patch Changes
