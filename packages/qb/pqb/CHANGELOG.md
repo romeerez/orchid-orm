@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.11
+
+### Patch Changes
+
+- cb1c4c2c: Change `string` column type to be a varchar with 255 limit by default
+
 ## 0.18.10
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.10.44
+
+### Patch Changes
+
+- cb1c4c2c: Change `string` column type to be a varchar with 255 limit by default
+- Updated dependencies [cb1c4c2c]
+  - pqb@0.18.11
+
 ## 2.10.43
 
 ### Patch Changes
