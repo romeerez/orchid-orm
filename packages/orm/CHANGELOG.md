@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.17.10
+
+### Patch Changes
+
+- 4debeb31: Add insert methods that do all the same as create methods, but return row count by default
+- Updated dependencies [4debeb31]
+  - pqb@0.18.10
+  - orchid-core@0.10.8
+
 ## 1.17.9
 
 ### Patch Changes
