@@ -8,6 +8,9 @@ import {
   snakeData,
   SnakeRecord,
   snakeSelectAll,
+  UniqueTable,
+  uniqueTableData,
+  UniqueTableRecord,
   User,
   userData,
   UserRecord,
@@ -1150,6 +1153,36 @@ describe('create functions', () => {
         );
 
         expectQueryNotMutated(q);
+      });
+
+      it('should override query return type from oneOrThrow to one', async () => {
+        await UniqueTable.create(uniqueTableData);
+
+        const q = UniqueTable.take()
+          .create(uniqueTableData)
+          .onConflict()
+          .ignore();
+
+        const result = await q;
+
+        assertType<typeof result, UniqueTableRecord | undefined>();
+
+        expect(result).toBe(undefined);
+      });
+
+      it('should override query return type from valueOrThrow to value', async () => {
+        await UniqueTable.create(uniqueTableData);
+
+        const q = UniqueTable.get('id')
+          .create(uniqueTableData)
+          .onConflict()
+          .ignore();
+
+        const result = await q;
+
+        assertType<typeof result, number | undefined>();
+
+        expect(result).toBe(undefined);
       });
     });
 

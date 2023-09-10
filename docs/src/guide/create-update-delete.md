@@ -207,12 +207,13 @@ A conflict occurs when a table has a `PRIMARY KEY` or a `UNIQUE` index on a colu
 (or a composite index on a set of columns) and a row being created has the same value as a row
 that already exists in the table in this column(s).
 The default behavior in case of conflict is to raise an error and abort the query.
-Using this method you can change this behavior to either silently ignore the error by using .onConflict().ignore()
-or to update the existing row with new data (perform an "UPSERT") by using .onConflict().merge().
+
+Use `onConflict` to either ignore the error by using `.onConflict().ignore()`,
+or to update the existing row with new data (perform an "UPSERT") by using `.onConflict().merge()`.
 
 ```ts
-// leave without argument to ignore or merge on any conflict
-Target.create(data).onConflict().ignore();
+// leave `onConflict` without argument to ignore or merge on any conflict
+db.table.create(data).onConflict().ignore();
 
 // single column:
 db.table.create(data).onConfict('email');
@@ -225,7 +226,7 @@ db.table.create(data).onConfict(db.table.sql`(email) where condition`);
 ```
 
 ::: info
-The column(s) specified by this method must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
+The column(s) given to the `onConflict` must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
 When specifying multiple columns, they must be a composite PRIMARY KEY or have a composite UNIQUE index.
 
 You can use the db.table.sql function in onConflict.
@@ -238,7 +239,7 @@ db.table
     name: 'John Doe',
     active: true,
   })
-  // ignore only on email conflict and active is true.
+  // ignore only when having conflicting email and when active is true.
   .onConflict(db.table.sql`(email) where active`)
   .ignore();
 ```
@@ -253,7 +254,7 @@ See the documentation on the .ignore() and .merge() methods for more details.
 
 Available only after `onConflict`.
 
-Modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
+`ignore` modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
 
 Adds the `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
 
@@ -267,6 +268,30 @@ db.table
   })
   .onConflict('email')
   .ignore();
+```
+
+When there is a conflict, nothing can be returned from the database, that's why `ignore` has to add `| undefined` part to the response type.
+
+`create` returns a full record by default, it becomes `RecordType | undefined` after applying `ignore`.
+
+```ts
+const maybeRecord: RecordType | undefined = await db.table
+  .create(data)
+  .onConflict()
+  .ignore();
+
+const maybeId: number | undefined = await db.table
+  .get('id')
+  .create(data)
+  .onConflict()
+  .ignore();
+```
+
+When creating many records, only the created records will be returned. If no records were created, array will be empty:
+
+```ts
+// array can be empty
+const arr = await db.table.createMany([data, data, data]).onConflict().ignore();
 ```
 
 ## merge

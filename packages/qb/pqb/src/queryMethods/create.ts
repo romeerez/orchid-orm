@@ -3,6 +3,7 @@ import {
   QueryReturnsAll,
   queryTypeWithLimitOne,
   SetQueryKind,
+  SetQueryReturns,
   SetQueryReturnsAll,
   SetQueryReturnsColumn,
   SetQueryReturnsOne,
@@ -158,6 +159,15 @@ type InsertManyResult<T extends Query> = T['meta']['hasSelect'] extends true
       >
     : SetQueryKind<T, 'create'>
   : SetQueryReturnsRowCount<SetQueryKind<T, 'create'>>;
+
+// `onConflict().ignore()` method output type:
+// overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',
+// because `ignore` won't return any data in case of a conflict.
+type IgnoreResult<T extends Query> = T['returnType'] extends 'oneOrThrow'
+  ? SetQueryReturns<T, 'one'>
+  : T['returnType'] extends 'valueOrThrow'
+  ? SetQueryReturns<T, 'value'>
+  : T;
 
 // `createRaw` method argument.
 // Contains array of columns and a raw SQL for values.
@@ -914,12 +924,13 @@ export class Create {
    * (or a composite index on a set of columns) and a row being created has the same value as a row
    * that already exists in the table in this column(s).
    * The default behavior in case of conflict is to raise an error and abort the query.
-   * Using this method you can change this behavior to either silently ignore the error by using .onConflict().ignore()
-   * or to update the existing row with new data (perform an "UPSERT") by using .onConflict().merge().
+   *
+   * Use `onConflict` to either ignore the error by using `.onConflict().ignore()`,
+   * or to update the existing row with new data (perform an "UPSERT") by using `.onConflict().merge()`.
    *
    * ```ts
-   * // leave without argument to ignore or merge on any conflict
-   * Target.create(data).onConflict().ignore();
+   * // leave `onConflict` without argument to ignore or merge on any conflict
+   * db.table.create(data).onConflict().ignore();
    *
    * // single column:
    * db.table.create(data).onConfict('email');
@@ -932,7 +943,7 @@ export class Create {
    * ```
    *
    * ::: info
-   * The column(s) specified by this method must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
+   * The column(s) given to the `onConflict` must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
    * When specifying multiple columns, they must be a composite PRIMARY KEY or have a composite UNIQUE index.
    *
    * You can use the db.table.sql function in onConflict.
@@ -945,7 +956,7 @@ export class Create {
    *     name: 'John Doe',
    *     active: true,
    *   })
-   *   // ignore only on email conflict and active is true.
+   *   // ignore only when having conflicting email and when active is true.
    *   .onConflict(db.table.sql`(email) where active`)
    *   .ignore();
    * ```
@@ -979,7 +990,7 @@ export class OnConflictQueryBuilder<
   /**
    * Available only after `onConflict`.
    *
-   * Modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
+   * `ignore` modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
    *
    * Adds the `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
    *
@@ -994,13 +1005,46 @@ export class OnConflictQueryBuilder<
    *   .onConflict('email')
    *   .ignore();
    * ```
+   *
+   *
+   * When there is a conflict, nothing can be returned from the database, that's why `ignore` has to add `| undefined` part to the response type.
+   *
+   * `create` returns a full record by default, it becomes `RecordType | undefined` after applying `ignore`.
+   *
+   * ```ts
+   * const maybeRecord: RecordType | undefined = await db.table
+   *   .create(data)
+   *   .onConflict()
+   *   .ignore();
+   *
+   * const maybeId: number | undefined = await db.table
+   *   .get('id')
+   *   .create(data)
+   *   .onConflict()
+   *   .ignore();
+   * ```
+   *
+   * When creating many records, only the created records will be returned. If no records were created, array will be empty:
+   *
+   * ```ts
+   * // array can be empty
+   * const arr = await db.table.createMany([data, data, data]).onConflict().ignore();
+   * ```
    */
-  ignore(): T {
-    (this.query.q as InsertQueryData).onConflict = {
+  ignore(): IgnoreResult<T> {
+    const q = this.query;
+    (q.q as InsertQueryData).onConflict = {
       type: 'ignore',
       expr: this.onConflict as OnConflictItem,
     };
-    return this.query;
+
+    if (q.q.returnType === 'oneOrThrow') {
+      q.q.returnType = 'one';
+    } else if (q.q.returnType === 'valueOrThrow') {
+      q.q.returnType = 'value';
+    }
+
+    return q as IgnoreResult<T>;
   }
 
   /**

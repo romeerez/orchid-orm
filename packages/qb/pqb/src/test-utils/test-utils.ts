@@ -35,6 +35,7 @@ export const Chat = testDb('chat', (t) => ({
   ...t.timestamps(),
 }));
 
+export type UniqueTableRecord = (typeof UniqueTable)['type'];
 export const UniqueTable = testDb('uniqueTable', (t) => ({
   id: t.identity().primaryKey(),
   one: t.text().unique().primaryKey(),
@@ -127,4 +128,11 @@ export const messageData = {
 export const snakeData = {
   snakeName: 'Dave',
   tailLength: 5,
+};
+
+export const uniqueTableData = {
+  one: 'one',
+  two: 2,
+  thirdColumn: 'three',
+  fourthColumn: 4,
 };
