@@ -69,7 +69,7 @@ describe('hasOne', () => {
       const user = { Id: 1, UserKey: 'key' };
       const now = new Date();
 
-      const query = db.user.profile(user).count().create({
+      const query = db.user.profile(user).insert({
         Bio: 'bio',
         updatedAt: now,
         createdAt: now,
@@ -649,7 +649,7 @@ describe('hasOne', () => {
           it('should invoke callbacks', async () => {
             const profileId = await db.profile.get('Id').create(profileData);
 
-            await db.user.count().create({
+            await db.user.insert({
               ...userData,
               profile: {
                 connect: { Id: profileId },

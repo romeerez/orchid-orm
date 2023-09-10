@@ -218,11 +218,18 @@ export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 export type SetQueryReturnsPluck<
   T extends Query,
   S extends keyof T['selectable'] | Expression,
-  C extends ColumnTypeBase = S extends keyof T['selectable']
+> = SetQueryReturnsPluckColumn<
+  T,
+  S extends keyof T['selectable']
     ? T['selectable'][S]['column']
     : S extends Expression
     ? S['_type']
-    : never,
+    : never
+>;
+
+export type SetQueryReturnsPluckColumn<
+  T extends Query,
+  C extends ColumnTypeBase,
 > = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
   meta: {
     hasSelect: true;

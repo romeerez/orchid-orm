@@ -42,7 +42,7 @@ describe('from', () => {
 
   describe('inner query', () => {
     useTestDatabase();
-    beforeEach(() => User.count().create(userData));
+    beforeEach(() => User.insert(userData));
 
     it('should apply column types from inner query', async () => {
       const inner = User.select('createdAt', {

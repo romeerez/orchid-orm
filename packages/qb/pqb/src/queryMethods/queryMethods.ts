@@ -695,7 +695,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
    * When they are called with `none`, query does not execute and 0 is returned.
    *
    * ```ts
-   * await db.table.count().create(data); // -> 0
+   * await db.table.insert(data); // -> 0
    * await db.table.all().update(data); // -> 0
    * await db.table.all().delete(); // -> 0
    * ```

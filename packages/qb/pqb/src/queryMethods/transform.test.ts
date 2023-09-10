@@ -5,7 +5,7 @@ describe('transform', () => {
   useTestDatabase();
 
   it('should load and transform records, with respect to column parsers', async () => {
-    await User.count().create(userData);
+    await User.insert(userData);
 
     const q = User.select('name', 'createdAt').transform((nodes) => ({
       nodes,
@@ -25,7 +25,7 @@ describe('transform', () => {
   });
 
   it('should load and transform records from a sub-query, with respect to column parsers', async () => {
-    await User.count().create(userData);
+    await User.insert(userData);
 
     const q = User.select('id', {
       users: () =>
@@ -67,7 +67,7 @@ describe('transform', () => {
       password: t.text(),
     }));
 
-    await User.count().create(userData);
+    await User.insert(userData);
 
     const q = User.select('id', {
       users: () =>

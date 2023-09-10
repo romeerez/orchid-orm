@@ -4,7 +4,10 @@ import {
   queryTypeWithLimitOne,
   SetQueryKind,
   SetQueryReturnsAll,
+  SetQueryReturnsColumn,
   SetQueryReturnsOne,
+  SetQueryReturnsPluckColumn,
+  SetQueryReturnsRowCount,
 } from '../query/query';
 import { RelationConfigBase, RelationsBase } from '../relations';
 import {
@@ -107,12 +110,27 @@ export type CreateRelationDataOmittingFKeys<
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns multiple, forces it to return one record.
-// - otherwise, query result remains as is.
+// - if it is a `pluck` query, forces it to return a single value
 type CreateResult<T extends Query> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : QueryReturnsAll<T['returnType']> extends true
   ? SetQueryReturnsOne<SetQueryKind<T, 'create'>>
+  : T['returnType'] extends 'pluck'
+  ? SetQueryReturnsColumn<SetQueryKind<T, 'create'>, T['result']['pluck']>
   : SetQueryKind<T, 'create'>;
+
+// `insert` method output type
+// - query returns inserted row count by default.
+// - returns a record with selected columns if the query has a select.
+// - if the query returns multiple, forces it to return one record.
+// - if it is a `pluck` query, forces it to return a single value
+type InsertResult<T extends Query> = T['meta']['hasSelect'] extends true
+  ? QueryReturnsAll<T['returnType']> extends true
+    ? SetQueryReturnsOne<SetQueryKind<T, 'create'>>
+    : T['returnType'] extends 'pluck'
+    ? SetQueryReturnsColumn<SetQueryKind<T, 'create'>, T['result']['pluck']>
+    : SetQueryKind<T, 'create'>
+  : SetQueryReturnsRowCount<SetQueryKind<T, 'create'>>;
 
 // `createMany` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
@@ -122,7 +140,24 @@ type CreateManyResult<T extends Query> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : T['returnType'] extends 'one' | 'oneOrThrow'
   ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
+  : T['returnType'] extends 'value' | 'valueOrThrow'
+  ? SetQueryReturnsPluckColumn<SetQueryKind<T, 'create'>, T['result']['value']>
   : SetQueryKind<T, 'create'>;
+
+// `insertMany` method output type
+// - query returns inserted row count by default.
+// - returns records with selected columns if the query has a select.
+// - if the query returns a single record, forces it to return multiple records.
+type InsertManyResult<T extends Query> = T['meta']['hasSelect'] extends true
+  ? T['returnType'] extends 'one' | 'oneOrThrow'
+    ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
+    : T['returnType'] extends 'value' | 'valueOrThrow'
+    ? SetQueryReturnsPluckColumn<
+        SetQueryKind<T, 'create'>,
+        T['result']['value']
+      >
+    : SetQueryKind<T, 'create'>
+  : SetQueryReturnsRowCount<SetQueryKind<T, 'create'>>;
 
 // `createRaw` method argument.
 // Contains array of columns and a raw SQL for values.
@@ -172,15 +207,23 @@ type OnConflictArg<T extends Query> =
   | (keyof T['shape'])[]
   | Expression;
 
+/**
+ * Used by ORM to access the context of current create query.
+ * Is passed to the `create` method of a {@link VirtualColumn}
+ */
 export type CreateCtx = {
   columns: Map<string, number>;
   returnTypeAll?: true;
   resultAll: Record<string, unknown>[];
 };
 
+// Type of `encodeFn` of columns.
 type Encoder = (input: unknown) => unknown;
 
-const handleSelect = (q: Query) => {
+// Function called by all `create` methods to override query select.
+// Clears select if query returning nothing or a count.
+// Otherwise, selects all if query doesn't have select.
+const createSelect = (q: Query) => {
   if (q.q.returnType === 'void' || isSelectingCount(q)) {
     q.q.select = undefined;
   } else if (!q.q.select) {
@@ -188,6 +231,18 @@ const handleSelect = (q: Query) => {
   }
 };
 
+/**
+ * Processes arguments of data to create.
+ * If the passed key is for a {@link VirtualColumn}, calls `create` of the virtual column.
+ * Otherwise, ignores keys that aren't relevant to the table shape,
+ * collects columns to the `ctx.columns` set, collects columns encoders.
+ *
+ * @param q - query object.
+ * @param item - argument of data to create.
+ * @param rowIndex - index of record's data in `createMany` args array.
+ * @param ctx - context of create query to be shared with a {@link VirtualColumn}.
+ * @param encoders - to collect `encodeFn`s of columns.
+ */
 const processCreateItem = (
   q: Query,
   item: Record<string, unknown>,
@@ -206,26 +261,38 @@ const processCreateItem = (
   }
 };
 
+// Creates a new context of create query.
 const createCtx = (): CreateCtx => ({
   columns: new Map(),
   resultAll: undefined as unknown as Record<string, unknown>[],
 });
 
+// Packs record values from the provided object into array of values.
+// Encode values when the column has an encoder.
 const mapColumnValues = (
   columns: string[],
   encoders: Record<string, Encoder>,
   data: Record<string, unknown>,
-) => {
+): unknown[] => {
   return columns.map((key) =>
     encoders[key] ? encoders[key](data[key]) : data[key],
   );
 };
 
+/**
+ * Processes arguments of `create`, `insert`, `createFrom` and `insertFrom` when it has data.
+ * Apply defaults that may be present on a query object to the data.
+ * Maps data object into array of values, encodes values when the column has an encoder.
+ *
+ * @param q - query object.
+ * @param data - argument with data for create.
+ * @param ctx - context of the create query.
+ */
 const handleOneData = (
   q: Query,
   data: Record<string, unknown>,
   ctx: CreateCtx,
-) => {
+): { columns: string[]; values: unknown[][] } => {
   const encoders: Record<string, Encoder> = {};
   const defaults = q.q.defaults;
 
@@ -241,11 +308,20 @@ const handleOneData = (
   return { columns, values };
 };
 
+/**
+ * Processes arguments of `createMany`, `insertMany`.
+ * Apply defaults that may be present on a query object to the data.
+ * Maps data objects into array of arrays of values, encodes values when the column has an encoder.
+ *
+ * @param q - query object.
+ * @param data - arguments with data for create.
+ * @param ctx - context of the create query.
+ */
 const handleManyData = (
   q: Query,
   data: Record<string, unknown>[],
   ctx: CreateCtx,
-) => {
+): { columns: string[]; values: unknown[][] } => {
   const encoders: Record<string, Encoder> = {};
   const defaults = q.q.defaults;
 
@@ -267,6 +343,19 @@ const handleManyData = (
   return { columns, values };
 };
 
+/**
+ * Core function that is used by all `create` and `insert` methods.
+ * Sets query `type` to `insert` for `toSQL` to know it's for inserting.
+ * Sets query columns and values.
+ * Sets query kind, which is checked by `update` method when returning a query from callback.
+ * Overrides query return type according to what is current create method supposed to return.
+ *
+ * @param self - query object.
+ * @param columns - columns list of all values.
+ * @param values - array of arrays matching columns, or can be an array of SQL expressions, or is a special object for `createFrom`.
+ * @param kind - the kind of create query, can be 'object', 'raw', 'from'.
+ * @param many - whether it's for creating one or many.
+ */
 const insert = (
   self: Query,
   {
@@ -297,15 +386,27 @@ const insert = (
   if (!select) {
     if (returnType !== 'void') q.returnType = 'rowCount';
   } else if (many) {
-    if (returnType === 'one' || returnType === 'oneOrThrow')
+    if (returnType === 'one' || returnType === 'oneOrThrow') {
       q.returnType = 'all';
+    } else if (returnType === 'value' || returnType === 'valueOrThrow') {
+      q.returnType = 'pluck';
+    }
   } else if (returnType === 'all') {
     q.returnType = 'from' in values ? values.from.q.returnType : 'one';
+  } else if (returnType === 'pluck') {
+    q.returnType = 'valueOrThrow';
   }
 
   return self;
 };
 
+/**
+ * Function to collect column names from the inner query of create `from` methods.
+ *
+ * @param from - inner query to grab the columns from.
+ * @param obj - optionally passed object with specific data, only available when creating a single record.
+ * @param many - whether it's for `createManyFrom`. If no, throws if the inner query returns multiple records.
+ */
 const getFromSelectColumns = (
   from: Query,
   obj?: { columns: string[] },
@@ -334,7 +435,17 @@ const getFromSelectColumns = (
   return queryColumns;
 };
 
-const createFromQuery = <
+/**
+ * Is used by all create from queries methods.
+ * Collects columns and values from the inner query and optionally from the given data,
+ * calls {@link insert} with a 'from' kind of create query.
+ *
+ * @param q - query object.
+ * @param from - inner query from which to create new records.
+ * @param many - whether creating many.
+ * @param data - optionally passed custom data when creating a single record.
+ */
+const insertFromQuery = <
   T extends Query,
   Q extends Query,
   Many extends boolean,
@@ -343,9 +454,7 @@ const createFromQuery = <
   from: Q,
   many: Many,
   data?: Omit<CreateData<T>, keyof Q['result']>,
-): Many extends true ? CreateManyResult<T> : CreateResult<T> => {
-  handleSelect(q);
-
+) => {
   const ctx = createCtx();
 
   const obj = data && handleOneData(q, data, ctx);
@@ -359,22 +468,40 @@ const createFromQuery = <
       values: { from, values: obj?.values },
     },
     'from',
-  ) as Many extends true ? CreateManyResult<T> : CreateResult<T>;
+    many,
+  );
 };
 
+/**
+ * Names of all create methods,
+ * is used in {@link RelationQuery} to remove these methods if chained relation shouldn't have them,
+ * for the case of has one/many through.
+ */
 export type CreateMethodsNames =
   | 'create'
   | '_create'
+  | 'insert'
+  | '_insert'
   | 'createMany'
   | '_createMany'
+  | 'insertMany'
+  | '_insertMany'
   | 'createRaw'
   | '_createRaw'
+  | 'insertRaw'
+  | '_insertRaw'
   | 'createFrom'
-  | '_createFrom';
+  | '_createFrom'
+  | 'insertFrom'
+  | '_insertFrom'
+  | 'createManyFrom'
+  | '_createManyFrom'
+  | 'insertManyFrom'
+  | '_insertManyFrom';
 
 export class Create {
   /**
-   * `create` will create one record.
+   * `create` and `insert` will create one record.
    *
    * Each column may accept a specific value, a raw SQL, or a query that returns a single value.
    *
@@ -383,6 +510,10 @@ export class Create {
    *   name: 'John',
    *   password: '1234',
    * });
+   *
+   * // When using `.onConflict().ignore()`,
+   * // the record may be not created and the `createdCount` will be 0.
+   * const createdCount = await db.table.insert(data).onConflict().ignore();
    *
    * await db.table.create({
    *   // raw SQL
@@ -394,13 +525,25 @@ export class Create {
    * });
    * ```
    *
-   * @param data - data for the record, may have values, raw SQL, queries, relation operations
+   * @param data - data for the record, may have values, raw SQL, queries, relation operations.
    */
   create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
     return this.clone()._create(data);
   }
   _create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
-    handleSelect(this);
+    createSelect(this);
+    return this._insert(data) as unknown as CreateResult<T>;
+  }
+
+  /**
+   * Works exactly as {@link create}, except that it returns inserted row count by default.
+   *
+   * @param data - data for the record, may have values, raw SQL, queries, relation operations.
+   */
+  insert<T extends Query>(this: T, data: CreateData<T>): InsertResult<T> {
+    return this.clone()._insert(data);
+  }
+  _insert<T extends Query>(this: T, data: CreateData<T>): InsertResult<T> {
     const ctx = createCtx();
     const obj = handleOneData(this, data, ctx) as {
       columns: string[];
@@ -414,13 +557,13 @@ export class Create {
       obj.values = values;
     }
 
-    return insert(this, obj, 'object') as CreateResult<T>;
+    return insert(this, obj, 'object') as InsertResult<T>;
   }
 
   /**
-   * `createMany` will create a batch of records.
+   * `createMany` and `insertMany` will create a batch of records.
    *
-   * Each column may be set with a specific value, a raw SQL, or a query, the same as in [create](#create).
+   * Each column may be set with a specific value, a raw SQL, or a query, the same as in {@link create}.
    *
    * In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be placed in its place in the `VALUES` statement.
    *
@@ -429,9 +572,12 @@ export class Create {
    *   { key: 'value', otherKey: 'other value' },
    *   { key: 'value' }, // default will be used for `otherKey`
    * ]);
+   *
+   * // `createdCount` will be 3.
+   * const createdCount = await db.table.insertMany([data, data, data]);
    * ```
    *
-   * @param data - data for the record, may have values, raw SQL, queries, relation operations
+   * @param data - array of records data, may have values, raw SQL, queries, relation operations
    */
   createMany<T extends Query>(
     this: T,
@@ -443,18 +589,36 @@ export class Create {
     this: T,
     data: CreateData<T>[],
   ): CreateManyResult<T> {
-    handleSelect(this);
+    createSelect(this);
+    return this._insertMany(data) as unknown as CreateManyResult<T>;
+  }
+
+  /**
+   * Works exactly as {@link createMany}, except that it returns inserted row count by default.
+   *
+   * @param data - array of records data, may have values, raw SQL, queries, relation operations
+   */
+  insertMany<T extends Query>(
+    this: T,
+    data: CreateData<T>[],
+  ): InsertManyResult<T> {
+    return this.clone()._insertMany(data);
+  }
+  _insertMany<T extends Query>(
+    this: T,
+    data: CreateData<T>[],
+  ): InsertManyResult<T> {
     const ctx = createCtx();
     return insert(
       this,
       handleManyData(this, data, ctx),
       'object',
       true,
-    ) as CreateManyResult<T>;
+    ) as InsertManyResult<T>;
   }
 
   /**
-   * `createRaw` is for creating one record with a raw expression.
+   * `createRaw` and `insertRaw` are for creating one record with a raw SQL expression.
    *
    * Provided SQL will be wrapped into parens for a single `VALUES` record.
    *
@@ -482,7 +646,7 @@ export class Create {
     this: T,
     ...args: CreateRawArgs<T, Arg>
   ): CreateResult<T> {
-    handleSelect(this);
+    createSelect(this);
     return insert(
       this,
       args[0] as { columns: string[]; values: Expression },
@@ -491,7 +655,30 @@ export class Create {
   }
 
   /**
-   * `createRaw` is for creating many record with raw expressions.
+   * Works exactly as {@link createRaw}, except that it returns inserted row count by default.
+   *
+   * @param args - object with columns list and raw SQL for values
+   */
+  insertRaw<T extends Query, Arg extends CreateRawData<T>>(
+    this: T,
+    ...args: CreateRawArgs<T, Arg>
+  ): InsertResult<T> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._insertRaw(args[0] as any);
+  }
+  _insertRaw<T extends Query, Arg extends CreateRawData<T>>(
+    this: T,
+    ...args: CreateRawArgs<T, Arg>
+  ): InsertResult<T> {
+    return insert(
+      this,
+      args[0] as { columns: string[]; values: Expression },
+      'raw',
+    ) as InsertResult<T>;
+  }
+
+  /**
+   * `createManyRaw` and `insertManyRaw` are for creating many record with raw SQL expressions.
    *
    * Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
    *
@@ -519,25 +706,45 @@ export class Create {
     this: T,
     ...args: CreateRawArgs<T, Arg>
   ): CreateManyResult<T> {
-    handleSelect(this);
+    createSelect(this);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this._insertManyRaw(args[0] as any) as CreateManyResult<T>;
+  }
+
+  /**
+   * Works exactly as {@link createManyRaw}, except that it returns inserted row count by default.
+   *
+   * @param args - object with columns list and array of raw SQL for values
+   */
+  insertManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
+    this: T,
+    ...args: CreateRawArgs<T, Arg>
+  ): InsertManyResult<T> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._insertManyRaw(args[0] as any);
+  }
+  _insertManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
+    this: T,
+    ...args: CreateRawArgs<T, Arg>
+  ): InsertManyResult<T> {
     return insert(
       this,
       args[0] as { columns: string[]; values: Expression[] },
       'raw',
       true,
-    ) as CreateManyResult<T>;
+    ) as InsertManyResult<T>;
   }
 
   /**
-   * This method is for creating a single record, for batch creating see `createManyFrom`.
+   * These methods are for creating a single record, for batch creating see {@link createManyFrom}.
    *
-   * `createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert in a single query.
+   * `createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
    *
    * The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
    *
    * The second optional argument is a data which will be merged with columns returned from the select query.
    *
-   * The data for the second argument is the same as in [create](#create) and [createMany](#createMany).
+   * The data for the second argument is the same as in {@link create}.
    *
    * Columns with runtime defaults (defined with a callback) are supported here.
    * The value for such a column will be injected unless selected from a related table or provided in a data object.
@@ -585,7 +792,35 @@ export class Create {
     query: Q,
     data?: Omit<CreateData<T>, keyof Q['result']>,
   ): CreateResult<T> {
-    return createFromQuery(this, query, false, data);
+    createSelect(this);
+    return insertFromQuery(this, query, false, data) as CreateResult<T>;
+  }
+
+  /**
+   * Works exactly as {@link createFrom}, except that it returns inserted row count by default.
+   *
+   * @param query - query to create new records from
+   * @param data - additionally you can set some columns
+   */
+  insertFrom<
+    T extends Query,
+    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+  >(
+    this: T,
+    query: Q,
+    data?: Omit<CreateData<T>, keyof Q['result']>,
+  ): InsertResult<T> {
+    return this.clone()._insertFrom(query, data);
+  }
+  _insertFrom<
+    T extends Query,
+    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+  >(
+    this: T,
+    query: Q,
+    data?: Omit<CreateData<T>, keyof Q['result']>,
+  ): InsertResult<T> {
+    return insertFromQuery(this, query, false, data) as InsertResult<T>;
   }
 
   /**
@@ -611,7 +846,26 @@ export class Create {
     this: T,
     query: Q,
   ): CreateManyResult<T> {
-    return createFromQuery(this, query, true);
+    createSelect(this);
+    return insertFromQuery(this, query, true) as CreateManyResult<T>;
+  }
+
+  /**
+   * Works exactly as {@link createManyFrom}, except that it returns inserted row count by default.
+   *
+   * @param query - query to create new records from
+   */
+  insertManyFrom<T extends Query, Q extends Query>(
+    this: T,
+    query: Q,
+  ): InsertManyResult<T> {
+    return this.clone()._insertManyFrom(query);
+  }
+  _insertManyFrom<T extends Query, Q extends Query>(
+    this: T,
+    query: Q,
+  ): InsertManyResult<T> {
+    return insertFromQuery(this, query, true) as InsertManyResult<T>;
   }
 
   /**

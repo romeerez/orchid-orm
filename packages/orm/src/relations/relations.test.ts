@@ -74,7 +74,7 @@ describe('relations', () => {
   });
 
   it('should handle sub query pluck with empty results', async () => {
-    await db.user.count().create(userData);
+    await db.user.insert(userData);
 
     const query = db.user
       .select({

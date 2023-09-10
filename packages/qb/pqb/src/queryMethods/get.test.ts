@@ -27,7 +27,7 @@ describe('get', () => {
     });
 
     it('should support chaining the value with operators', async () => {
-      await User.count().create(userData);
+      await User.insert(userData);
       const q = User.get('id').gt(0);
 
       const result = await q;

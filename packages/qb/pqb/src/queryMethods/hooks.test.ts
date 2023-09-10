@@ -52,7 +52,7 @@ describe('hooks', () => {
   describe('afterCreate', () => {
     it('should run inside transaction', async () => {
       const fn = jest.fn();
-      const q = User.afterCreate([], fn).count().create(userData);
+      const q = User.afterCreate([], fn).insert(userData);
       ignoreTestTransactionOnce(q);
 
       q.transaction = jest.fn(() => Promise.resolve());
@@ -408,7 +408,7 @@ describe('hooks', () => {
 
     it('should handle return type `rowCount`', async () => {
       const fn = jest.fn();
-      const q = User.afterCreate(['id'], fn).count().create(userData);
+      const q = User.afterCreate(['id'], fn).insert(userData);
 
       const result = await q;
 
@@ -418,7 +418,9 @@ describe('hooks', () => {
 
     it('should handle return type `pluck`', async () => {
       const fn = jest.fn();
-      const q = User.afterCreate(['id'], fn).pluck('name').create(userData);
+      const q = User.afterCreate(['id'], fn)
+        .pluck('name')
+        .createMany([userData]);
 
       const result = await q;
 

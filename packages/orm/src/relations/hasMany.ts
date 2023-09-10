@@ -454,8 +454,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         obj[foreignKeys[i]] = data[0][primaryKeys[i]];
       }
 
-      // TODO: optimize calling count
-      await t.count()._createMany(
+      await t.insertMany(
         params.create.map((create) => ({
           ...create,
           ...obj,

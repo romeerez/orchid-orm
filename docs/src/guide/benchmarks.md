@@ -152,7 +152,7 @@ const commentData = {
   text: 'Comment text',
 };
 
-await db.post.count().create({
+await db.post.insert({
   ...postData,
   comments: {
     create: [commentData, commentData, commentData],

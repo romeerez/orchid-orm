@@ -1,5 +1,6 @@
 import {
   Chat,
+  chatData,
   expectQueryNotMutated,
   Message,
   MessageRecord,
@@ -80,6 +81,47 @@ describe('create functions', () => {
     });
   });
 
+  describe('insertRaw', () => {
+    it('should return inserted row column by default', async () => {
+      const q = User.insertRaw({
+        columns: ['name', 'password'],
+        values: raw`'name', 'password'`,
+      });
+
+      const result = await q;
+
+      assertType<typeof result, number>();
+
+      expect(result).toBe(1);
+    });
+
+    it('should return selected columns', async () => {
+      const q = User.select('name').insertRaw({
+        columns: ['name', 'password'],
+        values: raw`'name', 'password'`,
+      });
+
+      const result = await q;
+
+      assertType<typeof result, { name: string }>();
+
+      expect(result).toEqual({ name: 'name' });
+    });
+
+    it('should override pluck to a single value', async () => {
+      const q = User.pluck('name').insertRaw({
+        columns: ['name', 'password'],
+        values: raw`'name', 'password'`,
+      });
+
+      const result = await q;
+
+      assertType<typeof result, string>();
+
+      expect(result).toEqual('name');
+    });
+  });
+
   describe('createManyRaw', () => {
     it('should create with raw sql and list of columns', () => {
       const q = User.all();
@@ -132,6 +174,51 @@ describe('create functions', () => {
           RETURNING ${snakeSelectAll}
         `,
       );
+    });
+  });
+
+  describe('insertManyRaw', () => {
+    it('should return inserted row count by default', async () => {
+      const q = User.insertManyRaw({
+        columns: ['name', 'password'],
+        values: [raw`'name', 'password'`, raw`'name', 'password'`],
+      });
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, number>();
+
+      expect(result).toBe(2);
+    });
+
+    it('should return override returning one record to multiple', async () => {
+      const q = User.take()
+        .select('name')
+        .insertManyRaw({
+          columns: ['name', 'password'],
+          values: [raw`'name', 'password'`, raw`'name', 'password'`],
+        });
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, { name: string }[]>();
+
+      expect(result).toEqual([{ name: 'name' }, { name: 'name' }]);
+    });
+
+    it('should return override returning single value with a pluck', async () => {
+      const q = User.take()
+        .get('name')
+        .insertManyRaw({
+          columns: ['name', 'password'],
+          values: [raw`'name', 'password'`, raw`'name', 'password'`],
+        });
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, string[]>();
+
+      expect(result).toEqual(['name', 'name']);
     });
   });
 
@@ -290,7 +377,7 @@ describe('create functions', () => {
     it('should create one record, returning created count', async () => {
       const q = User.all();
 
-      const query = q.count().create(userData);
+      const query = q.insert(userData);
       expectSql(
         query.toSQL(),
         `
@@ -379,8 +466,40 @@ describe('create functions', () => {
     });
   });
 
+  describe('insert', () => {
+    it('should return row count by default', async () => {
+      const q = User.insert(userData);
+
+      const result = await q;
+
+      assertType<typeof result, number>();
+
+      expect(result).toBe(1);
+    });
+
+    it('should return selected columns', async () => {
+      const q = User.select('name').insert(userData);
+
+      const result = await q;
+
+      assertType<typeof result, { name: string }>();
+
+      expect(result).toEqual({ name: userData.name });
+    });
+
+    it('should return a single selected value', async () => {
+      const q = User.get('name').insert(userData);
+
+      const result = await q;
+
+      assertType<typeof result, string>();
+
+      expect(result).toBe(userData.name);
+    });
+  });
+
   describe('createMany', () => {
-    it('should create many records with raw SQL for a column value', async () => {
+    it('should create many records with raw SQL for a column value', () => {
       const q = User.createMany([
         {
           name: userData.name,
@@ -416,7 +535,7 @@ describe('create functions', () => {
         userData,
       ];
 
-      const query = q.count().createMany(arr);
+      const query = q.insertMany(arr);
 
       expectSql(
         query.toSQL(),
@@ -582,6 +701,47 @@ describe('create functions', () => {
         ['password'],
       );
     });
+
+    it('should override value return type with pluck', () => {
+      const q = User.get('name').createMany([userData]);
+
+      assertType<Awaited<typeof q>, string[]>();
+    });
+  });
+
+  describe('insertMany', () => {
+    it('should return row count by default', async () => {
+      const q = User.insertMany([userData, userData]);
+
+      const result = await q;
+
+      assertType<typeof result, number>();
+
+      expect(result).toBe(2);
+    });
+
+    it('should return records with selected columns', async () => {
+      const q = User.select('name').insertMany([userData, userData]);
+
+      const result = await q;
+
+      assertType<typeof result, { name: string }[]>();
+
+      expect(result).toEqual([
+        { name: userData.name },
+        { name: userData.name },
+      ]);
+    });
+
+    it('should override single returning value with multiple', async () => {
+      const q = User.get('name').insertMany([userData, userData]);
+
+      const result = await q;
+
+      assertType<typeof result, string[]>();
+
+      expect(result).toEqual([userData.name, userData.name]);
+    });
   });
 
   describe('createFrom', () => {
@@ -689,6 +849,56 @@ describe('create functions', () => {
     });
   });
 
+  describe('insertFrom', () => {
+    it('should return inserted row count by default', async () => {
+      const authorId = await User.get('id').create(userData);
+      const chatId = await Chat.get('idOfChat').create(chatData);
+      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+
+      const q = Message.insertFrom(chat, { authorId, text: 'text' });
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, number>();
+
+      expect(result).toBe(1);
+    });
+
+    it('should override selecting multiple with selecting one', async () => {
+      const authorId = await User.get('id').create(userData);
+      const chatId = await Chat.get('idOfChat').create(chatData);
+      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+
+      const q = Message.select('text').insertFrom(chat, {
+        authorId,
+        text: 'text',
+      });
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, { text: string }>();
+
+      expect(result).toEqual({ text: 'text' });
+    });
+
+    it('should override selecting pluck with selecting value', async () => {
+      const authorId = await User.get('id').create(userData);
+      const chatId = await Chat.get('idOfChat').create(chatData);
+      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+
+      const q = Message.pluck('text').insertFrom(chat, {
+        authorId,
+        text: 'text',
+      });
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, string>();
+
+      expect(result).toBe('text');
+    });
+  });
+
   describe('createManyFrom', () => {
     it('should create records from select', () => {
       const query = Message.createManyFrom(
@@ -731,11 +941,66 @@ describe('create functions', () => {
     });
   });
 
+  describe('insertManyFrom', () => {
+    it('should return inserted row count by default', async () => {
+      const chatId = await Chat.get('idOfChat').create(chatData);
+
+      const q = Message.insertManyFrom(
+        Chat.find(chatId).select({
+          chatId: 'idOfChat',
+          text: 'title',
+        }),
+      );
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, number>();
+
+      expect(result).toBe(1);
+    });
+
+    it('should override selecting single with selecting multiple', async () => {
+      const chatId = await Chat.get('idOfChat').create(chatData);
+
+      const q = Message.take()
+        .select('text')
+        .insertManyFrom(
+          Chat.find(chatId).select({
+            chatId: 'idOfChat',
+            text: 'title',
+          }),
+        );
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, { text: string }[]>();
+
+      expect(result).toEqual([{ text: 'title' }]);
+    });
+
+    it('should override selecting value with selecting pluck', async () => {
+      const chatId = await Chat.get('idOfChat').create(chatData);
+
+      const q = Message.get('text').insertManyFrom(
+        Chat.find(chatId).select({
+          chatId: 'idOfChat',
+          text: 'title',
+        }),
+      );
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, string[]>();
+
+      expect(result).toEqual(['title']);
+    });
+  });
+
   describe('onConflict', () => {
     it('should return special query builder and return previous after ignore or merge', () => {
       const q = User.all();
 
-      const originalQuery = q.count().create(userData);
+      const originalQuery = q.insert(userData);
       const onConflictQuery = q.onConflict();
       expect(originalQuery instanceof OnConflictQueryBuilder).not.toBe(true);
       expect(onConflictQuery instanceof OnConflictQueryBuilder).toBe(true);
@@ -779,7 +1044,7 @@ describe('create functions', () => {
       it('should perform `ON CONFLICT` without a target', () => {
         const q = User.all();
 
-        const query = q.count().create(userData).onConflict().ignore();
+        const query = q.insert(userData).onConflict().ignore();
         expectSql(
           query.toSQL(),
           `
@@ -796,7 +1061,7 @@ describe('create functions', () => {
       it('should accept single column', () => {
         const q = User.all();
 
-        const query = q.count().create(userData).onConflict('id').ignore();
+        const query = q.insert(userData).onConflict('id').ignore();
         expectSql(
           query.toSQL(),
           `

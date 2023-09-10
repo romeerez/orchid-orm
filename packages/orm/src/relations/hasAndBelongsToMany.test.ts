@@ -1429,7 +1429,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         it('should invoke callbacks in a batch update', async () => {
-          const id = await db.user.get('Id').createMany([
+          const userIds = await db.user.pluck('Id').createMany([
             {
               ...userData,
               chats: {
@@ -1446,7 +1446,7 @@ describe('hasAndBelongsToMany', () => {
 
           resetMocks();
 
-          await db.user.find(id).update(data);
+          await db.user.where({ Id: { in: userIds } }).update(data);
 
           const ids = await db.chat.pluck('IdOfChat');
 

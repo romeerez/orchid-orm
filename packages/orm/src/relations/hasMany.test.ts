@@ -74,7 +74,7 @@ describe('hasMany', () => {
 
     it('should have create with defaults of provided id', () => {
       const user = { Id: 1, UserKey: 'key' };
-      const query = db.user.messages(user).count().create({
+      const query = db.user.messages(user).insert({
         ChatId: 2,
         Text: 'text',
       });

@@ -39,7 +39,7 @@ describe('none', () => {
 
   it('should return 0 for return type `rowCount`', async () => {
     const result = await Promise.all([
-      User.count().create(userData).none(),
+      User.insert(userData).none(),
       User.all().update({}).none(),
       User.all().delete().none(),
     ]);

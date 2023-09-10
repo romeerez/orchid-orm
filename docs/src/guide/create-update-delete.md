@@ -1,12 +1,12 @@
 # Create, update, and delete records
 
-By default, all create methods will return a full record.
+We have `create` methods that returns a full record by default, and `insert` methods that by default will return only a count of inserted rows.
 
-`beforeCreate` and `afterCreate` callbacks are supported for creating, see [callbacks](#callbacks).
+To perform custom actions before or after creating records, see `beforeCreate`, `afterCreate`, `afterCreateCommit` [lifecycle hooks](/guide/hooks.html).
 
-`create*` methods require columns that are not nullable and don't have a default.
+`create*` and `insert*` methods require columns that are not nullable and don't have a default.
 
-Place `select`, or `get` before `create` to specify returning columns:
+Place `select`, or `get` before `create` or `insert` to specify returning columns:
 
 ```ts
 // to return only `id`, use get('id')
@@ -27,11 +27,11 @@ const objects2: { id: number }[] = await db.table.select('id').createRaw({
 });
 ```
 
-## create
+## create, insert
 
 [//]: # 'has JSDoc'
 
-`create` will create one record.
+`create` and `insert` will create one record.
 
 Each column may accept a specific value, a raw SQL, or a query that returns a single value.
 
@@ -40,6 +40,10 @@ const oneRecord = await db.table.create({
   name: 'John',
   password: '1234',
 });
+
+// When using `.onConflict().ignore()`,
+// the record may be not created and the `createdCount` will be 0.
+const createdCount = await db.table.insert(data).onConflict().ignore();
 
 await db.table.create({
   // raw SQL
@@ -51,13 +55,13 @@ await db.table.create({
 });
 ```
 
-## createMany
+## createMany, insertMany
 
 [//]: # 'has JSDoc'
 
-`createMany` will create a batch of records.
+`createMany` and `insertMany` will create a batch of records.
 
-Each column may be set with a specific value, a raw SQL, or a query, the same as in [create](#create).
+Each column may be set with a specific value, a raw SQL, or a query, the same as in [create](#create-insert).
 
 In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be placed in its place in the `VALUES` statement.
 
@@ -66,13 +70,16 @@ const manyRecords = await db.table.createMany([
   { key: 'value', otherKey: 'other value' },
   { key: 'value' }, // default will be used for `otherKey`
 ]);
+
+// `createdCount` will be 3.
+const createdCount = await db.table.insertMany([data, data, data]);
 ```
 
-## createRaw
+## createRaw, insertRaw
 
 [//]: # 'has JSDoc'
 
-`createRaw` is for creating one record with a raw SQL expression.
+`createRaw` and `insertRaw` are for creating one record with a raw SQL expression.
 
 Provided SQL will be wrapped into parens for a single `VALUES` record.
 
@@ -87,11 +94,11 @@ const oneRecord = await db.table.createRaw({
 });
 ```
 
-## createManyRaw
+## createManyRaw, insertManyRaw
 
 [//]: # 'has JSDoc'
 
-`createRaw` is for creating many record with raw SQL expressions.
+`createManyRaw` and `insertManyRaw` are for creating many record with raw SQL expressions.
 
 Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
 
@@ -106,19 +113,19 @@ const manyRecords = await db.table.createManyRaw({
 });
 ```
 
-## createFrom
+## createFrom, insertFrom
 
 [//]: # 'has JSDoc'
 
-This method is for creating a single record, for batch creating see `createManyFrom`.
+These methods are for creating a single record, for batch creating see [createManyFrom](#createManyFrom-insertManyFrom).
 
-`createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert in a single query.
+`createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
 
 The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
 
 The second optional argument is a data which will be merged with columns returned from the select query.
 
-The data for the second argument is the same as in [create](#create) and [createMany](#createMany).
+The data for the second argument is the same as in [create](#create-insert).
 
 Columns with runtime defaults (defined with a callback) are supported here.
 The value for such a column will be injected unless selected from a related table or provided in a data object.
@@ -145,7 +152,7 @@ LIMIT 1
 RETURNING *
 ```
 
-## createManyFrom
+## createManyFrom, insertManyFrom
 
 [//]: # 'has JSDoc'
 
@@ -375,7 +382,7 @@ db.table
 
 Columns provided in `defaults` are marked as optional in the following `create`. `defaults`
 
-Default data is the same as in [create](#create) and [createMany](#createMany),
+Default data is the same as in [create](#create-insert) and [createMany](#createMany-insertMany),
 so you can provide a raw SQL, or a query.
 
 ```ts
