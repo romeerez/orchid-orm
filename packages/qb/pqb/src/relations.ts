@@ -1,6 +1,6 @@
 import { Query, QueryWithTable } from './query/query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
-import { EmptyObject, StringKey } from 'orchid-core';
+import { StringKey } from 'orchid-core';
 import { QueryBase } from './query/queryBase';
 
 export type RelationConfigBase = {
@@ -38,23 +38,26 @@ export type RelationQuery<
   Name extends PropertyKey = PropertyKey,
   Config extends RelationConfigBase = RelationConfigBase,
   T extends Query = Query,
-  Q extends Query = ((Config['chainedCreate'] extends true
-    ? T
-    : T & {
-        [K in CreateMethodsNames]: never;
-      }) &
-    (Config['chainedDelete'] extends true
-      ? EmptyObject
-      : {
-          [K in DeleteMethodsNames]: never;
-        })) & {
-    meta: Omit<T['meta'], 'as'> & {
-      as: StringKey<Name>;
-      defaults: Record<Config['populate'], true>;
-      hasWhere: true;
-    };
-    relationConfig: Config;
-    // INNER JOIN the current relation instead of the default OUTER behavior
-    join<T extends Query>(this: T): T;
+  Q = {
+    [K in keyof T | 'relationConfig']: K extends 'meta'
+      ? Omit<T['meta'], 'as'> & {
+          as: StringKey<Name>;
+          defaults: Record<Config['populate'], true>;
+          hasWhere: true;
+        }
+      : K extends 'join'
+      ? // INNER JOIN the current relation instead of the default OUTER behavior
+        <T extends Query>(this: T) => T
+      : K extends CreateMethodsNames
+      ? Config['chainedCreate'] extends true
+        ? T[K]
+        : never
+      : K extends DeleteMethodsNames
+      ? Config['chainedDelete'] extends true
+        ? T[K]
+        : never
+      : K extends keyof T
+      ? T[K]
+      : Config;
   },
 > = ((params: Config['params']) => Q) & Q;
