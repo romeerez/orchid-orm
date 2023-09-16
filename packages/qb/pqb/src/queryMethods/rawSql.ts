@@ -1,5 +1,10 @@
-import { ColumnTypesBase, ColumnTypeBase, RawSQLArgs } from 'orchid-core';
-import { raw, RawSQL } from '../sql/rawSql';
+import {
+  ColumnTypesBase,
+  ColumnTypeBase,
+  StaticSQLArgs,
+  DynamicSQLArg,
+} from 'orchid-core';
+import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';
 
 export class RawSqlMethods<CT extends ColumnTypesBase> {
   columnTypes!: CT;
@@ -158,9 +163,15 @@ export class RawSqlMethods<CT extends ColumnTypesBase> {
    */
   sql<T = unknown>(
     this: { columnTypes: CT },
-    ...args: RawSQLArgs
-  ): RawSQL<ColumnTypeBase<T>, CT> {
-    const sql = raw<T>(...args) as unknown as RawSQL<ColumnTypeBase<T>, CT>;
+    ...args: StaticSQLArgs
+  ): RawSQL<ColumnTypeBase<T>, CT>;
+  sql<T = unknown>(
+    this: { columnTypes: CT },
+    ...args: [DynamicSQLArg]
+  ): DynamicRawSQL<ColumnTypeBase<T>, CT>;
+  sql(...args: unknown[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sql = (raw as any)(...args);
     sql.columnTypes = this.columnTypes;
     return sql;
   }

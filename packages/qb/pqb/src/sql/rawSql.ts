@@ -1,14 +1,19 @@
 import {
   ColumnTypeBase,
   ColumnTypesBase,
-  RawSQLArgs,
+  SQLArgs,
   RawSQLBase,
   RawSQLValues,
   TemplateLiteralArgs,
   isTemplateLiteralArgs,
+  DynamicSQLArg,
+  Expression,
+  ExpressionTypeMethod,
+  StaticSQLArgs,
 } from 'orchid-core';
 import { DefaultColumnTypes } from '../columns';
 
+// reuse array to track which variables were used in the SQL, to throw when there are some unused.
 const used: string[] = [];
 const literalValues: number[] = [];
 
@@ -103,12 +108,44 @@ export class RawSQL<
   }
 }
 
-export const raw = <T = unknown>(
-  ...args: RawSQLArgs
-): RawSQL<ColumnTypeBase<T>> =>
-  isTemplateLiteralArgs(args)
+// `DynamicRawSQL` extends both `Expression` and `ExpressionTypeMethod`, so it needs a separate interface.
+export interface DynamicRawSQL<T extends ColumnTypeBase>
+  extends Expression<T>,
+    ExpressionTypeMethod {}
+
+// Calls the given function to get inner SQL each time when converting to SQL.
+export class DynamicRawSQL<
+  T extends ColumnTypeBase,
+  CT extends ColumnTypesBase = DefaultColumnTypes,
+> extends Expression<T> {
+  declare _type: T;
+  declare columnTypes: CT;
+
+  constructor(public fn: DynamicSQLArg) {
+    super();
+  }
+
+  // Calls the given function to get SQL from it.
+  makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
+    return this.fn(raw).toSQL(ctx, quotedAs);
+  }
+}
+
+DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
+
+export function raw<T = unknown>(
+  ...args: StaticSQLArgs
+): RawSQL<ColumnTypeBase<T>>;
+export function raw<T = unknown>(
+  ...args: [DynamicSQLArg]
+): DynamicRawSQL<ColumnTypeBase<T>>;
+export function raw(...args: SQLArgs) {
+  return isTemplateLiteralArgs(args)
     ? new RawSQL(args)
+    : typeof args[0] === 'function'
+    ? new DynamicRawSQL(args[0])
     : new RawSQL(args[0].raw, args[0].values);
+}
 
 // Raw SQL count(*) to apply directly to `QueryData.select`.
 export const countSelect = [new RawSQL('count(*)')];

@@ -218,4 +218,18 @@ describe('raw sql', () => {
 
     expect(() => q.toSQL()).toThrow('Query variable `b` is unused');
   });
+
+  describe('dynamic raw sql', () => {
+    it('should accept function which is executed dynamically each time when converting the expression to sql', () => {
+      const sql = User.sql((sql) => sql({ raw: `value = ${value}` }));
+
+      const ctx = { values: [] };
+
+      let value = 1;
+      expect(sql.toSQL(ctx)).toBe('value = 1');
+
+      value++;
+      expect(sql.toSQL(ctx)).toBe('value = 2');
+    });
+  });
 });

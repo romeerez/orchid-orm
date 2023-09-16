@@ -10,10 +10,10 @@ import {
   PrimaryKeyColumn,
   pushColumnData,
   QueryBaseCommon,
-  RawSQLArgs,
   RawSQLBase,
   setColumnData,
   ValidationContext,
+  StaticSQLArgs,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
 import { raw, RawSQL } from '../sql/rawSql';
@@ -470,7 +470,7 @@ export abstract class ColumnType<
    *
    * @param args - raw SQL
    */
-  generated<T extends ColumnType>(this: T, ...args: RawSQLArgs): T {
+  generated<T extends ColumnType>(this: T, ...args: StaticSQLArgs): T {
     return setColumnData(this, 'generated', raw(...args));
   }
 }
