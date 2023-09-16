@@ -3,21 +3,31 @@ import { QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
 import { Expression } from 'orchid-core';
 
-export type ColumnNamesShape = Record<
-  string,
-  { data: { name?: string; computed?: Expression } }
->;
+type Column = {
+  data: { name?: string; computed?: Expression };
+};
+
+export type ColumnsShapeWithDataForSQL = Record<string, Column>;
 
 export const q = (sql: string) => `"${sql}"`;
 
-// quote column with table or as
-export const qc = (column: string, quotedAs?: string) =>
-  quotedAs ? `${quotedAs}."${column}"` : column;
+export function simpleColumnToSQL(
+  ctx: ToSQLCtx,
+  key: string,
+  column?: Column,
+  quotedAs?: string,
+): string {
+  return column
+    ? column.data.computed
+      ? column.data.computed.toSQL(ctx, quotedAs)
+      : `${quotedAs ? `${quotedAs}.` : ''}"${column.data.name || key}"`
+    : `"${key}"`;
+}
 
 export const columnToSql = (
   ctx: ToSQLCtx,
   data: Pick<QueryData, 'joinedShapes' | 'joinOverrides'>,
-  shape: ColumnNamesShape,
+  shape: ColumnsShapeWithDataForSQL,
   column: string,
   quotedAs?: string,
   select?: true,
@@ -59,20 +69,7 @@ export const columnToSql = (
     return `"${column}".r`;
   }
 
-  const col = shape[column];
-  if (col) {
-    if (col.data.name) {
-      return `${quotedAs ? `${quotedAs}.` : ''}"${col.data.name}"`;
-    }
-
-    if (col.data.computed) {
-      return `${col.data.computed.toSQL(ctx, quotedAs)}`;
-    }
-
-    return `${quotedAs ? `${quotedAs}.` : ''}"${column}"`;
-  }
-
-  return `"${column}"`;
+  return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
 };
 
 export const columnToSqlWithAs = (
@@ -152,7 +149,7 @@ export const rawOrColumnToSql = (
   data: Pick<QueryData, 'shape' | 'joinedShapes'>,
   expr: SelectableOrExpression,
   quotedAs: string | undefined,
-  shape: ColumnNamesShape = data.shape,
+  shape: ColumnsShapeWithDataForSQL = data.shape,
   select?: true,
 ) => {
   return typeof expr === 'string'

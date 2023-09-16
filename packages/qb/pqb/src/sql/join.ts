@@ -1,9 +1,9 @@
 import {
-  ColumnNamesShape,
   q,
   quoteSchemaAndTable,
   rawOrColumnToSql,
   columnToSql,
+  ColumnsShapeWithDataForSQL,
 } from './common';
 import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query/query';
@@ -169,7 +169,7 @@ const processArgs = (
         joinQueryAfterCallback?(fromQuery: Query, toQuery: Query): Query;
       }),
   joinAs: string,
-  joinShape: ColumnNamesShape,
+  joinShape: ColumnsShapeWithDataForSQL,
   quotedAs?: string,
 ) => {
   if (args.length === 2) {
@@ -266,7 +266,7 @@ const getConditionsFor3Or4LengthItem = (
   target: string,
   quotedAs: string | undefined,
   args: ItemOf3Or4Length,
-  joinShape: ColumnNamesShape,
+  joinShape: ColumnsShapeWithDataForSQL,
 ): string => {
   const [, leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
@@ -288,7 +288,7 @@ const getObjectOrRawConditions = (
   data: Record<string, string | Expression> | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
-  joinShape: ColumnNamesShape,
+  joinShape: ColumnsShapeWithDataForSQL,
 ): string => {
   if (data === true) {
     return 'true';

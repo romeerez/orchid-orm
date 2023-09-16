@@ -2,6 +2,7 @@ import {
   AfterHook,
   ColumnsShape,
   columnTypes as defaultColumnTypes,
+  ComputedColumnsBase,
   Db,
   DefaultColumnTypes,
   getColumnTypes,
@@ -10,6 +11,7 @@ import {
   QueryBase,
   QueryBeforeHook,
   QueryData,
+  QueryDefaultReturnData,
   QueryHooks,
   QueryWithTable,
   RelationQueryBase,
@@ -21,6 +23,7 @@ import {
   ColumnShapeQueryType,
   ColumnsShapeBase,
   ColumnTypesBase,
+  EmptyObject,
   getCallerFilePath,
   getStackTrace,
   snakeCaseKey,
@@ -45,7 +48,17 @@ export type TableClasses = Record<string, TableClass>;
 export type TableToDb<
   T extends Table,
   RelationQueries extends Record<string, RelationQueryBase>,
-> = Db<T['table'], T['columns'], RelationQueries, T['types']> & {
+> = Db<
+  T['table'],
+  T['computed'] extends ComputedColumnsBase<never>
+    ? T['columns'] & {
+        [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
+      }
+    : T['columns'],
+  RelationQueries,
+  T['types'],
+  QueryDefaultReturnData<T['columns']>
+> & {
   definedAs: string;
   db: OrchidORM;
   getFilePath(): string;
@@ -84,6 +97,8 @@ export type Table = {
   filePath: string;
   // default language for the full text search
   language?: string;
+
+  computed?: ComputedColumnsBase<never>;
 };
 
 // Object type that's allowed in `where` and similar methods of the table.
@@ -240,6 +255,14 @@ export const createBaseTable = <
       // Memoize columns in the prototype of class.
       // It is accessed in schema-to-tod.
       return (this.constructor.prototype.columns = shape);
+    }
+
+    setComputed<
+      Table extends string,
+      Shape extends ColumnsShape,
+      Computed extends ComputedColumnsBase<Db<Table, Shape, EmptyObject, CT>>,
+    >(computed: Computed): Computed {
+      return computed;
     }
 
     belongsTo<

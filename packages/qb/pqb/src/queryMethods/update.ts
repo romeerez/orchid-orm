@@ -328,7 +328,10 @@ export class Update {
       if (item instanceof VirtualColumn && item.update) {
         item.update(this, ctx, set);
         delete set[key];
-      } else if (!shape[key] && shape !== anyShape) {
+      } else if (
+        (!shape[key] || shape[key].data.computed) &&
+        shape !== anyShape
+      ) {
         delete set[key];
       } else {
         let value = set[key];

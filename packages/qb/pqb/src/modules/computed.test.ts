@@ -139,4 +139,100 @@ describe('computed', () => {
       expect(res).toEqual({ as: nameAndKey });
     });
   });
+
+  describe('where', () => {
+    it('should support computed columns', () => {
+      const q = User.where({ nameAndKey: 'value' });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "user"
+        WHERE "name" || ' ' || "userKey" = $1`,
+        ['value'],
+      );
+    });
+
+    it('should support where operators', () => {
+      const q = User.where({ nameAndKey: { startsWith: 'value' } });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "user"
+        WHERE "name" || ' ' || "userKey" ILIKE $1 || '%'`,
+        ['value'],
+      );
+    });
+
+    it('should support where operators with dot', () => {
+      const q = User.where({ 'user.nameAndKey': { startsWith: 'value' } });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "user"
+        WHERE "name" || ' ' || "userKey" ILIKE $1 || '%'`,
+        ['value'],
+      );
+    });
+  });
+
+  describe('order', () => {
+    it('should support computed column', () => {
+      const q = User.order('nameAndKey');
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "user"
+        ORDER BY "name" || ' ' || "userKey" ASC`,
+      );
+    });
+
+    it('should support computed column for object', () => {
+      const q = User.order({ nameAndKey: 'DESC' });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "user"
+        ORDER BY "name" || ' ' || "userKey" DESC`,
+      );
+    });
+  });
+
+  describe('create', () => {
+    it('should not allow computed columns', () => {
+      const q = User.insert({
+        ...partialUserData,
+        // @ts-expect-error computed column should not be allowed
+        nameAndKey: 'value',
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, $2)
+        `,
+        [userData.name, userData.password],
+      );
+    });
+  });
+
+  describe('update', () => {
+    it('should not allow computed columns', () => {
+      const q = User.find(1).update({
+        name: 'name',
+        // @ts-expect-error computed column should not be allowed
+        nameAndKey: 'value',
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          UPDATE "user"
+          SET "name" = $1
+          WHERE "user"."id" = $2
+        `,
+        ['name', 1],
+      );
+    });
+  });
 });

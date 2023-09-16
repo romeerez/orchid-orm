@@ -8,7 +8,7 @@ import {
   WhereOnJoinItem,
   WhereSearchItem,
 } from './types';
-import { addValue, q, qc, columnToSql } from './common';
+import { addValue, columnToSql, simpleColumnToSQL } from './common';
 import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
@@ -112,7 +112,12 @@ const processWhere = (
 
   if ('prototype' in data || 'baseQuery' in data) {
     const query = data as Query;
-    const sql = whereToSql(ctx, query, query.q, query.table && q(query.table));
+    const sql = whereToSql(
+      ctx,
+      query,
+      query.q,
+      query.table && `"${query.table}"`,
+    );
     if (sql) {
       ands.push(`${prefix}(${sql})`);
     }
@@ -179,7 +184,7 @@ const processWhere = (
           query,
           query.shape,
           item.on[0],
-          q(getJoinItemSource(item.joinFrom)),
+          `"${getJoinItemSource(item.joinFrom)}"`,
         );
 
         const joinTo = getJoinItemSource(item.joinTo);
@@ -194,7 +199,7 @@ const processWhere = (
             query,
             joinedShape,
             item.on[1],
-            q(joinTo),
+            `"${joinTo}"`,
           );
         } else {
           op = item.on[1];
@@ -203,7 +208,7 @@ const processWhere = (
             query,
             joinedShape,
             item.on[2],
-            q(joinTo),
+            `"${joinTo}"`,
           );
         }
 
@@ -249,19 +254,21 @@ const processWhere = (
         let column = query.shape[key];
         let quotedColumn: string | undefined;
         if (column) {
-          quotedColumn = qc(column.data.name || key, quotedAs);
+          quotedColumn = simpleColumnToSQL(ctx, key, column, quotedAs);
         } else if (!column) {
           const index = key.indexOf('.');
           if (index !== -1) {
-            const joinedTable = key.slice(0, index);
-            const joinedColumn = key.slice(index + 1);
-            column = query.joinedShapes?.[joinedTable]?.[
-              joinedColumn
-            ] as typeof column;
-            quotedColumn = qc(
-              column?.data.name || joinedColumn,
-              q(joinedTable),
-            );
+            const table = key.slice(0, index);
+            const quoted = `"${table}"`;
+            const name = key.slice(index + 1);
+
+            column = (
+              quotedAs === quoted
+                ? query.shape[name]
+                : query.joinedShapes?.[table]?.[name]
+            ) as typeof column;
+
+            quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
           } else {
             quotedColumn = undefined;
           }

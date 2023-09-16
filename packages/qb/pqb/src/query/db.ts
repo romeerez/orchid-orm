@@ -80,12 +80,17 @@ export type DbTableOptions = {
   language?: string;
 } & QueryLogOptions;
 
+export type QueryDefaultReturnData<Shape extends ColumnsShapeBase> = Pick<
+  ColumnShapeOutput<Shape>,
+  DefaultSelectColumns<Shape>[number]
+>[];
+
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
   CT extends ColumnTypesBase = DefaultColumnTypes,
-  Data = Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[],
+  Data = QueryDefaultReturnData<Shape>,
 > extends DbBase<Adapter, Table, Shape, CT>,
     QueryMethods<CT> {
   new (

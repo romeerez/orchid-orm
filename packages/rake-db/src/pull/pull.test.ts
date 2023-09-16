@@ -74,10 +74,10 @@ class BaseTable {
     return 'path';
   }
   static exportAs = 'BaseTable';
-  columnTypes!: DefaultColumnTypes;
+  types!: DefaultColumnTypes;
   snakeCase?: boolean;
 }
-BaseTable.prototype.columnTypes = columnTypes;
+BaseTable.prototype.types = columnTypes;
 
 const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
   processRakeDbConfig({
