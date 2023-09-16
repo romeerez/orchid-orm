@@ -27,8 +27,8 @@ export class SelectItemExpression<
       ? this.item === '*'
         ? selectAllSql(this.q, this.q.q as SelectQueryData, quotedAs)
         : ctx.aliasValue
-        ? columnToSql(this.q.q, this.q.q.shape, this.item, quotedAs, true)
-        : columnToSqlWithAs(this.q.q, this.item, quotedAs, true)
+        ? columnToSql(ctx, this.q.q, this.q.q.shape, this.item, quotedAs, true)
+        : columnToSqlWithAs(ctx, this.q.q, this.item, quotedAs, true)
       : selectedObjectToSQL(ctx, this.q, quotedAs, this.item);
   }
 }

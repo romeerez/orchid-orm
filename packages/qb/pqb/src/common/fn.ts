@@ -87,7 +87,7 @@ export class FnExpression<
           if (typeof arg === 'string') {
             return arg === '*'
               ? '*'
-              : columnToSql(this.q.q, this.q.q.shape, arg, quotedAs, true);
+              : columnToSql(ctx, this.q.q, this.q.q.shape, arg, quotedAs, true);
           } else if (arg instanceof Expression) {
             return arg.toSQL(ctx, quotedAs);
           } else if ('pairs' in arg) {

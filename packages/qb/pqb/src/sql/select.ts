@@ -10,17 +10,19 @@ import { Expression, isExpression } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 
 const jsonColumnOrMethodToSql = (
+  ctx: ToSQLCtx,
   table: Query,
   column: string | JsonItem,
   values: unknown[],
   quotedAs?: string,
 ) => {
   return typeof column === 'string'
-    ? columnToSql(table.q, table.q.shape, column, quotedAs)
-    : jsonToSql(table, column, values, quotedAs);
+    ? columnToSql(ctx, table.q, table.q.shape, column, quotedAs)
+    : jsonToSql(ctx, table, column, values, quotedAs);
 };
 
 export const jsonToSql = (
+  ctx: ToSQLCtx,
   table: Query,
   item: JsonItem,
   values: unknown[],
@@ -30,6 +32,7 @@ export const jsonToSql = (
   if (json[0] === 'pathQuery') {
     const [, , , column, path, options] = json;
     return `jsonb_path_query(${jsonColumnOrMethodToSql(
+      ctx,
       table,
       column,
       values,
@@ -40,6 +43,7 @@ export const jsonToSql = (
   } else if (json[0] === 'set') {
     const [, , , column, path, value, options] = json;
     return `jsonb_set(${jsonColumnOrMethodToSql(
+      ctx,
       table,
       column,
       values,
@@ -50,6 +54,7 @@ export const jsonToSql = (
   } else if (json[0] === 'insert') {
     const [, , , column, path, value, options] = json;
     return `jsonb_insert(${jsonColumnOrMethodToSql(
+      ctx,
       table,
       column,
       values,
@@ -60,6 +65,7 @@ export const jsonToSql = (
   } else if (json[0] === 'remove') {
     const [, , , column, path] = json;
     return `${jsonColumnOrMethodToSql(
+      ctx,
       table,
       column,
       values,
@@ -88,7 +94,7 @@ export const selectToSql = (
     const list: string[] = [];
     for (const item of query.select) {
       if (typeof item === 'string') {
-        list.push(selectedStringToSQL(table, query, quotedAs, item));
+        list.push(selectedStringToSQL(ctx, table, query, quotedAs, item));
       } else if ('selectAs' in item) {
         const obj = item.selectAs as Record<
           string,
@@ -105,6 +111,7 @@ export const selectToSql = (
           } else {
             list.push(
               `${columnToSql(
+                ctx,
                 table.q,
                 table.q.shape,
                 value as string,
@@ -125,6 +132,7 @@ export const selectToSql = (
 };
 
 export const selectedStringToSQL = (
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs: string | undefined,
@@ -132,7 +140,7 @@ export const selectedStringToSQL = (
 ) =>
   item === '*'
     ? selectAllSql(table, query, quotedAs)
-    : columnToSqlWithAs(table.q, item, quotedAs, true);
+    : columnToSqlWithAs(ctx, table.q, item, quotedAs, true);
 
 export function selectedObjectToSQL(
   ctx: ToSQLCtx,
@@ -141,7 +149,7 @@ export function selectedObjectToSQL(
   item: JsonItem | Expression,
 ) {
   if ('__json' in item) {
-    return `${jsonToSql(table, item, ctx.values, quotedAs)} AS ${q(
+    return `${jsonToSql(ctx, table, item, ctx.values, quotedAs)} ${q(
       item.__json[1],
     )}`;
   }

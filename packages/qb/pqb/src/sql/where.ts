@@ -144,10 +144,22 @@ const processWhere = (
     } else if (key === 'ON') {
       if (Array.isArray(value)) {
         const item = value as WhereJsonPathEqualsItem;
-        const leftColumn = columnToSql(query, query.shape, item[0], quotedAs);
+        const leftColumn = columnToSql(
+          ctx,
+          query,
+          query.shape,
+          item[0],
+          quotedAs,
+        );
 
         const leftPath = item[1];
-        const rightColumn = columnToSql(query, query.shape, item[2], quotedAs);
+        const rightColumn = columnToSql(
+          ctx,
+          query,
+          query.shape,
+          item[2],
+          quotedAs,
+        );
 
         const rightPath = item[3];
 
@@ -163,6 +175,7 @@ const processWhere = (
       } else {
         const item = value as WhereOnItem;
         const leftColumn = columnToSql(
+          ctx,
           query,
           query.shape,
           item.on[0],
@@ -176,10 +189,22 @@ const processWhere = (
         let rightColumn;
         if (item.on.length === 2) {
           op = '=';
-          rightColumn = columnToSql(query, joinedShape, item.on[1], q(joinTo));
+          rightColumn = columnToSql(
+            ctx,
+            query,
+            joinedShape,
+            item.on[1],
+            q(joinTo),
+          );
         } else {
           op = item.on[1];
-          rightColumn = columnToSql(query, joinedShape, item.on[2], q(joinTo));
+          rightColumn = columnToSql(
+            ctx,
+            query,
+            joinedShape,
+            item.on[2],
+            q(joinTo),
+          );
         }
 
         ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
@@ -213,6 +238,7 @@ const processWhere = (
       if (isExpression(value)) {
         ands.push(
           `${prefix}${columnToSql(
+            ctx,
             query,
             query.shape,
             key,
@@ -273,7 +299,7 @@ const processWhere = (
       }
     } else {
       ands.push(
-        `${prefix}${columnToSql(query, query.shape, key, quotedAs)} ${
+        `${prefix}${columnToSql(ctx, query, query.shape, key, quotedAs)} ${
           value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
         }`,
       );
@@ -322,7 +348,7 @@ const pushIn = (
   }
 
   const columnsSql = arg.columns
-    .map((column) => columnToSql(query, query.shape, column, quotedAs))
+    .map((column) => columnToSql(ctx, query, query.shape, column, quotedAs))
     .join(', ');
 
   ands.push(

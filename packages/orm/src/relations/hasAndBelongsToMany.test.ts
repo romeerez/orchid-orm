@@ -207,7 +207,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "chats"."title" AS "Title"
+        SELECT "u"."name" AS "Name", "chats"."title" "Title"
         FROM "user" AS "u"
         JOIN "chat" AS "chats"
           ON EXISTS (
@@ -239,7 +239,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "c"."title" AS "Title"
+        SELECT "u"."name" AS "Name", "c"."title" "Title"
         FROM "user" AS "u"
         JOIN "chat" AS "c"
           ON "c"."title" = $1

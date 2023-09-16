@@ -302,13 +302,13 @@ const getObjectOrRawConditions = (
       const value = data[key];
 
       pairs.push(
-        `${columnToSql(query, joinShape, key, joinAs)} = ${rawOrColumnToSql(
+        `${columnToSql(
           ctx,
           query,
-          value,
-          quotedAs,
-          shape,
-        )}`,
+          joinShape,
+          key,
+          joinAs,
+        )} = ${rawOrColumnToSql(ctx, query, value, quotedAs, shape)}`,
       );
     }
 

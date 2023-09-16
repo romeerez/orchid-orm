@@ -98,7 +98,7 @@ export const getSearchLang = (
 ): string => {
   return (source.langSQL ??=
     'languageColumn' in source
-      ? columnToSql(data, data.shape, source.languageColumn, quotedAs)
+      ? columnToSql(ctx, data, data.shape, source.languageColumn, quotedAs)
       : isRawSQL(source.language)
       ? source.language.toSQL(ctx)
       : addValue(ctx.values, source.language || data.language || 'english'));
@@ -116,15 +116,15 @@ export const getSearchText = (
 
   if ('in' in source) {
     if (typeof source.in === 'string') {
-      sql = columnToSql(data, data.shape, source.in, quotedAs);
+      sql = columnToSql(ctx, data, data.shape, source.in, quotedAs);
     } else if (Array.isArray(source.in)) {
       sql = `concat_ws(' ', ${source.in
-        .map((column) => columnToSql(data, data.shape, column, quotedAs))
+        .map((column) => columnToSql(ctx, data, data.shape, column, quotedAs))
         .join(', ')})`;
     } else {
       sql = [];
       for (const key in source.in) {
-        sql.push(columnToSql(data, data.shape, key, quotedAs));
+        sql.push(columnToSql(ctx, data, data.shape, key, quotedAs));
       }
     }
   } else if ('vector' in source) {
@@ -134,7 +134,7 @@ export const getSearchText = (
       );
     }
 
-    sql = columnToSql(data, data.shape, source.vector, quotedAs);
+    sql = columnToSql(ctx, data, data.shape, source.vector, quotedAs);
   } else {
     if (typeof source.text === 'string') {
       sql = addValue(ctx.values, source.text);

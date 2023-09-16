@@ -143,7 +143,7 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     const group = query.group.map((item) =>
       isExpression(item)
         ? item.toSQL(ctx, quotedAs)
-        : columnToSql(table.q, table.q.shape, item as string, quotedAs),
+        : columnToSql(ctx, table.q, table.q.shape, item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }

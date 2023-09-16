@@ -45,7 +45,7 @@ export type TableClasses = Record<string, TableClass>;
 export type TableToDb<
   T extends Table,
   RelationQueries extends Record<string, RelationQueryBase>,
-> = Db<T['table'], T['columns'], RelationQueries, T['columnTypes']> & {
+> = Db<T['table'], T['columns'], RelationQueries, T['types']> & {
   definedAs: string;
   db: OrchidORM;
   getFilePath(): string;
@@ -77,7 +77,7 @@ export type Table = {
   // database schema containing this table
   schema?: string;
   // column types defined in base table to use in `setColumns`
-  columnTypes: ColumnTypesBase;
+  types: ColumnTypesBase;
   // suppress no primary key warning
   noPrimaryKey?: boolean;
   // path to file where the table is defined
@@ -194,7 +194,7 @@ export const createBaseTable = <
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
-    columnTypes = columnTypes;
+    types = columnTypes;
     q: QueryData = {} as QueryData;
     language = language;
     declare filePath: string;
@@ -316,7 +316,7 @@ export const createBaseTable = <
 
   applyMixins(base, [QueryHooks]);
 
-  base.prototype.columnTypes = columnTypes as typeof base.prototype.columnTypes;
+  base.prototype.types = columnTypes as typeof base.prototype.types;
 
   return base;
 };

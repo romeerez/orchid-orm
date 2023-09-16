@@ -46,7 +46,7 @@ export const stringMethodNames: Exclude<
 ];
 
 // string column and JSON type data for validations
-export type StringTypeData = ColumnDataBase & {
+export interface StringTypeData extends ColumnDataBase {
   min?: number;
   max?: number;
   length?: number;
@@ -72,7 +72,7 @@ export type StringTypeData = ColumnDataBase & {
   trim?: boolean;
   toLowerCase?: boolean;
   toUpperCase?: boolean;
-};
+}
 
 // method names for date columns to generate methods' code
 export const dateMethodNames: Exclude<

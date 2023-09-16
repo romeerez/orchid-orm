@@ -224,7 +224,7 @@ describe('hasOne', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "profile"."bio" AS "Bio"
+        SELECT "u"."name" AS "Name", "profile"."bio" "Bio"
         FROM "user" AS "u"
         JOIN "profile"
           ON "profile"."userId" = "u"."id"
@@ -252,7 +252,7 @@ describe('hasOne', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "p"."bio" AS "Bio"
+        SELECT "u"."name" AS "Name", "p"."bio" "Bio"
         FROM "user" AS "u"
         JOIN "profile" AS "p"
           ON "p"."bio" = $1
@@ -1842,7 +1842,7 @@ describe('hasOne through', () => {
     expectSql(
       query.toSQL(),
       `
-        SELECT "m"."text" AS "Text", "profile"."bio" AS "Bio"
+        SELECT "m"."text" AS "Text", "profile"."bio" "Bio"
         FROM "message" AS "m"
         JOIN "profile"
           ON EXISTS (
@@ -1872,7 +1872,7 @@ describe('hasOne through', () => {
     expectSql(
       query.toSQL(),
       `
-        SELECT "m"."text" AS "Text", "p"."bio" AS "Bio"
+        SELECT "m"."text" AS "Text", "p"."bio" "Bio"
         FROM "message" AS "m"
         JOIN "profile" AS "p"
           ON "p"."bio" = $1

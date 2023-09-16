@@ -164,7 +164,7 @@ export const orchidORM = <T extends TableClasses>(
       qb as any,
       table.table,
       table.columns,
-      table.columnTypes,
+      table.types,
       transactionStorage,
       options,
     );
