@@ -8,7 +8,12 @@ import {
   WhereOnJoinItem,
   WhereSearchItem,
 } from './types';
-import { addValue, columnToSql, simpleColumnToSQL } from './common';
+import {
+  addValue,
+  columnToSql,
+  simpleColumnToSQL,
+  simpleExistingColumnToSQL,
+} from './common';
 import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
@@ -254,7 +259,7 @@ const processWhere = (
         let column = query.shape[key];
         let quotedColumn: string | undefined;
         if (column) {
-          quotedColumn = simpleColumnToSQL(ctx, key, column, quotedAs);
+          quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
         } else if (!column) {
           const index = key.indexOf('.');
           if (index !== -1) {

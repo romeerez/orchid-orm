@@ -12,6 +12,7 @@ import {
   StaticSQLArgs,
 } from 'orchid-core';
 import { DefaultColumnTypes } from '../columns';
+import { ToSQLCtx } from './toSQL';
 
 // reuse array to track which variables were used in the SQL, to throw when there are some unused.
 const used: string[] = [];
@@ -19,21 +20,28 @@ const literalValues: number[] = [];
 
 export const templateLiteralToSQL = (
   template: TemplateLiteralArgs,
-  values: unknown[],
+  ctx: ToSQLCtx,
+  quotedAs?: string,
 ): string => {
   let sql = '';
+  const { values } = ctx;
   const parts = template[0];
   literalValues.length = 0;
 
   let i = 0;
   for (let last = parts.length - 1; i < last; i++) {
-    values.push(template[i + 1]);
     sql += parts[i];
 
-    if (template) literalValues.push(sql.length);
-
-    sql += `$${values.length}`;
+    const value = template[i + 1];
+    if (value instanceof Expression) {
+      sql += value.toSQL(ctx, quotedAs);
+    } else {
+      values.push(value);
+      literalValues.push(sql.length);
+      sql += `$${values.length}`;
+    }
   }
+
   return sql + parts[i];
 };
 
@@ -52,12 +60,16 @@ export class RawSQL<
     if (type) this._type = type;
   }
 
-  makeSQL({ values }: { values: unknown[] }): string {
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     let sql;
     const isTemplate = typeof this._sql !== 'string';
 
     if (isTemplate) {
-      sql = templateLiteralToSQL(this._sql as TemplateLiteralArgs, values);
+      sql = templateLiteralToSQL(
+        this._sql as TemplateLiteralArgs,
+        ctx,
+        quotedAs,
+      );
     } else {
       sql = this._sql as string;
     }
@@ -67,6 +79,7 @@ export class RawSQL<
       return sql;
     }
 
+    const { values } = ctx;
     const arr = sql.split("'");
     const len = arr.length;
     used.length = 0;
@@ -126,7 +139,7 @@ export class DynamicRawSQL<
   }
 
   // Calls the given function to get SQL from it.
-  makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     return this.fn(raw).toSQL(ctx, quotedAs);
   }
 }

@@ -362,7 +362,12 @@ export class Db<
 }
 
 const performQuery = async <Result>(
-  q: { internal: QueryInternal; adapter: Adapter; q: QueryData },
+  q: {
+    queryBuilder: Db;
+    internal: QueryInternal;
+    adapter: Adapter;
+    q: QueryData;
+  },
   args: SQLQueryArgs,
   method: 'query' | 'arrays',
 ): Promise<Result> => {
@@ -377,7 +382,11 @@ const performQuery = async <Result>(
   } else {
     const values: unknown[] = [];
     sql = {
-      text: templateLiteralToSQL(args as TemplateLiteralArgs, values),
+      text: templateLiteralToSQL(args as TemplateLiteralArgs, {
+        queryBuilder: q.queryBuilder,
+        sql: [],
+        values,
+      }),
       values,
     };
   }

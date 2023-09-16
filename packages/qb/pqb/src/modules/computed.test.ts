@@ -15,7 +15,9 @@ const User = addComputedColumns(
   })),
   {
     nameAndKey: (q) =>
-      q.sql`"name" || ' ' || "userKey"`.type((t) => t.string()),
+      q.sql`${q.column('name')} || ' ' || ${q.column('userKey')}`.type((t) =>
+        t.string(),
+      ),
   },
 );
 
@@ -36,7 +38,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name", "name" || ' ' || "userKey" "nameAndKey"
+        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "nameAndKey"
           FROM "user"
           LIMIT 1`,
       );
@@ -53,7 +55,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name", "name" || ' ' || "userKey" "nameAndKey"
+        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "nameAndKey"
           FROM "user"
           LIMIT 1`,
       );
@@ -70,7 +72,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name", "name" || ' ' || "userKey" AS "as"
+        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" AS "as"
           FROM "user"
           LIMIT 1`,
       );
@@ -87,7 +89,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name", "name" || ' ' || "userKey" AS "as"
+        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" AS "as"
           FROM "user"
           LIMIT 1`,
       );
@@ -106,7 +108,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "name" || ' ' || "userKey" "nameAndKey"
+        `SELECT "user"."name" || ' ' || "user"."userKey" "nameAndKey"
           FROM "profile"
           JOIN "user" ON "user"."id" = "profile"."userId"
           LIMIT 1`,
@@ -126,7 +128,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "name" || ' ' || "userKey" AS "as"
+        `SELECT "user"."name" || ' ' || "user"."userKey" AS "as"
           FROM "profile"
           JOIN "user" ON "user"."id" = "profile"."userId"
           LIMIT 1`,
@@ -147,7 +149,7 @@ describe('computed', () => {
       expectSql(
         q.toSQL(),
         `SELECT * FROM "user"
-        WHERE "name" || ' ' || "userKey" = $1`,
+        WHERE "user"."name" || ' ' || "user"."userKey" = $1`,
         ['value'],
       );
     });
@@ -158,7 +160,7 @@ describe('computed', () => {
       expectSql(
         q.toSQL(),
         `SELECT * FROM "user"
-        WHERE "name" || ' ' || "userKey" ILIKE $1 || '%'`,
+        WHERE "user"."name" || ' ' || "user"."userKey" ILIKE $1 || '%'`,
         ['value'],
       );
     });
@@ -169,7 +171,7 @@ describe('computed', () => {
       expectSql(
         q.toSQL(),
         `SELECT * FROM "user"
-        WHERE "name" || ' ' || "userKey" ILIKE $1 || '%'`,
+        WHERE "user"."name" || ' ' || "user"."userKey" ILIKE $1 || '%'`,
         ['value'],
       );
     });
@@ -182,7 +184,7 @@ describe('computed', () => {
       expectSql(
         q.toSQL(),
         `SELECT * FROM "user"
-        ORDER BY "name" || ' ' || "userKey" ASC`,
+        ORDER BY "user"."name" || ' ' || "user"."userKey" ASC`,
       );
     });
 
@@ -192,7 +194,7 @@ describe('computed', () => {
       expectSql(
         q.toSQL(),
         `SELECT * FROM "user"
-        ORDER BY "name" || ' ' || "userKey" DESC`,
+        ORDER BY "user"."name" || ' ' || "user"."userKey" DESC`,
       );
     });
   });

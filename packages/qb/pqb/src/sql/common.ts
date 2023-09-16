@@ -24,6 +24,17 @@ export function simpleColumnToSQL(
     : `"${key}"`;
 }
 
+export function simpleExistingColumnToSQL(
+  ctx: ToSQLCtx,
+  key: string,
+  column: Column,
+  quotedAs?: string,
+): string {
+  return column.data.computed
+    ? column.data.computed.toSQL(ctx, quotedAs)
+    : `${quotedAs ? `${quotedAs}.` : ''}"${column.data.name || key}"`;
+}
+
 export const columnToSql = (
   ctx: ToSQLCtx,
   data: Pick<QueryData, 'joinedShapes' | 'joinOverrides'>,
@@ -44,11 +55,10 @@ export const columnToSql = (
     }
 
     const tableName = data.joinOverrides?.[table] || table;
-    const isOwnColumn = `"${table}"` === quotedAs;
+    const quoted = `"${table}"`;
 
-    const col = isOwnColumn
-      ? shape[key]
-      : data.joinedShapes?.[tableName]?.[key];
+    const col =
+      quoted === quotedAs ? shape[key] : data.joinedShapes?.[tableName]?.[key];
 
     if (col) {
       if (col.data.name) {
@@ -56,7 +66,7 @@ export const columnToSql = (
       }
 
       if (col.data.computed) {
-        return `${col.data.computed.toSQL(ctx, quotedAs)}`;
+        return `${col.data.computed.toSQL(ctx, quoted)}`;
       }
 
       return `"${tableName}"."${key}"`;
@@ -93,18 +103,19 @@ export const columnToSqlWithAs = (
     }
 
     const tableName = data.joinOverrides?.[table] || table;
-    const isOwnColumn = `"${table}"` === quotedAs;
+    const quoted = `"${table}"`;
 
-    const col = isOwnColumn
-      ? data.shape[key]
-      : data.joinedShapes?.[tableName][key];
+    const col =
+      quoted === quotedAs
+        ? data.shape[key]
+        : data.joinedShapes?.[tableName][key];
     if (col) {
       if (col.data.name && col.data.name !== key) {
         return `"${tableName}"."${col.data.name}" "${key}"`;
       }
 
       if (col.data.computed) {
-        return `${col.data.computed.toSQL(ctx, quotedAs)} "${key}"`;
+        return `${col.data.computed.toSQL(ctx, quoted)} "${key}"`;
       }
     }
 

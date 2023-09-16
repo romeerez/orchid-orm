@@ -474,7 +474,9 @@ describe('baseTable', () => {
 
       computed = this.setComputed({
         nameAndKey: (q) =>
-          q.sql`"name" || ' ' || "userKey"`.type((t) => t.text()),
+          q.sql`${q.column('name')} || ' ' || ${q.column('userKey')}`.type(
+            (t) => t.text(),
+          ),
       });
     }
 
@@ -493,7 +495,7 @@ describe('baseTable', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", "name" || ' ' || "userKey" "nameAndKey"
+          SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "nameAndKey"
           FROM "user"
         `,
       );
