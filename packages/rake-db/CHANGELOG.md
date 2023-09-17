@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.49
+
+### Patch Changes
+
+- f021abb2: Allow overriding config in rakeDb.lazy (#180)
+
 ## 2.10.48
 
 ### Patch Changes
