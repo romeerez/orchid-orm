@@ -1,8 +1,10 @@
 import {
   Adapter,
   AdapterOptions,
+  addComputedColumns,
   anyShape,
   columnTypes,
+  ComputedColumnsBase,
   Db,
   DbTableOptions,
   FromArgs,
@@ -164,7 +166,7 @@ export const orchidORM = <T extends TableClasses>(
       qb as any,
       table.table,
       table.columns,
-      table.columnTypes,
+      table.types,
       transactionStorage,
       options,
     );
@@ -173,6 +175,13 @@ export const orchidORM = <T extends TableClasses>(
     (dbTable as unknown as { db: unknown }).db = result;
     (dbTable as unknown as { filePath: string }).filePath = table.filePath;
     (dbTable as unknown as { name: string }).name = table.constructor.name;
+
+    if (table.computed) {
+      addComputedColumns(
+        dbTable,
+        table.computed as ComputedColumnsBase<typeof dbTable>,
+      );
+    }
 
     (result as Record<string, unknown>)[key] = dbTable;
   }

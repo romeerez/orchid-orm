@@ -24,7 +24,7 @@ type BaseTable<CT extends ColumnTypesBase> = {
   nowSQL?: string;
 
   new (): {
-    columnTypes: CT;
+    types: CT;
     snakeCase?: boolean;
     language?: string;
   };
@@ -164,7 +164,7 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
 
   if ('baseTable' in config) {
     const proto = config.baseTable?.prototype;
-    result.columnTypes = proto.columnTypes || defaultColumnTypes;
+    result.columnTypes = proto.types || defaultColumnTypes;
     if (proto.snakeCase) result.snakeCase = true;
     if (proto.language) result.language = proto.language;
   } else {

@@ -80,7 +80,7 @@ export type JSONTypeData = {
 // base type for json types
 export abstract class JSONType<
   Type = unknown,
-  Data extends Record<string, unknown> = EmptyObject,
+  Data extends EmptyObject = EmptyObject,
 > {
   abstract kind: string;
 

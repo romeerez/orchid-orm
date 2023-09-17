@@ -52,12 +52,42 @@ export const isTemplateLiteralArgs = (
   Array.isArray(args[0]) && 'raw' in args[0] && Array.isArray(args[0].raw);
 
 // Argument type for `sql` function.
-export type RawSQLArgs =
+// It can take a template literal, an object `{ raw: string, values?: Record<string, unknown> }`,
+// or a function to build SQL lazily.
+export type SQLArgs = StaticSQLArgs | [DynamicSQLArg];
+
+// Function for sql method to build SQL lazily (dynamically).
+// May be used for computed column to build a different SQL in different executions.
+export type DynamicSQLArg = (
+  sql: (...args: StaticSQLArgs) => Expression,
+) => Expression;
+
+// SQL arguments for a non-lazy SQL expression.
+export type StaticSQLArgs =
   | TemplateLiteralArgs
   | [{ raw: string; values?: RawSQLValues }];
 
 // Record of values to pass and store in a RawSQL instance.
 export type RawSQLValues = Record<string, unknown>;
+
+// `type` method to be used in both static and dynamic variants of SQL expressions.
+export abstract class ExpressionTypeMethod {
+  // Define the resulting column type for the raw SQL.
+  type<Self extends RawSQLBase, C extends ColumnTypeBase>(
+    this: Self,
+    fn: (types: Self['columnTypes']) => C,
+  ): Omit<Self, '_type'> & { _type: C } {
+    this._type = fn(this.columnTypes);
+    return this as unknown as Omit<Self, '_type'> & { _type: C };
+  }
+}
+
+// RawSQLBase extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
+export interface RawSQLBase<
+  T extends ColumnTypeBase = ColumnTypeBase,
+  CT extends ColumnTypesBase = EmptyObject,
+> extends Expression<T>,
+    ExpressionTypeMethod {}
 
 // Base class for raw SQL
 export abstract class RawSQLBase<
@@ -78,15 +108,6 @@ export abstract class RawSQLBase<
     public _values?: RawSQLValues,
   ) {
     super();
-  }
-
-  // Define the resulting column type for the raw SQL.
-  type<Self extends RawSQLBase, C extends ColumnTypeBase>(
-    this: Self,
-    fn: (types: Self['columnTypes']) => C,
-  ): Omit<Self, '_type'> & { _type: C } {
-    this._type = fn(this.columnTypes);
-    return this as unknown as Omit<Self, '_type'> & { _type: C };
   }
 
   // Attach query variables to the raw SQL.
@@ -122,6 +143,8 @@ export abstract class RawSQLBase<
     return code;
   }
 }
+
+RawSQLBase.prototype.type = ExpressionTypeMethod.prototype.type;
 
 // Check if something is a raw SQL.
 export const isRawSQL = (arg: unknown): arg is RawSQLBase =>

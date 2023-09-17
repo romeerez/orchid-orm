@@ -20,7 +20,7 @@ export const havingToSql = (
   return query.having
     ?.map((it) =>
       'raw' in it[0]
-        ? templateLiteralToSQL(it as TemplateLiteralArgs, ctx.values)
+        ? templateLiteralToSQL(it as TemplateLiteralArgs, ctx, quotedAs)
         : it
             .map((item) => (item as Expression).toSQL(ctx, quotedAs))
             .join(' AND '),

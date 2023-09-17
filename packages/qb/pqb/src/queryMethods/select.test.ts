@@ -158,7 +158,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
           FROM "snake"
         `,
       );
@@ -214,7 +214,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "snake"."snake_name" AS "snakeName"
+          SELECT "user"."id", "snake"."snake_name" "snakeName"
           FROM "user"
           JOIN "snake" ON "snake"."tail_length" = "user"."id"
         `,
@@ -254,7 +254,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "s"."snake_name" AS "snakeName"
+          SELECT "user"."id", "s"."snake_name" "snakeName"
           FROM "user"
           JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
         `,

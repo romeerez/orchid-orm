@@ -62,5 +62,7 @@ const addOrder = (
     }) ${order.dir || 'DESC'}`;
   }
 
-  return `${columnToSql(data, data.shape, column, quotedAs)} ${dir || 'ASC'}`;
+  return `${columnToSql(ctx, data, data.shape, column, quotedAs)} ${
+    dir || 'ASC'
+  }`;
 };

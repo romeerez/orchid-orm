@@ -8,7 +8,12 @@ import {
   WhereOnJoinItem,
   WhereSearchItem,
 } from './types';
-import { addValue, q, qc, columnToSql } from './common';
+import {
+  addValue,
+  columnToSql,
+  simpleColumnToSQL,
+  simpleExistingColumnToSQL,
+} from './common';
 import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
@@ -112,7 +117,12 @@ const processWhere = (
 
   if ('prototype' in data || 'baseQuery' in data) {
     const query = data as Query;
-    const sql = whereToSql(ctx, query, query.q, query.table && q(query.table));
+    const sql = whereToSql(
+      ctx,
+      query,
+      query.q,
+      query.table && `"${query.table}"`,
+    );
     if (sql) {
       ands.push(`${prefix}(${sql})`);
     }
@@ -144,10 +154,22 @@ const processWhere = (
     } else if (key === 'ON') {
       if (Array.isArray(value)) {
         const item = value as WhereJsonPathEqualsItem;
-        const leftColumn = columnToSql(query, query.shape, item[0], quotedAs);
+        const leftColumn = columnToSql(
+          ctx,
+          query,
+          query.shape,
+          item[0],
+          quotedAs,
+        );
 
         const leftPath = item[1];
-        const rightColumn = columnToSql(query, query.shape, item[2], quotedAs);
+        const rightColumn = columnToSql(
+          ctx,
+          query,
+          query.shape,
+          item[2],
+          quotedAs,
+        );
 
         const rightPath = item[3];
 
@@ -163,10 +185,11 @@ const processWhere = (
       } else {
         const item = value as WhereOnItem;
         const leftColumn = columnToSql(
+          ctx,
           query,
           query.shape,
           item.on[0],
-          q(getJoinItemSource(item.joinFrom)),
+          `"${getJoinItemSource(item.joinFrom)}"`,
         );
 
         const joinTo = getJoinItemSource(item.joinTo);
@@ -176,10 +199,22 @@ const processWhere = (
         let rightColumn;
         if (item.on.length === 2) {
           op = '=';
-          rightColumn = columnToSql(query, joinedShape, item.on[1], q(joinTo));
+          rightColumn = columnToSql(
+            ctx,
+            query,
+            joinedShape,
+            item.on[1],
+            `"${joinTo}"`,
+          );
         } else {
           op = item.on[1];
-          rightColumn = columnToSql(query, joinedShape, item.on[2], q(joinTo));
+          rightColumn = columnToSql(
+            ctx,
+            query,
+            joinedShape,
+            item.on[2],
+            `"${joinTo}"`,
+          );
         }
 
         ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
@@ -213,6 +248,7 @@ const processWhere = (
       if (isExpression(value)) {
         ands.push(
           `${prefix}${columnToSql(
+            ctx,
             query,
             query.shape,
             key,
@@ -223,19 +259,21 @@ const processWhere = (
         let column = query.shape[key];
         let quotedColumn: string | undefined;
         if (column) {
-          quotedColumn = qc(column.data.name || key, quotedAs);
+          quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
         } else if (!column) {
           const index = key.indexOf('.');
           if (index !== -1) {
-            const joinedTable = key.slice(0, index);
-            const joinedColumn = key.slice(index + 1);
-            column = query.joinedShapes?.[joinedTable]?.[
-              joinedColumn
-            ] as typeof column;
-            quotedColumn = qc(
-              column?.data.name || joinedColumn,
-              q(joinedTable),
-            );
+            const table = key.slice(0, index);
+            const quoted = `"${table}"`;
+            const name = key.slice(index + 1);
+
+            column = (
+              quotedAs === quoted
+                ? query.shape[name]
+                : query.joinedShapes?.[table]?.[name]
+            ) as typeof column;
+
+            quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
           } else {
             quotedColumn = undefined;
           }
@@ -273,7 +311,7 @@ const processWhere = (
       }
     } else {
       ands.push(
-        `${prefix}${columnToSql(query, query.shape, key, quotedAs)} ${
+        `${prefix}${columnToSql(ctx, query, query.shape, key, quotedAs)} ${
           value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
         }`,
       );
@@ -322,7 +360,7 @@ const pushIn = (
   }
 
   const columnsSql = arg.columns
-    .map((column) => columnToSql(query, query.shape, column, quotedAs))
+    .map((column) => columnToSql(ctx, query, query.shape, column, quotedAs))
     .join(', ');
 
   ands.push(

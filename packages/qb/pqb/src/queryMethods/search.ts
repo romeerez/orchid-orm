@@ -194,7 +194,7 @@ class Headline extends Expression<TextColumn> {
     const text = params?.text
       ? params.text instanceof Expression
         ? params.text.toSQL(ctx, quotedAs)
-        : columnToSql(q, q.shape, params.text, quotedAs)
+        : columnToSql(ctx, q, q.shape, params.text, quotedAs)
       : getSearchText(ctx, q, source, quotedAs, true);
 
     const options = params?.options

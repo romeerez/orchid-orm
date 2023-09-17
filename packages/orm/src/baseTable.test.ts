@@ -462,4 +462,43 @@ describe('baseTable', () => {
       >();
     });
   });
+
+  describe('computed', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+        userKey: t.text(),
+      }));
+
+      computed = this.setComputed({
+        nameAndKey: (q) =>
+          q.sql`${q.column('name')} || ' ' || ${q.column('userKey')}`.type(
+            (t) => t.text(),
+          ),
+      });
+    }
+
+    const local = orchidORM(
+      { db: db.$queryBuilder },
+      {
+        user: UserTable,
+      },
+    );
+
+    it('should define computed columns', () => {
+      const q = local.user.select('name', 'nameAndKey');
+
+      assertType<Awaited<typeof q>, { name: string; nameAndKey: string }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "nameAndKey"
+          FROM "user"
+        `,
+      );
+    });
+  });
 });

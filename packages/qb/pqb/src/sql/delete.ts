@@ -3,7 +3,6 @@ import { pushWhereStatementSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx } from './toSQL';
-import { q } from './common';
 import { DeleteQueryData, QueryHookSelect } from './data';
 
 export const pushDeleteSql = (
@@ -12,7 +11,7 @@ export const pushDeleteSql = (
   query: DeleteQueryData,
   quotedAs: string,
 ): QueryHookSelect | undefined => {
-  const from = q(table.table as string);
+  const from = `"${table.table}"`;
   ctx.sql.push(`DELETE FROM ${from}`);
 
   if (from !== quotedAs) {

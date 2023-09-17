@@ -16,6 +16,7 @@ import {
   SelectQueryData,
   SortDir,
   toSQL,
+  ToSQLCtx,
   ToSQLOptions,
   TruncateQueryData,
 } from '../sql';
@@ -57,6 +58,7 @@ import {
   TemplateLiteralArgs,
   ColumnTypesBase,
   Expression,
+  ColumnTypeBase,
 } from 'orchid-core';
 import { AsMethods } from './as';
 import { QueryBase } from '../query/queryBase';
@@ -64,6 +66,7 @@ import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { RawSQL } from '../sql/rawSql';
 import { noneMethods } from './none';
+import { simpleExistingColumnToSQL } from '../sql/common';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -130,6 +133,19 @@ type TruncateResult<T extends Query> = SetQueryKind<
   SetQueryReturnsVoid<T>,
   'truncate'
 >;
+
+// Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
+export class ColumnRefExpression<
+  T extends ColumnTypeBase,
+> extends Expression<T> {
+  constructor(public _type: T, public name: string) {
+    super();
+  }
+
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
+    return simpleExistingColumnToSQL(ctx, this.name, this._type, quotedAs);
+  }
+}
 
 export interface QueryMethods<CT extends ColumnTypesBase>
   extends Omit<AsMethods, 'result'>,
@@ -798,6 +814,24 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {
     return fn as unknown as QueryHelper<T, Args, Result>;
+  }
+
+  /**
+   * Use `column` method to interpolate column names inside SQL templates.
+   * The column will be prefixed with the correct table name taken from the context of the query.
+   *
+   * ```ts
+   * db.table.sql`${db.table.column('id')} = 1`;
+   * ```
+   *
+   * @param name
+   */
+  column<T extends Query, K extends keyof T['shape']>(
+    this: T,
+    name: K,
+  ): ColumnRefExpression<T['shape'][K]> {
+    const column = (this.shape as Record<PropertyKey, ColumnTypeBase>)[name];
+    return new ColumnRefExpression(column as T['shape'][K], name as string);
   }
 }
 

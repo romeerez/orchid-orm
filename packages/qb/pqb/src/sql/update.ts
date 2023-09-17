@@ -112,7 +112,7 @@ const processValue = (
 ) => {
   if (value && typeof value === 'object') {
     if ((value as JsonItem).__json) {
-      return jsonToSql(table, value as JsonItem, ctx.values, quotedAs);
+      return jsonToSql(ctx, table, value as JsonItem, ctx.values, quotedAs);
     } else if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof QueryClass) {

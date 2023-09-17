@@ -1,5 +1,5 @@
 import { Query, queryTypeWithLimitOne } from '../query/query';
-import { addValue, q, columnToSql } from './common';
+import { addValue, columnToSql } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -79,11 +79,11 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
 
     if (!table.table) throw new Error(`Table is missing for ${query.type}`);
 
-    const quotedAs = q(query.as || table.table);
+    const quotedAs = `"${query.as || table.table}"`;
 
     if (query.type === 'insert') {
       return {
-        hookSelect: pushInsertSql(ctx, table, query, q(table.table)),
+        hookSelect: pushInsertSql(ctx, table, query, `"${table.table}"`),
         text: sql.join(' '),
         values,
       };
@@ -111,8 +111,7 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     }
   }
 
-  const quotedAs =
-    (query.as || table.table) && q((query.as || table.table) as string);
+  const quotedAs = (query.as || table.table) && `"${query.as || table.table}"`;
 
   sql.push('SELECT');
 
@@ -143,7 +142,7 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     const group = query.group.map((item) =>
       isExpression(item)
         ? item.toSQL(ctx, quotedAs)
-        : columnToSql(table.q, table.q.shape, item as string, quotedAs),
+        : columnToSql(ctx, table.q, table.q.shape, item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }
@@ -155,7 +154,7 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     query.window.forEach((item) => {
       for (const key in item) {
         window.push(
-          `${q(key)} AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
+          `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
         );
       }
     });
@@ -193,7 +192,7 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
         'OF',
         isExpression(tableNames)
           ? tableNames.toSQL(ctx, quotedAs)
-          : tableNames.map(q).join(', '),
+          : tableNames.map((x) => `"${x}"`).join(', '),
       );
     }
     if (query.for.mode) sql.push(query.for.mode);

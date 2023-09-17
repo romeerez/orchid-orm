@@ -264,7 +264,10 @@ const processCreateItem = (
   for (const key in item) {
     if (shape[key] instanceof VirtualColumn) {
       (shape[key] as VirtualColumn).create?.(q, ctx, item, rowIndex);
-    } else if (!ctx.columns.has(key) && (shape[key] || shape === anyShape)) {
+    } else if (
+      !ctx.columns.has(key) &&
+      ((shape[key] && !shape[key].data.computed) || shape === anyShape)
+    ) {
       ctx.columns.set(key, ctx.columns.size);
       encoders[key] = shape[key]?.encodeFn as Encoder;
     }

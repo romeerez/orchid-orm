@@ -212,7 +212,7 @@ type SetColumnDataTypes<
 };
 
 // base data of column
-export type ColumnDataBase = {
+export interface ColumnDataBase {
   // name of the column in the database, if different from the code
   name?: string;
 
@@ -249,7 +249,7 @@ export type ColumnDataBase = {
 
   // error messages: key is camelCased version of Zod, like invalidType, and the value is the message
   errors?: Record<string, string>;
-};
+}
 
 // chain of column refinements and transformations
 export type ColumnChain = (

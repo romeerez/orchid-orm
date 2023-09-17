@@ -45,7 +45,6 @@ import {
   isRawSQL,
   EmptyObject,
 } from 'orchid-core';
-import { q } from '../sql/common';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from '../sql/rawSql';
@@ -80,12 +79,19 @@ export type DbTableOptions = {
   language?: string;
 } & QueryLogOptions;
 
+// Type of data returned from the table query by default, doesn't include computed columns.
+// `const user: User[] = await db.user;`
+export type QueryDefaultReturnData<Shape extends ColumnsShapeBase> = Pick<
+  ColumnShapeOutput<Shape>,
+  DefaultSelectColumns<Shape>[number]
+>[];
+
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
   CT extends ColumnTypesBase = DefaultColumnTypes,
-  Data = Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[],
+  Data = QueryDefaultReturnData<Shape>,
 > extends DbBase<Adapter, Table, Shape, CT>,
     QueryMethods<CT> {
   new (
@@ -207,7 +213,7 @@ export class Db<
       for (const key in shape) {
         const column = shape[key];
         list.push(
-          column.data.name ? `${q(column.data.name)} AS ${q(key)}` : q(key),
+          column.data.name ? `"${column.data.name}" AS "${key}"` : `"${key}"`,
         );
       }
       this.internal.columnsForSelectAll = list;
@@ -357,7 +363,12 @@ export class Db<
 }
 
 const performQuery = async <Result>(
-  q: { internal: QueryInternal; adapter: Adapter; q: QueryData },
+  q: {
+    queryBuilder: Db;
+    internal: QueryInternal;
+    adapter: Adapter;
+    q: QueryData;
+  },
   args: SQLQueryArgs,
   method: 'query' | 'arrays',
 ): Promise<Result> => {
@@ -372,7 +383,11 @@ const performQuery = async <Result>(
   } else {
     const values: unknown[] = [];
     sql = {
-      text: templateLiteralToSQL(args as TemplateLiteralArgs, values),
+      text: templateLiteralToSQL(args as TemplateLiteralArgs, {
+        queryBuilder: q.queryBuilder,
+        sql: [],
+        values,
+      }),
       values,
     };
   }

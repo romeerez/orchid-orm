@@ -10,9 +10,9 @@ import {
   TemplateLiteralArgs,
   getDefaultLanguage,
   RawSQLBase,
-  RawSQLArgs,
   assignMethodsToClass,
   ColumnTypeBase,
+  StaticSQLArgs,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
@@ -362,7 +362,7 @@ export class TsVectorColumn extends ColumnType<string, typeof Operators.text> {
   generated<T extends ColumnType>(
     this: T,
     ...args:
-      | RawSQLArgs
+      | StaticSQLArgs
       | [language: string, columns: TsVectorGeneratedColumns]
       | [columns: TsVectorGeneratedColumns]
   ): T {

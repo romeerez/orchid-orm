@@ -2,7 +2,6 @@ import { createBaseTable, Selectable } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
-
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
 });

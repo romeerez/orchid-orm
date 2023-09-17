@@ -212,7 +212,7 @@ describe('hasMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "messages"."text" AS "Text"
+        SELECT "u"."name" AS "Name", "messages"."text" "Text"
         FROM "user" AS "u"
         JOIN "message" AS "messages"
           ON "messages"."authorId" = "u"."id"
@@ -237,7 +237,7 @@ describe('hasMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "m"."text" AS "Text"
+        SELECT "u"."name" AS "Name", "m"."text" "Text"
         FROM "user" AS "u"
         JOIN "message" AS "m"
           ON "m"."text" = $1
@@ -2211,7 +2211,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "p"."bio" AS "Bio", "chats"."title" AS "Title"
+          SELECT "p"."bio" AS "Bio", "chats"."title" "Title"
           FROM "profile" AS "p"
           JOIN "chat" AS "chats"
             ON EXISTS (
@@ -2251,7 +2251,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "p"."bio" AS "Bio", "c"."title" AS "Title"
+          SELECT "p"."bio" AS "Bio", "c"."title" "Title"
           FROM "profile" AS "p"
           JOIN "chat" AS "c"
             ON "c"."title" = $1
@@ -2756,7 +2756,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "c"."title" AS "Title", "profiles"."bio" AS "Bio"
+          SELECT "c"."title" AS "Title", "profiles"."bio" "Bio"
           FROM "chat" AS "c"
           JOIN "profile" AS "profiles"
             ON EXISTS (
@@ -2794,7 +2794,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "c"."title" AS "Title", "p"."bio" AS "Bio"
+          SELECT "c"."title" AS "Title", "p"."bio" "Bio"
           FROM "chat" AS "c"
           JOIN "profile" AS "p"
             ON "p"."bio" = $1

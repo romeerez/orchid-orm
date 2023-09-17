@@ -910,4 +910,17 @@ describe('queryMethods', () => {
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
     });
   });
+
+  describe('column reference expression', () => {
+    it('should make SQL where given column is prefixed with a table name', () => {
+      const q = User.get(
+        User.sql`${User.column('name')} || ' ' || ${User.column('password')}`,
+      );
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "user"."name" || ' ' || "user"."password" FROM "user" LIMIT 1`,
+      );
+    });
+  });
 });

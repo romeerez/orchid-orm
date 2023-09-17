@@ -1,7 +1,6 @@
 import { ToSQLCtx } from './toSQL';
 import { CopyQueryData } from './data';
 import { Query } from '../query/query';
-import { q } from './common';
 import { quoteString } from '../quote';
 import { pushWhereStatementSql } from './where';
 
@@ -16,14 +15,14 @@ export const pushCopySql = (
 
   const columns = copy.columns
     ? `(${copy.columns
-        .map((item) => q(query.shape[item]?.data.name || item))
+        .map((item) => `"${query.shape[item]?.data.name || item}"`)
         .join(', ')})`
     : '';
 
   const target = 'from' in copy ? copy.from : copy.to;
 
   sql.push(
-    `COPY ${q(table.table as string)}${columns} ${
+    `COPY "${table.table as string}"${columns} ${
       'from' in copy ? 'FROM' : 'TO'
     } ${
       typeof target === 'string'
@@ -48,13 +47,17 @@ export const pushCopySql = (
         `FORCE_QUOTE ${
           copy.forceQuote === '*'
             ? '*'
-            : `(${copy.forceQuote.map(q).join(', ')})`
+            : `(${copy.forceQuote.map((x) => `"${x}"`).join(', ')})`
         }`,
       );
     if (copy.forceNotNull)
-      options.push(`FORCE_NOT_NULL (${copy.forceNotNull.map(q).join(', ')})`);
+      options.push(
+        `FORCE_NOT_NULL (${copy.forceNotNull.map((x) => `"${x}"`).join(', ')})`,
+      );
     if (copy.forceNull)
-      options.push(`FORCE_NULL (${copy.forceNull.map(q).join(', ')})`);
+      options.push(
+        `FORCE_NULL (${copy.forceNull.map((x) => `"${x}"`).join(', ')})`,
+      );
     if (copy.encoding) options.push(`ENCODING ${quoteString(copy.encoding)}`);
 
     sql.push(`WITH (${options.join(', ')})`);

@@ -12,7 +12,7 @@ export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
     const column = shape[name].data.name || name;
     return [
       `"${table}"."${column}"`,
-      column === name ? '' : ` AS "${name}"`,
+      column === name ? '' : ` "${name}"`,
       column,
     ];
   } else {

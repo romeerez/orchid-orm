@@ -1,7 +1,9 @@
 import { User } from '../test-utils/test-utils';
 import { ColumnType, IntegerColumn } from '../columns';
-import { expectSql, testAdapter } from 'test-utils';
+import { expectSql, testAdapter, testDb } from 'test-utils';
 import { createDb } from '../query/db';
+import { ColumnTypeBase, Expression } from 'orchid-core';
+import { ToSQLCtx } from '../sql';
 
 describe('raw sql', () => {
   it('should use column types in callback from a db instance', () => {
@@ -217,5 +219,35 @@ describe('raw sql', () => {
     const q = User.where(User.sql({ raw: `a = $a` }).values({ a: 1, b: 'b' }));
 
     expect(() => q.toSQL()).toThrow('Query variable `b` is unused');
+  });
+
+  describe('dynamic raw sql', () => {
+    it('should accept function which is executed dynamically each time when converting the expression to sql', () => {
+      const sql = testDb.sql((sql) => sql({ raw: `value = ${value}` }));
+
+      const ctx = { values: [] };
+
+      let value = 1;
+      expect(sql.toSQL(ctx)).toBe('value = 1');
+
+      value++;
+      expect(sql.toSQL(ctx)).toBe('value = 2');
+    });
+  });
+
+  it('should interpolate expressions', () => {
+    class CustomExpression extends Expression {
+      declare _type: ColumnTypeBase;
+      makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
+        ctx.values.push('value');
+        return `hello, ${quotedAs}!`;
+      }
+    }
+
+    const q = User.get(testDb.sql`${new CustomExpression()}`);
+
+    expectSql(q.toSQL(), `SELECT hello, "user"! FROM "user" LIMIT 1`, [
+      'value',
+    ]);
   });
 });

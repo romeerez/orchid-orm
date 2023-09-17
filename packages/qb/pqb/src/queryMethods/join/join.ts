@@ -139,8 +139,16 @@ export type JoinResult<
   Cb extends (q: never) => { meta: QueryMetaBase } = () => {
     meta: QueryMetaBase;
   },
-  J extends Pick<Query, 'result' | 'table' | 'meta'> = Arg extends Query
-    ? Arg
+  J extends {
+    table?: string;
+    meta: QueryMetaBase;
+    shape: ColumnsShapeBase;
+  } = Arg extends Query
+    ? Arg['meta']['hasSelect'] extends true
+      ? // If joined query has select, it will be wrapped into a sub-query, use result type as the shape.
+        { table: Arg['table']; meta: Arg['meta']; shape: Arg['result'] }
+      : // If no select, use its shape. This allows using computed columns.
+        Arg
     : Arg extends keyof T['relations']
     ? T['relations'][Arg]['relationConfig']['table']
     : Arg extends (q: never) => Query
@@ -149,7 +157,7 @@ export type JoinResult<
     ? T['withData'][Arg] extends WithDataItem
       ? {
           table: T['withData'][Arg]['table'];
-          result: T['withData'][Arg]['shape'];
+          shape: T['withData'][Arg]['shape'];
           meta: QueryBase['meta'];
         }
       : never
@@ -194,12 +202,16 @@ export type JoinLateralResult<
  * and a star prefixed with the table name or alias to select all joined columns.
  */
 type JoinResultSelectable<
-  J extends Pick<Query, 'result' | 'table' | 'meta'>,
+  J extends {
+    table?: string;
+    meta: QueryMetaBase;
+    shape: ColumnsShapeBase;
+  },
   RequireJoined extends boolean,
   CbResult extends { meta: QueryMetaBase },
   Result extends ColumnsShapeBase = RequireJoined extends true
-    ? J['result']
-    : { [K in keyof J['result']]: NullableColumn<J['result'][K]> },
+    ? J['shape']
+    : { [K in keyof J['shape']]: NullableColumn<J['shape'][K]> },
   As extends string = CbResult extends { meta: QueryMetaBase & { as: string } }
     ? CbResult['meta']['as']
     : AliasOrTable<J>,
@@ -212,8 +224,8 @@ type JoinResultSelectable<
   [K in As as `${As}.*`]: {
     as: K;
     column: RequireJoined extends true
-      ? ColumnsObject<J['result']>
-      : NullableColumn<ColumnsObject<J['result']>>;
+      ? ColumnsObject<J['shape']>
+      : NullableColumn<ColumnsObject<J['shape']>>;
   };
 };
 
