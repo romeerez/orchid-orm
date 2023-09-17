@@ -8,6 +8,7 @@ import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock } from 'test-utils';
 import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
+import { RakeDbConfig } from './common';
 
 jest.mock('./common', () => ({
   processRakeDbConfig: (config: unknown) => config,
@@ -181,7 +182,7 @@ describe('rakeDb', () => {
   });
 
   describe('rakeDb.lazy', () => {
-    beforeAll(clearChanges);
+    beforeEach(clearChanges);
 
     it('should return `change` and `run` functions', () => {
       const custom = jest.fn();
@@ -200,6 +201,34 @@ describe('rakeDb', () => {
       run(['custom']);
 
       expect(custom).toBeCalled();
+    });
+
+    it('should take optional partial config as the second arg', () => {
+      const { change, run } = rakeDb.lazy(options, {
+        ...config,
+        commands: {
+          custom(_: unknown, config: RakeDbConfig) {
+            config.logger?.log('hello');
+          },
+        },
+      });
+
+      const fn = async () => {};
+      const result = change(fn);
+
+      expect(getCurrentChanges()).toEqual([fn]);
+      expect(result).toBe(fn);
+
+      const log = jest.fn();
+      run(['custom'], {
+        log: true,
+        logger: {
+          ...console,
+          log,
+        },
+      });
+
+      expect(log).toBeCalledWith('hello');
     });
   });
 });

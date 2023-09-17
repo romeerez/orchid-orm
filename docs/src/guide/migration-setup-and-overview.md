@@ -148,7 +148,7 @@ export const change = rakeDb(dbConfig, rakeDbConfig);
 await change.promise;
 ```
 
-## rakeDb.lazy
+## rakeDb lazy
 
 `rakeDb` is designed to be launched with CLI, it will execute one command, and finish.
 
@@ -159,13 +159,32 @@ export const { change, run } = rakeDb.lazy(dbConfig, rakeDbConfig);
 
 // run a command programmatically:
 await run(['migrate']);
+
+// optionally, you can provide a partial `rakeDbConfig` to override some values,
+// here we override the logger.
+await run(['migrate'], {
+  log: true,
+  logger: {
+    log(message: string): void {
+      console.log(message);
+    },
+    warn(message: string): void {
+      console.warn(message);
+    },
+    error(message: string): void {
+      console.error(message);
+    },
+  },
+});
 ```
 
 `rakeDb.lazy` is accepting the same options as `rakeDb`, and returns two functions.
 
 `change` is to be used in migrations to wrap database changes with it.
 
-`run` is a function to execute a command, it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)), returns a `Promise<void>`.
+`run` is a function to execute a command,
+it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)),
+optionally takes config overrides, returns a `Promise<void>`.
 
 ## ReferenceError: require is not defined
 

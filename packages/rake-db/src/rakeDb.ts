@@ -38,7 +38,7 @@ export type RakeDbLazyFn = <C extends ColumnTypesBase = DefaultColumnTypes>(
   partialConfig?: InputRakeDbConfig<C>,
 ) => {
   change: RakeDbChangeFn<C>;
-  run(args: string[]): Promise<void>;
+  run(args: string[], config?: Partial<RakeDbConfig<C>>): Promise<void>;
 };
 
 /**
@@ -81,8 +81,8 @@ rakeDb.lazy = ((options, partialConfig = {}) => {
 
   return {
     change,
-    run(args: string[]) {
-      return runCommand(options, config, args);
+    run(args: string[], conf) {
+      return runCommand(options, conf ? { ...config, ...conf } : config, args);
     },
   };
 }) as RakeDbLazyFn;
