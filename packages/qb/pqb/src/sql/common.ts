@@ -1,20 +1,15 @@
 import { SelectableOrExpression } from '../common/utils';
 import { QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
-import { Expression } from 'orchid-core';
+import { ColumnsShapeBase, ColumnTypeBase } from 'orchid-core';
 
-type Column = {
-  data: { name?: string; computed?: Expression };
-};
-
-export type ColumnsShapeWithDataForSQL = Record<string, Column>;
-
-export const q = (sql: string) => `"${sql}"`;
-
+/**
+ * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
+ */
 export function simpleColumnToSQL(
   ctx: ToSQLCtx,
   key: string,
-  column?: Column,
+  column?: ColumnTypeBase,
   quotedAs?: string,
 ): string {
   return column
@@ -24,10 +19,12 @@ export function simpleColumnToSQL(
     : `"${key}"`;
 }
 
+// Takes a column name without dot, and the optional column object.
+// Handles computed column, uses column.data.name when set, prefixes regular column with `quotedAs`.
 export function simpleExistingColumnToSQL(
   ctx: ToSQLCtx,
   key: string,
-  column: Column,
+  column: ColumnTypeBase,
   quotedAs?: string,
 ): string {
   return column.data.computed
@@ -38,7 +35,7 @@ export function simpleExistingColumnToSQL(
 export const columnToSql = (
   ctx: ToSQLCtx,
   data: Pick<QueryData, 'joinedShapes' | 'joinOverrides'>,
-  shape: ColumnsShapeWithDataForSQL,
+  shape: ColumnsShapeBase,
   column: string,
   quotedAs?: string,
   select?: true,
@@ -160,7 +157,7 @@ export const rawOrColumnToSql = (
   data: Pick<QueryData, 'shape' | 'joinedShapes'>,
   expr: SelectableOrExpression,
   quotedAs: string | undefined,
-  shape: ColumnsShapeWithDataForSQL = data.shape,
+  shape: ColumnsShapeBase = data.shape,
   select?: true,
 ) => {
   return typeof expr === 'string'

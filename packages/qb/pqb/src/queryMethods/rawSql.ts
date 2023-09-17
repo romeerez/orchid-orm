@@ -32,6 +32,18 @@ export class RawSqlMethods<CT extends ColumnTypesBase> {
    * });
    * ```
    *
+   * Instead of `sql` method, you can use `raw` function from `orchid-orm` (or `pqb`) to do the same.
+   * The only difference, `raw` function don't have access to the overridden column types.
+   *
+   * ```ts
+   * import { raw } from 'orchid-orm';
+   *
+   * const result: { timestamp: Date }[] = await db.table.select({
+   *   // if you have overridden timestamp with `asDate` or `asNumber` it won't be parsed properly:
+   *   timestamp: raw`now()`.type((t) => t.timestamp()),
+   * });
+   * ```
+   *
    * In some cases such as when using [from](/guide/orm-and-query-builder.html#from), setting column type via callback allows for special `where` operations:
    *
    * ```ts
@@ -44,33 +56,11 @@ export class RawSqlMethods<CT extends ColumnTypesBase> {
    * const result = await db.$from(subQuery).where({ sum: { gte: 5 } });
    * ```
    *
-   * ```ts
-   * db.$from(Otherdb.table.select('foo', 'bar'));
-   * ```
-   *
-   * `where` and other methods don't need the return type, so it can be omitted:
+   * `where` and other methods don't need the return type, so it can be omitted.
+   * You can pass SQL template directly to the `where`:
    *
    * ```ts
-   * await db.table.where(db.table.sql`
-   *   "someValue" = random() * 100
-   * `);
-   * ```
-   *
-   * Instead of `sql` method, you can use `raw` function from `orchid-orm` (or `pqb`) to do the same.
-   * The only difference, `raw` function don't have access to the overridden column types.
-   *
-   * ```ts
-   * import { raw } from 'orchid-orm';
-   *
-   * await db.table.where(raw`
-   *   "someValue" = random() * 100
-   * `);
-   *
-   * await db.table.select({
-   *   // it is a default `timestamp` column,
-   *   // if you have overriden it with `asDate` or `asNumber` it won't be parsed properly:
-   *   now: raw`now()`.type((t) => t.timestamp()),
-   * });
+   * await db.table.where`"someValue" = random() * 100`;
    * ```
    *
    * Interpolating values in template literals is completely safe:
@@ -80,27 +70,40 @@ export class RawSqlMethods<CT extends ColumnTypesBase> {
    * const { value } = req.params;
    *
    * // SQL injection is prevented by a library, this is safe:
-   * await db.table.where(db.table.sql`
-   *   column = ${value}
-   * `);
+   * await db.table.where`column = ${value}`;
+   * ```
+   *
+   * In the example above, TS cannot check if the table has `column` column, or if there are joined tables that have such column which will lead to error.
+   * Instead, use the `column` method to reference a column:
+   *
+   * ```ts
+   * import { raw } from 'orchid-orm';
+   *
+   * // ids will be prefixed with proper table names, no ambiguity:
+   * db.table.join(db.otherTable, 'id', 'otherId').where`
+   *   ${db.table.column('id')} = 1 AND
+   *   ${db.otherTable.column('id')} = 2
+   * `;
    * ```
    *
    * SQL can be passed with a simple string, it's important to note that this is not safe to interpolate values in it.
    *
    * ```ts
+   * import { raw } from 'orchid-orm';
+   *
    * // no interpolation is okay
-   * await db.table.where(db.table.sql({ raw: 'column = random() * 100' }));
+   * await db.table.where(raw({ raw: 'column = random() * 100' }));
    *
    * // get value from user-provided params
    * const { value } = req.params;
    *
    * // this is NOT safe, SQL injection is possible:
-   * await db.table.where(db.table.sql({ raw: `column = random() * ${value}` }));
+   * await db.table.where(raw({ raw: `column = random() * ${value}` }));
    * ```
    *
    * To inject values into `raw` SQL strings, denote it with `$` in the string and provide `values` object.
    *
-   * Use `$$` to provide column or/and table name. Column names will be quoted so don't quote them manually.
+   * Use `$$` to provide column or/and table name (`column` method is more preferable). Column names will be quoted so don't quote them manually.
    *
    * ```ts
    * // get value from user-provided params
@@ -131,25 +134,19 @@ export class RawSqlMethods<CT extends ColumnTypesBase> {
    * // with column type for select:
    * db.table.sql`key = ${value}`.type((t) => t.boolean());
    *
-   * // with column name:
-   * db.table.sql`$$columnName = ${value}`.values({
-   *   columnName: 'column',
-   * });
+   * // with column name via `column` method:
+   * db.table.sql`${db.table.column('column')} = ${value}`;
    *
-   * // raw SQL string, not allowed to interpolate:
+   * // raw SQL string, not allowed to interpolate values:
    * db.table.sql({ raw: 'random()' });
    *
-   * // with resulting type:
+   * // with resulting type and `raw` string:
    * db.table.sql<number>({ raw: 'random()' });
    *
-   * // with values:
+   * // with column name and a value in a `raw` string:
    * db.table.sql({
-   *   raw: '$$columnName = $one + $two',
-   *   values: {
-   *     columnName: 'column',
-   *     one: 1,
-   *     two: 2,
-   *   },
+   *   raw: `$$column = $value`,
+   *   values: { column: 'columnName', value: 123 },
    * });
    *
    * // combine template literal, column type, and values:

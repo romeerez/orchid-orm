@@ -460,6 +460,97 @@ const db2 = orchidORM(
 );
 ```
 
+## computed columns
+
+[//]: # 'has JSDoc'
+
+You can add a generated column in the migration (see [generated](/guide/migration-column-methods.html#generated-column)),
+such column will persist in the database, it can be indexed.
+
+Or you can add a computed column on the ORM level, without adding it to the database, in such a way:
+
+```ts
+import { BaseTable } from './baseTable';
+
+export class UserTable extends BaseTable {
+  readonly table = 'user';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    firstName: t.string(),
+    lastName: t.string(),
+  }));
+
+  computed = this.setComputed({
+    fullName: (q) =>
+      q.sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
+        (t) => t.string(),
+      ),
+  });
+}
+```
+
+`setComputed` takes an object where keys are computed column names, and values are functions returning raw SQL.
+
+Use `q.column` as shown above to reference a table column, it will be prefixed with a correct table name even if the table is joined under a different name.
+
+Computed columns are not selected by default, only on demand:
+
+```ts
+const a = await db.user.take();
+a.fullName; // not selected
+
+const b = await db.user.select('*', 'fullName');
+b.fullName; // selected
+
+// Table post belongs to user as an author.
+// it's possible to select joined computed column:
+const posts = await db.post
+  .join('author')
+  .select('post.title', 'author.fullName');
+```
+
+SQL query can be generated dynamically based on the current request context.
+
+Imagine we are using [AsyncLocalStorage](https://nodejs.org/api/async_context.html#asynchronous-context-tracking)
+to keep track of current user's language.
+
+And we have articles translated to different languages, each article has `title_en`, `title_uk`, `title_be` and so on.
+
+We can define a computed `title` by passing a function into `sql` method:
+
+```ts
+type Locale = 'en' | 'uk' | 'be';
+const asyncLanguageStorage = new AsyncLocalStorage<Locale>();
+const defaultLocale: Locale = 'en';
+
+export class ArticleTable extends BaseTable {
+  readonly table = 'article';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    title_en: t.text(),
+    title_uk: t.text().nullable(),
+    title_be: t.text().nullable(),
+  }));
+
+  computed = this.setComputed({
+    title: (q) =>
+      q
+        // .sql can take a function that accepts `sql` argument and must return SQL
+        .sql((sql) => {
+          // get locale dynamically based on current storage value
+          const locale = asyncLanguageStorage.getStore() || defaultLocale;
+
+          // use COALESCE in case when localized title is NULL, use title_en
+          return sql`COALESCE(
+            ${q.column(`title_${locale}`)},
+            ${q.column(`title_${defaultLocale}`)}
+          )`;
+        })
+        .type((t) => t.text()),
+  });
+}
+```
+
 ## $query
 
 Use `$query` to perform raw SQL queries.

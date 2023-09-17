@@ -45,7 +45,6 @@ import {
   isRawSQL,
   EmptyObject,
 } from 'orchid-core';
-import { q } from '../sql/common';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from '../sql/rawSql';
@@ -80,6 +79,8 @@ export type DbTableOptions = {
   language?: string;
 } & QueryLogOptions;
 
+// Type of data returned from the table query by default, doesn't include computed columns.
+// `const user: User[] = await db.user;`
 export type QueryDefaultReturnData<Shape extends ColumnsShapeBase> = Pick<
   ColumnShapeOutput<Shape>,
   DefaultSelectColumns<Shape>[number]
@@ -212,7 +213,7 @@ export class Db<
       for (const key in shape) {
         const column = shape[key];
         list.push(
-          column.data.name ? `${q(column.data.name)} AS ${q(key)}` : q(key),
+          column.data.name ? `"${column.data.name}" AS "${key}"` : `"${key}"`,
         );
       }
       this.internal.columnsForSelectAll = list;

@@ -1,10 +1,4 @@
-import {
-  q,
-  quoteSchemaAndTable,
-  rawOrColumnToSql,
-  columnToSql,
-  ColumnsShapeWithDataForSQL,
-} from './common';
+import { quoteSchemaAndTable, rawOrColumnToSql, columnToSql } from './common';
 import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
@@ -12,7 +6,7 @@ import { ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { pushQueryArray } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
-import { Expression, isExpression } from 'orchid-core';
+import { ColumnsShapeBase, Expression, isExpression } from 'orchid-core';
 
 type ItemOf3Or4Length =
   | [
@@ -54,7 +48,7 @@ export const processJoinItem = (
       target = quoteSchemaAndTable(j.schema, tableName);
 
       const as = j.as || first;
-      const joinAs = q(as as string);
+      const joinAs = `"${as}"`;
       if (as !== tableName) {
         target += ` AS ${joinAs}`;
       }
@@ -81,7 +75,7 @@ export const processJoinItem = (
 
       conditions = whereToSql(ctx, jq, queryData, joinAs);
     } else {
-      target = q(first);
+      target = `"${first}"`;
       const joinShape = (query.joinedShapes as JoinedShapes)[first];
       conditions = processArgs(
         args,
@@ -98,13 +92,13 @@ export const processJoinItem = (
     const joinQuery = first.q;
 
     const quotedFrom =
-      typeof joinQuery.from === 'string' ? q(joinQuery.from) : undefined;
+      typeof joinQuery.from === 'string' ? `"${joinQuery.from}"` : undefined;
 
     target = quotedFrom || quoteSchemaAndTable(joinQuery.schema, first.table);
 
-    let joinAs = quotedFrom || q(first.table);
+    let joinAs = quotedFrom || `"${first.table}"`;
 
-    const qAs = joinQuery.as ? q(joinQuery.as) : undefined;
+    const qAs = joinQuery.as ? `"${joinQuery.as}"` : undefined;
     const addAs = qAs && qAs !== joinAs;
 
     const joinedShape = first.shape;
@@ -169,7 +163,7 @@ const processArgs = (
         joinQueryAfterCallback?(fromQuery: Query, toQuery: Query): Query;
       }),
   joinAs: string,
-  joinShape: ColumnsShapeWithDataForSQL,
+  joinShape: ColumnsShapeBase,
   quotedAs?: string,
 ) => {
   if (args.length === 2) {
@@ -266,7 +260,7 @@ const getConditionsFor3Or4LengthItem = (
   target: string,
   quotedAs: string | undefined,
   args: ItemOf3Or4Length,
-  joinShape: ColumnsShapeWithDataForSQL,
+  joinShape: ColumnsShapeBase,
 ): string => {
   const [, leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
@@ -288,7 +282,7 @@ const getObjectOrRawConditions = (
   data: Record<string, string | Expression> | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
-  joinShape: ColumnsShapeWithDataForSQL,
+  joinShape: ColumnsShapeBase,
 ): string => {
   if (data === true) {
     return 'true';

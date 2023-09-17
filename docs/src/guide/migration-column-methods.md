@@ -76,7 +76,7 @@ change(async (db) => {
 });
 ```
 
-## generated
+## generated column
 
 [//]: # 'has JSDoc in columnType'
 

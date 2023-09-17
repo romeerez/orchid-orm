@@ -1,4 +1,3 @@
-import { q } from './common';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { QueryData } from './data';
 import { isExpression } from 'orchid-core';
@@ -23,7 +22,9 @@ export const pushWithSql = (
         }
 
         return `${options.recursive ? 'RECURSIVE ' : ''}"${name}"${
-          options.columns ? `(${options.columns.map(q).join(', ')})` : ''
+          options.columns
+            ? `(${options.columns.map((x) => `"${x}"`).join(', ')})`
+            : ''
         } AS ${
           options.materialized
             ? 'MATERIALIZED '

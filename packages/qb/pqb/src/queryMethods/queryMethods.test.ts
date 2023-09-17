@@ -911,7 +911,7 @@ describe('queryMethods', () => {
     });
   });
 
-  describe('column expression', () => {
+  describe('column reference expression', () => {
     it('should make SQL where given column is prefixed with a table name', () => {
       const q = User.get(
         User.sql`${User.column('name')} || ' ' || ${User.column('password')}`,

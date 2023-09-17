@@ -1,7 +1,7 @@
 import { JsonItem, SelectItem } from './types';
 import { RawSQL } from './rawSql';
 import { Query } from '../query/query';
-import { addValue, q, columnToSql, columnToSqlWithAs } from './common';
+import { addValue, columnToSql, columnToSqlWithAs } from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { SelectQueryData } from './data';
@@ -104,7 +104,7 @@ export const selectToSql = (
           const value = obj[as];
           if (typeof value === 'object' || typeof value === 'function') {
             if (isExpression(value)) {
-              list.push(`${value.toSQL(ctx, quotedAs)} AS ${q(as)}`);
+              list.push(`${value.toSQL(ctx, quotedAs)} AS "${as}"`);
             } else {
               pushSubQuerySql(ctx, value as Query, as, list, quotedAs);
             }
@@ -117,7 +117,7 @@ export const selectToSql = (
                 value as string,
                 quotedAs,
                 true,
-              )} AS ${q(as)}`,
+              )} AS "${as}"`,
             );
           }
         }
@@ -149,9 +149,9 @@ export function selectedObjectToSQL(
   item: JsonItem | Expression,
 ) {
   if ('__json' in item) {
-    return `${jsonToSql(ctx, table, item, ctx.values, quotedAs)} ${q(
-      item.__json[1],
-    )}`;
+    return `${jsonToSql(ctx, table, item, ctx.values, quotedAs)} "${
+      item.__json[1]
+    }"`;
   }
 
   const sql = item.toSQL(ctx, quotedAs);
@@ -199,7 +199,7 @@ const pushSubQuerySql = (
       default:
         throw new UnhandledTypeError(query, returnType);
     }
-    if (sql) list.push(`${coalesce(ctx, query, sql, quotedAs)} ${q(as)}`);
+    if (sql) list.push(`${coalesce(ctx, query, sql, quotedAs)} "${as}"`);
     return;
   }
 
@@ -236,9 +236,12 @@ const pushSubQuerySql = (
   }
 
   list.push(
-    `${coalesce(ctx, query, `(${makeSQL(query, ctx).text})`, quotedAs)} AS ${q(
-      as,
-    )}`,
+    `${coalesce(
+      ctx,
+      query,
+      `(${makeSQL(query, ctx).text})`,
+      quotedAs,
+    )} AS "${as}"`,
   );
 };
 
