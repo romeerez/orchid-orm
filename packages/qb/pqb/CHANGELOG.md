@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.14
+
+### Patch Changes
+
+- 18018604: Handle updating with empty set by switching to a `SELECT` query (#185)
+
 ## 0.18.13
 
 ### Patch Changes
