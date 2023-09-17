@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.10.46
+
+### Patch Changes
+
+- 2343dad6: Serialize the default value with the encoding function of the column (#183)
+- Updated dependencies [2343dad6]
+  - pqb@0.18.13
+  - orchid-core@0.10.9
+
 ## 2.10.45
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.9
+
+### Patch Changes
+
+- 2343dad6: Serialize the default value with the encoding function of the column (#183)
+
 ## 0.10.8
 
 ### Patch Changes
