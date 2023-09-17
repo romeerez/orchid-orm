@@ -2,7 +2,7 @@ const singleQuoteRegex = /'/g;
 const doubleQuoteRegex = /"/g;
 
 // eslint-disable-next-line
-type Value = any
+type Value = any;
 
 const quoteValue = (value: Value): string => {
   const type = typeof value;

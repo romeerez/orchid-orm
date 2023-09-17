@@ -188,6 +188,17 @@ export class Db<
         const arr = this.internal.runtimeDefaultColumns;
         if (!arr) this.internal.runtimeDefaultColumns = [key];
         else arr.push(key);
+
+        if (!column.data.runtimeDefault) {
+          const {
+            data: { default: def },
+            encodeFn,
+          } = column;
+
+          column.data.runtimeDefault = encodeFn
+            ? () => encodeFn(def())
+            : (def as () => unknown);
+        }
       }
     }
 

@@ -1,5 +1,6 @@
 import { ColumnType, quote, TableData } from 'pqb';
 import {
+  ColumnTypeBase,
   ForeignKeyTable,
   isRawSQL,
   RawSQLBase,
@@ -62,14 +63,8 @@ export const columnToSql = (
     line.push(checkToSql(item.data.check, values));
   }
 
-  const def = item.data.default;
-  if (def !== undefined && def !== null && typeof def !== 'function') {
-    if (isRawSQL(def)) {
-      line.push(`DEFAULT ${def.toSQL({ values })}`);
-    } else {
-      line.push(`DEFAULT ${quote(def)}`);
-    }
-  }
+  const def = encodeColumnDefault(item.data.default, values, item);
+  if (def !== null) line.push(`DEFAULT ${def}`);
 
   const { foreignKeys } = item.data;
   if (foreignKeys) {
@@ -93,6 +88,22 @@ export const columnToSql = (
   }
 
   return line.join(' ');
+};
+
+export const encodeColumnDefault = (
+  def: unknown,
+  values: unknown[],
+  column?: ColumnTypeBase,
+) => {
+  if (def !== undefined && def !== null && typeof def !== 'function') {
+    if (isRawSQL(def)) {
+      return def.toSQL({ values });
+    } else {
+      return quote(column?.encodeFn ? column.encodeFn(def) : def);
+    }
+  }
+
+  return null;
 };
 
 export const identityToSql = (identity: TableData.Identity) => {

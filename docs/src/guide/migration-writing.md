@@ -310,24 +310,30 @@ change(async (db) => {
     // change column default
     column3: t.change(t.default(1), t.default(2)),
 
+    // it's important to specify a column type (json)
+    // when we want the value to be correctly serialized:
+    // t.json().default([]) will be serialized with JSON.stringify,
+    // t.default([]) won't.
+    column4: t.change(t.json(), t.json().default([])),
+
     // change column default with raw SQL
-    column4: t.change(t.default(t.sql`2 + 2`), t.default(t.sql`3 + 3`)),
+    column5: t.change(t.default(t.sql`2 + 2`), t.default(t.sql`3 + 3`)),
 
     // change column to be nullable or non-nullable
-    column5: t.change(t.nonNullable(), t.nullable()),
-    column6: t.change(t.nullable(), t.nonNullable()),
+    column6: t.change(t.nonNullable(), t.nullable()),
+    column7: t.change(t.nullable(), t.nonNullable()),
 
     // change column comment
-    column7: t.change(t.comment('from comment'), t.comment('to comment')),
+    column8: t.change(t.comment('from comment'), t.comment('to comment')),
 
     // add index
-    column8: t.change(t.integer(), t.integer().index()),
+    column9: t.change(t.integer(), t.integer().index()),
 
     // remove index
-    column9: t.change(t.integer().index(), t.integer()),
+    column10: t.change(t.integer().index(), t.integer()),
 
     // change index
-    column10: t.change(
+    column11: t.change(
       t.integer().index({
         // index options to be applied when migrating down
       }),
@@ -337,25 +343,25 @@ change(async (db) => {
     ),
 
     // add primary key
-    column11: t.change(t.integer(), t.integer().primaryKey()),
+    column12: t.change(t.integer(), t.integer().primaryKey()),
 
     // drop primary key
-    column12: t.change(t.integer().primaryKey(), t.integer()),
+    column13: t.change(t.integer().primaryKey(), t.integer()),
 
     // add foreign key
-    column13: t.change(
+    column14: t.change(
       t.integer(),
       t.integer().foreignKey('otherTable', 'otherTableId'),
     ),
 
     // remove foreign key
-    column14: t.change(
+    column15: t.change(
       t.integer().foreignKey('otherTable', 'otherTableId'),
       t.integer(),
     ),
 
     // change foreign key
-    column15: t.change(
+    column16: t.change(
       t.integer().foreignKey('oneTable', 'oneColumn', {
         // foreign key options to be applied when migrating up
         name: 'oneForeignKeyName',
@@ -373,7 +379,7 @@ change(async (db) => {
     ),
 
     // change various column properties at once
-    column16: t.change(
+    column17: t.change(
       t
         .integer()
         .collate('de_DE')
@@ -397,7 +403,7 @@ change(async (db) => {
         }),
     ),
 
-    column17: t.change(
+    column18: t.change(
       // change from this check:
       t.check(t.sql`column17 > 5`),
       // to this check:

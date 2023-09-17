@@ -225,6 +225,9 @@ export type ColumnDataBase = {
   // if column has a default value, then it can be omitted in `create` method
   default?: unknown;
 
+  // if the `default` is a function, instantiating table query will set `runtimeDefault` to wrap the `default` function with `encodeFn` if it is set.
+  runtimeDefault?(): unknown;
+
   // is column removed from default table selection
   isHidden?: boolean;
 

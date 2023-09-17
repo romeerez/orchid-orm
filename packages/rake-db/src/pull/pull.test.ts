@@ -188,6 +188,15 @@ describe('pull', () => {
             typeSchema: 'schema',
           },
           {
+            ...textColumn,
+            schemaName: 'schema',
+            tableName: 'table1',
+            name: 'jsonArray',
+            type: 'jsonb',
+            typeSchema: 'schema',
+            default: "'[]'",
+          },
+          {
             ...createdAtColumn,
             schemaName: 'schema',
             tableName: 'table1',
@@ -309,6 +318,7 @@ change(async (db) => {
     columnName: t.name('column_name').integer(),
     domainColumn: t.array(t.domain('domain').as(t.integer())),
     customTypeColumn: t.type('customType'),
+    jsonArray: t.json().default(t.sql({ raw: '\\'[]\\'' })),
     ...t.timestamps(),
   }));
 });

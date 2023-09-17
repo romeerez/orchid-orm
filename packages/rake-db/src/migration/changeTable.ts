@@ -17,7 +17,6 @@ import {
   deepCompare,
   consumeColumnName,
   RawSQLBase,
-  isRawSQL,
   setDefaultLanguage,
   ColumnTypeBase,
 } from 'orchid-core';
@@ -42,6 +41,7 @@ import {
   columnToSql,
   commentsToQuery,
   constraintToSql,
+  encodeColumnDefault,
   getColumnName,
   identityToSql,
   indexesToQuery,
@@ -519,14 +519,7 @@ const astToQueries = (
       }
 
       if (from.default !== to.default) {
-        const value =
-          to.default === undefined ||
-          to.default === null ||
-          typeof to.default === 'function'
-            ? null
-            : typeof to.default === 'object' && isRawSQL(to.default)
-            ? to.default.toSQL({ values })
-            : quote(to.default);
+        const value = encodeColumnDefault(to.default, values, to.column);
 
         // when changing type, need to first drop an existing default before setting a new one
         if (changeType && value !== null) {

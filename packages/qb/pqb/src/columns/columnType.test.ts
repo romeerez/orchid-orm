@@ -364,6 +364,22 @@ describe('column type', () => {
         );
       });
     });
+
+    it('should encode lazy default value with the encoding function from the column', async () => {
+      const User = testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        data: t.json().default(() => ['foo']),
+      }));
+
+      const q = User.insert(userData);
+      expectSql(
+        q.toSQL(),
+        `INSERT INTO "user"("name", "password", "data") VALUES ($1, $2, $3)`,
+        [userData.name, userData.password, '["foo"]'],
+      );
+    });
   });
 
   describe('.index', () => {

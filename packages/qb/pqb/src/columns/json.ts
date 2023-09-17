@@ -36,12 +36,17 @@ export class JSONColumn<Type extends JSONType = JSONUnknown> extends ColumnType<
 
   toCode(t: string): Code {
     const { schema } = this.data;
-    const schemaCode = toArray(schema.toCode(t));
-    addCode(schemaCode, ',');
+
+    let schemaCode;
+    if (!(schema instanceof JSONUnknown)) {
+      schemaCode = toArray(schema.toCode(t));
+      addCode(schemaCode, ',');
+    }
+
     return columnCode(
       this,
       t,
-      [`json((${t}) =>`, schemaCode, ')'],
+      schemaCode ? [`json((${t}) =>`, schemaCode, ')'] : [`json()`],
       this.data,
       toCodeSkip,
     );

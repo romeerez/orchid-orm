@@ -132,7 +132,7 @@ describe('changeTable', () => {
       );
     });
 
-    it('should now add DEFAULT if the provided default is a function', async () => {
+    it('should not add DEFAULT if the provided default is a function', async () => {
       await testUpAndDown(
         (action) =>
           db.changeTable('table', (t) => ({
@@ -275,16 +275,19 @@ describe('changeTable', () => {
         (action) =>
           db.changeTable('table', (t) => ({
             withDefault: t[action](t.boolean().default(false)),
+            jsonWithDefault: t[action](t.json().default([])),
           })),
         () =>
           expectSql(`
             ALTER TABLE "table"
-              ADD COLUMN "withDefault" boolean NOT NULL DEFAULT false
+              ADD COLUMN "withDefault" boolean NOT NULL DEFAULT false,
+              ADD COLUMN "jsonWithDefault" jsonb NOT NULL DEFAULT '[]'
           `),
         () =>
           expectSql(`
             ALTER TABLE "table"
-              DROP COLUMN "withDefault"
+              DROP COLUMN "withDefault",
+              DROP COLUMN "jsonWithDefault"
           `),
       );
     });
@@ -1562,16 +1565,22 @@ describe('changeTable', () => {
                 t.default('from'),
                 t.default(t.sql("'to'")),
               ),
+              changeJsonDefault: t.change(
+                t.json().default(null),
+                t.json().default([]),
+              ),
             })),
           () =>
             expectSql(`
             ALTER TABLE "table"
-              ALTER COLUMN "changeDefault" SET DEFAULT 'to'
+              ALTER COLUMN "changeDefault" SET DEFAULT 'to',
+              ALTER COLUMN "changeJsonDefault" SET DEFAULT '[]'
           `),
           () =>
             expectSql(`
             ALTER TABLE "table"
-              ALTER COLUMN "changeDefault" SET DEFAULT 'from'
+              ALTER COLUMN "changeDefault" SET DEFAULT 'from',
+              ALTER COLUMN "changeJsonDefault" DROP DEFAULT
           `),
         );
       });

@@ -33,7 +33,7 @@ export const pushInsertSql = (
       if (!columns.includes(key)) {
         const column = shape[key];
         quotedColumns.push(`"${column.data.name || key}"`);
-        runtimeDefaults.push(column.data.default as () => unknown);
+        runtimeDefaults.push(column.data.runtimeDefault as () => unknown);
       }
     }
   }

@@ -33,7 +33,9 @@ Set a default value to a column. Columns that have defaults become optional when
 
 If you provide a value or a raw SQL, such default should be set on the column in migration to be applied on a database level.
 
-Or you can specify a callback that returns a value. This function will be called for each creating record. Such a default won't be applied to a database.
+Or you can specify a callback that returns a value.
+This function will be called for each creating record. Such a default won't be applied to a database.
+If the column has an encoding function (json, timestamp columns have it), it will be used to serialize the returned default value.
 
 ```ts
 export class Table extends BaseTable {
