@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.15
+
+### Patch Changes
+
+- 56c5ff9f: Add computed columns (#59)
+- Updated dependencies [56c5ff9f]
+  - orchid-core@0.10.10
+
 ## 0.18.14
 
 ### Patch Changes

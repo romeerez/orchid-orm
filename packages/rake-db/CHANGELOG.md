@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.10.48
+
+### Patch Changes
+
+- 56c5ff9f: Add computed columns (#59)
+- Updated dependencies [56c5ff9f]
+  - pqb@0.18.15
+  - orchid-core@0.10.10
+
 ## 2.10.47
 
 ### Patch Changes
