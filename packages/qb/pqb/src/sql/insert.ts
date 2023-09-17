@@ -246,6 +246,7 @@ export const pushReturningSql = (
   data: QueryData,
   quotedAs: string,
   hookSelect?: QueryHookSelect,
+  keyword = 'RETURNING', // noop update can use this function for `SELECT` list
 ): QueryHookSelect | undefined => {
   const { select } = data;
   if (!hookSelect?.length && !select) return hookSelect;
@@ -277,7 +278,7 @@ export const pushReturningSql = (
     }
   }
 
-  ctx.sql.push('RETURNING');
+  ctx.sql.push(keyword);
   if (hookFiltered?.length) {
     if (selected) ctx.sql.push(`${selected},`);
     ctx.sql.push(

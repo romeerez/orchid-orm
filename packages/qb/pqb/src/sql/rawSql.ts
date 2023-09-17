@@ -109,3 +109,6 @@ export const raw = <T = unknown>(
   isTemplateLiteralArgs(args)
     ? new RawSQL(args)
     : new RawSQL(args[0].raw, args[0].values);
+
+// Raw SQL count(*) to apply directly to `QueryData.select`.
+export const countSelect = [new RawSQL('count(*)')];

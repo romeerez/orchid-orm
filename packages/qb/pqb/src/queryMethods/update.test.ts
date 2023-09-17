@@ -9,7 +9,7 @@ import {
   userData,
   UserRecord,
 } from '../test-utils/test-utils';
-import { assertType, expectSql, useTestDatabase } from 'test-utils';
+import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { RelationConfigBase, RelationQuery } from '../relations';
 import { addQueryOn } from './join/join';
 import { Query } from '../query/query';
@@ -41,8 +41,10 @@ describe('update', () => {
     );
   });
 
-  it('should let update all records after using `all` method', () => {
-    User.all().update({ name: 'new name' });
+  it('should let update all records after using `all` method', async () => {
+    const q = User.all().update({ name: 'new name' });
+
+    assertType<Awaited<typeof q>, number>();
   });
 
   it('should update record with raw sql, returning updated rows count', async () => {
@@ -809,6 +811,74 @@ describe('update', () => {
         `,
         ['name', 1, 'password', 1, '"data"', 1],
       );
+    });
+  });
+
+  describe('updating with empty set', () => {
+    const User = testDb('user', (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+      password: t.text(),
+    }));
+
+    beforeAll(async () => {
+      await User.insert(userData);
+    });
+
+    it('should select count for return type `rowCount`', async () => {
+      const q = User.all().update({});
+
+      expectSql(q.toSQL(), `SELECT count(*) FROM "user"`);
+
+      expect(await q).toBe(1);
+    });
+
+    it('should select records for return type of many records', async () => {
+      const q = User.all().select('name').update({});
+
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user"`);
+
+      const res = await q;
+
+      assertType<typeof res, { name: string }[]>();
+
+      expect(res).toEqual([{ name: userData.name }]);
+    });
+
+    it('should select one record for return type selecting one record', async () => {
+      const q = User.select('name').findBy().update({});
+
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user" LIMIT 1`);
+
+      const res = await q;
+
+      assertType<typeof res, { name: string }>();
+
+      expect(res).toEqual({ name: userData.name });
+    });
+
+    it('should get a single value', async () => {
+      const q = User.findBy().get('name').update({});
+
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user" LIMIT 1`);
+
+      const res = await q;
+
+      assertType<typeof res, string>();
+
+      expect(res).toEqual(userData.name);
+    });
+
+    it('should pluck values', async () => {
+      const q = User.all().pluck('name').update({});
+
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user"`);
+
+      const res = await q;
+
+      assertType<typeof res, string[]>();
+
+      expect(res).toEqual([userData.name]);
     });
   });
 });

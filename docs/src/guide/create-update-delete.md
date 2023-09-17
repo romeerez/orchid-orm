@@ -549,16 +549,39 @@ await db.table.find(1).update({
 
 It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
 
-### null and undefined
+### null, undefined, unknown columns
 
-`null` value will set a column to `NULL`, but the `undefined` value will be ignored:
+- `null` value will set a column to `NULL`
+- `undefined` value will be ignored
+- unknown columns will be ignored
 
 ```ts
 db.table.findBy({ id: 1 }).update({
   name: null, // updates to null
   age: undefined, // skipped, no effect
+  lalala: 123, // skipped
 });
 ```
+
+### empty set
+
+When trying to query update with an empty object, it will be transformed seamlessly to a `SELECT` query:
+
+```ts
+// imagine the data is an empty object
+const data = req.body;
+
+// query is transformed to `SELECT count(*) WHERE key = 'value'`
+const count = await db.table.where({ key: 'value' }).update(data);
+
+// will select a full record by id
+const record = await db.table.find(1).selectAll().update(data);
+
+// will select a single column by id
+const name = await db.table.find(1).get('name').update(data);
+```
+
+If the table has `updatedAt` [timestamp](/guide/common-column-methods.html#timestamps), it will be updated even for an empty data.
 
 ## updateRaw
 

@@ -2,9 +2,10 @@ import { Query } from '../query/query';
 import { addValue, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
-import { ToSQLCtx } from './toSQL';
+import { pushLimitSQL, ToSQLCtx } from './toSQL';
 import {
   QueryHookSelect,
+  SelectQueryData,
   UpdateQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
@@ -14,6 +15,7 @@ import { Db } from '../query/db';
 import { joinSubQuery } from '../common/utils';
 import { JsonItem } from './types';
 import { jsonToSql } from './select';
+import { countSelect } from './rawSql';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -22,6 +24,32 @@ export const pushUpdateSql = (
   quotedAs: string,
 ): QueryHookSelect | undefined => {
   const quotedTable = quoteSchemaAndTable(query.schema, table.table as string);
+
+  const set: string[] = [];
+  processData(ctx, table, set, query.updateData, quotedAs);
+
+  // if no values to set, make an `SELECT` query
+  if (!set.length) {
+    if (!query.select) {
+      query.select = countSelect;
+    }
+
+    const hookSelect = pushReturningSql(
+      ctx,
+      table,
+      query,
+      quotedAs,
+      query.afterUpdateSelect,
+      'SELECT',
+    );
+
+    ctx.sql.push(`FROM ${quotedTable}`);
+    pushWhereStatementSql(ctx, table, query, quotedAs);
+    pushLimitSQL(ctx.sql, ctx.values, query as unknown as SelectQueryData);
+
+    return hookSelect;
+  }
+
   ctx.sql.push(`UPDATE ${quotedTable}`);
 
   if (quotedTable !== quotedAs) {
@@ -29,9 +57,6 @@ export const pushUpdateSql = (
   }
 
   ctx.sql.push('SET');
-
-  const set: string[] = [];
-  processData(ctx, table, set, query.updateData, quotedAs);
   ctx.sql.push(set.join(', '));
 
   pushWhereStatementSql(ctx, table, query, quotedAs);

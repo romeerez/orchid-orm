@@ -15,7 +15,7 @@ import { pushDeleteSql } from './delete';
 import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
-import { QueryData } from './data';
+import { QueryData, SelectQueryData } from './data';
 import { pushCopySql } from './copy';
 import { isExpression, Sql } from 'orchid-core';
 import { Db } from '../query/db';
@@ -179,13 +179,7 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     pushOrderBySql(ctx, query, quotedAs, query.order);
   }
 
-  if (!query.returnsOne) {
-    if (queryTypeWithLimitOne[query.returnType]) {
-      sql.push(`LIMIT 1`);
-    } else if (query.limit) {
-      sql.push(`LIMIT ${addValue(values, query.limit)}`);
-    }
-  }
+  pushLimitSQL(sql, values, query);
 
   if (query.offset) {
     sql.push(`OFFSET ${addValue(values, query.offset)}`);
@@ -207,3 +201,17 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
 
   return { text: sql.join(' '), values };
 };
+
+export function pushLimitSQL(
+  sql: string[],
+  values: unknown[],
+  q: SelectQueryData,
+) {
+  if (!q.returnsOne) {
+    if (queryTypeWithLimitOne[q.returnType]) {
+      sql.push(`LIMIT 1`);
+    } else if (q.limit) {
+      sql.push(`LIMIT ${addValue(values, q.limit)}`);
+    }
+  }
+}

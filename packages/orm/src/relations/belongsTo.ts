@@ -137,7 +137,7 @@ type BelongsToNestedUpdate = (
     queries?: ((queryResult: QueryResult) => Promise<void>)[];
     updateData?: Record<string, unknown>;
   },
-) => boolean;
+) => void;
 
 class BelongsToVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: BelongsToNestedInsert;
@@ -211,9 +211,7 @@ class BelongsToVirtualColumn extends VirtualColumn {
     q.q.wrapInTransaction = true;
 
     const data = set[this.key] as NestedUpdateOneItem;
-    if (this.nestedUpdate(q, set, data, ctx)) {
-      ctx.willSetKeys = true;
-    }
+    this.nestedUpdate(q, set, data, ctx);
   }
 }
 
@@ -480,7 +478,5 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         }
       });
     }
-
-    return !params.update && !params.upsert;
   }) as BelongsToNestedUpdate;
 };

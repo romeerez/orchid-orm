@@ -11,7 +11,7 @@ import {
 } from '../query/queryUtils';
 import { RelationConfigBase, RelationQueryBase } from '../relations';
 import { WhereResult } from './where/where';
-import { JsonItem, QueryData, UpdateQueryData } from '../sql';
+import { JsonItem } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape, Db } from '../query/db';
 import {
@@ -19,7 +19,6 @@ import {
   Expression,
   EmptyObject,
   QueryThen,
-  isObjectEmpty,
   callWithThis,
   TemplateLiteralArgs,
   emptyObject,
@@ -109,7 +108,6 @@ type ChangeCountArg<T extends Query> =
 // Context object for `update` logic used internally.
 // It's being used by relations logic in the ORM.
 export type UpdateCtx = {
-  willSetKeys?: true;
   queries?: ((queryResult: QueryResult) => Promise<void>)[];
   updateData?: Record<string, unknown>;
 };
@@ -135,16 +133,6 @@ const applyCountChange = <T extends Query>(
 
   pushQueryValue(self, 'updateData', map);
   return self as unknown as UpdateResult<T>;
-};
-
-// check if there is nothing to update for the table.
-//
-// It may happen when user is using `update` to only update relations,
-// and there are no columns to update in the table of this query.
-const checkIfUpdateIsEmpty = (q: QueryData) => {
-  return !(q as UpdateQueryData).updateData?.some(
-    (item) => isExpression(item) || !isObjectEmpty(item),
-  );
 };
 
 // sets query type, `returnType`, casts type from Query to UpdateResult
@@ -285,16 +273,39 @@ export class Update {
    *
    * It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
    *
-   * ### null and undefined
+   * ### null, undefined, unknown columns
    *
-   * `null` value will set a column to `NULL`, but the `undefined` value will be ignored:
+   * - `null` value will set a column to `NULL`
+   * - `undefined` value will be ignored
+   * - unknown columns will be ignored
    *
    * ```ts
    * db.table.findBy({ id: 1 }).update({
    *   name: null, // updates to null
    *   age: undefined, // skipped, no effect
+   *   lalala: 123, // skipped
    * });
    * ```
+   *
+   * ### empty set
+   *
+   * When trying to query update with an empty object, it will be transformed seamlessly to a `SELECT` query:
+   *
+   * ```ts
+   * // imagine the data is an empty object
+   * const data = req.body;
+   *
+   * // query is transformed to `SELECT count(*) WHERE key = 'value'`
+   * const count = await db.table.where({ key: 'value' }).update(data);
+   *
+   * // will select a full record by id
+   * const record = await db.table.find(1).selectAll().update(data);
+   *
+   * // will select a single column by id
+   * const name = await db.table.find(1).get('name').update(data);
+   * ```
+   *
+   * If the table has `updatedAt` [timestamp](/guide/common-column-methods.html#timestamps), it will be updated even for an empty data.
    *
    * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
    */
@@ -353,10 +364,6 @@ export class Update {
           }
         }
       }
-    }
-
-    if (!ctx.willSetKeys && checkIfUpdateIsEmpty(q)) {
-      delete q.type;
     }
 
     const { queries } = ctx;
@@ -428,6 +435,9 @@ export class Update {
     }
 
     pushQueryValue(this, 'updateData', args[0]);
+
+    this.q.type = 'update';
+
     return update(this);
   }
 
