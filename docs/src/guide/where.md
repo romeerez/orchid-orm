@@ -277,9 +277,9 @@ db.table.where({
 
 `notIn` is for the `NOT IN` operator, and takes the same arguments as `in`
 
-## numeric, date, time operators
+## numeric and date operators
 
-To compare numbers, dates, and times.
+To compare numbers and dates.
 
 `lt` is for `<` (lower than)
 
@@ -288,6 +288,9 @@ To compare numbers, dates, and times.
 `gt` is for `>` (greater than)
 
 `gte` is for `>=` (greater than or equal)
+
+Numeric types (int, decimal, double precision, etc.) are comparable with numbers,
+date types (date, timestamp) are comparable with `Date` object or `Data.toISOString()` formatted strings.
 
 ```ts
 db.table.where({
@@ -298,10 +301,7 @@ db.table.where({
 
   date: {
     lte: new Date(),
-  },
-
-  time: {
-    gte: new Date(),
+    gte: new Date().toISOString(),
   },
 });
 ```

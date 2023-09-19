@@ -599,4 +599,32 @@ describe('operators', () => {
       );
     });
   });
+
+  describe('date operators', () => {
+    it('should accept Date object', () => {
+      const now = new Date();
+
+      const q = User.where({ createdAt: { gt: now } });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "user" WHERE "user"."createdAt" > $1
+        `,
+        [now],
+      );
+    });
+
+    it('should accept string', () => {
+      const now = new Date().toISOString();
+
+      const q = User.where({ createdAt: { gt: now } });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "user" WHERE "user"."createdAt" > $1
+        `,
+        [now],
+      );
+    });
+  });
 });

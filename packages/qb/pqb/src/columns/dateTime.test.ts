@@ -33,6 +33,7 @@ describe('date time columns', () => {
       const result = await testDb.get(
         testDb.sql`'1999-01-08'::date`.type(() => new DateColumn()),
       );
+
       expect(result).toBe('1999-01-08');
 
       assertType<typeof result, string>();

@@ -99,8 +99,15 @@ const quoteValue = (
   return addValue(ctx.values, arg);
 };
 
-// defining all operators for all types
-const ops = {
+// common operators that exist for any types
+type Base<Value> = {
+  equals: Operator<Value | Query | Expression, BooleanColumn>;
+  not: Operator<Value | Query | Expression, BooleanColumn>;
+  in: Operator<Value[] | Query | Expression, BooleanColumn>;
+  notIn: Operator<Value[] | Query | Expression, BooleanColumn>;
+};
+
+const base = {
   equals: make((key, value, ctx, quotedAs) =>
     value === null
       ? `${key} IS NULL`
@@ -119,6 +126,48 @@ const ops = {
     (key, value, ctx, quotedAs) =>
       `NOT ${key} IN ${quoteValue(value, ctx, quotedAs)}`,
   ),
+} as Base<unknown>;
+
+// Boolean type operators
+type Bool = Base<boolean> & {
+  and: Operator<
+    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
+    BooleanColumn
+  >;
+  or: Operator<
+    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
+    BooleanColumn
+  >;
+};
+
+const boolean = {
+  ...base,
+  and: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} AND ${value.q.expr.toSQL(ctx, quotedAs)}`,
+  ),
+  or: make(
+    (key, value, ctx, quotedAs) =>
+      `(${key}) OR (${value.q.expr.toSQL(ctx, quotedAs)})`,
+  ),
+} as unknown as Bool;
+
+// Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
+type Ord<Value> = Base<Value> & {
+  lt: Operator<Value | Query | Expression, BooleanColumn>;
+  lte: Operator<Value | Query | Expression, BooleanColumn>;
+  gt: Operator<Value | Query | Expression, BooleanColumn>;
+  gte: Operator<Value | Query | Expression, BooleanColumn>;
+  between: Operator<
+    [Value | Query | Expression, Value | Query | Expression],
+    BooleanColumn
+  >;
+};
+
+type Numeric = Ord<number>;
+
+const numeric = {
+  ...base,
   lt: make(
     (key, value, ctx, quotedAs) =>
       `${key} < ${quoteValue(value, ctx, quotedAs)}`,
@@ -135,6 +184,28 @@ const ops = {
     (key, value, ctx, quotedAs) =>
       `${key} >= ${quoteValue(value, ctx, quotedAs)}`,
   ),
+  between: make<[unknown, unknown]>(
+    (key, [from, to], ctx, quotedAs) =>
+      `${key} BETWEEN ${quoteValue(from, ctx, quotedAs)} AND ${quoteValue(
+        to,
+        ctx,
+        quotedAs,
+      )}`,
+  ),
+} as Numeric;
+
+// Text type operators
+type Text = Base<string> & {
+  contains: Operator<string | Query | Expression, BooleanColumn>;
+  containsSensitive: Operator<string | Query | Expression, BooleanColumn>;
+  startsWith: Operator<string | Query | Expression, BooleanColumn>;
+  startsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
+  endsWith: Operator<string | Query | Expression, BooleanColumn>;
+  endsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
+};
+
+const text = {
+  ...base,
   contains: make(
     (key, value, ctx, quotedAs) =>
       `${key} ILIKE '%' || ${quoteValue(value, ctx, quotedAs)} || '%'`,
@@ -159,14 +230,20 @@ const ops = {
     (key, value, ctx, quotedAs) =>
       `${key} LIKE '%' || ${quoteValue(value, ctx, quotedAs)}`,
   ),
-  between: make<[unknown, unknown]>(
-    (key, [from, to], ctx, quotedAs) =>
-      `${key} BETWEEN ${quoteValue(from, ctx, quotedAs)} AND ${quoteValue(
-        to,
-        ctx,
-        quotedAs,
-      )}`,
-  ),
+} as Text;
+
+// JSON type operators
+type Json = Base<unknown> & {
+  jsonPath: Operator<
+    [path: string, op: string, value: unknown | Query | Expression],
+    BooleanColumn
+  >;
+  jsonSupersetOf: Operator<unknown | Query | Expression, BooleanColumn>;
+  jsonSubsetOf: Operator<unknown | Query | Expression, BooleanColumn>;
+};
+
+const json = {
+  ...base,
   jsonPath: make<[string, string, unknown]>(
     (key, [path, op, value], ctx, quotedAs) =>
       `jsonb_path_query_first(${key}, '${path}') #>> '{}' ${op} ${quoteValue(
@@ -184,105 +261,6 @@ const ops = {
     (key, value, ctx, quotedAs) =>
       `${key} <@ ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
-  and: make(
-    (key, value, ctx, quotedAs) =>
-      `${key} AND ${value.q.expr.toSQL(ctx, quotedAs)}`,
-  ),
-  or: make(
-    (key, value, ctx, quotedAs) =>
-      `(${key}) OR (${value.q.expr.toSQL(ctx, quotedAs)})`,
-  ),
-};
-
-// common operators that exist for any types
-type Base<Value> = {
-  equals: Operator<Value | Query | Expression, BooleanColumn>;
-  not: Operator<Value | Query | Expression, BooleanColumn>;
-  in: Operator<Value[] | Query | Expression, BooleanColumn>;
-  notIn: Operator<Value[] | Query | Expression, BooleanColumn>;
-};
-
-const base = {
-  equals: ops.equals,
-  not: ops.not,
-  in: ops.in,
-  notIn: ops.notIn,
-} as Base<unknown>;
-
-// Boolean type operators
-type Bool = Base<boolean> & {
-  and: Operator<
-    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
-    BooleanColumn
-  >;
-  or: Operator<
-    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
-    BooleanColumn
-  >;
-};
-
-const boolean = {
-  ...base,
-  and: ops.and,
-  or: ops.or,
-} as Bool;
-
-// Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
-type Ord<Value> = Base<Value> & {
-  lt: Operator<Value | Query | Expression, BooleanColumn>;
-  lte: Operator<Value | Query | Expression, BooleanColumn>;
-  gt: Operator<Value | Query | Expression, BooleanColumn>;
-  gte: Operator<Value | Query | Expression, BooleanColumn>;
-  between: Operator<
-    [Value | Query | Expression, Value | Query | Expression],
-    BooleanColumn
-  >;
-};
-
-const numeric = {
-  ...base,
-  lt: ops.lt,
-  lte: ops.lte,
-  gt: ops.gt,
-  gte: ops.gte,
-  between: ops.between,
-};
-
-// Text type operators
-type Text = Base<string> & {
-  contains: Operator<string | Query | Expression, BooleanColumn>;
-  containsSensitive: Operator<string | Query | Expression, BooleanColumn>;
-  startsWith: Operator<string | Query | Expression, BooleanColumn>;
-  startsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
-  endsWith: Operator<string | Query | Expression, BooleanColumn>;
-  endsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
-};
-
-const text = {
-  ...base,
-  contains: ops.contains,
-  containsSensitive: ops.containsSensitive,
-  startsWith: ops.startsWith,
-  startsWithSensitive: ops.startsWithSensitive,
-  endsWith: ops.endsWith,
-  endsWithSensitive: ops.endsWithSensitive,
-} as Text;
-
-// JSON type operators
-type Json = Base<unknown> & {
-  jsonPath: Operator<
-    [path: string, op: string, value: unknown | Query | Expression],
-    BooleanColumn
-  >;
-  jsonSupersetOf: Operator<unknown | Query | Expression, BooleanColumn>;
-  jsonSubsetOf: Operator<unknown | Query | Expression, BooleanColumn>;
-};
-
-const json = {
-  ...base,
-  jsonPath: ops.jsonPath,
-  jsonSupersetOf: ops.jsonSupersetOf,
-  jsonSubsetOf: ops.jsonSubsetOf,
 } as Json;
 
 // `Operators` has operators grouped by types. To be used by column classes.
@@ -290,8 +268,8 @@ export const Operators = {
   any: base,
   boolean,
   number: numeric,
-  date: base,
-  time: base,
+  date: numeric,
+  time: numeric,
   text,
   json,
   array: base,
@@ -299,9 +277,9 @@ export const Operators = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   any: Base<any>;
   boolean: Bool;
-  number: Ord<number>;
-  date: Ord<number>;
-  time: Ord<number>;
+  number: Numeric;
+  date: Ord<Date | string>;
+  time: Numeric;
   text: Text;
   json: Json;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
