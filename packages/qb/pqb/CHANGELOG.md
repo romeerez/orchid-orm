@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.16
+
+### Patch Changes
+
+- eada7f0a: Fix timestamp comparison operators (#187)
+
 ## 0.18.15
 
 ### Patch Changes
