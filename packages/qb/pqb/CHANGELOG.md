@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.17
+
+### Patch Changes
+
+- 7f39e294: Remove computed columns from the table shape for create and update in ORM (#188)
+- Updated dependencies [7f39e294]
+  - orchid-core@0.10.11
+
 ## 0.18.16
 
 ### Patch Changes

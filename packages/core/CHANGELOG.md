@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.11
+
+### Patch Changes
+
+- 7f39e294: Remove computed columns from the table shape for create and update in ORM (#188)
+
 ## 0.10.10
 
 ### Patch Changes
