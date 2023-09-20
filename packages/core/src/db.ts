@@ -18,6 +18,7 @@ export type DbBase<
   Table extends string | undefined,
   Shape extends ColumnsShapeBase,
   CT extends ColumnTypesBase,
+  ShapeWithComputed extends ColumnsShapeBase = Shape,
   Result extends ColumnsShapeBase = Pick<
     Shape,
     DefaultSelectColumns<Shape>[number]
@@ -27,7 +28,7 @@ export type DbBase<
   table: Table;
   columns: (keyof Shape)[];
   columnTypes: CT;
-  shape: Shape;
+  shape: ShapeWithComputed;
   singlePrimaryKey: SinglePrimaryKey<Shape>;
   type: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;

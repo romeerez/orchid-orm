@@ -91,8 +91,9 @@ export interface Db<
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
   CT extends ColumnTypesBase = DefaultColumnTypes,
+  ShapeWithComputed extends ColumnsShape = Shape,
   Data = QueryDefaultReturnData<Shape>,
-> extends DbBase<Adapter, Table, Shape, CT>,
+> extends DbBase<Adapter, Table, Shape, CT, ShapeWithComputed>,
     QueryMethods<CT> {
   new (
     adapter: Adapter,
@@ -106,7 +107,7 @@ export interface Db<
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
   q: QueryData;
-  selectable: SelectableFromShape<Shape, Table>;
+  selectable: SelectableFromShape<ShapeWithComputed, Table>;
   returnType: Query['returnType'];
   then: QueryThen<Data>;
   catch: QueryCatch<Data>;
@@ -139,13 +140,14 @@ export class Db<
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
   CT extends ColumnTypesBase = DefaultColumnTypes,
+  ShapeWithComputed extends ColumnsShape = Shape,
 > implements Query
 {
   constructor(
     public adapter: Adapter,
     public queryBuilder: Db,
     public table: Table = undefined as Table,
-    public shape: Shape = anyShape as Shape,
+    public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
     public columnTypes: CT,
     transactionStorage: AsyncLocalStorage<TransactionState>,
     options: DbTableOptions,

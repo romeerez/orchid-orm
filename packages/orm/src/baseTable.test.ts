@@ -492,6 +492,18 @@ describe('baseTable', () => {
 
       assertType<Awaited<typeof q>, { name: string; nameAndKey: string }[]>();
 
+      local.user.create({
+        name: 'name',
+        userKey: 'key',
+        // @ts-expect-error computed values should not be accepted
+        nameAndKey: 'value',
+      });
+
+      local.user.find(1).update({
+        // @ts-expect-error computed values should not be accepted
+        nameAndKey: 'value',
+      });
+
       expectSql(
         q.toSQL(),
         `

@@ -11,7 +11,6 @@ import {
   QueryBase,
   QueryBeforeHook,
   QueryData,
-  QueryDefaultReturnData,
   QueryHooks,
   QueryWithTable,
   RelationQueryBase,
@@ -50,14 +49,14 @@ export type TableToDb<
   RelationQueries extends Record<string, RelationQueryBase>,
 > = Db<
   T['table'],
+  T['columns'],
+  RelationQueries,
+  T['types'],
   T['computed'] extends ComputedColumnsBase<never>
     ? T['columns'] & {
         [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
       }
-    : T['columns'],
-  RelationQueries,
-  T['types'],
-  QueryDefaultReturnData<T['columns']>
+    : T['columns']
 > & {
   definedAs: string;
   db: OrchidORM;
