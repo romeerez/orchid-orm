@@ -53,6 +53,9 @@ export class JSONColumn<Type extends JSONType = JSONUnknown> extends ColumnType<
   }
 }
 
+// Encode data of both types with JSON.stringify
+JSONColumn.prototype.encodeFn = JSON.stringify;
+
 // JSON non-binary type, stored as a text in the database, so it doesn't have rich functionality.
 export class JSONTextColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'json' as const;
@@ -61,7 +64,3 @@ export class JSONTextColumn extends ColumnType<string, typeof Operators.text> {
     return columnCode(this, t, `jsonText()`, this.data, toCodeSkip);
   }
 }
-
-// Encode data of both types with JSON.stringify
-JSONColumn.prototype.encodeFn = JSONTextColumn.prototype.encodeFn =
-  JSON.stringify;

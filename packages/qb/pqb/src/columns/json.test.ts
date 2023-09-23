@@ -27,8 +27,8 @@ describe('json columns', () => {
       expect(t.jsonText().toCode('t')).toBe('t.jsonText()');
     });
 
-    it(`should have encodeFn because pg driver fails to encode arrays on its own`, async () => {
-      expect(t.jsonText().encodeFn?.([1, '2', true])).toBe('[1,"2",true]');
+    it(`should not have encodeFn because it expects a JSON string`, async () => {
+      expect(t.jsonText().encodeFn).toBe(undefined);
     });
   });
 });
