@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.19
+
+### Patch Changes
+
+- 0ce2a897: Optimize exported types of columns and column methods by explicitly writing them instead of inferring
+- Updated dependencies [0ce2a897]
+  - orchid-core@0.10.12
+
 ## 0.18.18
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.12
+
+### Patch Changes
+
+- 0ce2a897: Optimize exported types of columns and column methods by explicitly writing them instead of inferring
+
 ## 0.10.11
 
 ### Patch Changes

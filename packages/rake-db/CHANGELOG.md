@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.10.53
+
+### Patch Changes
+
+- 0ce2a897: Optimize exported types of columns and column methods by explicitly writing them instead of inferring
+- Updated dependencies [0ce2a897]
+  - pqb@0.18.19
+  - orchid-core@0.10.12
+
 ## 2.10.52
 
 ### Patch Changes
