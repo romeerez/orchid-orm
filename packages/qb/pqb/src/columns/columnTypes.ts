@@ -3,6 +3,7 @@ import {
   BigSerialColumn,
   DecimalColumn,
   DoublePrecisionColumn,
+  IdentityColumn,
   IntegerColumn,
   RealColumn,
   SerialColumn,
@@ -46,7 +47,6 @@ import { EnumColumn } from './enum';
 import { JSONColumn, JSONTextColumn } from './json';
 import {
   ColumnNameOfTable,
-  ColumnTypesBase,
   EmptyObject,
   emptyObject,
   ForeignKeyTable,
@@ -61,6 +61,8 @@ import {
   JSONType,
   JSONTypes,
   JSONUnknown,
+  ColumnTypesBase,
+  TimestampHelpers,
 } from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
@@ -74,8 +76,6 @@ import { makeRegexToFindInSql } from '../common/utils';
 import { ColumnsShape } from './columnsSchema';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL } from '../sql/rawSql';
-
-export type ColumnTypes = typeof columnTypes;
 
 export type TableData = {
   primaryKey?: TableData.PrimaryKey;
@@ -152,12 +152,9 @@ export const resetTableData = (data: TableData = newTableData()) => {
   tableData = data;
 };
 
-export const getColumnTypes = <
-  CT extends ColumnTypesBase,
-  Shape extends ColumnsShape,
->(
-  types: CT,
-  fn: (t: CT) => Shape,
+export const getColumnTypes = <ColumnTypes, Shape extends ColumnsShape>(
+  types: ColumnTypes,
+  fn: (t: ColumnTypes) => Shape,
   nowSQL: string | undefined,
   language: string | undefined,
   data: TableData = newTableData(),
@@ -169,38 +166,203 @@ export const getColumnTypes = <
   return fn(types);
 };
 
-function sql(sql: TemplateStringsArray, ...values: unknown[]): RawSQLBase;
-function sql(sql: string): RawSQLBase;
-function sql(values: Record<string, unknown>, sql: string): RawSQLBase;
-function sql(
-  values: Record<string, unknown>,
-): (...sql: TemplateLiteralArgs) => RawSQLBase;
-function sql(
-  ...args:
-    | [sql: TemplateStringsArray, ...values: unknown[]]
-    | [sql: string]
-    | [values: Record<string, unknown>, sql?: string]
-): ((...sql: TemplateLiteralArgs) => RawSQLBase) | RawSQLBase {
-  const arg = args[0];
-  if (Array.isArray(arg)) {
-    return new RawSQL(args as TemplateLiteralArgs);
-  }
+export type DefaultColumnTypes = TimestampHelpers & {
+  name<T extends ColumnTypesBase>(this: T, name: string): T;
 
-  if (typeof args[0] === 'string') {
-    return new RawSQL(args[0] as string);
-  }
+  sql<T extends ColumnTypesBase>(
+    this: T,
+    sql: TemplateStringsArray,
+    ...values: unknown[]
+  ): RawSQLBase<ColumnType, T>;
+  sql<T extends ColumnTypesBase>(
+    this: T,
+    sql: string,
+  ): RawSQLBase<ColumnType, T>;
+  sql<T extends ColumnTypesBase>(
+    this: T,
+    values: Record<string, unknown>,
+    sql: string,
+  ): RawSQLBase<ColumnType, T>;
+  sql<T extends ColumnTypesBase>(
+    this: T,
+    values: Record<string, unknown>,
+  ): (...sql: TemplateLiteralArgs) => RawSQLBase<ColumnType, T>;
+  sql(
+    ...args:
+      | [sql: TemplateStringsArray, ...values: unknown[]]
+      | [sql: string]
+      | [values: Record<string, unknown>, sql?: string]
+  ): ((...sql: TemplateLiteralArgs) => RawSQLBase) | RawSQLBase;
 
-  if (args[1] !== undefined) {
-    return new RawSQL(args[1] as string, arg as Record<string, unknown>);
-  }
+  smallint(): SmallIntColumn;
+  integer(): IntegerColumn;
+  bigint(): BigIntColumn;
+  numeric<
+    Precision extends number | undefined = undefined,
+    Scale extends number | undefined = undefined,
+  >(
+    precision?: Precision,
+    scale?: Scale,
+  ): DecimalColumn<Precision, Scale>;
+  decimal<
+    Precision extends number | undefined = undefined,
+    Scale extends number | undefined = undefined,
+  >(
+    precision?: Precision,
+    scale?: Scale,
+  ): DecimalColumn<Precision, Scale>;
+  real(): RealColumn;
+  doublePrecision(): DoublePrecisionColumn;
+  identity(options?: TableData.Identity): IdentityColumn<IntegerColumn>;
+  smallSerial(): IdentityColumn<SmallSerialColumn>;
+  serial(): SerialColumn;
+  bigSerial(): BigSerialColumn;
+  money(): MoneyColumn;
+  varchar<Limit extends number | undefined = undefined>(
+    limit?: Limit,
+  ): VarCharColumn<Limit>;
+  char<Limit extends number | undefined = undefined>(
+    limit?: Limit,
+  ): CharColumn<Limit>;
+  text(min: number, max: number): TextColumn;
+  // `varchar` column with optional limit defaulting to 255.
+  string<Limit extends number = 255>(limit?: Limit): VarCharColumn<Limit>;
+  citext(min: number, max: number): CitextColumn;
+  bytea(): ByteaColumn;
+  date(): DateColumn;
+  timestampNoTZ<Precision extends number>(
+    precision?: Precision,
+  ): TimestampColumn<Precision>;
+  timestamp<Precision extends number | undefined = undefined>(
+    precision?: Precision,
+  ): TimestampTZColumn<Precision>;
+  time<Precision extends number | undefined = undefined>(
+    precision?: Precision,
+  ): TimeColumn<Precision>;
+  interval<
+    Fields extends string | undefined = undefined,
+    Precision extends number | undefined = undefined,
+  >(
+    fields?: Fields,
+    precision?: Precision,
+  ): IntervalColumn<Fields, Precision>;
+  boolean(): BooleanColumn;
+  enum<U extends string, T extends [U, ...U[]]>(
+    dataType: string,
+    type: T,
+  ): EnumColumn<U, T>;
+  point(): PointColumn;
+  line(): LineColumn;
+  lseg(): LsegColumn;
+  box(): BoxColumn;
+  path(): PathColumn;
+  polygon(): PolygonColumn;
+  circle(): CircleColumn;
+  cidr(): CidrColumn;
+  inet(): InetColumn;
+  macaddr(): MacAddrColumn;
+  macaddr8(): MacAddr8Column;
+  bit<Length extends number>(length: Length): BitColumn<Length>;
+  bitVarying<Length extends number | undefined = undefined>(
+    length?: Length,
+  ): BitVaryingColumn<Length>;
+  tsvector(): TsVectorColumn;
+  tsquery(): TsQueryColumn;
+  uuid(): UUIDColumn;
+  xml(): XMLColumn;
+  json<Type extends JSONType = JSONUnknown>(
+    schemaOrFn?: Type | ((j: JSONTypes) => Type),
+  ): JSONColumn<Type>;
+  jsonText(): JSONTextColumn;
+  array<Item extends ColumnType>(item: Item): ArrayColumn<Item>;
+  type(dataType: string): CustomTypeColumn;
+  domain(dataType: string): DomainColumn;
 
-  return (...args) => new RawSQL(args, arg as Record<string, unknown>);
-}
+  primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
 
-export type DefaultColumnTypes = typeof columnTypes;
-export const columnTypes = {
+  index(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options?: IndexOptions,
+  ): EmptyObject;
+
+  unique(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options?: IndexOptions,
+  ): EmptyObject;
+
+  /**
+   * See {@link ColumnType.searchIndex}
+   */
+  searchIndex(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options?: IndexOptions,
+  ): EmptyObject;
+
+  constraint<
+    Table extends (() => ForeignKeyTable) | string,
+    Columns extends Table extends () => ForeignKeyTable
+      ? [
+          ColumnNameOfTable<ReturnType<Table>>,
+          ...ColumnNameOfTable<ReturnType<Table>>[],
+        ]
+      : [string, ...string[]],
+  >({
+    name,
+    references,
+    check,
+    dropMode,
+  }: {
+    name?: string;
+    references?: [
+      columns: string[],
+      fnOrTable: Table,
+      foreignColumns: Columns,
+      options?: ForeignKeyOptions,
+    ];
+    check?: RawSQLBase;
+    dropMode?: DropMode;
+  }): EmptyObject;
+
+  foreignKey<
+    Table extends (() => ForeignKeyTable) | string,
+    Columns extends Table extends () => ForeignKeyTable
+      ? [
+          ColumnNameOfTable<ReturnType<Table>>,
+          ...ColumnNameOfTable<ReturnType<Table>>[],
+        ]
+      : [string, ...string[]],
+  >(
+    columns: string[],
+    fnOrTable: Table,
+    foreignColumns: Columns,
+    options?: ForeignKeyOptions & { name?: string; dropMode?: DropMode },
+  ): EmptyObject;
+
+  check(check: RawSQLBase): EmptyObject;
+};
+
+export const columnTypes: DefaultColumnTypes = {
   name,
-  sql,
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sql(...args: any[]): any {
+    const arg = args[0];
+    if (Array.isArray(arg)) {
+      return new RawSQL(args as TemplateLiteralArgs);
+    }
+
+    if (typeof args[0] === 'string') {
+      return new RawSQL(args[0]);
+    }
+
+    if (args[1] !== undefined) {
+      return new RawSQL(args[1], arg);
+    }
+
+    return (...args: TemplateLiteralArgs) =>
+      new RawSQL(args, arg as Record<string, unknown>);
+  },
+
   smallint() {
     return new SmallIntColumn();
   },
@@ -210,16 +372,10 @@ export const columnTypes = {
   bigint() {
     return new BigIntColumn();
   },
-  numeric<
-    Precision extends number | undefined = undefined,
-    Scale extends number | undefined = undefined,
-  >(precision?: Precision, scale?: Scale) {
+  numeric(precision, scale) {
     return new DecimalColumn(precision, scale);
   },
-  decimal<
-    Precision extends number | undefined = undefined,
-    Scale extends number | undefined = undefined,
-  >(precision?: Precision, scale?: Scale) {
+  decimal(precision, scale) {
     return new DecimalColumn(precision, scale);
   },
   real() {
@@ -228,7 +384,7 @@ export const columnTypes = {
   doublePrecision() {
     return new DoublePrecisionColumn();
   },
-  identity(options?: TableData.Identity) {
+  identity(options) {
     return new IntegerColumn().identity(options);
   },
   smallSerial() {
@@ -243,20 +399,19 @@ export const columnTypes = {
   money() {
     return new MoneyColumn();
   },
-  varchar<Limit extends number | undefined = undefined>(limit?: Limit) {
+  varchar(limit) {
     return new VarCharColumn(limit);
   },
-  char<Limit extends number | undefined = undefined>(limit?: Limit) {
+  char(limit) {
     return new CharColumn(limit);
   },
-  text(min: number, max: number) {
+  text(min, max) {
     return new TextColumn(min, max);
   },
-  // `varchar` column with optional limit defaulting to 255.
-  string<Limit extends number = 255>(limit: Limit = 255 as Limit) {
+  string<Limit extends number = 255>(limit = 255 as Limit) {
     return new VarCharColumn(limit);
   },
-  citext(min: number, max: number) {
+  citext(min, max) {
     return new CitextColumn(min, max);
   },
   bytea() {
@@ -265,30 +420,23 @@ export const columnTypes = {
   date() {
     return new DateColumn();
   },
-  timestampNoTZ<Precision extends number>(precision?: Precision) {
+  timestampNoTZ(precision) {
     return new TimestampColumn(precision);
   },
-  timestamp<Precision extends number | undefined = undefined>(
-    precision?: Precision,
-  ) {
+  timestamp(precision) {
     return new TimestampTZColumn(precision);
   },
-  time<Precision extends number | undefined = undefined>(
-    precision?: Precision,
-  ) {
+  time(precision) {
     return new TimeColumn(precision);
   },
-  interval<
-    Fields extends string | undefined = undefined,
-    Precision extends number | undefined = undefined,
-  >(fields?: Fields, precision?: Precision) {
+  interval(fields, precision) {
     return new IntervalColumn(fields, precision);
   },
   boolean() {
     return new BooleanColumn();
   },
-  enum<U extends string, T extends [U, ...U[]]>(dataType: string, type: T) {
-    return new EnumColumn<U, T>(dataType, type);
+  enum(dataType, type) {
+    return new EnumColumn(dataType, type);
   },
   point() {
     return new PointColumn();
@@ -323,10 +471,10 @@ export const columnTypes = {
   macaddr8() {
     return new MacAddr8Column();
   },
-  bit<Length extends number>(length: Length) {
+  bit(length) {
     return new BitColumn(length);
   },
-  bitVarying<Length extends number | undefined = undefined>(length?: Length) {
+  bitVarying(length) {
     return new BitVaryingColumn(length);
   },
   tsvector() {
@@ -341,33 +489,28 @@ export const columnTypes = {
   xml() {
     return new XMLColumn();
   },
-  json<Type extends JSONType = JSONUnknown>(
-    schemaOrFn?: Type | ((j: JSONTypes) => Type),
-  ) {
+  json(schemaOrFn) {
     return new JSONColumn(schemaOrFn);
   },
   jsonText() {
     return new JSONTextColumn();
   },
-  array<Item extends ColumnType>(item: Item) {
+  array(item) {
     return new ArrayColumn(item);
   },
-  type(dataType: string) {
+  type(dataType) {
     return new CustomTypeColumn(dataType);
   },
-  domain(dataType: string) {
+  domain(dataType) {
     return new DomainColumn(dataType);
   },
 
-  primaryKey(columns: string[], options?: { name?: string }) {
+  primaryKey(columns, options) {
     tableData.primaryKey = { columns, options };
     return emptyObject;
   },
 
-  index(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options: IndexOptions = {},
-  ) {
+  index(columns, options = {}) {
     const index = {
       columns: toArray(columns).map((column) =>
         typeof column === 'string' ? { column } : column,
@@ -379,47 +522,18 @@ export const columnTypes = {
     return emptyObject;
   },
 
-  unique(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
-  ) {
+  unique(columns, options) {
     return this.index(columns, { ...options, unique: true });
   },
 
   /**
    * See {@link ColumnType.searchIndex}
    */
-  searchIndex(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
-  ) {
+  searchIndex(columns, options) {
     return this.index(columns, { ...options, tsVector: true });
   },
 
-  constraint<
-    Table extends (() => ForeignKeyTable) | string,
-    Columns extends Table extends () => ForeignKeyTable
-      ? [
-          ColumnNameOfTable<ReturnType<Table>>,
-          ...ColumnNameOfTable<ReturnType<Table>>[],
-        ]
-      : [string, ...string[]],
-  >({
-    name,
-    references,
-    check,
-    dropMode,
-  }: {
-    name?: string;
-    references?: [
-      columns: string[],
-      fnOrTable: Table,
-      foreignColumns: Columns,
-      options?: ForeignKeyOptions,
-    ];
-    check?: RawSQLBase;
-    dropMode?: DropMode;
-  }): EmptyObject {
+  constraint({ name, references, check, dropMode }) {
     (tableData.constraints ??= []).push({
       name,
       references: references
@@ -436,20 +550,7 @@ export const columnTypes = {
     return emptyObject;
   },
 
-  foreignKey<
-    Table extends (() => ForeignKeyTable) | string,
-    Columns extends Table extends () => ForeignKeyTable
-      ? [
-          ColumnNameOfTable<ReturnType<Table>>,
-          ...ColumnNameOfTable<ReturnType<Table>>[],
-        ]
-      : [string, ...string[]],
-  >(
-    columns: string[],
-    fnOrTable: Table,
-    foreignColumns: Columns,
-    options?: ForeignKeyOptions & { name?: string; dropMode?: DropMode },
-  ): EmptyObject {
+  foreignKey(columns, fnOrTable, foreignColumns, options) {
     (tableData.constraints ??= []).push({
       name: options?.name,
       references: {
@@ -463,7 +564,7 @@ export const columnTypes = {
     return emptyObject;
   },
 
-  check(check: RawSQLBase): EmptyObject {
+  check(check) {
     (tableData.constraints ??= []).push({
       check,
     });

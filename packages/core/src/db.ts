@@ -3,7 +3,6 @@ import {
   ColumnShapeInput,
   ColumnShapeOutput,
   ColumnsShapeBase,
-  ColumnTypesBase,
   DefaultSelectColumns,
   SinglePrimaryKey,
 } from './columns/columnType';
@@ -17,7 +16,7 @@ export type DbBase<
   Adapter extends AdapterBase,
   Table extends string | undefined,
   Shape extends ColumnsShapeBase,
-  CT extends ColumnTypesBase,
+  CT,
   ShapeWithComputed extends ColumnsShapeBase = Shape,
   Result extends ColumnsShapeBase = Pick<
     Shape,

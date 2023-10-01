@@ -1,4 +1,4 @@
-import { ColumnTypeBase, ColumnTypesBase } from './columns/columnType';
+import { ColumnTypeBase } from './columns/columnType';
 import { EmptyObject } from './utils';
 import { OperatorToSQL } from './columns';
 
@@ -85,20 +85,20 @@ export abstract class ExpressionTypeMethod {
 // RawSQLBase extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
 export interface RawSQLBase<
   T extends ColumnTypeBase = ColumnTypeBase,
-  CT extends ColumnTypesBase = EmptyObject,
+  ColumnTypes = EmptyObject,
 > extends Expression<T>,
     ExpressionTypeMethod {}
 
 // Base class for raw SQL
 export abstract class RawSQLBase<
   T extends ColumnTypeBase = ColumnTypeBase,
-  CT extends ColumnTypesBase = EmptyObject,
+  ColumnTypes = EmptyObject,
 > extends Expression<T> {
   // Column type instance, it is assigned directly to the prototype of RawSQL class.
   declare _type: T;
 
   // Column types are stored to be passed to the `type` callback.
-  abstract columnTypes: CT;
+  abstract columnTypes: ColumnTypes;
 
   // Produce SQL string, push query variables into given `values` array.
   abstract makeSQL(ctx: { values: unknown[] }): string;

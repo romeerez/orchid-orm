@@ -1,5 +1,4 @@
 import { WithOptions } from '../sql';
-import { ColumnTypes } from '../columns';
 import { AddQueryWith, Query } from '../query/query';
 import { Db } from '../query/db';
 import { pushQueryValue, setQueryObjectValue } from '../query/queryUtils';
@@ -10,6 +9,7 @@ import {
   emptyObject,
   ColumnsShapeBase,
 } from 'orchid-core';
+import { DefaultColumnTypes } from '../columns';
 
 // `with` method options
 // - `columns`: true to get all columns from the query, or array of column names
@@ -43,7 +43,7 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
   ? Args[1]
   : Args[2] extends ColumnsShapeBase
   ? Args[2]
-  : Args[2] extends (t: ColumnTypes) => ColumnsShapeBase
+  : Args[2] extends (t: DefaultColumnTypes) => ColumnsShapeBase
   ? ReturnType<Args[2]> extends ColumnsShapeBase
     ? ReturnType<Args[2]>
     : never

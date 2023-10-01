@@ -137,7 +137,7 @@ export const createMigrationInterface = <CT extends ColumnTypesBase>(
   tx: TransactionAdapter,
   up: boolean,
   config: RakeDbConfig<CT>,
-): DbMigration => {
+): DbMigration<CT> => {
   const adapter = new TransactionAdapter(tx, tx.client, tx.types);
   const { query, arrays } = adapter;
   const log = logParamToLogObject(config.logger || console, config.log);
@@ -170,7 +170,7 @@ export const createMigrationInterface = <CT extends ColumnTypesBase>(
     log,
     up,
     options: config,
-  });
+  }) as unknown as DbMigration<CT>;
 };
 
 // Migration interface to use inside the `change` callback.

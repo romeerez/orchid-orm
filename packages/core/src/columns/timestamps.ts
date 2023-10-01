@@ -52,6 +52,42 @@ class SimpleRawSQL extends RawSQLBase {
 // Construct a simplified raw SQL.
 const raw = (sql: string) => new SimpleRawSQL(sql);
 
+export type TimestampHelpers = {
+  /**
+   * Add `createdAt` and `updatedAt timestamps. Both have `now()` as a default, `updatedAt` is automatically updated during update.
+   */
+  timestamps<T extends ColumnTypeBase>(this: {
+    name(name: string): { timestamp(): T };
+    timestamp(): T;
+    timestampsSnakeCase(): Timestamps<T>;
+  }): Timestamps<T>;
+
+  /**
+   * The same as {@link timestamps}, but for `created_at` and `updated_at` database columns.
+   */
+  timestampsSnakeCase<T extends ColumnTypeBase>(this: {
+    name(name: string): { timestamp(): T };
+    timestamp(): T;
+  }): Timestamps<T>;
+
+  /**
+   * The same as {@link timestamps}, for the timestamp without time zone time.
+   */
+  timestampsNoTZ<T extends ColumnTypeBase>(this: {
+    name(name: string): { timestampNoTZ(): T };
+    timestampNoTZ(): T;
+    timestampsNoTZSnakeCase(): Timestamps<T>;
+  }): Timestamps<T>;
+
+  /**
+   * The same as {@link timestamps}, for the timestamp without time zone time and with snake cased names.
+   */
+  timestampsNoTZSnakeCase<T extends ColumnTypeBase>(this: {
+    name(name: string): { timestampNoTZ(): T };
+    timestampNoTZ(): T;
+  }): Timestamps<T>;
+};
+
 // Build `timestamps`, `timestampsNoTZ`, and similar helpers.
 export const makeTimestampsHelpers = (
   // Regular expression to search for setting of the `updatedAt` timestamp in a raw SQL.
@@ -62,7 +98,7 @@ export const makeTimestampsHelpers = (
   updatedAtRegexSnake: RegExp,
   // Quoted `updated_at` column name.
   quotedUpdatedAtSnakeCase: string,
-) => {
+): TimestampHelpers => {
   // builds a function to modify a query object of a specific table where timestamps are defined in.
   const addHookForUpdate = (now: string) => (q: unknown) => {
     const updatedAtInjector = makeInjector(
@@ -96,9 +132,6 @@ export const makeTimestampsHelpers = (
   };
 
   return {
-    /**
-     * Add `createdAt` and `updatedAt timestamps. Both have `now()` as a default, `updatedAt` is automatically updated during update.
-     */
     timestamps<T extends ColumnTypeBase>(this: {
       name(name: string): { timestamp(): T };
       timestamp(): T;
@@ -117,9 +150,7 @@ export const makeTimestampsHelpers = (
         updatedAt,
       };
     },
-    /**
-     * The same as {@link timestamps}, but for `created_at` and `updated_at` database columns.
-     */
+
     timestampsSnakeCase<T extends ColumnTypeBase>(this: {
       name(name: string): { timestamp(): T };
       timestamp(): T;
@@ -134,9 +165,7 @@ export const makeTimestampsHelpers = (
         updatedAt,
       };
     },
-    /**
-     * The same as {@link timestamps}, for the timestamp without time zone time.
-     */
+
     timestampsNoTZ<T extends ColumnTypeBase>(this: {
       name(name: string): { timestampNoTZ(): T };
       timestampNoTZ(): T;
@@ -155,9 +184,7 @@ export const makeTimestampsHelpers = (
         updatedAt,
       };
     },
-    /**
-     * The same as {@link timestamps}, for the timestamp without time zone time and with snake cased names.
-     */
+
     timestampsNoTZSnakeCase<T extends ColumnTypeBase>(this: {
       name(name: string): { timestampNoTZ(): T };
       timestampNoTZ(): T;

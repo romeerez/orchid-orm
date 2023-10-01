@@ -21,7 +21,6 @@ import {
   ColumnShapeOutput,
   ColumnShapeQueryType,
   ColumnsShapeBase,
-  ColumnTypesBase,
   EmptyObject,
   getCallerFilePath,
   getStackTrace,
@@ -89,7 +88,7 @@ export type Table = {
   // database schema containing this table
   schema?: string;
   // column types defined in base table to use in `setColumns`
-  types: ColumnTypesBase;
+  types: unknown;
   // suppress no primary key warning
   noPrimaryKey?: boolean;
   // path to file where the table is defined
@@ -136,127 +135,29 @@ type AfterSelectableHookMethod = <
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SchemaProviderBase = any;
 
-// base table constructor
-export const createBaseTable = <
-  ColumnTypes extends ColumnTypesBase,
+export interface BaseTableClass<
+  ColumnTypes,
   SchemaProvider extends SchemaProviderBase,
->({
-  columnTypes: columnTypesArg,
-  snakeCase,
-  filePath: filePathArg,
-  nowSQL,
-  exportAs = 'BaseTable',
-  language,
-  schemaProvider: schemaProviderArg,
-}: {
-  // concrete column types or a callback for overriding standard column types
-  // this types will be used in tables to define their columns
-  columnTypes?: ColumnTypes | ((t: DefaultColumnTypes) => ColumnTypes);
-  // when set to true, all columns will be translated to `snake_case` when querying database
-  snakeCase?: boolean;
-  // if for some unknown reason you see error that file path for a table can't be guessed automatically,
-  // provide it manually via `filePath`
-  filePath?: string;
-  // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
-  nowSQL?: string;
-  // export name of the base table, by default it is BaseTable
-  exportAs?: string;
-  // default language for the full text search
-  language?: string;
-  // a function to prepare a validation schema based on table's columns,
-  // it will be available as `TableClass.schema()` method.
-  schemaProvider?: SchemaProvider;
-} = {}) => {
-  type CT = ColumnTypesBase extends ColumnTypes
-    ? DefaultColumnTypes
-    : ColumnTypes;
+> {
+  nowSQL: string | undefined;
+  exportAs: string;
+  schema: SchemaProvider;
+  getFilePath(): string;
 
-  const columnTypes = (
-    typeof columnTypesArg === 'function'
-      ? columnTypesArg(defaultColumnTypes)
-      : columnTypesArg || defaultColumnTypes
-  ) as CT;
-
-  // stack is needed only if filePath wasn't given
-  const filePathOrStack = filePathArg || getStackTrace();
-
-  let filePath: string | undefined;
-
-  function schemaProvider(this: Table) {
-    const schema = (schemaProviderArg as () => unknown).call(this);
-    (this as unknown as { schema: () => unknown }).schema = () => schema;
-    return schema;
-  }
-
-  const base = class BaseTable {
-    static nowSQL = nowSQL;
-    static exportAs = exportAs;
-    static getFilePath(): string {
-      if (filePath) return filePath;
-      if (typeof filePathOrStack === 'string') {
-        return (filePath = filePathOrStack);
-      }
-
-      filePath = getCallerFilePath(filePathOrStack);
-      if (filePath) return filePath;
-
-      throw new Error(
-        `Failed to determine file path of a base table. Please set the \`filePath\` option of \`createBaseTable\` manually.`,
-      );
-    }
-
-    table!: string;
-    columns!: ColumnsShape;
+  new (): {
+    table: string;
+    columns: ColumnsShape;
     schema?: string;
     noPrimaryKey?: boolean;
-    snakeCase = snakeCase;
-    types = columnTypes;
-    q: QueryData = {} as QueryData;
-    language = language;
-    declare filePath: string;
-    declare result: ColumnsShapeBase;
-
-    static schema = schemaProvider as SchemaProvider;
-
-    clone<T extends QueryBase>(this: T): T {
-      return this;
-    }
-
-    getFilePath() {
-      if (this.filePath) return this.filePath;
-      if (typeof filePathOrStack === 'string')
-        return (this.filePath = filePathOrStack);
-
-      const filePath = getCallerFilePath(filePathOrStack);
-      if (filePath) return (this.filePath = filePath);
-
-      throw new Error(
-        `Failed to determine file path for table ${this.constructor.name}. Please set \`filePath\` property manually`,
-      );
-    }
-
-    setColumns<T extends ColumnsShape>(fn: (t: CT) => T): T {
-      (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
-        this.snakeCase;
-
-      const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
-
-      if (this.snakeCase) {
-        for (const key in shape) {
-          const column = shape[key];
-          if (column.data.name) continue;
-
-          const snakeName = toSnakeCase(key);
-          if (snakeName !== key) {
-            column.data.name = snakeName;
-          }
-        }
-      }
-
-      // Memoize columns in the prototype of class.
-      // It is accessed in schema-to-tod.
-      return (this.constructor.prototype.columns = shape);
-    }
+    snakeCase?: boolean;
+    types: ColumnTypes;
+    q: QueryData;
+    language?: string;
+    filePath: string;
+    result: ColumnsShapeBase;
+    clone<T extends QueryBase>(this: T): T;
+    getFilePath(): string;
+    setColumns<T extends ColumnsShape>(fn: (t: ColumnTypes) => T): T;
 
     /**
      * You can add a generated column in the migration (see [generated](/guide/migration-column-methods.html#generated-column)),
@@ -351,7 +252,219 @@ export const createBaseTable = <
     setComputed<
       Table extends string,
       Shape extends ColumnsShape,
-      Computed extends ComputedColumnsBase<Db<Table, Shape, EmptyObject, CT>>,
+      Computed extends ComputedColumnsBase<
+        Db<Table, Shape, EmptyObject, ColumnTypes>
+      >,
+    >(
+      computed: Computed,
+    ): Computed;
+
+    belongsTo<
+      Self extends Table,
+      Related extends TableClass,
+      Scope extends Query,
+      Options extends BelongsToOptions<Self, Related, Scope>,
+    >(
+      this: Self,
+      fn: () => Related,
+      options: Options,
+    ): {
+      type: 'belongsTo';
+      fn: () => Related;
+      options: Options;
+    };
+
+    hasOne<
+      Self extends Table,
+      Related extends TableClass,
+      Scope extends Query,
+      Through extends string,
+      Source extends string,
+      Options extends HasOneOptions<Self, Related, Scope, Through, Source>,
+    >(
+      this: Self,
+      fn: () => Related,
+      options: Options,
+    ): {
+      type: 'hasOne';
+      fn: () => Related;
+      options: Options;
+    };
+
+    hasMany<
+      Self extends Table,
+      Related extends TableClass,
+      Scope extends Query,
+      Through extends string,
+      Source extends string,
+      Options extends HasManyOptions<Self, Related, Scope, Through, Source>,
+    >(
+      this: Self,
+      fn: () => Related,
+      options: Options,
+    ): {
+      type: 'hasMany';
+      fn: () => Related;
+      options: Options;
+    };
+
+    hasAndBelongsToMany<
+      Self extends Table,
+      Related extends TableClass,
+      Scope extends Query,
+      Options extends HasAndBelongsToManyOptions<Self, Related, Scope>,
+    >(
+      this: Self,
+      fn: () => Related,
+      options: Options,
+    ): {
+      type: 'hasAndBelongsToMany';
+      fn: () => Related;
+      options: Options;
+    };
+
+    beforeQuery: BeforeHookMethod;
+    afterQuery: AfterHookMethod;
+    beforeCreate: BeforeHookMethod;
+    afterCreate: AfterSelectableHookMethod;
+    afterCreateCommit: AfterSelectableHookMethod;
+    beforeUpdate: BeforeHookMethod;
+    afterUpdate: AfterSelectableHookMethod;
+    afterUpdateCommit: AfterSelectableHookMethod;
+    beforeSave: BeforeHookMethod;
+    afterSave: AfterSelectableHookMethod;
+    afterSaveCommit: AfterSelectableHookMethod;
+    beforeDelete: BeforeHookMethod;
+    afterDelete: AfterSelectableHookMethod;
+    afterDeleteCommit: AfterSelectableHookMethod;
+  };
+}
+
+// base table constructor
+export const createBaseTable = <
+  SchemaProvider extends SchemaProviderBase,
+  ColumnTypes = DefaultColumnTypes,
+>({
+  columnTypes: columnTypesArg,
+  snakeCase,
+  filePath: filePathArg,
+  nowSQL,
+  exportAs = 'BaseTable',
+  language,
+  schemaProvider: schemaProviderArg,
+}: {
+  // concrete column types or a callback for overriding standard column types
+  // this types will be used in tables to define their columns
+  columnTypes?: ColumnTypes | ((t: DefaultColumnTypes) => ColumnTypes);
+  // when set to true, all columns will be translated to `snake_case` when querying database
+  snakeCase?: boolean;
+  // if for some unknown reason you see error that file path for a table can't be guessed automatically,
+  // provide it manually via `filePath`
+  filePath?: string;
+  // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
+  nowSQL?: string;
+  // export name of the base table, by default it is BaseTable
+  exportAs?: string;
+  // default language for the full text search
+  language?: string;
+  // a function to prepare a validation schema based on table's columns,
+  // it will be available as `TableClass.schema()` method.
+  schemaProvider?: SchemaProvider;
+} = {}): BaseTableClass<ColumnTypes, SchemaProvider> => {
+  const columnTypes = (
+    typeof columnTypesArg === 'function'
+      ? (columnTypesArg as (t: DefaultColumnTypes) => ColumnTypes)(
+          defaultColumnTypes,
+        )
+      : columnTypesArg || defaultColumnTypes
+  ) as ColumnTypes;
+
+  // stack is needed only if filePath wasn't given
+  const filePathOrStack = filePathArg || getStackTrace();
+
+  let filePath: string | undefined;
+
+  function schemaProvider(this: Table) {
+    const schema = (schemaProviderArg as () => unknown).call(this);
+    (this as unknown as { schema: () => unknown }).schema = () => schema;
+    return schema;
+  }
+
+  const base = class BaseTable {
+    static nowSQL = nowSQL;
+    static exportAs = exportAs;
+    static schema = schemaProvider as SchemaProvider;
+    static getFilePath(): string {
+      if (filePath) return filePath;
+      if (typeof filePathOrStack === 'string') {
+        return (filePath = filePathOrStack);
+      }
+
+      filePath = getCallerFilePath(filePathOrStack);
+      if (filePath) return filePath;
+
+      throw new Error(
+        `Failed to determine file path of a base table. Please set the \`filePath\` option of \`createBaseTable\` manually.`,
+      );
+    }
+
+    table!: string;
+    columns!: ColumnsShape;
+    schema?: string;
+    noPrimaryKey?: boolean;
+    snakeCase = snakeCase;
+    types = columnTypes;
+    q: QueryData = {} as QueryData;
+    language = language;
+    declare filePath: string;
+    declare result: ColumnsShapeBase;
+
+    clone<T extends QueryBase>(this: T): T {
+      return this;
+    }
+
+    getFilePath() {
+      if (this.filePath) return this.filePath;
+      if (typeof filePathOrStack === 'string')
+        return (this.filePath = filePathOrStack);
+
+      const filePath = getCallerFilePath(filePathOrStack);
+      if (filePath) return (this.filePath = filePath);
+
+      throw new Error(
+        `Failed to determine file path for table ${this.constructor.name}. Please set \`filePath\` property manually`,
+      );
+    }
+
+    setColumns<T extends ColumnsShape>(fn: (t: ColumnTypes) => T): T {
+      (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
+        this.snakeCase;
+
+      const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
+
+      if (this.snakeCase) {
+        for (const key in shape) {
+          const column = shape[key];
+          if (column.data.name) continue;
+
+          const snakeName = toSnakeCase(key);
+          if (snakeName !== key) {
+            column.data.name = snakeName;
+          }
+        }
+      }
+
+      // Memoize columns in the prototype of class.
+      // It is accessed in schema-to-tod.
+      return (this.constructor.prototype.columns = shape);
+    }
+
+    setComputed<
+      Table extends string,
+      Shape extends ColumnsShape,
+      Computed extends ComputedColumnsBase<
+        Db<Table, Shape, EmptyObject, ColumnTypes>
+      >,
     >(computed: Computed): Computed {
       return computed;
     }
@@ -411,26 +524,11 @@ export const createBaseTable = <
         options,
       };
     }
-
-    declare beforeQuery: BeforeHookMethod;
-    declare afterQuery: AfterHookMethod;
-    declare beforeCreate: BeforeHookMethod;
-    declare afterCreate: AfterSelectableHookMethod;
-    declare afterCreateCommit: AfterSelectableHookMethod;
-    declare beforeUpdate: BeforeHookMethod;
-    declare afterUpdate: AfterSelectableHookMethod;
-    declare afterUpdateCommit: AfterSelectableHookMethod;
-    declare beforeSave: BeforeHookMethod;
-    declare afterSave: AfterSelectableHookMethod;
-    declare afterSaveCommit: AfterSelectableHookMethod;
-    declare beforeDelete: BeforeHookMethod;
-    declare afterDelete: AfterSelectableHookMethod;
-    declare afterDeleteCommit: AfterSelectableHookMethod;
   };
 
   applyMixins(base, [QueryHooks]);
 
   base.prototype.types = columnTypes as typeof base.prototype.types;
 
-  return base;
+  return base as unknown as BaseTableClass<ColumnTypes, SchemaProvider>;
 };

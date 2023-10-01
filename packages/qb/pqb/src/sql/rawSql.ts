@@ -1,6 +1,5 @@
 import {
   ColumnTypeBase,
-  ColumnTypesBase,
   SQLArgs,
   RawSQLBase,
   RawSQLValues,
@@ -47,9 +46,9 @@ export const templateLiteralToSQL = (
 
 export class RawSQL<
   T extends ColumnTypeBase,
-  CT extends ColumnTypesBase = DefaultColumnTypes,
-> extends RawSQLBase<T> {
-  declare columnTypes: CT;
+  ColumnTypes = DefaultColumnTypes,
+> extends RawSQLBase<T, ColumnTypes> {
+  declare columnTypes: ColumnTypes;
 
   constructor(
     sql: string | TemplateLiteralArgs,
@@ -129,10 +128,10 @@ export interface DynamicRawSQL<T extends ColumnTypeBase>
 // Calls the given function to get inner SQL each time when converting to SQL.
 export class DynamicRawSQL<
   T extends ColumnTypeBase,
-  CT extends ColumnTypesBase = DefaultColumnTypes,
+  ColumnTypes = DefaultColumnTypes,
 > extends Expression<T> {
   declare _type: T;
-  declare columnTypes: CT;
+  declare columnTypes: ColumnTypes;
 
   constructor(public fn: DynamicSQLArg) {
     super();

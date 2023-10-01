@@ -160,7 +160,7 @@ const processMigration = async <CT extends ColumnTypesBase>(
       changeCache[file.path] = changes;
     }
 
-    const db = createMigrationInterface(tx, up, config);
+    const db = createMigrationInterface<CT>(tx, up, config);
 
     for (const fn of up ? changes : changes.reverse()) {
       await fn(db, up);

@@ -56,7 +56,6 @@ import {
   QueryThen,
   ColumnsShapeBase,
   TemplateLiteralArgs,
-  ColumnTypesBase,
   Expression,
   ColumnTypeBase,
 } from 'orchid-core';
@@ -147,7 +146,7 @@ export class ColumnRefExpression<
   }
 }
 
-export interface QueryMethods<CT extends ColumnTypesBase>
+export interface QueryMethods<ColumnTypes>
   extends Omit<AsMethods, 'result'>,
     AggregateMethods,
     Select,
@@ -173,11 +172,11 @@ export interface QueryMethods<CT extends ColumnTypesBase>
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,
-    RawSqlMethods<CT>,
+    RawSqlMethods<ColumnTypes>,
     CopyMethods,
     TransformMethods {}
 
-export class QueryMethods<CT extends ColumnTypesBase> {
+export class QueryMethods<ColumnTypes> {
   /**
    * `.all` is a default behavior, that returns an array of objects:
    *

@@ -14,7 +14,6 @@ import {
   ColumnShapeOutput,
   ColumnsShapeBase,
   ColumnTypeBase,
-  ColumnTypesBase,
   EmptyObject,
   Expression,
   QueryCatch,
@@ -43,9 +42,9 @@ export type WithDataItem = { table: string; shape: ColumnsShapeBase };
 export type WithDataBase = Record<never, WithDataItem>;
 
 export type Query = QueryBase &
-  QueryMethods<ColumnTypesBase> & {
+  QueryMethods<unknown> & {
     queryBuilder: Db;
-    columnTypes: ColumnTypesBase;
+    columnTypes: unknown;
     onQueryBuilder: typeof OnQueryBuilder;
     table?: string;
     shape: ColumnsShape;

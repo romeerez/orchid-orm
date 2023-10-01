@@ -113,8 +113,8 @@ export const toArray = <T>(item: T) =>
 // Shared doing nothing function
 export const noop = () => {};
 
-// Type of empty object
-export type EmptyObject = typeof emptyObject;
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type EmptyObject = {};
 // Shared empty object to avoid unnecessary allocations
 export const emptyObject = {};
 

@@ -29,7 +29,6 @@ import {
   applyMixins,
   pushOrNewArray,
   ColumnShapeOutput,
-  ColumnTypesBase,
   SinglePrimaryKey,
   snakeCaseKey,
   toSnakeCase,
@@ -44,6 +43,7 @@ import {
   SQLQueryArgs,
   isRawSQL,
   EmptyObject,
+  ColumnTypesBase,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -52,14 +52,14 @@ import { RelationsBase } from '../relations';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
-export type DbOptions<CT extends ColumnTypesBase> = (
+export type DbOptions<ColumnTypes extends ColumnTypesBase> = (
   | { adapter: Adapter }
   | Omit<AdapterOptions, 'log'>
 ) &
   QueryLogOptions & {
     // concrete column types or a callback for overriding standard column types
     // this types will be used in tables to define their columns
-    columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
+    columnTypes?: ColumnTypes | ((t: DefaultColumnTypes) => ColumnTypes);
     autoPreparedStatements?: boolean;
     noPrimaryKey?: NoPrimaryKeyOption;
     // when set to true, all columns will be translated to `snake_case` when querying database
@@ -90,14 +90,14 @@ export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
-  CT extends ColumnTypesBase = DefaultColumnTypes,
+  ColumnTypes = DefaultColumnTypes,
   ShapeWithComputed extends ColumnsShape = Shape,
   Data = QueryDefaultReturnData<Shape>,
-> extends DbBase<Adapter, Table, Shape, CT, ShapeWithComputed>,
-    QueryMethods<CT> {
+> extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
+    QueryMethods<ColumnTypes> {
   new (
     adapter: Adapter,
-    queryBuilder: Db<Table, Shape, Relations, CT>,
+    queryBuilder: Db<Table, Shape, Relations, ColumnTypes>,
     table?: Table,
     shape?: Shape,
     options?: DbTableOptions,
@@ -139,7 +139,7 @@ export class Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
-  CT extends ColumnTypesBase = DefaultColumnTypes,
+  ColumnTypes = DefaultColumnTypes,
   ShapeWithComputed extends ColumnsShape = Shape,
 > implements Query
 {
@@ -148,7 +148,7 @@ export class Db<
     public queryBuilder: Db,
     public table: Table = undefined as Table,
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
-    public columnTypes: CT,
+    public columnTypes: ColumnTypes,
     transactionStorage: AsyncLocalStorage<TransactionState>,
     options: DbTableOptions,
   ) {
@@ -419,17 +419,15 @@ applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 Db.prototype.onQueryBuilder = OnQueryBuilder;
 
-export type DbResult<CT extends ColumnTypesBase> = Db<
+export type DbResult<ColumnTypes> = Db<
   string,
   Record<string, never>,
   EmptyObject,
-  ColumnTypesBase extends CT ? DefaultColumnTypes : CT
+  ColumnTypes
 > & {
   <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
     table: Table,
-    shape?:
-      | ((t: ColumnTypesBase extends CT ? DefaultColumnTypes : CT) => Shape)
-      | Shape,
+    shape?: ((t: ColumnTypes) => Shape) | Shape,
     options?: DbTableOptions,
   ): Db<Table, Shape, EmptyObject>;
 
@@ -437,14 +435,16 @@ export type DbResult<CT extends ColumnTypesBase> = Db<
   close: Adapter['close'];
 };
 
-export const createDb = <CT extends ColumnTypesBase>({
+export const createDb = <
+  ColumnTypes extends ColumnTypesBase = DefaultColumnTypes,
+>({
   log,
   logger,
-  columnTypes: ctOrFn = columnTypes as unknown as CT,
+  columnTypes: ctOrFn = columnTypes as unknown as ColumnTypes,
   snakeCase,
   nowSQL,
   ...options
-}: DbOptions<CT>): DbResult<CT> => {
+}: DbOptions<ColumnTypes>): DbResult<ColumnTypes> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = {
     log,
@@ -454,7 +454,12 @@ export const createDb = <CT extends ColumnTypesBase>({
     snakeCase,
   };
 
-  const ct = typeof ctOrFn === 'function' ? ctOrFn(columnTypes) : ctOrFn;
+  const ct =
+    typeof ctOrFn === 'function'
+      ? (ctOrFn as unknown as (t: DefaultColumnTypes) => ColumnTypes)(
+          columnTypes,
+        )
+      : ctOrFn;
 
   if (snakeCase) {
     (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
@@ -476,10 +481,10 @@ export const createDb = <CT extends ColumnTypesBase>({
   const db = Object.assign(
     <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
       table: Table,
-      shape?: ((t: CT) => Shape) | Shape,
+      shape?: ((t: ColumnTypes) => Shape) | Shape,
       options?: DbTableOptions,
-    ): Db<Table, Shape, EmptyObject, CT> => {
-      return new Db<Table, Shape, EmptyObject, CT>(
+    ): Db<Table, Shape, EmptyObject, ColumnTypes> => {
+      return new Db<Table, Shape, EmptyObject, ColumnTypes>(
         adapter,
         qb as unknown as Db,
         table as Table,
@@ -501,5 +506,5 @@ export const createDb = <CT extends ColumnTypesBase>({
       Db.prototype[name as keyof typeof Db.prototype];
   }
 
-  return db as unknown as DbResult<CT>;
+  return db as unknown as DbResult<ColumnTypes>;
 };

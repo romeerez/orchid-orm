@@ -22,43 +22,64 @@ import { JSONTuple, JSONTupleItems } from './tuple';
 import { JSONUnion, JSONUnionArgs } from './union';
 
 // The type of all available JSON type constructors.
-export type JSONTypes = typeof jsonTypes;
-
-// Object with all available JSON type constructors, is passed as an argument into `json(t => ...)` column.
-export const jsonTypes = {
-  unknown: () => new JSONUnknown(),
-  boolean: () => new JSONBoolean(),
-  null: () => new JSONNull(),
-  number: <T extends number = number>() => new JSONNumber<T>(),
-  string: <T extends string = string>() => new JSONString<T>(),
-  array: <T extends JSONType>(item: T) => new JSONArray(item),
-  object: <Shape extends JSONObjectShape>(shape: Shape) =>
-    new JSONObject(shape),
-  literal: <T extends JSONPrimitive>(value: T) => new JSONLiteral(value),
-  discriminatedUnion: <
+export type JSONTypes = {
+  unknown(): JSONUnknown;
+  boolean(): JSONBoolean;
+  null(): JSONNull;
+  number<T extends number = number>(): JSONNumber<T>;
+  string<T extends string = string>(): JSONString<T>;
+  array<T extends JSONType>(item: T): JSONArray<T, 'many'>;
+  object<Shape extends JSONObjectShape>(shape: Shape): JSONObject<Shape>;
+  literal<T extends JSONPrimitive>(value: T): JSONLiteral<T>;
+  discriminatedUnion<
     Discriminator extends string,
     Types extends JSONDiscriminatedUnionArg<Discriminator>,
   >(
     discriminator: Discriminator,
     types: Types,
-  ) => new JSONDiscriminatedUnion<Discriminator, Types>(discriminator, types),
-  enum: <U extends string, T extends [U, ...U[]]>(options: T) =>
-    new JSONEnum(options),
-  intersection: <Left extends JSONType, Right extends JSONType>(
+  ): JSONDiscriminatedUnion<Discriminator, Types>;
+  enum<U extends string, T extends [U, ...U[]]>(
+    options: T,
+  ): JSONEnum<string, T>;
+  intersection<Left extends JSONType, Right extends JSONType>(
     left: Left,
     right: Right,
-  ) => new JSONIntersection(left, right),
-  lazy: <T extends JSONType>(fn: () => T) => new JSONLazy(fn),
-  nativeEnum: <T extends EnumLike>(type: T) => new JSONNativeEnum(type),
-  record: <Key extends JSONString | JSONNumber, Value extends JSONType>(
+  ): JSONIntersection<Left, Right>;
+  lazy<T extends JSONType>(fn: () => T): JSONLazy<T>;
+  nativeEnum<T extends EnumLike>(type: T): JSONNativeEnum<T>;
+  record<
+    Key extends JSONString<string> | JSONNumber<number>,
+    Value extends JSONType,
+  >(
     ...args: [value: Value] | [key: Key, value: Value]
-  ) => new JSONRecord(...args),
-  tuple: <
+  ): JSONRecord<Key, Value>;
+  tuple<
     T extends JSONTupleItems,
     Rest extends JSONType | undefined = undefined,
   >(
     items: T,
-    rest?: Rest,
-  ) => new JSONTuple(items, rest),
-  union: <T extends JSONUnionArgs>(...types: T) => new JSONUnion(...types),
+    rest?: Rest | undefined,
+  ): JSONTuple<T, Rest>;
+  union<T extends JSONUnionArgs>(...types: T): JSONUnion<T>;
+};
+
+// Object with all available JSON type constructors, is passed as an argument into `json(t => ...)` column.
+export const jsonTypes: JSONTypes = {
+  unknown: () => new JSONUnknown(),
+  boolean: () => new JSONBoolean(),
+  null: () => new JSONNull(),
+  number: () => new JSONNumber(),
+  string: () => new JSONString(),
+  array: (item) => new JSONArray(item),
+  object: (shape) => new JSONObject(shape),
+  literal: (value) => new JSONLiteral(value),
+  discriminatedUnion: (discriminator, types) =>
+    new JSONDiscriminatedUnion(discriminator, types),
+  enum: (options) => new JSONEnum(options),
+  intersection: (left, right) => new JSONIntersection(left, right),
+  lazy: (fn) => new JSONLazy(fn),
+  nativeEnum: (type) => new JSONNativeEnum(type),
+  record: (...args) => new JSONRecord(...args),
+  tuple: (items, rest) => new JSONTuple(items, rest),
+  union: (...types) => new JSONUnion(...types),
 };
