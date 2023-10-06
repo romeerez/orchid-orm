@@ -121,6 +121,16 @@ const applyCountChange = <T extends Query>(
 ) => {
   self.q.type = 'update';
 
+  if (!self.q.select) {
+    if (
+      self.q.returnType === 'oneOrThrow' ||
+      self.q.returnType === 'valueOrThrow'
+    ) {
+      self.q.throwOnNotFound = true;
+    }
+    self.q.returnType = 'rowCount';
+  }
+
   let map: Record<string, { op: string; arg: number }>;
   if (typeof data === 'object') {
     map = {};
@@ -480,17 +490,33 @@ export class Update {
   }
 
   /**
-   * Increments a column value by the specified amount. Optionally takes `returning` argument.
+   * Increments a column by `1`, returns a count of updated records by default.
    *
    * ```ts
-   * // increment numericColumn column by 1, return updated records
-   * const result = await db.table
-   *   .selectAll()
+   * const updatedCount = await db.table
    *   .where(...conditions)
    *   .increment('numericColumn');
+   * ```
    *
+   * When using `find` or `get` it will throw `NotFoundError` when no records found.
+   *
+   * ```ts
+   * // throws when not found
+   * const updatedCount = await db.table.find(1).increment('numericColumn');
+   *
+   * // also throws when not found
+   * const updatedCount2 = await db.table
+   *   .where(...conditions)
+   *   .get('columnName')
+   *   .increment('numericColumn');
+   * ```
+   *
+   * Provide an object to increment multiple columns with different values.
+   * Use `select` to specify columns to return.
+   *
+   * ```ts
    * // increment someColumn by 5 and otherColumn by 10, return updated records
-   * const result2 = await db.table
+   * const result = await db.table
    *   .selectAll()
    *   .where(...conditions)
    *   .increment({
@@ -515,17 +541,33 @@ export class Update {
   }
 
   /**
-   * Decrements a column value by the specified amount. Optionally takes `returning` argument.
+   * Decrements a column by `1`, returns a count of updated records by default.
    *
    * ```ts
-   * // decrement numericColumn column by 1, return updated records
-   * const result = await db.table
-   *   .selectAll()
+   * const updatedCount = await db.table
    *   .where(...conditions)
    *   .decrement('numericColumn');
+   * ```
    *
+   * When using `find` or `get` it will throw `NotFoundError` when no records found.
+   *
+   * ```ts
+   * // throws when not found
+   * const updatedCount = await db.table.find(1).decrement('numericColumn');
+   *
+   * // also throws when not found
+   * const updatedCount2 = await db.table
+   *   .where(...conditions)
+   *   .get('columnName')
+   *   .decrement('numericColumn');
+   * ```
+   *
+   * Provide an object to decrement multiple columns with different values.
+   * Use `select` to specify columns to return.
+   *
+   * ```ts
    * // decrement someColumn by 5 and otherColumn by 10, return updated records
-   * const result2 = await db.table
+   * const result = await db.table
    *   .selectAll()
    *   .where(...conditions)
    *   .decrement({

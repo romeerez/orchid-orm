@@ -721,6 +721,21 @@ describe('update', () => {
 
       assertType<Awaited<typeof q>, { snakeId: number }[]>();
     });
+
+    it('should throw not found error when record does not exist', async () => {
+      await expect(User.find(123).increment('age')).rejects.toThrow(
+        'Record is not found',
+      );
+    });
+
+    it('should not throw not found error when record exists', async () => {
+      const id = await User.get('id').create(userData);
+
+      const res = await User.find(id).increment('age');
+
+      expect(res).toBe(1);
+      assertType<typeof res, number>();
+    });
   });
 
   describe('decrement', () => {
@@ -781,6 +796,21 @@ describe('update', () => {
       );
 
       assertType<Awaited<typeof q>, { snakeId: number }[]>();
+    });
+
+    it('should throw not found error when record does not exist', async () => {
+      await expect(User.find(123).decrement('age')).rejects.toThrow(
+        'Record is not found',
+      );
+    });
+
+    it('should not throw not found error when record exists', async () => {
+      const id = await User.get('id').create(userData);
+
+      const res = await User.find(id).decrement('age');
+
+      expect(res).toBe(1);
+      assertType<typeof res, number>();
     });
   });
 
