@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.20
+
+### Patch Changes
+
+- 87a0dbae: Fix increment/decrement throwing not found error behavior (#199)
+
 ## 0.18.19
 
 ### Patch Changes
