@@ -1,9 +1,4 @@
-import {
-  GetQueryResult,
-  Query,
-  QueryReturnsAll,
-  SelectableBase,
-} from '../query/query';
+import { GetQueryResult, Query, QueryReturnsAll } from '../query/query';
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
@@ -18,7 +13,6 @@ import {
   ColumnsShapeBase,
   ColumnTypeBase,
   emptyArray,
-  EmptyObject,
   Expression,
   getValueKey,
   isExpression,
@@ -37,19 +31,16 @@ import {
 } from '../common/utils';
 import { RawSQL } from '../sql/rawSql';
 
-// .select method argument
-export type SelectArg<T extends Query> =
-  | '*'
-  | StringKey<keyof T['selectable']>
-  | SelectAsArg<T>;
+// .select method argument.
+export type SelectArg<T extends Query> = '*' | keyof T['selectable'];
 
-// .select method object argument
-// key is alias for selected item,
-// value can be a column, raw, or a function returning query or raw
+// .select method object argument.
+// Key is alias for selected item,
+// value can be a column, raw, or a function returning query or raw.
 type SelectAsArg<T extends Query> = Record<string, SelectAsValue<T>>;
 
-// .select method object argument value
-// can be column, raw, or a function returning query or raw
+// .select method object argument value.
+// Can be column, raw, or a function returning query or raw.
 type SelectAsValue<T extends Query> =
   | StringKey<keyof T['selectable']>
   | Expression
@@ -57,120 +48,107 @@ type SelectAsValue<T extends Query> =
   | ((q: T) => Expression)
   | ((q: T) => QueryBase | Expression);
 
-// tuple for the result of selected by objects args
-// the first element is shape of selected data
-// the second is 'selectable', it allows to order and filter by the records
-// that were implicitly joined when selecting belongsTo or hasOne relation
-// ```ts
-// db.book.select({ author: (q) => q.author }).order('author.name')
-// ```
-type SelectObjectResultTuple = [ColumnsShapeBase, SelectableBase];
-
-// query type after select
+// Result type of select without the ending object argument.
 type SelectResult<
   T extends Query,
-  Args extends SelectArg<T>[],
-  // shape of the columns selected by string args
-  SelectStringsResult extends ColumnsShapeBase = SelectStringArgsResult<
-    T,
-    Args
-  >,
-  // keys of selected columns by string args
-  StringsKeys extends keyof SelectStringsResult = keyof SelectStringsResult,
-  // tuple for the result of selected by objects args
-  SelectAsResult extends SelectObjectResultTuple = SpreadSelectObjectArgs<
-    T,
-    Args,
-    [EmptyObject, T['selectable']]
-  >,
-  // keys of combined object args
-  AsKeys extends keyof SelectAsResult[0] = keyof SelectAsResult[0],
-  // previous result keys to preserve, if the query has select
-  ResultKeys extends keyof T['result'] = T['meta']['hasSelect'] extends true
-    ? keyof T['result']
-    : never,
-  // to include all columns when * arg is provided
-  ShapeKeys extends keyof T['shape'] = '*' extends Args[number]
-    ? keyof T['shape']
-    : never,
-  // combine previously selected items, all columns if * was provided,
-  // and the selected by string and object arguments
+  Columns extends SelectArg<T>[],
   Result extends ColumnsShapeBase = {
-    [K in StringsKeys | AsKeys | ResultKeys | ShapeKeys]: K extends StringsKeys
-      ? SelectStringsResult[K]
-      : K extends AsKeys
-      ? SelectAsResult[0][K]
-      : K extends ResultKeys
+    [K in
+      | ('*' extends Columns[number]
+          ? Exclude<Columns[number], '*'> | keyof T['shape']
+          : Columns[number])
+      | PrevResultKeys<T> as K extends keyof T['selectable']
+      ? T['selectable'][K]['as']
+      : K]: K extends keyof T['selectable']
+      ? T['selectable'][K]['column']
+      : K extends keyof T['result']
       ? T['result'][K]
-      : K extends ShapeKeys
-      ? T['shape'][K]
       : never;
   },
   Data = GetQueryResult<T['returnType'], Result>,
-> = (T['meta']['hasSelect'] extends true
-  ? unknown
-  : { meta: { hasSelect: true } }) & {
-  [K in keyof T]: K extends 'result'
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? SetMetaHasSelect<T>
+    : K extends 'result'
+    ? Result
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : T[K];
+};
+
+// Result type of select with the ending object argument.
+type SelectResultWithObj<
+  T extends Query,
+  Columns extends SelectArg<T>[],
+  Obj extends SelectAsArg<T>,
+  // Combine previously selected items, all columns if * was provided,
+  // and the selected by string and object arguments.
+  Result extends ColumnsShapeBase = {
+    [K in
+      | ('*' extends Columns[number]
+          ? Exclude<Columns[number], '*'> | keyof T['shape']
+          : Columns[number])
+      | keyof Obj
+      | PrevResultKeys<T> as K extends keyof T['selectable']
+      ? T['selectable'][K]['as']
+      : K]: K extends keyof T['selectable']
+      ? T['selectable'][K]['column']
+      : K extends keyof Obj
+      ? SelectAsValueResult<T, Obj[K]>
+      : K extends keyof T['result']
+      ? T['result'][K]
+      : never;
+  },
+  Data = GetQueryResult<T['returnType'], Result>,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? SetMetaHasSelect<T>
+    : K extends 'result'
     ? Result
     : K extends 'then'
     ? QueryThen<Data>
     : K extends 'catch'
     ? QueryCatch<Data>
     : K extends 'selectable'
-    ? SelectAsResult[1]
+    ? SelectAsSelectable<T, Obj>
     : T[K];
 };
 
-// map string args of the select into a resulting object
-type SelectStringArgsResult<T extends Query, Args extends SelectArg<T>[]> = {
-  [Arg in Args[number] as Arg extends keyof T['selectable']
-    ? T['selectable'][Arg]['as']
-    : never]: Arg extends keyof T['selectable']
-    ? T['selectable'][Arg]['column']
+// Previous result keys to preserve, if the query has select.
+type PrevResultKeys<T extends Query> = T['meta']['hasSelect'] extends true
+  ? keyof T['result']
+  : never;
+
+// Merge { hasSelect: true } into 'meta' if it's not true yet.
+type SetMetaHasSelect<T extends Query> = T['meta']['hasSelect'] extends true
+  ? T['meta']
+  : {
+      [K in keyof T['meta'] | 'hasSelect']: K extends 'hasSelect'
+        ? true
+        : T['meta'][K];
+    };
+
+// Add new 'selectable' types based on the select object argument.
+type SelectAsSelectable<T extends Query, Arg extends SelectAsArg<T>> = {
+  [K in keyof Arg]: Arg[K] extends ((q: never) => infer R extends QueryBase)
+    ? // turn union of objects into intersection
+      // https://stackoverflow.com/questions/66445084/intersection-of-an-objects-value-types-in-typescript
+      (x: {
+        [C in keyof R['result'] as `${StringKey<K>}.${StringKey<C>}`]: {
+          as: C;
+          column: R['result'][C];
+        };
+      }) => void
     : never;
-};
-
-// combine multiple object args of the select into a tuple
-type SpreadSelectObjectArgs<
-  T extends Query,
-  Args extends [...unknown[]],
-  Result extends SelectObjectResultTuple,
-> = Args extends [infer L, ...infer R]
-  ? SpreadSelectObjectArgs<T, R, SelectAsResult<T, L, Result>>
-  : Result;
-
-// map a single object arg of the select into the tuple of selected data and selectable columns
-type SelectAsResult<
-  T extends Query,
-  Arg,
-  Result extends SelectObjectResultTuple,
-  Shape = Result[0],
-  AddSelectable extends SelectableBase = {
-    [K in keyof Arg]: Arg[K] extends ((q: never) => infer R extends QueryBase)
-      ? // turn union of objects into intersection
-        // https://stackoverflow.com/questions/66445084/intersection-of-an-objects-value-types-in-typescript
-        (x: {
-          [C in keyof R['result'] as `${StringKey<K>}.${StringKey<C>}`]: {
-            as: C;
-            column: R['result'][C];
-          };
-        }) => void
-      : never;
-  }[keyof Arg] extends (x: infer I) => void
-    ? { [K in keyof I]: I[K] }
-    : never,
-> = Arg extends SelectAsArg<T>
-  ? [
-      {
-        [K in keyof Shape | keyof Arg]: K extends keyof Arg
-          ? SelectAsValueResult<T, Arg[K]>
-          : K extends keyof Shape
-          ? Shape[K]
-          : never;
-      },
-      Result[1] & AddSelectable,
-    ]
-  : Result;
+}[keyof Arg] extends (x: infer I) => void
+  ? {
+      [K in keyof T['selectable'] | keyof I]: K extends keyof I
+        ? I[K]
+        : T['selectable'][K];
+    }
+  : never;
 
 // map a single value of select object arg into a column
 type SelectAsValueResult<
@@ -295,9 +273,9 @@ export const processSelectArg = <T extends Query>(
 
   const selectAs: Record<string, string | Query | Expression> = {};
 
-  for (const key in arg as SelectAsArg<T>) {
+  for (const key in arg as unknown as SelectAsArg<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let value = (arg as SelectAsArg<T>)[key] as any;
+    let value = (arg as unknown as SelectAsArg<T>)[key] as any;
 
     if (typeof value === 'function') {
       value = resolveSubQueryCallback(q, value);
@@ -504,7 +482,7 @@ export class Select {
   /**
    * Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
    *
-   * Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub-query, or raw expression.
+   * The last argument can be an object. Keys of the object are column aliases, value can be a column name, sub-query, or raw SQL expression.
    *
    * ```ts
    * // select columns of the table:
@@ -557,29 +535,45 @@ export class Select {
    *   .where({ 'author.isPopular': true });
    * ```
    */
-  select<T extends Query, K extends SelectArg<T>[]>(
+  select<T extends Query, Columns extends SelectArg<T>[]>(
     this: T,
-    ...args: K
-  ): SelectResult<T, K> {
-    return this.clone()._select(...args) as unknown as SelectResult<T, K>;
+    ...args: Columns
+  ): SelectResult<T, Columns>;
+  select<
+    T extends Query,
+    Columns extends SelectArg<T>[],
+    Obj extends SelectAsArg<T>,
+  >(
+    this: T,
+    ...args: [...columns: Columns, obj: Obj]
+  ): SelectResultWithObj<T, Columns, Obj>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  select(this: Query, ...args: any[]) {
+    return this.clone()._select(...args);
   }
 
-  _select<T extends Query, K extends SelectArg<T>[]>(
+  _select<T extends Query, Columns extends SelectArg<T>[]>(
     this: T,
-    ...args: K
-  ): SelectResult<T, K> {
+    ...args: Columns
+  ): SelectResult<T, Columns>;
+  _select<
+    T extends Query,
+    Columns extends SelectArg<T>[],
+    Obj extends SelectAsArg<T>,
+  >(
+    this: T,
+    ...args: [...columns: Columns, obj: Obj]
+  ): SelectResultWithObj<T, Columns, Obj>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _select(this: Query, ...args: any[]) {
     if (!args.length) {
-      return this as unknown as SelectResult<T, K>;
+      return this;
     }
 
     const as = this.q.as || this.table;
     const selectArgs = args.map((item) => processSelectArg(this, as, item));
 
-    return pushQueryArray(
-      this,
-      'select',
-      selectArgs,
-    ) as unknown as SelectResult<T, K>;
+    return pushQueryArray(this, 'select', selectArgs);
   }
 
   /**

@@ -343,7 +343,7 @@ db.table.sql`($one + $two) / $one`
 
 Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
 
-Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub-query, or raw SQL expression.
+The last argument can be an object. Keys of the object are column aliases, value can be a column name, sub-query, or raw SQL expression.
 
 ```ts
 // select columns of the table:

@@ -38,7 +38,7 @@ export type MergeQuery<
     : K extends 'catch'
     ? QueryCatch<Data>
     : K extends 'selectable'
-    ? T['selectable'] & Q['selectable']
+    ? MergeObjects<T['selectable'], Q['selectable']>
     : K extends 'windows'
     ? MergeObjects<T['windows'], Q['windows']>
     : K extends 'withData'

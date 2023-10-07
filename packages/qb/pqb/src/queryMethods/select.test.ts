@@ -5,6 +5,7 @@ import {
   profileData,
   ProfileRecord,
   Snake,
+  SnakeRecord,
   snakeSelectAll,
   snakeSelectAllWithTable,
   User,
@@ -29,15 +30,17 @@ describe('select', () => {
   it('should handle nested sub selects', async () => {
     await User.create(userData);
 
-    await User.select({
+    const res = await User.select({
       author: () =>
         User.select({
           count: () => User.count(),
         }).takeOptional(),
     });
+
+    assertType<typeof res, { author: { count: number } | null }[]>();
   });
 
-  it('should combine multiple selects and give proper types', () => {
+  it('should combine multiple selects and give proper types', async () => {
     const query = User.select('id').select({
       count: () => User.count(),
     });
@@ -71,11 +74,30 @@ describe('select', () => {
     it('should select all named columns with a *', () => {
       const q = Snake.join(Message, 'authorId', 'tailLength').select('*');
 
+      assertType<Awaited<typeof q>, SnakeRecord[]>();
+
       expectSql(
         q.toSQL(),
         `
           SELECT ${snakeSelectAllWithTable} FROM "snake"
           JOIN "message" ON "message"."authorId" = "snake"."tail_length"
+        `,
+      );
+    });
+
+    it('should select all table columns with * plus specified joined columns', () => {
+      const query = User.join(Message, 'authorId', 'id').select(
+        '*',
+        'message.text',
+      );
+
+      assertType<Awaited<typeof query>, (UserRecord & { text: string })[]>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "user".*, "message"."text" FROM "user"
+          JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
     });
@@ -122,6 +144,11 @@ describe('select', () => {
     it('should select named columns', () => {
       const q = Snake.select('snakeName', 'tailLength');
 
+      assertType<
+        Awaited<typeof q>,
+        { snakeName: string; tailLength: number }[]
+      >();
+
       expectSql(
         q.toSQL(),
         `
@@ -154,6 +181,11 @@ describe('select', () => {
 
     it('should select named columns with table', () => {
       const q = Snake.select('snake.snakeName', 'snake.tailLength');
+
+      assertType<
+        Awaited<typeof q>,
+        { snakeName: string; tailLength: number }[]
+      >();
 
       expectSql(
         q.toSQL(),
@@ -211,6 +243,8 @@ describe('select', () => {
         'snake.snakeName',
       );
 
+      assertType<Awaited<typeof q>, { id: number; snakeName: string }[]>();
+
       expectSql(
         q.toSQL(),
         `
@@ -250,6 +284,8 @@ describe('select', () => {
         'user.id',
         's.snakeName',
       );
+
+      assertType<Awaited<typeof q>, { id: number; snakeName: string }[]>();
 
       expectSql(
         q.toSQL(),
@@ -566,6 +602,8 @@ describe('select', () => {
     it('should select named columns with aliases', async () => {
       const q = Snake.select({ name: 'snakeName', length: 'tailLength' });
 
+      assertType<Awaited<typeof q>, { name: string; length: number }[]>();
+
       expectSql(
         q.toSQL(),
         `
@@ -608,6 +646,8 @@ describe('select', () => {
         name: 'snake.snakeName',
         length: 'snake.tailLength',
       });
+
+      assertType<Awaited<typeof q>, { name: string; length: number }[]>();
 
       expectSql(
         q.toSQL(),
@@ -661,6 +701,8 @@ describe('select', () => {
         length: 'snake.tailLength',
       });
 
+      assertType<Awaited<typeof q>, { userId: number; length: number }[]>();
+
       expectSql(
         q.toSQL(),
         `
@@ -704,6 +746,8 @@ describe('select', () => {
         userId: 'user.id',
         length: 's.tailLength',
       });
+
+      assertType<Awaited<typeof q>, { userId: number; length: number }[]>();
 
       expectSql(
         q.toSQL(),
@@ -780,6 +824,8 @@ describe('select', () => {
     it('should select subquery for named columns', () => {
       const q = Snake.select({ subquery: () => Snake.all() });
 
+      assertType<Awaited<typeof q>, { subquery: SnakeRecord[] }[]>();
+
       expectSql(
         q.toSQL(),
         `
@@ -810,6 +856,8 @@ describe('select', () => {
 
     it('should select all named columns', () => {
       const q = Snake.select('snakeName').selectAll();
+
+      assertType<Awaited<typeof q>, SnakeRecord[]>();
 
       expectSql(
         q.toSQL(),
