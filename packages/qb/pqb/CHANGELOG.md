@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.23
+
+### Patch Changes
+
+- 828e22aa: Optimize `select` type. Now object is allowed only as the last arg.
+
 ## 0.18.22
 
 ### Patch Changes
