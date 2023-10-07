@@ -1,7 +1,6 @@
 import { Query, QueryReturnType } from '../query/query';
 import { QueryLogger, QueryLogObject } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
-import { ColumnsShape } from '../columns';
 import { toSQLCacheKey } from './toSQL';
 import {
   HavingItem,
@@ -59,7 +58,7 @@ export type CommonQueryData = {
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItem[];
-  withShapes?: Record<string, ColumnsShape>;
+  withShapes?: Record<string, ColumnsShapeBase>;
   joinTo?: QueryBase;
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;

@@ -4,13 +4,14 @@ import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
 import { JoinArgs, JoinCallback, JoinFirstArg } from '../join/join';
 import {
   applyMixins,
+  ColumnsShapeBase,
   Expression,
   MaybeArray,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
-import { BooleanNullable, ColumnsShape } from '../../columns';
+import { BooleanNullable } from '../../columns';
 import { QueryBase } from '../../query/queryBase';
 import { RawSQL } from '../../sql/rawSql';
 import { ColumnExpression } from '../../common/fn';
@@ -252,7 +253,7 @@ const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
     isSubQuery = getIsJoinSubQuery(q.q, q.baseQuery.q);
     if (isSubQuery) {
       args[0] = q.clone();
-      args[0].shape = getShapeFromSelect(q, true) as ColumnsShape;
+      args[0].shape = getShapeFromSelect(q, true) as ColumnsShapeBase;
     }
   } else {
     isSubQuery = false;

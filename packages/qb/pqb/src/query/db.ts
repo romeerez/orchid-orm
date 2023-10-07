@@ -14,9 +14,7 @@ import {
   QueryArraysResult,
 } from '../adapter';
 import {
-  ColumnsShape,
   getColumnTypes,
-  ColumnType,
   getTableData,
   DefaultColumnTypes,
   columnTypes,
@@ -44,6 +42,7 @@ import {
   isRawSQL,
   EmptyObject,
   ColumnTypesBase,
+  ColumnTypeBase,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -88,10 +87,10 @@ export type QueryDefaultReturnData<Shape extends ColumnsShapeBase> = Pick<
 
 export interface Db<
   Table extends string | undefined = undefined,
-  Shape extends ColumnsShape = Record<string, never>,
+  Shape extends ColumnsShapeBase = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes,
-  ShapeWithComputed extends ColumnsShape = Shape,
+  ShapeWithComputed extends ColumnsShapeBase = Shape,
   Data = QueryDefaultReturnData<Shape>,
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
     QueryMethods<ColumnTypes> {
@@ -133,14 +132,14 @@ export interface Db<
   };
 }
 
-export const anyShape = {} as Record<string, ColumnType>;
+export const anyShape = {} as Record<string, ColumnTypeBase>;
 
 export class Db<
   Table extends string | undefined = undefined,
-  Shape extends ColumnsShape = Record<string, never>,
+  Shape extends ColumnsShapeBase = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes,
-  ShapeWithComputed extends ColumnsShape = Shape,
+  ShapeWithComputed extends ColumnsShapeBase = Shape,
 > implements Query
 {
   constructor(
@@ -425,7 +424,7 @@ export type DbResult<ColumnTypes> = Db<
   EmptyObject,
   ColumnTypes
 > & {
-  <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
+  <Table extends string, Shape extends ColumnsShapeBase = ColumnsShapeBase>(
     table: Table,
     shape?: ((t: ColumnTypes) => Shape) | Shape,
     options?: DbTableOptions,
@@ -479,7 +478,7 @@ export const createDb = <
   qb.queryBuilder = qb as unknown as Db;
 
   const db = Object.assign(
-    <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
+    <Table extends string, Shape extends ColumnsShapeBase = ColumnsShapeBase>(
       table: Table,
       shape?: ((t: ColumnTypes) => Shape) | Shape,
       options?: DbTableOptions,

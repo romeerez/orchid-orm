@@ -5,7 +5,7 @@ import {
   WhereResult,
 } from '../queryMethods';
 import { QueryData } from '../sql';
-import { ColumnsShape, ColumnType } from '../columns';
+import { ColumnType } from '../columns';
 import { AliasOrTable } from '../common/utils';
 import { Db } from './db';
 import { RelationsBase } from '../relations';
@@ -47,7 +47,7 @@ export type Query = QueryBase &
     columnTypes: unknown;
     onQueryBuilder: typeof OnQueryBuilder;
     table?: string;
-    shape: ColumnsShape;
+    shape: ColumnsShapeBase;
     singlePrimaryKey: string;
     primaryKeys: string[];
     inputType: Record<string, unknown>;

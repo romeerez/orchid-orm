@@ -63,6 +63,7 @@ import {
   JSONUnknown,
   ColumnTypesBase,
   TimestampHelpers,
+  ColumnsShapeBase,
 } from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
@@ -73,7 +74,6 @@ import {
   ForeignKeyOptions,
 } from './columnType';
 import { makeRegexToFindInSql } from '../common/utils';
-import { ColumnsShape } from './columnsSchema';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL } from '../sql/rawSql';
 
@@ -152,7 +152,7 @@ export const resetTableData = (data: TableData = newTableData()) => {
   tableData = data;
 };
 
-export const getColumnTypes = <ColumnTypes, Shape extends ColumnsShape>(
+export const getColumnTypes = <ColumnTypes, Shape extends ColumnsShapeBase>(
   types: ColumnTypes,
   fn: (t: ColumnTypes) => Shape,
   nowSQL: string | undefined,

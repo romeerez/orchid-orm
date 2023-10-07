@@ -12,7 +12,6 @@ import {
   JoinLateralResult,
   JoinResult,
 } from './join';
-import { ColumnsShape } from '../../columns';
 import { getQueryAs } from '../../common/utils';
 import { QueryBase } from '../../query/queryBase';
 
@@ -65,7 +64,7 @@ export const _join = <
 
       if (isSubQuery) {
         args[0] = first.clone() as Arg;
-        (args[0] as Query).shape = shape as ColumnsShape;
+        (args[0] as Query).shape = shape as ColumnsShapeBase;
       }
     }
   } else {

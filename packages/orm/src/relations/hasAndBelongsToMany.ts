@@ -5,8 +5,6 @@ import {
 } from './relations';
 import { DbTable, Table, TableClass } from '../baseTable';
 import {
-  ColumnsShape,
-  ColumnType,
   CreateCtx,
   CreateData,
   getQueryAs,
@@ -22,7 +20,12 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { EmptyObject, MaybeArray } from 'orchid-core';
+import {
+  ColumnsShapeBase,
+  ColumnTypeBase,
+  EmptyObject,
+  MaybeArray,
+} from 'orchid-core';
 import {
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
@@ -165,7 +168,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
   }
 }
 
-const removeColumnName = (column: ColumnType) => {
+const removeColumnName = (column: ColumnTypeBase) => {
   if (!column.data.name) return column;
 
   const cloned = Object.create(column);
@@ -218,7 +221,7 @@ export const makeHasAndBelongsToManyMethod = (
   baseQuery.baseQuery = baseQuery;
   baseQuery.table = joinTable;
 
-  const shape: ColumnsShape = {};
+  const shape: ColumnsShapeBase = {};
   for (let i = 0; i < len; i++) {
     shape[foreignKeys[i]] = removeColumnName(table.shape[primaryKeys[i]]);
   }

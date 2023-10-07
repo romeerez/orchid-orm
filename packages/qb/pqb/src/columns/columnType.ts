@@ -1,4 +1,3 @@
-import { ColumnsShape } from './columnsSchema';
 import { Query } from '../query/query';
 import {
   ColumnDataBase,
@@ -14,6 +13,7 @@ import {
   setColumnData,
   ValidationContext,
   StaticSQLArgs,
+  ColumnsShapeBase,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
 import { raw, RawSQL } from '../sql/rawSql';
@@ -62,7 +62,7 @@ export type ForeignKeyAction =
 // Foreign key type contains a foreign table (by function or a name), columns of this table, and foreign key options.
 export type ForeignKey<Table extends string, Columns extends string[]> = (
   | {
-      fn(): new () => { table: Table; columns: ColumnsShape };
+      fn(): new () => { table: Table; columns: ColumnsShapeBase };
     }
   | {
       table: Table;

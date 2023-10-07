@@ -1,6 +1,5 @@
 import {
   AfterHook,
-  ColumnsShape,
   columnTypes as defaultColumnTypes,
   ComputedColumnsBase,
   Db,
@@ -84,7 +83,7 @@ export type Table = {
   // table name
   table: string;
   // columns shape and the record type
-  columns: ColumnsShape;
+  columns: ColumnsShapeBase;
   // database schema containing this table
   schema?: string;
   // column types defined in base table to use in `setColumns`
@@ -146,7 +145,7 @@ export interface BaseTableClass<
 
   new (): {
     table: string;
-    columns: ColumnsShape;
+    columns: ColumnsShapeBase;
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase?: boolean;
@@ -157,7 +156,7 @@ export interface BaseTableClass<
     result: ColumnsShapeBase;
     clone<T extends QueryBase>(this: T): T;
     getFilePath(): string;
-    setColumns<T extends ColumnsShape>(fn: (t: ColumnTypes) => T): T;
+    setColumns<T extends ColumnsShapeBase>(fn: (t: ColumnTypes) => T): T;
 
     /**
      * You can add a generated column in the migration (see [generated](/guide/migration-column-methods.html#generated-column)),
@@ -251,7 +250,7 @@ export interface BaseTableClass<
      */
     setComputed<
       Table extends string,
-      Shape extends ColumnsShape,
+      Shape extends ColumnsShapeBase,
       Computed extends ComputedColumnsBase<
         Db<Table, Shape, EmptyObject, ColumnTypes>
       >,
@@ -341,7 +340,7 @@ export interface BaseTableClass<
 }
 
 // base table constructor
-export const createBaseTable = <
+export function createBaseTable<
   SchemaProvider extends SchemaProviderBase,
   ColumnTypes = DefaultColumnTypes,
 >({
@@ -370,7 +369,7 @@ export const createBaseTable = <
   // a function to prepare a validation schema based on table's columns,
   // it will be available as `TableClass.schema()` method.
   schemaProvider?: SchemaProvider;
-} = {}): BaseTableClass<ColumnTypes, SchemaProvider> => {
+} = {}): BaseTableClass<ColumnTypes, SchemaProvider> {
   const columnTypes = (
     typeof columnTypesArg === 'function'
       ? (columnTypesArg as (t: DefaultColumnTypes) => ColumnTypes)(
@@ -409,7 +408,7 @@ export const createBaseTable = <
     }
 
     table!: string;
-    columns!: ColumnsShape;
+    columns!: ColumnsShapeBase;
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
@@ -436,7 +435,7 @@ export const createBaseTable = <
       );
     }
 
-    setColumns<T extends ColumnsShape>(fn: (t: ColumnTypes) => T): T {
+    setColumns<T extends ColumnsShapeBase>(fn: (t: ColumnTypes) => T): T {
       (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
         this.snakeCase;
 
@@ -461,7 +460,7 @@ export const createBaseTable = <
 
     setComputed<
       Table extends string,
-      Shape extends ColumnsShape,
+      Shape extends ColumnsShapeBase,
       Computed extends ComputedColumnsBase<
         Db<Table, Shape, EmptyObject, ColumnTypes>
       >,
@@ -531,4 +530,4 @@ export const createBaseTable = <
   base.prototype.types = columnTypes as typeof base.prototype.types;
 
   return base as unknown as BaseTableClass<ColumnTypes, SchemaProvider>;
-};
+}
