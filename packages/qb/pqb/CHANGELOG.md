@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.22
+
+### Patch Changes
+
+- 3fcab80e: Fix belongsTo nested create type for a required relation
+
 ## 0.18.21
 
 ### Patch Changes

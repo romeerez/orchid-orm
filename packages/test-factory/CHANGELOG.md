@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.3.149
+
+### Patch Changes
+
+- 3fcab80e: Fix belongsTo nested create type for a required relation
+- Updated dependencies [3fcab80e]
+  - orchid-orm-schema-to-zod@0.4.25
+  - pqb@0.18.22
+  - orchid-orm@1.17.22
+
 ## 0.3.148
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.17.22
+
+### Patch Changes
+
+- 3fcab80e: Fix belongsTo nested create type for a required relation
+- Updated dependencies [3fcab80e]
+  - pqb@0.18.22
+
 ## 1.17.21
 
 ### Patch Changes
