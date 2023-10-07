@@ -78,7 +78,6 @@ export type HasAndBelongsToManyInfo<
   one: false;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
-  requiredDataForCreate: EmptyObject;
   optionalDataForCreate: {
     [P in K]?: RelationToManyDataForCreate<{
       nestedCreateQuery: Q;

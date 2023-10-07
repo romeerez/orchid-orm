@@ -16,7 +16,7 @@ export type RelationConfigBase = {
   omitForeignKeyInCreate: PropertyKey;
   // Data for `create` method that may have required properties.
   // Only `belongsTo` has it for required foreign keys.
-  requiredDataForCreate: unknown;
+  dataForCreate?: RelationConfigDataForCreate;
   // Data for `create` method with all optional properties.
   // Other than `belongsTo` relation kinds use it.
   optionalDataForCreate: unknown;
@@ -26,6 +26,11 @@ export type RelationConfigBase = {
   populate: string;
   chainedCreate: boolean;
   chainedDelete: boolean;
+};
+
+export type RelationConfigDataForCreate = {
+  columns: Record<string, unknown>;
+  nested: Record<string, unknown>;
 };
 
 export type RelationsBase = Record<string, RelationQueryBase>;

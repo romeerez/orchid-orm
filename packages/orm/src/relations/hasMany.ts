@@ -80,7 +80,6 @@ export type HasManyInfo<
   one: false;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
-  requiredDataForCreate: EmptyObject;
   optionalDataForCreate: {
     [P in K]?: Relation['options'] extends RelationThroughOptions
       ? EmptyObject

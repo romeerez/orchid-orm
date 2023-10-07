@@ -10,7 +10,11 @@ import {
   SetQueryReturnsPluckColumn,
   SetQueryReturnsRowCount,
 } from '../query/query';
-import { RelationConfigBase, RelationsBase } from '../relations';
+import {
+  RelationConfigBase,
+  RelationConfigDataForCreate,
+  RelationsBase,
+} from '../relations';
 import {
   CreateKind,
   InsertQueryData,
@@ -99,14 +103,18 @@ export type CreateRelationsDataOmittingFKeys<
 export type CreateRelationDataOmittingFKeys<
   RelationConfig extends RelationConfigBase,
   Defaults extends PropertyKey,
-  Data = RelationConfig['requiredDataForCreate'],
-> = [
-  {
-    [K in keyof Data]: K extends Defaults ? never : Data[K];
-  } & {
-    [K in keyof Data]?: K extends Defaults ? Data[K] : never;
-  },
-];
+  Data extends
+    | RelationConfigDataForCreate
+    | undefined = RelationConfig['dataForCreate'],
+> = Data extends RelationConfigDataForCreate
+  ? [
+      keyof Data['columns'] extends Defaults
+        ? Omit<Data['columns'], Defaults> & {
+            [P in Defaults & keyof Data['columns']]?: Data['columns'][P];
+          } & Partial<Data['nested']>
+        : Data['columns'] | Data['nested'],
+    ]
+  : never;
 
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.

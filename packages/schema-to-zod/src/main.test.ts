@@ -1,6 +1,5 @@
 import {
   ArrayColumn,
-  ColumnType,
   columnTypes,
   CustomTypeColumn,
   DateColumn,
@@ -15,6 +14,7 @@ import {
   JSONString,
   JSONArray,
   jsonTypes,
+  ColumnTypeBase,
 } from 'orchid-core';
 import {
   columnToZod,
@@ -33,7 +33,7 @@ const t = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const columnOrJsonToZod = (type: any): z.ZodTypeAny => {
-  return type instanceof ColumnType
+  return type instanceof ColumnTypeBase
     ? (columnToZod(type) as z.ZodTypeAny)
     : (columnToZod(t.json(() => type)) as z.ZodTypeAny);
 };
@@ -744,7 +744,7 @@ describe('schema to zod', () => {
   });
 
   const testArrayMethods = (
-    type: ArrayColumn<ColumnType> | JSONArray<JSONType>,
+    type: ArrayColumn<ColumnTypeBase> | JSONArray<JSONType>,
   ) => {
     testTypeMethod(
       type,

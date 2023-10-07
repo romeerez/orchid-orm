@@ -82,11 +82,12 @@ export type BelongsToInfo<
   one: true;
   required: Required;
   omitForeignKeyInCreate: FK;
-  requiredDataForCreate:
-    | { [L in FK]: T['columns'][L]['inputType'] }
-    | (Required extends true
-        ? { [Key in K]: DataForCreate }
-        : { [Key in K]?: DataForCreate });
+  dataForCreate: {
+    columns: { [L in FK]: T['columns'][L]['inputType'] };
+    nested: Required extends true
+      ? { [Key in K]: DataForCreate }
+      : { [Key in K]?: DataForCreate };
+  };
   optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key for the relation

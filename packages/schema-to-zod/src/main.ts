@@ -1,7 +1,5 @@
 import {
   ArrayColumn,
-  ColumnsShape,
-  ColumnType,
   DateColumn,
   EnumColumn,
   JSONColumn,
@@ -34,6 +32,7 @@ import {
   JSONTupleItems,
   JSONObjectShape,
   JSONDiscriminatedUnionArg,
+  ColumnsShapeBase,
 } from 'orchid-core';
 import { z, ZodErrorMap, ZodTypeAny } from 'zod';
 import { Buffer } from 'node:buffer';
@@ -219,8 +218,8 @@ type MapJsonTuple<T extends unknown[]> = T extends [infer Head, ...infer Tail]
   ? [Head extends JSONType ? JsonToZod<Head> : never, ...MapJsonTuple<Tail>]
   : [];
 
-type Columns = { shape: ColumnsShape };
-type Table = { columns: ColumnsShape };
+type Columns = { shape: ColumnsShapeBase };
+type Table = { columns: ColumnsShapeBase };
 type TableClass<T extends Table> = { new (): T };
 
 export type InstanceToZod<T extends Columns> = z.ZodObject<{
@@ -251,7 +250,7 @@ export const zodSchemaProvider = function <T extends Table>(
   }>;
 };
 
-export const columnToZod = <T extends ColumnType>(
+export const columnToZod = <T extends ColumnTypeBase>(
   column: T,
 ): SchemaToZod<T> => {
   const dataType = column.data.as?.dataType || column.dataType;
@@ -265,10 +264,10 @@ export const columnToZod = <T extends ColumnType>(
   return converter(column) as SchemaToZod<T>;
 };
 
-const typeHandler = <Type extends ColumnType | JSONType>(
+const typeHandler = <Type extends ColumnTypeBase | JSONType>(
   fn: (column: Type, errors?: Record<string, string>) => z.ZodTypeAny,
 ) => {
-  return (column: ColumnType | JSONType): z.ZodTypeAny => {
+  return (column: ColumnTypeBase | JSONType): z.ZodTypeAny => {
     let type = fn(column as Type, column.data.errors);
 
     const { errors } = column.data;
@@ -287,7 +286,7 @@ const typeHandler = <Type extends ColumnType | JSONType>(
     }) as ZodErrorMap;
 
     const chain =
-      column instanceof ColumnType ? column.chain : column.data.chain;
+      column instanceof ColumnTypeBase ? column.chain : column.data.chain;
     if (chain) {
       for (const item of chain) {
         if (item[0] === 'transform') {
@@ -304,7 +303,7 @@ const typeHandler = <Type extends ColumnType | JSONType>(
 
     if (
       ('nullable' in column.data && column.data.nullable) ||
-      (column as ColumnType).data.isNullable
+      (column as ColumnTypeBase).data.isNullable
     ) {
       if ('optional' in column.data && column.data.optional) {
         type = type.nullish();
@@ -315,8 +314,11 @@ const typeHandler = <Type extends ColumnType | JSONType>(
       type = type.optional();
     }
 
-    if (column instanceof ColumnType) {
-      if (column.data.validationDefault !== undefined) {
+    if (column instanceof ColumnTypeBase) {
+      if (
+        'validationDefault' in column.data &&
+        column.data.validationDefault !== undefined
+      ) {
         type = type.default(column.data.validationDefault);
       }
     } else if (column.data.default !== undefined) {
@@ -501,9 +503,9 @@ const handleUUID = typeHandler((_, errors) => {
 
 const arrayParams = ['min', 'max', 'length'];
 const handleArray = typeHandler(
-  (array: ArrayColumn<ColumnType> | JSONArray<JSONType>, errors) => {
+  (array: ArrayColumn<ColumnTypeBase> | JSONArray<JSONType>, errors) => {
     let type: z.ZodArray<z.ZodTypeAny>;
-    if (array instanceof ColumnType) {
+    if (array instanceof ColumnTypeBase) {
       type = z.array(columnToZod(array.data.item));
     } else {
       type = z.array(jsonItemToZod(array.data.item));
@@ -564,11 +566,13 @@ const jsonItemToZod = (type: JSONType): z.ZodTypeAny => {
   }
 };
 
-const itemToZod = (item: ColumnType | JSONType) => {
-  return item instanceof ColumnType ? columnToZod(item) : jsonItemToZod(item);
+const itemToZod = (item: ColumnTypeBase | JSONType) => {
+  return item instanceof ColumnTypeBase
+    ? columnToZod(item)
+    : jsonItemToZod(item);
 };
 
-const converters: Record<string, (column: ColumnType) => z.ZodType> = {
+const converters: Record<string, (column: ColumnTypeBase) => z.ZodType> = {
   varchar: handleString,
   char: handleString,
   text: handleString,

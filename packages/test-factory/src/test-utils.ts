@@ -33,8 +33,8 @@ class UserTable extends BaseTable {
   relations = {
     profile: this.hasOne(() => ProfileTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['id'],
+      references: ['userId'],
     }),
   };
 }
@@ -54,8 +54,8 @@ export class ProfileTable extends BaseTable {
   relations = {
     user: this.belongsTo(() => UserTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['userId'],
+      references: ['id'],
     }),
   };
 }

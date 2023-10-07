@@ -2,7 +2,7 @@ import { ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable } from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
-import { ColumnsShape, columnTypes, ColumnTypes } from 'pqb';
+import { ColumnsShape, columnTypes, DefaultColumnTypes } from 'pqb';
 import { assertType, testAdapter, useTestDatabase } from 'test-utils';
 
 describe('factory', () => {
@@ -457,7 +457,9 @@ describe('factory', () => {
   });
 
   describe('unique columns', () => {
-    const makeTable = <T extends ColumnsShape>(fn: (t: ColumnTypes) => T) => {
+    const makeTable = <T extends ColumnsShape>(
+      fn: (t: DefaultColumnTypes) => T,
+    ) => {
       return class extends BaseTable {
         readonly table = 'table';
         columns = this.setColumns((t) => ({
