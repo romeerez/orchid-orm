@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.17.21
+
+### Patch Changes
+
+- 144e296d: Change generic columns type to the base form because it has conflicts when instantiating ORM
+- Updated dependencies [144e296d]
+  - pqb@0.18.21
+
 ## 1.17.20
 
 ### Patch Changes

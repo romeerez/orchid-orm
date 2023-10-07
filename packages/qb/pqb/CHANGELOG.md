@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.21
+
+### Patch Changes
+
+- 144e296d: Change generic columns type to the base form because it has conflicts when instantiating ORM
+
 ## 0.18.20
 
 ### Patch Changes
