@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.24
+
+### Patch Changes
+
+- 0ea831ae: Return multiple records when chainging relation (#194)
+
 ## 0.18.23
 
 ### Patch Changes

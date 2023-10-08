@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.17.24
+
+### Patch Changes
+
+- 0ea831ae: Return multiple records when chainging relation (#194)
+- Updated dependencies [0ea831ae]
+  - pqb@0.18.24
+
 ## 1.17.23
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.4.27
+
+### Patch Changes
+
+- 0ea831ae: Return multiple records when chainging relation (#194)
+- Updated dependencies [0ea831ae]
+  - pqb@0.18.24
+
 ## 0.4.26
 
 ### Patch Changes
