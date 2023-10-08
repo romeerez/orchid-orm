@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.14
+
+### Patch Changes
+
+- 96a6d588: Fix `defaults` type for optional columns (#196)
+
 ## 0.10.13
 
 ### Patch Changes

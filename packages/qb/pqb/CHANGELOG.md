@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.26
+
+### Patch Changes
+
+- 96a6d588: Fix `defaults` type for optional columns (#196)
+- Updated dependencies [96a6d588]
+  - orchid-core@0.10.14
+
 ## 0.18.25
 
 ### Patch Changes
