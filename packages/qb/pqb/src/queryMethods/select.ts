@@ -44,9 +44,16 @@ type SelectAsArg<T extends Query> = Record<string, SelectAsValue<T>>;
 type SelectAsValue<T extends Query> =
   | StringKey<keyof T['selectable']>
   | Expression
-  | ((q: T) => QueryBase)
-  | ((q: T) => Expression)
-  | ((q: T) => QueryBase | Expression);
+  | ((q: SelectSubQueryArg<T>) => QueryBase | Expression);
+
+type SelectSubQueryArg<T extends Query> = {
+  [K in keyof T]: K extends keyof T['relations']
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      T[K] extends (...args: any) => any
+      ? ReturnType<T[K]>
+      : T[K]
+    : T[K];
+};
 
 // Result type of select without the ending object argument.
 type SelectResult<

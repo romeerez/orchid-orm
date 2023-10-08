@@ -9,9 +9,6 @@ import {
   RelationConfigBase,
   RelationQuery,
   RelationsBase,
-  SetQueryReturnsAll,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
   VirtualColumn,
   WhereArg,
 } from 'pqb';
@@ -117,21 +114,10 @@ export type MapRelation<
   Relations extends RelationThunks,
   RelationName extends keyof Relations,
   Relation extends RelationThunk = Relations[RelationName],
-  RelatedQuery extends Query = RelationScopeOrTable<Relation>,
-  Config extends RelationConfigBase = RelationConfig<
-    T,
-    Relations,
-    Relation,
-    RelationName
-  >,
 > = RelationQuery<
   RelationName,
-  Config,
-  Config['one'] extends true
-    ? Config['required'] extends true
-      ? SetQueryReturnsOne<RelatedQuery>
-      : SetQueryReturnsOneOptional<RelatedQuery>
-    : SetQueryReturnsAll<RelatedQuery>
+  RelationConfig<T, Relations, Relation, RelationName>,
+  RelationScopeOrTable<Relation>
 >;
 
 export type MapRelations<T extends Table> = T extends {
@@ -376,10 +362,14 @@ const makeRelationQuery = (
 
       const query = this.q.isSubQuery
         ? toTable
-        : toTable._whereExists(
-            this.baseQuery,
-            (q) => data.reverseJoin(this, toTable) as unknown as typeof q,
-          );
+        : toTable
+            // Relation query returns a single record in case of belongsTo or hasOne,
+            // but when called as a query chain like `q.user.profile` it should return many.
+            ._all()
+            ._whereExists(
+              this.baseQuery,
+              (q) => data.reverseJoin(this, toTable) as unknown as typeof q,
+            );
 
       query.q.joinedShapes = {
         [getQueryAs(this)]: this.q.shape,

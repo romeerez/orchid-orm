@@ -233,9 +233,6 @@ describe('relations', () => {
     assertType<Awaited<typeof first>, { Id: number; Name: string }[]>();
 
     const second = fn(db.profile.user.select('Id'));
-    assertType<
-      Awaited<typeof second>,
-      { Id: number; Name: string } | undefined
-    >();
+    assertType<Awaited<typeof second>, { Id: number; Name: string }[]>();
   });
 });

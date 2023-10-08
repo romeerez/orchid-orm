@@ -1,4 +1,9 @@
-import { Query, QueryWithTable } from './query/query';
+import {
+  Query,
+  QueryWithTable,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
+} from './query/query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
 import { StringKey } from 'orchid-core';
 import { QueryBase } from './query/queryBase';
@@ -43,7 +48,7 @@ export type RelationQuery<
   Name extends PropertyKey = PropertyKey,
   Config extends RelationConfigBase = RelationConfigBase,
   T extends Query = Query,
-  Q = {
+  Q extends Query = {
     [K in keyof T | 'relationConfig']: K extends 'meta'
       ? Omit<T['meta'], 'as'> & {
           as: StringKey<Name>;
@@ -63,6 +68,15 @@ export type RelationQuery<
         : never
       : K extends keyof T
       ? T[K]
-      : Config;
+      : K extends 'relationConfig'
+      ? Config
+      : never;
   },
-> = ((params: Config['params']) => Q) & Q;
+> = ((
+  params: Config['params'],
+) => Config['one'] extends true
+  ? Config['required'] extends true
+    ? SetQueryReturnsOne<Q>
+    : SetQueryReturnsOneOptional<Q>
+  : Q) &
+  Q;

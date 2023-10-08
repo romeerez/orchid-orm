@@ -3,12 +3,11 @@
   "include": ["./src"],
   "compilerOptions": {
     "outDir": "./dist",
-    "noEmit": false,
     "baseUrl": ".",
     "paths": {
       "orchid-core": ["../core/src"],
       "pqb": ["../qb/pqb/src"],
-      "test-utils": ["../test-utils/src"],
+      "test-utils": ["../test-utils/src"]
     }
   }
 }

@@ -44,12 +44,27 @@ describe('belongsTo', () => {
       expect(user).toMatchObject(userData);
     });
 
-    it('should handle chained query', () => {
+    it('should handle chained query', async () => {
+      const [oneId, twoId] = await db.user
+        .pluck('Id')
+        .createMany([userData, userData]);
+
+      await db.profile.createMany([
+        {
+          UserId: oneId,
+          ProfileKey: userData.UserKey,
+          Bio: 'bio',
+        },
+        {
+          UserId: twoId,
+          ProfileKey: userData.UserKey,
+          Bio: 'bio',
+        },
+      ]);
+
       const query = db.profile
         .where({ Bio: 'bio' })
-        .user.where({ Name: 'name' });
-
-      assertType<Awaited<typeof query>, User | undefined>();
+        .user.where({ Name: userData.Name });
 
       expectSql(
         query.toSQL(),
@@ -65,6 +80,12 @@ describe('belongsTo', () => {
         `,
         ['bio', 'name'],
       );
+
+      const res = await query;
+
+      assertType<typeof res, User[]>();
+
+      expect(res.length).toBe(2);
     });
 
     it('should have disabled create and delete method', () => {
