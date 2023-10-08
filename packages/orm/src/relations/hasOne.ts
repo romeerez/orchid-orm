@@ -1,4 +1,5 @@
 import {
+  AddQueryDefaults,
   CreateCtx,
   CreateData,
   InsertQueryData,
@@ -77,9 +78,7 @@ export type HasOneInfo<
   Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,
   NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
     ? Q
-    : Q & {
-        meta: { defaults: Record<Populate, true> };
-      },
+    : AddQueryDefaults<Q, Populate>,
 > = {
   table: Q;
   query: Q;

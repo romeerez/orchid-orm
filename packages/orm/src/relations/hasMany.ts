@@ -22,6 +22,7 @@ import {
   SetQueryTableAlias,
   UpdateData,
   QueryWithTable,
+  AddQueryDefaults,
 } from 'pqb';
 import { EmptyObject, MaybeArray, toArray } from 'orchid-core';
 import {
@@ -70,9 +71,7 @@ export type HasManyInfo<
   Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,
   NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
     ? Q
-    : Q & {
-        meta: { defaults: Record<Populate, true> };
-      },
+    : AddQueryDefaults<Q, Populate>,
 > = {
   table: Q;
   query: Q;

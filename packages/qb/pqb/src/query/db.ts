@@ -121,14 +121,13 @@ export interface Db<
   ) => QueryError<this>;
   meta: {
     kind: 'select';
-    defaults: Record<
-      {
-        [K in keyof Shape]: undefined extends Shape[K]['data']['default']
-          ? never
-          : K;
-      }[keyof Shape],
-      true
-    >;
+    defaults: {
+      [K in keyof Shape]:
+        | undefined
+        | unknown extends Shape[K]['data']['default']
+        ? never
+        : K;
+    }[keyof Shape];
   };
 }
 

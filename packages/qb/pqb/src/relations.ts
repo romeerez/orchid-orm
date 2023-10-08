@@ -50,9 +50,9 @@ export type RelationQuery<
   T extends Query = Query,
   Q extends Query = {
     [K in keyof T | 'relationConfig']: K extends 'meta'
-      ? Omit<T['meta'], 'as'> & {
+      ? Omit<T['meta'], 'as' | 'defaults'> & {
           as: StringKey<Name>;
-          defaults: Record<Config['populate'], true>;
+          defaults: T['meta']['defaults'] | Config['populate'];
           hasWhere: true;
         }
       : K extends 'join'
