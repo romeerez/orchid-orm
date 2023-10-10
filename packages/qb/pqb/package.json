@@ -24,7 +24,8 @@
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
-    "test:ci": "jest --coverage --coverageReporters json-summary",
+    "bun:check": "cd ../../.. && bun test packages/qb/pqb/bun.test.ts",
+    "test:ci": "jest --coverage --coverageReporters json-summary && pnpm bun:check",
     "build": "rimraf ./dist/ && rollup -c ../../../rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
@@ -50,11 +51,12 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
+    "@types/pg": ">=8",
     "orchid-core": "workspace:*",
-    "pg": ">=8",
-    "@types/pg": ">=8"
+    "pg": ">=8"
   },
   "devDependencies": {
+    "bun-types": "1.0.5-canary.20231009T140142",
     "test-utils": "workspace:*"
   }
 }

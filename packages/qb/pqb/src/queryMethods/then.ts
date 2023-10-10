@@ -39,25 +39,57 @@ type Resolve = (result: any) => any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Reject = (error: any) => any;
 
-let queryError: Error = undefined as unknown as Error;
-
 export class Then {
-  get then() {
-    queryError = new Error();
-    return maybeWrappedThen;
-  }
-
-  set then(value) {
-    Object.defineProperty(this, 'then', {
-      value,
-    });
-  }
+  then!: (this: Query, resolve?: Resolve, reject?: Reject) => Promise<unknown>;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   catch(this: Query, fn: (reason: any) => unknown) {
     return this.then(undefined, fn);
   }
 }
+
+// For storing error with the stacktrace leading to the code which calls `await query`,
+// using it later when catching query error.
+let queryError: Error = undefined as unknown as Error;
+
+// `query.then` getter: it must be a getter to store the error with stacktrace prior to executing `await`.
+let getThen: (this: Query) => typeof Then.prototype.then;
+
+// workaround for the bun issue: https://github.com/romeerez/orchid-orm/issues/198
+if (process.versions.bun) {
+  getThen = function (this: Query) {
+    queryError = new Error();
+
+    // In rake-db `then` might be called on a lightweight query object that has no `internal`.
+    if (!this.internal) return maybeWrappedThen;
+
+    // Value in the store exists only before the call of the returned function.
+    const trx = this.internal.transactionStorage.getStore();
+    if (!trx) return maybeWrappedThen;
+
+    return (resolve, reject) => {
+      // Here `transactionStorage.getStore()` returns undefined,
+      // need to set the `trx` value to the store to workaround the bug.
+      return this.internal.transactionStorage.run(trx, () => {
+        return maybeWrappedThen.call(this, resolve, reject);
+      });
+    };
+  };
+} else {
+  getThen = function () {
+    queryError = new Error();
+    return maybeWrappedThen;
+  };
+}
+
+Object.defineProperty(Then.prototype, 'then', {
+  get: getThen,
+  set(value) {
+    Object.defineProperty(this, 'then', {
+      value,
+    });
+  },
+});
 
 export const handleResult: CommonQueryData['handleResult'] = (
   q,

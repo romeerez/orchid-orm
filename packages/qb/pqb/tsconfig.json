@@ -1,11 +1,12 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["./src"],
+  "include": ["./src", "bun.test.ts"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "orchid-core": ["../../core/src"],
       "test-utils": ["../../test-utils/src"]
-    }
+    },
+    "types": ["@types/jest", "bun-types"]
   }
 }

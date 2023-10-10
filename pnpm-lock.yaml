@@ -146,6 +146,9 @@ importers:
         specifier: '>=8'
         version: 8.11.2
     devDependencies:
+      bun-types:
+        specifier: 1.0.5-canary.20231009T140142
+        version: 1.0.5-canary.20231009T140142
       test-utils:
         specifier: workspace:*
         version: link:../../test-utils
@@ -2066,6 +2069,10 @@ packages:
   /buffer-writer@2.0.0:
     resolution: {integrity: sha512-a7ZpuTZU1TRtnwyCNW3I5dc0wWNC3VR9S++Ewyk2HHZdrO3CQJqSpd+95Us590V6AL7JqUAH2IwZ/398PmNFgw==}
     engines: {node: '>=4'}
+
+  /bun-types@1.0.5-canary.20231009T140142:
+    resolution: {integrity: sha512-5hT8WBXZ2ozdJt6s0nnnh4iQXn6xp9a7spbRYjapNxKjR3ckS5U2V347H3+XpaMVzc/a7D2I2KnKqIPO1R82kg==}
+    dev: true
 
   /call-bind@1.0.2:
     resolution: {integrity: sha512-7O+FbCihrB5WGbFYesctwmTKae6rOiIzmz1icreWJ+0aA7LJfuqhEso2T9ncpcFtzMQtzXf2QGGueWJGTYsqrA==}
