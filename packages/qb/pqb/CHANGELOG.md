@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.27
+
+### Patch Changes
+
+- 67bafe78: Fix transactions in Bun (#198)
+
 ## 0.18.26
 
 ### Patch Changes
