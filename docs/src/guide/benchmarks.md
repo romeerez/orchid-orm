@@ -59,6 +59,12 @@ const nestedInsertData = {
 The following benchmarks measure operations per second for different ORMs and query builders.
 All the code with instruction is in the [repo here](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/benchmarks).
 
+::: warning
+These measurements were taken in June 2023.
+
+Actively maintained libraries are constantly being updated, so consider these benchmarks approximate and out of date.
+:::
+
 Contestants:
 
 - **Orchid ORM** v1.11.0
@@ -66,6 +72,8 @@ Contestants:
 - **Sequelize** v6.32.0
 - **Knex** v2.4.2
 - **Kysely** v0.25.0
+
+For comparing with **Drizzle ORM** you can check [these benchmarks](https://github.com/webNeat/sql-single-vs-multiple-queries).
 
 The connection pool is set to have size 10 for every ORM.
 Benchmark is running 10 parallel queries for 10 seconds to calculate the average ops/s metric.
