@@ -174,14 +174,17 @@ t.bytea(); // -> Buffer
 // 4 bytes date (no time of day)
 t.date() // -> string
 
-// timestamp [ (p) ] with time zone    8 bytes    both date and time, with time zone 4713 BC    294276 AD  1 microsecond
+// timestamp with time zone (8 bytes)
 t.timestamp(precision?: number) // -> string
 
-// timestamp [ (p) ] [ without time zone ] 8 bytes both date and time (no time zone) 4713 BC 294276 AD 1 microsecond
+// timestamp without time zone (8 bytes), not recommended
 t.timestampNoTZ(precision?: number) // -> string
 
-// time [ (p) ] [ without time zone ]  8 bytes    time of day (no date)  00:00:00   24:00:00   1 microsecond
+// time without time zone (8 bytes)
+// format is 00:00:00
 t.time(precision?: number) // -> string
+
+// time with time zone is not added because it should never be used, according to Postgres docs.
 ```
 
 Time with time zone is not included because it's discouraged [by Postgres docs](https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_timetz).

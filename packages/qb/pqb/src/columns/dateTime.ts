@@ -27,7 +27,7 @@ export interface DateBaseColumn
 
 // encode string, number, or Date to a Date object,
 const dateTimeEncode = (input: string | number | Date) => {
-  return typeof input === 'object' ? input : new Date(input);
+  return typeof input === 'number' ? new Date(input) : input;
 };
 
 // when generating code, don't output `encodeFn` because it is a default
@@ -151,11 +151,23 @@ export class TimestampTZColumn<
   }
 }
 
+export interface TimeColumn
+  extends ColumnType<string, typeof Operators.time>,
+    DateTypeMethods {}
+
 // time [ (p) ] [ without time zone ]	8 bytes	time of day (no date)	00:00:00	24:00:00	1 microsecond
 export class TimeColumn<
   Precision extends number | undefined = undefined,
-> extends DateTimeBaseClass<Precision> {
+> extends ColumnType<string, typeof Operators.time> {
+  declare data: DateColumnData & { dateTimePrecision: Precision };
   dataType = 'time' as const;
+  operators = Operators.time;
+
+  constructor(dateTimePrecision?: Precision) {
+    super();
+    this.data.dateTimePrecision = dateTimePrecision as Precision;
+  }
+
   toCode(t: string): Code {
     const { dateTimePrecision } = this.data;
     return columnCode(
@@ -167,6 +179,8 @@ export class TimeColumn<
     );
   }
 }
+
+assignMethodsToClass(TimeColumn, dateTypeMethods);
 
 export type TimeInterval = {
   years?: number;
@@ -182,8 +196,8 @@ export class IntervalColumn<
   Fields extends string | undefined = undefined,
   Precision extends number | undefined = undefined,
 > extends ColumnType<TimeInterval, typeof Operators.date> {
-  dataType = 'interval' as const;
   declare data: ColumnData & { fields: Fields; precision: Precision };
+  dataType = 'interval' as const;
   operators = Operators.date;
 
   constructor(fields?: Fields, precision?: Precision) {

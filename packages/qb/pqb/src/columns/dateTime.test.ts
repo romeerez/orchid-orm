@@ -1,6 +1,5 @@
 import { userData } from '../test-utils/test-utils';
 import {
-  DateColumn,
   IntervalColumn,
   TimeColumn,
   TimeInterval,
@@ -16,7 +15,7 @@ const t = columnTypes;
 const testTimestampInput = (column: ColumnType) => {
   const date = new Date();
   const string = date.toISOString();
-  expect((column.encodeFn?.(string) as Date).toISOString()).toBe(string);
+  expect(column.encodeFn?.(string) as Date).toBe(string);
 
   const number = date.getTime();
   expect((column.encodeFn?.(number) as Date).getTime()).toBe(number);
@@ -31,7 +30,7 @@ describe('date time columns', () => {
   describe('date', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'1999-01-08'::date`.type(() => new DateColumn()),
+        testDb.sql`'1999-01-08'::date`.type(() => t.date()),
       );
 
       expect(result).toBe('1999-01-08');
@@ -39,8 +38,19 @@ describe('date time columns', () => {
       assertType<typeof result, string>();
     });
 
+    it('should encode number, but not encode string and date', () => {
+      const num = new Date().getTime();
+      expect(t.date().encodeFn?.(num)).toEqual(new Date(num));
+
+      const string = '2000-10-20';
+      expect(t.date().encodeFn?.(string)).toBe(string);
+
+      const date = new Date();
+      expect(t.date().encodeFn?.(date)).toBe(date);
+    });
+
     it('should have toCode', () => {
-      const column = new DateColumn();
+      const column = t.date();
       expect(column.toCode('t')).toBe('t.date()');
 
       const now = new Date();
@@ -69,6 +79,17 @@ describe('date time columns', () => {
       expect(result).toBe('1999-01-08 04:05:06');
 
       assertType<typeof result, string>();
+    });
+
+    it('should encode number, but not encode string and Date', () => {
+      const num = new Date().getTime();
+      expect(t.timestampNoTZ().encodeFn?.(num)).toEqual(new Date(num));
+
+      const string = new Date().toISOString();
+      expect(t.timestampNoTZ().encodeFn?.(string)).toBe(string);
+
+      const date = new Date();
+      expect(t.timestampNoTZ().encodeFn?.(date)).toBe(date);
     });
 
     it('should have toCode, ignore default precision', () => {
@@ -107,6 +128,17 @@ describe('date time columns', () => {
       expect(result).toBe('1999-01-08 04:05:06');
 
       assertType<typeof result, string>();
+    });
+
+    it('should encode number, but not encode string and Date', () => {
+      const num = new Date().getTime();
+      expect(t.timestamp().encodeFn?.(num)).toEqual(new Date(num));
+
+      const string = new Date().toISOString();
+      expect(t.timestamp().encodeFn?.(string)).toBe(string);
+
+      const date = new Date();
+      expect(t.timestamp().encodeFn?.(date)).toBe(date);
     });
 
     it('should have toCode, ignore default precision', () => {
@@ -148,10 +180,7 @@ describe('date time columns', () => {
       const now = new Date();
       const s = now.toISOString();
       expect(
-        new TimeColumn()
-          .min(now, 'min message')
-          .max(now, 'max message')
-          .toCode('t'),
+        t.time().min(now, 'min message').max(now, 'max message').toCode('t'),
       ).toBe(
         `t.time()` +
           `.min(new Date('${s}'), 'min message')` +

@@ -279,7 +279,7 @@ export const Operators = {
   boolean: Bool;
   number: Numeric;
   date: Ord<Date | string>;
-  time: Numeric;
+  time: Ord<string>;
   text: Text;
   json: Json;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
