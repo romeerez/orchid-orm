@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.28
+
+### Patch Changes
+
+- c56498d2: Do not turn string for date and timestamp column to Date before saving (#179)
+
 ## 0.18.27
 
 ### Patch Changes
