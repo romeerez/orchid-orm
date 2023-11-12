@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.63
+
+### Patch Changes
+
+- 67eeefd3: Change resolving path to dbScript to support bundling
+
 ## 2.10.62
 
 ### Patch Changes
