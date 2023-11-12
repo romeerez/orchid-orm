@@ -8,7 +8,7 @@ import {
   NoPrimaryKeyOption,
   QueryLogOptions,
 } from 'pqb';
-import { ColumnTypesBase, getCallerFilePath, singleQuote } from 'orchid-core';
+import { ColumnTypesBase, getStackTrace, singleQuote } from 'orchid-core';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
@@ -133,7 +133,9 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
   }
 
   if (!result.basePath || !result.dbScript) {
-    const filePath = getCallerFilePath();
+    // 0 is getStackTrace file, 1 is this function, 2 is a caller in rakeDb.ts, 3 is the user db script file.
+    // bundlers can bundle all files into a single file, or change file structure, so this must rely only on the caller index.
+    const filePath = getStackTrace()?.[3].getFileName();
     if (!filePath) {
       throw new Error(
         'Failed to determine path to db script. Please set basePath option of rakeDb',

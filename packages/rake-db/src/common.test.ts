@@ -20,7 +20,7 @@ import { readdir } from 'fs/promises';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { testConfig } from './rake-db.test-utils';
-import { getCallerFilePath } from 'orchid-core';
+import { getCallerFilePath, getStackTrace } from 'orchid-core';
 
 jest.mock('prompts', () => jest.fn());
 
@@ -30,6 +30,7 @@ jest.mock('fs/promises', () => ({
 
 jest.mock('orchid-core', () => ({
   ...jest.requireActual('../../core/src'),
+  getStackTrace: jest.fn(),
   getCallerFilePath: jest.fn(),
 }));
 
@@ -82,7 +83,12 @@ describe('common', () => {
 
     // https://github.com/romeerez/orchid-orm/issues/157: when calling rakeDb script with vite-node without .ts suffix
     it(`should throw when no basePath and can't get it automatically`, () => {
-      asMock(getCallerFilePath).mockReturnValueOnce('some-path');
+      asMock(getStackTrace).mockReturnValueOnce([
+        null,
+        null,
+        null,
+        { getFileName: () => 'some-path' },
+      ]);
 
       expect(() => processRakeDbConfig({})).toThrow(
         'Add a .ts suffix to the "some-path" when calling it',
