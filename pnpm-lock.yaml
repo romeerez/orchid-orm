@@ -90,6 +90,19 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
 
+  packages/create-orm:
+    dependencies:
+      prompts:
+        specifier: ^2.4.2
+        version: 2.4.2
+    devDependencies:
+      '@types/prompts':
+        specifier: ^2.4.2
+        version: 2.4.2
+      rollup-plugin-executable:
+        specifier: ^1.6.3
+        version: 1.6.3
+
   packages/orm:
     dependencies:
       inflection:
@@ -1643,10 +1656,6 @@ packages:
     resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
     dev: true
 
-  /@types/node@18.11.9:
-    resolution: {integrity: sha512-CRpX21/kGdzjOpFsZSkcrXMGIBWMGNIHXXBVFSH+ggkftxg+XYP20TESbh+zFvFj3EQOl5byk0HTRn1IL6hbqg==}
-    dev: true
-
   /@types/node@18.15.11:
     resolution: {integrity: sha512-E5Kwq2n4SbMzQOn6wnmBjuK9ouqlURrcZDVfbo9ftDDTFt3nk7ZKK4GMOzoYgnpQJKcxwQw+lGaBvvlMo0qN/Q==}
 
@@ -1668,7 +1677,7 @@ packages:
   /@types/prompts@2.4.2:
     resolution: {integrity: sha512-TwNx7qsjvRIUv/BCx583tqF5IINEVjCNqg9ofKHRlSoUHE62WBHrem4B1HGXcIrG511v29d1kJ9a/t2Esz7MIg==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.15.11
       kleur: 3.0.3
     dev: true
 
@@ -4561,6 +4570,13 @@ packages:
       rollup: 3.20.2
     transitivePeerDependencies:
       - supports-color
+    dev: true
+
+  /rollup-plugin-executable@1.6.3:
+    resolution: {integrity: sha512-634q95UyowXcX5yu3zIxVQ5aWgE3WVE1zdIiwKangMYt1Lw0T0MfCHEPYvZP/0V7ni2NJr/4iVseIgCjkuSA1A==}
+    engines: {node: '>=10.0.0', npm: '>=4.0.0', yarn: '>=1.0.0'}
+    dependencies:
+      '@babel/runtime': 7.20.1
     dev: true
 
   /rollup@3.20.2:

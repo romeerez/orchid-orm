@@ -14,7 +14,7 @@ import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
 import prompts from 'prompts';
 import { TableQuery } from './migration/createTable';
-import { pathToFileURL } from 'url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
 type Db = DbResult<DefaultColumnTypes>;
 
@@ -135,11 +135,15 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
   if (!result.basePath || !result.dbScript) {
     // 0 is getStackTrace file, 1 is this function, 2 is a caller in rakeDb.ts, 3 is the user db script file.
     // bundlers can bundle all files into a single file, or change file structure, so this must rely only on the caller index.
-    const filePath = getStackTrace()?.[3].getFileName();
+    let filePath = getStackTrace()?.[3].getFileName();
     if (!filePath) {
       throw new Error(
         'Failed to determine path to db script. Please set basePath option of rakeDb',
       );
+    }
+
+    if (filePath.startsWith('file://')) {
+      filePath = fileURLToPath(filePath);
     }
 
     const ext = path.extname(filePath);

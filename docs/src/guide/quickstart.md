@@ -3,71 +3,79 @@
 Orchid ORM has a script to initialize the project with a command-line prompts.
 Use it to start from scratch, or it can be run inside the existing project, it won't remove any existing files.
 
-## init script
+## Scaffold Orchid ORM
+
+Run the following script for both cases of scaffolding a new project or adding the ORM to already existing project.
 
 ```sh
-npx orchid-orm@latest
-# or if you're using pnpm
-pnpm dlx orchid-orm@latest
+# with npm:
+npm create orchid-orm@latest
+
+# with pnpm:
+pnpm create orchid-orm
+
+# with bun:
+bun create orchid-orm
+
+# with yarn:
+yarn create orchid-orm
 ```
 
 This script will ask a few questions to customize the setup:
 
-```
-Where would you like to install Orchid ORM?
-```
+> Where to install Orchid ORM?
 
-Press enter to init in the current directory, or specify a path. It will create directories recursively unless they exist.
+Hit enter to use the current directory, or enter a name for a new directory, or a relative or absolute path.
+It will create directories recursively unless they exist.
 
-```
-Preferred type of returned timestamps:
-```
+> Choose a tool for executing TS files
+
+When running command with `bun`, this question is skipped and `bun` will be used.
+Otherwise, choose between [tsx](https://github.com/privatenumber/tsx), [vite-node](https://github.com/vitest-dev/vitest/tree/main/packages/vite-node), and [ts-node](https://github.com/TypeStrong/ts-node).
+
+`tsx` and `vite-node` templates includes compiling and running compiled migrations, `bun` and `ts-node` don't template don't include that.
+
+> Return timestamps as:
 
 Here you can choose how timestamps will be returned from a database: as a string, as a number, or as a Date object.
 
 This can be changed later, and this can be overridden for a specific table.
 
-```
-Should the script add a separate database for tests:
-```
+> Add a separate database for tests?
 
-Hit `y` if you're going to write integration tests over a real database.
+Hit `y` if you're going to run tests over a real database.
 
-```
-Are you going to use `Zod` for validation?
-```
+Orchid ORM has special utilities (see [testTransaction](/guide/transactions.html#testtransaction))
+and [record factories](/guide/test-factories.html)
+to make writing tests easy and fun.
 
-When chosen, table schemas can be used as `Zod` schemas for validation. `orchid-orm` does not perform validation on its own.
+> Add Zod for validations?
 
-```
-Do you want object factories for writing tests?
-```
+Hit `y` to have a `Zod` integration (see [validation methods](/guide/columns-validation-methods.html)).
+Orchid ORM does not validate data on its own.
 
-This adds a library for generating mock objects from defined tables.
+> Add object factories for writing tests?
 
-```
-Should the script add demo tables?
-```
+Hit `y` for [record factories](/guide/test-factories.html) (generating mock objects from tables).
 
-Adds two tables for example.
+> Add demo tables?
 
-```
-Let's add fast TS compiler swc?
-```
+Adds a post and a comment table files, migrations, seed file for example.
 
-It's only asked when initializing a new project (when no `tsconfig.json` found), this will add [swc](https://swc.rs/) compiler to a `package.json` and to `tsconfig.json`.
-
-After answering these questions, it will create all the necessary config files.
+After receiving the answers, the script will create all the necessary config files.
 
 ## package.json
 
-After running the script, check if the package.json file looks well, and install dependencies (`npm i`) :
+After running the script, take a look at the package.json file, and install dependencies.
 
 ```js
 {
+  "name": "project",
+  // "type": "module" is set when choosing tsx, vite-node, or bun
+  "type": "module",
   "scripts": {
     // for running db scripts, like npm run db create, npm run db migrate
-    "db": "ts-node src/db/dbScript.ts"
+    "db": "tsx src/db/dbScript.ts"
   },
   "dependencies": {
     // dotenv loads variables from .env
@@ -88,22 +96,80 @@ After running the script, check if the package.json file looks well, and install
     "@swc/core": "^1.3.32",
     // node.js types
     "@types/node": "^18.11.18",
+    "typescript": "^4.9.5",
     // for running typescript
-    "ts-node": "^10.9.1",
-    "typescript": "^4.9.5"
+    "tsx": "^4.1.1"
   }
 }
 ```
 
-Note the `db` script: it is for running migrations, and it's being launched with `ts-node`.
+If you already have a `tsconfig.json` file in this directory, it won't be changed.
 
-## ES modules
+For everything to work properly, `tsconfig.json` must have a `target` property and `"strict": true`.
 
-Some npm packages don't support `commonjs` and require a special setup for ES modules.
+## Configuring with Vite
 
-In such case, we suggest to configure the project with `vite-node`, follow [these instructions](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/express-esm).
+There is a wonderful plugin [vite-plugin-node](https://github.com/axe-me/vite-plugin-node) that enables HMR for developing node.js backends,
+and if your dev server is running with Vite, it makes sense to also use it for bundling and running db scripts.
 
-If, during init script, you opted for `swc` compiler - it's no longer needed, remove `swc` from dependencies and from `tsconfig.json`.
+If you chose `vite-node`, package.json will include:
+
+```json
+{
+  "scripts": {
+    // to run db scripts
+    "db": "vite-node src/db/dbScript.ts --",
+    // build migrations
+    "build:migrations": "vite build --config vite.migrations.ts",
+    // run compiled migrations
+    "db:compiled": "node dist/db/dbScript.js"
+  },
+  "devDependencies": {
+    // vite bundler itself
+    "vite": "^4.5.0",
+    // for executing typescript
+    "vite-node": "^0.34.6",
+    // special plugin for compiling migrations
+    "rollup-plugin-node-externals": "^6.1.2"
+  }
+}
+```
+
+Orchid ORM's scaffolding script does not make assumptions on how you start and compile your app,
+it adds separate scripts for building and compiling migrations that you can use for CI/CD.
+
+In some scenarios it may not make a difference if the original TS migration files are executed to migrate production db.
+In other cases, it may be wanted to run migration files as fast as possible, and the compiled JS files are executing faster.
+
+## Configuring with tsx
+
+[tsx](https://github.com/privatenumber/tsx) is only meant for executing typescript,
+for compiling we'll need `esbuild`.
+
+If you chose `tsx`, package.json will include:
+
+```json
+{
+  "scripts": {
+    // to run db scripts
+    "db": "NODE_ENV=development tsx src/db/dbScript.ts",
+    // build migrations
+    "build:migrations": "rimraf dist/db && node esbuild.migrations.js",
+    // run compiled migrations
+    "db:compiled": "NODE_ENV=production node dist/db/dbScript.js"
+  },
+  "devDependencies": {
+    // for executing TS
+    "tsx": "^4.1.1",
+    // for compiling
+    "esbuild": "^0.19.5",
+    // to clean dist directory
+    "rimraf": "^5.0.5"
+  }
+}
+```
+
+This config allows to run migrations, compile them to `.js` files, and to run compiled migrations.
 
 ## structure
 

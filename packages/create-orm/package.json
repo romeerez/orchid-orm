@@ -1,0 +1,54 @@
+{
+  "name": "create-orchid-orm",
+  "version": "0.0.0",
+  "description": "Initialize Orchid ORM",
+  "license": "ISC",
+  "author": "Roman Kushyn",
+  "homepage": "https://orchid-orm.netlify.app/guide/quickstart.html",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/create-orm"
+  },
+  "bin": "dist/bin.js",
+  "main": "dist/lib.js",
+  "module": "dist/lib.mjs",
+  "typings": "dist/lib.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/lib.js",
+      "import": "./dist/lib.mjs",
+      "types": "./dist/lib.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "jest --watch --verbose false",
+    "check": "jest",
+    "types": "tsc",
+    "test:ci": "jest --coverage --coverageReporters json-summary",
+    "build": "rimraf ./dist/ && rollup -c ./rollup.config.mjs",
+    "prepublishOnly": "pnpm build"
+  },
+  "jest": {
+    "rootDir": "src",
+    "coverageDirectory": "../coverage",
+    "setupFiles": [
+      "dotenv/config"
+    ],
+    "setupFilesAfterEnv": [
+      "../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
+  },
+  "dependencies": {
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.4.2",
+    "rollup-plugin-executable": "^1.6.3"
+  }
+}
