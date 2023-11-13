@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.17.29
+
+### Patch Changes
+
+- 4781781b: Extract init script into own package and renew it
+
 ## 1.17.28
 
 ### Patch Changes

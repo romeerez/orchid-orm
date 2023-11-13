@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.64
+
+### Patch Changes
+
+- 4781781b: Extract init script into own package and renew it
+
 ## 2.10.63
 
 ### Patch Changes
