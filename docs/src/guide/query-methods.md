@@ -534,9 +534,25 @@ For the `GROUP BY` SQL statement, it is accepting column names or raw SQL expres
 
 ```ts
 // Select the category and sum of prices grouped by the category
-const results = Product.select('category')
+const results = db.product
+  .select('category')
   .selectSum('price', { as: 'sumPrice' })
   .group('category');
+```
+
+Also, it's possible to group by a selected value:
+
+```ts
+const results = db.product
+  .select({
+    month: db.product.sql`extract(month from "createdAt")`.type((t) =>
+      // month is returned as string, parse it to int
+      t.string().parse(parseInt),
+    ),
+  })
+  .selectSum('price', { as: 'sumPrice' })
+  // group by month extracted from "createdAt"
+  .group('month');
 ```
 
 ## order

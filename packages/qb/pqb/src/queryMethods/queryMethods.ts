@@ -110,6 +110,16 @@ export type OrderArg<
 
 export type OrderArgs<T extends Query> = OrderArg<T>[] | TemplateLiteralArgs;
 
+export type GroupArg<T extends Query> =
+  | {
+      [K in keyof T['result']]: T['result'][K]['dataType'] extends
+        | 'array'
+        | 'object'
+        ? never
+        : K;
+    }[keyof T['result']]
+  | Expression;
+
 type FindArgs<T extends Query> =
   | [T['shape'][T['singlePrimaryKey']]['queryType'] | Expression]
   | TemplateLiteralArgs;
@@ -505,17 +515,33 @@ export class QueryMethods<ColumnTypes> {
    *
    * ```ts
    * // Select the category and sum of prices grouped by the category
-   * const results = Product.select('category')
+   * const results = db.product
+   *   .select('category')
    *   .selectSum('price', { as: 'sumPrice' })
    *   .group('category');
    * ```
    *
+   * Also, it's possible to group by a selected value:
+   *
+   * ```ts
+   * const results = db.product
+   *   .select({
+   *     month: db.product.sql`extract(month from "createdAt")`.type((t) =>
+   *       // month is returned as string, parse it to int
+   *       t.string().parse(parseInt),
+   *     ),
+   *   })
+   *   .selectSum('price', { as: 'sumPrice' })
+   *   // group by month extracted from "createdAt"
+   *   .group('month');
+   * ```
+   *
    * @param columns - column names or a raw SQL
    */
-  group<T extends Query>(this: T, ...columns: SelectableOrExpression<T>[]): T {
+  group<T extends Query>(this: T, ...columns: GroupArg<T>[]): T {
     return this.clone()._group(...columns);
   }
-  _group<T extends Query>(this: T, ...columns: SelectableOrExpression<T>[]): T {
+  _group<T extends Query>(this: T, ...columns: GroupArg<T>[]): T {
     return pushQueryArray(this, 'group', columns);
   }
 

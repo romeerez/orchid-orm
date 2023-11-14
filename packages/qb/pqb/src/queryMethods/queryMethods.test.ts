@@ -589,6 +589,23 @@ describe('queryMethods', () => {
       q._group(testDb.sql`id`, testDb.sql`name`);
       expectSql(q.toSQL({ clearCache: true }), expectedSql);
     });
+
+    it('should group by selected value', () => {
+      const q = User.select({
+        month: User.sql<string>`extract(month from "createdAt")`,
+      }).group('month');
+
+      assertType<Awaited<typeof q>, { month: string }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT extract(month from "createdAt") AS "month"
+          FROM "user"
+          GROUP BY "month"
+        `,
+      );
+    });
   });
 
   describe('window', () => {
