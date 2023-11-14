@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.29
+
+### Patch Changes
+
+- f3cfab1a: Support `group` by selected value (#212)
+
 ## 0.18.28
 
 ### Patch Changes
