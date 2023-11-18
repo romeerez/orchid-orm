@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.67
+
+### Patch Changes
+
+- ee7aaeaf: Fix inconsistent order of changes applied when running migration up and down programmatically multiple times (#214)
+
 ## 2.10.66
 
 ### Patch Changes
