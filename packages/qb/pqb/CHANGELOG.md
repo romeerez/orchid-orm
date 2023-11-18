@@ -1,5 +1,13 @@
 # pqb
 
+## 0.18.30
+
+### Patch Changes
+
+- 057b1b5a: Change type of `Query.meta.defaults` from union of string literals to `Record<string, true>`, it is a more correct type for this case and it solves (#213)
+- Updated dependencies [057b1b5a]
+  - orchid-core@0.10.15
+
 ## 0.18.29
 
 ### Patch Changes
