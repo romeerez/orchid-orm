@@ -385,9 +385,7 @@ function getMigrationsFromConfig(
     });
   }
 
-  if (!up) result.reverse();
-
-  return result;
+  return up ? result : result.reverse();
 }
 
 // Scans files under `migrationsPath` to convert files into migration items.

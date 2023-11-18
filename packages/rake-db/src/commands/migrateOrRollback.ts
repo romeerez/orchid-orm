@@ -162,8 +162,15 @@ const processMigration = async <CT extends ColumnTypesBase>(
 
     const db = createMigrationInterface<CT>(tx, up, config);
 
-    for (const fn of up ? changes : changes.reverse()) {
-      await (fn as unknown as ChangeCallback<CT>)(db, up);
+    if (changes.length) {
+      // when up: for (let i = 0; i !== changes.length - 1; i++)
+      // when down: for (let i = changes.length - 1; i !== -1; i--)
+      const from = up ? 0 : changes.length - 1;
+      const to = up ? changes.length : -1;
+      const step = up ? 1 : -1;
+      for (let i = from; i !== to; i += step) {
+        await (changes[i] as unknown as ChangeCallback<CT>)(db, up);
+      }
     }
 
     await (up ? saveMigratedVersion : removeMigratedVersion)(
@@ -226,12 +233,5 @@ export const redo = async <CT extends ColumnTypesBase>(
   args: string[] = [],
 ): Promise<void> => {
   await migrateOrRollback(options, config, args, false);
-
-  // because we just called rollback, `change` functions are cached bottom-to-top.
-  // now we are about to migrate, and need to reverse cached functions.
-  for (const file in changeCache) {
-    changeCache[file]?.reverse();
-  }
-
   await migrateOrRollback(options, config, args, true);
 };
