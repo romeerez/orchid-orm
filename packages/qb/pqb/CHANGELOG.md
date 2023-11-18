@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.31
+
+### Patch Changes
+
+- e4e4f963: Add `QueryHelperResult` type helper (#215)
+
 ## 0.18.30
 
 ### Patch Changes
