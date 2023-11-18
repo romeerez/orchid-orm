@@ -18,7 +18,12 @@ export async function setupTSConfig(config: InitConfig): Promise<void> {
   await fs.writeFile(
     tsConfigPath,
     `{
-  "compilerOptions": {
+  "compilerOptions": {${
+    config.runner === 'ts-node'
+      ? `
+    "outDir": "dist",`
+      : ''
+  }
     "target": "es2017",
     "module": "${module}",${moduleResolution}
     "esModuleInterop": true,

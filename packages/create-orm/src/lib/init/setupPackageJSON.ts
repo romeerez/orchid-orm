@@ -48,31 +48,24 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
 
   if (config.esm) json = { name: json.name, type: 'module', ...json };
 
-  if (!json.scripts) json.scripts = {};
+  const scripts = (json.scripts ??= {});
 
-  let db: string;
-  let build: string | undefined;
-  let compiledDb: string | undefined;
   if (config.runner === 'vite-node') {
-    db = 'vite-node src/db/dbScript.ts --';
-    build = 'vite build --config vite.migrations.ts';
-    compiledDb = 'node dist/db/dbScript.js';
+    scripts.db = 'vite-node src/db/dbScript.ts --';
+    scripts['build:migrations'] = 'vite build --config vite.migrations.mts';
+    scripts['db:compiled'] = 'node dist/db/dbScript.mjs';
   } else if (config.runner === 'tsx') {
-    db = 'NODE_ENV=development tsx src/db/dbScript.ts';
-    build = 'rimraf dist/db && node esbuild.migrations.js';
-    compiledDb = 'NODE_ENV=production node dist/db/dbScript.js';
+    scripts.db = 'NODE_ENV=development tsx src/db/dbScript.ts';
+    scripts['build:migrations'] =
+      'rimraf dist/db && node esbuild.migrations.mjs';
+    scripts['db:compiled'] = 'NODE_ENV=production node dist/db/dbScript.mjs';
   } else {
-    db = `${config.runner} src/db/dbScript.ts`;
-  }
+    scripts.db = `${config.runner} src/db/dbScript.ts`;
 
-  json.scripts.db = db;
-
-  if (build) {
-    json.scripts['build:migrations'] = build;
-  }
-
-  if (compiledDb) {
-    json.scripts['db:compiled'] = compiledDb;
+    if (config.runner === 'ts-node') {
+      scripts.build = 'tsc';
+      scripts['db:compiled'] = 'node dist/dbScript.js';
+    }
   }
 
   if (!json.dependencies) json.dependencies = {};

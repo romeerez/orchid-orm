@@ -1,5 +1,5 @@
 .idea
-gitignored
+_local
 roadmap.md
 .env
 .turbo

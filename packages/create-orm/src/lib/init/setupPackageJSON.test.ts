@@ -36,8 +36,8 @@ const devDependencies = `"rake-db": "^1.2.3",
     "typescript": "^1.2.3"`;
 
 const tsxScripts = `"db": "NODE_ENV=development tsx src/db/dbScript.ts",
-    "build:migrations": "rimraf dist/db && node esbuild.migrations.js",
-    "db:compiled": "NODE_ENV=production node dist/db/dbScript.js"`;
+    "build:migrations": "rimraf dist/db && node esbuild.migrations.mjs",
+    "db:compiled": "NODE_ENV=production node dist/db/dbScript.mjs"`;
 
 const tsxDeps = `"tsx": "^1.2.3",
     "esbuild": "^1.2.3",
@@ -216,8 +216,8 @@ describe('setupPackageJSON', () => {
   "type": "module",
   "scripts": {
     "db": "vite-node src/db/dbScript.ts --",
-    "build:migrations": "vite build --config vite.migrations.ts",
-    "db:compiled": "node dist/db/dbScript.js"
+    "build:migrations": "vite build --config vite.migrations.mts",
+    "db:compiled": "node dist/db/dbScript.mjs"
   },
   "dependencies": {
     ${dependencies}
@@ -269,7 +269,9 @@ describe('setupPackageJSON', () => {
     expect(writeFile.mock.calls[0][1]).toBe(`{
   "name": "project",
   "scripts": {
-    "db": "ts-node src/db/dbScript.ts"
+    "db": "ts-node src/db/dbScript.ts",
+    "build": "tsc",
+    "db:compiled": "node dist/dbScript.js"
   },
   "dependencies": {
     ${dependencies}

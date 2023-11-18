@@ -1,9 +1,6 @@
 import fs from 'fs/promises';
 import { initSteps } from '../init';
-import { resolve } from 'path';
 import { mockFn, testInitConfig } from '../../testUtils';
-
-const tsConfigPath = resolve(testInitConfig.path, 'tsconfig.json');
 
 const writeFile = mockFn(fs, 'writeFile');
 
@@ -13,8 +10,7 @@ describe('setupTSConfig', () => {
   it('should create tsconfig.json if not not exist', async () => {
     await initSteps.setupTSConfig({ ...testInitConfig, hasTsConfig: false });
 
-    const call = writeFile.mock.calls.find(([to]) => to === tsConfigPath);
-    expect(call?.[1]).toBe(`{
+    expect(writeFile.mock.calls[0][1]).toBe(`{
   "compilerOptions": {
     "target": "es2017",
     "module": "esnext",
@@ -41,8 +37,7 @@ describe('setupTSConfig', () => {
       runner: 'vite-node',
     });
 
-    const call = writeFile.mock.calls.find(([to]) => to === tsConfigPath);
-    expect(call?.[1]).toBe(`{
+    expect(writeFile.mock.calls[0][1]).toBe(`{
   "compilerOptions": {
     "target": "es2017",
     "module": "esnext",
@@ -52,6 +47,27 @@ describe('setupTSConfig', () => {
     "strict": true,
     "skipLibCheck": true,
     "types": ["vite/client"]
+  }
+}
+`);
+  });
+
+  it('should add "outDir": "dist" for ts-node', async () => {
+    await initSteps.setupTSConfig({
+      ...testInitConfig,
+      hasTsConfig: false,
+      runner: 'ts-node',
+    });
+
+    expect(writeFile.mock.calls[0][1]).toBe(`{
+  "compilerOptions": {
+    "outDir": "dist",
+    "target": "es2017",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
   }
 }
 `);

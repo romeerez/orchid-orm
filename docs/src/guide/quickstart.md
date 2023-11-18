@@ -33,7 +33,7 @@ It will create directories recursively unless they exist.
 When running command with `bun`, this question is skipped and `bun` will be used.
 Otherwise, choose between [tsx](https://github.com/privatenumber/tsx), [vite-node](https://github.com/vitest-dev/vitest/tree/main/packages/vite-node), and [ts-node](https://github.com/TypeStrong/ts-node).
 
-`tsx` and `vite-node` templates includes compiling and running compiled migrations, `bun` and `ts-node` don't template don't include that.
+In addition to apply migrations from `.ts` files, for `tsx`, `vite-node`, and `ts-node` there will be package.json scripts to build migrations to `.js` and apply compiled migrations.
 
 > Return timestamps as:
 
@@ -116,13 +116,14 @@ If you chose `vite-node`, package.json will include:
 
 ```json
 {
+  "type": "module",
   "scripts": {
     // to run db scripts
     "db": "vite-node src/db/dbScript.ts --",
     // build migrations
-    "build:migrations": "vite build --config vite.migrations.ts",
+    "build:migrations": "vite build --config vite.migrations.mts",
     // run compiled migrations
-    "db:compiled": "node dist/db/dbScript.js"
+    "db:compiled": "node dist/db/dbScript.mjs"
   },
   "devDependencies": {
     // vite bundler itself
@@ -134,6 +135,11 @@ If you chose `vite-node`, package.json will include:
   }
 }
 ```
+
+:::info
+Notice `"type": "module"` at the top: all compiled files will be treated as ES modules.
+In case your project relies on commonjs modules, remove the `"type": "module"`, compiled migrations would still work as expected.
+:::
 
 Orchid ORM's scaffolding script does not make assumptions on how you start and compile your app,
 it adds separate scripts for building and compiling migrations that you can use for CI/CD.
@@ -150,6 +156,7 @@ If you chose `tsx`, package.json will include:
 
 ```json
 {
+  "type": "module",
   "scripts": {
     // to run db scripts
     "db": "NODE_ENV=development tsx src/db/dbScript.ts",
@@ -168,6 +175,11 @@ If you chose `tsx`, package.json will include:
   }
 }
 ```
+
+:::info
+Notice `"type": "module"` at the top: all compiled files will be treated as ES modules.
+In case your project relies on commonjs modules, remove the `"type": "module"`, compiled migrations would still work as expected.
+:::
 
 This config allows to run migrations, compile them to `.js` files, and to run compiled migrations.
 

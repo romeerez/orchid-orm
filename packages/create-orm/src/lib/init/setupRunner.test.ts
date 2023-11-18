@@ -12,7 +12,7 @@ describe('setupRunner', () => {
     await initSteps.setupRunner({ ...testInitConfig, runner: 'vite-node' });
 
     expect(writeFile).toBeCalledWith(
-      resolve(testInitConfig.path, 'vite.migrations.ts'),
+      resolve(testInitConfig.path, 'vite.migrations.mts'),
       expect.stringContaining('defineConfig'),
     );
   });
@@ -21,7 +21,7 @@ describe('setupRunner', () => {
     await initSteps.setupRunner({ ...testInitConfig, runner: 'tsx' });
 
     expect(writeFile).toBeCalledWith(
-      resolve(testInitConfig.path, 'esbuild.migrations.js'),
+      resolve(testInitConfig.path, 'esbuild.migrations.mjs'),
       expect.stringContaining('esbuild'),
     );
   });
