@@ -112,7 +112,7 @@ export type HasAndBelongsToManyInfo<
         T['columns'][Relation['options']['primaryKey']]['type']
       >
     : never;
-  populate: never;
+  populate: EmptyObject;
   chainedCreate: true;
   chainedDelete: true;
 };

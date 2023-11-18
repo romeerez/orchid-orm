@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
+import { EmptyObject } from './utils';
 
 // Output type of the `toSQL` method of query objects.
 // This will be passed to database adapter to perform query.
@@ -23,8 +24,8 @@ export type QueryMetaBase = {
   // `update` and `delete` require the query to have `where`.
   // Calling `.all()` is also setting `hasWhere` to true.
   hasWhere?: true;
-  // Union of columns with defaults for `create` to make them optional.
-  defaults: PropertyKey;
+  // Record<string, true> where keys are columns with defaults for `create` to make them optional.
+  defaults: EmptyObject;
   // Union of available full text search aliases to use in `headline` and in `order`.
   tsQuery?: string;
 };

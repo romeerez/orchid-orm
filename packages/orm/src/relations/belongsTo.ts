@@ -113,7 +113,7 @@ export type BelongsToInfo<
   };
 
   params: { [K in FK]: T['columns'][FK]['type'] };
-  populate: never;
+  populate: EmptyObject;
   chainedCreate: false;
   chainedDelete: false;
 };

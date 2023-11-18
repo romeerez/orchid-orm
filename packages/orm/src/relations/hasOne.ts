@@ -69,10 +69,13 @@ export type HasOneInfo<
   Relations extends RelationThunks,
   Relation extends HasOne,
   K extends string,
-  Populate extends string = Relation['options'] extends RelationRefsOptions
-    ? Relation['options']['references'][number]
+  Populate extends Record<
+    string,
+    true
+  > = Relation['options'] extends RelationRefsOptions
+    ? Record<Relation['options']['references'][number], true>
     : Relation['options'] extends RelationKeysOptions
-    ? Relation['options']['foreignKey']
+    ? Record<Relation['options']['foreignKey'], true>
     : never,
   TC extends TableClass = ReturnType<Relation['fn']>,
   Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,

@@ -41,7 +41,7 @@ export type CreateData<
   T extends Query,
   Data = SetOptional<
     { [K in keyof T['inputType']]: CreateColumn<T, K> },
-    T['meta']['defaults']
+    keyof T['meta']['defaults']
   >,
 > = [keyof T['relations']] extends [never]
   ? // if no relations, don't load TS with extra calculations
@@ -86,7 +86,7 @@ export type CreateRelationsDataOmittingFKeys<
   Union extends [Record<string, unknown>] = {
     [K in keyof Relations]: CreateRelationDataOmittingFKeys<
       Relations[K]['relationConfig'],
-      T['meta']['defaults']
+      keyof T['meta']['defaults']
     >;
   }[keyof Relations],
 > =
@@ -193,7 +193,7 @@ type CreateManyRawData<T extends Query> = {
 
 // Record<(column name), true> where the column doesn't have a default, and it is not nullable.
 type RawRequiredColumns<T extends Query> = {
-  [K in keyof T['inputType'] as K extends T['meta']['defaults']
+  [K in keyof T['inputType'] as K extends keyof T['meta']['defaults']
     ? never
     : null extends T['inputType'][K]
     ? never
@@ -225,11 +225,14 @@ type OnConflictArg<T extends Query> =
   | (keyof T['shape'])[]
   | Expression;
 
-export type AddQueryDefaults<T extends Query, Defaults extends PropertyKey> = {
+export type AddQueryDefaults<
+  T extends Query,
+  Defaults extends Record<string, true>,
+> = {
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta']]: K extends 'defaults'
-          ? T['meta']['defaults'] | Defaults
+          ? T['meta']['defaults'] & Defaults
           : T['meta'][K];
       }
     : T[K];
@@ -924,15 +927,15 @@ export class Create {
   defaults<T extends Query, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
-  ): AddQueryDefaults<T, keyof Data> {
+  ): AddQueryDefaults<T, Record<keyof Data, true>> {
     return (this.clone() as T)._defaults(data);
   }
   _defaults<T extends Query, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
-  ): AddQueryDefaults<T, keyof Data> {
+  ): AddQueryDefaults<T, Record<keyof Data, true>> {
     this.q.defaults = data;
-    return this as AddQueryDefaults<T, keyof Data>;
+    return this as AddQueryDefaults<T, Record<keyof Data, true>>;
   }
 
   /**

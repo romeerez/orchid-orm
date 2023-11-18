@@ -122,12 +122,10 @@ export interface Db<
   meta: {
     kind: 'select';
     defaults: {
-      [K in keyof Shape]:
-        | undefined
-        | unknown extends Shape[K]['data']['default']
+      [K in keyof Shape as unknown extends Shape[K]['data']['default']
         ? never
-        : K;
-    }[keyof Shape];
+        : K]: true;
+    };
   };
 }
 

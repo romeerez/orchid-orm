@@ -28,7 +28,7 @@ export type RelationConfigBase = {
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
   params: Record<string, unknown>;
-  populate: string;
+  populate: Record<string, true>;
   chainedCreate: boolean;
   chainedDelete: boolean;
 };
@@ -52,7 +52,7 @@ export type RelationQuery<
     [K in keyof T | 'relationConfig']: K extends 'meta'
       ? Omit<T['meta'], 'as' | 'defaults'> & {
           as: StringKey<Name>;
-          defaults: T['meta']['defaults'] | Config['populate'];
+          defaults: T['meta']['defaults'] & Config['populate'];
           hasWhere: true;
         }
       : K extends 'join'
