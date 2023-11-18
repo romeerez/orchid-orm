@@ -124,18 +124,27 @@ type FindArgs<T extends Query> =
   | [T['shape'][T['singlePrimaryKey']]['queryType'] | Expression]
   | TemplateLiteralArgs;
 
-type QueryHelper<T extends Query, Args extends unknown[], Result> = <
-  Q extends {
-    [K in keyof T]: K extends 'then'
-      ? QueryThen<unknown>
-      : K extends 'result'
-      ? ColumnsShapeBase
-      : T[K];
-  },
->(
-  q: Q,
-  ...args: Args
-) => Result extends Query ? MergeQuery<Q, Result> : Result;
+type QueryHelper<T extends Query, Args extends unknown[], Result> = {
+  <
+    Q extends {
+      [K in keyof T]: K extends 'then'
+        ? QueryThen<unknown>
+        : K extends 'result'
+        ? ColumnsShapeBase
+        : T[K];
+    },
+  >(
+    q: Q,
+    ...args: Args
+  ): Result extends Query ? MergeQuery<Q, Result> : Result;
+
+  result: Result;
+};
+
+// Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
+export type QueryHelperResult<
+  T extends QueryHelper<Query, unknown[], unknown>,
+> = T['result'];
 
 // Result of `truncate` method: query has kind 'truncate' and returns nothing.
 type TruncateResult<T extends Query> = SetQueryKind<

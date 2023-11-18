@@ -842,6 +842,20 @@ const selectFollowing = db.user.makeHelper((q, currentUser: { id: number }) => {
 await selectFollowing(db.user.select('id', 'name'), currentUser);
 ```
 
+To get the result type of query helper, use `QueryHelperResult` from `pqb`:
+
+```ts
+import { QueryHelperResult } from 'pqb';
+
+const selectHelper = db.table.makeHelper((q) => q.select('id', 'name'));
+
+// This type is identical to `db.table.select('id', 'name')`
+type SelectQuery = QueryHelperResult<typeof selectHelper>;
+
+// Await to get result, the type is `{ id: number, name: string }[]`
+type Result = Awaited<QueryHelperResult<typeof selectHelper>>;
+```
+
 ## toSQL
 
 [//]: # 'has JSDoc'
