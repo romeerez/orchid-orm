@@ -119,7 +119,7 @@ const posts = await db.post.where(
     post.tags // query tags of the post
       .whereIn('tagName', givenTags) // where name of the tag is inside array
       .count() // count how many such tags were found
-      .equals(wantedTags.length), // the count must be exactly the length of array
+      .equals(givenTags.length), // the count must be exactly the length of array
   // if the post has ony `typescript` tag but not the `node.js` it will be omitted
 );
 ```

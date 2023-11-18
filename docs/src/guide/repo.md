@@ -51,7 +51,7 @@ When more arguments are needed, they should have a type.
 
 Repositories can use all table features, such as sub-queries on relations.
 
-Note how `followRepo` is used inside of the `followed` callback, in a such way one repository can use another to decouple responsibilities.
+Note how `followRepo` is used inside the `followed` callback, in a such way one repository can use another to decouple responsibilities.
 
 And then we can use this repo in other parts of our code:
 
@@ -70,17 +70,6 @@ users[0].followed; // boolean
 All methods became chainable, first argument `q` is injected automatically under the hood.
 
 Type safety is still guaranteed, so `users` is an array of specific objects with id: number, firstName: string, following: boolean, etc.
-
-Need to be careful when using repositories inside of transactions:
-
-```ts
-await db.$transaction(async (db) => {
-  // wrong: userRepo is using a main `db` by default
-  await userRepo.search(query);
-  // need to provide `db.user` explicitly:
-  await userRepo(db.user).search(query);
-});
-```
 
 Currently, it is not possible to use one method of the same repo in another method due to TypeScript limitations,
 but you can extract a function for this purpose with a user of [makeHelper](/guide/query-methods#makeHelper):

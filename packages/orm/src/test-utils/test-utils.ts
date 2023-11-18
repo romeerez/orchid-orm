@@ -2,6 +2,7 @@ import { createBaseTable, Selectable } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
+
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
 });
@@ -167,6 +168,7 @@ export class PostTable extends BaseTable {
       .name('userId')
       .integer()
       .foreignKey(() => UserTable, 'Id'),
+    Body: t.name('body').text(),
     Title: t.name('title').text(),
     ...t.timestamps(),
   }));
@@ -175,6 +177,10 @@ export class PostTable extends BaseTable {
     postTags: this.hasMany(() => PostTagTable, {
       columns: ['Id'],
       references: ['PostId'],
+    }),
+    tags: this.hasMany(() => TagTable, {
+      through: 'postTags',
+      source: 'tag',
     }),
   };
 }

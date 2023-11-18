@@ -2190,7 +2190,7 @@ export const updateArticleRoute = routeHandler(
   (req) => {
     const currentUserId = getCurrentUserId(req);
 
-    return db.$transaction(async (db) => {
+    return db.$transaction(async () => {
       const { slug } = req.params;
 
       // retrieve required fields and the current tags of article
