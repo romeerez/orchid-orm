@@ -1,5 +1,11 @@
 # orchid-orm-test-factory
 
+## 0.3.160
+
+### Patch Changes
+
+- a62fdd85: Add example option to init script; Fix test-factory for zod-mock updates
+
 ## 0.3.159
 
 ### Patch Changes
