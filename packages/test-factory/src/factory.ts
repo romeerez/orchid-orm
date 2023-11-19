@@ -434,6 +434,8 @@ export class TestFactory<
 
 const nowString = new Date().toISOString();
 
+const maxPostgresInt = 2147483647;
+
 export const tableFactory = <T extends Query>(
   table: T,
   options?: FactoryOptions,
@@ -472,6 +474,22 @@ export const tableFactory = <T extends Query>(
           item instanceof ZodNullable
             ? string.max(max).nullable()
             : string.max(max);
+      }
+    } else if (column instanceof IntegerBaseColumn) {
+      const item = schema.shape[key];
+      const num = (
+        item instanceof ZodNullable ? item.unwrap() : item
+      ) as ZodString;
+
+      const maxCheck = num._def.checks.find((check) => check.kind === 'max') as
+        | { value: number }
+        | undefined;
+
+      if (!maxCheck) {
+        (schema.shape as Record<string, ZodTypeAny>)[key] =
+          item instanceof ZodNullable
+            ? num.max(maxPostgresInt).nullable()
+            : num.max(maxPostgresInt);
       }
     }
 

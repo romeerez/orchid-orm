@@ -207,11 +207,11 @@ importers:
   packages/test-factory:
     dependencies:
       '@anatine/zod-mock':
-        specifier: ^3.6.0
-        version: 3.6.0(@faker-js/faker@7.6.0)
+        specifier: ^3.13.3
+        version: 3.13.3(@faker-js/faker@8.3.1)(zod@3.21.4)
       '@faker-js/faker':
-        specifier: ^7.6.0
-        version: 7.6.0
+        specifier: ^8.3.1
+        version: 8.3.1
       orchid-core:
         specifier: workspace:*
         version: link:../core
@@ -244,13 +244,15 @@ packages:
       '@jridgewell/trace-mapping': 0.3.17
     dev: true
 
-  /@anatine/zod-mock@3.6.0(@faker-js/faker@7.6.0):
-    resolution: {integrity: sha512-xW7TuAr2dRS8J0Th0w/fAf3rJqDcYJvvpy1uuWvxVoEIs835f7BcqmYoL+rN5PjFU1E6gqa8rxXF3mo9bQt57g==}
+  /@anatine/zod-mock@3.13.3(@faker-js/faker@8.3.1)(zod@3.21.4):
+    resolution: {integrity: sha512-AN+0YEFE7s6BpuALQHhEoVmJmD+0gPnf4Fehc6oE5NHbM3X2ZD5fW5M6vvot29NWUB6nxvj0gu+BPQ9cVnxALw==}
     peerDependencies:
-      '@faker-js/faker': ^7.0.0
+      '@faker-js/faker': ^7.0.0 || ^8.0.0
+      zod: ^3.21.4
     dependencies:
-      '@faker-js/faker': 7.6.0
+      '@faker-js/faker': 8.3.1
       randexp: 0.5.3
+      zod: 3.21.4
     dev: false
 
   /@babel/code-frame@7.18.6:
@@ -1017,9 +1019,9 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
 
-  /@faker-js/faker@7.6.0:
-    resolution: {integrity: sha512-XK6BTq1NDMo9Xqw/YkYyGjSsg44fbNwYRx7QK2CuoQgyy+f1rrTDHoExVM5PsyXCtfl2vs2vVJ0MN0yN6LppRw==}
-    engines: {node: '>=14.0.0', npm: '>=6.0.0'}
+  /@faker-js/faker@8.3.1:
+    resolution: {integrity: sha512-FdgpFxY6V6rLZE9mmIBb9hM0xpfvQOSNOLnzolzKwsE1DH+gC7lEKV1p1IbR0lAYyvYd5a4u3qWJzowUkw1bIw==}
+    engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0, npm: '>=6.14.13'}
     dev: false
 
   /@humanwhocodes/config-array@0.11.8:
