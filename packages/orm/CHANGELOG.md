@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.17.34
+
+### Patch Changes
+
+- 19bff227: Improve codegen: update relations syntax, output `string` for string column instead of `varchar`
+- Updated dependencies [19bff227]
+  - pqb@0.18.33
+
 ## 1.17.33
 
 ### Patch Changes

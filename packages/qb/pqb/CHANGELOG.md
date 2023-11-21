@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.33
+
+### Patch Changes
+
+- 19bff227: Improve codegen: update relations syntax, output `string` for string column instead of `varchar`
+
 ## 0.18.32
 
 ### Patch Changes
