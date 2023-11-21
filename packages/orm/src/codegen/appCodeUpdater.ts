@@ -1,7 +1,10 @@
 import { AppCodeUpdater } from 'rake-db';
 import * as path from 'path';
 import { updateMainFile } from './updateMainFile';
-import { updateTableFile } from './updateTableFile/updateTableFile';
+import {
+  updateTableFile,
+  UpdateTableFileParams,
+} from './updateTableFile/updateTableFile';
 import { createBaseTableFile } from './createBaseTableFile';
 import { Db, QueryLogOptions } from 'pqb';
 import { OrchidORM } from '../orm';
@@ -81,18 +84,24 @@ const makeGetTable = (
     for (const key in orm) {
       const table = orm[key];
       if (
-        table &&
-        typeof table === 'object' &&
-        (table as object) instanceof Db &&
-        (table as Db).table === tableName
-      ) {
-        const tableInfo = {
-          key,
-          name: (table as { name: string }).name,
-          path: (table as { filePath: string }).filePath,
-        };
-        return (tables[tableName] = tableInfo);
-      }
+        !table ||
+        typeof table !== 'object' ||
+        !((table as object) instanceof Db) ||
+        (table as Db).table !== tableName
+      )
+        continue;
+
+      const name = (table as { name?: string }).name;
+      if (!name) continue;
+
+      const path = (table as { getFilePath?(): string }).getFilePath?.();
+      if (!path) continue;
+
+      return (tables[tableName] = {
+        key,
+        name,
+        path,
+      });
     }
 
     return;
@@ -141,6 +150,8 @@ export const appCodeUpdater = ({
       logger,
     );
 
+    const delayed: UpdateTableFileParams['delayed'] = [];
+
     const promises: Promise<void>[] = [
       updateTableFile({
         ...params,
@@ -149,6 +160,7 @@ export const appCodeUpdater = ({
         getTable,
         relations: cache.relations,
         tables: cache.tables,
+        delayed,
       }),
     ];
 
@@ -161,6 +173,7 @@ export const appCodeUpdater = ({
     }
 
     await Promise.all(promises);
+    await Promise.all(delayed.map((fn) => fn()));
   },
 
   async afterAll({ cache, logger }) {

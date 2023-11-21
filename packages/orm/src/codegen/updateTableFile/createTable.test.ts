@@ -75,6 +75,7 @@ describe('createTable', () => {
         shape: {},
       },
     });
+    await params.delayed.map((fn) => fn());
 
     expect(params.tables).toEqual({
       [ast.addTable.name]: {
@@ -141,6 +142,7 @@ describe('createTable', () => {
         ],
       },
     });
+    await params.delayed.map((fn) => fn());
 
     testWritten(
       template({
@@ -188,6 +190,7 @@ describe('createTable', () => {
         },
       },
     });
+    await params.delayed.map((fn) => fn());
 
     testWritten(
       template({
@@ -210,6 +213,7 @@ describe('createTable', () => {
       ...params,
       ast: { ...ast.addTable, noPrimaryKey: 'ignore' },
     });
+    await params.delayed.map((fn) => fn());
 
     testWritten(
       template({
@@ -250,6 +254,8 @@ describe('createTable', () => {
             },
           },
         });
+
+        await Promise.all(params.delayed.map((fn) => fn()));
 
         expect(params.relations).toEqual({
           other: {

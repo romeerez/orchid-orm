@@ -19,6 +19,7 @@ export type UpdateTableFileParams = {
   getTable: AppCodeUpdaterGetTable;
   relations: AppCodeUpdaterRelations;
   tables: AppCodeUpdaterTables;
+  delayed: (() => Promise<void>)[];
 };
 
 export const updateTableFile = async (params: UpdateTableFileParams) => {

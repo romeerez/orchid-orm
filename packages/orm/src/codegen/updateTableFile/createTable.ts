@@ -24,6 +24,7 @@ export const createTable = async ({
   getTable,
   relations,
   tables,
+  delayed,
   ...params
 }: UpdateTableFileParams & {
   ast: RakeDbAst.Table;
@@ -64,23 +65,8 @@ export const createTable = async ({
     '}));',
   );
 
-  const relCode = await getRelations(
-    ast,
-    getTable,
-    tablePath,
-    imports,
-    relations,
-    ast.name,
-  );
-  if (relCode) {
-    props.push('', ...relCode);
-  }
-
+  const importsCode = importsToCode(imports);
   const code: Code[] = [
-    ...Object.entries(imports).map(
-      ([from, name]) => `import { ${name} } from '${from}';`,
-    ),
-    '',
     `export class ${className} extends ${params.baseTable.exportAs} {`,
     props,
     '}\n',
@@ -88,14 +74,50 @@ export const createTable = async ({
 
   await fs.mkdir(path.dirname(tablePath), { recursive: true });
   try {
-    await fs.writeFile(tablePath, codeToString(code, '', '  '), { flag: 'wx' });
-    logger?.log(`Created ${pathToLog(tablePath)}`);
+    const content = importsCode + '\n\n' + codeToString(code, '', '  ');
+    await fs.writeFile(tablePath, content, { flag: 'wx' });
+
+    delayed.push(async () => {
+      const imports: Record<string, string> = {};
+
+      const relCode = await getRelations(
+        ast,
+        getTable,
+        tablePath,
+        imports,
+        relations,
+        ast.name,
+      );
+
+      if (relCode) {
+        const code = codeToString(relCode, '  ', '  ');
+
+        const updated =
+          content.slice(0, importsCode.length) +
+          `\n${importsToCode(imports)}` +
+          content.slice(importsCode.length, -2) +
+          '  \n' +
+          code +
+          '\n' +
+          content.slice(-2);
+
+        await fs.writeFile(tablePath, updated);
+      }
+
+      logger?.log(`Created ${pathToLog(tablePath)}`);
+    });
   } catch (err) {
     if ((err as unknown as { code: string }).code !== 'EEXIST') {
       throw err;
     }
   }
 };
+
+function importsToCode(imports: Record<string, string>): string {
+  return Object.entries(imports)
+    .map(([from, name]) => `import { ${name} } from '${from}';`)
+    .join('\n');
+}
 
 const getRelations = async (
   ast: RakeDbAst.Table,

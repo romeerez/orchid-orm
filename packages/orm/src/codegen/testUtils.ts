@@ -30,9 +30,11 @@ export const updateTableFileParams: Omit<UpdateTableFileParams, 'ast'> & {
   },
   clearTables() {
     updateTableFileParams.tables = {};
+    updateTableFileParams.delayed.length = 0;
   },
   tables: {},
   relations: {},
+  delayed: [],
 };
 
 const makeAst = () => {
@@ -76,7 +78,8 @@ const makeAst = () => {
 export const ast = makeAst();
 
 export const makeTestWritten = (path: string) => (expected: string) => {
-  const [args] = asMock(fs.writeFile).mock.calls;
+  const { calls } = asMock(fs.writeFile).mock;
+  const args = calls[calls.length - 1];
   expect(args[0]).toBe(path);
   expect(args[1]).toBe(expected);
 };
