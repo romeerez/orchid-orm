@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.17.36
+
+### Patch Changes
+
+- 4d71aa88: Fix codegen `belongsTo`
+
 ## 1.17.35
 
 ### Patch Changes

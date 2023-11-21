@@ -1,5 +1,12 @@
 # orchid-orm-test-factory
 
+## 0.3.164
+
+### Patch Changes
+
+- Updated dependencies [4d71aa88]
+  - orchid-orm@1.17.36
+
 ## 0.3.163
 
 ### Patch Changes
