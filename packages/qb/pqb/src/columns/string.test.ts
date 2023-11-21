@@ -21,11 +21,13 @@ import {
   TsQueryColumn,
   TsVectorColumn,
   UUIDColumn,
-  VarCharColumn,
   XMLColumn,
 } from './string';
 import { assertType, testDb } from 'test-utils';
 import { raw } from '../sql/rawSql';
+import { columnTypes } from './columnTypes';
+
+const t = columnTypes;
 
 const testStringColumnMethods = (type: TextBaseColumn, name: string) => {
   expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);
@@ -83,7 +85,7 @@ describe('string columns', () => {
     describe('varchar', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'text'::varchar(4)`.type(() => new VarCharColumn(4)),
+          testDb.sql`'text'::varchar(4)`.type(() => t.varchar(4)),
         );
         expect(result).toBe('text');
 
@@ -91,10 +93,26 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new VarCharColumn().toCode('t')).toBe('t.varchar()');
-        expect(new VarCharColumn(5).toCode('t')).toBe('t.varchar(5)');
+        expect(t.varchar().toCode('t')).toBe('t.varchar()');
+        expect(t.varchar(5).toCode('t')).toBe('t.varchar(5)');
 
-        testStringColumnMethods(new VarCharColumn(), 'varchar');
+        testStringColumnMethods(t.varchar(), 'varchar');
+      });
+    });
+
+    describe('string', () => {
+      it('should be an alias for varchar with limit 255 by default', async () => {
+        const column = t.string();
+
+        expect(column.dataType).toBe('varchar');
+        expect(column.data.maxChars).toBe(255);
+      });
+
+      it('should have toCode', () => {
+        expect(t.string().toCode('t')).toBe('t.string()');
+        expect(t.string(5).toCode('t')).toBe('t.string(5)');
+
+        testStringColumnMethods(t.string(), 'string');
       });
     });
 

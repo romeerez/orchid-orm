@@ -280,8 +280,8 @@ describe('createTable', () => {
   }`,
             relations: `
     other: this.belongsTo(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'otherId',
+      columns: ['id'],
+      references: ['otherId'],
     }),`,
           }),
         );

@@ -19,8 +19,6 @@ import { RawSQL } from '../sql/rawSql';
 import { SearchWeight } from '../sql';
 import { Operators } from './operators';
 
-export type StringColumn = ColumnType<string, typeof Operators.text>;
-
 export type TextColumnData = StringTypeData;
 
 type TextMethods = typeof stringTypeMethods;
@@ -68,6 +66,23 @@ export class VarCharColumn<
       this,
       t,
       `varchar(${maxChars ?? ''})${stringDataToCode(this.data)}`,
+    );
+  }
+}
+
+export class StringColumn<
+  Limit extends number = 255,
+> extends VarCharColumn<Limit> {
+  constructor(limit: Limit = 255 as Limit) {
+    super(limit);
+  }
+  toCode(t: string): Code {
+    let max: number | undefined = this.data.maxChars;
+    if (max === 255) max = undefined;
+    return columnCode(
+      this,
+      t,
+      `string(${max ?? ''})${stringDataToCode(this.data)}`,
     );
   }
 }

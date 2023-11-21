@@ -28,6 +28,7 @@ import {
   PathColumn,
   PointColumn,
   PolygonColumn,
+  StringColumn,
   TextColumn,
   TsQueryColumn,
   TsVectorColumn,
@@ -226,7 +227,7 @@ export type DefaultColumnTypes = TimestampHelpers & {
   ): CharColumn<Limit>;
   text(min: number, max: number): TextColumn;
   // `varchar` column with optional limit defaulting to 255.
-  string<Limit extends number = 255>(limit?: Limit): VarCharColumn<Limit>;
+  string<Limit extends number = 255>(limit?: Limit): StringColumn<Limit>;
   citext(min: number, max: number): CitextColumn;
   bytea(): ByteaColumn;
   date(): DateColumn;
@@ -409,7 +410,7 @@ export const columnTypes: DefaultColumnTypes = {
     return new TextColumn(min, max);
   },
   string<Limit extends number = 255>(limit = 255 as Limit) {
-    return new VarCharColumn(limit);
+    return new StringColumn(limit);
   },
   citext(min, max) {
     return new CitextColumn(min, max);

@@ -173,7 +173,10 @@ const getRelations = async (
 
     code.push(
       `${info.key}: this.belongsTo(() => ${info.name}, {`,
-      [`primaryKey: '${foreignColumns[0]}',`, `foreignKey: '${columns[0]}',`],
+      [
+        `columns: [${foreignColumns.map(singleQuote).join(', ')}],`,
+        `references: [${columns.map(singleQuote).join(', ')}],`,
+      ],
       '}),',
     );
 
