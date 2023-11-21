@@ -280,8 +280,8 @@ describe('createTable', () => {
   }`,
             relations: `
     other: this.belongsTo(() => OtherTable, {
-      columns: ['id'],
-      references: ['otherId'],
+      columns: ['otherId'],
+      references: ['id'],
     }),`,
           }),
         );

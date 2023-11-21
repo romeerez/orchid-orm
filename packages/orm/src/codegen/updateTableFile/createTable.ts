@@ -174,8 +174,8 @@ const getRelations = async (
     code.push(
       `${info.key}: this.belongsTo(() => ${info.name}, {`,
       [
-        `columns: [${foreignColumns.map(singleQuote).join(', ')}],`,
-        `references: [${columns.map(singleQuote).join(', ')}],`,
+        `columns: [${columns.map(singleQuote).join(', ')}],`,
+        `references: [${foreignColumns.map(singleQuote).join(', ')}],`,
       ],
       '}),',
     );
