@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.17.35
+
+### Patch Changes
+
+- bdae988c: Improve codegen: update relations syntax
+
 ## 1.17.34
 
 ### Patch Changes
