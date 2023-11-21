@@ -17,6 +17,9 @@ const del = <T extends Query>(self: T): DeleteResult<T> => {
 
 const _del = <T extends Query>(q: T): DeleteResult<T> => {
   if (!q.q.select) {
+    if (q.q.returnType === 'oneOrThrow' || q.q.returnType === 'valueOrThrow') {
+      q.q.throwOnNotFound = true;
+    }
     q.q.returnType = 'rowCount';
   }
 
@@ -29,14 +32,25 @@ const _del = <T extends Query>(q: T): DeleteResult<T> => {
 export class Delete {
   /**
    * Alias for `delete` method
+   *
+   * @deprecated use `delete` instead, this method will be removed
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  del<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
+  del<T extends Query>(
+    this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    ..._args: DeleteArgs<T>
+  ): DeleteResult<T> {
     return del(this);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _del<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
+  /**
+   * @deprecated use `_del` instead, this method will be removed
+   */
+  _del<T extends Query>(
+    this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    ..._args: DeleteArgs<T>
+  ): DeleteResult<T> {
     return _del(this);
   }
 

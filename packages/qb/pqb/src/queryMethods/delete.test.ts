@@ -160,4 +160,10 @@ describe('delete', () => {
 
     expectQueryNotMutated(q);
   });
+
+  it('should throw NotFoundError when no records to delete for a `one` query kind', async () => {
+    const q = User.find(1).del();
+
+    await expect(q).rejects.toThrow('Record is not found');
+  });
 });
