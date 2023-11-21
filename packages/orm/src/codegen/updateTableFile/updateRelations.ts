@@ -7,7 +7,7 @@ import { QueryLogOptions } from 'pqb';
 import fs from 'fs/promises';
 import path from 'path';
 import { FileChanges } from '../fileChanges';
-import { getImportPath, pathToLog } from 'orchid-core';
+import { getImportPath, pathToLog, singleQuote } from 'orchid-core';
 import { ts } from '../tsUtils';
 import {
   ClassDeclaration,
@@ -170,11 +170,11 @@ const relationToCode = (
 ): string => {
   const code = [`\n    ${name}: this.${rel.kind}(() => ${rel.className}, {`];
 
-  const pk = rel[rel.kind === 'hasMany' ? 'columns' : 'foreignColumns'][0];
-  const fk = rel[rel.kind === 'hasMany' ? 'foreignColumns' : 'columns'][0];
+  const pk = rel[rel.kind === 'hasMany' ? 'columns' : 'foreignColumns'];
+  const fk = rel[rel.kind === 'hasMany' ? 'foreignColumns' : 'columns'];
   code.push(
-    `      primaryKey: '${pk}',`,
-    `      foreignKey: '${fk}',`,
+    `      columns: [${pk.map(singleQuote).join(', ')}],`,
+    `      references: [${fk.map(singleQuote).join(', ')}],`,
     '    }),',
   );
 

@@ -73,8 +73,8 @@ describe('updateRelations', () => {
     testWritten({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `others: this.hasMany(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'otherId',
+      columns: ['id'],
+      references: ['otherId'],
     }),`,
     });
   });
@@ -83,8 +83,8 @@ describe('updateRelations', () => {
     setContent({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `others: this.hasMany(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'otherId',
+      columns: ['id'],
+      references: ['otherId'],
     }),`,
     });
 
@@ -101,8 +101,8 @@ describe('updateRelations', () => {
     testWritten({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `others: this.hasMany(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'otherId',
+      columns: ['id'],
+      references: ['otherId'],
     }),`,
     });
   });
@@ -111,8 +111,8 @@ describe('updateRelations', () => {
     setContent({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `some: this.belongsTo(() => SomeTable, {
-      primaryKey: 'id',
-      foreignKey: 'someId',
+      columns: ['id'],
+      references: ['someId'],
     }),`,
     });
 
@@ -129,12 +129,12 @@ describe('updateRelations', () => {
     testWritten({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `some: this.belongsTo(() => SomeTable, {
-      primaryKey: 'id',
-      foreignKey: 'someId',
+      columns: ['id'],
+      references: ['someId'],
     }),
     others: this.hasMany(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'otherId',
+      columns: ['id'],
+      references: ['otherId'],
     }),`,
     });
   });
@@ -143,8 +143,8 @@ describe('updateRelations', () => {
     setContent({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `others: this.belongsTo(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'someId',
+      columns: ['id'],
+      references: ['someId'],
     }),`,
     });
 
@@ -161,8 +161,8 @@ describe('updateRelations', () => {
     testWritten({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `others: this.belongsTo(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'someId',
+      columns: ['id'],
+      references: ['someId'],
     }),`,
     });
   });
@@ -183,8 +183,8 @@ describe('updateRelations', () => {
     testWritten({
       imports: `import { OtherTable } from './otherTable';`,
       relations: `others: this.belongsTo(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'otherId',
+      columns: ['id'],
+      references: ['otherId'],
     }),`,
     });
   });
