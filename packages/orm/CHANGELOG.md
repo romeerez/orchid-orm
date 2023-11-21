@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.17.33
+
+### Patch Changes
+
+- e92bf8fa: Fix codegen when generating relations for new tables
+- Updated dependencies [3c089403]
+  - pqb@0.18.32
+
 ## 1.17.32
 
 ### Patch Changes

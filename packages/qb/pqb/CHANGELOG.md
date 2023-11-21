@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.32
+
+### Patch Changes
+
+- 3c089403: Make `delete` to throw when not found when it's chained with `take`, `find`, `findBy`, `value`
+
 ## 0.18.31
 
 ### Patch Changes
