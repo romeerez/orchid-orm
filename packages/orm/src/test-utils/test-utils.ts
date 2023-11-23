@@ -2,9 +2,11 @@ import { createBaseTable, Selectable } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
+import { zodSchemaProvider } from 'orchid-orm-schema-to-zod';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
+  schemaProvider: zodSchemaProvider,
 });
 
 export type User = Selectable<UserTable>;

@@ -149,7 +149,7 @@ export const orchidORM = <T extends TableClasses>(
       throw new Error(`Table class name must not start with $`);
     }
 
-    const table = new tables[key]();
+    const table = tables[key].instance();
     tableInstances[key] = table;
 
     const options: DbTableOptions = {

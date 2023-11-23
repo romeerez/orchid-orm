@@ -78,9 +78,7 @@ describe('baseTable', () => {
         columns = this.setColumns(() => shape);
       }
 
-      new SomeTable();
-
-      expect(SomeTable.prototype.columns).toEqual(shape);
+      expect(SomeTable.instance().columns).toEqual(shape);
     });
   });
 
@@ -346,7 +344,6 @@ describe('baseTable', () => {
         { adapter: testAdapter },
         {
           table: Table,
-          chair: Table,
         },
       );
 

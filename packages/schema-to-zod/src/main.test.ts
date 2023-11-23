@@ -64,9 +64,12 @@ describe('zodSchemaProvider', () => {
 
     class Table {
       static schema = zodSchemaProvider;
-      columns = columns;
+      static instance() {
+        return {
+          columns,
+        };
+      }
     }
-    Table.prototype.columns = columns;
 
     const schema = Table.schema();
 
