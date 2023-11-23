@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.71
+
+### Patch Changes
+
+- 16eaadbd: Fix getting schema in orchid-orm-schema-to-zod before calling `orchidORM` for the table
+
 ## 2.10.70
 
 ### Patch Changes

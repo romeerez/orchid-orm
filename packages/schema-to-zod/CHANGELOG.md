@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.4.37
+
+### Patch Changes
+
+- 16eaadbd: Fix getting schema in orchid-orm-schema-to-zod before calling `orchidORM` for the table
+
 ## 0.4.36
 
 ### Patch Changes
