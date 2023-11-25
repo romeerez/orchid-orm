@@ -85,8 +85,6 @@ After running the script, take a look at the package.json file, and install depe
     "dotenv": "^16.0.3",
     // the ORM is responsible for defining tables and relations between them
     "orchid-orm": "^1.5.18",
-    // query builder, used by other parts to build chainable query objects
-    "pqb": "^0.9.12",
     // convert table columns to a Zod schema to use it for validations
     "orchid-orm-schema-to-zod": "^0.2.18"
   },
