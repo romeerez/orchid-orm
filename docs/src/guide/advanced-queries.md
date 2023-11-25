@@ -7,7 +7,7 @@
 Add Common Table Expression (CTE) to the query.
 
 ```ts
-import { columnTypes } from 'pqb';
+import { columnTypes } from 'orchid-orm';
 import { NumberColumn } from './number';
 
 // .with optionally accepts such options:
@@ -199,7 +199,7 @@ const json = await db.table.select('id', 'name').json();
 Selects a value from JSON data using a JSON path.
 
 ```ts
-import { columnTypes } from 'pqb';
+import { columnTypes } from 'orchid-orm';
 
 db.table.jsonPathQuery(
   columnTypes.text(3, 100), // type of the value

@@ -68,7 +68,7 @@ export class With {
    * Add Common Table Expression (CTE) to the query.
    *
    * ```ts
-   * import { columnTypes } from 'pqb';
+   * import { columnTypes } from 'orchid-orm';
    * import { NumberColumn } from './number';
    *
    * // .with optionally accepts such options:

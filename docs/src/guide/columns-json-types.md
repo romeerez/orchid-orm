@@ -827,10 +827,12 @@ export class Table extends BaseTable {
 
 ## recursive JSON types
 
+[//]: # 'has JSDoc'
+
 You can define a recursive schema, but because of a limitation of TypeScript, their type can't be statically inferred. Instead, you'll need to define the type definition manually, and provide it as a "type hint".
 
 ```ts
-import { JSONType, jsonTypes as t } from 'pqb';
+import { JSONType, jsonTypes as t } from 'orchid-orm';
 
 interface Category {
   name: string;

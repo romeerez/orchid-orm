@@ -103,7 +103,7 @@ export class QueryGet {
    * It will throw `NotFoundError` when not found.
    *
    * ```ts
-   * import { NumberColumn } from 'pqb';
+   * import { NumberColumn } from 'orchid-orm';
    *
    * const firstName: string = await db.table.get('name');
    *

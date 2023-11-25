@@ -28,8 +28,7 @@ const readFile = mockFn(fs, 'readFile');
 const writeFile = mockFn(fs, 'writeFile');
 
 const dependencies = `"dotenv": "^1.2.3",
-    "orchid-orm": "^1.2.3",
-    "pqb": "^1.2.3"`;
+    "orchid-orm": "^1.2.3"`;
 
 const devDependencies = `"rake-db": "^1.2.3",
     "@types/node": "^1.2.3",
@@ -160,7 +159,6 @@ describe('setupPackageJSON', () => {
     "ko": "ko",
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
-    "pqb": "^1.2.3",
     "orchid-orm-schema-to-zod": "^1.2.3"
   },
   "devDependencies": {

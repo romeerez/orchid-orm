@@ -101,7 +101,7 @@ const foundOptional: TableType | undefined = await db.table.findByOptional({
 `get` throws a `NotFoundError` when not found, and `getOptional` returns `undefined`.
 
 ```ts
-import { NumberColumn } from 'pqb';
+import { NumberColumn } from 'orchid-orm';
 
 const firstName: string = await db.table.get('name');
 
@@ -842,10 +842,10 @@ const selectFollowing = db.user.makeHelper((q, currentUser: { id: number }) => {
 await selectFollowing(db.user.select('id', 'name'), currentUser);
 ```
 
-To get the result type of query helper, use `QueryHelperResult` from `pqb`:
+To get the result type of query helper, use `QueryHelperResult` type:
 
 ```ts
-import { QueryHelperResult } from 'pqb';
+import { QueryHelperResult } from 'orchid-orm';
 
 const selectHelper = db.table.makeHelper((q) => q.select('id', 'name'));
 

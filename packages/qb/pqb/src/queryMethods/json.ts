@@ -292,7 +292,7 @@ export abstract class JsonModifiers extends QueryBase {
    * Selects a value from JSON data using a JSON path.
    *
    * ```ts
-   * import { columnTypes } from 'pqb';
+   * import { columnTypes } from 'orchid-orm';
    *
    * db.table.jsonPathQuery(
    *   columnTypes.text(3, 100), // type of the value

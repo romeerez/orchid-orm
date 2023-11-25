@@ -7,7 +7,6 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
   const pairs = await Promise.all([
     getLatestPackageVersion('dotenv', 'dependencies'),
     getLatestPackageVersion('orchid-orm', 'dependencies'),
-    getLatestPackageVersion('pqb', 'dependencies'),
     config.addSchemaToZod &&
       getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies'),
     getLatestPackageVersion('rake-db', 'devDependencies'),

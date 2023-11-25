@@ -27,7 +27,7 @@ export default defineConfig({
       fileName: "dbScript",
     },
     rollupOptions: {
-      external: ["pqb", "rake-db"],
+      external: ["orchid-orm", "rake-db"],
       output: {
         entryFileNames: "[name].mjs",
         chunkFileNames: "[name].[hash].mjs",

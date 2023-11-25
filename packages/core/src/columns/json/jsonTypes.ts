@@ -45,6 +45,39 @@ export type JSONTypes = {
     left: Left,
     right: Right,
   ): JSONIntersection<Left, Right>;
+  /**
+   * You can define a recursive schema, but because of a limitation of TypeScript, their type can't be statically inferred. Instead, you'll need to define the type definition manually, and provide it as a "type hint".
+   *
+   * ```ts
+   * import { JSONType, jsonTypes as t } from 'orchid-orm';
+   *
+   * interface Category {
+   *   name: string;
+   *   subCategories: Category[];
+   * }
+   *
+   * const Category: JSONType<Category> = t.lazy(() =>
+   *   t.object({
+   *     name: t.string(),
+   *     subCategories: t.array(Category),
+   *   }),
+   * );
+   *
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     data: t.json((t) =>
+   *       t.object({
+   *         name: t.string(),
+   *         category: Category,
+   *       }),
+   *     ),
+   *   }));
+   * }
+   * ```
+   *
+   * @param fn - function to construct json types lazily
+   */
   lazy<T extends JSONType>(fn: () => T): JSONLazy<T>;
   nativeEnum<T extends EnumLike>(type: T): JSONNativeEnum<T>;
   record<

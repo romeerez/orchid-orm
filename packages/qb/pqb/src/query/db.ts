@@ -431,6 +431,73 @@ export type DbResult<ColumnTypes> = Db<
   close: Adapter['close'];
 };
 
+/**
+ * For the case of using the query builder as a standalone tool, use `createDb` from `pqb` package.
+ *
+ * As `Orchid ORM` focuses on ORM usage, docs examples mostly demonstrates how to work with ORM-defined tables,
+ * but everything that's not related to table relations should also work with `pqb` query builder on its own.
+ *
+ * It is accepting the same options as `orchidORM` + options of `createBaseTable`:
+ *
+ * ```ts
+ * import { createDb } from 'orchid-orm';
+ *
+ * const db = createDb({
+ *   // db connection options
+ *   databaseURL: process.env.DATABASE_URL,
+ *   log: true,
+ *
+ *   // columns in db are in snake case:
+ *   snakeCase: true,
+ *
+ *   // override default SQL for timestamp, see `nowSQL` above
+ *   nowSQL: `now() AT TIME ZONE 'UTC'`,
+ *
+ *   // override column types:
+ *   columnTypes: (t) => ({
+ *     // by default timestamp is returned as a string, override to a number
+ *     timestamp: () => t.timestamp().asNumber(),
+ *   }),
+ * });
+ * ```
+ *
+ * After `db` is defined, construct queryable tables in such way:
+ *
+ * ```ts
+ * export const User = db('user', (t) => ({
+ *   id: t.identity().primaryKey(),
+ *   name: t.text(3, 100),
+ *   password: t.text(8, 200),
+ *   age: t.integer().nullable(),
+ *   ...t.timestamps(),
+ * }));
+ * ```
+ *
+ * Now the `User` can be used for making type-safe queries:
+ *
+ * ```ts
+ * const users = await User.select('id', 'name') // only known columns are allowed
+ *   .where({ age: { gte: 20 } }) // gte is available only on the numeric field, and the only number is allowed
+ *   .order({ createdAt: 'DESC' }) // type safe as well
+ *   .limit(10);
+ *
+ * // users array has a proper type of Array<{ id: number, name: string }>
+ * ```
+ *
+ * The optional third argument is for table options:
+ *
+ * ```ts
+ * const Table = db('table', (t) => ({ ...columns }), {
+ *   // provide this value if the table belongs to a specific database schema:
+ *   schema: 'customTableSchema',
+ *   // override `log` option of `createDb`:
+ *   log: true, // boolean or object described `createdDb` section
+ *   logger: { ... }, // override logger
+ *   noPrimaryKey: 'ignore', // override noPrimaryKey
+ *   snakeCase: true, // override snakeCase
+ * })
+ * ```
+ */
 export const createDb = <
   ColumnTypes extends ColumnTypesBase = DefaultColumnTypes,
 >({

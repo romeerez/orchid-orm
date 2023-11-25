@@ -8,7 +8,7 @@ import {
 } from 'pqb';
 import { EmptyObject } from 'orchid-core';
 
-export type QueryMethods<T extends Query> = Record<
+type QueryMethods<T extends Query> = Record<
   string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (q: T, ...args: any[]) => any

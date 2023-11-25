@@ -458,7 +458,7 @@ export class Update {
    * To make sure that at least one row was updated use `updateOrThrow`:
    *
    * ```ts
-   * import { NotFoundError } from 'pqb';
+   * import { NotFoundError } from 'orchid-orm';
    *
    * try {
    *   // updatedCount is guaranteed to be greater than 0

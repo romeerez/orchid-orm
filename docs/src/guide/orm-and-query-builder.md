@@ -198,7 +198,9 @@ export type UserQueryable = Queryable<UserTable>;
 
 ## createDb
 
-For the case of using the query builder as a standalone tool, use `createDb` from `pqb` package.
+[//]: # 'has JSDoc'
+
+For the case of using the query builder as a standalone tool, use `createDb`.
 
 As `Orchid ORM` focuses on ORM usage, docs examples mostly demonstrates how to work with ORM-defined tables,
 but everything that's not related to table relations should also work with `pqb` query builder on its own.
@@ -206,7 +208,7 @@ but everything that's not related to table relations should also work with `pqb`
 It is accepting the same options as `orchidORM` + options of `createBaseTable`:
 
 ```ts
-import { createDb } from 'pqb';
+import { createDb } from 'orchid-orm';
 
 const db = createDb({
   // db connection options
@@ -254,7 +256,7 @@ The optional third argument is for table options:
 
 ```ts
 const Table = db('table', (t) => ({ ...columns }), {
-  // provide this value if the table belongs to a specific database schema
+  // provide this value if the table belongs to a specific database schema:
   schema: 'customTableSchema',
   // override `log` option of `createDb`:
   log: true, // boolean or object described `createdDb` section

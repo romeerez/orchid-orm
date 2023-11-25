@@ -841,6 +841,20 @@ export class QueryMethods<ColumnTypes> {
    * await selectFollowing(db.user.select('id', 'name'), currentUser);
    * ```
    *
+   * To get the result type of query helper, use `QueryHelperResult` type:
+   *
+   * ```ts
+   * import { QueryHelperResult } from 'orchid-orm';
+   *
+   * const selectHelper = db.table.makeHelper((q) => q.select('id', 'name'));
+   *
+   * // This type is identical to `db.table.select('id', 'name')`
+   * type SelectQuery = QueryHelperResult<typeof selectHelper>;
+   *
+   * // Await to get result, the type is `{ id: number, name: string }[]`
+   * type Result = Awaited<QueryHelperResult<typeof selectHelper>>;
+   * ```
+   *
    * @param fn - helper function
    */
   makeHelper<T extends Query, Args extends unknown[], Result>(

@@ -52,13 +52,13 @@
   "dependencies": {
     "@anatine/zod-mock": "^3.13.3",
     "@faker-js/faker": "^8.3.1",
-    "orchid-orm": "workspace:*",
     "orchid-orm-schema-to-zod": "workspace:*",
     "orchid-core": "workspace:*",
     "pqb": "workspace:*",
-    "zod": "^3.21.4"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "orchid-orm": "workspace:*",
     "test-utils": "workspace:*"
   }
 }
