@@ -57,7 +57,7 @@ const nestedInsertData = {
 # Benchmarks
 
 The following benchmarks measure operations per second for different ORMs and query builders.
-All the code with instruction is in the [repo here](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/benchmarks).
+All the code with instruction is in the [repo here](https://github.com/romeerez/orchid-orm-benchmarks).
 
 ::: warning
 These measurements were taken in June 2023.
