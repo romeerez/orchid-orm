@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.3.166
+
+### Patch Changes
+
+- 46382c24: Re-export everything from pqb in orchid-orm
+- Updated dependencies [46382c24]
+  - orchid-orm-schema-to-zod@0.4.38
+  - pqb@0.18.34
+  - orchid-core@0.10.16
+
 ## 0.3.165
 
 ### Patch Changes

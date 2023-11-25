@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.16
+
+### Patch Changes
+
+- 46382c24: Re-export everything from pqb in orchid-orm
+
 ## 0.10.15
 
 ### Patch Changes

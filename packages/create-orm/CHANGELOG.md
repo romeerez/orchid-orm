@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.0.4
+
+### Patch Changes
+
+- 46382c24: Re-export everything from pqb in orchid-orm
+
 ## 0.0.3
 
 ### Patch Changes
