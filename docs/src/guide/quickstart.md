@@ -1,7 +1,10 @@
 # Quickstart
 
 Orchid ORM has a script to initialize the project with a command-line prompts.
-Use it to start from scratch, or it can be run inside the existing project, it won't remove any existing files.
+You can use it to start a new project from scratch, also you can run the same command to scaffold Orchid ORM inside the existing project, it won't remove any existing files.
+
+After familiarizing with this section, you can read the [Building A Sample App](https://github.com/romeerez/orchid-orm-sample-blog-api-guide) guide that demonstrates the process of building a real world app with Orchid ORM,
+it walks through setup process, migrations, creating tables, writing complex queries, abstracting queries into repositories, writing tests.
 
 ## Scaffold Orchid ORM
 

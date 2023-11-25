@@ -27,10 +27,6 @@ export default {
             link: '/guide/quickstart',
           },
           {
-            text: 'Building a sample app',
-            link: '/guide/building-a-sample-app',
-          },
-          {
             text: 'Benchmarks',
             link: '/guide/benchmarks',
           },
