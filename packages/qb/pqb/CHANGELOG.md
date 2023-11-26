@@ -1,5 +1,11 @@
 # pqb
 
+## 0.19.0
+
+### Minor Changes
+
+- 49780b94: Support loading of chained relations (#173)
+
 ## 0.18.34
 
 ### Patch Changes

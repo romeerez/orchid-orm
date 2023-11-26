@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.18.0
+
+### Minor Changes
+
+- 49780b94: Support loading of chained relations (#173)
+
+### Patch Changes
+
+- Updated dependencies [49780b94]
+  - pqb@0.19.0
+
 ## 1.17.38
 
 ### Patch Changes
