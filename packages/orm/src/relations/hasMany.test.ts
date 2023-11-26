@@ -15,6 +15,10 @@ import {
   profileSelectAll,
   userSelectAll,
   useTestORM,
+  PostTag,
+  postTagSelectAll,
+  Post,
+  postSelectAll,
 } from '../test-utils/test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
@@ -69,6 +73,40 @@ describe('hasMany', () => {
             AND "messages"."text" = $2
         `,
         ['name', 'text'],
+      );
+    });
+
+    it('should handle long chained query', () => {
+      const q = db.user
+        .where({ Name: 'name' })
+        .posts.where({ Body: 'body' })
+        .postTags.where({ Tag: 'tag' });
+
+      assertType<Awaited<typeof q>, PostTag[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+        SELECT ${postTagSelectAll}
+        FROM "postTag" AS "postTags"
+        WHERE
+          EXISTS (
+            SELECT 1
+            FROM "post" AS "posts"
+            WHERE
+              EXISTS (
+                SELECT 1
+                FROM "user"
+                WHERE "user"."name" = $1
+                  AND "user"."id" = "posts"."userId"
+                  AND "user"."userKey" = "posts"."title"
+              )
+              AND "posts"."body" = $2
+              AND "posts"."id" = "postTags"."postId"
+          )
+          AND "postTags"."tag" = $3
+      `,
+        ['name', 'body', 'tag'],
       );
     });
 
@@ -160,7 +198,7 @@ describe('hasMany', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         db.user.relations.messages.relationConfig
-          .joinQuery(db.user.as('u'), db.message.as('m'))
+          .joinQuery(db.message.as('m'), db.user.as('u'))
           .toSQL(),
         `
         SELECT ${messageSelectAll} FROM "message" AS "m"
@@ -330,6 +368,36 @@ describe('hasMany', () => {
             ) "messages" ON true
           `,
           ['text'],
+        );
+      });
+
+      it('should support chained select', () => {
+        const q = db.user.select({
+          items: (q) => q.posts.postTags,
+        });
+
+        assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "user"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${postTagSelectAll}
+                FROM "postTag" AS "postTags"
+                WHERE EXISTS (
+                  SELECT 1
+                  FROM "post" AS "posts"
+                  WHERE "posts"."userId" = "user"."id"
+                    AND "posts"."title" = "user"."userKey"
+                    AND "posts"."id" = "postTags"."postId"
+                )
+              ) AS "t"
+            ) "items" ON true
+          `,
         );
       });
     });
@@ -2084,6 +2152,53 @@ describe('hasMany through', () => {
       );
     });
 
+    it('should handle long chained query', () => {
+      const q = db.message
+        .where({ Text: 'text' })
+        .profiles.where({ Bio: 'bio' })
+        .posts.where({ Body: 'body' });
+
+      assertType<Awaited<typeof q>, Post[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+        SELECT ${postSelectAll}
+        FROM "post" AS "posts"
+        WHERE
+          EXISTS (
+            SELECT 1
+            FROM "profile" AS "profiles"
+            WHERE
+              EXISTS (
+                SELECT 1
+                FROM "message"
+                WHERE "message"."text" = $1
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE "profiles"."userId" = "user"."id"
+                      AND "profiles"."profileKey" = "user"."userKey"
+                      AND "user"."id" = "message"."authorId"
+                      AND "user"."userKey" = "message"."messageKey"
+                  )
+              )
+              AND "profiles"."bio" = $2
+              AND EXISTS (
+                SELECT 1
+                FROM "user"
+                WHERE "posts"."userId" = "user"."id"
+                  AND "posts"."title" = "user"."userKey"
+                  AND "user"."id" = "profiles"."userId"
+                  AND "user"."userKey" = "profiles"."profileKey"
+              )
+          )
+          AND "posts"."body" = $3
+      `,
+        ['text', 'bio', 'body'],
+      );
+    });
+
     it('should have disabled create method', () => {
       // @ts-expect-error hasMany with through option should not have chained create
       db.profile.chats.create(chatData);
@@ -2126,7 +2241,7 @@ describe('hasMany through', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         db.profile.relations.chats.relationConfig
-          .joinQuery(db.profile.as('p'), db.chat.as('c'))
+          .joinQuery(db.chat.as('c'), db.profile.as('p'))
           .toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" AS "c"
@@ -2671,7 +2786,7 @@ describe('hasMany through', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         db.chat.relations.profiles.relationConfig
-          .joinQuery(db.chat.as('c'), db.profile.as('p'))
+          .joinQuery(db.profile.as('p'), db.chat.as('c'))
           .toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" AS "p"
@@ -2894,6 +3009,45 @@ describe('hasMany through', () => {
             ) "profiles" ON true
           `,
           ['bio'],
+        );
+      });
+
+      it('should support chained select', () => {
+        const q = db.message.select({
+          items: (q) => q.profiles.posts,
+        });
+
+        assertType<Awaited<typeof q>, { items: Post[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT ${postSelectAll}
+              FROM "post" AS "posts"
+              WHERE EXISTS (
+                SELECT 1 FROM "profile" AS "profiles"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE "profiles"."userId" = "user"."id"
+                    AND "profiles"."profileKey" = "user"."userKey"
+                    AND "user"."id" = "message"."authorId"
+                    AND "user"."userKey" = "message"."messageKey"
+                ) AND EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE "posts"."userId" = "user"."id"
+                    AND "posts"."title" = "user"."userKey"
+                    AND "user"."id" = "profiles"."userId"
+                    AND "user"."userKey" = "profiles"."profileKey"
+                )
+              )
+            ) AS "t"
+          ) "items" ON true
+        `,
         );
       });
 

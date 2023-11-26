@@ -288,7 +288,7 @@ export const processSelectArg = <T extends Query>(
       value = resolveSubQueryCallback(q, value);
 
       if (!isExpression(value) && value.joinQuery) {
-        value = value.joinQuery(q, value);
+        value = value.joinQuery(value, q);
 
         let query;
         const returnType = value.q.returnType;

@@ -23,6 +23,7 @@ import {
   UpdateData,
   QueryWithTable,
   AddQueryDefaults,
+  RelationJoinQuery,
 } from 'pqb';
 import { EmptyObject, MaybeArray, toArray } from 'orchid-core';
 import {
@@ -32,6 +33,7 @@ import {
   hasRelationHandleUpdate,
   joinHasRelation,
   joinHasThrough,
+  joinQueryChainingHOF,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
@@ -78,7 +80,7 @@ export type HasManyInfo<
 > = {
   table: Q;
   query: Q;
-  joinQuery(fromQuery: Query, toQuery: Query): Query;
+  joinQuery: RelationJoinQuery;
   one: false;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
@@ -216,11 +218,21 @@ export const makeHasManyMethod = (
     const sourceRelation = getSourceRelation(throughRelation, source);
     const sourceRelationQuery = sourceRelation.query.as(relationName);
     const sourceQuery = sourceRelation.joinQuery(
-      throughRelation.query,
       sourceRelationQuery,
+      throughRelation.query,
     );
 
     const whereExistsCallback = () => sourceQuery;
+
+    const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
+      return joinHasThrough(
+        baseQuery,
+        baseQuery,
+        joiningQuery,
+        throughRelation,
+        sourceRelation,
+      );
+    };
 
     return {
       returns: 'many',
@@ -234,24 +246,16 @@ export const makeHasManyMethod = (
           whereExistsCallback as unknown as JoinCallback<Query, Query>,
         );
       },
-      joinQuery(fromQuery, toQuery) {
-        return joinHasThrough(
-          toQuery,
-          fromQuery,
-          toQuery,
+      joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
+        joinHasThrough(
+          joiningQuery,
+          baseQuery,
+          joiningQuery,
           throughRelation,
           sourceRelation,
-        );
-      },
-      reverseJoin(fromQuery, toQuery) {
-        return joinHasThrough(
-          fromQuery,
-          fromQuery,
-          toQuery,
-          throughRelation,
-          sourceRelation,
-        );
-      },
+        ),
+      ),
+      reverseJoin,
     };
   }
 
@@ -275,6 +279,16 @@ export const makeHasManyMethod = (
 
   const fromQuerySelect = [{ selectAs: reversedOn }];
 
+  const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
+    return joinHasRelation(
+      joiningQuery,
+      baseQuery,
+      foreignKeys,
+      primaryKeys,
+      len,
+    );
+  };
+
   return {
     returns: 'many',
     method: (params: Record<string, unknown>) => {
@@ -285,19 +299,17 @@ export const makeHasManyMethod = (
       return query.where(values)._defaults(values);
     },
     virtualColumn: new HasManyVirtualColumn(relationName, state),
-    joinQuery(fromQuery, toQuery) {
-      return joinHasRelation(fromQuery, toQuery, primaryKeys, foreignKeys, len);
-    },
-    reverseJoin(fromQuery, toQuery) {
-      return joinHasRelation(toQuery, fromQuery, foreignKeys, primaryKeys, len);
-    },
+    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
+      joinHasRelation(baseQuery, joiningQuery, primaryKeys, foreignKeys, len),
+    ),
+    reverseJoin,
     modifyRelatedQuery(relationQuery) {
       return (query) => {
-        const fromQuery = query.clone();
-        fromQuery.q.select = fromQuerySelect;
+        const baseQuery = query.clone();
+        baseQuery.q.select = fromQuerySelect;
         const q = relationQuery.q as InsertQueryData;
         q.kind = 'from';
-        q.values = { from: fromQuery };
+        q.values = { from: baseQuery };
       };
     },
   };

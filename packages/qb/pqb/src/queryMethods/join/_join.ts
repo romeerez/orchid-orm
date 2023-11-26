@@ -155,8 +155,8 @@ export const _joinLateral = <
 
   if (relation) {
     result = relation.relationConfig.joinQuery(
-      q,
       result as unknown as Query,
+      q,
     ) as unknown as R;
   }
 

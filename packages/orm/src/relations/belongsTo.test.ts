@@ -88,6 +88,40 @@ describe('belongsTo', () => {
       expect(res.length).toBe(2);
     });
 
+    it('should handle long chained query', () => {
+      const q = db.postTag
+        .where({ Tag: 'tag' })
+        .post.where({ Body: 'body' })
+        .user.where({ Name: 'name' });
+
+      assertType<Awaited<typeof q>, User[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${userSelectAll}
+          FROM "user"
+          WHERE
+            EXISTS (
+              SELECT 1
+              FROM "post"
+              WHERE
+                EXISTS (
+                  SELECT 1
+                  FROM "postTag"
+                  WHERE "postTag"."tag" = $1
+                    AND "postTag"."postId" = "post"."id"
+                )
+                AND "post"."body" = $2
+                AND "post"."userId" = "user"."id"
+                AND "post"."title" = "user"."userKey"
+            )
+            AND "user"."name" = $3
+        `,
+        ['tag', 'body', 'name'],
+      );
+    });
+
     it('should have disabled create and delete method', () => {
       // @ts-expect-error belongsTo should not have chained create
       db.profile.user.create(userData);
@@ -99,7 +133,7 @@ describe('belongsTo', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         db.profile.relations.user.relationConfig
-          .joinQuery(db.profile.as('p'), db.user.as('u'))
+          .joinQuery(db.user.as('u'), db.profile.as('p'))
           .toSQL(),
         `
           SELECT ${userSelectAll} FROM "user" AS "u"
@@ -277,6 +311,35 @@ describe('belongsTo', () => {
             ORDER BY "user"."Name" ASC
           `,
           ['name'],
+        );
+      });
+
+      it('should support chained select', () => {
+        const q = db.postTag.select({
+          items: (q) => q.post.user,
+        });
+
+        assertType<Awaited<typeof q>, { items: User[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "postTag"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${userSelectAll}
+                FROM "user"
+                WHERE EXISTS (
+                  SELECT 1 FROM "post"
+                  WHERE "post"."id" = "postTag"."postId"
+                    AND "post"."userId" = "user"."id"
+                    AND "post"."title" = "user"."userKey"
+                )
+              ) AS "t"
+            ) "items" ON true
+          `,
         );
       });
 

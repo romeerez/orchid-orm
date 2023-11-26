@@ -229,9 +229,9 @@ export const testJoin = ({
           as: {
             relationConfig: {
               query: joinTarget,
-              joinQuery(fromQuery: Query, toQuery: Query) {
-                const rel = toQuery.as('as');
-                return addQueryOn(rel, fromQuery, rel, fkey, pkey);
+              joinQuery(joiningQuery: Query, baseQuery: Query) {
+                const rel = joiningQuery.as('as');
+                return addQueryOn(rel, baseQuery, rel, fkey, pkey);
               },
             },
           },

@@ -7,6 +7,7 @@ import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { pushQueryArray } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
 import { ColumnsShapeBase, Expression, isExpression } from 'orchid-core';
+import { RelationJoinQuery } from '../relations';
 
 type ItemOf3Or4Length =
   | [
@@ -38,7 +39,7 @@ export const processJoinItem = (
       const { query: toQuery, joinQuery } =
         table.relations[first].relationConfig;
 
-      const jq = joinQuery(table, toQuery);
+      const jq = joinQuery(toQuery, table as Query);
       const { q: j } = jq;
 
       const tableName = (
@@ -160,7 +161,7 @@ const processArgs = (
   first:
     | string
     | (QueryWithTable & {
-        joinQueryAfterCallback?(fromQuery: Query, toQuery: Query): Query;
+        joinQueryAfterCallback?: RelationJoinQuery;
       }),
   joinAs: string,
   joinShape: ColumnsShapeBase,
@@ -203,8 +204,8 @@ const processArgs = (
           }
 
           const { q: query } = first.joinQueryAfterCallback(
-            table as Query,
             base,
+            table as Query,
           );
           if (query.and) {
             pushQueryArray(q, 'and', query.and);

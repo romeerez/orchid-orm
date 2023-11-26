@@ -12,6 +12,7 @@ import {
   OrchidOrmInternalError,
   Query,
   QueryWithTable,
+  RelationJoinQuery,
   SetQueryTableAlias,
   toSQLCacheKey,
   UpdateCtx,
@@ -29,6 +30,7 @@ import {
 import {
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
+  joinQueryChainingHOF,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
@@ -74,7 +76,7 @@ export type HasAndBelongsToManyInfo<
 > = {
   table: Q;
   query: Q;
-  joinQuery(fromQuery: Query, toQuery: Query): Query;
+  joinQuery: RelationJoinQuery;
   one: false;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
@@ -249,8 +251,12 @@ export const makeHasAndBelongsToManyMethod = (
     throughPrimaryKeysFull,
   };
 
-  const joinQuery = (toQuery: Query, tableAs: string, foreignAs: string) => {
-    return toQuery.whereExists(subQuery, (q) => {
+  const joinQuery = (
+    joiningQuery: Query,
+    tableAs: string,
+    foreignAs: string,
+  ) => {
+    return joiningQuery.whereExists(subQuery, (q) => {
       for (let i = 0; i < throughLen; i++) {
         q._on(
           throughForeignKeysFull[i],
@@ -272,6 +278,14 @@ export const makeHasAndBelongsToManyMethod = (
   }
   const selectPrimaryKeysAsForeignKeys = [{ selectAs: obj }];
 
+  const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
+    return joinQuery(
+      baseQuery,
+      getQueryAs(baseQuery),
+      getQueryAs(joiningQuery),
+    );
+  };
+
   return {
     returns: 'many',
     method(params: Record<string, unknown>) {
@@ -291,25 +305,21 @@ export const makeHasAndBelongsToManyMethod = (
       });
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(relationName, state),
-    // joinQuery can be a property of RelationQuery and be used by whereExists and other stuff which needs it
-    // and the chained query itself may be a query around this joinQuery
-    joinQuery(fromQuery, toQuery) {
-      const join = joinQuery(
-        toQuery,
-        getQueryAs(fromQuery),
-        getQueryAs(toQuery),
+    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) => {
+      const joined = joinQuery(
+        joiningQuery,
+        getQueryAs(baseQuery),
+        getQueryAs(joiningQuery),
       );
 
-      join.q.joinedShapes = {
-        ...join.q.joinedShapes,
-        [(fromQuery.q.as || fromQuery.table) as string]: fromQuery.q.shape,
+      joined.q.joinedShapes = {
+        ...joined.q.joinedShapes,
+        [(baseQuery.q.as || baseQuery.table) as string]: baseQuery.q.shape,
       };
 
-      return join;
-    },
-    reverseJoin(fromQuery, toQuery) {
-      return joinQuery(fromQuery, getQueryAs(fromQuery), getQueryAs(toQuery));
-    },
+      return joined;
+    }),
+    reverseJoin,
     modifyRelatedQuery(relationQuery) {
       const ref = {} as { q: Query };
 
@@ -323,8 +333,8 @@ export const makeHasAndBelongsToManyMethod = (
           );
         }
 
-        const fromQuery = ref.q.clone();
-        fromQuery.q.select = selectPrimaryKeysAsForeignKeys;
+        const baseQuery = ref.q.clone();
+        baseQuery.q.select = selectPrimaryKeysAsForeignKeys;
 
         const data: Record<string, unknown> = {};
         for (let i = 0; i < throughLen; i++) {
@@ -335,10 +345,10 @@ export const makeHasAndBelongsToManyMethod = (
 
         const createdCount = await subQuery
           .count()
-          ._createFrom(fromQuery, data);
+          ._createFrom(baseQuery, data);
 
         if (createdCount === 0) {
-          throw new NotFoundError(fromQuery);
+          throw new NotFoundError(baseQuery);
         }
       });
 

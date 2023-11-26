@@ -103,7 +103,7 @@ const processWhere = (
     if (!(res instanceof Expression) && res.q.expr) {
       const q =
         'relationConfig' in res
-          ? res.relationConfig.joinQuery(table, res)
+          ? res.relationConfig.joinQuery(res, table)
           : res.clone();
 
       q.q.select = [expr as Expression];

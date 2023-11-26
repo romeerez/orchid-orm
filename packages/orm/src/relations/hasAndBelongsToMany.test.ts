@@ -4,6 +4,8 @@ import {
   chatData,
   chatSelectAll,
   db,
+  PostTag,
+  postTagSelectAll,
   User,
   userData,
   useRelationCallback,
@@ -74,6 +76,52 @@ describe('hasAndBelongsToMany', () => {
       );
     });
 
+    it('should handle long chained query', () => {
+      const q = db.chat
+        .where({ Title: 'title' })
+        .users.where({ Name: 'name' })
+        .postTags.where({ Tag: 'tag' });
+
+      assertType<Awaited<typeof q>, PostTag[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${postTagSelectAll}
+          FROM "postTag" AS "postTags"
+          WHERE
+            EXISTS (
+              SELECT 1
+              FROM "user" AS "users"
+              WHERE
+                EXISTS (
+                  SELECT 1
+                  FROM "chat"
+                  WHERE "chat"."title" = $1
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."userKey" = "users"."userKey"
+                        AND "chatUser"."chatId" = "chat"."idOfChat"
+                        AND "chatUser"."chatKey" = "chat"."chatKey"
+                    )
+                )
+                AND "users"."name" = $2
+                AND EXISTS (
+                  SELECT 1
+                  FROM "post"
+                  WHERE "post"."id" = "postTags"."postId"
+                    AND "post"."userId" = "users"."id"
+                    AND "post"."title" = "users"."userKey"
+                )
+            )
+            AND "postTags"."tag" = $3
+        `,
+        ['title', 'name', 'tag'],
+      );
+    });
+
     describe('create based on a query', () => {
       it('should have create based on find query', async () => {
         const user = await db.user.create(userData);
@@ -139,7 +187,7 @@ describe('hasAndBelongsToMany', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         db.user.relations.chats.relationConfig
-          .joinQuery(db.user.as('u'), db.chat.as('c'))
+          .joinQuery(db.chat.as('c'), db.user.as('u'))
           .toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" AS "c"
@@ -326,6 +374,44 @@ describe('hasAndBelongsToMany', () => {
             ) "chats" ON true
           `,
           ['title'],
+        );
+      });
+
+      it('should support chained select', () => {
+        const q = db.chat.select({
+          items: (q) => q.users.postTags,
+        });
+
+        assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "chat"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${postTagSelectAll}
+                FROM "postTag" AS "postTags"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "users"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."userKey" = "users"."userKey"
+                      AND "chatUser"."chatId" = "chat"."idOfChat"
+                      AND "chatUser"."chatKey" = "chat"."chatKey"
+                  ) AND EXISTS (
+                    SELECT 1 FROM "post"
+                    WHERE "post"."id" = "postTags"."postId"
+                      AND "post"."userId" = "users"."id"
+                      AND "post"."title" = "users"."userKey"
+                  )
+                )
+              ) AS "t"
+            ) "items" ON true
+          `,
         );
       });
     });

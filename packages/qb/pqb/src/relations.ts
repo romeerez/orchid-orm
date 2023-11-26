@@ -6,12 +6,18 @@ import {
 } from './query/query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
 import { StringKey } from 'orchid-core';
-import { QueryBase } from './query/queryBase';
+
+export type RelationsChain = (Query | RelationQuery)[];
+
+export type RelationJoinQuery = (
+  joiningQuery: Query,
+  baseQuery: Query,
+) => Query;
 
 export type RelationConfigBase = {
   table: QueryWithTable;
   query: QueryWithTable;
-  joinQuery(fromQuery: QueryBase, toQuery: Query): Query;
+  joinQuery: RelationJoinQuery;
   one: boolean;
   required: boolean;
   // Omit `belongsTo` foreign keys to be able to create records

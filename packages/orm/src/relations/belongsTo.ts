@@ -9,6 +9,7 @@ import {
   Query,
   QueryResult,
   QueryWithTable,
+  RelationJoinQuery,
   SelectQueryData,
   setQueryObjectValue,
   SetQueryTableAlias,
@@ -24,6 +25,7 @@ import {
   RelationToOneDataForCreate,
 } from './relations';
 import {
+  joinQueryChainingHOF,
   NestedInsertOneItem,
   NestedInsertOneItemConnect,
   NestedInsertOneItemConnectOrCreate,
@@ -78,7 +80,7 @@ export type BelongsToInfo<
 > = {
   table: Q;
   query: Q;
-  joinQuery(fromQuery: Query, toQuery: Query): Query;
+  joinQuery: RelationJoinQuery;
   one: true;
   required: Required;
   omitForeignKeyInCreate: FK;
@@ -236,24 +238,28 @@ export const makeBelongsToMethod = (
   const makeWhere = relationWhere(len, primaryKeys, foreignKeys);
 
   const join = (
-    fromQuery: Query,
-    toQuery: Query,
+    baseQuery: Query,
+    joiningQuery: Query,
     primaryKeys: string[],
     foreignKeys: string[],
   ) => {
-    const q = toQuery.clone();
+    const q = joiningQuery.clone();
     setQueryObjectValue(
       q,
       'joinedShapes',
-      (fromQuery.q.as || fromQuery.table) as string,
-      fromQuery.q.shape,
+      (baseQuery.q.as || baseQuery.table) as string,
+      baseQuery.q.shape,
     );
 
     for (let i = 0; i < len; i++) {
-      pushQueryOn(q, fromQuery, toQuery, primaryKeys[i], foreignKeys[i]);
+      pushQueryOn(q, baseQuery, joiningQuery, primaryKeys[i], foreignKeys[i]);
     }
 
     return q;
+  };
+
+  const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
+    return join(joiningQuery, baseQuery, foreignKeys, primaryKeys);
   };
 
   return {
@@ -262,12 +268,10 @@ export const makeBelongsToMethod = (
       return query.where(makeWhere(params));
     },
     virtualColumn: new BelongsToVirtualColumn(relationName, state),
-    joinQuery(fromQuery, toQuery) {
-      return join(fromQuery, toQuery, primaryKeys, foreignKeys);
-    },
-    reverseJoin(fromQuery, toQuery) {
-      return join(toQuery, fromQuery, foreignKeys, primaryKeys);
-    },
+    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
+      join(baseQuery, joiningQuery, primaryKeys, foreignKeys),
+    ),
+    reverseJoin,
   };
 };
 

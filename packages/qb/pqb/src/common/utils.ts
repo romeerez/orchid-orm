@@ -53,10 +53,12 @@ export const resolveSubQueryCallback = (
   q: Query,
   cb: (q: Query) => Query,
 ): Query => {
-  const { isSubQuery } = q.q;
+  const { isSubQuery, relChain } = q.q;
   q.q.isSubQuery = true;
+  q.q.relChain = undefined;
   const result = cb(q);
   q.q.isSubQuery = isSubQuery;
+  q.q.relChain = relChain;
   return result;
 };
 
@@ -72,5 +74,5 @@ export const resolveSubQueryCallback = (
 export const joinSubQuery = (q: Query, sub: Query): Query => {
   if (!('relationConfig' in sub)) return sub;
 
-  return (sub as unknown as RelationQuery).relationConfig.joinQuery(q, sub);
+  return (sub as unknown as RelationQuery).relationConfig.joinQuery(sub, q);
 };

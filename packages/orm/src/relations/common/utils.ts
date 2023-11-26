@@ -5,6 +5,7 @@ import {
   pushQueryOn,
   Query,
   RelationConfigBase,
+  RelationJoinQuery,
   setQueryObjectValue,
   UpdateData,
   WhereArg,
@@ -195,42 +196,68 @@ export const relationWhere =
 
 export function joinHasThrough(
   q: Query,
-  fromQuery: Query,
-  toQuery: Query,
+  baseQuery: Query,
+  joiningQuery: Query,
   throughRelation: RelationConfigBase,
   sourceRelation: RelationConfigBase,
 ): Query {
   return q.whereExists<Query, Query>(
-    throughRelation.joinQuery(fromQuery, throughRelation.query),
+    throughRelation.joinQuery(throughRelation.query, baseQuery),
     (() => {
-      const as = getQueryAs(toQuery);
+      const as = getQueryAs(joiningQuery);
       return sourceRelation.joinQuery(
-        throughRelation.query,
         sourceRelation.query.as(as),
+        throughRelation.query,
       );
     }) as unknown as JoinCallback<Query, Query>,
   );
 }
 
 export function joinHasRelation(
-  fromQuery: Query,
-  toQuery: Query,
+  baseQuery: Query,
+  joiningQuery: Query,
   primaryKeys: string[],
   foreignKeys: string[],
   len: number,
 ) {
-  const q = toQuery.clone();
+  const q = joiningQuery.clone();
 
   setQueryObjectValue(
     q,
     'joinedShapes',
-    (fromQuery.q.as || fromQuery.table) as string,
-    fromQuery.q.shape,
+    (baseQuery.q.as || baseQuery.table) as string,
+    baseQuery.q.shape,
   );
 
   for (let i = 0; i < len; i++) {
-    pushQueryOn(q, fromQuery, toQuery, foreignKeys[i], primaryKeys[i]);
+    pushQueryOn(q, baseQuery, joiningQuery, foreignKeys[i], primaryKeys[i]);
   }
 
   return q;
 }
+
+export const joinQueryChainingHOF =
+  (
+    reverseJoin: RelationJoinQuery,
+    joinQuery: RelationJoinQuery,
+  ): RelationJoinQuery =>
+  (joiningQuery, baseQuery) => {
+    const chain = joiningQuery.q.relChain;
+    if (!chain || chain.length === 1) {
+      return joinQuery(joiningQuery, baseQuery);
+    }
+
+    const last = chain[chain.length - 1];
+    const query =
+      'relationConfig' in last
+        ? last.relationConfig.joinQuery(last, baseQuery)
+        : last;
+
+    const inner = reverseJoin(query, joiningQuery);
+
+    return joiningQuery.where({
+      EXISTS: {
+        args: [inner],
+      },
+    });
+  };

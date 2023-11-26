@@ -7,6 +7,7 @@ import {
   getQueryAs,
   Query,
   RelationConfigBase,
+  RelationJoinQuery,
   RelationQuery,
   RelationsBase,
   VirtualColumn,
@@ -77,8 +78,8 @@ export type RelationData = {
   returns: 'one' | 'many';
   method(params: Record<string, unknown>): Query;
   virtualColumn?: VirtualColumn;
-  joinQuery(fromQuery: Query, toQuery: Query): Query;
-  reverseJoin(fromQuery: Query, toQuery: Query): Query;
+  joinQuery: RelationJoinQuery;
+  reverseJoin: RelationJoinQuery;
   modifyRelatedQuery?(relatedQuery: Query): (query: Query) => void;
 };
 
@@ -360,16 +361,28 @@ const makeRelationQuery = (
     get() {
       const toTable = q.clone();
 
-      const query = this.q.isSubQuery
-        ? toTable
-        : toTable
-            // Relation query returns a single record in case of belongsTo or hasOne,
-            // but when called as a query chain like `q.user.profile` it should return many.
-            ._all()
-            ._whereExists(
-              this.baseQuery,
-              (q) => data.reverseJoin(this, toTable) as unknown as typeof q,
-            );
+      let query: Query;
+      if (this.q.isSubQuery) {
+        query = toTable;
+        query.q.isSubQuery = true;
+      } else {
+        query = toTable
+          // Relation query returns a single record in case of belongsTo or hasOne,
+          // but when called as a query chain like `q.user.profile` it should return many.
+          ._all()
+          ._where({
+            EXISTS: {
+              args: [data.reverseJoin(this, toTable)],
+            },
+          });
+      }
+
+      if (this.q.relChain) {
+        query.q.relChain = [...this.q.relChain, this];
+        query.q.returnType = 'all';
+      } else {
+        query.q.relChain = [this];
+      }
 
       query.q.joinedShapes = {
         [getQueryAs(this)]: this.q.shape,

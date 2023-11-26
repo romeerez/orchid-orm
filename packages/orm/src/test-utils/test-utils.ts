@@ -53,6 +53,26 @@ export class UserTable extends BaseTable {
         references: ['IdOfChat', 'ChatKey'],
       },
     }),
+
+    posts: this.hasMany(() => PostTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['UserId', 'Title'],
+    }),
+
+    onePost: this.hasOne(() => PostTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['UserId', 'Title'],
+    }),
+
+    postTags: this.hasAndBelongsToMany(() => PostTagTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['userId', 'title'],
+      through: {
+        table: 'post',
+        columns: ['id'],
+        references: ['PostId'],
+      },
+    }),
   };
 }
 
@@ -85,6 +105,16 @@ export class ProfileTable extends BaseTable {
     messages: this.hasMany(() => MessageTable, {
       through: 'user',
       source: 'messages',
+    }),
+
+    posts: this.hasMany(() => PostTable, {
+      through: 'user',
+      source: 'posts',
+    }),
+
+    onePost: this.hasOne(() => PostTable, {
+      through: 'user',
+      source: 'onePost',
     }),
   };
 }
@@ -158,6 +188,12 @@ export class MessageTable extends BaseTable {
       through: 'user',
       source: 'profile',
     }),
+
+    profiles: this.hasMany(() => ProfileTable, {
+      required: true,
+      through: 'user',
+      source: 'profile',
+    }),
   };
 }
 
@@ -176,10 +212,21 @@ export class PostTable extends BaseTable {
   }));
 
   relations = {
+    user: this.belongsTo(() => UserTable, {
+      columns: ['UserId', 'Title'],
+      references: ['Id', 'UserKey'],
+    }),
+
     postTags: this.hasMany(() => PostTagTable, {
       columns: ['Id'],
       references: ['PostId'],
     }),
+
+    onePostTag: this.hasOne(() => PostTagTable, {
+      columns: ['Id'],
+      references: ['PostId'],
+    }),
+
     tags: this.hasMany(() => TagTable, {
       through: 'postTags',
       source: 'tag',
@@ -203,6 +250,11 @@ export class PostTagTable extends BaseTable {
   }));
 
   relations = {
+    post: this.belongsTo(() => PostTable, {
+      columns: ['PostId'],
+      references: ['Id'],
+    }),
+
     tag: this.belongsTo(() => TagTable, {
       columns: ['Tag'],
       references: ['Tag'],
@@ -266,6 +318,11 @@ export const messageSelectAll =
   db.message.internal.columnsForSelectAll!.join(', ');
 
 export const chatSelectAll = db.chat.internal.columnsForSelectAll!.join(', ');
+
+export const postSelectAll = db.post.internal.columnsForSelectAll!.join(', ');
+
+export const postTagSelectAll =
+  db.postTag.internal.columnsForSelectAll!.join(', ');
 
 export const userData = {
   Name: 'name',

@@ -28,6 +28,7 @@ import {
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 import { BaseOperators } from '../columns/operators';
+import { RelationsChain } from '../relations';
 
 // Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
 export type JoinedShapes = Record<string, ColumnsShapeBase>;
@@ -122,6 +123,8 @@ export type CommonQueryData = {
   // It is used by ORM to skip applying a join to the query when `isSubQuery` is true,
   // the join will be applied after callback is resolved.
   isSubQuery?: true;
+  // Chained relations, such as `db.user.messages.chat` are stored into array.
+  relChain?: RelationsChain;
   /**
    * Stores current operator functions available for the query.
    * Is needed to remove these operators from query object when changing the query type, see {@link setQueryOperators}.

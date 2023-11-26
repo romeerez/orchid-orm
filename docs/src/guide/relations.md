@@ -8,11 +8,9 @@ Two tables can have a relation with each other without circular dependency probl
 
 ```ts
 // user.table.ts
-import { Selectable } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 import { ProfileTable } from './profile.table';
 
-export type User = Selectable<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -31,11 +29,9 @@ export class UserTable extends BaseTable {
 
 ```ts
 // profile.table.ts
-import { Selectable } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 import { UserTable } from './user.table';
 
-export type Profile = Selectable<ProfileTable>;
 export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({

@@ -7,10 +7,10 @@ The resulting record of the `belongsTo` and `hasOne` relation can be undefined i
 ```ts
 const book = await db.book.find(1);
 
-// type of argument is { authorId: number }
+// type of `db.book.author` argument is { authorId: number }
 const author = await db.book.author(book);
 
-// type of argument is { id: number }
+// type of `db.author.books` argument is { id: number }
 const books = await db.author.books(author);
 
 // additional query methods can be applied:
@@ -24,11 +24,18 @@ const countBooks: number = await db.author
 const authorHasBooks: boolean = await db.author.books(author).exists();
 ```
 
-It's possible to chain relations query without providing a loaded record (supported by all kinds of relations):
+It's possible to chain relations query without providing a loaded record (supported by all kinds of relations).
+
+Each chained relation can have own `where` conditions and all query methods are applicable here.
+No limits on chaining.
 
 ```ts
-// find book and load author:
+// load author by book id, in a one query:
 const author = await db.book.find(1).author;
+
+// imagine an author has many awards,
+// load awards for an author by book id, in a one query:
+const authorAwards = await db.book.find(1).author.awards;
 
 // find many books and load their authors:
 const manyAuthors = await db.book.where({ id: { in: [1, 2, 3] } }).author;
@@ -44,6 +51,10 @@ const booksFromOneAuthor = await db.author.find(1).books;
 // find many authors and load their books:
 const booksFromManyAuthors = await db.author.where({ id: { in: [1, 2, 3] } })
   .books;
+
+// imagine a book has many reviews,
+// load book reviews for an author, in a one query:
+const bookReviews = await db.author.findBy({ name: '...' }).books.reviews;
 
 // filter both authors and books and load books in one query:
 const filteredBooks = await db.author
@@ -62,7 +73,7 @@ await db.authors.whereExists('book');
 
 // additional query methods can be applied in a callback:
 await db.book.whereExists('author', (q) =>
-  q.where({ 'author.name': 'Olexiy' }),
+  q.where({ 'author.name': 'Uladzimir' }),
 );
 ```
 
@@ -98,6 +109,7 @@ For `hasMany` and `hasAndBelongsToMany` this works better than `join` because it
 Inside the callback, you can set `select`, `where`, `order`, `limit`, and other methods for the relation.
 
 ```ts
+// type will be inferred, it is here for demonstration.
 type BookResult = {
   id: number;
   title: string;
@@ -130,6 +142,32 @@ const authorWithBooks: AuthorResult = await db.author
         .where(...conditions)
         .order('title')
         .limit(5),
+  })
+  .take();
+```
+
+You can chain relations inside `select` callback with no limits:
+
+```ts
+type BookResult = {
+  id: number;
+  title: string;
+  author: {
+    id: number;
+    name: string;
+    awards: {
+      name: string;
+      year: string;
+    }[];
+  };
+};
+
+const result: BookResult = await db.book
+  .select('id', 'title', {
+    author: (q) =>
+      q.author.select('id', 'name', {
+        awards: (q) => q.awards.select('name', 'year'),
+      }),
   })
   .take();
 ```
@@ -174,15 +212,14 @@ if you want to filter out main table records that don't have a matching relation
 
 ```ts
 // load only those authors who have at least one book that is published after 2000
-// with a books that are published after 2000
-await db.author.select({
-  books: (q) => q.books.join().where({ yearPublished: { gte: 2000 } }),
-});
+const author = await db.author
+  .select({
+    books: (q) => q.books.join().where({ yearPublished: { gte: 2000 } }),
+  })
+  .take();
 
-// load only books of female authors
-await db.books.select({
-  author: (q) => q.author.join().where({ gender: 'female' }),
-});
+// `join()` guarantees that the `author.books` can not be empty
+assert(author.books.length > 0);
 ```
 
 ### selecting the same table
