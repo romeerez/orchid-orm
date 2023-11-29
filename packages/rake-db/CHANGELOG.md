@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.11.0
+
+### Minor Changes
+
+- 913be12e: rake-db: use a single transaction for multiple migrations, use a database lock to prevent concurrency issues
+
 ## 2.10.73
 
 ### Patch Changes
