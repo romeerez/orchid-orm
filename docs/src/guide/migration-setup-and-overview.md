@@ -7,6 +7,24 @@ Migrations allow you to evolve your database schema over time. This migration to
 - it shares the same column types library as the ORM, which allows you to write a `createTable` migration and copy-paste columns to your table class
 - optionally, automatically updating table files of ORM after running a migration, instead of copy-pasting
 
+## how it works
+
+`rake-db` automatically creates a table `schemaMigrations` where it saves all migration file names that were applied.
+
+All changes are wrapped into a single transaction. If you have 3 pending migrations, and the last one throws an error,
+none of them will be applied.
+
+The transaction beings with setting a [pg_advisory_xact_lock](https://www.postgresql.org/docs/current/functions-admin.html).
+If you're deploying a cluster of node.js applications, and each application starts with running migrations,
+the first of them will set a lock and apply the migrations, the rest will wait for a lock,
+and after the lock is released all migrations are already applied.
+
+Locally, migrations are compiled from TS to JS on the fly before running.
+When developing to remote server, it may be preferable to precompile them first.
+If you're using `rake-db` as a standalone tool, try [ORM initializer script](/guide/quickstart.html) to use configs from it,
+the script allows to choose between `tsx`, `vite`, and `ts-node` and generates configs accordingly,
+package.json has `build:migrations` and `db:compiled` scripts.
+
 ## setup
 
 It is already set up if you ran `npx orchid-orm@latest` command from a [quickstart](/guide/quickstart).
@@ -130,10 +148,6 @@ npm run db new createSomeTable
 pnpm db new createSomeTable
 yarn db new createSomeTable
 ```
-
-## Vite
-
-See [this instruction](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/express-esm) in case you're using [Vite](https://vitejs.dev/).
 
 ## awaiting rakeDb
 

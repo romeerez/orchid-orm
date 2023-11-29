@@ -4,6 +4,7 @@ import {
   createDb,
   DbResult,
   DefaultColumnTypes,
+  TransactionAdapter,
 } from 'pqb';
 import {
   ColumnTypesBase,
@@ -12,7 +13,12 @@ import {
   pathToLog,
   toArray,
 } from 'orchid-core';
-import { getMigrations, MigrationItem, RakeDbConfig } from '../common';
+import {
+  AppCodeUpdater,
+  getMigrations,
+  MigrationItem,
+  RakeDbConfig,
+} from '../common';
 import {
   ChangeCallback,
   clearChanges,
@@ -25,93 +31,205 @@ import {
   saveMigratedVersion,
 } from '../migration/manageMigratedVersions';
 import { RakeDbError } from '../errors';
+import { RakeDbAst } from '../ast';
+
+export const RAKE_DB_LOCK_KEY = '8582141715823621641';
+
+type MigrateFn = <CT extends ColumnTypesBase>(
+  options: MaybeArray<AdapterOptions>,
+  config: RakeDbConfig<CT>,
+  args?: string[],
+) => Promise<void>;
+
+function makeMigrateFn(
+  defaultCount: number,
+  up: boolean,
+  fn: (
+    trx: TransactionAdapter,
+    config: RakeDbConfig,
+    files: MigrationItem[],
+    count: number,
+    asts: RakeDbAst[],
+  ) => Promise<void>,
+): MigrateFn {
+  return async (options, config, args = []) => {
+    const files = await getMigrations(config, up);
+    const count = getCount(args);
+    const conf = prepareConfig(config, args, count);
+    const asts: RakeDbAst[] = [];
+    const appCodeUpdaterCache = {};
+    const { appCodeUpdater } = conf;
+    const arrOptions = toArray(options);
+    let localAsts = asts;
+    for (const opts of arrOptions) {
+      const adapter = new Adapter(opts);
+
+      try {
+        await adapter.transaction(begin, async (trx) => {
+          await trx.query(
+            `SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`,
+          );
+
+          await fn(
+            trx,
+            conf as unknown as RakeDbConfig,
+            files,
+            count ?? defaultCount,
+            localAsts,
+          );
+        });
+      } finally {
+        await adapter.close();
+      }
+
+      // ignore asts after the first db was migrated
+      localAsts = [];
+    }
+
+    await runCodeUpdaterAfterAll(
+      arrOptions[0],
+      config,
+      appCodeUpdater,
+      asts,
+      appCodeUpdaterCache,
+    );
+  };
+}
+
+/**
+ * Will run all pending yet migrations, sequentially in order,
+ * will apply `change` functions top-to-bottom.
+ *
+ * @param options - options to construct db adapter with
+ * @param config - specifies how to load migrations, may have `appCodeUpdater`, callbacks, and logger.
+ * @param args - pass none or `all` to run all migrations, pass int for how many to migrate, `--code` to enable and `--code false` to disable `useCodeUpdater`.
+ */
+export const migrate: MigrateFn = makeMigrateFn(
+  Infinity,
+  true,
+  (trx, configs, files, count, asts) =>
+    migrateOrRollback(trx, configs, files, count, asts, true),
+);
+
+/**
+ * Will roll back one latest applied migration,
+ * will apply `change` functions bottom-to-top.
+ *
+ * Takes the same options as {@link migrate}.
+ */
+export const rollback: MigrateFn = makeMigrateFn(
+  1,
+  false,
+  (trx, config, files, count, asts) =>
+    migrateOrRollback(trx, config, files, count, asts, false),
+);
+
+/**
+ * Calls {@link rollback} and then {@link migrate}.
+ *
+ * Takes the same options as {@link migrate}.
+ */
+export const redo: MigrateFn = makeMigrateFn(
+  1,
+  false,
+  async (trx, config, files, count, asts) => {
+    await migrateOrRollback(trx, config, files, count, asts, false);
+
+    files.reverse();
+
+    await migrateOrRollback(trx, config, files, count, asts, true);
+
+    files.reverse();
+  },
+);
 
 const getDb = (adapter: Adapter) => createDb({ adapter });
 
-export const migrateOrRollback = async <CT extends ColumnTypesBase>(
-  options: MaybeArray<AdapterOptions>,
+const getCount = (args: string[]): number | undefined => {
+  const num = args[0] === 'all' ? Infinity : parseInt(args[0]);
+  return isNaN(num) ? undefined : num;
+};
+
+function prepareConfig<CT extends ColumnTypesBase>(
   config: RakeDbConfig<CT>,
   args: string[],
-  up: boolean,
-): Promise<void> => {
+  count?: number,
+): RakeDbConfig<CT> {
   config = { ...config };
-  const files = await getMigrations(config, up);
 
-  let count = up ? Infinity : 1;
-  let argI = 0;
-  const num = args[0] === 'all' ? Infinity : parseInt(args[0]);
-  if (!isNaN(num)) {
-    argI++;
-    count = num;
-  }
-
-  const arg = args[argI];
+  const i = count === undefined ? 0 : 1;
+  const arg = args[i];
   if (arg === '--code') {
-    config.useCodeUpdater = args[argI + 1] !== 'false';
+    config.useCodeUpdater = args[i + 1] !== 'false';
   }
 
   if (!config.useCodeUpdater) delete config.appCodeUpdater;
+  return config;
+}
 
-  const appCodeUpdaterCache = {};
+export const migrateOrRollback = async <CT extends ColumnTypesBase>(
+  trx: TransactionAdapter,
+  config: RakeDbConfig<CT>,
+  files: MigrationItem[],
+  count: number,
+  asts: RakeDbAst[],
+  up: boolean,
+): Promise<void> => {
+  let db: DbResult<DefaultColumnTypes> | undefined;
 
-  for (const opts of toArray(options)) {
-    const adapter = new Adapter(opts);
-    let db: DbResult<DefaultColumnTypes> | undefined;
+  await config[up ? 'beforeMigrate' : 'beforeRollback']?.((db ??= getDb(trx)));
 
-    if (up) {
-      await config.beforeMigrate?.((db ??= getDb(adapter)));
-    } else {
-      await config.beforeRollback?.((db ??= getDb(adapter)));
+  const migratedVersions = await getMigratedVersionsMap(trx, config);
+  for (const file of files) {
+    if (
+      (up && migratedVersions[file.version]) ||
+      (!up && !migratedVersions[file.version])
+    ) {
+      continue;
     }
 
-    const migratedVersions = await getMigratedVersionsMap(adapter, config);
-    try {
-      for (const file of files) {
-        if (
-          (up && migratedVersions[file.version]) ||
-          (!up && !migratedVersions[file.version])
-        ) {
-          continue;
-        }
+    if (count-- <= 0) break;
 
-        if (count-- <= 0) break;
+    await runMigration(trx, up, file, config, asts);
 
-        await processMigration(
-          adapter,
-          up,
-          file,
-          config,
-          opts,
-          appCodeUpdaterCache,
-        );
-
-        config.logger?.log(
-          `${up ? 'Migrated' : 'Rolled back'} ${pathToLog(file.path)}`,
-        );
-      }
-
-      if (up) {
-        await config.afterMigrate?.((db ??= getDb(adapter)));
-      } else {
-        await config.afterRollback?.((db ??= getDb(adapter)));
-      }
-    } finally {
-      await config.appCodeUpdater?.afterAll({
-        options: opts,
-        basePath: config.basePath,
-        cache: appCodeUpdaterCache,
-        logger: config.logger,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        baseTable: config.baseTable!,
-        import: config.import,
-      });
-
-      await adapter.close();
-    }
-    // use appCodeUpdater only for the first provided options
-    delete config.appCodeUpdater;
+    config.logger?.log(
+      `${up ? 'Migrated' : 'Rolled back'} ${pathToLog(file.path)}`,
+    );
   }
+
+  await config[up ? 'afterMigrate' : 'afterRollback']?.((db ??= getDb(trx)));
 };
+
+async function runCodeUpdaterAfterAll<CT extends ColumnTypesBase>(
+  options: AdapterOptions,
+  config: RakeDbConfig<CT>,
+  appCodeUpdater: AppCodeUpdater | undefined,
+  asts: RakeDbAst[],
+  cache: object,
+) {
+  for (const ast of asts) {
+    await appCodeUpdater?.process({
+      ast,
+      options,
+      basePath: config.basePath,
+      cache,
+      logger: config.logger,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      baseTable: config.baseTable!,
+      import: config.import,
+    });
+  }
+
+  await appCodeUpdater?.afterAll({
+    options,
+    basePath: config.basePath,
+    cache,
+    logger: config.logger,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    baseTable: config.baseTable!,
+    import: config.import,
+  });
+}
 
 // Cache `change` functions of migrations. Key is a migration file name, value is array of `change` functions.
 // When migrating two or more databases, files are loaded just once due to this cache.
@@ -129,109 +247,51 @@ const begin = {
  * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
  * After transaction is committed, will call `appCodeUpdater` if exists with the migrated changes.
  */
-const processMigration = async <CT extends ColumnTypesBase>(
-  db: Adapter,
+const runMigration = async <CT extends ColumnTypesBase>(
+  trx: TransactionAdapter,
   up: boolean,
   file: MigrationItem,
   config: RakeDbConfig<CT>,
-  options: AdapterOptions,
-  appCodeUpdaterCache: object,
+  asts: RakeDbAst[],
 ) => {
-  const asts = await db.transaction(begin, async (tx) => {
-    clearChanges();
+  clearChanges();
 
-    let changes = changeCache[file.path];
-    if (!changes) {
-      const module = (await file.load()) as
-        | {
-            default?: MaybeArray<ChangeCallback>;
-          }
-        | undefined;
+  let changes = changeCache[file.path];
+  if (!changes) {
+    const module = (await file.load()) as
+      | {
+          default?: MaybeArray<ChangeCallback>;
+        }
+      | undefined;
 
-      const exported = module?.default && toArray(module.default);
+    const exported = module?.default && toArray(module.default);
 
-      if (config.forceDefaultExports && !exported) {
-        throw new RakeDbError(
-          `Missing a default export in ${file.path} migration`,
-        );
-      }
-
-      changes = exported || getCurrentChanges();
-      changeCache[file.path] = changes;
+    if (config.forceDefaultExports && !exported) {
+      throw new RakeDbError(
+        `Missing a default export in ${file.path} migration`,
+      );
     }
 
-    const db = createMigrationInterface<CT>(tx, up, config);
-
-    if (changes.length) {
-      // when up: for (let i = 0; i !== changes.length - 1; i++)
-      // when down: for (let i = changes.length - 1; i !== -1; i--)
-      const from = up ? 0 : changes.length - 1;
-      const to = up ? changes.length : -1;
-      const step = up ? 1 : -1;
-      for (let i = from; i !== to; i += step) {
-        await (changes[i] as unknown as ChangeCallback<CT>)(db, up);
-      }
-    }
-
-    await (up ? saveMigratedVersion : removeMigratedVersion)(
-      db.adapter,
-      file.version,
-      config,
-    );
-
-    return db.migratedAsts;
-  });
-
-  for (const ast of asts) {
-    await config.appCodeUpdater?.process({
-      ast,
-      options,
-      basePath: config.basePath,
-      cache: appCodeUpdaterCache,
-      logger: config.logger,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      baseTable: config.baseTable!,
-      import: config.import,
-    });
+    changes = exported || getCurrentChanges();
+    changeCache[file.path] = changes;
   }
-};
 
-/**
- * Will run all pending yet migrations, sequentially in order,
- * will apply `change` functions top-to-bottom.
- *
- * @param options - options to construct db adapter with
- * @param config - specifies how to load migrations, may have `appCodeUpdater`, callbacks, and logger.
- * @param args - pass none or `all` to run all migrations, pass int for how many to migrate, `--code` to enable and `--code false` to disable `useCodeUpdater`.
- */
-export const migrate = <CT extends ColumnTypesBase>(
-  options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
-  args: string[] = [],
-): Promise<void> => migrateOrRollback(options, config, args, true);
+  const db = createMigrationInterface<CT>(trx, up, config, asts);
 
-/**
- * Will roll back one latest applied migration,
- * will apply `change` functions bottom-to-top.
- *
- * Takes the same options as {@link migrate}.
- */
-export const rollback = <CT extends ColumnTypesBase>(
-  options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
-  args: string[] = [],
-): Promise<void> => migrateOrRollback(options, config, args, false);
+  if (changes.length) {
+    // when up: for (let i = 0; i !== changes.length - 1; i++)
+    // when down: for (let i = changes.length - 1; i !== -1; i--)
+    const from = up ? 0 : changes.length - 1;
+    const to = up ? changes.length : -1;
+    const step = up ? 1 : -1;
+    for (let i = from; i !== to; i += step) {
+      await (changes[i] as unknown as ChangeCallback<CT>)(db, up);
+    }
+  }
 
-/**
- * Calls {@link rollback} and then {@link migrate}.
- *
- * Takes the same options as {@link migrate}.
- */
-export const redo = async <CT extends ColumnTypesBase>(
-  options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
-  args: string[] = [],
-): Promise<void> => {
-  await migrateOrRollback(options, config, args, false);
-  await migrateOrRollback(options, config, args, true);
+  await (up ? saveMigratedVersion : removeMigratedVersion)(
+    db.adapter,
+    file.version,
+    config,
+  );
 };

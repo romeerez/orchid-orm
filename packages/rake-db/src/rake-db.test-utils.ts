@@ -37,6 +37,7 @@ export const getDb = () => {
     {} as unknown as TransactionAdapter,
     true,
     testConfig,
+    [],
   );
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;

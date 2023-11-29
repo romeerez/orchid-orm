@@ -1,4 +1,4 @@
-import { Adapter } from 'pqb';
+import { TransactionAdapter } from 'pqb';
 import {
   createSchemaMigrations,
   quoteWithSchema,
@@ -32,13 +32,12 @@ export const removeMigratedVersion = async <CT extends ColumnTypesBase>(
 };
 
 export const getMigratedVersionsMap = async <CT extends ColumnTypesBase>(
-  db: Adapter,
+  db: TransactionAdapter,
   config: RakeDbConfig<CT>,
 ): Promise<Record<string, boolean>> => {
   try {
     const result = await db.arrays<[string]>(
-      `SELECT *
-       FROM ${quoteWithSchema({ name: config.migrationsTable })}`,
+      `SELECT * FROM ${quoteWithSchema({ name: config.migrationsTable })}`,
     );
     return Object.fromEntries(result.rows.map((row) => [row[0], true]));
   } catch (err) {

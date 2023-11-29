@@ -132,11 +132,13 @@ type ConstraintArg = {
  * @param tx - database adapter that executes inside a transaction
  * @param up - migrate or rollback
  * @param config - config of `rakeDb`
+ * @param asts - array of migration ASTs to collect changes into
  */
 export const createMigrationInterface = <CT extends ColumnTypesBase>(
   tx: TransactionAdapter,
   up: boolean,
   config: RakeDbConfig<CT>,
+  asts: RakeDbAst[],
 ): DbMigration<CT> => {
   const adapter = new TransactionAdapter(tx, tx.client, tx.types);
   const { query, arrays } = adapter;
@@ -163,7 +165,7 @@ export const createMigrationInterface = <CT extends ColumnTypesBase>(
       proto[key as keyof typeof proto];
   }
 
-  db.migratedAsts = [];
+  db.migratedAsts = asts;
 
   return Object.assign(db, {
     adapter,
