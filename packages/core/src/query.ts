@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
-import { EmptyObject } from './utils';
+import { EmptyObject, RecordKeyTrue } from './utils';
 
 // Output type of the `toSQL` method of query objects.
 // This will be passed to database adapter to perform query.
@@ -14,7 +14,7 @@ export type Sql = {
 };
 
 // query metadata that is stored only on TS side, not available in runtime
-export type QueryMetaBase = {
+export type QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
   // kind of a query: select, update, create, etc.
   kind: string;
   // table alias
@@ -28,6 +28,8 @@ export type QueryMetaBase = {
   defaults: EmptyObject;
   // Union of available full text search aliases to use in `headline` and in `order`.
   tsQuery?: string;
+  // Used to determine what scopes are available on the table.
+  scopes: Scopes;
 };
 
 // static query data that is defined only once when the table instance is instantiated
@@ -40,13 +42,21 @@ export type QueryInternal = {
     options: { unique?: boolean };
   }[];
   transactionStorage: AsyncLocalStorage<TransactionState>;
+  // Store scopes data, used for adding or removing a scope to the query.
+  scopes?: CoreQueryScopes;
 };
+
+// Scopes data stored in table instance. Doesn't change after defining a table.
+export type CoreQueryScopes<Keys extends string = string> = Record<
+  Keys,
+  unknown
+>;
 
 // It is a generic interface that covers any query:
 // both the table query objects
 // and the lightweight queries inside `where` and `on` callbacks
-export type QueryBaseCommon = {
-  meta: QueryMetaBase;
+export type QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
+  meta: QueryMetaBase<Scopes>;
   internal: QueryInternal;
 };
 

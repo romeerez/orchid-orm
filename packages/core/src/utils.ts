@@ -68,6 +68,11 @@ export type MergeObjects<
     : never;
 };
 
+// Utility type to store info to know which keys are available.
+// Use it for cases where you'd want to pick a string union,
+// this record type solves the same use case, but is better at handling the empty case.
+export type RecordKeyTrue = Record<PropertyKey, true>;
+
 // Use a default string if the first argument string is undefined.
 export type CoalesceString<
   Left extends string | undefined,

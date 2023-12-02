@@ -3,6 +3,7 @@ import {
   columnTypes as defaultColumnTypes,
   ComputedColumnsBase,
   Db,
+  DbTableOptionScopes,
   DefaultColumnTypes,
   getColumnTypes,
   Query,
@@ -23,6 +24,7 @@ import {
   EmptyObject,
   getCallerFilePath,
   getStackTrace,
+  CoreQueryScopes,
   snakeCaseKey,
   toSnakeCase,
 } from 'orchid-core';
@@ -57,7 +59,8 @@ export type TableToDb<
     ? T['columns'] & {
         [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
       }
-    : T['columns']
+    : T['columns'],
+  T['scopes']
 > & {
   definedAs: string;
   db: OrchidORM;
@@ -101,6 +104,8 @@ export type Table = {
    * collect computed columns returned by {@link BaseTable.setColumns}
    */
   computed?: ComputedColumnsBase<never>;
+  // Available scopes for this table defined by user.
+  scopes?: CoreQueryScopes;
 };
 
 // Object type that's allowed in `where` and similar methods of the table.
@@ -252,13 +257,25 @@ export interface BaseTableInstance<ColumnTypes> {
     computed: Computed,
   ): Computed;
 
+  /**
+   * See {@link ScopeMethods}
+   */
+  setScopes<
+    Table extends string,
+    Columns extends ColumnsShapeBase,
+    Keys extends string,
+  >(
+    this: { table: Table; columns: Columns },
+    scopes: DbTableOptionScopes<Table, Columns, Keys>,
+  ): CoreQueryScopes<Keys>;
+
   belongsTo<
-    Self extends Table,
+    Columns extends ColumnsShapeBase,
     Related extends TableClass,
     Scope extends Query,
-    Options extends BelongsToOptions<Self, Related, Scope>,
+    Options extends BelongsToOptions<Columns, Related, Scope>,
   >(
-    this: Self,
+    this: { columns: Columns },
     fn: () => Related,
     options: Options,
   ): {
@@ -268,14 +285,14 @@ export interface BaseTableInstance<ColumnTypes> {
   };
 
   hasOne<
-    Self extends Table,
+    Columns extends ColumnsShapeBase,
     Related extends TableClass,
     Scope extends Query,
     Through extends string,
     Source extends string,
-    Options extends HasOneOptions<Self, Related, Scope, Through, Source>,
+    Options extends HasOneOptions<Columns, Related, Scope, Through, Source>,
   >(
-    this: Self,
+    this: { columns: Columns },
     fn: () => Related,
     options: Options,
   ): {
@@ -285,14 +302,14 @@ export interface BaseTableInstance<ColumnTypes> {
   };
 
   hasMany<
-    Self extends Table,
+    Columns extends ColumnsShapeBase,
     Related extends TableClass,
     Scope extends Query,
     Through extends string,
     Source extends string,
-    Options extends HasManyOptions<Self, Related, Scope, Through, Source>,
+    Options extends HasManyOptions<Columns, Related, Scope, Through, Source>,
   >(
-    this: Self,
+    this: { columns: Columns },
     fn: () => Related,
     options: Options,
   ): {
@@ -302,12 +319,12 @@ export interface BaseTableInstance<ColumnTypes> {
   };
 
   hasAndBelongsToMany<
-    Self extends Table,
+    Columns extends ColumnsShapeBase,
     Related extends TableClass,
     Scope extends Query,
-    Options extends HasAndBelongsToManyOptions<Self, Related, Scope>,
+    Options extends HasAndBelongsToManyOptions<Columns, Related, Scope>,
   >(
-    this: Self,
+    this: { columns: Columns },
     fn: () => Related,
     options: Options,
   ): {
@@ -477,12 +494,11 @@ export function createBaseTable<
       return computed;
     }
 
-    belongsTo<
-      Self extends this,
-      Related extends TableClass,
-      Scope extends Query,
-      Options extends BelongsToOptions<Self, Related, Scope>,
-    >(this: Self, fn: () => Related, options: Options) {
+    setScopes(scopes: unknown) {
+      return scopes;
+    }
+
+    belongsTo(fn: () => unknown, options: unknown) {
       return {
         type: 'belongsTo' as const,
         fn,
@@ -490,14 +506,7 @@ export function createBaseTable<
       };
     }
 
-    hasOne<
-      Self extends this,
-      Related extends TableClass,
-      Scope extends Query,
-      Through extends string,
-      Source extends string,
-      Options extends HasOneOptions<Self, Related, Scope, Through, Source>,
-    >(this: Self, fn: () => Related, options: Options) {
+    hasOne(fn: () => unknown, options: unknown) {
       return {
         type: 'hasOne' as const,
         fn,
@@ -505,14 +514,7 @@ export function createBaseTable<
       };
     }
 
-    hasMany<
-      Self extends this,
-      Related extends TableClass,
-      Scope extends Query,
-      Through extends string,
-      Source extends string,
-      Options extends HasManyOptions<Self, Related, Scope, Through, Source>,
-    >(this: Self, fn: () => Related, options: Options) {
+    hasMany(fn: () => unknown, options: unknown) {
       return {
         type: 'hasMany' as const,
         fn,
@@ -520,12 +522,7 @@ export function createBaseTable<
       };
     }
 
-    hasAndBelongsToMany<
-      Self extends this,
-      Related extends TableClass,
-      Scope extends Query,
-      Options extends HasAndBelongsToManyOptions<Self, Related, Scope>,
-    >(this: Self, fn: () => Related, options: Options) {
+    hasAndBelongsToMany(fn: () => unknown, options: unknown) {
       return {
         type: 'hasAndBelongsToMany' as const,
         fn,

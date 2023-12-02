@@ -45,6 +45,14 @@ export type QueryAfterHook<Data = unknown> = (
 ) => void | Promise<void>;
 export type QueryHookSelect = string[];
 
+export type QueryScopes = Record<string, QueryScopeData>;
+
+// Query data stored for a specific scope to be applied to the query.
+export type QueryScopeData = {
+  and?: WhereItem[];
+  or?: WhereItem[][];
+};
+
 export type CommonQueryData = {
   adapter: Adapter;
   shape: ColumnsShapeBase;
@@ -134,6 +142,8 @@ export type CommonQueryData = {
    * Used by {@link setQueryOperators} to store the original `baseQuery` before extending it with operators.
    */
   originalQuery?: Query;
+  // Track the applied scopes, this is used when removing the scope from the query.
+  scopes: Record<string, QueryScopeData>;
 };
 
 export type SelectQueryData = CommonQueryData & {

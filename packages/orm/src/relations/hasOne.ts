@@ -37,7 +37,7 @@ import {
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
 } from './common/utils';
-import { EmptyObject } from 'orchid-core';
+import { ColumnsShapeBase, EmptyObject } from 'orchid-core';
 import {
   RelationCommonOptions,
   RelationHasOptions,
@@ -52,17 +52,14 @@ export type HasOne = RelationThunkBase & {
 };
 
 export type HasOneOptions<
-  Self extends Table = Table,
+  Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
   Scope extends Query = Query,
   Through extends string = string,
   Source extends string = string,
 > = RelationCommonOptions<Related, Scope> &
   (
-    | RelationHasOptions<
-        keyof Self['columns'],
-        keyof InstanceType<Related>['columns']
-      >
+    | RelationHasOptions<keyof Columns, keyof InstanceType<Related>['columns']>
     | RelationThroughOptions<Through, Source>
   );
 

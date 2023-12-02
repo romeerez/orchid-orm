@@ -66,6 +66,7 @@ import { TransformMethods } from './transform';
 import { RawSQL } from '../sql/rawSql';
 import { noneMethods } from './none';
 import { simpleExistingColumnToSQL } from '../sql/common';
+import { ScopeMethods } from './scope';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -193,7 +194,8 @@ export interface QueryMethods<ColumnTypes>
     MergeQueryMethods,
     RawSqlMethods<ColumnTypes>,
     CopyMethods,
-    TransformMethods {}
+    TransformMethods,
+    ScopeMethods {}
 
 export class QueryMethods<ColumnTypes> {
   /**
@@ -914,4 +916,5 @@ applyMixins(QueryMethods, [
   RawSqlMethods,
   CopyMethods,
   TransformMethods,
+  ScopeMethods,
 ]);

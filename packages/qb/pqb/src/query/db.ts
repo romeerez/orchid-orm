@@ -6,7 +6,7 @@ import {
   logParamToLogObject,
   QueryLogOptions,
 } from '../queryMethods';
-import { QueryData, SelectQueryData, ToSQLOptions } from '../sql';
+import { QueryData, QueryScopes, SelectQueryData, ToSQLOptions } from '../sql';
 import {
   AdapterOptions,
   Adapter,
@@ -43,11 +43,15 @@ import {
   EmptyObject,
   ColumnTypesBase,
   ColumnTypeBase,
+  emptyObject,
+  CoreQueryScopes,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from '../sql/rawSql';
 import { RelationsBase } from '../relations';
+import { ScopeArgumentQuery } from '../queryMethods/scope';
+import { QueryBase } from './queryBase';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -67,7 +71,11 @@ export type DbOptions<ColumnTypes extends ColumnTypesBase> = (
     nowSQL?: string;
   };
 
-export type DbTableOptions = {
+// Options of `createDb`.
+export type DbTableOptions<
+  Table extends string | undefined,
+  Shape extends ColumnsShapeBase,
+> = {
   schema?: string;
   // prepare all SQL queries before executing
   // true by default
@@ -76,7 +84,20 @@ export type DbTableOptions = {
   snakeCase?: boolean;
   // default language for the full text search
   language?: string;
+  /**
+   * See {@link ScopeMethods}
+   */
+  scopes?: DbTableOptionScopes<Table, Shape>;
 } & QueryLogOptions;
+
+/**
+ * See {@link ScopeMethods}
+ */
+export type DbTableOptionScopes<
+  Table extends string | undefined,
+  Shape extends ColumnsShapeBase,
+  Keys extends string = string,
+> = Record<Keys, (q: ScopeArgumentQuery<Table, Shape>) => QueryBase>;
 
 // Type of data returned from the table query by default, doesn't include computed columns.
 // `const user: User[] = await db.user;`
@@ -91,6 +112,7 @@ export interface Db<
   Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes,
   ShapeWithComputed extends ColumnsShapeBase = Shape,
+  Scopes extends CoreQueryScopes | undefined = EmptyObject,
   Data = QueryDefaultReturnData<Shape>,
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
     QueryMethods<ColumnTypes> {
@@ -99,9 +121,9 @@ export interface Db<
     queryBuilder: Db<Table, Shape, Relations, ColumnTypes>,
     table?: Table,
     shape?: Shape,
-    options?: DbTableOptions,
+    options?: DbTableOptions<Table, ShapeWithComputed>,
   ): this;
-  internal: Query['internal'];
+  internal: QueryInternal;
   queryBuilder: Db;
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
@@ -126,6 +148,7 @@ export interface Db<
         ? never
         : K]: true;
     };
+    scopes: Record<keyof Scopes, true>;
   };
 }
 
@@ -146,16 +169,18 @@ export class Db<
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
     public columnTypes: ColumnTypes,
     transactionStorage: AsyncLocalStorage<TransactionState>,
-    options: DbTableOptions,
+    options: DbTableOptions<Table, ShapeWithComputed>,
   ) {
-    const tableData = getTableData();
-
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
+    const scopes = (options.scopes ? {} : emptyObject) as QueryScopes;
+
+    const tableData = getTableData();
     this.internal = {
       ...tableData,
       transactionStorage,
+      scopes,
     };
 
     this.baseQuery = this as Query;
@@ -285,6 +310,23 @@ export class Db<
         super(self, message);
       }
     };
+
+    if (options.scopes) {
+      for (const key in options.scopes) {
+        const q = options.scopes[key](this).q as SelectQueryData;
+
+        const s: Partial<SelectQueryData> = {};
+        if (q.and) s.and = q.and;
+        if (q.or) s.or = q.or;
+
+        (scopes as Record<string, unknown>)[key] = s;
+      }
+
+      if (scopes.default) {
+        Object.assign(this.q, scopes.default);
+        this.q.scopes = { default: scopes.default };
+      }
+    }
   }
 
   [inspect.custom]() {
@@ -415,21 +457,34 @@ applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 Db.prototype.onQueryBuilder = OnQueryBuilder;
 
+// Function to build a new table instance.
+export type DbTableConstructor<ColumnTypes> = <
+  Table extends string,
+  Shape extends ColumnsShapeBase,
+  Options extends DbTableOptions<Table, Shape>,
+>(
+  table: Table,
+  shape?: ((t: ColumnTypes) => Shape) | Shape,
+  options?: Options,
+) => Db<
+  Table,
+  Shape,
+  EmptyObject,
+  ColumnTypes,
+  Shape,
+  Options extends { scopes: CoreQueryScopes } ? Options['scopes'] : EmptyObject
+>;
+
 export type DbResult<ColumnTypes> = Db<
   string,
   Record<string, never>,
   EmptyObject,
   ColumnTypes
-> & {
-  <Table extends string, Shape extends ColumnsShapeBase = ColumnsShapeBase>(
-    table: Table,
-    shape?: ((t: ColumnTypes) => Shape) | Shape,
-    options?: DbTableOptions,
-  ): Db<Table, Shape, EmptyObject>;
-
-  adapter: Adapter;
-  close: Adapter['close'];
-};
+> &
+  DbTableConstructor<ColumnTypes> & {
+    adapter: Adapter;
+    close: Adapter['close'];
+  };
 
 /**
  * For the case of using the query builder as a standalone tool, use `createDb` from `pqb` package.
@@ -541,27 +596,27 @@ export const createDb = <
   );
   qb.queryBuilder = qb as unknown as Db;
 
-  const db = Object.assign(
-    <Table extends string, Shape extends ColumnsShapeBase = ColumnsShapeBase>(
-      table: Table,
-      shape?: ((t: ColumnTypes) => Shape) | Shape,
-      options?: DbTableOptions,
-    ): Db<Table, Shape, EmptyObject, ColumnTypes> => {
-      return new Db<Table, Shape, EmptyObject, ColumnTypes>(
-        adapter,
-        qb as unknown as Db,
-        table as Table,
-        typeof shape === 'function'
-          ? getColumnTypes(ct, shape, nowSQL, options?.language)
-          : shape,
-        ct,
-        transactionStorage,
-        { ...commonOptions, ...options },
-      );
-    },
-    qb,
-    { adapter, close: () => adapter.close() },
-  );
+  const tableConstructor: DbTableConstructor<ColumnTypes> = (
+    table,
+    shape,
+    options,
+  ) =>
+    new Db(
+      adapter,
+      qb as unknown as Db,
+      table,
+      typeof shape === 'function'
+        ? getColumnTypes(ct, shape, nowSQL, options?.language)
+        : shape,
+      ct,
+      transactionStorage,
+      { ...commonOptions, ...options },
+    );
+
+  const db = Object.assign(tableConstructor, qb, {
+    adapter,
+    close: () => adapter.close(),
+  });
 
   // Set all methods from prototype to the db instance (needed for transaction at least):
   for (const name of Object.getOwnPropertyNames(Db.prototype)) {

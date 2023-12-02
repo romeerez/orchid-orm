@@ -510,4 +510,40 @@ describe('baseTable', () => {
       );
     });
   });
+
+  describe('scopes', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        active: t.boolean(),
+      }));
+
+      scopes = this.setScopes({
+        default: (q) => q.where({ active: true }),
+        positiveId: (q) => q.where({ id: { gt: 0 } }),
+      });
+    }
+
+    const local = orchidORM(
+      { db: db.$queryBuilder },
+      {
+        user: UserTable,
+      },
+    );
+
+    it('should have a default scope and be able to use defined scope', async () => {
+      const q = local.user.scope('positiveId');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT * FROM "user"
+          WHERE "user"."active" = $1
+            AND "user"."id" > $2
+        `,
+        [true, 0],
+      );
+    });
+  });
 });

@@ -21,6 +21,7 @@ import {
   QueryThen,
   QueryCatch,
   emptyObject,
+  EmptyObject,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
 import { AliasOrTable } from '../../common/utils';
@@ -137,7 +138,7 @@ export type JoinResult<
   RequireJoined extends boolean,
   RequireMain extends boolean,
   Cb extends (q: never) => { meta: QueryMetaBase } = () => {
-    meta: QueryMetaBase;
+    meta: QueryMetaBase<EmptyObject>;
   },
   J extends {
     table?: string;

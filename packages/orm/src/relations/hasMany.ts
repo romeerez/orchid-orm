@@ -25,7 +25,12 @@ import {
   AddQueryDefaults,
   RelationJoinQuery,
 } from 'pqb';
-import { EmptyObject, MaybeArray, toArray } from 'orchid-core';
+import {
+  ColumnsShapeBase,
+  EmptyObject,
+  MaybeArray,
+  toArray,
+} from 'orchid-core';
 import {
   getSourceRelation,
   getThroughRelation,
@@ -52,12 +57,12 @@ export type HasMany = RelationThunkBase & {
 };
 
 export type HasManyOptions<
-  Self extends Table = Table,
+  Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
   Scope extends Query = Query,
   Through extends string = string,
   Source extends string = string,
-> = HasOneOptions<Self, Related, Scope, Through, Source>;
+> = HasOneOptions<Columns, Related, Scope, Through, Source>;
 
 export type HasManyInfo<
   T extends Table,

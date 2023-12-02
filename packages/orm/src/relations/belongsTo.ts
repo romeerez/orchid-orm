@@ -34,7 +34,7 @@ import {
   relationWhere,
   selectIfNotSelected,
 } from './common/utils';
-import { emptyArray, EmptyObject } from 'orchid-core';
+import { ColumnsShapeBase, emptyArray, EmptyObject } from 'orchid-core';
 import {
   RelationCommonOptions,
   RelationKeysOptions,
@@ -48,15 +48,15 @@ export type BelongsTo = RelationThunkBase & {
 };
 
 export type BelongsToOptions<
-  Self extends Table = Table,
+  Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
   Scope extends Query = Query,
 > = RelationCommonOptions<Related, Scope> &
   RelationRefsOrKeysOptions<
-    keyof Self['columns'],
+    keyof Columns,
     keyof InstanceType<Related>['columns'],
     keyof InstanceType<Related>['columns'],
-    keyof Self['columns']
+    keyof Columns
   >;
 
 export type BelongsToInfo<

@@ -44,13 +44,13 @@ export type HasAndBelongsToMany = RelationThunkBase & {
 };
 
 export type HasAndBelongsToManyOptions<
-  Self extends Table = Table,
+  Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
   Scope extends Query = Query,
 > = RelationCommonOptions<Related, Scope> &
   (
     | {
-        columns: (keyof Self['columns'])[];
+        columns: (keyof Columns)[];
         references: string[];
         through: {
           table: string;
@@ -59,7 +59,7 @@ export type HasAndBelongsToManyOptions<
         };
       }
     | {
-        primaryKey: keyof Self['columns'];
+        primaryKey: keyof Columns;
         foreignKey: string;
         joinTable: string;
         associationPrimaryKey: string;

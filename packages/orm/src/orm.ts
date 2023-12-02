@@ -7,6 +7,7 @@ import {
   ComputedColumnsBase,
   Db,
   DbTableOptions,
+  DbTableOptionScopes,
   FromArgs,
   FromResult,
   NoPrimaryKeyOption,
@@ -18,7 +19,7 @@ import { DbTable, Table, TableClasses } from './baseTable';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { SQLQueryArgs, TransactionState } from 'orchid-core';
+import { ColumnsShapeBase, SQLQueryArgs, TransactionState } from 'orchid-core';
 
 export type OrchidORM<T extends TableClasses = TableClasses> = {
   [K in keyof T]: DbTable<T[K]>;
@@ -152,10 +153,11 @@ export const orchidORM = <T extends TableClasses>(
     const table = tables[key].instance();
     tableInstances[key] = table;
 
-    const options: DbTableOptions = {
+    const options: DbTableOptions<string, ColumnsShapeBase> = {
       ...commonOptions,
       schema: table.schema,
       language: table.language,
+      scopes: table.scopes as DbTableOptionScopes<string, ColumnsShapeBase>,
     };
 
     if (table.noPrimaryKey) options.noPrimaryKey = 'ignore';
