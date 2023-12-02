@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.4.42
+
+### Patch Changes
+
+- d3981407: Fix schema-to-zod unability to infer schema type
+
 ## 0.4.41
 
 ### Patch Changes
