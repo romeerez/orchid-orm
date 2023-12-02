@@ -28,7 +28,7 @@ const createdUser = await factory.user.create();
 const manyUsers = await factory.user.createMany(
   { email: 'one@email.com' },
   { email: 'two@email.com' },
-)
+);
 ```
 
 Both `build` and `create` methods will especially handle the timestamp field:
@@ -54,7 +54,7 @@ const factory = ormFactory(db, {
 
 ## example
 
-This example is extracted from [building a sample app](/guide/building-a-sample-app.html), you can find more test examples in that doc.
+This example is extracted from [building a sample app](https://github.com/romeerez/orchid-orm-sample-blog-api-guide), you can find more test examples in that doc.
 
 Here we are using `build` to build parameters for a test request, and `create` to create records for testing how unique violations are handled.
 
@@ -307,7 +307,7 @@ const [user1, user2, user3] = await factory.user.createMany(
   {
     age: () => Math.ceil(Math.random() * 100),
   },
-)
+);
 ```
 
 ## createList
