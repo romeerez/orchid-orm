@@ -482,11 +482,16 @@ const result: TableType | undefined = await db.table.findByOptional({
 
 [//]: # 'has JSDoc'
 
-`whereNot` takes the same arguments as `where` and prepends them with `NOT` in SQL
+`whereNot` takes the same argument as `where`,
+multiple conditions are combined with `AND`,
+the whole group of conditions is negated with `NOT`.
 
 ```ts
 // find records of different colors than red
 db.table.whereNot({ color: 'red' });
+// WHERE NOT color = 'red'
+db.table.whereNot({ one: 1, two: 2 });
+// WHERE NOT (one = 1 AND two = 2)
 ```
 
 ## andNot
