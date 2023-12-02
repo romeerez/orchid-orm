@@ -1,5 +1,11 @@
 # pqb
 
+## 0.20.0
+
+### Minor Changes
+
+- d6819aa9: Fix `whereNot` behavior to negate a whole condition group
+
 ## 0.19.1
 
 ### Patch Changes
