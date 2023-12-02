@@ -79,6 +79,10 @@ export type WhereArgs<T extends WhereQueryBase> =
   | WhereArg<T>[]
   | TemplateLiteralArgs;
 
+export type WhereNotArgs<T extends WhereQueryBase> =
+  | [WhereArg<T>]
+  | TemplateLiteralArgs;
+
 // Argument of `whereIn`: can be a column name or a tuple with column names to search in.
 export type WhereInColumn<T extends QueryBase> =
   | keyof T['selectable']
@@ -147,7 +151,7 @@ export const addWhere = <T extends WhereQueryBase>(
  */
 export const addWhereNot = <T extends WhereQueryBase>(
   q: T,
-  args: WhereArgs<T>,
+  args: WhereNotArgs<T>,
 ): WhereResult<T> => {
   if (Array.isArray(args[0])) {
     return pushQueryValue(q, 'and', {
@@ -209,8 +213,6 @@ export const addWhereIn = <T extends QueryBase>(
   values: unknown[] | unknown[][] | Query | Expression | undefined,
   not?: boolean,
 ): WhereResult<T> => {
-  const op = not ? 'notIn' : 'in';
-
   let item;
   if (values) {
     if (Array.isArray(arg)) {
@@ -220,16 +222,17 @@ export const addWhereIn = <T extends QueryBase>(
           values,
         },
       };
-      if (not) item = { NOT: item };
     } else {
-      item = { [arg as string]: { [op]: values } };
+      item = { [arg as string]: { in: values } };
     }
   } else {
     item = {} as Record<string, { in: unknown[] }>;
     for (const key in arg as Record<string, unknown[]>) {
-      item[key] = { [op as 'in']: (arg as Record<string, unknown[]>)[key] };
+      item[key] = { in: (arg as Record<string, unknown[]>)[key] };
     }
   }
+
+  if (not) item = { NOT: item };
 
   if (and) {
     pushQueryValue(q, 'and', item);
@@ -681,13 +684,13 @@ export abstract class Where {
    */
   whereNot<T extends WhereQueryBase>(
     this: T,
-    ...args: WhereArgs<T>
+    ...args: WhereNotArgs<T>
   ): WhereResult<T> {
     return this.clone()._whereNot(...args);
   }
   _whereNot<T extends WhereQueryBase>(
     this: T,
-    ...args: WhereArgs<T>
+    ...args: WhereNotArgs<T>
   ): WhereResult<T> {
     return addWhereNot(this, args);
   }

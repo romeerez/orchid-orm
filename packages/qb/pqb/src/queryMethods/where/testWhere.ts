@@ -143,7 +143,7 @@ export const testWhere = (
         ],
         `
             ${startSql}
-            NOT ${pkeySql} = $1 AND NOT ${nullableSql} IS NULL
+            NOT (${pkeySql} = $1 AND ${nullableSql} IS NULL)
           `,
         [1],
       );
@@ -161,17 +161,20 @@ export const testWhere = (
             }),
           ),
           buildSql((q) =>
-            q.whereNot(
-              { [pkey]: 1 },
-              q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
+            q.whereNot((q) =>
+              q
+                .where({ [pkey]: 1 })
+                .where((q) =>
+                  q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
+                ),
             ),
           ),
         ],
         `
             ${startSql}
-            NOT ${pkeySql} = $1 AND NOT (
+            NOT (${pkeySql} = $1 AND (
               ${pkeySql} = $2 OR ${pkeySql} = $3 AND ${textSql} = $4
-            )
+            ))
           `,
         [1, 2, 3, 'n'],
       );
@@ -246,8 +249,10 @@ export const testWhere = (
         ),
         `
           ${startSql}
-          NOT ${pkeySql} IN ($1, $2, $3)
-          AND NOT EXISTS (SELECT 1 FROM "${table}" WHERE ${pkeySql} = ${pkeySql})
+          NOT (
+            ${pkeySql} IN ($1, $2, $3)
+            AND EXISTS (SELECT 1 FROM "${table}" WHERE ${pkeySql} = ${pkeySql})
+          )
         `,
         [1, 2, 3],
       );
@@ -938,10 +943,11 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            NOT ${pkeySql} IN ($1, $2, $3)
-              AND NOT ${textSql} IN ($4, $5, $6)
-          `,
+          ${startSql} NOT (
+            ${pkeySql} IN ($1, $2, $3)
+            AND ${textSql} IN ($4, $5, $6)
+          )
+        `,
         [1, 2, 3, 'a', 'b', 'c'],
       );
     });
@@ -987,8 +993,7 @@ export const testWhere = (
         ],
         `
             ${startSql}
-            NOT ${pkeySql} IN (1, 2, 3)
-              AND NOT ${textSql} IN ('a', 'b', 'c')
+            NOT (${pkeySql} IN (1, 2, 3) AND ${textSql} IN ('a', 'b', 'c'))
           `,
       );
     });
@@ -1033,10 +1038,12 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-              AND NOT ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          NOT (
+            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
+          )
+        `,
       );
     });
 
@@ -1178,10 +1185,12 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            ${pkeySql} = $1
-              OR NOT ${pkeySql} IN ($2, $3, $4) AND NOT ${textSql} IN ($5, $6, $7)
-          `,
+          ${startSql}
+          ${pkeySql} = $1 OR NOT (
+            ${pkeySql} IN ($2, $3, $4)
+            AND ${textSql} IN ($5, $6, $7)
+          )
+        `,
         [1, 1, 2, 3, 'a', 'b', 'c'],
       );
     });
@@ -1242,11 +1251,12 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            ${pkeySql} = $1
-               OR NOT ${pkeySql} IN (1, 2, 3)
-              AND NOT ${textSql} IN ('a', 'b', 'c')
-          `,
+          ${startSql}
+          ${pkeySql} = $1 OR NOT (
+            ${pkeySql} IN (1, 2, 3)
+            AND ${textSql} IN ('a', 'b', 'c')
+          )
+        `,
         [1],
       );
     });
@@ -1305,11 +1315,12 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            ${pkeySql} = $1
-               OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-              AND NOT ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          ${pkeySql} = $1 OR NOT (
+            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
+          )
+        `,
         [1],
       );
     });
