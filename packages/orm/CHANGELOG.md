@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.18.1
+
+### Patch Changes
+
+- 003de3d6: Add the `scopes` feature
+- Updated dependencies [003de3d6]
+  - pqb@0.19.1
+  - orchid-core@0.10.17
+
 ## 1.18.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.17
+
+### Patch Changes
+
+- 003de3d6: Add the `scopes` feature
+
 ## 0.10.16
 
 ### Patch Changes
