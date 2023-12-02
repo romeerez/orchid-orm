@@ -69,6 +69,7 @@ describe('zodSchemaProvider', () => {
           columns,
         };
       }
+      columns!: typeof columns;
     }
 
     const schema = Table.schema();
