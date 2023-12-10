@@ -5,6 +5,8 @@ import {
   IntegerBaseColumn,
   NumberBaseColumn,
   Query,
+  RelationConfigDataForCreate,
+  RelationsBase,
   TextBaseColumn,
 } from 'pqb';
 import { ColumnShapeOutput, EmptyObject } from 'orchid-core';
@@ -65,15 +67,40 @@ type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
       }
 >;
 
-type CreateArg<T extends TestFactory> = CreateData<
-  Omit<T['table'], 'inputType'> & {
+export type CreateArg<T extends TestFactory> = CreateData<
+  Omit<T['table'], 'inputType' | 'relations'> & {
     inputType: {
       [K in keyof T['table']['inputType']]?:
         | T['table']['inputType'][K]
         | ((sequence: number) => T['table']['inputType'][K]);
     };
+    /**
+     * Allow defining async functions that create relation records and returns id
+     */
+    relations: MapRelations<T['table']['relations']>;
   }
 >;
+
+type MapRelations<T extends RelationsBase> = {
+  [K in keyof T]: Omit<T[K], 'relationConfig'> & {
+    relationConfig: Omit<T[K]['relationConfig'], 'dataForCreate'> & {
+      dataForCreate: MapDataForCreate<T[K]['relationConfig']['dataForCreate']>;
+    };
+  };
+};
+
+type MapDataForCreate<T extends RelationConfigDataForCreate | undefined> =
+  T extends RelationConfigDataForCreate
+    ? Omit<T, 'columns'> & {
+        columns: {
+          [K in keyof T['columns']]:
+            | T['columns'][K]
+            | ((
+                sequence: number,
+              ) => T['columns'][K] | Promise<T['columns'][K]>);
+        };
+      }
+    : undefined;
 
 type CreateResult<T extends TestFactory> = Result<
   T,
@@ -234,7 +261,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     }
   });
 
-  const result: Record<string, unknown> = {};
+  const shared: Record<string, unknown> = {};
 
   const fns: Record<string, (sequence: number) => unknown> = {};
 
@@ -246,37 +273,49 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     if (typeof value === 'function') {
       fns[key] = value as () => unknown;
     } else {
-      result[key] = value;
+      shared[key] = value;
     }
   }
 
   const pickedSchema = factory.schema.pick(pick);
   const setUniqueValues = makeSetUniqueValues(uniqueFields, allData);
 
-  return (arg?: CreateArg<T>) => {
-    Object.assign(result, generateMock(pickedSchema));
+  return async (arg?: CreateArg<T>) => {
+    const result = Object.assign({ ...shared }, generateMock(pickedSchema));
+
+    const { sequence } = factory;
+    factory.sequence++;
 
     if (arg) {
       for (const key in arg) {
         if (typeof arg[key] === 'function') {
-          result[key] = (arg[key] as (sequence: number) => unknown)(
-            factory.sequence,
-          );
+          result[key] = (arg[key] as (sequence: number) => unknown)(sequence);
         } else {
           result[key] = arg[key];
         }
       }
     } else {
+      const promises: Promise<void>[] = [];
+
       for (const key in fns) {
-        result[key] = fns[key](factory.sequence);
+        promises.push(
+          new Promise(async (resolve, reject) => {
+            try {
+              result[key] = await fns[key](sequence);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          }),
+        );
       }
+
+      await Promise.all(promises);
     }
 
-    setUniqueValues(result, factory.sequence);
+    setUniqueValues(result, sequence);
 
-    factory.sequence++;
-
-    return { ...result } as CreateData<T['table']>;
+    return result as CreateData<T['table']>;
   };
 };
 
@@ -397,7 +436,7 @@ export class TestFactory<
     data?: Data,
   ): Promise<CreateResult<T>> {
     const getData = processCreateData(this, this.data, this.uniqueFields, data);
-    return (await this.table.create(getData())) as CreateResult<T>;
+    return (await this.table.create(await getData())) as CreateResult<T>;
   }
 
   async createList<T extends this, Data extends CreateArg<T>>(
@@ -406,8 +445,10 @@ export class TestFactory<
     data?: Data,
   ): Promise<CreateResult<T>[]> {
     const getData = processCreateData(this, this.data, this.uniqueFields, data);
-    const arr = [...Array(qty)].map(() => getData());
-    return (await this.table.createMany(arr)) as CreateResult<T>[];
+    const arr = await Promise.all([...Array(qty)].map(() => getData()));
+    return (await this.table.createMany(
+      arr as CreateData<T['table']>[],
+    )) as CreateResult<T>[];
   }
 
   async createMany<T extends this, Args extends CreateArg<T>[]>(
@@ -415,8 +456,10 @@ export class TestFactory<
     ...arr: Args
   ): Promise<{ [K in keyof Args]: CreateResult<T> }> {
     const getData = processCreateData(this, this.data, this.uniqueFields);
-    const data = arr.map(getData);
-    return (await this.table.createMany(data)) as Promise<{
+    const data = await Promise.all(arr.map(getData));
+    return (await this.table.createMany(
+      data as CreateData<T['table']>[],
+    )) as Promise<{
       [K in keyof Args]: CreateResult<T>;
     }>;
   }

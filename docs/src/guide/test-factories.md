@@ -327,6 +327,15 @@ const arrayOfCustomizedUsers = await factory.user.create(5, {
 });
 ```
 
+You can dynamically create a `belongsTo` record and use its id:
+
+```ts
+// create 5 books with 5 different authors
+const books = await factory.book.create(5, {
+  author: async () => (await factory.author.create()).id,
+});
+```
+
 ## unique columns
 
 Test factory will prefix unique text columns with sequence, and it will use a sequence for unique numeric columns.

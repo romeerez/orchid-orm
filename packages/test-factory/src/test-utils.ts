@@ -39,6 +39,7 @@ class UserTable extends BaseTable {
   };
 }
 
+export type Profile = Selectable<ProfileTable>;
 export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({

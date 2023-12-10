@@ -1,5 +1,5 @@
 import { ormFactory, tableFactory } from './factory';
-import { db, User, BaseTable } from './test-utils';
+import { db, User, BaseTable, Profile } from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
 import { ColumnsShape, columnTypes, DefaultColumnTypes } from 'pqb';
@@ -327,6 +327,16 @@ describe('factory', () => {
       assertType<typeof items, User[]>();
 
       expect(items.map((item) => item.name)).toEqual(['name', 'name']);
+    });
+
+    it('should create a related belongsTo record using a function, individually for every record in a list', async () => {
+      const items = await factory.profile.createList(2, {
+        userId: async () => (await factory.user.create()).id,
+      });
+
+      assertType<typeof items, Profile[]>();
+
+      expect(items[0].userId).not.toBe(items[1].userId);
     });
   });
 
