@@ -1,5 +1,11 @@
 # orchid-orm-test-factory
 
+## 0.3.171
+
+### Patch Changes
+
+- ecb73e3b: test factory: allow creating belong to dynamically in createList (#220)
+
 ## 0.3.170
 
 ### Patch Changes
