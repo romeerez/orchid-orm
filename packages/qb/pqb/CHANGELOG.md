@@ -1,5 +1,11 @@
 # pqb
 
+## 0.20.1
+
+### Patch Changes
+
+- e436974f: Fix scopes: it was mutating query data
+
 ## 0.20.0
 
 ### Minor Changes
