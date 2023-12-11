@@ -91,10 +91,7 @@ export class ScopeMethods {
    *
    * @param scope - name of the scope to remove from the query
    */
-  unScope<T extends QueryBase>(
-    this: T,
-    scope: keyof T['meta']['scopes'],
-  ): WhereResult<T> {
+  unScope<T extends QueryBase>(this: T, scope: keyof T['meta']['scopes']): T {
     const q = this.clone();
     const data = q.q as SelectQueryData;
 
@@ -103,10 +100,12 @@ export class ScopeMethods {
       const { and, or } = s;
       if (and) {
         data.and = (data.and as WhereItem[]).filter((x) => !and.includes(x));
+        if (!data.and.length) delete data.and;
       }
 
       if (or) {
         data.or = (data.or as WhereItem[][]).filter((x) => !or.includes(x));
+        if (!data.or.length) delete data.or;
       }
 
       delete (q.q.scopes as QueryScopes)[scope as string];

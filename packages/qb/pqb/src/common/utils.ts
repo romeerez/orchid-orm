@@ -1,4 +1,4 @@
-import { cloneQueryArrays, QueryData, toSQLCacheKey } from '../sql';
+import { cloneQuery, QueryData, toSQLCacheKey } from '../sql';
 import type { Query } from '../query/query';
 import type { ColumnTypeBase, StringKey } from 'orchid-core';
 import { RelationQuery } from '../relations';
@@ -30,7 +30,7 @@ export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };
   delete cloned[toSQLCacheKey];
   if (cloned.parsers) cloned.parsers = { ...cloned.parsers };
-  cloneQueryArrays(cloned);
+  cloneQuery(cloned);
   return cloned as QueryData;
 };
 

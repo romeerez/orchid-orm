@@ -1,28 +1,18 @@
 import { expectSql, testDb } from 'test-utils';
-import { User } from '../test-utils/test-utils';
 
-const table = testDb(
-  'table',
+const User = testDb(
+  'user',
   (t) => ({
     id: t.identity().primaryKey(),
-    active: t.boolean(),
+    name: t.string(),
+    password: t.string(),
+    active: t.boolean().nullable(),
+    deletedAt: t.timestamp().nullable(),
   }),
   {
     scopes: {
-      someScope: (q) => q.where({ active: true }).orWhere({ id: 1 }),
-    },
-  },
-);
-
-const tableWithDefaultScope = testDb(
-  'table',
-  (t) => ({
-    id: t.identity().primaryKey(),
-    active: t.boolean(),
-  }),
-  {
-    scopes: {
-      default: (q) => q.where({ active: true }).orWhere({ id: 1 }),
+      default: (q) => q.where({ deletedAt: null }).orWhere({ active: true }),
+      someScope: (q) => q.where({ name: 'a' }).orWhere({ name: 'b' }),
     },
   },
 );
@@ -30,81 +20,86 @@ const tableWithDefaultScope = testDb(
 describe('ScopeMethods', () => {
   describe('scope', () => {
     it('should apply where, whereOr, and order', () => {
-      const q = table.scope('someScope');
+      const q = User.unScope('default').scope('someScope');
 
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "table"
-          WHERE "table"."active" = $1
-             OR "table"."id" = $2
+          SELECT * FROM "user"
+          WHERE "user"."name" = $1
+             OR "user"."name" = $2
         `,
-        [true, 1],
+        ['a', 'b'],
       );
     });
 
     it('should not be available if not set for the table', () => {
       // @ts-expect-error this scope was not defined
-      expect(() => User.scope('someScope')).toThrow();
+      expect(() => User.scope('unknown')).toThrow();
     });
 
     it('should set a type flag to allow updating and deleting', () => {
-      // @ts-expect-error updating without conditions is not allowed
-      expect(() => table.update()).toThrow();
-      // @ts-expect-error deleting without conditions is not allowed
-      expect(() => table.delete()).toThrow();
+      const q = User.unScope('default');
 
-      table.scope('someScope').update({});
-      table.scope('someScope').delete();
+      // @ts-expect-error updating without conditions is not allowed
+      expect(() => q.update()).toThrow();
+      // @ts-expect-error deleting without conditions is not allowed
+      expect(() => q.delete()).toThrow();
+
+      q.scope('someScope').update({});
+      q.scope('someScope').delete();
     });
 
     it('should use default scope by default', () => {
       expectSql(
-        tableWithDefaultScope.toSQL(),
+        User.toSQL(),
         `
-          SELECT * FROM "table"
-          WHERE "table"."active" = $1
-             OR "table"."id" = $2
+          SELECT * FROM "user"
+          WHERE "user"."deletedAt" IS NULL
+             OR "user"."active" = $1
         `,
-        [true, 1],
+        [true],
       );
     });
   });
 
   describe('unScope', () => {
     it('should remove where, orWhere, order that were previously set by the scope', () => {
-      const q = table
-        .where({ id: 2 })
-        .orWhere({ id: 3 })
-        .order({ active: 'ASC' })
+      const q = User.where({ id: 1 })
+        .orWhere({ id: 2 })
         .scope('someScope')
-        .where({ id: 4 })
-        .orWhere({ id: 5 })
-        .order({ active: 'DESC' })
+        .where({ id: 3 })
+        .orWhere({ id: 4 })
         .unScope('someScope');
 
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "table"
-          WHERE "table"."id" = $1
-            AND "table"."id" = $2
-             OR "table"."id" = $3
-             OR "table"."id" = $4
-          ORDER BY
-            "table"."active" ASC, "table"."active" DESC
+          SELECT * FROM "user"
+          WHERE "user"."deletedAt" IS NULL
+            AND "user"."id" = $1
+            AND "user"."id" = $2
+             OR "user"."active" = $3
+             OR "user"."id" = $4
+             OR "user"."id" = $5
         `,
-        [2, 4, 3, 5],
+        [1, 3, true, 2, 4],
       );
     });
 
-    it('should disable the default scope', async () => {
+    it('should disable the default scope', () => {
       expectSql(
-        tableWithDefaultScope.unScope('default').toSQL(),
+        User.unScope('default').toSQL(),
         `
-          SELECT * FROM "table"
+          SELECT * FROM "user"
         `,
       );
+    });
+
+    it('should not mutate query data', () => {
+      const q = User.all();
+      q.unScope('default').scope('someScope');
+      expect(Object.keys(q.q.scopes)).toEqual(['default']);
     });
   });
 });

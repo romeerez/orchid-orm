@@ -266,7 +266,7 @@ export type QueryData =
   | ColumnInfoQueryData
   | CopyQueryData;
 
-export const cloneQueryArrays = (q: QueryData) => {
+export const cloneQuery = (q: QueryData) => {
   if (q.with) q.with = q.with.slice(0);
   if (q.select) q.select = q.select.slice(0);
   if (q.and) q.and = q.and.slice(0);
@@ -274,6 +274,7 @@ export const cloneQueryArrays = (q: QueryData) => {
   if (q.before) q.before = q.before.slice(0);
   if (q.after) q.after = q.after.slice(0);
   if (q.joinedShapes) q.joinedShapes = { ...q.joinedShapes };
+  if (q.scopes) q.scopes = { ...q.scopes };
 
   // may have data for updating timestamps on any kind of query
   if ((q as UpdateQueryData).updateData) {
