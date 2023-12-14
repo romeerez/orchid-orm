@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.19.0
+
+### Minor Changes
+
+- c865fa77: Add `softDelete`, rename `unScope` to `unscope`, remove `del` in favor of `delete` (#205)
+
+### Patch Changes
+
+- Updated dependencies [c865fa77]
+  - pqb@0.21.0
+
 ## 1.18.3
 
 ### Patch Changes
