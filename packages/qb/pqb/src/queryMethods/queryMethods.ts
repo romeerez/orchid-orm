@@ -67,6 +67,7 @@ import { RawSQL } from '../sql/rawSql';
 import { noneMethods } from './none';
 import { simpleExistingColumnToSQL } from '../sql/common';
 import { ScopeMethods } from './scope';
+import { SoftDeleteMethods } from './softDelete';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -195,7 +196,8 @@ export interface QueryMethods<ColumnTypes>
     RawSqlMethods<ColumnTypes>,
     CopyMethods,
     TransformMethods,
-    ScopeMethods {}
+    ScopeMethods,
+    SoftDeleteMethods {}
 
 export class QueryMethods<ColumnTypes> {
   /**
@@ -212,7 +214,7 @@ export class QueryMethods<ColumnTypes> {
   }
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     this.q.returnType = 'all';
-    this.q.and ??= [];
+    this.q.all = true;
     return this as unknown as SetQueryReturnsAll<T>;
   }
 
@@ -917,4 +919,5 @@ applyMixins(QueryMethods, [
   CopyMethods,
   TransformMethods,
   ScopeMethods,
+  SoftDeleteMethods,
 ]);

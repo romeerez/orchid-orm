@@ -158,6 +158,7 @@ export const orchidORM = <T extends TableClasses>(
       schema: table.schema,
       language: table.language,
       scopes: table.scopes as DbTableOptionScopes<string, ColumnsShapeBase>,
+      softDelete: table.softDelete,
     };
 
     if (table.noPrimaryKey) options.noPrimaryKey = 'ignore';

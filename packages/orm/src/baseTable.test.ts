@@ -525,12 +525,7 @@ describe('baseTable', () => {
       });
     }
 
-    const local = orchidORM(
-      { db: db.$queryBuilder },
-      {
-        user: UserTable,
-      },
-    );
+    const local = orchidORM({ db: db.$queryBuilder }, { user: UserTable });
 
     it('should have a default scope and be able to use defined scope', async () => {
       const q = local.user.scope('positiveId');
@@ -543,6 +538,43 @@ describe('baseTable', () => {
             AND "user"."id" > $2
         `,
         [true, 0],
+      );
+    });
+  });
+
+  describe('softDelete', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        deletedAt: t.timestamp().nullable(),
+      }));
+
+      readonly softDelete = true;
+    }
+
+    const local = orchidORM({ db: db.$queryBuilder }, { user: UserTable });
+
+    it('should filter records by `deletedAt`, add `includeDeleted` and `hardDelete` methods', () => {
+      expectSql(
+        local.user.toSQL(),
+        `
+          SELECT * FROM "user" WHERE "user"."deletedAt" IS NULL
+        `,
+      );
+
+      expectSql(
+        local.user.includeDeleted().toSQL(),
+        `
+          SELECT * FROM "user"
+        `,
+      );
+
+      expectSql(
+        local.user.all().hardDelete().toSQL(),
+        `
+          DELETE FROM "user"
+        `,
       );
     });
   });

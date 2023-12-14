@@ -3,17 +3,13 @@ import { throwIfNoWhere } from '../query/queryUtils';
 
 export type DeleteMethodsNames = 'del' | '_del' | 'delete' | '_delete';
 
-type DeleteArgs<T extends Query> = T['meta']['hasWhere'] extends true
+export type DeleteArgs<T extends Query> = T['meta']['hasWhere'] extends true
   ? []
   : [never];
 
-type DeleteResult<T extends Query> = T['meta']['hasSelect'] extends true
+export type DeleteResult<T extends Query> = T['meta']['hasSelect'] extends true
   ? SetQueryKind<T, 'delete'>
   : SetQueryReturnsRowCount<SetQueryKind<T, 'delete'>>;
-
-const del = <T extends Query>(self: T): DeleteResult<T> => {
-  return _del(self.clone()) as unknown as DeleteResult<T>;
-};
 
 const _del = <T extends Query>(q: T): DeleteResult<T> => {
   if (!q.q.select) {
@@ -30,30 +26,6 @@ const _del = <T extends Query>(q: T): DeleteResult<T> => {
 };
 
 export class Delete {
-  /**
-   * Alias for `delete` method
-   *
-   * @deprecated use `delete` instead, this method will be removed
-   */
-  del<T extends Query>(
-    this: T,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    ..._args: DeleteArgs<T>
-  ): DeleteResult<T> {
-    return del(this);
-  }
-
-  /**
-   * @deprecated use `_del` instead, this method will be removed
-   */
-  _del<T extends Query>(
-    this: T,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    ..._args: DeleteArgs<T>
-  ): DeleteResult<T> {
-    return _del(this);
-  }
-
   /**
    * It is aliased to `del` because `delete` is a reserved word in JavaScript.
    *
@@ -104,7 +76,7 @@ export class Delete {
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   delete<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
-    return del(this);
+    return _del(this.clone());
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

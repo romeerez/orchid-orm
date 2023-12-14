@@ -21,6 +21,19 @@ export const User = testDb('user', (t) => ({
   ...t.timestamps(),
 }));
 
+export const UserSoftDelete = testDb(
+  'user',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    name: t.string(),
+    active: t.boolean().nullable(),
+    deletedAt: t.timestamp().nullable(),
+  }),
+  {
+    softDelete: true,
+  },
+);
+
 export type ProfileRecord = (typeof Profile)['type'];
 export const Profile = testDb('profile', (t) => ({
   id: t.identity().primaryKey(),

@@ -52,6 +52,7 @@ import { templateLiteralToSQL } from '../sql/rawSql';
 import { RelationsBase } from '../relations';
 import { ScopeArgumentQuery } from '../queryMethods/scope';
 import { QueryBase } from './queryBase';
+import { enableSoftDelete, SoftDeleteOption } from '../queryMethods/softDelete';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -88,6 +89,10 @@ export type DbTableOptions<
    * See {@link ScopeMethods}
    */
   scopes?: DbTableOptionScopes<Table, Shape>;
+  /**
+   * See {@link SoftDeleteMethods}
+   */
+  softDelete?: SoftDeleteOption<Shape>;
 } & QueryLogOptions;
 
 /**
@@ -174,7 +179,10 @@ export class Db<
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
-    const scopes = (options.scopes ? {} : emptyObject) as QueryScopes;
+    const { softDelete } = options;
+    const scopes = (
+      options.scopes || softDelete ? {} : emptyObject
+    ) as QueryScopes;
 
     const tableData = getTableData();
     this.internal = {
@@ -327,6 +335,10 @@ export class Db<
         this.q.scopes = { default: scopes.default };
       }
     }
+
+    if (softDelete) {
+      enableSoftDelete(this, table, shape, softDelete, scopes);
+    }
   }
 
   [inspect.custom]() {
@@ -472,8 +484,17 @@ export type DbTableConstructor<ColumnTypes> = <
   EmptyObject,
   ColumnTypes,
   Shape,
-  Options extends { scopes: CoreQueryScopes } ? Options['scopes'] : EmptyObject
+  MapTableScopesOption<Options['scopes'], Options['softDelete']>
 >;
+
+export type MapTableScopesOption<
+  Scopes extends CoreQueryScopes | undefined,
+  SoftDelete extends true | PropertyKey | undefined,
+> = {
+  [K in
+    | keyof Scopes
+    | (SoftDelete extends true | PropertyKey ? 'nonDeleted' : never)]: unknown;
+};
 
 export type DbResult<ColumnTypes> = Db<
   string,

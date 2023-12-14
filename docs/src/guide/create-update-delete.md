@@ -803,11 +803,9 @@ const result = await db.table
   });
 ```
 
-## del / delete
+## delete
 
 [//]: # 'has JSDoc'
-
-It is aliased to `del` because `delete` is a reserved word in JavaScript.
 
 This method deletes one or more rows, based on other conditions specified in the query.
 

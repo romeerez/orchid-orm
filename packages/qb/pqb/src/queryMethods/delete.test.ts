@@ -6,7 +6,6 @@ import {
   User,
   userData,
 } from '../test-utils/test-utils';
-import { DeleteQueryData } from '../sql';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
 describe('delete', () => {
@@ -19,13 +18,6 @@ describe('delete', () => {
 
   it('should allow deleting all records after using `all` method', () => {
     User.all().delete();
-  });
-
-  it('should be aliased as `del`', () => {
-    const a = User.where({ id: 1 }).delete();
-    const b = User.where({ id: 1 }).del();
-    expect((a.q as DeleteQueryData).type).toBeTruthy();
-    expect(a.q).toEqual(b.q);
   });
 
   it('should delete records, returning value', async () => {
@@ -162,7 +154,7 @@ describe('delete', () => {
   });
 
   it('should throw NotFoundError when no records to delete for a `one` query kind', async () => {
-    const q = User.find(1).del();
+    const q = User.find(1).delete();
 
     await expect(q).rejects.toThrow('Record is not found');
   });

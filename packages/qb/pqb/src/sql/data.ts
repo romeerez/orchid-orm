@@ -144,6 +144,8 @@ export type CommonQueryData = {
   originalQuery?: Query;
   // Track the applied scopes, this is used when removing the scope from the query.
   scopes: Record<string, QueryScopeData>;
+  // to allow updating or deleting all records
+  all?: true;
 };
 
 export type SelectQueryData = CommonQueryData & {

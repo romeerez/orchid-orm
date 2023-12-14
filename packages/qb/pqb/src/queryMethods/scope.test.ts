@@ -20,7 +20,7 @@ const User = testDb(
 describe('ScopeMethods', () => {
   describe('scope', () => {
     it('should apply where, whereOr, and order', () => {
-      const q = User.unScope('default').scope('someScope');
+      const q = User.unscope('default').scope('someScope');
 
       expectSql(
         q.toSQL(),
@@ -39,7 +39,7 @@ describe('ScopeMethods', () => {
     });
 
     it('should set a type flag to allow updating and deleting', () => {
-      const q = User.unScope('default');
+      const q = User.unscope('default');
 
       // @ts-expect-error updating without conditions is not allowed
       expect(() => q.update()).toThrow();
@@ -63,14 +63,14 @@ describe('ScopeMethods', () => {
     });
   });
 
-  describe('unScope', () => {
+  describe('unscope', () => {
     it('should remove where, orWhere, order that were previously set by the scope', () => {
       const q = User.where({ id: 1 })
         .orWhere({ id: 2 })
         .scope('someScope')
         .where({ id: 3 })
         .orWhere({ id: 4 })
-        .unScope('someScope');
+        .unscope('someScope');
 
       expectSql(
         q.toSQL(),
@@ -89,7 +89,7 @@ describe('ScopeMethods', () => {
 
     it('should disable the default scope', () => {
       expectSql(
-        User.unScope('default').toSQL(),
+        User.unscope('default').toSQL(),
         `
           SELECT * FROM "user"
         `,
@@ -98,7 +98,7 @@ describe('ScopeMethods', () => {
 
     it('should not mutate query data', () => {
       const q = User.all();
-      q.unScope('default').scope('someScope');
+      q.unscope('default').scope('someScope');
       expect(Object.keys(q.q.scopes)).toEqual(['default']);
     });
   });

@@ -2,11 +2,11 @@
 
 Despite thousands tests written, may have bugs, please drop an issue if you meet some.
 
-Only Postgres database is supported for now.
+Only Postgres database is supported.
 
 Migrations are written by hand instead of generating them like in some other ORMs.
 
-To perform relation queries, related tables currently must be in a single database.
+To perform relation queries, related tables must be in a single database.
 
 Cannot select record with relations in the `create`, `update`, and `delete` queries.
 

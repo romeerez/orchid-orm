@@ -86,12 +86,12 @@ export class ScopeMethods {
    *
    * ```ts
    * // SomeTable has a default scope, ignore it for this query:
-   * await db.some.unScope('default');
+   * await db.some.unscope('default');
    * ```
    *
    * @param scope - name of the scope to remove from the query
    */
-  unScope<T extends QueryBase>(this: T, scope: keyof T['meta']['scopes']): T {
+  unscope<T extends QueryBase>(this: T, scope: keyof T['meta']['scopes']): T {
     const q = this.clone();
     const data = q.q as SelectQueryData;
 

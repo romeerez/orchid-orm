@@ -6,6 +6,7 @@ import {
   DbTableOptionScopes,
   DefaultColumnTypes,
   getColumnTypes,
+  MapTableScopesOption,
   Query,
   QueryAfterHook,
   QueryBase,
@@ -60,7 +61,7 @@ export type TableToDb<
         [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
       }
     : T['columns'],
-  T['scopes']
+  MapTableScopesOption<T['scopes'], T['softDelete']>
 > & {
   definedAs: string;
   db: OrchidORM;
@@ -106,6 +107,8 @@ export type Table = {
   computed?: ComputedColumnsBase<never>;
   // Available scopes for this table defined by user.
   scopes?: CoreQueryScopes;
+  // enable soft delete, true for `deletedAt` column, string for column name
+  readonly softDelete?: true | string;
 };
 
 // Object type that's allowed in `where` and similar methods of the table.

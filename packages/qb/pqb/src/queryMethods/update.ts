@@ -83,7 +83,7 @@ type UpdateRelationData<
 
 // Type of argument for `update`.
 // not available when there are no conditions on the query.
-type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
+export type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
   : never;
 
