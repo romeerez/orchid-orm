@@ -31,8 +31,8 @@ const migartionsLogger = <C extends ColumnTypesBase = DefaultColumnTypes>(
   printPath = false,
 ) => {
   // sorting the list based on the timestamp available in the filename.
-  const sortedList = migrationsList.sort((a, b) =>
-    path.basename(a.path).localeCompare(path.basename(b.path)),
+  const sortedList = migrationsList.sort(
+    (a, b) => Number(a.version) - Number(b.version),
   );
 
   sortedList.forEach((migrationItem) => {
