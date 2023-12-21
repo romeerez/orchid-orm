@@ -117,7 +117,7 @@ const runCommand = async <C extends ColumnTypesBase = DefaultColumnTypes>(
   } else if (arg === 'pull') {
     await pullDbStructure(toArray(options)[0], config);
   } else if (arg === 'list' || arg === 'l') {
-    migrationList(config);
+    await migrationList(config, args.slice(1));
   } else if (config.commands[arg]) {
     await config.commands[arg](toArray(options), config, args.slice(1));
   } else if (arg !== 'rec' && arg !== 'recurrent') {
