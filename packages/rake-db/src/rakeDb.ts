@@ -1,8 +1,13 @@
-import { AdapterOptions, DefaultColumnTypes } from 'pqb';
-import { ColumnTypesBase, MaybeArray, toArray } from 'orchid-core';
+import { AdapterOptions } from 'pqb';
+import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
-import { InputRakeDbConfig, processRakeDbConfig, RakeDbConfig } from './common';
+import {
+  InputRakeDbConfig,
+  processRakeDbConfig,
+  RakeDbColumnTypes,
+  RakeDbConfig,
+} from './common';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
@@ -12,11 +17,11 @@ import { runRecurrentMigrations } from './commands/recurrent';
 /**
  * Type of {@link rakeDb} function
  */
-export type RakeDbFn = (<C extends ColumnTypesBase = DefaultColumnTypes>(
+export type RakeDbFn = (<CT extends RakeDbColumnTypes>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig?: InputRakeDbConfig<C>,
+  partialConfig?: InputRakeDbConfig<CT>,
   args?: string[],
-) => RakeDbChangeFn<C> & {
+) => RakeDbChangeFn<CT> & {
   promise: Promise<void>;
 }) & {
   /**
@@ -33,12 +38,12 @@ export type RakeDbFn = (<C extends ColumnTypesBase = DefaultColumnTypes>(
 /**
  * Type of {@link rakeDb.lazy} function
  */
-export type RakeDbLazyFn = <C extends ColumnTypesBase = DefaultColumnTypes>(
+export type RakeDbLazyFn = <CT extends RakeDbColumnTypes>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig?: InputRakeDbConfig<C>,
+  partialConfig?: InputRakeDbConfig<CT>,
 ) => {
-  change: RakeDbChangeFn<C>;
-  run(args: string[], config?: Partial<RakeDbConfig<C>>): Promise<void>;
+  change: RakeDbChangeFn<CT>;
+  run(args: string[], config?: Partial<RakeDbConfig<CT>>): Promise<void>;
 };
 
 /**
@@ -46,9 +51,9 @@ export type RakeDbLazyFn = <C extends ColumnTypesBase = DefaultColumnTypes>(
  * Saves the given callback to an internal queue,
  * and also returns the callback in case you want to export it from migration.
  */
-export type RakeDbChangeFn<C extends ColumnTypesBase> = (
-  fn: ChangeCallback<C>,
-) => ChangeCallback<C>;
+export type RakeDbChangeFn<CT extends RakeDbColumnTypes> = (
+  fn: ChangeCallback<ColumnSchemaConfig, CT>,
+) => ChangeCallback<ColumnSchemaConfig, CT>;
 
 /**
  * Function to configure and run `rakeDb`.
@@ -63,7 +68,11 @@ export const rakeDb: RakeDbFn = ((
   args = process.argv.slice(2),
 ) => {
   const config = processRakeDbConfig(partialConfig);
-  const promise = runCommand(options, config, args).catch((err) => {
+  const promise = runCommand(
+    options,
+    config as unknown as RakeDbConfig<RakeDbColumnTypes>,
+    args,
+  ).catch((err) => {
     if (err instanceof RakeDbError) {
       config.logger?.error(err.message);
       process.exit(1);
@@ -87,14 +96,14 @@ rakeDb.lazy = ((options, partialConfig = {}) => {
   };
 }) as RakeDbLazyFn;
 
-function change(fn: ChangeCallback) {
+function change(fn: ChangeCallback<ColumnSchemaConfig, RakeDbColumnTypes>) {
   pushChange(fn);
   return fn;
 }
 
-const runCommand = async <C extends ColumnTypesBase = DefaultColumnTypes>(
+const runCommand = async <CT extends RakeDbColumnTypes>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<C>,
+  config: RakeDbConfig<CT>,
   args: string[] = process.argv.slice(2),
 ): Promise<void> => {
   const arg = args[0]?.split(':')[0];

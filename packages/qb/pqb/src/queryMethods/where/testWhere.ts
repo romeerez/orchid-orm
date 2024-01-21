@@ -1,6 +1,6 @@
 import { Query } from '../../query/query';
 import { testJoin } from '../join/testJoin';
-import { Sql } from 'orchid-core';
+import { ColumnTypeBase, Sql } from 'orchid-core';
 import { expectSql, testDb } from 'test-utils';
 
 export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
@@ -9,14 +9,14 @@ export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
   if (index !== -1) {
     const table = key.slice(0, index);
     const name = key.slice(index + 1);
-    const column = shape[name].data.name || name;
+    const column = (shape[name] as ColumnTypeBase).data.name || name;
     return [
       `"${table}"."${column}"`,
       column === name ? '' : ` "${name}"`,
       column,
     ];
   } else {
-    const column = shape[key].data.name || key;
+    const column = (shape[key] as ColumnTypeBase).data.name || key;
     return [
       `"${table}"."${column}"`,
       column === key ? '' : ` AS "${key}"`,
@@ -1454,7 +1454,7 @@ export const testWhereExists = ({
   selectFrom?: string;
 }) => {
   const table = joinTo.table;
-  const pkeySql = joinTo.shape[pkey].data.name || pkey;
+  const pkeySql = (joinTo.shape[pkey] as ColumnTypeBase).data.name || pkey;
 
   describe('whereExists', () => {
     testJoin({

@@ -1,7 +1,10 @@
 import { createBaseTable, orchidORM, Selectable } from 'orchid-orm';
 import { testAdapter } from 'test-utils';
+import { zodSchemaConfig } from 'schema-to-zod';
+import { z } from 'zod';
 
 export const BaseTable = createBaseTable({
+  schemaConfig: zodSchemaConfig,
   columnTypes: (t) => ({
     ...t,
     text: (min = 0, max = Infinity) => t.text(min, max),
@@ -18,10 +21,10 @@ class UserTable extends BaseTable {
     password: t.text(),
     picture: t.text().nullable(),
     data: t
-      .json((j) =>
-        j.object({
-          name: j.string(),
-          tags: j.string().array(),
+      .json(
+        z.object({
+          name: z.string(),
+          tags: z.string().array(),
         }),
       )
       .nullable(),

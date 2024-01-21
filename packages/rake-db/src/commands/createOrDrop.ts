@@ -1,11 +1,12 @@
 import { Adapter, AdapterOptions } from 'pqb';
-import { ColumnTypesBase, MaybeArray, toArray } from 'orchid-core';
+import { MaybeArray, toArray } from 'orchid-core';
 import {
   getDatabaseAndUserFromOptions,
   setAdminCredentialsToOptions,
   setAdapterOptions,
   createSchemaMigrations,
   RakeDbConfig,
+  RakeDbColumnTypes,
 } from '../common';
 import { migrate } from './migrateOrRollback';
 
@@ -108,7 +109,7 @@ const createOrDrop = async (
   await db.close();
 };
 
-export const createDb = async <CT extends ColumnTypesBase>(
+export const createDb = async <CT>(
   arg: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
 ) => {
@@ -128,7 +129,7 @@ export const createDb = async <CT extends ColumnTypesBase>(
   }
 };
 
-export const dropDb = async <CT extends ColumnTypesBase>(
+export const dropDb = async <CT>(
   arg: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
 ) => {
@@ -147,7 +148,7 @@ export const dropDb = async <CT extends ColumnTypesBase>(
   }
 };
 
-export const resetDb = async <CT extends ColumnTypesBase>(
+export const resetDb = async <CT extends RakeDbColumnTypes>(
   arg: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
 ) => {

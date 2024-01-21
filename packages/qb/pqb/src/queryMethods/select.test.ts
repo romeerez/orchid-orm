@@ -15,8 +15,14 @@ import {
 import { DateColumn, IntegerColumn, JSONTextColumn } from '../columns';
 import { getShapeFromSelect } from './select';
 import { UnknownColumn } from '../columns/unknown';
-import { assertType, expectSql, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  testColumnTypes as t,
+  useTestDatabase,
+} from 'test-utils';
 import { raw } from '../sql/rawSql';
+import { z } from 'zod';
 
 const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);
@@ -922,7 +928,7 @@ describe('select', () => {
     it('should parse raw column', async () => {
       const q = User.select({
         date: raw`"createdAt"`.type(() =>
-          new DateColumn().parse((input) => new Date(input)),
+          t.date().parse(z.date(), (input) => new Date(input)),
         ),
       });
 

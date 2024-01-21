@@ -1,14 +1,14 @@
-import { ColumnTypesBase, MaybeArray, toArray } from 'orchid-core';
+import { MaybeArray, toArray } from 'orchid-core';
 import { Adapter, AdapterOptions, createDb, DbResult } from 'pqb';
 import { RakeDbConfig } from '../common';
 import { join } from 'path';
 import { readdir, stat, readFile } from 'fs/promises';
 
-export const runRecurrentMigrations = async <CT extends ColumnTypesBase>(
+export const runRecurrentMigrations = async <CT>(
   options: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
 ): Promise<void> => {
-  let dbs: DbResult<ColumnTypesBase>[] | undefined;
+  let dbs: DbResult<unknown>[] | undefined;
   let files = 0;
 
   await readdirRecursive(config.recurrentPath, async (path) => {

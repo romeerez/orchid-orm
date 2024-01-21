@@ -11,7 +11,7 @@ import {
 } from '../query/queryUtils';
 import { RelationConfigBase, RelationQueryBase } from '../relations';
 import { WhereResult } from './where/where';
-import { JsonItem } from '../sql';
+import { JsonItem, ToSQLQuery } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape, Db } from '../query/db';
 import {
@@ -348,7 +348,7 @@ export class Update {
         if (typeof value === 'function') {
           value = resolveSubQueryCallback(
             this.baseQuery,
-            value as (q: Query) => Query,
+            value as (q: ToSQLQuery) => ToSQLQuery,
           );
           if (value instanceof Db && value.q.type) {
             throw new OrchidOrmInternalError(

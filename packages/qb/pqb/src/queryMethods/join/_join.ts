@@ -1,5 +1,10 @@
 import { Query } from '../../query/query';
-import { ColumnsParsers, ColumnsShapeBase } from 'orchid-core';
+import {
+  ColumnsParsers,
+  ColumnsShapeBase,
+  ColumnTypeBase,
+  QueryColumns,
+} from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { RelationQueryBase } from '../../relations';
@@ -39,7 +44,7 @@ export const _join = <
   args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
 ): JoinResult<T, Arg, RequireJoined, RequireMain> => {
   let joinKey: string | undefined;
-  let shape: ColumnsShapeBase | undefined;
+  let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
   let isSubQuery = false;
 
@@ -82,7 +87,7 @@ export const _join = <
 
         parsers = {} as ColumnsParsers;
         for (const key in shape) {
-          const parser = shape[key].parseFn;
+          const parser = (shape[key] as ColumnTypeBase).parseFn;
           if (parser) {
             parsers[key] = parser;
           }

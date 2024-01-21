@@ -19,12 +19,12 @@ import {
 import { SelectableOrExpression } from '../common/utils';
 import {
   ColumnsShapeBase,
-  ColumnTypeBase,
   MaybeArray,
   Sql,
   getValueKey,
   ColumnsParsers,
   Expression,
+  QueryColumn,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 import { BaseOperators } from '../columns/operators';
@@ -53,6 +53,8 @@ export type QueryScopeData = {
   or?: WhereItem[][];
 };
 
+export type QueryDataJoinTo = Pick<QueryBase, 'table' | 'q'>;
+
 export type CommonQueryData = {
   adapter: Adapter;
   shape: ColumnsShapeBase;
@@ -68,7 +70,7 @@ export type CommonQueryData = {
   throwOnNotFound?: boolean;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShapeBase>;
-  joinTo?: QueryBase;
+  joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
   joinedForSelect?: string;
@@ -167,7 +169,7 @@ export type SelectQueryData = CommonQueryData & {
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
   // column type for query with 'value' or 'valueOrThrow' return type
-  [getValueKey]?: ColumnTypeBase;
+  [getValueKey]?: QueryColumn;
 };
 
 export type CreateKind = 'object' | 'raw' | 'from';

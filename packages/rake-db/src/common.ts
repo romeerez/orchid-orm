@@ -1,24 +1,73 @@
 import {
   Adapter,
   AdapterOptions,
-  columnTypes as defaultColumnTypes,
+  makeColumnTypes as defaultColumnTypes,
   DbResult,
   DefaultColumnTypes,
   EnumColumn,
   NoPrimaryKeyOption,
   QueryLogOptions,
+  IndexColumnOptions,
+  IndexOptions,
+  ForeignKeyOptions,
+  defaultSchemaConfig,
 } from 'pqb';
-import { ColumnTypesBase, getStackTrace, singleQuote } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  EmptyObject,
+  getStackTrace,
+  MaybeArray,
+  RawSQLBase,
+  singleQuote,
+} from 'orchid-core';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
 import prompts from 'prompts';
 import { TableQuery } from './migration/createTable';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { DropMode } from './migration/migration';
 
-type Db = DbResult<DefaultColumnTypes>;
+export type RakeDbColumnTypes = {
+  index(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options?: IndexOptions,
+  ): EmptyObject;
 
-type BaseTable<CT extends ColumnTypesBase> = {
+  foreignKey(
+    columns: [string, ...string[]],
+    foreignTable: string,
+    foreignColumns: [string, ...string[]],
+    options?: ForeignKeyOptions,
+  ): EmptyObject;
+
+  primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
+
+  check(check: RawSQLBase): EmptyObject;
+
+  constraint(arg: ConstraintArg): EmptyObject;
+};
+
+// Constraint config, it can be a foreign key or a check
+export type ConstraintArg = {
+  // Name of the constraint
+  name?: string;
+  // Foreign key options
+  references?: [
+    columns: [string, ...string[]],
+    table: string,
+    foreignColumn: [string, ...string[]],
+    options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
+  ];
+  // Database check raw SQL
+  check?: RawSQLBase;
+  // Drop mode to use when dropping the constraint
+  dropMode?: DropMode;
+};
+
+type Db = DbResult<RakeDbColumnTypes>;
+
+type BaseTable<CT> = {
   exportAs: string;
   getFilePath(): string;
   nowSQL?: string;
@@ -30,19 +79,20 @@ type BaseTable<CT extends ColumnTypesBase> = {
   };
 };
 
-export type InputRakeDbConfig<CT extends ColumnTypesBase> = Partial<
+export type InputRakeDbConfig<CT> = Partial<
   Omit<RakeDbConfig<CT>, 'columnTypes'>
 > &
   (
     | {
-        columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
+        columnTypes?: CT | ((t: DefaultColumnTypes<ColumnSchemaConfig>) => CT);
       }
     | {
         baseTable?: BaseTable<CT>;
       }
   );
 
-export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
+export type RakeDbConfig<CT = DefaultColumnTypes<ColumnSchemaConfig>> = {
+  columnSchemaConfig: ColumnSchemaConfig;
   columnTypes: CT;
   basePath: string;
   dbScript: string;
@@ -89,10 +139,8 @@ export type AppCodeUpdater = {
   afterAll(params: AppCodeUpdaterParams): Promise<void>;
 };
 
-export const migrationConfigDefaults: Omit<
-  RakeDbConfig,
-  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
-> = {
+export const migrationConfigDefaults = {
+  columnSchemaConfig: defaultSchemaConfig,
   migrationsPath: path.join('src', 'db', 'migrations'),
   migrationsTable: 'schemaMigrations',
   snakeCase: false,
@@ -109,9 +157,12 @@ export const migrationConfigDefaults: Omit<
   log: true,
   logger: console,
   useCodeUpdater: true,
-};
+} satisfies Omit<
+  RakeDbConfig,
+  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
+>;
 
-export const processRakeDbConfig = <CT extends ColumnTypesBase>(
+export const processRakeDbConfig = <CT>(
   config: InputRakeDbConfig<CT>,
 ): RakeDbConfig<CT> => {
   const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<CT>;
@@ -170,15 +221,16 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
 
   if ('baseTable' in config) {
     const proto = config.baseTable?.prototype;
-    result.columnTypes = proto.types || defaultColumnTypes;
+    result.columnTypes = proto.types || defaultColumnTypes(defaultSchemaConfig);
     if (proto.snakeCase) result.snakeCase = true;
     if (proto.language) result.language = proto.language;
   } else {
-    result.columnTypes = (('columnTypes' in config &&
-      (typeof config.columnTypes === 'function'
-        ? config.columnTypes(defaultColumnTypes)
-        : config.columnTypes)) ||
-      defaultColumnTypes) as CT;
+    const ct = 'columnTypes' in config && config.columnTypes;
+    result.columnTypes = ((typeof ct === 'function'
+      ? (ct as (t: DefaultColumnTypes<ColumnSchemaConfig>) => CT)(
+          defaultColumnTypes(defaultSchemaConfig),
+        )
+      : ct) || defaultColumnTypes) as CT;
   }
 
   return result as RakeDbConfig<CT>;
@@ -506,7 +558,9 @@ export const quoteSchemaTable = ({
   return singleQuote(schema ? `${schema}.${name}` : name);
 };
 
-export const makePopulateEnumQuery = (item: EnumColumn): TableQuery => {
+export const makePopulateEnumQuery = (
+  item: EnumColumn<ColumnSchemaConfig, unknown>,
+): TableQuery => {
   const [schema, name] = getSchemaAndTableFromName(item.enumName);
   return {
     text: `SELECT unnest(enum_range(NULL::${quoteWithSchema({

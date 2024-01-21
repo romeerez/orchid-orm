@@ -1,5 +1,5 @@
 import { Query } from './query/query';
-import { ColumnsShapeBase } from 'orchid-core';
+import { QueryColumns } from 'orchid-core';
 
 export abstract class OrchidOrmError extends Error {
   abstract query: Query;
@@ -55,7 +55,7 @@ export type QueryErrorName =
   | 'notice';
 
 export abstract class QueryError<
-  T extends { shape: ColumnsShapeBase } = { shape: ColumnsShapeBase },
+  T extends { shape: QueryColumns } = { shape: QueryColumns },
 > extends OrchidOrmInternalError {
   message!: string;
   name!: QueryErrorName;

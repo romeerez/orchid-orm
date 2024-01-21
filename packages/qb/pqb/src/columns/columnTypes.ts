@@ -44,35 +44,31 @@ import {
   TimestampTZColumn,
 } from './dateTime';
 import { BooleanColumn } from './boolean';
-import { EnumColumn } from './enum';
-import { JSONColumn, JSONTextColumn } from './json';
+import { JSONTextColumn } from './json';
 import {
   ColumnNameOfTable,
+  ColumnSchemaConfig,
   EmptyObject,
   emptyObject,
   ForeignKeyTable,
   makeTimestampsHelpers,
   MaybeArray,
-  name,
+  QueryColumn,
+  QueryColumnsInit,
+  RawSQLBase,
+  setCurrentColumnName,
   setDefaultLanguage,
   setDefaultNowFn,
   TemplateLiteralArgs,
-  toArray,
-  RawSQLBase,
-  JSONType,
-  JSONTypes,
-  JSONUnknown,
-  ColumnTypesBase,
   TimestampHelpers,
-  ColumnsShapeBase,
+  toArray,
 } from 'orchid-core';
-import { ArrayColumn } from './array';
 import {
   ColumnType,
   DropMode,
+  ForeignKeyOptions,
   IndexColumnOptions,
   IndexOptions,
-  ForeignKeyOptions,
 } from './columnType';
 import { makeRegexToFindInSql } from '../common/utils';
 import { CustomTypeColumn, DomainColumn } from './customType';
@@ -128,21 +124,6 @@ export namespace TableData {
   };
 }
 
-export const getConstraintKind = (
-  it: TableData.Constraint,
-): 'constraint' | 'foreignKey' | 'check' => {
-  let num = 0;
-  for (const key in it) {
-    if (
-      (key === 'references' || key === 'check') &&
-      it[key as keyof typeof it] !== undefined
-    ) {
-      num++;
-    }
-  }
-  return num === 1 ? (it.references ? 'foreignKey' : 'check') : 'constraint';
-};
-
 export const newTableData = (): TableData => ({});
 
 let tableData: TableData = newTableData();
@@ -153,7 +134,7 @@ export const resetTableData = (data: TableData = newTableData()) => {
   tableData = data;
 };
 
-export const getColumnTypes = <ColumnTypes, Shape extends ColumnsShapeBase>(
+export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
   types: ColumnTypes,
   fn: (t: ColumnTypes) => Shape,
   nowSQL: string | undefined,
@@ -167,27 +148,33 @@ export const getColumnTypes = <ColumnTypes, Shape extends ColumnsShapeBase>(
   return fn(types);
 };
 
-export type DefaultColumnTypes = TimestampHelpers & {
-  name<T extends ColumnTypesBase>(this: T, name: string): T;
+export type DefaultColumnTypes<
+  SchemaConfig extends ColumnSchemaConfig,
+  NumberMethods = SchemaConfig['numberMethods'],
+  StringMethods = SchemaConfig['stringMethods'],
+  DateMethods = SchemaConfig['dateMethods'],
+> = TimestampHelpers & {
+  schema: SchemaConfig;
+  enum: SchemaConfig['enum'];
+  array: SchemaConfig['array'];
 
-  sql<T extends ColumnTypesBase>(
+  name<T>(this: T, name: string): T;
+
+  sql<T>(
     this: T,
     sql: TemplateStringsArray,
     ...values: unknown[]
-  ): RawSQLBase<ColumnType, T>;
-  sql<T extends ColumnTypesBase>(
-    this: T,
-    sql: string,
-  ): RawSQLBase<ColumnType, T>;
-  sql<T extends ColumnTypesBase>(
+  ): RawSQLBase<QueryColumn, T>;
+  sql<T>(this: T, sql: string): RawSQLBase<QueryColumn, T>;
+  sql<T>(
     this: T,
     values: Record<string, unknown>,
     sql: string,
-  ): RawSQLBase<ColumnType, T>;
-  sql<T extends ColumnTypesBase>(
+  ): RawSQLBase<QueryColumn, T>;
+  sql<T>(
     this: T,
     values: Record<string, unknown>,
-  ): (...sql: TemplateLiteralArgs) => RawSQLBase<ColumnType, T>;
+  ): (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>;
   sql(
     ...args:
       | [sql: TemplateStringsArray, ...values: unknown[]]
@@ -195,89 +182,62 @@ export type DefaultColumnTypes = TimestampHelpers & {
       | [values: Record<string, unknown>, sql?: string]
   ): ((...sql: TemplateLiteralArgs) => RawSQLBase) | RawSQLBase;
 
-  smallint(): SmallIntColumn;
-  integer(): IntegerColumn;
-  bigint(): BigIntColumn;
-  numeric<
-    Precision extends number | undefined = undefined,
-    Scale extends number | undefined = undefined,
-  >(
-    precision?: Precision,
-    scale?: Scale,
-  ): DecimalColumn<Precision, Scale>;
-  decimal<
-    Precision extends number | undefined = undefined,
-    Scale extends number | undefined = undefined,
-  >(
-    precision?: Precision,
-    scale?: Scale,
-  ): DecimalColumn<Precision, Scale>;
-  real(): RealColumn;
-  doublePrecision(): DoublePrecisionColumn;
-  identity(options?: TableData.Identity): IdentityColumn<IntegerColumn>;
-  smallSerial(): IdentityColumn<SmallSerialColumn>;
-  serial(): SerialColumn;
-  bigSerial(): BigSerialColumn;
-  money(): MoneyColumn;
-  varchar<Limit extends number | undefined = undefined>(
-    limit?: Limit,
-  ): VarCharColumn<Limit>;
-  char<Limit extends number | undefined = undefined>(
-    limit?: Limit,
-  ): CharColumn<Limit>;
-  text(min: number, max: number): TextColumn;
+  smallint(): SmallIntColumn<SchemaConfig> & NumberMethods;
+  integer(): IntegerColumn<SchemaConfig> & NumberMethods;
+  bigint(): BigIntColumn<SchemaConfig> & StringMethods;
+  numeric(
+    precision?: number,
+    scale?: number,
+  ): DecimalColumn<SchemaConfig> & StringMethods;
+  decimal(
+    precision?: number,
+    scale?: number,
+  ): DecimalColumn<SchemaConfig> & StringMethods;
+  real(): RealColumn<SchemaConfig> & NumberMethods;
+  doublePrecision(): DoublePrecisionColumn<SchemaConfig> & StringMethods;
+  identity(
+    options?: TableData.Identity,
+  ): IdentityColumn<IntegerColumn<SchemaConfig> & NumberMethods>;
+  smallSerial(): SmallSerialColumn<SchemaConfig> & NumberMethods;
+  serial(): SerialColumn<SchemaConfig> & NumberMethods;
+  bigSerial(): BigSerialColumn<SchemaConfig> & StringMethods;
+  money(): MoneyColumn<SchemaConfig> & StringMethods;
+  varchar(limit?: number): VarCharColumn<SchemaConfig> & StringMethods;
+  char(limit?: number): CharColumn<SchemaConfig> & StringMethods;
+  text(min: number, max: number): TextColumn<SchemaConfig> & StringMethods;
   // `varchar` column with optional limit defaulting to 255.
-  string<Limit extends number = 255>(limit?: Limit): StringColumn<Limit>;
-  citext(min: number, max: number): CitextColumn;
-  bytea(): ByteaColumn;
-  date(): DateColumn;
-  timestampNoTZ<Precision extends number>(
-    precision?: Precision,
-  ): TimestampColumn<Precision>;
-  timestamp<Precision extends number | undefined = undefined>(
-    precision?: Precision,
-  ): TimestampTZColumn<Precision>;
-  time<Precision extends number | undefined = undefined>(
-    precision?: Precision,
-  ): TimeColumn<Precision>;
-  interval<
-    Fields extends string | undefined = undefined,
-    Precision extends number | undefined = undefined,
-  >(
-    fields?: Fields,
-    precision?: Precision,
-  ): IntervalColumn<Fields, Precision>;
-  boolean(): BooleanColumn;
-  enum<U extends string, T extends [U, ...U[]]>(
-    dataType: string,
-    type: T,
-  ): EnumColumn<U, T>;
-  point(): PointColumn;
-  line(): LineColumn;
-  lseg(): LsegColumn;
-  box(): BoxColumn;
-  path(): PathColumn;
-  polygon(): PolygonColumn;
-  circle(): CircleColumn;
-  cidr(): CidrColumn;
-  inet(): InetColumn;
-  macaddr(): MacAddrColumn;
-  macaddr8(): MacAddr8Column;
-  bit<Length extends number>(length: Length): BitColumn<Length>;
-  bitVarying<Length extends number | undefined = undefined>(
-    length?: Length,
-  ): BitVaryingColumn<Length>;
-  tsvector(): TsVectorColumn;
-  tsquery(): TsQueryColumn;
-  uuid(): UUIDColumn;
-  xml(): XMLColumn;
-  json<Type extends JSONType = JSONUnknown>(
-    schemaOrFn?: Type | ((j: JSONTypes) => Type),
-  ): JSONColumn<Type>;
-  jsonText(): JSONTextColumn;
-  array<Item extends ColumnType>(item: Item): ArrayColumn<Item>;
-  type(dataType: string): CustomTypeColumn;
-  domain(dataType: string): DomainColumn;
+  string(limit?: number): StringColumn<SchemaConfig> & StringMethods;
+  citext(min: number, max: number): CitextColumn<SchemaConfig> & StringMethods;
+  bytea(): ByteaColumn<SchemaConfig>;
+  date(): DateColumn<SchemaConfig> & DateMethods;
+  timestampNoTZ(
+    precision?: number,
+  ): TimestampColumn<SchemaConfig> & DateMethods;
+  timestamp(precision?: number): TimestampTZColumn<SchemaConfig> & DateMethods;
+  time(precision?: number): TimeColumn<SchemaConfig>;
+  interval(fields?: string, precision?: number): IntervalColumn<SchemaConfig>;
+  boolean(): BooleanColumn<SchemaConfig>;
+  point(): PointColumn<SchemaConfig>;
+  line(): LineColumn<SchemaConfig>;
+  lseg(): LsegColumn<SchemaConfig>;
+  box(): BoxColumn<SchemaConfig>;
+  path(): PathColumn<SchemaConfig>;
+  polygon(): PolygonColumn<SchemaConfig>;
+  circle(): CircleColumn<SchemaConfig>;
+  cidr(): CidrColumn<SchemaConfig>;
+  inet(): InetColumn<SchemaConfig>;
+  macaddr(): MacAddrColumn<SchemaConfig>;
+  macaddr8(): MacAddr8Column<SchemaConfig>;
+  bit(length: number): BitColumn<SchemaConfig>;
+  bitVarying(length?: number): BitVaryingColumn<SchemaConfig>;
+  tsvector(): TsVectorColumn<SchemaConfig>;
+  tsquery(): TsQueryColumn<SchemaConfig>;
+  uuid(): UUIDColumn<SchemaConfig>;
+  xml(): XMLColumn<SchemaConfig>;
+  json: SchemaConfig['json'];
+  jsonText(): JSONTextColumn<SchemaConfig>;
+  type(dataType: string): CustomTypeColumn<SchemaConfig>;
+  domain(dataType: string): DomainColumn<SchemaConfig>;
 
   primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
 
@@ -342,242 +302,297 @@ export type DefaultColumnTypes = TimestampHelpers & {
   check(check: RawSQLBase): EmptyObject;
 };
 
-export const columnTypes: DefaultColumnTypes = {
-  name,
+export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
+  schema: SchemaConfig,
+): DefaultColumnTypes<SchemaConfig> => {
+  const columnsWithMethods: Record<
+    string,
+    { new (...args: unknown[]): unknown }
+  > = {};
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  sql(...args: any[]): any {
-    const arg = args[0];
-    if (Array.isArray(arg)) {
-      return new RawSQL(args as TemplateLiteralArgs);
+  function columnWithMethods<
+    Methods extends Record<string, unknown>,
+    Args extends unknown[],
+    Klass extends { new (...args: Args): EmptyObject },
+  >(klass: Klass, methods: Methods, ...args: Args): never {
+    if (columnsWithMethods[klass.name]) {
+      return new columnsWithMethods[klass.name](...args) as never;
     }
 
-    if (typeof args[0] === 'string') {
-      return new RawSQL(args[0]);
-    }
+    // @ts-expect-error don't know how to fix that error
+    const withMethods = class extends klass {};
+    Object.assign(withMethods.prototype, methods);
 
-    if (args[1] !== undefined) {
-      return new RawSQL(args[1], arg);
-    }
+    return new (columnsWithMethods[klass.name] = withMethods as unknown as {
+      new (...args: unknown[]): unknown;
+    })(...args) as never;
+  }
 
-    return (...args: TemplateLiteralArgs) =>
-      new RawSQL(args, arg as Record<string, unknown>);
-  },
+  const numberMethods = schema.numberMethods;
+  const stringMethods = schema.stringMethods;
+  const dateMethods = schema.dateMethods;
 
-  smallint() {
-    return new SmallIntColumn();
-  },
-  integer() {
-    return new IntegerColumn();
-  },
-  bigint() {
-    return new BigIntColumn();
-  },
-  numeric(precision, scale) {
-    return new DecimalColumn(precision, scale);
-  },
-  decimal(precision, scale) {
-    return new DecimalColumn(precision, scale);
-  },
-  real() {
-    return new RealColumn();
-  },
-  doublePrecision() {
-    return new DoublePrecisionColumn();
-  },
-  identity(options) {
-    return new IntegerColumn().identity(options);
-  },
-  smallSerial() {
-    return new SmallSerialColumn();
-  },
-  serial() {
-    return new SerialColumn();
-  },
-  bigSerial() {
-    return new BigSerialColumn();
-  },
-  money() {
-    return new MoneyColumn();
-  },
-  varchar(limit) {
-    return new VarCharColumn(limit);
-  },
-  char(limit) {
-    return new CharColumn(limit);
-  },
-  text(min, max) {
-    return new TextColumn(min, max);
-  },
-  string<Limit extends number = 255>(limit = 255 as Limit) {
-    return new StringColumn(limit);
-  },
-  citext(min, max) {
-    return new CitextColumn(min, max);
-  },
-  bytea() {
-    return new ByteaColumn();
-  },
-  date() {
-    return new DateColumn();
-  },
-  timestampNoTZ(precision) {
-    return new TimestampColumn(precision);
-  },
-  timestamp(precision) {
-    return new TimestampTZColumn(precision);
-  },
-  time(precision) {
-    return new TimeColumn(precision);
-  },
-  interval(fields, precision) {
-    return new IntervalColumn(fields, precision);
-  },
-  boolean() {
-    return new BooleanColumn();
-  },
-  enum(dataType, type) {
-    return new EnumColumn(dataType, type);
-  },
-  point() {
-    return new PointColumn();
-  },
-  line() {
-    return new LineColumn();
-  },
-  lseg() {
-    return new LsegColumn();
-  },
-  box() {
-    return new BoxColumn();
-  },
-  path() {
-    return new PathColumn();
-  },
-  polygon() {
-    return new PolygonColumn();
-  },
-  circle() {
-    return new CircleColumn();
-  },
-  cidr() {
-    return new CidrColumn();
-  },
-  inet() {
-    return new InetColumn();
-  },
-  macaddr() {
-    return new MacAddrColumn();
-  },
-  macaddr8() {
-    return new MacAddr8Column();
-  },
-  bit(length) {
-    return new BitColumn(length);
-  },
-  bitVarying(length) {
-    return new BitVaryingColumn(length);
-  },
-  tsvector() {
-    return new TsVectorColumn();
-  },
-  tsquery() {
-    return new TsQueryColumn();
-  },
-  uuid() {
-    return new UUIDColumn();
-  },
-  xml() {
-    return new XMLColumn();
-  },
-  json(schemaOrFn) {
-    return new JSONColumn(schemaOrFn);
-  },
-  jsonText() {
-    return new JSONTextColumn();
-  },
-  array(item) {
-    return new ArrayColumn(item);
-  },
-  type(dataType) {
-    return new CustomTypeColumn(dataType);
-  },
-  domain(dataType) {
-    return new DomainColumn(dataType);
-  },
+  return {
+    schema,
+    enum: schema.enum,
+    array: schema.array,
 
-  primaryKey(columns, options) {
-    tableData.primaryKey = { columns, options };
-    return emptyObject;
-  },
+    name(name: string) {
+      setCurrentColumnName(name);
+      return this;
+    },
 
-  index(columns, options = {}) {
-    const index = {
-      columns: toArray(columns).map((column) =>
-        typeof column === 'string' ? { column } : column,
-      ),
-      options,
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sql(...args: any[]): any {
+      const arg = args[0];
+      if (Array.isArray(arg)) {
+        return new RawSQL(args as TemplateLiteralArgs);
+      }
 
-    (tableData.indexes ??= []).push(index);
-    return emptyObject;
-  },
+      if (typeof args[0] === 'string') {
+        return new RawSQL(args[0]);
+      }
 
-  unique(columns, options) {
-    return this.index(columns, { ...options, unique: true });
-  },
+      if (args[1] !== undefined) {
+        return new RawSQL(args[1], arg);
+      }
 
-  /**
-   * See {@link ColumnType.searchIndex}
-   */
-  searchIndex(columns, options) {
-    return this.index(columns, { ...options, tsVector: true });
-  },
+      return (...args: TemplateLiteralArgs) =>
+        new RawSQL(args, arg as Record<string, unknown>);
+    },
 
-  constraint({ name, references, check, dropMode }) {
-    (tableData.constraints ??= []).push({
-      name,
-      references: references
-        ? {
-            columns: references[0],
-            fnOrTable: references[1],
-            foreignColumns: references[2],
-            options: references[3],
-          }
-        : undefined,
-      check,
-      dropMode,
-    });
-    return emptyObject;
-  },
+    smallint() {
+      return columnWithMethods(SmallIntColumn, numberMethods, schema);
+    },
+    integer() {
+      return columnWithMethods(IntegerColumn, numberMethods, schema);
+    },
+    bigint() {
+      return columnWithMethods(BigIntColumn, stringMethods, schema);
+    },
+    numeric(precision, scale) {
+      return columnWithMethods(
+        DecimalColumn,
+        stringMethods,
+        schema,
+        precision,
+        scale,
+      );
+    },
+    decimal(precision, scale) {
+      return columnWithMethods(
+        DecimalColumn,
+        stringMethods,
+        schema,
+        precision,
+        scale,
+      );
+    },
+    real() {
+      return columnWithMethods(RealColumn, numberMethods, schema);
+    },
+    doublePrecision() {
+      return columnWithMethods(DoublePrecisionColumn, stringMethods, schema);
+    },
+    identity(options) {
+      return (
+        columnWithMethods(
+          IntegerColumn,
+          numberMethods,
+          schema,
+        ) as IntegerColumn<SchemaConfig>
+      ).identity(options) as unknown as IdentityColumn<
+        IntegerColumn<SchemaConfig> & SchemaConfig['numberMethods']
+      >;
+    },
+    smallSerial() {
+      return columnWithMethods(SmallSerialColumn, numberMethods, schema);
+    },
+    serial() {
+      return columnWithMethods(SerialColumn, numberMethods, schema);
+    },
+    bigSerial() {
+      return columnWithMethods(BigSerialColumn, stringMethods, schema);
+    },
+    money() {
+      return columnWithMethods(MoneyColumn, stringMethods, schema);
+    },
+    varchar(limit) {
+      return columnWithMethods(VarCharColumn, stringMethods, schema, limit);
+    },
+    char(limit) {
+      return columnWithMethods(CharColumn, stringMethods, schema, limit);
+    },
+    text(min, max) {
+      return columnWithMethods(TextColumn, stringMethods, schema, min, max);
+    },
+    string(limit = 255) {
+      return columnWithMethods(StringColumn, stringMethods, schema, limit);
+    },
+    citext(min, max) {
+      return columnWithMethods(CitextColumn, stringMethods, schema, min, max);
+    },
+    bytea() {
+      return new ByteaColumn<SchemaConfig>(schema);
+    },
+    date() {
+      return columnWithMethods(DateColumn, dateMethods, schema);
+    },
+    timestampNoTZ(precision) {
+      return columnWithMethods(TimestampColumn, dateMethods, schema, precision);
+    },
+    timestamp(precision) {
+      return columnWithMethods(
+        TimestampTZColumn,
+        dateMethods,
+        schema,
+        precision,
+      );
+    },
+    time(precision) {
+      return new TimeColumn<SchemaConfig>(schema, precision);
+    },
+    interval(fields, precision) {
+      return new IntervalColumn<SchemaConfig>(schema, fields, precision);
+    },
+    boolean() {
+      return new BooleanColumn<SchemaConfig>(schema);
+    },
+    point() {
+      return new PointColumn<SchemaConfig>(schema);
+    },
+    line() {
+      return new LineColumn<SchemaConfig>(schema);
+    },
+    lseg() {
+      return new LsegColumn<SchemaConfig>(schema);
+    },
+    box() {
+      return new BoxColumn<SchemaConfig>(schema);
+    },
+    path() {
+      return new PathColumn<SchemaConfig>(schema);
+    },
+    polygon() {
+      return new PolygonColumn<SchemaConfig>(schema);
+    },
+    circle() {
+      return new CircleColumn<SchemaConfig>(schema);
+    },
+    cidr() {
+      return new CidrColumn<SchemaConfig>(schema);
+    },
+    inet() {
+      return new InetColumn<SchemaConfig>(schema);
+    },
+    macaddr() {
+      return new MacAddrColumn<SchemaConfig>(schema);
+    },
+    macaddr8() {
+      return new MacAddr8Column<SchemaConfig>(schema);
+    },
+    bit(length) {
+      return new BitColumn<SchemaConfig>(schema, length);
+    },
+    bitVarying(length) {
+      return new BitVaryingColumn<SchemaConfig>(schema, length);
+    },
+    tsvector() {
+      return new TsVectorColumn<SchemaConfig>(schema);
+    },
+    tsquery() {
+      return new TsQueryColumn<SchemaConfig>(schema);
+    },
+    uuid() {
+      return new UUIDColumn<SchemaConfig>(schema);
+    },
+    xml() {
+      return new XMLColumn<SchemaConfig>(schema);
+    },
+    json: schema.json,
+    jsonText() {
+      return new JSONTextColumn<SchemaConfig>(schema);
+    },
+    type(dataType) {
+      return new CustomTypeColumn<SchemaConfig>(schema, dataType);
+    },
+    domain(dataType) {
+      return new DomainColumn<SchemaConfig>(schema, dataType);
+    },
 
-  foreignKey(columns, fnOrTable, foreignColumns, options) {
-    (tableData.constraints ??= []).push({
-      name: options?.name,
-      references: {
-        columns,
-        fnOrTable,
-        foreignColumns,
+    primaryKey(columns, options) {
+      tableData.primaryKey = { columns, options };
+      return emptyObject;
+    },
+
+    index(columns, options = {}) {
+      const index = {
+        columns: toArray(columns).map((column) =>
+          typeof column === 'string' ? { column } : column,
+        ),
         options,
-      },
-      dropMode: options?.dropMode,
-    });
-    return emptyObject;
-  },
+      };
 
-  check(check) {
-    (tableData.constraints ??= []).push({
-      check,
-    });
-    return emptyObject;
-  },
+      (tableData.indexes ??= []).push(index);
+      return emptyObject;
+    },
 
-  ...makeTimestampsHelpers(
-    makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*='),
-    '"updatedAt"',
-    makeRegexToFindInSql('\\bupdated_at\\b"?\\s*='),
-    '"updated_at"',
-  ),
+    unique(columns, options) {
+      return this.index(columns, { ...options, unique: true });
+    },
+
+    /**
+     * See {@link ColumnType.searchIndex}
+     */
+    searchIndex(columns, options) {
+      return this.index(columns, { ...options, tsVector: true });
+    },
+
+    constraint({ name, references, check, dropMode }) {
+      (tableData.constraints ??= []).push({
+        name,
+        references: references
+          ? {
+              columns: references[0],
+              fnOrTable: references[1],
+              foreignColumns: references[2],
+              options: references[3],
+            }
+          : undefined,
+        check,
+        dropMode,
+      });
+      return emptyObject;
+    },
+
+    foreignKey(columns, fnOrTable, foreignColumns, options) {
+      (tableData.constraints ??= []).push({
+        name: options?.name,
+        references: {
+          columns,
+          fnOrTable,
+          foreignColumns,
+          options,
+        },
+        dropMode: options?.dropMode,
+      });
+      return emptyObject;
+    },
+
+    check(check) {
+      (tableData.constraints ??= []).push({
+        check,
+      });
+      return emptyObject;
+    },
+
+    ...makeTimestampsHelpers(
+      makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*='),
+      '"updatedAt"',
+      makeRegexToFindInSql('\\bupdated_at\\b"?\\s*='),
+      '"updated_at"',
+    ),
+  };
 };
 
-RawSQL.prototype.columnTypes = columnTypes;
+RawSQL.prototype.columnTypes = makeColumnTypes;

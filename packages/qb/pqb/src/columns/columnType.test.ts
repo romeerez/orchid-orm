@@ -1,33 +1,39 @@
-import { ColumnType, instantiateColumn } from './columnType';
+import { ColumnType } from './columnType';
 import { User, userData } from '../test-utils/test-utils';
 import { createDb } from '../query/db';
-import { columnTypes } from './columnTypes';
-import { IntegerColumn } from './number';
 import { columnCode } from './code';
-import { Code } from 'orchid-core';
+import { Code, ColumnSchemaConfig } from 'orchid-core';
 import {
   assertType,
   expectSql,
   testAdapter,
+  testColumnTypes as t,
   testDb,
+  testSchemaConfig,
   useTestDatabase,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
-import { UUIDColumn } from './string';
+import { z, ZodLiteral, ZodNumber } from 'zod';
+import { instantiateColumn } from './columnType.utils';
 
 describe('column type', () => {
   useTestDatabase();
   afterAll(testDb.close);
 
-  class Column extends ColumnType {
+  class Column<Schema extends ColumnSchemaConfig> extends ColumnType<Schema> {
     dataType = 'test';
     operators = Operators.any;
+
+    constructor(schema: Schema) {
+      super(schema, schema.unknown);
+    }
+
     toCode(t: string): Code {
       return columnCode(this, t, 'column()');
     }
   }
-  const column = new Column();
+  const column = new Column(testSchemaConfig);
 
   describe('.primaryKey', () => {
     it('should mark column as a primary key', () => {
@@ -44,7 +50,7 @@ describe('column type', () => {
     it('should have toCode', () => {
       class Table {
         readonly table = 'table';
-        columns = { column: new IntegerColumn() };
+        columns = { column: t.integer() };
       }
 
       expect(column.foreignKey(() => Table, 'column').toCode('t')).toBe(
@@ -142,15 +148,9 @@ describe('column type', () => {
     it('should set a function to encode value for this column', () => {
       expect(column.encodeFn).toBe(undefined);
       const fn = (input: number) => input.toString();
-      const withEncode = column.encode(fn);
+      const withEncode = column.encode(z.number(), fn);
       expect(withEncode.encodeFn).toBe(fn);
       assertType<typeof withEncode.inputType, number>();
-    });
-
-    it('should have toCode', () => {
-      expect(
-        column.encode((input: number) => input.toString()).toCode('t'),
-      ).toBe('t.column().encode((input)=>input.toString())');
     });
   });
 
@@ -158,7 +158,7 @@ describe('column type', () => {
     it('should set a function to encode value for this column', () => {
       expect(column.parseFn).toBe(undefined);
       const fn = () => 123;
-      const withEncode = column.parse(fn);
+      const withEncode = column.parse(z.number(), fn);
       expect(withEncode.parseFn).toBe(fn);
       assertType<typeof withEncode.outputType, number>();
     });
@@ -166,17 +166,11 @@ describe('column type', () => {
     it('should not override the type to search records with', () => {
       const table = testDb('table', (t) => ({
         id: t.serial().primaryKey(),
-        column: t.text().parse(parseInt),
+        column: t.text().parse(z.number(), parseInt),
       }));
 
       const q = table.findBy({ column: 'text' });
       assertType<Awaited<typeof q>, { id: number; column: number }>();
-    });
-
-    it('should have toCode', () => {
-      expect(column.parse((v) => parseInt(v as string)).toCode('t')).toBe(
-        't.column().parse((v)=>parseInt(v))',
-      );
     });
 
     describe('parsing columns', () => {
@@ -207,15 +201,15 @@ describe('column type', () => {
   });
 
   describe('as', () => {
-    const numberTimestamp = columnTypes
+    const numberTimestamp = t
       .timestampNoTZ()
-      .encode((input: number) => new Date(input))
-      .parse(Date.parse)
-      .as(columnTypes.integer());
+      .encode(z.number(), (input: number) => new Date(input))
+      .parse(z.number(), Date.parse)
+      .as(t.integer());
 
-    const dateTimestamp = columnTypes
+    const dateTimestamp = t
       .timestampNoTZ()
-      .parse((input) => new Date(input));
+      .parse(z.date(), (input) => new Date(input));
 
     const db = createDb({
       adapter: testAdapter,
@@ -236,18 +230,18 @@ describe('column type', () => {
     }));
 
     it('should have toCode', () => {
-      expect(column.as(columnTypes.integer()).toCode('t')).toEqual(
+      expect(column.as(t.integer()).toCode('t')).toEqual(
         't.column().as(t.integer())',
       );
     });
 
     it('should return same column with `as` property in data', () => {
-      const timestamp = columnTypes
+      const timestamp = t
         .timestampNoTZ()
-        .encode((input: number) => new Date(input))
-        .parse(Date.parse);
+        .encode(z.number(), (input: number) => new Date(input))
+        .parse(z.number(), Date.parse);
 
-      const integer = columnTypes.integer();
+      const integer = t.integer();
 
       const column = timestamp.as(integer);
 
@@ -308,34 +302,54 @@ describe('column type', () => {
   });
 
   describe('.asType', () => {
-    type Type = 'foo' | 'bar';
     it('should use custom type', () => {
-      const withType = column.asType((t) => t<Type>());
-      assertType<typeof withType.type, Type>();
-      assertType<typeof withType.inputType, Type>();
-      assertType<typeof withType.outputType, Type>();
-      assertType<typeof withType.queryType, Type>();
+      const withType = t.string().asType({
+        type: z.literal('value'),
+      });
+
+      assertType<typeof withType.type, 'value'>();
+      assertType<typeof withType.inputType, 'value'>();
+      assertType<typeof withType.inputSchema, ZodLiteral<'value'>>();
+      assertType<typeof withType.outputType, 'value'>();
+      assertType<typeof withType.outputSchema, ZodLiteral<'value'>>();
+      assertType<typeof withType.queryType, 'value'>();
+      assertType<typeof withType.querySchema, ZodLiteral<'value'>>();
     });
+
     it('should use custom type along with parse', () => {
-      const withType = column.asType((t) => t<Type>()).parse(() => 123);
-      assertType<typeof withType.type, Type>();
-      assertType<typeof withType.inputType, Type>();
+      const withType = t
+        .string()
+        .asType({ type: z.literal('value') })
+        .parse(z.number(), () => 123);
+
+      assertType<typeof withType.type, 'value'>();
+      assertType<typeof withType.inputType, 'value'>();
       assertType<typeof withType.outputType, number>();
-      assertType<typeof withType.queryType, Type>();
+      assertType<typeof withType.outputSchema, ZodNumber>();
+      assertType<typeof withType.queryType, 'value'>();
     });
+
     it('should use custom type along with encode', () => {
-      const withType = column
-        .asType((t) => t<Type>())
-        .encode((value: number) => '' + value);
-      assertType<typeof withType.type, Type>();
+      const withType = t
+        .string()
+        .asType({ type: z.literal('value') })
+        .encode(z.number(), (value: number) => '' + value);
+
+      assertType<typeof withType.type, 'value'>();
       assertType<typeof withType.inputType, number>();
-      assertType<typeof withType.outputType, Type>();
-      assertType<typeof withType.queryType, Type>();
+      assertType<typeof withType.inputSchema, ZodNumber>();
+      assertType<typeof withType.outputType, 'value'>();
+      assertType<typeof withType.queryType, 'value'>();
     });
+
     it('should use individual custom types', () => {
-      const withType = column.asType((t) =>
-        t<'type', 'input', 'output', 'query'>(),
-      );
+      const withType = t.string().asType({
+        type: z.literal('type'),
+        input: z.literal('input'),
+        output: z.literal('output'),
+        query: z.literal('query'),
+      });
+
       assertType<typeof withType.type, 'type'>();
       assertType<typeof withType.inputType, 'input'>();
       assertType<typeof withType.outputType, 'output'>();
@@ -358,7 +372,7 @@ describe('column type', () => {
 
     describe('value is null', () => {
       it('should not be added by toCode', () => {
-        const uuid = new UUIDColumn().primaryKey();
+        const uuid = t.uuid().primaryKey();
         expect(uuid.default(null).toCode('t')).toBe(
           `t.uuid().primaryKey().default(null)`,
         );
@@ -462,22 +476,6 @@ describe('column type', () => {
     });
   });
 
-  describe('validationDefault', () => {
-    it('should have toCode', () => {
-      expect(column.validationDefault('value').toCode('t')).toBe(
-        `t.column().validationDefault('value')`,
-      );
-
-      expect(column.validationDefault(123).toCode('t')).toBe(
-        `t.column().validationDefault(123)`,
-      );
-
-      expect(column.validationDefault(() => 'value').toCode('t')).toBe(
-        `t.column().validationDefault(()=>'value')`,
-      );
-    });
-  });
-
   describe('compression', () => {
     it('should have toCode', () => {
       expect(column.compression('compression').toCode('t')).toBe(
@@ -502,42 +500,6 @@ describe('column type', () => {
     });
   });
 
-  describe('transform', () => {
-    it('should have toCode', () => {
-      expect(column.transform((s) => s).toCode('t')).toBe(
-        't.column().transform((s)=>s)',
-      );
-    });
-  });
-
-  describe('to', () => {
-    it('should have toCode', () => {
-      expect(
-        column
-          .to((s) => parseInt(s as string), new IntegerColumn())
-          .toCode('t'),
-      ).toEqual('t.column().to((s)=>parseInt(s), t.integer())');
-    });
-  });
-
-  describe('refine', () => {
-    it('should have toCode', () => {
-      expect(
-        column
-          .refine((s) => (s as string).length > 0, 'refine message')
-          .toCode('t'),
-      ).toBe(`t.column().refine((s)=>s.length > 0, 'refine message')`);
-    });
-  });
-
-  describe('superRefine', () => {
-    it('should have toCode', () => {
-      expect(column.superRefine((s) => s).toCode('t')).toBe(
-        't.column().superRefine((s)=>s)',
-      );
-    });
-  });
-
   describe('fromDb', () => {
     it('should instantiate a column', () => {
       const params = {
@@ -546,7 +508,10 @@ describe('column type', () => {
         numericScale: 3,
         dateTimePrecision: 4,
       };
-      const column = instantiateColumn(Column, params);
+      const column = instantiateColumn(
+        () => new Column(testSchemaConfig),
+        params,
+      );
       expect(column).toBeInstanceOf(Column);
       expect(column.data).toMatchObject(params);
     });

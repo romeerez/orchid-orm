@@ -3,13 +3,13 @@ import { RawSQLBase } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 import { QueryBaseCommon } from '../query';
 import { BaseOperators, OperatorBase } from './operators';
-import { JSONType } from './json/jsonType';
+import { ColumnSchemaConfig } from './columnSchema';
 
 // type returned from a database and processed by `parse` function when it's defined.
-export type ColumnInput<T extends ColumnTypeBase> = T['inputType'];
+export type ColumnInput<T extends { inputType: unknown }> = T['inputType'];
 
 // get columns object type where nullable columns or columns with a default are optional
-export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
+export type ColumnShapeInput<Shape extends QueryColumnsInit> = SetOptional<
   {
     [K in keyof Shape]: ColumnInput<Shape[K]>;
   },
@@ -17,10 +17,10 @@ export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
 >;
 
 // allowed type for creating and updating, it is processed by `encode` function when it's defined.
-export type ColumnOutput<T extends ColumnTypeBase> = T['outputType'];
+export type ColumnOutput<T extends QueryColumn> = T['outputType'];
 
 // output of a shape of columns
-export type ColumnShapeOutput<Shape extends ColumnsShapeBase> = {
+export type ColumnShapeOutput<Shape extends Record<string, QueryColumn>> = {
   [K in keyof Shape]: ColumnOutput<Shape[K]>;
 };
 
@@ -36,62 +36,111 @@ export type ColumnShapeQueryType<Shape extends ColumnsShapeBase> = {
 export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
 
 // marks the column as a primary
-export type PrimaryKeyColumn<T extends ColumnTypeBase> = T & {
+export type PrimaryKeyColumn<T> = T & {
   data: {
     isPrimaryKey: true;
   };
 };
 
 // marks the column as a nullable, adds `null` type to `type` and `inputType`
-export type NullableColumn<T extends ColumnTypeBase> = Omit<
+export type NullableColumn<
+  T extends ColumnTypeBase,
+  InputSchema,
+  OutputSchema,
+  QuerySchema,
+> = Omit<
   T,
-  'type' | 'inputType' | 'outputType' | 'queryType' | 'data' | 'operators'
+  | 'type'
+  | 'inputType'
+  | 'inputSchema'
+  | 'outputType'
+  | 'outputSchema'
+  | 'queryType'
+  | 'querySchema'
+  | 'operators'
 > & {
   type: T['type'] | null;
   inputType: T['inputType'] | null;
+  inputSchema: InputSchema;
   outputType: T['outputType'] | null;
-  queryType: T['outputType'] | null;
-  data: Omit<T['data'], 'isNullable'> & {
+  outputSchema: OutputSchema;
+  queryType: T['queryType'] | null;
+  querySchema: QuerySchema;
+  data: {
     isNullable: true;
   };
-  operators: {
+  operators: Omit<T['operators'], 'equals' | 'not'> & {
     // allow `null` in .where({ column: { equals: null } }) and the same for `not`
-    [K in keyof T['operators']]: K extends 'equals' | 'not'
-      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        OperatorBase<T['type'] | null, any>
-      : T['operators'][K];
+    equals: OperatorBase<T['queryType'] | null, any>;
+    not: OperatorBase<T['queryType'] | null, any>;
   };
 };
 
+// change column type and all schemas to nullable
+export function makeColumnNullable<
+  T extends ColumnTypeBase,
+  InputSchema,
+  OutputSchema,
+  QuerySchema,
+>(
+  column: T,
+  inputSchema: InputSchema,
+  outputSchema: OutputSchema,
+  querySchema: QuerySchema,
+) {
+  const c = setColumnData(column, 'isNullable', true);
+  c.inputSchema = inputSchema;
+  c.outputSchema = outputSchema;
+  c.querySchema = querySchema;
+  return c as unknown as NullableColumn<
+    T,
+    InputSchema,
+    OutputSchema,
+    QuerySchema
+  >;
+}
+
 // change the input type of the column
-export type EncodeColumn<T extends ColumnTypeBase, Input> = {
-  [K in keyof T]: K extends 'inputType' ? Input : T[K];
+export type EncodeColumn<T, InputSchema, Input> = Omit<
+  T,
+  'inputType' | 'inputSchema'
+> & {
+  inputType: Input;
+  inputSchema: InputSchema;
 };
 
 // change the output type of the column
-export type ParseColumn<T extends ColumnTypeBase, Output> = {
-  [K in keyof T]: K extends 'outputType' ? Output : T[K];
+export type ParseColumn<T, OutputSchema, Output> = Omit<
+  T,
+  'outputType' | 'outputSchema'
+> & {
+  outputType: Output;
+  outputSchema: OutputSchema;
 };
 
 // adds default type to the column
 // removes the default if the Value is null
-export type ColumnWithDefault<T extends ColumnTypeBase, Value> = {
-  [K in keyof T]: K extends 'data'
-    ? Omit<T['data'], 'default'> & {
-        default: Value extends null ? never : Value;
-      }
-    : T[K];
+export type ColumnWithDefault<
+  T extends Pick<ColumnTypeBase, 'data'>,
+  Value,
+> = Omit<T, 'data'> & {
+  data: Omit<T['data'], 'default'> & {
+    default: Value extends null ? never : Value;
+  };
 };
 
 // marks the column as hidden
-export type HiddenColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
+export type HiddenColumn<T extends Pick<ColumnTypeBase, 'data'>> = Omit<
+  T,
+  'data'
+> & {
   data: Omit<T['data'], 'isHidden'> & {
     isHidden: true;
   };
 };
 
 // get union of column names (ex. 'col1' | 'col2' | 'col3') where column is nullable or has a default
-type OptionalColumnsForInput<Shape extends ColumnsShapeBase> = {
+type OptionalColumnsForInput<Shape extends QueryColumnsInit> = {
   [K in keyof Shape]: SomeIsTrue<
     [
       Shape[K]['data']['isNullable'],
@@ -102,27 +151,14 @@ type OptionalColumnsForInput<Shape extends ColumnsShapeBase> = {
     : never;
 }[keyof Shape];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyColumnType = ColumnTypeBase<any>;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
-export type AnyColumnTypeCreator = (...args: any) => AnyColumnType | {};
-
-export type ColumnTypesBase = Record<
-  string,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  AnyColumnTypeCreator
-> & {
-  // snakeCaseKey may be present, but due to problems with TS it can't be listed here
-  // [snakeCaseKey]?: boolean;
-};
+export type ColumnTypesBase = Record<string, ColumnTypeBase>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ValidationContext = any;
 
 // resolves in string literal of single primary key
 // if table has two or more primary keys it will resolve in never
-export type SinglePrimaryKey<Shape extends ColumnsShapeBase> = StringKey<
+export type SinglePrimaryKey<Shape extends QueryColumnsInit> = StringKey<
   {
     [K in keyof Shape]: Shape[K]['data']['isPrimaryKey'] extends true
       ? [
@@ -141,7 +177,7 @@ export type SinglePrimaryKey<Shape extends ColumnsShapeBase> = StringKey<
 >;
 
 // type of columns selected by default, `hidden` columns are omitted
-export type DefaultSelectColumns<S extends ColumnsShapeBase> = {
+export type DefaultSelectColumns<S extends QueryColumnsInit> = {
   [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
 }[StringKey<keyof S>][];
 
@@ -159,7 +195,7 @@ export type ColumnNameOfTable<Table extends ForeignKeyTable> = StringKey<
 
 // clone column type and set data to it
 export const setColumnData = <
-  T extends ColumnTypeBase,
+  T extends Pick<ColumnTypeBase, 'data'>,
   K extends keyof T['data'],
 >(
   q: T,
@@ -173,7 +209,7 @@ export const setColumnData = <
 
 // clone column type and push data to array property of it
 export const pushColumnData = <
-  T extends ColumnTypeBase,
+  T extends Pick<ColumnTypeBase, 'data'>,
   K extends keyof T['data'],
 >(
   q: T,
@@ -188,27 +224,60 @@ export const pushColumnData = <
   );
 };
 
+// Can be used to customize required and invalidType validation error message on any column.
+export type ErrorMessages = {
+  required?: string;
+  invalidType?: string;
+};
+
+// Parameter of column types to customize an error message.
+export type ErrorMessage =
+  | string
+  | {
+      message?: string;
+    };
+
+// Clone a column or a JSON type and set the value in its data.
+export const setDataValue = <
+  T extends { data: object },
+  Key extends string,
+  Value,
+>(
+  item: T,
+  key: Key,
+  value: Value,
+  params?: ErrorMessage,
+): T => {
+  const cloned = Object.create(item);
+  cloned.data = { ...item.data, [key]: value };
+
+  if (params && (typeof params === 'string' || params.message)) {
+    (cloned.data.errors ??= {})[key] =
+      typeof params === 'string' ? params : params.message;
+  }
+
+  return cloned as T;
+};
+
 // types to be assigned to the column with .asType
-type ColumnDataTypes<
-  Type,
+export type ColumnDataTypes<
+  Schema extends Pick<ColumnSchemaConfig, 'type'>,
+  Type = unknown,
   InputType = Type,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  InputSchema extends Schema['type'] = any,
   OutputType = Type,
-  QueryType = Type,
+  OutputSchema extends Schema['type'] = InputSchema,
+  QueryType = InputType,
+  QuerySchema extends Schema['type'] = InputSchema,
 > = {
   type: Type;
   inputType: InputType;
+  inputSchema: InputSchema;
   outputType: OutputType;
+  outputSchema: OutputSchema;
   queryType: QueryType;
-};
-
-// change the inner types of the column with .asType
-type SetColumnDataTypes<
-  T extends ColumnTypeBase,
-  Types extends ColumnDataTypes<unknown>,
-> = {
-  [K in keyof T]: K extends 'type' | 'inputType' | 'outputType' | 'queryType'
-    ? Types[K]
-    : T[K];
+  querySchema: QuerySchema;
 };
 
 // base data of column
@@ -217,10 +286,10 @@ export interface ColumnDataBase {
   name?: string;
 
   // is null value allowed
-  isNullable?: boolean;
+  isNullable?: true;
 
   // is column a primary key in a database
-  isPrimaryKey?: boolean;
+  isPrimaryKey?: true;
 
   // if column has a default value, then it can be omitted in `create` method
   default?: unknown;
@@ -229,7 +298,7 @@ export interface ColumnDataBase {
   runtimeDefault?(): unknown;
 
   // is column removed from default table selection
-  isHidden?: boolean;
+  isHidden?: true;
 
   // parse and encode a column to use it `as` another column
   as?: ColumnTypeBase;
@@ -251,21 +320,12 @@ export interface ColumnDataBase {
   errors?: Record<string, string>;
 }
 
-// chain of column refinements and transformations
-export type ColumnChain = (
-  | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
-  | ['to', (input: unknown) => JSONType | undefined, JSONType]
-  | ['refine', (input: unknown) => unknown, ColumnTypeBase | JSONType]
-  | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
-)[];
-
 // current name of the column, set by `name` method
 let currentName: string | undefined;
 
 // set current name of the column
-export function name<T extends ColumnTypesBase>(this: T, name: string): T {
+export function setCurrentColumnName(name: string): void {
   currentName = name;
-  return this;
 }
 
 // consume column name: reset current name and return the value it contained
@@ -303,15 +363,70 @@ export const setDefaultLanguage = (lang?: string) => {
 // get default language for full text search
 export const getDefaultLanguage = () => defaultLanguage;
 
+export type AsTypeArg<Schema> = {
+  type: Schema;
+  input?: Schema;
+  output?: Schema;
+  query?: Schema;
+};
+
+// Workaround for the "type instantiation is too deep" error.
+export type QueryColumn<T = unknown, Op = BaseOperators> = {
+  dataType: string;
+  type: T;
+  outputType: T;
+  queryType: T;
+  operators: Op;
+};
+
+export type QueryColumns = Record<string, QueryColumn>;
+
+export type QueryColumnInit = QueryColumn & {
+  inputType: unknown;
+  data: {
+    isHidden?: true;
+    isPrimaryKey?: true;
+    isNullable?: true;
+    default?: unknown;
+  };
+};
+
+export type QueryColumnsInit = Record<string, QueryColumnInit>;
+
+export type QueryColumnToNullable<C extends QueryColumn> = Omit<
+  C,
+  'outputType' | 'queryType'
+> & { outputType: C['outputType'] | null; queryType: C['queryType'] };
+
+type ColumnTypeSchemaArg = Pick<
+  ColumnSchemaConfig,
+  'type' | 'nullable' | 'encode' | 'parse' | 'asType' | 'errors'
+>;
+
 // base column type
 export abstract class ColumnTypeBase<
+  Schema extends ColumnTypeSchemaArg = ColumnTypeSchemaArg,
   Type = unknown,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  InputSchema extends Schema['type'] = any,
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
   OutputType = Type,
-  QueryType = Type,
+  OutputSchema extends Schema['type'] = InputSchema,
+  QueryType = InputType,
+  QuerySchema extends Schema['type'] = InputSchema,
   Data extends ColumnDataBase = ColumnDataBase,
-> implements ColumnDataTypes<Type, InputType, OutputType, QueryType>
+> implements
+    ColumnDataTypes<
+      Schema,
+      Type,
+      InputType,
+      InputSchema,
+      OutputType,
+      OutputSchema,
+      QueryType,
+      QuerySchema
+    >
 {
   // name of the type in a database
   abstract dataType: string;
@@ -325,7 +440,8 @@ export abstract class ColumnTypeBase<
   // format the column into the database type
   abstract toSQL(): string;
 
-  // type returned from a database before parsing
+  // Type returned from a database before parsing, it is an output type of db.
+  // Unlike `queryType`, it cannot be a union.
   type!: Type;
 
   // allowed type for creating and updating, it is processed by `encode` function when it's defined.
@@ -334,17 +450,33 @@ export abstract class ColumnTypeBase<
   // type returned from a database and processed by `parse` function when it's defined.
   outputType!: OutputType;
 
-  // allowed type to use in `where` and other query methods, it is **not** processed by the ORM, only by a database driver.
+  // Allowed type to use in `where` and other query methods.
+  // Input type of db: timestamp can be sent as a string, a number, or Date (serialized by `pg` driver).
+  // It is **not** processed by the ORM, only by a database driver.
   queryType!: QueryType;
 
   // data of the column that specifies column characteristics and validations
   data: Data;
 
-  // chain of transformations and validations of the column
-  chain = [] as ColumnChain;
+  errors: Schema['errors'];
 
-  constructor() {
+  constructor(
+    schema: ColumnSchemaConfig,
+    // type for validation lib for inserting and updating records
+    // public inputSchema: InputSchema = undefined as InputSchema,
+    public inputSchema: InputSchema,
+    // type for validation lib for selected data
+    public outputSchema: OutputSchema = inputSchema as unknown as OutputSchema,
+    // type for validation lib for validating filters
+    public querySchema: QuerySchema = inputSchema as unknown as QuerySchema,
+  ) {
+    // this.schema = schema;
+    this.parse = schema.parse;
+    this.encode = schema.encode;
+    this.asType = schema.asType;
+    this.nullable = schema.nullable;
     this.data = {} as Data;
+    this.errors = schema.errors;
     const name = consumeColumnName();
     if (name) {
       this.data.name = name;
@@ -387,7 +519,7 @@ export abstract class ColumnTypeBase<
    * @param value - default value or a function returning a value
    */
   default<
-    T extends ColumnTypeBase,
+    T extends Pick<ColumnTypeBase, 'type' | 'inputType' | 'data'>,
     Value extends T['type'] | null | RawSQLBase | (() => T['inputType']),
   >(this: T, value: Value): ColumnWithDefault<T, Value> {
     return setColumnData(this, 'default', value) as ColumnWithDefault<T, Value>;
@@ -398,7 +530,7 @@ export abstract class ColumnTypeBase<
    *
    * It's better to use {@link default} instead so the value is explicit and serves as a hint.
    */
-  hasDefault<T extends ColumnTypeBase>(
+  hasDefault<T extends Pick<ColumnTypeBase, 'data'>>(
     this: T,
   ): ColumnWithDefault<T, RawSQLBase> {
     return this as ColumnWithDefault<T, RawSQLBase>;
@@ -420,83 +552,8 @@ export abstract class ColumnTypeBase<
    *
    * @param value - raw SQL expression
    */
-  check<T extends ColumnTypeBase>(this: T, value: RawSQLBase): T {
+  check<T extends Pick<ColumnTypeBase, 'data'>>(this: T, value: RawSQLBase): T {
     return setColumnData(this, 'check', value);
-  }
-
-  /**
-   * `errors` allows to specify two following validation messages:
-   *
-   * ```ts
-   * t.text().errors({
-   *   required: 'This column is required',
-   *   invalidType: 'This column must be an integer',
-   * });
-   * ```
-   *
-   * It will be converted into `Zod`'s messages:
-   *
-   * ```ts
-   * z.string({
-   *   required_error: 'This column is required',
-   *   invalid_type_error: 'This column must be an integer',
-   * });
-   * ```
-   *
-   * Each validation method can accept an error message as a string:
-   *
-   * ```ts
-   * t.text().min(5, 'Must be 5 or more characters long');
-   * t.text().max(5, 'Must be 5 or fewer characters long');
-   * t.text().length(5, 'Must be exactly 5 characters long');
-   * t.text().email('Invalid email address');
-   * t.text().url('Invalid url');
-   * t.text().emoji('Contains non-emoji characters');
-   * t.text().uuid('Invalid UUID');
-   * t.text().includes('tuna', 'Must include tuna');
-   * t.text().startsWith('https://', 'Must provide secure URL');
-   * t.text().endsWith('.com', 'Only .com domains allowed');
-   * ```
-   *
-   * Except for `text().datetime()` and `text().ip()`:
-   *
-   * these methods can have their own parameters, so the error message is passed in object.
-   *
-   * ```ts
-   * t.text().datetime({ message: 'Invalid datetime string! Must be UTC.' });
-   * t.text().ip({ message: 'Invalid IP address' });
-   * ```
-   *
-   * Error messages are supported for a JSON schema as well:
-   *
-   * ```ts
-   * t.json((j) =>
-   *   j.object({
-   *     one: j
-   *       .string()
-   *       .errors({ required: 'One is required' })
-   *       .min(5, 'Must be 5 or more characters long'),
-   *     two: j
-   *       .string()
-   *       .errors({ invalidType: 'Two should be a string' })
-   *       .max(5, 'Must be 5 or fewer characters long'),
-   *     three: j.string().length(5, 'Must be exactly 5 characters long'),
-   *   }),
-   * );
-   * ```
-   *
-   * @param errorMessages - object, key is either 'required' or 'invalidType', value is an error message
-   */
-  errors<T extends ColumnTypeBase>(
-    this: T,
-    errorMessages: { [K in 'required' | 'invalidType']?: string },
-  ): T {
-    const { errors } = this.data;
-    return setColumnData(
-      this,
-      'errors',
-      errors ? { ...errors, ...errorMessages } : errorMessages,
-    );
   }
 
   /**
@@ -513,13 +570,7 @@ export abstract class ColumnTypeBase<
    * }
    * ```
    */
-  nullable<T extends ColumnTypeBase>(this: T): NullableColumn<T> {
-    return setColumnData(
-      this,
-      'isNullable',
-      true,
-    ) as unknown as NullableColumn<T>;
-  }
+  nullable: Schema['nullable'];
 
   /**
    * Set a custom function to process value for the column when creating or updating a record.
@@ -545,14 +596,7 @@ export abstract class ColumnTypeBase<
    *
    * @param fn - function to encode value for a database, argument type is specified by you, return type must be compatible with a database
    */
-  encode<T extends ColumnTypeBase, Input>(
-    this: T,
-    fn: (input: Input) => unknown,
-  ): EncodeColumn<T, Input> {
-    return Object.assign(Object.create(this), {
-      encodeFn: fn,
-    }) as unknown as EncodeColumn<T, Input>;
-  }
+  encode: Schema['encode'];
 
   /**
    * Set a custom function to process value after loading it from a database.
@@ -591,15 +635,7 @@ export abstract class ColumnTypeBase<
    *
    * @param fn - function to parse a value from the database, argument is the type of this column, return type is up to you
    */
-  parse<T extends ColumnTypeBase, Output>(
-    this: T,
-    fn: (input: T['type']) => Output,
-  ): ParseColumn<T, Output> {
-    return Object.assign(Object.create(this), {
-      parseFn: fn,
-      parseItem: fn,
-    }) as unknown as ParseColumn<T, Output>;
-  }
+  parse: Schema['parse'];
 
   /**
    * This method changes a column type without modifying its behavior.
@@ -620,15 +656,15 @@ export abstract class ColumnTypeBase<
    * @param column - other column type to inherit from
    */
   as<
-    T extends ColumnTypeBase,
-    C extends ColumnTypeBase<
-      unknown,
-      BaseOperators,
-      T['inputType'],
-      T['outputType']
-    >,
+    T extends Pick<ColumnTypeBase, 'inputType' | 'outputType' | 'data'>,
+    C extends Omit<ColumnTypeBase, 'inputType' | 'outputType'> &
+      Pick<T, 'inputType' | 'outputType'>,
   >(this: T, column: C): C {
-    return setColumnData(this, 'as', column) as unknown as C;
+    return setColumnData(
+      this,
+      'as',
+      column as unknown as T['data']['as'],
+    ) as unknown as C;
   }
 
   /**
@@ -660,19 +696,42 @@ export abstract class ColumnTypeBase<
    * - `OutputType` is for the data that is loaded from a database and parsed if the column has `parse`.
    * - `QueryType` is used in `where` and other query methods, it should be compatible with the actual database column type.
    */
-  asType<T extends ColumnTypeBase, Types extends ColumnDataTypes<unknown>>(
+  asType: Schema['asType'];
+
+  input<
+    T extends Pick<ColumnTypeBase, 'inputSchema'>,
+    InputSchema extends Schema['type'],
+  >(
     this: T,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _fn: (
-      type: <
-        Type,
-        InputType = Type,
-        OutputType = Type,
-        QueryType = Type,
-      >() => ColumnDataTypes<Type, InputType, OutputType, QueryType>,
-    ) => Types,
-  ): SetColumnDataTypes<T, Types> {
-    return this as unknown as SetColumnDataTypes<T, Types>;
+    fn: (schema: T['inputSchema']) => InputSchema,
+  ): Omit<T, 'inputSchema'> & { inputSchema: InputSchema } {
+    const cloned = Object.create(this);
+    cloned.inputSchema = fn(this.inputSchema);
+    return cloned;
+  }
+
+  output<
+    T extends Pick<ColumnTypeBase, 'outputSchema'>,
+    InputSchema extends Schema['type'],
+  >(
+    this: T,
+    fn: (schema: T['outputSchema']) => InputSchema,
+  ): Omit<T, 'outputSchema'> & { outputSchema: InputSchema } {
+    const cloned = Object.create(this);
+    cloned.outputSchema = fn(this.outputSchema);
+    return cloned;
+  }
+
+  query<
+    T extends Pick<ColumnTypeBase, 'querySchema'>,
+    InputSchema extends Schema['type'],
+  >(
+    this: T,
+    fn: (schema: T['querySchema']) => InputSchema,
+  ): Omit<T, 'querySchema'> & { querySchema: InputSchema } {
+    const cloned = Object.create(this);
+    cloned.querySchema = fn(this.querySchema);
+    return cloned;
   }
 
   /**
@@ -680,7 +739,7 @@ export abstract class ColumnTypeBase<
    *
    * Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
    */
-  hidden<T extends ColumnTypeBase>(this: T): HiddenColumn<T> {
+  hidden<T extends Pick<ColumnTypeBase, 'data'>>(this: T): HiddenColumn<T> {
     return setColumnData(this, 'isHidden', true) as HiddenColumn<T>;
   }
 }

@@ -1,73 +1,54 @@
 import { ColumnData, ColumnType } from './columnType';
 import {
-  assignMethodsToClass,
   Code,
+  ColumnSchemaConfig,
   DateColumnData,
   dateDataToCode,
-  DateTypeMethods,
-  dateTypeMethods,
-  EncodeColumn,
   joinTruthy,
-  ParseColumn,
+  TimeInterval,
 } from 'orchid-core';
-import { IntegerColumn } from './number';
 import { columnCode } from './code';
-import { Operators } from './operators';
+import { Operators, OperatorsDate, OperatorsTime } from './operators';
 
-// common interface for Date and DateTime columns
-export interface DateBaseColumn
-  extends ColumnType<
-      string,
-      typeof Operators.date,
-      string | number | Date,
-      string,
-      string | number | Date
-    >,
-    DateTypeMethods {}
+export type DateColumnInput = string | number | Date;
 
 // encode string, number, or Date to a Date object,
-const dateTimeEncode = (input: string | number | Date) => {
+const dateTimeEncode = (input: DateColumnInput) => {
   return typeof input === 'number' ? new Date(input) : input;
 };
 
 // when generating code, don't output `encodeFn` because it is a default
 const skipDateMethodsFromToCode = { encodeFn: dateTimeEncode };
 
-// parse a date string to number, with respect to null
-const parseToNumber = (value: unknown) =>
-  value ? Date.parse(value as string) : value;
-
-// parse a date string to date object, with respect to null
-const parseToDate = (value: unknown) =>
-  value ? new Date(value as string) : value;
-
 // common class for Date and DateTime columns
-export abstract class DateBaseColumn extends ColumnType<
+export abstract class DateBaseColumn<
+  Schema extends ColumnSchemaConfig,
+> extends ColumnType<
+  Schema,
   string,
-  typeof Operators.date,
-  string | number | Date,
+  Schema['stringNumberDate'],
+  OperatorsDate,
+  DateColumnInput,
   string,
-  string | number | Date
+  Schema['string']
 > {
   declare data: DateColumnData;
   operators = Operators.date;
   encodeFn = dateTimeEncode;
+  asNumber: Schema['dateAsNumber'];
+  asDate: Schema['dateAsDate'];
 
-  asNumber() {
-    return this.parse(parseToNumber).as(
-      new IntegerColumn() as never,
-    ) as unknown as EncodeColumn<IntegerColumn, string | number | Date>;
-  }
-
-  asDate<T extends ColumnType>(this: T): ParseColumn<T, Date> {
-    return this.parse(parseToDate) as ParseColumn<T, Date>;
+  constructor(schema: Schema) {
+    super(schema, schema.stringNumberDate);
+    this.asNumber = schema.dateAsNumber;
+    this.asDate = schema.dateAsDate;
   }
 }
 
-assignMethodsToClass(DateBaseColumn, dateTypeMethods);
-
 // date	4 bytes	date (no time of day)	4713 BC	5874897 AD 1 day
-export class DateColumn extends DateBaseColumn {
+export class DateColumn<
+  Schema extends ColumnSchemaConfig,
+> extends DateBaseColumn<Schema> {
   dataType = 'date' as const;
   toCode(t: string): Code {
     return columnCode(
@@ -81,13 +62,13 @@ export class DateColumn extends DateBaseColumn {
 }
 
 export abstract class DateTimeBaseClass<
-  Precision extends number | undefined = undefined,
-> extends DateBaseColumn {
-  declare data: DateColumnData & { dateTimePrecision: Precision };
+  Schema extends ColumnSchemaConfig,
+> extends DateBaseColumn<Schema> {
+  declare data: DateColumnData & { dateTimePrecision?: number };
 
-  constructor(dateTimePrecision?: Precision) {
-    super();
-    this.data.dateTimePrecision = dateTimePrecision as Precision;
+  constructor(schema: Schema, dateTimePrecision?: number) {
+    super(schema);
+    this.data.dateTimePrecision = dateTimePrecision;
   }
 
   toSQL() {
@@ -100,8 +81,8 @@ export abstract class DateTimeBaseClass<
 }
 
 export abstract class DateTimeTzBaseClass<
-  Precision extends number | undefined = undefined,
-> extends DateTimeBaseClass<Precision> {
+  Schema extends ColumnSchemaConfig,
+> extends DateTimeBaseClass<Schema> {
   abstract baseDataType: string;
 
   toSQL() {
@@ -114,8 +95,10 @@ export abstract class DateTimeTzBaseClass<
   }
 }
 
-const timestampToCode = <P extends number | undefined>(
-  self: TimestampColumn<P> | TimestampTZColumn<P>,
+const timestampToCode = (
+  self:
+    | TimestampColumn<ColumnSchemaConfig>
+    | TimestampTZColumn<ColumnSchemaConfig>,
   t: string,
 ) => {
   const { dateTimePrecision: p } = self.data;
@@ -132,8 +115,8 @@ const timestampToCode = <P extends number | undefined>(
 
 // timestamp [ (p) ] [ without time zone ]	8 bytes	both date and time (no time zone)	4713 BC	294276 AD	1 microsecond
 export class TimestampColumn<
-  Precision extends number | undefined,
-> extends DateTimeBaseClass<Precision> {
+  Schema extends ColumnSchemaConfig,
+> extends DateTimeBaseClass<Schema> {
   dataType = 'timestamp' as const;
   toCode(t: string): Code {
     return timestampToCode(this, t);
@@ -142,8 +125,8 @@ export class TimestampColumn<
 
 // timestamp [ (p) ] with time zone	8 bytes	both date and time, with time zone	4713 BC	294276 AD	1 microsecond
 export class TimestampTZColumn<
-  Precision extends number | undefined,
-> extends DateTimeTzBaseClass<Precision> {
+  Schema extends ColumnSchemaConfig,
+> extends DateTimeTzBaseClass<Schema> {
   dataType = 'timestamptz' as const;
   baseDataType = 'timestamp' as const;
   toCode(t: string): Code {
@@ -151,21 +134,20 @@ export class TimestampTZColumn<
   }
 }
 
-export interface TimeColumn
-  extends ColumnType<string, typeof Operators.time>,
-    DateTypeMethods {}
-
 // time [ (p) ] [ without time zone ]	8 bytes	time of day (no date)	00:00:00	24:00:00	1 microsecond
-export class TimeColumn<
-  Precision extends number | undefined = undefined,
-> extends ColumnType<string, typeof Operators.time> {
-  declare data: DateColumnData & { dateTimePrecision: Precision };
+export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+  Schema,
+  string,
+  Schema['string'],
+  OperatorsTime
+> {
+  declare data: DateColumnData & { dateTimePrecision?: number };
   dataType = 'time' as const;
   operators = Operators.time;
 
-  constructor(dateTimePrecision?: Precision) {
-    super();
-    this.data.dateTimePrecision = dateTimePrecision as Precision;
+  constructor(schema: Schema, dateTimePrecision?: number) {
+    super(schema, schema.string);
+    this.data.dateTimePrecision = dateTimePrecision;
   }
 
   toCode(t: string): Code {
@@ -180,30 +162,23 @@ export class TimeColumn<
   }
 }
 
-assignMethodsToClass(TimeColumn, dateTypeMethods);
-
-export type TimeInterval = {
-  years?: number;
-  months?: number;
-  days?: number;
-  hours?: number;
-  minutes?: number;
-  seconds?: number;
-};
-
 // interval [ fields ] [ (p) ]	16 bytes	time interval	-178000000 years	178000000 years	1 microsecond
 export class IntervalColumn<
-  Fields extends string | undefined = undefined,
-  Precision extends number | undefined = undefined,
-> extends ColumnType<TimeInterval, typeof Operators.date> {
-  declare data: ColumnData & { fields: Fields; precision: Precision };
+  Schema extends ColumnSchemaConfig,
+> extends ColumnType<
+  Schema,
+  TimeInterval,
+  Schema['timeInterval'],
+  OperatorsDate
+> {
+  declare data: ColumnData & { fields?: string; precision?: number };
   dataType = 'interval' as const;
   operators = Operators.date;
 
-  constructor(fields?: Fields, precision?: Precision) {
-    super();
-    this.data.fields = fields as Fields;
-    this.data.precision = precision as Precision;
+  constructor(schema: Schema, fields?: string, precision?: number) {
+    super(schema, schema.timeInterval);
+    this.data.fields = fields;
+    this.data.precision = precision;
   }
 
   toCode(t: string): Code {

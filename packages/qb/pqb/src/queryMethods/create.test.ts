@@ -13,6 +13,7 @@ import {
   UniqueTableRecord,
   User,
   userData,
+  UserInsert,
   UserRecord,
 } from '../test-utils/test-utils';
 import { OnConflictQueryBuilder } from './create';
@@ -422,7 +423,7 @@ describe('create functions', () => {
         name: 'name',
         password: 'password',
         unknown: 'should be stripped',
-      } as unknown as UserRecord);
+      } as unknown as UserInsert);
 
       expectSql(
         q.toSQL(),
@@ -630,7 +631,7 @@ describe('create functions', () => {
         expect(item).toMatchObject(arr[i]);
       });
 
-      assertType<typeof result, (typeof User)['type'][]>();
+      assertType<typeof result, (typeof User.outputType)[]>();
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
@@ -673,7 +674,7 @@ describe('create functions', () => {
           password: 'password',
           unknown: 'should be stripped',
         },
-      ] as unknown as UserRecord[]);
+      ] as unknown as UserInsert[]);
 
       expectSql(
         query.toSQL(),
@@ -749,7 +750,8 @@ describe('create functions', () => {
 
   describe('createFrom', () => {
     it('should create records without additional data', () => {
-      const q = Message.createFrom(Chat.find(1).select({ chatId: 'idOfChat' }));
+      const sub = Chat.find(1).select({ chatId: 'idOfChat' });
+      const q = Message.createFrom(sub);
 
       assertType<Awaited<typeof q>, MessageRecord>();
 
@@ -904,9 +906,8 @@ describe('create functions', () => {
 
   describe('createManyFrom', () => {
     it('should create records from select', () => {
-      const query = Message.createManyFrom(
-        Chat.where({ title: 'title' }).select({ chatId: 'idOfChat' }),
-      );
+      const sub = Chat.where({ title: 'title' }).select({ chatId: 'idOfChat' });
+      const query = Message.createManyFrom(sub);
 
       assertType<Awaited<typeof query>, MessageRecord[]>();
 
@@ -924,9 +925,8 @@ describe('create functions', () => {
     });
 
     it('should create record from select with named columns', () => {
-      const query = Snake.createManyFrom(
-        User.where({ name: 'name' }).select({ snakeName: 'name' }),
-      );
+      const sub = User.where({ name: 'name' }).select({ snakeName: 'name' });
+      const query = Snake.createManyFrom(sub);
 
       assertType<Awaited<typeof query>, SnakeRecord[]>();
 
@@ -948,12 +948,11 @@ describe('create functions', () => {
     it('should return inserted row count by default', async () => {
       const chatId = await Chat.get('idOfChat').create(chatData);
 
-      const q = Message.insertManyFrom(
-        Chat.find(chatId).select({
-          chatId: 'idOfChat',
-          text: 'title',
-        }),
-      );
+      const sub = Chat.find(chatId).select({
+        chatId: 'idOfChat',
+        text: 'title',
+      });
+      const q = Message.insertManyFrom(sub);
 
       const result = await q;
 
@@ -965,14 +964,12 @@ describe('create functions', () => {
     it('should override selecting single with selecting multiple', async () => {
       const chatId = await Chat.get('idOfChat').create(chatData);
 
-      const q = Message.take()
-        .select('text')
-        .insertManyFrom(
-          Chat.find(chatId).select({
-            chatId: 'idOfChat',
-            text: 'title',
-          }),
-        );
+      const sub = Chat.find(chatId).select({
+        chatId: 'idOfChat',
+        text: 'title',
+      });
+
+      const q = Message.take().select('text').insertManyFrom(sub);
 
       const result = await q;
 
@@ -984,12 +981,12 @@ describe('create functions', () => {
     it('should override selecting value with selecting pluck', async () => {
       const chatId = await Chat.get('idOfChat').create(chatData);
 
-      const q = Message.get('text').insertManyFrom(
-        Chat.find(chatId).select({
-          chatId: 'idOfChat',
-          text: 'title',
-        }),
-      );
+      const sub = Chat.find(chatId).select({
+        chatId: 'idOfChat',
+        text: 'title',
+      });
+
+      const q = Message.get('text').insertManyFrom(sub);
 
       const result = await q;
 

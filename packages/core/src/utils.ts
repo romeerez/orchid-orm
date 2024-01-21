@@ -399,25 +399,6 @@ export const cloneInstance = <T>(instance: T): T => {
   );
 };
 
-export const assignMethodsToClass = <Methods extends Record<string, unknown>>(
-  klass: { prototype: unknown },
-  methods: Methods,
-) => {
-  for (const name in methods) {
-    Object.defineProperty(klass.prototype, name, {
-      configurable: true,
-      enumerable: false,
-      writable: true,
-      value(...args: unknown[]) {
-        const cloned = cloneInstance(this);
-        return (
-          methods as unknown as Record<string, (...args: unknown[]) => unknown>
-        )[name].apply(cloned, args);
-      },
-    });
-  }
-};
-
 export const pick = <T, Keys extends keyof T>(
   obj: T,
   keys: Keys[],

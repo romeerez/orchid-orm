@@ -2,11 +2,12 @@ import { createBaseTable, Selectable } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
-import { zodSchemaProvider } from 'orchid-orm-schema-to-zod';
+import { z } from 'zod';
+import { zodSchemaConfig } from 'schema-to-zod';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
-  schemaProvider: zodSchemaProvider,
+  schemaConfig: zodSchemaConfig,
 });
 
 export type User = Selectable<UserTable>;
@@ -20,10 +21,10 @@ export class UserTable extends BaseTable {
     Picture: t.name('picture').text().nullable(),
     Data: t
       .name('data')
-      .json((j) =>
-        j.object({
-          name: j.string(),
-          tags: j.string().array(),
+      .json(
+        z.object({
+          name: z.string(),
+          tags: z.string().array(),
         }),
       )
       .nullable(),
@@ -279,10 +280,10 @@ export class ActiveUserWithProfile extends BaseTable {
     password: t.text(),
     picture: t.text().nullable(),
     data: t
-      .json((j) =>
-        j.object({
-          name: j.string(),
-          tags: j.string().array(),
+      .json(
+        z.object({
+          name: z.string(),
+          tags: z.string().array(),
         }),
       )
       .nullable(),

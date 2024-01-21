@@ -5,10 +5,10 @@ import { Expression } from 'orchid-core';
 // argument of `union`-like query methods.
 // it supports query objects with the same result as in the previous query,
 // or a raw SQL
-export type UnionArg<T extends Query> =
-  | (Omit<Query, 'result'> & {
+export type UnionArg<T extends Pick<Query, 'result'>> =
+  | {
       result: { [K in keyof T['result']]: Pick<T['result'][K], 'dataType'> };
-    })
+    }
   | Expression;
 
 export class Union {
@@ -29,10 +29,18 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  union<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
+  union<T extends Pick<Query, 'result' | '_union' | 'q'>>(
+    this: T,
+    args: UnionArg<T>[],
+    wrap?: boolean,
+  ): T {
     return this._union(args, wrap);
   }
-  _union<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
+  _union<T extends Pick<Query, 'result' | 'q'>>(
+    this: T,
+    args: UnionArg<T>[],
+    wrap?: boolean,
+  ): T {
     return pushQueryArray(
       this,
       'union',

@@ -5,18 +5,17 @@ import {
   WhereResult,
 } from '../queryMethods';
 import { QueryData } from '../sql';
-import { ColumnType } from '../columns';
 import { AliasOrTable } from '../common/utils';
 import { Db } from './db';
 import { RelationsBase } from '../relations';
 import { QueryError, QueryErrorName } from '../errors';
 import {
   ColumnShapeOutput,
-  ColumnsShapeBase,
-  ColumnTypeBase,
   EmptyObject,
   Expression,
   QueryCatch,
+  QueryColumn,
+  QueryColumns,
   QueryThen,
   Spread,
   StringKey,
@@ -25,11 +24,11 @@ import { QueryBase } from './queryBase';
 
 export type SelectableBase = Record<
   PropertyKey,
-  { as: string; column: ColumnTypeBase }
+  { as: string; column: QueryColumn }
 >;
 
 export type SelectableFromShape<
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumns,
   Table extends string | undefined,
 > = { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
   [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
@@ -38,7 +37,7 @@ export type SelectableFromShape<
   };
 };
 
-export type WithDataItem = { table: string; shape: ColumnsShapeBase };
+export type WithDataItem = { table: string; shape: QueryColumns };
 export type WithDataBase = Record<never, WithDataItem>;
 
 export type Query = QueryBase &
@@ -47,12 +46,12 @@ export type Query = QueryBase &
     columnTypes: unknown;
     onQueryBuilder: typeof OnQueryBuilder;
     table?: string;
-    shape: ColumnsShapeBase;
+    shape: QueryColumns;
     singlePrimaryKey: string;
     primaryKeys: string[];
     inputType: Record<string, unknown>;
     q: QueryData;
-    result: ColumnsShapeBase;
+    result: QueryColumns;
     selectable: SelectableBase;
     then: QueryThen<unknown>;
     catch: QueryCatch<unknown>;
@@ -67,7 +66,10 @@ export type Query = QueryBase &
     ) => QueryError;
   };
 
-export type SelectableOfType<T extends QueryBase, Type> = StringKey<
+export type SelectableOfType<
+  T extends Pick<QueryBase, 'selectable'>,
+  Type,
+> = StringKey<
   {
     [K in keyof T['selectable']]: T['selectable'][K]['column']['type'] extends Type | null
       ? K
@@ -76,11 +78,9 @@ export type SelectableOfType<T extends QueryBase, Type> = StringKey<
 >;
 
 export type SelectableOrExpressionOfType<
-  T extends Query,
-  C extends ColumnTypeBase,
-> =
-  | SelectableOfType<T, C['type']>
-  | Expression<ColumnTypeBase<C['type'] | null>>;
+  T extends Pick<Query, 'selectable'>,
+  C extends QueryColumn,
+> = SelectableOfType<T, C['type']> | Expression<QueryColumn<C['type'] | null>>;
 
 export type QueryWithTable = Query & { table: string };
 
@@ -113,7 +113,7 @@ export type QueryReturnsAll<T extends QueryReturnType> = (
 
 export type GetQueryResult<
   ReturnType extends QueryReturnType,
-  Result extends ColumnsShapeBase,
+  Result extends QueryColumns,
 > = QueryReturnsAll<ReturnType> extends true
   ? ColumnShapeOutput<Result>[]
   : ReturnType extends 'one'
@@ -121,17 +121,17 @@ export type GetQueryResult<
   : ReturnType extends 'oneOrThrow'
   ? ColumnShapeOutput<Result>
   : ReturnType extends 'value'
-  ? Result extends { value: ColumnType }
+  ? Result extends { value: QueryColumn }
     ? Result['value']['outputType'] | undefined
     : never
   : ReturnType extends 'valueOrThrow'
-  ? Result extends { value: ColumnType }
+  ? Result extends { value: QueryColumn }
     ? Result['value']['outputType']
     : never
   : ReturnType extends 'rows'
   ? ColumnShapeOutput<Result>[keyof Result][][]
   : ReturnType extends 'pluck'
-  ? Result extends { pluck: ColumnType }
+  ? Result extends { pluck: QueryColumn }
     ? Result['pluck']['outputType'][]
     : never
   : ReturnType extends 'rowCount'
@@ -142,7 +142,7 @@ export type GetQueryResult<
 
 export type AddQuerySelect<
   T extends Pick<Query, 'result' | 'meta' | 'returnType'>,
-  Result extends ColumnsShapeBase,
+  Result extends QueryColumns,
   Data = GetQueryResult<T['returnType'], Result>,
 > = T['meta']['hasSelect'] extends true
   ? MergeSelect<T, Result, Data>
@@ -150,9 +150,9 @@ export type AddQuerySelect<
 
 type MergeSelect<
   T extends Pick<Query, 'result'>,
-  Result extends ColumnsShapeBase,
+  Result extends QueryColumns,
   Data,
-  Merged extends ColumnsShapeBase = {
+  Merged extends QueryColumns = {
     [K in keyof T['result']]: K extends keyof Result ? unknown : T['result'][K];
   } & Result,
 > = {
@@ -167,7 +167,7 @@ type MergeSelect<
 
 type SetSelect<
   T extends Pick<Query, 'result' | 'meta'>,
-  Result extends ColumnsShapeBase,
+  Result extends QueryColumns,
   Data,
 > = {
   [K in keyof T]: K extends 'meta'
@@ -228,7 +228,7 @@ export type SetQueryReturnsPluck<
 
 export type SetQueryReturnsPluckColumn<
   T extends Query,
-  C extends ColumnTypeBase,
+  C extends QueryColumn,
 > = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
   meta: {
     hasSelect: true;
@@ -240,15 +240,15 @@ export type SetQueryReturnsPluckColumn<
 };
 
 export type SetQueryReturnsValueOptional<
-  T extends Query,
+  T extends Pick<Query, 'selectable'>,
   Arg extends GetStringArg<T>,
 > = SetQueryReturnsValue<T, Arg, 'value'>;
 
 export type SetQueryReturnsValue<
-  T extends Query,
+  T extends Pick<Query, 'selectable'>,
   Arg extends GetStringArg<T>,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-  Column extends ColumnTypeBase = Arg extends keyof T['selectable']
+  Column extends QueryColumn = Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']
     : Arg extends Query
     ? Arg['result']['value']
@@ -256,29 +256,23 @@ export type SetQueryReturnsValue<
 > = SetQueryReturnsColumn<T, Column, ReturnType> & Column['operators'];
 
 export type SetQueryReturnsColumnOptional<
-  T extends QueryBase,
-  Column extends ColumnTypeBase,
+  T,
+  Column extends QueryColumn,
 > = SetQueryReturnsColumn<T, Column, 'value'>;
 
 export type SetQueryReturnsColumn<
-  T extends QueryBase,
-  Column extends ColumnTypeBase,
+  T,
+  Column extends QueryColumn,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
   Data = ReturnType extends 'value'
     ? Column['outputType'] | undefined
     : Column['outputType'],
-> = {
-  [K in keyof T]: K extends 'meta'
-    ? T['meta'] & { hasSelect: true }
-    : K extends 'result'
-    ? { value: Column }
-    : K extends 'returnType'
-    ? ReturnType
-    : K extends 'then'
-    ? QueryThen<Data>
-    : K extends 'catch'
-    ? QueryCatch<Data>
-    : T[K];
+> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
+  meta: { hasSelect: true };
+  result: { value: Column };
+  returnType: ReturnType;
+  then: QueryThen<Data>;
+  catch: QueryCatch<Data>;
 };
 
 export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<
@@ -299,9 +293,7 @@ export type SetQueryKind<T extends Query, Kind extends string> = {
 };
 
 export type SetQueryTableAlias<
-  T extends Pick<Query, 'selectable' | 'table' | 'meta'> & {
-    shape: ColumnsShapeBase;
-  },
+  T extends Pick<Query, 'selectable' | 'table' | 'meta' | 'shape'>,
   As extends string,
 > = {
   [K in keyof T]: K extends 'selectable'

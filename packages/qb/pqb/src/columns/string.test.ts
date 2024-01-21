@@ -1,35 +1,16 @@
+import { TextBaseColumn } from './string';
 import {
-  BitColumn,
-  BitVaryingColumn,
-  BoxColumn,
-  ByteaColumn,
-  CharColumn,
-  CidrColumn,
-  CircleColumn,
-  CitextColumn,
-  InetColumn,
-  LineColumn,
-  LsegColumn,
-  MacAddr8Column,
-  MacAddrColumn,
-  MoneyColumn,
-  PathColumn,
-  PointColumn,
-  PolygonColumn,
-  TextBaseColumn,
-  TextColumn,
-  TsQueryColumn,
-  TsVectorColumn,
-  UUIDColumn,
-  XMLColumn,
-} from './string';
-import { assertType, testDb } from 'test-utils';
+  assertType,
+  testColumnTypes as t,
+  testDb,
+  TestSchemaConfig,
+} from 'test-utils';
 import { raw } from '../sql/rawSql';
-import { columnTypes } from './columnTypes';
 
-const t = columnTypes;
-
-const testStringColumnMethods = (type: TextBaseColumn, name: string) => {
+const testStringColumnMethods = (
+  type: TextBaseColumn<TestSchemaConfig> & TestSchemaConfig['stringMethods'],
+  name: string,
+) => {
   expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);
 
   expect(
@@ -119,7 +100,7 @@ describe('string columns', () => {
     describe('char', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'text'::char(4)`.type(() => new CharColumn(4)),
+          testDb.sql`'text'::char(4)`.type((t) => t.char(4)),
         );
         expect(result).toBe('text');
 
@@ -127,17 +108,17 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new CharColumn().toCode('t')).toBe('t.char()');
-        expect(new CharColumn(5).toCode('t')).toBe('t.char(5)');
+        expect(t.char().toCode('t')).toBe('t.char()');
+        expect(t.char(5).toCode('t')).toBe('t.char(5)');
 
-        testStringColumnMethods(new CharColumn(), 'char');
+        testStringColumnMethods(t.char(), 'char');
       });
     });
 
     describe('text', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'text'::text`.type(() => new TextColumn()),
+          testDb.sql`'text'::text`.type(() => t.text()),
         );
         expect(result).toBe('text');
 
@@ -145,19 +126,19 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new TextColumn().toCode('t')).toBe('t.text()');
+        expect(t.text().toCode('t')).toBe('t.text()');
 
-        expect(new TextColumn(1).toCode('t')).toBe('t.text(1)');
-        expect(new TextColumn(1, 2).toCode('t')).toBe('t.text(1, 2)');
+        expect(t.text(1).toCode('t')).toBe('t.text(1)');
+        expect(t.text(1, 2).toCode('t')).toBe('t.text(1, 2)');
 
-        testStringColumnMethods(new TextColumn(), 'text');
+        testStringColumnMethods(t.text(), 'text');
       });
     });
 
     describe('citext', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'text'::citext`.type(() => new CitextColumn()),
+          testDb.sql`'text'::citext`.type(() => t.citext(0, Infinity)),
         );
         expect(result).toBe('text');
 
@@ -165,12 +146,15 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new CitextColumn().toCode('t')).toBe('t.citext()');
+        expect(t.citext(1, 2).toCode('t')).toBe('t.citext(1, 2)');
 
-        expect(new CitextColumn(1).toCode('t')).toBe('t.citext(1)');
-        expect(new CitextColumn(1, 2).toCode('t')).toBe('t.citext(1, 2)');
-
-        testStringColumnMethods(new CitextColumn(), 'citext');
+        const type = t.citext(1, 2);
+        type.data.minArg =
+          type.data.min =
+          type.data.maxArg =
+          type.data.max =
+            undefined;
+        testStringColumnMethods(type, 'citext');
       });
     });
   });
@@ -179,7 +163,7 @@ describe('string columns', () => {
     describe('bytea', () => {
       it('should output Buffer', async () => {
         const result = await testDb.get(
-          testDb.sql`'text'::bytea`.type(() => new ByteaColumn()),
+          testDb.sql`'text'::bytea`.type(() => t.bytea()),
         );
         expect(result instanceof Buffer).toBe(true);
         expect(result.toString()).toBe('text');
@@ -188,7 +172,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new ByteaColumn().toCode('t')).toBe('t.bytea()');
+        expect(t.bytea().toCode('t')).toBe('t.bytea()');
       });
     });
   });
@@ -197,7 +181,7 @@ describe('string columns', () => {
     describe('point', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'(1, 2)'::point`.type(() => new PointColumn()),
+          testDb.sql`'(1, 2)'::point`.type(() => t.point()),
         );
         expect(result).toBe('(1,2)');
 
@@ -205,14 +189,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new PointColumn().toCode('t')).toBe('t.point()');
+        expect(t.point().toCode('t')).toBe('t.point()');
       });
     });
 
     describe('line', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'{1, 2, 3}'::line`.type(() => new LineColumn()),
+          testDb.sql`'{1, 2, 3}'::line`.type(() => t.line()),
         );
         expect(result).toBe('{1,2,3}');
 
@@ -220,14 +204,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new LineColumn().toCode('t')).toBe('t.line()');
+        expect(t.line().toCode('t')).toBe('t.line()');
       });
     });
 
     describe('lseg', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'[(1, 2), (3, 4)]'::lseg`.type(() => new LsegColumn()),
+          testDb.sql`'[(1, 2), (3, 4)]'::lseg`.type(() => t.lseg()),
         );
         expect(result).toBe('[(1,2),(3,4)]');
 
@@ -235,14 +219,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new LsegColumn().toCode('t')).toBe('t.lseg()');
+        expect(t.lseg().toCode('t')).toBe('t.lseg()');
       });
     });
 
     describe('box', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'((3, 4), (1, 2))'::box`.type(() => new BoxColumn()),
+          testDb.sql`'((3, 4), (1, 2))'::box`.type(() => t.box()),
         );
         expect(result).toBe('(3,4),(1,2)');
 
@@ -250,14 +234,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new BoxColumn().toCode('t')).toBe('t.box()');
+        expect(t.box().toCode('t')).toBe('t.box()');
       });
     });
 
     describe('path', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'((1, 2), (3, 4))'::path`.type(() => new PathColumn()),
+          testDb.sql`'((1, 2), (3, 4))'::path`.type(() => t.path()),
         );
         expect(result).toBe('((1,2),(3,4))');
 
@@ -265,16 +249,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new PathColumn().toCode('t')).toBe('t.path()');
+        expect(t.path().toCode('t')).toBe('t.path()');
       });
     });
 
     describe('polygon', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'((1, 2), (3, 4))'::polygon`.type(
-            () => new PolygonColumn(),
-          ),
+          testDb.sql`'((1, 2), (3, 4))'::polygon`.type(() => t.polygon()),
         );
         expect(result).toBe('((1,2),(3,4))');
 
@@ -282,14 +264,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new PolygonColumn().toCode('t')).toBe('t.polygon()');
+        expect(t.polygon().toCode('t')).toBe('t.polygon()');
       });
     });
 
     describe('circle', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'<(1,2),3>'::circle`.type(() => new CircleColumn()),
+          testDb.sql`'<(1,2),3>'::circle`.type(() => t.circle()),
         );
         expect(result).toBe('<(1,2),3>');
 
@@ -297,7 +279,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new CircleColumn().toCode('t')).toBe('t.circle()');
+        expect(t.circle().toCode('t')).toBe('t.circle()');
       });
     });
   });
@@ -306,7 +288,7 @@ describe('string columns', () => {
     describe('cidr', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'192.168.100.128/25'::cidr`.type(() => new CidrColumn()),
+          testDb.sql`'192.168.100.128/25'::cidr`.type(() => t.cidr()),
         );
         expect(result).toBe('192.168.100.128/25');
 
@@ -314,14 +296,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new CidrColumn().toCode('t')).toBe('t.cidr()');
+        expect(t.cidr().toCode('t')).toBe('t.cidr()');
       });
     });
 
     describe('inet', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'192.168.100.128/25'::inet`.type(() => new InetColumn()),
+          testDb.sql`'192.168.100.128/25'::inet`.type(() => t.inet()),
         );
         expect(result).toBe('192.168.100.128/25');
 
@@ -329,16 +311,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new InetColumn().toCode('t')).toBe('t.inet()');
+        expect(t.inet().toCode('t')).toBe('t.inet()');
       });
     });
 
     describe('macaddr', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'08:00:2b:01:02:03'::macaddr`.type(
-            () => new MacAddrColumn(),
-          ),
+          testDb.sql`'08:00:2b:01:02:03'::macaddr`.type(() => t.macaddr()),
         );
         expect(result).toBe('08:00:2b:01:02:03');
 
@@ -346,15 +326,15 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new MacAddrColumn().toCode('t')).toBe('t.macaddr()');
+        expect(t.macaddr().toCode('t')).toBe('t.macaddr()');
       });
     });
 
     describe('macaddr8', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'08:00:2b:ff:fe:01:02:03'::macaddr8`.type(
-            () => new MacAddr8Column(),
+          testDb.sql`'08:00:2b:ff:fe:01:02:03'::macaddr8`.type(() =>
+            t.macaddr8(),
           ),
         );
         expect(result).toBe('08:00:2b:ff:fe:01:02:03');
@@ -363,7 +343,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new MacAddr8Column().toCode('t')).toBe('t.macaddr8()');
+        expect(t.macaddr8().toCode('t')).toBe('t.macaddr8()');
       });
     });
   });
@@ -372,7 +352,7 @@ describe('string columns', () => {
     describe('bit', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`B'101'`.type(() => new BitColumn(3)),
+          testDb.sql`B'101'`.type(() => t.bit(3)),
         );
         expect(result).toBe('101');
 
@@ -380,16 +360,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new BitColumn(5).toCode('t')).toBe('t.bit(5)');
+        expect(t.bit(5).toCode('t')).toBe('t.bit(5)');
       });
     });
 
     describe('bit varying', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'10101'::bit varying(5)`.type(
-            () => new BitVaryingColumn(),
-          ),
+          testDb.sql`'10101'::bit varying(5)`.type(() => t.bitVarying()),
         );
         expect(result).toBe('10101');
 
@@ -397,8 +375,8 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new BitVaryingColumn().toCode('t')).toBe('t.bitVarying()');
-        expect(new BitVaryingColumn(5).toCode('t')).toBe('t.bitVarying(5)');
+        expect(t.bitVarying().toCode('t')).toBe('t.bitVarying()');
+        expect(t.bitVarying(5).toCode('t')).toBe('t.bitVarying(5)');
       });
     });
   });
@@ -408,7 +386,7 @@ describe('string columns', () => {
       it('should output string', async () => {
         const result = await testDb.get(
           testDb.sql`'a fat cat sat on a mat and ate a fat rat'::tsvector`.type(
-            () => new TsVectorColumn(),
+            () => t.tsvector(),
           ),
         );
         expect(result).toBe(
@@ -419,14 +397,14 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new TsVectorColumn().toCode('t')).toBe('t.tsvector()');
+        expect(t.tsvector().toCode('t')).toBe('t.tsvector()');
       });
     });
 
     describe('tsquery', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'fat & rat'::tsquery`.type(() => new TsQueryColumn()),
+          testDb.sql`'fat & rat'::tsquery`.type(() => t.tsquery()),
         );
         expect(result).toBe(`'fat' & 'rat'`);
 
@@ -434,7 +412,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(new TsQueryColumn().toCode('t')).toBe('t.tsquery()');
+        expect(t.tsquery().toCode('t')).toBe('t.tsquery()');
       });
     });
   });
@@ -442,8 +420,8 @@ describe('string columns', () => {
   describe('uuid', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid`.type(
-          () => new UUIDColumn(),
+        testDb.sql`'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid`.type(() =>
+          t.uuid(),
         ),
       );
       expect(result).toBe(`a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11`);
@@ -452,24 +430,24 @@ describe('string columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new UUIDColumn().toCode('t')).toBe('t.uuid()');
+      expect(t.uuid().toCode('t')).toBe('t.uuid()');
     });
 
     describe('primaryKey', () => {
       it('should have a default function to generate uuid', () => {
-        const column = new UUIDColumn().primaryKey();
+        const column = t.uuid().primaryKey();
 
         expect(column.data.default).toEqual(raw({ raw: 'gen_random_uuid()' }));
       });
 
       it('should not reveal default when converting to code', () => {
-        const column = new UUIDColumn().primaryKey();
+        const column = t.uuid().primaryKey();
 
         expect(column.toCode('t')).toEqual('t.uuid().primaryKey()');
       });
 
       it('should not change default if it is set by user', () => {
-        const column = new UUIDColumn().default('hi').primaryKey();
+        const column = t.uuid().default('hi').primaryKey();
 
         expect(column.data.default).toBe('hi');
       });
@@ -479,7 +457,7 @@ describe('string columns', () => {
   describe('xml', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'<xml></xml>'::xml`.type(() => new XMLColumn()),
+        testDb.sql`'<xml></xml>'::xml`.type(() => t.xml()),
       );
       expect(result).toBe('<xml></xml>');
 
@@ -487,14 +465,14 @@ describe('string columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new XMLColumn().toCode('t')).toBe('t.xml()');
+      expect(t.xml().toCode('t')).toBe('t.xml()');
     });
   });
 
   describe('money', () => {
     it('should output number', async () => {
       const result = await testDb.get(
-        testDb.sql`'1234567890.42'::money`.type(() => new MoneyColumn()),
+        testDb.sql`'1234567890.42'::money`.type(() => t.money()),
       );
       expect(result).toBe(1234567890.42);
 
@@ -502,7 +480,7 @@ describe('string columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new MoneyColumn().toCode('t')).toBe('t.money()');
+      expect(t.money().toCode('t')).toBe('t.money()');
     });
   });
 });

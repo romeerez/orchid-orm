@@ -1,54 +1,81 @@
 import { ColumnData, ColumnType } from './columnType';
 import {
-  arrayTypeMethods,
   addCode,
   Code,
   ColumnTypeBase,
   ArrayMethodsData,
   arrayDataToCode,
-  assignMethodsToClass,
+  ColumnSchemaConfig,
 } from 'orchid-core';
 import { columnCode } from './code';
-import { Operators } from './operators';
+import { Operators, OperatorsArray } from './operators';
 
-export type ArrayData<Item extends ColumnTypeBase> = ColumnData &
+export type ArrayColumnValue = Pick<
+  ColumnTypeBase,
+  | 'type'
+  | 'inputSchema'
+  | 'inputType'
+  | 'outputType'
+  | 'outputSchema'
+  | 'queryType'
+  | 'querySchema'
+  | 'toSQL'
+  | 'toCode'
+  | 'parseItem'
+  | 'data'
+>;
+
+export type ArrayData<Item extends ArrayColumnValue> = ColumnData &
   ArrayMethodsData & {
     item: Item;
   };
 
-type ArrayMethods = typeof arrayTypeMethods;
-
-export interface ArrayColumn<Item extends ColumnTypeBase>
-  extends ColumnType<
-      Item['type'][],
-      typeof Operators.array,
-      Item['inputType'][],
-      Item['outputType'][],
-      Item['queryType'][]
-    >,
-    ArrayMethods {}
-
-export class ArrayColumn<Item extends ColumnTypeBase> extends ColumnType<
+export class ArrayColumn<
+  Schema extends ColumnSchemaConfig,
+  Item extends ArrayColumnValue,
+  InputType extends Schema['type'],
+  OutputType extends Schema['type'],
+  QueryType extends Schema['type'],
+> extends ColumnType<
+  Schema,
   Item['type'][],
-  typeof Operators.array,
+  InputType,
+  OperatorsArray,
   Item['inputType'][],
   Item['outputType'][],
-  Item['queryType'][]
+  OutputType,
+  Item['queryType'][],
+  QueryType
 > {
   dataType = 'array' as const;
   operators = Operators.array;
   declare data: ArrayData<Item>;
 
-  constructor(item: Item) {
-    super();
+  constructor(
+    schema: Schema,
+    item: Item,
+    inputType: InputType,
+    outputType?: OutputType,
+    queryType?: QueryType,
+  ) {
+    super(schema, inputType, outputType, queryType);
     this.data.item = item;
   }
 
-  toSQL() {
+  toSQL(): string {
     return `${this.data.item.toSQL()}[]`;
   }
 
-  toCode(this: ArrayColumn<Item>, t: string): Code {
+  toCode(
+    this: ArrayColumn<
+      ColumnSchemaConfig,
+      ArrayColumnValue,
+      unknown,
+      unknown,
+      unknown
+    >,
+    t: string,
+  ): Code {
     const code: Code[] = ['array('];
     addCode(code, this.data.item.toCode(t));
     addCode(code, `)${arrayDataToCode(this.data)}`);
@@ -80,7 +107,7 @@ const parseArray = (
   len: number,
   entries: unknown[],
   nested: boolean,
-  item: ColumnTypeBase,
+  item: ArrayColumnValue,
 ): number => {
   if (input[0] === '[') {
     while (pos < len) {
@@ -120,8 +147,9 @@ const parseArray = (
         array = [];
         entries.push(array);
         if ('item' in item.data) {
-          nestedItem = (item as ArrayColumn<ColumnType>).data
-            .item as ColumnType;
+          nestedItem = (
+            item as unknown as { data: ArrayData<ArrayColumnValue> }
+          ).data.item as ArrayColumnValue;
         }
       } else {
         array = entries;
@@ -140,14 +168,12 @@ const parseArray = (
   return pos;
 };
 
-assignMethodsToClass(ArrayColumn, arrayTypeMethods);
-
 const pushEntry = (
   input: string,
   start: number,
   pos: number,
   entries: unknown[],
-  item: ColumnTypeBase,
+  item: ArrayColumnValue,
 ) => {
   let entry: unknown = input.slice(start, pos - 1);
   if (entry === 'NULL') {

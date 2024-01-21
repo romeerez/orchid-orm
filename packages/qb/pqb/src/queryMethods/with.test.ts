@@ -6,8 +6,12 @@ import {
   Snake,
   User,
 } from '../test-utils/test-utils';
-import { columnTypes } from '../columns';
-import { assertType, expectSql, testDb } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  testColumnTypes as t,
+  testDb,
+} from 'test-utils';
 
 describe('with', () => {
   const options: (
@@ -49,8 +53,8 @@ describe('with', () => {
   };
 
   const columnShape = {
-    one: columnTypes.integer(),
-    two: columnTypes.text(1, 10),
+    one: t.integer(),
+    two: t.text(1, 10),
   };
 
   it('accepts raw parameter preceded by columns shape', () => {

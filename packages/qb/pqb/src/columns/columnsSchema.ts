@@ -1,49 +1,49 @@
 import { ColumnType } from './columnType';
-import { ColumnsShapeBase, ColumnTypeBase } from 'orchid-core';
-import { Operators } from './operators';
+import { OperatorsAny } from './operators';
+import { QueryColumns } from 'orchid-core';
 
 export type ColumnsShape = Record<string, ColumnType>;
 
-export abstract class ColumnsObject<
-  Shape extends ColumnsShapeBase,
-> extends ColumnType<
-  { [K in keyof Shape]: Shape[K]['type'] },
-  typeof Operators.any,
-  { [K in keyof Shape]: Shape[K]['inputType'] },
-  { [K in keyof Shape]: Shape[K]['outputType'] },
-  { [K in keyof Shape]: Shape[K]['queryType'] }
-> {
-  dataType = 'object' as const;
-  operators = Operators.any;
+export type ColumnsShapeToObject<Shape extends QueryColumns> = {
+  dataType: 'object';
+  type: ObjectType<Shape>;
+  outputType: ObjectOutput<Shape>;
+  queryType: ObjectQuery<Shape>;
+  operators: OperatorsAny;
+};
 
-  constructor(public shape: Shape) {
-    super();
-  }
-}
+export type ColumnsShapeToNullableObject<Shape extends QueryColumns> = {
+  dataType: 'object';
+  type: ObjectType<Shape>;
+  outputType: ObjectOutput<Shape> | null;
+  queryType: ObjectQuery<Shape> | null;
+  operators: OperatorsAny;
+};
 
-export abstract class ArrayOfColumnsObjects<
-  Shape extends ColumnsShapeBase,
-> extends ColumnType<
-  { [K in keyof Shape]: Shape[K]['type'] }[],
-  typeof Operators.any,
-  { [K in keyof Shape]: Shape[K]['inputType'] }[],
-  { [K in keyof Shape]: Shape[K]['outputType'] }[],
-  { [K in keyof Shape]: Shape[K]['queryType'] }[]
-> {
-  dataType = 'array' as const;
-  operators = Operators.any;
+type ObjectType<Shape extends QueryColumns> = {
+  [K in keyof Shape]: Shape[K]['type'];
+};
 
-  constructor(public shape: Shape) {
-    super();
-  }
-}
+type ObjectOutput<Shape extends QueryColumns> = {
+  [K in keyof Shape]: Shape[K]['outputType'];
+};
 
-export abstract class PluckResultColumnType<
-  C extends ColumnTypeBase,
-> extends ColumnTypeBase<
-  C['type'][],
-  typeof Operators.any,
-  C['inputType'][],
-  C['outputType'][],
-  C['queryType'][]
-> {}
+type ObjectQuery<Shape extends QueryColumns> = {
+  [K in keyof Shape]: Shape[K]['queryType'];
+};
+
+export type ColumnsShapeToPluck<Shape extends QueryColumns> = {
+  dataType: 'array';
+  type: Shape['pluck']['type'][];
+  outputType: Shape['pluck']['outputType'][];
+  queryType: Shape['pluck']['queryType'][];
+  operators: OperatorsAny;
+};
+
+export type ColumnsShapeToObjectArray<Shape extends QueryColumns> = {
+  dataType: 'array';
+  type: ObjectType<Shape>[];
+  outputType: ObjectOutput<Shape>[];
+  queryType: ObjectQuery<Shape>[];
+  operators: OperatorsAny;
+};

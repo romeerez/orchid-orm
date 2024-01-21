@@ -26,6 +26,7 @@ import {
   RelationJoinQuery,
 } from 'pqb';
 import {
+  ColumnSchemaConfig,
   ColumnsShapeBase,
   EmptyObject,
   MaybeArray,
@@ -50,6 +51,7 @@ import {
   RelationRefsOptions,
   RelationThroughOptions,
 } from './common/options';
+import { defaultSchemaConfig } from 'pqb';
 
 export type HasMany = RelationThunkBase & {
   type: 'hasMany';
@@ -161,12 +163,16 @@ export type HasManyNestedInsert = (
   ][],
 ) => Promise<void>;
 
-class HasManyVirtualColumn extends VirtualColumn {
+class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasManyNestedInsert;
   private readonly nestedUpdate: HasManyNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    schema: ColumnSchemaConfig,
+    private key: string,
+    private state: State,
+  ) {
+    super(schema);
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -303,7 +309,11 @@ export const makeHasManyMethod = (
       }
       return query.where(values)._defaults(values);
     },
-    virtualColumn: new HasManyVirtualColumn(relationName, state),
+    virtualColumn: new HasManyVirtualColumn(
+      defaultSchemaConfig,
+      relationName,
+      state,
+    ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
       joinHasRelation(baseQuery, joiningQuery, primaryKeys, foreignKeys, len),
     ),

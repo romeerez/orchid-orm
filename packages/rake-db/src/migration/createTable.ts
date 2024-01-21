@@ -30,11 +30,12 @@ import {
   getSchemaAndTableFromName,
   makePopulateEnumQuery,
   quoteWithSchema,
+  RakeDbColumnTypes,
 } from '../common';
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
-import { ColumnTypesBase, emptyObject, snakeCaseKey } from 'orchid-core';
+import { ColumnSchemaConfig, emptyObject, snakeCaseKey } from 'orchid-core';
 
 export type TableQuery = {
   text: string;
@@ -50,15 +51,16 @@ export type CreateTableResult<
 };
 
 export const createTable = async <
-  CT extends ColumnTypesBase,
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
   Table extends string,
   Shape extends ColumnsShape,
 >(
-  migration: Migration<CT>,
+  migration: Migration<SchemaConfig, CT>,
   up: boolean,
   tableName: Table,
   options: TableOptions,
-  fn?: ColumnsShapeCallback<CT, Shape>,
+  fn?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
 ): Promise<CreateTableResult<Table, Shape>> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
@@ -66,7 +68,7 @@ export const createTable = async <
     'language' in options ? options.language : migration.options.language;
 
   const types = Object.assign(
-    Object.create(migration.columnTypes),
+    Object.create(migration.columnTypes as object),
     tableMethods,
   );
   types[snakeCaseKey] = snakeCase;
@@ -99,14 +101,15 @@ export const createTable = async <
 
   return {
     get table(): Db<Table, Shape> {
-      return (table ??= (migration as unknown as DbMigration)(
-        tableName,
-        shape,
-        {
-          noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
-          snakeCase: options.snakeCase,
-        },
-      ) as unknown as Db<Table, Shape>);
+      return (table ??= (
+        migration as unknown as DbMigration<
+          ColumnSchemaConfig,
+          RakeDbColumnTypes
+        >
+      )(tableName, shape, {
+        noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
+        snakeCase: options.snakeCase,
+      }) as unknown as Db<Table, Shape>);
     },
   };
 };

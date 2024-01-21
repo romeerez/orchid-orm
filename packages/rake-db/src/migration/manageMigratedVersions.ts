@@ -5,9 +5,8 @@ import {
   RakeDbConfig,
 } from '../common';
 import { SilentQueries } from './migration';
-import { ColumnTypesBase } from 'orchid-core';
 
-export const saveMigratedVersion = async <CT extends ColumnTypesBase>(
+export const saveMigratedVersion = async <CT>(
   db: SilentQueries,
   version: string,
   config: RakeDbConfig<CT>,
@@ -19,7 +18,7 @@ export const saveMigratedVersion = async <CT extends ColumnTypesBase>(
   );
 };
 
-export const removeMigratedVersion = async <CT extends ColumnTypesBase>(
+export const removeMigratedVersion = async <CT>(
   db: SilentQueries,
   version: string,
   config: RakeDbConfig<CT>,
@@ -31,7 +30,7 @@ export const removeMigratedVersion = async <CT extends ColumnTypesBase>(
   );
 };
 
-export const getMigratedVersionsMap = async <CT extends ColumnTypesBase>(
+export const getMigratedVersionsMap = async <CT>(
   db: TransactionAdapter,
   config: RakeDbConfig<CT>,
 ): Promise<Record<string, boolean>> => {

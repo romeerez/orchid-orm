@@ -3,7 +3,7 @@ import {
   AdapterOptions,
   addComputedColumns,
   anyShape,
-  columnTypes,
+  makeColumnTypes,
   ComputedColumnsBase,
   Db,
   DbTableOptions,
@@ -14,6 +14,7 @@ import {
   Query,
   QueryData,
   QueryLogOptions,
+  defaultSchemaConfig,
 } from 'pqb';
 import { DbTable, Table, TableClasses } from './baseTable';
 import { applyRelations } from './relations/relations';
@@ -126,7 +127,7 @@ export const orchidORM = <T extends TableClasses>(
       undefined as unknown as Db,
       undefined,
       anyShape,
-      columnTypes,
+      makeColumnTypes(defaultSchemaConfig),
       transactionStorage,
       commonOptions,
     ) as unknown as Db;

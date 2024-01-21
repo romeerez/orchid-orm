@@ -1,16 +1,25 @@
 import {
   Adapter,
-  columnTypes,
+  makeColumnTypes,
   createDb,
   testTransaction,
 } from '../../qb/pqb/src';
 import { MaybeArray, toArray } from 'orchid-core';
+import { z } from 'zod';
+import { zodSchemaConfig, ZodSchemaConfig } from 'schema-to-zod';
+
+export type TestSchemaConfig = ZodSchemaConfig;
 
 export const testDbOptions = {
   databaseURL: process.env.PG_URL,
+  columnSchema: zodSchemaConfig,
 };
 
+export const testSchemaConfig = zodSchemaConfig;
+
 export const testAdapter = new Adapter(testDbOptions);
+
+const columnTypes = makeColumnTypes(zodSchemaConfig);
 
 export const testColumnTypes = {
   ...columnTypes,
@@ -18,15 +27,18 @@ export const testColumnTypes = {
     return columnTypes.text(min, max);
   },
   timestamp() {
-    return columnTypes.timestamp().parse((input) => new Date(input));
+    return columnTypes.timestamp().parse(z.date(), (input) => new Date(input));
   },
   timestampNoTZ() {
-    return columnTypes.timestampNoTZ().parse((input) => new Date(input));
+    return columnTypes
+      .timestampNoTZ()
+      .parse(z.date(), (input) => new Date(input));
   },
 };
 
 export const testDb = createDb({
   adapter: testAdapter,
+  columnSchema: zodSchemaConfig,
   columnTypes: testColumnTypes,
 });
 
@@ -44,7 +56,7 @@ export const expectSql = (
   });
 };
 
-type AssertEqual<T, Expected> = [T] extends [Expected]
+export type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
     ? true
     : false

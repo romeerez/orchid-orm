@@ -6,12 +6,10 @@ import {
   quote,
   EnumColumn,
   UnknownColumn,
-  columnTypes,
 } from 'pqb';
 import {
   EmptyObject,
   emptyObject,
-  ColumnTypesBase,
   snakeCaseKey,
   toSnakeCase,
   deepCompare,
@@ -19,6 +17,8 @@ import {
   RawSQLBase,
   setDefaultLanguage,
   ColumnTypeBase,
+  setCurrentColumnName,
+  ColumnSchemaConfig,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -34,6 +34,7 @@ import {
   makePopulateEnumQuery,
   quoteNameFromString,
   quoteWithSchema,
+  RakeDbColumnTypes,
 } from '../common';
 import {
   addColumnComment,
@@ -205,15 +206,15 @@ const nameKey = Symbol('name');
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
   ...tableMethods,
-  name(this: ColumnTypesBase, name: string) {
-    const types = Object.create(columnTypes.name.call(this, name));
+  name(this: RakeDbColumnTypes, name: string) {
+    setCurrentColumnName(name);
+    const types = Object.create(this);
     types[nameKey] = name;
     return types;
   },
   add,
   drop,
   change(
-    this: ColumnTypesBase,
     from: ColumnType | Change,
     to: ColumnType | Change,
     options?: ChangeOptions,
@@ -251,8 +252,10 @@ const tableChangeMethods = {
   },
 };
 
-export type TableChanger<CT extends ColumnTypesBase> =
-  MigrationColumnTypes<CT> & TableChangeMethods;
+export type TableChanger<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+> = MigrationColumnTypes<SchemaConfig, CT> & TableChangeMethods;
 
 export type TableChangeData = Record<
   string,
@@ -262,12 +265,15 @@ export type TableChangeData = Record<
   | EmptyObject
 >;
 
-export const changeTable = async <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+export const changeTable = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
+  migration: Migration<SchemaConfig, CT>,
   up: boolean,
   tableName: string,
   options: ChangeTableOptions,
-  fn?: ChangeTableCallback<CT>,
+  fn?: ChangeTableCallback<SchemaConfig, CT>,
 ): Promise<void> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
@@ -278,7 +284,9 @@ export const changeTable = async <CT extends ColumnTypesBase>(
   resetTableData();
   resetChangeTableData();
 
-  const tableChanger = Object.create(migration.columnTypes) as TableChanger<CT>;
+  const tableChanger = Object.create(
+    migration.columnTypes as object,
+  ) as TableChanger<SchemaConfig, CT>;
   Object.assign(tableChanger, tableChangeMethods);
 
   (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] = snakeCase;

@@ -1,9 +1,7 @@
 import { columnsShapeToCode } from './code';
-import { columnTypes } from './columnTypes';
 import { codeToString } from 'orchid-core';
 import { raw } from '../sql/rawSql';
-
-const t = columnTypes;
+import { testColumnTypes as t } from 'test-utils';
 
 describe('code', () => {
   describe('codeToString', () => {

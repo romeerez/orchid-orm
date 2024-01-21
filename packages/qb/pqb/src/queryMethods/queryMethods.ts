@@ -28,11 +28,11 @@ import {
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
-import { From } from './from';
+import { From, FromQueryArg, FromQuerySelf } from './from';
 import { Join, OnQueryBuilder } from './join/join';
 import { With } from './with';
 import { Union } from './union';
-import { JsonModifiers, JsonMethods } from './json';
+import { JsonMethods, JsonModifiers } from './json';
 import { Create } from './create';
 import { Update } from './update';
 import { Delete } from './delete';
@@ -52,12 +52,13 @@ import { RawSqlMethods } from './rawSql';
 import { CopyMethods } from './copy';
 import {
   applyMixins,
-  Sql,
-  QueryThen,
-  ColumnsShapeBase,
-  TemplateLiteralArgs,
-  Expression,
   ColumnTypeBase,
+  Expression,
+  QueryColumn,
+  QueryColumns,
+  QueryThen,
+  Sql,
+  TemplateLiteralArgs,
 } from 'orchid-core';
 import { AsMethods } from './as';
 import { QueryBase } from '../query/queryBase';
@@ -68,6 +69,7 @@ import { noneMethods } from './none';
 import { simpleExistingColumnToSQL } from '../sql/common';
 import { ScopeMethods } from './scope';
 import { SoftDeleteMethods } from './softDelete';
+import { queryWrap } from './queryMethods.utils';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -89,7 +91,7 @@ type WindowResult<T extends Query, W extends WindowArg<T>> = T & {
 };
 
 export type OrderArg<
-  T extends Query,
+  T extends Pick<Query, 'selectable' | 'meta' | 'result'>,
   TsQuery extends PropertyKey = string | undefined extends T['meta']['tsQuery']
     ? never
     : Exclude<T['meta']['tsQuery'], undefined>,
@@ -132,7 +134,7 @@ type QueryHelper<T extends Query, Args extends unknown[], Result> = {
       [K in keyof T]: K extends 'then'
         ? QueryThen<unknown>
         : K extends 'result'
-        ? ColumnsShapeBase
+        ? QueryColumns
         : T[K];
     },
   >(
@@ -155,9 +157,7 @@ type TruncateResult<T extends Query> = SetQueryKind<
 >;
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
-export class ColumnRefExpression<
-  T extends ColumnTypeBase,
-> extends Expression<T> {
+export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
   constructor(public _type: T, public name: string) {
     super();
   }
@@ -198,6 +198,10 @@ export interface QueryMethods<ColumnTypes>
     TransformMethods,
     ScopeMethods,
     SoftDeleteMethods {}
+
+export type WrapQuerySelf = FromQueryArg;
+export type WrapQueryArg = FromQuerySelf &
+  Pick<Query, 'selectable' | 'table' | 'shape'>;
 
 export class QueryMethods<ColumnTypes> {
   /**
@@ -597,21 +601,19 @@ export class QueryMethods<ColumnTypes> {
     return pushQueryValue(this, 'window', arg) as unknown as WindowResult<T, W>;
   }
 
-  wrap<T extends Query, Q extends Query, As extends string = 't'>(
-    this: T,
-    query: Q,
-    as?: As,
-  ): SetQueryTableAlias<Q, As> {
-    return this.clone()._wrap(query, as);
+  wrap<
+    T extends WrapQuerySelf,
+    Q extends WrapQueryArg,
+    As extends string = 't',
+  >(this: T, query: Q, as?: As): SetQueryTableAlias<Q, As> {
+    return queryWrap(this, query.clone(), as);
   }
-  _wrap<T extends Query, Q extends Query, As extends string = 't'>(
-    this: T,
-    query: Q,
-    as: As = 't' as As,
-  ): SetQueryTableAlias<Q, As> {
-    return (query._from(this) as Query)._as(
-      as,
-    ) as unknown as SetQueryTableAlias<Q, As>;
+  _wrap<
+    T extends WrapQuerySelf,
+    Q extends WrapQueryArg,
+    As extends string = 't',
+  >(this: T, query: Q, as: As = 't' as As): SetQueryTableAlias<Q, As> {
+    return queryWrap(this, query, as);
   }
 
   /**

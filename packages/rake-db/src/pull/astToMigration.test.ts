@@ -1,7 +1,9 @@
 import { astToMigration } from './astToMigration';
-import { columnTypes, EnumColumn, raw, TableData, UUIDColumn } from 'pqb';
+import { makeColumnTypes, raw, TableData, defaultSchemaConfig } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
+
+const t = makeColumnTypes(defaultSchemaConfig);
 
 const template = (content: string) => `import { change } from '../dbScript';
 
@@ -38,7 +40,7 @@ const table: RakeDbAst.Table = {
   indexes: [],
   constraints: [],
   shape: {
-    id: columnTypes.identity().primaryKey(),
+    id: t.identity().primaryKey(),
   },
 };
 
@@ -47,7 +49,7 @@ const domain: RakeDbAst.Domain = {
   action: 'create',
   schema: 'schema',
   name: 'domainName',
-  baseType: columnTypes.integer(),
+  baseType: t.integer(),
   notNull: true,
   collation: 'C',
   default: raw({ raw: '123' }),
@@ -97,7 +99,7 @@ const view: RakeDbAst.View = {
   schema: 'custom',
   name: 'view',
   shape: {
-    id: columnTypes.integer(),
+    id: t.integer(),
   },
   sql: raw({ raw: 'sql' }),
   options: {
@@ -134,8 +136,8 @@ describe('astToMigration', () => {
       {
         ...table,
         shape: {
-          id: new UUIDColumn().primaryKey(),
-          enum: new EnumColumn(enumType.name, enumType.values),
+          id: t.uuid().primaryKey(),
+          enum: t.enum(enumType.name, enumType.values),
         },
       },
       { ...table, name: 'other' },
@@ -234,7 +236,7 @@ change(async (db) => {
         {
           ...table,
           shape: {
-            someId: columnTypes
+            someId: t
               .integer()
               .unique({ name: 'indexName', nullsNotDistinct: true })
               .foreignKey('otherTable', 'otherId', {
@@ -273,7 +275,7 @@ change(async (db) => {
         {
           ...table,
           shape: {
-            id: columnTypes.identity().primaryKey(),
+            id: t.identity().primaryKey(),
           },
           primaryKey: { columns: ['id', 'name'], options: { name: 'pkey' } },
           indexes: [
@@ -511,8 +513,8 @@ change(async (db) => {
         {
           ...table,
           shape: {
-            identity: columnTypes.smallint().identity(),
-            identityAlways: columnTypes.identity({
+            identity: t.smallint().identity(),
+            identityAlways: t.identity({
               always: true,
               incrementBy: 2,
               startWith: 3,

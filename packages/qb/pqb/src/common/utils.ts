@@ -1,6 +1,6 @@
-import { cloneQuery, QueryData, toSQLCacheKey } from '../sql';
+import { cloneQuery, QueryData, toSQLCacheKey, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
-import type { ColumnTypeBase, StringKey } from 'orchid-core';
+import type { QueryColumn, StringKey } from 'orchid-core';
 import { RelationQuery } from '../relations';
 import { Expression } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
@@ -14,16 +14,16 @@ export type AliasOrTable<T extends Pick<Query, 'table' | 'meta'>> =
 
 export type SelectableOrExpression<
   T extends QueryBase = QueryBase,
-  C extends ColumnTypeBase = ColumnTypeBase,
+  C extends QueryColumn = QueryColumn,
 > = '*' | StringKey<keyof T['selectable']> | Expression<C>;
 
 export type ExpressionOutput<
-  T extends Query,
+  T extends QueryBase,
   Expr extends SelectableOrExpression<T>,
 > = Expr extends keyof T['selectable']
   ? T['selectable'][Expr]['column']
-  : Expr extends Expression<infer ColumnTypeBase>
-  ? ColumnTypeBase
+  : Expr extends Expression
+  ? Expr['_type']
   : never;
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
@@ -50,9 +50,9 @@ export const makeRegexToFindInSql = (value: string) => {
  * @param cb - sub-query callback
  */
 export const resolveSubQueryCallback = (
-  q: Query,
-  cb: (q: Query) => Query,
-): Query => {
+  q: ToSQLQuery,
+  cb: (q: ToSQLQuery) => ToSQLQuery,
+): ToSQLQuery => {
   const { isSubQuery, relChain } = q.q;
   q.q.isSubQuery = true;
   q.q.relChain = undefined;
@@ -71,8 +71,11 @@ export const resolveSubQueryCallback = (
  * @param q - main query object
  * @param sub - sub-query query object
  */
-export const joinSubQuery = (q: Query, sub: Query): Query => {
-  if (!('relationConfig' in sub)) return sub;
+export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): Query => {
+  if (!('relationConfig' in sub)) return sub as Query;
 
-  return (sub as unknown as RelationQuery).relationConfig.joinQuery(sub, q);
+  return (sub as unknown as RelationQuery).relationConfig.joinQuery(
+    sub as unknown as Query,
+    q as Query,
+  );
 };

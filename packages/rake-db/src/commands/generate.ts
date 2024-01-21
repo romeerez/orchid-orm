@@ -6,9 +6,9 @@ import {
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { ColumnTypesBase, getImportPath, pathToLog } from 'orchid-core';
+import { getImportPath, pathToLog } from 'orchid-core';
 
-export const writeMigrationFile = async <CT extends ColumnTypesBase>(
+export const writeMigrationFile = async <CT>(
   config: RakeDbConfig<CT>,
   version: string,
   name: string,
@@ -26,7 +26,7 @@ export const writeMigrationFile = async <CT extends ColumnTypesBase>(
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 
-export const generate = async <CT extends ColumnTypesBase>(
+export const generate = async <CT>(
   config: RakeDbConfig<CT>,
   [name]: string[],
 ): Promise<void> => {

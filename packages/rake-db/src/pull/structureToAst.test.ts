@@ -8,12 +8,15 @@ import {
   DomainColumn,
   EnumColumn,
   IntegerColumn,
+  makeColumnsByType,
   raw,
   SerialColumn,
   SmallSerialColumn,
   TextColumn,
   TimestampTZColumn,
   VarCharColumn,
+  DefaultSchemaConfig,
+  defaultSchemaConfig,
 } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
@@ -51,6 +54,8 @@ const ctx: StructureToAstCtx = {
   unsupportedTypes: {},
   snakeCase: false,
   currentSchema: 'custom',
+  columnSchemaConfig: defaultSchemaConfig,
+  columnsByType: makeColumnsByType(defaultSchemaConfig),
 };
 
 const structure: {
@@ -196,7 +201,15 @@ describe('structureToAst', () => {
 
       expect(ast.shape.column).toBeInstanceOf(ArrayColumn);
       expect(
-        (ast.shape.column as ArrayColumn<IntegerColumn>).data.item,
+        (
+          ast.shape.column as ArrayColumn<
+            DefaultSchemaConfig,
+            IntegerColumn<DefaultSchemaConfig>,
+            unknown,
+            unknown,
+            unknown
+          >
+        ).data.item,
       ).toBeInstanceOf(IntegerColumn);
     });
 
@@ -219,8 +232,12 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
       expect(ast.shape.column).toBeInstanceOf(EnumColumn);
-      expect((ast.shape.column as EnumColumn).enumName).toBe(enumType.name);
-      expect((ast.shape.column as EnumColumn).options).toBe(enumType.values);
+      expect(
+        (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).enumName,
+      ).toBe(enumType.name);
+      expect(
+        (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).options,
+      ).toBe(enumType.values);
     });
 
     it('should support column with check', async () => {
@@ -283,7 +300,15 @@ describe('structureToAst', () => {
       const array = ast.shape.column;
       expect(array).toBeInstanceOf(ArrayColumn);
 
-      const column = (array as ArrayColumn<DomainColumn>).data.item;
+      const column = (
+        array as ArrayColumn<
+          DefaultSchemaConfig,
+          DomainColumn<DefaultSchemaConfig>,
+          unknown,
+          unknown,
+          unknown
+        >
+      ).data.item;
       expect(column.dataType).toBe(domain.name);
       expect(column.data.as).toBeInstanceOf(IntegerColumn);
     });

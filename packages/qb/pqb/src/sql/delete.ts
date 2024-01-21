@@ -1,13 +1,12 @@
-import { Query } from '../query/query';
 import { pushWhereStatementSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
-import { ToSQLCtx } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { DeleteQueryData, QueryHookSelect } from './data';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: DeleteQueryData,
   quotedAs: string,
 ): QueryHookSelect | undefined => {

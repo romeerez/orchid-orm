@@ -1,8 +1,7 @@
 import { Query, SelectableOrExpressionOfType } from '../query/query';
 import { ColumnExpression } from '../common/fn';
-import { TextColumn } from '../columns';
 import { AggregateMethods } from './aggregate';
-import { Expression, MaybeArray } from 'orchid-core';
+import { emptyObject, Expression, MaybeArray, QueryColumn } from 'orchid-core';
 import {
   OrderTsQueryConfig,
   QueryData,
@@ -30,7 +29,7 @@ type HeadlineSearchArg<T extends Query> = Exclude<
 // - text: column name or a raw SQL with the full text to select headline from.
 // - options: string or an expression returning Postgres headline options (https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
 type HeadlineParams<T extends Query> = {
-  text?: SelectableOrExpressionOfType<T, TextColumn>;
+  text?: SelectableOrExpressionOfType<T, QueryColumn<string>>;
   options?: string | Expression;
 };
 
@@ -111,7 +110,7 @@ declare module './aggregate' {
       this: T,
       search: HeadlineSearchArg<T>,
       options?: HeadlineParams<T>,
-    ): ColumnExpression<TextColumn>;
+    ): ColumnExpression<QueryColumn<string>>;
   }
 }
 
@@ -176,8 +175,8 @@ export type WhereSearchResult<T extends QueryBase, As extends string> = T & {
   meta: { tsQuery: string extends As ? never : As };
 };
 
-class Headline extends Expression<TextColumn> {
-  _type = TextColumn.instance;
+class Headline extends Expression<QueryColumn<string>> {
+  _type = emptyObject as QueryColumn<string>;
 
   constructor(
     public q: QueryData,
@@ -221,7 +220,7 @@ AggregateMethods.prototype.headline = function (this: Query, search, params) {
     this.q,
     source,
     params as HeadlineParams<Query> | undefined,
-  ) as unknown as ColumnExpression<TextColumn>;
+  ) as unknown as ColumnExpression<QueryColumn<string>>;
 };
 
 export class SearchMethods {

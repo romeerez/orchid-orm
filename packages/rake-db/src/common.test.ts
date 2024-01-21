@@ -15,7 +15,7 @@ import {
   AppCodeUpdater,
 } from './common';
 import prompts from 'prompts';
-import { Adapter, columnTypes } from 'pqb';
+import { Adapter, defaultSchemaConfig, makeColumnTypes } from 'pqb';
 import { readdir } from 'fs/promises';
 import path from 'path';
 import { asMock } from 'test-utils';
@@ -49,8 +49,9 @@ describe('common', () => {
 
       expect(result).toEqual({
         basePath: __dirname,
+        columnSchemaConfig: defaultSchemaConfig,
         dbScript: 'dbScript.ts',
-        columnTypes,
+        columnTypes: makeColumnTypes,
         migrationsPath,
         recurrentPath: path.join(migrationsPath, 'recurrent'),
         migrationsTable: 'schemaMigrations',

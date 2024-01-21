@@ -4,3 +4,12 @@
  * When it's on, column names in ORM are still as user types them, but they are translated to snake_case when generating SQL.
  */
 export const snakeCaseKey: unique symbol = Symbol('snakeCase');
+
+export type TimeInterval = {
+  years?: number;
+  months?: number;
+  days?: number;
+  hours?: number;
+  minutes?: number;
+  seconds?: number;
+};

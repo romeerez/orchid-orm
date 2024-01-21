@@ -1,16 +1,16 @@
 import { userData } from '../test-utils/test-utils';
-import {
-  IntervalColumn,
-  TimeColumn,
-  TimeInterval,
-  TimestampColumn,
-  TimestampTZColumn,
-} from './dateTime';
-import { columnTypes } from './columnTypes';
+import { TimestampColumn, TimestampTZColumn } from './dateTime';
 import { ColumnType } from './columnType';
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
-
-const t = columnTypes;
+import {
+  assertType,
+  expectSql,
+  testColumnTypes as t,
+  testDb,
+  testSchemaConfig,
+  useTestDatabase,
+} from 'test-utils';
+import { TimeInterval } from 'orchid-core';
+import { z } from 'zod';
 
 const testTimestampInput = (column: ColumnType) => {
   const date = new Date();
@@ -72,8 +72,8 @@ describe('date time columns', () => {
 
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'1999-01-08 04:05:06'::timestamp`.type(() =>
-          t.timestampNoTZ(),
+        testDb.sql`'1999-01-08 04:05:06'::timestamp`.type(
+          () => new TimestampTZColumn(testSchemaConfig),
         ),
       );
       expect(result).toBe('1999-01-08 04:05:06');
@@ -93,19 +93,25 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampColumn().toCode('t')).toBe('t.timestampNoTZ()');
+      expect(new TimestampColumn(testSchemaConfig).toCode('t')).toBe(
+        't.timestampNoTZ()',
+      );
 
-      expect(new TimestampColumn(10).toCode('t')).toBe('t.timestampNoTZ(10)');
+      expect(new TimestampColumn(testSchemaConfig, 10).toCode('t')).toBe(
+        't.timestampNoTZ(10)',
+      );
 
-      expect(new TimestampColumn(6).toCode('t')).toBe('t.timestampNoTZ()');
+      expect(new TimestampColumn(testSchemaConfig, 6).toCode('t')).toBe(
+        't.timestampNoTZ()',
+      );
 
       const now = new Date();
       const s = now.toISOString();
+      const timestamp = t.timestampNoTZ();
+      delete timestamp.parseFn;
+
       expect(
-        new TimestampColumn()
-          .min(now, 'min message')
-          .max(now, 'max message')
-          .toCode('t'),
+        timestamp.min(now, 'min message').max(now, 'max message').toCode('t'),
       ).toBe(
         `t.timestampNoTZ()` +
           `.min(new Date('${s}'), 'min message')` +
@@ -122,7 +128,7 @@ describe('date time columns', () => {
     it('should output string', async () => {
       const result = await testDb.get(
         testDb.sql`'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`.type(
-          () => new TimestampTZColumn(),
+          () => new TimestampTZColumn(testSchemaConfig),
         ),
       );
       expect(result).toBe('1999-01-08 04:05:06');
@@ -142,19 +148,26 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampTZColumn().toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampTZColumn(testSchemaConfig).toCode('t')).toBe(
+        't.timestamp()',
+      );
 
-      expect(new TimestampTZColumn(6).toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampTZColumn(testSchemaConfig, 6).toCode('t')).toBe(
+        't.timestamp()',
+      );
 
-      expect(new TimestampTZColumn(10).toCode('t')).toBe('t.timestamp(10)');
+      expect(new TimestampTZColumn(testSchemaConfig, 10).toCode('t')).toBe(
+        't.timestamp(10)',
+      );
 
       const now = new Date();
       const s = now.toISOString();
+
+      const timestamp = t.timestamp();
+      delete timestamp.parseFn;
+
       expect(
-        new TimestampTZColumn()
-          .min(now, 'min message')
-          .max(now, 'max message')
-          .toCode('t'),
+        timestamp.min(now, 'min message').max(now, 'max message').toCode('t'),
       ).toBe(
         `t.timestamp()` +
           `.min(new Date('${s}'), 'min message')` +
@@ -166,7 +179,7 @@ describe('date time columns', () => {
   describe('time', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'12:00'::time`.type(() => new TimeColumn()),
+        testDb.sql`'12:00'::time`.type(() => t.time()),
       );
       expect(result).toBe('12:00:00');
 
@@ -174,18 +187,8 @@ describe('date time columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new TimeColumn().toCode('t')).toBe('t.time()');
-      expect(new TimeColumn(10).toCode('t')).toBe('t.time(10)');
-
-      const now = new Date();
-      const s = now.toISOString();
-      expect(
-        t.time().min(now, 'min message').max(now, 'max message').toCode('t'),
-      ).toBe(
-        `t.time()` +
-          `.min(new Date('${s}'), 'min message')` +
-          `.max(new Date('${s}'), 'max message')`,
-      );
+      expect(t.time().toCode('t')).toBe('t.time()');
+      expect(t.time(10).toCode('t')).toBe('t.time(10)');
     });
   });
 
@@ -193,7 +196,7 @@ describe('date time columns', () => {
     it('should output string', async () => {
       const result = await testDb.get(
         testDb.sql`'1 year 2 months 3 days 4 hours 5 minutes 6 seconds'::interval`.type(
-          () => new IntervalColumn(),
+          () => t.interval(),
         ),
       );
       expect(result).toEqual({
@@ -209,11 +212,9 @@ describe('date time columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new IntervalColumn().toCode('t')).toBe('t.interval()');
-      expect(new IntervalColumn('fields').toCode('t')).toBe(
-        "t.interval('fields')",
-      );
-      expect(new IntervalColumn('fields', 10).toCode('t')).toBe(
+      expect(t.interval().toCode('t')).toBe('t.interval()');
+      expect(t.interval('fields').toCode('t')).toBe("t.interval('fields')");
+      expect(t.interval('fields', 10).toCode('t')).toBe(
         "t.interval('fields', 10)",
       );
     });
@@ -288,8 +289,8 @@ describe('date time columns', () => {
 
     it('should parse and encode timestamp as a number', async () => {
       t.text(0, 100)
-        .encode((input: number) => input)
-        .parse((text) => parseInt(text))
+        .encode(z.number(), (input: number) => input)
+        .parse(z.number(), (text) => parseInt(text))
         .as(t.integer());
 
       const UserWithNumberTimestamp = testDb('user', (t) => ({

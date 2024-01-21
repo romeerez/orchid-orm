@@ -22,6 +22,7 @@ import {
   WhereResult,
 } from 'pqb';
 import {
+  ColumnSchemaConfig,
   ColumnsShapeBase,
   ColumnTypeBase,
   EmptyObject,
@@ -37,6 +38,7 @@ import {
 } from './common/utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 import { RelationCommonOptions } from './common/options';
+import { defaultSchemaConfig } from 'pqb';
 
 export type HasAndBelongsToMany = RelationThunkBase & {
   type: 'hasAndBelongsToMany';
@@ -131,12 +133,16 @@ type State = {
   throughPrimaryKeysFull: string[];
 };
 
-class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
+class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasManyNestedInsert;
   private readonly nestedUpdate: HasManyNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    schema: ColumnSchemaConfig,
+    private key: string,
+    private state: State,
+  ) {
+    super(schema);
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -224,11 +230,13 @@ export const makeHasAndBelongsToManyMethod = (
 
   const shape: ColumnsShapeBase = {};
   for (let i = 0; i < len; i++) {
-    shape[foreignKeys[i]] = removeColumnName(table.shape[primaryKeys[i]]);
+    shape[foreignKeys[i]] = removeColumnName(
+      table.shape[primaryKeys[i]] as ColumnTypeBase,
+    );
   }
   for (let i = 0; i < throughLen; i++) {
     shape[throughForeignKeys[i]] = removeColumnName(
-      query.shape[throughPrimaryKeys[i]],
+      query.shape[throughPrimaryKeys[i]] as ColumnTypeBase,
     );
   }
 
@@ -304,7 +312,11 @@ export const makeHasAndBelongsToManyMethod = (
         return q._where(where);
       });
     },
-    virtualColumn: new HasAndBelongsToManyVirtualColumn(relationName, state),
+    virtualColumn: new HasAndBelongsToManyVirtualColumn(
+      defaultSchemaConfig,
+      relationName,
+      state,
+    ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) => {
       const joined = joinQuery(
         joiningQuery,

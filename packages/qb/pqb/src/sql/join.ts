@@ -2,11 +2,11 @@ import { quoteSchemaAndTable, rawOrColumnToSql, columnToSql } from './common';
 import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
-import { ToSQLCtx } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { pushQueryArray } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
-import { ColumnsShapeBase, Expression, isExpression } from 'orchid-core';
+import { Expression, isExpression, QueryColumns } from 'orchid-core';
 import { RelationJoinQuery } from '../relations';
 
 type ItemOf3Or4Length =
@@ -24,7 +24,7 @@ type ItemOf3Or4Length =
 
 export const processJoinItem = (
   ctx: ToSQLCtx,
-  table: QueryBase,
+  table: ToSQLQuery,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   item: Pick<SimpleJoinItem, 'args' | 'isSubQuery'>,
   quotedAs: string | undefined,
@@ -60,7 +60,7 @@ export const processJoinItem = (
           ...query.joinedShapes,
           ...j.joinedShapes,
           [(table.q.as || table.table) as string]: table.shape,
-        },
+        } as JoinedShapes,
         and: j.and ? [...j.and] : [],
         or: j.or ? [...j.or] : [],
       };
@@ -156,7 +156,7 @@ export const processJoinItem = (
 const processArgs = (
   args: SimpleJoinItem['args'],
   ctx: ToSQLCtx,
-  table: QueryBase,
+  table: ToSQLQuery,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   first:
     | string
@@ -164,7 +164,7 @@ const processArgs = (
         joinQueryAfterCallback?: RelationJoinQuery;
       }),
   joinAs: string,
-  joinShape: ColumnsShapeBase,
+  joinShape: QueryColumns,
   quotedAs?: string,
 ) => {
   if (args.length === 2) {
@@ -173,7 +173,7 @@ const processArgs = (
       const joinedShapes = {
         ...query.joinedShapes,
         [(table.q.as || table.table) as string]: table.shape,
-      };
+      } as JoinedShapes;
 
       let q: QueryBase;
       let data;
@@ -217,7 +217,10 @@ const processArgs = (
 
         data = {
           ...first.q,
-          joinedShapes: { ...first.q.joinedShapes, ...joinedShapes },
+          joinedShapes: {
+            ...first.q.joinedShapes,
+            ...joinedShapes,
+          } as JoinedShapes,
         };
       }
 
@@ -227,7 +230,7 @@ const processArgs = (
         jq.q.joinedShapes = {
           ...jq.q.joinedShapes,
           ...joinedShapes,
-        };
+        } as JoinedShapes;
       }
 
       return whereToSql(ctx, jq as Query, jq.q, joinAs);
@@ -261,7 +264,7 @@ const getConditionsFor3Or4LengthItem = (
   target: string,
   quotedAs: string | undefined,
   args: ItemOf3Or4Length,
-  joinShape: ColumnsShapeBase,
+  joinShape: QueryColumns,
 ): string => {
   const [, leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
@@ -283,7 +286,7 @@ const getObjectOrRawConditions = (
   data: Record<string, string | Expression> | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
-  joinShape: ColumnsShapeBase,
+  joinShape: QueryColumns,
 ): string => {
   if (data === true) {
     return 'true';
@@ -313,7 +316,7 @@ const getObjectOrRawConditions = (
 
 export const pushJoinSql = (
   ctx: ToSQLCtx,
-  table: QueryBase,
+  table: ToSQLQuery,
   query: QueryData & {
     join: JoinItem[];
   },

@@ -1,7 +1,4 @@
-import { ArrayColumn } from './array';
-import { IntegerColumn } from './number';
-import { assertType, testDb } from 'test-utils';
-import { raw } from '../sql/rawSql';
+import { assertType, testColumnTypes as t, testDb } from 'test-utils';
 
 describe('array column', () => {
   afterAll(testDb.close);
@@ -9,8 +6,8 @@ describe('array column', () => {
   describe('array', () => {
     it('should output nested array of numbers', async () => {
       const result = await testDb.get(
-        raw`'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`.type(
-          (t) => new ArrayColumn(new ArrayColumn(t.integer())),
+        testDb.sql`'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`.type((t) =>
+          t.array(t.array(t.integer())),
         ),
       );
       expect(result).toEqual([
@@ -23,8 +20,8 @@ describe('array column', () => {
 
     it('should output nested array of strings', async () => {
       const result = await testDb.get(
-        testDb.sql`'{{"a", "b"}, {"c", "d"}}'::text[][]`.type(
-          (t) => new ArrayColumn(new ArrayColumn(t.text())),
+        testDb.sql`'{{"a", "b"}, {"c", "d"}}'::text[][]`.type((t) =>
+          t.array(t.array(t.text())),
         ),
       );
       expect(result).toEqual([
@@ -37,8 +34,8 @@ describe('array column', () => {
 
     it('should output nested array of booleans', async () => {
       const result = await testDb.get(
-        raw`'{{true}, {false}}'::text[][]`.type(
-          (t) => new ArrayColumn(new ArrayColumn(t.boolean())),
+        testDb.sql`'{{true}, {false}}'::text[][]`.type((t) =>
+          t.array(t.array(t.boolean())),
         ),
       );
       expect(result).toEqual([[true], [false]]);
@@ -47,7 +44,7 @@ describe('array column', () => {
     });
 
     it('should have toCode', async () => {
-      const column = new ArrayColumn(new IntegerColumn());
+      const column = t.array(t.integer());
       expect(column.toCode('t')).toBe('t.array(t.integer())');
 
       expect(column.nonEmpty('nonEmpty message').toCode('t')).toBe(

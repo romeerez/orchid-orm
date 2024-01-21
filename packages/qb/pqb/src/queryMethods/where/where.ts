@@ -7,11 +7,11 @@ import {
   ColumnsShapeBase,
   Expression,
   MaybeArray,
+  QueryColumn,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
-import { BooleanNullable } from '../../columns';
 import { QueryBase } from '../../query/queryBase';
 import { RawSQL } from '../../sql/rawSql';
 import { ColumnExpression } from '../../common/fn';
@@ -58,7 +58,7 @@ export type WhereArg<T extends WhereQueryBase> =
   | Expression
   | ((
       q: WhereQueryBuilder<T>,
-    ) => QueryBase | ColumnExpression<BooleanNullable>);
+    ) => QueryBase | ColumnExpression<QueryColumn<boolean | null>>);
 
 /**
  * Callback argument of `where`.

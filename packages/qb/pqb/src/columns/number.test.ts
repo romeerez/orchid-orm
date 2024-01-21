@@ -1,10 +1,17 @@
 import { NumberBaseColumn } from './number';
-import { columnTypes } from './columnTypes';
-import { assertType, expectSql, testDb } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  testColumnTypes as t,
+  testDb,
+  TestSchemaConfig,
+} from 'test-utils';
 
-const t = columnTypes;
-
-const testNumberColumnMethods = (type: NumberBaseColumn, name: string) => {
+const testNumberColumnMethods = (
+  type: NumberBaseColumn<TestSchemaConfig, TestSchemaConfig['type']> &
+    TestSchemaConfig['numberMethods'],
+  name: string,
+) => {
   expect(
     type
       .lt(1, 'lt message')
@@ -42,7 +49,7 @@ describe('number columns', () => {
   describe('smallint', () => {
     it('should output number', async () => {
       const result = await testDb.get(
-        testDb.sql`1::smallint`.type(() => t.smallint()),
+        testDb.sql`1::smallint`.type((t) => t.smallint()),
       );
       expect(result).toBe(1);
 

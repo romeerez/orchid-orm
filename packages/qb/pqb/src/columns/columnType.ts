@@ -2,21 +2,20 @@ import { Query } from '../query/query';
 import {
   ColumnDataBase,
   ColumnNameOfTable,
+  ColumnSchemaConfig,
+  ColumnsShapeBase,
   ColumnTypeBase,
   ForeignKeyTable,
   MaybeArray,
-  ErrorMessage,
   PrimaryKeyColumn,
   pushColumnData,
   QueryBaseCommon,
   RawSQLBase,
   setColumnData,
-  ValidationContext,
   StaticSQLArgs,
-  ColumnsShapeBase,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
-import { raw, RawSQL } from '../sql/rawSql';
+import { raw } from '../sql/rawSql';
 import { SearchWeight } from '../sql';
 import { BaseOperators } from './operators';
 
@@ -126,44 +125,27 @@ export type ColumnFromDbParams = {
   dateTimePrecision?: number;
 };
 
-const knownDefaults: Record<string, string> = {
-  current_timestamp: 'now()',
-  'transaction_timestamp()': 'now()',
-};
-
-export const simplifyColumnDefault = (value?: string) => {
-  if (typeof value === 'string') {
-    const lower = value.toLowerCase();
-    return new RawSQL(knownDefaults[lower] || value);
-  }
-  return;
-};
-
-export const instantiateColumn = (
-  klass: new (...args: never[]) => ColumnType,
-  params: ColumnFromDbParams,
-): ColumnType => {
-  const column = new (klass as unknown as new () => ColumnType)();
-
-  Object.assign(column.data, {
-    ...params,
-    default: simplifyColumnDefault(params.default),
-  });
-  return column as unknown as ColumnType;
-};
-
 export abstract class ColumnType<
+  Schema extends ColumnSchemaConfig = ColumnSchemaConfig,
   Type = unknown,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  InputSchema extends Schema['type'] = any,
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
   OutputType = Type,
-  QueryType = Type,
+  OutputSchema extends Schema['type'] = InputSchema,
+  QueryType = InputType,
+  QuerySchema extends Schema['type'] = InputSchema,
 > extends ColumnTypeBase<
+  Schema,
   Type,
+  InputSchema,
   Ops,
   InputType,
   OutputType,
+  OutputSchema,
   QueryType,
+  QuerySchema,
   ColumnData
 > {
   /**
@@ -186,7 +168,9 @@ export abstract class ColumnType<
    * db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
    * ```
    */
-  primaryKey<T extends ColumnTypeBase>(this: T): PrimaryKeyColumn<T> {
+  primaryKey<T extends Pick<ColumnTypeBase, 'data'>>(
+    this: T,
+  ): PrimaryKeyColumn<T> {
     return setColumnData(
       this,
       'isPrimaryKey',
@@ -276,7 +260,7 @@ export abstract class ColumnType<
    * @param options - {@link ForeignKeyOptions}
    */
   foreignKey<
-    T extends ColumnType,
+    T,
     Table extends ForeignKeyTable,
     Column extends ColumnNameOfTable<Table>,
   >(
@@ -287,7 +271,7 @@ export abstract class ColumnType<
   ): Omit<T, 'foreignKeyData'> & {
     foreignKeyData: ForeignKey<InstanceType<Table>['table'], [Column]>;
   };
-  foreignKey<T extends ColumnType, Table extends string, Column extends string>(
+  foreignKey<T, Table extends string, Column extends string>(
     this: T,
     table: Table,
     column: Column,
@@ -311,7 +295,7 @@ export abstract class ColumnType<
     return this.dataType;
   }
 
-  index<T extends ColumnType>(
+  index<T extends Pick<ColumnType, 'data'>>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column'> = {},
   ): T {
@@ -365,7 +349,7 @@ export abstract class ColumnType<
    *
    * @param options - index options
    */
-  searchIndex<T extends ColumnType>(
+  searchIndex<T extends Pick<ColumnType, 'data' | 'dataType'>>(
     this: T,
     options?: Omit<SingleColumnIndexOptions, 'tsVector'>,
   ): T {
@@ -375,84 +359,37 @@ export abstract class ColumnType<
     });
   }
 
-  unique<T extends ColumnType>(
+  unique<T extends Pick<ColumnType, 'data'>>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column' | 'unique'> = {},
   ): T {
     return pushColumnData(this, 'indexes', { ...options, unique: true });
   }
 
-  comment<T extends ColumnType>(this: T, comment: string): T {
+  comment<T extends Pick<ColumnType, 'data'>>(this: T, comment: string): T {
     return setColumnData(this, 'comment', comment);
   }
 
-  validationDefault<T extends ColumnType>(this: T, value: T['inputType']): T {
-    return setColumnData(this, 'validationDefault', value as unknown);
-  }
-
-  compression<T extends ColumnType>(this: T, compression: string): T {
+  compression<T extends Pick<ColumnType, 'data'>>(
+    this: T,
+    compression: string,
+  ): T {
     return setColumnData(this, 'compression', compression);
   }
 
-  collate<T extends ColumnType>(this: T, collate: string): T {
+  collate<T extends Pick<ColumnType, 'data'>>(this: T, collate: string): T {
     return setColumnData(this, 'collate', collate);
   }
 
-  modifyQuery<T extends ColumnType>(this: T, cb: (q: Query) => void): T {
+  modifyQuery<T extends Pick<ColumnType, 'data'>>(
+    this: T,
+    cb: (q: Query) => void,
+  ): T {
     return setColumnData(
       this,
       'modifyQuery',
       cb as (q: QueryBaseCommon) => void,
     );
-  }
-
-  transform<T extends ColumnType, Transformed>(
-    this: T,
-    fn: (input: T['inputType'], ctx: ValidationContext) => Transformed,
-  ): Omit<T, 'inputType'> & { inputType: Transformed } {
-    const cloned = Object.create(this);
-    cloned.chain = [...this.chain, ['transform', fn]];
-    return cloned as Omit<T, 'inputType'> & { inputType: Transformed };
-  }
-
-  to<T extends ColumnType, ToType extends ColumnType>(
-    this: T,
-    fn: (input: T['inputType']) => ToType['inputType'] | undefined,
-    type: ToType,
-  ): ToType {
-    const cloned = Object.create(this);
-    cloned.chain = [...this.chain, ['to', fn, type], ...cloned.chain];
-    return cloned as ToType;
-  }
-
-  refine<T extends ColumnType, RefinedOutput extends T['inputType']>(
-    this: T,
-    check: (arg: T['inputType']) => unknown,
-    params?: ErrorMessage,
-  ): T & { type: RefinedOutput } {
-    const cloned = Object.create(this);
-    cloned.chain = [...this.chain, ['refine', check, cloned]];
-
-    if (typeof params === 'string' || params?.message) {
-      cloned.data = {
-        ...this.data,
-        errors: {
-          ...this.data.errors,
-          refine: typeof params === 'string' ? params : params.message,
-        },
-      };
-    }
-
-    return cloned as T & { type: RefinedOutput };
-  }
-
-  superRefine<T extends ColumnType, RefinedOutput extends T['inputType']>(
-    this: T,
-    check: (arg: T['inputType'], ctx: ValidationContext) => unknown,
-  ): T & { type: RefinedOutput } {
-    const cloned = Object.create(this);
-    cloned.chain = [...this.chain, ['superRefine', check]];
-    return cloned as T & { type: RefinedOutput };
   }
 
   /**
@@ -470,7 +407,10 @@ export abstract class ColumnType<
    *
    * @param args - raw SQL
    */
-  generated<T extends ColumnType>(this: T, ...args: StaticSQLArgs): T {
+  generated<T extends Pick<ColumnType, 'data'>>(
+    this: T,
+    ...args: StaticSQLArgs
+  ): T {
     return setColumnData(this, 'generated', raw(...args));
   }
 }

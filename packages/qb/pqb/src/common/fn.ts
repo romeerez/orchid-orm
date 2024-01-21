@@ -4,6 +4,7 @@ import {
   emptyObject,
   Expression,
   getValueKey,
+  QueryColumn,
   setParserToQuery,
   toArray,
 } from 'orchid-core';
@@ -14,7 +15,6 @@ import { pushOrderBySql } from '../sql/orderBy';
 import { whereToSql } from '../sql/where';
 import { windowToSql } from '../sql/window';
 import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
-import { BooleanNullable } from '../columns';
 import { BaseOperators, setQueryOperators } from '../columns/operators';
 
 // Additional SQL options that can be accepted by any aggregate function.
@@ -53,7 +53,7 @@ export type FnExpressionArgs<Q extends Query> = (
 // Expression for SQL function calls.
 export class FnExpression<
   Q extends Query = Query,
-  T extends ColumnTypeBase = ColumnTypeBase,
+  T extends QueryColumn = QueryColumn,
 > extends Expression<T> {
   /**
    * @param q - query object.
@@ -157,12 +157,12 @@ export class FnExpression<
 
 // Adds column operator functions to the expression.
 export type ColumnExpression<
-  C extends ColumnTypeBase,
+  C extends QueryColumn,
   Ops extends BaseOperators = C['operators'],
 > = Expression<C> & {
   [K in keyof Ops]: (
     arg: Ops[K]['_opType'],
-  ) => ColumnExpression<BooleanNullable>;
+  ) => ColumnExpression<QueryColumn<boolean | null>>;
 };
 
 // Applies Expression to the query.
@@ -171,7 +171,7 @@ export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
   self: T,
   expr: Expression,
 ): SetQueryReturnsColumn<T, C> & C['operators'] => {
-  const { _type: type } = expr;
+  const type = expr._type as ColumnTypeBase;
   const q = setQueryOperators(self, type.operators);
 
   // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
@@ -189,7 +189,7 @@ export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
 };
 
 // Applies a function expression to the query.
-export function makeFnExpression<T extends Query, C extends ColumnTypeBase>(
+export function makeFnExpression<T extends Query, C extends QueryColumn>(
   self: T,
   type: C,
   fn: string,
@@ -198,12 +198,12 @@ export function makeFnExpression<T extends Query, C extends ColumnTypeBase>(
 ): SetQueryReturnsColumn<T, C> & C['operators'] {
   return makeExpression(
     self.clone(),
-    new FnExpression<Query, ColumnTypeBase>(
+    new FnExpression<Query, QueryColumn>(
       self,
       fn,
       args,
       options as AggregateOptions<Query> | undefined,
       type,
     ),
-  ) as SetQueryReturnsColumn<T, C> & C['operators'];
+  ) as unknown as SetQueryReturnsColumn<T, C> & C['operators'];
 }

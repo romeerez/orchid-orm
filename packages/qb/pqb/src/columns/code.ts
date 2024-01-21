@@ -1,9 +1,8 @@
 import { ColumnData, ColumnType, ForeignKey } from './columnType';
-import { getConstraintKind, TableData } from './columnTypes';
+import { TableData } from './columnTypes';
 import {
   addCode,
   Code,
-  columnChainToCode,
   columnDefaultArgumentToCode,
   columnErrorMessagesToCode,
   ColumnsShapeBase,
@@ -15,6 +14,7 @@ import {
   toArray,
   RawSQLBase,
 } from 'orchid-core';
+import { getConstraintKind } from './columnType.utils';
 
 const isDefaultTimeStamp = (item: ColumnTypeBase) => {
   if (item.dataType !== 'timestamptz') return false;
@@ -494,5 +494,5 @@ export const columnCode = (
   if (data.modifyQuery)
     addCode(code, `.modifyQuery(${data.modifyQuery.toString()})`);
 
-  return columnChainToCode(type.chain, t, code);
+  return code.length === 1 && typeof code[0] === 'string' ? code[0] : code;
 };

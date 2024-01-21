@@ -1,18 +1,20 @@
 import { Query } from '../query/query';
 import { quote } from '../quote';
 import { expectSql, testDb } from 'test-utils';
+import { z } from 'zod';
 
-export type UserRecord = (typeof User)['type'];
+export type UserRecord = typeof User.outputType;
+export type UserInsert = typeof User.inputType;
 export const User = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
   name: t.text(),
   password: t.text(),
   picture: t.text().nullable(),
   data: t
-    .json((j) =>
-      j.object({
-        name: j.string(),
-        tags: j.string().array(),
+    .json(
+      z.object({
+        name: z.string(),
+        tags: z.string().array(),
       }),
     )
     .nullable(),
@@ -34,7 +36,7 @@ export const UserSoftDelete = testDb(
   },
 );
 
-export type ProfileRecord = (typeof Profile)['type'];
+export type ProfileRecord = typeof Profile.outputType;
 export const Profile = testDb('profile', (t) => ({
   id: t.identity().primaryKey(),
   userId: t.integer().foreignKey('user', 'id'),
@@ -48,7 +50,7 @@ export const Chat = testDb('chat', (t) => ({
   ...t.timestamps(),
 }));
 
-export type UniqueTableRecord = (typeof UniqueTable)['type'];
+export type UniqueTableRecord = typeof UniqueTable.outputType;
 export const UniqueTable = testDb('uniqueTable', (t) => ({
   id: t.identity().primaryKey(),
   one: t.text().unique().primaryKey(),
@@ -58,7 +60,7 @@ export const UniqueTable = testDb('uniqueTable', (t) => ({
   ...t.unique(['thirdColumn', 'fourthColumn']),
 }));
 
-export type MessageRecord = (typeof Message)['type'];
+export type MessageRecord = typeof Message.outputType;
 export const Message = testDb('message', (t) => ({
   id: t.identity().primaryKey(),
   chatId: t.integer().foreignKey('chat', 'id'),
@@ -68,7 +70,7 @@ export const Message = testDb('message', (t) => ({
   ...t.timestamps(),
 }));
 
-export type SnakeRecord = (typeof Snake)['type'];
+export type SnakeRecord = typeof Snake.outputType;
 export const Snake = testDb('snake', (t) => ({
   snakeId: t.name('snake_id').identity().primaryKey(),
   snakeName: t.name('snake_name').text(),

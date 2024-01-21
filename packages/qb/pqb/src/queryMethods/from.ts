@@ -14,19 +14,39 @@ import {
   Expression,
   TemplateLiteralArgs,
   isExpression,
+  ColumnsShapeBase,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { RawSQL } from '../sql/rawSql';
+import { QueryBase } from '../query/queryBase';
 
-export type FromArgs<T extends Query> =
+export type FromQuerySelf = Pick<
+  Query,
+  | 'withData'
+  | 'meta'
+  | 'selectable'
+  | 'table'
+  | 'returnType'
+  | 'clone'
+  | 'baseQuery'
+  | 'q'
+  | 'shape'
+>;
+
+export type FromQueryArg = Pick<Query, 'result' | 'table' | 'meta' | 'q'>;
+
+export type FromArgs<T extends FromQuerySelf> =
   | [
-      first: Query | Expression | Exclude<keyof T['withData'], symbol | number>,
+      first:
+        | FromQueryArg
+        | Expression
+        | Exclude<keyof T['withData'], symbol | number>,
       second?: { only?: boolean },
     ]
   | TemplateLiteralArgs;
 
 export type FromResult<
-  T extends Query,
+  T extends FromQuerySelf,
   Args extends FromArgs<T>,
 > = Args extends TemplateStringsArray
   ? T
@@ -44,13 +64,13 @@ export type FromResult<
         }
       : SetQueryTableAlias<T, Args[0]>
     : SetQueryTableAlias<T, Args[0]>
-  : Args[0] extends Query
+  : Args[0] extends FromQueryArg
   ? FromQueryResult<T, Args[0]>
   : T;
 
 type FromQueryResult<
-  T extends Query,
-  Q extends Query,
+  T extends FromQuerySelf,
+  Q extends FromQueryArg,
   Selectable extends SelectableBase = {
     [K in keyof Q['result']]: K extends string
       ? {
@@ -65,7 +85,9 @@ type FromQueryResult<
     ? Omit<T['meta'], 'hasSelect' | 'as'> & { as: AliasOrTable<Q> }
     : K extends 'selectable'
     ? Selectable
-    : K extends 'result' | 'shape'
+    : K extends 'result'
+    ? Q['result']
+    : K extends 'shape'
     ? Q['result']
     : K extends 'then'
     ? QueryThen<Data>
@@ -73,6 +95,40 @@ type FromQueryResult<
     ? QueryCatch<Data>
     : T[K];
 };
+
+export function queryFrom<T extends FromQuerySelf, Args extends FromArgs<T>>(
+  self: T,
+  args: Args,
+): FromResult<T, Args> {
+  if (Array.isArray(args[0])) {
+    return queryFrom(self, [
+      new RawSQL(args as TemplateLiteralArgs),
+    ]) as FromResult<T, Args>;
+  }
+
+  if (typeof args[0] === 'string') {
+    self.q.as ||= args[0];
+  } else if (!isExpression(args[0])) {
+    const q = args[0] as FromQueryArg;
+    self.q.as ||= q.q.as || q.table || 't';
+    self.q.shape = getShapeFromSelect(
+      args[0] as QueryBase,
+      true,
+    ) as ColumnsShapeBase;
+    self.q.parsers = q.q.parsers;
+  } else {
+    self.q.as ||= 't';
+  }
+
+  const options = args[1] as { only?: boolean } | undefined;
+  if (options?.only) {
+    (self.q as SelectQueryData).fromOnly = options.only;
+  }
+
+  self.q.from = args[0] as Query;
+
+  return self as unknown as FromResult<T, Args>;
+}
 
 export class From {
   /**
@@ -103,41 +159,16 @@ export class From {
    *
    * @param args - query, raw SQL, name of CTE table, or a template string
    */
-  from<T extends Query, Args extends FromArgs<T>>(
+  from<T extends FromQuerySelf, Args extends FromArgs<T>>(
     this: T,
     ...args: Args
   ): FromResult<T, Args> {
-    return this.clone()._from(...args) as FromResult<T, Args>;
+    return queryFrom(this.clone(), args);
   }
-  _from<T extends Query, Args extends FromArgs<T>>(
+  _from<T extends FromQuerySelf, Args extends FromArgs<T>>(
     this: T,
     ...args: Args
   ): FromResult<T, Args> {
-    if (Array.isArray(args[0])) {
-      return this._from(new RawSQL(args as TemplateLiteralArgs)) as FromResult<
-        T,
-        Args
-      >;
-    }
-
-    if (typeof args[0] === 'string') {
-      this.q.as ||= args[0];
-    } else if (!isExpression(args[0])) {
-      const q = args[0] as Query;
-      this.q.as ||= q.q.as || q.table || 't';
-      this.q.shape = getShapeFromSelect(args[0] as Query, true);
-      this.q.parsers = q.q.parsers;
-    } else {
-      this.q.as ||= 't';
-    }
-
-    const options = args[1] as { only?: boolean } | undefined;
-    if (options?.only) {
-      (this.q as SelectQueryData).fromOnly = options.only;
-    }
-
-    this.q.from = args[0] as Query;
-
-    return this as unknown as FromResult<T, Args>;
+    return queryFrom(this, args);
   }
 }

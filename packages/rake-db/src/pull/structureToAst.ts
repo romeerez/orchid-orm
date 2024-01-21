@@ -3,7 +3,6 @@ import { RakeDbAst } from '../ast';
 import {
   ArrayColumn,
   ColumnFromDbParams,
-  columnsByType,
   ColumnsShape,
   ColumnType,
   CustomTypeColumn,
@@ -17,8 +16,14 @@ import {
   raw,
   simplifyColumnDefault,
   TableData,
+  ColumnsByType,
 } from 'pqb';
-import { singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  singleQuote,
+  toCamelCase,
+  toSnakeCase,
+} from 'orchid-core';
 import { getConstraintName, getIndexName } from '../migration/migrationUtils';
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
@@ -58,6 +63,8 @@ export type StructureToAstCtx = {
   snakeCase?: boolean;
   unsupportedTypes: Record<string, string[]>;
   currentSchema: string;
+  columnSchemaConfig: ColumnSchemaConfig;
+  columnsByType: ColumnsByType;
 };
 
 export const structureToAst = async (
@@ -295,21 +302,27 @@ const getColumn = (
 ) => {
   let column: ColumnType;
 
-  const klass = columnsByType[getColumnType(type, isSerial)];
-  if (klass) {
-    column = instantiateColumn(klass, params);
+  const columnType = getColumnType(type, isSerial);
+  const typeFn = ctx.columnsByType[columnType];
+  if (typeFn) {
+    column = instantiateColumn(typeFn, params);
   } else {
     const domainColumn = domains[`${typeSchema}.${type}`];
     if (domainColumn) {
-      column = new DomainColumn(type).as(domainColumn);
+      column = new DomainColumn(ctx.columnSchemaConfig, type).as(domainColumn);
     } else {
       const enumType = data.enums.find(
         (item) => item.name === type && item.schemaName === typeSchema,
       );
       if (enumType) {
-        column = new EnumColumn(type, enumType.values);
+        column = new EnumColumn(
+          ctx.columnSchemaConfig,
+          type,
+          enumType.values,
+          ctx.columnSchemaConfig.type,
+        );
       } else {
-        column = new CustomTypeColumn(type);
+        column = new CustomTypeColumn(ctx.columnSchemaConfig, type);
 
         (ctx.unsupportedTypes[type] ??= []).push(
           `${schemaName}${tableName ? `.${tableName}` : ''}.${name}`,
@@ -318,7 +331,13 @@ const getColumn = (
     }
   }
 
-  return isArray ? new ArrayColumn(column) : column;
+  return isArray
+    ? new ArrayColumn(
+        ctx.columnSchemaConfig,
+        column,
+        ctx.columnSchemaConfig.type,
+      )
+    : column;
 };
 
 const getColumnType = (type: string, isSerial: boolean) => {

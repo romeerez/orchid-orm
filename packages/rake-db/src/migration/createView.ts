@@ -1,10 +1,14 @@
 import { Migration } from './migration';
-import { ColumnTypesBase, RawSQLBase, singleQuote, Sql } from 'orchid-core';
+import { ColumnSchemaConfig, RawSQLBase, singleQuote, Sql } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { raw } from 'pqb';
+import { RakeDbColumnTypes } from '../common';
 
-export const createView = async <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+export const createView = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
+  migration: Migration<SchemaConfig, CT>,
   up: boolean,
   name: string,
   options: RakeDbAst.ViewOptions,

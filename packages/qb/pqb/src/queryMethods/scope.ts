@@ -1,5 +1,5 @@
 import { QueryBase } from '../query/queryBase';
-import { ColumnsShapeBase } from 'orchid-core';
+import { QueryColumns } from 'orchid-core';
 import { QueryScopes, SelectQueryData, WhereItem } from '../sql';
 import { pushQueryArray, setQueryObjectValue } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
@@ -7,7 +7,7 @@ import { SelectableFromShape } from '../query/query';
 
 export interface ScopeArgumentQuery<
   Table extends string | undefined,
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumns,
 > extends Where,
     QueryBase {
   table: Table;

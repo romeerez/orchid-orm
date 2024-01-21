@@ -5,9 +5,10 @@ import { pushQueryValue, setQueryObjectValue } from '../query/queryUtils';
 import {
   isExpression,
   Expression,
-  ColumnShapeOutput,
   emptyObject,
   ColumnsShapeBase,
+  QueryColumns,
+  ColumnSchemaConfig,
 } from 'orchid-core';
 import { DefaultColumnTypes } from '../columns';
 
@@ -43,7 +44,9 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
   ? Args[1]
   : Args[2] extends ColumnsShapeBase
   ? Args[2]
-  : Args[2] extends (t: DefaultColumnTypes) => ColumnsShapeBase
+  : Args[2] extends (
+      t: DefaultColumnTypes<ColumnSchemaConfig>,
+    ) => ColumnsShapeBase
   ? ReturnType<Args[2]> extends ColumnsShapeBase
     ? ReturnType<Args[2]>
     : never
@@ -53,13 +56,12 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
 type WithResult<
   T extends Query,
   Args extends WithArgs,
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumns,
 > = AddQueryWith<
   T,
   {
     table: Args[0];
     shape: Shape;
-    type: ColumnShapeOutput<Shape>;
   }
 >;
 
@@ -133,14 +135,14 @@ export class With {
   with<
     T extends Query,
     Args extends WithArgs,
-    Shape extends ColumnsShapeBase = WithShape<Args>,
+    Shape extends QueryColumns = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
     return this.clone()._with<T, Args, Shape>(...args);
   }
   _with<
     T extends Query,
     Args extends WithArgs,
-    Shape extends ColumnsShapeBase = WithShape<Args>,
+    Shape extends QueryColumns = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
     let options =
       (args.length === 3 && !isExpression(args[2])) || args.length === 4

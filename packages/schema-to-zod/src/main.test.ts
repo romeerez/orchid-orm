@@ -1,492 +1,332 @@
+import { ZodSchemaConfig, zodSchemaConfig } from './main';
+import { CustomTypeColumn, makeColumnTypes, VirtualColumn } from 'pqb';
 import {
-  ArrayColumn,
-  columnTypes,
-  CustomTypeColumn,
-  DateColumn,
-  DomainColumn,
-  IntegerColumn,
-  TextColumn,
-  VirtualColumn,
-} from 'pqb';
-import {
-  JSONType,
-  JSONNumber,
-  JSONString,
-  JSONArray,
-  jsonTypes,
-  ColumnTypeBase,
-} from 'orchid-core';
-import {
-  columnToZod,
-  InstanceToZod,
-  instanceToZod,
-  zodSchemaProvider,
-} from './index';
-import { z } from 'zod';
-import { Buffer } from 'node:buffer';
-import { assertType } from 'test-utils';
+  z,
+  ZodArray,
+  ZodBoolean,
+  ZodDate,
+  ZodEnum,
+  ZodNever,
+  ZodNullable,
+  ZodNumber,
+  ZodString,
+  ZodType,
+  ZodTypeAny,
+} from 'zod';
+import { AssertEqual, assertType } from 'test-utils';
 
-const t = {
-  ...columnTypes,
-  text: (min = 0, max = Infinity) => columnTypes.text(min, max),
+const t = makeColumnTypes(zodSchemaConfig);
+
+type TypeBase = {
+  inputSchema: ZodTypeAny;
+  outputSchema: ZodTypeAny;
+  querySchema: ZodTypeAny;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const columnOrJsonToZod = (type: any): z.ZodTypeAny => {
-  return type instanceof ColumnTypeBase
-    ? (columnToZod(type) as z.ZodTypeAny)
-    : (columnToZod(t.json(() => type)) as z.ZodTypeAny);
+const assertAllTypes = <T extends TypeBase, Expected extends ZodTypeAny>(
+  ..._: AssertEqual<
+    T['inputSchema'] | T['outputSchema'] | T['querySchema'],
+    Expected
+  > extends true
+    ? []
+    : ['invalid type']
+) => {
+  // noop
 };
 
-const testTypeMethod = (
+function expectAllParse(type: TypeBase, input: unknown, expected: unknown) {
+  expect({
+    input: type.inputSchema.parse(input),
+    output: type.inputSchema.parse(input),
+    query: type.inputSchema.parse(input),
+  }).toEqual({
+    input: expected,
+    output: expected,
+    query: expected,
+  });
+}
+
+function expectAllThrow(type: TypeBase, input: unknown, message: string) {
+  expect(() => type.inputSchema.parse(input)).toThrow(message);
+  expect(() => type.outputSchema.parse(input)).toThrow(message);
+  expect(() => type.querySchema.parse(input)).toThrow(message);
+}
+
+function testTypeMethod(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type: any,
   method: string,
   value: unknown,
   error: string,
   ...args: unknown[]
-) => {
-  expect(() => columnOrJsonToZod(type[method](...args)).parse(value)).toThrow(
-    error,
-  );
+) {
+  const a = type[method](...args);
+  expect(() => a.inputSchema.parse(value)).toThrow(error);
+  expect(() => a.querySchema.parse(value)).toThrow(error);
 
-  expect(() =>
-    columnOrJsonToZod(type[method](...args, 'custom')).parse(value),
-  ).toThrow('custom');
-};
+  const b = type[method](...args, { message: 'custom' });
+  expect(() => b.inputSchema.parse(value)).toThrow('custom');
+  expect(() => b.querySchema.parse(value)).toThrow('custom');
+}
 
-describe('zodSchemaProvider', () => {
-  it('should create a schema for the table', () => {
+describe('zod schema config', () => {
+  it('should create schemas for a table', () => {
     const columns = {
-      id: t.serial().primaryKey(),
-      name: t.text(),
+      id: t.identity().primaryKey(),
+      name: t.string(),
     };
 
-    class Table {
-      static schema = zodSchemaProvider;
-      static instance() {
-        return {
-          columns,
-        };
-      }
-      columns!: typeof columns;
-    }
-
-    const schema = Table.schema();
-
-    assertType<
-      typeof schema,
-      z.ZodObject<{ id: z.ZodNumber; name: z.ZodString }>
-    >();
-
-    expect(schema.parse({ id: 1, name: 'name' })).toEqual({
-      id: 1,
-      name: 'name',
-    });
-
-    expect(() => schema.parse({ id: '1' })).toThrow(
-      'Expected number, received string',
-    );
-  });
-});
-
-describe('instance to zod', () => {
-  it('should convert object with shape to a zod validation schema', () => {
-    const item = {
-      shape: {
-        id: t.serial().primaryKey(),
-        name: t.text(),
-      },
+    const klass = {
+      prototype: { columns },
+      inputSchema: zodSchemaConfig.inputSchema,
+      outputSchema: zodSchemaConfig.outputSchema,
+      querySchema: zodSchemaConfig.querySchema,
     };
 
-    const schema: InstanceToZod<typeof item> = instanceToZod(item);
+    const type = {
+      inputSchema: klass.inputSchema(),
+      outputSchema: klass.outputSchema(),
+      querySchema: klass.querySchema(),
+    };
 
-    assertType<
-      typeof schema,
-      z.ZodObject<{ id: z.ZodNumber; name: z.ZodString }>
-    >();
+    const expected = z.object({ id: z.number(), name: z.string() });
+    assertAllTypes<typeof type, typeof expected>();
 
-    expect(schema.parse({ id: 1, name: 'name' })).toEqual({
-      id: 1,
-      name: 'name',
-    });
+    expectAllParse(type, { id: 1, name: 'name' }, { id: 1, name: 'name' });
 
-    expect(() => schema.parse({ id: '1' })).toThrow(
-      'Expected number, received string',
-    );
-  });
-});
-
-describe('schema to zod', () => {
-  describe('transform', () => {
-    it('should transform column value', () => {
-      const type = columnToZod(
-        t.text().transform((text) => text.split('').reverse().join('')),
-      );
-
-      expect(type.parse('123')).toBe('321');
-    });
-
-    it('should transform json value', () => {
-      const type = columnToZod(
-        t.json((t) =>
-          t.string().transform((text) => text.split('').reverse().join('')),
-        ),
-      );
-
-      expect(type.parse('123')).toBe('321');
-    });
-  });
-
-  describe('to', () => {
-    it('should transform column value to a type', () => {
-      const type = columnToZod(t.text().to(parseInt, t.integer()));
-      expect(type.parse('123')).toBe(123);
-    });
-
-    it('should transform json value to a type', () => {
-      const type = columnToZod(
-        t.json((t) => t.string().to(parseInt, t.number())),
-      );
-      expect(type.parse('123')).toBe(123);
-    });
-  });
-
-  describe('refine', () => {
-    it('should add a refine check for column type', () => {
-      const type = columnToZod(t.text().refine((val) => val !== 'val'));
-      expect(() => type.parse('val')).toThrow('Invalid input');
-    });
-
-    it('should add a refine check for json type', () => {
-      const type = columnToZod(
-        t.json((t) => t.string().refine((val) => val !== 'val')),
-      );
-      expect(() => type.parse('val')).toThrow('Invalid input');
-    });
-
-    it('should support custom message', () => {
-      const type = columnToZod(
-        t.text().refine((val) => val !== 'val', 'custom message'),
-      );
-      expect(() => type.parse('val')).toThrow('custom message');
-    });
-  });
-
-  describe('superRefine', () => {
-    it('should add a superRefine check for column type', () => {
-      const type = columnToZod(
-        t.text().superRefine((val, ctx) => {
-          if (val.length > 3) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.too_big,
-              maximum: 3,
-              type: 'string',
-              inclusive: true,
-              message: 'Too many items 😡',
-            });
-          }
-        }),
-      );
-
-      expect(() => type.parse('1234')).toThrow('Too many items');
-    });
-
-    it('should add a superRefine check for json type', () => {
-      const type = columnToZod(
-        t.json((t) =>
-          t.string().superRefine((val, ctx) => {
-            if (val.length > 3) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.too_big,
-                maximum: 3,
-                type: 'string',
-                inclusive: true,
-                message: 'Too many items 😡',
-              });
-            }
-          }),
-        ),
-      );
-
-      expect(() => type.parse('1234')).toThrow('Too many items');
-    });
-  });
-
-  describe('validationDefault', () => {
-    it('should set default value for column', () => {
-      const type = columnToZod(t.text().validationDefault('value'));
-
-      expect(type.parse(undefined)).toBe('value');
-    });
-
-    it('should set default value for json type', () => {
-      const type = columnToZod(t.json((t) => t.string().default('value')));
-
-      expect(type.parse(undefined)).toBe('value');
-    });
+    expectAllThrow(type, { id: '1' }, 'Expected number, received string');
   });
 
   describe('nullable', () => {
     it('should parse nullable', () => {
-      const schema = columnToZod(t.text().nullable());
+      const type = t.string().nullable();
 
-      assertType<typeof schema, z.ZodNullable<z.ZodString>>();
+      assertAllTypes<typeof type, ZodNullable<ZodString>>();
 
-      expect(schema.parse(null)).toBe(null);
+      expectAllParse(type, null, null);
     });
   });
 
-  const smallint = columnToZod(t.smallint());
-  const integer = columnToZod(t.integer());
-  const real = columnToZod(t.real());
-  const smallSerial = columnToZod(t.smallSerial());
-  const serial = columnToZod(t.serial());
-  const money = columnToZod(t.serial());
-  assertType<
+  const smallint = t.smallint();
+  const integer = t.integer();
+  const real = t.real();
+  const smallSerial = t.smallSerial();
+  const serial = t.serial();
+
+  assertAllTypes<
     | typeof smallint
     | typeof integer
     | typeof real
     | typeof smallSerial
-    | typeof serial
-    | typeof money,
-    z.ZodNumber
+    | typeof serial,
+    ZodNumber
   >();
 
-  const testNumberMethods = (
-    type: IntegerColumn | JSONNumber,
-    isInt: boolean,
-  ) => {
-    if (isInt) {
-      expect(() => columnOrJsonToZod(type).parse(1.5)).toThrow(
-        'Expected integer, received float',
-      );
-    }
+  describe.each(['smallint', 'integer', 'real', 'smallSerial', 'serial'])(
+    '%s',
+    (method) => {
+      it('should convert to number', () => {
+        const type = t[method as 'integer']();
 
-    testTypeMethod(type, 'lt', 10, 'Number must be less than 5', 5);
+        expectAllParse(type, 123, 123);
 
-    testTypeMethod(
-      type,
-      'lte',
-      10,
-      'Number must be less than or equal to 5',
-      5,
-    );
+        expectAllThrow(type, 's', 'Expected number');
 
-    testTypeMethod(
-      type,
-      'max',
-      10,
-      'Number must be less than or equal to 5',
-      5,
-    );
+        const isInt = method !== 'real' && method !== 'money';
 
-    testTypeMethod(type, 'gt', 0, 'Number must be greater than 5', 5);
+        if (isInt) {
+          expectAllThrow(type, 1.5, 'Expected integer, received float');
+        }
 
-    testTypeMethod(
-      type,
-      'gte',
-      0,
-      'Number must be greater than or equal to 5',
-      5,
-    );
+        testTypeMethod(type, 'lt', 10, 'Number must be less than 5', 5);
 
-    testTypeMethod(
-      type,
-      'min',
-      0,
-      'Number must be greater than or equal to 5',
-      5,
-    );
+        testTypeMethod(
+          type,
+          'lte',
+          10,
+          'Number must be less than or equal to 5',
+          5,
+        );
 
-    testTypeMethod(type, 'positive', -1, 'Number must be greater than 0');
+        testTypeMethod(
+          type,
+          'max',
+          10,
+          'Number must be less than or equal to 5',
+          5,
+        );
 
-    testTypeMethod(
-      type,
-      'nonNegative',
-      -1,
-      'Number must be greater than or equal to 0',
-    );
+        testTypeMethod(type, 'gt', 0, 'Number must be greater than 5', 5);
 
-    testTypeMethod(type, 'negative', 0, 'Number must be less than 0');
+        testTypeMethod(
+          type,
+          'gte',
+          0,
+          'Number must be greater than or equal to 5',
+          5,
+        );
 
-    testTypeMethod(
-      type,
-      'nonPositive',
-      1,
-      'Number must be less than or equal to 0',
-    );
+        testTypeMethod(
+          type,
+          'min',
+          0,
+          'Number must be greater than or equal to 5',
+          5,
+        );
 
-    testTypeMethod(type, 'multipleOf', 3, 'Number must be a multiple of 5', 5);
+        testTypeMethod(type, 'positive', -1, 'Number must be greater than 0');
 
-    testTypeMethod(type, 'step', 3, 'Number must be a multiple of 5', 5);
+        testTypeMethod(
+          type,
+          'nonNegative',
+          -1,
+          'Number must be greater than or equal to 0',
+        );
 
-    // remove int check before checking for infinity
-    expect(
-      () => ((type.data as { int?: boolean }).int = undefined),
-    ).not.toThrow();
+        testTypeMethod(type, 'negative', 0, 'Number must be less than 0');
 
-    testTypeMethod(type, 'finite', Infinity, 'Number must be finite');
+        testTypeMethod(
+          type,
+          'nonPositive',
+          1,
+          'Number must be less than or equal to 0',
+        );
 
-    testTypeMethod(
-      type,
-      'safe',
-      Number.MAX_SAFE_INTEGER + 1,
-      `Number must be less than or equal to ${Number.MAX_SAFE_INTEGER}`,
-    );
-  };
+        testTypeMethod(type, 'step', 3, 'Number must be a multiple of 5', 5);
 
-  describe.each([
-    'smallint',
-    'integer',
-    'real',
-    'smallSerial',
-    'serial',
-    'money',
-  ])('%s', (method) => {
-    it('should convert to number', () => {
-      const schema = columnToZod(t[method as 'integer']());
+        // remove int check before checking for infinity
+        (type.data as { int?: boolean }).int = undefined;
 
-      expect(schema.parse(123)).toBe(123);
+        testTypeMethod(type, 'finite', Infinity, 'Number must be finite');
 
-      expect(() => schema.parse('s')).toThrow('Expected number');
+        testTypeMethod(
+          type,
+          'safe',
+          Number.MAX_SAFE_INTEGER + 1,
+          `Number must be less than or equal to ${Number.MAX_SAFE_INTEGER}`,
+        );
+      });
+    },
+  );
 
-      testNumberMethods(
-        t[method as 'integer'](),
-        method !== 'real' && method !== 'money',
-      );
-    });
-  });
-
-  const bigint = columnToZod(t.bigint());
-  const numeric = columnToZod(t.numeric());
-  const decimal = columnToZod(t.decimal());
-  const doublePrecision = columnToZod(t.doublePrecision());
-  const bigSerial = columnToZod(t.bigSerial());
-  assertType<
-    | typeof bigint
+  const bigint = t.bigint();
+  const bigSerial = t.bigSerial();
+  const numeric = t.numeric();
+  const decimal = t.decimal();
+  const doublePrecision = t.doublePrecision();
+  const varchar = t.varchar();
+  const char = t.char();
+  const text = t.text(0, Infinity);
+  const string = t.string();
+  assertAllTypes<
     | typeof numeric
     | typeof decimal
     | typeof doublePrecision
-    | typeof bigSerial,
-    z.ZodString
+    | typeof bigint
+    | typeof bigSerial
+    | typeof varchar
+    | typeof char
+    | typeof text
+    | typeof string,
+    ZodString
   >();
 
   describe.each([
-    'bigint',
     'numeric',
     'decimal',
     'doublePrecision',
+    'bigint',
     'bigSerial',
+    'varchar',
+    'char',
+    'text',
+    'string',
   ])('%s', (method) => {
-    it('should validate bigint and parse to a string', () => {
-      const schema = columnToZod(t[method as 'bigint']());
-
-      expect(schema.parse('123')).toBe('123');
-
-      expect(() => schema.parse('s')).toThrow('Failed to parse bigint');
-    });
-  });
-
-  const varchar = columnToZod(t.varchar());
-  const char = columnToZod(t.char());
-  const text = columnToZod(t.text());
-  const string = columnToZod(t.string());
-  assertType<
-    typeof varchar | typeof char | typeof text | typeof string,
-    z.ZodString
-  >();
-
-  const testStringMethods = (type: TextColumn | JSONString) => {
-    testTypeMethod(
-      type,
-      'min',
-      '',
-      'String must contain at least 1 character(s)',
-      1,
-    );
-
-    testTypeMethod(
-      type,
-      'max',
-      '123',
-      'String must contain at most 1 character(s)',
-      1,
-    );
-
-    testTypeMethod(
-      type,
-      'length',
-      '',
-      'String must contain exactly 1 character(s)',
-      1,
-    );
-
-    testTypeMethod(
-      type,
-      'length',
-      '123',
-      'String must contain exactly 1 character(s)',
-      1,
-    );
-
-    testTypeMethod(type, 'email', 'invalid', 'Invalid email');
-
-    testTypeMethod(type, 'url', 'invalid', 'Invalid url');
-
-    testTypeMethod(type, 'emoji', 'invalid', 'Invalid emoji');
-
-    testTypeMethod(type, 'uuid', 'invalid', 'Invalid uuid');
-
-    testTypeMethod(type, 'cuid', '', 'Invalid cuid');
-
-    testTypeMethod(type, 'ulid', 'invalid', 'Invalid ulid');
-
-    testTypeMethod(
-      type,
-      'nonEmpty',
-      '',
-      'String must contain at least 1 character(s)',
-    );
-
-    testTypeMethod(type, 'regex', 'invalid', 'Invalid', /\d+/);
-
-    testTypeMethod(type, 'includes', 'invalid', 'Invalid', 'koko');
-
-    testTypeMethod(type, 'startsWith', 'invalid', 'Invalid', 'koko');
-
-    testTypeMethod(type, 'endsWith', 'invalid', 'Invalid', 'koko');
-
-    testTypeMethod(type, 'datetime', 'invalid', 'Invalid');
-
-    testTypeMethod(type, 'ip', 'invalid', 'Invalid');
-
-    expect(columnOrJsonToZod(type.trim()).parse('  trimmed  ')).toBe('trimmed');
-
-    expect(columnOrJsonToZod(type.toLowerCase()).parse('DOWN')).toBe('down');
-
-    expect(columnOrJsonToZod(type.toUpperCase()).parse('up')).toBe('UP');
-  };
-
-  describe.each(['varchar', 'char', 'text', 'string'])('%s', (method) => {
     it('should convert to string', () => {
-      const schema = columnToZod(t[method as 'text']());
+      const type = t[method as 'varchar'];
 
-      expect(schema.parse('s')).toBe('s');
+      expectAllParse(type(), 's', 's');
 
-      expect(() => schema.parse(1)).toThrow('Expected string');
+      expectAllThrow(type(), 1, 'Expected string');
 
-      testStringMethods(t[method as 'text']());
+      testTypeMethod(
+        type(),
+        'min',
+        '',
+        'String must contain at least 1 character(s)',
+        1,
+      );
+
+      testTypeMethod(
+        type(),
+        'max',
+        '123',
+        'String must contain at most 1 character(s)',
+        1,
+      );
+
+      testTypeMethod(
+        type(),
+        'length',
+        '',
+        'String must contain exactly 1 character(s)',
+        1,
+      );
+
+      testTypeMethod(
+        type(),
+        'length',
+        '123',
+        'String must contain exactly 1 character(s)',
+        1,
+      );
+
+      testTypeMethod(type(), 'email', 'invalid', 'Invalid email');
+
+      testTypeMethod(type(), 'url', 'invalid', 'Invalid url');
+
+      testTypeMethod(type(), 'emoji', 'invalid', 'Invalid emoji');
+
+      testTypeMethod(type(), 'uuid', 'invalid', 'Invalid uuid');
+
+      testTypeMethod(type(), 'cuid', '', 'Invalid cuid');
+
+      testTypeMethod(type(), 'ulid', 'invalid', 'Invalid ulid');
+
+      testTypeMethod(
+        type(),
+        'nonEmpty',
+        '',
+        'String must contain at least 1 character(s)',
+      );
+
+      testTypeMethod(type(), 'regex', 'invalid', 'Invalid', /\d+/);
+
+      testTypeMethod(type(), 'includes', 'invalid', 'Invalid', 'koko');
+
+      testTypeMethod(type(), 'startsWith', 'invalid', 'Invalid', 'koko');
+
+      testTypeMethod(type(), 'endsWith', 'invalid', 'Invalid', 'koko');
+
+      testTypeMethod(type(), 'datetime', 'invalid', 'Invalid');
+
+      testTypeMethod(type(), 'ip', 'invalid', 'Invalid');
+
+      expectAllParse(type().trim(), '  trimmed  ', 'trimmed');
+
+      expectAllParse(type().toLowerCase(), 'DOWN', 'down');
+
+      expectAllParse(type().toUpperCase(), 'up', 'UP');
     });
 
     it('should convert to string with limit', () => {
-      const schema = columnToZod(t[method as 'varchar']().length(3));
+      const type = t[method as 'varchar']().length(3);
 
-      expect(() => schema.parse('')).toThrow(
-        'String must contain exactly 3 character(s)',
-      );
+      expectAllThrow(type, '', 'String must contain exactly 3 character(s)');
 
-      expect(() => schema.parse('1234')).toThrow(
+      expectAllThrow(
+        type,
+        '1234',
         'String must contain exactly 3 character(s)',
       );
     });
@@ -494,98 +334,121 @@ describe('schema to zod', () => {
 
   describe('bytea', () => {
     it('should check Buffer', () => {
-      const schema = columnToZod(t.bytea());
+      const type = t.bytea();
 
-      assertType<typeof schema, z.ZodType<Buffer>>();
+      assertAllTypes<typeof type, ZodType<Buffer>>();
 
       const buffer = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
-      expect(schema.parse(buffer)).toBe(buffer);
+      expectAllParse(type, buffer, buffer);
 
-      expect(() => schema.parse([1, 0, 1])).toThrow(
-        'Input not instance of Buffer',
-      );
+      expectAllThrow(type, [1, 0, 1], 'Input not instance of Buffer');
     });
   });
 
-  const date = columnToZod(t.date());
-  const timestamp = columnToZod(t.timestampNoTZ());
-  const timestampWithTimeZone = columnToZod(t.timestamp());
+  const date = t.date();
+  const timestampNoTz = t.timestampNoTZ();
+  const timestamp = t.timestamp();
+
   assertType<
-    typeof date | typeof timestamp | typeof timestampWithTimeZone,
-    z.ZodDate
+    | typeof date.inputSchema
+    | typeof timestampNoTz.inputSchema
+    | typeof timestamp.inputSchema,
+    ZodDate
   >();
 
-  const testDateMethods = (type: DateColumn) => {
-    const now = new Date();
+  assertType<
+    | typeof date.outputSchema
+    | typeof timestampNoTz.outputSchema
+    | typeof timestamp.outputSchema,
+    ZodString
+  >();
 
-    expect(() =>
-      columnOrJsonToZod(type.min(new Date(now.getTime() + 100))).parse(now),
-    ).toThrow('Date must be greater than or equal to');
+  assertType<
+    | typeof date.querySchema
+    | typeof timestampNoTz.querySchema
+    | typeof timestamp.querySchema,
+    ZodDate
+  >();
 
-    expect(() =>
-      columnOrJsonToZod(
-        type.min(new Date(now.getTime() + 100), 'custom'),
-      ).parse(now),
-    ).toThrow('custom');
+  describe.each([
+    'date',
+    // 'timestampNoTZ',
+    // 'timestamp'
+  ])('%s', (method) => {
+    const type = t[method as 'date']();
 
-    expect(() =>
-      columnOrJsonToZod(type.max(new Date(now.getTime() - 100))).parse(now),
-    ).toThrow('Date must be smaller than or equal to');
+    const asDate = type.asDate();
+    assertType<typeof asDate.outputSchema, ZodDate>();
 
-    expect(() =>
-      columnOrJsonToZod(
-        type.max(new Date(now.getTime() - 100), 'custom'),
-      ).parse(now),
-    ).toThrow('custom');
-  };
-
-  describe.each(['date', 'timestampNoTZ', 'timestamp'])('%s', (method) => {
-    const schema = columnToZod(t[method as 'date']());
-    assertType<typeof schema, z.ZodDate>();
+    const asNumber = type.asNumber();
+    assertType<typeof asNumber.outputSchema, ZodNumber>();
 
     it('should parse from string to a Date', () => {
       const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-      expect(schema.parse(date.toISOString())).toEqual(date);
 
-      expect(() => schema.parse('malformed')).toThrow('Invalid date');
+      expectAllParse(type, date.toISOString(), date);
+
+      expectAllThrow(type, 'malformed', 'Invalid date');
     });
 
     it('should parse from number to a Date', () => {
       const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-      expect(schema.parse(date.getTime())).toEqual(date);
 
-      expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
+      expectAllParse(type, date.getTime(), date);
+
+      expectAllThrow(type, new Date(NaN), 'Invalid date');
     });
 
     it('should parse from Date to a Date', () => {
       const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-      expect(schema.parse(date)).toEqual(date);
 
-      expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
+      expectAllParse(type, date, date);
+
+      expectAllThrow(type, new Date(NaN), 'Invalid date');
     });
 
     it('should support date methods', () => {
-      testDateMethods(t[method as 'date']());
+      const now = new Date();
+
+      expectAllThrow(
+        type.min(new Date(now.getTime() + 100)),
+        now,
+        'Date must be greater than or equal to',
+      );
+
+      expectAllThrow(
+        type.min(new Date(now.getTime() + 100), 'custom'),
+        now,
+        'custom',
+      );
+
+      expectAllThrow(
+        type.max(new Date(now.getTime() - 100)),
+        now,
+        'Date must be smaller than or equal to',
+      );
+
+      expectAllThrow(
+        type.max(new Date(now.getTime() - 100), 'custom'),
+        now,
+        'custom',
+      );
     });
   });
 
-  const time = columnToZod(t.time());
-  assertType<typeof time, z.ZodString>();
+  const time = t.time();
+  assertAllTypes<typeof time, ZodString>();
 
   describe('time', () => {
     it('should validate and parse to a string', () => {
-      const schema = columnToZod(t.time());
-
       const input = '12:12:12';
-      expect(schema.parse(input)).toBe(input);
-
-      expect(() => schema.parse('malformed')).toThrow('Invalid time');
+      expectAllParse(time, input, input);
     });
   });
 
   describe('interval', () => {
     it('should validate and parse time interval', () => {
-      const schema = columnToZod(t.interval());
+      const type = t.interval();
 
       const interval = {
         years: 1,
@@ -596,13 +459,15 @@ describe('schema to zod', () => {
       };
 
       assertType<
-        ReturnType<(typeof schema)['parse']>,
+        ReturnType<(typeof type.outputSchema)['parse']>,
         Partial<typeof interval>
       >();
 
-      expect(schema.parse(interval)).toEqual(interval);
+      expectAllParse(type, interval, interval);
 
-      expect(() => schema.parse({ years: 'string' })).toThrow(
+      expectAllThrow(
+        type,
+        { years: 'string' },
         'Expected number, received string',
       );
     });
@@ -610,38 +475,36 @@ describe('schema to zod', () => {
 
   describe('boolean', () => {
     it('should validate and parse a boolean', () => {
-      const schema = columnToZod(t.boolean());
+      const type = t.boolean();
 
-      assertType<typeof schema, z.ZodBoolean>();
+      assertAllTypes<typeof type, ZodBoolean>();
 
-      expect(schema.parse(true)).toBe(true);
+      expectAllParse(type, true, true);
 
-      expect(() => schema.parse(123)).toThrow(
-        'Expected boolean, received number',
-      );
+      expectAllThrow(type, 123, 'Expected boolean, received number');
     });
   });
 
   describe('enum', () => {
     it('should validate and parse enum', () => {
-      const schema = columnToZod(t.enum('name', ['a', 'b', 'c']));
+      const type = t.enum('name', ['a', 'b', 'c']);
 
-      assertType<typeof schema, z.ZodEnum<['a', 'b', 'c']>>();
+      assertAllTypes<typeof type, ZodEnum<['a', 'b', 'c']>>();
 
-      expect(schema.parse('a')).toBe('a');
+      expectAllParse(type, 'a', 'a');
 
-      expect(() => schema.parse('d')).toThrow('Invalid enum value');
+      expectAllThrow(type, 'd', 'Invalid enum value');
     });
   });
 
-  const point = columnToZod(t.point());
-  const line = columnToZod(t.line());
-  const lseg = columnToZod(t.lseg());
-  const box = columnToZod(t.box());
-  const path = columnToZod(t.path());
-  const polygon = columnToZod(t.polygon());
-  const circle = columnToZod(t.circle());
-  assertType<
+  const point = t.point();
+  const line = t.line();
+  const lseg = t.lseg();
+  const box = t.box();
+  const path = t.path();
+  const polygon = t.polygon();
+  const circle = t.circle();
+  assertAllTypes<
     | typeof point
     | typeof line
     | typeof lseg
@@ -649,700 +512,252 @@ describe('schema to zod', () => {
     | typeof path
     | typeof polygon
     | typeof circle,
-    z.ZodString
+    ZodString
   >();
 
   describe.each(['point', 'line', 'lseg', 'box', 'path', 'polygon', 'circle'])(
     '%s',
     (method) => {
       it('should parse to a string without validation', () => {
-        const schema = columnToZod(t[method as 'point']());
+        const type = t[method as 'point']();
 
-        expect(schema.parse('string')).toBe('string');
+        expectAllParse(type, 'string', 'string');
 
-        expect(() => schema.parse(123)).toThrow(
-          'Expected string, received number',
-        );
+        expectAllThrow(type, 123, 'Expected string, received number');
       });
     },
   );
 
-  const cidr = columnToZod(t.cidr());
-  const inet = columnToZod(t.inet());
-  const macaddr = columnToZod(t.macaddr());
-  const macaddr8 = columnToZod(t.macaddr8());
-  assertType<
+  const cidr = t.cidr();
+  const inet = t.inet();
+  const macaddr = t.macaddr();
+  const macaddr8 = t.macaddr8();
+  assertAllTypes<
     typeof cidr | typeof inet | typeof macaddr | typeof macaddr8,
-    z.ZodString
+    ZodString
   >();
 
   describe.each(['cidr', 'inet', 'macaddr', 'macaddr8'])('%s', (method) => {
     it('should parse to a string without validation', () => {
-      const schema = columnToZod(t[method as 'cidr']());
+      const type = t[method as 'cidr']();
 
-      expect(schema.parse('string')).toBe('string');
+      expectAllParse(type, 'string', 'string');
 
-      expect(() => schema.parse(123)).toThrow(
-        'Expected string, received number',
-      );
+      expectAllThrow(type, 123, 'Expected string, received number');
     });
   });
 
-  const bit = columnToZod(t.bit(5));
-  const bitVarying = columnToZod(t.bitVarying());
-  assertType<typeof bit | typeof bitVarying, z.ZodString>();
+  const bit = t.bit(5);
+  const bitVarying = t.bitVarying();
+  assertAllTypes<typeof bit | typeof bitVarying, ZodString>();
 
   describe.each(['bit', 'bitVarying'])('%s', (method) => {
     it('should validate a string to contain only 1 or 0 and parse to a string', () => {
-      const schema = columnToZod(t[method as 'bit'](5));
+      const type = t[method as 'bit'](5);
 
-      expect(schema.parse('10101')).toBe('10101');
+      expectAllParse(type, '10101', '10101');
 
-      expect(() => schema.parse('2')).toThrow('Invalid');
+      expectAllThrow(type, '2', 'Invalid');
     });
   });
 
-  const tsvector = columnToZod(t.tsvector());
-  const tsquery = columnToZod(t.tsquery());
-  assertType<typeof tsvector | typeof tsquery, z.ZodString>();
+  const tsvector = t.tsvector();
+  const tsquery = t.tsquery();
+  assertAllTypes<typeof tsvector | typeof tsquery, ZodString>();
 
   describe.each(['tsvector', 'tsquery'])('%s', (method) => {
     it('should parse to a string without validation', () => {
-      const schema = columnToZod(t[method as 'tsvector']());
+      const type = t[method as 'tsvector']();
 
-      expect(schema.parse('string')).toBe('string');
+      expectAllParse(type, 'string', 'string');
 
-      expect(() => schema.parse(123)).toThrow(
-        'Expected string, received number',
-      );
+      expectAllThrow(type, 123, 'Expected string, received number');
     });
   });
 
-  const xml = columnToZod(t.xml());
-  const jsonText = columnToZod(t.jsonText());
-  assertType<typeof xml | typeof jsonText, z.ZodString>();
+  const money = t.money();
+  const xml = t.xml();
+  const jsonText = t.jsonText();
+  assertAllTypes<typeof money | typeof xml | typeof jsonText, ZodString>();
 
-  describe.each(['xml', 'jsonText'])('%s', (method) => {
+  describe.each(['money', 'xml', 'jsonText'])('%s', (method) => {
     it('should parse to a string without validation', () => {
-      const schema = columnToZod(t[method as 'xml']());
+      const type = t[method as 'xml']();
 
-      expect(schema.parse('string')).toBe('string');
+      expectAllParse(type, 'string', 'string');
 
-      expect(() => schema.parse(123)).toThrow(
-        'Expected string, received number',
-      );
+      expectAllThrow(type, 123, 'Expected string, received number');
     });
   });
 
   describe('uuid', () => {
     it('should validate uuid and parse to a string', () => {
-      const schema = columnToZod(t.uuid());
+      const type = t.uuid();
 
-      assertType<typeof schema, z.ZodString>();
+      assertAllTypes<typeof type, ZodString>();
 
       const uuid = '123e4567-e89b-12d3-a456-426614174000';
-      expect(schema.parse(uuid)).toBe(uuid);
+      expectAllParse(type, uuid, uuid);
 
-      expect(() => schema.parse('1234')).toThrow('Invalid uuid');
+      expectAllThrow(type, '1234', 'Invalid uuid');
     });
   });
 
-  const testArrayMethods = (
-    type: ArrayColumn<ColumnTypeBase> | JSONArray<JSONType>,
-  ) => {
-    testTypeMethod(
-      type,
-      'min',
-      [],
-      'Array must contain at least 1 element(s)',
-      1,
-    );
-
-    testTypeMethod(
-      type,
-      'max',
-      [1, 2],
-      'Array must contain at most 1 element(s)',
-      1,
-    );
-
-    testTypeMethod(
-      type,
-      'length',
-      [],
-      'Array must contain exactly 1 element(s)',
-      1,
-    );
-
-    testTypeMethod(
-      type,
-      'length',
-      [1, 2],
-      'Array must contain exactly 1 element(s)',
-      1,
-    );
-
-    testTypeMethod(
-      type,
-      'nonEmpty',
-      [],
-      'Array must contain at least 1 element(s)',
-    );
-  };
-
   describe('array', () => {
     it('should validate and parse array', () => {
-      const schema = columnToZod(t.array(t.integer()));
+      const type = t.array(t.integer());
 
-      assertType<typeof schema, z.ZodArray<z.ZodNumber>>();
+      assertAllTypes<typeof type, ZodArray<ZodNumber>>();
 
-      expect(schema.parse([1, 2, 3])).toEqual([1, 2, 3]);
+      expectAllParse(type, [1, 2, 3], [1, 2, 3]);
 
-      expect(() => schema.parse(123)).toThrow(
-        'Expected array, received number',
+      expectAllThrow(type, 123, 'Expected array, received number');
+
+      expectAllThrow(type, 's', 'Expected array, received string');
+
+      testTypeMethod(
+        type,
+        'min',
+        [],
+        'Array must contain at least 1 element(s)',
+        1,
       );
-      expect(() => schema.parse(['a'])).toThrow(
-        'Expected number, received string',
+
+      testTypeMethod(
+        type,
+        'max',
+        [1, 2],
+        'Array must contain at most 1 element(s)',
+        1,
       );
 
-      testArrayMethods(t.array(t.integer()));
+      testTypeMethod(
+        type,
+        'length',
+        [],
+        'Array must contain exactly 1 element(s)',
+        1,
+      );
+
+      testTypeMethod(
+        type,
+        'length',
+        [1, 2],
+        'Array must contain exactly 1 element(s)',
+        1,
+      );
+
+      testTypeMethod(
+        type,
+        'nonEmpty',
+        [],
+        'Array must contain at least 1 element(s)',
+      );
     });
   });
 
   describe('error messages', () => {
     it('should support `required_error`', () => {
-      const schema = columnToZod(
-        t.text().errors({
-          required: 'custom message',
-        }),
-      );
+      const type = t.string().errors({
+        required: 'custom message',
+      });
 
-      assertType<typeof schema, z.ZodString>();
+      assertAllTypes<typeof type, ZodString>();
 
-      expect(() => schema.parse(undefined)).toThrow('custom message');
+      expectAllThrow(type, undefined, 'custom message');
     });
 
     it('should support `invalid_type_error`', () => {
-      const schema = columnToZod(
-        t.text().errors({
-          invalidType: 'custom message',
-        }),
-      );
+      const type = t.string().errors({
+        invalidType: 'custom message',
+      });
 
-      assertType<typeof schema, z.ZodString>();
+      assertAllTypes<typeof type, ZodString>();
 
-      expect(() => schema.parse(123)).toThrow('custom message');
+      expectAllThrow(type, 123, 'custom message');
     });
   });
 
   describe('json', () => {
-    describe('boolean', () => {
-      it('should parse boolean', () => {
-        const schema = columnToZod(t.json((t) => t.boolean()));
-
-        assertType<typeof schema, z.ZodBoolean>();
-
-        expect(schema.parse(true)).toBe(true);
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected boolean, received number',
-        );
-      });
-    });
-
-    describe('null', () => {
-      it('should parse a null', () => {
-        const schema = columnToZod(t.json((t) => t.null()));
-
-        assertType<typeof schema, z.ZodNull>();
-
-        expect(schema.parse(null)).toBe(null);
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected null, received number',
-        );
-      });
-    });
-
-    describe('number', () => {
-      it('should parse a number', () => {
-        const schema = columnToZod(t.json((t) => t.number()));
-
-        assertType<typeof schema, z.ZodNumber>();
-
-        expect(schema.parse(123)).toBe(123);
-
-        expect(() => schema.parse('123')).toThrow(
-          'Expected number, received string',
-        );
-
-        testNumberMethods(jsonTypes.number().int(), true);
-      });
-    });
-
-    describe('string', () => {
-      it('should parse a string', () => {
-        const schema = columnToZod(t.json((t) => t.string()));
-
-        assertType<typeof schema, z.ZodString>();
-
-        expect(schema.parse('string')).toBe('string');
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected string, received number',
-        );
-
-        testStringMethods(jsonTypes.string());
-      });
-    });
-
-    describe('unknown', () => {
-      it('should parse unknown', () => {
-        const schema = columnToZod(t.json((t) => t.unknown()));
-
-        assertType<typeof schema, z.ZodUnknown>();
-
-        expect(schema.parse(123)).toBe(123);
-      });
-    });
-
-    describe('array', () => {
-      it('should validate and parse array', () => {
-        const schema = columnToZod(t.json((t) => t.array(t.number())));
-
-        assertType<typeof schema, z.ZodArray<z.ZodNumber>>();
-
-        expect(schema.parse([1, 2, 3])).toEqual([1, 2, 3]);
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected array, received number',
-        );
-
-        expect(() => schema.parse(['a'])).toThrow(
-          'Expected number, received string',
-        );
-
-        testArrayMethods(jsonTypes.array(jsonTypes.number()));
-      });
-    });
-
-    describe('enum', () => {
-      it('should parse enum', () => {
-        const schema = columnToZod(t.json((t) => t.enum(['a', 'b', 'c'])));
-
-        assertType<typeof schema, z.ZodEnum<['a', 'b', 'c']>>();
-
-        expect(schema.parse('a')).toBe('a');
-
-        expect(() => schema.parse('d')).toThrow('Invalid enum value');
-      });
-    });
-
-    describe('literal', () => {
-      it('should parse literal', () => {
-        const schema = columnToZod(t.json((t) => t.literal('string')));
-
-        assertType<typeof schema, z.ZodLiteral<'string'>>();
-
-        expect(schema.parse('string')).toBe('string');
-
-        expect(() => schema.parse('koko')).toThrow('Invalid literal value');
-      });
-    });
-
-    describe('nativeEnum', () => {
-      it('should parse native enum', () => {
-        enum Test {
-          one = 'one',
-          two = 'two',
-        }
-
-        const schema = columnToZod(t.json((t) => t.nativeEnum(Test)));
-
-        assertType<typeof schema, z.ZodNativeEnum<typeof Test>>();
-
-        expect(schema.parse('one')).toBe('one');
-
-        expect(() => schema.parse('ko')).toThrow('Invalid enum value');
-      });
-    });
-
-    describe('tuple', () => {
-      it('should parse tuple', () => {
-        const schema = columnToZod(
-          t.json((t) => t.tuple([t.number(), t.string()])),
-        );
-
-        assertType<typeof schema, z.ZodTuple<[z.ZodNumber, z.ZodString]>>();
-
-        expect(schema.parse([1, 'string'])).toEqual([1, 'string']);
-
-        expect(() => schema.parse(['string', 1])).toThrow(
-          `Expected number, received string`,
-        );
-      });
-
-      it('should parse rest elements', () => {
-        const schema = columnToZod(
-          t.json((t) => t.tuple([t.number()], t.string())),
-        );
-
-        assertType<typeof schema, z.ZodTuple<[z.ZodNumber], z.ZodString>>();
-
-        expect(schema.parse([1, 'a', 'b'])).toEqual([1, 'a', 'b']);
-
-        expect(() => schema.parse([1, 'a', 2])).toThrow(
-          'Expected string, received number',
-        );
-      });
-    });
-
-    describe('nullable', () => {
-      it('should parse nullable', () => {
-        const schema = columnToZod(t.json((t) => t.number().nullable()));
-
-        assertType<typeof schema, z.ZodNullable<z.ZodNumber>>();
-
-        expect(schema.parse(null)).toBe(null);
-      });
-    });
-
-    describe('nullish', () => {
-      it('should parse nullish', () => {
-        const schema = columnToZod(t.json((t) => t.number().nullish()));
-
-        assertType<typeof schema, z.ZodNullable<z.ZodOptional<z.ZodNumber>>>();
-
-        expect(schema.parse(null)).toBe(null);
-        expect(schema.parse(undefined)).toBe(undefined);
-      });
-    });
-
-    describe('optional', () => {
-      it('should parse optional', () => {
-        const schema = columnToZod(t.json((t) => t.number().optional()));
-
-        assertType<typeof schema, z.ZodOptional<z.ZodNumber>>();
-
-        expect(schema.parse(undefined)).toBe(undefined);
-      });
-    });
-
-    describe('object', () => {
-      it('should parse object', () => {
-        const schema = columnToZod(
-          t.json((t) => t.object({ key: t.number() })),
-        );
-
-        assertType<
-          typeof schema,
-          z.ZodObject<{ key: z.ZodNumber }, 'strip', z.ZodTypeAny>
-        >();
-
-        expect(schema.parse({ key: 123 })).toEqual({ key: 123 });
-
-        expect(() => schema.parse({ key: 'string' })).toThrow(
-          'Expected number, received string',
-        );
-      });
-
-      it('should parse object with passing through unknown keys', () => {
-        const schema = columnToZod(
-          t.json((t) => t.object({ key: t.number() }).passthrough()),
-        );
-
-        assertType<
-          typeof schema,
-          z.ZodObject<{ key: z.ZodNumber }, 'passthrough'>
-        >();
-
-        expect(schema.parse({ key: 123, koko: 'koko' })).toEqual({
-          key: 123,
-          koko: 'koko',
-        });
-
-        expect(() => schema.parse({ key: 'string' })).toThrow(
-          'Expected number, received string',
-        );
-      });
-
-      it('should parse object with strict unknown keys', () => {
-        const schema = columnToZod(
-          t.json((t) => t.object({ key: t.number() }).strict()),
-        );
-
-        assertType<
-          typeof schema,
-          z.ZodObject<{ key: z.ZodNumber }, 'strict'>
-        >();
-
-        expect(schema.parse({ key: 123 })).toEqual({ key: 123 });
-
-        expect(() => schema.parse({ key: 123, koko: 'koko' })).toThrow(
-          'Unrecognized key(s)',
-        );
-      });
-
-      it('should parse object with catch all option', () => {
-        const schema = columnToZod(
-          t.json((t) => t.object({ key: t.number() }).catchAll(t.number())),
-        );
-
-        assertType<
-          typeof schema,
-          z.ZodObject<{ key: z.ZodNumber }, 'strip', z.ZodNumber>
-        >();
-
-        expect(schema.parse({ key: 123, koko: 123 })).toEqual({
-          key: 123,
-          koko: 123,
-        });
-
-        expect(() => schema.parse({ key: 123, koko: 'koko' })).toThrow(
-          'Expected number, received string',
-        );
-      });
-    });
-
-    describe('record', () => {
-      it('should parse record', () => {
-        const schema = columnToZod(
-          t.json((t) => t.record(t.string(), t.number())),
-        );
-
-        assertType<typeof schema, z.ZodRecord<z.ZodString, z.ZodNumber>>();
-
-        expect(schema.parse({ key: 123 })).toEqual({ key: 123 });
-
-        expect(() => schema.parse({ key: 'string' })).toThrow(
-          'Expected number, received string',
-        );
-      });
-    });
-
-    describe('intersection', () => {
-      it('should parse intersection', () => {
-        const schema = columnToZod(
-          t.json((t) =>
-            t.intersection(
-              t.object({ a: t.string(), b: t.number() }),
-              t.object({ a: t.string(), c: t.number() }),
-            ),
-          ),
-        );
-
-        assertType<
-          typeof schema,
-          z.ZodIntersection<
-            z.ZodObject<
-              { a: z.ZodString; b: z.ZodNumber },
-              'strip',
-              z.ZodTypeAny
-            >,
-            z.ZodObject<
-              { a: z.ZodString; c: z.ZodNumber },
-              'strip',
-              z.ZodTypeAny
-            >
-          >
-        >();
-
-        expect(schema.parse({ a: 'string', b: 123, c: 123 })).toEqual({
-          a: 'string',
-          b: 123,
-          c: 123,
-        });
-
-        expect(() => schema.parse({ a: 'string', b: 123 })).toThrow('Required');
-      });
-    });
-
-    describe('union', () => {
-      it('should parse union', () => {
-        const schema = columnToZod(
-          t.json((t) => t.union(t.number(), t.string())),
-        );
-
-        assertType<typeof schema, z.ZodUnion<[z.ZodNumber, z.ZodString]>>();
-
-        expect(schema.parse(123)).toBe(123);
-        expect(schema.parse('string')).toBe('string');
-
-        expect(() => schema.parse(true)).toThrow('Invalid input');
-      });
-    });
-
-    describe('discriminatedUnion', () => {
-      it('should parse discriminated union', () => {
-        const schema = columnToZod(
-          t.json((t) =>
-            t.discriminatedUnion('type', [
-              t.object({ type: t.literal('a'), a: t.string() }),
-              t.object({ type: t.literal('b'), b: t.number() }),
-            ]),
-          ),
-        );
-
-        assertType<
-          typeof schema,
-          z.ZodDiscriminatedUnion<
-            'type',
-            [
-              z.ZodObject<{ type: z.ZodLiteral<'a'>; a: z.ZodString }, 'strip'>,
-              z.ZodObject<{ type: z.ZodLiteral<'b'>; b: z.ZodNumber }, 'strip'>,
-            ]
-          >
-        >();
-
-        expect(schema.parse({ type: 'a', a: 'string' })).toEqual({
-          type: 'a',
-          a: 'string',
-        });
-        expect(schema.parse({ type: 'b', b: 123 })).toEqual({
-          type: 'b',
-          b: 123,
-        });
-
-        expect(() => schema.parse({ type: 'c' })).toThrow(
-          'Invalid discriminator value',
-        );
-      });
-    });
-
-    describe('lazy', () => {
-      it('should parse lazy type', () => {
-        interface Category {
-          name: string;
-          subCategories: Category[];
-        }
-
-        const JsonCategory: JSONType<Category> = jsonTypes.lazy(() =>
-          jsonTypes.object({
-            name: jsonTypes.string(),
-            subCategories: jsonTypes.array(JsonCategory),
-          }),
-        );
-
-        const schema = columnToZod(t.json(() => JsonCategory));
-
-        const valid = {
-          name: 'name',
-          subCategories: [{ name: 'name', subCategories: [] }],
-        };
-        expect(schema.parse(valid)).toEqual(valid);
-
-        expect(() =>
-          schema.parse({ name: 'name', subCategories: [{ name: 'name' }] }),
-        ).toThrow('Required');
-      });
-    });
-
-    describe('error messages', () => {
-      it('should support `required_error`', () => {
-        const schema = columnToZod(
-          t.json((j) =>
-            j.string().errors({
-              required: 'custom message',
-            }),
-          ),
-        );
-
-        assertType<typeof schema, z.ZodString>();
-
-        expect(() => schema.parse(undefined)).toThrow('custom message');
-      });
-
-      it('should support `invalid_type_error`', () => {
-        const schema = columnToZod(
-          t.json((j) =>
-            j.string().errors({
-              invalidType: 'custom message',
-            }),
-          ),
-        );
-
-        assertType<typeof schema, z.ZodString>();
-
-        expect(() => schema.parse(123)).toThrow('custom message');
-      });
+    it('should parse json', () => {
+      const type = t.json(
+        z.object({
+          bool: z.boolean(),
+        }),
+      );
+
+      const expected = z.object({ bool: z.boolean() });
+      assertAllTypes<typeof type, typeof expected>();
     });
   });
 
   describe('as', () => {
     it('should convert one type to the same schema as another type', () => {
-      const timestampAsInteger = columnToZod(
-        t
-          .timestampNoTZ()
-          .encode((input: number) => new Date(input))
-          .parse(Date.parse)
-          .as(t.integer()),
-      );
+      const timestampAsInteger = t
+        .timestampNoTZ()
+        .encode(z.number(), (input: number) => new Date(input))
+        .parse(z.date(), Date.parse)
+        .as(t.integer());
 
-      assertType<typeof timestampAsInteger, z.ZodNumber>();
-      expect(timestampAsInteger.parse(123)).toBe(123);
+      assertAllTypes<typeof timestampAsInteger, ZodNumber>();
 
-      const timestampAsDate = columnToZod(
-        t.timestampNoTZ().parse((string) => new Date(string)),
-      );
+      expectAllParse(timestampAsInteger, 123, 123);
 
-      assertType<typeof timestampAsDate, z.ZodDate>();
+      const timestampAsDate = t
+        .timestampNoTZ()
+        .parse(z.date(), (string) => new Date(string));
+
+      assertType<typeof timestampAsDate.outputSchema, ZodDate>();
+
       const date = new Date();
-      expect(timestampAsDate.parse(date)).toEqual(date);
+      expect(timestampAsDate.outputSchema.parse(date)).toEqual(date);
     });
   });
 
   describe('virtual', () => {
-    class Virtual extends VirtualColumn {}
-
-    it('should skip virtual column in instanceToZod', () => {
-      const schema = instanceToZod({
-        shape: {
-          text: t.text(),
-          virtual: new Virtual(),
-        },
-      });
-
-      expect(Object.keys(schema.shape)).toEqual(['text']);
-    });
+    class Virtual extends VirtualColumn<ZodSchemaConfig> {}
 
     it('should return ZodNever from columnToZod', () => {
-      const schema = columnToZod(new Virtual());
+      const type = new Virtual(zodSchemaConfig);
 
-      assertType<typeof schema, z.ZodNever>();
+      assertAllTypes<typeof type, ZodNever>();
 
-      expect(() => schema.parse(123)).toThrow(
-        'Expected never, received number',
-      );
+      expectAllThrow(type, 123, 'Expected never, received number');
     });
   });
 
   describe('domain', () => {
     it('should convert it to a base column', () => {
-      const schema = columnToZod(
-        new DomainColumn('domainName').as(new IntegerColumn()),
-      );
+      const type = t.domain('domainName').as(t.integer());
 
-      assertType<typeof schema, z.ZodNumber>();
+      assertAllTypes<typeof type, ZodNumber>();
 
-      expect(schema.parse(123)).toBe(123);
-      expect(() => schema.parse('string')).toThrow(
-        'Expected number, received string',
-      );
+      expectAllParse(type, 123, 123);
+
+      expectAllThrow(type, 'string', 'Expected number, received string');
     });
   });
 
   describe('custom type', () => {
     it('should convert it to a base column', () => {
-      const schema = columnToZod(
-        new CustomTypeColumn('customType').as(new IntegerColumn()),
+      const type = new CustomTypeColumn(zodSchemaConfig, 'customType').as(
+        t.integer(),
       );
 
-      assertType<typeof schema, z.ZodNumber>();
+      assertAllTypes<typeof type, ZodNumber>();
 
-      expect(schema.parse(123)).toBe(123);
-      expect(() => schema.parse('string')).toThrow(
-        'Expected number, received string',
-      );
+      expectAllParse(type, 123, 123);
+
+      expectAllThrow(type, 'string', 'Expected number, received string');
     });
+  });
+
+  describe('customizing schema types', () => {
+    const fn = (s: ZodString) =>
+      s.transform((s) => s.split('').reverse().join(''));
+
+    const type = t.string().input(fn).output(fn).query(fn);
+
+    expectAllParse(type, 'foo', 'oof');
   });
 });

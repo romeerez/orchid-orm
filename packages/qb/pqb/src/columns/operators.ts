@@ -2,21 +2,22 @@ import { Query, SetQueryReturnsColumn } from '../query/query';
 import { ToSQLCtx } from '../sql';
 import { addValue } from '../sql/common';
 import {
-  ColumnTypeBase,
   Expression,
   getValueKey,
   isExpression,
   OperatorToSQL,
+  QueryColumn,
 } from 'orchid-core';
-import { BooleanColumn } from './boolean';
 import { extendQuery } from '../query/queryUtils';
+import { BooleanColumn } from './boolean';
+import { DefaultSchemaConfig } from './defaultSchemaConfig';
 
 // Operator function type.
 // Table.count().gt(10) <- here `.gt(10)` is this operator function.
 // It discards previously defined column type operators and applies new ones,
 // for a case when operator gives a different column type.
-export type Operator<Value, Column extends ColumnTypeBase = ColumnTypeBase> = {
-  <T extends Query>(this: T, arg: Value): Omit<
+export type Operator<Value, Column extends QueryColumn = QueryColumn> = {
+  <T extends Pick<Query, 'result'>>(this: T, arg: Value): Omit<
     SetQueryReturnsColumn<T, Column>,
     keyof T['result']['value']['operators']
   > &
@@ -34,7 +35,10 @@ export type BaseOperators = Record<string, Operator<any>>; // eslint-disable-lin
 // If query already has the same operators, nothing is changed.
 // Previously defined operators, if any, are dropped form the query.
 // Adds new operators, saves `Query.baseQuery` into `QueryData.originalQuery`, saves operators to `QueryData.operators`.
-export function setQueryOperators(q: Query, operators: BaseOperators) {
+export function setQueryOperators(
+  q: Pick<Query, 'q' | 'baseQuery'>,
+  operators: BaseOperators,
+) {
   if (q.q.operators) {
     if (q.q.operators === operators) return q;
 
@@ -52,12 +56,14 @@ export function setQueryOperators(q: Query, operators: BaseOperators) {
  *
  * @param _op - function to turn the operator call into SQL.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const make = <Value = any>(
-  _op: (key: string, value: Value, ctx: ToSQLCtx, quotedAs?: string) => string,
-): Operator<Value> => {
+const make = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _op: (key: string, value: any, ctx: ToSQLCtx, quotedAs?: string) => string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Operator<any> => {
   return Object.assign(
-    function (this: Query, value: Value) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function (this: Query, value: any) {
       const expr = this.q.expr as Expression;
       (expr._chain ??= []).push(_op, value);
 
@@ -71,7 +77,8 @@ const make = <Value = any>(
     {
       _op,
     },
-  ) as unknown as Operator<Value>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) as unknown as Operator<any>;
 };
 
 // Handles array, expression object, query object to insert into sql.
@@ -101,10 +108,19 @@ const quoteValue = (
 
 // common operators that exist for any types
 type Base<Value> = {
-  equals: Operator<Value | Query | Expression, BooleanColumn>;
-  not: Operator<Value | Query | Expression, BooleanColumn>;
-  in: Operator<Value[] | Query | Expression, BooleanColumn>;
-  notIn: Operator<Value[] | Query | Expression, BooleanColumn>;
+  equals: Operator<
+    Value | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  not: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
+  in: Operator<
+    Value[] | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  notIn: Operator<
+    Value[] | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
 };
 
 const base = {
@@ -129,14 +145,18 @@ const base = {
 } as Base<unknown>;
 
 // Boolean type operators
-type Bool = Base<boolean> & {
+export type OperatorsBoolean = Base<boolean> & {
   and: Operator<
-    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
-    BooleanColumn
+    {
+      result: { value: BooleanColumn<DefaultSchemaConfig> };
+    } & OperatorsBoolean,
+    BooleanColumn<DefaultSchemaConfig>
   >;
   or: Operator<
-    SetQueryReturnsColumn<Query, BooleanColumn> & BooleanColumn['operators'],
-    BooleanColumn
+    {
+      result: { value: BooleanColumn<DefaultSchemaConfig> };
+    } & OperatorsBoolean,
+    BooleanColumn<DefaultSchemaConfig>
   >;
 };
 
@@ -150,21 +170,21 @@ const boolean = {
     (key, value, ctx, quotedAs) =>
       `(${key}) OR (${value.q.expr.toSQL(ctx, quotedAs)})`,
   ),
-} as unknown as Bool;
+} as unknown as OperatorsBoolean;
 
 // Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
 type Ord<Value> = Base<Value> & {
-  lt: Operator<Value | Query | Expression, BooleanColumn>;
-  lte: Operator<Value | Query | Expression, BooleanColumn>;
-  gt: Operator<Value | Query | Expression, BooleanColumn>;
-  gte: Operator<Value | Query | Expression, BooleanColumn>;
+  lt: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
+  lte: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
+  gt: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
+  gte: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
   between: Operator<
     [Value | Query | Expression, Value | Query | Expression],
-    BooleanColumn
+    BooleanColumn<DefaultSchemaConfig>
   >;
 };
 
-type Numeric = Ord<number>;
+export type OperatorsNumber = Ord<number>;
 
 const numeric = {
   ...base,
@@ -184,7 +204,7 @@ const numeric = {
     (key, value, ctx, quotedAs) =>
       `${key} >= ${quoteValue(value, ctx, quotedAs)}`,
   ),
-  between: make<[unknown, unknown]>(
+  between: make(
     (key, [from, to], ctx, quotedAs) =>
       `${key} BETWEEN ${quoteValue(from, ctx, quotedAs)} AND ${quoteValue(
         to,
@@ -192,16 +212,34 @@ const numeric = {
         quotedAs,
       )}`,
   ),
-} as Numeric;
+} as OperatorsNumber;
 
 // Text type operators
-type Text = Base<string> & {
-  contains: Operator<string | Query | Expression, BooleanColumn>;
-  containsSensitive: Operator<string | Query | Expression, BooleanColumn>;
-  startsWith: Operator<string | Query | Expression, BooleanColumn>;
-  startsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
-  endsWith: Operator<string | Query | Expression, BooleanColumn>;
-  endsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
+export type OperatorsText = Base<string> & {
+  contains: Operator<
+    string | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  containsSensitive: Operator<
+    string | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  startsWith: Operator<
+    string | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  startsWithSensitive: Operator<
+    string | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  endsWith: Operator<
+    string | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  endsWithSensitive: Operator<
+    string | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
 };
 
 const text = {
@@ -230,21 +268,27 @@ const text = {
     (key, value, ctx, quotedAs) =>
       `${key} LIKE '%' || ${quoteValue(value, ctx, quotedAs)}`,
   ),
-} as Text;
+} as OperatorsText;
 
 // JSON type operators
-type Json = Base<unknown> & {
+export type OperatorsJson = Base<unknown> & {
   jsonPath: Operator<
     [path: string, op: string, value: unknown | Query | Expression],
-    BooleanColumn
+    BooleanColumn<DefaultSchemaConfig>
   >;
-  jsonSupersetOf: Operator<unknown | Query | Expression, BooleanColumn>;
-  jsonSubsetOf: Operator<unknown | Query | Expression, BooleanColumn>;
+  jsonSupersetOf: Operator<
+    unknown | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
+  jsonSubsetOf: Operator<
+    unknown | Query | Expression,
+    BooleanColumn<DefaultSchemaConfig>
+  >;
 };
 
 const json = {
   ...base,
-  jsonPath: make<[string, string, unknown]>(
+  jsonPath: make(
     (key, [path, op, value], ctx, quotedAs) =>
       `jsonb_path_query_first(${key}, '${path}') #>> '{}' ${op} ${quoteValue(
         value,
@@ -261,7 +305,15 @@ const json = {
     (key, value, ctx, quotedAs) =>
       `${key} <@ ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
-} as Json;
+} as OperatorsJson;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type OperatorsAny = Base<any>;
+export type OperatorsDate = Ord<Date | string>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type OperatorsArray = Base<any>;
+
+export type OperatorsTime = Ord<string>;
 
 // `Operators` has operators grouped by types. To be used by column classes.
 export const Operators = {
@@ -275,13 +327,12 @@ export const Operators = {
   array: base,
 } as {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  any: Base<any>;
-  boolean: Bool;
-  number: Numeric;
-  date: Ord<Date | string>;
-  time: Ord<string>;
-  text: Text;
-  json: Json;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  array: Base<any>;
+  any: OperatorsAny;
+  boolean: OperatorsBoolean;
+  number: OperatorsNumber;
+  date: OperatorsDate;
+  time: OperatorsTime;
+  text: OperatorsText;
+  json: OperatorsJson;
+  array: OperatorsArray;
 };

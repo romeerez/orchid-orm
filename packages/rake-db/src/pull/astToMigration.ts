@@ -15,14 +15,14 @@ import {
   backtickQuote,
   Code,
   codeToString,
-  ColumnTypesBase,
+  ColumnSchemaConfig,
   isRawSQL,
   quoteObjectKey,
   singleQuote,
 } from 'orchid-core';
 import { quoteSchemaTable, RakeDbConfig } from '../common';
 
-export const astToMigration = <CT extends ColumnTypesBase>(
+export const astToMigration = <CT>(
   config: RakeDbConfig<CT>,
   ast: RakeDbAst[],
 ): ((importPath: string) => string) | undefined => {
@@ -152,10 +152,7 @@ const createCollation = (ast: RakeDbAst.Collation): Code[] => {
   ];
 };
 
-const createTable = <CT extends ColumnTypesBase>(
-  config: RakeDbConfig<CT>,
-  ast: RakeDbAst.Table,
-) => {
+const createTable = <CT>(config: RakeDbConfig<CT>, ast: RakeDbAst.Table) => {
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 
@@ -211,7 +208,9 @@ const createTable = <CT extends ColumnTypesBase>(
 
 const isTimestamp = (
   column: ColumnType | undefined,
-  type: typeof TimestampTZColumn<number> | typeof TimestampColumn<number>,
+  type:
+    | typeof TimestampTZColumn<ColumnSchemaConfig>
+    | typeof TimestampColumn<ColumnSchemaConfig>,
 ) => {
   if (!column) return false;
 
@@ -226,10 +225,12 @@ const isTimestamp = (
   );
 };
 
-const getTimestampsInfo = <CT extends ColumnTypesBase>(
+const getTimestampsInfo = <CT>(
   config: RakeDbConfig<CT>,
   ast: RakeDbAst.Table,
-  type: typeof TimestampTZColumn<number> | typeof TimestampColumn<number>,
+  type:
+    | typeof TimestampTZColumn<ColumnSchemaConfig>
+    | typeof TimestampColumn<ColumnSchemaConfig>,
 ) => {
   let hasTimestamps =
     isTimestamp(ast.shape.createdAt, type) &&

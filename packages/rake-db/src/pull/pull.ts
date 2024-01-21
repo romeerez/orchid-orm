@@ -1,13 +1,12 @@
 import { RakeDbConfig } from '../common';
-import { Adapter, AdapterOptions } from 'pqb';
+import { Adapter, AdapterOptions, makeColumnsByType } from 'pqb';
 import { DbStructure } from './dbStructure';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
-import { ColumnTypesBase } from 'orchid-core';
 
-export const pullDbStructure = async <CT extends ColumnTypesBase>(
+export const pullDbStructure = async <CT>(
   options: AdapterOptions,
   config: RakeDbConfig<CT>,
 ): Promise<void> => {
@@ -16,9 +15,11 @@ export const pullDbStructure = async <CT extends ColumnTypesBase>(
   const db = new DbStructure(adapter);
 
   const ctx: StructureToAstCtx = {
-    unsupportedTypes: {},
     snakeCase: config.snakeCase,
+    unsupportedTypes: {},
     currentSchema,
+    columnSchemaConfig: config.columnSchemaConfig,
+    columnsByType: makeColumnsByType(config.columnSchemaConfig),
   };
 
   const ast = await structureToAst(ctx, db);

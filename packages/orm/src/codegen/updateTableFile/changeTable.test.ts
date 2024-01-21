@@ -7,9 +7,11 @@ import {
   updateTableFileParams,
 } from '../testUtils';
 import { updateTableFile } from './updateTableFile';
-import { columnTypes, newTableData, TableData, raw } from 'pqb';
+import { makeColumnTypes, newTableData, TableData, raw } from 'pqb';
 import { RakeDbAst } from 'rake-db';
 import { pathToLog } from 'orchid-core';
+import { z } from 'zod';
+import { zodSchemaConfig } from 'schema-to-zod';
 
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
@@ -19,7 +21,7 @@ jest.mock('fs/promises', () => ({
 
 const params = updateTableFileParams;
 
-const t = columnTypes;
+const t = makeColumnTypes(zodSchemaConfig);
 
 const path = tablePath('fooBar');
 const testWrittenOnly = makeTestWritten(path);
@@ -139,7 +141,7 @@ describe('updateTableFile', () => {
           custom: { type: 'add', item: t.type('customType').as(t.integer()) },
           json: {
             type: 'add',
-            item: t.json((t) => t.object({ foo: t.string() })),
+            item: t.json(z.unknown()),
           },
         },
       },
@@ -152,11 +154,7 @@ describe('updateTableFile', () => {
     active: t.boolean(),
     domain: t.domain('name').as(t.integer()),
     custom: t.type('customType').as(t.integer()),
-    json: t.json((t) =>
-      t.object({
-        foo: t.string(),
-      }),
-    ),
+    json: t.json(),
 `),
     );
   });

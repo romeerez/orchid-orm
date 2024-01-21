@@ -18,7 +18,12 @@ import {
   updatedAtColumn,
 } from './pull.test-utils';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
-import { columnTypes, DefaultColumnTypes } from 'pqb';
+import {
+  makeColumnTypes,
+  DefaultColumnTypes,
+  defaultSchemaConfig,
+  DefaultSchemaConfig,
+} from 'pqb';
 import { asMock } from 'test-utils';
 
 jest.mock('./dbStructure', () => {
@@ -74,10 +79,10 @@ class BaseTable {
     return 'path';
   }
   static exportAs = 'BaseTable';
-  types!: DefaultColumnTypes;
+  types!: DefaultColumnTypes<DefaultSchemaConfig>;
   snakeCase?: boolean;
 }
-BaseTable.prototype.types = columnTypes;
+BaseTable.prototype.types = makeColumnTypes(defaultSchemaConfig);
 
 const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
   processRakeDbConfig({

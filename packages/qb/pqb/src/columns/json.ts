@@ -1,55 +1,20 @@
-import { ColumnData, ColumnType } from './columnType';
+import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Operators } from './operators';
-import {
-  addCode,
-  Code,
-  JSONType,
-  JSONTypes,
-  jsonTypes,
-  JSONUnknown,
-  toArray,
-} from 'orchid-core';
+import { Operators, OperatorsJson, OperatorsText } from './operators';
+import { Code, ColumnSchemaConfig } from 'orchid-core';
 
 // skip adding the default `encode` function to code
 const toCodeSkip = { encodeFn: JSON.stringify };
 
 // Type of JSON column (jsonb).
-export class JSONColumn<Type extends JSONType = JSONUnknown> extends ColumnType<
-  Type['type'],
-  typeof Operators.json
+export class JSONColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+  Schema,
+  OperatorsJson
 > {
   dataType = 'jsonb' as const;
   operators = Operators.json;
-  declare data: ColumnData & { schema: Type };
-
-  constructor(
-    schemaOrFn:
-      | Type
-      | ((j: JSONTypes) => Type) = new JSONUnknown() as unknown as Type,
-  ) {
-    super();
-
-    this.data.schema =
-      typeof schemaOrFn === 'function' ? schemaOrFn(jsonTypes) : schemaOrFn;
-  }
-
   toCode(t: string): Code {
-    const { schema } = this.data;
-
-    let schemaCode;
-    if (!(schema instanceof JSONUnknown)) {
-      schemaCode = toArray(schema.toCode(t));
-      addCode(schemaCode, ',');
-    }
-
-    return columnCode(
-      this,
-      t,
-      schemaCode ? [`json((${t}) =>`, schemaCode, ')'] : [`json()`],
-      this.data,
-      toCodeSkip,
-    );
+    return columnCode(this, t, `json()`, this.data, toCodeSkip);
   }
 }
 
@@ -57,9 +22,16 @@ export class JSONColumn<Type extends JSONType = JSONUnknown> extends ColumnType<
 JSONColumn.prototype.encodeFn = JSON.stringify;
 
 // JSON non-binary type, stored as a text in the database, so it doesn't have rich functionality.
-export class JSONTextColumn extends ColumnType<string, typeof Operators.text> {
+export class JSONTextColumn<
+  Schema extends ColumnSchemaConfig,
+> extends ColumnType<Schema, string, Schema['string'], OperatorsText> {
   dataType = 'json' as const;
   operators = Operators.text;
+
+  constructor(schema: Schema) {
+    super(schema, schema.string);
+  }
+
   toCode(t: string): Code {
     return columnCode(this, t, `jsonText()`, this.data, toCodeSkip);
   }

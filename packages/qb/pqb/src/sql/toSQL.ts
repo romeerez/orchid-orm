@@ -40,14 +40,34 @@ type ToSqlOptionsInternal = ToSQLOptions & {
   aliasValue?: true;
 };
 
-export const toSQL = (table: Query, options?: ToSQLOptions): Sql => {
+export type ToSQLQuery = Pick<
+  Query,
+  | 'q'
+  | 'queryBuilder'
+  | 'table'
+  | 'internal'
+  | 'relations'
+  | 'withData'
+  | 'selectable'
+  | 'clone'
+  | 'baseQuery'
+  | 'meta'
+  | 'returnType'
+  | 'result'
+  | 'shape'
+>;
+
+export const toSQL = (table: ToSQLQuery, options?: ToSQLOptions): Sql => {
   return (
     (!options?.clearCache && table.q[toSQLCacheKey]) ||
     (table.q[toSQLCacheKey] = makeSQL(table, options))
   );
 };
 
-export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
+export const makeSQL = (
+  table: ToSQLQuery,
+  options?: ToSqlOptionsInternal,
+): Sql => {
   const query = table.q;
   const sql: string[] = [];
   const values = options?.values || [];

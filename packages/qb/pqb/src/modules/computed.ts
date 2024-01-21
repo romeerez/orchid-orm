@@ -1,5 +1,5 @@
 import { Query, SelectableFromShape } from '../query/query';
-import { ColumnsShapeBase, ColumnTypeBase, Expression } from 'orchid-core';
+import { ColumnTypeBase, Expression, QueryColumns } from 'orchid-core';
 
 // Type of argument for computed columns, each value is a function returning an Expression.
 export type ComputedColumnsBase<T extends Query> = Record<
@@ -13,7 +13,7 @@ export type ComputedColumnsBase<T extends Query> = Record<
 export type QueryWithComputed<
   T extends Query,
   Computed extends ComputedColumnsBase<T>,
-  Shape extends ColumnsShapeBase = {
+  Shape extends QueryColumns = {
     [K in keyof Computed]: ReturnType<Computed[K]>['_type'];
   },
 > = {
@@ -39,8 +39,8 @@ export function addComputedColumns<
   const { shape } = q;
   for (const key in computed) {
     const expr = computed[key](q);
-    (shape as Record<string, ColumnTypeBase>)[key] = expr._type;
-    expr._type.data.computed = expr;
+    (shape as QueryColumns)[key] = expr._type;
+    (expr._type as ColumnTypeBase).data.computed = expr;
   }
 
   return q as QueryWithComputed<T, Computed>;

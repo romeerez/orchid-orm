@@ -1,5 +1,10 @@
-import { CustomTypeColumn, DomainColumn } from './customType';
-import { assertType, testDb } from 'test-utils';
+import { CustomTypeColumn } from './customType';
+import {
+  assertType,
+  testColumnTypes as t,
+  testDb,
+  testSchemaConfig,
+} from 'test-utils';
 
 describe('custom type column', () => {
   it('should output value of `as` type', () => {
@@ -27,12 +32,14 @@ describe('custom type column', () => {
   });
 
   it('should have toCode', () => {
-    expect(new CustomTypeColumn('name').toCode('t')).toBe(`t.type('name')`);
+    expect(new CustomTypeColumn(testSchemaConfig, 'name').toCode('t')).toBe(
+      `t.type('name')`,
+    );
   });
 });
 
 describe('domain column', () => {
   it('should have toCode', () => {
-    expect(new DomainColumn('name').toCode('t')).toBe(`t.domain('name')`);
+    expect(t.domain('name').toCode('t')).toBe(`t.domain('name')`);
   });
 });

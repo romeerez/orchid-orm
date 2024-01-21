@@ -1,4 +1,5 @@
 export * from './columnType';
+export * from './columnType.utils';
 export * from './columnTypes';
 export * from './columnsSchema';
 export * from './number';
@@ -13,3 +14,4 @@ export * from './unknown';
 export * from './virtual';
 export * from './code';
 export * from './columnsByType';
+export * from './defaultSchemaConfig';
