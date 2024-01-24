@@ -219,7 +219,9 @@ export type ZodSchemaConfig = {
   asType<
     T,
     Types extends AsTypeArg<ZodTypeAny>,
-    TypeSchema extends ZodTypeAny = Types['type'],
+    TypeSchema extends ZodTypeAny = Types extends { type: ZodTypeAny }
+      ? Types['type']
+      : never,
     Type = TypeSchema['_output'],
   >(
     this: T,
@@ -292,7 +294,7 @@ export type ZodSchemaConfig = {
   >;
 
   json<ZodSchema extends ZodTypeAny = ZodUnknown>(
-    schemaOrFn?: ZodSchema,
+    schema?: ZodSchema,
   ): ZodJSONColumn<ZodSchema>;
 
   boolean: ZodBoolean;
@@ -300,6 +302,9 @@ export type ZodSchemaConfig = {
   unknown: ZodUnknown;
   never: ZodNever;
   string: ZodString;
+  stringMin(max: number): ZodString;
+  stringMax(max: number): ZodString;
+  stringMinMax(min: number, max: number): ZodString;
   stringMethods: ArrayMethods<number> & {
     // Check a value to be a valid email
     email<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
@@ -426,7 +431,7 @@ export type ZodSchemaConfig = {
     minutes: ZodOptional<ZodNumber>;
     seconds: ZodOptional<ZodNumber>;
   }>;
-  bit: ZodString;
+  bit(max: number): ZodString;
   uuid: ZodString;
 
   inputSchema<T extends ColumnSchemaGetterTableClass>(
@@ -440,6 +445,12 @@ export type ZodSchemaConfig = {
   querySchema<T extends ColumnSchemaGetterTableClass>(
     this: T,
   ): MapSchema<T, 'querySchema'>;
+
+  updateSchema<T extends ColumnSchemaGetterTableClass>(
+    this: T,
+  ): UpdateSchema<T>;
+
+  pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T): PkeySchema<T>;
 
   errors<T extends ColumnTypeBase>(this: T, errors: ErrorMessages): T;
 };
@@ -512,6 +523,15 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   unknown: z.unknown(),
   never: z.never(),
   string: z.string(),
+  stringMin(min) {
+    return z.string().min(min);
+  },
+  stringMax(max) {
+    return z.string().max(max);
+  },
+  stringMinMax(min, max) {
+    return z.string().min(min).max(max);
+  },
   stringMethods: {
     ...(arrayMethods as unknown as ArrayMethods<number>),
 
@@ -664,7 +684,8 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     seconds: z.number().optional(),
   }),
 
-  bit: z.string().regex(/[10]/g),
+  bit: (max?: number) =>
+    (max ? z.string().max(max) : z.string()).regex(/[10]/g),
 
   uuid: z.string().uuid(),
 
@@ -678,6 +699,27 @@ export const zodSchemaConfig: ZodSchemaConfig = {
 
   querySchema() {
     return mapSchema(this, 'querySchema');
+  },
+
+  updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+    return (
+      this.inputSchema() as ZodObject<ZodRawShape>
+    ).partial() as UpdateSchema<T>;
+  },
+
+  pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+    const pkeys: Record<string, true> = {};
+
+    const { columns } = this.prototype;
+    for (const key in columns) {
+      if (columns[key].data.isPrimaryKey) {
+        pkeys[key] = true;
+      }
+    }
+
+    return (this.querySchema() as ZodObject<ZodRawShape>).pick(
+      pkeys,
+    ) as PkeySchema<T>;
   },
 
   /**
@@ -771,6 +813,24 @@ type MapSchema<
 > = ZodObject<
   {
     [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
+  },
+  'strip'
+>;
+
+type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
+  {
+    [K in keyof ColumnSchemaGetterColumns<T>]: ZodOptional<
+      ColumnSchemaGetterColumns<T>[K]['inputSchema']
+    >;
+  },
+  'strip'
+>;
+
+type PkeySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
+  {
+    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['isPrimaryKey'] extends true
+      ? K
+      : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
   },
   'strip'
 >;

@@ -35,18 +35,24 @@ import { RakeDbAst } from '../ast';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 
-type MigrateFn = <CT extends RakeDbColumnTypes>(
+type MigrateFn = <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
   args?: string[],
 ) => Promise<void>;
 
-function makeMigrateFn<CT extends RakeDbColumnTypes>(
+function makeMigrateFn<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   defaultCount: number,
   up: boolean,
   fn: (
     trx: TransactionAdapter,
-    config: RakeDbConfig<CT>,
+    config: RakeDbConfig<SchemaConfig, CT>,
     files: MigrationItem[],
     count: number,
     asts: RakeDbAst[],
@@ -72,7 +78,7 @@ function makeMigrateFn<CT extends RakeDbColumnTypes>(
 
           await fn(
             trx,
-            conf as unknown as RakeDbConfig<CT>,
+            conf as unknown as RakeDbConfig<SchemaConfig, CT>,
             files,
             count ?? defaultCount,
             localAsts,
@@ -151,11 +157,11 @@ const getCount = (args: string[]): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-function prepareConfig<CT>(
-  config: RakeDbConfig<CT>,
+function prepareConfig<SchemaConfig extends ColumnSchemaConfig, CT>(
+  config: RakeDbConfig<SchemaConfig, CT>,
   args: string[],
   count?: number,
-): RakeDbConfig<CT> {
+): RakeDbConfig<SchemaConfig, CT> {
   config = { ...config };
 
   const i = count === undefined ? 0 : 1;
@@ -170,7 +176,7 @@ function prepareConfig<CT>(
 
 export const migrateOrRollback = async (
   trx: TransactionAdapter,
-  config: RakeDbConfig<RakeDbColumnTypes>,
+  config: RakeDbConfig<ColumnSchemaConfig, RakeDbColumnTypes>,
   files: MigrationItem[],
   count: number,
   asts: RakeDbAst[],
@@ -201,9 +207,12 @@ export const migrateOrRollback = async (
   await config[up ? 'afterMigrate' : 'afterRollback']?.((db ??= getDb(trx)));
 };
 
-async function runCodeUpdaterAfterAll<CT>(
+async function runCodeUpdaterAfterAll<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
   options: AdapterOptions,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
   appCodeUpdater: AppCodeUpdater | undefined,
   asts: RakeDbAst[],
   cache: object,
@@ -236,7 +245,7 @@ async function runCodeUpdaterAfterAll<CT>(
 // When migrating two or more databases, files are loaded just once due to this cache.
 export const changeCache: Record<
   string,
-  ChangeCallback<ColumnSchemaConfig, RakeDbColumnTypes>[] | undefined
+  ChangeCallback<RakeDbColumnTypes>[] | undefined
 > = {};
 
 // SQL to start a transaction
@@ -251,11 +260,14 @@ const begin = {
  * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
  * After transaction is committed, will call `appCodeUpdater` if exists with the migrated changes.
  */
-const runMigration = async <CT extends RakeDbColumnTypes>(
+const runMigration = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   trx: TransactionAdapter,
   up: boolean,
   file: MigrationItem,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
   asts: RakeDbAst[],
 ) => {
   clearChanges();
@@ -264,9 +276,7 @@ const runMigration = async <CT extends RakeDbColumnTypes>(
   if (!changes) {
     const module = (await file.load()) as
       | {
-          default?: MaybeArray<
-            ChangeCallback<ColumnSchemaConfig, RakeDbColumnTypes>
-          >;
+          default?: MaybeArray<ChangeCallback<RakeDbColumnTypes>>;
         }
       | undefined;
 
@@ -282,12 +292,7 @@ const runMigration = async <CT extends RakeDbColumnTypes>(
     changeCache[file.path] = changes;
   }
 
-  const db = createMigrationInterface<ColumnSchemaConfig, CT>(
-    trx,
-    up,
-    config,
-    asts,
-  );
+  const db = createMigrationInterface<SchemaConfig, CT>(trx, up, config, asts);
 
   if (changes.length) {
     // when up: for (let i = 0; i !== changes.length - 1; i++)
@@ -296,10 +301,7 @@ const runMigration = async <CT extends RakeDbColumnTypes>(
     const to = up ? changes.length : -1;
     const step = up ? 1 : -1;
     for (let i = from; i !== to; i += step) {
-      await (changes[i] as unknown as ChangeCallback<ColumnSchemaConfig, CT>)(
-        db,
-        up,
-      );
+      await (changes[i] as unknown as ChangeCallback<CT>)(db, up);
     }
   }
 

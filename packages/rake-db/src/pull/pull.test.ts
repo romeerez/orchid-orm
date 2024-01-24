@@ -25,6 +25,7 @@ import {
   DefaultSchemaConfig,
 } from 'pqb';
 import { asMock } from 'test-utils';
+import { ColumnSchemaConfig } from 'orchid-core';
 
 jest.mock('./dbStructure', () => {
   const { DbStructure } = jest.requireActual('./dbStructure');
@@ -84,7 +85,7 @@ class BaseTable {
 }
 BaseTable.prototype.types = makeColumnTypes(defaultSchemaConfig);
 
-const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
+const makeConfig = (config: Partial<RakeDbConfig<ColumnSchemaConfig>> = {}) =>
   processRakeDbConfig({
     baseTable: BaseTable,
     appCodeUpdater,

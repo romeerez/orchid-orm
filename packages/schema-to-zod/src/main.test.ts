@@ -97,6 +97,63 @@ describe('zod schema config', () => {
     expectAllThrow(type, { id: '1' }, 'Expected number, received string');
   });
 
+  describe('updateSchema', () => {
+    it('should be a partial inputSchema', () => {
+      const columns = {
+        id: t.identity().primaryKey(),
+        name: t.string(),
+      };
+
+      const klass = {
+        prototype: { columns },
+        inputSchema: zodSchemaConfig.inputSchema,
+        querySchema: zodSchemaConfig.outputSchema,
+        updateSchema: zodSchemaConfig.updateSchema,
+      };
+
+      const updateSchema = klass.updateSchema();
+
+      const expected = z.object({ id: z.number(), name: z.string() }).partial();
+      assertType<typeof updateSchema, typeof expected>();
+
+      expect(updateSchema.parse({ id: 1, name: 'name' })).toEqual({
+        id: 1,
+        name: 'name',
+      });
+
+      expect(updateSchema.parse({})).toEqual({});
+    });
+  });
+
+  describe('pkeySchema', () => {
+    it('should validate primary keys', () => {
+      const columns = {
+        id: t.identity().primaryKey(),
+        name: t.string().primaryKey(),
+        age: t.integer(),
+      };
+
+      const klass = {
+        prototype: { columns },
+        inputSchema: zodSchemaConfig.inputSchema,
+        querySchema: zodSchemaConfig.outputSchema,
+        pkeySchema: zodSchemaConfig.pkeySchema,
+      };
+
+      const pkeySchema = klass.pkeySchema();
+
+      const expected = z.object({ id: z.number(), name: z.string() });
+      assertType<typeof pkeySchema, typeof expected>();
+
+      expect(pkeySchema.parse({ id: 1, name: 'name' })).toEqual({
+        id: 1,
+        name: 'name',
+      });
+
+      expect(() => pkeySchema.parse({})).toThrow('Required');
+    });
+  });
+
   describe('nullable', () => {
     it('should parse nullable', () => {
       const type = t.string().nullable();
@@ -332,6 +389,32 @@ describe('zod schema config', () => {
     });
   });
 
+  describe.each(['varchar', 'char', 'string'])('%s', (method) => {
+    it('should accept max as argument', () => {
+      const type = t[method as 'varchar'](3);
+
+      expect(() => type.inputSchema.parse('asdf')).toThrow(
+        'String must contain at most 3 character(s)',
+      );
+    });
+  });
+
+  describe.each(['text', 'citext'])('%s', (method) => {
+    it('should accept min and max as arguments', () => {
+      const type = t[method as 'text'](2, 3);
+
+      expect(() => type.inputSchema.parse('a')).toThrow(
+        'String must contain at least 2 character(s)',
+      );
+
+      expect(() => type.inputSchema.parse('asdf')).toThrow(
+        'String must contain at most 3 character(s)',
+      );
+    });
+  });
+
+  // describe()
+
   describe('bytea', () => {
     it('should check Buffer', () => {
       const type = t.bytea();
@@ -558,6 +641,12 @@ describe('zod schema config', () => {
       expectAllParse(type, '10101', '10101');
 
       expectAllThrow(type, '2', 'Invalid');
+
+      expectAllThrow(
+        type,
+        '101010',
+        'String must contain at most 5 character(s)',
+      );
     });
   });
 

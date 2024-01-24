@@ -4,6 +4,8 @@
 
 It is producing objects of the shape defined by your table columns.
 
+Table schemas for input (inserting) and output (selecting) may vary, the test factory is using the input schema.
+
 Under the hood, it is using [@anatine/zod-mock](https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock)
 to create and fill the object with random values. Random values are produced by [faker.js](https://www.npmjs.com/package/@faker-js/faker).
 

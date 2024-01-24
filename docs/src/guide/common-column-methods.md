@@ -7,9 +7,9 @@ All the following methods are available in any kind of column.
 [//]: # 'has JSDoc'
 
 Mark the column as a primary key.
-This column type becomes an argument of the `.find` method.
-So if the primary key is of `integer` type (`identity` or `serial`), `.find` will accept the number,
-or if the primary key is of `UUID` type, `.find` will expect a string.
+This column type becomes an argument of the [find](/guide/query-methods.html#find-and-findoptional) method.
+So if the primary key is of `integer` type (`identity` or `serial`), [find](/guide/query-methods.html#find-and-findoptional) will accept the number,
+or if the primary key is of `UUID` type, [find](/guide/query-methods.html#find-and-findoptional) will expect a string.
 
 Using `primaryKey` on a `uuid` column will automatically add a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
 
@@ -152,13 +152,24 @@ Set a custom function to process value for the column when creating or updating 
 
 The type of `input` argument will be used as the type of the column when creating and updating.
 
+If you have a validation library [installed and configured](http://localhost:5173/guide/columns-validation-methods.html),
+first argument is a schema to validate the input.
+
 ```ts
+import { z } from 'zod';
+
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     // encode boolean, number, or string to text before saving
     column: t
       .text(3, 100)
+      // when having validation library, the first argument is a schema
+      .encode(
+        z.boolean().or(z.number()).or(z.string()),
+        (input: boolean | number | string) => String(input),
+      )
+      // no schema argument otherwise
       .encode((input: boolean | number | string) => String(input)),
   }));
 }
@@ -177,12 +188,21 @@ Set a custom function to process value after loading it from a database.
 
 The type of input is the type of column before `.parse`, the resulting type will replace the type of column.
 
+If you have a validation library [installed and configured](http://localhost:5173/guide/columns-validation-methods.html),
+first argument is a schema for validating the output.
+
 ```ts
+import { z } from 'zod';
+
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    // parse text to integer
-    column: t.text(3, 100).parse((input) => parseInt(input)),
+    column: t
+      .text(3, 100)
+      // when having validation library, the first argument is a schema
+      .parse(z.number().int(), (input) => parseInt(input))
+      // no schema argument otherwise
+      .parse((input) => parseInt(input)),
   }));
 }
 
@@ -211,8 +231,7 @@ export class Table extends BaseTable {
 
 [//]: # 'has JSDoc'
 
-This method changes a column type without modifying its behavior.
-This is needed when converting columns to a validation schema, the converter will pick a different type specified by `.as`.
+This method changes a column type to treat one column as another column, this affects on available column operations in `where`.
 
 Before calling `.as` need to use `.encode` with the input of the same type as the input of the target column,
 and `.parse` which returns the correct type.
@@ -223,6 +242,9 @@ const column = t
   .text(1, 100)
   .encode((input: number) => input)
   .parse((text) => parseInt(text))
+  // schema argument is required if you included a validation library
+  .encode(z.number(), (input: number) => input)
+  .parse(z.number(), (text) => parseInt(text))
   .as(t.integer());
 ```
 
@@ -232,6 +254,8 @@ const column = t
 
 Mark the column as to have specific Typescript type.
 This can be used to narrow generic column types, such as narrow `string` to a string literal union.
+
+If you don't specify `schemaConfig` option for a [validation library](/guide/columns-validation-methods.html), the syntax as follows:
 
 ```ts
 export class Table extends BaseTable {
@@ -257,6 +281,43 @@ const column = t
 - `InputType` is for `create`, `update` methods.
 - `OutputType` is for the data that is loaded from a database and parsed if the column has `parse`.
 - `QueryType` is used in `where` and other query methods, it should be compatible with the actual database column type.
+
+If when using a [validation library](/guide/columns-validation-methods.html), also provide validation schemas:
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    size: t.text().asType({
+      type: z.union([
+        z.literal('small'),
+        z.literal('medium'),
+        z.literal('large'),
+      ]),
+    }),
+  }));
+}
+
+// size will be typed as 'small' | 'medium' | 'large'
+const size = await db.table.get('size');
+```
+
+The same schema will be assigned for input, output, and query.
+
+You can set different schemas for different purposes:
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    size: t.text().asType({
+      input: z.literal('input'),
+      output: z.literal('output'),
+      query: z.literal('query'),
+    }),
+  }));
+}
+```
 
 ## timestamps
 

@@ -5,10 +5,14 @@ import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
+import { ColumnSchemaConfig } from 'orchid-core';
 
-export const pullDbStructure = async <CT>(
+export const pullDbStructure = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
   options: AdapterOptions,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
   const adapter = new Adapter(options);
   const currentSchema = adapter.schema || 'public';
@@ -18,8 +22,8 @@ export const pullDbStructure = async <CT>(
     snakeCase: config.snakeCase,
     unsupportedTypes: {},
     currentSchema,
-    columnSchemaConfig: config.columnSchemaConfig,
-    columnsByType: makeColumnsByType(config.columnSchemaConfig),
+    columnSchemaConfig: config.schemaConfig,
+    columnsByType: makeColumnsByType(config.schemaConfig),
   };
 
   const ast = await structureToAst(ctx, db);

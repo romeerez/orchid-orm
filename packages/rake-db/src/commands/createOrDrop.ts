@@ -1,5 +1,5 @@
 import { Adapter, AdapterOptions } from 'pqb';
-import { MaybeArray, toArray } from 'orchid-core';
+import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import {
   getDatabaseAndUserFromOptions,
   setAdminCredentialsToOptions,
@@ -50,7 +50,7 @@ const execute = async (
 const createOrDrop = async (
   options: AdapterOptions,
   adminOptions: AdapterOptions,
-  config: Pick<RakeDbConfig, 'migrationsTable' | 'logger'>,
+  config: Pick<RakeDbConfig<ColumnSchemaConfig>, 'migrationsTable' | 'logger'>,
   args: {
     sql(params: { database: string; user: string }): string;
     successMessage(params: { database: string }): string;
@@ -109,9 +109,9 @@ const createOrDrop = async (
   await db.close();
 };
 
-export const createDb = async <CT>(
+export const createDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
   arg: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
   for (const options of toArray(arg)) {
     await createOrDrop(options, options, config, {
@@ -129,9 +129,9 @@ export const createDb = async <CT>(
   }
 };
 
-export const dropDb = async <CT>(
+export const dropDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
   arg: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
   for (const options of toArray(arg)) {
     await createOrDrop(options, options, config, {
@@ -148,9 +148,12 @@ export const dropDb = async <CT>(
   }
 };
 
-export const resetDb = async <CT extends RakeDbColumnTypes>(
+export const resetDb = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   arg: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
   await dropDb(arg, config);
   await createDb(arg, config);

@@ -79,9 +79,10 @@ type BaseTable<CT> = {
   };
 };
 
-export type InputRakeDbConfig<CT> = Partial<
-  Omit<RakeDbConfig<CT>, 'columnTypes'>
-> &
+export type InputRakeDbConfig<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+> = Partial<Omit<RakeDbConfig<SchemaConfig, CT>, 'columnTypes'>> &
   (
     | {
         columnTypes?: CT | ((t: DefaultColumnTypes<ColumnSchemaConfig>) => CT);
@@ -91,8 +92,11 @@ export type InputRakeDbConfig<CT> = Partial<
       }
   );
 
-export type RakeDbConfig<CT = DefaultColumnTypes<ColumnSchemaConfig>> = {
-  columnSchemaConfig: ColumnSchemaConfig;
+export type RakeDbConfig<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT = DefaultColumnTypes<ColumnSchemaConfig>,
+> = {
+  schemaConfig: SchemaConfig;
   columnTypes: CT;
   basePath: string;
   dbScript: string;
@@ -106,7 +110,7 @@ export type RakeDbConfig<CT = DefaultColumnTypes<ColumnSchemaConfig>> = {
     string,
     (
       options: AdapterOptions[],
-      config: RakeDbConfig<CT>,
+      config: RakeDbConfig<SchemaConfig, CT>,
       args: string[],
     ) => void | Promise<void>
   >;
@@ -140,7 +144,7 @@ export type AppCodeUpdater = {
 };
 
 export const migrationConfigDefaults = {
-  columnSchemaConfig: defaultSchemaConfig,
+  schemaConfig: defaultSchemaConfig,
   migrationsPath: path.join('src', 'db', 'migrations'),
   migrationsTable: 'schemaMigrations',
   snakeCase: false,
@@ -158,14 +162,20 @@ export const migrationConfigDefaults = {
   logger: console,
   useCodeUpdater: true,
 } satisfies Omit<
-  RakeDbConfig,
+  RakeDbConfig<ColumnSchemaConfig>,
   'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
 >;
 
-export const processRakeDbConfig = <CT>(
-  config: InputRakeDbConfig<CT>,
-): RakeDbConfig<CT> => {
-  const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<CT>;
+export const processRakeDbConfig = <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
+  config: InputRakeDbConfig<SchemaConfig, CT>,
+): RakeDbConfig<SchemaConfig, CT> => {
+  const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<
+    SchemaConfig,
+    CT
+  >;
   if (!result.recurrentPath) {
     result.recurrentPath = path.join(result.migrationsPath, 'recurrent');
   }
@@ -233,7 +243,7 @@ export const processRakeDbConfig = <CT>(
       : ct) || defaultColumnTypes) as CT;
   }
 
-  return result as RakeDbConfig<CT>;
+  return result as RakeDbConfig<SchemaConfig, CT>;
 };
 
 export const getDatabaseAndUserFromOptions = (
@@ -323,7 +333,7 @@ export const setAdminCredentialsToOptions = async (
 
 export const createSchemaMigrations = async (
   db: Adapter,
-  config: Pick<RakeDbConfig, 'migrationsTable' | 'logger'>,
+  config: Pick<RakeDbConfig<ColumnSchemaConfig>, 'migrationsTable' | 'logger'>,
 ) => {
   const { schema } = db;
   if (schema && schema !== 'public') {
@@ -411,7 +421,7 @@ export const getMigrations = async (
     migrations,
     ...config
   }: Pick<
-    RakeDbConfig,
+    RakeDbConfig<ColumnSchemaConfig>,
     'basePath' | 'migrations' | 'migrationsPath' | 'import'
   >,
   up: boolean,
@@ -442,7 +452,7 @@ function getMigrationsFromConfig(
 
 // Scans files under `migrationsPath` to convert files into migration items.
 async function getMigrationsFromFiles(
-  config: Pick<RakeDbConfig, 'migrationsPath' | 'import'>,
+  config: Pick<RakeDbConfig<ColumnSchemaConfig>, 'migrationsPath' | 'import'>,
   up: boolean,
 ): Promise<MigrationItem[]> {
   const { migrationsPath, import: imp } = config;

@@ -7,17 +7,16 @@ import {
   DefaultSchemaConfig,
   defaultSchemaConfig,
 } from 'pqb';
-import { MaybeArray, noop, toArray } from 'orchid-core';
+import { ColumnSchemaConfig, MaybeArray, noop, toArray } from 'orchid-core';
 import { migrationConfigDefaults, RakeDbConfig } from './common';
 import { join } from 'path';
 
-let db:
-  | DbMigration<DefaultSchemaConfig, DefaultColumnTypes<DefaultSchemaConfig>>
-  | undefined;
+let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;
 
 export const testMigrationsPath = 'migrations-path';
 
 export const testConfig: RakeDbConfig<
+  ColumnSchemaConfig,
   DefaultColumnTypes<DefaultSchemaConfig>
 > & {
   logger: QueryLogger;
@@ -52,10 +51,7 @@ export const getDb = () => {
   );
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;
-  return db as unknown as DbMigration<
-    DefaultSchemaConfig,
-    DefaultColumnTypes<DefaultSchemaConfig>
-  >;
+  return db as unknown as DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;
 };
 
 export const queryMock = jest.fn();

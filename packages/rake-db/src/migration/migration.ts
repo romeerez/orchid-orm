@@ -59,28 +59,24 @@ export type TableOptions = {
 };
 
 // Simplified text column type that doesn't require `min` and `max` arguments.
-type TextColumnCreator<SchemaConfig extends ColumnSchemaConfig> = (
+type TextColumnCreator = (
   min?: number,
   max?: number,
-) => TextColumn<SchemaConfig>;
+) => TextColumn<ColumnSchemaConfig>;
 
 // Overridden column types to simplify and adapt some column types for a migration.
-export type MigrationColumnTypes<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
-> = Omit<CT, 'text' | 'string' | 'enum'> & {
-  text: TextColumnCreator<SchemaConfig>;
-  string: TextColumnCreator<SchemaConfig>;
-  citext: TextColumnCreator<SchemaConfig>;
-  enum: (name: string) => EnumColumn<SchemaConfig, unknown>;
+export type MigrationColumnTypes<CT> = Omit<CT, 'text' | 'string' | 'enum'> & {
+  text: TextColumnCreator;
+  string: TextColumnCreator;
+  citext: TextColumnCreator;
+  enum: (name: string) => EnumColumn<ColumnSchemaConfig, unknown>;
 };
 
 // Create table callback
 export type ColumnsShapeCallback<
-  SchemaConfig extends ColumnSchemaConfig,
   CT,
   Shape extends ColumnsShape = ColumnsShape,
-> = (t: MigrationColumnTypes<SchemaConfig, CT> & { raw: typeof raw }) => Shape;
+> = (t: MigrationColumnTypes<CT> & { raw: typeof raw }) => Shape;
 
 // Options for changing a table
 export type ChangeTableOptions = {
@@ -90,9 +86,7 @@ export type ChangeTableOptions = {
 };
 
 // Callback for a table change
-export type ChangeTableCallback<SchemaConfig extends ColumnSchemaConfig, CT> = (
-  t: TableChanger<SchemaConfig, CT>,
-) => TableChangeData;
+export type ChangeTableCallback<CT> = (t: TableChanger<CT>) => TableChangeData;
 
 // DTO for column comments
 export type ColumnComment = { column: string; comment: string | null };
@@ -106,11 +100,8 @@ export type SilentQueries = {
 };
 
 // Combined queryable database instance and a migration interface
-export type DbMigration<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
-> = DbResult<CT> &
-  Migration<SchemaConfig, CT> & {
+export type DbMigration<CT extends RakeDbColumnTypes> = DbResult<CT> &
+  Migration<CT> & {
     // Add `SilentQueries` to an existing `adapter` type in the `DbResult`
     adapter: SilentQueries;
   };
@@ -130,9 +121,9 @@ export const createMigrationInterface = <
 >(
   tx: TransactionAdapter,
   up: boolean,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
   asts: RakeDbAst[],
-): DbMigration<SchemaConfig, CT> => {
+): DbMigration<CT> => {
   const adapter = new TransactionAdapter(tx, tx.client, tx.types);
   const { query, arrays } = adapter;
   const log = logParamToLogObject(config.logger || console, config.log);
@@ -150,7 +141,7 @@ export const createMigrationInterface = <
   const db = createDb({
     adapter,
     columnTypes: config.columnTypes,
-  }) as unknown as DbMigration<SchemaConfig, CT>;
+  }) as unknown as DbMigration<CT>;
 
   const { prototype: proto } = Migration;
   for (const key of Object.getOwnPropertyNames(proto)) {
@@ -169,10 +160,7 @@ export const createMigrationInterface = <
 };
 
 // Migration interface to use inside the `change` callback.
-export class Migration<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
-> {
+export class Migration<CT extends RakeDbColumnTypes> {
   // Database adapter to perform queries with.
   public adapter!: TransactionAdapter;
   // The logger config.
@@ -180,7 +168,7 @@ export class Migration<
   // Is migrating or rolling back.
   public up!: boolean;
   // `rakeDb` config.
-  public options!: RakeDbConfig;
+  public options!: RakeDbConfig<ColumnSchemaConfig>;
   // Collect objects that represents what was changed by a migration to pass it later to the `appCodeUpdater`.
   public migratedAsts!: RakeDbAst[];
   // Available column types that may be customized by a user.
@@ -264,7 +252,7 @@ export class Migration<
    */
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    fn?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   /**
    * See {@link createTable}
@@ -276,19 +264,19 @@ export class Migration<
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
-    fn?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    cbOrOptions?: ColumnsShapeCallback<SchemaConfig, CT, Shape> | TableOptions,
-    cb?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
+    cbOrOptions?: ColumnsShapeCallback<CT, Shape> | TableOptions,
+    cb?: ColumnsShapeCallback<CT, Shape>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const options =
       !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
     const fn = (
       typeof cbOrOptions === 'function' ? cbOrOptions : cb
-    ) as ColumnsShapeCallback<SchemaConfig, CT, Shape>;
+    ) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, this.up, tableName, options, fn);
   }
@@ -301,7 +289,7 @@ export class Migration<
    */
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    fn?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   /**
    * Drop the table, create it on rollback. See {@link createTable}.
@@ -313,19 +301,19 @@ export class Migration<
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
-    fn?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    cbOrOptions?: ColumnsShapeCallback<SchemaConfig, CT, Shape> | TableOptions,
-    cb?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
+    cbOrOptions?: ColumnsShapeCallback<CT, Shape> | TableOptions,
+    cb?: ColumnsShapeCallback<CT, Shape>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const options =
       !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
     const fn = (
       typeof cbOrOptions === 'function' ? cbOrOptions : cb
-    ) as ColumnsShapeCallback<SchemaConfig, CT, Shape>;
+    ) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, !this.up, tableName, options, fn);
   }
@@ -355,10 +343,7 @@ export class Migration<
    * @param tableName - name of the table to change (ALTER)
    * @param fn - change table callback
    */
-  changeTable(
-    tableName: string,
-    fn: ChangeTableCallback<SchemaConfig, CT>,
-  ): Promise<void>;
+  changeTable(tableName: string, fn: ChangeTableCallback<CT>): Promise<void>;
   /**
    * See {@link changeTable}
    *
@@ -369,12 +354,12 @@ export class Migration<
   changeTable(
     tableName: string,
     options: ChangeTableOptions,
-    fn?: ChangeTableCallback<SchemaConfig, CT>,
+    fn?: ChangeTableCallback<CT>,
   ): Promise<void>;
   changeTable(
     tableName: string,
-    cbOrOptions: ChangeTableCallback<SchemaConfig, CT> | ChangeTableOptions,
-    cb?: ChangeTableCallback<SchemaConfig, CT>,
+    cbOrOptions: ChangeTableCallback<CT> | ChangeTableOptions,
+    cb?: ChangeTableCallback<CT>,
   ): Promise<void> {
     const [fn, options] =
       typeof cbOrOptions === 'function' ? [cbOrOptions, {}] : [cb, cbOrOptions];
@@ -442,7 +427,7 @@ export class Migration<
   addColumn(
     tableName: string,
     columnName: string,
-    fn: (t: MigrationColumnTypes<SchemaConfig, CT>) => ColumnType,
+    fn: (t: MigrationColumnTypes<CT>) => ColumnType,
   ): Promise<void> {
     return addColumn(this, this.up, tableName, columnName, fn);
   }
@@ -457,7 +442,7 @@ export class Migration<
   dropColumn(
     tableName: string,
     columnName: string,
-    fn: (t: MigrationColumnTypes<SchemaConfig, CT>) => ColumnType,
+    fn: (t: MigrationColumnTypes<CT>) => ColumnType,
   ): Promise<void> {
     return addColumn(this, !this.up, tableName, columnName, fn);
   }
@@ -1218,15 +1203,12 @@ const wrapWithLog = async <Result>(
 /**
  * See {@link Migration.addColumn}
  */
-const addColumn = <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
-  migration: Migration<SchemaConfig, CT>,
+const addColumn = <CT extends RakeDbColumnTypes>(
+  migration: Migration<CT>,
   up: boolean,
   tableName: string,
   columnName: string,
-  fn: (t: MigrationColumnTypes<SchemaConfig, CT>) => ColumnType,
+  fn: (t: MigrationColumnTypes<CT>) => ColumnType,
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     [columnName]: t.add(fn(t)),
@@ -1237,7 +1219,7 @@ const addColumn = <
  * See {@link Migration.addIndex}
  */
 const addIndex = (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   columns: MaybeArray<string | IndexColumnOptions>,
@@ -1252,7 +1234,7 @@ const addIndex = (
  * See {@link Migration.addForeignKey}
  */
 const addForeignKey = (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
@@ -1269,7 +1251,7 @@ const addForeignKey = (
  * See {@link Migration.addPrimaryKey}
  */
 const addPrimaryKey = (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   columns: string[],
@@ -1284,7 +1266,7 @@ const addPrimaryKey = (
  * See {@link Migration.addCheck}
  */
 const addCheck = (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   check: RawSQLBase,
@@ -1298,7 +1280,7 @@ const addCheck = (
  * See {@link Migration.addConstraint}
  */
 const addConstraint = (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   constraint: ConstraintArg,
@@ -1312,7 +1294,7 @@ const addConstraint = (
  * See {@link Migration.createSchema}
  */
 const createSchema = async (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
 ): Promise<void> => {
@@ -1333,7 +1315,7 @@ const createSchema = async (
  * See {@link Migration.createExtension}
  */
 const createExtension = async (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'>,
@@ -1367,7 +1349,7 @@ const createExtension = async (
  * See {@link Migration.createEnum}
  */
 const createEnum = async (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
   values: [string, ...string[]],
@@ -1407,11 +1389,8 @@ const createEnum = async (
 /**
  * See {@link Migration.createDomain}
  */
-const createDomain = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
-  migration: Migration<SchemaConfig, CT>,
+const createDomain = async <CT extends RakeDbColumnTypes>(
+  migration: Migration<CT>,
   up: boolean,
   name: string,
   fn: (t: CT) => ColumnType,
@@ -1467,7 +1446,7 @@ DEFAULT ${ast.default.toSQL({ values })}`
  * See {@link Migration.createCollation}
  */
 const createCollation = async (
-  migration: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Collation, 'type' | 'action' | 'schema' | 'name'>,
@@ -1523,7 +1502,7 @@ const createCollation = async (
  * @param sql - raw SQL object to execute
  */
 const queryExists = (
-  db: Migration<ColumnSchemaConfig, RakeDbColumnTypes>,
+  db: Migration<RakeDbColumnTypes>,
   sql: { text: string; values: unknown[] },
 ): Promise<boolean> => {
   return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);

@@ -17,7 +17,7 @@ import {
   TransactionAdapter,
   DefaultSchemaConfig,
 } from 'pqb';
-import { ColumnSchemaConfig, noop, pathToLog } from 'orchid-core';
+import { noop, pathToLog } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock } from 'test-utils';
@@ -66,14 +66,9 @@ TransactionAdapter.prototype.arrays = transactionQueryMock;
 const config = testConfig;
 
 const change = (
-  fn: ChangeCallback<
-    ColumnSchemaConfig,
-    DefaultColumnTypes<DefaultSchemaConfig>
-  >,
+  fn: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>,
 ) => {
-  pushChange(
-    fn as unknown as ChangeCallback<ColumnSchemaConfig, RakeDbColumnTypes>,
-  );
+  pushChange(fn as unknown as ChangeCallback<RakeDbColumnTypes>);
 };
 
 const createTableCallback = () => {

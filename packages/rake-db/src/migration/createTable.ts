@@ -35,7 +35,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
-import { ColumnSchemaConfig, emptyObject, snakeCaseKey } from 'orchid-core';
+import { emptyObject, snakeCaseKey } from 'orchid-core';
 
 export type TableQuery = {
   text: string;
@@ -51,16 +51,15 @@ export type CreateTableResult<
 };
 
 export const createTable = async <
-  SchemaConfig extends ColumnSchemaConfig,
   CT extends RakeDbColumnTypes,
   Table extends string,
   Shape extends ColumnsShape,
 >(
-  migration: Migration<SchemaConfig, CT>,
+  migration: Migration<CT>,
   up: boolean,
   tableName: Table,
   options: TableOptions,
-  fn?: ColumnsShapeCallback<SchemaConfig, CT, Shape>,
+  fn?: ColumnsShapeCallback<CT, Shape>,
 ): Promise<CreateTableResult<Table, Shape>> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
@@ -102,10 +101,7 @@ export const createTable = async <
   return {
     get table(): Db<Table, Shape> {
       return (table ??= (
-        migration as unknown as DbMigration<
-          ColumnSchemaConfig,
-          RakeDbColumnTypes
-        >
+        migration as unknown as DbMigration<RakeDbColumnTypes>
       )(tableName, shape, {
         noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
         snakeCase: options.snakeCase,

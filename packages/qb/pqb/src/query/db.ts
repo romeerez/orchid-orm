@@ -61,17 +61,17 @@ import { enableSoftDelete, SoftDeleteOption } from '../queryMethods/softDelete';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
-export type DbOptions<Schema extends ColumnSchemaConfig, ColumnTypes> = (
+export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
   | { adapter: Adapter }
   | Omit<AdapterOptions, 'log'>
 ) &
   QueryLogOptions & {
-    columnSchema?: Schema;
+    schemaConfig?: SchemaConfig;
     // concrete column types or a callback for overriding standard column types
     // this types will be used in tables to define their columns
     columnTypes?:
       | ColumnTypes
-      | ((t: DefaultColumnTypes<Schema>) => ColumnTypes);
+      | ((t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes);
     autoPreparedStatements?: boolean;
     noPrimaryKey?: NoPrimaryKeyOption;
     // when set to true, all columns will be translated to `snake_case` when querying database
@@ -583,17 +583,17 @@ export type DbResult<ColumnTypes> = Db<
  * ```
  */
 export const createDb = <
-  Schema extends ColumnSchemaConfig = DefaultSchemaConfig,
-  ColumnTypes = DefaultColumnTypes<Schema>,
+  SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
+  ColumnTypes = DefaultColumnTypes<SchemaConfig>,
 >({
   log,
   logger,
   snakeCase,
   nowSQL,
-  columnSchema = defaultSchemaConfig as unknown as Schema,
-  columnTypes: ctOrFn = makeColumnTypes(columnSchema) as unknown as ColumnTypes,
+  schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
+  columnTypes: ctOrFn = makeColumnTypes(schemaConfig) as unknown as ColumnTypes,
   ...options
-}: DbOptions<Schema, ColumnTypes>): DbResult<ColumnTypes> => {
+}: DbOptions<SchemaConfig, ColumnTypes>): DbResult<ColumnTypes> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = {
     log,
@@ -605,9 +605,11 @@ export const createDb = <
 
   const ct =
     typeof ctOrFn === 'function'
-      ? (ctOrFn as unknown as (t: DefaultColumnTypes<Schema>) => ColumnTypes)(
-          makeColumnTypes(columnSchema),
-        )
+      ? (
+          ctOrFn as unknown as (
+            t: DefaultColumnTypes<SchemaConfig>,
+          ) => ColumnTypes
+        )(makeColumnTypes(schemaConfig))
       : ctOrFn;
 
   if (snakeCase) {

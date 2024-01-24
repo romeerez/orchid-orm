@@ -363,12 +363,18 @@ export const setDefaultLanguage = (lang?: string) => {
 // get default language for full text search
 export const getDefaultLanguage = () => defaultLanguage;
 
-export type AsTypeArg<Schema> = {
-  type: Schema;
-  input?: Schema;
-  output?: Schema;
-  query?: Schema;
-};
+export type AsTypeArg<Schema> =
+  | {
+      type: Schema;
+      input?: Schema;
+      output?: Schema;
+      query?: Schema;
+    }
+  | {
+      input: Schema;
+      output: Schema;
+      query: Schema;
+    };
 
 // Workaround for the "type instantiation is too deep" error.
 export type QueryColumn<T = unknown, Op = BaseOperators> = {

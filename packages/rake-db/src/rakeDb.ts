@@ -17,9 +17,12 @@ import { runRecurrentMigrations } from './commands/recurrent';
 /**
  * Type of {@link rakeDb} function
  */
-export type RakeDbFn = (<CT extends RakeDbColumnTypes>(
+export type RakeDbFn = (<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig?: InputRakeDbConfig<CT>,
+  partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
   args?: string[],
 ) => RakeDbChangeFn<CT> & {
   promise: Promise<void>;
@@ -38,12 +41,18 @@ export type RakeDbFn = (<CT extends RakeDbColumnTypes>(
 /**
  * Type of {@link rakeDb.lazy} function
  */
-export type RakeDbLazyFn = <CT extends RakeDbColumnTypes>(
+export type RakeDbLazyFn = <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig?: InputRakeDbConfig<CT>,
+  partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
 ) => {
   change: RakeDbChangeFn<CT>;
-  run(args: string[], config?: Partial<RakeDbConfig<CT>>): Promise<void>;
+  run(
+    args: string[],
+    config?: Partial<RakeDbConfig<SchemaConfig, CT>>,
+  ): Promise<void>;
 };
 
 /**
@@ -52,8 +61,8 @@ export type RakeDbLazyFn = <CT extends RakeDbColumnTypes>(
  * and also returns the callback in case you want to export it from migration.
  */
 export type RakeDbChangeFn<CT extends RakeDbColumnTypes> = (
-  fn: ChangeCallback<ColumnSchemaConfig, CT>,
-) => ChangeCallback<ColumnSchemaConfig, CT>;
+  fn: ChangeCallback<CT>,
+) => ChangeCallback<CT>;
 
 /**
  * Function to configure and run `rakeDb`.
@@ -70,7 +79,7 @@ export const rakeDb: RakeDbFn = ((
   const config = processRakeDbConfig(partialConfig);
   const promise = runCommand(
     options,
-    config as unknown as RakeDbConfig<RakeDbColumnTypes>,
+    config as unknown as RakeDbConfig<ColumnSchemaConfig, RakeDbColumnTypes>,
     args,
   ).catch((err) => {
     if (err instanceof RakeDbError) {
@@ -96,14 +105,17 @@ rakeDb.lazy = ((options, partialConfig = {}) => {
   };
 }) as RakeDbLazyFn;
 
-function change(fn: ChangeCallback<ColumnSchemaConfig, RakeDbColumnTypes>) {
+function change(fn: ChangeCallback<RakeDbColumnTypes>) {
   pushChange(fn);
   return fn;
 }
 
-const runCommand = async <CT extends RakeDbColumnTypes>(
+const runCommand = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
   args: string[] = process.argv.slice(2),
 ): Promise<void> => {
   const arg = args[0]?.split(':')[0];

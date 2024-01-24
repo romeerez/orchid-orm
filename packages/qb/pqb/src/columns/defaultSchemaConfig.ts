@@ -69,11 +69,13 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig {
     item: Item,
   ): ArrayColumn<DefaultSchemaConfig, Item, unknown, unknown, unknown>;
 
-  json(): ColumnType;
+  json<T>(): ColumnType<DefaultSchemaConfig, T>;
 
   inputSchema(): undefined;
   outputSchema(): undefined;
   querySchema(): undefined;
+  updateSchema(): undefined;
+  pkeySchema(): undefined;
 }
 
 // parse a date string to number, with respect to null
@@ -111,6 +113,10 @@ export const defaultSchemaConfig = {
   array<Item extends ArrayColumnValue>(item: Item) {
     return new ArrayColumn(defaultSchemaConfig, item, undefined);
   },
+  stringMin: noop,
+  stringMax: noop,
+  stringMinMax: noop,
+  bit: noop,
   nullable(this: ColumnTypeBase) {
     return setColumnData(this, 'isNullable', true);
   },

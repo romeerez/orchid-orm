@@ -8,6 +8,8 @@ import { EmptyObject } from '../utils';
 
 export type ColumnSchemaGetterTableClass = {
   prototype: { columns: ColumnTypesBase };
+  inputSchema(): unknown;
+  querySchema(): unknown;
 };
 
 export type ColumnSchemaGetterColumns<T extends ColumnSchemaGetterTableClass> =
@@ -28,13 +30,16 @@ export interface ColumnSchemaConfig {
   unknown: unknown;
   never: unknown;
   string: unknown;
+  stringMin(max: number): unknown;
+  stringMax(max: number): unknown;
+  stringMinMax(min: number, max: number): unknown;
   stringMethods: EmptyObject;
   number: unknown;
   int: unknown;
   numberMethods: EmptyObject;
   stringNumberDate: unknown;
   timeInterval: unknown;
-  bit: unknown;
+  bit(max?: number): unknown;
   uuid: unknown;
   nullable<T extends ColumnTypeBase>(
     this: T,
@@ -43,5 +48,7 @@ export interface ColumnSchemaConfig {
   inputSchema(this: ColumnSchemaGetterTableClass): unknown;
   outputSchema(this: ColumnSchemaGetterTableClass): unknown;
   querySchema(this: ColumnSchemaGetterTableClass): unknown;
+  updateSchema(this: ColumnSchemaGetterTableClass): unknown;
+  pkeySchema(this: ColumnSchemaGetterTableClass): unknown;
   errors?<T extends ColumnTypeBase>(this: T, errors: ErrorMessages): void;
 }

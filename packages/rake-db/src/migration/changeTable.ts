@@ -18,7 +18,6 @@ import {
   setDefaultLanguage,
   ColumnTypeBase,
   setCurrentColumnName,
-  ColumnSchemaConfig,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -252,10 +251,7 @@ const tableChangeMethods = {
   },
 };
 
-export type TableChanger<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
-> = MigrationColumnTypes<SchemaConfig, CT> & TableChangeMethods;
+export type TableChanger<CT> = MigrationColumnTypes<CT> & TableChangeMethods;
 
 export type TableChangeData = Record<
   string,
@@ -265,15 +261,12 @@ export type TableChangeData = Record<
   | EmptyObject
 >;
 
-export const changeTable = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
-  migration: Migration<SchemaConfig, CT>,
+export const changeTable = async <CT extends RakeDbColumnTypes>(
+  migration: Migration<CT>,
   up: boolean,
   tableName: string,
   options: ChangeTableOptions,
-  fn?: ChangeTableCallback<SchemaConfig, CT>,
+  fn?: ChangeTableCallback<CT>,
 ): Promise<void> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
@@ -286,7 +279,7 @@ export const changeTable = async <
 
   const tableChanger = Object.create(
     migration.columnTypes as object,
-  ) as TableChanger<SchemaConfig, CT>;
+  ) as TableChanger<CT>;
   Object.assign(tableChanger, tableChangeMethods);
 
   (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] = snakeCase;

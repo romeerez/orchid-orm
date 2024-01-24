@@ -6,10 +6,13 @@ import {
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { getImportPath, pathToLog } from 'orchid-core';
+import { ColumnSchemaConfig, getImportPath, pathToLog } from 'orchid-core';
 
-export const writeMigrationFile = async <CT>(
-  config: RakeDbConfig<CT>,
+export const writeMigrationFile = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
+  config: RakeDbConfig<SchemaConfig, CT>,
   version: string,
   name: string,
   content: (importPath: string, name: string) => string,
@@ -26,8 +29,8 @@ export const writeMigrationFile = async <CT>(
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 
-export const generate = async <CT>(
-  config: RakeDbConfig<CT>,
+export const generate = async <SchemaConfig extends ColumnSchemaConfig, CT>(
+  config: RakeDbConfig<SchemaConfig, CT>,
   [name]: string[],
 ): Promise<void> => {
   if (!name) throw new Error('Migration name is missing');

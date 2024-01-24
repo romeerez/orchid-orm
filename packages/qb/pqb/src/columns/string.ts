@@ -26,8 +26,8 @@ export abstract class TextBaseColumn<
   declare data: TextColumnData;
   operators = Operators.text;
 
-  constructor(schema: Schema) {
-    super(schema, schema.string);
+  constructor(schema: Schema, schemaType: Schema['string'] = schema.string) {
+    super(schema, schemaType);
   }
 }
 
@@ -37,7 +37,7 @@ export abstract class LimitedTextBaseColumn<
   declare data: TextColumnData & { maxChars?: number };
 
   constructor(schema: Schema, limit?: number) {
-    super(schema);
+    super(schema, limit ? schema.stringMax(limit) : schema.string);
     this.data.maxChars = limit;
   }
 
@@ -138,6 +138,17 @@ const textColumnToCode = (
   );
 };
 
+const minMaxToSchema = <Schema extends ColumnSchemaConfig>(
+  schema: Schema,
+  min?: number,
+  max?: number,
+) =>
+  min
+    ? max
+      ? schema.stringMinMax(min, max)
+      : schema.stringMin(min)
+    : schema.string;
+
 // text	variable unlimited length
 export class TextColumn<
   Schema extends ColumnSchemaConfig,
@@ -145,9 +156,9 @@ export class TextColumn<
   dataType = 'text' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
-  constructor(schema: Schema, minArg?: number, maxArg?: number) {
-    super(schema);
-    setTextColumnData(this, minArg, maxArg);
+  constructor(schema: Schema, min?: number, max?: number) {
+    super(schema, minMaxToSchema(schema, min, max));
+    setTextColumnData(this, min, max);
   }
 
   toCode(t: string): Code {
@@ -404,7 +415,7 @@ export class MacAddr8Column<
 export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['bit'],
+  ReturnType<Schema['bit']>,
   OperatorsText
 > {
   dataType = 'bit' as const;
@@ -412,7 +423,7 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   declare data: ColumnData & { length: number };
 
   constructor(schema: Schema, length: number) {
-    super(schema, schema.bit);
+    super(schema, schema.bit(length) as ReturnType<Schema['bit']>);
     this.data.length = length;
   }
 
@@ -431,13 +442,13 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
 export class BitVaryingColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['bit'], OperatorsText> {
+> extends ColumnType<Schema, string, ReturnType<Schema['bit']>, OperatorsText> {
   dataType = 'bit varying' as const;
   operators = Operators.text;
   declare data: ColumnData & { length?: number };
 
   constructor(schema: Schema, length?: number) {
-    super(schema, schema.bit);
+    super(schema, schema.bit(length) as ReturnType<Schema['bit']>);
     this.data.length = length;
   }
 
@@ -622,9 +633,9 @@ export class CitextColumn<
   dataType = 'citext' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
-  constructor(schema: Schema, minArg?: number, maxArg?: number) {
-    super(schema);
-    setTextColumnData(this, minArg, maxArg);
+  constructor(schema: Schema, min?: number, max?: number) {
+    super(schema, minMaxToSchema(schema, min, max));
+    setTextColumnData(this, min, max);
   }
 
   toCode(t: string): Code {

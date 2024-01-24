@@ -38,7 +38,7 @@ export const testColumnTypes = {
 
 export const testDb = createDb({
   adapter: testAdapter,
-  columnSchema: zodSchemaConfig,
+  schemaConfig: zodSchemaConfig,
   columnTypes: testColumnTypes,
 });
 

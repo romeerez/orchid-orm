@@ -410,24 +410,44 @@ export function createBaseTable<
 
   let filePath: string | undefined;
 
-  let inputSchema: unknown;
-  let outputSchema: unknown;
-  let querySchema: unknown;
-
   const base = class BaseTable {
     static nowSQL = nowSQL;
     static exportAs = exportAs;
 
+    private static _inputSchema: unknown;
     static inputSchema() {
-      return (inputSchema ??= schemaConfig.inputSchema.call(this));
+      // Nullish coalescing assignment (??=), for some reason, compiles to != null and miss undefined
+      return this._inputSchema === undefined
+        ? (this._inputSchema = schemaConfig.inputSchema.call(this))
+        : this._inputSchema;
     }
 
+    private static _outputSchema: unknown;
     static outputSchema() {
-      return (outputSchema ??= schemaConfig.outputSchema.call(this));
+      return this._outputSchema === undefined
+        ? (this._outputSchema = schemaConfig.outputSchema.call(this))
+        : this._outputSchema;
     }
 
+    private static _querySchema: unknown;
     static querySchema() {
-      return (querySchema ??= schemaConfig.querySchema.call(this));
+      return this._querySchema === undefined
+        ? (this._querySchema = schemaConfig.querySchema.call(this))
+        : this._querySchema;
+    }
+
+    private static _updateSchema: unknown;
+    static updateSchema() {
+      return this._updateSchema === undefined
+        ? (this._updateSchema = schemaConfig.updateSchema.call(this))
+        : this._updateSchema;
+    }
+
+    private static _pkeySchema: unknown;
+    static pkeySchema() {
+      return this._pkeySchema === undefined
+        ? (this._pkeySchema = schemaConfig.pkeySchema.call(this))
+        : this._pkeySchema;
     }
 
     static getFilePath(): string {
@@ -495,7 +515,8 @@ export function createBaseTable<
         }
       }
 
-      return shape;
+      // save columns to prototype to make them available in static methods (inputSchema, outputSchema)
+      return (this.constructor.prototype.columns = shape);
     }
 
     setComputed<

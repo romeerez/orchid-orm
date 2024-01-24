@@ -22,8 +22,8 @@ import {
 } from 'orchid-core';
 import { quoteSchemaTable, RakeDbConfig } from '../common';
 
-export const astToMigration = <CT>(
-  config: RakeDbConfig<CT>,
+export const astToMigration = <SchemaConfig extends ColumnSchemaConfig, CT>(
+  config: RakeDbConfig<SchemaConfig, CT>,
   ast: RakeDbAst[],
 ): ((importPath: string) => string) | undefined => {
   const first: Code[] = [];
@@ -152,7 +152,10 @@ const createCollation = (ast: RakeDbAst.Collation): Code[] => {
   ];
 };
 
-const createTable = <CT>(config: RakeDbConfig<CT>, ast: RakeDbAst.Table) => {
+const createTable = <SchemaConfig extends ColumnSchemaConfig, CT>(
+  config: RakeDbConfig<SchemaConfig, CT>,
+  ast: RakeDbAst.Table,
+) => {
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 
@@ -225,8 +228,8 @@ const isTimestamp = (
   );
 };
 
-const getTimestampsInfo = <CT>(
-  config: RakeDbConfig<CT>,
+const getTimestampsInfo = <SchemaConfig extends ColumnSchemaConfig, CT>(
+  config: RakeDbConfig<SchemaConfig, CT>,
   ast: RakeDbAst.Table,
   type:
     | typeof TimestampTZColumn<ColumnSchemaConfig>

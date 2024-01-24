@@ -57,7 +57,7 @@ export const db = orchidORM(
 If needed, you can pass `Adapter` instance instead of connection options:
 
 ```ts
-import { orchidORM } from 'orchid-orm';
+import { orchidORM, Adapter } from 'orchid-orm';
 
 export const db = orchidORM(
   {
@@ -84,10 +84,14 @@ Optionally, you can customize column types behavior here for all future tables:
 
 ```ts
 import { createBaseTable } from 'orchid-orm';
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod'; // separate package
 
 export const BaseTable = createBaseTable({
   // set to true if columns in database are in snake_case
   snakeCase: true,
+
+  // optional, but recommended: makes zod schemas for your tables
+  schemaConfig: zodSchemaConfig,
 
   columnTypes: (t) => ({
     // by default timestamp is returned as a string, override to a number
@@ -209,6 +213,7 @@ It is accepting the same options as `orchidORM` + options of `createBaseTable`:
 
 ```ts
 import { createDb } from 'orchid-orm';
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod'; // separate package
 
 const db = createDb({
   // db connection options
@@ -220,6 +225,9 @@ const db = createDb({
 
   // override default SQL for timestamp, see `nowSQL` above
   nowSQL: `now() AT TIME ZONE 'UTC'`,
+
+  // optional, but recommended: makes zod schemas for your tables
+  schemaConfig: zodSchemaConfig,
 
   // override column types:
   columnTypes: (t) => ({
