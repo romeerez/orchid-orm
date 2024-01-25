@@ -1,5 +1,6 @@
 {
   "name": "test-utils",
+  "private": true,
   "version": "0.1.0",
   "description": "Test utilities for other packages",
   "scripts": {
