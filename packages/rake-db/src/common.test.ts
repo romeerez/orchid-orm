@@ -49,12 +49,12 @@ describe('common', () => {
 
       expect(result).toEqual({
         basePath: __dirname,
-        columnSchemaConfig: defaultSchemaConfig,
         dbScript: 'dbScript.ts',
         columnTypes: makeColumnTypes,
         migrationsPath,
         recurrentPath: path.join(migrationsPath, 'recurrent'),
         migrationsTable: 'schemaMigrations',
+        schemaConfig: defaultSchemaConfig,
         snakeCase: false,
         import: expect.any(Function),
         log: true,

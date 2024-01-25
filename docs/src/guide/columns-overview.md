@@ -194,7 +194,7 @@ export const BaseTable = createBaseTable({
 ## Override column default validation
 
 ORM doesn't validate inputs by itself,
-use `Table.inputSchema()` (see [Validation methods](http://localhost:5173/guide/columns-validation-methods.html)) in your request handlers,
+use `Table.inputSchema()` (see [Validation methods](/guide/columns-validation-methods.html)) in your request handlers,
 and then it's guaranteed that user won't be able to submit empty or a million chars long username and other text data.
 
 Type of `text` method forces you to provide the `min` and `max` each time when calling it. To simplify this, define common defaults for all text columns:

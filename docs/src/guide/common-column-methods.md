@@ -152,7 +152,7 @@ Set a custom function to process value for the column when creating or updating 
 
 The type of `input` argument will be used as the type of the column when creating and updating.
 
-If you have a validation library [installed and configured](http://localhost:5173/guide/columns-validation-methods.html),
+If you have a validation library [installed and configured](/guide/columns-validation-methods.html),
 first argument is a schema to validate the input.
 
 ```ts
@@ -188,7 +188,7 @@ Set a custom function to process value after loading it from a database.
 
 The type of input is the type of column before `.parse`, the resulting type will replace the type of column.
 
-If you have a validation library [installed and configured](http://localhost:5173/guide/columns-validation-methods.html),
+If you have a validation library [installed and configured](/guide/columns-validation-methods.html),
 first argument is a schema for validating the output.
 
 ```ts
