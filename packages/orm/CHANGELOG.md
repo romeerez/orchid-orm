@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.20.0
+
+### Minor Changes
+
+- 4c7015b4: Support multiple column schemas for various cases
+
+### Patch Changes
+
+- Updated dependencies [4c7015b4]
+  - pqb@0.22.0
+  - orchid-core@0.11.0
+
 ## 1.19.0
 
 ### Minor Changes

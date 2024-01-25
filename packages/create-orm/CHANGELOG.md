@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.1.0
+
+### Minor Changes
+
+- 4c7015b4: Support multiple column schemas for various cases
+
 ## 0.0.4
 
 ### Patch Changes

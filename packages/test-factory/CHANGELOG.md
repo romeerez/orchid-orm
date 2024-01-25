@@ -1,5 +1,18 @@
 # orchid-orm-test-factory
 
+## 0.4.0
+
+### Minor Changes
+
+- 4c7015b4: Support multiple column schemas for various cases
+
+### Patch Changes
+
+- Updated dependencies [4c7015b4]
+  - orchid-orm-schema-to-zod@0.5.0
+  - pqb@0.22.0
+  - orchid-core@0.11.0
+
 ## 0.3.173
 
 ### Patch Changes

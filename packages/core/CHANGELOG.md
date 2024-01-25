@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.11.0
+
+### Minor Changes
+
+- 4c7015b4: Support multiple column schemas for various cases
+
 ## 0.10.17
 
 ### Patch Changes

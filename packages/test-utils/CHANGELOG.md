@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.1.0
+
+### Minor Changes
+
+- 4c7015b4: Support multiple column schemas for various cases
+
 ## 0.0.3
 
 ### Patch Changes
