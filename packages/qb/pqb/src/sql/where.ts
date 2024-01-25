@@ -16,14 +16,14 @@ import {
 } from './common';
 import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
-import { makeSQL, ToSQLCtx } from './toSQL';
+import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { JoinedShapes, QueryData } from './data';
 import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
 import { Operator } from '../columns/operators';
 
 export const pushWhereStatementSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
 ) => {
@@ -49,7 +49,7 @@ export const pushWhereToSql = (
 
 export const whereToSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   parens?: boolean,
@@ -72,7 +72,7 @@ export const whereToSql = (
 const processAnds = (
   and: WhereItem[],
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   parens?: boolean,
@@ -88,7 +88,7 @@ const processAnds = (
 const processWhere = (
   ands: string[],
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes' | 'language'>,
   data: WhereItem,
   quotedAs?: string,
@@ -104,7 +104,7 @@ const processWhere = (
     if (!(res instanceof Expression) && res.q.expr) {
       const q =
         'relationConfig' in res
-          ? res.relationConfig.joinQuery(res, table)
+          ? res.relationConfig.joinQuery(res, table as Query)
           : res.clone();
 
       q.q.select = [expr as Expression];

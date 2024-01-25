@@ -7,7 +7,7 @@ import {
   User,
   Profile,
   userData,
-  UserRecord,
+  UserInsert,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { RelationConfigBase, RelationQuery } from '../relations';
@@ -257,7 +257,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    assertType<typeof result, typeof User.type>();
+    assertType<typeof result, typeof User.outputType>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
@@ -368,7 +368,7 @@ describe('update', () => {
     const result = await query;
     expect(result[0]).toMatchObject({ ...userData, ...update });
 
-    assertType<typeof result, (typeof User)['type'][]>();
+    assertType<typeof result, (typeof User.outputType)[]>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
@@ -460,7 +460,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    assertType<typeof result, typeof User.type>();
+    assertType<typeof result, typeof User.outputType>();
 
     expect(result).toMatchObject({ ...userData, ...update });
   });
@@ -468,7 +468,7 @@ describe('update', () => {
   it('should throw when searching for one to update and it is not found', async () => {
     const q = User.selectAll().findBy({ id: 1 }).update({ name: 'new name' });
 
-    assertType<Awaited<typeof q>, typeof User.type>();
+    assertType<Awaited<typeof q>, typeof User.outputType>();
 
     await expect(q).rejects.toThrow();
   });
@@ -643,7 +643,7 @@ describe('update', () => {
     const query = User.find(1).update({
       name: 'name',
       unknown: 'should be stripped',
-    } as unknown as UserRecord);
+    } as unknown as UserInsert);
 
     expectSql(
       query.toSQL(),

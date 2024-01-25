@@ -2,8 +2,9 @@ import { ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable, Profile } from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
-import { ColumnsShape, columnTypes, DefaultColumnTypes } from 'pqb';
+import { ColumnsShape, makeColumnTypes, DefaultColumnTypes } from 'pqb';
 import { assertType, testAdapter, useTestDatabase } from 'test-utils';
+import { zodSchemaConfig, ZodSchemaConfig } from 'schema-to-zod';
 
 describe('factory', () => {
   useTestDatabase();
@@ -467,8 +468,10 @@ describe('factory', () => {
   });
 
   describe('unique columns', () => {
+    const columnTypes = makeColumnTypes(zodSchemaConfig);
+
     const makeTable = <T extends ColumnsShape>(
-      fn: (t: DefaultColumnTypes) => T,
+      fn: (t: DefaultColumnTypes<ZodSchemaConfig>) => T,
     ) => {
       return class extends BaseTable {
         readonly table = 'table';

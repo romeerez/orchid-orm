@@ -129,10 +129,6 @@ export default {
             text: 'Column types',
             link: '/guide/columns-types',
           },
-          {
-            text: 'JSON types',
-            link: '/guide/columns-json-types',
-          },
         ],
       },
       {

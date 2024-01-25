@@ -5,8 +5,8 @@ describe('clear', () => {
   it('should remove query statements for select', () => {
     const inner = User.select('id', { as: 'name' });
 
-    const query = User.with('withAlias', User.all())
-      .select('id', { as: 'name' })
+    const query = User.select('id', { as: 'name' })
+      .with('withAlias', User.all())
       .where({ id: 1 })
       .orWhere({ id: 2 })
       .union([inner])

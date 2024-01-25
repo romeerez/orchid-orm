@@ -3,16 +3,18 @@ import {
   Insertable,
   Queryable,
   Selectable,
-  Table,
   Updateable,
 } from './baseTable';
 import { orchidORM } from './orm';
-import { ColumnType, columnTypes, Operators, TextColumn } from 'pqb';
+import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
 import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
 import path from 'path';
 import { asMock } from './codegen/testUtils';
 import { getCallerFilePath } from 'orchid-core';
 import { assertType, expectSql, testAdapter } from 'test-utils';
+import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
+import { z } from 'zod';
+import { zodSchemaConfig } from 'schema-to-zod';
 
 jest.mock('orchid-core', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -36,6 +38,7 @@ describe('baseTable', () => {
   it('should allow to customize a name', () => {
     const base = createBaseTable({
       exportAs: 'custom',
+      schemaConfig: zodSchemaConfig,
     });
     expect(base.exportAs).toBe('custom');
   });
@@ -70,7 +73,7 @@ describe('baseTable', () => {
   describe('setColumns', () => {
     it('should store columns in the prototype of the table', () => {
       const shape = {
-        id: columnTypes.identity().primaryKey(),
+        id: makeColumnTypes(defaultSchemaConfig).identity().primaryKey(),
       };
 
       class SomeTable extends BaseTable {
@@ -87,6 +90,9 @@ describe('baseTable', () => {
       class Type extends ColumnType {
         dataType = 'type';
         operators = Operators.any;
+        constructor() {
+          super(defaultSchemaConfig, defaultSchemaConfig.unknown);
+        }
         toCode() {
           return '';
         }
@@ -369,34 +375,45 @@ describe('baseTable', () => {
   });
 
   describe('schemaProvider', () => {
-    const schemaProviderFn = jest.fn(() => ({}));
-
     const BaseTable = createBaseTable({
-      schemaProvider<T extends Table>(this: { new (): T }): Selectable<T> {
-        return schemaProviderFn() as never;
-      },
+      schemaConfig: zodSchemaConfig,
     });
 
     class SomeTable extends BaseTable {
       readonly table = 'some';
       columns = this.setColumns((t) => ({
         id: t.identity().primaryKey(),
-        name: t.text(1, 2),
+        name: t.text(0, Infinity),
       }));
     }
 
-    it('should infer and transform types of the table columns', () => {
-      const schema = SomeTable.schema();
+    it('should expose inputSchema, outputSchema, outputSchema', () => {
+      const inputSchema = SomeTable.inputSchema();
+      const outputSchema = SomeTable.outputSchema();
+      const querySchema = SomeTable.querySchema();
 
-      assertType<typeof schema, { id: number; name: string }>();
+      const expected = z.object({ id: z.number(), name: z.string() });
+      assertType<typeof inputSchema, typeof expected>();
+      assertType<typeof outputSchema, typeof expected>();
+      assertType<typeof querySchema, typeof expected>();
+
+      const data = { id: 1, name: 'name' };
+      expect(() => inputSchema.parse(data)).not.toThrow();
+      expect(() => outputSchema.parse(data)).not.toThrow();
+      expect(() => querySchema.parse(data)).not.toThrow();
     });
 
     it('should be memoized', () => {
-      const schema1 = SomeTable.schema();
-      const schema2 = SomeTable.schema();
+      const inputSchema = SomeTable.inputSchema();
+      const outputSchema = SomeTable.outputSchema();
+      const querySchema = SomeTable.querySchema();
+      const inputSchema2 = SomeTable.inputSchema();
+      const outputSchema2 = SomeTable.outputSchema();
+      const querySchema2 = SomeTable.querySchema();
 
-      expect(schema1).toBe(schema2);
-      expect(schemaProviderFn).toBeCalledTimes(1);
+      expect(inputSchema2).toBe(inputSchema);
+      expect(outputSchema2).toBe(outputSchema);
+      expect(querySchema2).toBe(querySchema);
     });
   });
 
@@ -404,7 +421,10 @@ describe('baseTable', () => {
     it('should have a partial shape of column `queryType`', () => {
       class SomeTable extends BaseTable {
         columns = this.setColumns((t) => ({
-          foo: t.text() as unknown as Omit<TextColumn, 'queryType'> & {
+          foo: t.text() as unknown as Omit<
+            TextColumn<DefaultSchemaConfig>,
+            'queryType'
+          > & {
             queryType: number;
           },
         }));
@@ -418,7 +438,7 @@ describe('baseTable', () => {
     it('should have a columns shape type returned from database and parsed', () => {
       class SomeTable extends BaseTable {
         columns = this.setColumns((t) => ({
-          foo: t.text().parse(() => true),
+          foo: t.text().parse(z.boolean(), () => true),
         }));
       }
 

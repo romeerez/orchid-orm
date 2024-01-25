@@ -3,31 +3,29 @@ import {
   SelectableOrExpressionOfType,
   SetQueryReturnsColumn,
 } from '../query/query';
-import {
-  ArrayColumn,
-  BooleanColumn,
-  BooleanNullable,
-  ColumnType,
-  IntegerColumn,
-  JSONColumn,
-  JSONTextColumn,
-  NumberBaseColumn,
-  NumberColumn,
-  TextBaseColumn,
-  TextColumn,
-  UnknownColumn,
-  XMLColumn,
-} from '../columns';
 import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
-import { ColumnTypeBase, emptyArray, NullableColumn } from 'orchid-core';
+import {
+  BaseOperators,
+  emptyArray,
+  emptyObject,
+  QueryColumn,
+} from 'orchid-core';
 import {
   AggregateOptions,
   makeFnExpression,
   FnExpression,
   Over,
 } from '../common/fn';
-import { Operators } from '../columns/operators';
+import {
+  OperatorsAny,
+  OperatorsArray,
+  OperatorsBoolean,
+  OperatorsNumber,
+  OperatorsText,
+} from '../columns/operators';
 import { RawSQL } from '../sql/rawSql';
+import { IntegerColumn, RealColumn } from '../columns';
+import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
@@ -40,51 +38,103 @@ export const isSelectingCount = (q: Query) => {
 
 // `count` returns `bigint` type that is represented by a string.
 // This is needed to parse the value back to a number.
-const int = new IntegerColumn().parse((input) =>
-  parseInt(input as unknown as string),
-);
-
-type NullableInteger = NullableColumn<IntegerColumn>;
+const int = new IntegerColumn(defaultSchemaConfig);
+int.parseItem = int.parseFn = (input): number =>
+  parseInt(input as unknown as string);
 
 // Parse nullable string to int, the nullable string may happen because of `bigint` db type.
-const nullableInt = new IntegerColumn().parse((input) =>
-  input === null ? null : parseInt(input as unknown as string),
-) as NullableInteger;
-
-type NullableNumber = NullableColumn<NumberColumn>;
+const nullableInt = new IntegerColumn(defaultSchemaConfig);
+nullableInt.parseItem = nullableInt.parseFn = (input): number =>
+  (input === null ? null : parseInt(input as unknown as string)) as number;
 
 // double-precision is represented by string in JS, parse it to float.
-const nullableFloat = new IntegerColumn().parse((input) =>
-  input === null ? null : parseFloat(input as unknown as string),
-) as NullableNumber;
+const nullableFloat = new RealColumn(defaultSchemaConfig);
+nullableFloat.parseItem = nullableFloat.parseFn = (input): number =>
+  (input === null ? null : parseFloat(input as unknown as string)) as number;
 
-const nullableBoolean: BooleanNullable = new BooleanColumn().nullable();
+type QueryReturnsColumnAgg<
+  T,
+  C extends QueryColumn,
+  Op,
+> = SetQueryReturnsColumn<T, C> & Op;
+
+type QueryReturnsAgg<T, C, Op extends BaseOperators> = QueryReturnsColumnAgg<
+  T,
+  QueryColumn<C, Op>,
+  Op
+>;
 
 type NullableJSONAgg<
   T extends Query,
   Arg extends SelectableOrExpression<T>,
-> = NullableColumn<ArrayColumn<ExpressionOutput<T, Arg>>>;
+  C extends QueryColumn = ExpressionOutput<T, Arg>,
+  Result extends QueryColumn = {
+    dataType: 'json';
+    type: (C['type'] | null)[] | null;
+    outputType: (C['outputType'] | null)[] | null;
+    queryType: (C['queryType'] | null)[] | null;
+    operators: OperatorsArray;
+  },
+> = Result;
 
 type NullableJSONObject<
   T extends Query,
   Obj extends Record<string, SelectableOrExpression<T>>,
-  Outputs extends Record<string, ColumnTypeBase> = {
-    [K in keyof Obj]: ExpressionOutput<T, Obj[K]>;
+  Result extends QueryColumn = {
+    dataType: 'json';
+    type:
+      | {
+          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'];
+        }
+      | null;
+    outputType:
+      | {
+          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['outputType'];
+        }
+      | null;
+    queryType:
+      | {
+          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['queryType'];
+        }
+      | null;
+    operators: OperatorsAny;
   },
-> = NullableColumn<
-  ColumnType<
-    { [K in keyof Outputs]: Outputs[K]['type'] },
-    typeof Operators.any,
-    { [K in keyof Outputs]: Outputs[K]['inputType'] },
-    { [K in keyof Outputs]: Outputs[K]['outputType'] }
-  >
->;
+> = Result;
 
-const jsonColumn = new JSONTextColumn().nullable();
-const jsonbColumn = new JSONColumn().nullable();
+type CountReturn<T> = QueryReturnsAgg<T, number, OperatorsNumber> & {
+  isCount: true;
+};
 
-type NullableText = NullableColumn<TextColumn>;
-const nullableText = new TextColumn().nullable();
+type NumberColumn = QueryColumn<number, OperatorsNumber>;
+
+type NumberNullable = QueryColumn<number | null, OperatorsNumber>;
+
+type NullableNumberReturn<T> = SetQueryReturnsColumn<T, NumberNullable> &
+  OperatorsNumber;
+
+type BooleanColumn = QueryColumn<boolean, OperatorsBoolean>;
+
+type BooleanNullable = QueryColumn<boolean | null, OperatorsBoolean>;
+
+type NullableBooleanReturn<T> = SetQueryReturnsColumn<T, BooleanNullable> &
+  OperatorsBoolean;
+
+type NullableJSONAggReturn<
+  T extends Query,
+  Arg extends SelectableOrExpression<T>,
+> = SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> & OperatorsArray;
+
+type NullableJSONObjectReturn<
+  T extends Query,
+  Obj extends Record<string, SelectableOrExpression<T>>,
+> = SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> & OperatorsAny;
+
+type StringColumn = QueryColumn<string, OperatorsText>;
+
+type StringNullable = QueryColumn<string | null, OperatorsText>;
+
+type NullableStringReturn<T> = SetQueryReturnsColumn<T, StringNullable> &
+  OperatorsText;
 
 // Query methods to get a single value for an aggregate function
 export class AggregateMethods {
@@ -95,6 +145,7 @@ export class AggregateMethods {
    *
    * ```ts
    * const q = await User.select({
+   *   // todo: use type callback instead of generic type
    *   sqrt: (q) => q.fn<number>('sqrt', ['numericColumn']),
    * }).take();
    *
@@ -121,16 +172,20 @@ export class AggregateMethods {
    * @param options
    * @param type
    */
-  fn<T extends Query, Type = unknown, C extends ColumnType = ColumnType<Type>>(
+  fn<
+    T extends Query,
+    Type = unknown,
+    C extends QueryColumn = QueryColumn<Type>,
+  >(
     this: T,
     fn: string,
     args: SelectableOrExpression<T>[],
     options?: AggregateOptions<T>,
     type?: (t: T['columnTypes']) => C,
-  ): SetQueryReturnsColumn<T, C> & C['operators'] {
+  ): QueryReturnsColumnAgg<T, C, C['operators']> {
     return makeFnExpression(
       this,
-      (type?.(this.columnTypes) || UnknownColumn.instance) as C,
+      (type?.(this.columnTypes) || emptyObject) as C,
       fn,
       args,
       options,
@@ -184,18 +239,14 @@ export class AggregateMethods {
     this: T,
     arg: SelectableOrExpression<T> = '*',
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NumberColumn> & {
-    isCount: true;
-  } & NumberColumn['operators'] {
+  ): CountReturn<T> {
     return makeFnExpression(
       this,
       int,
       'count',
       [arg],
       options,
-    ) as SetQueryReturnsColumn<T, NumberColumn> & {
-      isCount: true;
-    } & NumberColumn['operators'];
+    ) as unknown as CountReturn<T>;
   }
 
   /**
@@ -221,10 +272,16 @@ export class AggregateMethods {
    */
   min<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    arg: SelectableOrExpressionOfType<T, NumberColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
-    return makeFnExpression(this, nullableFloat, 'min', [arg], options);
+  ): NullableNumberReturn<T> {
+    return makeFnExpression(
+      this,
+      nullableFloat,
+      'min',
+      [arg],
+      options,
+    ) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -250,10 +307,16 @@ export class AggregateMethods {
    */
   max<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    arg: SelectableOrExpressionOfType<T, NumberColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
-    return makeFnExpression(this, nullableFloat, 'max', [arg], options);
+  ): NullableNumberReturn<T> {
+    return makeFnExpression(
+      this,
+      nullableFloat,
+      'max',
+      [arg],
+      options,
+    ) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -278,10 +341,16 @@ export class AggregateMethods {
    */
   sum<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    arg: SelectableOrExpressionOfType<T, NumberColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
-    return makeFnExpression(this, nullableFloat, 'sum', [arg], options);
+  ): NullableNumberReturn<T> {
+    return makeFnExpression(
+      this,
+      nullableFloat,
+      'sum',
+      [arg],
+      options,
+    ) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -303,10 +372,16 @@ export class AggregateMethods {
    */
   avg<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    arg: SelectableOrExpressionOfType<T, NumberColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
-    return makeFnExpression(this, nullableFloat, 'avg', [arg], options);
+  ): NullableNumberReturn<T> {
+    return makeFnExpression(
+      this,
+      nullableFloat,
+      'avg',
+      [arg],
+      options,
+    ) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -331,10 +406,16 @@ export class AggregateMethods {
    */
   bitAnd<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    arg: SelectableOrExpressionOfType<T, NumberColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
-    return makeFnExpression(this, nullableFloat, 'bit_and', [arg], options);
+  ): NullableNumberReturn<T> {
+    return makeFnExpression(
+      this,
+      nullableFloat,
+      'bit_and',
+      [arg],
+      options,
+    ) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -356,10 +437,16 @@ export class AggregateMethods {
    */
   bitOr<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, NumberBaseColumn>,
+    arg: SelectableOrExpressionOfType<T, NumberColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
-    return makeFnExpression(this, nullableFloat, 'bit_or', [arg], options);
+  ): NullableNumberReturn<T> {
+    return makeFnExpression(
+      this,
+      nullableFloat,
+      'bit_or',
+      [arg],
+      options,
+    ) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -386,8 +473,14 @@ export class AggregateMethods {
     this: T,
     arg: SelectableOrExpressionOfType<T, BooleanColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> & BooleanNullable['operators'] {
-    return makeFnExpression(this, nullableBoolean, 'bool_and', [arg], options);
+  ): NullableBooleanReturn<T> {
+    return makeFnExpression(
+      this,
+      emptyObject as QueryColumn,
+      'bool_and',
+      [arg],
+      options,
+    ) as unknown as NullableBooleanReturn<T>;
   }
 
   /**
@@ -414,8 +507,14 @@ export class AggregateMethods {
     this: T,
     arg: SelectableOrExpressionOfType<T, BooleanColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> & BooleanNullable['operators'] {
-    return makeFnExpression(this, nullableBoolean, 'bool_or', [arg], options);
+  ): NullableBooleanReturn<T> {
+    return makeFnExpression(
+      this,
+      emptyObject as QueryColumn,
+      'bool_or',
+      [arg],
+      options,
+    ) as unknown as NullableBooleanReturn<T>;
   }
 
   /**
@@ -425,8 +524,14 @@ export class AggregateMethods {
     this: T,
     arg: SelectableOrExpressionOfType<T, BooleanColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, BooleanNullable> & BooleanNullable['operators'] {
-    return makeFnExpression(this, nullableBoolean, 'every', [arg], options);
+  ): NullableBooleanReturn<T> {
+    return makeFnExpression(
+      this,
+      emptyObject as QueryColumn,
+      'every',
+      [arg],
+      options,
+    ) as unknown as NullableBooleanReturn<T>;
   }
 
   /**
@@ -457,11 +562,10 @@ export class AggregateMethods {
     this: T,
     arg: Arg,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> &
-    ArrayColumn<ColumnTypeBase>['operators'] {
+  ): NullableJSONAggReturn<T, Arg> {
     return makeFnExpression(
       this,
-      jsonColumn as unknown as NullableJSONAgg<T, Arg>,
+      emptyObject as NullableJSONAgg<T, Arg>,
       'json_agg',
       [arg],
       options,
@@ -475,11 +579,10 @@ export class AggregateMethods {
     this: T,
     arg: Arg,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONAgg<T, Arg>> &
-    ArrayColumn<ColumnTypeBase>['operators'] {
+  ): NullableJSONAggReturn<T, Arg> {
     return makeFnExpression(
       this,
-      jsonbColumn as unknown as NullableJSONAgg<T, Arg>,
+      emptyObject as NullableJSONAgg<T, Arg>,
       'jsonb_agg',
       [arg],
       options,
@@ -525,11 +628,10 @@ export class AggregateMethods {
     this: T,
     arg: Obj,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> &
-    typeof Operators.any {
+  ): NullableJSONObjectReturn<T, Obj> {
     return makeFnExpression(
       this,
-      jsonColumn as NullableJSONObject<T, Obj>,
+      emptyObject as NullableJSONObject<T, Obj>,
       'json_object_agg',
       [{ pairs: arg }],
       options,
@@ -546,11 +648,10 @@ export class AggregateMethods {
     this: T,
     arg: Obj,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableJSONObject<T, Obj>> &
-    typeof Operators.any {
+  ): NullableJSONObjectReturn<T, Obj> {
     return makeFnExpression(
       this,
-      jsonbColumn as NullableJSONObject<T, Obj>,
+      emptyObject as NullableJSONObject<T, Obj>,
       'jsonb_object_agg',
       [{ pairs: arg }],
       options,
@@ -581,17 +682,17 @@ export class AggregateMethods {
    */
   stringAgg<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, TextBaseColumn>,
+    arg: SelectableOrExpressionOfType<T, StringColumn>,
     delimiter: string,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableText> & NullableText['operators'] {
+  ): NullableStringReturn<T> {
     return makeFnExpression(
       this,
-      nullableText,
+      emptyObject as QueryColumn,
       'string_agg',
       [arg, { value: delimiter }],
       options,
-    );
+    ) as NullableStringReturn<T>;
   }
 
   /**
@@ -613,10 +714,16 @@ export class AggregateMethods {
    */
   xmlAgg<T extends Query>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, XMLColumn>,
+    arg: SelectableOrExpressionOfType<T, StringColumn>,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NullableText> & NullableText['operators'] {
-    return makeFnExpression(this, nullableText, 'xmlagg', [arg], options);
+  ): NullableStringReturn<T> {
+    return makeFnExpression(
+      this,
+      emptyObject as QueryColumn,
+      'xmlagg',
+      [arg],
+      options,
+    ) as NullableStringReturn<T>;
   }
 
   /**
@@ -637,13 +744,10 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  rowNumber<T extends Query>(
-    this: T,
-    over?: Over<T>,
-  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
+  rowNumber<T extends Query>(this: T, over?: Over<T>): NullableNumberReturn<T> {
     return makeFnExpression(this, nullableInt, 'row_number', emptyArray, {
       over,
-    });
+    }) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -664,11 +768,10 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  rank<T extends Query>(
-    this: T,
-    over?: Over<T>,
-  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
-    return makeFnExpression(this, nullableInt, 'rank', emptyArray, { over });
+  rank<T extends Query>(this: T, over?: Over<T>): NullableNumberReturn<T> {
+    return makeFnExpression(this, nullableInt, 'rank', emptyArray, {
+      over,
+    }) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -689,13 +792,10 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  denseRank<T extends Query>(
-    this: T,
-    over?: Over<T>,
-  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
+  denseRank<T extends Query>(this: T, over?: Over<T>): NullableNumberReturn<T> {
     return makeFnExpression(this, nullableInt, 'dense_rank', emptyArray, {
       over,
-    });
+    }) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -719,10 +819,10 @@ export class AggregateMethods {
   percentRank<T extends Query>(
     this: T,
     over?: Over<T>,
-  ): SetQueryReturnsColumn<T, NullableInteger> & NullableInteger['operators'] {
+  ): NullableNumberReturn<T> {
     return makeFnExpression(this, nullableInt, 'percent_rank', emptyArray, {
       over,
-    });
+    }) as unknown as NullableNumberReturn<T>;
   }
 
   /**
@@ -743,12 +843,9 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  cumeDist<T extends Query>(
-    this: T,
-    over?: Over<T>,
-  ): SetQueryReturnsColumn<T, NullableNumber> & NullableNumber['operators'] {
+  cumeDist<T extends Query>(this: T, over?: Over<T>): NullableNumberReturn<T> {
     return makeFnExpression(this, nullableFloat, 'cume_dist', emptyArray, {
       over,
-    });
+    }) as unknown as NullableNumberReturn<T>;
   }
 }

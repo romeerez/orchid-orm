@@ -1,17 +1,25 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Code } from 'orchid-core';
-import { Operators } from './operators';
+import { Code, ColumnSchemaConfig } from 'orchid-core';
+import { Operators, OperatorsAny } from './operators';
 
 export class EnumColumn<
+  Schema extends ColumnSchemaConfig,
+  SchemaType extends Schema['type'],
   U extends string = string,
   T extends [U, ...U[]] = [U],
-> extends ColumnType<T[number], typeof Operators.any> {
+> extends ColumnType<Schema, T[number], SchemaType, OperatorsAny> {
   operators = Operators.any;
   dataType = 'enum';
 
-  constructor(public enumName: string, public options: T) {
-    super();
+  constructor(
+    schema: Schema,
+    public enumName: string,
+    public options: T,
+    schemaType: SchemaType,
+  ) {
+    super(schema, schemaType);
+    this.inputSchema = this.outputSchema = this.querySchema = schemaType;
   }
 
   toCode(t: string, migration?: boolean): Code {

@@ -13,7 +13,7 @@ import {
   VirtualColumn,
   WhereArg,
 } from 'pqb';
-import { EmptyObject, StringKey } from 'orchid-core';
+import { ColumnSchemaConfig, EmptyObject, StringKey } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
@@ -77,7 +77,7 @@ export type RelationThunks = Record<string, RelationThunk>;
 export type RelationData = {
   returns: 'one' | 'many';
   method(params: Record<string, unknown>): Query;
-  virtualColumn?: VirtualColumn;
+  virtualColumn?: VirtualColumn<ColumnSchemaConfig>;
   joinQuery: RelationJoinQuery;
   reverseJoin: RelationJoinQuery;
   modifyRelatedQuery?(relatedQuery: Query): (query: Query) => void;

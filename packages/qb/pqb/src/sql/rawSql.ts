@@ -1,5 +1,4 @@
 import {
-  ColumnTypeBase,
   SQLArgs,
   RawSQLBase,
   RawSQLValues,
@@ -9,6 +8,8 @@ import {
   Expression,
   ExpressionTypeMethod,
   StaticSQLArgs,
+  ColumnSchemaConfig,
+  QueryColumn,
 } from 'orchid-core';
 import { DefaultColumnTypes } from '../columns';
 import { ToSQLCtx } from './toSQL';
@@ -45,8 +46,8 @@ export const templateLiteralToSQL = (
 };
 
 export class RawSQL<
-  T extends ColumnTypeBase,
-  ColumnTypes = DefaultColumnTypes,
+  T extends QueryColumn,
+  ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
 > extends RawSQLBase<T, ColumnTypes> {
   declare columnTypes: ColumnTypes;
 
@@ -121,14 +122,14 @@ export class RawSQL<
 }
 
 // `DynamicRawSQL` extends both `Expression` and `ExpressionTypeMethod`, so it needs a separate interface.
-export interface DynamicRawSQL<T extends ColumnTypeBase>
+export interface DynamicRawSQL<T extends QueryColumn>
   extends Expression<T>,
     ExpressionTypeMethod {}
 
 // Calls the given function to get inner SQL each time when converting to SQL.
 export class DynamicRawSQL<
-  T extends ColumnTypeBase,
-  ColumnTypes = DefaultColumnTypes,
+  T extends QueryColumn,
+  ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
 > extends Expression<T> {
   declare _type: T;
   declare columnTypes: ColumnTypes;
@@ -147,10 +148,10 @@ DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
 
 export function raw<T = unknown>(
   ...args: StaticSQLArgs
-): RawSQL<ColumnTypeBase<T>>;
+): RawSQL<QueryColumn<T>>;
 export function raw<T = unknown>(
   ...args: [DynamicSQLArg]
-): DynamicRawSQL<ColumnTypeBase<T>>;
+): DynamicRawSQL<QueryColumn<T>>;
 export function raw(...args: SQLArgs) {
   return isTemplateLiteralArgs(args)
     ? new RawSQL(args)

@@ -1,5 +1,5 @@
-import { singleQuote, toArray } from '../utils';
-import { ColumnChain, ColumnDataBase } from './columnType';
+import { singleQuote } from '../utils';
+import { ColumnDataBase } from './columnType';
 import {
   arrayMethodNames,
   ArrayMethodsData,
@@ -31,45 +31,6 @@ export const addCode = (code: Code[], add: Code) => {
       code.push(add);
     }
   }
-};
-
-/**
- * Turn column validations chain into code
- *
- * @param chain - column validation chain
- * @param t - column types variable name
- * @param code - append the chain code into the existing code
- */
-export const columnChainToCode = (
-  chain: ColumnChain,
-  t: string,
-  code: Code,
-): Code => {
-  const result = toArray(code) as Code[];
-
-  for (const item of chain) {
-    if (item[0] === 'transform') {
-      addCode(result, `.transform(${item[1].toString()})`);
-    } else if (item[0] === 'to') {
-      addCode(result, `.to(${item[1].toString()}, `);
-      addCode(result, item[2].toCode(t));
-      addCode(result, ')');
-    } else if (item[0] === 'refine') {
-      const message = item[2].data.errors?.refine;
-      addCode(
-        result,
-        `.refine(${item[1].toString()}${
-          message ? `, ${singleQuote(message)}` : ''
-        })`,
-      );
-    } else if (item[0] === 'superRefine') {
-      addCode(result, `.superRefine(${item[1].toString()})`);
-    }
-  }
-
-  return result.length === 1 && typeof result[0] === 'string'
-    ? result[0]
-    : result;
 };
 
 /**
@@ -160,7 +121,7 @@ const columnMethodToCode = <T extends ColumnDataBase, K extends keyof T>(
   const param = data[key];
   if (param === undefined) return '';
 
-  const error = data.errors?.[key === 'nonEmpty' ? 'min' : (key as string)];
+  const error = data.errors?.[key as string];
 
   let params;
   if (typeof param === 'object' && param && param?.constructor === Object) {

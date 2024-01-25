@@ -13,11 +13,10 @@ import {
   EnumColumn,
   quote,
   Adapter,
-  DefaultColumnTypes,
   raw,
 } from 'pqb';
 import {
-  ColumnTypesBase,
+  ColumnSchemaConfig,
   emptyObject,
   MaybeArray,
   QueryInput,
@@ -32,6 +31,8 @@ import {
   quoteWithSchema,
   getSchemaAndTableFromName,
   quoteNameFromString,
+  RakeDbColumnTypes,
+  ConstraintArg,
 } from '../common';
 import { RakeDbAst } from '../ast';
 import { columnTypeToSql } from './migrationUtils';
@@ -58,22 +59,22 @@ export type TableOptions = {
 };
 
 // Simplified text column type that doesn't require `min` and `max` arguments.
-type TextColumnCreator = () => TextColumn;
+type TextColumnCreator = (
+  min?: number,
+  max?: number,
+) => TextColumn<ColumnSchemaConfig>;
 
 // Overridden column types to simplify and adapt some column types for a migration.
-export type MigrationColumnTypes<CT extends ColumnTypesBase> = Omit<
-  CT,
-  'text' | 'string' | 'enum'
-> & {
+export type MigrationColumnTypes<CT> = Omit<CT, 'text' | 'string' | 'enum'> & {
   text: TextColumnCreator;
   string: TextColumnCreator;
   citext: TextColumnCreator;
-  enum: (name: string) => EnumColumn;
+  enum: (name: string) => EnumColumn<ColumnSchemaConfig, unknown>;
 };
 
 // Create table callback
 export type ColumnsShapeCallback<
-  CT extends ColumnTypesBase,
+  CT,
   Shape extends ColumnsShape = ColumnsShape,
 > = (t: MigrationColumnTypes<CT> & { raw: typeof raw }) => Shape;
 
@@ -85,9 +86,7 @@ export type ChangeTableOptions = {
 };
 
 // Callback for a table change
-export type ChangeTableCallback<CT extends ColumnTypesBase> = (
-  t: TableChanger<CT>,
-) => TableChangeData;
+export type ChangeTableCallback<CT> = (t: TableChanger<CT>) => TableChangeData;
 
 // DTO for column comments
 export type ColumnComment = { column: string; comment: string | null };
@@ -101,29 +100,11 @@ export type SilentQueries = {
 };
 
 // Combined queryable database instance and a migration interface
-export type DbMigration<CT extends ColumnTypesBase = DefaultColumnTypes> =
-  DbResult<CT> &
-    Migration<CT> & {
-      // Add `SilentQueries` to an existing `adapter` type in the `DbResult`
-      adapter: SilentQueries;
-    };
-
-// Constraint config, it can be a foreign key or a check
-type ConstraintArg = {
-  // Name of the constraint
-  name?: string;
-  // Foreign key options
-  references?: [
-    columns: [string, ...string[]],
-    table: string,
-    foreignColumn: [string, ...string[]],
-    options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
-  ];
-  // Database check raw SQL
-  check?: RawSQLBase;
-  // Drop mode to use when dropping the constraint
-  dropMode?: DropMode;
-};
+export type DbMigration<CT extends RakeDbColumnTypes> = DbResult<CT> &
+  Migration<CT> & {
+    // Add `SilentQueries` to an existing `adapter` type in the `DbResult`
+    adapter: SilentQueries;
+  };
 
 /**
  * Creates a new `db` instance that is an instance of `pqb` with mixed in migration methods from the `Migration` class.
@@ -134,10 +115,13 @@ type ConstraintArg = {
  * @param config - config of `rakeDb`
  * @param asts - array of migration ASTs to collect changes into
  */
-export const createMigrationInterface = <CT extends ColumnTypesBase>(
+export const createMigrationInterface = <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT extends RakeDbColumnTypes,
+>(
   tx: TransactionAdapter,
   up: boolean,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
   asts: RakeDbAst[],
 ): DbMigration<CT> => {
   const adapter = new TransactionAdapter(tx, tx.client, tx.types);
@@ -157,7 +141,7 @@ export const createMigrationInterface = <CT extends ColumnTypesBase>(
   const db = createDb({
     adapter,
     columnTypes: config.columnTypes,
-  }) as unknown as DbMigration;
+  }) as unknown as DbMigration<CT>;
 
   const { prototype: proto } = Migration;
   for (const key of Object.getOwnPropertyNames(proto)) {
@@ -172,11 +156,11 @@ export const createMigrationInterface = <CT extends ColumnTypesBase>(
     log,
     up,
     options: config,
-  }) as unknown as DbMigration<CT>;
+  });
 };
 
 // Migration interface to use inside the `change` callback.
-export class Migration<CT extends ColumnTypesBase> {
+export class Migration<CT extends RakeDbColumnTypes> {
   // Database adapter to perform queries with.
   public adapter!: TransactionAdapter;
   // The logger config.
@@ -184,7 +168,7 @@ export class Migration<CT extends ColumnTypesBase> {
   // Is migrating or rolling back.
   public up!: boolean;
   // `rakeDb` config.
-  public options!: RakeDbConfig;
+  public options!: RakeDbConfig<ColumnSchemaConfig>;
   // Collect objects that represents what was changed by a migration to pass it later to the `appCodeUpdater`.
   public migratedAsts!: RakeDbAst[];
   // Available column types that may be customized by a user.
@@ -1219,7 +1203,7 @@ const wrapWithLog = async <Result>(
 /**
  * See {@link Migration.addColumn}
  */
-const addColumn = <CT extends ColumnTypesBase>(
+const addColumn = <CT extends RakeDbColumnTypes>(
   migration: Migration<CT>,
   up: boolean,
   tableName: string,
@@ -1234,8 +1218,8 @@ const addColumn = <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.addIndex}
  */
-const addIndex = <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const addIndex = (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   columns: MaybeArray<string | IndexColumnOptions>,
@@ -1249,8 +1233,8 @@ const addIndex = <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.addForeignKey}
  */
-const addForeignKey = <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const addForeignKey = (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
@@ -1266,8 +1250,8 @@ const addForeignKey = <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.addPrimaryKey}
  */
-const addPrimaryKey = <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const addPrimaryKey = (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   columns: string[],
@@ -1281,8 +1265,8 @@ const addPrimaryKey = <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.addCheck}
  */
-const addCheck = <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const addCheck = (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   check: RawSQLBase,
@@ -1295,8 +1279,8 @@ const addCheck = <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.addConstraint}
  */
-const addConstraint = <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const addConstraint = (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   tableName: string,
   constraint: ConstraintArg,
@@ -1309,8 +1293,8 @@ const addConstraint = <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.createSchema}
  */
-const createSchema = async <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const createSchema = async (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
 ): Promise<void> => {
@@ -1330,8 +1314,8 @@ const createSchema = async <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.createExtension}
  */
-const createExtension = async <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const createExtension = async (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'>,
@@ -1364,8 +1348,8 @@ const createExtension = async <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.createEnum}
  */
-const createEnum = async <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const createEnum = async (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
   values: [string, ...string[]],
@@ -1405,7 +1389,7 @@ const createEnum = async <CT extends ColumnTypesBase>(
 /**
  * See {@link Migration.createDomain}
  */
-const createDomain = async <CT extends ColumnTypesBase>(
+const createDomain = async <CT extends RakeDbColumnTypes>(
   migration: Migration<CT>,
   up: boolean,
   name: string,
@@ -1461,8 +1445,8 @@ DEFAULT ${ast.default.toSQL({ values })}`
 /**
  * See {@link Migration.createCollation}
  */
-const createCollation = async <CT extends ColumnTypesBase>(
-  migration: Migration<CT>,
+const createCollation = async (
+  migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Collation, 'type' | 'action' | 'schema' | 'name'>,
@@ -1517,8 +1501,8 @@ const createCollation = async <CT extends ColumnTypesBase>(
  * @param db - migration instance
  * @param sql - raw SQL object to execute
  */
-const queryExists = <CT extends ColumnTypesBase>(
-  db: Migration<CT>,
+const queryExists = (
+  db: Migration<RakeDbColumnTypes>,
   sql: { text: string; values: unknown[] },
 ): Promise<boolean> => {
   return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);

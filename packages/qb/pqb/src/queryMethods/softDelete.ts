@@ -1,18 +1,16 @@
-import { ColumnsShapeBase } from 'orchid-core';
+import { QueryColumns, QueryColumnsInit } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
 import { QueryScopes } from '../sql';
 import { Query } from '../query/query';
 import { RawSQL } from '../sql/rawSql';
 import { Delete, DeleteArgs, DeleteResult, UpdateArg } from './index';
 
-export type SoftDeleteOption<Shape extends ColumnsShapeBase> =
-  | true
-  | keyof Shape;
+export type SoftDeleteOption<Shape extends QueryColumns> = true | keyof Shape;
 
 export function enableSoftDelete(
   q: Query,
   table: string | undefined,
-  shape: ColumnsShapeBase,
+  shape: QueryColumnsInit,
   softDelete: true | PropertyKey,
   scopes: QueryScopes,
 ) {

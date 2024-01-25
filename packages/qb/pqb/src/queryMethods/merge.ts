@@ -1,10 +1,10 @@
 import { Query, QueryReturnType, GetQueryResult } from '../query/query';
 import { SelectQueryData } from '../sql';
 import {
-  ColumnsShapeBase,
   getValueKey,
   MergeObjects,
   QueryCatch,
+  QueryColumns,
   QueryThen,
 } from 'orchid-core';
 
@@ -14,7 +14,7 @@ export type MergeQuery<
   ReturnType extends QueryReturnType = QueryReturnType extends Q['returnType']
     ? T['returnType']
     : Q['returnType'],
-  Result extends ColumnsShapeBase = T['meta']['hasSelect'] extends true
+  Result extends QueryColumns = T['meta']['hasSelect'] extends true
     ? Q['meta']['hasSelect'] extends true
       ? {
           [K in

@@ -16,7 +16,7 @@ import {
   quoteWithSchema,
 } from '../common';
 
-export const columnTypeToSql = (item: ColumnType) => {
+export const columnTypeToSql = (item: ColumnTypeBase) => {
   return item.data.isOfCustomType ? `"${item.toSQL()}"` : item.toSQL();
 };
 

@@ -17,12 +17,11 @@ import {
   getColumnTypes,
   getTableData,
   DefaultColumnTypes,
-  columnTypes,
+  makeColumnTypes,
 } from '../columns';
 import { QueryError, QueryErrorName } from '../errors';
 import {
   DbBase,
-  ColumnsShapeBase,
   DefaultSelectColumns,
   applyMixins,
   pushOrNewArray,
@@ -41,10 +40,12 @@ import {
   SQLQueryArgs,
   isRawSQL,
   EmptyObject,
-  ColumnTypesBase,
   ColumnTypeBase,
   emptyObject,
   CoreQueryScopes,
+  ColumnSchemaConfig,
+  QueryColumns,
+  QueryColumnsInit,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -52,18 +53,25 @@ import { templateLiteralToSQL } from '../sql/rawSql';
 import { RelationsBase } from '../relations';
 import { ScopeArgumentQuery } from '../queryMethods/scope';
 import { QueryBase } from './queryBase';
+import {
+  defaultSchemaConfig,
+  DefaultSchemaConfig,
+} from '../columns/defaultSchemaConfig';
 import { enableSoftDelete, SoftDeleteOption } from '../queryMethods/softDelete';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
-export type DbOptions<ColumnTypes extends ColumnTypesBase> = (
+export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
   | { adapter: Adapter }
   | Omit<AdapterOptions, 'log'>
 ) &
   QueryLogOptions & {
+    schemaConfig?: SchemaConfig;
     // concrete column types or a callback for overriding standard column types
     // this types will be used in tables to define their columns
-    columnTypes?: ColumnTypes | ((t: DefaultColumnTypes) => ColumnTypes);
+    columnTypes?:
+      | ColumnTypes
+      | ((t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes);
     autoPreparedStatements?: boolean;
     noPrimaryKey?: NoPrimaryKeyOption;
     // when set to true, all columns will be translated to `snake_case` when querying database
@@ -75,7 +83,7 @@ export type DbOptions<ColumnTypes extends ColumnTypesBase> = (
 // Options of `createDb`.
 export type DbTableOptions<
   Table extends string | undefined,
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumns,
 > = {
   schema?: string;
   // prepare all SQL queries before executing
@@ -100,23 +108,23 @@ export type DbTableOptions<
  */
 export type DbTableOptionScopes<
   Table extends string | undefined,
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumns,
   Keys extends string = string,
 > = Record<Keys, (q: ScopeArgumentQuery<Table, Shape>) => QueryBase>;
 
 // Type of data returned from the table query by default, doesn't include computed columns.
 // `const user: User[] = await db.user;`
-export type QueryDefaultReturnData<Shape extends ColumnsShapeBase> = Pick<
+export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = Pick<
   ColumnShapeOutput<Shape>,
   DefaultSelectColumns<Shape>[number]
 >[];
 
 export interface Db<
   Table extends string | undefined = undefined,
-  Shape extends ColumnsShapeBase = Record<string, never>,
+  Shape extends QueryColumnsInit = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
-  ColumnTypes = DefaultColumnTypes,
-  ShapeWithComputed extends ColumnsShapeBase = Shape,
+  ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
+  ShapeWithComputed extends QueryColumnsInit = Shape,
   Scopes extends CoreQueryScopes | undefined = EmptyObject,
   Data = QueryDefaultReturnData<Shape>,
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
@@ -157,14 +165,14 @@ export interface Db<
   };
 }
 
-export const anyShape = {} as Record<string, ColumnTypeBase>;
+export const anyShape = {} as QueryColumnsInit;
 
 export class Db<
   Table extends string | undefined = undefined,
-  Shape extends ColumnsShapeBase = Record<string, never>,
+  Shape extends QueryColumnsInit = Record<string, never>,
   Relations extends RelationsBase = EmptyObject,
-  ColumnTypes = DefaultColumnTypes,
-  ShapeWithComputed extends ColumnsShapeBase = Shape,
+  ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
+  ShapeWithComputed extends QueryColumnsInit = Shape,
 > implements Query
 {
   constructor(
@@ -201,7 +209,7 @@ export class Db<
     let hasCustomName = false;
     const { snakeCase } = options;
     for (const key in shape) {
-      const column = shape[key];
+      const column = shape[key] as unknown as ColumnTypeBase;
       if (column.parseFn) {
         hasParsers = true;
         parsers[key] = column.parseFn;
@@ -242,7 +250,7 @@ export class Db<
     if (hasCustomName) {
       const list: string[] = [];
       for (const key in shape) {
-        const column = shape[key];
+        const column = shape[key] as unknown as ColumnTypeBase;
         list.push(
           column.data.name ? `"${column.data.name}" AS "${key}"` : `"${key}"`,
         );
@@ -252,7 +260,7 @@ export class Db<
 
     this.q = {
       adapter,
-      shape: shape as ColumnsShapeBase,
+      shape: shape as QueryColumnsInit,
       handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
@@ -472,7 +480,7 @@ Db.prototype.onQueryBuilder = OnQueryBuilder;
 // Function to build a new table instance.
 export type DbTableConstructor<ColumnTypes> = <
   Table extends string,
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumnsInit,
   Options extends DbTableOptions<Table, Shape>,
 >(
   table: Table,
@@ -575,15 +583,17 @@ export type DbResult<ColumnTypes> = Db<
  * ```
  */
 export const createDb = <
-  ColumnTypes extends ColumnTypesBase = DefaultColumnTypes,
+  SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
+  ColumnTypes = DefaultColumnTypes<SchemaConfig>,
 >({
   log,
   logger,
-  columnTypes: ctOrFn = columnTypes as unknown as ColumnTypes,
   snakeCase,
   nowSQL,
+  schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
+  columnTypes: ctOrFn = makeColumnTypes(schemaConfig) as unknown as ColumnTypes,
   ...options
-}: DbOptions<ColumnTypes>): DbResult<ColumnTypes> => {
+}: DbOptions<SchemaConfig, ColumnTypes>): DbResult<ColumnTypes> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = {
     log,
@@ -595,9 +605,11 @@ export const createDb = <
 
   const ct =
     typeof ctOrFn === 'function'
-      ? (ctOrFn as unknown as (t: DefaultColumnTypes) => ColumnTypes)(
-          columnTypes,
-        )
+      ? (
+          ctOrFn as unknown as (
+            t: DefaultColumnTypes<SchemaConfig>,
+          ) => ColumnTypes
+        )(makeColumnTypes(schemaConfig))
       : ctOrFn;
 
   if (snakeCase) {
@@ -632,7 +644,7 @@ export const createDb = <
       ct,
       transactionStorage,
       { ...commonOptions, ...options },
-    );
+    ) as never;
 
   const db = Object.assign(tableConstructor, qb, {
     adapter,

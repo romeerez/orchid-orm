@@ -1,20 +1,14 @@
-import { columnTypes } from './columnTypes';
 import { codeToString } from 'orchid-core';
-import { useTestDatabase } from 'test-utils';
-
-const t = columnTypes;
+import { testColumnTypes as t, useTestDatabase } from 'test-utils';
+import { z } from 'zod';
 
 describe('json columns', () => {
   describe('json', () => {
     useTestDatabase();
 
     it('should have toCode', () => {
-      const code = t.json((t) => t.object({ foo: t.string() })).toCode('t');
-      expect(codeToString(code, '', '  ')).toBe(`t.json((t) =>
-  t.object({
-    foo: t.string(),
-  }),
-)`);
+      const code = t.json(z.object({ foo: z.string() })).toCode('t');
+      expect(codeToString(code, '', '  ')).toBe(`t.json()`);
     });
 
     it(`should have encodeFn because pg driver fails to encode arrays on its own`, async () => {

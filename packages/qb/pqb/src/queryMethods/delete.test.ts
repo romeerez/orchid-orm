@@ -84,7 +84,7 @@ describe('delete', () => {
       [1],
     );
 
-    assertType<Awaited<typeof query>, (typeof User)['type'][]>();
+    assertType<Awaited<typeof query>, (typeof User.outputType)[]>();
 
     expectQueryNotMutated(q);
   });
@@ -148,7 +148,7 @@ describe('delete', () => {
       [1],
     );
 
-    assertType<Awaited<typeof query>, (typeof User)['type'][]>();
+    assertType<Awaited<typeof query>, (typeof User.outputType)[]>();
 
     expectQueryNotMutated(q);
   });

@@ -9,7 +9,8 @@
       "pqb": ["../qb/pqb/src"],
       "orchid-orm": ["../orm/src"],
       "orchid-orm-schema-to-zod": ["../schema-to-zod/src"],
-      "test-utils": ["../test-utils/src"]
+      "test-utils": ["../test-utils/src"],
+      "schema-to-zod": ["../schema-to-zod/src"]
     }
   }
 }

@@ -1,7 +1,6 @@
 import { Query, SetQueryKind } from '../query/query';
 import { ColumnInfoQueryData } from '../sql';
-import { ColumnType } from '../columns';
-import { QueryCatch, QueryThen } from 'orchid-core';
+import { QueryCatch, QueryColumn, QueryThen } from 'orchid-core';
 
 /**
  * Result type for `columnInfo` method.
@@ -18,7 +17,7 @@ export type SetQueryReturnsColumnInfo<
   SetQueryKind<T, 'columnInfo'>,
   'result' | 'returnType' | 'then' | 'catch'
 > & {
-  result: { value: ColumnType<Result> };
+  result: { value: QueryColumn<Result> };
   returnType: 'value';
   then: QueryThen<Result>;
   catch: QueryCatch<Result>;

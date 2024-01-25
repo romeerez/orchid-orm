@@ -1,20 +1,17 @@
-import { BooleanColumn } from './boolean';
-import { assertType, testDb } from 'test-utils';
+import { assertType, testColumnTypes as t, testDb } from 'test-utils';
 
 describe('boolean column', () => {
   afterAll(testDb.close);
 
   it('should output boolean', async () => {
-    const result = await testDb.get(
-      testDb.sql`true`.type(() => new BooleanColumn()),
-    );
+    const result = await testDb.get(testDb.sql`true`.type((t) => t.boolean()));
     expect(result).toBe(true);
 
     assertType<typeof result, boolean>();
   });
 
   it('should have toCode', () => {
-    const column = new BooleanColumn();
+    const column = t.boolean();
 
     expect(column.toCode('t')).toBe('t.boolean()');
   });

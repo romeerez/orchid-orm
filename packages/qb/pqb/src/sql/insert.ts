@@ -2,10 +2,15 @@ import { addValue, ownColumnToSql } from './common';
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query/query';
 import { selectToSql } from './select';
-import { makeSQL, ToSQLCtx } from './toSQL';
+import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { pushQueryValue } from '../query/queryUtils';
 import { InsertQueryData, QueryData, QueryHookSelect } from './data';
-import { emptyArray, Expression, isExpression } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  emptyArray,
+  Expression,
+  isExpression,
+} from 'orchid-core';
 import { ColumnData } from '../columns';
 import { joinSubQuery, resolveSubQueryCallback } from '../common/utils';
 import { Db } from '../query/db';
@@ -16,7 +21,7 @@ const quotedColumns: string[] = [];
 
 export const pushInsertSql = (
   ctx: ToSQLCtx,
-  q: Query,
+  q: ToSQLQuery,
   query: InsertQueryData,
   quotedAs: string,
 ): QueryHookSelect | undefined => {
@@ -41,7 +46,7 @@ export const pushInsertSql = (
   let values = query.values;
   if (quotedColumns.length === 0) {
     const key = Object.keys(q.shape)[0];
-    const column = q.shape[key];
+    const column = q.shape[key] as ColumnTypeBase;
     quotedColumns[0] = `"${column?.data.name || key}"`;
 
     // for `create({})` case: `{}` is transformed into `[[]]`,
@@ -209,7 +214,7 @@ export const pushInsertSql = (
 
 const encodeRow = (
   ctx: ToSQLCtx,
-  q: Query,
+  q: ToSQLQuery,
   QueryClass: Db,
   row: unknown[],
   runtimeDefaults?: (() => unknown)[],
@@ -217,7 +222,10 @@ const encodeRow = (
 ) => {
   const arr = row.map((value) => {
     if (typeof value === 'function') {
-      value = resolveSubQueryCallback(q, value as (q: Query) => Query);
+      value = resolveSubQueryCallback(
+        q,
+        value as (q: ToSQLQuery) => ToSQLQuery,
+      );
     }
 
     if (value && typeof value === 'object') {
@@ -242,7 +250,7 @@ const encodeRow = (
 
 export const pushReturningSql = (
   ctx: ToSQLCtx,
-  q: Query,
+  q: ToSQLQuery,
   data: QueryData,
   quotedAs: string,
   hookSelect?: QueryHookSelect,

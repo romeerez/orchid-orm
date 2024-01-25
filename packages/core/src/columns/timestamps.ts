@@ -1,6 +1,5 @@
 import {
   ColumnTypeBase,
-  ColumnTypesBase,
   ColumnWithDefault,
   getDefaultNowFn,
 } from './columnType';
@@ -41,7 +40,7 @@ const makeInjector =
 // Simplified SQL type that returns raw SQL as it is, without dealing with SQL variables.
 class SimpleRawSQL extends RawSQLBase {
   // Column types are stored to be passed to the `type` callback.
-  columnTypes!: ColumnTypesBase;
+  columnTypes!: unknown;
 
   // Simply returning SQL provided in the constructor.
   makeSQL(): string {

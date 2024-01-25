@@ -1,5 +1,5 @@
 import { Query } from '../query/query';
-import { ColumnTypeBase, QueryCatch, QueryThen } from 'orchid-core';
+import { QueryCatch, QueryColumn, QueryThen } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
 
@@ -22,7 +22,7 @@ export type QueryTransform<
   [K in keyof QueryBase]: K extends 'returnType'
     ? 'valueOrThrow'
     : K extends 'result'
-    ? { value: ColumnTypeBase<Data> }
+    ? { value: QueryColumn<Data> }
     : T[K];
 } & {
   then: QueryThen<Data>;

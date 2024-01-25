@@ -1,21 +1,31 @@
 import { createMigrationInterface, DbMigration } from './migration/migration';
-import { columnTypes, QueryLogger, TransactionAdapter } from 'pqb';
-import { MaybeArray, noop, toArray } from 'orchid-core';
+import {
+  DefaultColumnTypes,
+  makeColumnTypes,
+  QueryLogger,
+  TransactionAdapter,
+  DefaultSchemaConfig,
+  defaultSchemaConfig,
+} from 'pqb';
+import { ColumnSchemaConfig, MaybeArray, noop, toArray } from 'orchid-core';
 import { migrationConfigDefaults, RakeDbConfig } from './common';
 import { join } from 'path';
 
-let db: DbMigration | undefined;
+let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;
 
 export const testMigrationsPath = 'migrations-path';
 
-export const testConfig: RakeDbConfig & {
+export const testConfig: RakeDbConfig<
+  ColumnSchemaConfig,
+  DefaultColumnTypes<DefaultSchemaConfig>
+> & {
   logger: QueryLogger;
   migrationsPath: string;
 } = {
   ...migrationConfigDefaults,
   basePath: __dirname,
   dbScript: 'dbScript.ts',
-  columnTypes,
+  columnTypes: makeColumnTypes(defaultSchemaConfig),
   log: false,
   logger: {
     log: jest.fn(),
@@ -41,7 +51,7 @@ export const getDb = () => {
   );
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;
-  return db;
+  return db as unknown as DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;
 };
 
 export const queryMock = jest.fn();

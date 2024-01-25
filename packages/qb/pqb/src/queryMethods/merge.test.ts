@@ -1,6 +1,5 @@
 import { Message, Profile, User } from '../test-utils/test-utils';
 import { QueryReturnType } from '../query/query';
-import { IntegerColumn, TextColumn } from '../columns';
 import { logParamToLogObject } from './log';
 import {
   ColumnInfoQueryData,
@@ -10,7 +9,12 @@ import {
   TruncateQueryData,
   UpdateQueryData,
 } from '../sql';
-import { assertType, expectSql, testDb } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  testColumnTypes as t,
+  testDb,
+} from 'test-utils';
 import { Expression, getValueKey } from 'orchid-core';
 
 describe('merge queries', () => {
@@ -215,7 +219,6 @@ describe('merge queries', () => {
           withAlias: {
             table: 'withAlias';
             shape: typeof withQuery.result;
-            type: { id: number };
           };
         }
       >();
@@ -242,7 +245,6 @@ describe('merge queries', () => {
           withAlias: {
             table: 'withAlias';
             shape: typeof withQuery.result;
-            type: { id: number };
           };
         }
       >();
@@ -270,12 +272,10 @@ describe('merge queries', () => {
           a: {
             table: 'a';
             shape: typeof firstWith.result;
-            type: { id: number };
           };
           b: {
             table: 'b';
             shape: typeof secondWith.result;
-            type: { name: string };
           };
         }
       >();
@@ -300,17 +300,17 @@ describe('merge queries', () => {
       const q2 = User.clone();
 
       q1.q.shape = {
-        number: new IntegerColumn(),
+        number: t.integer(),
       };
       q2.q.shape = {
-        string: new TextColumn(),
+        string: t.string(),
       };
       q1.q.wrapInTransaction = false;
       q2.q.wrapInTransaction = true;
       q1.q.throwOnNotFound = false;
       q2.q.throwOnNotFound = true;
-      q1.q.withShapes = { a: { id: new IntegerColumn() } };
-      q2.q.withShapes = { b: { name: new TextColumn() } };
+      q1.q.withShapes = { a: { id: t.integer() } };
+      q2.q.withShapes = { b: { name: t.string() } };
       q1.q.schema = 'a';
       q2.q.schema = 'b';
       q1.q.as = 'a';
@@ -362,8 +362,8 @@ describe('merge queries', () => {
       s2.offset = 2;
       s1.for = { type: 'UPDATE' };
       s2.for = { type: 'SHARE' };
-      s1[getValueKey] = new IntegerColumn();
-      s2[getValueKey] = new TextColumn();
+      s1[getValueKey] = t.integer();
+      s2[getValueKey] = t.string();
 
       const i1 = q1.q as unknown as InsertQueryData;
       const i2 = q2.q as unknown as InsertQueryData;
@@ -486,9 +486,9 @@ describe('merge queries', () => {
       expect(i.afterDelete).toEqual([...i1.afterDelete, ...i2.afterDelete]);
       expect(i.afterDeleteSelect).toEqual(['one', 'two']);
 
-      const t = q as TruncateQueryData;
-      expect(t.restartIdentity).toBe(t2.restartIdentity);
-      expect(t.cascade).toBe(t2.cascade);
+      const tr = q as TruncateQueryData;
+      expect(tr.restartIdentity).toBe(t2.restartIdentity);
+      expect(tr.cascade).toBe(t2.cascade);
 
       const c = q as ColumnInfoQueryData;
       expect(c.column).toBe(c2.column);

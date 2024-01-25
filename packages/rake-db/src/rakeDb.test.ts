@@ -8,7 +8,6 @@ import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock } from 'test-utils';
 import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
-import { RakeDbConfig } from './common';
 
 jest.mock('./common', () => ({
   processRakeDbConfig: (config: unknown) => config,
@@ -207,7 +206,7 @@ describe('rakeDb', () => {
       const { change, run } = rakeDb.lazy(options, {
         ...config,
         commands: {
-          custom(_: unknown, config: RakeDbConfig) {
+          custom(_, config) {
             config.logger?.log('hello');
           },
         },

@@ -1,710 +1,850 @@
 import {
+  AsTypeArg,
+  Code,
+  ColumnSchemaGetterColumns,
+  ColumnSchemaGetterTableClass,
+  ColumnTypeBase,
+  EncodeColumn,
+  NullableColumn,
+  ParseColumn,
+  makeColumnNullable,
+  ErrorMessage,
+  setDataValue,
+  StringTypeData,
+  ErrorMessages,
+  setColumnData,
+} from 'orchid-core';
+import {
   ArrayColumn,
-  DateColumn,
+  ArrayColumnValue,
+  columnCode,
+  ColumnData,
+  ColumnType,
+  DateBaseColumn,
   EnumColumn,
-  JSONColumn,
-  NumberColumn,
-  TextColumn,
-  VirtualColumn,
+  Operators,
+  OperatorsJson,
 } from 'pqb';
 import {
-  JSONArray,
-  JSONEnum,
-  JSONLiteral,
-  EnumLike,
-  JSONNativeEnum,
-  JSONNumber,
-  JSONString,
-  JSONTuple,
-  JSONObject,
-  UnknownKeysParam,
-  JSONDiscriminatedUnion,
-  JSONRecord,
-  JSONIntersection,
-  JSONUnion,
-  JSONLazy,
-  EmptyObject,
-  ColumnTypeBase,
-  JSONType,
-  JSONBoolean,
-  JSONNull,
-  JSONUnknown,
-  JSONTupleItems,
-  JSONObjectShape,
-  JSONDiscriminatedUnionArg,
-  ColumnsShapeBase,
-} from 'orchid-core';
-import { z, ZodErrorMap, ZodTypeAny } from 'zod';
-import { Buffer } from 'node:buffer';
+  z,
+  ZodArray,
+  ZodBoolean,
+  ZodDate,
+  ZodEnum,
+  ZodNever,
+  ZodNullable,
+  ZodNumber,
+  ZodObject,
+  ZodOptional,
+  ZodRawShape,
+  ZodString,
+  ZodType,
+  ZodTypeAny,
+  ZodUnknown,
+} from 'zod';
+import { ZodErrorMap } from 'zod/lib/ZodError';
 
-type NumberType =
-  | 'smallint'
-  | 'integer'
-  | 'real'
-  | 'smallserial'
-  | 'serial'
-  | 'money';
+type ParseDateToNumber = ParseColumn<
+  DateBaseColumn<ZodSchemaConfig>,
+  ZodNumber,
+  number
+>;
 
-type BigIntType =
-  | 'bigint'
-  | 'numeric'
-  | 'decimal'
-  | 'double precision'
-  | 'bigserial';
+type ParseDateToDate = ParseColumn<
+  DateBaseColumn<ZodSchemaConfig>,
+  ZodDate,
+  Date
+>;
 
-type StringType = 'varchar' | 'char' | 'text' | 'string' | 'xml' | 'json';
+// skip adding the default `encode` function to code
+const toCodeSkip = { encodeFn: JSON.stringify };
 
-type DateTimeType = 'date' | 'timestamp' | 'timestamptz';
+class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends ColumnType<
+  ZodSchemaConfig,
+  ZodSchema['_output'],
+  ZodSchema,
+  OperatorsJson
+> {
+  dataType = 'jsonb' as const;
+  operators = Operators.json;
+  declare data: ColumnData;
 
-type TimeType = 'time' | 'time with time zone';
-
-type GeometryType =
-  | 'point'
-  | 'line'
-  | 'lseg'
-  | 'box'
-  | 'path'
-  | 'polygon'
-  | 'circle';
-
-type NetworkType = 'cidr' | 'inet' | 'macaddr' | 'macaddr8';
-
-type BitStringType = 'bit' | 'bit varying';
-
-type FullTextSearchType = 'tsvector' | 'tsquery';
-
-type UUIDType = 'uuid';
-
-type ByteaType = 'bytea';
-
-type SchemaToZod<
-  T extends ColumnTypeBase,
-  D = T['dataType'],
-> = T['data']['isNullable'] extends true
-  ? z.ZodNullable<
-      SchemaToZod<
-        Omit<T, 'data'> & {
-          data: Omit<T['data'], 'isNullable'> & { isNullable: false };
-        }
-      >
-    >
-  : D extends NumberType
-  ? z.ZodNumber
-  : D extends
-      | BigIntType
-      | StringType
-      | TimeType
-      | GeometryType
-      | NetworkType
-      | BitStringType
-      | FullTextSearchType
-      | UUIDType
-  ? z.ZodString
-  : D extends ByteaType
-  ? z.ZodType<Buffer>
-  : D extends DateTimeType
-  ? z.ZodDate
-  : D extends 'interval'
-  ? typeof interval
-  : D extends 'boolean'
-  ? z.ZodBoolean
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends EnumColumn<any, any>
-  ? z.ZodEnum<T['options']>
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends ArrayColumn<any>
-  ? z.ZodArray<SchemaToZod<T['data']['item']>>
-  : T extends JSONColumn<JSONType>
-  ? JsonToZod<T['data']['schema']>
-  : T extends VirtualColumn
-  ? z.ZodNever
-  : never;
-
-declare module 'orchid-core' {
-  interface JSONType {
-    zod: z.ZodTypeAny;
+  constructor(schema: ZodSchema) {
+    super(zodSchemaConfig, schema);
   }
 
-  interface JSONUnknown {
-    zod: z.ZodUnknown;
-  }
-
-  interface JSONBoolean {
-    zod: z.ZodBoolean;
-  }
-
-  interface JSONNull {
-    zod: z.ZodNull;
-  }
-
-  interface JSONNumber {
-    zod: z.ZodNumber;
-  }
-
-  interface JSONString {
-    zod: z.ZodString;
+  toCode(t: string): Code {
+    return columnCode(this, t, [`json()`], this.data, toCodeSkip);
   }
 }
 
-type JsonToZod<T extends JSONType> = T['data']['nullable'] extends true
-  ? z.ZodNullable<JsonNotNullableToZod<T>>
-  : JsonNotNullableToZod<T>;
+// Encode data of both types with JSON.stringify
+ZodJSONColumn.prototype.encodeFn = JSON.stringify;
 
-type JsonNotNullableToZod<T extends JSONType> =
-  T['data']['optional'] extends true
-    ? z.ZodOptional<JsonNotOptionalToZod<T>>
-    : JsonNotOptionalToZod<T>;
-
-type JsonNotOptionalToZod<T extends JSONType> =
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends JSONUnion<any>
-    ? z.ZodUnion<MapUnionArgs<T['data']['types']>>
-    : T extends JSONArray<JSONType>
-    ? z.ZodArray<JsonToZod<T['data']['item']>>
-    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    T extends JSONEnum<any, any>
-    ? z.ZodEnum<T['data']['options']>
-    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    T extends JSONLiteral<any>
-    ? z.ZodLiteral<T['data']['value']>
-    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    T extends JSONNativeEnum<any>
-    ? z.ZodNativeEnum<T['data']['enum']>
-    : T extends JSONTuple<JSONTupleItems, JSONType | undefined>
-    ? z.ZodTuple<
-        MapJsonTuple<T['data']['items']>,
-        T['data']['rest'] extends JSONType ? JsonToZod<T['data']['rest']> : null
-      >
-    : T extends JSONObject<JSONObjectShape, UnknownKeysParam>
-    ? z.ZodObject<
-        { [K in keyof T['data']['shape']]: JsonToZod<T['data']['shape'][K]> },
-        T['data']['unknownKeys'],
-        JsonToZod<T['data']['catchAll']>
-      >
-    : T extends JSONRecord<JSONString | JSONNumber, JSONType>
-    ? T['data']['key'] extends JSONString
-      ? z.ZodRecord<z.ZodString, JsonToZod<T['data']['value']>>
-      : z.ZodRecord<z.ZodNumber, JsonToZod<T['data']['value']>>
-    : T extends JSONIntersection<JSONType, JSONType>
-    ? z.ZodIntersection<
-        JsonToZod<T['data']['left']>,
-        JsonToZod<T['data']['right']>
-      >
-    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    T extends JSONDiscriminatedUnion<string, any>
-    ? MapDiscriminatedUnion<T>
-    : T['zod'];
-
-export type MapDiscriminatedUnion<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends JSONDiscriminatedUnion<string, any>,
-  Options = MapJsonTuple<T['data']['types']>,
-> = z.ZodDiscriminatedUnion<
-  T['data']['discriminator'],
-  Options extends z.ZodDiscriminatedUnionOption<T['data']['discriminator']>[]
-    ? Options
-    : never
->;
-
-type MapUnionArgs<T extends unknown[]> = T extends [
-  infer F extends JSONType,
-  infer S extends JSONType,
-  ...infer Tail,
-]
-  ? [JsonToZod<F>, JsonToZod<S>, ...MapJsonTuple<Tail>]
-  : never;
-
-type MapJsonTuple<T extends unknown[]> = T extends [infer Head, ...infer Tail]
-  ? [Head extends JSONType ? JsonToZod<Head> : never, ...MapJsonTuple<Tail>]
-  : [];
-
-type Columns = { shape: ColumnsShapeBase };
-type Table = { columns: ColumnsShapeBase };
-
-type TableClass<T extends Table> = {
-  new (): T;
-  // Cannot set T as the `instance()` return type because it cannot be properly inferred
-  instance(): unknown;
+type NumberMethodSchema<Key extends string> = {
+  [K in Key]: (
+    value: unknown,
+    params?: ErrorMessage,
+  ) => NumberMethodSchema<Key>;
 };
 
-export type InstanceToZod<T extends Columns> = z.ZodObject<{
-  [K in keyof T['shape']]: SchemaToZod<T['shape'][K]>;
-}>;
-
-export const instanceToZod = <T extends Columns>({
-  shape,
-}: T): InstanceToZod<T> => {
-  const result = {} as z.ZodRawShape;
-  for (const key in shape) {
-    const column = shape[key];
-    if (!(column instanceof VirtualColumn)) {
-      result[key as keyof typeof result] = columnToZod(column);
-    }
-  }
-
-  return z.object(result) as InstanceToZod<T>;
-};
-
-export const zodSchemaProvider = function <T extends Table>(
-  this: TableClass<T>,
-): InstanceToZod<{ shape: T['columns'] }> {
-  return instanceToZod({
-    shape: (this.instance() as T).columns,
-  }) as unknown as InstanceToZod<{
-    shape: T['columns'];
-  }>;
-};
-
-export const columnToZod = <T extends ColumnTypeBase>(
-  column: T,
-): SchemaToZod<T> => {
-  const dataType = column.data.as?.dataType || column.dataType;
-  const converter = converters[dataType];
-  if (!converter) {
-    if (column instanceof VirtualColumn) {
-      return handleNever(column) as SchemaToZod<T>;
-    }
-    throw new Error(`Cannot parse column ${dataType}`);
-  }
-  return converter(column) as SchemaToZod<T>;
-};
-
-const typeHandler = <Type extends ColumnTypeBase | JSONType>(
-  fn: (column: Type, errors?: Record<string, string>) => z.ZodTypeAny,
-) => {
-  return (column: ColumnTypeBase | JSONType): z.ZodTypeAny => {
-    let type = fn(column as Type, column.data.errors);
-
-    const { errors } = column.data;
-    const { required_error, invalid_type_error } = {
-      required_error: errors?.required,
-      invalid_type_error: errors?.invalidType,
-    };
-
-    // copy-pasted from Zod source, may break in future
-    type._def.errorMap = ((iss, ctx) => {
-      if (iss.code !== 'invalid_type') return { message: ctx.defaultError };
-      if (ctx.data === undefined) {
-        return { message: required_error ?? ctx.defaultError };
-      }
-      return { message: invalid_type_error ?? ctx.defaultError };
-    }) as ZodErrorMap;
-
-    const chain =
-      column instanceof ColumnTypeBase ? column.chain : column.data.chain;
-    if (chain) {
-      for (const item of chain) {
-        if (item[0] === 'transform') {
-          type = type.transform(item[1]);
-        } else if (item[0] === 'to') {
-          type = z.preprocess(item[1], itemToZod(item[2]));
-        } else if (item[0] === 'refine') {
-          type = type.refine(item[1], { message: errors?.refine });
-        } else if (item[0] === 'superRefine') {
-          type = type.superRefine(item[1]);
-        }
-      }
-    }
-
-    if (
-      ('nullable' in column.data && column.data.nullable) ||
-      (column as ColumnTypeBase).data.isNullable
-    ) {
-      if ('optional' in column.data && column.data.optional) {
-        type = type.nullish();
-      } else {
-        type = type.nullable();
-      }
-    } else if ('optional' in column.data && column.data.optional) {
-      type = type.optional();
-    }
-
-    if (column instanceof ColumnTypeBase) {
-      if (
-        'validationDefault' in column.data &&
-        column.data.validationDefault !== undefined
-      ) {
-        type = type.default(column.data.validationDefault);
-      }
-    } else if (column.data.default !== undefined) {
-      type = type.default(column.data.default);
-    }
-
-    return type;
-  };
-};
-
-const stringParams = [
-  'min',
-  'max',
-  'length',
-  'regex',
-  'includes',
-  'startsWith',
-  'endsWith',
-];
-
-const stringEmptyParams = [
-  'email',
-  'url',
-  'emoji',
-  'uuid',
-  'cuid',
-  'cuid2',
-  'ulid',
-  'trim',
-  'toLowerCase',
-  'toUpperCase',
-];
-
-const stringObjectParams = ['datetime', 'ip'];
-
-const handleString = typeHandler((column: TextColumn | JSONString, errors) => {
-  let type = z.string();
-  const data = column.data;
-
-  stringParams.forEach((key) => {
-    const value = (data as Record<string, unknown>)[key];
-    if (value !== undefined) {
-      type = type[key as 'min'](value as number, { message: errors?.[key] });
-    }
-  });
-
-  stringEmptyParams.forEach((key) => {
-    const value = (data as Record<string, unknown>)[key];
-    if (value) {
-      type = type[key as 'email']({ message: errors?.[key] });
-    }
-  });
-
-  stringObjectParams.forEach((key) => {
-    const value = (data as Record<string, unknown>)[key];
-    if (value) {
-      type = type[key as 'datetime'](value as EmptyObject);
-    }
-  });
-
-  const { maxChars } = data as { maxChars?: number };
-  if (maxChars !== undefined) {
-    type = type.max(maxChars, { message: errors?.length });
-  }
-
-  return type;
-});
-
-const numberParams = ['lt', 'lte', 'gt', 'gte', 'step'];
-
-const numberEmptyParams = ['finite', 'safe'];
-
-const handleNumber = typeHandler(
-  (column: NumberColumn | JSONNumber, errors) => {
-    let type = z.number();
-    numberParams.forEach((key) => {
-      const value = (column.data as Record<string, unknown>)[key];
-      if (value !== undefined) {
-        type = type[key as 'min'](value as number, { message: errors?.[key] });
-      }
-    });
-
-    numberEmptyParams.forEach((key) => {
-      const value = (column.data as Record<string, unknown>)[key];
-      if (value) {
-        type = type[key as 'finite']({ message: errors?.[key] });
-      }
-    });
-
-    if ((column.data as Record<'int', boolean>).int) {
-      type = type.int({ message: errors?.int });
-    }
-
-    return type;
+function applyMethod<
+  Key extends string,
+  T extends {
+    data: object;
+    inputSchema: NumberMethodSchema<Key>;
+    outputSchema: NumberMethodSchema<Key>;
+    querySchema: NumberMethodSchema<Key>;
   },
-);
+>(column: T, key: Key, value: unknown, params?: ErrorMessage) {
+  const cloned = setDataValue(column, key, value, params);
+  cloned.inputSchema = column.inputSchema[key](value, params);
+  cloned.outputSchema = column.outputSchema[key](value, params);
+  cloned.querySchema = column.querySchema[key](value, params);
+  return cloned;
+}
 
-const handleBigInt = typeHandler((_, errors) => {
-  return z.string().refine(
-    (value) => {
-      try {
-        BigInt(value);
-        return true;
-      } catch (_) {
-        return false;
-      }
+type NumberMethodSimpleSchema<Key extends string> = {
+  [K in Key]: (params?: ErrorMessage) => NumberMethodSimpleSchema<Key>;
+};
+
+function applySimpleMethod<
+  Key extends string,
+  T extends {
+    data: object;
+    inputSchema: NumberMethodSimpleSchema<Key>;
+    outputSchema: NumberMethodSimpleSchema<Key>;
+    querySchema: NumberMethodSimpleSchema<Key>;
+  },
+>(column: T, key: Key, params?: ErrorMessage) {
+  const cloned = setDataValue(column, key, true, params);
+  column.inputSchema = column.inputSchema[key](params);
+  column.outputSchema = column.outputSchema[key](params);
+  column.querySchema = column.querySchema[key](params);
+  return cloned;
+}
+
+type ArrayMethods<Value> = {
+  // Require a minimum length (inclusive)
+  min<T extends ColumnTypeBase>(
+    this: T,
+    value: Value,
+    params?: ErrorMessage,
+  ): T;
+
+  // Require a maximum length (inclusive)
+  max<T extends ColumnTypeBase>(
+    this: T,
+    value: Value,
+    params?: ErrorMessage,
+  ): T;
+
+  // Require a specific length
+  length<T extends ColumnTypeBase>(
+    this: T,
+    value: Value,
+    params?: ErrorMessage,
+  ): T;
+
+  // Require a value to be non-empty
+  nonEmpty<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+};
+
+const arrayMethods: ArrayMethods<Date> = {
+  min(value, params) {
+    return applyMethod(this, 'min', value, params);
+  },
+  max(value, params) {
+    return applyMethod(this, 'max', value, params);
+  },
+  length(value, params) {
+    return applyMethod(this, 'length', value, params);
+  },
+  nonEmpty(params) {
+    const cloned = setDataValue(this, 'nonEmpty', true, params);
+    this.inputSchema = this.inputSchema.nonempty(params);
+    this.outputSchema = this.outputSchema.nonempty(params);
+    this.querySchema = this.querySchema.nonempty(params);
+    return cloned;
+  },
+};
+
+interface ZodArrayColumn<Item extends ArrayColumnValue>
+  extends ArrayColumn<
+      ZodSchemaConfig,
+      Item,
+      ZodArray<Item['inputSchema']>,
+      ZodArray<Item['outputSchema']>,
+      ZodArray<Item['querySchema']>
+    >,
+    ArrayMethods<number> {}
+
+class ZodArrayColumn<Item extends ArrayColumnValue> extends ArrayColumn<
+  ZodSchemaConfig,
+  Item,
+  ZodArray<Item['inputSchema']>,
+  ZodArray<Item['outputSchema']>,
+  ZodArray<Item['querySchema']>
+> {
+  constructor(item: Item) {
+    super(zodSchemaConfig, item, z.array(item.inputSchema));
+  }
+}
+
+Object.assign(ZodArrayColumn.prototype, arrayMethods);
+
+export type ZodSchemaConfig = {
+  type: ZodTypeAny;
+
+  parse<
+    T extends { type: unknown },
+    OutputSchema extends ZodTypeAny,
+    Output = OutputSchema['_output'],
+  >(
+    this: T,
+    _schema: OutputSchema,
+    fn: (input: T['type']) => Output,
+  ): ParseColumn<T, OutputSchema, Output>;
+
+  encode<
+    T extends { type: unknown },
+    InputSchema extends ZodTypeAny,
+    Input = InputSchema['_output'],
+  >(
+    this: T,
+    _schema: InputSchema,
+    fn: (input: Input) => unknown,
+  ): EncodeColumn<T, InputSchema, Input>;
+
+  asType<
+    T,
+    Types extends AsTypeArg<ZodTypeAny>,
+    TypeSchema extends ZodTypeAny = Types extends { type: ZodTypeAny }
+      ? Types['type']
+      : never,
+    Type = TypeSchema['_output'],
+  >(
+    this: T,
+    types: Types,
+  ): Omit<
+    T,
+    | 'type'
+    | 'inputType'
+    | 'inputSchema'
+    | 'outputType'
+    | 'outputSchema'
+    | 'queryType'
+    | 'querySchema'
+  > & {
+    type: Type;
+    inputType: Types['input'] extends ZodTypeAny
+      ? Types['input']['_output']
+      : Type;
+    inputSchema: Types['input'] extends ZodTypeAny
+      ? Types['input']
+      : TypeSchema;
+    outputType: Types['output'] extends ZodTypeAny
+      ? Types['output']['_output']
+      : Type;
+    outputSchema: Types['output'] extends ZodTypeAny
+      ? Types['output']
+      : TypeSchema;
+    queryType: Types['query'] extends ZodTypeAny
+      ? Types['query']['_output']
+      : Type;
+    querySchema: Types['query'] extends ZodTypeAny
+      ? Types['query']
+      : TypeSchema;
+  };
+
+  dateAsNumber(): ParseDateToNumber;
+
+  dateAsDate(): ParseDateToDate;
+
+  dateMethods: {
+    // Require a value to be greater than or equal to a given Date object
+    min<T extends ColumnTypeBase>(
+      this: T,
+      value: Date,
+      params?: ErrorMessage,
+    ): T;
+
+    // Require a value to be lower than or equal to a given Date object
+    max<T extends ColumnTypeBase>(
+      this: T,
+      value: Date,
+      params?: ErrorMessage,
+    ): T;
+  };
+
+  enum<U extends string, T extends [U, ...U[]]>(
+    dataType: string,
+    type: T,
+  ): EnumColumn<ZodSchemaConfig, ZodEnum<T>, U, T>;
+
+  array<Item extends ArrayColumnValue>(item: Item): ZodArrayColumn<Item>;
+
+  nullable<T extends ColumnTypeBase>(
+    this: T,
+  ): NullableColumn<
+    T,
+    ZodNullable<T['inputSchema']>,
+    ZodNullable<T['outputSchema']>,
+    ZodNullable<T['querySchema']>
+  >;
+
+  json<ZodSchema extends ZodTypeAny = ZodUnknown>(
+    schema?: ZodSchema,
+  ): ZodJSONColumn<ZodSchema>;
+
+  boolean: ZodBoolean;
+  buffer: ZodType<Buffer>;
+  unknown: ZodUnknown;
+  never: ZodNever;
+  string: ZodString;
+  stringMin(max: number): ZodString;
+  stringMax(max: number): ZodString;
+  stringMinMax(min: number, max: number): ZodString;
+  stringMethods: ArrayMethods<number> & {
+    // Check a value to be a valid email
+    email<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Check a value to be a valid url
+    url<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Check a value to be an emoji
+    emoji<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Check a value to be a valid uuid
+    uuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Check a value to be a valid cuid
+    cuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Check a value to be a valid cuid2
+    cuid2<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Check a value to be a valid ulid
+    ulid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Validate the value over the given regular expression
+    regex<T extends ColumnTypeBase>(
+      this: T,
+      value: RegExp,
+      params?: ErrorMessage,
+    ): T;
+
+    // Check a value to include a given string
+    includes<T extends ColumnTypeBase, Value extends string>(
+      this: T,
+      value: Value,
+      params?: ErrorMessage,
+    ): T;
+
+    // Check a value to start with a given string
+    startsWith<T extends ColumnTypeBase, Value extends string>(
+      this: T,
+      value: Value,
+      params?: ErrorMessage,
+    ): T;
+
+    // Check a value to end with a given string
+    endsWith<T extends ColumnTypeBase, Value extends string>(
+      this: T,
+      value: Value,
+      params?: ErrorMessage,
+    ): T;
+
+    // Check a value have a valid datetime string
+    datetime<T extends ColumnTypeBase>(
+      this: T,
+      params?: StringTypeData['datetime'] & Exclude<ErrorMessage, string>,
+    ): T;
+
+    // Check a value to be a valid ip address
+    ip<T extends ColumnTypeBase>(
+      this: T,
+      params?: StringTypeData['ip'] & Exclude<ErrorMessage, string>,
+    ): T;
+
+    // Trim the value during a validation
+    trim<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Transform value to a lower case during a validation
+    toLowerCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+    // Transform value to an upper case during a validation
+    toUpperCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  };
+  number: ZodNumber;
+  numberMethods: {
+    lt<T extends ColumnTypeBase>(
+      this: T,
+      value: number,
+      params?: ErrorMessage,
+    ): T;
+    lte<T extends ColumnTypeBase>(
+      this: T,
+      value: number,
+      params?: ErrorMessage,
+    ): T;
+    max<T extends ColumnTypeBase>(
+      this: T,
+      value: number,
+      params?: ErrorMessage,
+    ): T;
+    gt<T extends ColumnTypeBase>(
+      this: T,
+      value: number,
+      params?: ErrorMessage,
+    ): T;
+    gte<T extends ColumnTypeBase>(
+      this: T,
+      value: number,
+      params?: ErrorMessage,
+    ): T;
+    min<T extends ColumnTypeBase>(
+      this: T,
+      value: number,
+      params?: ErrorMessage,
+    ): T;
+    positive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+    nonNegative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+    negative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+    nonPositive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+    step<T extends ColumnTypeBase>(
+      this: T,
+      value: number,
+      params?: ErrorMessage,
+    ): T;
+    int<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+    finite<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+    safe<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  };
+  int: ZodNumber;
+  stringNumberDate: ZodDate;
+  timeInterval: ZodObject<{
+    years: ZodOptional<ZodNumber>;
+    months: ZodOptional<ZodNumber>;
+    days: ZodOptional<ZodNumber>;
+    hours: ZodOptional<ZodNumber>;
+    minutes: ZodOptional<ZodNumber>;
+    seconds: ZodOptional<ZodNumber>;
+  }>;
+  bit(max: number): ZodString;
+  uuid: ZodString;
+
+  inputSchema<T extends ColumnSchemaGetterTableClass>(
+    this: T,
+  ): MapSchema<T, 'inputSchema'>;
+
+  outputSchema<T extends ColumnSchemaGetterTableClass>(
+    this: T,
+  ): MapSchema<T, 'outputSchema'>;
+
+  querySchema<T extends ColumnSchemaGetterTableClass>(
+    this: T,
+  ): MapSchema<T, 'querySchema'>;
+
+  updateSchema<T extends ColumnSchemaGetterTableClass>(
+    this: T,
+  ): UpdateSchema<T>;
+
+  pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T): PkeySchema<T>;
+
+  errors<T extends ColumnTypeBase>(this: T, errors: ErrorMessages): T;
+};
+
+// parse a date string to number, with respect to null
+const parseDateToNumber = (value: unknown) =>
+  (value ? Date.parse(value as string) : value) as number;
+
+// parse a date string to date object, with respect to null
+const parseDateToDate = (value: unknown) =>
+  (value ? new Date(value as string) : value) as Date;
+
+export const zodSchemaConfig: ZodSchemaConfig = {
+  type: undefined as unknown as ZodTypeAny,
+  parse(schema, fn) {
+    return Object.assign(Object.create(this), {
+      outputSchema: schema,
+      parseFn: fn,
+      parseItem: fn,
+    });
+  },
+  encode(schema, fn) {
+    return Object.assign(Object.create(this), {
+      inputSchema: schema,
+      encodeFn: fn,
+    });
+  },
+  asType(_types) {
+    return this as never;
+  },
+  dateAsNumber() {
+    return this.parse(
+      this.number,
+      parseDateToNumber,
+    ) as unknown as ParseDateToNumber;
+  },
+  dateAsDate() {
+    return this.parse(
+      this.number,
+      parseDateToDate,
+    ) as unknown as ParseDateToDate;
+  },
+  dateMethods: {
+    min(value, params) {
+      return applyMethod(this, 'min', value, params);
     },
-    {
-      message: errors?.invalidType || 'Failed to parse bigint',
+    max(value, params) {
+      return applyMethod(this, 'max', value, params);
     },
-  );
-});
+  },
+  enum(dataType, type) {
+    return new EnumColumn(zodSchemaConfig, dataType, type, z.enum(type));
+  },
+  array(item) {
+    return new ZodArrayColumn(item);
+  },
+  nullable() {
+    return makeColumnNullable(
+      this,
+      z.nullable(this.inputSchema),
+      z.nullable(this.outputSchema),
+      z.nullable(this.querySchema),
+    );
+  },
+  json<ZodSchema extends ZodTypeAny = ZodUnknown>(schema?: ZodSchema) {
+    return new ZodJSONColumn((schema ?? z.unknown()) as ZodSchema);
+  },
+  boolean: z.boolean(),
+  buffer: z.instanceof(Buffer),
+  unknown: z.unknown(),
+  never: z.never(),
+  string: z.string(),
+  stringMin(min) {
+    return z.string().min(min);
+  },
+  stringMax(max) {
+    return z.string().max(max);
+  },
+  stringMinMax(min, max) {
+    return z.string().min(min).max(max);
+  },
+  stringMethods: {
+    ...(arrayMethods as unknown as ArrayMethods<number>),
 
-const handleBuffer = typeHandler(() => {
-  return z.instanceof(Buffer);
-});
-
-const dateParams = ['min', 'max'];
-const handleDate = typeHandler((column: DateColumn, errors) => {
-  let type = z.date();
-  dateParams.forEach((key) => {
-    const value = (column.data as Record<string, unknown>)[key];
-    if (value !== undefined) {
-      type = type[key as 'min'](value as Date, { message: errors?.[key] });
-    }
-  });
-
-  return z.preprocess(
-    (val) =>
-      typeof val === 'string' || typeof val === 'number' ? new Date(val) : val,
-    type,
-  );
-});
-
-const handleTime = typeHandler((_, errors) => {
-  return z.string().refine(
-    (val) => {
-      return !isNaN(new Date(`2000-01-01 ${val}`).getTime());
+    email(params) {
+      return applySimpleMethod(this, 'email', params);
     },
-    {
-      message: errors?.invalidType || 'Invalid time',
-    },
-  );
-});
 
-const interval = z
-  .object({
+    url(params) {
+      return applySimpleMethod(this, 'url', params);
+    },
+
+    emoji(params) {
+      return applySimpleMethod(this, 'emoji', params);
+    },
+
+    uuid(params) {
+      return applySimpleMethod(this, 'uuid', params);
+    },
+
+    cuid(params) {
+      return applySimpleMethod(this, 'cuid', params);
+    },
+
+    cuid2(params) {
+      return applySimpleMethod(this, 'cuid2', params);
+    },
+
+    ulid(params) {
+      return applySimpleMethod(this, 'ulid', params);
+    },
+
+    regex(value, params) {
+      return applyMethod(this, 'regex', value, params);
+    },
+
+    includes(value, params) {
+      return applyMethod(this, 'includes', value, params);
+    },
+
+    startsWith(value, params) {
+      return applyMethod(this, 'startsWith', value, params);
+    },
+
+    endsWith(value, params) {
+      return applyMethod(this, 'endsWith', value, params);
+    },
+
+    datetime(params = {}) {
+      return applyMethod(this, 'datetime', params, params);
+    },
+
+    ip(params = {}) {
+      return applyMethod(this, 'ip', params, params);
+    },
+
+    trim(params) {
+      return applySimpleMethod(this, 'trim', params);
+    },
+
+    toLowerCase(params) {
+      return applySimpleMethod(this, 'toLowerCase', params);
+    },
+
+    toUpperCase(params) {
+      return applySimpleMethod(this, 'toUpperCase', params);
+    },
+  },
+  number: z.number(),
+  int: z.number().int(),
+  numberMethods: {
+    // Require a value to be lower than a given number
+    lt(value, params) {
+      return applyMethod(this, 'lt', value, params);
+    },
+
+    // Require a value to be lower than or equal to a given number (the same as `max`)
+    lte(value, params) {
+      return applyMethod(this, 'lte', value, params);
+    },
+
+    // Require a value to be lower than or equal to a given number
+    max(value, params) {
+      return applyMethod(this, 'lte', value, params);
+    },
+
+    // Require a value to be greater than a given number
+    gt(value, params) {
+      return applyMethod(this, 'gt', value, params);
+    },
+
+    // Require a value to be greater than or equal to a given number (the same as `min`)
+    gte(value, params) {
+      return applyMethod(this, 'gte', value, params);
+    },
+
+    // Require a value to be greater than or equal to a given number
+    min(value, params) {
+      return applyMethod(this, 'gte', value, params);
+    },
+
+    // Require a value to be greater than 0
+    positive(params) {
+      return applyMethod(this, 'gt', 0, params);
+    },
+
+    // Require a value to be greater than or equal to 0
+    nonNegative(params) {
+      return applyMethod(this, 'gte', 0, params);
+    },
+
+    // Require a value to be lower than 0
+    negative(params) {
+      return applyMethod(this, 'lt', 0, params);
+    },
+
+    // Require a value to be lower than or equal to 0
+    nonPositive(params) {
+      return applyMethod(this, 'lte', 0, params);
+    },
+
+    // Require a value to be a multiple of a given number
+    step(value, params) {
+      return applyMethod(this, 'step', value, params);
+    },
+
+    // Require a value to be an integer
+    int(params) {
+      return applySimpleMethod(this, 'int', params);
+    },
+
+    // Exclude `Infinity` from being a valid value
+    finite(params) {
+      return applySimpleMethod(this, 'finite', params);
+    },
+
+    // Require the value to be less than or equal to Number.MAX_SAFE_INTEGER
+    safe(params) {
+      return applySimpleMethod(this, 'safe', params);
+    },
+  },
+
+  stringNumberDate: z.coerce.date(),
+
+  timeInterval: z.object({
     years: z.number().optional(),
     months: z.number().optional(),
     days: z.number().optional(),
     hours: z.number().optional(),
+    minutes: z.number().optional(),
     seconds: z.number().optional(),
-  })
-  .strict();
+  }),
 
-const handleInterval = typeHandler(() => interval);
+  bit: (max?: number) =>
+    (max ? z.string().max(max) : z.string()).regex(/[10]/g),
 
-const handleBoolean = typeHandler(() => z.boolean());
+  uuid: z.string().uuid(),
 
-const handleEnum = typeHandler(
-  (column: EnumColumn | JSONEnum<string, [string, ...string[]]>) => {
-    const enumColumn = column as
-      | EnumColumn<string, [string, ...string[]]>
-      | JSONEnum<string, [string, ...string[]]>;
-
-    const options =
-      enumColumn instanceof EnumColumn
-        ? enumColumn.options
-        : enumColumn.data.options;
-
-    return z.enum(options);
+  inputSchema() {
+    return mapSchema(this, 'inputSchema');
   },
-);
 
-const handleBitString = typeHandler((_, errors) => {
-  return z.string().regex(/[10]/g, { message: errors?.invalidType });
-});
+  outputSchema() {
+    return mapSchema(this, 'outputSchema');
+  },
 
-const handleUUID = typeHandler((_, errors) => {
-  return z.string().uuid({ message: errors?.invalidType });
-});
+  querySchema() {
+    return mapSchema(this, 'querySchema');
+  },
 
-const arrayParams = ['min', 'max', 'length'];
-const handleArray = typeHandler(
-  (array: ArrayColumn<ColumnTypeBase> | JSONArray<JSONType>, errors) => {
-    let type: z.ZodArray<z.ZodTypeAny>;
-    if (array instanceof ColumnTypeBase) {
-      type = z.array(columnToZod(array.data.item));
-    } else {
-      type = z.array(jsonItemToZod(array.data.item));
-    }
+  updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+    return (
+      this.inputSchema() as ZodObject<ZodRawShape>
+    ).partial() as UpdateSchema<T>;
+  },
 
-    arrayParams.forEach((key) => {
-      const value = (array.data as Record<string, unknown>)[key];
-      if (value !== undefined) {
-        type = type[key as 'min'](value as number, { message: errors?.[key] });
+  pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+    const pkeys: Record<string, true> = {};
+
+    const { columns } = this.prototype;
+    for (const key in columns) {
+      if (columns[key].data.isPrimaryKey) {
+        pkeys[key] = true;
       }
-    });
+    }
 
-    return type;
+    return (this.querySchema() as ZodObject<ZodRawShape>).pick(
+      pkeys,
+    ) as PkeySchema<T>;
   },
-);
 
-const handleJson = typeHandler((column: JSONColumn) => {
-  const type = column.data.schema;
-  column.data.errors = column.data.schema.data.errors;
-  return jsonItemToZod(type);
-});
+  /**
+   * `errors` allows to specify two following validation messages:
+   *
+   * ```ts
+   * t.text().errors({
+   *   required: 'This column is required',
+   *   invalidType: 'This column must be an integer',
+   * });
+   * ```
+   *
+   * It will be converted into `Zod`'s messages:
+   *
+   * ```ts
+   * z.string({
+   *   required_error: 'This column is required',
+   *   invalid_type_error: 'This column must be an integer',
+   * });
+   * ```
+   *
+   * Each validation method can accept an error message as a string:
+   *
+   * ```ts
+   * t.text().min(5, 'Must be 5 or more characters long');
+   * t.text().max(5, 'Must be 5 or fewer characters long');
+   * t.text().length(5, 'Must be exactly 5 characters long');
+   * t.text().email('Invalid email address');
+   * t.text().url('Invalid url');
+   * t.text().emoji('Contains non-emoji characters');
+   * t.text().uuid('Invalid UUID');
+   * t.text().includes('tuna', 'Must include tuna');
+   * t.text().startsWith('https://', 'Must provide secure URL');
+   * t.text().endsWith('.com', 'Only .com domains allowed');
+   * ```
+   *
+   * Except for `text().datetime()` and `text().ip()`:
+   *
+   * these methods can have their own parameters, so the error message is passed in object.
+   *
+   * ```ts
+   * t.text().datetime({ message: 'Invalid datetime string! Must be UTC.' });
+   * t.text().ip({ message: 'Invalid IP address' });
+   * ```
+   *
+   * Error messages are supported for a JSON schema as well:
+   *
+   * ```ts
+   * t.json((j) =>
+   *   j.object({
+   *     one: j
+   *       .string()
+   *       .errors({ required: 'One is required' })
+   *       .min(5, 'Must be 5 or more characters long'),
+   *     two: j
+   *       .string()
+   *       .errors({ invalidType: 'Two should be a string' })
+   *       .max(5, 'Must be 5 or fewer characters long'),
+   *     three: j.string().length(5, 'Must be exactly 5 characters long'),
+   *   }),
+   * );
+   * ```
+   *
+   * @param errorMessages - object, key is either 'required' or 'invalidType', value is an error message
+   */
+  errors(errors) {
+    const { errors: old } = this.data;
+    const newErrors = old ? { ...old, ...errors } : errors;
+    const { required, invalidType } = newErrors;
 
-const jsonItemToZod = (type: JSONType): z.ZodTypeAny => {
-  if (type instanceof JSONUnknown) {
-    return handleUnknown(type);
-  } else if (type instanceof JSONBoolean) {
-    return handleBoolean(type);
-  } else if (type instanceof JSONNull) {
-    return handleNull(type);
-  } else if (type instanceof JSONNumber) {
-    return handleNumber(type);
-  } else if (type instanceof JSONString) {
-    return handleString(type);
-  } else if (type instanceof JSONArray) {
-    return handleArray(type);
-  } else if (type instanceof JSONObject) {
-    return handleObject(type);
-  } else if (type instanceof JSONLiteral) {
-    return handleLiteral(type);
-  } else if (type instanceof JSONDiscriminatedUnion) {
-    return handleDiscriminatedUnion(type);
-  } else if (type instanceof JSONEnum) {
-    return handleEnum(type);
-  } else if (type instanceof JSONIntersection) {
-    return handleIntersection(type);
-  } else if (type instanceof JSONLazy) {
-    return handleLazy(type);
-  } else if (type instanceof JSONNativeEnum) {
-    return handleNativeEnum(type);
-  } else if (type instanceof JSONRecord) {
-    return handleRecord(type);
-  } else if (type instanceof JSONTuple) {
-    return handleTuple(type);
-  } else if (type instanceof JSONUnion) {
-    return handleUnion(type);
-  } else {
-    throw new Error(`Cannot parse column ${type.constructor.name}`);
+    const errorMap: ZodErrorMap = (iss, ctx) => {
+      if (iss.code !== 'invalid_type') return { message: ctx.defaultError };
+      if (typeof ctx.data === 'undefined') {
+        return { message: required ?? ctx.defaultError };
+      }
+      return { message: invalidType ?? ctx.defaultError };
+    };
+
+    (this.inputSchema as ZodTypeAny)._def.errorMap =
+      (this.outputSchema as ZodTypeAny)._def.errorMap =
+      (this.querySchema as ZodTypeAny)._def.errorMap =
+        errorMap;
+
+    return setColumnData(this, 'errors', newErrors);
+  },
+};
+
+type MapSchema<
+  T extends ColumnSchemaGetterTableClass,
+  Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
+> = ZodObject<
+  {
+    [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
+  },
+  'strip'
+>;
+
+type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
+  {
+    [K in keyof ColumnSchemaGetterColumns<T>]: ZodOptional<
+      ColumnSchemaGetterColumns<T>[K]['inputSchema']
+    >;
+  },
+  'strip'
+>;
+
+type PkeySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
+  {
+    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['isPrimaryKey'] extends true
+      ? K
+      : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
+  },
+  'strip'
+>;
+
+function mapSchema<
+  T extends ColumnSchemaGetterTableClass,
+  Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
+>(klass: T, schemaKey: Key): MapSchema<T, Key> {
+  const shape: ZodRawShape = {};
+  const columns = klass.prototype.columns;
+
+  for (const key in columns) {
+    shape[key] = columns[key][schemaKey];
   }
-};
 
-const itemToZod = (item: ColumnTypeBase | JSONType) => {
-  return item instanceof ColumnTypeBase
-    ? columnToZod(item)
-    : jsonItemToZod(item);
-};
-
-const converters: Record<string, (column: ColumnTypeBase) => z.ZodType> = {
-  varchar: handleString,
-  char: handleString,
-  text: handleString,
-  smallint: handleNumber,
-  integer: handleNumber,
-  real: handleNumber,
-  smallserial: handleNumber,
-  serial: handleNumber,
-  money: handleNumber,
-  bigint: handleBigInt,
-  decimal: handleBigInt,
-  'double precision': handleBigInt,
-  bigserial: handleBigInt,
-  bytea: handleBuffer,
-  date: handleDate,
-  timestamp: handleDate,
-  timestamptz: handleDate,
-  time: handleTime,
-  timetz: handleTime,
-  interval: handleInterval,
-  boolean: handleBoolean,
-  enum: handleEnum,
-  point: handleString,
-  line: handleString,
-  lseg: handleString,
-  box: handleString,
-  path: handleString,
-  polygon: handleString,
-  circle: handleString,
-  cidr: handleString,
-  inet: handleString,
-  macaddr: handleString,
-  macaddr8: handleString,
-  bit: handleBitString,
-  'bit varying': handleBitString,
-  tsvector: handleString,
-  tsquery: handleString,
-  xml: handleString,
-  json: handleString,
-  uuid: handleUUID,
-  array: handleArray,
-  jsonb: handleJson,
-};
-
-const handleNever = typeHandler(() => z.never());
-
-const handleNull = typeHandler(() => z.null());
-
-const handleUnknown = typeHandler(() => z.unknown());
-
-const handleLiteral = typeHandler((type: JSONType) => {
-  return z.literal((type as JSONLiteral<string>).data.value);
-});
-
-const handleNativeEnum = typeHandler((type: JSONType) => {
-  return z.nativeEnum((type as JSONNativeEnum<EnumLike>).data.enum);
-});
-
-const handleTuple = typeHandler((column: JSONTuple<JSONTupleItems>) => {
-  let type: z.ZodTuple<[], ZodTypeAny | null> = z.tuple(
-    column.data.items.map((item) => jsonItemToZod(item)) as [],
-  );
-  if (column.data.rest) {
-    type = type.rest(jsonItemToZod(column.data.rest));
-  }
-  return type;
-});
-
-const handleObject = typeHandler(
-  (type: JSONObject<Record<string, JSONType>, UnknownKeysParam>, errors) => {
-    const shape: Record<string, z.ZodTypeAny> = {};
-    for (const key in type.data.shape) {
-      shape[key] = jsonItemToZod(type.data.shape[key]);
-    }
-
-    let object: z.ZodObject<z.ZodRawShape, UnknownKeysParam, z.ZodTypeAny> =
-      z.object(shape);
-
-    if (type.data.unknownKeys === 'passthrough') {
-      object = object.passthrough();
-    } else if (type.data.unknownKeys === 'strict') {
-      object = object.strict(errors?.strict);
-    }
-
-    if (type.data.catchAll) {
-      object = object.catchall(jsonItemToZod(type.data.catchAll));
-    }
-
-    return object;
-  },
-);
-
-const handleRecord = typeHandler(
-  (type: JSONRecord<JSONString | JSONNumber, JSONType>) => {
-    return z.record(
-      jsonItemToZod(type.data.key),
-      jsonItemToZod(type.data.value),
-    );
-  },
-);
-
-const handleUnion = typeHandler(
-  (type: JSONUnion<[JSONType, JSONType, ...JSONType[]]>) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return z.union(type.data.types.map(jsonItemToZod) as any);
-  },
-);
-
-const handleIntersection = typeHandler(
-  (type: JSONIntersection<JSONType, JSONType>) => {
-    return z.intersection(
-      jsonItemToZod(type.data.left),
-      jsonItemToZod(type.data.right),
-    );
-  },
-);
-
-const handleDiscriminatedUnion = typeHandler(
-  (type: JSONDiscriminatedUnion<string, JSONDiscriminatedUnionArg<string>>) => {
-    return z.discriminatedUnion(
-      type.data.discriminator,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      [...type.data.types].map(jsonItemToZod) as any,
-    );
-  },
-);
-
-const handleLazy = typeHandler((type: JSONLazy<JSONType>) => {
-  return z.lazy(() => jsonItemToZod(type.getType()));
-});
+  return z.object(shape) as MapSchema<T, Key>;
+}

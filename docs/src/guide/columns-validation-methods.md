@@ -1,15 +1,16 @@
 # Validation methods of columns
 
-It's expected that validation happens at the moment when the application is receiving data from the client, in the controller layer.
+It's expected that validation happens at the moment when the application is receiving data from the client, in the controller layer (aka route handler).
 
 ORM and query builder do not perform validation because it's expected that data is already validated when it reaches ORM.
 
 You can convert the column schema into a validation schema with the use of an additional package.
 
 Column methods described in this section have **no** effect on parsing, or encoding values, or tables schema in migrations,
-they only have an effect after converting to validation schema and using it in a controller or elsewhere.
+they only alter the validation schema exposed by `Table.inputSchema()`, `Table.outputSchema()`, and similar,
+and you are supposed to use the `Table.inputSchema()` when validating incoming parameters.
 
-For now, only conversion to [Zod](https://github.com/colinhacks/zod) is supported.
+For now, only [Zod](https://github.com/colinhacks/zod) is supported.
 
 Install a package:
 
@@ -17,29 +18,36 @@ Install a package:
 npm i orchid-orm-schema-to-zod
 ```
 
-Set `schemaProvider` of the `BaseTable` to `zodSchemaProvider`:
+Set `schemaConfig` of the `BaseTable` to `zodSchemaConfig`:
 
 ```ts
 import { createBaseTable } from 'orchid-orm';
-import { zodSchemaProvider } from 'orchid-orm-schema-to-zod';
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 
 export const BaseTable = createBaseTable({
-  schemaProvider: zodSchemaProvider,
+  schemaConfig: zodSchemaConfig,
 });
 ```
 
-`schema` method became available for all table classes.
-In the code which is receiving input from client, you can use table schemas for validation:
+All table classes will now expose schemas for different purposes:
+
+- `Table.inputSchema()` - validating input data for inserting records.
+- `Table.updateSchema()` - partial `inputSchema` for updating records.
+- `Table.ouputSchema()` - not sure why you might want to validate output, but you can. Perhaps, for testing purposes.
+- `Table.querySchema()` - validating parameters for use in `where` or `find`. It's a very rare case when it does not much the `inputSchema`, so you can simply use the `inputSchema` for this instead.
+- `Table.pkeySchema()` - picked table primary keys from `querySchema`, validates object like `{ id: 123 }`.
+
+Use it in your controllers:
 
 ```ts
 // we want to validate params which are sent from client:
 const params = req.body;
 
 // validate params with the `parse` method:
-const validated = SomeTable.schema().parse(params);
+const validated = SomeTable.inputSchema().parse(params);
 
 // the schema is a Zod schema, it can be extended with `pick`, `omit`, `and`, `merge`, `extend` and other methods:
-const extendedSchema = SomeTable.schema()
+const extendedSchema = SomeTable.inputSchema()
   .pick({
     name: true,
   })
@@ -48,11 +56,13 @@ const extendedSchema = SomeTable.schema()
   });
 ```
 
-The schema of table is memoized when calling `schema()`, so calling it multiple times doesn't have a performance penalty.
+The schema of table is memoized when calling the schema function, so calling it multiple times doesn't have a performance penalty.
+
+`inputSchema()` and similar are building `zod` schema on the first call and remembers it for next calls.
 
 ## errors
 
-`errors` allows to specify two following validation messages:
+`errors` allows to set validation messages for `required` and `invalidType` errors:
 
 ```ts
 class SomeTable extends BaseTable {
@@ -64,15 +74,6 @@ class SomeTable extends BaseTable {
     }),
   }));
 }
-```
-
-It will be converted into `Zod`'s messages:
-
-```ts
-z.string({
-  required_error: 'This column is required',
-  invalid_type_error: 'This column must be an integer',
-});
 ```
 
 Each validation method can accept an error message as a string:
@@ -111,108 +112,20 @@ class SomeTable extends BaseTable {
 }
 ```
 
-Error messages are supported for a JSON schema as well:
+## extending validation schemas
+
+Use `inputSchema`, `outputSchema`, `querySchema` to extend Zod schemas, any zod specific methods can be used inside a callback:
 
 ```ts
 class SomeTable extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((j) =>
-      j.object({
-        one: j
-          .string()
-          .errors({ required: 'One is required' })
-          .min(5, 'Must be 5 or more characters long'),
-        two: j
-          .string()
-          .errors({ invalidType: 'Two should be a string' })
-          .max(5, 'Must be 5 or fewer characters long'),
-        three: j.string().length(5, 'Must be exactly 5 characters long'),
-      }),
-    ),
-  }));
-}
-```
-
-## validationDefault
-
-Set default value or a function, in the case of a function it's called on each validation.
-
-```ts
-class SomeTable extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    column: t.text(1, 100).validationDefault('default value'),
-    dateColumn: t.date().validationDefault(() => new Date()),
-  }));
-}
-```
-
-## transform
-
-Transform value with a custom function. Returned type of value becomes a type of column (this is not particularly useful).
-
-```ts
-class SomeTable extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // reverse a string during validation
-    column: t.text(1, 100).transform((val) => val.split('').reverse().join('')),
-  }));
-}
-```
-
-## to
-
-Similar to the `.preprocess` function of Zod, it allows the transformation of one type to another. The column last type is counted as the type of the column.
-
-```ts
-class SomeTable extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // transform text to integer
-    column: t.text(1, 100).to((val) => parseInt(val), t.integer()),
-  }));
-}
-```
-
-## refine
-
-Return the truthy value when the input is okay, and return the falsy value to produce an error.
-
-Optionally takes error message parameter.
-
-```ts
-class SomeTable extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // will produce an error when the value is not 'something'
     column: t
-      .text(1, 100)
-      .refine((val) => val === 'something', 'error message'),
-  }));
-}
-```
-
-## superRefine
-
-Add a custom check with access to the validation context, see the `.superRefine` method in Zod for details.
-
-```ts
-class SomeTable extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    column: t.text(1, 100).superRefine((val, ctx) => {
-      if (val.length > 3) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.too_big,
-          maximum: 3,
-          type: 'string',
-          inclusive: true,
-          message: 'Too many items 😡',
-        });
-      }
-    }),
+      .string()
+      .inputSchema((s) => s.default('Default only for validation'))
+      .outputSchema((s) =>
+        s.transform((val) => val.split('').reverse().join('')),
+      ),
   }));
 }
 ```
@@ -237,8 +150,7 @@ class SomeTable extends BaseTable {
       .nonNegative() // must be greater than or equal to 0
       .negative() // must be lower than 0
       .nonPositive() // must be lower than or equal to 0
-      .multipleOf(number) // must be a multiple of the number
-      .step(number) // alias for .multipleOf
+      .step(number) // must be a multiple of the number
       .finite() // useful only for `numeric`, `decimal`, `real`, because Infinity won't pass integer check
       .safe(), // equivalient to .lte(Number.MAX_SAFE_INTEGER)
   }));

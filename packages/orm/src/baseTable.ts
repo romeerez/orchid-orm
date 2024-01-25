@@ -1,6 +1,6 @@
 import {
   AfterHook,
-  columnTypes as defaultColumnTypes,
+  makeColumnTypes,
   ComputedColumnsBase,
   Db,
   DbTableOptionScopes,
@@ -28,6 +28,7 @@ import {
   CoreQueryScopes,
   snakeCaseKey,
   toSnakeCase,
+  ColumnSchemaConfig,
 } from 'orchid-core';
 import { MapRelations } from './relations/relations';
 import { OrchidORM } from './orm';
@@ -35,6 +36,7 @@ import { BelongsToOptions } from './relations/belongsTo';
 import { HasOneOptions } from './relations/hasOne';
 import { HasManyOptions } from './relations/hasMany';
 import { HasAndBelongsToManyOptions } from './relations/hasAndBelongsToMany';
+import { defaultSchemaConfig, DefaultSchemaConfig } from 'pqb';
 
 // type of table class itself
 export type TableClass<T extends Table = Table> = {
@@ -140,10 +142,6 @@ type AfterSelectableHookMethod = <
   select: S,
   cb: AfterHook<S, T['columns']>,
 ) => T;
-
-// Couldn't manage it to work otherwise than specifying any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SchemaProviderBase = any;
 
 export interface BaseTableInstance<ColumnTypes> {
   table: string;
@@ -353,34 +351,40 @@ export interface BaseTableInstance<ColumnTypes> {
 }
 
 export interface BaseTableClass<
+  SchemaConfig extends ColumnSchemaConfig,
   ColumnTypes,
-  SchemaProvider extends SchemaProviderBase,
 > {
   nowSQL: string | undefined;
   exportAs: string;
-  schema: SchemaProvider;
   getFilePath(): string;
 
   new (): BaseTableInstance<ColumnTypes>;
   instance(): BaseTableInstance<ColumnTypes>;
+
+  inputSchema: SchemaConfig['inputSchema'];
+  outputSchema: SchemaConfig['outputSchema'];
+  querySchema: SchemaConfig['querySchema'];
 }
 
 // base table constructor
 export function createBaseTable<
-  SchemaProvider extends SchemaProviderBase,
-  ColumnTypes = DefaultColumnTypes,
+  SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
+  ColumnTypes = DefaultColumnTypes<SchemaConfig>,
 >({
+  schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
   columnTypes: columnTypesArg,
   snakeCase,
   filePath: filePathArg,
   nowSQL,
   exportAs = 'BaseTable',
   language,
-  schemaProvider: schemaProviderArg,
 }: {
+  schemaConfig?: SchemaConfig;
   // concrete column types or a callback for overriding standard column types
   // this types will be used in tables to define their columns
-  columnTypes?: ColumnTypes | ((t: DefaultColumnTypes) => ColumnTypes);
+  columnTypes?:
+    | ColumnTypes
+    | ((t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes);
   // when set to true, all columns will be translated to `snake_case` when querying database
   snakeCase?: boolean;
   // if for some unknown reason you see error that file path for a table can't be guessed automatically,
@@ -392,16 +396,13 @@ export function createBaseTable<
   exportAs?: string;
   // default language for the full text search
   language?: string;
-  // a function to prepare a validation schema based on table's columns,
-  // it will be available as `TableClass.schema()` method.
-  schemaProvider?: SchemaProvider;
-} = {}): BaseTableClass<ColumnTypes, SchemaProvider> {
+} = {}): BaseTableClass<SchemaConfig, ColumnTypes> {
   const columnTypes = (
     typeof columnTypesArg === 'function'
-      ? (columnTypesArg as (t: DefaultColumnTypes) => ColumnTypes)(
-          defaultColumnTypes,
-        )
-      : columnTypesArg || defaultColumnTypes
+      ? (
+          columnTypesArg as (t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes
+        )(makeColumnTypes(schemaConfig))
+      : columnTypesArg || makeColumnTypes(defaultSchemaConfig)
   ) as ColumnTypes;
 
   // stack is needed only if filePath wasn't given
@@ -409,16 +410,46 @@ export function createBaseTable<
 
   let filePath: string | undefined;
 
-  function schemaProvider(this: Table) {
-    const schema = (schemaProviderArg as () => unknown).call(this);
-    (this as unknown as { schema: () => unknown }).schema = () => schema;
-    return schema;
-  }
-
   const base = class BaseTable {
     static nowSQL = nowSQL;
     static exportAs = exportAs;
-    static schema = schemaProvider as SchemaProvider;
+
+    private static _inputSchema: unknown;
+    static inputSchema() {
+      // Nullish coalescing assignment (??=), for some reason, compiles to != null and miss undefined
+      return this._inputSchema === undefined
+        ? (this._inputSchema = schemaConfig.inputSchema.call(this))
+        : this._inputSchema;
+    }
+
+    private static _outputSchema: unknown;
+    static outputSchema() {
+      return this._outputSchema === undefined
+        ? (this._outputSchema = schemaConfig.outputSchema.call(this))
+        : this._outputSchema;
+    }
+
+    private static _querySchema: unknown;
+    static querySchema() {
+      return this._querySchema === undefined
+        ? (this._querySchema = schemaConfig.querySchema.call(this))
+        : this._querySchema;
+    }
+
+    private static _updateSchema: unknown;
+    static updateSchema() {
+      return this._updateSchema === undefined
+        ? (this._updateSchema = schemaConfig.updateSchema.call(this))
+        : this._updateSchema;
+    }
+
+    private static _pkeySchema: unknown;
+    static pkeySchema() {
+      return this._pkeySchema === undefined
+        ? (this._pkeySchema = schemaConfig.pkeySchema.call(this))
+        : this._pkeySchema;
+    }
+
     static getFilePath(): string {
       if (filePath) return filePath;
       if (typeof filePathOrStack === 'string') {
@@ -484,7 +515,8 @@ export function createBaseTable<
         }
       }
 
-      return shape;
+      // save columns to prototype to make them available in static methods (inputSchema, outputSchema)
+      return (this.constructor.prototype.columns = shape);
     }
 
     setComputed<
@@ -538,5 +570,5 @@ export function createBaseTable<
 
   base.prototype.types = columnTypes as typeof base.prototype.types;
 
-  return base as unknown as BaseTableClass<ColumnTypes, SchemaProvider>;
+  return base as unknown as BaseTableClass<SchemaConfig, ColumnTypes>;
 }

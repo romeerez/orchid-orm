@@ -1,7 +1,12 @@
-import { ColumnTypeBase, Expression } from 'orchid-core';
-import { SelectAs, SelectItem, SelectQueryData, ToSQLCtx } from '../sql';
+import { Expression, QueryColumn } from 'orchid-core';
+import {
+  SelectAs,
+  SelectItem,
+  SelectQueryData,
+  ToSQLCtx,
+  ToSQLQuery,
+} from '../sql';
 import { selectAllSql, selectedObjectToSQL } from '../sql/select';
-import { Query } from '../query/query';
 import { columnToSql, columnToSqlWithAs } from '../sql/common';
 
 /**
@@ -9,10 +14,10 @@ import { columnToSql, columnToSqlWithAs } from '../sql/common';
  * Used by `get` to have an expression that can be chained with operators.
  */
 export class SelectItemExpression<
-  T extends ColumnTypeBase = ColumnTypeBase,
+  T extends QueryColumn = QueryColumn,
 > extends Expression<T> {
   constructor(
-    public q: Query,
+    public q: ToSQLQuery,
     public item: Exclude<SelectItem, SelectAs>,
     public _type: T,
   ) {

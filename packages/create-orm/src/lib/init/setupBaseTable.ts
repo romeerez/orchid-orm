@@ -7,13 +7,19 @@ export async function setupBaseTable(config: InitConfig): Promise<void> {
 
   let content = `import { createBaseTable } from 'orchid-orm';${
     config.addSchemaToZod
-      ? `\nimport { zodSchemaProvider } from 'orchid-orm-schema-to-zod';`
+      ? `\nimport { zodSchemaConfig } from 'orchid-orm-schema-to-zod';`
       : ''
   }
 
 export const BaseTable = createBaseTable({
   // Set \`snakeCase\` to \`true\` if columns in your database are in snake_case.
-  // snakeCase: true,
+  // snakeCase: true,${
+    config.addSchemaToZod
+      ? `
+
+  schemaConfig: zodSchemaConfig,`
+      : ''
+  }
 
   // Customize column types for all tables.
   columnTypes: (t) => ({
@@ -30,19 +36,13 @@ export const BaseTable = createBaseTable({
   if (timestamp && timestamp !== 'string') {
     content += `
     // Parse timestamps to ${timestamp === 'number' ? 'number' : 'Date object'}.
-    timestamp: <P extends number>(precision?: P) =>
-      t.timestamp<P>(precision).${
-        timestamp === 'date' ? 'asDate' : 'asNumber'
-      }(),`;
+    timestamp: (precision?: number) => t.timestamp(precision).${
+      timestamp === 'date' ? 'asDate' : 'asNumber'
+    }(),`;
   }
 
   content += `
-  }),${
-    config.addSchemaToZod
-      ? `
-  schemaProvider: zodSchemaProvider,`
-      : ''
-  }
+  }),
 });
 `;
 

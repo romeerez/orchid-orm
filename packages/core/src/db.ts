@@ -2,8 +2,9 @@ import { AdapterBase } from './adapter';
 import {
   ColumnShapeInput,
   ColumnShapeOutput,
-  ColumnsShapeBase,
   DefaultSelectColumns,
+  QueryColumns,
+  QueryColumnsInit,
   SinglePrimaryKey,
 } from './columns/columnType';
 import { QueryInternal } from './query';
@@ -15,10 +16,10 @@ export type SQLQueryArgs = TemplateLiteralArgs | [RawSQLBase];
 export type DbBase<
   Adapter extends AdapterBase,
   Table extends string | undefined,
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumnsInit,
   CT,
-  ShapeWithComputed extends ColumnsShapeBase = Shape,
-  Result extends ColumnsShapeBase = Pick<
+  ShapeWithComputed extends QueryColumns = Shape,
+  Result extends QueryColumns = Pick<
     Shape,
     DefaultSelectColumns<Shape>[number]
   >,
@@ -29,7 +30,7 @@ export type DbBase<
   columnTypes: CT;
   shape: ShapeWithComputed;
   singlePrimaryKey: SinglePrimaryKey<Shape>;
-  type: ColumnShapeOutput<Shape>;
+  outputType: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
   result: Result;
   internal: QueryInternal;

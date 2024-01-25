@@ -9,23 +9,27 @@ import {
 import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
 import { WhereQueryBase } from '../where/where';
 import { RelationsBase } from '../../relations';
-import { QueryData } from '../../sql';
+import { QueryData, QueryDataJoinTo } from '../../sql';
 import {
   Expression,
   StringKey,
   QueryInternal,
   EmptyTuple,
-  NullableColumn,
   QueryMetaBase,
   ColumnsShapeBase,
   QueryThen,
   QueryCatch,
   emptyObject,
   EmptyObject,
+  QueryColumns,
+  QueryColumnToNullable,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
 import { AliasOrTable } from '../../common/utils';
-import { ColumnsObject } from '../../columns';
+import {
+  ColumnsShapeToNullableObject,
+  ColumnsShapeToObject,
+} from '../../columns';
 import { QueryBase } from '../../query/queryBase';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
@@ -143,7 +147,7 @@ export type JoinResult<
   J extends {
     table?: string;
     meta: QueryMetaBase;
-    shape: ColumnsShapeBase;
+    shape: QueryColumns;
   } = Arg extends Query
     ? Arg['meta']['hasSelect'] extends true
       ? // If joined query has select, it will be wrapped into a sub-query, use result type as the shape.
@@ -206,13 +210,13 @@ type JoinResultSelectable<
   J extends {
     table?: string;
     meta: QueryMetaBase;
-    shape: ColumnsShapeBase;
+    shape: QueryColumns;
   },
   RequireJoined extends boolean,
   CbResult extends { meta: QueryMetaBase },
-  Result extends ColumnsShapeBase = RequireJoined extends true
+  Result extends QueryColumns = RequireJoined extends true
     ? J['shape']
-    : { [K in keyof J['shape']]: NullableColumn<J['shape'][K]> },
+    : { [K in keyof J['shape']]: QueryColumnToNullable<J['shape'][K]> },
   As extends string = CbResult extends { meta: QueryMetaBase & { as: string } }
     ? CbResult['meta']['as']
     : AliasOrTable<J>,
@@ -225,8 +229,8 @@ type JoinResultSelectable<
   [K in As as `${As}.*`]: {
     as: K;
     column: RequireJoined extends true
-      ? ColumnsObject<J['shape']>
-      : NullableColumn<ColumnsObject<J['shape']>>;
+      ? ColumnsShapeToObject<J['shape']>
+      : ColumnsShapeToNullableObject<J['shape']>;
   };
 };
 
@@ -240,8 +244,8 @@ type JoinAddSelectable<T extends Query, Selectable extends SelectableBase> = {
 type JoinOptionalMain<
   T extends Query,
   Selectable extends SelectableBase,
-  Result extends ColumnsShapeBase = {
-    [K in keyof T['result']]: NullableColumn<T['result'][K]>;
+  Result extends QueryColumns = {
+    [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
   },
   Data = GetQueryResult<T['returnType'], Result>,
 > = {
@@ -249,7 +253,7 @@ type JoinOptionalMain<
     ? {
         [K in keyof T['selectable']]: {
           as: T['selectable'][K]['as'];
-          column: NullableColumn<T['selectable'][K]['column']>;
+          column: QueryColumnToNullable<T['selectable'][K]['column']>;
         };
       } & Selectable
     : K extends 'result'
@@ -276,7 +280,7 @@ type JoinWithArgToQuery<
 > = {
   q: QueryData;
   table: With['table'];
-  clone<T extends QueryBase>(this: T): T;
+  clone<T extends Pick<QueryBase, 'baseQuery' | 'q'>>(this: T): T;
   selectable: Selectable & {
     [K in keyof Selectable as `${With['table']}.${StringKey<K>}`]: Selectable[K];
   };
@@ -1110,7 +1114,10 @@ type OnJsonPathEqualsArgs<T extends QueryBase> = [
 // Query builder with `or` methods that is passed to the `join` and `joinLateral` callbacks.
 export class OnQueryBuilder<
   S extends QueryBase = QueryBase,
-  J extends QueryBase = QueryBase,
+  J extends Pick<
+    QueryBase,
+    'selectable' | 'relations' | 'result' | 'shape'
+  > = QueryBase,
 > extends WhereQueryBase {
   declare selectable: J['selectable'] & Omit<S['selectable'], keyof S['shape']>;
   declare relations: J['relations'];
@@ -1123,7 +1130,7 @@ export class OnQueryBuilder<
   constructor(
     q: QueryBase,
     { shape, joinedShapes }: Pick<QueryData, 'shape' | 'joinedShapes'>,
-    joinTo: QueryBase,
+    joinTo: QueryDataJoinTo,
   ) {
     super();
     this.internal = q.internal;

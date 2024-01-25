@@ -34,13 +34,19 @@ import {
   relationWhere,
   selectIfNotSelected,
 } from './common/utils';
-import { ColumnsShapeBase, emptyArray, EmptyObject } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  ColumnsShapeBase,
+  emptyArray,
+  EmptyObject,
+} from 'orchid-core';
 import {
   RelationCommonOptions,
   RelationKeysOptions,
   RelationRefsOptions,
   RelationRefsOrKeysOptions,
 } from './common/options';
+import { defaultSchemaConfig } from 'pqb';
 
 export type BelongsTo = RelationThunkBase & {
   type: 'belongsTo';
@@ -142,12 +148,16 @@ type BelongsToNestedUpdate = (
   },
 ) => void;
 
-class BelongsToVirtualColumn extends VirtualColumn {
+class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: BelongsToNestedInsert;
   private readonly nestedUpdate: BelongsToNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    schema: ColumnSchemaConfig,
+    private key: string,
+    private state: State,
+  ) {
+    super(schema);
     this.nestedInsert = nestedInsert(this.state);
     this.nestedUpdate = nestedUpdate(this.state);
   }
@@ -267,7 +277,11 @@ export const makeBelongsToMethod = (
     method(params: Record<string, unknown>) {
       return query.where(makeWhere(params));
     },
-    virtualColumn: new BelongsToVirtualColumn(relationName, state),
+    virtualColumn: new BelongsToVirtualColumn(
+      defaultSchemaConfig,
+      relationName,
+      state,
+    ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
       join(baseQuery, joiningQuery, primaryKeys, foreignKeys),
     ),

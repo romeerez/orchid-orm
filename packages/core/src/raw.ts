@@ -1,8 +1,8 @@
-import { ColumnTypeBase } from './columns/columnType';
+import { ColumnTypeBase, QueryColumn } from './columns/columnType';
 import { OperatorToSQL } from './columns';
 
 // Base class for the raw SQL and other classes that can produce SQL
-export abstract class Expression<T extends ColumnTypeBase = ColumnTypeBase> {
+export abstract class Expression<T extends QueryColumn = QueryColumn> {
   // `_type` contains an instance of a column type.
   // Starts with underscore to allow having `type` method
   abstract _type: T;
@@ -72,25 +72,25 @@ export type RawSQLValues = Record<string, unknown>;
 // `type` method to be used in both static and dynamic variants of SQL expressions.
 export abstract class ExpressionTypeMethod {
   // Define the resulting column type for the raw SQL.
-  type<Self extends RawSQLBase, C extends ColumnTypeBase>(
+  type<Self extends RawSQLBase, C extends QueryColumn>(
     this: Self,
     fn: (types: Self['columnTypes']) => C,
   ): Omit<Self, '_type'> & { _type: C } {
-    this._type = fn(this.columnTypes);
+    this._type = fn(this.columnTypes) as unknown as ColumnTypeBase;
     return this as unknown as Omit<Self, '_type'> & { _type: C };
   }
 }
 
 // RawSQLBase extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
 export interface RawSQLBase<
-  T extends ColumnTypeBase = ColumnTypeBase,
+  T extends QueryColumn = QueryColumn,
   ColumnTypes = unknown,
 > extends Expression<T>,
     ExpressionTypeMethod {}
 
 // Base class for raw SQL
 export abstract class RawSQLBase<
-  T extends ColumnTypeBase = ColumnTypeBase,
+  T extends QueryColumn = QueryColumn,
   ColumnTypes = unknown,
 > extends Expression<T> {
   // Column type instance, it is assigned directly to the prototype of RawSQL class.

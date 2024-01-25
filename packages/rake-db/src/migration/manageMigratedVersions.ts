@@ -5,12 +5,15 @@ import {
   RakeDbConfig,
 } from '../common';
 import { SilentQueries } from './migration';
-import { ColumnTypesBase } from 'orchid-core';
+import { ColumnSchemaConfig } from 'orchid-core';
 
-export const saveMigratedVersion = async <CT extends ColumnTypesBase>(
+export const saveMigratedVersion = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
   db: SilentQueries,
   version: string,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
   await db.silentArrays(
     `INSERT INTO ${quoteWithSchema({
@@ -19,10 +22,13 @@ export const saveMigratedVersion = async <CT extends ColumnTypesBase>(
   );
 };
 
-export const removeMigratedVersion = async <CT extends ColumnTypesBase>(
+export const removeMigratedVersion = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
   db: SilentQueries,
   version: string,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
   await db.silentArrays(
     `DELETE FROM ${quoteWithSchema({
@@ -31,9 +37,12 @@ export const removeMigratedVersion = async <CT extends ColumnTypesBase>(
   );
 };
 
-export const getMigratedVersionsMap = async <CT extends ColumnTypesBase>(
+export const getMigratedVersionsMap = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
   db: TransactionAdapter,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<Record<string, boolean>> => {
   try {
     const result = await db.arrays<[string]>(

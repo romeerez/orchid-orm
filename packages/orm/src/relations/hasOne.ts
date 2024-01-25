@@ -37,7 +37,7 @@ import {
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
 } from './common/utils';
-import { ColumnsShapeBase, EmptyObject } from 'orchid-core';
+import { ColumnSchemaConfig, ColumnsShapeBase, EmptyObject } from 'orchid-core';
 import {
   RelationCommonOptions,
   RelationHasOptions,
@@ -45,6 +45,7 @@ import {
   RelationRefsOptions,
   RelationThroughOptions,
 } from './common/options';
+import { defaultSchemaConfig } from 'pqb';
 
 export type HasOne = RelationThunkBase & {
   type: 'hasOne';
@@ -166,12 +167,16 @@ export type HasOneNestedUpdate = (
   relationData: NestedUpdateOneItem,
 ) => Promise<void>;
 
-class HasOneVirtualColumn extends VirtualColumn {
+class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasOneNestedInsert;
   private readonly nestedUpdate: HasOneNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    schema: ColumnSchemaConfig,
+    private key: string,
+    private state: State,
+  ) {
+    super(schema);
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -309,7 +314,11 @@ export const makeHasOneMethod = (
       }
       return query.where(values)._defaults(values);
     },
-    virtualColumn: new HasOneVirtualColumn(relationName, state),
+    virtualColumn: new HasOneVirtualColumn(
+      defaultSchemaConfig,
+      relationName,
+      state,
+    ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
       joinHasRelation(baseQuery, joiningQuery, primaryKeys, foreignKeys, len),
     ),

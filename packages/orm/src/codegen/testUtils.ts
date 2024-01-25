@@ -1,8 +1,9 @@
 import { RakeDbAst } from 'rake-db';
-import { columnTypes, QueryLogOptions } from 'pqb';
+import { makeColumnTypes, QueryLogOptions } from 'pqb';
 import path, { resolve } from 'path';
 import fs from 'fs/promises';
 import { UpdateTableFileParams } from './updateTableFile/updateTableFile';
+import { defaultSchemaConfig } from 'pqb';
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
 export const tablePath = (table: string) =>
@@ -43,7 +44,7 @@ const makeAst = () => {
     action: 'create',
     name: 'foo_bar',
     shape: {
-      id: columnTypes.identity().primaryKey(),
+      id: makeColumnTypes(defaultSchemaConfig).identity().primaryKey(),
     },
     noPrimaryKey: 'error',
   };

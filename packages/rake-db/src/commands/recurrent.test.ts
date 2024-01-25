@@ -3,17 +3,12 @@ import { testConfig } from '../rake-db.test-utils';
 import { readdir, readFile, stat } from 'fs/promises';
 import { asMock } from 'test-utils';
 import { join } from 'path';
-import { createDb } from 'pqb';
+import { Adapter } from 'pqb';
 
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
   stat: jest.fn(),
   readFile: jest.fn(),
-}));
-
-jest.mock('pqb', () => ({
-  Adapter: class {},
-  createDb: jest.fn(),
 }));
 
 const options = [
@@ -50,12 +45,13 @@ describe('recurrent', () => {
   });
 
   it('should apply sql file', async () => {
-    const db = {
-      adapter: { arrays: jest.fn() },
-      close: jest.fn(),
-    };
+    Adapter.prototype.arrays = jest.fn();
+    Adapter.prototype.close = jest.fn();
 
-    asMock(createDb).mockReturnValueOnce(db);
+    const db = {
+      adapter: { arrays: Adapter.prototype.arrays },
+      close: Adapter.prototype.close,
+    };
 
     asMock(readdir).mockResolvedValueOnce(['one.sql']);
 
@@ -90,12 +86,11 @@ describe('recurrent', () => {
   });
 
   it('should read dir recursively, query each sql file', async () => {
-    const dbs = [
-      { adapter: { arrays: jest.fn() }, close: jest.fn() },
-      { adapter: { arrays: jest.fn() }, close: jest.fn() },
-    ];
-    asMock(createDb).mockReturnValueOnce(dbs[0]);
-    asMock(createDb).mockReturnValueOnce(dbs[1]);
+    const query = jest.fn();
+    const close = jest.fn();
+
+    Adapter.prototype.arrays = query;
+    Adapter.prototype.close = close;
 
     asMock(readdir).mockResolvedValueOnce([
       'dir',
@@ -145,15 +140,16 @@ describe('recurrent', () => {
       join(testConfig.recurrentPath, 'dir', 'inner.sql'),
     ]);
 
-    for (const db of dbs) {
-      expect(asMock(db.adapter.arrays).mock.calls.flat()).toEqual([
-        join(testConfig.recurrentPath, 'one.sql'),
-        join(testConfig.recurrentPath, 'two.sql'),
-        join(testConfig.recurrentPath, 'dir', 'inner.sql'),
-      ]);
+    expect(asMock(query).mock.calls.flat()).toEqual([
+      join(testConfig.recurrentPath, 'one.sql'),
+      join(testConfig.recurrentPath, 'one.sql'),
+      join(testConfig.recurrentPath, 'two.sql'),
+      join(testConfig.recurrentPath, 'two.sql'),
+      join(testConfig.recurrentPath, 'dir', 'inner.sql'),
+      join(testConfig.recurrentPath, 'dir', 'inner.sql'),
+    ]);
 
-      expect(db.close).toBeCalled();
-    }
+    expect(close).toBeCalledTimes(2);
 
     expect(testConfig.logger.log).toBeCalledWith(
       `Applied 3 recurrent migration files`,

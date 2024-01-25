@@ -3,7 +3,7 @@ import { RelationQuery } from '../relations';
 import { SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from './data';
 import {
-  ColumnTypeBase,
+  QueryColumn,
   Expression,
   MaybeArray,
   TemplateLiteralArgs,
@@ -57,7 +57,7 @@ export type WithOptions = {
 
 export type JsonItem<
   As extends string = string,
-  Type extends ColumnTypeBase = ColumnTypeBase,
+  Type extends QueryColumn = QueryColumn,
 > = {
   __json:
     | [

@@ -1,4 +1,12 @@
-import { AnyZodObject, ZodNullable, ZodString, ZodTypeAny } from 'zod';
+import {
+  AnyZodObject,
+  z,
+  ZodNullable,
+  ZodObject,
+  ZodRawShape,
+  ZodString,
+  ZodTypeAny,
+} from 'zod';
 import {
   CreateData,
   DateBaseColumn,
@@ -9,8 +17,7 @@ import {
   RelationsBase,
   TextBaseColumn,
 } from 'pqb';
-import { ColumnShapeOutput, EmptyObject } from 'orchid-core';
-import { instanceToZod, InstanceToZod } from 'orchid-orm-schema-to-zod';
+import { ColumnShapeOutput, ColumnTypeBase, EmptyObject } from 'orchid-core';
 import { generateMock } from '@anatine/zod-mock';
 
 type UniqueField =
@@ -254,7 +261,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   }
 
   factory.table.primaryKeys.forEach((key) => {
-    const item = factory.table.shape[key];
+    const item = factory.table.shape[key] as ColumnTypeBase;
 
     if ('identity' in item.data || item.dataType.includes('serial')) {
       delete pick[key];
@@ -479,11 +486,33 @@ const nowString = new Date().toISOString();
 
 const maxPostgresInt = 2147483647;
 
+type TableFactory<T extends Query> = T['shape'] extends Record<
+  string,
+  { inputSchema: ZodTypeAny }
+>
+  ? TestFactory<
+      T,
+      ZodObject<
+        { [K in keyof T['shape']]: T['shape'][K]['inputSchema'] },
+        'strip'
+      >,
+      ColumnShapeOutput<T['shape']>
+    >
+  : never;
+
 export const tableFactory = <T extends Query>(
   table: T,
   options?: FactoryOptions,
-): TestFactory<T, InstanceToZod<T>, ColumnShapeOutput<T['shape']>> => {
-  const schema = instanceToZod(table);
+): TableFactory<T> => {
+  const shape: ZodRawShape = {};
+  const columns = table.shape;
+
+  for (const key in columns) {
+    const { inputSchema } = columns[key] as ColumnTypeBase;
+    if (inputSchema) shape[key] = inputSchema as ZodTypeAny;
+  }
+
+  const schema = z.object(shape);
 
   const data: Record<string, unknown> = {};
   const now = Date.now();
@@ -491,7 +520,7 @@ export const tableFactory = <T extends Query>(
   const uniqueFields: UniqueField[] = [];
 
   for (const key in table.shape) {
-    const column = table.shape[key];
+    const column = table.shape[key] as ColumnTypeBase;
     if (column instanceof DateBaseColumn) {
       if (column.data.as instanceof IntegerBaseColumn) {
         data[key] = (sequence: number) => now + sequence;
@@ -560,18 +589,18 @@ export const tableFactory = <T extends Query>(
     }
   }
 
-  return new TestFactory<T, InstanceToZod<T>, ColumnShapeOutput<T['shape']>>(
+  return new TestFactory(
     table,
     schema,
     uniqueFields,
     data,
     options,
-  );
+  ) as TableFactory<T>;
 };
 
 type ORMFactory<T> = {
   [K in keyof T]: T[K] extends Query & { definedAs: string }
-    ? TestFactory<T[K], InstanceToZod<T[K]>, ColumnShapeOutput<T[K]['shape']>>
+    ? TableFactory<T[K]>
     : never;
 };
 

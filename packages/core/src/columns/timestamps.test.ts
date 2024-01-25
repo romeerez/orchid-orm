@@ -92,8 +92,10 @@ describe('timestamps methods', () => {
         ...t.timestamps(),
       }));
 
-      expect(table.shape.createdAt.data.name).toBe('created_at');
-      expect(table.shape.updatedAt.data.name).toBe('updated_at');
+      expect(table.shape).toMatchObject({
+        createdAt: { data: { name: 'created_at' } },
+        updatedAt: { data: { name: 'updated_at' } },
+      });
     });
 
     it('should not update updated_at column when updating snakeCase table with `updatedAt` provided in object', () => {

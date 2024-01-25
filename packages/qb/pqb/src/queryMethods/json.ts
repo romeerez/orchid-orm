@@ -1,15 +1,13 @@
 import {
   AddQuerySelect,
   Query,
-  queryTypeWithLimitOne,
   SetQueryReturnsColumnOptional,
 } from '../query/query';
 import { pushQueryValue } from '../query/queryUtils';
-import { ColumnType, StringColumn } from '../columns';
-import { JsonItem, SelectQueryData } from '../sql';
-import { StringKey, ColumnTypeBase } from 'orchid-core';
+import { JsonItem } from '../sql';
+import { QueryColumn, StringKey } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
-import { RawSQL } from '../sql/rawSql';
+import { queryJson } from './json.utils';
 
 // union of column names that have a `jsonb` type
 type JsonColumnName<T extends QueryBase> = StringKey<
@@ -30,11 +28,11 @@ type JsonSetResult<
   T extends QueryBase,
   Column extends ColumnOrJsonMethod<T>,
   As extends string,
-  Type extends ColumnTypeBase = Column extends keyof T['shape']
+  Type extends QueryColumn = Column extends keyof T['shape']
     ? T['shape'][Column]
     : Column extends JsonItem
     ? Column['__json'][2]
-    : ColumnTypeBase,
+    : QueryColumn,
 > = JsonItem<As, Type> & AddQuerySelect<T, Record<As, Type>>;
 
 // result of `jsonPathQuery`:
@@ -43,7 +41,7 @@ type JsonSetResult<
 type JsonPathQueryResult<
   T extends QueryBase,
   As extends string,
-  Type extends ColumnType,
+  Type extends QueryColumn,
 > = JsonItem &
   AddQuerySelect<
     T,
@@ -330,7 +328,7 @@ export abstract class JsonModifiers extends QueryBase {
   jsonPathQuery<
     T extends JsonModifiers,
     As extends string,
-    Type extends ColumnType,
+    Type extends QueryColumn,
   >(
     this: T,
     type: Type,
@@ -348,7 +346,7 @@ export abstract class JsonModifiers extends QueryBase {
   _jsonPathQuery<
     T extends JsonModifiers,
     As extends string,
-    Type extends ColumnType,
+    Type extends QueryColumn,
   >(
     this: T,
     type: Type,
@@ -387,28 +385,13 @@ export abstract class JsonMethods {
   json<T extends Query>(
     this: T,
     coalesce?: boolean,
-  ): SetQueryReturnsColumnOptional<T, StringColumn> {
-    return this.clone()._json(coalesce);
+  ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
+    return queryJson(this.clone(), coalesce);
   }
   _json<T extends Query>(
     this: T,
     coalesce?: boolean,
-  ): SetQueryReturnsColumnOptional<T, StringColumn> {
-    const q = this._wrap(this.baseQuery.clone()) as unknown as T;
-    // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
-    q._getOptional(
-      new RawSQL(
-        queryTypeWithLimitOne[this.q.returnType]
-          ? `row_to_json("t".*)`
-          : coalesce !== false
-          ? `COALESCE(json_agg(row_to_json("t".*)), '[]')`
-          : 'json_agg(row_to_json("t".*))',
-      ),
-    );
-
-    // to skip LIMIT 1
-    (q.q as SelectQueryData).returnsOne = true;
-
-    return q as unknown as SetQueryReturnsColumnOptional<T, StringColumn>;
+  ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
+    return queryJson(this, coalesce);
   }
 }

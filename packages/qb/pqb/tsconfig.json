@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "orchid-core": ["../../core/src"],
-      "test-utils": ["../../test-utils/src"]
+      "test-utils": ["../../test-utils/src"],
+      "schema-to-zod": ["../../schema-to-zod/src"]
     },
     "types": ["@types/jest", "bun-types"]
   }

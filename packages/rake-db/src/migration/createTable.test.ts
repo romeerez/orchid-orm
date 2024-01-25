@@ -1,5 +1,5 @@
 import { expectSql, getDb, resetDb, toLine } from '../rake-db.test-utils';
-import { columnTypes, Db } from 'pqb';
+import { makeColumnTypes, Db, defaultSchemaConfig } from 'pqb';
 import { asMock } from 'test-utils';
 import { setDefaultLanguage } from 'orchid-core';
 
@@ -793,7 +793,7 @@ describe('create and drop table', () => {
       setDefaultLanguage('english');
     });
 
-    const t = columnTypes;
+    const t = makeColumnTypes(defaultSchemaConfig);
     const columns = {
       id: t.identity().primaryKey(),
       title: t.text(0, 100),

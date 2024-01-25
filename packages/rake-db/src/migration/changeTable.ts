@@ -6,12 +6,10 @@ import {
   quote,
   EnumColumn,
   UnknownColumn,
-  columnTypes,
 } from 'pqb';
 import {
   EmptyObject,
   emptyObject,
-  ColumnTypesBase,
   snakeCaseKey,
   toSnakeCase,
   deepCompare,
@@ -19,6 +17,7 @@ import {
   RawSQLBase,
   setDefaultLanguage,
   ColumnTypeBase,
+  setCurrentColumnName,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -34,6 +33,7 @@ import {
   makePopulateEnumQuery,
   quoteNameFromString,
   quoteWithSchema,
+  RakeDbColumnTypes,
 } from '../common';
 import {
   addColumnComment,
@@ -205,15 +205,15 @@ const nameKey = Symbol('name');
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
   ...tableMethods,
-  name(this: ColumnTypesBase, name: string) {
-    const types = Object.create(columnTypes.name.call(this, name));
+  name(this: RakeDbColumnTypes, name: string) {
+    setCurrentColumnName(name);
+    const types = Object.create(this);
     types[nameKey] = name;
     return types;
   },
   add,
   drop,
   change(
-    this: ColumnTypesBase,
     from: ColumnType | Change,
     to: ColumnType | Change,
     options?: ChangeOptions,
@@ -251,8 +251,7 @@ const tableChangeMethods = {
   },
 };
 
-export type TableChanger<CT extends ColumnTypesBase> =
-  MigrationColumnTypes<CT> & TableChangeMethods;
+export type TableChanger<CT> = MigrationColumnTypes<CT> & TableChangeMethods;
 
 export type TableChangeData = Record<
   string,
@@ -262,7 +261,7 @@ export type TableChangeData = Record<
   | EmptyObject
 >;
 
-export const changeTable = async <CT extends ColumnTypesBase>(
+export const changeTable = async <CT extends RakeDbColumnTypes>(
   migration: Migration<CT>,
   up: boolean,
   tableName: string,
@@ -278,7 +277,9 @@ export const changeTable = async <CT extends ColumnTypesBase>(
   resetTableData();
   resetChangeTableData();
 
-  const tableChanger = Object.create(migration.columnTypes) as TableChanger<CT>;
+  const tableChanger = Object.create(
+    migration.columnTypes as object,
+  ) as TableChanger<CT>;
   Object.assign(tableChanger, tableChangeMethods);
 
   (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] = snakeCase;

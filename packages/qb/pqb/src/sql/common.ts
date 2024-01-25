@@ -1,7 +1,7 @@
 import { SelectableOrExpression } from '../common/utils';
 import { QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
-import { ColumnsShapeBase, ColumnTypeBase } from 'orchid-core';
+import { ColumnTypeBase, QueryColumn, QueryColumns } from 'orchid-core';
 
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
@@ -9,14 +9,15 @@ import { ColumnsShapeBase, ColumnTypeBase } from 'orchid-core';
 export function simpleColumnToSQL(
   ctx: ToSQLCtx,
   key: string,
-  column?: ColumnTypeBase,
+  column?: QueryColumn,
   quotedAs?: string,
 ): string {
-  return column
-    ? column.data.computed
-      ? column.data.computed.toSQL(ctx, quotedAs)
-      : `${quotedAs ? `${quotedAs}.` : ''}"${column.data.name || key}"`
-    : `"${key}"`;
+  if (!column) return `"${key}"`;
+
+  const { data } = column as ColumnTypeBase;
+  return data.computed
+    ? data.computed.toSQL(ctx, quotedAs)
+    : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
 // Takes a column name without dot, and the optional column object.
@@ -24,18 +25,19 @@ export function simpleColumnToSQL(
 export function simpleExistingColumnToSQL(
   ctx: ToSQLCtx,
   key: string,
-  column: ColumnTypeBase,
+  column: QueryColumn,
   quotedAs?: string,
 ): string {
-  return column.data.computed
-    ? column.data.computed.toSQL(ctx, quotedAs)
-    : `${quotedAs ? `${quotedAs}.` : ''}"${column.data.name || key}"`;
+  const { data } = column as ColumnTypeBase;
+  return data.computed
+    ? data.computed.toSQL(ctx, quotedAs)
+    : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
 export const columnToSql = (
   ctx: ToSQLCtx,
   data: Pick<QueryData, 'joinedShapes' | 'joinOverrides'>,
-  shape: ColumnsShapeBase,
+  shape: QueryColumns,
   column: string,
   quotedAs?: string,
   select?: true,
@@ -54,8 +56,9 @@ export const columnToSql = (
     const tableName = data.joinOverrides?.[table] || table;
     const quoted = `"${table}"`;
 
-    const col =
-      quoted === quotedAs ? shape[key] : data.joinedShapes?.[tableName]?.[key];
+    const col = (
+      quoted === quotedAs ? shape[key] : data.joinedShapes?.[tableName]?.[key]
+    ) as ColumnTypeBase | undefined;
 
     if (col) {
       if (col.data.name) {
@@ -157,7 +160,7 @@ export const rawOrColumnToSql = (
   data: Pick<QueryData, 'shape' | 'joinedShapes'>,
   expr: SelectableOrExpression,
   quotedAs: string | undefined,
-  shape: ColumnsShapeBase = data.shape,
+  shape: QueryColumns = data.shape,
   select?: true,
 ) => {
   return typeof expr === 'string'

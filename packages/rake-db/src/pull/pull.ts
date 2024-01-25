@@ -1,24 +1,29 @@
 import { RakeDbConfig } from '../common';
-import { Adapter, AdapterOptions } from 'pqb';
+import { Adapter, AdapterOptions, makeColumnsByType } from 'pqb';
 import { DbStructure } from './dbStructure';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
-import { ColumnTypesBase } from 'orchid-core';
+import { ColumnSchemaConfig } from 'orchid-core';
 
-export const pullDbStructure = async <CT extends ColumnTypesBase>(
+export const pullDbStructure = async <
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+>(
   options: AdapterOptions,
-  config: RakeDbConfig<CT>,
+  config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
   const adapter = new Adapter(options);
   const currentSchema = adapter.schema || 'public';
   const db = new DbStructure(adapter);
 
   const ctx: StructureToAstCtx = {
-    unsupportedTypes: {},
     snakeCase: config.snakeCase,
+    unsupportedTypes: {},
     currentSchema,
+    columnSchemaConfig: config.schemaConfig,
+    columnsByType: makeColumnsByType(config.schemaConfig),
   };
 
   const ast = await structureToAst(ctx, db);

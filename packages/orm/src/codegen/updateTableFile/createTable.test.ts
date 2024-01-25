@@ -8,8 +8,10 @@ import {
 } from '../testUtils';
 import { dirname } from 'path';
 import fs from 'fs/promises';
-import { columnTypes, raw } from 'pqb';
+import { makeColumnTypes, raw } from 'pqb';
 import { pathToLog } from 'orchid-core';
+import { zodSchemaConfig } from 'schema-to-zod';
+import { z } from 'zod';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
@@ -17,7 +19,7 @@ jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
 }));
 
-const t = columnTypes;
+const t = makeColumnTypes(zodSchemaConfig);
 
 const params = updateTableFileParams;
 
@@ -186,7 +188,7 @@ describe('createTable', () => {
           column: t.name('name').integer(),
           domain: t.domain('domainName').as(t.integer()),
           custom: t.type('customType').as(t.integer()),
-          json: t.json((t) => t.object({ foo: t.string() })),
+          json: t.json(z.unknown()),
         },
       },
     });
@@ -198,11 +200,7 @@ describe('createTable', () => {
     column: t.name('name').integer(),
     domain: t.domain('domainName').as(t.integer()),
     custom: t.type('customType').as(t.integer()),
-    json: t.json((t) =>
-      t.object({
-        foo: t.string(),
-      }),
-    ),
+    json: t.json(),
   }`,
       }),
     );

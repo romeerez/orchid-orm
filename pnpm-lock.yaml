@@ -133,6 +133,9 @@ importers:
       test-utils:
         specifier: workspace:*
         version: link:../test-utils
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
 
   packages/qb/myqb:
     dependencies:
@@ -165,6 +168,9 @@ importers:
       test-utils:
         specifier: workspace:*
         version: link:../../test-utils
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
 
   packages/rake-db:
     dependencies:
@@ -232,7 +238,11 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
 
-  packages/test-utils: {}
+  packages/test-utils:
+    devDependencies:
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
 
 packages:
 
@@ -5282,4 +5292,3 @@ packages:
 
   /zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
-    dev: false

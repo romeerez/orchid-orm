@@ -6,5 +6,8 @@
     "types": "tsc"
   },
   "author": "Roman Kushyn",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "zod": "^3.22.4"
+  }
 }

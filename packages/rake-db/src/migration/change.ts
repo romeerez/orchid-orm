@@ -1,9 +1,9 @@
 import { DbMigration } from './migration';
-import { ColumnTypesBase } from 'orchid-core';
+import { RakeDbColumnTypes } from '../common';
 
-let currentChanges: ChangeCallback[] = [];
+let currentChanges: ChangeCallback<RakeDbColumnTypes>[] = [];
 
-export type ChangeCallback<CT extends ColumnTypesBase = ColumnTypesBase> = (
+export type ChangeCallback<CT extends RakeDbColumnTypes> = (
   db: DbMigration<CT>,
   up: boolean,
 ) => Promise<void>;
@@ -13,4 +13,5 @@ export const clearChanges = () => {
 };
 
 export const getCurrentChanges = () => currentChanges;
-export const pushChange = (fn: ChangeCallback) => currentChanges.push(fn);
+export const pushChange = (fn: ChangeCallback<RakeDbColumnTypes>) =>
+  currentChanges.push(fn);

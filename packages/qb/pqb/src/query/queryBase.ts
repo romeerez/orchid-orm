@@ -1,11 +1,11 @@
 import { Query, QueryReturnType, SelectableBase, WithDataBase } from './query';
 import { QueryData } from '../sql';
 import {
-  ColumnsShapeBase,
   EmptyObject,
   QueryBaseCommon,
   QueryInternal,
   QueryMetaBase,
+  QueryColumns,
   RecordKeyTrue,
 } from 'orchid-core';
 import { RelationsBase } from '../relations';
@@ -19,16 +19,16 @@ export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
    *
    * Used under the hood, and not really needed on the app side.
    */
-  clone<T extends QueryBase<Scopes>>(this: T): T {
+  clone<T extends Pick<QueryBase, 'baseQuery' | 'q'>>(this: T): T {
     const cloned = Object.create(this.baseQuery);
     cloned.q = getClonedQueryData(this.q);
     return cloned;
   }
-  abstract result: ColumnsShapeBase;
+  abstract result: QueryColumns;
   q = {} as QueryData;
   table?: string;
   selectable!: SelectableBase;
-  shape!: ColumnsShapeBase;
+  shape!: QueryColumns;
   relations!: RelationsBase;
   withData!: WithDataBase;
   baseQuery!: Query;

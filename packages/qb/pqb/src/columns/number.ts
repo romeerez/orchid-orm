@@ -1,6 +1,5 @@
 import { ColumnData, ColumnType } from './columnType';
 import {
-  numberTypeMethods,
   Code,
   Expression,
   joinTruthy,
@@ -10,14 +9,11 @@ import {
   addCode,
   ColumnWithDefault,
   ColumnTypeBase,
-  NumberTypeMethods,
-  assignMethodsToClass,
+  ColumnSchemaConfig,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
 import type { TableData } from './columnTypes';
-import { Operators } from './operators';
-
-export type NumberColumn = ColumnType<number, typeof Operators.number>;
+import { Operators, OperatorsNumber } from './operators';
 
 export type NumberColumnData = BaseNumberData & {
   identity: TableData.Identity;
@@ -27,51 +23,54 @@ export type SerialColumnData = NumberColumnData & {
   default: Expression;
 };
 
-export interface NumberBaseColumn
-  extends ColumnType<number, typeof Operators.number>,
-    NumberTypeMethods {}
-
-export abstract class NumberBaseColumn extends ColumnType<
-  number,
-  typeof Operators.number
-> {
+export abstract class NumberBaseColumn<
+  Schema extends ColumnSchemaConfig,
+  SchemaType extends Schema['type'],
+> extends ColumnType<Schema, number, SchemaType, OperatorsNumber> {
   declare data: NumberColumnData;
   operators = Operators.number;
 }
 
-assignMethodsToClass(NumberBaseColumn, numberTypeMethods);
-
-export abstract class IntegerBaseColumn extends NumberBaseColumn {
+export abstract class IntegerBaseColumn<
+  Schema extends ColumnSchemaConfig,
+> extends NumberBaseColumn<Schema, Schema['int']> {
   declare data: NumberColumnData;
-  constructor() {
-    super();
+  constructor(schema: Schema) {
+    super(schema, schema.int);
     this.data.int = true;
   }
 }
 
-export abstract class NumberAsStringBaseColumn extends ColumnType<
-  string,
-  typeof Operators.number
-> {
+export abstract class NumberAsStringBaseColumn<
+  Schema extends ColumnSchemaConfig,
+> extends ColumnType<Schema, string, Schema['string'], OperatorsNumber> {
   operators = Operators.number;
   declare data: ColumnData;
+
+  constructor(schema: Schema) {
+    super(schema, schema.string);
+  }
 }
 
-export class DecimalBaseColumn<
-  Precision extends number | undefined = undefined,
-  Scale extends number | undefined = undefined,
-> extends ColumnType<string, typeof Operators.number> {
+// exact numeric of selectable precision
+export class DecimalColumn<
+  Schema extends ColumnSchemaConfig,
+> extends ColumnType<Schema, string, Schema['string'], OperatorsNumber> {
   declare data: ColumnData & {
-    numericPrecision: Precision;
-    numericScale: Scale;
+    numericPrecision?: number;
+    numericScale?: number;
   };
   operators = Operators.number;
   dataType = 'decimal' as const;
 
-  constructor(numericPrecision?: Precision, numericScale?: Scale) {
-    super();
-    this.data.numericPrecision = numericPrecision as Precision;
-    this.data.numericScale = numericScale as Scale;
+  constructor(
+    schema: Schema,
+    numericPrecision?: number,
+    numericScale?: number,
+  ) {
+    super(schema, schema.string);
+    this.data.numericPrecision = numericPrecision;
+    this.data.numericScale = numericScale;
   }
 
   toCode(t: string): Code {
@@ -115,13 +114,13 @@ const intToCode = (column: ColumnType, t: string): Code => {
   return columnCode(column, t, code);
 };
 
-export type IdentityColumn<T extends ColumnTypeBase> = ColumnWithDefault<
-  T,
-  Expression
->;
+export type IdentityColumn<T extends Pick<ColumnTypeBase, 'data'>> =
+  ColumnWithDefault<T, Expression>;
 
 // signed two-byte integer
-export class SmallIntColumn extends IntegerBaseColumn {
+export class SmallIntColumn<
+  Schema extends ColumnSchemaConfig,
+> extends IntegerBaseColumn<Schema> {
   dataType = 'smallint' as const;
   parseItem = parseInt;
   toCode(t: string): Code {
@@ -137,7 +136,9 @@ export class SmallIntColumn extends IntegerBaseColumn {
 }
 
 // signed four-byte integer
-export class IntegerColumn extends IntegerBaseColumn {
+export class IntegerColumn<
+  Schema extends ColumnSchemaConfig,
+> extends IntegerBaseColumn<Schema> {
   dataType = 'integer' as const;
   parseItem = parseInt;
   toCode(t: string): Code {
@@ -153,7 +154,9 @@ export class IntegerColumn extends IntegerBaseColumn {
 }
 
 // signed eight-byte integer
-export class BigIntColumn extends NumberAsStringBaseColumn {
+export class BigIntColumn<
+  Schema extends ColumnSchemaConfig,
+> extends NumberAsStringBaseColumn<Schema> {
   dataType = 'bigint' as const;
   toCode(t: string): Code {
     return intToCode(this, t);
@@ -167,23 +170,26 @@ export class BigIntColumn extends NumberAsStringBaseColumn {
   }
 }
 
-// exact numeric of selectable precision
-export class DecimalColumn<
-  Precision extends number | undefined = undefined,
-  Scale extends number | undefined = undefined,
-> extends DecimalBaseColumn<Precision, Scale> {}
-
 // single precision floating-point number (4 bytes)
-export class RealColumn extends NumberBaseColumn {
+export class RealColumn<
+  Schema extends ColumnSchemaConfig,
+> extends NumberBaseColumn<Schema, Schema['number']> {
   dataType = 'real' as const;
   parseItem = parseFloat;
+
+  constructor(schema: Schema) {
+    super(schema, schema.number);
+  }
+
   toCode(t: string): Code {
     return columnCode(this, t, `real()${numberDataToCode(this.data)}`);
   }
 }
 
 // double precision floating-point number (8 bytes)
-export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
+export class DoublePrecisionColumn<
+  Schema extends ColumnSchemaConfig,
+> extends NumberAsStringBaseColumn<Schema> {
   dataType = 'double precision' as const;
   toCode(t: string): Code {
     return columnCode(this, t, `doublePrecision()`);
@@ -191,13 +197,15 @@ export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
 }
 
 // autoincrementing two-byte integer
-export class SmallSerialColumn extends IntegerBaseColumn {
+export class SmallSerialColumn<
+  Schema extends ColumnSchemaConfig,
+> extends IntegerBaseColumn<Schema> {
   dataType = 'smallint' as const;
   parseItem = parseInt;
   declare data: SerialColumnData;
 
-  constructor() {
-    super();
+  constructor(schema: Schema) {
+    super(schema);
     this.data.int = true;
   }
 
@@ -215,13 +223,15 @@ export class SmallSerialColumn extends IntegerBaseColumn {
 }
 
 // autoincrementing four-byte integer
-export class SerialColumn extends IntegerBaseColumn {
+export class SerialColumn<
+  Schema extends ColumnSchemaConfig,
+> extends IntegerBaseColumn<Schema> {
   dataType = 'integer' as const;
   parseItem = parseInt;
   declare data: SerialColumnData;
 
-  constructor() {
-    super();
+  constructor(schema: Schema) {
+    super(schema);
     this.data.int = true;
   }
 
@@ -239,7 +249,9 @@ export class SerialColumn extends IntegerBaseColumn {
 }
 
 // autoincrementing eight-byte integer
-export class BigSerialColumn extends NumberAsStringBaseColumn {
+export class BigSerialColumn<
+  Schema extends ColumnSchemaConfig,
+> extends NumberAsStringBaseColumn<Schema> {
   dataType = 'bigint' as const;
   declare data: SerialColumnData;
 

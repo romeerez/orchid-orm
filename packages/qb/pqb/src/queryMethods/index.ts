@@ -26,3 +26,6 @@ export * from './upsertOrCreate';
 export * from './where/where';
 export * from './search';
 export * from './with';
+export * from './get.utils';
+export * from './json.utils';
+export * from './queryMethods.utils';

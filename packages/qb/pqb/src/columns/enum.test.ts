@@ -1,5 +1,4 @@
-import { EnumColumn } from './enum';
-import { assertType, testDb } from 'test-utils';
+import { assertType, testColumnTypes as t, testDb } from 'test-utils';
 
 describe('enum column', () => {
   afterAll(testDb.close);
@@ -17,8 +16,8 @@ describe('enum column', () => {
 
   it('should output proper union', async () => {
     const result = await testDb.get(
-      testDb.sql`'happy'::mood`.type(
-        () => new EnumColumn('mood', ['sad', 'ok', 'happy']),
+      testDb.sql`'happy'::mood`.type((t) =>
+        t.enum('mood', ['sad', 'ok', 'happy']),
       ),
     );
     expect(result).toBe('happy');
@@ -27,7 +26,7 @@ describe('enum column', () => {
   });
 
   it('should have toCode', () => {
-    expect(new EnumColumn('mood', ['sad', 'ok', 'happy']).toCode('t')).toBe(
+    expect(t.enum('mood', ['sad', 'ok', 'happy']).toCode('t')).toBe(
       `t.enum('mood', ['sad', 'ok', 'happy'])`,
     );
   });

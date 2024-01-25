@@ -1,23 +1,25 @@
 import { GetQueryResult, Query, QueryReturnsAll } from '../query/query';
 import {
-  ArrayOfColumnsObjects,
-  ColumnsObject,
-  JSONTextColumn,
-  PluckResultColumnType,
+  ColumnsShapeToNullableObject,
+  ColumnsShapeToObject,
+  ColumnsShapeToObjectArray,
+  ColumnsShapeToPluck,
 } from '../columns';
+import { JSONTextColumn } from '../columns/json';
 import { pushQueryArray } from '../query/queryUtils';
 import { SelectItem, SelectQueryData } from '../sql';
 import { QueryResult } from '../adapter';
 import {
   applyTransforms,
-  ColumnsShapeBase,
   ColumnTypeBase,
   emptyArray,
+  emptyObject,
   Expression,
   getValueKey,
   isExpression,
-  NullableColumn,
   QueryCatch,
+  QueryColumn,
+  QueryColumns,
   QueryThen,
   setColumnData,
   setParserToQuery,
@@ -30,6 +32,7 @@ import {
   SelectableOrExpression,
 } from '../common/utils';
 import { RawSQL } from '../sql/rawSql';
+import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 
 // .select method argument.
 export type SelectArg<T extends Query> = '*' | keyof T['selectable'];
@@ -59,7 +62,7 @@ type SelectSubQueryArg<T extends Query> = {
 type SelectResult<
   T extends Query,
   Columns extends SelectArg<T>[],
-  Result extends ColumnsShapeBase = {
+  Result extends QueryColumns = {
     [K in
       | ('*' extends Columns[number]
           ? Exclude<Columns[number], '*'> | keyof T['shape']
@@ -92,7 +95,7 @@ type SelectResultWithObj<
   Obj extends SelectAsArg<T>,
   // Combine previously selected items, all columns if * was provided,
   // and the selected by string and object arguments.
-  Result extends ColumnsShapeBase = {
+  Result extends QueryColumns = {
     [K in
       | ('*' extends Columns[number]
           ? Exclude<Columns[number], '*'> | keyof T['shape']
@@ -185,23 +188,24 @@ type SelectAsValueResult<
 export type SelectSubQueryResult<Arg extends QueryBase> = QueryReturnsAll<
   Arg['returnType']
 > extends true
-  ? ArrayOfColumnsObjects<Arg['result']>
+  ? ColumnsShapeToObjectArray<Arg['result']>
   : Arg['returnType'] extends 'valueOrThrow'
   ? Arg['result']['value']
   : Arg['returnType'] extends 'pluck'
-  ? PluckResultColumnType<Arg['result']['pluck']>
+  ? ColumnsShapeToPluck<Arg['result']>
   : Arg extends { relationConfig: { required: true } }
-  ? ColumnsObject<Arg['result']>
-  : NullableColumn<ColumnsObject<Arg['result']>>;
+  ? ColumnsShapeToObject<Arg['result']>
+  : ColumnsShapeToNullableObject<Arg['result']>;
 
 // add a parser for a raw expression column
 // is used by .select and .get methods
 export const addParserForRawExpression = (
-  q: Query,
+  q: Pick<Query, 'q'>,
   key: string | getValueKey,
   raw: Expression,
 ) => {
-  if (raw._type.parseFn) setParserToQuery(q.q, key, raw._type.parseFn);
+  const type = raw._type as unknown as ColumnTypeBase;
+  if (type.parseFn) setParserToQuery(q.q, key, type.parseFn);
 };
 
 // these are used as a wrapper to pass sub query result to `parseRecord`
@@ -214,7 +218,7 @@ const subQueryResult: QueryResult = {
 
 // add parsers when selecting a full joined table by name or alias
 const addParsersForSelectJoined = (
-  q: Query,
+  q: Pick<Query, 'q'>,
   arg: string,
   as: string | getValueKey = arg,
 ) => {
@@ -222,7 +226,7 @@ const addParsersForSelectJoined = (
   if (parsers) {
     setParserToQuery(q.q, as, (item) => {
       subQueryResult.rows = [item];
-      return q.q.handleResult(q, 'one', subQueryResult, true);
+      return q.q.handleResult(q as Query, 'one', subQueryResult, true);
     });
   }
 };
@@ -355,7 +359,7 @@ export const processSelectArg = <T extends Query>(
 // adds a column parser for a column
 // when table.* string is provided, sets a parser for a joined table
 export const setParserForSelectedString = (
-  q: Query,
+  q: Pick<Query, 'q'>,
   arg: string,
   as: string | getValueKey | undefined,
   columnAs?: string | getValueKey,
@@ -392,7 +396,7 @@ export const setParserForSelectedString = (
 export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
   const query = q.q as SelectQueryData;
   const { select, shape } = query;
-  let result: ColumnsShapeBase;
+  let result: QueryColumns;
   if (!select) {
     // when no select, and it is a sub-query, return the table shape with unnamed columns
     if (isSubQuery) {
@@ -425,14 +429,14 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
               key,
             );
           } else if (isExpression(it)) {
-            result[key] = it._type;
+            result[key] = it._type as unknown as ColumnTypeBase;
           } else {
             const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
               const type = (it.q as SelectQueryData)[getValueKey];
               if (type) result[key] = type;
             } else {
-              result[key] = new JSONTextColumn();
+              result[key] = new JSONTextColumn(defaultSchemaConfig);
             }
           }
         }
@@ -448,14 +452,14 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
 const addColumnToShapeFromSelect = (
   q: QueryBase,
   arg: string,
-  shape: ColumnsShapeBase,
+  shape: QueryColumns,
   query: SelectQueryData,
-  result: ColumnsShapeBase,
+  result: QueryColumns,
   isSubQuery?: boolean,
   key?: string,
 ) => {
   if (q.relations[arg] as unknown as boolean) {
-    result[key || arg] = new JSONTextColumn();
+    result[key || arg] = emptyObject as QueryColumn;
     return;
   }
 
@@ -479,9 +483,9 @@ const addColumnToShapeFromSelect = (
 };
 
 // un-name a column if `isSubQuery` is true
-const maybeUnNameColumn = (column: ColumnTypeBase, isSubQuery?: boolean) => {
-  return isSubQuery && column.data.name
-    ? setColumnData(column, 'name', undefined)
+const maybeUnNameColumn = (column: QueryColumn, isSubQuery?: boolean) => {
+  return isSubQuery && (column as ColumnTypeBase).data.name
+    ? setColumnData(column as ColumnTypeBase, 'name', undefined)
     : column;
 };
 

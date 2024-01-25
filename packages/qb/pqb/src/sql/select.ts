@@ -1,17 +1,19 @@
 import { JsonItem, SelectItem } from './types';
 import { RawSQL } from './rawSql';
-import { Query } from '../query/query';
 import { addValue, columnToSql, columnToSqlWithAs } from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
-import { makeSQL, ToSQLCtx } from './toSQL';
+import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
 import { Expression, isExpression } from 'orchid-core';
-import { QueryBase } from '../query/queryBase';
+import { Query } from '../query/query';
+import { queryGetOptional } from '../queryMethods/get.utils';
+import { queryJson } from '../queryMethods/json.utils';
+import { queryWrap } from '../queryMethods/queryMethods.utils';
 
 const jsonColumnOrMethodToSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   column: string | JsonItem,
   values: unknown[],
   quotedAs?: string,
@@ -23,7 +25,7 @@ const jsonColumnOrMethodToSql = (
 
 export const jsonToSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   item: JsonItem,
   values: unknown[],
   quotedAs?: string,
@@ -77,7 +79,7 @@ export const jsonToSql = (
 
 export const pushSelectSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
 ) => {
@@ -86,7 +88,7 @@ export const pushSelectSql = (
 
 export const selectToSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
 ): string => {
@@ -98,7 +100,7 @@ export const selectToSql = (
       } else if ('selectAs' in item) {
         const obj = item.selectAs as Record<
           string,
-          SelectableOrExpression | Query
+          SelectableOrExpression | ToSQLQuery
         >;
         for (const as in obj) {
           const value = obj[as];
@@ -106,7 +108,7 @@ export const selectToSql = (
             if (isExpression(value)) {
               list.push(`${value.toSQL(ctx, quotedAs)} AS "${as}"`);
             } else {
-              pushSubQuerySql(ctx, value as Query, as, list, quotedAs);
+              pushSubQuerySql(ctx, value, as, list, quotedAs);
             }
           } else {
             list.push(
@@ -133,7 +135,7 @@ export const selectToSql = (
 
 export const selectedStringToSQL = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs: string | undefined,
   item: string,
@@ -144,7 +146,7 @@ export const selectedStringToSQL = (
 
 export function selectedObjectToSQL(
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   quotedAs: string | undefined,
   item: JsonItem | Expression,
 ) {
@@ -159,7 +161,7 @@ export function selectedObjectToSQL(
 }
 
 export const selectAllSql = (
-  table: QueryBase,
+  table: ToSQLQuery,
   query: Pick<SelectQueryData, 'join'>,
   quotedAs?: string,
 ) => {
@@ -172,7 +174,7 @@ export const selectAllSql = (
 
 const pushSubQuerySql = (
   ctx: ToSQLCtx,
-  query: Query,
+  query: ToSQLQuery,
   as: string,
   list: string[],
   quotedAs?: string,
@@ -197,7 +199,7 @@ const pushSubQuerySql = (
       case 'void':
         return;
       default:
-        throw new UnhandledTypeError(query, returnType);
+        throw new UnhandledTypeError(query as Query, returnType);
     }
     if (sql) list.push(`${coalesce(ctx, query, sql, quotedAs)} "${as}"`);
     return;
@@ -207,22 +209,22 @@ const pushSubQuerySql = (
     case 'all':
     case 'one':
     case 'oneOrThrow':
-      query = query._json() as unknown as typeof query;
+      query = queryJson(query) as unknown as typeof query;
       break;
     case 'pluck': {
       const { select } = query.q;
       const first = select?.[0];
       if (!select || !first) {
         throw new OrchidOrmInternalError(
-          query,
+          query as Query,
           `Nothing was selected for pluck`,
         );
       }
 
       const cloned = query.clone();
       cloned.q.select = [{ selectAs: { c: first } }] as SelectItem[];
-      query = cloned._wrap(cloned.baseQuery.clone()) as unknown as typeof query;
-      query._getOptional(new RawSQL(`COALESCE(json_agg("c"), '[]')`));
+      query = queryWrap(cloned, cloned.baseQuery.clone());
+      queryGetOptional(query, new RawSQL(`COALESCE(json_agg("c"), '[]')`));
       break;
     }
     case 'value':
@@ -232,7 +234,7 @@ const pushSubQuerySql = (
     case 'void':
       break;
     default:
-      throw new UnhandledTypeError(query, returnType);
+      throw new UnhandledTypeError(query as Query, returnType);
   }
 
   list.push(
@@ -247,7 +249,7 @@ const pushSubQuerySql = (
 
 const coalesce = (
   ctx: ToSQLCtx,
-  query: Query,
+  query: ToSQLQuery,
   sql: string,
   quotedAs?: string,
 ) => {

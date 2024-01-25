@@ -4,8 +4,12 @@ import {
   User,
   userData,
 } from '../test-utils/test-utils';
-import { columnTypes } from '../columns';
-import { assertType, expectSql, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  testColumnTypes as t,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('json methods', () => {
   useTestDatabase();
@@ -402,12 +406,7 @@ describe('json methods', () => {
       it('should select json property', async () => {
         const q = User.all();
 
-        const query = q.jsonPathQuery(
-          columnTypes.text(0, 100),
-          'data',
-          '$.name',
-          'name',
-        );
+        const query = q.jsonPathQuery(t.text(0, 100), 'data', '$.name', 'name');
         expectSql(
           query.toSQL(),
           `
@@ -427,7 +426,7 @@ describe('json methods', () => {
 
       it('should select json property for named column', () => {
         const q = Snake.jsonPathQuery(
-          columnTypes.text(0, 100),
+          t.text(0, 100),
           'snakeData',
           '$.name',
           'name',
@@ -447,7 +446,7 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonPathQuery(
-          columnTypes.text(0, 100),
+          t.text(0, 100),
           'data',
           '$.name',
           'name',
@@ -472,7 +471,7 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonPathQuery(
-          columnTypes.array(columnTypes.text(0, 100)),
+          t.array(t.text(0, 100)),
           q.jsonSet('data', ['tags'], ['tag']),
           '$.tags',
           'tags',

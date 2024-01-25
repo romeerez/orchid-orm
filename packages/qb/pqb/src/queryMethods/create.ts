@@ -23,7 +23,13 @@ import {
 } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../query/db';
-import { Expression, StringKey, QueryThen, SetOptional } from 'orchid-core';
+import {
+  Expression,
+  StringKey,
+  QueryThen,
+  SetOptional,
+  ColumnSchemaConfig,
+} from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 
 // Type of argument for `create`, `createMany`, optional argument for `createFrom`,
@@ -284,7 +290,12 @@ const processCreateItem = (
   const { shape } = q.q;
   for (const key in item) {
     if (shape[key] instanceof VirtualColumn) {
-      (shape[key] as VirtualColumn).create?.(q, ctx, item, rowIndex);
+      (shape[key] as VirtualColumn<ColumnSchemaConfig>).create?.(
+        q,
+        ctx,
+        item,
+        rowIndex,
+      );
     } else if (
       !ctx.columns.has(key) &&
       ((shape[key] && !shape[key].data.computed) || shape === anyShape)

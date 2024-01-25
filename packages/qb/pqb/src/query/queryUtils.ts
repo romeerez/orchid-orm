@@ -112,7 +112,7 @@ export const saveSearchAlias = (
  * @param methods - methods to add
  */
 export const extendQuery = <
-  T extends Query,
+  T extends Pick<Query, 'q' | 'baseQuery'>,
   Methods extends Record<string, unknown>,
 >(
   q: T,

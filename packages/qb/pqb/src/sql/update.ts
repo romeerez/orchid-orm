@@ -1,8 +1,7 @@
-import { Query } from '../query/query';
 import { addValue, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
-import { pushLimitSQL, ToSQLCtx } from './toSQL';
+import { pushLimitSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
   QueryHookSelect,
   SelectQueryData,
@@ -19,7 +18,7 @@ import { countSelect } from './rawSql';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   query: UpdateQueryData,
   quotedAs: string,
 ): QueryHookSelect | undefined => {
@@ -65,7 +64,7 @@ export const pushUpdateSql = (
 
 const processData = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   set: string[],
   data: UpdateQueryDataItem[],
   quotedAs?: string,
@@ -104,7 +103,7 @@ const processData = (
 
 const processValue = (
   ctx: ToSQLCtx,
-  table: Query,
+  table: ToSQLQuery,
   QueryClass: Db,
   key: string,
   value: UpdateQueryDataObject[string],
@@ -116,7 +115,7 @@ const processValue = (
     } else if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof QueryClass) {
-      return `(${joinSubQuery(table, value as Query).toSQL(ctx).text})`;
+      return `(${joinSubQuery(table, value as ToSQLQuery).toSQL(ctx).text})`;
     } else if ('op' in value && 'arg' in value) {
       return `"${table.q.shape[key].data.name || key}" ${
         (value as { op: string }).op

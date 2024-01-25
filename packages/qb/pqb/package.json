@@ -57,6 +57,7 @@
   },
   "devDependencies": {
     "bun-types": "1.0.5-canary.20231009T140142",
-    "test-utils": "workspace:*"
+    "test-utils": "workspace:*",
+    "zod": "^3.22.4"
   }
 }
