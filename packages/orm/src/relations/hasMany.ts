@@ -24,6 +24,12 @@ import {
   QueryWithTable,
   AddQueryDefaults,
   RelationJoinQuery,
+  _queryDefaults,
+  _queryUpdateOrThrow,
+  _queryUpdate,
+  _queryCreateMany,
+  _queryDelete,
+  UpdateArg,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -307,7 +313,7 @@ export const makeHasManyMethod = (
       for (let i = 0; i < len; i++) {
         values[foreignKeys[i]] = params[primaryKeys[i]];
       }
-      return query.where(values)._defaults(values);
+      return _queryDefaults(query.where(values), values);
     },
     virtualColumn: new HasManyVirtualColumn(
       defaultSchemaConfig,
@@ -372,9 +378,10 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
           obj[foreignKeys[i]] = selfData[primaryKeys[i]];
         }
 
-        items[i] = t
-          .orWhere<Query>(...connect)
-          ._updateOrThrow(obj as UpdateData<WhereResult<Query>>);
+        items[i] = _queryUpdateOrThrow(
+          t.orWhere<Query>(...connect),
+          obj as UpdateData<WhereResult<Query>>,
+        );
       }
 
       await Promise.all(items);
@@ -403,9 +410,10 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
           }
 
           queries.push(
-            (
-              t.where(item.where) as WhereResult<Query & { hasSelect: false }>
-            )._update(obj as UpdateData<WhereResult<Query>>),
+            _queryUpdate(
+              t.where(item.where) as WhereResult<Query & { hasSelect: false }>,
+              obj as UpdateData<WhereResult<Query>>,
+            ),
           );
         }
       }
@@ -466,7 +474,7 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         }
       }
 
-      await t._createMany(records);
+      await _queryCreateMany(t, records);
     }
   }) as HasManyNestedInsert;
 };
@@ -498,13 +506,16 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         obj[foreignKey] = null;
       }
 
-      await getWhereForNestedUpdate(
-        t,
-        data,
-        params.disconnect,
-        primaryKeys,
-        foreignKeys,
-      )._update(obj as UpdateData<WhereResult<Query>>);
+      await _queryUpdate(
+        getWhereForNestedUpdate(
+          t,
+          data,
+          params.disconnect,
+          primaryKeys,
+          foreignKeys,
+        ),
+        obj as UpdateData<WhereResult<Query>>,
+      );
 
       if (params.set) {
         delete t.q[toSQLCacheKey];
@@ -514,15 +525,16 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
           obj[foreignKeys[i]] = data[0][primaryKeys[i]];
         }
 
-        await t
-          .where<Query>(
+        await _queryUpdate(
+          t.where<Query>(
             Array.isArray(params.set)
               ? {
                   OR: params.set,
                 }
               : params.set,
-          )
-          ._update(obj as UpdateData<WhereResult<Query>>);
+          ),
+          obj as UpdateData<WhereResult<Query>>,
+        );
       }
     }
 
@@ -538,9 +550,9 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
       );
 
       if (params.delete) {
-        await q._delete();
+        await _queryDelete(q);
       } else if (params.update) {
-        await q._update<WhereResult<Query>>(params.update.data);
+        await _queryUpdate(q, params.update.data as UpdateArg<Query>);
       }
     }
   }) as HasManyNestedUpdate;

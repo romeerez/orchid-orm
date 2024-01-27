@@ -3,7 +3,13 @@ import { pushQueryValue } from '../query/queryUtils';
 import { QueryScopes } from '../sql';
 import { Query } from '../query/query';
 import { RawSQL } from '../sql/rawSql';
-import { Delete, DeleteArgs, DeleteResult, UpdateArg } from './index';
+import {
+  _queryDelete,
+  _queryUpdate,
+  DeleteArgs,
+  DeleteResult,
+  UpdateArg,
+} from './index';
 
 export type SoftDeleteOption<Shape extends QueryColumns> = true | keyof Shape;
 
@@ -37,7 +43,6 @@ export function enableSoftDelete(
   q.baseQuery.delete = function (this: Query) {
     return _del.call(this.clone());
   };
-  q.baseQuery._delete = _del as typeof q.baseQuery._delete;
 }
 
 const nowSql = new RawSQL('now()');
@@ -45,15 +50,13 @@ const nowSql = new RawSQL('now()');
 const _softDelete = (column: PropertyKey) => {
   const set = { [column]: nowSql };
   return function <T extends Query>(this: T) {
-    return this._update(set as UpdateArg<T>);
+    return _queryUpdate(this, set as UpdateArg<T>);
   };
 };
 
 export type QueryWithSoftDelete = Query & {
   meta: { scopes: { nonDeleted: unknown } };
 };
-
-const { _delete } = Delete.prototype;
 
 /**
  * `softDelete` configures the table to set `deletedAt` to current time instead of deleting records.
@@ -110,8 +113,6 @@ export class SoftDeleteMethods {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {
-    return (_delete as (this: Query) => DeleteResult<T>).call(
-      this.clone().unscope('nonDeleted' as never),
-    );
+    return _queryDelete(this.clone().unscope('nonDeleted' as never));
   }
 }

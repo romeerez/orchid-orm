@@ -5,27 +5,21 @@ import { extendQuery } from '../query/queryUtils';
 
 type ForQueryBuilder<Q extends Query> = Q & {
   noWait<T extends ForQueryBuilder<Q>>(this: T): T;
-  _noWait<T extends ForQueryBuilder<Q>>(this: T): T;
   skipLocked<T extends ForQueryBuilder<Q>>(this: T): T;
-  _skipLocked<T extends ForQueryBuilder<Q>>(this: T): T;
 };
 
 const forMethods = {
   noWait<T extends ForQueryBuilder<Query>>(this: T): T {
-    return this.clone()._noWait();
-  },
-  _noWait<T extends ForQueryBuilder<Query>>(this: T): T {
-    const q = this.q as SelectQueryData | undefined;
-    if (q?.for) q.for.mode = 'NO WAIT';
-    return this;
+    const q = this.clone();
+    const data = q.q as SelectQueryData | undefined;
+    if (data?.for) data.for.mode = 'NO WAIT';
+    return q;
   },
   skipLocked<T extends ForQueryBuilder<Query>>(this: T): T {
-    return this.clone()._skipLocked();
-  },
-  _skipLocked<T extends ForQueryBuilder<Query>>(this: T): T {
-    const q = this.q as SelectQueryData | undefined;
-    if (q?.for) q.for.mode = 'SKIP LOCKED';
-    return this;
+    const q = this.clone();
+    const data = q.q as SelectQueryData | undefined;
+    if (data?.for) data.for.mode = 'SKIP LOCKED';
+    return q;
   },
 };
 

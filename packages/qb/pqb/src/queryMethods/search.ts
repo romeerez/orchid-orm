@@ -416,14 +416,10 @@ export class SearchMethods {
     this: T,
     arg: SearchArg<T, As>,
   ): WhereSearchResult<T, As> {
-    return this.clone()._search(arg);
-  }
-  _search<T extends Query, As extends string>(
-    this: T,
-    arg: SearchArg<T, As>,
-  ): WhereSearchResult<T, As> {
+    const q = this.clone();
+
     if (!arg.as) {
-      const as = saveSearchAlias(this, '@q', 'joinedShapes') as As;
+      const as = saveSearchAlias(q, '@q', 'joinedShapes') as As;
 
       arg = {
         ...arg,
@@ -431,12 +427,12 @@ export class SearchMethods {
       };
     }
 
-    setQueryObjectValue(this, 'sources', arg.as as string, arg);
+    setQueryObjectValue(q, 'sources', arg.as as string, arg);
     if (arg.order) {
-      pushQueryValue(this, 'order', arg.as);
+      pushQueryValue(q, 'order', arg.as);
     }
 
-    return pushQueryValue(this, 'and', { SEARCH: arg }) as WhereSearchResult<
+    return pushQueryValue(q, 'and', { SEARCH: arg }) as WhereSearchResult<
       T,
       As
     >;

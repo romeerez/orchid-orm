@@ -517,6 +517,147 @@ const insertFromQuery = <
   );
 };
 
+export const _queryCreate = <T extends Query>(
+  q: T,
+  data: CreateData<T>,
+): CreateResult<T> => {
+  createSelect(q);
+  return _queryInsert(q, data) as unknown as CreateResult<T>;
+};
+
+export const _queryInsert = <T extends Query>(
+  q: T,
+  data: CreateData<T>,
+): InsertResult<T> => {
+  const ctx = createCtx();
+  const obj = handleOneData(q, data, ctx) as {
+    columns: string[];
+    values: InsertQueryData['values'];
+  };
+
+  const values = (q.q as InsertQueryData).values;
+  if (values && 'from' in values) {
+    obj.columns = getFromSelectColumns(values.from, obj);
+    values.values = obj.values as unknown[][];
+    obj.values = values;
+  }
+
+  return insert(q, obj, 'object') as InsertResult<T>;
+};
+
+export const _queryCreateMany = <T extends Query>(
+  q: T,
+  data: CreateData<T>[],
+): CreateManyResult<T> => {
+  createSelect(q);
+  return _queryInsertMany(q, data) as unknown as CreateManyResult<T>;
+};
+
+export const _queryInsertMany = <T extends Query>(
+  q: T,
+  data: CreateData<T>[],
+) => {
+  const ctx = createCtx();
+  return insert(
+    q,
+    handleManyData(q, data, ctx),
+    'object',
+    true,
+  ) as InsertManyResult<T>;
+};
+
+export const _queryCreateRaw = <T extends Query>(
+  q: T,
+  args: CreateRawArgs<T, CreateRawData<T>>,
+): CreateResult<T> => {
+  createSelect(q);
+  return insert(
+    q,
+    args[0] as { columns: string[]; values: Expression },
+    'raw',
+  ) as CreateResult<T>;
+};
+
+export const _queryInsertRaw = <T extends Query>(
+  q: T,
+  args: CreateRawArgs<T, CreateRawData<T>>,
+): InsertResult<T> => {
+  return insert(
+    q,
+    args[0] as { columns: string[]; values: Expression },
+    'raw',
+  ) as InsertResult<T>;
+};
+
+export const _queryCreateManyRaw = <T extends Query>(
+  q: T,
+  args: CreateRawArgs<T, CreateManyRawData<T>>,
+): CreateManyResult<T> => {
+  createSelect(q);
+  return _queryInsertManyRaw(q, args) as CreateManyResult<T>;
+};
+
+export const _queryInsertManyRaw = <T extends Query>(
+  q: T,
+  args: CreateRawArgs<T, CreateManyRawData<T>>,
+) => {
+  return insert(
+    q,
+    args[0] as { columns: string[]; values: Expression[] },
+    'raw',
+    true,
+  ) as InsertManyResult<T>;
+};
+
+export const _queryCreateFrom = <
+  T extends Query,
+  Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+>(
+  q: T,
+  query: Q,
+  data?: Omit<CreateData<T>, keyof Q['result']>,
+): CreateResult<T> => {
+  createSelect(q);
+  return insertFromQuery(q, query, false, data) as CreateResult<T>;
+};
+
+export const _queryInsertFrom = <
+  T extends Query,
+  Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+>(
+  q: T,
+  query: Q,
+  data?: Omit<CreateData<T>, keyof Q['result']>,
+): InsertResult<T> => {
+  return insertFromQuery(q, query, false, data) as InsertResult<T>;
+};
+
+export const _queryCreateManyFrom = <T extends Query>(
+  q: T,
+  query: Query,
+): CreateManyResult<T> => {
+  createSelect(q);
+  return insertFromQuery(q, query, true) as CreateManyResult<T>;
+};
+
+export const _queryInsertManyFrom = <T extends Query>(
+  q: T,
+  query: Query,
+): InsertManyResult<T> => {
+  return insertFromQuery(q, query, true) as InsertManyResult<T>;
+};
+
+export const _queryDefaults = <
+  T extends Query,
+  Data extends Partial<CreateData<T>>,
+>(
+  q: T,
+  data: Data,
+): AddQueryDefaults<T, Record<keyof Data, true>> => {
+  q.q.defaults = data;
+  return q as AddQueryDefaults<T, Record<keyof Data, true>>;
+};
+
 /**
  * Names of all create methods,
  * is used in {@link RelationQuery} to remove these methods if chained relation shouldn't have them,
@@ -524,25 +665,15 @@ const insertFromQuery = <
  */
 export type CreateMethodsNames =
   | 'create'
-  | '_create'
   | 'insert'
-  | '_insert'
   | 'createMany'
-  | '_createMany'
   | 'insertMany'
-  | '_insertMany'
   | 'createRaw'
-  | '_createRaw'
   | 'insertRaw'
-  | '_insertRaw'
   | 'createFrom'
-  | '_createFrom'
   | 'insertFrom'
-  | '_insertFrom'
   | 'createManyFrom'
-  | '_createManyFrom'
-  | 'insertManyFrom'
-  | '_insertManyFrom';
+  | 'insertManyFrom';
 
 export class Create {
   /**
@@ -573,11 +704,7 @@ export class Create {
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.
    */
   create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
-    return this.clone()._create(data);
-  }
-  _create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
-    createSelect(this);
-    return this._insert(data) as unknown as CreateResult<T>;
+    return _queryCreate(this.clone(), data);
   }
 
   /**
@@ -586,23 +713,7 @@ export class Create {
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.
    */
   insert<T extends Query>(this: T, data: CreateData<T>): InsertResult<T> {
-    return this.clone()._insert(data);
-  }
-  _insert<T extends Query>(this: T, data: CreateData<T>): InsertResult<T> {
-    const ctx = createCtx();
-    const obj = handleOneData(this, data, ctx) as {
-      columns: string[];
-      values: InsertQueryData['values'];
-    };
-
-    const values = (this.q as InsertQueryData).values;
-    if (values && 'from' in values) {
-      obj.columns = getFromSelectColumns(values.from, obj);
-      values.values = obj.values as unknown[][];
-      obj.values = values;
-    }
-
-    return insert(this, obj, 'object') as InsertResult<T>;
+    return _queryInsert(this.clone(), data);
   }
 
   /**
@@ -628,14 +739,7 @@ export class Create {
     this: T,
     data: CreateData<T>[],
   ): CreateManyResult<T> {
-    return this.clone()._createMany(data);
-  }
-  _createMany<T extends Query>(
-    this: T,
-    data: CreateData<T>[],
-  ): CreateManyResult<T> {
-    createSelect(this);
-    return this._insertMany(data) as unknown as CreateManyResult<T>;
+    return _queryCreateMany(this.clone(), data);
   }
 
   /**
@@ -647,19 +751,7 @@ export class Create {
     this: T,
     data: CreateData<T>[],
   ): InsertManyResult<T> {
-    return this.clone()._insertMany(data);
-  }
-  _insertMany<T extends Query>(
-    this: T,
-    data: CreateData<T>[],
-  ): InsertManyResult<T> {
-    const ctx = createCtx();
-    return insert(
-      this,
-      handleManyData(this, data, ctx),
-      'object',
-      true,
-    ) as InsertManyResult<T>;
+    return _queryInsertMany(this.clone(), data);
   }
 
   /**
@@ -680,23 +772,11 @@ export class Create {
    *
    * @param args - object with columns list and raw SQL for values
    */
-  createRaw<T extends Query, Arg extends CreateRawData<T>>(
+  createRaw<T extends Query>(
     this: T,
-    ...args: CreateRawArgs<T, Arg>
+    ...args: CreateRawArgs<T, CreateRawData<T>>
   ): CreateResult<T> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.clone()._createRaw(args[0] as any);
-  }
-  _createRaw<T extends Query, Arg extends CreateRawData<T>>(
-    this: T,
-    ...args: CreateRawArgs<T, Arg>
-  ): CreateResult<T> {
-    createSelect(this);
-    return insert(
-      this,
-      args[0] as { columns: string[]; values: Expression },
-      'raw',
-    ) as CreateResult<T>;
+    return _queryCreateRaw(this.clone(), args);
   }
 
   /**
@@ -704,22 +784,11 @@ export class Create {
    *
    * @param args - object with columns list and raw SQL for values
    */
-  insertRaw<T extends Query, Arg extends CreateRawData<T>>(
+  insertRaw<T extends Query>(
     this: T,
-    ...args: CreateRawArgs<T, Arg>
+    ...args: CreateRawArgs<T, CreateRawData<T>>
   ): InsertResult<T> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.clone()._insertRaw(args[0] as any);
-  }
-  _insertRaw<T extends Query, Arg extends CreateRawData<T>>(
-    this: T,
-    ...args: CreateRawArgs<T, Arg>
-  ): InsertResult<T> {
-    return insert(
-      this,
-      args[0] as { columns: string[]; values: Expression },
-      'raw',
-    ) as InsertResult<T>;
+    return _queryInsertRaw(this.clone(), args);
   }
 
   /**
@@ -740,20 +809,11 @@ export class Create {
    *
    * @param args - object with columns list and array of raw SQL for values
    */
-  createManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
+  createManyRaw<T extends Query>(
     this: T,
-    ...args: CreateRawArgs<T, Arg>
+    ...args: CreateRawArgs<T, CreateManyRawData<T>>
   ): CreateManyResult<T> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.clone()._createManyRaw(args[0] as any);
-  }
-  _createManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
-    this: T,
-    ...args: CreateRawArgs<T, Arg>
-  ): CreateManyResult<T> {
-    createSelect(this);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this._insertManyRaw(args[0] as any) as CreateManyResult<T>;
+    return _queryCreateManyRaw(this.clone(), args);
   }
 
   /**
@@ -761,23 +821,11 @@ export class Create {
    *
    * @param args - object with columns list and array of raw SQL for values
    */
-  insertManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
+  insertManyRaw<T extends Query>(
     this: T,
-    ...args: CreateRawArgs<T, Arg>
+    ...args: CreateRawArgs<T, CreateManyRawData<T>>
   ): InsertManyResult<T> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.clone()._insertManyRaw(args[0] as any);
-  }
-  _insertManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
-    this: T,
-    ...args: CreateRawArgs<T, Arg>
-  ): InsertManyResult<T> {
-    return insert(
-      this,
-      args[0] as { columns: string[]; values: Expression[] },
-      'raw',
-      true,
-    ) as InsertManyResult<T>;
+    return _queryInsertManyRaw(this.clone(), args);
   }
 
   /**
@@ -827,18 +875,7 @@ export class Create {
     query: Q,
     data?: Omit<CreateData<T>, keyof Q['result']>,
   ): CreateResult<T> {
-    return this.clone()._createFrom(query, data);
-  }
-  _createFrom<
-    T extends Query,
-    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
-  >(
-    this: T,
-    query: Q,
-    data?: Omit<CreateData<T>, keyof Q['result']>,
-  ): CreateResult<T> {
-    createSelect(this);
-    return insertFromQuery(this, query, false, data) as CreateResult<T>;
+    return _queryCreateFrom(this.clone(), query, data);
   }
 
   /**
@@ -855,17 +892,7 @@ export class Create {
     query: Q,
     data?: Omit<CreateData<T>, keyof Q['result']>,
   ): InsertResult<T> {
-    return this.clone()._insertFrom(query, data);
-  }
-  _insertFrom<
-    T extends Query,
-    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
-  >(
-    this: T,
-    query: Q,
-    data?: Omit<CreateData<T>, keyof Q['result']>,
-  ): InsertResult<T> {
-    return insertFromQuery(this, query, false, data) as InsertResult<T>;
+    return _queryInsertFrom(this.clone(), query, data);
   }
 
   /**
@@ -881,18 +908,8 @@ export class Create {
    *
    * @param query - query to create new records from
    */
-  createManyFrom<T extends Query, Q extends Query>(
-    this: T,
-    query: Q,
-  ): CreateManyResult<T> {
-    return this.clone()._createManyFrom(query);
-  }
-  _createManyFrom<T extends Query, Q extends Query>(
-    this: T,
-    query: Q,
-  ): CreateManyResult<T> {
-    createSelect(this);
-    return insertFromQuery(this, query, true) as CreateManyResult<T>;
+  createManyFrom<T extends Query>(this: T, query: Query): CreateManyResult<T> {
+    return _queryCreateManyFrom(this.clone(), query);
   }
 
   /**
@@ -900,17 +917,8 @@ export class Create {
    *
    * @param query - query to create new records from
    */
-  insertManyFrom<T extends Query, Q extends Query>(
-    this: T,
-    query: Q,
-  ): InsertManyResult<T> {
-    return this.clone()._insertManyFrom(query);
-  }
-  _insertManyFrom<T extends Query, Q extends Query>(
-    this: T,
-    query: Q,
-  ): InsertManyResult<T> {
-    return insertFromQuery(this, query, true) as InsertManyResult<T>;
+  insertManyFrom<T extends Query>(this: T, query: Query): InsertManyResult<T> {
+    return _queryInsertManyFrom(this.clone(), query);
   }
 
   /**
@@ -939,14 +947,7 @@ export class Create {
     this: T,
     data: Data,
   ): AddQueryDefaults<T, Record<keyof Data, true>> {
-    return (this.clone() as T)._defaults(data);
-  }
-  _defaults<T extends Query, Data extends Partial<CreateData<T>>>(
-    this: T,
-    data: Data,
-  ): AddQueryDefaults<T, Record<keyof Data, true>> {
-    this.q.defaults = data;
-    return this as AddQueryDefaults<T, Record<keyof Data, true>>;
+    return _queryDefaults(this.clone(), data);
   }
 
   /**
@@ -1002,12 +1003,6 @@ export class Create {
     this: T,
     arg?: Arg,
   ): OnConflictQueryBuilder<T, Arg> {
-    return this.clone()._onConflict(arg);
-  }
-  _onConflict<
-    T extends Query,
-    Arg extends OnConflictArg<T> | undefined = undefined,
-  >(this: T, arg?: Arg): OnConflictQueryBuilder<T, Arg> {
     return new OnConflictQueryBuilder(this, arg as Arg);
   }
 }

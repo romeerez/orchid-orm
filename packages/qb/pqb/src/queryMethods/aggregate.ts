@@ -202,10 +202,7 @@ export class AggregateMethods {
    * ```
    */
   exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
-    return this.clone()._exists();
-  }
-  _exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
-    const q = this._getOptional(new RawSQL('true'));
+    const q = this.getOptional(new RawSQL('true'));
     q.q.notFoundDefault = false;
     q.q.coalesceValue = new RawSQL('false');
     return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;

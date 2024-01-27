@@ -32,29 +32,5 @@ import { expectSql, testDb } from 'test-utils';
 
       expectQueryNotMutated(q);
     });
-
-    it('has modifier', () => {
-      const q = User.select('id');
-      q[`_${what}` as '_union']([testDb.sql`SELECT 1`]);
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."id" FROM "user"
-          ${upper}
-          SELECT 1
-        `,
-      );
-      q[`_${what}All` as '_unionAll']([testDb.sql`SELECT 2`], true);
-      expectSql(
-        q.toSQL({ clearCache: true }),
-        `
-        SELECT "user"."id" FROM "user"
-        ${upper}
-        SELECT 1
-        ${upper} ALL
-        (SELECT 2)
-      `,
-      );
-    });
   });
 });

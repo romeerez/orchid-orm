@@ -111,74 +111,6 @@ Other methods takes the same arguments, they are different by SQL keyword:
 - `except` - get only rows that are in the first query but not in the second
 - `exceptAll` - `except` that allows duplicated rows
 
-## columnInfo
-
-[//]: # 'has JSDoc'
-
-Returns an object with the column info about the current table, or an individual column if one is passed, returning an object with the following keys:
-
-```ts
-type ColumnInfo = {
-  defaultValue: unknown; // the default value for the column
-  type: string; // the column type
-  maxLength: number | null; // the max length set for the column, present on string types
-  nullable: boolean; // whether the column may be null
-};
-
-// columnInfo has type Record<string, ColumnInfo>, where string is name of columns
-const columnInfo = await db.table.columnInfo();
-
-// singleColumnInfo has the type ColumnInfo
-const singleColumnInfo = await db.table.columnInfo('name');
-```
-
-## copy
-
-[//]: # 'has JSDoc'
-
-`copy` is a method to invoke a `COPY` SQL statement, it can copy from or to a file or a program.
-
-Copying from `STDIN` or to `STDOUT` is not supported.
-
-It supports all the options of the `COPY` statement of Postgres. See details in [Postgres document](https://www.postgresql.org/docs/current/sql-copy.html).
-
-The copying is performed by the Postgres database server, and it must have access to the file.
-
-Type of copy argument:
-
-```ts
-export type CopyOptions<Column = string> = {
-  columns?: Column[];
-  format?: 'text' | 'csv' | 'binary';
-  freeze?: boolean;
-  delimiter?: string;
-  null?: string;
-  header?: boolean | 'match';
-  quote?: string;
-  escape?: string;
-  forceQuote?: Column[] | '*';
-  forceNotNull?: Column[];
-  forceNull?: Column[];
-  encoding?: string;
-} & (
-  | {
-      from: string | { program: string };
-    }
-  | {
-      to: string | { program: string };
-    }
-);
-```
-
-Example usage:
-
-```ts
-await db.table.copy({
-  columns: ['id', 'title', 'description'],
-  from: 'path-to-file',
-});
-```
-
 ## json
 
 [//]: # 'has JSDoc'
@@ -305,4 +237,76 @@ const result = await db.table
   .take();
 
 expect(result.alias).toEqual({ tags: ['two'] });
+```
+
+## getColumnInfo
+
+[//]: # 'has JSDoc'
+
+Returns an object with the column info about the current table, or an individual column if one is passed, returning an object with the following keys:
+
+```ts
+type ColumnInfo = {
+  defaultValue: unknown; // the default value for the column
+  type: string; // the column type
+  maxLength: number | null; // the max length set for the column, present on string types
+  nullable: boolean; // whether the column may be null
+};
+
+import { getColumnInfo } from 'orchid-orm';
+
+// columnInfo has type Record<string, ColumnInfo>, where string is name of columns
+const columnInfo = await getColumnInfo(db.table);
+
+// singleColumnInfo has the type ColumnInfo
+const singleColumnInfo = await getColumnInfo(db.table, 'name');
+```
+
+## copyTableData
+
+[//]: # 'has JSDoc'
+
+`copyTableData` is a function to invoke a `COPY` SQL statement, it can copy from or to a file or a program.
+
+Copying from `STDIN` or to `STDOUT` is not supported.
+
+It supports all the options of the `COPY` statement of Postgres. See details in [Postgres document](https://www.postgresql.org/docs/current/sql-copy.html).
+
+The copying is performed by the Postgres database server, and it must have access to the file.
+
+Type of copy argument:
+
+```ts
+export type CopyOptions<Column = string> = {
+  columns?: Column[];
+  format?: 'text' | 'csv' | 'binary';
+  freeze?: boolean;
+  delimiter?: string;
+  null?: string;
+  header?: boolean | 'match';
+  quote?: string;
+  escape?: string;
+  forceQuote?: Column[] | '*';
+  forceNotNull?: Column[];
+  forceNull?: Column[];
+  encoding?: string;
+} & (
+  | {
+      from: string | { program: string };
+    }
+  | {
+      to: string | { program: string };
+    }
+);
+```
+
+Example usage:
+
+```ts
+import { copyTableData } from 'orchid-orm';
+
+await copyTableData(db.table, {
+  columns: ['id', 'title', 'description'],
+  from: 'path-to-file',
+});
 ```

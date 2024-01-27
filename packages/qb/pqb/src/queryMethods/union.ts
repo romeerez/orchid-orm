@@ -29,20 +29,13 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  union<T extends Pick<Query, 'result' | '_union' | 'q'>>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
-    return this._union(args, wrap);
-  }
-  _union<T extends Pick<Query, 'result' | 'q'>>(
+  union<T extends Pick<Query, 'clone' | 'result' | 'q' | 'baseQuery'>>(
     this: T,
     args: UnionArg<T>[],
     wrap?: boolean,
   ): T {
     return pushQueryArray(
-      this,
+      this.clone() as T,
       'union',
       args.map((arg) => ({ arg, kind: 'UNION' as const, wrap })),
     );
@@ -55,11 +48,8 @@ export class Union {
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
   unionAll<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
-    return this._unionAll(args, wrap);
-  }
-  _unionAll<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
     return pushQueryArray(
-      this,
+      this.clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'UNION ALL' as const, wrap })),
     );
@@ -72,11 +62,8 @@ export class Union {
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
   intersect<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
-    return this._intersect(args, wrap);
-  }
-  _intersect<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
     return pushQueryArray(
-      this,
+      this.clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'INTERSECT' as const, wrap })),
     );
@@ -93,15 +80,8 @@ export class Union {
     args: UnionArg<T>[],
     wrap?: boolean,
   ): T {
-    return this._intersectAll(args, wrap);
-  }
-  _intersectAll<T extends Query>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
     return pushQueryArray(
-      this,
+      this.clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'INTERSECT ALL' as const, wrap })),
     );
@@ -114,11 +94,8 @@ export class Union {
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
   except<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
-    return this._except(args, wrap);
-  }
-  _except<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
     return pushQueryArray(
-      this,
+      this.clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'EXCEPT' as const, wrap })),
     );
@@ -131,11 +108,8 @@ export class Union {
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
   exceptAll<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
-    return this._exceptAll(args, wrap);
-  }
-  _exceptAll<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
     return pushQueryArray(
-      this,
+      this.clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'EXCEPT ALL' as const, wrap })),
     );

@@ -1,4 +1,6 @@
 import {
+  _queryHookAfterCreate,
+  _queryHookAfterUpdate,
   CreateCtx,
   getQueryAs,
   JoinCallback,
@@ -125,7 +127,7 @@ export const hasRelationHandleCreate = (
   const relationData = [values];
   store.hasRelation[key] = relationData;
 
-  q._afterCreate(primaryKeys, (rows, q) =>
+  _queryHookAfterCreate(q, primaryKeys, (rows, q) =>
     (nestedInsert as HasOneNestedInsert)(
       q,
       relationData.map(([rowIndex, data]) => [
@@ -163,7 +165,7 @@ export const hasRelationHandleUpdate = (
 
   q.q.wrapInTransaction = true;
 
-  q._afterUpdate(q.primaryKeys, (rows, q) => {
+  _queryHookAfterUpdate(q, q.primaryKeys, (rows, q) => {
     return (nestedUpdate as HasOneNestedUpdate)(
       q,
       rows,

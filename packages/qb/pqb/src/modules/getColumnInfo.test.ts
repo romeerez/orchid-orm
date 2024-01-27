@@ -1,5 +1,6 @@
 import { expectQueryNotMutated, Snake, User } from '../test-utils/test-utils';
 import { expectSql, testDb } from 'test-utils';
+import { getColumnInfo } from './getColumnInfo';
 
 describe('columnInfo', () => {
   afterAll(testDb.close);
@@ -7,7 +8,7 @@ describe('columnInfo', () => {
   it('should return all columns info', async () => {
     const q = User.all();
 
-    const query = q.columnInfo();
+    const query = getColumnInfo(q);
     expectSql(
       query.toSQL(),
       `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema()`,
@@ -28,7 +29,7 @@ describe('columnInfo', () => {
   it('should return specified column info', async () => {
     const q = User.all();
 
-    const query = q.columnInfo('name');
+    const query = getColumnInfo(q, 'name');
     expectSql(
       query.toSQL(),
       `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema() AND column_name = $2`,
@@ -47,7 +48,7 @@ describe('columnInfo', () => {
   });
 
   it('should return info about column with custom name', async () => {
-    const query = Snake.columnInfo('snakeName');
+    const query = getColumnInfo(Snake, 'snakeName');
     expectSql(
       query.toSQL(),
       `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema() AND column_name = $2`,

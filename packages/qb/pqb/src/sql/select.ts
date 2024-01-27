@@ -7,7 +7,7 @@ import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
 import { Expression, isExpression } from 'orchid-core';
 import { Query } from '../query/query';
-import { queryGetOptional } from '../queryMethods/get.utils';
+import { _queryGetOptional } from '../queryMethods/get.utils';
 import { queryJson } from '../queryMethods/json.utils';
 import { queryWrap } from '../queryMethods/queryMethods.utils';
 
@@ -224,7 +224,7 @@ const pushSubQuerySql = (
       const cloned = query.clone();
       cloned.q.select = [{ selectAs: { c: first } }] as SelectItem[];
       query = queryWrap(cloned, cloned.baseQuery.clone());
-      queryGetOptional(query, new RawSQL(`COALESCE(json_agg("c"), '[]')`));
+      _queryGetOptional(query, new RawSQL(`COALESCE(json_agg("c"), '[]')`));
       break;
     }
     case 'value':

@@ -1,5 +1,5 @@
 import { WrapQuerySelf, WrapQueryArg } from './queryMethods';
-import { queryGetOptional } from './get.utils';
+import { _queryGetOptional } from './get.utils';
 import { RawSQL } from '../sql/rawSql';
 import {
   queryTypeWithLimitOne,
@@ -15,7 +15,7 @@ export function queryJson<T extends WrapQueryArg & WrapQuerySelf>(
 ) {
   const q = queryWrap(self, self.baseQuery.clone()) as unknown as T;
   // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
-  queryGetOptional(
+  _queryGetOptional(
     q,
     new RawSQL(
       queryTypeWithLimitOne[self.q.returnType]

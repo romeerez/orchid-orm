@@ -1,5 +1,6 @@
 import { Snake, User } from '../test-utils/test-utils';
 import { expectSql, useTestDatabase } from 'test-utils';
+import { copyTableData } from './copyTableData';
 
 describe('copy', () => {
   useTestDatabase();
@@ -26,7 +27,7 @@ describe('copy', () => {
     ${'to'}   | ${'TO'}
   `('$method', ({ method, sql }) => {
     it(`should copy ${method}`, () => {
-      const q = User.copy({
+      const q = copyTableData(User, {
         [method as 'from']: 'path-to-file',
       });
 
@@ -34,7 +35,7 @@ describe('copy', () => {
     });
 
     it(`should copy ${method} with options`, () => {
-      const q = User.copy({
+      const q = copyTableData(User, {
         [method as 'from']: { program: 'program' },
         ...options,
       });
@@ -62,7 +63,7 @@ describe('copy', () => {
     });
 
     it(`should copy ${method} with columns with names`, () => {
-      const q = Snake.copy({
+      const q = copyTableData(Snake, {
         [method as 'from']: 'path-to-file',
         columns: ['snakeName', 'tailLength'],
       });

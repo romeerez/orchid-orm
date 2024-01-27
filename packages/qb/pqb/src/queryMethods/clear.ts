@@ -17,17 +17,14 @@ export type ClearStatement =
 
 export class Clear {
   clear<T extends Query>(this: T, ...clears: ClearStatement[]): T {
-    return this.clone()._clear(...clears);
-  }
-
-  _clear<T extends Query>(this: T, ...clears: ClearStatement[]): T {
+    const q = this.clone();
     clears.forEach((clear) => {
       if (clear === 'where') {
-        delete this.q.and;
-        delete this.q.or;
+        delete q.q.and;
+        delete q.q.or;
       } else if (clear === 'counters') {
-        if ('type' in this.q && this.q.type === 'update') {
-          this.q.updateData = this.q.updateData.filter((item) => {
+        if ('type' in q.q && q.q.type === 'update') {
+          q.q.updateData = q.q.updateData.filter((item) => {
             if (!isExpression(item) && typeof item !== 'function') {
               let removed = false;
               for (const key in item) {
@@ -49,9 +46,9 @@ export class Clear {
           });
         }
       } else {
-        delete (this.q as Record<string, unknown>)[clear];
+        delete (q.q as Record<string, unknown>)[clear];
       }
     });
-    return this;
+    return q;
   }
 }

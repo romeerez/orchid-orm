@@ -1,4 +1,10 @@
 import {
+  _queryDefaults,
+  _queryDelete,
+  _queryRows,
+  _queryUpdate,
+  _queryUpdateOrThrow,
+  _queryWhere,
   AddQueryDefaults,
   CreateCtx,
   CreateData,
@@ -312,7 +318,7 @@ export const makeHasOneMethod = (
       for (let i = 0; i < len; i++) {
         values[foreignKeys[i]] = params[primaryKeys[i]];
       }
-      return query.where(values)._defaults(values);
+      return _queryDefaults(query.where(values), values);
     },
     virtualColumn: new HasOneVirtualColumn(
       defaultSchemaConfig,
@@ -362,7 +368,7 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
 
         items[i] =
           'connect' in item
-            ? (
+            ? _queryUpdateOrThrow(
                 t.where(item.connect as NestedInsertOneItemConnect) as Omit<
                   Query,
                   'meta'
@@ -370,9 +376,10 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
                   meta: Omit<Query['meta'], 'hasSelect' | 'hasWhere'> & {
                     hasWhere: true;
                   };
-                }
-              )._updateOrThrow(data as UpdateData<WhereResult<Query>>)
-            : (
+                },
+                data as UpdateData<WhereResult<Query>>,
+              )
+            : _queryUpdate(
                 t.where(
                   (item.connectOrCreate as NestedInsertOneItemConnectOrCreate)
                     .where,
@@ -380,8 +387,9 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
                   meta: Omit<Query['meta'], 'hasSelect' | 'hasWhere'> & {
                     hasWhere: true;
                   };
-                }
-              )._update(data as UpdateData<WhereResult<Query>>);
+                },
+                data as UpdateData<WhereResult<Query>>,
+              );
       }
 
       connected = (await Promise.all(items)) as number[];
@@ -446,7 +454,8 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
     );
 
     if (params.create || params.disconnect || params.set) {
-      await currentRelationsQuery._update(
+      await _queryUpdate(
+        currentRelationsQuery,
         setNulls as UpdateData<WhereResult<Query>>,
       );
 
@@ -467,20 +476,25 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
           obj[foreignKeys[i]] = record[primaryKeys[i]];
         }
 
-        await t
-          ._where<Query>(params.set)
-          ._update(obj as UpdateData<WhereResult<Query>>);
+        await _queryUpdate(
+          _queryWhere(t as Query, [params.set]) as WhereResult<Query>,
+          obj as UpdateData<WhereResult<Query>>,
+        );
       }
     } else if (params.update) {
-      await currentRelationsQuery._update<WhereResult<Query>>(params.update);
+      await _queryUpdate(
+        currentRelationsQuery,
+        params.update as UpdateData<WhereResult<Query>>,
+      );
     } else if (params.delete) {
-      await currentRelationsQuery._delete();
+      await _queryDelete(currentRelationsQuery);
     } else if (params.upsert) {
       const { update, create } = params.upsert;
       currentRelationsQuery.q.select = foreignKeys;
-      const updatedIds = (await currentRelationsQuery
-        ._rows()
-        ._update(update as never)) as unknown as unknown[][];
+      const updatedIds = (await _queryUpdate(
+        _queryRows(currentRelationsQuery),
+        update as never,
+      )) as unknown as unknown[][];
 
       if (updatedIds.length < ids.length) {
         const data = typeof create === 'function' ? create() : create;

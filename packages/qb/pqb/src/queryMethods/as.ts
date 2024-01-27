@@ -6,7 +6,7 @@ export type AsQueryArg = Pick<
   'selectable' | 'table' | 'meta' | 'q' | 'clone' | 'baseQuery' | 'shape'
 >;
 
-export const queryAs = <T extends AsQueryArg, As extends string>(
+export const _queryAs = <T extends AsQueryArg, As extends string>(
   self: T,
   as: As,
 ): SetQueryTableAlias<T, As> => {
@@ -31,12 +31,6 @@ export abstract class AsMethods extends QueryBase {
     this: T,
     as: As,
   ): SetQueryTableAlias<T, As> {
-    return queryAs(this.clone(), as);
-  }
-  _as<T extends AsQueryArg, As extends string>(
-    this: T,
-    as: As,
-  ): SetQueryTableAlias<T, As> {
-    return queryAs(this, as);
+    return _queryAs(this.clone(), as);
   }
 }

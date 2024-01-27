@@ -1,5 +1,13 @@
 import { DbTable, Table, TableClass } from '../baseTable';
 import {
+  _queryCreate,
+  _queryCreateMany,
+  _queryDelete,
+  _queryFindBy,
+  _queryHookAfterUpdate,
+  _queryHookBeforeUpdate,
+  _queryRows,
+  _queryUpdate,
   CreateCtx,
   CreateData,
   InsertQueryData,
@@ -13,11 +21,11 @@ import {
   SelectQueryData,
   setQueryObjectValue,
   SetQueryTableAlias,
+  UpdateArg,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
   WhereArg,
-  WhereResult,
 } from 'pqb';
 import {
   RelationData,
@@ -335,7 +343,7 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
                 .create;
       }
 
-      created = await t.select(...primaryKeys)._createMany(items);
+      created = await _queryCreateMany(t.select(...primaryKeys), items);
     } else {
       created = emptyArray;
     }
@@ -379,7 +387,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
     let idsForDelete: [unknown, ...unknown[]][] | undefined;
 
-    q._beforeUpdate(async (q) => {
+    _queryHookBeforeUpdate(q, async (q) => {
       if (params.disconnect) {
         for (const key of foreignKeys) {
           update[key] = null;
@@ -398,9 +406,9 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           }
         }
         if (loadPrimaryKeys) {
-          const record = await query
-            .select(...loadPrimaryKeys)
-            ._findBy(params.set);
+          const record = await _queryFindBy(query.select(...loadPrimaryKeys), [
+            params.set,
+          ]);
 
           for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
             update[(loadForeignKeys as string[])[i]] =
@@ -410,7 +418,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
       } else if (params.create) {
         const q = query.clone();
         q.q.select = primaryKeys;
-        const record = await q._create(params.create);
+        const record = await _queryCreate(q, params.create);
         for (let i = 0; i < len; i++) {
           update[foreignKeys[i]] = record[primaryKeys[i]];
         }
@@ -418,7 +426,10 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         const selectQuery = q.clone();
         selectQuery.q.type = undefined;
         (selectQuery.q as SelectQueryData).distinct = emptyArray;
-        idsForDelete = (await selectQuery._rows()) as [unknown, ...unknown[]][];
+        idsForDelete = (await _queryRows(selectQuery)) as [
+          unknown,
+          ...unknown[],
+        ][];
         for (const foreignKey of foreignKeys) {
           update[foreignKey] = null;
         }
@@ -445,13 +456,16 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         }
 
         if (obj) {
-          await query.findBy(obj)._update<WhereResult<Query>>(upsert.update);
+          await _queryUpdate(
+            query.findBy(obj),
+            upsert.update as UpdateArg<Query>,
+          );
         } else {
           const data =
             typeof upsert.create === 'function'
               ? upsert.create()
               : upsert.create;
-          const result = await query.select(...primaryKeys)._create(data);
+          const result = await _queryCreate(query.select(...primaryKeys), data);
 
           for (let i = 0; i < len; i++) {
             (state.updateData ??= {})[foreignKeys[i]] = result[primaryKeys[i]];
@@ -459,7 +473,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         }
       });
     } else if (params.delete || params.update) {
-      q._afterUpdate([], async (data) => {
+      _queryHookAfterUpdate(q, [], async (data) => {
         let ids: [unknown, ...unknown[]][] | undefined;
 
         if (params.delete) {
@@ -489,11 +503,9 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         );
 
         if (params.delete) {
-          await t._delete();
+          await _queryDelete(t);
         } else {
-          await t._update<WhereResult<Query>>(
-            params.update as UpdateData<Query>,
-          );
+          await _queryUpdate(t, params.update as UpdateArg<Query>);
         }
       });
     }
