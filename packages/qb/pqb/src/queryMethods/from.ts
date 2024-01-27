@@ -165,10 +165,4 @@ export class From {
   ): FromResult<T, Args> {
     return queryFrom(this.clone(), args);
   }
-  _from<T extends FromQuerySelf, Args extends FromArgs<T>>(
-    this: T,
-    ...args: Args
-  ): FromResult<T, Args> {
-    return queryFrom(this, args);
-  }
 }

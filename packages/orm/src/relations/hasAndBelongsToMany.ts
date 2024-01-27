@@ -5,6 +5,17 @@ import {
 } from './relations';
 import { DbTable, Table, TableClass } from '../baseTable';
 import {
+  _queryCreateFrom,
+  _queryCreateMany,
+  _queryDelete,
+  _queryFindBy,
+  _queryFindByOptional,
+  _queryHookAfterCreate,
+  _queryJoinOn,
+  _queryRows,
+  _querySelect,
+  _queryUpdate,
+  _queryWhere,
   CreateCtx,
   CreateData,
   getQueryAs,
@@ -15,11 +26,11 @@ import {
   RelationJoinQuery,
   SetQueryTableAlias,
   toSQLCacheKey,
+  UpdateArg,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
   WhereArg,
-  WhereResult,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -266,14 +277,14 @@ export const makeHasAndBelongsToManyMethod = (
   ) => {
     return joiningQuery.whereExists(subQuery, (q) => {
       for (let i = 0; i < throughLen; i++) {
-        q._on(
+        _queryJoinOn(q, [
           throughForeignKeysFull[i],
           `${foreignAs}.${throughPrimaryKeys[i]}`,
-        );
+        ]);
       }
 
       for (let i = 0; i < len; i++) {
-        q._on(foreignKeysFull[i], `${tableAs}.${primaryKeys[i]}`);
+        _queryJoinOn(q, [foreignKeysFull[i], `${tableAs}.${primaryKeys[i]}`]);
       }
 
       return q;
@@ -306,10 +317,13 @@ export const makeHasAndBelongsToManyMethod = (
         }
 
         for (let i = 0; i < throughLen; i++) {
-          q._on(throughForeignKeysFull[i], throughPrimaryKeysFull[i]);
+          _queryJoinOn(q, [
+            throughForeignKeysFull[i],
+            throughPrimaryKeysFull[i],
+          ]);
         }
 
-        return q._where(where);
+        return _queryWhere(q, [where]);
       });
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(
@@ -335,7 +349,7 @@ export const makeHasAndBelongsToManyMethod = (
     modifyRelatedQuery(relationQuery) {
       const ref = {} as { q: Query };
 
-      relationQuery._afterCreate([], async (result: unknown[]) => {
+      _queryHookAfterCreate(relationQuery, [], async (result: unknown[]) => {
         if (result.length > 1) {
           // TODO: currently this relies on `INSERT ... SELECT` that works only for 1 record
           // consider using `WITH` to reuse id of main table for multiple related ids
@@ -355,11 +369,13 @@ export const makeHasAndBelongsToManyMethod = (
           ];
         }
 
-        const createdCount = await subQuery
-          .count()
-          ._createFrom(baseQuery, data);
+        const createdCount = await _queryCreateFrom(
+          subQuery.count(),
+          baseQuery as Query & { returnType: 'one' | 'oneOrThrow' },
+          data,
+        );
 
-        if (createdCount === 0) {
+        if ((createdCount as unknown as number) === 0) {
           throw new NotFoundError(baseQuery);
         }
       });
@@ -384,14 +400,17 @@ const queryJoinTable = (
   });
 
   if (conditions) {
-    t._where({
-      IN: {
-        columns: state.throughForeignKeys,
-        values: state.relatedTableQuery
-          .where(conditionsToWhereArg(conditions))
-          ._select(...state.throughPrimaryKeys),
+    _queryWhere(t, [
+      {
+        IN: {
+          columns: state.throughForeignKeys,
+          values: _querySelect(
+            state.relatedTableQuery.where(conditionsToWhereArg(conditions)),
+            state.throughPrimaryKeys,
+          ),
+        },
       },
-    });
+    ]);
   }
 
   return t;
@@ -461,12 +480,7 @@ const nestedInsert = ({
         { connect: NestedInsertManyConnect },
       ][]) {
         for (const item of connect) {
-          queries.push(
-            t
-              .select(...throughPrimaryKeys)
-              ._findBy(item)
-              ._take(),
-          );
+          queries.push(_queryFindBy(t.select(...throughPrimaryKeys), [item]));
         }
       }
 
@@ -492,10 +506,7 @@ const nestedInsert = ({
       ][]) {
         for (const item of connectOrCreate) {
           queries.push(
-            t
-              .select(...throughPrimaryKeys)
-              ._findBy(item.where)
-              ._takeOptional(),
+            _queryFindByOptional(t.select(...throughPrimaryKeys), [item.where]),
           );
         }
       }
@@ -547,9 +558,10 @@ const nestedInsert = ({
         }
       }
 
-      created = (await t
-        .select(...throughPrimaryKeys)
-        ._createMany(records)) as Record<string, unknown>[];
+      created = await _queryCreateMany(
+        t.select(...throughPrimaryKeys),
+        records,
+      );
     } else {
       created = [];
     }
@@ -622,10 +634,10 @@ const nestedUpdate = (state: State) => {
 
   return (async (_, data, params) => {
     if (params.create) {
-      const idsRows: unknown[][] = await state.relatedTableQuery
-        .select(...state.throughPrimaryKeys)
-        ._rows()
-        ._createMany(params.create);
+      const idsRows: unknown[][] = await _queryCreateMany(
+        _queryRows(state.relatedTableQuery.select(...state.throughPrimaryKeys)),
+        params.create,
+      );
 
       const records: Record<string, unknown>[] = [];
       for (const item of data) {
@@ -649,59 +661,65 @@ const nestedUpdate = (state: State) => {
     }
 
     if (params.update) {
-      await state.relatedTableQuery
-        .whereExists(state.joinTableQuery, (q) => {
-          for (let i = 0; i < throughLen; i++) {
-            q._on(
-              state.throughForeignKeysFull[i],
-              state.throughPrimaryKeysFull[i],
-            );
-          }
+      await _queryUpdate(
+        _queryWhere(
+          state.relatedTableQuery.whereExists(state.joinTableQuery, (q) => {
+            for (let i = 0; i < throughLen; i++) {
+              _queryJoinOn(q, [
+                state.throughForeignKeysFull[i],
+                state.throughPrimaryKeysFull[i],
+              ]);
+            }
 
-          return q._where({
-            IN: {
-              columns: state.foreignKeysFull,
-              values: data.map((item) =>
-                state.primaryKeys.map((key) => item[key]),
-              ),
-            },
-          });
-        })
-        ._where(conditionsToWhereArg(params.update.where))
-        ._update<WhereResult<Query>>(params.update.data);
+            return _queryWhere(q, [
+              {
+                IN: {
+                  columns: state.foreignKeysFull,
+                  values: data.map((item) =>
+                    state.primaryKeys.map((key) => item[key]),
+                  ),
+                },
+              },
+            ]);
+          }),
+          [conditionsToWhereArg(params.update.where)],
+        ),
+        params.update.data as UpdateArg<Query>,
+      );
     }
 
     if (params.disconnect) {
-      await queryJoinTable(state, data, params.disconnect)._delete();
+      await _queryDelete(queryJoinTable(state, data, params.disconnect));
     }
 
     if (params.delete) {
       const j = queryJoinTable(state, data, params.delete);
 
-      const idsRows = await j
-        ._select(...state.throughForeignKeys)
-        ._rows()
-        ._delete();
+      const idsRows = await _queryDelete(
+        _queryRows(_querySelect(j, state.throughForeignKeys)),
+      );
 
-      await state.relatedTableQuery
-        .where({
+      await _queryDelete(
+        state.relatedTableQuery.where({
           IN: {
             columns: state.throughPrimaryKeys,
             values: idsRows,
           },
-        })
-        ._delete();
+        }),
+      );
     }
 
     if (params.set) {
       const j = queryJoinTable(state, data);
-      await j._delete();
+      await _queryDelete(j);
       delete j.q[toSQLCacheKey];
 
-      const idsRows = await state.relatedTableQuery
-        .where(conditionsToWhereArg(params.set))
-        ._select(...state.throughPrimaryKeys)
-        ._rows();
+      const idsRows = await _queryRows(
+        _querySelect(
+          state.relatedTableQuery.where(conditionsToWhereArg(params.set)),
+          state.throughPrimaryKeys,
+        ),
+      );
 
       await insertToJoinTable(state, j, data, idsRows);
     }

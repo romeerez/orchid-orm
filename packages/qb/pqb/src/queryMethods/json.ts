@@ -92,22 +92,6 @@ export abstract class JsonModifiers extends QueryBase {
     },
   ): JsonSetResult<T, Column, As> {
     const q = this.clone() as T;
-    return q._jsonSet(column, path, value, options);
-  }
-  _jsonSet<
-    T extends JsonModifiers,
-    Column extends ColumnOrJsonMethod<T>,
-    As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
-  >(
-    this: T,
-    column: Column,
-    path: Array<string | number>,
-    value: unknown,
-    options?: {
-      as?: As;
-      createIfMissing?: boolean;
-    },
-  ): JsonSetResult<T, Column, As> {
     const json: JsonItem = {
       __json: [
         'set',
@@ -116,7 +100,7 @@ export abstract class JsonModifiers extends QueryBase {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.q.shape[column]
+          ? q.q.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -126,7 +110,7 @@ export abstract class JsonModifiers extends QueryBase {
     };
 
     return Object.assign(
-      pushQueryValue(this, 'select', json),
+      pushQueryValue(q, 'select', json),
       json,
     ) as unknown as JsonSetResult<T, Column, As>;
   }
@@ -178,22 +162,6 @@ export abstract class JsonModifiers extends QueryBase {
     },
   ): JsonSetResult<T, Column, As> {
     const q = this.clone() as T;
-    return q._jsonInsert(column, path, value, options);
-  }
-  _jsonInsert<
-    T extends JsonModifiers,
-    Column extends ColumnOrJsonMethod<T>,
-    As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
-  >(
-    this: T,
-    column: Column,
-    path: Array<string | number>,
-    value: unknown,
-    options?: {
-      as?: As;
-      insertAfter?: boolean;
-    },
-  ): JsonSetResult<T, Column, As> {
     const json: JsonItem = {
       __json: [
         'insert',
@@ -202,7 +170,7 @@ export abstract class JsonModifiers extends QueryBase {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.q.shape[column]
+          ? q.q.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -212,7 +180,7 @@ export abstract class JsonModifiers extends QueryBase {
     };
 
     return Object.assign(
-      pushQueryValue(this, 'select', json),
+      pushQueryValue(q, 'select', json),
       json,
     ) as unknown as JsonSetResult<T, Column, As>;
   }
@@ -253,18 +221,6 @@ export abstract class JsonModifiers extends QueryBase {
     options?: { as?: As },
   ): JsonSetResult<T, Column, As> {
     const q = this.clone() as T;
-    return q._jsonRemove(column, path, options);
-  }
-  _jsonRemove<
-    T extends JsonModifiers,
-    Column extends ColumnOrJsonMethod<T>,
-    As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
-  >(
-    this: T,
-    column: Column,
-    path: Array<string | number>,
-    options?: { as?: As },
-  ): JsonSetResult<T, Column, As> {
     const json: JsonItem = {
       __json: [
         'remove',
@@ -273,7 +229,7 @@ export abstract class JsonModifiers extends QueryBase {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.q.shape[column]
+          ? q.q.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -281,7 +237,7 @@ export abstract class JsonModifiers extends QueryBase {
     };
 
     return Object.assign(
-      pushQueryValue(this, 'select', json),
+      pushQueryValue(q, 'select', json),
       json,
     ) as unknown as JsonSetResult<T, Column, As>;
   }
@@ -341,29 +297,13 @@ export abstract class JsonModifiers extends QueryBase {
     },
   ): JsonPathQueryResult<T, As, Type> {
     const q = this.clone() as T;
-    return q._jsonPathQuery(type, column, path, as, options);
-  }
-  _jsonPathQuery<
-    T extends JsonModifiers,
-    As extends string,
-    Type extends QueryColumn,
-  >(
-    this: T,
-    type: Type,
-    column: ColumnOrJsonMethod<T>,
-    path: string,
-    as: As,
-    options?: {
-      vars?: string;
-      silent?: boolean;
-    },
-  ): JsonPathQueryResult<T, As, Type> {
+
     const json: JsonItem = {
       __json: ['pathQuery', as, type, column, path, options],
     };
 
     return Object.assign(
-      pushQueryValue(this, 'select', json),
+      pushQueryValue(q, 'select', json),
       json,
     ) as unknown as JsonPathQueryResult<T, As, Type>;
   }
@@ -387,11 +327,5 @@ export abstract class JsonMethods {
     coalesce?: boolean,
   ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
     return queryJson(this.clone(), coalesce);
-  }
-  _json<T extends Query>(
-    this: T,
-    coalesce?: boolean,
-  ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
-    return queryJson(this, coalesce);
   }
 }

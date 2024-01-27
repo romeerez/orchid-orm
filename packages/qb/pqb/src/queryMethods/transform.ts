@@ -85,12 +85,9 @@ export class TransformMethods {
     this: T,
     fn: Fn,
   ): QueryTransform<T, Fn> {
-    return this.clone()._transform(fn);
-  }
-  _transform<T extends Query, Fn extends QueryTransformFn<T>>(
-    this: T,
-    fn: Fn,
-  ): QueryTransform<T, Fn> {
-    return pushQueryValue(this, 'transform', fn) as QueryTransform<T, Fn>;
+    return pushQueryValue(this.clone(), 'transform', fn) as QueryTransform<
+      T,
+      Fn
+    >;
   }
 }

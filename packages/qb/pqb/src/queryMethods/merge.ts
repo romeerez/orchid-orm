@@ -57,10 +57,8 @@ const mergableObjects: Record<string, boolean> = {
 
 export class MergeQueryMethods {
   merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
-    return this.clone()._merge(q);
-  }
-  _merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
-    const a = this.q as Record<string, unknown>;
+    const query = this.clone();
+    const a = query.q as Record<string, unknown>;
     const b = q.q as Record<string, unknown>;
 
     for (const key in b) {
@@ -89,6 +87,6 @@ export class MergeQueryMethods {
 
     if (b.returnType) a.returnType = b.returnType;
 
-    return this as unknown as MergeQuery<T, Q>;
+    return query as unknown as MergeQuery<T, Q>;
   }
 }

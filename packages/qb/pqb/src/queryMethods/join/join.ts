@@ -728,20 +728,6 @@ export class Join {
   join(this: Query, ...args: any) {
     return _join(this.clone(), true, 'JOIN', args);
   }
-  _join<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, true, true>;
-  _join<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, true, true, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _join(this: Query, ...args: any) {
-    return _join(this, true, 'JOIN', args);
-  }
 
   /**
    * `leftJoin` is a method for SQL `LEFT JOIN`, which is equivalent to `OUTER JOIN`, `LEFT OUTER JOIN`.
@@ -786,20 +772,6 @@ export class Join {
   leftJoin(this: Query, ...args: any) {
     return _join(this.clone(), false, 'LEFT JOIN', args);
   }
-  _leftJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, false, true>;
-  _leftJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, false, true, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _leftJoin(this: Query, ...args: any) {
-    return _join(this, false, 'LEFT JOIN', args);
-  }
 
   /**
    * `rightJoin` is a method for SQL `RIGHT JOIN`, which is equivalent to `RIGHT OUTER JOIN`.
@@ -841,20 +813,6 @@ export class Join {
   rightJoin(this: Query, ...args: any) {
     return _join(this.clone(), true, 'RIGHT JOIN', args);
   }
-  _rightJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, true, false>;
-  _rightJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, true, false, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _rightJoin(this: Query, ...args: any) {
-    return _join(this, true, 'RIGHT JOIN', args);
-  }
 
   /**
    * `fullJoin` is a method for SQL `FULL JOIN`, which is equivalent to `FULL OUTER JOIN`.
@@ -895,20 +853,6 @@ export class Join {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fullJoin(this: Query, ...args: any) {
     return _join(this.clone(), false, 'FULL JOIN', args);
-  }
-  _fullJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, false, false>;
-  _fullJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, false, false, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _fullJoin(this: Query, ...args: any) {
-    return _join(this, false, 'FULL JOIN', args);
   }
 
   /**
@@ -989,17 +933,6 @@ export class Join {
   ): JoinLateralResult<T, R, true> {
     return _joinLateral<T, Arg, R, true>(this.clone(), 'JOIN', arg, cb);
   }
-  _joinLateral<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    R extends QueryBase,
-  >(
-    this: T,
-    arg: Arg,
-    cb: JoinLateralCallback<T, Arg, R>,
-  ): JoinLateralResult<T, R, true> {
-    return _joinLateral<T, Arg, R, true>(this, 'JOIN', arg, cb);
-  }
 
   /**
    * The same as {@link joinLateral}, but when no records found for the join it will result in `null`:
@@ -1026,17 +959,6 @@ export class Join {
     cb: JoinLateralCallback<T, Arg, R>,
   ): JoinLateralResult<T, R, false> {
     return _joinLateral<T, Arg, R, false>(this.clone(), 'LEFT JOIN', arg, cb);
-  }
-  _leftJoinLateral<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    R extends QueryBase,
-  >(
-    this: T,
-    arg: Arg,
-    cb: JoinLateralCallback<T, Arg, R>,
-  ): JoinLateralResult<T, R, false> {
-    return _joinLateral<T, Arg, R, false>(this, 'LEFT JOIN', arg, cb);
   }
 }
 
@@ -1111,6 +1033,27 @@ type OnJsonPathEqualsArgs<T extends QueryBase> = [
   rightPath: string,
 ];
 
+export const _queryJoinOn = <T extends OnQueryBuilder>(
+  q: T,
+  args: OnArgs<T>,
+): T => {
+  return pushQueryOn(q, q.q.joinTo as QueryBase, q, ...args);
+};
+
+export const _queryJoinOrOn = <T extends OnQueryBuilder>(
+  q: T,
+  args: OnArgs<T>,
+): T => {
+  return pushQueryOrOn(q, q.q.joinTo as QueryBase, q, ...args);
+};
+
+export const _queryJoinOnJsonPathEquals = <T extends OnQueryBuilder>(
+  q: T,
+  args: OnJsonPathEqualsArgs<T>,
+): T => {
+  return pushQueryValue(q, 'and', { ON: args });
+};
+
 // Query builder with `or` methods that is passed to the `join` and `joinLateral` callbacks.
 export class OnQueryBuilder<
   S extends QueryBase = QueryBase,
@@ -1167,10 +1110,7 @@ export class OnQueryBuilder<
    * @param args - columns to join with
    */
   on<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
-    return this.clone()._on(...args);
-  }
-  _on<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
-    return pushQueryOn(this, this.q.joinTo as QueryBase, this, ...args);
+    return _queryJoinOn(this.clone(), args);
   }
 
   /**
@@ -1179,10 +1119,7 @@ export class OnQueryBuilder<
    * @param args - columns to join with
    */
   orOn<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
-    return this.clone()._orOn(...args);
-  }
-  _orOn<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
-    return pushQueryOrOn(this, this.q.joinTo as QueryBase, this, ...args);
+    return _queryJoinOrOn(this.clone(), args);
   }
 
   /**
@@ -1201,12 +1138,6 @@ export class OnQueryBuilder<
     this: T,
     ...args: OnJsonPathEqualsArgs<T>
   ): T {
-    return this.clone()._onJsonPathEquals(...args);
-  }
-  _onJsonPathEquals<T extends OnQueryBuilder>(
-    this: T,
-    ...args: OnJsonPathEqualsArgs<T>
-  ): T {
-    return pushQueryValue(this, 'and', { ON: args });
+    return _queryJoinOnJsonPathEquals(this.clone(), args);
   }
 }

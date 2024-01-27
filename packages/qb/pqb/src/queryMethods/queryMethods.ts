@@ -38,8 +38,7 @@ import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
-import { ColumnInfoMethods } from './columnInfo';
-import { addWhere, Where, WhereArg, WhereResult } from './where/where';
+import { _queryWhere, Where, WhereArg, WhereResult } from './where/where';
 import { SearchMethods } from './search';
 import { Clear } from './clear';
 import { Having } from './having';
@@ -49,7 +48,6 @@ import { QueryUpsertOrCreate } from './upsertOrCreate';
 import { QueryGet } from './get';
 import { MergeQuery, MergeQueryMethods } from './merge';
 import { RawSqlMethods } from './rawSql';
-import { CopyMethods } from './copy';
 import {
   applyMixins,
   ColumnTypeBase,
@@ -182,7 +180,6 @@ export interface QueryMethods<ColumnTypes>
     Delete,
     Transaction,
     For,
-    ColumnInfoMethods,
     Omit<Where, 'result'>,
     SearchMethods,
     Clear,
@@ -194,7 +191,6 @@ export interface QueryMethods<ColumnTypes>
     QueryGet,
     MergeQueryMethods,
     RawSqlMethods<ColumnTypes>,
-    CopyMethods,
     TransformMethods,
     ScopeMethods,
     SoftDeleteMethods {}
@@ -202,6 +198,48 @@ export interface QueryMethods<ColumnTypes>
 export type WrapQuerySelf = FromQueryArg;
 export type WrapQueryArg = FromQuerySelf &
   Pick<Query, 'selectable' | 'table' | 'shape'>;
+
+export const _queryAll = <T extends Query>(q: T): SetQueryReturnsAll<T> => {
+  q.q.returnType = 'all';
+  q.q.all = true;
+  return q as unknown as SetQueryReturnsAll<T>;
+};
+
+export const _queryTake = <T extends Query>(q: T): SetQueryReturnsOne<T> => {
+  q.q.returnType = 'oneOrThrow';
+  return q as unknown as SetQueryReturnsOne<T>;
+};
+
+export const _queryTakeOptional = <T extends Query>(
+  q: T,
+): SetQueryReturnsOneOptional<T> => {
+  q.q.returnType = 'one';
+  return q as unknown as SetQueryReturnsOneOptional<T>;
+};
+
+export const _queryExec = <T extends Query>(q: T) => {
+  q.q.returnType = 'void';
+  return q as unknown as SetQueryReturnsVoid<T>;
+};
+
+export const _queryFindBy = <T extends Query>(
+  q: T,
+  args: WhereArg<T>[],
+): SetQueryReturnsOne<WhereResult<T>> => {
+  return _queryTake(_queryWhere(q, args));
+};
+
+export const _queryFindByOptional = <T extends Query>(
+  q: T,
+  args: WhereArg<T>[],
+): SetQueryReturnsOneOptional<WhereResult<T>> => {
+  return _queryTakeOptional(_queryWhere(q, args));
+};
+
+export const _queryRows = <T extends Query>(q: T): SetQueryReturnsRows<T> => {
+  q.q.returnType = 'rows';
+  return q as unknown as SetQueryReturnsRows<T>;
+};
 
 export class QueryMethods<ColumnTypes> {
   /**
@@ -214,12 +252,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    return this.clone()._all();
-  }
-  _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    this.q.returnType = 'all';
-    this.q.all = true;
-    return this as unknown as SetQueryReturnsAll<T>;
+    return _queryAll(this.clone());
   }
 
   /**
@@ -231,11 +264,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   take<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    return this.clone()._take();
-  }
-  _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    this.q.returnType = 'oneOrThrow';
-    return this as unknown as SetQueryReturnsOne<T>;
+    return _queryTake(this.clone());
   }
 
   /**
@@ -249,11 +278,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
-    return this.clone()._takeOptional();
-  }
-  _takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
-    this.q.returnType = 'one';
-    return this as unknown as SetQueryReturnsOneOptional<T>;
+    return _queryTakeOptional(this.clone());
   }
 
   /**
@@ -273,11 +298,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    return this.clone()._rows();
-  }
-  _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    this.q.returnType = 'rows';
-    return this as unknown as SetQueryReturnsRows<T>;
+    return _queryRows(this.clone());
   }
 
   /**
@@ -293,16 +314,11 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    return this.clone()._pluck(select);
-  }
-  _pluck<T extends Query, S extends SelectableOrExpression<T>>(
-    this: T,
-    select: S,
-  ): SetQueryReturnsPluck<T, S> {
-    this.q.returnType = 'pluck';
-    (this.q as SelectQueryData).select = [select as SelectItem];
-    addParserForSelectItem(this, this.q.as || this.table, 'pluck', select);
-    return this as unknown as SetQueryReturnsPluck<T, S>;
+    const q = this.clone();
+    q.q.returnType = 'pluck';
+    (q.q as SelectQueryData).select = [select as SelectItem];
+    addParserForSelectItem(q, q.q.as || q.table, 'pluck', select);
+    return q as unknown as SetQueryReturnsPluck<T, S>;
   }
 
   /**
@@ -313,11 +329,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    return this.clone()._exec();
-  }
-  _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    this.q.returnType = 'void';
-    return this as unknown as SetQueryReturnsVoid<T>;
+    return _queryExec(this.clone());
   }
 
   /**
@@ -369,13 +381,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     ...columns: SelectableOrExpression<T>[]
   ): T {
-    return this.clone()._distinct(...columns);
-  }
-  _distinct<T extends Query>(
-    this: T,
-    ...columns: SelectableOrExpression<T>[]
-  ): T {
-    return pushQueryArray(this, 'distinct', columns as string[]);
+    return pushQueryArray(this.clone(), 'distinct', columns as string[]);
   }
 
   /**
@@ -401,27 +407,27 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     ...args: FindArgs<T>
   ): SetQueryReturnsOne<WhereResult<T>> {
-    return this.clone()._find(...args);
-  }
-  _find<T extends Query>(
-    this: T,
-    ...args: FindArgs<T>
-  ): SetQueryReturnsOne<WhereResult<T>> {
     const [value] = args;
     if (Array.isArray(value)) {
-      return this._find(new RawSQL(args as TemplateLiteralArgs));
+      return this.find(new RawSQL(args as TemplateLiteralArgs));
     }
+
+    const q = this.clone();
 
     if (value === null || value === undefined) {
       throw new OrchidOrmInternalError(
-        this,
+        q,
         `${value} is not allowed in the find method`,
       );
     }
 
-    return this._where({
-      [this.singlePrimaryKey]: value,
-    } as WhereArg<T>)._take();
+    return _queryTake(
+      _queryWhere(q, [
+        {
+          [q.singlePrimaryKey]: value,
+        } as WhereArg<T>,
+      ]),
+    );
   }
 
   /**
@@ -438,15 +444,9 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     ...args: FindArgs<T>
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return this.clone()._findOptional(...args);
-  }
-  _findOptional<T extends Query>(
-    this: T,
-    ...args: FindArgs<T>
-  ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return this._find(
-      ...args,
-    ).takeOptional() as unknown as SetQueryReturnsOneOptional<WhereResult<T>>;
+    return _queryTakeOptional(
+      this.find(...args),
+    ) as unknown as SetQueryReturnsOneOptional<WhereResult<T>>;
   }
 
   /**
@@ -465,13 +465,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOne<WhereResult<T>> {
-    return this.clone()._findBy(...args);
-  }
-  _findBy<T extends Query>(
-    this: T,
-    ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<WhereResult<T>> {
-    return addWhere(this, args).take();
+    return _queryFindBy(this.clone(), args);
   }
 
   /**
@@ -490,13 +484,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return this.clone()._findByOptional(...args);
-  }
-  _findByOptional<T extends Query>(
-    this: T,
-    ...args: WhereArg<T>[]
-  ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return addWhere(this, args).takeOptional();
+    return _queryFindByOptional(this.clone(), args);
   }
 
   /**
@@ -518,11 +506,9 @@ export class QueryMethods<ColumnTypes> {
    * @param schema - a name of the database schema to use
    */
   withSchema<T extends Query>(this: T, schema: string): T {
-    return this.clone()._withSchema(schema);
-  }
-  _withSchema<T extends Query>(this: T, schema: string): T {
-    this.q.schema = schema;
-    return this;
+    const q = this.clone();
+    q.q.schema = schema;
+    return q;
   }
 
   /**
@@ -556,10 +542,7 @@ export class QueryMethods<ColumnTypes> {
    * @param columns - column names or a raw SQL
    */
   group<T extends Query>(this: T, ...columns: GroupArg<T>[]): T {
-    return this.clone()._group(...columns);
-  }
-  _group<T extends Query>(this: T, ...columns: GroupArg<T>[]): T {
-    return pushQueryArray(this, 'group', columns);
+    return pushQueryArray(this.clone(), 'group', columns);
   }
 
   /**
@@ -592,13 +575,11 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     arg: W,
   ): WindowResult<T, W> {
-    return this.clone()._window(arg);
-  }
-  _window<T extends Query, W extends WindowArg<T>>(
-    this: T,
-    arg: W,
-  ): WindowResult<T, W> {
-    return pushQueryValue(this, 'window', arg) as unknown as WindowResult<T, W>;
+    return pushQueryValue(
+      this.clone(),
+      'window',
+      arg,
+    ) as unknown as WindowResult<T, W>;
   }
 
   wrap<
@@ -607,13 +588,6 @@ export class QueryMethods<ColumnTypes> {
     As extends string = 't',
   >(this: T, query: Q, as?: As): SetQueryTableAlias<Q, As> {
     return queryWrap(this, query.clone(), as);
-  }
-  _wrap<
-    T extends WrapQuerySelf,
-    Q extends WrapQueryArg,
-    As extends string = 't',
-  >(this: T, query: Q, as: As = 't' as As): SetQueryTableAlias<Q, As> {
-    return queryWrap(this, query, as);
   }
 
   /**
@@ -657,13 +631,10 @@ export class QueryMethods<ColumnTypes> {
    * @param args - column name(s), raw SQL, or an object with column names and sort directions.
    */
   order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
-    return this.clone()._order(...args);
-  }
-  _order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
     if (Array.isArray(args[0])) {
-      return this._order(new RawSQL(args as TemplateLiteralArgs));
+      return this.order(new RawSQL(args as TemplateLiteralArgs));
     }
-    return pushQueryArray(this, 'order', args);
+    return pushQueryArray(this.clone(), 'order', args);
   }
 
   /**
@@ -676,11 +647,9 @@ export class QueryMethods<ColumnTypes> {
    * @param arg - limit number
    */
   limit<T extends Query>(this: T, arg: number | undefined): T {
-    return this.clone()._limit(arg);
-  }
-  _limit<T extends Query>(this: T, arg: number | undefined): T {
-    (this.q as SelectQueryData).limit = arg;
-    return this;
+    const q = this.clone();
+    (q.q as SelectQueryData).limit = arg;
+    return q;
   }
 
   /**
@@ -693,11 +662,9 @@ export class QueryMethods<ColumnTypes> {
    * @param arg - offset number
    */
   offset<T extends Query>(this: T, arg: number | undefined): T {
-    return this.clone()._offset(arg);
-  }
-  _offset<T extends Query>(this: T, arg: number | undefined): T {
-    (this.q as SelectQueryData).offset = arg;
-    return this;
+    const q = this.clone();
+    (q.q as SelectQueryData).offset = arg;
+    return q;
   }
 
   /**
@@ -720,13 +687,8 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): TruncateResult<T> {
-    return this.clone()._truncate(options);
-  }
-  _truncate<T extends Query>(
-    this: T,
-    options?: { restartIdentity?: boolean; cascade?: boolean },
-  ): TruncateResult<T> {
-    const q = this.q as TruncateQueryData;
+    const query = this.clone();
+    const q = query.q as TruncateQueryData;
     q.type = 'truncate';
     if (options?.restartIdentity) {
       q.restartIdentity = true;
@@ -734,7 +696,7 @@ export class QueryMethods<ColumnTypes> {
     if (options?.cascade) {
       q.cascade = true;
     }
-    return this._exec() as TruncateResult<T>;
+    return _queryExec(query) as TruncateResult<T>;
   }
 
   /**
@@ -906,7 +868,6 @@ applyMixins(QueryMethods, [
   Delete,
   Transaction,
   For,
-  ColumnInfoMethods,
   Where,
   SearchMethods,
   Clear,
@@ -918,7 +879,6 @@ applyMixins(QueryMethods, [
   QueryGet,
   MergeQueryMethods,
   RawSqlMethods,
-  CopyMethods,
   TransformMethods,
   ScopeMethods,
   SoftDeleteMethods,

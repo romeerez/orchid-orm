@@ -15,3 +15,5 @@ export * from './common/fn';
 export * from './query/queryBase';
 export * from './testTransaction';
 export * from './modules/computed';
+export * from './modules/getColumnInfo';
+export * from './modules/copyTableData';

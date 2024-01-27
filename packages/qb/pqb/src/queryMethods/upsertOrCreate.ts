@@ -4,7 +4,7 @@ import {
   SetQueryReturnsOne,
   SetQueryReturnsVoid,
 } from '../query/query';
-import { UpdateData } from './update';
+import { _queryUpdate, UpdateData } from './update';
 import { CreateData } from './create';
 import { WhereResult } from './where/where';
 import { MoreThanOneRowError } from '../errors';
@@ -192,12 +192,8 @@ export class QueryUpsertOrCreate {
     this: T,
     data: UpsertArg<T, Update>,
   ): UpsertResult<T> {
-    return this.clone()._upsert(data);
-  }
-  _upsert<T extends UpsertThis, Update extends UpdateData<T>>(
-    this: T,
-    data: UpsertArg<T, Update>,
-  ): UpsertResult<T> {
+    const q = this.clone();
+
     let updateData;
     let mergeData;
     if ('data' in data) {
@@ -207,12 +203,10 @@ export class QueryUpsertOrCreate {
     }
 
     if (!isObjectEmpty(updateData)) {
-      this._update<WhereResult<Query>>(
-        updateData as UpdateData<WhereResult<Query>>,
-      );
+      _queryUpdate(q, updateData as UpdateData<WhereResult<Query>>);
     }
 
-    return orCreate(this, data.create, updateData, mergeData);
+    return orCreate(q, data.create, updateData, mergeData);
   }
 
   /**
@@ -250,12 +244,6 @@ export class QueryUpsertOrCreate {
     this: T,
     data: OrCreateArg<T>,
   ): UpsertResult<T> {
-    return this.clone()._orCreate(data);
-  }
-  _orCreate<T extends UpsertThis>(
-    this: T,
-    data: OrCreateArg<T>,
-  ): UpsertResult<T> {
-    return orCreate(this, data);
+    return orCreate(this.clone(), data);
   }
 }

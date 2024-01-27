@@ -71,17 +71,15 @@ export class Having {
    * @param args - raw SQL template string or one or multiple callbacks returning a boolean expression
    */
   having<T extends Query>(this: T, ...args: HavingArgs<T>): T {
-    return this.clone()._having(...args);
-  }
-  _having<T extends Query>(this: T, ...args: HavingArgs<T>): T {
+    const q = this.clone();
     return pushQueryValue(
-      this,
+      q,
       'having',
       'raw' in args[0]
         ? args
         : args.map(
             (arg) =>
-              ((arg as HavingArgFn<T>)(this) as unknown as { q: QueryData }).q
+              ((arg as HavingArgFn<T>)(q) as unknown as { q: QueryData }).q
                 .expr,
           ),
     );

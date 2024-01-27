@@ -489,6 +489,30 @@ const maybeUnNameColumn = (column: QueryColumn, isSubQuery?: boolean) => {
     : column;
 };
 
+export function _querySelect<T extends Query, Columns extends SelectArg<T>[]>(
+  q: T,
+  args: Columns,
+): SelectResult<T, Columns>;
+export function _querySelect<
+  T extends Query,
+  Columns extends SelectArg<T>[],
+  Obj extends SelectAsArg<T>,
+>(
+  q: T,
+  args: [...columns: Columns, obj: Obj],
+): SelectResultWithObj<T, Columns, Obj>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function _querySelect(q: Query, args: any[]) {
+  if (!args.length) {
+    return q;
+  }
+
+  const as = q.q.as || q.table;
+  const selectArgs = args.map((item) => processSelectArg(q, as, item));
+
+  return pushQueryArray(q, 'select', selectArgs);
+}
+
 export class Select {
   /**
    * Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
@@ -560,31 +584,7 @@ export class Select {
   ): SelectResultWithObj<T, Columns, Obj>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   select(this: Query, ...args: any[]) {
-    return this.clone()._select(...args);
-  }
-
-  _select<T extends Query, Columns extends SelectArg<T>[]>(
-    this: T,
-    ...args: Columns
-  ): SelectResult<T, Columns>;
-  _select<
-    T extends Query,
-    Columns extends SelectArg<T>[],
-    Obj extends SelectAsArg<T>,
-  >(
-    this: T,
-    ...args: [...columns: Columns, obj: Obj]
-  ): SelectResultWithObj<T, Columns, Obj>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _select(this: Query, ...args: any[]) {
-    if (!args.length) {
-      return this;
-    }
-
-    const as = this.q.as || this.table;
-    const selectArgs = args.map((item) => processSelectArg(this, as, item));
-
-    return pushQueryArray(this, 'select', selectArgs);
+    return _querySelect(this.clone(), args);
   }
 
   /**
@@ -604,11 +604,8 @@ export class Select {
    * ```
    */
   selectAll<T extends Query>(this: T): SelectResult<T, ['*']> {
-    return this.clone()._selectAll();
-  }
-
-  _selectAll<T extends Query>(this: T): SelectResult<T, ['*']> {
-    this.q.select = ['*'];
-    return this as unknown as SelectResult<T, ['*']>;
+    const q = this.clone();
+    q.q.select = ['*'];
+    return q as unknown as SelectResult<T, ['*']>;
   }
 }

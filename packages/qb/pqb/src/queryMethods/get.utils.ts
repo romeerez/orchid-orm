@@ -106,16 +106,16 @@ const _get = <
   ) as unknown as GetResult<T, Arg> & GetResultOptional<T, Arg>;
 };
 
-export function queryGet<T extends QueryGetSelf, Arg extends GetArg<T>>(
+export function _queryGet<T extends QueryGetSelf, Arg extends GetArg<T>>(
   self: T,
   arg: Arg,
 ): GetResult<T, Arg> {
   return _get(self, 'valueOrThrow', arg);
 }
 
-export function queryGetOptional<T extends QueryGetSelf, Arg extends GetArg<T>>(
-  self: T,
-  arg: Arg,
-): GetResultOptional<T, Arg> {
+export function _queryGetOptional<
+  T extends QueryGetSelf,
+  Arg extends GetArg<T>,
+>(self: T, arg: Arg): GetResultOptional<T, Arg> {
   return _get(self, 'value', arg);
 }

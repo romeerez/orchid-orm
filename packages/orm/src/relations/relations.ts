@@ -3,6 +3,10 @@ import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
 import { DbTable, Table, TableClass } from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
+  _queryAll,
+  _queryTake,
+  _queryTakeOptional,
+  _queryWhere,
   CreateData,
   getQueryAs,
   Query,
@@ -306,9 +310,9 @@ const applyRelation = (
 
   if (data.returns === 'one') {
     if (relation.options.required) {
-      query._take();
+      _queryTake(query);
     } else {
-      query._takeOptional();
+      _queryTakeOptional(query);
     }
 
     query.q.returnsOne = true;
@@ -366,15 +370,15 @@ const makeRelationQuery = (
         query = toTable;
         query.q.isSubQuery = true;
       } else {
-        query = toTable
-          // Relation query returns a single record in case of belongsTo or hasOne,
-          // but when called as a query chain like `q.user.profile` it should return many.
-          ._all()
-          ._where({
+        // Relation query returns a single record in case of belongsTo or hasOne,
+        // but when called as a query chain like `q.user.profile` it should return many.
+        query = _queryWhere(_queryAll(toTable), [
+          {
             EXISTS: {
               args: [data.reverseJoin(this, toTable)],
             },
-          });
+          },
+        ]);
       }
 
       if (this.q.relChain) {

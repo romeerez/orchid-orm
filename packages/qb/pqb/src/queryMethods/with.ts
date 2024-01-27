@@ -137,13 +137,8 @@ export class With {
     Args extends WithArgs,
     Shape extends QueryColumns = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
-    return this.clone()._with<T, Args, Shape>(...args);
-  }
-  _with<
-    T extends Query,
-    Args extends WithArgs,
-    Shape extends QueryColumns = WithShape<Args>,
-  >(this: T, ...args: Args): WithResult<T, Args, Shape> {
+    const q = this.clone();
+
     let options =
       (args.length === 3 && !isExpression(args[2])) || args.length === 4
         ? (args[1] as WithArgsOptions | WithOptions)
@@ -154,7 +149,7 @@ export class With {
       | ((qb: Db) => Query)
       | Expression;
 
-    const query = typeof last === 'function' ? last(this.queryBuilder) : last;
+    const query = typeof last === 'function' ? last(q.queryBuilder) : last;
 
     const shape =
       args.length === 4
@@ -170,10 +165,10 @@ export class With {
       };
     }
 
-    pushQueryValue(this, 'with', [args[0], options || emptyObject, query]);
+    pushQueryValue(q, 'with', [args[0], options || emptyObject, query]);
 
     return setQueryObjectValue(
-      this,
+      q,
       'withShapes',
       args[0],
       shape,

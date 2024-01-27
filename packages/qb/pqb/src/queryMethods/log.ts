@@ -114,11 +114,8 @@ export const logParamToLogObject = (
 
 export class QueryLog {
   log<T extends Query>(this: T, log = true): T {
-    return this.clone()._log(log);
-  }
-
-  _log<T extends Query>(this: T, log = true): T {
-    this.q.log = logParamToLogObject(this.q.logger, log);
-    return this;
+    const q = this.clone();
+    q.q.log = logParamToLogObject(q.q.logger, log);
+    return q;
   }
 }

@@ -3,8 +3,8 @@ import {
   GetArg,
   GetResult,
   GetResultOptional,
-  queryGet,
-  queryGetOptional,
+  _queryGet,
+  _queryGetOptional,
   QueryGetSelf,
 } from './get.utils';
 
@@ -29,14 +29,7 @@ export class QueryGet {
     this: T,
     arg: Arg,
   ): GetResult<T, Arg> {
-    return queryGet(this.clone(), arg);
-  }
-
-  _get<T extends Query, Arg extends GetArg<T>>(
-    this: T,
-    arg: Arg,
-  ): GetResult<T, Arg> {
-    return queryGet(this, arg);
+    return _queryGet(this.clone(), arg);
   }
 
   /**
@@ -52,13 +45,6 @@ export class QueryGet {
     this: T,
     arg: Arg,
   ): GetResultOptional<T, Arg> {
-    return queryGetOptional(this.clone(), arg);
-  }
-
-  _getOptional<T extends QueryGetSelf, Arg extends GetArg<T>>(
-    this: T,
-    arg: Arg,
-  ): GetResultOptional<T, Arg> {
-    return queryGetOptional(this, arg);
+    return _queryGetOptional(this.clone(), arg);
   }
 }
