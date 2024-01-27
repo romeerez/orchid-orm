@@ -1,5 +1,11 @@
 # pqb
 
+## 0.22.1
+
+### Patch Changes
+
+- cbe9ad6b: Remove mutative (starting with \_) query methods to make it a bit more lightweight for TS checker
+
 ## 0.22.0
 
 ### Minor Changes
