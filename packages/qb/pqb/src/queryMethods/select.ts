@@ -56,10 +56,7 @@ type SelectAsValue<T extends Pick<Query, 'selectable' | 'relations'>> =
 
 type SelectSubQueryArg<T extends Pick<Query, 'relations'>> = {
   [K in keyof T]: K extends keyof T['relations']
-    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      T[K] extends (...args: any) => any
-      ? ReturnType<T[K]>
-      : T[K]
+    ? T['relations'][K]['relationConfig']['methodQuery']
     : T[K];
 };
 
@@ -202,9 +199,9 @@ export type SelectSubQueryResult<Arg extends QueryBase> = QueryReturnsAll<
   ? Arg['result']['value']
   : Arg['returnType'] extends 'pluck'
   ? ColumnsShapeToPluck<Arg['result']>
-  : Arg extends { relationConfig: { required: true } }
-  ? ColumnsShapeToObject<Arg['result']>
-  : ColumnsShapeToNullableObject<Arg['result']>;
+  : Arg['returnType'] extends 'one'
+  ? ColumnsShapeToNullableObject<Arg['result']>
+  : ColumnsShapeToObject<Arg['result']>;
 
 // add a parser for a raw expression column
 // is used by .select and .get methods

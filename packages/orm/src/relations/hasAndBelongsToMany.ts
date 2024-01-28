@@ -18,6 +18,8 @@ import {
   _queryWhere,
   CreateCtx,
   CreateData,
+  CreateMethodsNames,
+  DeleteMethodsNames,
   getQueryAs,
   NotFoundError,
   OrchidOrmInternalError,
@@ -38,6 +40,7 @@ import {
   ColumnTypeBase,
   EmptyObject,
   MaybeArray,
+  StringKey,
 } from 'orchid-core';
 import {
   hasRelationHandleCreate,
@@ -83,18 +86,38 @@ export type HasAndBelongsToManyOptions<
 export type HasAndBelongsToManyInfo<
   T extends Table,
   Relation extends HasAndBelongsToMany,
-  K extends string,
+  Name extends string,
+  TableQuery extends Query,
   TC extends TableClass = ReturnType<Relation['fn']>,
-  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,
+  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, Name>,
+  ChainedQuery extends Query = {
+    [K in keyof TableQuery]: K extends 'meta'
+      ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
+          as: StringKey<Name>;
+          defaults: TableQuery['meta']['defaults'];
+          hasWhere: true;
+        }
+      : K extends 'join'
+      ? // INNER JOIN the current relation instead of the default OUTER behavior
+        <T extends Query>(this: T) => T
+      : K extends CreateMethodsNames
+      ? TableQuery[K]
+      : K extends DeleteMethodsNames
+      ? TableQuery[K]
+      : K extends keyof TableQuery
+      ? TableQuery[K]
+      : never;
+  },
 > = {
   table: Q;
   query: Q;
+  chainedQuery: ChainedQuery;
+  methodQuery: ChainedQuery;
   joinQuery: RelationJoinQuery;
   one: false;
-  required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {
-    [P in K]?: RelationToManyDataForCreate<{
+    [P in Name]?: RelationToManyDataForCreate<{
       nestedCreateQuery: Q;
       table: Q;
     }>;
@@ -119,7 +142,7 @@ export type HasAndBelongsToManyInfo<
 
   params: Relation['options'] extends { columns: string[] }
     ? {
-        [K in Relation['options']['columns'][number]]: T['columns'][K]['type'];
+        [Name in Relation['options']['columns'][number]]: T['columns'][Name]['type'];
       }
     : Relation['options'] extends { primaryKey: string }
     ? Record<
@@ -127,9 +150,6 @@ export type HasAndBelongsToManyInfo<
         T['columns'][Relation['options']['primaryKey']]['type']
       >
     : never;
-  populate: EmptyObject;
-  chainedCreate: true;
-  chainedDelete: true;
 };
 
 type State = {

@@ -10,6 +10,8 @@ import {
   _queryUpdate,
   CreateCtx,
   CreateData,
+  CreateMethodsNames,
+  DeleteMethodsNames,
   InsertQueryData,
   isQueryReturnsAll,
   pushQueryOn,
@@ -20,6 +22,8 @@ import {
   RelationJoinQuery,
   SelectQueryData,
   setQueryObjectValue,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
   SetQueryTableAlias,
   UpdateArg,
   UpdateCtx,
@@ -47,6 +51,7 @@ import {
   ColumnsShapeBase,
   emptyArray,
   EmptyObject,
+  StringKey,
 } from 'orchid-core';
 import {
   RelationCommonOptions,
@@ -76,7 +81,8 @@ export type BelongsToOptions<
 export type BelongsToInfo<
   T extends Table,
   Relation extends BelongsTo,
-  K extends string,
+  Name extends string,
+  TableQuery extends Query,
   FK extends string = Relation['options'] extends RelationRefsOptions
     ? Relation['options']['columns'][number]
     : Relation['options'] extends RelationKeysOptions
@@ -84,25 +90,44 @@ export type BelongsToInfo<
     : never,
   Q extends QueryWithTable = SetQueryTableAlias<
     DbTable<ReturnType<Relation['fn']>>,
-    K
+    Name
   >,
   DataForCreate = RelationToOneDataForCreate<{
     nestedCreateQuery: Q;
     table: Q;
   }>,
   Required = Relation['options']['required'] extends true ? true : false,
+  ChainedQuery extends Query = {
+    [K in keyof TableQuery]: K extends 'meta'
+      ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
+          as: StringKey<Name>;
+          defaults: TableQuery['meta']['defaults'];
+          hasWhere: true;
+        }
+      : K extends 'join'
+      ? // INNER JOIN the current relation instead of the default OUTER behavior
+        <T extends Query>(this: T) => T
+      : K extends CreateMethodsNames | DeleteMethodsNames
+      ? never
+      : K extends keyof TableQuery
+      ? TableQuery[K]
+      : never;
+  },
 > = {
   table: Q;
   query: Q;
+  chainedQuery: ChainedQuery;
+  methodQuery: Required extends true
+    ? SetQueryReturnsOne<ChainedQuery>
+    : SetQueryReturnsOneOptional<ChainedQuery>;
   joinQuery: RelationJoinQuery;
   one: true;
-  required: Required;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: { [L in FK]: T['columns'][L]['inputType'] };
     nested: Required extends true
-      ? { [Key in K]: DataForCreate }
-      : { [Key in K]?: DataForCreate };
+      ? { [Key in Name]: DataForCreate }
+      : { [Key in Name]?: DataForCreate };
   };
   optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:
@@ -128,10 +153,7 @@ export type BelongsToInfo<
     };
   };
 
-  params: { [K in FK]: T['columns'][FK]['type'] };
-  populate: EmptyObject;
-  chainedCreate: false;
-  chainedDelete: false;
+  params: { [Name in FK]: T['columns'][FK]['type'] };
 };
 
 type State = {
