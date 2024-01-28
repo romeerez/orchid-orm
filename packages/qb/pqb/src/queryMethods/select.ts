@@ -86,7 +86,7 @@ type SelectResult<
   Data = GetQueryResult<T['returnType'], Result>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? SetMetaHasSelect<T>
+    ? T['meta'] & MetaHasSelect
     : K extends 'result'
     ? Result
     : K extends 'then'
@@ -125,7 +125,7 @@ type SelectResultWithObj<
   Data = GetQueryResult<T['returnType'], Result>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? SetMetaHasSelect<T>
+    ? T['meta'] & MetaHasSelect
     : K extends 'result'
     ? Result
     : K extends 'then'
@@ -142,14 +142,9 @@ type PrevResultKeys<T extends Pick<Query, 'meta' | 'result'>> =
   T['meta']['hasSelect'] extends true ? keyof T['result'] : never;
 
 // Merge { hasSelect: true } into 'meta' if it's not true yet.
-type SetMetaHasSelect<T extends Pick<Query, 'meta'>> =
-  T['meta']['hasSelect'] extends true
-    ? T['meta']
-    : {
-        [K in keyof T['meta'] | 'hasSelect']: K extends 'hasSelect'
-          ? true
-          : T['meta'][K];
-      };
+type MetaHasSelect = {
+  hasSelect: true;
+};
 
 // Add new 'selectable' types based on the select object argument.
 type SelectAsSelectable<
