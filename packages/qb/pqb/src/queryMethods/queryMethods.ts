@@ -38,7 +38,13 @@ import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
-import { _queryWhere, Where, WhereArg, WhereResult } from './where/where';
+import {
+  _queryWhere,
+  Where,
+  WhereArg,
+  WhereQueryBase,
+  WhereResult,
+} from './where/where';
 import { SearchMethods } from './search';
 import { Clear } from './clear';
 import { Having } from './having';
@@ -59,7 +65,7 @@ import {
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { AsMethods } from './as';
-import { QueryBase } from '../query/queryBase';
+import { CloneSelfKeys, QueryBase } from '../query/queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { RawSQL } from '../sql/rawSql';
@@ -88,8 +94,13 @@ type WindowResult<T extends Query, W extends WindowArg<T>> = T & {
   windows: Record<keyof W, true>;
 };
 
+export type OrderArgSelf = Pick<
+  Query,
+  'selectable' | 'meta' | 'result' | 'clone' | 'q' | 'baseQuery'
+>;
+
 export type OrderArg<
-  T extends Pick<Query, 'selectable' | 'meta' | 'result'>,
+  T extends OrderArgSelf,
   TsQuery extends PropertyKey = string | undefined extends T['meta']['tsQuery']
     ? never
     : Exclude<T['meta']['tsQuery'], undefined>,
@@ -110,7 +121,9 @@ export type OrderArg<
     }
   | Expression;
 
-export type OrderArgs<T extends Query> = OrderArg<T>[] | TemplateLiteralArgs;
+export type OrderArgs<T extends OrderArgSelf> =
+  | OrderArg<T>[]
+  | TemplateLiteralArgs;
 
 export type GroupArg<T extends Query> =
   | {
@@ -122,7 +135,7 @@ export type GroupArg<T extends Query> =
     }[keyof T['result']]
   | Expression;
 
-type FindArgs<T extends Query> =
+type FindArgs<T extends Pick<Query, 'shape' | 'singlePrimaryKey'>> =
   | [T['shape'][T['singlePrimaryKey']]['queryType'] | Expression]
   | TemplateLiteralArgs;
 
@@ -205,12 +218,14 @@ export const _queryAll = <T extends Query>(q: T): SetQueryReturnsAll<T> => {
   return q as unknown as SetQueryReturnsAll<T>;
 };
 
-export const _queryTake = <T extends Query>(q: T): SetQueryReturnsOne<T> => {
+export const _queryTake = <T extends Pick<Query, 'result' | 'q'>>(
+  q: T,
+): SetQueryReturnsOne<T> => {
   q.q.returnType = 'oneOrThrow';
   return q as unknown as SetQueryReturnsOne<T>;
 };
 
-export const _queryTakeOptional = <T extends Query>(
+export const _queryTakeOptional = <T extends Pick<Query, 'result' | 'q'>>(
   q: T,
 ): SetQueryReturnsOneOptional<T> => {
   q.q.returnType = 'one';
@@ -222,14 +237,14 @@ export const _queryExec = <T extends Query>(q: T) => {
   return q as unknown as SetQueryReturnsVoid<T>;
 };
 
-export const _queryFindBy = <T extends Query>(
+export const _queryFindBy = <T extends WhereQueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): SetQueryReturnsOne<WhereResult<T>> => {
   return _queryTake(_queryWhere(q, args));
 };
 
-export const _queryFindByOptional = <T extends Query>(
+export const _queryFindByOptional = <T extends WhereQueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): SetQueryReturnsOneOptional<WhereResult<T>> => {
@@ -310,14 +325,14 @@ export class QueryMethods<ColumnTypes> {
    * ```
    * @param select - column name or a raw SQL
    */
-  pluck<T extends Query, S extends SelectableOrExpression<T>>(
-    this: T,
-    select: S,
-  ): SetQueryReturnsPluck<T, S> {
+  pluck<
+    T extends Pick<Query, 'selectable' | 'table' | CloneSelfKeys>,
+    S extends SelectableOrExpression<T>,
+  >(this: T, select: S): SetQueryReturnsPluck<T, S> {
     const q = this.clone();
     q.q.returnType = 'pluck';
     (q.q as SelectQueryData).select = [select as SelectItem];
-    addParserForSelectItem(q, q.q.as || q.table, 'pluck', select);
+    addParserForSelectItem(q as any, q.q.as || q.table, 'pluck', select);
     return q as unknown as SetQueryReturnsPluck<T, S>;
   }
 
@@ -403,16 +418,18 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - primary key value to find by, or a raw SQL
    */
-  find<T extends Query>(
-    this: T,
-    ...args: FindArgs<T>
-  ): SetQueryReturnsOne<WhereResult<T>> {
-    const [value] = args;
+  find<
+    T extends Pick<
+      Query,
+      'shape' | 'result' | 'singlePrimaryKey' | CloneSelfKeys
+    >,
+  >(this: T, ...args: FindArgs<T>): SetQueryReturnsOne<WhereResult<T>> {
+    let [value] = args;
     if (Array.isArray(value)) {
-      return this.find(new RawSQL(args as TemplateLiteralArgs));
+      value = new RawSQL(args as TemplateLiteralArgs);
     }
 
-    const q = this.clone();
+    const q = this.clone() as unknown as Query;
 
     if (value === null || value === undefined) {
       throw new OrchidOrmInternalError(
@@ -425,9 +442,9 @@ export class QueryMethods<ColumnTypes> {
       _queryWhere(q, [
         {
           [q.singlePrimaryKey]: value,
-        } as WhereArg<T>,
+        } as WhereArg<Query>,
       ]),
-    );
+    ) as SetQueryReturnsOne<WhereResult<T>>;
   }
 
   /**
@@ -461,7 +478,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - `where` conditions
    */
-  findBy<T extends Query>(
+  findBy<T extends WhereQueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOne<WhereResult<T>> {
@@ -480,7 +497,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - `where` conditions
    */
-  findByOptional<T extends Query>(
+  findByOptional<T extends WhereQueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
@@ -630,9 +647,13 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - column name(s), raw SQL, or an object with column names and sort directions.
    */
-  order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
+  order<T extends OrderArgSelf>(this: T, ...args: OrderArgs<T>): T {
     if (Array.isArray(args[0])) {
-      return this.order(new RawSQL(args as TemplateLiteralArgs));
+      return pushQueryValue(
+        this.clone(),
+        'order',
+        new RawSQL(args as TemplateLiteralArgs),
+      );
     }
     return pushQueryArray(this.clone(), 'order', args);
   }
@@ -646,7 +667,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param arg - limit number
    */
-  limit<T extends Query>(this: T, arg: number | undefined): T {
+  limit<T extends Pick<Query, CloneSelfKeys>>(
+    this: T,
+    arg: number | undefined,
+  ): T {
     const q = this.clone();
     (q.q as SelectQueryData).limit = arg;
     return q;
@@ -661,7 +685,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param arg - offset number
    */
-  offset<T extends Query>(this: T, arg: number | undefined): T {
+  offset<T extends Pick<Query, CloneSelfKeys>>(
+    this: T,
+    arg: number | undefined,
+  ): T {
     const q = this.clone();
     (q.q as SelectQueryData).offset = arg;
     return q;

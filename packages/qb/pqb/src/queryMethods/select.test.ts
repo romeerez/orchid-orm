@@ -964,7 +964,7 @@ describe('select', () => {
 
       it('should parse subquery item columns', async () => {
         const q = User.select({
-          user: () => User.take(),
+          user: () => User.takeOptional(),
         });
 
         assertType<Awaited<typeof q>, { user: UserRecord | null }[]>();

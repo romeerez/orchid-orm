@@ -116,7 +116,7 @@ export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
 };
 
 // After applying `where`, attach `hasWhere: true` to query meta to allow updating and deleting.
-export type WhereResult<T extends QueryBase> = T & {
+export type WhereResult<T> = T & {
   meta: {
     hasWhere: true;
   };

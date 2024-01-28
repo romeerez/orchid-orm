@@ -28,6 +28,17 @@ import { JsonModifiers } from './json';
 import { RawSQL } from '../sql/rawSql';
 import { resolveSubQueryCallback } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
+import { CloneSelfKeys } from '../query/queryBase';
+
+export type UpdateSelf = Pick<
+  Query,
+  | 'meta'
+  | 'inputType'
+  | 'selectable'
+  | 'relations'
+  | keyof JsonModifiers
+  | CloneSelfKeys
+>;
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -37,7 +48,7 @@ import { OrchidOrmInternalError } from '../errors';
 // or a callback with JSON methods.
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
-export type UpdateData<T extends Query> = {
+export type UpdateData<T extends UpdateSelf> = {
   [K in keyof T['inputType']]?: UpdateColumn<T, K>;
 } & {
   [K in keyof T['relations']]?: UpdateRelationData<
@@ -50,7 +61,7 @@ export type UpdateData<T extends Query> = {
 // The column value may be a specific value, or raw SQL, or a query returning a single value,
 // or a callback with a relation query that is returning a single value,
 // or a callback with JSON methods.
-type UpdateColumn<T extends Query, Key extends keyof T['inputType']> =
+type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | T['inputType'][Key]
   | Expression
   | {
@@ -68,7 +79,7 @@ type UpdateColumn<T extends Query, Key extends keyof T['inputType']> =
 
 // Add relation operations to the update argument.
 type UpdateRelationData<
-  T extends Query,
+  T extends UpdateSelf,
   Rel extends RelationConfigBase,
 > = Rel['one'] extends true
   ?
@@ -83,25 +94,25 @@ type UpdateRelationData<
 
 // Type of argument for `update`.
 // not available when there are no conditions on the query.
-export type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
+export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
   : never;
 
 // Type of argument for `updateRaw`.
 // not available when there are no conditions on the query.
-type UpdateRawArgs<T extends Query> = T['meta']['hasWhere'] extends true
+type UpdateRawArgs<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
   ? [sql: Expression] | TemplateLiteralArgs
   : never;
 
 // `update` and `updateOrThrow` methods output type.
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
-type UpdateResult<T extends Query> = T['meta']['hasSelect'] extends true
+type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
   ? SetQueryKind<T, 'update'>
   : SetQueryReturnsRowCount<SetQueryKind<T, 'update'>>;
 
 // `increment` and `decrement` methods argument type.
 // Accepts a column name to change, or an object with column names and number values to increment or decrement with.
-type ChangeCountArg<T extends Query> =
+type ChangeCountArg<T extends Pick<Query, 'shape'>> =
   | keyof T['shape']
   | Partial<Record<keyof T['shape'], number>>;
 
@@ -114,7 +125,7 @@ export type UpdateCtx = {
 
 // apply `increment` or a `decrement`,
 // mutates the `queryData` of a query.
-export const _queryChangeCounter = <T extends Query>(
+export const _queryChangeCounter = <T extends UpdateSelf>(
   self: T,
   op: string,
   data: ChangeCountArg<T>,
@@ -146,7 +157,7 @@ export const _queryChangeCounter = <T extends Query>(
 };
 
 // sets query type, `returnType`, casts type from Query to UpdateResult
-const update = <T extends Query>(q: T): UpdateResult<T> => {
+const update = <T extends UpdateSelf>(q: T): UpdateResult<T> => {
   q.q.type = 'update';
 
   if (!q.q.select) {
@@ -158,7 +169,7 @@ const update = <T extends Query>(q: T): UpdateResult<T> => {
   return q as unknown as UpdateResult<T>;
 };
 
-export const _queryUpdate = <T extends Query>(
+export const _queryUpdate = <T extends UpdateSelf>(
   query: T,
   arg: UpdateArg<T>,
 ): UpdateResult<T> => {
@@ -224,7 +235,7 @@ export const _queryUpdate = <T extends Query>(
 
       if (ctx.updateData) {
         const t = query.baseQuery.clone();
-        const keys = query.primaryKeys;
+        const keys = (query as unknown as Query).primaryKeys;
 
         (
           _queryWhereIn as unknown as (
@@ -253,7 +264,7 @@ export const _queryUpdate = <T extends Query>(
   return update(query);
 };
 
-export const _queryUpdateRaw = <T extends Query>(
+export const _queryUpdateRaw = <T extends UpdateSelf>(
   q: T,
   sql: Expression,
 ): UpdateResult<T> => {
@@ -264,7 +275,7 @@ export const _queryUpdateRaw = <T extends Query>(
   return update(q);
 };
 
-export const _queryUpdateOrThrow = <T extends Query>(
+export const _queryUpdateOrThrow = <T extends UpdateSelf>(
   q: T,
   arg: UpdateArg<T>,
 ): UpdateResult<T> => {
@@ -433,7 +444,7 @@ export class Update {
    *
    * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
    */
-  update<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
+  update<T extends UpdateSelf>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     return _queryUpdate(this.clone(), arg);
   }
 
@@ -456,7 +467,7 @@ export class Update {
    * ```
    * @param args - raw SQL via a template string or by using a `sql` method
    */
-  updateRaw<T extends Query>(
+  updateRaw<T extends UpdateSelf>(
     this: T,
     ...args: UpdateRawArgs<T>
   ): UpdateResult<T> {
@@ -496,7 +507,10 @@ export class Update {
    *
    * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
    */
-  updateOrThrow<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
+  updateOrThrow<T extends UpdateSelf>(
+    this: T,
+    arg: UpdateArg<T>,
+  ): UpdateResult<T> {
     return _queryUpdateOrThrow(this.clone(), arg);
   }
 
@@ -538,7 +552,7 @@ export class Update {
    *
    * @param data - name of the column to increment, or an object with columns and values to add
    */
-  increment<T extends Query>(
+  increment<T extends UpdateSelf>(
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
@@ -583,7 +597,7 @@ export class Update {
    *
    * @param data - name of the column to decrement, or an object with columns and values to subtract
    */
-  decrement<T extends Query>(
+  decrement<T extends UpdateSelf>(
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {

@@ -1,6 +1,5 @@
 import { ColumnType } from './columnType';
-import { Query } from '../query/query';
-import { CreateCtx, UpdateCtx } from '../queryMethods';
+import { CreateCtx, CreateSelf, UpdateCtx, UpdateSelf } from '../queryMethods';
 import { Operators, OperatorsAny } from './operators';
 import { ColumnSchemaConfig } from 'orchid-core';
 
@@ -23,11 +22,11 @@ export abstract class VirtualColumn<
   }
 
   create?(
-    q: Query,
+    q: CreateSelf,
     ctx: CreateCtx,
     item: Record<string, unknown>,
     rowIndex: number,
   ): void;
 
-  update?(q: Query, ctx: UpdateCtx, set: Record<string, unknown>): void;
+  update?(q: UpdateSelf, ctx: UpdateCtx, set: Record<string, unknown>): void;
 }

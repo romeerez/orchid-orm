@@ -1,17 +1,20 @@
 import { Query, SetQueryKind, SetQueryReturnsRowCount } from '../query/query';
 import { throwIfNoWhere } from '../query/queryUtils';
+import { CloneSelfKeys } from '../query/queryBase';
+
+export type DeleteSelf = Pick<Query, 'meta' | 'result' | CloneSelfKeys>;
 
 export type DeleteMethodsNames = 'delete';
 
-export type DeleteArgs<T extends Query> = T['meta']['hasWhere'] extends true
-  ? []
-  : [never];
+export type DeleteArgs<T extends DeleteSelf> =
+  T['meta']['hasWhere'] extends true ? [] : [never];
 
-export type DeleteResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? SetQueryKind<T, 'delete'>
-  : SetQueryReturnsRowCount<SetQueryKind<T, 'delete'>>;
+export type DeleteResult<T extends DeleteSelf> =
+  T['meta']['hasSelect'] extends true
+    ? SetQueryKind<T, 'delete'>
+    : SetQueryReturnsRowCount<SetQueryKind<T, 'delete'>>;
 
-export const _queryDelete = <T extends Query>(q: T): DeleteResult<T> => {
+export const _queryDelete = <T extends DeleteSelf>(q: T): DeleteResult<T> => {
   if (!q.q.select) {
     if (q.q.returnType === 'oneOrThrow' || q.q.returnType === 'valueOrThrow') {
       q.q.throwOnNotFound = true;
@@ -75,7 +78,10 @@ export class Delete {
    * ```
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  delete<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
+  delete<T extends DeleteSelf>(
+    this: T,
+    ..._args: DeleteArgs<T>
+  ): DeleteResult<T> {
     return _queryDelete(this.clone());
   }
 }

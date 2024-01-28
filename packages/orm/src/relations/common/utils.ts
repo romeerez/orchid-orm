@@ -85,7 +85,7 @@ export const getSourceRelation = (
   throughRelation: RelationConfigBase,
   source: string,
 ): RelationConfigBase => {
-  return throughRelation.table.relations[source]?.relationConfig;
+  return throughRelation.query.relations[source]?.relationConfig;
 };
 
 export const hasRelationHandleCreate = (

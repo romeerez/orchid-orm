@@ -1,4 +1,4 @@
-import { DbTable, Table, TableClass } from '../baseTable';
+import { Table, TableClass } from '../baseTable';
 import {
   _queryCreate,
   _queryCreateMany,
@@ -10,17 +10,19 @@ import {
   _queryUpdate,
   CreateCtx,
   CreateData,
+  CreateMethodsNames,
+  DeleteMethodsNames,
   InsertQueryData,
   isQueryReturnsAll,
   pushQueryOn,
   pushQueryValue,
   Query,
   QueryResult,
-  QueryWithTable,
   RelationJoinQuery,
   SelectQueryData,
   setQueryObjectValue,
-  SetQueryTableAlias,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
   UpdateArg,
   UpdateCtx,
   UpdateData,
@@ -47,6 +49,7 @@ import {
   ColumnsShapeBase,
   emptyArray,
   EmptyObject,
+  StringKey,
 } from 'orchid-core';
 import {
   RelationCommonOptions,
@@ -76,33 +79,47 @@ export type BelongsToOptions<
 export type BelongsToInfo<
   T extends Table,
   Relation extends BelongsTo,
-  K extends string,
+  Name extends string,
+  TableQuery extends Query,
   FK extends string = Relation['options'] extends RelationRefsOptions
     ? Relation['options']['columns'][number]
     : Relation['options'] extends RelationKeysOptions
     ? Relation['options']['foreignKey']
     : never,
-  Q extends QueryWithTable = SetQueryTableAlias<
-    DbTable<ReturnType<Relation['fn']>>,
-    K
-  >,
+  Required = Relation['options']['required'] extends true ? true : false,
+  Q extends Query = {
+    [K in keyof TableQuery]: K extends 'meta'
+      ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
+          as: StringKey<Name>;
+          defaults: TableQuery['meta']['defaults'];
+          hasWhere: true;
+        }
+      : K extends 'join'
+      ? // INNER JOIN the current relation instead of the default OUTER behavior
+        <T extends Query>(this: T) => T
+      : K extends CreateMethodsNames | DeleteMethodsNames
+      ? never
+      : K extends keyof TableQuery
+      ? TableQuery[K]
+      : never;
+  },
   DataForCreate = RelationToOneDataForCreate<{
     nestedCreateQuery: Q;
     table: Q;
   }>,
-  Required = Relation['options']['required'] extends true ? true : false,
 > = {
-  table: Q;
   query: Q;
+  methodQuery: Required extends true
+    ? SetQueryReturnsOne<Q>
+    : SetQueryReturnsOneOptional<Q>;
   joinQuery: RelationJoinQuery;
   one: true;
-  required: Required;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: { [L in FK]: T['columns'][L]['inputType'] };
     nested: Required extends true
-      ? { [Key in K]: DataForCreate }
-      : { [Key in K]?: DataForCreate };
+      ? { [Key in Name]: DataForCreate }
+      : { [Key in Name]?: DataForCreate };
   };
   optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:
@@ -128,10 +145,7 @@ export type BelongsToInfo<
     };
   };
 
-  params: { [K in FK]: T['columns'][FK]['type'] };
-  populate: EmptyObject;
-  chainedCreate: false;
-  chainedDelete: false;
+  params: { [Name in FK]: T['columns'][FK]['type'] };
 };
 
 type State = {
@@ -406,9 +420,9 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           }
         }
         if (loadPrimaryKeys) {
-          const record = await _queryFindBy(query.select(...loadPrimaryKeys), [
+          const record = (await _queryFindBy(query.select(...loadPrimaryKeys), [
             params.set,
-          ]);
+          ])) as Record<string, unknown>;
 
           for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
             update[(loadForeignKeys as string[])[i]] =

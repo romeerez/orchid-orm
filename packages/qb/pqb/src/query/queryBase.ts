@@ -11,6 +11,8 @@ import {
 import { RelationsBase } from '../relations';
 import { getClonedQueryData } from '../common/utils';
 
+export type CloneSelfKeys = 'clone' | 'baseQuery' | 'q';
+
 export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
   implements QueryBaseCommon<Scopes>
 {

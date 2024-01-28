@@ -103,14 +103,15 @@ export type RelationConfig<
   Relations extends RelationThunks = RelationThunks,
   Relation extends RelationThunk = RelationThunk,
   K extends PropertyKey = PropertyKey,
+  TableQuery extends Query = Query,
   Result extends RelationConfigBase = Relation extends BelongsTo
-    ? BelongsToInfo<T, Relation, StringKey<K>>
+    ? BelongsToInfo<T, Relation, StringKey<K>, TableQuery>
     : Relation extends HasOne
-    ? HasOneInfo<T, Relations, Relation, StringKey<K>>
+    ? HasOneInfo<T, Relations, Relation, StringKey<K>, TableQuery>
     : Relation extends HasMany
-    ? HasManyInfo<T, Relations, Relation, StringKey<K>>
+    ? HasManyInfo<T, Relations, Relation, StringKey<K>, TableQuery>
     : Relation extends HasAndBelongsToMany
-    ? HasAndBelongsToManyInfo<T, Relation, StringKey<K>>
+    ? HasAndBelongsToManyInfo<T, Relation, StringKey<K>, TableQuery>
     : never,
 > = Result;
 
@@ -119,10 +120,9 @@ export type MapRelation<
   Relations extends RelationThunks,
   RelationName extends keyof Relations,
   Relation extends RelationThunk = Relations[RelationName],
+  TableQuery extends Query = RelationScopeOrTable<Relation>,
 > = RelationQuery<
-  RelationName,
-  RelationConfig<T, Relations, Relation, RelationName>,
-  RelationScopeOrTable<Relation>
+  RelationConfig<T, Relations, Relation, RelationName, TableQuery>
 >;
 
 export type MapRelations<T extends Table> = T extends {
@@ -200,7 +200,7 @@ export const applyRelations = (
         if (!sourceRelation) {
           delayRelation(
             delayedRelations,
-            throughRelation.table,
+            (throughRelation as unknown as { table: Query }).table,
             options.source,
             data,
           );
@@ -231,7 +231,7 @@ export const applyRelations = (
           source: string;
         };
         const throughRel = (table.relations as RelationsBase)[through]
-          ?.relationConfig;
+          ?.relationConfig as unknown as { table: Query } | undefined;
 
         if (through && !throughRel) {
           message += `: cannot find \`${through}\` relation required by the \`through\` option`;

@@ -8,20 +8,22 @@ import {
   AddQueryDefaults,
   CreateCtx,
   CreateData,
+  CreateMethodsNames,
+  DeleteMethodsNames,
   InsertQueryData,
   isQueryReturnsAll,
   JoinCallback,
   Query,
-  QueryWithTable,
   RelationJoinQuery,
-  SetQueryTableAlias,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { DbTable, Table, TableClass } from '../baseTable';
+import { Table, TableClass } from '../baseTable';
 import {
   RelationData,
   RelationConfig,
@@ -43,7 +45,12 @@ import {
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
 } from './common/utils';
-import { ColumnSchemaConfig, ColumnsShapeBase, EmptyObject } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  ColumnsShapeBase,
+  EmptyObject,
+  StringKey,
+} from 'orchid-core';
 import {
   RelationCommonOptions,
   RelationHasOptions,
@@ -74,7 +81,8 @@ export type HasOneInfo<
   T extends Table,
   Relations extends RelationThunks,
   Relation extends HasOne,
-  K extends string,
+  Name extends string,
+  TableQuery extends Query,
   Populate extends Record<
     string,
     true
@@ -83,22 +91,41 @@ export type HasOneInfo<
     : Relation['options'] extends RelationKeysOptions
     ? Record<Relation['options']['foreignKey'], true>
     : never,
-  TC extends TableClass = ReturnType<Relation['fn']>,
-  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,
+  Q extends Query = {
+    [K in keyof TableQuery]: K extends 'meta'
+      ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
+          as: StringKey<Name>;
+          defaults: TableQuery['meta']['defaults'] & Populate;
+          hasWhere: true;
+        }
+      : K extends 'join'
+      ? // INNER JOIN the current relation instead of the default OUTER behavior
+        <T extends Query>(this: T) => T
+      : K extends CreateMethodsNames
+      ? Relation['options'] extends RelationThroughOptions
+        ? never
+        : TableQuery[K]
+      : K extends DeleteMethodsNames
+      ? TableQuery[K]
+      : K extends keyof TableQuery
+      ? TableQuery[K]
+      : never;
+  },
   NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
     ? Q
     : AddQueryDefaults<Q, Populate>,
 > = {
-  table: Q;
   query: Q;
+  methodQuery: Relation['options']['required'] extends true
+    ? SetQueryReturnsOne<Q>
+    : SetQueryReturnsOneOptional<Q>;
   joinQuery: RelationJoinQuery;
   one: true;
-  required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: Relation['options'] extends RelationThroughOptions
     ? EmptyObject
     : {
-        [P in K]?: RelationToOneDataForCreate<{
+        [P in Name]?: RelationToOneDataForCreate<{
           nestedCreateQuery: NestedCreateQuery;
           table: Q;
         }>;
@@ -131,7 +158,7 @@ export type HasOneInfo<
 
   params: Relation['options'] extends RelationRefsOptions
     ? {
-        [K in Relation['options']['columns'][number]]: T['columns'][K]['type'];
+        [Name in Relation['options']['columns'][number]]: T['columns'][Name]['type'];
       }
     : Relation['options'] extends RelationKeysOptions
     ? Record<
@@ -146,11 +173,6 @@ export type HasOneInfo<
         Relation['options']['through']
       >['params']
     : never;
-  populate: Populate;
-  chainedCreate: Relation['options'] extends RelationThroughOptions
-    ? false
-    : true;
-  chainedDelete: true;
 };
 
 type State = {
