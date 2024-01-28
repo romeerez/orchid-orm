@@ -35,21 +35,26 @@ import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 
 // .select method argument.
-export type SelectArg<T extends Query> = '*' | keyof T['selectable'];
+export type SelectArg<T extends Pick<Query, 'selectable'>> =
+  | '*'
+  | keyof T['selectable'];
 
 // .select method object argument.
 // Key is alias for selected item,
 // value can be a column, raw, or a function returning query or raw.
-type SelectAsArg<T extends Query> = Record<string, SelectAsValue<T>>;
+type SelectAsArg<T extends Pick<Query, 'selectable' | 'relations'>> = Record<
+  string,
+  SelectAsValue<T>
+>;
 
 // .select method object argument value.
 // Can be column, raw, or a function returning query or raw.
-type SelectAsValue<T extends Query> =
+type SelectAsValue<T extends Pick<Query, 'selectable' | 'relations'>> =
   | StringKey<keyof T['selectable']>
   | Expression
   | ((q: SelectSubQueryArg<T>) => QueryBase | Expression);
 
-type SelectSubQueryArg<T extends Query> = {
+type SelectSubQueryArg<T extends Pick<Query, 'relations'>> = {
   [K in keyof T]: K extends keyof T['relations']
     ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
       T[K] extends (...args: any) => any
@@ -60,7 +65,10 @@ type SelectSubQueryArg<T extends Query> = {
 
 // Result type of select without the ending object argument.
 type SelectResult<
-  T extends Query,
+  T extends Pick<
+    Query,
+    'selectable' | 'shape' | 'result' | 'meta' | 'returnType'
+  >,
   Columns extends SelectArg<T>[],
   Result extends QueryColumns = {
     [K in
@@ -90,7 +98,10 @@ type SelectResult<
 
 // Result type of select with the ending object argument.
 type SelectResultWithObj<
-  T extends Query,
+  T extends Pick<
+    Query,
+    'selectable' | 'relations' | 'shape' | 'result' | 'returnType' | 'meta'
+  >,
   Columns extends SelectArg<T>[],
   Obj extends SelectAsArg<T>,
   // Combine previously selected items, all columns if * was provided,
@@ -127,21 +138,24 @@ type SelectResultWithObj<
 };
 
 // Previous result keys to preserve, if the query has select.
-type PrevResultKeys<T extends Query> = T['meta']['hasSelect'] extends true
-  ? keyof T['result']
-  : never;
+type PrevResultKeys<T extends Pick<Query, 'meta' | 'result'>> =
+  T['meta']['hasSelect'] extends true ? keyof T['result'] : never;
 
 // Merge { hasSelect: true } into 'meta' if it's not true yet.
-type SetMetaHasSelect<T extends Query> = T['meta']['hasSelect'] extends true
-  ? T['meta']
-  : {
-      [K in keyof T['meta'] | 'hasSelect']: K extends 'hasSelect'
-        ? true
-        : T['meta'][K];
-    };
+type SetMetaHasSelect<T extends Pick<Query, 'meta'>> =
+  T['meta']['hasSelect'] extends true
+    ? T['meta']
+    : {
+        [K in keyof T['meta'] | 'hasSelect']: K extends 'hasSelect'
+          ? true
+          : T['meta'][K];
+      };
 
 // Add new 'selectable' types based on the select object argument.
-type SelectAsSelectable<T extends Query, Arg extends SelectAsArg<T>> = {
+type SelectAsSelectable<
+  T extends Pick<Query, 'selectable' | 'relations'>,
+  Arg extends SelectAsArg<T>,
+> = {
   [K in keyof Arg]: Arg[K] extends ((q: never) => infer R extends QueryBase)
     ? // turn union of objects into intersection
       // https://stackoverflow.com/questions/66445084/intersection-of-an-objects-value-types-in-typescript
@@ -162,7 +176,7 @@ type SelectAsSelectable<T extends Query, Arg extends SelectAsArg<T>> = {
 
 // map a single value of select object arg into a column
 type SelectAsValueResult<
-  T extends Query,
+  T extends Pick<Query, 'selectable' | 'relations'>,
   Arg extends SelectAsValue<T>,
 > = Arg extends keyof T['selectable']
   ? T['selectable'][Arg]['column']
@@ -232,7 +246,9 @@ const addParsersForSelectJoined = (
 };
 
 // add parser for a single key-value pair of selected object
-export const addParserForSelectItem = <T extends Query>(
+export const addParserForSelectItem = <
+  T extends Pick<Query, 'selectable' | 'q'>,
+>(
   q: T,
   as: string | getValueKey | undefined,
   key: string,
@@ -570,12 +586,18 @@ export class Select {
    *   .where({ 'author.isPopular': true });
    * ```
    */
-  select<T extends Query, Columns extends SelectArg<T>[]>(
-    this: T,
-    ...args: Columns
-  ): SelectResult<T, Columns>;
   select<
-    T extends Query,
+    T extends Pick<
+      Query,
+      'selectable' | 'shape' | 'result' | 'meta' | 'returnType'
+    >,
+    Columns extends SelectArg<T>[],
+  >(this: T, ...args: Columns): SelectResult<T, Columns>;
+  select<
+    T extends Pick<
+      Query,
+      'selectable' | 'shape' | 'result' | 'meta' | 'returnType' | 'relations'
+    >,
     Columns extends SelectArg<T>[],
     Obj extends SelectAsArg<T>,
   >(
@@ -603,7 +625,19 @@ export class Select {
    * const deletedFull = await db.table.selectAll().where(conditions).delete();
    * ```
    */
-  selectAll<T extends Query>(this: T): SelectResult<T, ['*']> {
+  selectAll<
+    T extends Pick<
+      Query,
+      | 'selectable'
+      | 'shape'
+      | 'result'
+      | 'meta'
+      | 'returnType'
+      | 'clone'
+      | 'baseQuery'
+      | 'q'
+    >,
+  >(this: T): SelectResult<T, ['*']> {
     const q = this.clone();
     q.q.select = ['*'];
     return q as unknown as SelectResult<T, ['*']>;

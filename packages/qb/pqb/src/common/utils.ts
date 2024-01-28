@@ -13,7 +13,7 @@ export type AliasOrTable<T extends Pick<Query, 'table' | 'meta'>> =
     : never;
 
 export type SelectableOrExpression<
-  T extends QueryBase = QueryBase,
+  T extends Pick<QueryBase, 'selectable'> = QueryBase,
   C extends QueryColumn = QueryColumn,
 > = '*' | StringKey<keyof T['selectable']> | Expression<C>;
 

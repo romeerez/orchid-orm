@@ -9,6 +9,8 @@ import {
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 
+export type TransactionSelf = Pick<Query, 'q' | 'internal'>;
+
 const commitSql = {
   text: 'COMMIT',
   values: emptyArray,
@@ -32,16 +34,16 @@ export type TransactionOptions = {
 };
 
 export class Transaction {
-  transaction<T extends Query, Result>(
+  transaction<T extends TransactionSelf, Result>(
     this: T,
     cb: () => Promise<Result>,
   ): Promise<Result>;
-  transaction<T extends Query, Result>(
+  transaction<T extends TransactionSelf, Result>(
     this: T,
     options: IsolationLevel | TransactionOptions,
     cb: () => Promise<Result>,
   ): Promise<Result>;
-  async transaction<T extends Query, Result>(
+  async transaction<T extends TransactionSelf, Result>(
     this: T,
     cbOrOptions: IsolationLevel | TransactionOptions | (() => Promise<Result>),
     cb?: () => Promise<Result>,

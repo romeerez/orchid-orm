@@ -480,7 +480,9 @@ const nestedInsert = ({
         { connect: NestedInsertManyConnect },
       ][]) {
         for (const item of connect) {
-          queries.push(_queryFindBy(t.select(...throughPrimaryKeys), [item]));
+          queries.push(
+            _queryFindBy(t.select(...throughPrimaryKeys), [item]) as Query,
+          );
         }
       }
 
@@ -506,7 +508,9 @@ const nestedInsert = ({
       ][]) {
         for (const item of connectOrCreate) {
           queries.push(
-            _queryFindByOptional(t.select(...throughPrimaryKeys), [item.where]),
+            _queryFindByOptional(t.select(...throughPrimaryKeys), [
+              item.where,
+            ]) as Query,
           );
         }
       }

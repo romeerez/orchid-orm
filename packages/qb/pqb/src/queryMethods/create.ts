@@ -31,6 +31,12 @@ import {
   ColumnSchemaConfig,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
+import { CloneSelfKeys } from '../query/queryBase';
+
+export type CreateSelf = Pick<
+  Query,
+  'inputType' | 'meta' | 'relations' | 'returnType' | 'result' | CloneSelfKeys
+>;
 
 // Type of argument for `create`, `createMany`, optional argument for `createFrom`,
 // `defaults` use a Partial of it.
@@ -44,7 +50,7 @@ import { isSelectingCount } from './aggregate';
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
 export type CreateData<
-  T extends Query,
+  T extends CreateSelf,
   Data = SetOptional<
     { [K in keyof T['inputType']]: CreateColumn<T, K> },
     keyof T['meta']['defaults']
@@ -55,7 +61,10 @@ export type CreateData<
   : CreateRelationsData<T, T['relations'], Data>;
 
 // Type of available variants to provide for a specific column when creating
-export type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
+export type CreateColumn<
+  T extends CreateSelf,
+  Key extends keyof T['inputType'],
+> =
   | Expression
   | T['inputType'][Key]
   | {
@@ -66,7 +75,7 @@ export type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
 
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<
-  T extends Query,
+  T extends CreateSelf,
   Relations extends RelationsBase,
   Data,
 > =
@@ -85,7 +94,7 @@ export type CreateRelationsData<
 // Intersection of relations that may omit foreign key (belongsTo):
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
 export type CreateRelationsDataOmittingFKeys<
-  T extends Query,
+  T extends CreateSelf,
   Relations extends RelationsBase,
   // Collect a union of `belongsTo` relation objects.
   // Tuple is needed to preserve the inner union type of the object.
@@ -126,7 +135,7 @@ export type CreateRelationDataOmittingFKeys<
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-type CreateResult<T extends Query> = T extends { isCount: true }
+type CreateResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : QueryReturnsAll<T['returnType']> extends true
   ? SetQueryReturnsOne<SetQueryKind<T, 'create'>>
@@ -139,7 +148,7 @@ type CreateResult<T extends Query> = T extends { isCount: true }
 // - returns a record with selected columns if the query has a select.
 // - if the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-type InsertResult<T extends Query> = T['meta']['hasSelect'] extends true
+type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
   ? QueryReturnsAll<T['returnType']> extends true
     ? SetQueryReturnsOne<SetQueryKind<T, 'create'>>
     : T['returnType'] extends 'pluck'
@@ -260,7 +269,7 @@ type Encoder = (input: unknown) => unknown;
 // Function called by all `create` methods to override query select.
 // Clears select if query returning nothing or a count.
 // Otherwise, selects all if query doesn't have select.
-const createSelect = (q: Query) => {
+const createSelect = (q: CreateSelf) => {
   if (q.q.returnType === 'void' || isSelectingCount(q)) {
     q.q.select = undefined;
   } else if (!q.q.select) {
@@ -281,7 +290,7 @@ const createSelect = (q: Query) => {
  * @param encoders - to collect `encodeFn`s of columns.
  */
 const processCreateItem = (
-  q: Query,
+  q: CreateSelf,
   item: Record<string, unknown>,
   rowIndex: number,
   ctx: CreateCtx,
@@ -334,7 +343,7 @@ const mapColumnValues = (
  * @param ctx - context of the create query.
  */
 const handleOneData = (
-  q: Query,
+  q: CreateSelf,
   data: Record<string, unknown>,
   ctx: CreateCtx,
 ): { columns: string[]; values: unknown[][] } => {
@@ -402,7 +411,7 @@ const handleManyData = (
  * @param many - whether it's for creating one or many.
  */
 const insert = (
-  self: Query,
+  self: CreateSelf,
   {
     columns,
     values,
@@ -517,7 +526,7 @@ const insertFromQuery = <
   );
 };
 
-export const _queryCreate = <T extends Query>(
+export const _queryCreate = <T extends CreateSelf>(
   q: T,
   data: CreateData<T>,
 ): CreateResult<T> => {
@@ -525,7 +534,7 @@ export const _queryCreate = <T extends Query>(
   return _queryInsert(q, data) as unknown as CreateResult<T>;
 };
 
-export const _queryInsert = <T extends Query>(
+export const _queryInsert = <T extends CreateSelf>(
   q: T,
   data: CreateData<T>,
 ): InsertResult<T> => {
@@ -600,7 +609,7 @@ export const _queryCreateManyRaw = <T extends Query>(
 export const _queryInsertManyRaw = <T extends Query>(
   q: T,
   args: CreateRawArgs<T, CreateManyRawData<T>>,
-) => {
+): InsertManyResult<T> => {
   return insert(
     q,
     args[0] as { columns: string[]; values: Expression[] },
@@ -703,7 +712,7 @@ export class Create {
    *
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.
    */
-  create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
+  create<T extends CreateSelf>(this: T, data: CreateData<T>): CreateResult<T> {
     return _queryCreate(this.clone(), data);
   }
 

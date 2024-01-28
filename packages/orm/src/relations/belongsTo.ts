@@ -406,9 +406,9 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           }
         }
         if (loadPrimaryKeys) {
-          const record = await _queryFindBy(query.select(...loadPrimaryKeys), [
+          const record = (await _queryFindBy(query.select(...loadPrimaryKeys), [
             params.set,
-          ]);
+          ])) as Record<string, unknown>;
 
           for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
             update[(loadForeignKeys as string[])[i]] =

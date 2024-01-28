@@ -182,7 +182,7 @@ type SetSelect<
 };
 
 export type SetQueryReturns<
-  T extends Query,
+  T extends Pick<Query, 'result'>,
   R extends QueryReturnType,
   Data = GetQueryResult<R, T['result']>,
 > = {
@@ -197,25 +197,19 @@ export type SetQueryReturns<
 
 // Change the query type to return multiple object records.
 // It wraps the query with `WhereResult` to allow updating and deleting all records when the `all` method is used.
-export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<
-  WhereResult<T>,
-  'all'
->;
+export type SetQueryReturnsAll<T extends Pick<Query, 'result'>> =
+  SetQueryReturns<WhereResult<T>, 'all'>;
 
-export type SetQueryReturnsOneOptional<T extends Query> = SetQueryReturns<
-  T,
-  'one'
->;
+export type SetQueryReturnsOneOptional<T extends Pick<Query, 'result'>> =
+  SetQueryReturns<T, 'one'>;
 
-export type SetQueryReturnsOne<T extends Query> = SetQueryReturns<
-  T,
-  'oneOrThrow'
->;
+export type SetQueryReturnsOne<T extends Pick<Query, 'result'>> =
+  SetQueryReturns<T, 'oneOrThrow'>;
 
 export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 
 export type SetQueryReturnsPluck<
-  T extends Query,
+  T extends Pick<Query, 'selectable'>,
   S extends keyof T['selectable'] | Expression,
 > = SetQueryReturnsPluckColumn<
   T,
@@ -226,10 +220,10 @@ export type SetQueryReturnsPluck<
     : never
 >;
 
-export type SetQueryReturnsPluckColumn<
-  T extends Query,
-  C extends QueryColumn,
-> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
+export type SetQueryReturnsPluckColumn<T, C extends QueryColumn> = Omit<
+  T,
+  'result' | 'returnType' | 'then' | 'catch'
+> & {
   meta: {
     hasSelect: true;
   };
@@ -275,16 +269,14 @@ export type SetQueryReturnsColumn<
   catch: QueryCatch<Data>;
 };
 
-export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<
-  T,
-  'rowCount'
->;
+export type SetQueryReturnsRowCount<T extends Pick<Query, 'result'>> =
+  SetQueryReturns<T, 'rowCount'>;
 
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
 
 // Set the kind of the query, can be 'select', 'update', 'create', etc.
 // `update` method is using the kind of query to allow only 'select' as a callback return for a column.
-export type SetQueryKind<T extends Query, Kind extends string> = {
+export type SetQueryKind<T extends Pick<Query, 'meta'>, Kind extends string> = {
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];

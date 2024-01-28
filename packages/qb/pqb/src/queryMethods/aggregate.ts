@@ -26,10 +26,11 @@ import {
 import { RawSQL } from '../sql/rawSql';
 import { IntegerColumn, RealColumn } from '../columns';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
+import { _queryGetOptional, QueryGetSelf } from './get.utils';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
-export const isSelectingCount = (q: Query) => {
+export const isSelectingCount = (q: Pick<Query, 'q'>) => {
   const { expr } = q.q;
   return (
     expr instanceof FnExpression && expr.fn === 'count' && expr.args[0] === '*'
@@ -201,8 +202,10 @@ export class AggregateMethods {
    * const exists: boolean = await db.table.where(...conditions).exists();
    * ```
    */
-  exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
-    const q = this.getOptional(new RawSQL('true'));
+  exists<T extends QueryGetSelf>(
+    this: T,
+  ): SetQueryReturnsColumn<T, BooleanColumn> {
+    const q = _queryGetOptional(this.clone(), new RawSQL('true'));
     q.q.notFoundDefault = false;
     q.q.coalesceValue = new RawSQL('false');
     return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;
