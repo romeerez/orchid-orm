@@ -155,7 +155,7 @@ export type JoinResult<
       : // If no select, use its shape. This allows using computed columns.
         Arg
     : Arg extends keyof T['relations']
-    ? T['relations'][Arg]['relationConfig']['table']
+    ? T['relations'][Arg]['relationConfig']['query']
     : Arg extends (q: never) => Query
     ? ReturnType<Arg>
     : Arg extends keyof T['withData']
@@ -311,7 +311,7 @@ type JoinArgToQuery<
   : Arg extends Query
   ? Arg
   : Arg extends keyof T['relations']
-  ? T['relations'][Arg]['relationConfig']['table']
+  ? T['relations'][Arg]['relationConfig']['query']
   : never;
 
 /**

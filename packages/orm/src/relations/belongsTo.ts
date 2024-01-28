@@ -1,4 +1,4 @@
-import { DbTable, Table, TableClass } from '../baseTable';
+import { Table, TableClass } from '../baseTable';
 import {
   _queryCreate,
   _queryCreateMany,
@@ -18,13 +18,11 @@ import {
   pushQueryValue,
   Query,
   QueryResult,
-  QueryWithTable,
   RelationJoinQuery,
   SelectQueryData,
   setQueryObjectValue,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
-  SetQueryTableAlias,
   UpdateArg,
   UpdateCtx,
   UpdateData,
@@ -88,16 +86,8 @@ export type BelongsToInfo<
     : Relation['options'] extends RelationKeysOptions
     ? Relation['options']['foreignKey']
     : never,
-  Q extends QueryWithTable = SetQueryTableAlias<
-    DbTable<ReturnType<Relation['fn']>>,
-    Name
-  >,
-  DataForCreate = RelationToOneDataForCreate<{
-    nestedCreateQuery: Q;
-    table: Q;
-  }>,
   Required = Relation['options']['required'] extends true ? true : false,
-  ChainedQuery extends Query = {
+  Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
       ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
           as: StringKey<Name>;
@@ -113,13 +103,15 @@ export type BelongsToInfo<
       ? TableQuery[K]
       : never;
   },
+  DataForCreate = RelationToOneDataForCreate<{
+    nestedCreateQuery: Q;
+    table: Q;
+  }>,
 > = {
-  table: Q;
   query: Q;
-  chainedQuery: ChainedQuery;
   methodQuery: Required extends true
-    ? SetQueryReturnsOne<ChainedQuery>
-    : SetQueryReturnsOneOptional<ChainedQuery>;
+    ? SetQueryReturnsOne<Q>
+    : SetQueryReturnsOneOptional<Q>;
   joinQuery: RelationJoinQuery;
   one: true;
   omitForeignKeyInCreate: FK;

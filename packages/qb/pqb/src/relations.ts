@@ -1,4 +1,4 @@
-import { Query, QueryWithTable } from './query/query';
+import { Query } from './query/query';
 
 export type RelationsChain = (Query | RelationQuery)[];
 
@@ -8,9 +8,7 @@ export type RelationJoinQuery = (
 ) => Query;
 
 export type RelationConfigBase = {
-  table: QueryWithTable;
-  query: QueryWithTable;
-  chainedQuery: Query;
+  query: Query;
   methodQuery: Query;
   joinQuery: RelationJoinQuery;
   one: boolean;
@@ -44,6 +42,6 @@ export type RelationQueryBase = Query & {
 export type RelationQuery<
   Config extends RelationConfigBase = RelationConfigBase,
 > = ((params: Config['params']) => Config['methodQuery']) &
-  Config['chainedQuery'] & {
+  Config['query'] & {
     relationConfig: Config;
   };

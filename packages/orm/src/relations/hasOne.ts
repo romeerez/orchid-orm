@@ -14,18 +14,16 @@ import {
   isQueryReturnsAll,
   JoinCallback,
   Query,
-  QueryWithTable,
   RelationJoinQuery,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
-  SetQueryTableAlias,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { DbTable, Table, TableClass } from '../baseTable';
+import { Table, TableClass } from '../baseTable';
 import {
   RelationData,
   RelationConfig,
@@ -93,12 +91,7 @@ export type HasOneInfo<
     : Relation['options'] extends RelationKeysOptions
     ? Record<Relation['options']['foreignKey'], true>
     : never,
-  TC extends TableClass = ReturnType<Relation['fn']>,
-  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, Name>,
-  NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
-    ? Q
-    : AddQueryDefaults<Q, Populate>,
-  ChainedQuery extends Query = {
+  Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
       ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
           as: StringKey<Name>;
@@ -118,13 +111,14 @@ export type HasOneInfo<
       ? TableQuery[K]
       : never;
   },
+  NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
+    ? Q
+    : AddQueryDefaults<Q, Populate>,
 > = {
-  table: Q;
   query: Q;
-  chainedQuery: ChainedQuery;
   methodQuery: Relation['options']['required'] extends true
-    ? SetQueryReturnsOne<ChainedQuery>
-    : SetQueryReturnsOneOptional<ChainedQuery>;
+    ? SetQueryReturnsOne<Q>
+    : SetQueryReturnsOneOptional<Q>;
   joinQuery: RelationJoinQuery;
   one: true;
   omitForeignKeyInCreate: never;

@@ -571,9 +571,9 @@ describe('update', () => {
       user,
     }) as unknown as typeof Profile & {
       relations: {
-        user: RelationQuery<RelationConfigBase & { chainedQuery: typeof User }>;
+        user: RelationQuery<RelationConfigBase & { query: typeof User }>;
       };
-      user: RelationQuery<RelationConfigBase & { chainedQuery: typeof User }>;
+      user: RelationQuery<RelationConfigBase & { query: typeof User }>;
     };
 
     it('should update column with a sub query callback', () => {

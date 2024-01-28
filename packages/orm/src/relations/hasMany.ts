@@ -5,7 +5,7 @@ import {
   RelationThunks,
   RelationToManyDataForCreate,
 } from './relations';
-import { DbTable, Table, TableClass } from '../baseTable';
+import { Table, TableClass } from '../baseTable';
 import {
   CreateData,
   JoinCallback,
@@ -19,9 +19,7 @@ import {
   CreateCtx,
   UpdateCtx,
   WhereQueryBase,
-  SetQueryTableAlias,
   UpdateData,
-  QueryWithTable,
   AddQueryDefaults,
   RelationJoinQuery,
   _queryDefaults,
@@ -89,12 +87,7 @@ export type HasManyInfo<
     : Relation['options'] extends RelationKeysOptions
     ? Record<Relation['options']['foreignKey'], true>
     : never,
-  TC extends TableClass = ReturnType<Relation['fn']>,
-  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, Name>,
-  NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
-    ? Q
-    : AddQueryDefaults<Q, Populate>,
-  ChainedQuery extends Query = {
+  Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
       ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
           as: StringKey<Name>;
@@ -114,11 +107,12 @@ export type HasManyInfo<
       ? TableQuery[K]
       : never;
   },
+  NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
+    ? Q
+    : AddQueryDefaults<Q, Populate>,
 > = {
-  table: Q;
   query: Q;
-  chainedQuery: ChainedQuery;
-  methodQuery: ChainedQuery;
+  methodQuery: Q;
   joinQuery: RelationJoinQuery;
   one: false;
   omitForeignKeyInCreate: never;

@@ -3,7 +3,7 @@ import {
   RelationThunkBase,
   RelationToManyDataForCreate,
 } from './relations';
-import { DbTable, Table, TableClass } from '../baseTable';
+import { Table, TableClass } from '../baseTable';
 import {
   _queryCreateFrom,
   _queryCreateMany,
@@ -24,9 +24,7 @@ import {
   NotFoundError,
   OrchidOrmInternalError,
   Query,
-  QueryWithTable,
   RelationJoinQuery,
-  SetQueryTableAlias,
   toSQLCacheKey,
   UpdateArg,
   UpdateCtx,
@@ -88,9 +86,7 @@ export type HasAndBelongsToManyInfo<
   Relation extends HasAndBelongsToMany,
   Name extends string,
   TableQuery extends Query,
-  TC extends TableClass = ReturnType<Relation['fn']>,
-  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, Name>,
-  ChainedQuery extends Query = {
+  Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
       ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
           as: StringKey<Name>;
@@ -109,10 +105,8 @@ export type HasAndBelongsToManyInfo<
       : never;
   },
 > = {
-  table: Q;
   query: Q;
-  chainedQuery: ChainedQuery;
-  methodQuery: ChainedQuery;
+  methodQuery: Q;
   joinQuery: RelationJoinQuery;
   one: false;
   omitForeignKeyInCreate: never;

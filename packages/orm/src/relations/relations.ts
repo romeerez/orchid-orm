@@ -200,7 +200,7 @@ export const applyRelations = (
         if (!sourceRelation) {
           delayRelation(
             delayedRelations,
-            throughRelation.table,
+            (throughRelation as unknown as { table: Query }).table,
             options.source,
             data,
           );
@@ -231,7 +231,7 @@ export const applyRelations = (
           source: string;
         };
         const throughRel = (table.relations as RelationsBase)[through]
-          ?.relationConfig;
+          ?.relationConfig as unknown as { table: Query } | undefined;
 
         if (through && !throughRel) {
           message += `: cannot find \`${through}\` relation required by the \`through\` option`;
