@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.21.0
+
+### Minor Changes
+
+- 74be332e: Optimize types
+
+### Patch Changes
+
+- Updated dependencies [74be332e]
+  - pqb@0.23.0
+
 ## 1.20.1
 
 ### Patch Changes

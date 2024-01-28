@@ -1,5 +1,11 @@
 # pqb
 
+## 0.23.0
+
+### Minor Changes
+
+- 74be332e: Optimize types
+
 ## 0.22.1
 
 ### Patch Changes
