@@ -1,5 +1,11 @@
 # pqb
 
+## 0.23.1
+
+### Patch Changes
+
+- 125e17d5: Support null in `jsonPath` operator
+
 ## 0.23.0
 
 ### Minor Changes
