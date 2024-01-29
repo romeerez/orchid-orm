@@ -389,6 +389,10 @@ db.someTable.where({
     // third value can be of any type, or a subquery, or a raw SQL query
     jsonPath: ['$.name', '=', value],
 
+    // use `is` or `is not` for the null
+    jsonPath: ['$.name', 'is', null],
+    jsonPath: ['$.name', 'is not', null],
+
     // check if the JSON value in the column is a superset of the provided value
     jsonSupersetOf: { key: 'value' },
 

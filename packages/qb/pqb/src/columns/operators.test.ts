@@ -532,6 +532,16 @@ describe('operators', () => {
       );
     });
 
+    it('should handle null value', () => {
+      expectSql(
+        User.where({ data: { jsonPath: ['$.name', 'is', null] } }).toSQL(),
+        `
+          SELECT * FROM "user"
+          WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' is null
+        `,
+      );
+    });
+
     it('should handle sub query', () => {
       expectSql(
         User.where({

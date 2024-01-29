@@ -290,12 +290,9 @@ const json = {
   ...base,
   jsonPath: make(
     (key, [path, op, value], ctx, quotedAs) =>
-      `jsonb_path_query_first(${key}, '${path}') #>> '{}' ${op} ${quoteValue(
-        value,
-        ctx,
-        quotedAs,
-        true,
-      )}`,
+      `jsonb_path_query_first(${key}, '${path}') #>> '{}' ${op} ${
+        value === null ? 'null' : quoteValue(value, ctx, quotedAs, true)
+      }`,
   ),
   jsonSupersetOf: make(
     (key, value, ctx, quotedAs) =>
