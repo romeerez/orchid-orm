@@ -1,5 +1,11 @@
 # pqb
 
+## 0.23.2
+
+### Patch Changes
+
+- d85a5492: Fix jsonSet inside update for default column types
+
 ## 0.23.1
 
 ### Patch Changes
