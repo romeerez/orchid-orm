@@ -356,6 +356,7 @@ export interface BaseTableClass<
 > {
   nowSQL: string | undefined;
   exportAs: string;
+  columnTypes: ColumnTypes;
   getFilePath(): string;
 
   new (): BaseTableInstance<ColumnTypes>;
@@ -413,6 +414,7 @@ export function createBaseTable<
   const base = class BaseTable {
     static nowSQL = nowSQL;
     static exportAs = exportAs;
+    static columnTypes = columnTypes;
 
     private static _inputSchema: unknown;
     static inputSchema() {

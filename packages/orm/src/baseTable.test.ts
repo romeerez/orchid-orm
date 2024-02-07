@@ -11,7 +11,12 @@ import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
 import path from 'path';
 import { asMock } from './codegen/testUtils';
 import { getCallerFilePath } from 'orchid-core';
-import { assertType, expectSql, testAdapter } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  testAdapter,
+  testColumnTypes,
+} from 'test-utils';
 import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
 import { z } from 'zod';
 import { zodSchemaConfig } from 'schema-to-zod';
@@ -68,6 +73,10 @@ describe('baseTable', () => {
     const orm = orchidORM({ adapter: testAdapter }, { table: Table });
 
     expect(orm.table.q.language).toBe('Ukrainian');
+  });
+
+  it('should have `columnTypes`', () => {
+    expect(BaseTable.columnTypes).toBe(testColumnTypes);
   });
 
   describe('setColumns', () => {
