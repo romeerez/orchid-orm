@@ -3,6 +3,7 @@ import {
   Snake,
   User,
   userData,
+  UserDefaultTypes,
 } from '../test-utils/test-utils';
 import {
   assertType,
@@ -166,7 +167,8 @@ describe('json methods', () => {
       });
 
       it('should work inside `update` callback', () => {
-        const q = User.all().update({
+        // using user with default types because of issue https://github.com/romeerez/orchid-orm/issues/230
+        const q = UserDefaultTypes.all().update({
           data: (q) => q.jsonSet('data', ['name'], 'new name'),
         });
 

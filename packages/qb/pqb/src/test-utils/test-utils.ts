@@ -1,6 +1,6 @@
 import { Query } from '../query/query';
 import { quote } from '../quote';
-import { expectSql, testDb } from 'test-utils';
+import { expectSql, testDb, testDbDefaultTypes } from 'test-utils';
 import { z } from 'zod';
 
 export type UserRecord = typeof User.outputType;
@@ -18,6 +18,17 @@ export const User = testDb('user', (t) => ({
       }),
     )
     .nullable(),
+  age: t.integer().nullable(),
+  active: t.boolean().nullable(),
+  ...t.timestamps(),
+}));
+
+export const UserDefaultTypes = testDbDefaultTypes('user', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.text(0, Infinity),
+  password: t.text(0, Infinity),
+  picture: t.text(0, Infinity).nullable(),
+  data: t.json<{ name: string; tags: string[] }>().nullable(),
   age: t.integer().nullable(),
   active: t.boolean().nullable(),
   ...t.timestamps(),

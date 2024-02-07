@@ -9,7 +9,6 @@ import {
 import { DateBaseColumn } from './dateTime';
 import { EnumColumn } from './enum';
 import { ArrayColumn, ArrayColumnValue } from './array';
-import { ColumnType } from './columnType';
 import { JSONColumn } from './json';
 
 type ParseDateToNumber = ParseColumn<
@@ -69,7 +68,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig {
     item: Item,
   ): ArrayColumn<DefaultSchemaConfig, Item, unknown, unknown, unknown>;
 
-  json<T>(): ColumnType<DefaultSchemaConfig, T>;
+  json<T>(): JSONColumn<T, DefaultSchemaConfig>;
 
   inputSchema(): undefined;
   outputSchema(): undefined;

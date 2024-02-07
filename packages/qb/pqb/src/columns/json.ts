@@ -7,10 +7,10 @@ import { Code, ColumnSchemaConfig } from 'orchid-core';
 const toCodeSkip = { encodeFn: JSON.stringify };
 
 // Type of JSON column (jsonb).
-export class JSONColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
-  Schema,
-  OperatorsJson
-> {
+export class JSONColumn<
+  T,
+  Schema extends ColumnSchemaConfig,
+> extends ColumnType<Schema, T, Schema['type'], OperatorsJson> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
   toCode(t: string): Code {
