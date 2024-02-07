@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.21.2
+
+### Patch Changes
+
+- ceace54f: Expose columnTypes from BaseTable
+
 ## 1.21.1
 
 ### Patch Changes
