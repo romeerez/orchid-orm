@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.12.6
+
+### Patch Changes
+
+- 87ef1c7f: Add connectRetry connection option
+- Updated dependencies [87ef1c7f]
+  - pqb@0.23.4
+  - orchid-core@0.11.1
+
 ## 2.12.5
 
 ### Patch Changes

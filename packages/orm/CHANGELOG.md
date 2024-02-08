@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.21.5
+
+### Patch Changes
+
+- Updated dependencies [87ef1c7f]
+  - pqb@0.23.4
+  - orchid-core@0.11.1
+
 ## 1.21.4
 
 ### Patch Changes

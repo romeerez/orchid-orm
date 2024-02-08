@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.11.1
+
+### Patch Changes
+
+- 87ef1c7f: Add connectRetry connection option
+
 ## 0.11.0
 
 ### Minor Changes

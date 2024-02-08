@@ -1,5 +1,13 @@
 # myqb
 
+## 0.2.51
+
+### Patch Changes
+
+- 87ef1c7f: Add connectRetry connection option
+- Updated dependencies [87ef1c7f]
+  - orchid-core@0.11.1
+
 ## 0.2.50
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # pqb
 
+## 0.23.4
+
+### Patch Changes
+
+- 87ef1c7f: Add connectRetry connection option
+- Updated dependencies [87ef1c7f]
+  - orchid-core@0.11.1
+
 ## 0.23.3
 
 ### Patch Changes
