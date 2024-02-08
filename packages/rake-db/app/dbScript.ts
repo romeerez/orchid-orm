@@ -14,11 +14,11 @@ if (!databaseURL) {
   throw new Error('PG_URL is missing in .env');
 }
 
-options.push({ databaseURL });
+options.push({ databaseURL, connectRetry: true });
 
 const databaseURLTest = process.env.PG_URL_TEST;
 if (databaseURLTest) {
-  options.push({ databaseURL: databaseURLTest });
+  options.push({ databaseURL: databaseURLTest, connectRetry: true });
 }
 
 export const change = rakeDb(options, {

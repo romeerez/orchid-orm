@@ -1,5 +1,14 @@
 import pg, { Pool, PoolClient, PoolConfig } from 'pg';
-import { AdapterBase, QueryInput, QueryResultRow, Sql } from 'orchid-core';
+import {
+  AdapterBase,
+  AdapterConfigBase,
+  emptyObject,
+  QueryInput,
+  QueryResultRow,
+  setAdapterConnectRetry,
+  Sql,
+} from 'orchid-core';
+
 const { types } = pg;
 
 export type TypeParsers = Record<number, (input: string) => unknown>;
@@ -39,10 +48,12 @@ for (const key in types.builtins) {
 
 const returnArg = (arg: unknown) => arg;
 
-export type AdapterConfig = Omit<PoolConfig, 'types' | 'connectionString'> & {
+export interface AdapterConfig
+  extends AdapterConfigBase,
+    Omit<PoolConfig, 'types' | 'connectionString'> {
   schema?: string;
   databaseURL?: string;
-};
+}
 
 export type AdapterOptions = AdapterConfig & {
   types?: TypeParsers;
@@ -81,18 +92,27 @@ export class Adapter implements AdapterBase {
 
     this.config = config;
     this.pool = new pg.Pool(config);
+
+    if (config.connectRetry) {
+      setAdapterConnectRetry(
+        this,
+        () => this.pool.connect(),
+        config.connectRetry === true ? emptyObject : config.connectRetry,
+      );
+    }
+  }
+
+  connect(): Promise<PoolClient> {
+    return this.pool.connect();
   }
 
   query<T extends QueryResultRow = QueryResultRow>(
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryResult<T>> {
-    return performQuery(
-      this.pool,
-      query,
-      types,
-      this.schema,
-    ) as unknown as Promise<QueryResult<T>>;
+    return performQuery(this, query, types) as unknown as Promise<
+      QueryResult<T>
+    >;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,20 +120,16 @@ export class Adapter implements AdapterBase {
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryArraysResult<R>> {
-    return performQuery(
-      this.pool,
-      query,
-      types,
-      this.schema,
-      'array',
-    ) as unknown as Promise<QueryArraysResult<R>>;
+    return performQuery(this, query, types, 'array') as unknown as Promise<
+      QueryArraysResult<R>
+    >;
   }
 
   async transaction<Result>(
     begin: Sql,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
-    const client = await this.pool.connect();
+    const client = await this.connect();
     try {
       await setSearchPath(client, this.schema);
       await performQueryOnClient(client, begin, this.types);
@@ -155,15 +171,14 @@ const setSearchPath = (client: PoolClient, schema?: string) => {
 };
 
 const performQuery = async (
-  pool: Pool,
+  adapter: Adapter,
   query: QueryInput,
   types?: TypeParsers,
-  schema?: string,
   rowMode?: 'array',
 ) => {
-  const client = await pool.connect();
+  const client = await adapter.connect();
   try {
-    await setSearchPath(client, schema);
+    await setSearchPath(client, adapter.schema);
     return await performQueryOnClient(client, query, types, rowMode);
   } finally {
     client.release();
@@ -204,6 +219,10 @@ export class TransactionAdapter implements Adapter {
   ) {
     this.pool = adapter.pool;
     this.config = adapter.config;
+  }
+
+  connect(): Promise<PoolClient> {
+    return Promise.resolve(this.client);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

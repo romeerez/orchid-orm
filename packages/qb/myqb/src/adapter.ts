@@ -54,6 +54,10 @@ export class Adapter implements AdapterBase {
     this.pool = createPool(this.config);
   }
 
+  connect(): Promise<unknown> {
+    throw new Error(`Not implemented for MySQL`);
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async query<T extends QueryResultRow = any>(
     query: QueryInput,
@@ -135,6 +139,10 @@ export class TransactionAdapter implements Adapter {
   constructor(public adapter: Adapter, public client: PoolConnection) {
     this.pool = adapter.pool;
     this.config = adapter.config;
+  }
+
+  connect(): Promise<PoolConnection> {
+    return Promise.resolve(this.client);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -41,6 +41,10 @@ export const db = orchidORM(
     ssl: true,
     schema: 'my_schema',
 
+    // retry connecting when db is starting up, no retry by default,
+    // see `connectRetry` section below
+    connectRetry: true,
+
     // option for logging, false by default
     log: true,
 
@@ -382,6 +386,55 @@ export const db = orchidORM(
     // ...tables
   },
 );
+```
+
+## connectRetry
+
+[//]: # 'has JSDoc'
+
+This option may be useful in CI when database container has started, CI starts performing next steps,
+migrations begin to apply though database may be not fully ready for connections yet.
+
+Set `connectRetry: true` for the default backoff strategy. It performs 10 attempts starting with 50ms delay and increases delay exponentially according to this formula:
+
+```
+(factor, defaults to 1.5) ** (currentAttempt - 1) * (delay, defaults to 50)
+```
+
+So the 2nd attempt will happen in 50ms from start, 3rd attempt in 125ms, 3rd in 237ms, and so on.
+
+You can customize max attempts to be made, `factor` multiplier and the starting delay by passing:
+
+```ts
+const options = {
+  databaseURL: process.env.DATABASE_URL,
+  connectRetry: {
+    attempts: 15, // max attempts
+    strategy: {
+      delay: 100, // initial delay
+      factor: 2, // multiplier for the formula above
+    }
+  }
+};
+
+rakeDb(options, { ... });
+```
+
+You can pass a custom function to `strategy` to customize delay behavior:
+
+```ts
+import { setTimeout } from 'timers/promises';
+
+const options = {
+  databaseURL: process.env.DATABASE_URL,
+  connectRetry: {
+    attempts: 5,
+    stragegy(currentAttempt: number, maxAttempts: number) {
+      // linear: wait 100ms after 1st attempt, then 200m after 2nd, and so on.
+      return setTimeout(currentAttempt * 100);
+    },
+  },
+};
 ```
 
 ## nowSQL option

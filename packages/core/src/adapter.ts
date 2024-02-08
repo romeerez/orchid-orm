@@ -1,4 +1,6 @@
 import { QueryBaseCommon, Sql } from './query';
+import { emptyObject } from './utils';
+import { setTimeout } from 'timers/promises';
 
 // Input type of adapter query methods.
 export type QueryInput = string | { text: string; values?: unknown[] };
@@ -9,8 +11,84 @@ export type QueryInput = string | { text: string; values?: unknown[] };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type QueryResultRow = Record<string, any>;
 
+export type AdapterConfigBase = {
+  /**
+   * This option may be useful in CI when database container has started, CI starts performing next steps,
+   * migrations begin to apply though database may be not fully ready for connections yet.
+   *
+   * Set `connectRetry: true` for the default backoff strategy. It performs 10 attempts starting with 50ms delay and increases delay exponentially according to this formula:
+   *
+   * ```
+   * (factor, defaults to 1.5) ** (currentAttempt - 1) * (delay, defaults to 50)
+   * ```
+   *
+   * So the 2nd attempt will happen in 50ms from start, 3rd attempt in 125ms, 3rd in 237ms, and so on.
+   *
+   * You can customize max attempts to be made, `factor` multiplier and the starting delay by passing:
+   *
+   * ```ts
+   * const options = {
+   *   databaseURL: process.env.DATABASE_URL,
+   *   connectRetry: {
+   *     attempts: 15, // max attempts
+   *     strategy: {
+   *       delay: 100, // initial delay
+   *       factor: 2, // multiplier for the formula above
+   *     }
+   *   }
+   * };
+   *
+   * rakeDb(options, { ... });
+   * ```
+   *
+   * You can pass a custom function to `strategy` to customize delay behavior:
+   *
+   * ```ts
+   * import { setTimeout } from 'timers/promises';
+   *
+   * const options = {
+   *   databaseURL: process.env.DATABASE_URL,
+   *   connectRetry: {
+   *     attempts: 5,
+   *     stragegy(currentAttempt: number, maxAttempts: number) {
+   *       // linear: wait 100ms after 1st attempt, then 200m after 2nd, and so on.
+   *       return setTimeout(currentAttempt * 100);
+   *     },
+   *   },
+   * };
+   * ```
+   */
+  connectRetry?: AdapterConfigConnectRetryParam | true;
+};
+
+type AdapterConfigConnectRetryParam = {
+  attempts?: number;
+  strategy?:
+    | AdapterConfigConnectRetryStrategyParam
+    | AdapterConfigConnectRetryStrategy;
+};
+
+type AdapterConfigConnectRetryStrategyParam = {
+  delay?: number;
+  factor?: number;
+};
+
+export type AdapterConfigConnectRetry = {
+  attempts: number;
+  strategy: AdapterConfigConnectRetryStrategy;
+};
+
+type AdapterConfigConnectRetryStrategy = (
+  attempt: number,
+  attempts: number,
+) => Promise<void> | void;
+
 // Interface of a database adapter to use for different databases.
 export type AdapterBase = {
+  connectRetryConfig?: AdapterConfigConnectRetry;
+
+  connect(): Promise<unknown>;
+
   // make a query to get rows as objects
   query(query: QueryInput): Promise<unknown>;
   // make a query to get rows as array of column values
@@ -57,3 +135,47 @@ export type AfterCommitHook = (
   data: unknown[],
   q: QueryBaseCommon,
 ) => void | Promise<void>;
+
+export const setAdapterConnectRetry = <Result>(
+  adapter: AdapterBase,
+  connect: () => Promise<Result>,
+  config: AdapterConfigConnectRetryParam,
+) => {
+  adapter.connectRetryConfig = {
+    attempts: config.attempts ?? 10,
+    strategy:
+      typeof config.strategy === 'function'
+        ? config.strategy
+        : defaultConnectRetryStrategy(config.strategy ?? emptyObject),
+  };
+
+  adapter.connect = async () => {
+    let attempt = 1;
+    for (;;) {
+      try {
+        return await connect();
+      } catch (err) {
+        const config = adapter.connectRetryConfig;
+        if (
+          !err ||
+          typeof err !== 'object' ||
+          (err as { code: string }).code !== 'ECONNREFUSED' ||
+          !config ||
+          attempt >= config.attempts
+        ) {
+          throw err;
+        }
+
+        await config.strategy(attempt, config.attempts);
+        attempt++;
+      }
+    }
+  };
+};
+
+const defaultConnectRetryStrategy = (
+  param: AdapterConfigConnectRetryStrategyParam,
+): AdapterConfigConnectRetryStrategy => {
+  return (attempt) =>
+    setTimeout((param.factor ?? 1.5) ** (attempt - 1) * (param.delay ?? 50));
+};

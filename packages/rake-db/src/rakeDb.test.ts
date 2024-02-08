@@ -8,10 +8,7 @@ import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock } from 'test-utils';
 import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
-
-jest.mock('./common', () => ({
-  processRakeDbConfig: (config: unknown) => config,
-}));
+import { processRakeDbConfig } from './common';
 
 jest.mock('./commands/createOrDrop', () => ({
   createDb: jest.fn(),
@@ -47,9 +44,12 @@ const options = [
 ];
 
 const config = {
-  migrationsPath: 'migrations',
+  basePath: '/rake-db',
+  dbScript: '/rake-db/script.ts',
   commands: {},
 };
+
+const processedConfig = processRakeDbConfig(config);
 
 describe('rakeDb', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -57,32 +57,32 @@ describe('rakeDb', () => {
   it('should support create command', async () => {
     await rakeDb(options, config, ['create']).promise;
 
-    expect(createDb).toBeCalledWith(options, config);
+    expect(createDb).toBeCalledWith(options, processedConfig);
   });
 
   it('should support drop command', async () => {
     await rakeDb(options, config, ['drop']).promise;
 
-    expect(dropDb).toBeCalledWith(options, config);
+    expect(dropDb).toBeCalledWith(options, processedConfig);
   });
 
   it('should support reset command', async () => {
     await rakeDb(options, config, ['reset']).promise;
 
-    expect(resetDb).toBeCalledWith(options, config);
+    expect(resetDb).toBeCalledWith(options, processedConfig);
   });
 
   it('should run migrations and recurrent on `migrate` command', async () => {
     await rakeDb(options, config, ['migrate', 'arg']).promise;
 
-    expect(migrate).toBeCalledWith(options, config, ['arg']);
-    expect(runRecurrentMigrations).toBeCalledWith(options, config);
+    expect(migrate).toBeCalledWith(options, processedConfig, ['arg']);
+    expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
   });
 
   it('should run migrations without recurrent on `up` command', async () => {
     await rakeDb(options, config, ['up', 'arg']).promise;
 
-    expect(migrate).toBeCalledWith(options, config, ['arg']);
+    expect(migrate).toBeCalledWith(options, processedConfig, ['arg']);
     expect(runRecurrentMigrations).not.toBeCalled();
   });
 
@@ -91,28 +91,28 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['down', 'arg']).promise;
 
     expect(asMock(rollback).mock.calls).toEqual([
-      [options, config, ['arg']],
-      [options, config, ['arg']],
+      [options, processedConfig, ['arg']],
+      [options, processedConfig, ['arg']],
     ]);
   });
 
   it('should run redo and recurrent on `redo` command', async () => {
     await rakeDb(options, config, ['redo', 'arg']).promise;
 
-    expect(redo).toBeCalledWith(options, config, ['arg']);
-    expect(runRecurrentMigrations).toBeCalledWith(options, config);
+    expect(redo).toBeCalledWith(options, processedConfig, ['arg']);
+    expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
   });
 
   it('should support new command', async () => {
     await rakeDb(options, config, ['new', 'arg']).promise;
 
-    expect(generate).toBeCalledWith(config, ['arg']);
+    expect(generate).toBeCalledWith(processedConfig, ['arg']);
   });
 
   it('should support pull command', async () => {
     await rakeDb(options, config, ['pull']).promise;
 
-    expect(pullDbStructure).toBeCalledWith(options[0], config);
+    expect(pullDbStructure).toBeCalledWith(options[0], processedConfig);
   });
 
   it('should call recurrent migration by `rec` and `recurrent` command', async () => {
@@ -120,19 +120,24 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['recurrent']).promise;
 
     expect(asMock(runRecurrentMigrations).mock.calls).toEqual([
-      [options, config],
-      [options, config],
+      [options, processedConfig],
+      [options, processedConfig],
     ]);
   });
 
   it('should call a custom command', async () => {
     const custom = jest.fn();
 
-    const conf = { ...config, commands: { custom } };
+    await rakeDb(options, { ...config, commands: { custom } }, [
+      'custom',
+      'arg',
+    ]).promise;
 
-    await rakeDb(options, conf, ['custom', 'arg']).promise;
-
-    expect(custom).toBeCalledWith(options, conf, ['arg']);
+    expect(custom).toBeCalledWith(
+      options,
+      { ...processedConfig, commands: { custom } },
+      ['arg'],
+    );
   });
 
   it('should log help when other command is sent', async () => {
