@@ -1,5 +1,11 @@
 # pqb
 
+## 0.23.3
+
+### Patch Changes
+
+- 3a3a5d9c: Fix where relation column inside where exits typing
+
 ## 0.23.2
 
 ### Patch Changes

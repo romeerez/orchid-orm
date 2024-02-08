@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.21.4
+
+### Patch Changes
+
+- 3a3a5d9c: Fix where relation column inside where exits typing
+- Updated dependencies [3a3a5d9c]
+  - pqb@0.23.3
+
 ## 1.21.3
 
 ### Patch Changes
