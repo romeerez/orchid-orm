@@ -29,14 +29,14 @@ import {
   _queryDelete,
   UpdateArg,
   CreateMethodsNames,
-  DeleteMethodsNames,
+  SelectableFromShape,
+  RelationConfigBase,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
   EmptyObject,
   MaybeArray,
-  StringKey,
   toArray,
 } from 'orchid-core';
 import {
@@ -51,6 +51,7 @@ import {
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
   NestedUpdateManyItems,
+  RelJoin,
 } from './common/utils';
 import { HasOneOptions } from './hasOne';
 import {
@@ -73,7 +74,7 @@ export type HasManyOptions<
   Source extends string = string,
 > = HasOneOptions<Columns, Related, Scope, Through, Source>;
 
-export type HasManyInfo<
+export interface HasManyInfo<
   T extends Table,
   Relations extends RelationThunks,
   Relation extends HasMany,
@@ -87,30 +88,39 @@ export type HasManyInfo<
     : Relation['options'] extends RelationKeysOptions
     ? Record<Relation['options']['foreignKey'], true>
     : never,
-  Q extends Query = {
-    [K in keyof TableQuery]: K extends 'meta'
-      ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
-          as: StringKey<Name>;
-          defaults: TableQuery['meta']['defaults'] & Populate;
-          hasWhere: true;
-        }
-      : K extends 'join'
-      ? // INNER JOIN the current relation instead of the default OUTER behavior
-        <TableQuery extends Query>(this: TableQuery) => TableQuery
-      : K extends CreateMethodsNames
-      ? Relation['options'] extends RelationThroughOptions
-        ? never
-        : TableQuery[K]
-      : K extends DeleteMethodsNames
-      ? TableQuery[K]
-      : K extends keyof TableQuery
-      ? TableQuery[K]
-      : never;
-  },
+  Q extends Query = Relation['options'] extends RelationThroughOptions
+    ? {
+        [K in keyof TableQuery]: K extends 'meta'
+          ? TableQuery['meta'] & {
+              as: Name;
+              defaults: Populate;
+              hasWhere: true;
+            }
+          : K extends 'selectable'
+          ? SelectableFromShape<TableQuery['shape'], Name>
+          : K extends 'join'
+          ? RelJoin
+          : K extends CreateMethodsNames
+          ? never
+          : TableQuery[K];
+      }
+    : {
+        [K in keyof TableQuery]: K extends 'meta'
+          ? TableQuery['meta'] & {
+              as: Name;
+              defaults: Populate;
+              hasWhere: true;
+            }
+          : K extends 'selectable'
+          ? SelectableFromShape<TableQuery['shape'], Name>
+          : K extends 'join'
+          ? RelJoin
+          : TableQuery[K];
+      },
   NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
     ? Q
     : AddQueryDefaults<Q, Populate>,
-> = {
+> extends RelationConfigBase {
   query: Q;
   methodQuery: Q;
   joinQuery: RelationJoinQuery;
@@ -161,7 +171,7 @@ export type HasManyInfo<
         Relation['options']['through']
       >['params']
     : never;
-};
+}
 
 type State = {
   query: Query;

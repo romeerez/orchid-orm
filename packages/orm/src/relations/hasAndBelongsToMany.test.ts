@@ -220,12 +220,7 @@ describe('hasAndBelongsToMany', () => {
         `,
       );
 
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists('chats', (q) => q.where({ Title: 'title' }))
-          .toSQL(),
-        `
+      const sql = `
         SELECT ${userSelectAll} FROM "user" AS "u"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
@@ -239,7 +234,23 @@ describe('hasAndBelongsToMany', () => {
             )
             AND "chats"."title" = $1
         )
-      `,
+      `;
+
+      expectSql(
+        db.user
+          .as('u')
+          .whereExists('chats', (q) => q.where({ Title: 'title' }))
+          .toSQL(),
+        sql,
+        ['title'],
+      );
+
+      expectSql(
+        db.user
+          .as('u')
+          .whereExists('chats', (q) => q.where({ 'chats.Title': 'title' }))
+          .toSQL(),
+        sql,
         ['title'],
       );
     });

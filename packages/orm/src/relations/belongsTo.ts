@@ -18,7 +18,9 @@ import {
   pushQueryValue,
   Query,
   QueryResult,
+  RelationConfigBase,
   RelationJoinQuery,
+  SelectableFromShape,
   SelectQueryData,
   setQueryObjectValue,
   SetQueryReturnsOne,
@@ -42,6 +44,7 @@ import {
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
   relationWhere,
+  RelJoin,
   selectIfNotSelected,
 } from './common/utils';
 import {
@@ -49,7 +52,6 @@ import {
   ColumnsShapeBase,
   emptyArray,
   EmptyObject,
-  StringKey,
 } from 'orchid-core';
 import {
   RelationCommonOptions,
@@ -76,7 +78,7 @@ export type BelongsToOptions<
     keyof Columns
   >;
 
-export type BelongsToInfo<
+export interface BelongsToInfo<
   T extends Table,
   Relation extends BelongsTo,
   Name extends string,
@@ -89,25 +91,19 @@ export type BelongsToInfo<
   Required = Relation['options']['required'] extends true ? true : false,
   Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
-      ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
-          as: StringKey<Name>;
-          defaults: TableQuery['meta']['defaults'];
+      ? TableQuery['meta'] & {
+          as: Name;
           hasWhere: true;
         }
+      : K extends 'selectable'
+      ? SelectableFromShape<TableQuery['shape'], Name>
       : K extends 'join'
-      ? // INNER JOIN the current relation instead of the default OUTER behavior
-        <T extends Query>(this: T) => T
+      ? RelJoin
       : K extends CreateMethodsNames | DeleteMethodsNames
       ? never
-      : K extends keyof TableQuery
-      ? TableQuery[K]
-      : never;
+      : TableQuery[K];
   },
-  DataForCreate = RelationToOneDataForCreate<{
-    nestedCreateQuery: Q;
-    table: Q;
-  }>,
-> = {
+> extends RelationConfigBase {
   query: Q;
   methodQuery: Required extends true
     ? SetQueryReturnsOne<Q>
@@ -118,8 +114,18 @@ export type BelongsToInfo<
   dataForCreate: {
     columns: { [L in FK]: T['columns'][L]['inputType'] };
     nested: Required extends true
-      ? { [Key in Name]: DataForCreate }
-      : { [Key in Name]?: DataForCreate };
+      ? {
+          [Key in Name]: RelationToOneDataForCreate<{
+            nestedCreateQuery: Q;
+            table: Q;
+          }>;
+        }
+      : {
+          [Key in Name]?: RelationToOneDataForCreate<{
+            nestedCreateQuery: Q;
+            table: Q;
+          }>;
+        };
   };
   optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:
@@ -146,7 +152,7 @@ export type BelongsToInfo<
   };
 
   params: { [Name in FK]: T['columns'][FK]['type'] };
-};
+}
 
 type State = {
   query: Query;

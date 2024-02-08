@@ -1,6 +1,6 @@
 import { cloneQuery, QueryData, toSQLCacheKey, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
-import type { QueryColumn, StringKey } from 'orchid-core';
+import type { QueryColumn, QueryThen, StringKey } from 'orchid-core';
 import { RelationQuery } from '../relations';
 import { Expression } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
@@ -25,6 +25,10 @@ export type ExpressionOutput<
   : Expr extends Expression
   ? Expr['_type']
   : never;
+
+export type ExpressionOrQueryReturning<T> =
+  | Expression<QueryColumn<T>>
+  | (QueryBase & { then: QueryThen<T> });
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };

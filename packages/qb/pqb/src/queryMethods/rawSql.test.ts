@@ -1,5 +1,5 @@
 import { User } from '../test-utils/test-utils';
-import { ColumnType, IntegerColumn } from '../columns';
+import { BooleanColumn, ColumnType } from '../columns';
 import { expectSql, testAdapter, testDb } from 'test-utils';
 import { createDb } from '../query/db';
 import { ColumnTypeBase, Expression } from 'orchid-core';
@@ -21,7 +21,7 @@ describe('raw sql', () => {
   });
 
   it('should handle a simple string', () => {
-    const sql = User.sql({ raw: 'simple sql' });
+    const sql = User.sql<boolean>({ raw: 'simple sql' });
 
     expect(sql).toEqual({
       _sql: 'simple sql',
@@ -35,7 +35,7 @@ describe('raw sql', () => {
   });
 
   it('should handle values, and a simple string', () => {
-    const sql = User.sql({
+    const sql = User.sql<boolean>({
       raw: '$$_CoLuMn = $VaLuE123',
     }).values({
       _CoLuMn: 'name',
@@ -81,10 +81,10 @@ describe('raw sql', () => {
   });
 
   it('should handle a column and a simple string', () => {
-    const sql = User.sql({ raw: 'simple sql' }).type((t) => t.integer());
+    const sql = User.sql({ raw: 'simple sql' }).type((t) => t.boolean());
 
     expect(sql).toEqual({
-      _type: expect.any(IntegerColumn),
+      _type: expect.any(BooleanColumn),
       _sql: 'simple sql',
       columnTypes: User.columnTypes,
     });
@@ -99,11 +99,11 @@ describe('raw sql', () => {
     const sql = User.sql({
       raw: '$$column = $value',
     })
-      .type((t) => t.integer())
+      .type((t) => t.boolean())
       .values({ column: 'name', value: 'value' });
 
     expect(sql).toEqual({
-      _type: expect.any(IntegerColumn),
+      _type: expect.any(BooleanColumn),
       _sql: '$$column = $value',
       _values: {
         column: 'name',
@@ -120,7 +120,7 @@ describe('raw sql', () => {
   });
 
   it('should handle a template literal', () => {
-    const sql = User.sql`one ${1} two ${true} three ${'string'} four`;
+    const sql = User.sql<boolean>`one ${1} two ${true} three ${'string'} four`;
 
     expect(sql).toEqual({
       _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
@@ -136,11 +136,11 @@ describe('raw sql', () => {
 
   it('should handle column and a template literal', () => {
     const sql = User.sql`one ${1} two ${true} three ${'string'} four`.type(
-      (t) => t.integer(),
+      (t) => t.boolean(),
     );
 
     expect(sql).toEqual({
-      _type: expect.any(IntegerColumn),
+      _type: expect.any(BooleanColumn),
       _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
       columnTypes: User.columnTypes,
     });
@@ -154,11 +154,11 @@ describe('raw sql', () => {
 
   it('should handle column, values, and a template literal', () => {
     const sql = User.sql`value = $1 AND ${true}`
-      .type((t) => t.integer())
+      .type((t) => t.boolean())
       .values({ 1: 'value' });
 
     expect(sql).toEqual({
-      _type: expect.any(IntegerColumn),
+      _type: expect.any(BooleanColumn),
       _sql: [['value = $1 AND ', ''], true],
       _values: {
         1: 'value',
@@ -174,7 +174,9 @@ describe('raw sql', () => {
   });
 
   it('should quote columns with tables', () => {
-    const sql = User.sql({ raw: '$$column' }).values({ column: 'user.name' });
+    const sql = User.sql<boolean>({ raw: '$$column' }).values({
+      column: 'user.name',
+    });
 
     expect(sql).toEqual({
       _sql: '$$column',
@@ -192,7 +194,7 @@ describe('raw sql', () => {
 
   it('should not replace values inside string literals', () => {
     const query = User.where(
-      User.sql({
+      User.sql<boolean>({
         raw: `foo = $foo AND bar = '$bar''$bar' AND baz = $baz`,
       }).values({
         foo: 1,
@@ -209,14 +211,16 @@ describe('raw sql', () => {
 
   it('should throw when variable in the query is not provided', () => {
     const q = User.where(
-      User.sql({ raw: `a = $a AND b = $b` }).values({ a: 1 }),
+      User.sql<boolean>({ raw: `a = $a AND b = $b` }).values({ a: 1 }),
     );
 
     expect(() => q.toSQL()).toThrow('Query variable `b` is not provided');
   });
 
   it('should throw when variable in the object is not used by the query', () => {
-    const q = User.where(User.sql({ raw: `a = $a` }).values({ a: 1, b: 'b' }));
+    const q = User.where(
+      User.sql<boolean>({ raw: `a = $a` }).values({ a: 1, b: 'b' }),
+    );
 
     expect(() => q.toSQL()).toThrow('Query variable `b` is unused');
   });

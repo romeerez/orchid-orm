@@ -156,12 +156,7 @@ describe('belongsTo', () => {
         `,
       );
 
-      expectSql(
-        db.profile
-          .as('p')
-          .whereExists('user', (q) => q.where({ Name: 'name' }))
-          .toSQL(),
-        `
+      const sql = `
         SELECT ${profileSelectAll} FROM "profile" AS "p"
         WHERE EXISTS (
           SELECT 1 FROM "user"
@@ -169,12 +164,43 @@ describe('belongsTo', () => {
             AND "user"."userKey" = "p"."profileKey"
             AND "user"."name" = $1
         )
-      `,
+      `;
+
+      expectSql(
+        db.profile
+          .as('p')
+          .whereExists('user', (q) => q.where({ Name: 'name' }))
+          .toSQL(),
+        sql,
+        ['name'],
+      );
+
+      expectSql(
+        db.profile
+          .as('p')
+          .whereExists('user', (q) => q.where({ 'user.Name': 'name' }))
+          .toSQL(),
+        sql,
         ['name'],
       );
     });
 
     it('should support nested whereExists', () => {
+      const sql = `
+        SELECT ${messageSelectAll} FROM "message" AS "m"
+        WHERE EXISTS (
+          SELECT 1 FROM "user"
+          WHERE "user"."id" = "m"."authorId"
+            AND "user"."userKey" = "m"."messageKey"
+            AND EXISTS (
+            SELECT 1 FROM "profile"
+            WHERE "profile"."userId" = "user"."id"
+              AND "profile"."profileKey" = "user"."userKey"
+              AND "profile"."bio" = $1
+          )
+        )
+      `;
+
       expectSql(
         db.message
           .as('m')
@@ -182,20 +208,18 @@ describe('belongsTo', () => {
             q.whereExists('profile', (q) => q.where({ Bio: 'bio' })),
           )
           .toSQL(),
-        `
-          SELECT ${messageSelectAll} FROM "message" AS "m"
-          WHERE EXISTS (
-            SELECT 1 FROM "user"
-            WHERE "user"."id" = "m"."authorId"
-              AND "user"."userKey" = "m"."messageKey"
-              AND EXISTS (
-                SELECT 1 FROM "profile"
-                WHERE "profile"."userId" = "user"."id"
-                  AND "profile"."profileKey" = "user"."userKey"
-                  AND "profile"."bio" = $1
-              )
+        sql,
+        ['bio'],
+      );
+
+      expectSql(
+        db.message
+          .as('m')
+          .whereExists('user', (q) =>
+            q.whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' })),
           )
-        `,
+          .toSQL(),
+        sql,
         ['bio'],
       );
     });

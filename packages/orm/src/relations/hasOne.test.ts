@@ -230,12 +230,7 @@ describe('hasOne', () => {
       `,
       );
 
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists('profile', (q) => q.where({ Bio: 'bio' }))
-          .toSQL(),
-        `
+      const sql = `
         SELECT ${userSelectAll} FROM "user" AS "u"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
@@ -243,7 +238,23 @@ describe('hasOne', () => {
             AND "profile"."profileKey" = "u"."userKey"
             AND "profile"."bio" = $1
         )
-      `,
+      `;
+
+      expectSql(
+        db.user
+          .as('u')
+          .whereExists('profile', (q) => q.where({ Bio: 'bio' }))
+          .toSQL(),
+        sql,
+        ['bio'],
+      );
+
+      expectSql(
+        db.user
+          .as('u')
+          .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
+          .toSQL(),
+        sql,
         ['bio'],
       );
     });
@@ -1923,25 +1934,36 @@ describe('hasOne through', () => {
       `,
     );
 
+    const sql = `
+      SELECT ${messageSelectAll} FROM "message" AS "m"
+      WHERE EXISTS (
+        SELECT 1 FROM "profile"
+        WHERE EXISTS (
+          SELECT 1 FROM "user"
+          WHERE "profile"."userId" = "user"."id"
+            AND "profile"."profileKey" = "user"."userKey"
+            AND "user"."id" = "m"."authorId"
+            AND "user"."userKey" = "m"."messageKey"
+        )
+        AND "profile"."bio" = $1
+      )
+    `;
+
     expectSql(
       db.message
         .as('m')
         .whereExists('profile', (q) => q.where({ Bio: 'bio' }))
         .toSQL(),
-      `
-        SELECT ${messageSelectAll} FROM "message" AS "m"
-        WHERE EXISTS (
-          SELECT 1 FROM "profile"
-          WHERE EXISTS (
-            SELECT 1 FROM "user"
-            WHERE "profile"."userId" = "user"."id"
-              AND "profile"."profileKey" = "user"."userKey"
-              AND "user"."id" = "m"."authorId"
-              AND "user"."userKey" = "m"."messageKey"
-          )
-          AND "profile"."bio" = $1
-        )
-      `,
+      sql,
+      ['bio'],
+    );
+
+    expectSql(
+      db.message
+        .as('m')
+        .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
+        .toSQL(),
+      sql,
       ['bio'],
     );
   });

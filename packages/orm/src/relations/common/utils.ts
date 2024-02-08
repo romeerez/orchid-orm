@@ -17,6 +17,9 @@ import { MaybeArray } from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 
+// INNER JOIN the current relation instead of the default OUTER behavior
+export type RelJoin = <T extends Query>(this: T) => T;
+
 export type NestedInsertOneItem = {
   create?: NestedInsertOneItemCreate;
   connect?: NestedInsertOneItemConnect;

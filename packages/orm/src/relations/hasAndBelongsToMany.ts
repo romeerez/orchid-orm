@@ -18,13 +18,13 @@ import {
   _queryWhere,
   CreateCtx,
   CreateData,
-  CreateMethodsNames,
-  DeleteMethodsNames,
   getQueryAs,
   NotFoundError,
   OrchidOrmInternalError,
   Query,
+  RelationConfigBase,
   RelationJoinQuery,
+  SelectableFromShape,
   toSQLCacheKey,
   UpdateArg,
   UpdateCtx,
@@ -38,7 +38,6 @@ import {
   ColumnTypeBase,
   EmptyObject,
   MaybeArray,
-  StringKey,
 } from 'orchid-core';
 import {
   hasRelationHandleCreate,
@@ -47,6 +46,7 @@ import {
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
+  RelJoin,
 } from './common/utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 import { RelationCommonOptions } from './common/options';
@@ -81,30 +81,24 @@ export type HasAndBelongsToManyOptions<
       }
   );
 
-export type HasAndBelongsToManyInfo<
+export interface HasAndBelongsToManyInfo<
   T extends Table,
   Relation extends HasAndBelongsToMany,
   Name extends string,
   TableQuery extends Query,
   Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
-      ? Omit<TableQuery['meta'], 'as' | 'defaults'> & {
-          as: StringKey<Name>;
-          defaults: TableQuery['meta']['defaults'];
+      ? TableQuery['meta'] & {
+          as: Name;
           hasWhere: true;
         }
+      : K extends 'selectable'
+      ? SelectableFromShape<TableQuery['shape'], Name>
       : K extends 'join'
-      ? // INNER JOIN the current relation instead of the default OUTER behavior
-        <T extends Query>(this: T) => T
-      : K extends CreateMethodsNames
-      ? TableQuery[K]
-      : K extends DeleteMethodsNames
-      ? TableQuery[K]
-      : K extends keyof TableQuery
-      ? TableQuery[K]
-      : never;
+      ? RelJoin
+      : TableQuery[K];
   },
-> = {
+> extends RelationConfigBase {
   query: Q;
   methodQuery: Q;
   joinQuery: RelationJoinQuery;
@@ -144,7 +138,7 @@ export type HasAndBelongsToManyInfo<
         T['columns'][Relation['options']['primaryKey']]['type']
       >
     : never;
-};
+}
 
 type State = {
   relatedTableQuery: Query;

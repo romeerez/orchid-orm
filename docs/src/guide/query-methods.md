@@ -293,7 +293,7 @@ const { value } = req.params;
 
 // this is SAFE, SQL injection are prevented:
 await db.table.where(
-  db.table.sql({
+  db.table.sql<boolean>({
     raw: '$$column = random() * $value',
     values: {
       column: 'someTable.someColumn', // or simply 'column'

@@ -17,7 +17,6 @@ import { anyShape, Db } from '../query/db';
 import {
   isExpression,
   Expression,
-  EmptyObject,
   QueryThen,
   callWithThis,
   TemplateLiteralArgs,
@@ -81,16 +80,11 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
 type UpdateRelationData<
   T extends UpdateSelf,
   Rel extends RelationConfigBase,
-> = Rel['one'] extends true
-  ?
-      | Rel['dataForUpdate']
-      | (QueryReturnsAll<T['returnType']> extends true
-          ? never
-          : Rel['dataForUpdateOne'])
-  : Rel['dataForUpdate'] &
-      (QueryReturnsAll<T['returnType']> extends true
-        ? EmptyObject
-        : Rel['dataForUpdateOne']);
+> = QueryReturnsAll<T['returnType']> extends true
+  ? Rel['dataForUpdate']
+  : Rel['one'] extends true
+  ? Rel['dataForUpdate'] | Rel['dataForUpdateOne']
+  : Rel['dataForUpdate'] & Rel['dataForUpdateOne'];
 
 // Type of argument for `update`.
 // not available when there are no conditions on the query.

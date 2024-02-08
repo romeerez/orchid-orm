@@ -14,7 +14,7 @@ import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { QueryBase } from '../../query/queryBase';
 import { RawSQL } from '../../sql/rawSql';
-import { ColumnExpression } from '../../common/fn';
+import { ExpressionOrQueryReturning } from '../../common/utils';
 
 /*
 Argument of `where`:
@@ -55,10 +55,10 @@ export type WhereArg<T extends WhereQueryBase> =
         : never;
     }
   | QueryBase
-  | Expression
+  | Expression<QueryColumn<boolean | null>>
   | ((
       q: WhereQueryBuilder<T>,
-    ) => QueryBase | ColumnExpression<QueryColumn<boolean | null>>);
+    ) => ExpressionOrQueryReturning<boolean | null> | WhereQueryBuilder<T>);
 
 /**
  * Callback argument of `where`.
