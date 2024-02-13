@@ -19,7 +19,7 @@ export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
     const column = (shape[key] as ColumnTypeBase).data.name || key;
     return [
       `"${table}"."${column}"`,
-      column === key ? '' : ` AS "${key}"`,
+      column === key ? '' : ` "${key}"`,
       column,
     ];
   }

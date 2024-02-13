@@ -18,20 +18,14 @@ import {
   QueryColumns,
   QueryThen,
   Spread,
-  StringKey,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
-
-export type SelectableBase = Record<
-  PropertyKey,
-  { as: string; column: QueryColumn }
->;
 
 export type SelectableFromShape<
   Shape extends QueryColumns,
   Table extends string | undefined,
 > = { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
-  [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
+  [K in keyof Shape & string as `${Table}.${K}`]: {
     as: K;
     column: Shape[K];
   };
@@ -52,7 +46,6 @@ export type Query = QueryBase &
     inputType: Record<string, unknown>;
     q: QueryData;
     result: QueryColumns;
-    selectable: SelectableBase;
     then: QueryThen<unknown>;
     catch: QueryCatch<unknown>;
     windows: EmptyObject;
@@ -66,19 +59,14 @@ export type Query = QueryBase &
     ) => QueryError;
   };
 
-export type SelectableOfType<
-  T extends Pick<QueryBase, 'selectable'>,
-  Type,
-> = StringKey<
-  {
-    [K in keyof T['selectable']]: T['selectable'][K]['column']['type'] extends Type | null
-      ? K
-      : never;
-  }[keyof T['selectable']]
->;
+export type SelectableOfType<T extends Pick<QueryBase, 'meta'>, Type> = {
+  [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends Type | null
+    ? K
+    : never;
+}[keyof T['meta']['selectable']];
 
 export type SelectableOrExpressionOfType<
-  T extends Pick<Query, 'selectable'>,
+  T extends Pick<Query, 'meta'>,
   C extends QueryColumn,
 > = SelectableOfType<T, C['type']> | Expression<QueryColumn<C['type'] | null>>;
 
@@ -209,12 +197,12 @@ export type SetQueryReturnsOne<T extends Pick<Query, 'result'>> =
 export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 
 export type SetQueryReturnsPluck<
-  T extends Pick<Query, 'selectable'>,
-  S extends keyof T['selectable'] | Expression,
+  T extends Pick<Query, 'meta'>,
+  S extends keyof T['meta']['selectable'] | Expression,
 > = SetQueryReturnsPluckColumn<
   T,
-  S extends keyof T['selectable']
-    ? T['selectable'][S]['column']
+  S extends keyof T['meta']['selectable']
+    ? T['meta']['selectable'][S]['column']
     : S extends Expression
     ? S['_type']
     : never
@@ -234,16 +222,16 @@ export type SetQueryReturnsPluckColumn<T, C extends QueryColumn> = Omit<
 };
 
 export type SetQueryReturnsValueOptional<
-  T extends Pick<Query, 'selectable'>,
+  T extends Pick<Query, 'meta'>,
   Arg extends GetStringArg<T>,
 > = SetQueryReturnsValue<T, Arg, 'value'>;
 
 export type SetQueryReturnsValue<
-  T extends Pick<Query, 'selectable'>,
+  T extends Pick<Query, 'meta'>,
   Arg extends GetStringArg<T>,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-  Column extends QueryColumn = Arg extends keyof T['selectable']
-    ? T['selectable'][Arg]['column']
+  Column extends QueryColumn = Arg extends keyof T['meta']['selectable']
+    ? T['meta']['selectable'][Arg]['column']
     : Arg extends Query
     ? Arg['result']['value']
     : never,
@@ -285,22 +273,21 @@ export type SetQueryKind<T extends Pick<Query, 'meta'>, Kind extends string> = {
 };
 
 export type SetQueryTableAlias<
-  T extends Pick<Query, 'selectable' | 'table' | 'meta' | 'shape'>,
+  T extends Pick<Query, 'table' | 'meta' | 'shape'>,
   As extends string,
 > = {
-  [K in keyof T]: K extends 'selectable'
-    ? Omit<
-        T['selectable'],
-        `${AliasOrTable<T>}.${StringKey<keyof T['shape']>}`
-      > & {
-        [K in keyof T['shape'] as `${As}.${StringKey<keyof T['shape']>}`]: {
-          as: K;
-          column: T['shape'][K];
-        };
-      }
-    : K extends 'meta'
-    ? Omit<T['meta'], 'as'> & {
+  [K in keyof T]: K extends 'meta'
+    ? Omit<T['meta'], 'as' | 'selectable'> & {
         as: As;
+        selectable: Omit<
+          T['meta']['selectable'],
+          `${AliasOrTable<T>}.${keyof T['shape'] & string}`
+        > & {
+          [K in keyof T['shape'] & string as `${As}.${K}`]: {
+            as: K;
+            column: T['shape'][K];
+          };
+        };
       }
     : T[K];
 };

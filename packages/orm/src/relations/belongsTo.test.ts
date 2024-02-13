@@ -238,7 +238,7 @@ describe('belongsTo', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "p"."bio" AS "Bio", "user"."name" "Name"
+        SELECT "p"."bio" "Bio", "user"."name" "Name"
         FROM "profile" AS "p"
         JOIN "user"
           ON "user"."id" = "p"."userId"
@@ -266,7 +266,7 @@ describe('belongsTo', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "p"."bio" AS "Bio", "u"."name" "Name"
+        SELECT "p"."bio" "Bio", "u"."name" "Name"
         FROM "profile" AS "p"
         JOIN "user" AS "u"
           ON "u"."name" = $1
@@ -289,7 +289,7 @@ describe('belongsTo', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "profile"."bio" AS "Bio", row_to_json("u".*) "u"
+          SELECT "profile"."bio" "Bio", row_to_json("u".*) "u"
           FROM "profile"
           JOIN LATERAL (
             SELECT ${userSelectAll}
@@ -322,11 +322,11 @@ describe('belongsTo', () => {
           query.toSQL(),
           `
             SELECT
-              "p"."id" AS "Id",
+              "p"."id" "Id",
               row_to_json("user".*) "user"
             FROM "profile" AS "p"
             LEFT JOIN LATERAL (
-              SELECT "user"."id" AS "Id", "user"."name" AS "Name"
+              SELECT "user"."id" "Id", "user"."name" "Name"
               FROM "user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "p"."userId"
@@ -378,7 +378,7 @@ describe('belongsTo', () => {
           query.toSQL(),
           `
             SELECT
-              "p"."id" AS "Id",
+              "p"."id" "Id",
               COALESCE("hasUser".r, false) "hasUser"
             FROM "profile" AS "p"
             LEFT JOIN LATERAL (

@@ -405,15 +405,15 @@ describe('join callback with query builder', () => {
           q.toSQL(),
           `
             SELECT
-              "t"."messageId" AS "messageId",
-              "t"."content" AS "messageText"
+              "t"."messageId" "messageId",
+              "t"."content" "messageText"
             FROM "user"
             JOIN
               (
                 SELECT
-                  "t"."id" AS "messageId",
-                  "t"."authorId" AS "userId",
-                  "t"."text" AS "content"
+                  "t"."id" "messageId",
+                  "t"."authorId" "userId",
+                  "t"."text" "content"
                 FROM "message" AS "t"
                 WHERE "t"."text" = $1
               ) "t"
@@ -446,14 +446,14 @@ describe('join callback with query builder', () => {
           q.toSQL(),
           `
             SELECT
-              "t"."snakeName" AS "name",
-              "t"."tailLength" AS "length"
+              "t"."snakeName" "name",
+              "t"."tailLength" "length"
             FROM "user"
             JOIN
               (
                 SELECT
-                  "t"."snake_name" AS "snakeName",
-                  "t"."tail_length" AS "tailLength"
+                  "t"."snake_name" "snakeName",
+                  "t"."tail_length" "tailLength"
                 FROM "snake" AS "t"
                 WHERE "t"."snake_name" = $1
               ) "t"

@@ -1,4 +1,4 @@
-import { Query, QueryReturnType, SelectableBase, WithDataBase } from './query';
+import { Query, QueryReturnType, WithDataBase } from './query';
 import { QueryData } from '../sql';
 import {
   EmptyObject,
@@ -29,7 +29,6 @@ export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
   abstract result: QueryColumns;
   q = {} as QueryData;
   table?: string;
-  selectable!: SelectableBase;
   shape!: QueryColumns;
   relations!: RelationsBase;
   withData!: WithDataBase;

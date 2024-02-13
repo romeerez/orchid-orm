@@ -17,7 +17,7 @@ import {
   VirtualColumn,
   WhereArg,
 } from 'pqb';
-import { ColumnSchemaConfig, EmptyObject, StringKey } from 'orchid-core';
+import { ColumnSchemaConfig, EmptyObject } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
@@ -102,23 +102,23 @@ export type RelationConfig<
   T extends Table = Table,
   Relations extends RelationThunks = RelationThunks,
   Relation extends RelationThunk = RelationThunk,
-  K extends PropertyKey = PropertyKey,
+  K extends string = string,
   TableQuery extends Query = Query,
   Result extends RelationConfigBase = Relation extends BelongsTo
-    ? BelongsToInfo<T, Relation, StringKey<K>, TableQuery>
+    ? BelongsToInfo<T, Relation, K, TableQuery>
     : Relation extends HasOne
-    ? HasOneInfo<T, Relations, Relation, StringKey<K>, TableQuery>
+    ? HasOneInfo<T, Relations, Relation, K, TableQuery>
     : Relation extends HasMany
-    ? HasManyInfo<T, Relations, Relation, StringKey<K>, TableQuery>
+    ? HasManyInfo<T, Relations, Relation, K, TableQuery>
     : Relation extends HasAndBelongsToMany
-    ? HasAndBelongsToManyInfo<T, Relation, StringKey<K>, TableQuery>
+    ? HasAndBelongsToManyInfo<T, Relation, K, TableQuery>
     : never,
 > = Result;
 
 export type MapRelation<
   T extends Table,
   Relations extends RelationThunks,
-  RelationName extends keyof Relations,
+  RelationName extends keyof Relations & string,
   Relation extends RelationThunk = Relations[RelationName],
   TableQuery extends Query = RelationScopeOrTable<Relation>,
 > = RelationQuery<
@@ -129,7 +129,7 @@ export type MapRelations<T extends Table> = T extends {
   relations: RelationThunks;
 }
   ? {
-      [K in keyof T['relations']]: MapRelation<T, T['relations'], K>;
+      [K in keyof T['relations'] & string]: MapRelation<T, T['relations'], K>;
     }
   : EmptyObject;
 

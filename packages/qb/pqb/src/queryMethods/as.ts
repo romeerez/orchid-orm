@@ -3,7 +3,7 @@ import { QueryBase } from '../query/queryBase';
 
 export type AsQueryArg = Pick<
   Query,
-  'selectable' | 'table' | 'meta' | 'q' | 'clone' | 'baseQuery' | 'shape'
+  'table' | 'meta' | 'q' | 'clone' | 'baseQuery' | 'shape'
 >;
 
 export const _queryAs = <T extends AsQueryArg, As extends string>(

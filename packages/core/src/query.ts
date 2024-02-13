@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
 import { EmptyObject, RecordKeyTrue } from './utils';
+import { QueryColumn } from './columns';
 
 // Output type of the `toSQL` method of query objects.
 // This will be passed to database adapter to perform query.
@@ -30,6 +31,8 @@ export type QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
   tsQuery?: string;
   // Used to determine what scopes are available on the table.
   scopes: Scopes;
+  // tracking columns of the main table, joined tables, `with` tables that are available for `select`.
+  selectable: SelectableBase;
 };
 
 // static query data that is defined only once when the table instance is instantiated
@@ -59,6 +62,11 @@ export type QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
   meta: QueryMetaBase<Scopes>;
   internal: QueryInternal;
 };
+
+export type SelectableBase = Record<
+  PropertyKey,
+  { as: string; column: QueryColumn }
+>;
 
 // Symbol that is used in the parsers in the query data for a column that doesn't have a name
 // this is for the case when using query.get('column') or query.count() - it returns anonymous value

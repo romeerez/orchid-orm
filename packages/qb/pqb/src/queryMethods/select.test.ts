@@ -158,7 +158,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
           FROM "snake"
         `,
       );
@@ -356,7 +356,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT row_to_json("p".*) AS "profile"
+          SELECT row_to_json("p".*) "profile"
           FROM "user"
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
           WHERE "p"."bio" = $1
@@ -424,7 +424,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT row_to_json("p".*) AS "profile"
+          SELECT row_to_json("p".*) "profile"
           FROM "user"
           LEFT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
         `,
@@ -480,7 +480,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", row_to_json("p".*) AS "profile"
+          SELECT "user"."name", row_to_json("p".*) "profile"
           FROM "user"
           RIGHT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
         `,
@@ -522,7 +522,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", row_to_json("p".*) AS "profile"
+          SELECT "user"."name", row_to_json("p".*) "profile"
           FROM "user"
           FULL JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
         `,
@@ -598,7 +598,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" AS "aliasedId", "user"."name" AS "aliasedName"
+          SELECT "user"."id" "aliasedId", "user"."name" "aliasedName"
           FROM "user"
         `,
       );
@@ -613,7 +613,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" AS "name", "snake"."tail_length" AS "length"
+          SELECT "snake"."snake_name" "name", "snake"."tail_length" "length"
           FROM "snake"
         `,
       );
@@ -640,7 +640,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" AS "aliasedId", "user"."name" AS "aliasedName"
+          SELECT "user"."id" "aliasedId", "user"."name" "aliasedName"
           FROM "user"
         `,
       );
@@ -658,7 +658,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" AS "name", "snake"."tail_length" AS "length"
+          SELECT "snake"."snake_name" "name", "snake"."tail_length" "length"
           FROM "snake"
         `,
       );
@@ -693,7 +693,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" AS "aliasedId", "profile"."userId" AS "aliasedUserId"
+          SELECT "user"."id" "aliasedId", "profile"."userId" "aliasedUserId"
           FROM "user"
           JOIN "profile" ON "profile"."userId" = "user"."id"
         `,
@@ -712,7 +712,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" AS "userId", "snake"."tail_length" AS "length"
+          SELECT "user"."id" "userId", "snake"."tail_length" "length"
           FROM "user"
           JOIN "snake" ON "snake"."tail_length" = "user"."id"
         `,
@@ -739,7 +739,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" AS "aliasedId", "p"."userId" AS "aliasedUserId"
+          SELECT "user"."id" "aliasedId", "p"."userId" "aliasedUserId"
           FROM "user"
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
         `,
@@ -758,7 +758,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" AS "userId", "s"."tail_length" AS "length"
+          SELECT "user"."id" "userId", "s"."tail_length" "length"
           FROM "user"
           JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
         `,
@@ -778,7 +778,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT 1 AS "one" FROM "user"
+          SELECT 1 "one" FROM "user"
         `,
       );
       expectQueryNotMutated(q);
@@ -798,7 +798,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT 1 AS "one" FROM "user"
+          SELECT 1 "one" FROM "user"
         `,
       );
     });
@@ -820,7 +820,7 @@ describe('select', () => {
             (
               SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
               FROM "user" AS "t"
-            ) AS "subquery"
+            ) "subquery"
           FROM "user"
         `,
       );
@@ -842,7 +842,7 @@ describe('select', () => {
                 SELECT ${snakeSelectAll}
                 FROM "snake"
               ) AS "t"
-            ) AS "subquery"
+            ) "subquery"
           FROM "snake"
         `,
       );

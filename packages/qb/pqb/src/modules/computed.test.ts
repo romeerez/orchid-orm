@@ -72,7 +72,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" AS "as"
+        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "as"
           FROM "user"
           LIMIT 1`,
       );
@@ -89,7 +89,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" AS "as"
+        `SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "as"
           FROM "user"
           LIMIT 1`,
       );
@@ -128,7 +128,7 @@ describe('computed', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name" || ' ' || "user"."userKey" AS "as"
+        `SELECT "user"."name" || ' ' || "user"."userKey" "as"
           FROM "profile"
           JOIN "user" ON "user"."id" = "profile"."userId"
           LIMIT 1`,

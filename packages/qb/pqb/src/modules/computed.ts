@@ -19,8 +19,10 @@ export type QueryWithComputed<
 > = {
   [K in keyof T]: K extends 'shape'
     ? T['shape'] & Shape
-    : K extends 'selectable'
-    ? T['selectable'] & SelectableFromShape<Shape, T['table']>
+    : K extends 'meta'
+    ? T['meta'] & {
+        selectable: SelectableFromShape<Shape, T['table']>;
+      }
     : T[K];
 };
 

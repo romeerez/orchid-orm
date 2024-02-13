@@ -23,7 +23,6 @@ import {
   QueryThen,
   setColumnData,
   setParserToQuery,
-  StringKey,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 import { _joinLateral } from './join/_join';
@@ -35,22 +34,22 @@ import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 
 // .select method argument.
-export type SelectArg<T extends Pick<Query, 'selectable'>> =
+export type SelectArg<T extends Pick<Query, 'meta'>> =
   | '*'
-  | keyof T['selectable'];
+  | keyof T['meta']['selectable'];
 
 // .select method object argument.
 // Key is alias for selected item,
 // value can be a column, raw, or a function returning query or raw.
-type SelectAsArg<T extends Pick<Query, 'selectable' | 'relations'>> = Record<
+type SelectAsArg<T extends Pick<Query, 'meta' | 'relations'>> = Record<
   string,
   SelectAsValue<T>
 >;
 
 // .select method object argument value.
 // Can be column, raw, or a function returning query or raw.
-type SelectAsValue<T extends Pick<Query, 'selectable' | 'relations'>> =
-  | StringKey<keyof T['selectable']>
+type SelectAsValue<T extends Pick<Query, 'meta' | 'relations'>> =
+  | keyof T['meta']['selectable']
   | Expression
   | ((q: SelectSubQueryArg<T>) => QueryBase | Expression);
 
@@ -62,20 +61,17 @@ type SelectSubQueryArg<T extends Pick<Query, 'relations'>> = {
 
 // Result type of select without the ending object argument.
 type SelectResult<
-  T extends Pick<
-    Query,
-    'selectable' | 'shape' | 'result' | 'meta' | 'returnType'
-  >,
+  T extends Pick<Query, 'shape' | 'result' | 'meta' | 'returnType'>,
   Columns extends SelectArg<T>[],
   Result extends QueryColumns = {
     [K in
       | ('*' extends Columns[number]
           ? Exclude<Columns[number], '*'> | keyof T['shape']
           : Columns[number])
-      | PrevResultKeys<T> as K extends keyof T['selectable']
-      ? T['selectable'][K]['as']
-      : K]: K extends keyof T['selectable']
-      ? T['selectable'][K]['column']
+      | PrevResultKeys<T> as K extends keyof T['meta']['selectable']
+      ? T['meta']['selectable'][K]['as']
+      : K]: K extends keyof T['meta']['selectable']
+      ? T['meta']['selectable'][K]['column']
       : K extends keyof T['result']
       ? T['result'][K]
       : never;
@@ -97,7 +93,7 @@ type SelectResult<
 type SelectResultWithObj<
   T extends Pick<
     Query,
-    'selectable' | 'relations' | 'shape' | 'result' | 'returnType' | 'meta'
+    'relations' | 'shape' | 'result' | 'returnType' | 'meta'
   >,
   Columns extends SelectArg<T>[],
   Obj extends SelectAsArg<T>,
@@ -109,10 +105,10 @@ type SelectResultWithObj<
           ? Exclude<Columns[number], '*'> | keyof T['shape']
           : Columns[number])
       | keyof Obj
-      | PrevResultKeys<T> as K extends keyof T['selectable']
-      ? T['selectable'][K]['as']
-      : K]: K extends keyof T['selectable']
-      ? T['selectable'][K]['column']
+      | PrevResultKeys<T> as K extends keyof T['meta']['selectable']
+      ? T['meta']['selectable'][K]['as']
+      : K]: K extends keyof T['meta']['selectable']
+      ? T['meta']['selectable'][K]['column']
       : K extends keyof Obj
       ? SelectAsValueResult<T, Obj[K]>
       : K extends keyof T['result']
@@ -122,15 +118,15 @@ type SelectResultWithObj<
   Data = GetQueryResult<T['returnType'], Result>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? T['meta'] & MetaHasSelect
+    ? Omit<T['meta'], 'selectable'> & {
+        selectable: SelectAsSelectable<T, Obj>;
+      } & MetaHasSelect
     : K extends 'result'
     ? Result
     : K extends 'then'
     ? QueryThen<Data>
     : K extends 'catch'
     ? QueryCatch<Data>
-    : K extends 'selectable'
-    ? SelectAsSelectable<T, Obj>
     : T[K];
 };
 
@@ -145,33 +141,35 @@ type MetaHasSelect = {
 
 // Add new 'selectable' types based on the select object argument.
 type SelectAsSelectable<
-  T extends Pick<Query, 'selectable' | 'relations'>,
+  T extends Pick<Query, 'meta' | 'relations'>,
   Arg extends SelectAsArg<T>,
 > = {
-  [K in keyof Arg]: Arg[K] extends ((q: never) => infer R extends QueryBase)
+  [K in keyof Arg & string]: Arg[K] extends ((
+    q: never,
+  ) => infer R extends QueryBase)
     ? // turn union of objects into intersection
       // https://stackoverflow.com/questions/66445084/intersection-of-an-objects-value-types-in-typescript
       (x: {
-        [C in keyof R['result'] as `${StringKey<K>}.${StringKey<C>}`]: {
+        [C in keyof R['result'] & string as `${K}.${C}`]: {
           as: C;
           column: R['result'][C];
         };
       }) => void
     : never;
-}[keyof Arg] extends (x: infer I) => void
+}[keyof Arg & string] extends (x: infer I) => void
   ? {
-      [K in keyof T['selectable'] | keyof I]: K extends keyof I
+      [K in keyof T['meta']['selectable'] | keyof I]: K extends keyof I
         ? I[K]
-        : T['selectable'][K];
+        : T['meta']['selectable'][K];
     }
   : never;
 
 // map a single value of select object arg into a column
 type SelectAsValueResult<
-  T extends Pick<Query, 'selectable' | 'relations'>,
+  T extends Pick<Query, 'meta' | 'relations'>,
   Arg extends SelectAsValue<T>,
-> = Arg extends keyof T['selectable']
-  ? T['selectable'][Arg]['column']
+> = Arg extends keyof T['meta']['selectable']
+  ? T['meta']['selectable'][Arg]['column']
   : Arg extends Expression
   ? Arg['_type']
   : Arg extends (q: never) => infer R
@@ -238,9 +236,7 @@ const addParsersForSelectJoined = (
 };
 
 // add parser for a single key-value pair of selected object
-export const addParserForSelectItem = <
-  T extends Pick<Query, 'selectable' | 'q'>,
->(
+export const addParserForSelectItem = <T extends Pick<Query, 'meta' | 'q'>>(
   q: T,
   as: string | getValueKey | undefined,
   key: string,
@@ -268,11 +264,10 @@ export const addParserForSelectItem = <
         });
       }
     }
-  } else {
-    setParserForSelectedString(q, arg, as, key);
+    return arg;
   }
 
-  return arg;
+  return setParserForSelectedString(q, arg as string, as, key);
 };
 
 // reuse SQL for empty array for JSON agg expressions
@@ -286,8 +281,7 @@ export const processSelectArg = <T extends Query>(
   columnAs?: string | getValueKey,
 ): SelectItem => {
   if (typeof arg === 'string') {
-    setParserForSelectedString(q, arg, as, columnAs);
-    return arg;
+    return setParserForSelectedString(q, arg, as, columnAs);
   }
 
   const selectAs: Record<string, string | Query | Expression> = {};
@@ -371,7 +365,7 @@ export const setParserForSelectedString = (
   arg: string,
   as: string | getValueKey | undefined,
   columnAs?: string | getValueKey,
-): void => {
+): string => {
   const index = arg.indexOf('.');
   if (index !== -1) {
     const table = arg.slice(0, index);
@@ -380,18 +374,22 @@ export const setParserForSelectedString = (
     // 'table.*' is selecting a full joined record
     if (column === '*') {
       addParsersForSelectJoined(q, table, columnAs);
+      return table === as ? column : arg;
     } else {
       if (table === as) {
         const parser = q.q.parsers?.[column];
         if (parser) setParserToQuery(q.q, columnAs || column, parser);
+        return column;
       } else {
         const parser = q.q.joinedParsers?.[table]?.[column];
         if (parser) setParserToQuery(q.q, columnAs || column, parser);
+        return arg;
       }
     }
   } else {
     const parser = q.q.parsers?.[arg];
     if (parser) setParserToQuery(q.q, columnAs || arg, parser);
+    return arg;
   }
 };
 
@@ -579,16 +577,13 @@ export class Select {
    * ```
    */
   select<
-    T extends Pick<
-      Query,
-      'selectable' | 'shape' | 'result' | 'meta' | 'returnType'
-    >,
+    T extends Pick<Query, 'shape' | 'result' | 'meta' | 'returnType'>,
     Columns extends SelectArg<T>[],
   >(this: T, ...args: Columns): SelectResult<T, Columns>;
   select<
     T extends Pick<
       Query,
-      'selectable' | 'shape' | 'result' | 'meta' | 'returnType' | 'relations'
+      'shape' | 'result' | 'meta' | 'returnType' | 'relations'
     >,
     Columns extends SelectArg<T>[],
     Obj extends SelectAsArg<T>,
@@ -620,14 +615,7 @@ export class Select {
   selectAll<
     T extends Pick<
       Query,
-      | 'selectable'
-      | 'shape'
-      | 'result'
-      | 'meta'
-      | 'returnType'
-      | 'clone'
-      | 'baseQuery'
-      | 'q'
+      'shape' | 'result' | 'meta' | 'returnType' | 'clone' | 'baseQuery' | 'q'
     >,
   >(this: T): SelectResult<T, ['*']> {
     const q = this.clone();

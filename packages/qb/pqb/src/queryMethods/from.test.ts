@@ -64,8 +64,8 @@ describe('from', () => {
         `SELECT * FROM (
         SELECT
           "user"."createdAt",
-          "user"."name" AS "alias",
-          (SELECT count(*) FROM "user") AS "count"
+          "user"."name" "alias",
+          (SELECT count(*) FROM "user") "count"
         FROM "user"
       ) AS "user" WHERE "user"."alias" ILIKE '%' || $1 || '%'`,
         ['name'],

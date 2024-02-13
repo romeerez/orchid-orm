@@ -106,7 +106,7 @@ export const selectToSql = (
           const value = obj[as];
           if (typeof value === 'object' || typeof value === 'function') {
             if (isExpression(value)) {
-              list.push(`${value.toSQL(ctx, quotedAs)} AS "${as}"`);
+              list.push(`${value.toSQL(ctx, quotedAs)} "${as}"`);
             } else {
               pushSubQuerySql(ctx, value, as, list, quotedAs);
             }
@@ -119,7 +119,7 @@ export const selectToSql = (
                 value as string,
                 quotedAs,
                 true,
-              )} AS "${as}"`,
+              )} "${as}"`,
             );
           }
         }
@@ -243,7 +243,7 @@ const pushSubQuerySql = (
       query,
       `(${makeSQL(query, ctx).text})`,
       quotedAs,
-    )} AS "${as}"`,
+    )} "${as}"`,
   );
 };
 

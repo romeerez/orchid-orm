@@ -91,13 +91,12 @@ export interface HasManyInfo<
   Q extends Query = Relation['options'] extends RelationThroughOptions
     ? {
         [K in keyof TableQuery]: K extends 'meta'
-          ? TableQuery['meta'] & {
+          ? Omit<TableQuery['meta'], 'selectable'> & {
               as: Name;
               defaults: Populate;
               hasWhere: true;
+              selectable: SelectableFromShape<TableQuery['shape'], Name>;
             }
-          : K extends 'selectable'
-          ? SelectableFromShape<TableQuery['shape'], Name>
           : K extends 'join'
           ? RelJoin
           : K extends CreateMethodsNames
@@ -106,13 +105,12 @@ export interface HasManyInfo<
       }
     : {
         [K in keyof TableQuery]: K extends 'meta'
-          ? TableQuery['meta'] & {
+          ? Omit<TableQuery['meta'], 'selectable'> & {
               as: Name;
               defaults: Populate;
               hasWhere: true;
+              selectable: SelectableFromShape<TableQuery['shape'], Name>;
             }
-          : K extends 'selectable'
-          ? SelectableFromShape<TableQuery['shape'], Name>
           : K extends 'join'
           ? RelJoin
           : TableQuery[K];

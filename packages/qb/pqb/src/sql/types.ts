@@ -1,4 +1,4 @@
-import { Query, QueryWithTable, SelectableBase } from '../query/query';
+import { Query, QueryWithTable } from '../query/query';
 import { RelationQuery } from '../relations';
 import { SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from './data';
@@ -7,6 +7,7 @@ import {
   Expression,
   MaybeArray,
   TemplateLiteralArgs,
+  SelectableBase,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 

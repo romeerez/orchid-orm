@@ -266,7 +266,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "chats"."title" "Title"
+        SELECT "u"."name" "Name", "chats"."title" "Title"
         FROM "user" AS "u"
         JOIN "chat" AS "chats"
           ON EXISTS (
@@ -298,7 +298,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "c"."title" "Title"
+        SELECT "u"."name" "Name", "c"."title" "Title"
         FROM "user" AS "u"
         JOIN "chat" AS "c"
           ON "c"."title" = $1
@@ -326,7 +326,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" AS "Name", row_to_json("c".*) AS "chat"
+          SELECT "user"."name" "Name", row_to_json("c".*) "chat"
           FROM "user"
           JOIN LATERAL (
             SELECT ${chatSelectAll}
@@ -363,15 +363,15 @@ describe('hasAndBelongsToMany', () => {
           query.toSQL(),
           `
             SELECT
-              "u"."id" AS "Id",
+              "u"."id" "Id",
               COALESCE("chats".r, '[]') "chats"
             FROM "user" AS "u"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json("t".*)) r
               FROM (
                 SELECT
-                  "chats"."idOfChat" AS "IdOfChat",
-                  "chats"."title" AS "Title"
+                  "chats"."idOfChat" "IdOfChat",
+                  "chats"."title" "Title"
                 FROM "chat" AS "chats"
                 WHERE "chats"."title" = $1
                   AND EXISTS (
@@ -438,7 +438,7 @@ describe('hasAndBelongsToMany', () => {
         query.toSQL(),
         `
           SELECT
-            "u"."id" AS "Id",
+            "u"."id" "Id",
             "chatsCount".r "chatsCount"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
@@ -467,13 +467,13 @@ describe('hasAndBelongsToMany', () => {
         query.toSQL(),
         `
           SELECT
-            "u"."id" AS "Id",
+            "u"."id" "Id",
             COALESCE("titles".r, '[]') "titles"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Title") r
             FROM (
-              SELECT "chats"."title" AS "Title"
+              SELECT "chats"."title" "Title"
               FROM "chat" AS "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
@@ -499,7 +499,7 @@ describe('hasAndBelongsToMany', () => {
         query.toSQL(),
         `
           SELECT
-            "u"."id" AS "Id",
+            "u"."id" "Id",
             COALESCE("hasChats".r, false) "hasChats"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
@@ -660,7 +660,7 @@ describe('hasAndBelongsToMany', () => {
           `
           INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
           VALUES ($1, $2, $3, $4, $5)
-          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
+          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
         `,
           ['user 1', 'key', 'password', now, now],
         );
@@ -670,7 +670,7 @@ describe('hasAndBelongsToMany', () => {
           `
           INSERT INTO "chat"("title", "chatKey", "updatedAt", "createdAt")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
-          RETURNING "chat"."idOfChat" AS "IdOfChat", "chat"."chatKey" AS "ChatKey"
+          RETURNING "chat"."idOfChat" "IdOfChat", "chat"."chatKey" "ChatKey"
         `,
           ['chat 1', 'key', now, now, 'chat 2', 'key', now, now],
         );
@@ -747,7 +747,7 @@ describe('hasAndBelongsToMany', () => {
           `
           INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
-          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
+          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
         `,
           [
             'user 1',
@@ -768,7 +768,7 @@ describe('hasAndBelongsToMany', () => {
           `
           INSERT INTO "chat"("title", "chatKey", "updatedAt", "createdAt")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
-          RETURNING "chat"."idOfChat" AS "IdOfChat", "chat"."chatKey" AS "ChatKey"
+          RETURNING "chat"."idOfChat" "IdOfChat", "chat"."chatKey" "ChatKey"
         `,
           [
             'chat 1',
@@ -905,7 +905,7 @@ describe('hasAndBelongsToMany', () => {
           `
           INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
           VALUES ($1, $2, $3, $4, $5)
-          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
+          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
         `,
           ['user 1', 'key', 'password', now, now],
         );
@@ -915,7 +915,7 @@ describe('hasAndBelongsToMany', () => {
           expectSql(
             sql as Sql,
             `
-            SELECT "chats"."idOfChat" AS "IdOfChat", "chats"."chatKey" AS "ChatKey"
+            SELECT "chats"."idOfChat" "IdOfChat", "chats"."chatKey" "ChatKey"
             FROM "chat" AS "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
@@ -999,7 +999,7 @@ describe('hasAndBelongsToMany', () => {
           `
           INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
-          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
+          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
         `,
           [
             'user 1',
@@ -1020,7 +1020,7 @@ describe('hasAndBelongsToMany', () => {
           expectSql(
             sql as Sql,
             `
-            SELECT "chats"."idOfChat" AS "IdOfChat", "chats"."chatKey" AS "ChatKey"
+            SELECT "chats"."idOfChat" "IdOfChat", "chats"."chatKey" "ChatKey"
             FROM "chat" AS "chats"
             WHERE "chats"."title" = $1
             LIMIT 1

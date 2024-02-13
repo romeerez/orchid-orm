@@ -88,12 +88,11 @@ export interface HasAndBelongsToManyInfo<
   TableQuery extends Query,
   Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
-      ? TableQuery['meta'] & {
+      ? Omit<TableQuery['meta'], 'selectable'> & {
           as: Name;
           hasWhere: true;
+          selectable: SelectableFromShape<TableQuery['shape'], Name>;
         }
-      : K extends 'selectable'
-      ? SelectableFromShape<TableQuery['shape'], Name>
       : K extends 'join'
       ? RelJoin
       : TableQuery[K];

@@ -132,7 +132,7 @@ describe('with', () => {
           .from('withAlias')
           .toSQL(),
         getExpectedWithSql(
-          `SELECT 1 AS "one"`,
+          `SELECT 1 "one"`,
           // columns: true will produce empty columns list because there is no way to get it from query builder result
           [],
           options,
@@ -243,7 +243,7 @@ describe('with', () => {
       q.toSQL(),
       `
         WITH "w" AS (
-          SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
           FROM "snake"
         )
         SELECT "w"."snakeName", "w"."tailLength"

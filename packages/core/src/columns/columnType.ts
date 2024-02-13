@@ -1,6 +1,6 @@
 import { Code } from './code';
 import { RawSQLBase } from '../raw';
-import { SetOptional, SomeIsTrue, StringKey } from '../utils';
+import { SetOptional, SomeIsTrue } from '../utils';
 import { QueryBaseCommon } from '../query';
 import { BaseOperators, OperatorBase } from './operators';
 import { ColumnSchemaConfig } from './columnSchema';
@@ -158,28 +158,26 @@ export type ValidationContext = any;
 
 // resolves in string literal of single primary key
 // if table has two or more primary keys it will resolve in never
-export type SinglePrimaryKey<Shape extends QueryColumnsInit> = StringKey<
-  {
-    [K in keyof Shape]: Shape[K]['data']['isPrimaryKey'] extends true
-      ? [
-          {
-            [S in keyof Shape]: Shape[S]['data']['isPrimaryKey'] extends true
-              ? S extends K
-                ? never
-                : S
-              : never;
-          }[keyof Shape],
-        ] extends [never]
-        ? K
-        : never
-      : never;
-  }[keyof Shape]
->;
+export type SinglePrimaryKey<Shape extends QueryColumnsInit> = {
+  [K in keyof Shape]: Shape[K]['data']['isPrimaryKey'] extends true
+    ? [
+        {
+          [S in keyof Shape]: Shape[S]['data']['isPrimaryKey'] extends true
+            ? S extends K
+              ? never
+              : S
+            : never;
+        }[keyof Shape],
+      ] extends [never]
+      ? K
+      : never
+    : never;
+}[keyof Shape & string];
 
 // type of columns selected by default, `hidden` columns are omitted
 export type DefaultSelectColumns<S extends QueryColumnsInit> = {
   [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
-}[StringKey<keyof S>][];
+}[keyof S & string][];
 
 // minimal table class type to use in the foreign key option
 export type ForeignKeyTable = new () => {
@@ -189,9 +187,8 @@ export type ForeignKeyTable = new () => {
 };
 
 // string union of available column names of the table
-export type ColumnNameOfTable<Table extends ForeignKeyTable> = StringKey<
-  keyof InstanceType<Table>['columns']
->;
+export type ColumnNameOfTable<Table extends ForeignKeyTable> =
+  keyof InstanceType<Table>['columns'] & string;
 
 // clone column type and set data to it
 export const setColumnData = <

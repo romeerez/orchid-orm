@@ -348,7 +348,7 @@ describe('search', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ts_headline($1, $2, "s", $3) AS "headline"
+        SELECT ts_headline($1, $2, "s", $3) "headline"
         FROM "post", to_tsquery($1, $4) "s"
         WHERE to_tsvector($1, $2) @@ "s"
       `,
@@ -368,7 +368,7 @@ describe('search', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ts_headline($1, $2, "s", 'MaxWords=' || $3) AS "headline"
+        SELECT ts_headline($1, $2, "s", 'MaxWords=' || $3) "headline"
         FROM "post", to_tsquery($1, $4) "s"
         WHERE to_tsvector($1, $2) @@ "s"
       `,

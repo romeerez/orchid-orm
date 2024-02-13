@@ -463,13 +463,19 @@ describe('queryMethods', () => {
   });
 
   describe('as', () => {
-    it('sets table alias', () => {
+    it('should set table alias', () => {
       const q = User.all();
       expectSql(
         q.select('id').as('as').toSQL(),
         'SELECT "as"."id" FROM "user" AS "as"',
       );
       expectQueryNotMutated(q);
+    });
+
+    it('should apply the latest table alias to SQL', () => {
+      const q = User.as('u').select('u.id').as('user').select('user.name');
+
+      expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
     });
   });
 
@@ -501,7 +507,7 @@ describe('queryMethods', () => {
           .withSchema('geo')
           .toSQL(),
         `
-          SELECT "city"."name", "country"."name" AS "countryName"
+          SELECT "city"."name", "country"."name" "countryName"
           FROM "geo"."city"
           JOIN "geo"."country" ON "country"."id" = "city"."countryId"
         `,
@@ -542,7 +548,7 @@ describe('queryMethods', () => {
         `
           SELECT "t"."snakeName"
           FROM (
-            SELECT "snake"."snake_name" AS "snakeName"
+            SELECT "snake"."snake_name" "snakeName"
             FROM "snake"
           ) AS "t"
         `,
@@ -597,7 +603,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT extract(month from "createdAt") AS "month"
+          SELECT extract(month from "createdAt") "month"
           FROM "user"
           GROUP BY "month"
         `,
@@ -627,7 +633,7 @@ describe('queryMethods', () => {
           })
           .toSQL(),
         `
-          SELECT avg("user"."id") OVER "w" AS "avg" FROM "user"
+          SELECT avg("user"."id") OVER "w" "avg" FROM "user"
           WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
         `,
       );
@@ -647,7 +653,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT avg("snake"."tail_length") OVER "w" AS "avg" FROM "snake"
+          SELECT avg("snake"."tail_length") OVER "w" "avg" FROM "snake"
           WINDOW "w" AS (PARTITION BY "snake"."snake_name" ORDER BY "snake"."tail_length" DESC)
         `,
       );
@@ -668,7 +674,7 @@ describe('queryMethods', () => {
           })
           .toSQL(),
         `
-        SELECT avg("user"."id") OVER "w" AS "avg" FROM "user"
+        SELECT avg("user"."id") OVER "w" "avg" FROM "user"
         WINDOW "w" AS (PARTITION BY id ORDER BY name DESC)
       `,
       );
@@ -783,7 +789,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT (SELECT count(*) FROM "user") AS "count"
+          SELECT (SELECT count(*) FROM "user") "count"
           FROM "user"
           ORDER BY "count" ASC
         `,

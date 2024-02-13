@@ -48,7 +48,7 @@ describe('aggregate', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT count(*) > $1 AS "count" FROM "user" LIMIT 1
+          SELECT count(*) > $1 "count" FROM "user" LIMIT 1
         `,
         [5],
       );
@@ -67,7 +67,7 @@ describe('aggregate', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT count(coalesce(one, two)) > 2 + 2 AS "count" FROM "user" LIMIT 1
+          SELECT count(coalesce(one, two)) > 2 + 2 "count" FROM "user" LIMIT 1
         `,
       );
     });
@@ -256,7 +256,7 @@ describe('aggregate', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT count(*) AS "count" FROM "user" LIMIT 1
+            SELECT count(*) "count" FROM "user" LIMIT 1
           `,
         );
 
@@ -450,7 +450,7 @@ describe('aggregate', () => {
     const getSql = (arg: string, as?: string) => {
       let select = `${functionName}(${arg})`;
 
-      if (as) select += ` AS "${as}"`;
+      if (as) select += ` "${as}"`;
 
       return `SELECT ${select} FROM "user"`;
     };
@@ -565,7 +565,7 @@ describe('aggregate', () => {
 
     it(`should select aggregated value`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") AS "result" FROM "user"`;
+      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") "result" FROM "user"`;
       expectSql(
         q
           .select({
@@ -580,7 +580,7 @@ describe('aggregate', () => {
 
     it(`should select aggregated value with raw sql`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}($1::text, name) AS "result" FROM "user"`;
+      const expectedSql = `SELECT ${functionName}($1::text, name) "result" FROM "user"`;
       expectSql(
         q
           .select({
@@ -712,7 +712,7 @@ describe('aggregate', () => {
             SELECT ${functionName}() OVER (
               PARTITION BY "user"."age"
               ORDER BY "user"."createdAt" DESC
-            ) AS "result" FROM "user"
+            ) "result" FROM "user"
           `,
           [],
         );

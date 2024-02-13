@@ -137,7 +137,7 @@ describe('hasMany', () => {
           query.toSQL(),
           `
             INSERT INTO "message"("chatId", "messageKey", "text")
-            SELECT "chat"."idOfChat" AS "ChatId", "chat"."chatKey" AS "MessageKey", $1
+            SELECT "chat"."idOfChat" "ChatId", "chat"."chatKey" "MessageKey", $1
             FROM "chat"
             WHERE "chat"."idOfChat" = $2
             LIMIT 1
@@ -283,7 +283,7 @@ describe('hasMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "messages"."text" "Text"
+        SELECT "u"."name" "Name", "messages"."text" "Text"
         FROM "user" AS "u"
         JOIN "message" AS "messages"
           ON "messages"."authorId" = "u"."id"
@@ -308,7 +308,7 @@ describe('hasMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "m"."text" "Text"
+        SELECT "u"."name" "Name", "m"."text" "Text"
         FROM "user" AS "u"
         JOIN "message" AS "m"
           ON "m"."text" = $1
@@ -331,7 +331,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" AS "Name", row_to_json("m".*) AS "message"
+          SELECT "user"."name" "Name", row_to_json("m".*) "message"
           FROM "user"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
@@ -386,7 +386,7 @@ describe('hasMany', () => {
           query.toSQL(),
           `
             SELECT
-              "u"."id" AS "Id",
+              "u"."id" "Id",
               COALESCE("messages".r, '[]') "messages"
             FROM "user" AS "u"
             LEFT JOIN LATERAL (
@@ -449,7 +449,7 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT
-            "u"."id" AS "Id",
+            "u"."id" "Id",
             "messagesCount".r "messagesCount"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
@@ -473,13 +473,13 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT
-            "u"."id" AS "Id",
+            "u"."id" "Id",
             COALESCE("texts".r, '[]') "texts"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Text") r
             FROM (
-              SELECT "messages"."text" AS "Text"
+              SELECT "messages"."text" "Text"
               FROM "message" AS "messages"
               WHERE "messages"."authorId" = "u"."id"
                 AND "messages"."messageKey" = "u"."userKey"
@@ -503,7 +503,7 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT
-            "u"."id" AS "Id",
+            "u"."id" "Id",
             COALESCE("hasMessages".r, false) "hasMessages"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
@@ -2370,7 +2370,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "p"."bio" AS "Bio", "chats"."title" "Title"
+          SELECT "p"."bio" "Bio", "chats"."title" "Title"
           FROM "profile" AS "p"
           JOIN "chat" AS "chats"
             ON EXISTS (
@@ -2410,7 +2410,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "p"."bio" AS "Bio", "c"."title" "Title"
+          SELECT "p"."bio" "Bio", "c"."title" "Title"
           FROM "profile" AS "p"
           JOIN "chat" AS "c"
             ON "c"."title" = $1
@@ -2443,7 +2443,7 @@ describe('hasMany through', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "profile"."bio" AS "Bio", row_to_json("c".*) AS "chat"
+          SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
           FROM "profile"
           JOIN LATERAL (
             SELECT ${chatSelectAll}
@@ -2483,7 +2483,7 @@ describe('hasMany through', () => {
           query.toSQL(),
           `
             SELECT
-              "p"."id" AS "Id",
+              "p"."id" "Id",
               COALESCE("chats".r, '[]') "chats"
             FROM "profile" AS "p"
             LEFT JOIN LATERAL (
@@ -2523,7 +2523,7 @@ describe('hasMany through', () => {
         query.toSQL(),
         `
           SELECT
-            "p"."id" AS "Id",
+            "p"."id" "Id",
             "chatsCount".r "chatsCount"
           FROM "profile" AS "p"
           LEFT JOIN LATERAL (
@@ -2557,13 +2557,13 @@ describe('hasMany through', () => {
         query.toSQL(),
         `
           SELECT
-            "p"."id" AS "Id",
+            "p"."id" "Id",
             COALESCE("titles".r, '[]') "titles"
           FROM "profile" AS "p"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Title") r
             FROM (
-              SELECT "chats"."title" AS "Title"
+              SELECT "chats"."title" "Title"
               FROM "chat" AS "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "user"
@@ -2594,7 +2594,7 @@ describe('hasMany through', () => {
         query.toSQL(),
         `
           SELECT
-            "p"."id" AS "Id",
+            "p"."id" "Id",
             COALESCE("hasChats".r, false) "hasChats"
           FROM "profile" AS "p"
           LEFT JOIN LATERAL (
@@ -2926,7 +2926,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "c"."title" AS "Title", "profiles"."bio" "Bio"
+          SELECT "c"."title" "Title", "profiles"."bio" "Bio"
           FROM "chat" AS "c"
           JOIN "profile" AS "profiles"
             ON EXISTS (
@@ -2964,7 +2964,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "c"."title" AS "Title", "p"."bio" "Bio"
+          SELECT "c"."title" "Title", "p"."bio" "Bio"
           FROM "chat" AS "c"
           JOIN "profile" AS "p"
             ON "p"."bio" = $1
@@ -2997,7 +2997,7 @@ describe('hasMany through', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "chat"."title" AS "Title", row_to_json("p".*) AS "profile"
+          SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
           FROM "chat"
           JOIN LATERAL (
             SELECT ${profileSelectAll}
@@ -3039,7 +3039,7 @@ describe('hasMany through', () => {
           query.toSQL(),
           `
             SELECT
-              "c"."idOfChat" AS "IdOfChat",
+              "c"."idOfChat" "IdOfChat",
               COALESCE("profiles".r, '[]') "profiles"
             FROM "chat" AS "c"
             LEFT JOIN LATERAL (
@@ -3120,7 +3120,7 @@ describe('hasMany through', () => {
           query.toSQL(),
           `
             SELECT
-              "c"."idOfChat" AS "IdOfChat",
+              "c"."idOfChat" "IdOfChat",
               "profilesCount".r "profilesCount"
             FROM "chat" AS "c"
             LEFT JOIN LATERAL (
@@ -3158,13 +3158,13 @@ describe('hasMany through', () => {
           query.toSQL(),
           `
             SELECT
-              "c"."idOfChat" AS "IdOfChat",
+              "c"."idOfChat" "IdOfChat",
               COALESCE("bios".r, '[]') "bios"
             FROM "chat" AS "c"
             LEFT JOIN LATERAL (
               SELECT json_agg("t"."Bio") r
               FROM (
-                SELECT "profiles"."bio" AS "Bio"
+                SELECT "profiles"."bio" "Bio"
                 FROM "profile" AS "profiles"
                 WHERE EXISTS (
                   SELECT 1 FROM "user" AS "users"
@@ -3198,7 +3198,7 @@ describe('hasMany through', () => {
           query.toSQL(),
           `
             SELECT
-              "c"."idOfChat" AS "IdOfChat",
+              "c"."idOfChat" "IdOfChat",
               COALESCE("hasProfiles".r, false) "hasProfiles"
             FROM "chat" AS "c"
             LEFT JOIN LATERAL (

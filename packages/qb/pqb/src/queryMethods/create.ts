@@ -25,7 +25,6 @@ import { VirtualColumn } from '../columns';
 import { anyShape } from '../query/db';
 import {
   Expression,
-  StringKey,
   QueryThen,
   SetOptional,
   ColumnSchemaConfig,
@@ -226,7 +225,7 @@ type CreateRawArgs<
   ? [data: Arg]
   : [
       `Missing required columns: ${Exclude<
-        StringKey<keyof RawRequiredColumns<T>>,
+        keyof RawRequiredColumns<T> & string,
         Arg['columns'][number]
       >}`,
     ];

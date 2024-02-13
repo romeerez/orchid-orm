@@ -322,7 +322,7 @@ describe('create functions', () => {
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES ($1, $2)
-          RETURNING "snake"."snake_name" AS "snakeName"
+          RETURNING "snake"."snake_name" "snakeName"
         `,
         [snakeData.snakeName, snakeData.tailLength],
       );
@@ -364,7 +364,7 @@ describe('create functions', () => {
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES ($1, $2)
-          RETURNING "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+          RETURNING "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
         `,
         [snakeData.snakeName, snakeData.tailLength],
       );
@@ -759,7 +759,7 @@ describe('create functions', () => {
         q.toSQL(),
         `
           INSERT INTO "message"("chatId")
-          SELECT "chat"."idOfChat" AS "chatId"
+          SELECT "chat"."idOfChat" "chatId"
           FROM "chat"
           WHERE "chat"."idOfChat" = $1
           LIMIT 1
@@ -783,7 +783,7 @@ describe('create functions', () => {
         query.toSQL(),
         `
           INSERT INTO "message"("chatId", "authorId", "text")
-          SELECT "chat"."idOfChat" AS "chatId", $1, 'text'
+          SELECT "chat"."idOfChat" "chatId", $1, 'text'
           FROM "chat"
           WHERE "chat"."idOfChat" = $2
           LIMIT 1
@@ -806,7 +806,7 @@ describe('create functions', () => {
         query.toSQL(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
-          SELECT "user"."name" AS "snakeName", $1
+          SELECT "user"."name" "snakeName", $1
           FROM "user"
           WHERE "user"."id" = $2
           LIMIT 1
@@ -915,7 +915,7 @@ describe('create functions', () => {
         query.toSQL(),
         `
           INSERT INTO "message"("chatId")
-          SELECT "chat"."idOfChat" AS "chatId"
+          SELECT "chat"."idOfChat" "chatId"
           FROM "chat"
           WHERE "chat"."title" = $1
           RETURNING *
@@ -934,7 +934,7 @@ describe('create functions', () => {
         query.toSQL(),
         `
           INSERT INTO "snake"("snake_name")
-          SELECT "user"."name" AS "snakeName"
+          SELECT "user"."name" "snakeName"
           FROM "user"
           WHERE "user"."name" = $1
           RETURNING ${snakeSelectAll}

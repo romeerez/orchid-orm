@@ -1,7 +1,6 @@
 import {
   Query,
   GetQueryResult,
-  SelectableBase,
   WithDataBase,
   WithDataItem,
   QueryReturnType,
@@ -12,7 +11,6 @@ import { RelationsBase } from '../../relations';
 import { QueryData, QueryDataJoinTo } from '../../sql';
 import {
   Expression,
-  StringKey,
   QueryInternal,
   EmptyTuple,
   QueryMetaBase,
@@ -23,6 +21,7 @@ import {
   EmptyObject,
   QueryColumns,
   QueryColumnToNullable,
+  SelectableBase,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
 import { AliasOrTable } from '../../common/utils';
@@ -39,10 +38,9 @@ type WithSelectable<
   W extends keyof T['withData'],
 > = T['withData'][W] extends WithDataItem
   ?
-      | StringKey<keyof T['withData'][W]['shape']>
-      | `${T['withData'][W]['table']}.${StringKey<
-          keyof T['withData'][W]['shape']
-        >}`
+      | keyof T['withData'][W]['shape']
+      | `${T['withData'][W]['table']}.${keyof T['withData'][W]['shape'] &
+          string}`
   : never;
 
 /**
@@ -81,7 +79,7 @@ export type JoinArgs<
  */
 type JoinSelectable<Q extends Query> =
   | keyof Q['result']
-  | `${AliasOrTable<Q>}.${StringKey<keyof Q['result']>}`;
+  | `${AliasOrTable<Q>}.${keyof Q['result'] & string}`;
 
 // Available arguments when joining a query object. Can be:
 // - an object where keys are columns of the joined table and values are columns of the main table or a raw SQL.
@@ -92,18 +90,18 @@ type JoinSelectable<Q extends Query> =
 type JoinQueryArgs<T extends QueryBase, Q extends Query> =
   | [
       conditions:
-        | Record<JoinSelectable<Q>, keyof T['selectable'] | Expression>
+        | Record<JoinSelectable<Q>, keyof T['meta']['selectable'] | Expression>
         | Expression
         | true,
     ]
   | [
       leftColumn: JoinSelectable<Q> | Expression,
-      rightColumn: keyof T['selectable'] | Expression,
+      rightColumn: keyof T['meta']['selectable'] | Expression,
     ]
   | [
       leftColumn: JoinSelectable<Q> | Expression,
       op: string,
-      rightColumn: keyof T['selectable'] | Expression,
+      rightColumn: keyof T['meta']['selectable'] | Expression,
     ];
 
 // Available arguments when joining a `with` table. Can be:
@@ -114,17 +112,20 @@ type JoinQueryArgs<T extends QueryBase, Q extends Query> =
 type JoinWithArgs<T extends QueryBase, W extends keyof T['withData']> =
   | [
       conditions:
-        | Record<WithSelectable<T, W>, keyof T['selectable'] | Expression>
+        | Record<
+            WithSelectable<T, W>,
+            keyof T['meta']['selectable'] | Expression
+          >
         | Expression,
     ]
   | [
       leftColumn: WithSelectable<T, W> | Expression,
-      rightColumn: keyof T['selectable'] | Expression,
+      rightColumn: keyof T['meta']['selectable'] | Expression,
     ]
   | [
       leftColumn: WithSelectable<T, W> | Expression,
       op: string,
-      rightColumn: keyof T['selectable'] | Expression,
+      rightColumn: keyof T['meta']['selectable'] | Expression,
     ];
 
 /**
@@ -221,7 +222,7 @@ type JoinResultSelectable<
     ? CbResult['meta']['as']
     : AliasOrTable<J>,
 > = {
-  [K in keyof Result as `${As}.${StringKey<K>}`]: {
+  [K in keyof Result & string as `${As}.${K}`]: {
     as: K;
     column: Result[K];
   };
@@ -236,7 +237,9 @@ type JoinResultSelectable<
 
 // Replace the 'selectable' of the query with the given selectable.
 type JoinAddSelectable<T extends Query, Selectable extends SelectableBase> = {
-  [K in keyof T]: K extends 'selectable' ? T['selectable'] & Selectable : T[K];
+  [K in keyof T]: K extends 'meta'
+    ? T['meta'] & { selectable: Selectable }
+    : T[K];
 };
 
 // Map `selectable` of the query to make all columns optional, and add the given `Selectable` to it.
@@ -249,13 +252,15 @@ type JoinOptionalMain<
   },
   Data = GetQueryResult<T['returnType'], Result>,
 > = {
-  [K in keyof T]: K extends 'selectable'
-    ? {
-        [K in keyof T['selectable']]: {
-          as: T['selectable'][K]['as'];
-          column: QueryColumnToNullable<T['selectable'][K]['column']>;
-        };
-      } & Selectable
+  [K in keyof T]: K extends 'meta'
+    ? Omit<T['meta'], 'selectable'> & {
+        selectable: {
+          [K in keyof T['meta']['selectable']]: {
+            as: T['meta']['selectable'][K]['as'];
+            column: QueryColumnToNullable<T['meta']['selectable'][K]['column']>;
+          };
+        } & Selectable;
+      }
     : K extends 'result'
     ? Result
     : K extends 'then'
@@ -272,8 +277,8 @@ type JoinOptionalMain<
 type JoinWithArgToQuery<
   With extends WithDataItem,
   Selectable extends SelectableBase = {
-    [K in keyof With['shape']]: {
-      as: StringKey<K>;
+    [K in keyof With['shape'] & string]: {
+      as: K;
       column: With['shape'][K];
     };
   },
@@ -282,7 +287,7 @@ type JoinWithArgToQuery<
   table: With['table'];
   clone<T extends Pick<QueryBase, 'baseQuery' | 'q'>>(this: T): T;
   selectable: Selectable & {
-    [K in keyof Selectable as `${With['table']}.${StringKey<K>}`]: Selectable[K];
+    [K in keyof Selectable & string as `${With['table']}.${K}`]: Selectable[K];
   };
   shape: With['shape'];
   result: With['shape'];
@@ -964,12 +969,15 @@ export class Join {
 
 // Arguments of `on` and `orOn` methods inside `join` callback.
 // Takes a pair of columns to check them for equality, or a pair of columns separated with an operator such as '!='.
-type OnArgs<Q extends { selectable: SelectableBase }> =
-  | [leftColumn: keyof Q['selectable'], rightColumn: keyof Q['selectable']]
+type OnArgs<Q extends { meta: { selectable: SelectableBase } }> =
   | [
-      leftColumn: keyof Q['selectable'],
+      leftColumn: keyof Q['meta']['selectable'],
+      rightColumn: keyof Q['meta']['selectable'],
+    ]
+  | [
+      leftColumn: keyof Q['meta']['selectable'],
       op: string,
-      rightColumn: keyof Q['selectable'],
+      rightColumn: keyof Q['meta']['selectable'],
     ];
 
 // Construct an object for `ON` type of where condition.
@@ -1027,9 +1035,9 @@ export const addQueryOn = <T extends QueryBase>(
 
 // To join record based on a value inside their json columns
 type OnJsonPathEqualsArgs<T extends QueryBase> = [
-  leftColumn: keyof T['selectable'],
+  leftColumn: keyof T['meta']['selectable'],
   leftPath: string,
-  rightColumn: keyof T['selectable'],
+  rightColumn: keyof T['meta']['selectable'],
   rightPath: string,
 ];
 
@@ -1059,10 +1067,11 @@ export class OnQueryBuilder<
   S extends QueryBase = QueryBase,
   J extends Pick<
     QueryBase,
-    'selectable' | 'relations' | 'result' | 'shape'
+    'relations' | 'result' | 'shape' | 'meta'
   > = QueryBase,
 > extends WhereQueryBase {
-  declare selectable: J['selectable'] & Omit<S['selectable'], keyof S['shape']>;
+  declare selectable: J['meta']['selectable'] &
+    Omit<S['meta']['selectable'], keyof S['shape']>;
   declare relations: J['relations'];
   declare result: J['result'];
   shape: J['shape'];

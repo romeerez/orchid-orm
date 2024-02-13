@@ -1,18 +1,18 @@
 import { pushQueryArray, pushQueryValue } from '../query/queryUtils';
-import { QueryColumns, StringKey } from 'orchid-core';
+import { QueryColumns } from 'orchid-core';
 import { QueryAfterHook, QueryBeforeHook } from '../sql';
 import { QueryBase } from '../query/queryBase';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
 export type AfterHook<
-  Select extends PropertyKey[],
+  Select extends string[],
   Shape extends QueryColumns,
-  Selected extends QueryColumns = Pick<Shape, StringKey<Select[number]>>,
+  Selected extends QueryColumns = Pick<Shape, Select[number]>,
   Item = { [K in keyof Selected]: Selected[K]['outputType'] },
 > = QueryAfterHook<Item[]>;
 
 // Hook argument for selecting columns: array of column names of the table.
-export type HookSelect<T extends QueryBase> = (keyof T['shape'])[];
+export type HookSelect<T extends QueryBase> = (keyof T['shape'] & string)[];
 
 // Possible action types to attach hook for.
 export type HookAction = 'Create' | 'Update' | 'Delete';

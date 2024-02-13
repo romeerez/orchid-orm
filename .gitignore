@@ -1,6 +1,7 @@
 .idea
 _local
 roadmap.md
+optimizing.md
 .env
 .turbo
 coverage

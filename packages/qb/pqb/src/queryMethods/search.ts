@@ -127,7 +127,7 @@ export type SearchArg<T extends QueryBase, As extends string> = {
     }
   | {
       // use a language stored in a column of the table
-      languageColumn?: keyof T['selectable'];
+      languageColumn?: keyof T['meta']['selectable'];
     }
 ) &
   (
@@ -139,16 +139,16 @@ export type SearchArg<T extends QueryBase, As extends string> = {
         // Provide one or multiple columns to search in.
         // Define an object like `{ title: 'A', body: 'B' }` to set column weights.
         in:
-          | MaybeArray<keyof T['selectable']>
-          | { [K in keyof T['selectable']]?: SearchWeight };
+          | MaybeArray<keyof T['meta']['selectable']>
+          | { [K in keyof T['meta']['selectable']]?: SearchWeight };
       }
     | {
         // search in a generated vector column
         vector: {
-          [K in keyof T['selectable']]: T['selectable'][K]['column']['dataType'] extends 'tsvector'
+          [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['dataType'] extends 'tsvector'
             ? K
             : never;
-        }[keyof T['selectable']];
+        }[keyof T['meta']['selectable']];
       }
   ) &
   (

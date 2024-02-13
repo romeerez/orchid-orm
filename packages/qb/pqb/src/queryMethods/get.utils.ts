@@ -11,7 +11,6 @@ import {
   Expression,
   getValueKey,
   QueryColumn,
-  StringKey,
 } from 'orchid-core';
 import { SelectQueryData } from '../sql';
 import {
@@ -24,15 +23,14 @@ import { Operators, setQueryOperators } from '../columns/operators';
 
 export type QueryGetSelf = Pick<
   Query,
-  'selectable' | 'q' | 'table' | 'baseQuery' | 'clone'
+  'meta' | 'q' | 'table' | 'baseQuery' | 'clone'
 >;
 
 // `get` method argument, accepts a string for a column name or a raw SQL
 export type GetArg<T extends QueryGetSelf> = GetStringArg<T> | Expression;
 
-export type GetStringArg<T extends Pick<Query, 'selectable'>> = StringKey<
-  keyof T['selectable']
->;
+export type GetStringArg<T extends Pick<Query, 'meta'>> =
+  keyof T['meta']['selectable'] & string;
 
 // `get` method result: returns a column type for raw expression or a value type for string argument
 export type GetResult<

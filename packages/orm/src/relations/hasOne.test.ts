@@ -144,7 +144,7 @@ describe('hasOne', () => {
           query.toSQL(),
           `
             INSERT INTO "profile"("userId", "profileKey", "bio")
-            SELECT "user"."id" AS "UserId", "user"."userKey" AS "ProfileKey", $1
+            SELECT "user"."id" "UserId", "user"."userKey" "ProfileKey", $1
             FROM "user"
             WHERE "user"."id" = $2
             LIMIT 1
@@ -273,7 +273,7 @@ describe('hasOne', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "profile"."bio" "Bio"
+        SELECT "u"."name" "Name", "profile"."bio" "Bio"
         FROM "user" AS "u"
         JOIN "profile"
           ON "profile"."userId" = "u"."id"
@@ -301,7 +301,7 @@ describe('hasOne', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" AS "Name", "p"."bio" "Bio"
+        SELECT "u"."name" "Name", "p"."bio" "Bio"
         FROM "user" AS "u"
         JOIN "profile" AS "p"
           ON "p"."bio" = $1
@@ -324,7 +324,7 @@ describe('hasOne', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" AS "Name", row_to_json("p".*) "p"
+          SELECT "user"."name" "Name", row_to_json("p".*) "p"
           FROM "user"
           JOIN LATERAL (
             SELECT ${profileSelectAll}
@@ -354,7 +354,7 @@ describe('hasOne', () => {
           query.toSQL(),
           `
             SELECT
-              "u"."id" AS "Id",
+              "u"."id" "Id",
               row_to_json("profile".*) "profile"
             FROM "user" AS "u"
             LEFT JOIN LATERAL (
@@ -414,7 +414,7 @@ describe('hasOne', () => {
           query.toSQL(),
           `
             SELECT
-              "u"."id" AS "Id",
+              "u"."id" "Id",
               COALESCE("hasProfile".r, false) "hasProfile"
             FROM "user" AS "u"
             LEFT JOIN LATERAL (
@@ -480,7 +480,7 @@ describe('hasOne', () => {
             UPDATE "profile"
             SET
               "bio" = (
-                SELECT "user"."name" AS "Name"
+                SELECT "user"."name" "Name"
                 FROM "user"
                 WHERE "user"."id" = "profile"."userId"
                   AND "user"."userKey" = "profile"."profileKey"
@@ -1979,7 +1979,7 @@ describe('hasOne through', () => {
     expectSql(
       query.toSQL(),
       `
-        SELECT "m"."text" AS "Text", "profile"."bio" "Bio"
+        SELECT "m"."text" "Text", "profile"."bio" "Bio"
         FROM "message" AS "m"
         JOIN "profile"
           ON EXISTS (
@@ -2009,7 +2009,7 @@ describe('hasOne through', () => {
     expectSql(
       query.toSQL(),
       `
-        SELECT "m"."text" AS "Text", "p"."bio" "Bio"
+        SELECT "m"."text" "Text", "p"."bio" "Bio"
         FROM "message" AS "m"
         JOIN "profile" AS "p"
           ON "p"."bio" = $1
@@ -2037,7 +2037,7 @@ describe('hasOne through', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "message"."text" AS "Text", row_to_json("p".*) "p"
+        SELECT "message"."text" "Text", row_to_json("p".*) "p"
         FROM "message"
         JOIN LATERAL (
           SELECT ${profileSelectAll}
@@ -2070,7 +2070,7 @@ describe('hasOne through', () => {
         query.toSQL(),
         `
           SELECT
-            "m"."id" AS "Id",
+            "m"."id" "Id",
             row_to_json("profile".*) "profile"
           FROM "message" AS "m"
           LEFT JOIN LATERAL (
@@ -2142,7 +2142,7 @@ describe('hasOne through', () => {
         query.toSQL(),
         `
           SELECT
-            "m"."id" AS "Id",
+            "m"."id" "Id",
             COALESCE("hasProfile".r, false) "hasProfile"
           FROM "message" AS "m"
           LEFT JOIN LATERAL (

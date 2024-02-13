@@ -34,7 +34,7 @@ describe('orm', () => {
       `SELECT * FROM (
         SELECT
           "user"."createdAt",
-          "user"."name" AS "alias",
+          "user"."name" "alias",
           "messagesCount".r "messagesCount"
         FROM "user"
         LEFT JOIN LATERAL (

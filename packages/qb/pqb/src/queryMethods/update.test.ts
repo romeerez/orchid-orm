@@ -170,7 +170,7 @@ describe('update', () => {
             "tail_length" = $2,
             "updated_at" = now()
         WHERE "snake"."snake_id" = $3
-        RETURNING "snake"."snake_id" AS "snakeId"
+        RETURNING "snake"."snake_id" "snakeId"
       `,
       [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
     );
@@ -224,7 +224,7 @@ describe('update', () => {
             "tail_length" = $2,
             "updated_at" = now()
         WHERE "snake"."snake_id" = $3
-        RETURNING "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+        RETURNING "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
       `,
       [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
     );
@@ -330,7 +330,7 @@ describe('update', () => {
             "tail_length" = $2,
             "updated_at" = now()
         WHERE "snake"."snake_id" IN ($3, $4)
-        RETURNING "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+        RETURNING "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
       `,
       [snakeUpdate.snakeName, snakeUpdate.tailLength, ...ids],
     );
@@ -714,7 +714,7 @@ describe('update', () => {
           UPDATE "snake"
           SET "tail_length" = "tail_length" + $1,
               "updated_at" = now()
-          RETURNING "snake"."snake_id" AS "snakeId"
+          RETURNING "snake"."snake_id" "snakeId"
         `,
         [3],
       );
@@ -790,7 +790,7 @@ describe('update', () => {
           UPDATE "snake"
           SET "tail_length" = "tail_length" - $1,
               "updated_at" = now()
-          RETURNING "snake"."snake_id" AS "snakeId"
+          RETURNING "snake"."snake_id" "snakeId"
         `,
         [3],
       );

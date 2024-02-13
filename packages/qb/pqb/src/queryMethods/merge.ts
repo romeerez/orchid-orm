@@ -28,7 +28,15 @@ export type MergeQuery<
   Data = GetQueryResult<ReturnType, Result>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? MergeObjects<T['meta'], Q['meta']>
+    ? {
+        [K in keyof T['meta'] | keyof Q['meta']]: K extends 'selectable'
+          ? MergeObjects<T['meta']['selectable'], Q['meta']['selectable']>
+          : K extends keyof Q['meta']
+          ? Q['meta'][K]
+          : K extends keyof T['meta']
+          ? T['meta'][K]
+          : never;
+      }
     : K extends 'result'
     ? Result
     : K extends 'returnType'
@@ -37,8 +45,6 @@ export type MergeQuery<
     ? QueryThen<Data>
     : K extends 'catch'
     ? QueryCatch<Data>
-    : K extends 'selectable'
-    ? MergeObjects<T['selectable'], Q['selectable']>
     : K extends 'windows'
     ? MergeObjects<T['windows'], Q['windows']>
     : K extends 'withData'

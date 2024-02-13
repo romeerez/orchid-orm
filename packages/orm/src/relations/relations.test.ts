@@ -227,12 +227,32 @@ describe('relations', () => {
   });
 
   it('should fit into `makeHelper` function', async () => {
-    const fn = db.user.makeHelper((arg) => arg.select('Name'));
+    const fn = db.post.makeHelper((arg) => arg.select('post.Title'));
 
-    const first = fn(db.user.select('Id'));
-    assertType<Awaited<typeof first>, { Id: number; Name: string }[]>();
+    const q = db.user.select({
+      posts: (q) => fn(q.posts.select('posts.Id')),
+    });
 
-    const second = fn(db.profile.user.select('Id'));
-    assertType<Awaited<typeof second>, { Id: number; Name: string }[]>();
+    assertType<
+      Awaited<typeof q>,
+      { posts: { Id: number; Title: string }[] }[]
+    >();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT COALESCE("posts".r, '[]') "posts"
+        FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT json_agg(row_to_json("t".*)) r
+          FROM (
+            SELECT "post"."id" "Id", "post"."title" "Title"
+            FROM "post"
+            WHERE "post"."userId" = "user"."id"
+              AND "post"."title" = "user"."userKey"
+          ) AS "t"
+        ) "posts" ON true
+      `,
+    );
   });
 });

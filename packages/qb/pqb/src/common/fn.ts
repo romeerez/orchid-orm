@@ -46,9 +46,15 @@ export type Over<T extends Query> =
 // `value` is for a query variable (used by `stringAgg` for a delimiter).
 export type FnExpressionArgs<Q extends Query> = (
   | SelectableOrExpression<Q>
-  | { pairs: Record<string, SelectableOrExpression<Q>> }
-  | { value: unknown }
+  | FnExpressionArgsPairs<Q>
+  | FnExpressionArgsValue
 )[];
+
+export type FnExpressionArgsPairs<Q extends Query> = {
+  pairs: Record<string, SelectableOrExpression<Q>>;
+};
+
+export type FnExpressionArgsValue = { value: unknown };
 
 // Expression for SQL function calls.
 export class FnExpression<
@@ -90,9 +96,9 @@ export class FnExpression<
               : columnToSql(ctx, this.q.q, this.q.q.shape, arg, quotedAs, true);
           } else if (arg instanceof Expression) {
             return arg.toSQL(ctx, quotedAs);
-          } else if ('pairs' in arg) {
+          } else if ('pairs' in (arg as FnExpressionArgsPairs<Query>)) {
             const args: string[] = [];
-            const { pairs } = arg;
+            const { pairs } = arg as FnExpressionArgsPairs<Query>;
             for (const key in pairs) {
               args.push(
                 // ::text is needed to bypass "could not determine data type of parameter" postgres error
@@ -108,7 +114,7 @@ export class FnExpression<
             }
             return args.join(', ');
           } else {
-            return addValue(values, arg.value);
+            return addValue(values, (arg as FnExpressionArgsValue).value);
           }
         })
         .join(', '),

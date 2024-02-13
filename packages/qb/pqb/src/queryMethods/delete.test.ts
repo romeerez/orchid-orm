@@ -48,7 +48,7 @@ describe('delete', () => {
       query.toSQL(),
       `
         DELETE FROM "snake" WHERE "snake"."snake_name" = $1
-        RETURNING "snake"."snake_name" AS "snakeName"
+        RETURNING "snake"."snake_name" "snakeName"
       `,
       ['name'],
     );
@@ -122,8 +122,8 @@ describe('delete', () => {
       `
         DELETE FROM "snake"
         RETURNING
-          "snake"."snake_name" AS "snakeName",
-          "snake"."tail_length" AS "tailLength"
+          "snake"."snake_name" "snakeName",
+          "snake"."tail_length" "tailLength"
       `,
     );
   });

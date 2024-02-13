@@ -5,18 +5,17 @@ import {
 } from '../query/query';
 import { pushQueryValue } from '../query/queryUtils';
 import { JsonItem } from '../sql';
-import { QueryColumn, StringKey } from 'orchid-core';
+import { QueryColumn } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 import { queryJson } from './json.utils';
 
 // union of column names that have a `jsonb` type
-type JsonColumnName<T extends QueryBase> = StringKey<
-  {
-    [K in keyof T['selectable']]: T['selectable'][K]['column']['dataType'] extends 'jsonb'
-      ? K
-      : never;
-  }[keyof T['selectable']]
->;
+type JsonColumnName<T extends QueryBase> = {
+  [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['dataType'] extends 'jsonb'
+    ? K
+    : never;
+}[keyof T['meta']['selectable']] &
+  string;
 
 // union of `jsonb` column names, or a JsonItem type for nesting json methods one in other
 type ColumnOrJsonMethod<T extends QueryBase> = JsonColumnName<T> | JsonItem;

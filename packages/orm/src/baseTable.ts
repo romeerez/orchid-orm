@@ -136,7 +136,7 @@ type AfterHookMethod = <T extends Table>(cb: QueryAfterHook) => T;
 // type of after hook function that allows selecting columns for the table
 type AfterSelectableHookMethod = <
   T extends Table,
-  S extends (keyof T['columns'])[],
+  S extends (keyof T['columns'] & string)[],
 >(
   this: T,
   select: S,

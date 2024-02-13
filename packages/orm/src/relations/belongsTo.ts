@@ -91,12 +91,11 @@ export interface BelongsToInfo<
   Required = Relation['options']['required'] extends true ? true : false,
   Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
-      ? TableQuery['meta'] & {
+      ? Omit<TableQuery['meta'], 'selectable'> & {
           as: Name;
           hasWhere: true;
+          selectable: SelectableFromShape<TableQuery['shape'], Name>;
         }
-      : K extends 'selectable'
-      ? SelectableFromShape<TableQuery['shape'], Name>
       : K extends 'join'
       ? RelJoin
       : K extends CreateMethodsNames | DeleteMethodsNames

@@ -48,7 +48,6 @@ export type ToSQLQuery = Pick<
   | 'internal'
   | 'relations'
   | 'withData'
-  | 'selectable'
   | 'clone'
   | 'baseQuery'
   | 'meta'

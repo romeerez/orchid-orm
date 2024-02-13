@@ -141,7 +141,6 @@ export interface Db<
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
   q: QueryData;
-  selectable: SelectableFromShape<ShapeWithComputed, Table>;
   returnType: Query['returnType'];
   then: QueryThen<Data>;
   catch: QueryCatch<Data>;
@@ -162,6 +161,7 @@ export interface Db<
         : K]: true;
     };
     scopes: Record<keyof Scopes, true>;
+    selectable: SelectableFromShape<ShapeWithComputed, Table>;
   };
 }
 

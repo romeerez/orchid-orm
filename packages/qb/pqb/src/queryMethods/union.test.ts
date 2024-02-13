@@ -21,7 +21,7 @@ import { expectSql, testDb } from 'test-utils';
           SELECT "t"."id" FROM (
             SELECT "user"."id" FROM "user"
             ${upper}
-            SELECT "snake"."tail_length" AS "id" FROM "snake"
+            SELECT "snake"."tail_length" "id" FROM "snake"
             ${upper}
             SELECT 1
             ${upper} ALL

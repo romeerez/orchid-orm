@@ -1,9 +1,6 @@
 import url from 'url';
 import path from 'node:path';
 
-// Exclude non-string types from array key.
-export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
-
 // Array contains `true` type.
 export type SomeIsTrue<T extends unknown[]> = T extends [
   infer Head,

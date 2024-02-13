@@ -32,7 +32,7 @@ Argument of `where`:
 export type WhereArg<T extends WhereQueryBase> =
   | {
       [K in
-        | keyof T['selectable']
+        | keyof T['meta']['selectable']
         | 'NOT'
         | 'OR'
         | 'IN'
@@ -42,14 +42,14 @@ export type WhereArg<T extends WhereQueryBase> =
         ? MaybeArray<WhereArg<T>>[]
         : K extends 'IN'
         ? MaybeArray<{
-            columns: (keyof T['selectable'])[];
+            columns: (keyof T['meta']['selectable'])[];
             values: unknown[][] | Query | Expression;
           }>
-        : K extends keyof T['selectable']
+        : K extends keyof T['meta']['selectable']
         ?
-            | T['selectable'][K]['column']['queryType']
+            | T['meta']['selectable'][K]['column']['queryType']
             | null
-            | ColumnOperators<T['selectable'], K>
+            | ColumnOperators<T['meta']['selectable'], K>
             | Expression
             | Query
         : never;
@@ -85,20 +85,23 @@ export type WhereNotArgs<T extends WhereQueryBase> =
 
 // Argument of `whereIn`: can be a column name or a tuple with column names to search in.
 export type WhereInColumn<T extends QueryBase> =
-  | keyof T['selectable']
-  | [keyof T['selectable'], ...(keyof T['selectable'])[]];
+  | keyof T['meta']['selectable']
+  | [keyof T['meta']['selectable'], ...(keyof T['meta']['selectable'])[]];
 
 // If `WhereInColumn` is a single column, it accepts array of values, or Query returning single column, or raw SQL expression.
 // If `WhereInColumn` is a tuple, it accepts a tuple of values described above.
 export type WhereInValues<
   T extends QueryBase,
   Column extends WhereInColumn<T>,
-> = Column extends keyof T['selectable']
-  ? T['selectable'][Column]['column']['queryType'][] | Query | Expression
+> = Column extends keyof T['meta']['selectable']
+  ?
+      | T['meta']['selectable'][Column]['column']['queryType'][]
+      | Query
+      | Expression
   :
       | ({
-          [I in keyof Column]: Column[I] extends keyof T['selectable']
-            ? T['selectable'][Column[I]]['column']['queryType']
+          [I in keyof Column]: Column[I] extends keyof T['meta']['selectable']
+            ? T['meta']['selectable'][Column[I]]['column']['queryType']
             : never;
         } & {
           length: Column extends { length: number } ? Column['length'] : never;
@@ -108,9 +111,9 @@ export type WhereInValues<
 
 // In addition to `WhereInColumn` + `WhereInValues` where user can provide a tuple with columns and a tuple with values, enable `whereIn` with object syntax.
 // Each key is a column name, value is array of column values, or a query returning single column, or a raw SQL expression.
-export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
-  [K in keyof T['selectable']]?:
-    | T['selectable'][K]['column']['queryType'][]
+export type WhereInArg<T extends Pick<Query, 'meta'>> = {
+  [K in keyof T['meta']['selectable']]?:
+    | T['meta']['selectable'][K]['column']['queryType'][]
     | Query
     | Expression;
 };

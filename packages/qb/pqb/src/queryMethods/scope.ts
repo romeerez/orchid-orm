@@ -1,5 +1,5 @@
 import { QueryBase } from '../query/queryBase';
-import { QueryColumns } from 'orchid-core';
+import { QueryColumns, QueryMetaBase } from 'orchid-core';
 import { QueryScopes, SelectQueryData, WhereItem } from '../sql';
 import { pushQueryArray, setQueryObjectValue } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
@@ -12,7 +12,9 @@ export interface ScopeArgumentQuery<
     QueryBase {
   table: Table;
   shape: Shape;
-  selectable: SelectableFromShape<Shape, Table>;
+  meta: Omit<QueryMetaBase, 'selectable'> & {
+    selectable: SelectableFromShape<Shape, Table>;
+  };
 }
 
 /**

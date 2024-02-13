@@ -31,12 +31,7 @@ import { CloneSelfKeys } from '../query/queryBase';
 
 export type UpdateSelf = Pick<
   Query,
-  | 'meta'
-  | 'inputType'
-  | 'selectable'
-  | 'relations'
-  | keyof JsonModifiers
-  | CloneSelfKeys
+  'meta' | 'inputType' | 'relations' | keyof JsonModifiers | CloneSelfKeys
 >;
 
 // Type of argument for `update` and `updateOrThrow`
@@ -71,7 +66,7 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | ((
       q: {
         [K in keyof JsonModifiers]: K extends 'selectable'
-          ? T['selectable']
+          ? T['meta']['selectable']
           : T[K];
       } & T['relations'],
     ) => JsonItem | (RelationQueryBase & { meta: { kind: 'select' } }));

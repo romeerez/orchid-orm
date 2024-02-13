@@ -294,10 +294,10 @@ export const testJoin = ({
         expectSql(
           q.toSQL(),
           makeSql({
-            select: `SELECT "as"."one" AS "id", "as"."two" AS "text" FROM "${table}"`,
+            select: `SELECT "as"."one" "id", "as"."two" "text" FROM "${table}"`,
             target: `
               (
-                SELECT "as"."${fkeyColumn}" AS "one", "as"."${textColumn}" AS "two"
+                SELECT "as"."${fkeyColumn}" "one", "as"."${textColumn}" "two"
                 FROM "${joinTable}" AS "as"
                 WHERE "as"."${fkeyColumn}" = $${values.length + (or ? 2 : 1)}
               ) "as"

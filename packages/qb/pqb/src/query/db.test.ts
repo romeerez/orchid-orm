@@ -231,9 +231,9 @@ describe('db', () => {
         `
           SELECT
             "table"."camelCase",
-            "table"."snake_case" AS "snakeCase",
-            "table"."updated_at" AS "updatedAt",
-            "table"."created_at" AS "createdAt"
+            "table"."snake_case" "snakeCase",
+            "table"."updated_at" "updatedAt",
+            "table"."created_at" "createdAt"
           FROM "table"
         `,
       );
@@ -267,9 +267,9 @@ describe('db', () => {
         `
           SELECT
             "table"."camelCase",
-            "table"."snake_case" AS "snakeCase",
-            "table"."updated_at" AS "updatedAt",
-            "table"."created_at" AS "createdAt"
+            "table"."snake_case" "snakeCase",
+            "table"."updated_at" "updatedAt",
+            "table"."created_at" "createdAt"
           FROM "table"
         `,
       );

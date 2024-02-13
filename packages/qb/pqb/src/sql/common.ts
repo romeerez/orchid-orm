@@ -1,7 +1,12 @@
 import { SelectableOrExpression } from '../common/utils';
 import { QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
-import { ColumnTypeBase, QueryColumn, QueryColumns } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  Expression,
+  QueryColumn,
+  QueryColumns,
+} from 'orchid-core';
 
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
@@ -131,9 +136,7 @@ export const columnToSqlWithAs = (
   const col = data.shape[column];
   if (col) {
     if (col.data.name && col.data.name !== column) {
-      return `${quotedAs ? `${quotedAs}.` : ''}"${
-        col.data.name
-      }" AS "${column}"`;
+      return `${quotedAs ? `${quotedAs}.` : ''}"${col.data.name}" "${column}"`;
     }
 
     if (col.data.computed) {
@@ -151,7 +154,7 @@ export const ownColumnToSql = (
 ) => {
   const name = data.shape[column]?.data.name;
   return `${quotedAs ? `${quotedAs}.` : ''}"${name || column}"${
-    name && name !== column ? ` AS "${column}"` : ''
+    name && name !== column ? ` "${column}"` : ''
   }`;
 };
 
@@ -165,7 +168,7 @@ export const rawOrColumnToSql = (
 ) => {
   return typeof expr === 'string'
     ? columnToSql(ctx, data, shape, expr, quotedAs, select)
-    : expr.toSQL(ctx, quotedAs);
+    : (expr as Expression).toSQL(ctx, quotedAs);
 };
 
 export const quoteSchemaAndTable = (

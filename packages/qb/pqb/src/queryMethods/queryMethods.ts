@@ -9,7 +9,7 @@ import {
   SetQueryReturnsVoid,
   SetQueryTableAlias,
 } from '../query/query';
-import { SelectableOrExpression } from '../common/utils';
+import { AliasOrTable, SelectableOrExpression } from '../common/utils';
 import {
   OrderTsQueryConfig,
   SelectItem,
@@ -96,7 +96,7 @@ type WindowResult<T extends Query, W extends WindowArg<T>> = T & {
 
 export type OrderArgSelf = Pick<
   Query,
-  'selectable' | 'meta' | 'result' | 'clone' | 'q' | 'baseQuery'
+  'meta' | 'result' | 'clone' | 'q' | 'baseQuery'
 >;
 
 export type OrderArg<
@@ -105,7 +105,7 @@ export type OrderArg<
     ? never
     : Exclude<T['meta']['tsQuery'], undefined>,
   Key extends PropertyKey =
-    | keyof T['selectable']
+    | keyof T['meta']['selectable']
     | {
         [K in keyof T['result']]: T['result'][K]['dataType'] extends
           | 'array'
@@ -146,6 +146,13 @@ type QueryHelper<T extends Query, Args extends unknown[], Result> = {
         ? QueryThen<unknown>
         : K extends 'result'
         ? QueryColumns
+        : K extends 'meta'
+        ? Omit<T['meta'], 'as' | 'selectable'> & {
+            selectable: Omit<
+              T['meta']['selectable'],
+              `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
+            >;
+          }
         : T[K];
     },
   >(
@@ -210,7 +217,7 @@ export interface QueryMethods<ColumnTypes>
 
 export type WrapQuerySelf = FromQueryArg;
 export type WrapQueryArg = FromQuerySelf &
-  Pick<Query, 'selectable' | 'table' | 'shape'>;
+  Pick<Query, 'meta' | 'table' | 'shape'>;
 
 export const _queryAll = <T extends Query>(q: T): SetQueryReturnsAll<T> => {
   q.q.returnType = 'all';
@@ -326,7 +333,7 @@ export class QueryMethods<ColumnTypes> {
    * @param select - column name or a raw SQL
    */
   pluck<
-    T extends Pick<Query, 'selectable' | 'table' | CloneSelfKeys>,
+    T extends Pick<Query, 'meta' | 'table' | CloneSelfKeys>,
     S extends SelectableOrExpression<T>,
   >(this: T, select: S): SetQueryReturnsPluck<T, S> {
     const q = this.clone();
@@ -856,7 +863,11 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {
-    return fn as unknown as QueryHelper<T, Args, Result>;
+    return ((query: T, ...args: Args) => {
+      const q = query.clone();
+      q.q.as = undefined;
+      return fn(q, ...args);
+    }) as unknown as QueryHelper<T, Args, Result>;
   }
 
   /**

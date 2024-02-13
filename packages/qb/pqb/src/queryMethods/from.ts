@@ -1,7 +1,6 @@
 import {
   Query,
   GetQueryResult,
-  SelectableBase,
   SelectableFromShape,
   SetQueryTableAlias,
   WithDataItem,
@@ -15,6 +14,7 @@ import {
   TemplateLiteralArgs,
   isExpression,
   ColumnsShapeBase,
+  SelectableBase,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { RawSQL } from '../sql/rawSql';
@@ -24,7 +24,6 @@ export type FromQuerySelf = Pick<
   Query,
   | 'withData'
   | 'meta'
-  | 'selectable'
   | 'table'
   | 'returnType'
   | 'clone'
@@ -53,14 +52,14 @@ export type FromResult<
   : Args[0] extends string
   ? T['withData'] extends Record<string, WithDataItem>
     ? Args[0] extends keyof T['withData']
-      ? Omit<T, 'meta' | 'selectable'> & {
-          meta: Omit<T['meta'], 'as'> & {
+      ? Omit<T, 'meta'> & {
+          meta: Omit<T['meta'], 'as' | 'selectable'> & {
             as?: string;
+            selectable: SelectableFromShape<
+              T['withData'][Args[0]]['shape'],
+              Args[0]
+            >;
           };
-          selectable: SelectableFromShape<
-            T['withData'][Args[0]]['shape'],
-            Args[0]
-          >;
         }
       : SetQueryTableAlias<T, Args[0]>
     : SetQueryTableAlias<T, Args[0]>
@@ -82,9 +81,10 @@ type FromQueryResult<
   Data = GetQueryResult<T['returnType'], Q['result']>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? Omit<T['meta'], 'hasSelect' | 'as'> & { as: AliasOrTable<Q> }
-    : K extends 'selectable'
-    ? Selectable
+    ? Omit<T['meta'], 'hasSelect' | 'as' | 'selectable'> & {
+        as: AliasOrTable<Q>;
+        selectable: Selectable;
+      }
     : K extends 'result'
     ? Q['result']
     : K extends 'shape'
