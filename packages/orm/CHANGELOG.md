@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.21.6
+
+### Patch Changes
+
+- 32d1a3be: `makeHelper`: ignore input table alias (#232)
+- Updated dependencies [32d1a3be]
+  - pqb@0.23.5
+  - orchid-core@0.11.2
+
 ## 1.21.5
 
 ### Patch Changes

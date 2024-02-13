@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.11.2
+
+### Patch Changes
+
+- 32d1a3be: `makeHelper`: ignore input table alias (#232)
+
 ## 0.11.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # pqb
 
+## 0.23.5
+
+### Patch Changes
+
+- 32d1a3be: `makeHelper`: ignore input table alias (#232)
+- Updated dependencies [32d1a3be]
+  - orchid-core@0.11.2
+
 ## 0.23.4
 
 ### Patch Changes
