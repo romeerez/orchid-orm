@@ -59,6 +59,7 @@ export type CoreQueryScopes<Keys extends string = string> = Record<
 // both the table query objects
 // and the lightweight queries inside `where` and `on` callbacks
 export type QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
+  __isQuery: true;
   meta: QueryMetaBase<Scopes>;
   internal: QueryInternal;
 };

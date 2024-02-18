@@ -75,9 +75,8 @@ export type CreateColumn<
   | Expression
   | T['inputType'][Key]
   | {
-      [K in keyof Query]: K extends 'then'
-        ? QueryThen<T['inputType'][Key]>
-        : Query[K];
+      __isQuery: true;
+      then: QueryThen<T['inputType'][Key]>;
     };
 
 // Combine data of the table with data that can be set for relations

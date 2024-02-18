@@ -283,6 +283,7 @@ type JoinWithArgToQuery<
     };
   },
 > = {
+  __isQuery: true;
   q: QueryData;
   table: With['table'];
   clone<T extends Pick<QueryBase, 'baseQuery' | 'q'>>(this: T): T;
