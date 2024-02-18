@@ -39,7 +39,6 @@ import {
 import {
   joinQueryChainingHOF,
   NestedInsertOneItem,
-  NestedInsertOneItemConnect,
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
@@ -377,7 +376,7 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
     let connected: unknown[];
     if (items.length) {
       for (let i = 0, len = items.length; i < len; i++) {
-        items[i] = t.findBy(items[i].connect as NestedInsertOneItemConnect);
+        items[i] = t.findBy(items[i].connect as WhereArg<Query>);
       }
 
       connected = await Promise.all(items);

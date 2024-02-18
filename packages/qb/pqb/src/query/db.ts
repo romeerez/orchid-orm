@@ -129,7 +129,8 @@ export interface Db<
   Scopes extends CoreQueryScopes | undefined = EmptyObject,
   Data = QueryDefaultReturnData<Shape>,
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
-    QueryMethods<ColumnTypes> {
+    QueryMethods<ColumnTypes>,
+    QueryBase {
   new (
     adapter: Adapter,
     queryBuilder: Db<Table, Shape, Relations, ColumnTypes>,
@@ -137,7 +138,7 @@ export interface Db<
     shape?: Shape,
     options?: DbTableOptions<Table, ShapeWithComputed>,
   ): this;
-  internal: QueryInternal;
+  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   queryBuilder: Db;
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];

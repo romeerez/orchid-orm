@@ -11,7 +11,6 @@ import { RelationQueryBase } from '../../relations';
 import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
 import {
   JoinArgs,
-  JoinCallback,
   JoinFirstArg,
   JoinLateralCallback,
   JoinLateralResult,
@@ -41,7 +40,7 @@ export const _join = <
   q: T,
   require: RequireJoined,
   type: string,
-  args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
+  args: [arg: Arg, ...args: Args],
 ): JoinResult<T, Arg, RequireJoined, RequireMain> => {
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
@@ -121,7 +120,7 @@ export const _join = <
  * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
  */
 export const _joinLateral = <
-  T extends Pick<Query, 'meta' | 'shape' | 'relations' | 'withData'>,
+  T extends QueryBase,
   Arg extends JoinFirstArg<T>,
   R extends QueryBase,
   RequireJoined extends boolean,

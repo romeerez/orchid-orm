@@ -47,7 +47,7 @@ type WithSelectable<
  * The first argument of all `join` and `joinLateral` methods.
  * See argument of {@link join}.
  */
-export type JoinFirstArg<T extends Pick<Query, 'relations' | 'withData'>> =
+export type JoinFirstArg<T extends QueryBase> =
   | Query
   | keyof T['relations']
   | keyof T['withData']
@@ -57,16 +57,15 @@ export type JoinFirstArg<T extends Pick<Query, 'relations' | 'withData'>> =
  * Arguments of `join` methods (not `joinLateral`).
  * See {@link join}
  */
-export type JoinArgs<
-  T extends QueryBase,
-  Arg extends JoinFirstArg<T>,
-> = Arg extends Query
-  ? JoinQueryArgs<T, Arg>
-  : Arg extends keyof T['relations']
-  ? EmptyTuple
-  : Arg extends keyof T['withData']
-  ? JoinWithArgs<T, Arg>
-  : never;
+export type JoinArgs<T extends QueryBase, Arg extends JoinFirstArg<T>> =
+  | [JoinCallback<T, Arg>]
+  | (Arg extends Query
+      ? JoinQueryArgs<T, Arg>
+      : Arg extends keyof T['relations']
+      ? EmptyTuple
+      : Arg extends keyof T['withData']
+      ? JoinWithArgs<T, Arg>
+      : never);
 
 /**
  * Column names of the joined table that can be used to join.
@@ -176,6 +175,16 @@ export type JoinResult<
 > = RequireMain extends true
   ? JoinAddSelectable<T, Selectable>
   : JoinOptionalMain<T, Selectable>;
+
+type JoinResultFromArgs<
+  T extends Query,
+  Arg extends JoinFirstArg<T>,
+  Args,
+  RequireJoined extends boolean,
+  RequireMain extends boolean,
+> = Args extends [(q: never) => { meta: QueryMetaBase }]
+  ? JoinResult<T, Arg, RequireJoined, RequireMain, Args[0]>
+  : JoinResult<T, Arg, RequireJoined, RequireMain>;
 
 /**
  * Result of all `joinLateral` methods.
@@ -315,7 +324,7 @@ type JoinWithArgToQuery<
  * relation name is replaced with a relation table.
  */
 type JoinArgToQuery<
-  T extends Pick<Query, 'relations' | 'withData'>,
+  T extends QueryBase,
   Arg extends JoinFirstArg<T>,
 > = Arg extends keyof T['withData']
   ? T['withData'][Arg] extends WithDataItem
@@ -351,7 +360,7 @@ export type JoinCallback<T extends QueryBase, Arg extends JoinFirstArg<T>> = (
  * The callback must return a query object. Its resulting type will become a type of the joined table.
  */
 export type JoinLateralCallback<
-  T extends Pick<Query, 'meta' | 'shape' | 'relations' | 'withData'>,
+  T extends QueryBase,
   Arg extends JoinFirstArg<T>,
   R extends QueryBase,
   Q extends QueryBase = JoinArgToQuery<T, Arg>,
@@ -726,20 +735,15 @@ export class Join {
     T extends Query,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, true, true>;
-  /**
-   * A join variant accepting a {@link JoinCallback}, see {@link join} for full info.
-   * @param arg - {@link JoinFirstArg}
-   * @param cb - {@link JoinCallback}
-   */
-  join<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, true, true, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  join(this: Query, ...args: any) {
-    return _join(this.clone(), true, 'JOIN', args);
+  >(
+    this: T,
+    arg: Arg,
+    ...args: Args
+  ): JoinResultFromArgs<T, Arg, Args, true, true> {
+    return _join(this.clone(), true, 'JOIN', [
+      arg,
+      ...(args as never),
+    ]) as never;
   }
 
   /**
@@ -770,20 +774,15 @@ export class Join {
     T extends Query,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, false, true>;
-  /**
-   * A `leftJoin` variant accepting a {@link JoinCallback}, see {@link join} for full info.
-   * @param arg - {@link JoinFirstArg}
-   * @param cb - {@link JoinCallback}
-   */
-  leftJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, false, true, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  leftJoin(this: Query, ...args: any) {
-    return _join(this.clone(), false, 'LEFT JOIN', args);
+  >(
+    this: T,
+    arg: Arg,
+    ...args: Args
+  ): JoinResultFromArgs<T, Arg, Args, false, true> {
+    return _join(this.clone(), false, 'LEFT JOIN', [
+      arg,
+      ...(args as never),
+    ]) as never;
   }
 
   /**
@@ -811,20 +810,15 @@ export class Join {
     T extends Query,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, true, false>;
-  /**
-   * A `rightJoin` variant accepting a {@link JoinCallback}, see {@link join} for full info.
-   * @param arg - {@link JoinFirstArg}
-   * @param cb - {@link JoinCallback}
-   */
-  rightJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, true, false, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rightJoin(this: Query, ...args: any) {
-    return _join(this.clone(), true, 'RIGHT JOIN', args);
+  >(
+    this: T,
+    arg: Arg,
+    ...args: Args
+  ): JoinResultFromArgs<T, Arg, Args, true, false> {
+    return _join(this.clone(), true, 'RIGHT JOIN', [
+      arg,
+      ...(args as never),
+    ]) as never;
   }
 
   /**
@@ -852,20 +846,15 @@ export class Join {
     T extends Query,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg, false, false>;
-  /**
-   * A `fullJoin` variant accepting a {@link JoinCallback}, see {@link join} for full info.
-   * @param arg - {@link JoinFirstArg}
-   * @param cb - {@link JoinCallback}
-   */
-  fullJoin<
-    T extends Query,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallback<T, Arg>,
-  >(this: T, arg: Arg, cb: Cb): JoinResult<T, Arg, false, false, Cb>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fullJoin(this: Query, ...args: any) {
-    return _join(this.clone(), false, 'FULL JOIN', args);
+  >(
+    this: T,
+    arg: Arg,
+    ...args: Args
+  ): JoinResultFromArgs<T, Arg, Args, false, false> {
+    return _join(this.clone(), false, 'FULL JOIN', [
+      arg,
+      ...(args as never),
+    ]) as never;
   }
 
   /**
@@ -1072,7 +1061,7 @@ export const _queryJoinOnJsonPathEquals = <T extends OnQueryBuilder>(
 
 // Query builder with `or` methods that is passed to the `join` and `joinLateral` callbacks.
 export class OnQueryBuilder<
-  S extends Pick<Query, 'meta' | 'shape'> = QueryBase,
+  S extends QueryBase = QueryBase,
   J extends Pick<
     QueryBase,
     'relations' | 'result' | 'shape' | 'meta'
@@ -1083,9 +1072,7 @@ export class OnQueryBuilder<
   declare relations: J['relations'];
   declare result: J['result'];
   shape: J['shape'];
-  baseQuery: Query;
   withData = emptyObject;
-  internal: QueryInternal;
 
   constructor(
     q: QueryBase,

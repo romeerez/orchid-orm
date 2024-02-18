@@ -1,7 +1,7 @@
 import { Query } from '../../query/query';
 import { ColumnOperators } from '../../sql';
 import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
-import { JoinArgs, JoinCallback, JoinFirstArg } from '../join/join';
+import { JoinArgs, JoinFirstArg } from '../join/join';
 import {
   applyMixins,
   ColumnsShapeBase,
@@ -15,6 +15,7 @@ import { getShapeFromSelect } from '../select';
 import { QueryBase } from '../../query/queryBase';
 import { RawSQL } from '../../sql/rawSql';
 import { ExpressionOrQueryReturning } from '../../common/utils';
+import { RelationsBase } from '../../relations';
 
 /*
 Argument of `where`:
@@ -29,7 +30,7 @@ Argument of `where`:
   - raw SQL: q.where({ num: q.raw`sql` })
   - sub query returning a single column: q.where({ num: db.someTable.where(...).get('column') })
  */
-export type WhereArg<T extends WhereQueryBase> =
+export type WhereArg<T extends QueryBase> =
   | {
       [K in
         | keyof T['meta']['selectable']
@@ -43,7 +44,7 @@ export type WhereArg<T extends WhereQueryBase> =
         : K extends 'IN'
         ? MaybeArray<{
             columns: (keyof T['meta']['selectable'])[];
-            values: unknown[][] | Query | Expression;
+            values: unknown[][] | QueryBase | Expression;
           }>
         : K extends keyof T['meta']['selectable']
         ?
@@ -51,7 +52,7 @@ export type WhereArg<T extends WhereQueryBase> =
             | null
             | ColumnOperators<T['meta']['selectable'], K>
             | Expression
-            | Query
+            | QueryBase
         : never;
     }
   | QueryBase
@@ -68,18 +69,25 @@ export type WhereArg<T extends WhereQueryBase> =
  * db.table.where((q) => q.relation.count().equals(10))
  * ```
  */
-export type WhereQueryBuilder<T extends WhereQueryBase> = Pick<
-  T,
-  keyof WhereQueryBase
-> &
-  T['relations'];
+export type WhereQueryBuilder<T extends QueryBase> =
+  RelationsBase extends T['relations']
+    ? {
+        [K in keyof T]: K extends keyof QueryBase | keyof Where ? T[K] : never;
+      }
+    : {
+        [K in keyof T]: K extends keyof T['relations']
+          ? T['relations'][K]
+          : K extends keyof QueryBase | keyof Where
+          ? T[K]
+          : never;
+      };
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
-export type WhereArgs<T extends WhereQueryBase> =
+export type WhereArgs<T extends QueryBase> =
   | WhereArg<T>[]
   | TemplateLiteralArgs;
 
-export type WhereNotArgs<T extends WhereQueryBase> =
+export type WhereNotArgs<T extends QueryBase> =
   | [WhereArg<T>]
   | TemplateLiteralArgs;
 
@@ -131,7 +139,7 @@ export type WhereResult<T> = T & {
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryWhere = <T extends WhereQueryBase>(
+export const _queryWhere = <T extends QueryBase>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
@@ -152,7 +160,7 @@ export const _queryWhere = <T extends WhereQueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryWhereNot = <T extends WhereQueryBase>(
+export const _queryWhereNot = <T extends QueryBase>(
   q: T,
   args: WhereNotArgs<T>,
 ): WhereResult<T> => {
@@ -172,7 +180,7 @@ export const _queryWhereNot = <T extends WhereQueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryOr = <T extends WhereQueryBase>(
+export const _queryOr = <T extends QueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
@@ -189,7 +197,7 @@ export const _queryOr = <T extends WhereQueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryOrNot = <T extends WhereQueryBase>(
+export const _queryOrNot = <T extends QueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
@@ -275,7 +283,7 @@ const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
   ] as never;
 };
 
-export abstract class Where {
+export class Where {
   /**
    * Constructing `WHERE` conditions:
    *
@@ -664,10 +672,7 @@ export abstract class Where {
    *
    * @param args - {@link WhereArgs}
    */
-  where<T extends WhereQueryBase>(
-    this: T,
-    ...args: WhereArgs<T>
-  ): WhereResult<T> {
+  where<T extends QueryBase>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return _queryWhere(this.clone(), args);
   }
 
@@ -686,7 +691,7 @@ export abstract class Where {
    *
    * @param args - {@link WhereArgs}
    */
-  whereNot<T extends WhereQueryBase>(
+  whereNot<T extends QueryBase>(
     this: T,
     ...args: WhereNotArgs<T>
   ): WhereResult<T> {
@@ -716,7 +721,7 @@ export abstract class Where {
    *
    * @param args - {@link WhereArgs} will be joined with `OR`
    */
-  orWhere<T extends WhereQueryBase>(
+  orWhere<T extends QueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
@@ -728,7 +733,7 @@ export abstract class Where {
    *
    * @param args - {@link WhereArgs} will be prefixed with `NOT` and joined with `OR`
    */
-  orWhereNot<T extends WhereQueryBase>(
+  orWhereNot<T extends QueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
@@ -769,30 +774,18 @@ export abstract class Where {
    * ```ts
    * db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
    * ```
-   *
-   * @param column - one column name, or array of column names
-   * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  whereIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
+  whereIn<T extends QueryBase, Column extends WhereInColumn<T>>(
     this: T,
-    column: Column,
-    values: WhereInValues<T, Column>,
-  ): WhereResult<T>;
-  /**
-   * See {@link whereIn}.
-   *
-   * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
-   */
-  whereIn<T extends WhereQueryBase>(
-    this: T,
-    arg: WhereInArg<T>,
-  ): WhereResult<T>;
-  whereIn<T extends WhereQueryBase>(
-    this: T,
-    arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | Expression,
+    ...args:
+      | [column: Column, values: WhereInValues<T, Column>]
+      | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), true, arg, values);
+    return _queryWhereIn(
+      this.clone(),
+      true,
+      ...(args as unknown as [WhereInArg<T>, undefined]),
+    );
   }
 
   /**
@@ -802,30 +795,18 @@ export abstract class Where {
    * ```ts
    * db.table.whereIn('a', [1, 2, 3]).orWhereIn('b', ['one', 'two']);
    * ```
-   *
-   * @param column - one column name, or array of column names
-   * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  orWhereIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
+  orWhereIn<T extends QueryBase, Column extends WhereInColumn<T>>(
     this: T,
-    column: Column,
-    values: WhereInValues<T, Column>,
-  ): WhereResult<T>;
-  /**
-   * See {@link orWhereIn}.
-   *
-   * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
-   */
-  orWhereIn<T extends WhereQueryBase>(
-    this: T,
-    arg: WhereInArg<T>,
-  ): WhereResult<T>;
-  orWhereIn<T extends WhereQueryBase>(
-    this: T,
-    arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | Expression,
+    ...args:
+      | [column: Column, values: WhereInValues<T, Column>]
+      | [WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), false, arg, values);
+    return _queryWhereIn(
+      this.clone(),
+      false,
+      ...(args as unknown as [WhereInArg<T>, undefined]),
+    );
   }
 
   /**
@@ -834,30 +815,19 @@ export abstract class Where {
    * ```ts
    * db.table.whereNotIn('color', ['red', 'green', 'blue']);
    * ```
-   *
-   * @param column - one column name, or array of column names
-   * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  whereNotIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
+  whereNotIn<T extends QueryBase, Column extends WhereInColumn<T>>(
     this: T,
-    column: Column,
-    values: WhereInValues<T, Column>,
-  ): WhereResult<T>;
-  /**
-   * See {@link whereNotIn}.
-   *
-   * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
-   */
-  whereNotIn<T extends WhereQueryBase>(
-    this: T,
-    arg: WhereInArg<T>,
-  ): WhereResult<T>;
-  whereNotIn<T extends WhereQueryBase>(
-    this: T,
-    arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | Expression,
+    ...args:
+      | [column: Column, values: WhereInValues<T, Column>]
+      | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), true, arg, values, true);
+    return _queryWhereIn(
+      this.clone(),
+      true,
+      ...(args as unknown as [WhereInArg<T>, undefined]),
+      true,
+    );
   }
 
   /**
@@ -866,30 +836,19 @@ export abstract class Where {
    * ```ts
    * db.table.whereNotIn('a', [1, 2, 3]).orWhereNoIn('b', ['one', 'two']);
    * ```
-   *
-   * @param column - one column name, or array of column names
-   * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  orWhereNotIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
+  orWhereNotIn<T extends QueryBase, Column extends WhereInColumn<T>>(
     this: T,
-    column: Column,
-    values: WhereInValues<T, Column>,
-  ): WhereResult<T>;
-  /**
-   * See {@link orWhereNotIn}.
-   *
-   * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
-   */
-  orWhereNotIn<T extends WhereQueryBase>(
-    this: T,
-    arg: WhereInArg<T>,
-  ): WhereResult<T>;
-  orWhereNotIn<T extends WhereQueryBase>(
-    this: T,
-    arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | Expression,
+    ...args:
+      | [column: Column, values: WhereInValues<T, Column>]
+      | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), false, arg, values, true);
+    return _queryWhereIn(
+      this.clone(),
+      false,
+      ...(args as unknown as [WhereInArg<T>, undefined]),
+      true,
+    );
   }
 
   /**
@@ -908,29 +867,13 @@ export abstract class Where {
    * // find using a query builder in a callback:
    * db.user.whereExists(db.account, (q) => q.on('account.id', '=', 'user.id'));
    * ```
-   *
-   * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
-   * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
-  whereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
+  whereExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     ...args: JoinArgs<T, Arg>
-  ): WhereResult<T>;
-  /**
-   * See {@link whereExists}.
-   *
-   * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
-   * @param cb - callback with a query builder to join the table.
-   */
-  whereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
-    this: T,
-    arg: Arg,
-    cb: JoinCallback<T, Arg>,
-  ): WhereResult<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  whereExists(this: WhereQueryBase, ...args: any) {
-    return _queryWhere(this.clone(), existsArgs(args));
+  ): WhereResult<T> {
+    return _queryWhere(this.clone(), existsArgs([arg as never, args as never]));
   }
 
   /**
@@ -941,29 +884,13 @@ export abstract class Where {
    * // imagine that the user has both `account` and `profile` relations defined.
    * db.user.whereExist('account').orWhereExists('profile');
    * ```
-   *
-   * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
-   * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
-  orWhereExists<
-    T extends WhereQueryBase,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
-  /**
-   * See {@link orWhereExists}.
-   *
-   * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
-   * @param cb - callback with a query builder to join the table.
-   */
-  orWhereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
+  orWhereExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
-    cb: JoinCallback<T, Arg>,
-  ): WhereResult<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orWhereExists(this: WhereQueryBase, ...args: any) {
-    return _queryOr(this.clone(), existsArgs(args));
+    ...args: JoinArgs<T, Arg>
+  ): WhereResult<T> {
+    return _queryOr(this.clone(), existsArgs([arg as never, args as never]));
   }
 
   /**
@@ -978,25 +905,15 @@ export abstract class Where {
    * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
-  whereNotExists<
-    T extends WhereQueryBase,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
-  /**
-   * See {@link whereNotExists}.
-   *
-   * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
-   * @param cb - callback with a query builder to join the table.
-   */
-  whereNotExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
+  whereNotExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
-    cb: JoinCallback<T, Arg>,
-  ): WhereResult<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  whereNotExists(this: WhereQueryBase, ...args: any) {
-    return _queryWhereNot(this.clone(), existsArgs(args));
+    ...args: JoinArgs<T, Arg>
+  ): WhereResult<T> {
+    return _queryWhereNot(
+      this.clone(),
+      existsArgs([arg as never, args as never]),
+    );
   }
 
   /**
@@ -1007,29 +924,13 @@ export abstract class Where {
    * // imagine that the user has both `account` and `profile` relations defined.
    * db.user.whereNotExists('account').orWhereNotExists('profile');
    * ```
-   *
-   * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
-   * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
-  orWhereNotExists<
-    T extends WhereQueryBase,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
-  /**
-   * See {@link orWhereNotExists}.
-   *
-   * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
-   * @param cb - callback with a query builder to join the table.
-   */
-  orWhereNotExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
+  orWhereNotExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
-    cb: JoinCallback<T, Arg>,
-  ): WhereResult<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orWhereNotExists(this: WhereQueryBase, ...args: any) {
-    return _queryOrNot(this.clone(), existsArgs(args));
+    ...args: JoinArgs<T, Arg>
+  ): WhereResult<T> {
+    return _queryOrNot(this.clone(), existsArgs([arg as never, args as never]));
   }
 }
 

@@ -338,7 +338,7 @@ export const processSelectArg = <T extends SelectSelf>(
         value.q.joinedForSelect = asOverride;
 
         _joinLateral(
-          q,
+          q as unknown as QueryBase,
           value.q.innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
           query,
           (q) => q,

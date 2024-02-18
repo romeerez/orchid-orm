@@ -41,7 +41,6 @@ import {
   joinHasThrough,
   joinQueryChainingHOF,
   NestedInsertOneItem,
-  NestedInsertOneItemConnect,
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
@@ -395,7 +394,7 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         items[i] =
           'connect' in item
             ? _queryUpdateOrThrow(
-                t.where(item.connect as NestedInsertOneItemConnect) as Omit<
+                t.where(item.connect as WhereArg<Query>) as Omit<
                   Query,
                   'meta'
                 > & {

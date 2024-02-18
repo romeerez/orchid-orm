@@ -401,7 +401,7 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         }
 
         items[i] = _queryUpdateOrThrow(
-          t.orWhere<Query>(...connect),
+          t.orWhere<Query>(...(connect as WhereArg<Query>[])),
           obj as UpdateData<WhereResult<Query>>,
         );
       }
@@ -549,11 +549,11 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
 
         await _queryUpdate(
           t.where<Query>(
-            Array.isArray(params.set)
+            (Array.isArray(params.set)
               ? {
                   OR: params.set,
                 }
-              : params.set,
+              : params.set) as WhereArg<Query>,
           ),
           obj as UpdateData<WhereResult<Query>>,
         );

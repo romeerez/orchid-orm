@@ -38,13 +38,7 @@ import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
-import {
-  _queryWhere,
-  Where,
-  WhereArg,
-  WhereQueryBase,
-  WhereResult,
-} from './where/where';
+import { _queryWhere, Where, WhereArg, WhereResult } from './where/where';
 import { SearchMethods } from './search';
 import { Clear } from './clear';
 import { Having } from './having';
@@ -78,16 +72,15 @@ import { queryWrap } from './queryMethods.utils';
 // argument of the window method
 // it is an object where keys are name of windows
 // and values can be a window options or a raw SQL
-export type WindowArg<T extends Query> = Record<
-  string,
-  WindowArgDeclaration<T> | Expression
->;
+export interface WindowArg<T extends Query> {
+  [K: string]: WindowArgDeclaration<T> | Expression;
+}
 
 // SQL window options to specify partitionBy and order of the window
-export type WindowArgDeclaration<T extends Query = Query> = {
+export interface WindowArgDeclaration<T extends Query = Query> {
   partitionBy?: SelectableOrExpression<T> | SelectableOrExpression<T>[];
   order?: OrderArg<T>;
-};
+}
 
 // add new windows to a query
 type WindowResult<T extends Query, W extends WindowArg<T>> = T & {
@@ -204,13 +197,13 @@ export interface QueryMethods<ColumnTypes>
     Delete,
     Transaction,
     For,
-    Omit<Where, 'result'>,
+    Where,
     SearchMethods,
     Clear,
     Having,
     Then,
     QueryLog,
-    Omit<QueryHooks, 'result'>,
+    QueryHooks,
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,
@@ -248,14 +241,14 @@ export const _queryExec = <T extends Query>(q: T) => {
   return q as unknown as SetQueryReturnsVoid<T>;
 };
 
-export const _queryFindBy = <T extends WhereQueryBase>(
+export const _queryFindBy = <T extends QueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): SetQueryReturnsOne<WhereResult<T>> => {
   return _queryTake(_queryWhere(q, args));
 };
 
-export const _queryFindByOptional = <T extends WhereQueryBase>(
+export const _queryFindByOptional = <T extends QueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): SetQueryReturnsOneOptional<WhereResult<T>> => {
@@ -489,7 +482,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - `where` conditions
    */
-  findBy<T extends WhereQueryBase>(
+  findBy<T extends QueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOne<WhereResult<T>> {
@@ -508,7 +501,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - `where` conditions
    */
-  findByOptional<T extends WhereQueryBase>(
+  findByOptional<T extends QueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOneOptional<WhereResult<T>> {

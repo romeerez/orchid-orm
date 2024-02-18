@@ -693,18 +693,20 @@ const nestedUpdate = (state: State) => {
               },
             ]);
           }),
-          [conditionsToWhereArg(params.update.where)],
+          [conditionsToWhereArg(params.update.where as WhereArg<Query>)],
         ),
         params.update.data as UpdateArg<Query>,
       );
     }
 
     if (params.disconnect) {
-      await _queryDelete(queryJoinTable(state, data, params.disconnect));
+      await _queryDelete(
+        queryJoinTable(state, data, params.disconnect as WhereArg<Query>),
+      );
     }
 
     if (params.delete) {
-      const j = queryJoinTable(state, data, params.delete);
+      const j = queryJoinTable(state, data, params.delete as WhereArg<Query>);
 
       const idsRows = await _queryDelete(
         _queryRows(_querySelect(j, state.throughForeignKeys)),
@@ -727,7 +729,9 @@ const nestedUpdate = (state: State) => {
 
       const idsRows = await _queryRows(
         _querySelect(
-          state.relatedTableQuery.where(conditionsToWhereArg(params.set)),
+          state.relatedTableQuery.where(
+            conditionsToWhereArg(params.set as WhereArg<Query>),
+          ),
           state.throughPrimaryKeys,
         ),
       );

@@ -1,9 +1,7 @@
 import { StaticSQLArgs, DynamicSQLArg, QueryColumn } from 'orchid-core';
 import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';
 
-export class RawSqlMethods<ColumnTypes> {
-  columnTypes!: ColumnTypes;
-
+export abstract class RawSqlMethods<ColumnTypes> {
   /**
    * When there is a need to use a piece of raw SQL, use the `sql` method from tables, or a `raw` function imported from `orchid-orm`.
    *
@@ -161,7 +159,7 @@ export class RawSqlMethods<ColumnTypes> {
     this: { columnTypes: ColumnTypes },
     ...args: [DynamicSQLArg]
   ): DynamicRawSQL<QueryColumn<T>, ColumnTypes>;
-  sql(...args: unknown[]) {
+  sql(this: { columnTypes: ColumnTypes }, ...args: unknown[]) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sql = (raw as any)(...args);
     sql.columnTypes = this.columnTypes;
