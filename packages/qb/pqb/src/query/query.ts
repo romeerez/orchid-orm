@@ -109,19 +109,13 @@ export type GetQueryResult<
   : ReturnType extends 'oneOrThrow'
   ? ColumnShapeOutput<Result>
   : ReturnType extends 'value'
-  ? Result extends { value: QueryColumn }
-    ? Result['value']['outputType'] | undefined
-    : never
+  ? Result['value']['outputType'] | undefined
   : ReturnType extends 'valueOrThrow'
-  ? Result extends { value: QueryColumn }
-    ? Result['value']['outputType']
-    : never
+  ? Result['value']['outputType']
   : ReturnType extends 'rows'
   ? ColumnShapeOutput<Result>[keyof Result][][]
   : ReturnType extends 'pluck'
-  ? Result extends { pluck: QueryColumn }
-    ? Result['pluck']['outputType'][]
-    : never
+  ? Result['pluck']['outputType'][]
   : ReturnType extends 'rowCount'
   ? number
   : ReturnType extends 'void'

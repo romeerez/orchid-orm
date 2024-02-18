@@ -118,9 +118,10 @@ type SelectResultWithObj<
   Data = GetQueryResult<T['returnType'], Result>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? Omit<T['meta'], 'selectable'> & {
+    ? T['meta'] & {
         selectable: SelectAsSelectable<T, Obj>;
-      } & MetaHasSelect
+        hasSelect: true;
+      }
     : K extends 'result'
     ? Result
     : K extends 'then'
@@ -144,25 +145,19 @@ type SelectAsSelectable<
   T extends Pick<Query, 'meta' | 'relations'>,
   Arg extends SelectAsArg<T>,
 > = {
-  [K in keyof Arg & string]: Arg[K] extends ((
-    q: never,
-  ) => infer R extends QueryBase)
+  [K in keyof Arg]: Arg[K] extends (q: never) => {
+    result: infer Result;
+  }
     ? // turn union of objects into intersection
       // https://stackoverflow.com/questions/66445084/intersection-of-an-objects-value-types-in-typescript
-      (x: {
-        [C in keyof R['result'] & string as `${K}.${C}`]: {
+      {
+        [C in keyof Result & string as `${K & string}.${C}`]: {
           as: C;
-          column: R['result'][C];
+          column: Result[C];
         };
-      }) => void
+      }
     : never;
-}[keyof Arg & string] extends (x: infer I) => void
-  ? {
-      [K in keyof T['meta']['selectable'] | keyof I]: K extends keyof I
-        ? I[K]
-        : T['meta']['selectable'][K];
-    }
-  : never;
+}[keyof Arg];
 
 // map a single value of select object arg into a column
 type SelectAsValueResult<
