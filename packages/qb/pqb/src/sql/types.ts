@@ -192,13 +192,12 @@ export type SimpleJoinItem = {
 export type JoinLateralItem = [type: string, joined: Query, as: string];
 
 export type WhereItem =
-  | (Omit<
-      Record<
-        string,
-        unknown | Record<string, unknown | Query | Expression> | Expression
-      >,
-      'NOT' | 'AND' | 'OR' | 'IN' | 'EXISTS' | 'ON' | 'ON_JSON_PATH_EQUALS'
-    > & {
+  | {
+      [K: string]:
+        | unknown
+        | Record<string, unknown | Query | Expression>
+        | Expression;
+
       NOT?: MaybeArray<WhereItem>;
       AND?: MaybeArray<WhereItem>;
       OR?: MaybeArray<WhereItem>[];
@@ -206,7 +205,7 @@ export type WhereItem =
       EXISTS?: MaybeArray<SimpleJoinItem['args']>;
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
-    })
+    }
   | ((q: unknown) => QueryBase | RelationQuery | Expression)
   | Query
   | Expression;

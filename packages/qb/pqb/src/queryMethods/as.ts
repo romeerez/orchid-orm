@@ -1,5 +1,4 @@
 import { Query, SetQueryTableAlias } from '../query/query';
-import { QueryBase } from '../query/queryBase';
 
 export type AsQueryArg = Pick<
   Query,
@@ -14,7 +13,7 @@ export const _queryAs = <T extends AsQueryArg, As extends string>(
   return self as SetQueryTableAlias<T, As>;
 };
 
-export abstract class AsMethods extends QueryBase {
+export abstract class AsMethods {
   /**
    * Sets table alias:
    *

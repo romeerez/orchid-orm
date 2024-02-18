@@ -32,7 +32,14 @@ import { CloneSelfKeys } from '../query/queryBase';
 
 export type UpdateSelf = Pick<
   Query,
-  'meta' | 'inputType' | 'relations' | keyof JsonModifiers | CloneSelfKeys
+  | 'meta'
+  | 'inputType'
+  | 'relations'
+  | 'shape'
+  | 'result'
+  | 'returnType'
+  | keyof JsonModifiers
+  | CloneSelfKeys
 >;
 
 // Type of argument for `update` and `updateOrThrow`
@@ -64,13 +71,19 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
         ? QueryThen<T['inputType'][Key]>
         : Query[K];
     }
-  | ((
-      q: {
-        [K in keyof JsonModifiers]: K extends 'selectable'
-          ? T['meta']['selectable']
-          : T[K];
-      } & T['relations'],
-    ) => JsonItem | (RelationQueryBase & { meta: { kind: 'select' } }));
+  | ((q: {
+      [K in
+        | keyof T['relations']
+        | keyof JsonModifiers
+        | 'meta'
+        | 'shape'
+        | 'result'
+        | 'returnType']: K extends keyof T['relations']
+        ? T['relations'][K]
+        : K extends keyof T
+        ? T[K]
+        : never;
+    }) => JsonItem | (RelationQueryBase & { meta: { kind: 'select' } }));
 
 // Add relation operations to the update argument.
 type UpdateRelationData<
@@ -204,7 +217,11 @@ export const _queryUpdate = <T extends UpdateSelf>(
           // if it is not a select query,
           // move it into `WITH` statement and select from it with a raw SQL
           if (value.q.type) {
-            const as = saveSearchAlias(query, 'q', 'withShapes');
+            const as = saveSearchAlias(
+              query as unknown as Query,
+              'q',
+              'withShapes',
+            );
             pushQueryValue(query, 'with', [as, emptyObject, value]);
 
             set[key] = new RawSQL(`(SELECT * FROM "${as}")`);

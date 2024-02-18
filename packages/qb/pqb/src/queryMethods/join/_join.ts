@@ -114,24 +114,26 @@ export const _join = <
  * Adds column parsers of the joined table into `joinedParsers`.
  * Adds join data into `join` of the query data.
  *
- * @param q - query object to join to
+ * @param self - query object to join to
  * @param type - SQL of the JOIN kind: JOIN or LEFT JOIN
  * @param arg - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
  * @param cb - callback where you can use `on` to join by columns, select needed data from the joined table, add where conditions, etc.
  * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
  */
 export const _joinLateral = <
-  T extends Query,
+  T extends Pick<Query, 'meta' | 'shape' | 'relations' | 'withData'>,
   Arg extends JoinFirstArg<T>,
   R extends QueryBase,
   RequireJoined extends boolean,
 >(
-  q: T,
+  self: T,
   type: string,
   arg: Arg,
   cb: JoinLateralCallback<T, Arg, R>,
   as?: string,
 ): JoinLateralResult<T, R, RequireJoined> => {
+  const q = self as unknown as Query;
+
   let relation: RelationQueryBase | undefined;
   if (typeof arg === 'string') {
     relation = q.relations[arg];
@@ -140,7 +142,7 @@ export const _joinLateral = <
     } else {
       const shape = q.q.withShapes?.[arg];
       if (shape) {
-        const t = Object.create(q.queryBuilder);
+        const t = Object.create((q as unknown as Query).queryBuilder);
         t.table = arg;
         t.shape = shape;
         t.q = {
@@ -161,7 +163,7 @@ export const _joinLateral = <
   if (relation) {
     result = relation.relationConfig.joinQuery(
       result as unknown as Query,
-      q,
+      q as unknown as Query,
     ) as unknown as R;
   }
 

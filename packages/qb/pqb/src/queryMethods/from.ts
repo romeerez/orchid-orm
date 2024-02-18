@@ -52,14 +52,19 @@ export type FromResult<
   : Args[0] extends string
   ? T['withData'] extends Record<string, WithDataItem>
     ? Args[0] extends keyof T['withData']
-      ? Omit<T, 'meta'> & {
-          meta: Omit<T['meta'], 'as' | 'selectable'> & {
-            as?: string;
-            selectable: SelectableFromShape<
-              T['withData'][Args[0]]['shape'],
-              Args[0]
-            >;
-          };
+      ? {
+          [K in keyof T]: K extends 'meta'
+            ? {
+                [K in keyof T['meta']]: K extends 'as'
+                  ? string | undefined
+                  : K extends 'selectable'
+                  ? SelectableFromShape<
+                      T['withData'][Args[0]]['shape'],
+                      Args[0]
+                    >
+                  : T['meta'][K];
+              }
+            : T[K];
         }
       : SetQueryTableAlias<T, Args[0]>
     : SetQueryTableAlias<T, Args[0]>
@@ -81,9 +86,14 @@ type FromQueryResult<
   Data = GetQueryResult<T['returnType'], Q['result']>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? Omit<T['meta'], 'hasSelect' | 'as' | 'selectable'> & {
-        as: AliasOrTable<Q>;
-        selectable: Selectable;
+    ? {
+        [K in keyof T['meta']]: K extends 'hasSelect'
+          ? undefined
+          : K extends 'as'
+          ? AliasOrTable<Q>
+          : K extends 'selectable'
+          ? Selectable
+          : T['meta'][K];
       }
     : K extends 'result'
     ? Q['result']

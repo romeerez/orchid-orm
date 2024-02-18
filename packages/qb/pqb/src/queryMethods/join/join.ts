@@ -47,7 +47,7 @@ type WithSelectable<
  * The first argument of all `join` and `joinLateral` methods.
  * See argument of {@link join}.
  */
-export type JoinFirstArg<T extends QueryBase> =
+export type JoinFirstArg<T extends Pick<Query, 'relations' | 'withData'>> =
   | Query
   | keyof T['relations']
   | keyof T['withData']
@@ -186,7 +186,7 @@ export type JoinResult<
  * @param RequireJoined - when false, joined table shape will be mapped to make all columns optional
  */
 export type JoinLateralResult<
-  T extends Query,
+  T extends Pick<Query, 'meta'>,
   R extends QueryBase,
   RequireJoined extends boolean,
   Selectable extends SelectableBase = JoinResultSelectable<
@@ -236,7 +236,10 @@ type JoinResultSelectable<
 };
 
 // Replace the 'selectable' of the query with the given selectable.
-type JoinAddSelectable<T extends Query, Selectable extends SelectableBase> = {
+type JoinAddSelectable<
+  T extends Pick<Query, 'meta'>,
+  Selectable extends SelectableBase,
+> = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & { selectable: Selectable }
     : T[K];
@@ -253,13 +256,17 @@ type JoinOptionalMain<
   Data = GetQueryResult<T['returnType'], Result>,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? Omit<T['meta'], 'selectable'> & {
-        selectable: {
-          [K in keyof T['meta']['selectable']]: {
-            as: T['meta']['selectable'][K]['as'];
-            column: QueryColumnToNullable<T['meta']['selectable'][K]['column']>;
-          };
-        } & Selectable;
+    ? {
+        [K in keyof T['meta']]: K extends 'selectable'
+          ? {
+              [K in keyof T['meta']['selectable']]: {
+                as: T['meta']['selectable'][K]['as'];
+                column: QueryColumnToNullable<
+                  T['meta']['selectable'][K]['column']
+                >;
+              };
+            } & Selectable
+          : T['meta'][K];
       }
     : K extends 'result'
     ? Result
@@ -308,7 +315,7 @@ type JoinWithArgToQuery<
  * relation name is replaced with a relation table.
  */
 type JoinArgToQuery<
-  T extends QueryBase,
+  T extends Pick<Query, 'relations' | 'withData'>,
   Arg extends JoinFirstArg<T>,
 > = Arg extends keyof T['withData']
   ? T['withData'][Arg] extends WithDataItem
@@ -344,7 +351,7 @@ export type JoinCallback<T extends QueryBase, Arg extends JoinFirstArg<T>> = (
  * The callback must return a query object. Its resulting type will become a type of the joined table.
  */
 export type JoinLateralCallback<
-  T extends QueryBase,
+  T extends Pick<Query, 'meta' | 'shape' | 'relations' | 'withData'>,
   Arg extends JoinFirstArg<T>,
   R extends QueryBase,
   Q extends QueryBase = JoinArgToQuery<T, Arg>,
@@ -1065,7 +1072,7 @@ export const _queryJoinOnJsonPathEquals = <T extends OnQueryBuilder>(
 
 // Query builder with `or` methods that is passed to the `join` and `joinLateral` callbacks.
 export class OnQueryBuilder<
-  S extends QueryBase = QueryBase,
+  S extends Pick<Query, 'meta' | 'shape'> = QueryBase,
   J extends Pick<
     QueryBase,
     'relations' | 'result' | 'shape' | 'meta'

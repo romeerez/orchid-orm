@@ -202,17 +202,18 @@ export type SetQueryReturnsPluck<
     : never
 >;
 
-export type SetQueryReturnsPluckColumn<T, C extends QueryColumn> = Omit<
-  T,
-  'result' | 'returnType' | 'then' | 'catch'
-> & {
-  meta: {
-    hasSelect: true;
-  };
-  result: { pluck: C };
-  returnType: 'pluck';
-  then: QueryThen<C['outputType'][]>;
-  catch: QueryCatch<C['outputType'][]>;
+export type SetQueryReturnsPluckColumn<T, C extends QueryColumn> = {
+  [K in keyof T]: K extends 'meta'
+    ? T[K] & { hasSelect: true }
+    : K extends 'result'
+    ? { pluck: C }
+    : K extends 'returnType'
+    ? 'pluck'
+    : K extends 'then'
+    ? QueryThen<C['outputType'][]>
+    : K extends 'catch'
+    ? QueryCatch<C['outputType'][]>
+    : T[K];
 };
 
 export type SetQueryReturnsValueOptional<
@@ -243,13 +244,17 @@ export type SetQueryReturnsColumn<
   Data = ReturnType extends 'value'
     ? Column['outputType'] | undefined
     : Column['outputType'],
-> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
-  meta: { hasSelect: true };
-  result: { value: Column };
-  returnType: ReturnType;
-  then: QueryThen<Data>;
-  catch: QueryCatch<Data>;
-};
+> = {
+  [K in keyof T]: K extends 'result'
+    ? { value: Column }
+    : K extends 'returnType'
+    ? ReturnType
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : T[K];
+} & { meta: { hasSelect: true } };
 
 export type SetQueryReturnsRowCount<T extends Pick<Query, 'result'>> =
   SetQueryReturns<T, 'rowCount'>;
@@ -271,17 +276,20 @@ export type SetQueryTableAlias<
   As extends string,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? Omit<T['meta'], 'as' | 'selectable'> & {
-        as: As;
-        selectable: Omit<
-          T['meta']['selectable'],
-          `${AliasOrTable<T>}.${keyof T['shape'] & string}`
-        > & {
-          [K in keyof T['shape'] & string as `${As}.${K}`]: {
-            as: K;
-            column: T['shape'][K];
-          };
-        };
+    ? {
+        [K in keyof T['meta'] | 'as']: K extends 'as'
+          ? As
+          : K extends 'selectable'
+          ? Omit<
+              T['meta']['selectable'],
+              `${AliasOrTable<T>}.${keyof T['shape'] & string}`
+            > & {
+              [K in keyof T['shape'] & string as `${As}.${K}`]: {
+                as: K;
+                column: T['shape'][K];
+              };
+            }
+          : T['meta'][K];
       }
     : T[K];
 };

@@ -15,7 +15,7 @@ export type Sql = {
 };
 
 // query metadata that is stored only on TS side, not available in runtime
-export type QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
+export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
   // kind of a query: select, update, create, etc.
   kind: string;
   // table alias
@@ -33,7 +33,7 @@ export type QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
   scopes: Scopes;
   // tracking columns of the main table, joined tables, `with` tables that are available for `select`.
   selectable: SelectableBase;
-};
+}
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore

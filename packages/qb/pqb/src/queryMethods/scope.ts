@@ -5,6 +5,13 @@ import { pushQueryArray, setQueryObjectValue } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
 import { SelectableFromShape } from '../query/query';
 
+interface ScopeArgumentQueryMeta<
+  Table extends string | undefined,
+  Shape extends QueryColumns,
+> extends QueryMetaBase {
+  selectable: SelectableFromShape<Shape, Table>;
+}
+
 export interface ScopeArgumentQuery<
   Table extends string | undefined,
   Shape extends QueryColumns,
@@ -12,9 +19,7 @@ export interface ScopeArgumentQuery<
     QueryBase {
   table: Table;
   shape: Shape;
-  meta: Omit<QueryMetaBase, 'selectable'> & {
-    selectable: SelectableFromShape<Shape, Table>;
-  };
+  meta: ScopeArgumentQueryMeta<Table, Shape>;
 }
 
 /**

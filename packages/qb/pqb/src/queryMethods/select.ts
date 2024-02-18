@@ -7,7 +7,7 @@ import {
 } from '../columns';
 import { JSONTextColumn } from '../columns/json';
 import { pushQueryArray } from '../query/queryUtils';
-import { SelectItem, SelectQueryData } from '../sql';
+import { SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
 import { QueryResult } from '../adapter';
 import {
   applyTransforms,
@@ -32,6 +32,11 @@ import {
 } from '../common/utils';
 import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
+
+type SelectSelf = Pick<
+  Query,
+  'relations' | 'shape' | 'result' | 'meta' | 'returnType' | 'withData'
+>;
 
 // .select method argument.
 export type SelectArg<T extends Pick<Query, 'meta'>> =
@@ -91,10 +96,7 @@ type SelectResult<
 
 // Result type of select with the ending object argument.
 type SelectResultWithObj<
-  T extends Pick<
-    Query,
-    'relations' | 'shape' | 'result' | 'returnType' | 'meta'
-  >,
+  T extends SelectSelf,
   Columns extends SelectArg<T>[],
   Obj extends SelectAsArg<T>,
   // Combine previously selected items, all columns if * was provided,
@@ -269,14 +271,14 @@ export const addParserForSelectItem = <T extends Pick<Query, 'meta' | 'q'>>(
 const emptyArrSQL = new RawSQL("'[]'");
 
 // process select argument: add parsers, join relations when needed
-export const processSelectArg = <T extends Query>(
+export const processSelectArg = <T extends SelectSelf>(
   q: T,
   as: string | undefined,
   arg: SelectArg<T>,
   columnAs?: string | getValueKey,
 ): SelectItem => {
   if (typeof arg === 'string') {
-    return setParserForSelectedString(q, arg, as, columnAs);
+    return setParserForSelectedString(q as unknown as Query, arg, as, columnAs);
   }
 
   const selectAs: Record<string, string | Query | Expression> = {};
@@ -286,7 +288,7 @@ export const processSelectArg = <T extends Query>(
     let value = (arg as unknown as SelectAsArg<T>)[key] as any;
 
     if (typeof value === 'function') {
-      value = resolveSubQueryCallback(q, value);
+      value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
 
       if (!isExpression(value) && value.joinQuery) {
         value = value.joinQuery(value, q);
@@ -322,7 +324,8 @@ export const processSelectArg = <T extends Query>(
 
         if (value.q.joinedShapes?.[key]) {
           let suffix = 2;
-          const joinOverrides = (q.q.joinOverrides ??= {});
+          const joinOverrides = ((q as unknown as Query).q.joinOverrides ??=
+            {});
           while (joinOverrides[(asOverride = `${key}${suffix}`)]) {
             suffix++;
           }
@@ -346,7 +349,12 @@ export const processSelectArg = <T extends Query>(
       }
     }
 
-    selectAs[key] = addParserForSelectItem(q, as, key, value);
+    selectAs[key] = addParserForSelectItem(
+      q as unknown as Query,
+      as,
+      key,
+      value,
+    );
   }
 
   return { selectAs };
@@ -490,12 +498,12 @@ const maybeUnNameColumn = (column: QueryColumn, isSubQuery?: boolean) => {
     : column;
 };
 
-export function _querySelect<T extends Query, Columns extends SelectArg<T>[]>(
-  q: T,
-  args: Columns,
-): SelectResult<T, Columns>;
 export function _querySelect<
-  T extends Query,
+  T extends SelectSelf,
+  Columns extends SelectArg<T>[],
+>(q: T, args: Columns): SelectResult<T, Columns>;
+export function _querySelect<
+  T extends SelectSelf,
   Columns extends SelectArg<T>[],
   Obj extends SelectAsArg<T>,
 >(
@@ -571,15 +579,12 @@ export class Select {
    *   .where({ 'author.isPopular': true });
    * ```
    */
+  select<T extends SelectSelf, Columns extends SelectArg<T>[]>(
+    this: T,
+    ...args: Columns
+  ): SelectResult<T, Columns>;
   select<
-    T extends Pick<Query, 'shape' | 'result' | 'meta' | 'returnType'>,
-    Columns extends SelectArg<T>[],
-  >(this: T, ...args: Columns): SelectResult<T, Columns>;
-  select<
-    T extends Pick<
-      Query,
-      'shape' | 'result' | 'meta' | 'returnType' | 'relations'
-    >,
+    T extends SelectSelf,
     Columns extends SelectArg<T>[],
     Obj extends SelectAsArg<T>,
   >(
@@ -587,8 +592,8 @@ export class Select {
     ...args: [...columns: Columns, obj: Obj]
   ): SelectResultWithObj<T, Columns, Obj>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  select(this: Query, ...args: any[]) {
-    return _querySelect(this.clone(), args);
+  select(this: SelectSelf, ...args: any[]) {
+    return _querySelect((this as Query).clone(), args);
   }
 
   /**
@@ -607,13 +612,8 @@ export class Select {
    * const deletedFull = await db.table.selectAll().where(conditions).delete();
    * ```
    */
-  selectAll<
-    T extends Pick<
-      Query,
-      'shape' | 'result' | 'meta' | 'returnType' | 'clone' | 'baseQuery' | 'q'
-    >,
-  >(this: T): SelectResult<T, ['*']> {
-    const q = this.clone();
+  selectAll<T extends SelectSelf>(this: T): SelectResult<T, ['*']> {
+    const q = (this as unknown as Query).clone();
     q.q.select = ['*'];
     return q as unknown as SelectResult<T, ['*']>;
   }

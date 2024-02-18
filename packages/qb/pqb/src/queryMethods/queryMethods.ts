@@ -147,11 +147,15 @@ type QueryHelper<T extends Query, Args extends unknown[], Result> = {
         : K extends 'result'
         ? QueryColumns
         : K extends 'meta'
-        ? Omit<T['meta'], 'as' | 'selectable'> & {
-            selectable: Omit<
-              T['meta']['selectable'],
-              `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
-            >;
+        ? {
+            [K in keyof T['meta']]: K extends 'as'
+              ? string | undefined
+              : K extends 'selectable'
+              ? Omit<
+                  T['meta']['selectable'],
+                  `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
+                >
+              : T['meta'][K];
           }
         : T[K];
     },
@@ -186,14 +190,14 @@ export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
 }
 
 export interface QueryMethods<ColumnTypes>
-  extends Omit<AsMethods, 'result'>,
+  extends AsMethods,
     AggregateMethods,
     Select,
     From,
     Join,
     With,
     Union,
-    Omit<JsonModifiers, 'result'>,
+    JsonModifiers,
     JsonMethods,
     Create,
     Update,

@@ -86,20 +86,23 @@ export namespace TableData {
     options?: ForeignKeyOptions;
   };
 
-  export type Identity = {
+  export interface Identity extends SequenceBaseOptions {
     always?: boolean;
-  } & Omit<SequenceOptions, 'dataType' | 'ownedBy'>;
+  }
 
-  export type SequenceOptions = {
-    dataType?: 'smallint' | 'integer' | 'bigint';
+  interface SequenceBaseOptions {
     incrementBy?: number;
     startWith?: number;
     min?: number;
     max?: number;
     cache?: number;
     cycle?: boolean;
+  }
+
+  export interface SequenceOptions extends SequenceBaseOptions {
+    dataType?: 'smallint' | 'integer' | 'bigint';
     ownedBy?: string;
-  };
+  }
 }
 
 export const newTableData = (): TableData => ({});

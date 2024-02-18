@@ -55,9 +55,9 @@ export interface AdapterConfig
   databaseURL?: string;
 }
 
-export type AdapterOptions = AdapterConfig & {
+export interface AdapterOptions extends AdapterConfig {
   types?: TypeParsers;
-};
+}
 
 export class Adapter implements AdapterBase {
   types: TypeParsers;
