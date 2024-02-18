@@ -35,30 +35,29 @@ export type SelectableFromShape<
 export type WithDataItem = { table: string; shape: QueryColumns };
 export type WithDataBase = Record<never, WithDataItem>;
 
-export type Query = QueryBase &
-  QueryMethods<unknown> & {
-    queryBuilder: Db;
-    columnTypes: unknown;
-    onQueryBuilder: typeof OnQueryBuilder;
-    table?: string;
-    shape: QueryColumns;
-    singlePrimaryKey: string;
-    primaryKeys: string[];
-    inputType: RecordUnknown;
-    q: QueryData;
-    result: QueryColumns;
-    then: QueryThen<unknown>;
-    catch: QueryCatch<unknown>;
-    windows: EmptyObject;
-    defaultSelectColumns: string[];
-    relations: RelationsBase;
-    withData: WithDataBase;
-    error: new (
-      message: string,
-      length: number,
-      name: QueryErrorName,
-    ) => QueryError;
-  };
+export interface Query extends QueryBase, QueryMethods<unknown> {
+  queryBuilder: Db;
+  columnTypes: unknown;
+  onQueryBuilder: typeof OnQueryBuilder;
+  table?: string;
+  shape: QueryColumns;
+  singlePrimaryKey: string;
+  primaryKeys: string[];
+  inputType: RecordUnknown;
+  q: QueryData;
+  result: QueryColumns;
+  then: QueryThen<unknown>;
+  catch: QueryCatch<unknown>;
+  windows: EmptyObject;
+  defaultSelectColumns: string[];
+  relations: RelationsBase;
+  withData: WithDataBase;
+  error: new (
+    message: string,
+    length: number,
+    name: QueryErrorName,
+  ) => QueryError;
+}
 
 export type SelectableOfType<T extends Pick<QueryBase, 'meta'>, Type> = {
   [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends Type | null

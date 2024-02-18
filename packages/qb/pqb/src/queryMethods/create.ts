@@ -10,11 +10,7 @@ import {
   SetQueryReturnsPluckColumn,
   SetQueryReturnsRowCount,
 } from '../query/query';
-import {
-  RelationConfigBase,
-  RelationConfigDataForCreate,
-  RelationsBase,
-} from '../relations';
+import { RelationConfigDataForCreate, RelationsBase } from '../relations';
 import {
   CreateKind,
   InsertQueryData,
@@ -65,7 +61,7 @@ export type CreateData<
 > = RelationsBase extends T['relations']
   ? // if no relations, don't load TS with extra calculations
     Data
-  : CreateRelationsData<T, T['relations'], Data>;
+  : CreateRelationsData<T['relations'], Data>;
 
 // Type of available variants to provide for a specific column when creating
 export type CreateColumn<
@@ -80,11 +76,7 @@ export type CreateColumn<
     };
 
 // Combine data of the table with data that can be set for relations
-export type CreateRelationsData<
-  T extends CreateSelf,
-  Relations extends RelationsBase,
-  Data,
-> =
+export type CreateRelationsData<Relations extends RelationsBase, Data> =
   // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
   Omit<
     Data,
@@ -92,7 +84,7 @@ export type CreateRelationsData<
   > &
     // Intersection of objects for `belongsTo` relations:
     // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-    CreateRelationsDataOmittingFKeys<T, Relations> &
+    CreateRelationsDataOmittingFKeys<Relations> &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
     Relations[keyof Relations]['relationConfig']['optionalDataForCreate'];
@@ -100,42 +92,19 @@ export type CreateRelationsData<
 // Intersection of relations that may omit foreign key (belongsTo):
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
 export type CreateRelationsDataOmittingFKeys<
-  T extends CreateSelf,
   Relations extends RelationsBase,
   // Collect a union of `belongsTo` relation objects.
-  // Tuple is needed to preserve the inner union type of the object.
-  Union extends [RecordUnknown] = {
-    [K in keyof Relations]: CreateRelationDataOmittingFKeys<
-      Relations[K]['relationConfig'],
-      keyof T['meta']['defaults']
-    >;
-  }[keyof Relations],
+  Union = Relations[keyof Relations]['relationConfig']['dataForCreate'],
 > =
   // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (Union extends any ? (u: Union) => void : never) extends (
-    u: [infer Obj],
-  ) => void
+  (
+    Union extends RelationConfigDataForCreate
+      ? (u: Union['columns' | 'nested']) => void
+      : never
+  ) extends (u: infer Obj extends RecordUnknown) => void
     ? Obj
     : never;
-
-// Makes type for a `belongsTo` relation:
-// [{ fooId: number } | { foo: object }]
-export type CreateRelationDataOmittingFKeys<
-  RelationConfig extends RelationConfigBase,
-  Defaults extends PropertyKey,
-  Data extends
-    | RelationConfigDataForCreate
-    | undefined = RelationConfig['dataForCreate'],
-> = Data extends RelationConfigDataForCreate
-  ? [
-      keyof Data['columns'] extends Defaults
-        ? Omit<Data['columns'], Defaults> & {
-            [P in Defaults & keyof Data['columns']]?: Data['columns'][P];
-          } & Partial<Data['nested']>
-        : Data['columns'] | Data['nested'],
-    ]
-  : never;
 
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.

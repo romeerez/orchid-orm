@@ -36,9 +36,9 @@ export type RelationConfigDataForCreate = {
 
 export type RelationsBase = Record<string, RelationQueryBase>;
 
-export type RelationQueryBase = Query & {
+export interface RelationQueryBase extends Query {
   relationConfig: RelationConfigBase;
-};
+}
 
 export type RelationQuery<
   Config extends RelationConfigBase = RelationConfigBase,
