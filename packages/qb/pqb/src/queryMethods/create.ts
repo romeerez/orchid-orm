@@ -27,12 +27,11 @@ import {
   RecordUnknown,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
-import { CloneSelfKeys } from '../query/queryBase';
+import { QueryBase } from '../query/queryBase';
 
-export type CreateSelf = Pick<
-  Query,
-  'inputType' | 'meta' | 'relations' | 'returnType' | 'result' | CloneSelfKeys
->;
+export interface CreateSelf extends QueryBase {
+  inputType: RecordUnknown;
+}
 
 // Type of argument for `create`, `createMany`, optional argument for `createFrom`,
 // `defaults` use a Partial of it.
@@ -48,31 +47,38 @@ export type CreateSelf = Pick<
 export type CreateData<
   T extends CreateSelf,
   Defaults extends PropertyKey = keyof T['meta']['defaults'],
-  Data = {
-    [K in keyof T['inputType'] as K extends Defaults ? never : K]: CreateColumn<
-      T,
-      K
-    >;
-  } & {
-    [K in Defaults]?: K extends keyof T['inputType']
-      ? CreateColumn<T, K>
-      : never;
-  },
 > = RelationsBase extends T['relations']
   ? // if no relations, don't load TS with extra calculations
-    Data
-  : CreateRelationsData<T['relations'], Data>;
+    CreateDataWithDefaults<T['inputType'], Defaults>
+  : CreateRelationsData<
+      T['relations'],
+      CreateDataWithDefaults<T['inputType'], Defaults>
+    >;
+
+type CreateDataWithDefaults<
+  InputType extends RecordUnknown,
+  Defaults extends PropertyKey,
+> = {
+  [K in keyof InputType as K extends Defaults ? never : K]: CreateColumn<
+    InputType,
+    K
+  >;
+} & {
+  [K in Defaults]?: K extends keyof InputType
+    ? CreateColumn<InputType, K>
+    : never;
+};
 
 // Type of available variants to provide for a specific column when creating
 export type CreateColumn<
-  T extends CreateSelf,
-  Key extends keyof T['inputType'],
+  InputType extends RecordUnknown,
+  Key extends keyof InputType,
 > =
   | Expression
-  | T['inputType'][Key]
+  | InputType[Key]
   | {
       __isQuery: true;
-      then: QueryThen<T['inputType'][Key]>;
+      then: QueryThen<InputType[Key]>;
     };
 
 // Combine data of the table with data that can be set for relations
@@ -135,7 +141,7 @@ type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns a single record, forces it to return multiple.
 // - otherwise, query result remains as is.
-type CreateManyResult<T extends Query> = T extends { isCount: true }
+type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : T['returnType'] extends 'one' | 'oneOrThrow'
   ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
@@ -147,21 +153,22 @@ type CreateManyResult<T extends Query> = T extends { isCount: true }
 // - query returns inserted row count by default.
 // - returns records with selected columns if the query has a select.
 // - if the query returns a single record, forces it to return multiple records.
-type InsertManyResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? T['returnType'] extends 'one' | 'oneOrThrow'
-    ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
-    : T['returnType'] extends 'value' | 'valueOrThrow'
-    ? SetQueryReturnsPluckColumn<
-        SetQueryKind<T, 'create'>,
-        T['result']['value']
-      >
-    : SetQueryKind<T, 'create'>
-  : SetQueryReturnsRowCount<SetQueryKind<T, 'create'>>;
+type InsertManyResult<T extends CreateSelf> =
+  T['meta']['hasSelect'] extends true
+    ? T['returnType'] extends 'one' | 'oneOrThrow'
+      ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
+      : T['returnType'] extends 'value' | 'valueOrThrow'
+      ? SetQueryReturnsPluckColumn<
+          SetQueryKind<T, 'create'>,
+          T['result']['value']
+        >
+      : SetQueryKind<T, 'create'>
+    : SetQueryReturnsRowCount<SetQueryKind<T, 'create'>>;
 
 // `onConflict().ignore()` method output type:
 // overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',
 // because `ignore` won't return any data in case of a conflict.
-type IgnoreResult<T extends Query> = T['returnType'] extends 'oneOrThrow'
+type IgnoreResult<T extends CreateSelf> = T['returnType'] extends 'oneOrThrow'
   ? SetQueryReturns<T, 'one'>
   : T['returnType'] extends 'valueOrThrow'
   ? SetQueryReturns<T, 'value'>
@@ -169,20 +176,20 @@ type IgnoreResult<T extends Query> = T['returnType'] extends 'oneOrThrow'
 
 // `createRaw` method argument.
 // Contains array of columns and a raw SQL for values.
-type CreateRawData<T extends Query> = {
+type CreateRawData<T extends CreateSelf> = {
   columns: (keyof T['shape'])[];
   values: Expression;
 };
 
 // `createManyRaw` method argument.
 // Contains array of columns and an array of raw SQL for values.
-type CreateManyRawData<T extends Query> = {
+type CreateManyRawData<T extends CreateSelf> = {
   columns: (keyof T['shape'])[];
   values: Expression[];
 };
 
 // Record<(column name), true> where the column doesn't have a default, and it is not nullable.
-type RawRequiredColumns<T extends Query> = {
+type RawRequiredColumns<T extends CreateSelf> = {
   [K in keyof T['inputType'] as K extends keyof T['meta']['defaults']
     ? never
     : null extends T['inputType'][K]
@@ -195,7 +202,7 @@ type RawRequiredColumns<T extends Query> = {
 // Arguments of `createRaw` and `createManyRaw`.
 // TS error if not all required columns are specified.
 type CreateRawArgs<
-  T extends Query,
+  T extends CreateSelf,
   Arg extends { columns: (keyof T['shape'])[] },
 > = keyof RawRequiredColumns<T> extends Arg['columns'][number]
   ? [data: Arg]
@@ -210,13 +217,13 @@ type CreateRawArgs<
 // - a column name
 // - an array of column names
 // - raw or other kind of Expression
-type OnConflictArg<T extends Query> =
+type OnConflictArg<T extends CreateSelf> =
   | keyof T['shape']
   | (keyof T['shape'])[]
   | Expression;
 
 export type AddQueryDefaults<
-  T extends Query,
+  T extends CreateSelf,
   Defaults extends RecordKeyTrue,
 > = {
   [K in keyof T]: K extends 'meta'
@@ -347,7 +354,7 @@ const handleOneData = (
  * @param ctx - context of the create query.
  */
 const handleManyData = (
-  q: Query,
+  q: CreateSelf,
   data: RecordUnknown[],
   ctx: CreateCtx,
 ): { columns: string[]; values: unknown[][] } => {
@@ -437,7 +444,7 @@ const insert = (
  * @param many - whether it's for `createManyFrom`. If no, throws if the inner query returns multiple records.
  */
 const getFromSelectColumns = (
-  from: Query,
+  from: CreateSelf,
   obj?: { columns: string[] },
   many?: boolean,
 ) => {
@@ -475,7 +482,7 @@ const getFromSelectColumns = (
  * @param data - optionally passed custom data when creating a single record.
  */
 const insertFromQuery = <
-  T extends Query,
+  T extends CreateSelf,
   Q extends Query,
   Many extends boolean,
 >(
@@ -529,7 +536,7 @@ export const _queryInsert = <T extends CreateSelf>(
   return insert(q, obj, 'object') as InsertResult<T>;
 };
 
-export const _queryCreateMany = <T extends Query>(
+export const _queryCreateMany = <T extends CreateSelf>(
   q: T,
   data: CreateData<T>[],
 ): CreateManyResult<T> => {
@@ -537,7 +544,7 @@ export const _queryCreateMany = <T extends Query>(
   return _queryInsertMany(q, data) as unknown as CreateManyResult<T>;
 };
 
-export const _queryInsertMany = <T extends Query>(
+export const _queryInsertMany = <T extends CreateSelf>(
   q: T,
   data: CreateData<T>[],
 ) => {
@@ -550,7 +557,7 @@ export const _queryInsertMany = <T extends Query>(
   ) as InsertManyResult<T>;
 };
 
-export const _queryCreateRaw = <T extends Query>(
+export const _queryCreateRaw = <T extends CreateSelf>(
   q: T,
   args: CreateRawArgs<T, CreateRawData<T>>,
 ): CreateResult<T> => {
@@ -562,7 +569,7 @@ export const _queryCreateRaw = <T extends Query>(
   ) as CreateResult<T>;
 };
 
-export const _queryInsertRaw = <T extends Query>(
+export const _queryInsertRaw = <T extends CreateSelf>(
   q: T,
   args: CreateRawArgs<T, CreateRawData<T>>,
 ): InsertResult<T> => {
@@ -573,7 +580,7 @@ export const _queryInsertRaw = <T extends Query>(
   ) as InsertResult<T>;
 };
 
-export const _queryCreateManyRaw = <T extends Query>(
+export const _queryCreateManyRaw = <T extends CreateSelf>(
   q: T,
   args: CreateRawArgs<T, CreateManyRawData<T>>,
 ): CreateManyResult<T> => {
@@ -581,7 +588,7 @@ export const _queryCreateManyRaw = <T extends Query>(
   return _queryInsertManyRaw(q, args) as CreateManyResult<T>;
 };
 
-export const _queryInsertManyRaw = <T extends Query>(
+export const _queryInsertManyRaw = <T extends CreateSelf>(
   q: T,
   args: CreateRawArgs<T, CreateManyRawData<T>>,
 ): InsertManyResult<T> => {
@@ -594,7 +601,7 @@ export const _queryInsertManyRaw = <T extends Query>(
 };
 
 export const _queryCreateFrom = <
-  T extends Query,
+  T extends CreateSelf,
   Q extends Query & { returnType: 'one' | 'oneOrThrow' },
 >(
   q: T,
@@ -606,7 +613,7 @@ export const _queryCreateFrom = <
 };
 
 export const _queryInsertFrom = <
-  T extends Query,
+  T extends CreateSelf,
   Q extends Query & { returnType: 'one' | 'oneOrThrow' },
 >(
   q: T,
@@ -616,7 +623,7 @@ export const _queryInsertFrom = <
   return insertFromQuery(q, query, false, data) as InsertResult<T>;
 };
 
-export const _queryCreateManyFrom = <T extends Query>(
+export const _queryCreateManyFrom = <T extends CreateSelf>(
   q: T,
   query: Query,
 ): CreateManyResult<T> => {
@@ -624,7 +631,7 @@ export const _queryCreateManyFrom = <T extends Query>(
   return insertFromQuery(q, query, true) as CreateManyResult<T>;
 };
 
-export const _queryInsertManyFrom = <T extends Query>(
+export const _queryInsertManyFrom = <T extends CreateSelf>(
   q: T,
   query: Query,
 ): InsertManyResult<T> => {
@@ -632,7 +639,7 @@ export const _queryInsertManyFrom = <T extends Query>(
 };
 
 export const _queryDefaults = <
-  T extends Query,
+  T extends CreateSelf,
   Data extends Partial<CreateData<T>>,
 >(
   q: T,
@@ -696,7 +703,7 @@ export class Create {
    *
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.
    */
-  insert<T extends Query>(this: T, data: CreateData<T>): InsertResult<T> {
+  insert<T extends CreateSelf>(this: T, data: CreateData<T>): InsertResult<T> {
     return _queryInsert(this.clone(), data);
   }
 
@@ -719,7 +726,7 @@ export class Create {
    *
    * @param data - array of records data, may have values, raw SQL, queries, relation operations
    */
-  createMany<T extends Query>(
+  createMany<T extends CreateSelf>(
     this: T,
     data: CreateData<T>[],
   ): CreateManyResult<T> {
@@ -731,7 +738,7 @@ export class Create {
    *
    * @param data - array of records data, may have values, raw SQL, queries, relation operations
    */
-  insertMany<T extends Query>(
+  insertMany<T extends CreateSelf>(
     this: T,
     data: CreateData<T>[],
   ): InsertManyResult<T> {
@@ -756,7 +763,7 @@ export class Create {
    *
    * @param args - object with columns list and raw SQL for values
    */
-  createRaw<T extends Query>(
+  createRaw<T extends CreateSelf>(
     this: T,
     ...args: CreateRawArgs<T, CreateRawData<T>>
   ): CreateResult<T> {
@@ -768,7 +775,7 @@ export class Create {
    *
    * @param args - object with columns list and raw SQL for values
    */
-  insertRaw<T extends Query>(
+  insertRaw<T extends CreateSelf>(
     this: T,
     ...args: CreateRawArgs<T, CreateRawData<T>>
   ): InsertResult<T> {
@@ -793,7 +800,7 @@ export class Create {
    *
    * @param args - object with columns list and array of raw SQL for values
    */
-  createManyRaw<T extends Query>(
+  createManyRaw<T extends CreateSelf>(
     this: T,
     ...args: CreateRawArgs<T, CreateManyRawData<T>>
   ): CreateManyResult<T> {
@@ -805,7 +812,7 @@ export class Create {
    *
    * @param args - object with columns list and array of raw SQL for values
    */
-  insertManyRaw<T extends Query>(
+  insertManyRaw<T extends CreateSelf>(
     this: T,
     ...args: CreateRawArgs<T, CreateManyRawData<T>>
   ): InsertManyResult<T> {
@@ -852,7 +859,7 @@ export class Create {
    * @param data - additionally you can set some columns
    */
   createFrom<
-    T extends Query,
+    T extends CreateSelf,
     Q extends Query & { returnType: 'one' | 'oneOrThrow' },
   >(
     this: T,
@@ -869,7 +876,7 @@ export class Create {
    * @param data - additionally you can set some columns
    */
   insertFrom<
-    T extends Query,
+    T extends CreateSelf,
     Q extends Query & { returnType: 'one' | 'oneOrThrow' },
   >(
     this: T,
@@ -892,7 +899,10 @@ export class Create {
    *
    * @param query - query to create new records from
    */
-  createManyFrom<T extends Query>(this: T, query: Query): CreateManyResult<T> {
+  createManyFrom<T extends CreateSelf>(
+    this: T,
+    query: Query,
+  ): CreateManyResult<T> {
     return _queryCreateManyFrom(this.clone(), query);
   }
 
@@ -901,7 +911,10 @@ export class Create {
    *
    * @param query - query to create new records from
    */
-  insertManyFrom<T extends Query>(this: T, query: Query): InsertManyResult<T> {
+  insertManyFrom<T extends CreateSelf>(
+    this: T,
+    query: Query,
+  ): InsertManyResult<T> {
     return _queryInsertManyFrom(this.clone(), query);
   }
 
@@ -927,7 +940,7 @@ export class Create {
    *
    * @param data - default values for `create` and `createMany` which will follow `defaults`
    */
-  defaults<T extends Query, Data extends Partial<CreateData<T>>>(
+  defaults<T extends CreateSelf, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
   ): AddQueryDefaults<T, Record<keyof Data, true>> {
@@ -983,7 +996,7 @@ export class Create {
    *
    * @param arg - optionally provide an array of columns
    */
-  onConflict<T extends Query, Arg extends OnConflictArg<T>>(
+  onConflict<T extends CreateSelf, Arg extends OnConflictArg<T>>(
     this: T,
     arg?: Arg,
   ): OnConflictQueryBuilder<T, Arg> {
@@ -992,7 +1005,7 @@ export class Create {
 }
 
 export class OnConflictQueryBuilder<
-  T extends Query,
+  T extends CreateSelf,
   Arg extends OnConflictArg<T> | undefined,
 > {
   constructor(private query: T, private onConflict: Arg) {}
