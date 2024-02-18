@@ -1,4 +1,4 @@
-import { QueryColumns, QueryColumnsInit } from 'orchid-core';
+import { QueryColumns, QueryColumnsInit, RecordUnknown } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
 import { QueryScopes } from '../sql';
 import { Query } from '../query/query';
@@ -34,7 +34,7 @@ export function enableSoftDelete(
     and: [{ [column]: null }],
   };
 
-  (scopes as Record<string, unknown>).deleted = scope;
+  (scopes as RecordUnknown).deleted = scope;
   pushQueryValue(q, 'and', scope.and[0]);
   (q.q.scopes ??= {}).nonDeleted = scope;
 

@@ -26,8 +26,9 @@ import { anyShape } from '../query/db';
 import {
   Expression,
   QueryThen,
-  SetOptional,
   ColumnSchemaConfig,
+  RecordKeyTrue,
+  RecordUnknown,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { CloneSelfKeys } from '../query/queryBase';
@@ -50,11 +51,18 @@ export type CreateSelf = Pick<
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
 export type CreateData<
   T extends CreateSelf,
-  Data = SetOptional<
-    { [K in keyof T['inputType']]: CreateColumn<T, K> },
-    keyof T['meta']['defaults']
-  >,
-> = [keyof T['relations']] extends [never]
+  Defaults extends PropertyKey = keyof T['meta']['defaults'],
+  Data = {
+    [K in keyof T['inputType'] as K extends Defaults ? never : K]: CreateColumn<
+      T,
+      K
+    >;
+  } & {
+    [K in Defaults]?: K extends keyof T['inputType']
+      ? CreateColumn<T, K>
+      : never;
+  },
+> = RelationsBase extends T['relations']
   ? // if no relations, don't load TS with extra calculations
     Data
   : CreateRelationsData<T, T['relations'], Data>;
@@ -97,7 +105,7 @@ export type CreateRelationsDataOmittingFKeys<
   Relations extends RelationsBase,
   // Collect a union of `belongsTo` relation objects.
   // Tuple is needed to preserve the inner union type of the object.
-  Union extends [Record<string, unknown>] = {
+  Union extends [RecordUnknown] = {
     [K in keyof Relations]: CreateRelationDataOmittingFKeys<
       Relations[K]['relationConfig'],
       keyof T['meta']['defaults']
@@ -241,7 +249,7 @@ type OnConflictArg<T extends Query> =
 
 export type AddQueryDefaults<
   T extends Query,
-  Defaults extends Record<string, true>,
+  Defaults extends RecordKeyTrue,
 > = {
   [K in keyof T]: K extends 'meta'
     ? {
@@ -259,7 +267,7 @@ export type AddQueryDefaults<
 export type CreateCtx = {
   columns: Map<string, number>;
   returnTypeAll?: true;
-  resultAll: Record<string, unknown>[];
+  resultAll: RecordUnknown[];
 };
 
 // Type of `encodeFn` of columns.
@@ -290,7 +298,7 @@ const createSelect = (q: CreateSelf) => {
  */
 const processCreateItem = (
   q: CreateSelf,
-  item: Record<string, unknown>,
+  item: RecordUnknown,
   rowIndex: number,
   ctx: CreateCtx,
   encoders: Record<string, Encoder>,
@@ -317,7 +325,7 @@ const processCreateItem = (
 // Creates a new context of create query.
 const createCtx = (): CreateCtx => ({
   columns: new Map(),
-  resultAll: undefined as unknown as Record<string, unknown>[],
+  resultAll: undefined as unknown as RecordUnknown[],
 });
 
 // Packs record values from the provided object into array of values.
@@ -325,7 +333,7 @@ const createCtx = (): CreateCtx => ({
 const mapColumnValues = (
   columns: string[],
   encoders: Record<string, Encoder>,
-  data: Record<string, unknown>,
+  data: RecordUnknown,
 ): unknown[] => {
   return columns.map((key) =>
     encoders[key] ? encoders[key](data[key]) : data[key],
@@ -343,7 +351,7 @@ const mapColumnValues = (
  */
 const handleOneData = (
   q: CreateSelf,
-  data: Record<string, unknown>,
+  data: RecordUnknown,
   ctx: CreateCtx,
 ): { columns: string[]; values: unknown[][] } => {
   const encoders: Record<string, Encoder> = {};
@@ -372,7 +380,7 @@ const handleOneData = (
  */
 const handleManyData = (
   q: Query,
-  data: Record<string, unknown>[],
+  data: RecordUnknown[],
   ctx: CreateCtx,
 ): { columns: string[]; values: unknown[][] } => {
   const encoders: Record<string, Encoder> = {};

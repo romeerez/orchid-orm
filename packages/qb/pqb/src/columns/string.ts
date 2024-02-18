@@ -22,11 +22,14 @@ export type TextColumnData = StringTypeData;
 
 export abstract class TextBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsText> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
   declare data: TextColumnData;
   operators = Operators.text;
 
-  constructor(schema: Schema, schemaType: Schema['string'] = schema.string) {
+  constructor(
+    schema: Schema,
+    schemaType: Schema['stringSchema'] = schema.stringSchema,
+  ) {
     super(schema, schemaType);
   }
 }
@@ -37,7 +40,7 @@ export abstract class LimitedTextBaseColumn<
   declare data: TextColumnData & { maxChars?: number };
 
   constructor(schema: Schema, limit?: number) {
-    super(schema, limit ? schema.stringMax(limit) : schema.string);
+    super(schema, limit ? schema.stringMax(limit) : schema.stringSchema);
     this.data.maxChars = limit;
   }
 
@@ -147,7 +150,7 @@ const minMaxToSchema = <Schema extends ColumnSchemaConfig>(
     ? max
       ? schema.stringMinMax(min, max)
       : schema.stringMin(min)
-    : schema.string;
+    : schema.stringSchema;
 
 // text	variable unlimited length
 export class TextColumn<

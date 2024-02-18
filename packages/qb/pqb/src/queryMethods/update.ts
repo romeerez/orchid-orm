@@ -21,6 +21,7 @@ import {
   callWithThis,
   TemplateLiteralArgs,
   emptyObject,
+  RecordUnknown,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
@@ -109,7 +110,7 @@ type ChangeCountArg<T extends Pick<Query, 'shape'>> =
 // It's being used by relations logic in the ORM.
 export type UpdateCtx = {
   queries?: ((queryResult: QueryResult) => Promise<void>)[];
-  updateData?: Record<string, unknown>;
+  updateData?: RecordUnknown;
 };
 
 // apply `increment` or a `decrement`,
@@ -164,7 +165,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
 ): UpdateResult<T> => {
   const { q } = query;
 
-  const set: Record<string, unknown> = { ...arg };
+  const set: RecordUnknown = { ...arg };
   pushQueryValue(query, 'updateData', set);
 
   const { shape } = q;

@@ -1,23 +1,8 @@
 import url from 'url';
 import path from 'node:path';
 
-// Array contains `true` type.
-export type SomeIsTrue<T extends unknown[]> = T extends [
-  infer Head,
-  ...infer Tail,
-]
-  ? Head extends true
-    ? true
-    : SomeIsTrue<Tail>
-  : false;
-
 // It may be a value or an array of such values.
 export type MaybeArray<T> = T | T[];
-
-// Make some object properties optional.
-export type SetOptional<T, K extends PropertyKey> = Omit<T, K> & {
-  [P in K]?: P extends keyof T ? T[P] : never;
-};
 
 // Converts union to overloaded function.
 type OptionalPropertyNames<T> = {
@@ -54,10 +39,7 @@ export type Spread<A extends readonly [...any]> = A extends [
 
 // Simple merge two objects.
 // When they have common keys, the value of the second object will be used.
-export type MergeObjects<
-  A extends Record<string, unknown>,
-  B extends Record<string, unknown>,
-> = {
+export type MergeObjects<A extends RecordUnknown, B extends RecordUnknown> = {
   [K in keyof A | keyof B]: K extends keyof B
     ? B[K]
     : K extends keyof A
@@ -69,6 +51,10 @@ export type MergeObjects<
 // Use it for cases where you'd want to pick a string union,
 // this record type solves the same use case, but is better at handling the empty case.
 export type RecordKeyTrue = Record<PropertyKey, true>;
+
+export type RecordString = Record<string, string>;
+
+export type RecordUnknown = Record<string, unknown>;
 
 // Use a default string if the first argument string is undefined.
 export type CoalesceString<
@@ -283,16 +269,11 @@ export const deepCompare = (a: unknown, b: unknown): boolean => {
     }
 
     for (const key in a) {
-      if (
-        !deepCompare(
-          (a as Record<string, unknown>)[key],
-          (b as Record<string, unknown>)[key],
-        )
-      )
+      if (!deepCompare((a as RecordUnknown)[key], (b as RecordUnknown)[key]))
         return false;
     }
 
-    for (const key in b as Record<string, unknown>) {
+    for (const key in b as RecordUnknown) {
       if (!(key in a)) return false;
     }
   }

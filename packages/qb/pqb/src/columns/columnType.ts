@@ -2,11 +2,13 @@ import { Query } from '../query/query';
 import {
   ColumnDataBase,
   ColumnNameOfTable,
-  ColumnSchemaConfig,
   ColumnsShapeBase,
   ColumnTypeBase,
+  ColumnTypeSchemaArg,
+  emptyObject,
   ForeignKeyTable,
   MaybeArray,
+  PickColumnBaseData,
   PrimaryKeyColumn,
   pushColumnData,
   QueryBaseCommon,
@@ -20,7 +22,7 @@ import { SearchWeight } from '../sql';
 import { BaseOperators } from './operators';
 
 // type of data for ColumnType
-export type ColumnData = ColumnDataBase & {
+export interface ColumnData extends ColumnDataBase {
   maxChars?: number;
   numericPrecision?: number;
   numericScale?: number;
@@ -34,7 +36,7 @@ export type ColumnData = ColumnDataBase & {
   identity?: TableData.Identity;
   // raw SQL for a generated column
   generated?: RawSQLBase;
-};
+}
 
 /**
  * - MATCH FULL will not allow one column of a multicolumn foreign key to be null unless all foreign key columns are null;
@@ -82,20 +84,20 @@ export type ForeignKeyOptions = {
   dropMode?: DropMode;
 };
 
-// Index options of a single column, is used in migrations.
-export type IndexColumnOptions = (
-  | { column: string }
-  | { expression: string }
-) & {
+interface IndexColumnOptionsForColumn {
   collate?: string;
   opclass?: string;
   order?: string;
   // weight for a column in a search index
   weight?: SearchWeight;
-};
+}
+
+// Index options of a single column, is used in migrations.
+export type IndexColumnOptions = ({ column: string } | { expression: string }) &
+  IndexColumnOptionsForColumn;
 
 // Options of the index, is used in migrations.
-export type IndexOptions = {
+export interface IndexOptions {
   name?: string;
   unique?: boolean;
   nullsNotDistinct?: boolean;
@@ -111,7 +113,11 @@ export type IndexOptions = {
   languageColumn?: string;
   // create a tsVector index
   tsVector?: boolean;
-};
+}
+
+export interface SingleColumnIndexOptionsForColumn
+  extends IndexColumnOptionsForColumn,
+    IndexOptions {}
 
 // Options for the `index` method of a column.
 export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
@@ -125,17 +131,19 @@ export type ColumnFromDbParams = {
   dateTimePrecision?: number;
 };
 
+type PickColumnData = { data: ColumnData };
+
 export abstract class ColumnType<
-  Schema extends ColumnSchemaConfig = ColumnSchemaConfig,
+  Schema extends ColumnTypeSchemaArg = ColumnTypeSchemaArg,
   Type = unknown,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  InputSchema extends Schema['type'] = any,
+  InputSchema = any,
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
   OutputType = Type,
-  OutputSchema extends Schema['type'] = InputSchema,
+  OutputSchema = InputSchema,
   QueryType = InputType,
-  QuerySchema extends Schema['type'] = InputSchema,
+  QuerySchema = InputSchema,
 > extends ColumnTypeBase<
   Schema,
   Type,
@@ -168,9 +176,7 @@ export abstract class ColumnType<
    * db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
    * ```
    */
-  primaryKey<T extends Pick<ColumnTypeBase, 'data'>>(
-    this: T,
-  ): PrimaryKeyColumn<T> {
+  primaryKey<T extends PickColumnBaseData>(this: T): PrimaryKeyColumn<T> {
     return setColumnData(
       this,
       'isPrimaryKey',
@@ -268,21 +274,25 @@ export abstract class ColumnType<
     fn: () => Table,
     column: Column,
     options?: ForeignKeyOptions,
-  ): Omit<T, 'foreignKeyData'> & {
-    foreignKeyData: ForeignKey<InstanceType<Table>['table'], [Column]>;
+  ): {
+    [K in keyof T]: T extends 'foreignKeyData'
+      ? ForeignKey<InstanceType<Table>['table'], [Column]>
+      : T[K];
   };
   foreignKey<T, Table extends string, Column extends string>(
     this: T,
     table: Table,
     column: Column,
     options?: ForeignKeyOptions,
-  ): Omit<T, 'foreignKeyData'> & {
-    foreignKeyData: ForeignKey<Table, [Column]>;
+  ): {
+    [K in keyof T]: K extends 'foreignKeyData'
+      ? ForeignKey<Table, [Column]>
+      : T[K];
   };
   foreignKey(
     fnOrTable: (() => ForeignKeyTable) | string,
     column: string,
-    options: ForeignKeyOptions = {},
+    options: ForeignKeyOptions = emptyObject,
   ) {
     const item =
       typeof fnOrTable === 'string'
@@ -291,13 +301,13 @@ export abstract class ColumnType<
     return pushColumnData(this, 'foreignKeys', item);
   }
 
-  toSQL() {
+  toSQL(): string {
     return this.dataType;
   }
 
-  index<T extends Pick<ColumnType, 'data'>>(
+  index<T extends PickColumnData>(
     this: T,
-    options: Omit<SingleColumnIndexOptions, 'column'> = {},
+    options: SingleColumnIndexOptionsForColumn = {},
   ): T {
     return pushColumnData(this, 'indexes', options);
   }
@@ -359,32 +369,26 @@ export abstract class ColumnType<
     });
   }
 
-  unique<T extends Pick<ColumnType, 'data'>>(
+  unique<T extends PickColumnData>(
     this: T,
-    options: Omit<SingleColumnIndexOptions, 'column' | 'unique'> = {},
+    options: Omit<SingleColumnIndexOptionsForColumn, 'unique'> = {},
   ): T {
     return pushColumnData(this, 'indexes', { ...options, unique: true });
   }
 
-  comment<T extends Pick<ColumnType, 'data'>>(this: T, comment: string): T {
+  comment<T extends PickColumnData>(this: T, comment: string): T {
     return setColumnData(this, 'comment', comment);
   }
 
-  compression<T extends Pick<ColumnType, 'data'>>(
-    this: T,
-    compression: string,
-  ): T {
+  compression<T extends PickColumnData>(this: T, compression: string): T {
     return setColumnData(this, 'compression', compression);
   }
 
-  collate<T extends Pick<ColumnType, 'data'>>(this: T, collate: string): T {
+  collate<T extends PickColumnData>(this: T, collate: string): T {
     return setColumnData(this, 'collate', collate);
   }
 
-  modifyQuery<T extends Pick<ColumnType, 'data'>>(
-    this: T,
-    cb: (q: Query) => void,
-  ): T {
+  modifyQuery<T extends PickColumnData>(this: T, cb: (q: Query) => void): T {
     return setColumnData(
       this,
       'modifyQuery',
@@ -407,10 +411,7 @@ export abstract class ColumnType<
    *
    * @param args - raw SQL
    */
-  generated<T extends Pick<ColumnType, 'data'>>(
-    this: T,
-    ...args: StaticSQLArgs
-  ): T {
+  generated<T extends PickColumnData>(this: T, ...args: StaticSQLArgs): T {
     return setColumnData(this, 'generated', raw(...args));
   }
 }

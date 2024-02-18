@@ -17,6 +17,7 @@ import {
   QueryColumn,
   QueryColumns,
   QueryThen,
+  RecordUnknown,
   Spread,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
@@ -43,7 +44,7 @@ export type Query = QueryBase &
     shape: QueryColumns;
     singlePrimaryKey: string;
     primaryKeys: string[];
-    inputType: Record<string, unknown>;
+    inputType: RecordUnknown;
     q: QueryData;
     result: QueryColumns;
     then: QueryThen<unknown>;

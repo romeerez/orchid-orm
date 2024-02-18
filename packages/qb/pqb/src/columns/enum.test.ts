@@ -1,4 +1,4 @@
-import { assertType, testColumnTypes as t, testDb } from 'test-utils';
+import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
 
 describe('enum column', () => {
   afterAll(testDb.close);

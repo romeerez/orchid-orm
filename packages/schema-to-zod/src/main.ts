@@ -13,17 +13,36 @@ import {
   StringTypeData,
   ErrorMessages,
   setColumnData,
+  ColumnDataBase,
 } from 'orchid-core';
 import {
   ArrayColumn,
   ArrayColumnValue,
+  BigIntColumn,
+  BigSerialColumn,
+  CharColumn,
+  CitextColumn,
   columnCode,
   ColumnData,
   ColumnType,
   DateBaseColumn,
+  DateColumn,
+  DecimalColumn,
+  DoublePrecisionColumn,
   EnumColumn,
+  IntegerColumn,
+  MoneyColumn,
   Operators,
   OperatorsJson,
+  RealColumn,
+  SerialColumn,
+  SmallIntColumn,
+  SmallSerialColumn,
+  StringColumn,
+  TextColumn,
+  TimestampColumn,
+  TimestampTZColumn,
+  VarCharColumn,
 } from 'pqb';
 import {
   z,
@@ -91,7 +110,7 @@ type NumberMethodSchema<Key extends string> = {
 function applyMethod<
   Key extends string,
   T extends {
-    data: object;
+    data: ColumnDataBase;
     inputSchema: NumberMethodSchema<Key>;
     outputSchema: NumberMethodSchema<Key>;
     querySchema: NumberMethodSchema<Key>;
@@ -111,7 +130,7 @@ type NumberMethodSimpleSchema<Key extends string> = {
 function applySimpleMethod<
   Key extends string,
   T extends {
-    data: object;
+    data: ColumnDataBase;
     inputSchema: NumberMethodSimpleSchema<Key>;
     outputSchema: NumberMethodSimpleSchema<Key>;
     querySchema: NumberMethodSimpleSchema<Key>;
@@ -124,7 +143,7 @@ function applySimpleMethod<
   return cloned;
 }
 
-type ArrayMethods<Value> = {
+interface ArrayMethods<Value> {
   // Require a minimum length (inclusive)
   min<T extends ColumnTypeBase>(
     this: T,
@@ -148,7 +167,7 @@ type ArrayMethods<Value> = {
 
   // Require a value to be non-empty
   nonEmpty<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-};
+}
 
 const arrayMethods: ArrayMethods<Date> = {
   min(value, params) {
@@ -193,6 +212,396 @@ class ZodArrayColumn<Item extends ArrayColumnValue> extends ArrayColumn<
 
 Object.assign(ZodArrayColumn.prototype, arrayMethods);
 
+interface NumberMethods {
+  lt<T extends ColumnTypeBase>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ): T;
+  lte<T extends ColumnTypeBase>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ): T;
+  max<T extends ColumnTypeBase>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ): T;
+  gt<T extends ColumnTypeBase>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ): T;
+  gte<T extends ColumnTypeBase>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ): T;
+  min<T extends ColumnTypeBase>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ): T;
+  positive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  nonNegative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  negative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  nonPositive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  step<T extends ColumnTypeBase>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ): T;
+  int<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  finite<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  safe<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+}
+
+const numberMethods: NumberMethods = {
+  // Require a value to be lower than a given number
+  lt(value, params) {
+    return applyMethod(this, 'lt', value, params);
+  },
+
+  // Require a value to be lower than or equal to a given number (the same as `max`)
+  lte(value, params) {
+    return applyMethod(this, 'lte', value, params);
+  },
+
+  // Require a value to be lower than or equal to a given number
+  max(value, params) {
+    return applyMethod(this, 'lte', value, params);
+  },
+
+  // Require a value to be greater than a given number
+  gt(value, params) {
+    return applyMethod(this, 'gt', value, params);
+  },
+
+  // Require a value to be greater than or equal to a given number (the same as `min`)
+  gte(value, params) {
+    return applyMethod(this, 'gte', value, params);
+  },
+
+  // Require a value to be greater than or equal to a given number
+  min(value, params) {
+    return applyMethod(this, 'gte', value, params);
+  },
+
+  // Require a value to be greater than 0
+  positive(params) {
+    return applyMethod(this, 'gt', 0, params);
+  },
+
+  // Require a value to be greater than or equal to 0
+  nonNegative(params) {
+    return applyMethod(this, 'gte', 0, params);
+  },
+
+  // Require a value to be lower than 0
+  negative(params) {
+    return applyMethod(this, 'lt', 0, params);
+  },
+
+  // Require a value to be lower than or equal to 0
+  nonPositive(params) {
+    return applyMethod(this, 'lte', 0, params);
+  },
+
+  // Require a value to be a multiple of a given number
+  step(value, params) {
+    return applyMethod(this, 'step', value, params);
+  },
+
+  // Require a value to be an integer
+  int(params) {
+    return applySimpleMethod(this, 'int', params);
+  },
+
+  // Exclude `Infinity` from being a valid value
+  finite(params) {
+    return applySimpleMethod(this, 'finite', params);
+  },
+
+  // Require the value to be less than or equal to Number.MAX_SAFE_INTEGER
+  safe(params) {
+    return applySimpleMethod(this, 'safe', params);
+  },
+};
+
+interface SmallIntColumnZod
+  extends SmallIntColumn<ZodSchemaConfig>,
+    NumberMethods {}
+
+class SmallIntColumnZod extends SmallIntColumn<ZodSchemaConfig> {}
+Object.assign(SmallIntColumnZod.prototype, numberMethods);
+
+interface IntegerColumnZod
+  extends IntegerColumn<ZodSchemaConfig>,
+    NumberMethods {}
+
+class IntegerColumnZod extends IntegerColumn<ZodSchemaConfig> {}
+Object.assign(IntegerColumnZod.prototype, numberMethods);
+
+interface RealColumnZod extends RealColumn<ZodSchemaConfig>, NumberMethods {}
+
+class RealColumnZod extends RealColumn<ZodSchemaConfig> {}
+Object.assign(RealColumnZod.prototype, numberMethods);
+
+interface SmallSerialColumnZod
+  extends SmallSerialColumn<ZodSchemaConfig>,
+    NumberMethods {}
+
+class SmallSerialColumnZod extends SmallSerialColumn<ZodSchemaConfig> {}
+Object.assign(SmallSerialColumnZod.prototype, numberMethods);
+
+interface SerialColumnZod
+  extends SerialColumn<ZodSchemaConfig>,
+    NumberMethods {}
+
+class SerialColumnZod extends SerialColumn<ZodSchemaConfig> {}
+Object.assign(SerialColumnZod.prototype, numberMethods);
+
+interface StringMethods extends ArrayMethods<number> {
+  // Check a value to be a valid email
+  email<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Check a value to be a valid url
+  url<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Check a value to be an emoji
+  emoji<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Check a value to be a valid uuid
+  uuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Check a value to be a valid cuid
+  cuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Check a value to be a valid cuid2
+  cuid2<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Check a value to be a valid ulid
+  ulid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Validate the value over the given regular expression
+  regex<T extends ColumnTypeBase>(
+    this: T,
+    value: RegExp,
+    params?: ErrorMessage,
+  ): T;
+
+  // Check a value to include a given string
+  includes<T extends ColumnTypeBase, Value extends string>(
+    this: T,
+    value: Value,
+    params?: ErrorMessage,
+  ): T;
+
+  // Check a value to start with a given string
+  startsWith<T extends ColumnTypeBase, Value extends string>(
+    this: T,
+    value: Value,
+    params?: ErrorMessage,
+  ): T;
+
+  // Check a value to end with a given string
+  endsWith<T extends ColumnTypeBase, Value extends string>(
+    this: T,
+    value: Value,
+    params?: ErrorMessage,
+  ): T;
+
+  // Check a value have a valid datetime string
+  datetime<T extends ColumnTypeBase>(
+    this: T,
+    params?: StringTypeData['datetime'] & Exclude<ErrorMessage, string>,
+  ): T;
+
+  // Check a value to be a valid ip address
+  ip<T extends ColumnTypeBase>(
+    this: T,
+    params?: StringTypeData['ip'] & Exclude<ErrorMessage, string>,
+  ): T;
+
+  // Trim the value during a validation
+  trim<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Transform value to a lower case during a validation
+  toLowerCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+
+  // Transform value to an upper case during a validation
+  toUpperCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+}
+
+const stringMethods: StringMethods = {
+  ...(arrayMethods as unknown as ArrayMethods<number>),
+
+  email(params) {
+    return applySimpleMethod(this, 'email', params);
+  },
+
+  url(params) {
+    return applySimpleMethod(this, 'url', params);
+  },
+
+  emoji(params) {
+    return applySimpleMethod(this, 'emoji', params);
+  },
+
+  uuid(params) {
+    return applySimpleMethod(this, 'uuid', params);
+  },
+
+  cuid(params) {
+    return applySimpleMethod(this, 'cuid', params);
+  },
+
+  cuid2(params) {
+    return applySimpleMethod(this, 'cuid2', params);
+  },
+
+  ulid(params) {
+    return applySimpleMethod(this, 'ulid', params);
+  },
+
+  regex(value, params) {
+    return applyMethod(this, 'regex', value, params);
+  },
+
+  includes(value, params) {
+    return applyMethod(this, 'includes', value, params);
+  },
+
+  startsWith(value, params) {
+    return applyMethod(this, 'startsWith', value, params);
+  },
+
+  endsWith(value, params) {
+    return applyMethod(this, 'endsWith', value, params);
+  },
+
+  datetime(params = {}) {
+    return applyMethod(this, 'datetime', params, params);
+  },
+
+  ip(params = {}) {
+    return applyMethod(this, 'ip', params, params);
+  },
+
+  trim(params) {
+    return applySimpleMethod(this, 'trim', params);
+  },
+
+  toLowerCase(params) {
+    return applySimpleMethod(this, 'toLowerCase', params);
+  },
+
+  toUpperCase(params) {
+    return applySimpleMethod(this, 'toUpperCase', params);
+  },
+};
+
+interface BigIntColumnZod
+  extends BigIntColumn<ZodSchemaConfig>,
+    StringMethods {}
+
+class BigIntColumnZod extends BigIntColumn<ZodSchemaConfig> {}
+Object.assign(BigIntColumnZod.prototype, stringMethods);
+
+interface DecimalColumnZod
+  extends DecimalColumn<ZodSchemaConfig>,
+    StringMethods {}
+
+class DecimalColumnZod extends DecimalColumn<ZodSchemaConfig> {}
+Object.assign(DecimalColumnZod.prototype, stringMethods);
+
+interface DoublePrecisionColumnZod
+  extends DoublePrecisionColumn<ZodSchemaConfig>,
+    StringMethods {}
+
+class DoublePrecisionColumnZod extends DoublePrecisionColumn<ZodSchemaConfig> {}
+Object.assign(DoublePrecisionColumnZod.prototype, stringMethods);
+
+interface BigSerialColumnZod
+  extends BigSerialColumn<ZodSchemaConfig>,
+    StringMethods {}
+
+class BigSerialColumnZod extends BigSerialColumn<ZodSchemaConfig> {}
+Object.assign(BigSerialColumnZod.prototype, stringMethods);
+
+interface MoneyColumnZod extends MoneyColumn<ZodSchemaConfig>, StringMethods {}
+
+class MoneyColumnZod extends MoneyColumn<ZodSchemaConfig> {}
+Object.assign(MoneyColumnZod.prototype, stringMethods);
+
+interface VarCharColumnZod
+  extends VarCharColumn<ZodSchemaConfig>,
+    StringMethods {}
+
+class VarCharColumnZod extends VarCharColumn<ZodSchemaConfig> {}
+Object.assign(VarCharColumnZod.prototype, stringMethods);
+
+interface CharColumnZod extends CharColumn<ZodSchemaConfig>, StringMethods {}
+
+class CharColumnZod extends CharColumn<ZodSchemaConfig> {}
+Object.assign(CharColumnZod.prototype, stringMethods);
+
+interface TextColumnZod extends TextColumn<ZodSchemaConfig>, StringMethods {}
+
+class TextColumnZod extends TextColumn<ZodSchemaConfig> {}
+Object.assign(TextColumnZod.prototype, stringMethods);
+
+interface StringColumnZod
+  extends StringColumn<ZodSchemaConfig>,
+    StringMethods {}
+
+class StringColumnZod extends StringColumn<ZodSchemaConfig> {}
+Object.assign(StringColumnZod.prototype, stringMethods);
+
+interface CitextColumnZod
+  extends CitextColumn<ZodSchemaConfig>,
+    StringMethods {}
+
+class CitextColumnZod extends CitextColumn<ZodSchemaConfig> {}
+Object.assign(CitextColumnZod.prototype, stringMethods);
+
+interface DateMethods {
+  // Require a value to be greater than or equal to a given Date object
+  min<T extends ColumnTypeBase>(this: T, value: Date, params?: ErrorMessage): T;
+
+  // Require a value to be lower than or equal to a given Date object
+  max<T extends ColumnTypeBase>(this: T, value: Date, params?: ErrorMessage): T;
+}
+
+const dateMethods: DateMethods = {
+  min(value, params) {
+    return applyMethod(this, 'min', value, params);
+  },
+  max(value, params) {
+    return applyMethod(this, 'max', value, params);
+  },
+};
+
+interface DateColumnZod extends DateColumn<ZodSchemaConfig>, DateMethods {}
+
+class DateColumnZod extends DateColumn<ZodSchemaConfig> {}
+Object.assign(DateColumnZod.prototype, dateMethods);
+
+interface TimestampNoTzColumnZod
+  extends TimestampColumn<ZodSchemaConfig>,
+    DateMethods {}
+
+class TimestampNoTzColumnZod extends TimestampColumn<ZodSchemaConfig> {}
+Object.assign(TimestampNoTzColumnZod.prototype, dateMethods);
+
+interface TimestampColumnZod
+  extends TimestampTZColumn<ZodSchemaConfig>,
+    DateMethods {}
+
+class TimestampColumnZod extends TimestampTZColumn<ZodSchemaConfig> {}
+Object.assign(TimestampColumnZod.prototype, dateMethods);
+
 export type ZodSchemaConfig = {
   type: ZodTypeAny;
 
@@ -226,56 +635,39 @@ export type ZodSchemaConfig = {
   >(
     this: T,
     types: Types,
-  ): Omit<
-    T,
-    | 'type'
-    | 'inputType'
-    | 'inputSchema'
-    | 'outputType'
-    | 'outputSchema'
-    | 'queryType'
-    | 'querySchema'
-  > & {
-    type: Type;
-    inputType: Types['input'] extends ZodTypeAny
-      ? Types['input']['_output']
-      : Type;
-    inputSchema: Types['input'] extends ZodTypeAny
-      ? Types['input']
-      : TypeSchema;
-    outputType: Types['output'] extends ZodTypeAny
-      ? Types['output']['_output']
-      : Type;
-    outputSchema: Types['output'] extends ZodTypeAny
-      ? Types['output']
-      : TypeSchema;
-    queryType: Types['query'] extends ZodTypeAny
-      ? Types['query']['_output']
-      : Type;
-    querySchema: Types['query'] extends ZodTypeAny
-      ? Types['query']
-      : TypeSchema;
+  ): {
+    [K in keyof T]: K extends 'type'
+      ? Type
+      : K extends 'inputType'
+      ? Types['input'] extends ZodTypeAny
+        ? Types['input']['_output']
+        : Type
+      : K extends 'inputSchema'
+      ? Types['input'] extends ZodTypeAny
+        ? Types['input']
+        : TypeSchema
+      : K extends 'outputType'
+      ? Types['output'] extends ZodTypeAny
+        ? Types['output']['_output']
+        : Type
+      : K extends 'outputSchema'
+      ? Types['output'] extends ZodTypeAny
+        ? Types['output']
+        : TypeSchema
+      : K extends 'queryType'
+      ? Types['query'] extends ZodTypeAny
+        ? Types['query']['_output']
+        : Type
+      : K extends 'querySchema'
+      ? Types['query'] extends ZodTypeAny
+        ? Types['query']
+        : TypeSchema
+      : T[K];
   };
 
   dateAsNumber(): ParseDateToNumber;
 
   dateAsDate(): ParseDateToDate;
-
-  dateMethods: {
-    // Require a value to be greater than or equal to a given Date object
-    min<T extends ColumnTypeBase>(
-      this: T,
-      value: Date,
-      params?: ErrorMessage,
-    ): T;
-
-    // Require a value to be lower than or equal to a given Date object
-    max<T extends ColumnTypeBase>(
-      this: T,
-      value: Date,
-      params?: ErrorMessage,
-    ): T;
-  };
 
   enum<U extends string, T extends [U, ...U[]]>(
     dataType: string,
@@ -301,126 +693,11 @@ export type ZodSchemaConfig = {
   buffer: ZodType<Buffer>;
   unknown: ZodUnknown;
   never: ZodNever;
-  string: ZodString;
+  stringSchema: ZodString;
   stringMin(max: number): ZodString;
   stringMax(max: number): ZodString;
   stringMinMax(min: number, max: number): ZodString;
-  stringMethods: ArrayMethods<number> & {
-    // Check a value to be a valid email
-    email<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Check a value to be a valid url
-    url<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Check a value to be an emoji
-    emoji<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Check a value to be a valid uuid
-    uuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Check a value to be a valid cuid
-    cuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Check a value to be a valid cuid2
-    cuid2<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Check a value to be a valid ulid
-    ulid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Validate the value over the given regular expression
-    regex<T extends ColumnTypeBase>(
-      this: T,
-      value: RegExp,
-      params?: ErrorMessage,
-    ): T;
-
-    // Check a value to include a given string
-    includes<T extends ColumnTypeBase, Value extends string>(
-      this: T,
-      value: Value,
-      params?: ErrorMessage,
-    ): T;
-
-    // Check a value to start with a given string
-    startsWith<T extends ColumnTypeBase, Value extends string>(
-      this: T,
-      value: Value,
-      params?: ErrorMessage,
-    ): T;
-
-    // Check a value to end with a given string
-    endsWith<T extends ColumnTypeBase, Value extends string>(
-      this: T,
-      value: Value,
-      params?: ErrorMessage,
-    ): T;
-
-    // Check a value have a valid datetime string
-    datetime<T extends ColumnTypeBase>(
-      this: T,
-      params?: StringTypeData['datetime'] & Exclude<ErrorMessage, string>,
-    ): T;
-
-    // Check a value to be a valid ip address
-    ip<T extends ColumnTypeBase>(
-      this: T,
-      params?: StringTypeData['ip'] & Exclude<ErrorMessage, string>,
-    ): T;
-
-    // Trim the value during a validation
-    trim<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Transform value to a lower case during a validation
-    toLowerCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-
-    // Transform value to an upper case during a validation
-    toUpperCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  };
   number: ZodNumber;
-  numberMethods: {
-    lt<T extends ColumnTypeBase>(
-      this: T,
-      value: number,
-      params?: ErrorMessage,
-    ): T;
-    lte<T extends ColumnTypeBase>(
-      this: T,
-      value: number,
-      params?: ErrorMessage,
-    ): T;
-    max<T extends ColumnTypeBase>(
-      this: T,
-      value: number,
-      params?: ErrorMessage,
-    ): T;
-    gt<T extends ColumnTypeBase>(
-      this: T,
-      value: number,
-      params?: ErrorMessage,
-    ): T;
-    gte<T extends ColumnTypeBase>(
-      this: T,
-      value: number,
-      params?: ErrorMessage,
-    ): T;
-    min<T extends ColumnTypeBase>(
-      this: T,
-      value: number,
-      params?: ErrorMessage,
-    ): T;
-    positive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-    nonNegative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-    negative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-    nonPositive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-    step<T extends ColumnTypeBase>(
-      this: T,
-      value: number,
-      params?: ErrorMessage,
-    ): T;
-    int<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-    finite<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-    safe<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  };
   int: ZodNumber;
   stringNumberDate: ZodDate;
   timeInterval: ZodObject<{
@@ -453,6 +730,27 @@ export type ZodSchemaConfig = {
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T): PkeySchema<T>;
 
   errors<T extends ColumnTypeBase>(this: T, errors: ErrorMessages): T;
+
+  smallint(): SmallIntColumnZod;
+  integer(): IntegerColumnZod;
+  real(): RealColumnZod;
+  smallSerial(): SmallSerialColumnZod;
+  serial(): SerialColumnZod;
+
+  bigint(): BigIntColumnZod;
+  decimal(precision?: number, scale?: number): DecimalColumnZod;
+  doublePrecision(): DoublePrecisionColumnZod;
+  bigSerial(): BigSerialColumnZod;
+  money(): MoneyColumnZod;
+  varchar(limit?: number): VarCharColumnZod;
+  char(limit?: number): CharColumnZod;
+  text(min: number, max: number): TextColumnZod;
+  string(limit?: number): StringColumnZod;
+  citext(min: number, max: number): CitextColumnZod;
+
+  date(): DateColumnZod;
+  timestampNoTZ(precision?: number): TimestampNoTzColumnZod;
+  timestamp(precision?: number): TimestampColumnZod;
 };
 
 // parse a date string to number, with respect to null
@@ -493,14 +791,6 @@ export const zodSchemaConfig: ZodSchemaConfig = {
       parseDateToDate,
     ) as unknown as ParseDateToDate;
   },
-  dateMethods: {
-    min(value, params) {
-      return applyMethod(this, 'min', value, params);
-    },
-    max(value, params) {
-      return applyMethod(this, 'max', value, params);
-    },
-  },
   enum(dataType, type) {
     return new EnumColumn(zodSchemaConfig, dataType, type, z.enum(type));
   },
@@ -522,7 +812,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   buffer: z.instanceof(Buffer),
   unknown: z.unknown(),
   never: z.never(),
-  string: z.string(),
+  stringSchema: z.string(),
   stringMin(min) {
     return z.string().min(min);
   },
@@ -532,146 +822,8 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   stringMinMax(min, max) {
     return z.string().min(min).max(max);
   },
-  stringMethods: {
-    ...(arrayMethods as unknown as ArrayMethods<number>),
-
-    email(params) {
-      return applySimpleMethod(this, 'email', params);
-    },
-
-    url(params) {
-      return applySimpleMethod(this, 'url', params);
-    },
-
-    emoji(params) {
-      return applySimpleMethod(this, 'emoji', params);
-    },
-
-    uuid(params) {
-      return applySimpleMethod(this, 'uuid', params);
-    },
-
-    cuid(params) {
-      return applySimpleMethod(this, 'cuid', params);
-    },
-
-    cuid2(params) {
-      return applySimpleMethod(this, 'cuid2', params);
-    },
-
-    ulid(params) {
-      return applySimpleMethod(this, 'ulid', params);
-    },
-
-    regex(value, params) {
-      return applyMethod(this, 'regex', value, params);
-    },
-
-    includes(value, params) {
-      return applyMethod(this, 'includes', value, params);
-    },
-
-    startsWith(value, params) {
-      return applyMethod(this, 'startsWith', value, params);
-    },
-
-    endsWith(value, params) {
-      return applyMethod(this, 'endsWith', value, params);
-    },
-
-    datetime(params = {}) {
-      return applyMethod(this, 'datetime', params, params);
-    },
-
-    ip(params = {}) {
-      return applyMethod(this, 'ip', params, params);
-    },
-
-    trim(params) {
-      return applySimpleMethod(this, 'trim', params);
-    },
-
-    toLowerCase(params) {
-      return applySimpleMethod(this, 'toLowerCase', params);
-    },
-
-    toUpperCase(params) {
-      return applySimpleMethod(this, 'toUpperCase', params);
-    },
-  },
   number: z.number(),
   int: z.number().int(),
-  numberMethods: {
-    // Require a value to be lower than a given number
-    lt(value, params) {
-      return applyMethod(this, 'lt', value, params);
-    },
-
-    // Require a value to be lower than or equal to a given number (the same as `max`)
-    lte(value, params) {
-      return applyMethod(this, 'lte', value, params);
-    },
-
-    // Require a value to be lower than or equal to a given number
-    max(value, params) {
-      return applyMethod(this, 'lte', value, params);
-    },
-
-    // Require a value to be greater than a given number
-    gt(value, params) {
-      return applyMethod(this, 'gt', value, params);
-    },
-
-    // Require a value to be greater than or equal to a given number (the same as `min`)
-    gte(value, params) {
-      return applyMethod(this, 'gte', value, params);
-    },
-
-    // Require a value to be greater than or equal to a given number
-    min(value, params) {
-      return applyMethod(this, 'gte', value, params);
-    },
-
-    // Require a value to be greater than 0
-    positive(params) {
-      return applyMethod(this, 'gt', 0, params);
-    },
-
-    // Require a value to be greater than or equal to 0
-    nonNegative(params) {
-      return applyMethod(this, 'gte', 0, params);
-    },
-
-    // Require a value to be lower than 0
-    negative(params) {
-      return applyMethod(this, 'lt', 0, params);
-    },
-
-    // Require a value to be lower than or equal to 0
-    nonPositive(params) {
-      return applyMethod(this, 'lte', 0, params);
-    },
-
-    // Require a value to be a multiple of a given number
-    step(value, params) {
-      return applyMethod(this, 'step', value, params);
-    },
-
-    // Require a value to be an integer
-    int(params) {
-      return applySimpleMethod(this, 'int', params);
-    },
-
-    // Exclude `Infinity` from being a valid value
-    finite(params) {
-      return applySimpleMethod(this, 'finite', params);
-    },
-
-    // Require the value to be less than or equal to Number.MAX_SAFE_INTEGER
-    safe(params) {
-      return applySimpleMethod(this, 'safe', params);
-    },
-  },
 
   stringNumberDate: z.coerce.date(),
 
@@ -805,6 +957,29 @@ export const zodSchemaConfig: ZodSchemaConfig = {
 
     return setColumnData(this, 'errors', newErrors);
   },
+
+  smallint: () => new SmallIntColumnZod(zodSchemaConfig),
+  integer: () => new IntegerColumnZod(zodSchemaConfig),
+  real: () => new RealColumnZod(zodSchemaConfig),
+  smallSerial: () => new SmallSerialColumnZod(zodSchemaConfig),
+  serial: () => new SerialColumnZod(zodSchemaConfig),
+
+  bigint: () => new BigIntColumnZod(zodSchemaConfig),
+  decimal: (precision, scale) =>
+    new DecimalColumnZod(zodSchemaConfig, precision, scale),
+  doublePrecision: () => new DoublePrecisionColumnZod(zodSchemaConfig),
+  bigSerial: () => new BigSerialColumnZod(zodSchemaConfig),
+  money: () => new MoneyColumnZod(zodSchemaConfig),
+  varchar: (limit) => new VarCharColumnZod(zodSchemaConfig, limit),
+  char: (limit) => new CharColumnZod(zodSchemaConfig, limit),
+  text: (min, max) => new TextColumnZod(zodSchemaConfig, min, max),
+  string: (limit) => new StringColumnZod(zodSchemaConfig, limit),
+  citext: (min, max) => new CitextColumnZod(zodSchemaConfig, min, max),
+
+  date: () => new DateColumnZod(zodSchemaConfig),
+  timestampNoTZ: (precision) =>
+    new TimestampNoTzColumnZod(zodSchemaConfig, precision),
+  timestamp: (precision) => new TimestampColumnZod(zodSchemaConfig, precision),
 };
 
 type MapSchema<

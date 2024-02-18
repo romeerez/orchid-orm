@@ -6,7 +6,12 @@ import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { pushQueryArray } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
-import { Expression, isExpression, QueryColumns } from 'orchid-core';
+import {
+  Expression,
+  isExpression,
+  QueryColumns,
+  RecordUnknown,
+} from 'orchid-core';
 import { RelationJoinQuery } from '../relations';
 
 type ItemOf3Or4Length =
@@ -365,8 +370,7 @@ export const getIsJoinSubQuery = (query: QueryData, baseQuery: QueryData) => {
   for (const key in query) {
     if (
       !skipQueryKeysForSubQuery[key] &&
-      (query as Record<string, unknown>)[key] !==
-        (baseQuery as Record<string, unknown>)[key]
+      (query as RecordUnknown)[key] !== (baseQuery as RecordUnknown)[key]
     ) {
       return true;
     }

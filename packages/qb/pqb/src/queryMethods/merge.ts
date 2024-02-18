@@ -6,6 +6,7 @@ import {
   QueryCatch,
   QueryColumns,
   QueryThen,
+  RecordUnknown,
 } from 'orchid-core';
 
 export type MergeQuery<
@@ -64,8 +65,8 @@ const mergableObjects: Record<string, boolean> = {
 export class MergeQueryMethods {
   merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
     const query = this.clone();
-    const a = query.q as Record<string, unknown>;
-    const b = q.q as Record<string, unknown>;
+    const a = query.q as RecordUnknown;
+    const b = q.q as RecordUnknown;
 
     for (const key in b) {
       const value = b[key];
@@ -80,7 +81,7 @@ export class MergeQueryMethods {
             a[key] = a[key] ? [...(a[key] as unknown[]), ...value] : value;
           } else if (mergableObjects[key]) {
             a[key] = a[key]
-              ? { ...(a[key] as Record<string, unknown>), ...value }
+              ? { ...(a[key] as RecordUnknown), ...value }
               : value;
           } else {
             a[key] = value;

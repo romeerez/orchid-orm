@@ -305,7 +305,7 @@ const getColumn = (
   const columnType = getColumnType(type, isSerial);
   const typeFn = ctx.columnsByType[columnType];
   if (typeFn) {
-    column = instantiateColumn(typeFn, params);
+    column = instantiateColumn(typeFn, params) as ColumnType;
   } else {
     const domainColumn = domains[`${typeSchema}.${type}`];
     if (domainColumn) {

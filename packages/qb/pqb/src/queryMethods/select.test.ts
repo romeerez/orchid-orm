@@ -18,7 +18,7 @@ import { UnknownColumn } from '../columns/unknown';
 import {
   assertType,
   expectSql,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';

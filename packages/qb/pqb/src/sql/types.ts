@@ -8,6 +8,7 @@ import {
   MaybeArray,
   TemplateLiteralArgs,
   SelectableBase,
+  RecordUnknown,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 
@@ -275,5 +276,5 @@ export type OnConflictItem = string | string[] | Expression;
 export type OnConflictMergeUpdate =
   | string
   | string[]
-  | Record<string, unknown>
+  | RecordUnknown
   | Expression;

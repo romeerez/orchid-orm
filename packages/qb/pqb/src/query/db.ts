@@ -46,6 +46,7 @@ import {
   ColumnSchemaConfig,
   QueryColumns,
   QueryColumnsInit,
+  RecordUnknown,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -335,7 +336,7 @@ export class Db<
         if (q.and) s.and = q.and;
         if (q.or) s.or = q.or;
 
-        (scopes as Record<string, unknown>)[key] = s;
+        (scopes as RecordUnknown)[key] = s;
       }
 
       if (scopes.default) {
@@ -653,7 +654,7 @@ export const createDb = <
 
   // Set all methods from prototype to the db instance (needed for transaction at least):
   for (const name of Object.getOwnPropertyNames(Db.prototype)) {
-    (db as unknown as Record<string, unknown>)[name] =
+    (db as unknown as RecordUnknown)[name] =
       Db.prototype[name as keyof typeof Db.prototype];
   }
 

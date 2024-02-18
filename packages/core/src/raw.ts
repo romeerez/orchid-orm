@@ -1,5 +1,6 @@
 import { ColumnTypeBase, QueryColumn } from './columns/columnType';
 import { OperatorToSQL } from './columns';
+import { RecordUnknown } from './utils';
 
 // Base class for the raw SQL and other classes that can produce SQL
 export abstract class Expression<T extends QueryColumn = QueryColumn> {
@@ -67,7 +68,7 @@ export type StaticSQLArgs =
   | [{ raw: string; values?: RawSQLValues }];
 
 // Record of values to pass and store in a RawSQL instance.
-export type RawSQLValues = Record<string, unknown>;
+export type RawSQLValues = RecordUnknown;
 
 // `type` method to be used in both static and dynamic variants of SQL expressions.
 export abstract class ExpressionTypeMethod {

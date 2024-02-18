@@ -4,44 +4,15 @@ import {
   pushOrNewArray,
   pushOrNewArrayToObject,
   quoteObjectKey,
-  SetOptional,
   singleQuote,
-  SomeIsTrue,
 } from './utils';
 import url from 'url';
 import { assertType } from 'test-utils';
 
 describe('utils', () => {
-  describe('SomeIsTrue', () => {
-    it('should be true if some is true', () => {
-      assertType<SomeIsTrue<[false, false, true, false]>, true>();
-    });
-
-    it('should be false if none is true', () => {
-      assertType<SomeIsTrue<[false, false, false]>, false>();
-    });
-
-    it('should be false if types array is empty', () => {
-      assertType<SomeIsTrue<[]>, false>();
-    });
-  });
-
   describe('MaybeArray', () => {
     it('should turn a type into union of T | T[]', () => {
       assertType<MaybeArray<number>, number | number[]>();
-    });
-  });
-
-  describe('SetOptional', () => {
-    it('should make specified keys optional', () => {
-      assertType<
-        SetOptional<{ a: number; b: string; c: boolean }, 'b' | 'c'>,
-        {
-          a: number;
-          b?: string;
-          c?: boolean;
-        }
-      >();
     });
   });
 

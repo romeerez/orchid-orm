@@ -25,6 +25,8 @@ import {
   ColumnsParsers,
   Expression,
   QueryColumn,
+  RecordString,
+  RecordUnknown,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 import { BaseOperators } from '../columns/operators';
@@ -36,7 +38,7 @@ export type JoinedShapes = Record<string, ColumnsShapeBase>;
 export type JoinedParsers = Record<string, ColumnsParsers>;
 // Keep track of joined table names.
 // When joining the same table second time, this allows to add a numeric suffix to avoid name collisions.
-export type JoinOverrides = Record<string, string>;
+export type JoinOverrides = RecordString;
 
 export type QueryBeforeHook = (query: Query) => void | Promise<void>;
 export type QueryAfterHook<Data = unknown> = (
@@ -88,7 +90,7 @@ export type CommonQueryData = {
   coalesceValue?: unknown | Expression;
   parsers?: ColumnsParsers;
   notFoundDefault?: unknown;
-  defaults?: Record<string, unknown>;
+  defaults?: RecordUnknown;
   // run functions before any query
   before?: QueryBeforeHook[];
   // run functions after any query

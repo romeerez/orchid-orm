@@ -8,7 +8,7 @@ import { _queryUpdate, UpdateData } from './update';
 import { CreateData } from './create';
 import { WhereResult } from './where/where';
 import { MoreThanOneRowError } from '../errors';
-import { isObjectEmpty, SetOptional } from 'orchid-core';
+import { isObjectEmpty, RecordUnknown } from 'orchid-core';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -30,7 +30,13 @@ export type UpsertArg<T extends Query, Data> =
 type UpsertArgWithData<
   T extends Query,
   Data,
-  Create = SetOptional<CreateData<T>, keyof Data>,
+  DataKey extends PropertyKey = keyof Data,
+  CD = CreateData<T>,
+  Create = {
+    [K in keyof CD as K extends DataKey ? never : K]: CD[K];
+  } & {
+    [K in DataKey]?: K extends keyof CD ? CD[K] : never;
+  },
 > = {
   data: Data;
   create: Create | ((update: Data) => Create);
@@ -71,8 +77,7 @@ function orCreate<T extends Query>(
         data = data(updateData);
       }
 
-      if (mergeData)
-        data = { ...mergeData, ...(data as Record<string, unknown>) };
+      if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
 
       const inner = q.create(data as CreateData<Query>);
       const { handleResult } = inner.q;

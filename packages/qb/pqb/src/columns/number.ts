@@ -8,8 +8,8 @@ import {
   setColumnData,
   addCode,
   ColumnWithDefault,
-  ColumnTypeBase,
   ColumnSchemaConfig,
+  PickColumnBaseData,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
 import type { TableData } from './columnTypes';
@@ -114,8 +114,10 @@ const intToCode = (column: ColumnType, t: string): Code => {
   return columnCode(column, t, code);
 };
 
-export type IdentityColumn<T extends Pick<ColumnTypeBase, 'data'>> =
-  ColumnWithDefault<T, Expression>;
+export type IdentityColumn<T extends PickColumnBaseData> = ColumnWithDefault<
+  T,
+  Expression
+>;
 
 // signed two-byte integer
 export class SmallIntColumn<

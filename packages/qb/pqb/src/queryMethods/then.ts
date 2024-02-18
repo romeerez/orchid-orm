@@ -15,6 +15,8 @@ import {
   ColumnsParsers,
   emptyArray,
   getValueKey,
+  RecordString,
+  RecordUnknown,
   Sql,
   TransactionState,
 } from 'orchid-core';
@@ -159,7 +161,7 @@ function maybeWrappedThen(
   }
 }
 
-const queriesNames: Record<string, string> = {};
+const queriesNames: RecordString = {};
 let nameI = 0;
 
 const callAfterHook = function (
@@ -430,9 +432,9 @@ const filterResult = (
   if (returnType === 'all') {
     const pick = getSelectPick(queryResult, hookSelect);
     return (result as unknown[]).map((full) => {
-      const filtered: Record<string, unknown> = {};
+      const filtered: RecordUnknown = {};
       for (const key of pick) {
-        filtered[key] = (full as Record<string, unknown>)[key];
+        filtered[key] = (full as RecordUnknown)[key];
       }
       return filtered;
     });
@@ -447,9 +449,7 @@ const filterResult = (
       result = {};
       for (const key in row) {
         if (!hookSelect.includes(key)) {
-          (result as Record<string, unknown>)[key] = (
-            row as Record<string, unknown>
-          )[key];
+          (result as RecordUnknown)[key] = (row as RecordUnknown)[key];
         }
       }
       return result;
@@ -457,13 +457,11 @@ const filterResult = (
   }
 
   if (returnType === 'value') {
-    return (result as Record<string, unknown>[])[0]?.[
-      queryResult.fields[0].name
-    ];
+    return (result as RecordUnknown[])[0]?.[queryResult.fields[0].name];
   }
 
   if (returnType === 'valueOrThrow') {
-    const row = (result as Record<string, unknown>[])[0];
+    const row = (result as RecordUnknown[])[0];
     if (!row) throw new NotFoundError(q);
     return row[queryResult.fields[0].name];
   }
@@ -474,13 +472,13 @@ const filterResult = (
 
   if (returnType === 'pluck') {
     const key = queryResult.fields[0].name;
-    return (result as Record<string, unknown>[]).map((row) => row[key]);
+    return (result as RecordUnknown[]).map((row) => row[key]);
   }
 
   if (returnType === 'rows') {
     const pick = getSelectPick(queryResult, hookSelect);
     return (result as unknown[]).map((full) =>
-      pick.map((key) => (full as Record<string, unknown>)[key]),
+      pick.map((key) => (full as RecordUnknown)[key]),
     );
   }
 

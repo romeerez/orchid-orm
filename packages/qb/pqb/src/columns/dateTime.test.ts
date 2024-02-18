@@ -1,18 +1,17 @@
 import { userData } from '../test-utils/test-utils';
 import { TimestampColumn, TimestampTZColumn } from './dateTime';
-import { ColumnType } from './columnType';
 import {
   assertType,
   expectSql,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   testDb,
   testSchemaConfig,
   useTestDatabase,
 } from 'test-utils';
-import { TimeInterval } from 'orchid-core';
+import { ColumnTypeBase, TimeInterval } from 'orchid-core';
 import { z } from 'zod';
 
-const testTimestampInput = (column: ColumnType) => {
+const testTimestampInput = (column: ColumnTypeBase) => {
   const date = new Date();
   const string = date.toISOString();
   expect(column.encodeFn?.(string) as Date).toBe(string);

@@ -1,5 +1,9 @@
 import { QueryData } from '../sql';
-import { emptyObject, pushOrNewArrayToObject } from 'orchid-core';
+import {
+  emptyObject,
+  pushOrNewArrayToObject,
+  RecordUnknown,
+} from 'orchid-core';
 import { OrchidOrmInternalError } from '../errors';
 import { Query } from './query';
 import { QueryBase } from './queryBase';
@@ -18,8 +22,7 @@ export const pushQueryArray = <T extends { q: QueryData }>(
   key: string,
   value: unknown,
 ): T => {
-  if (!q.q[key as keyof typeof q.q])
-    (q.q as Record<string, unknown>)[key] = value;
+  if (!q.q[key as keyof typeof q.q]) (q.q as RecordUnknown)[key] = value;
   else
     (q.q[key as keyof typeof q.q] as unknown[]).push(...(value as unknown[]));
   return q as T;
@@ -60,12 +63,10 @@ export const setQueryObjectValue = <T extends { q: QueryData }>(
   value: unknown,
 ): T => {
   if (!q.q[object as keyof typeof q.q])
-    (q.q as unknown as Record<string, Record<string, unknown>>)[object] = {
+    (q.q as unknown as Record<string, RecordUnknown>)[object] = {
       [key]: value,
     };
-  else
-    (q.q as unknown as Record<string, Record<string, unknown>>)[object][key] =
-      value;
+  else (q.q as unknown as Record<string, RecordUnknown>)[object][key] = value;
   return q as unknown as T;
 };
 
@@ -113,7 +114,7 @@ export const saveSearchAlias = (
  */
 export const extendQuery = <
   T extends Pick<Query, 'q' | 'baseQuery'>,
-  Methods extends Record<string, unknown>,
+  Methods extends RecordUnknown,
 >(
   q: T,
   methods: Methods,

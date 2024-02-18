@@ -12,7 +12,7 @@ import {
 import {
   assertType,
   expectSql,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   testDb,
 } from 'test-utils';
 import { Expression, getValueKey } from 'orchid-core';

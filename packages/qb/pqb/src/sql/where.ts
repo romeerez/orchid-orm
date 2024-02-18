@@ -18,7 +18,13 @@ import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { JoinedShapes, QueryData } from './data';
-import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
+import {
+  Expression,
+  isExpression,
+  MaybeArray,
+  RecordUnknown,
+  toArray,
+} from 'orchid-core';
 import { Operator } from '../columns/operators';
 
 export const pushWhereStatementSql = (
@@ -136,7 +142,7 @@ const processWhere = (
   }
 
   for (const key in data) {
-    const value = (data as Record<string, unknown>)[key];
+    const value = (data as RecordUnknown)[key];
     if (value === undefined) continue;
 
     if (key === 'AND') {

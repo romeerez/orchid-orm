@@ -1,4 +1,5 @@
 import { Query } from './query/query';
+import { RecordUnknown } from 'orchid-core';
 
 export type RelationsChain = (Query | RelationQuery)[];
 
@@ -25,12 +26,12 @@ export type RelationConfigBase = {
   optionalDataForCreate: unknown;
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
-  params: Record<string, unknown>;
+  params: RecordUnknown;
 };
 
 export type RelationConfigDataForCreate = {
-  columns: Record<string, unknown>;
-  nested: Record<string, unknown>;
+  columns: RecordUnknown;
+  nested: RecordUnknown;
 };
 
 export type RelationsBase = Record<string, RelationQueryBase>;

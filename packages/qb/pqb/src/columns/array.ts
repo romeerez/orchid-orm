@@ -25,17 +25,18 @@ export type ArrayColumnValue = Pick<
   | 'data'
 >;
 
-export type ArrayData<Item extends ArrayColumnValue> = ColumnData &
-  ArrayMethodsData & {
-    item: Item;
-  };
+export interface ArrayData<Item extends ArrayColumnValue>
+  extends ColumnData,
+    ArrayMethodsData {
+  item: Item;
+}
 
 export class ArrayColumn<
   Schema extends ColumnSchemaConfig,
   Item extends ArrayColumnValue,
-  InputType extends Schema['type'],
-  OutputType extends Schema['type'],
-  QueryType extends Schema['type'],
+  InputType,
+  OutputType,
+  QueryType,
 > extends ColumnType<
   Schema,
   Item['type'][],
