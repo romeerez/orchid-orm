@@ -137,27 +137,18 @@ export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
 
   name<T>(this: T, name: string): T;
 
-  sql<T>(
-    this: T,
-    sql: TemplateStringsArray,
-    ...values: unknown[]
-  ): RawSQLBase<QueryColumn, T>;
-  sql<T>(this: T, sql: string): RawSQLBase<QueryColumn, T>;
-  sql<T>(
-    this: T,
-    values: RecordUnknown,
-    sql: string,
-  ): RawSQLBase<QueryColumn, T>;
-  sql<T>(
-    this: T,
-    values: RecordUnknown,
-  ): (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>;
-  sql(
-    ...args:
+  sql<
+    T,
+    Args extends
       | [sql: TemplateStringsArray, ...values: unknown[]]
       | [sql: string]
-      | [values: RecordUnknown, sql?: string]
-  ): ((...sql: TemplateLiteralArgs) => RawSQLBase) | RawSQLBase;
+      | [values: RecordUnknown, sql?: string],
+  >(
+    this: T,
+    ...args: Args
+  ): Args extends [RecordUnknown]
+    ? (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>
+    : RawSQLBase<QueryColumn, T>;
 
   smallint: SchemaConfig['smallint'];
   integer: SchemaConfig['integer'];
