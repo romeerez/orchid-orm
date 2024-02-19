@@ -22,6 +22,7 @@ import {
   TemplateLiteralArgs,
   emptyObject,
   RecordUnknown,
+  QueryMetaBase,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
@@ -59,6 +60,23 @@ export type UpdateData<T extends UpdateSelf> = {
   >;
 };
 
+type UpdateColumnArgKeys =
+  | keyof JsonModifiers
+  | 'meta'
+  | 'shape'
+  | 'result'
+  | 'returnType';
+
+type UpdateColumnCallbackResult = JsonItem | ResultRelationQueryBase;
+
+interface ResultRelationQueryBaseMeta extends QueryMetaBase {
+  kind: 'select';
+}
+
+interface ResultRelationQueryBase extends RelationQueryBase {
+  meta: ResultRelationQueryBaseMeta;
+}
+
 // Type of available variants to provide for a specific column when updating.
 // The column value may be a specific value, or raw SQL, or a query returning a single value,
 // or a callback with a relation query that is returning a single value,
@@ -74,16 +92,12 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | ((q: {
       [K in
         | keyof T['relations']
-        | keyof JsonModifiers
-        | 'meta'
-        | 'shape'
-        | 'result'
-        | 'returnType']: K extends keyof T['relations']
+        | UpdateColumnArgKeys]: K extends keyof T['relations']
         ? T['relations'][K]
-        : K extends keyof T
+        : K extends UpdateColumnArgKeys
         ? T[K]
         : never;
-    }) => JsonItem | (RelationQueryBase & { meta: { kind: 'select' } }));
+    }) => UpdateColumnCallbackResult);
 
 // Add relation operations to the update argument.
 type UpdateRelationData<
@@ -111,13 +125,13 @@ type UpdateRawArgs<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
 type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
   ? SetQueryKind<T, 'update'>
-  : SetQueryReturnsRowCount<SetQueryKind<T, 'update'>>;
+  : SetQueryReturnsRowCount<T, 'update'>;
 
 // `increment` and `decrement` methods argument type.
 // Accepts a column name to change, or an object with column names and number values to increment or decrement with.
 type ChangeCountArg<T extends Pick<Query, 'shape'>> =
   | keyof T['shape']
-  | Partial<Record<keyof T['shape'], number>>;
+  | { [K in keyof T['shape']]?: number };
 
 // Context object for `update` logic used internally.
 // It's being used by relations logic in the ORM.

@@ -4,6 +4,7 @@ import {
   CreateCtx,
   getQueryAs,
   JoinCallback,
+  JoinQueryMethod,
   pushQueryOn,
   Query,
   RelationConfigBase,
@@ -13,12 +14,12 @@ import {
   WhereArg,
   WhereQueryBase,
 } from 'pqb';
-import { MaybeArray } from 'orchid-core';
+import { emptyArray, MaybeArray } from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 
 // INNER JOIN the current relation instead of the default OUTER behavior
-export type RelJoin = <T extends Query>(this: T) => T;
+export type RelJoin = JoinQueryMethod & (<T extends Query>(this: T) => T);
 
 export type NestedInsertOneItem = {
   create?: NestedInsertOneItemCreate;
@@ -262,7 +263,8 @@ export const joinQueryChainingHOF =
 
     return joiningQuery.where({
       EXISTS: {
-        args: [inner],
+        first: inner,
+        args: emptyArray,
       },
     });
   };

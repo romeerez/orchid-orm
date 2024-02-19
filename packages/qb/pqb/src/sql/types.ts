@@ -164,23 +164,18 @@ export type JoinItem = SimpleJoinItem | JoinLateralItem;
 
 export type SimpleJoinItem = {
   type: string;
+  first: string | QueryWithTable;
   args:
-    | [relation: string]
+    | []
     | [
-        arg: string | QueryWithTable,
         conditions:
           | Record<string, string | Expression>
           | Expression
           | ((q: unknown) => QueryBase)
           | true,
       ]
+    | [leftColumn: string | Expression, rightColumn: string | Expression]
     | [
-        arg: string | QueryWithTable,
-        leftColumn: string | Expression,
-        rightColumn: string | Expression,
-      ]
-    | [
-        arg: string | QueryWithTable,
         leftColumn: string | Expression,
         op: string,
         rightColumn: string | Expression,

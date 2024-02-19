@@ -72,11 +72,11 @@ describe.each`
     const q = User.clone();
     q.clone = (() => q) as unknown as typeof q.clone;
 
-    const args = [Message, 'authorId', 'id'] as const;
+    const args = ['authorId', 'id'] as const;
 
-    q[method as 'join'](...args);
+    q[method as 'join'](Message, ...args);
 
-    expect(_join).toBeCalledWith(q, require, sql, args);
+    expect(_join).toBeCalledWith(q, require, sql, Message, args);
   });
 });
 

@@ -40,23 +40,22 @@ export const _join = <
   q: T,
   require: RequireJoined,
   type: string,
-  args: [arg: Arg, ...args: Args],
+  first: Arg,
+  args: Args,
 ): JoinResult<T, Arg, RequireJoined, RequireMain> => {
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
   let isSubQuery = false;
 
-  if (typeof args[0] === 'function') {
-    args[0] = (args[0] as (q: Record<string, Query>) => Arg)(q.relations);
+  if (typeof first === 'function') {
+    first = (first as (q: Record<string, Query>) => Arg)(q.relations);
     (
-      args[0] as unknown as { joinQueryAfterCallback: unknown }
+      first as unknown as { joinQueryAfterCallback: unknown }
     ).joinQueryAfterCallback = (
-      args[0] as unknown as { joinQuery: unknown }
+      first as unknown as { joinQuery: unknown }
     ).joinQuery;
   }
-
-  const first = args[0];
 
   if (typeof first === 'object') {
     isSubQuery = getIsJoinSubQuery(first.q, first.baseQuery.q);
@@ -67,8 +66,8 @@ export const _join = <
       parsers = first.q.parsers;
 
       if (isSubQuery) {
-        args[0] = first.clone() as Arg;
-        (args[0] as Query).shape = shape as ColumnsShapeBase;
+        first = first.clone() as Arg;
+        (first as Query).shape = shape as ColumnsShapeBase;
       }
     }
   } else {
@@ -102,6 +101,7 @@ export const _join = <
 
   return pushQueryValue(q, 'join', {
     type,
+    first,
     args,
     isSubQuery,
   }) as unknown as JoinResult<T, Arg, RequireJoined, RequireMain>;

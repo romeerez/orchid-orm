@@ -5,8 +5,8 @@ import {
   SetQueryKind,
   SetQueryReturns,
   SetQueryReturnsAll,
-  SetQueryReturnsColumn,
-  SetQueryReturnsOne,
+  SetQueryReturnsColumnKind,
+  SetQueryReturnsOneKind,
   SetQueryReturnsPluckColumn,
   SetQueryReturnsRowCount,
 } from '../query/query';
@@ -44,29 +44,38 @@ export interface CreateSelf extends QueryBase {
 // or with `db.book.create({ author: authorData })`
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
-export type CreateData<
-  T extends CreateSelf,
-  Defaults extends PropertyKey = keyof T['meta']['defaults'],
-> = RelationsBase extends T['relations']
-  ? // if no relations, don't load TS with extra calculations
-    CreateDataWithDefaults<T['inputType'], Defaults>
-  : CreateRelationsData<
-      T['relations'],
-      CreateDataWithDefaults<T['inputType'], Defaults>
-    >;
+export type CreateData<T extends CreateSelf> =
+  RelationsBase extends T['relations']
+    ? // if no relations, don't load TS with extra calculations
+      CreateDataWithDefaults<T>
+    : CreateRelationsData<T>;
 
 type CreateDataWithDefaults<
-  InputType extends RecordUnknown,
-  Defaults extends PropertyKey,
+  T extends CreateSelf,
+  Defaults extends PropertyKey = keyof T['meta']['defaults'],
 > = {
-  [K in keyof InputType as K extends Defaults ? never : K]: CreateColumn<
-    InputType,
+  [K in keyof T['inputType'] as K extends Defaults ? never : K]: CreateColumn<
+    T['inputType'],
     K
   >;
 } & {
-  [K in Defaults]?: K extends keyof InputType
-    ? CreateColumn<InputType, K>
+  [K in Defaults]?: K extends keyof T['inputType']
+    ? CreateColumn<T['inputType'], K>
     : never;
+};
+
+type CreateDataWithDefaultsForRelations<
+  T extends CreateSelf,
+  Defaults extends PropertyKey = keyof T['meta']['defaults'],
+  OmitFKeys extends PropertyKey = T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate'],
+> = {
+  [K in keyof T['inputType'] as K extends Defaults | OmitFKeys
+    ? never
+    : K]: CreateColumn<T['inputType'], K>;
+} & {
+  [K in Defaults & keyof T['inputType'] as K extends OmitFKeys
+    ? never
+    : K]?: CreateColumn<T['inputType'], K>;
 };
 
 // Type of available variants to provide for a specific column when creating
@@ -82,33 +91,38 @@ export type CreateColumn<
     };
 
 // Combine data of the table with data that can be set for relations
-export type CreateRelationsData<Relations extends RelationsBase, Data> =
+export type CreateRelationsData<T extends CreateSelf> =
   // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
-  Omit<
-    Data,
-    Relations[keyof Relations]['relationConfig']['omitForeignKeyInCreate']
-  > &
+  CreateDataWithDefaultsForRelations<T> &
     // Intersection of objects for `belongsTo` relations:
     // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-    CreateRelationsDataOmittingFKeys<Relations> &
+    CreateRelationsDataOmittingFKeys<T> &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
-    Relations[keyof Relations]['relationConfig']['optionalDataForCreate'];
+    T['relations'][keyof T['relations']]['relationConfig']['optionalDataForCreate'];
 
 // Intersection of relations that may omit foreign key (belongsTo):
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
 export type CreateRelationsDataOmittingFKeys<
-  Relations extends RelationsBase,
+  T extends CreateSelf,
   // Collect a union of `belongsTo` relation objects.
-  Union = Relations[keyof Relations]['relationConfig']['dataForCreate'],
+  Union = T['relations'][keyof T['relations']]['relationConfig']['dataForCreate'],
 > =
   // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (
     Union extends RelationConfigDataForCreate
-      ? (u: Union['columns' | 'nested']) => void
+      ? (
+          u: // omit relation columns if they are in defaults, is tested in factory.test.ts
+          keyof Union['columns'] extends keyof T['meta']['defaults']
+            ? Omit<Union['columns'], keyof T['meta']['defaults']> & {
+                [P in keyof T['meta']['defaults'] &
+                  keyof Union['columns']]?: Union['columns'][P];
+              } & Partial<Union['nested']>
+            : Union['columns'] | Union['nested'],
+        ) => void
       : never
-  ) extends (u: infer Obj extends RecordUnknown) => void
+  ) extends // must be handled as a function argument, belongsTo.test relies on this
+  (u: infer Obj extends RecordUnknown) => void
     ? Obj
     : never;
 
@@ -119,9 +133,9 @@ export type CreateRelationsDataOmittingFKeys<
 type CreateResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : QueryReturnsAll<T['returnType']> extends true
-  ? SetQueryReturnsOne<SetQueryKind<T, 'create'>>
+  ? SetQueryReturnsOneKind<T, 'create'>
   : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumn<SetQueryKind<T, 'create'>, T['result']['pluck']>
+  ? SetQueryReturnsColumnKind<T, T['result']['pluck'], 'create'>
   : SetQueryKind<T, 'create'>;
 
 // `insert` method output type
@@ -131,11 +145,11 @@ type CreateResult<T extends CreateSelf> = T extends { isCount: true }
 // - if it is a `pluck` query, forces it to return a single value
 type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
   ? QueryReturnsAll<T['returnType']> extends true
-    ? SetQueryReturnsOne<SetQueryKind<T, 'create'>>
+    ? SetQueryReturnsOneKind<T, 'create'>
     : T['returnType'] extends 'pluck'
-    ? SetQueryReturnsColumn<SetQueryKind<T, 'create'>, T['result']['pluck']>
+    ? SetQueryReturnsColumnKind<T, T['result']['pluck'], 'create'>
     : SetQueryKind<T, 'create'>
-  : SetQueryReturnsRowCount<SetQueryKind<T, 'create'>>;
+  : SetQueryReturnsRowCount<T, 'create'>;
 
 // `createMany` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
@@ -163,7 +177,7 @@ type InsertManyResult<T extends CreateSelf> =
           T['result']['value']
         >
       : SetQueryKind<T, 'create'>
-    : SetQueryReturnsRowCount<SetQueryKind<T, 'create'>>;
+    : SetQueryReturnsRowCount<T, 'create'>;
 
 // `onConflict().ignore()` method output type:
 // overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',

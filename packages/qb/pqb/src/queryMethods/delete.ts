@@ -12,7 +12,7 @@ export type DeleteArgs<T extends DeleteSelf> =
 export type DeleteResult<T extends DeleteSelf> =
   T['meta']['hasSelect'] extends true
     ? SetQueryKind<T, 'delete'>
-    : SetQueryReturnsRowCount<SetQueryKind<T, 'delete'>>;
+    : SetQueryReturnsRowCount<T, 'delete'>;
 
 export const _queryDelete = <T extends DeleteSelf>(q: T): DeleteResult<T> => {
   if (!q.q.select) {

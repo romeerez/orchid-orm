@@ -192,14 +192,14 @@ export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class PointColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'point' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -211,14 +211,14 @@ export class PointColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class LineColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'line' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -230,14 +230,14 @@ export class LineColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class LsegColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'lseg' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -249,14 +249,14 @@ export class LsegColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class BoxColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'box' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -269,14 +269,14 @@ export class BoxColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class PathColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'path' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -287,12 +287,12 @@ export class PathColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 // polygon	40+16n bytes	Polygon (similar to closed path)	((x1,y1),...)
 export class PolygonColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsText> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
   dataType = 'polygon' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -304,14 +304,14 @@ export class PolygonColumn<
 export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'circle' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -321,11 +321,11 @@ export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
 export class MoneyColumn<
   Schema extends ColumnSchemaConfig,
-> extends NumberBaseColumn<Schema, Schema['string']> {
+> extends NumberBaseColumn<Schema, Schema['stringSchema']> {
   dataType = 'money' as const;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -346,14 +346,14 @@ export class MoneyColumn<
 export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'cidr' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -365,14 +365,14 @@ export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'inet' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -383,12 +383,12 @@ export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 // macaddr	6 bytes	MAC addresses
 export class MacAddrColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsText> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
   dataType = 'macaddr' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -399,12 +399,12 @@ export class MacAddrColumn<
 // macaddr8	8 bytes	MAC addresses (EUI-64 format)
 export class MacAddr8Column<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsText> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
   dataType = 'macaddr8' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -473,12 +473,12 @@ type TsVectorGeneratedColumns = string[] | Record<string, SearchWeight>;
 // A tsvector value is a sorted list of distinct lexemes
 export class TsVectorColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsText> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
   dataType = 'tsvector' as const;
   operators = Operators.text;
 
   constructor(schema: Schema, public defaultLanguage = getDefaultLanguage()) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -555,12 +555,12 @@ export class TsVectorColumn<
 // A tsquery value stores lexemes that are to be searched for
 export class TsQueryColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsText> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
   dataType = 'tsquery' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {
@@ -614,14 +614,14 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class XMLColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsText
 > {
   dataType = 'xml' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 
   toCode(t: string): Code {

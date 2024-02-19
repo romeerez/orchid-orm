@@ -39,19 +39,16 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
   queryBuilder: Db;
   columnTypes: unknown;
   onQueryBuilder: typeof OnQueryBuilder;
-  table?: string;
   shape: QueryColumns;
   singlePrimaryKey: string;
   primaryKeys: string[];
   inputType: RecordUnknown;
   q: QueryData;
-  result: QueryColumns;
   then: QueryThen<unknown>;
   catch: QueryCatch<unknown>;
   windows: EmptyObject;
   defaultSelectColumns: string[];
   relations: RelationsBase;
-  withData: WithDataBase;
   error: new (
     message: string,
     length: number,
@@ -70,7 +67,9 @@ export type SelectableOrExpressionOfType<
   C extends QueryColumn,
 > = SelectableOfType<T, C['type']> | Expression<QueryColumn<C['type'] | null>>;
 
-export type QueryWithTable = Query & { table: string };
+export interface QueryWithTable extends Query {
+  table: string;
+}
 
 export type QueryReturnType =
   | 'all'
@@ -134,12 +133,15 @@ type MergeSelect<
   T extends Pick<Query, 'result'>,
   Result extends QueryColumns,
   Data,
-  Merged extends QueryColumns = {
-    [K in keyof T['result']]: K extends keyof Result ? unknown : T['result'][K];
-  } & Result,
 > = {
   [K in keyof T]: K extends 'result'
-    ? Merged
+    ? {
+        [K in keyof T['result'] | keyof Result]: K extends keyof Result
+          ? Result[K]
+          : K extends keyof T['result']
+          ? T['result'][K]
+          : never;
+      }
     : K extends 'then'
     ? QueryThen<Data>
     : K extends 'catch'
@@ -177,6 +179,25 @@ export type SetQueryReturns<
     : T[K];
 };
 
+export type SetQueryReturnsKind<
+  T extends Pick<Query, 'meta' | 'result'>,
+  R extends QueryReturnType,
+  Kind extends string,
+  Data = GetQueryResult<R, T['result']>,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? R
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : T[K];
+};
+
 // Change the query type to return multiple object records.
 // It wraps the query with `WhereResult` to allow updating and deleting all records when the `all` method is used.
 export type SetQueryReturnsAll<T extends Pick<Query, 'result'>> =
@@ -187,6 +208,11 @@ export type SetQueryReturnsOneOptional<T extends Pick<Query, 'result'>> =
 
 export type SetQueryReturnsOne<T extends Pick<Query, 'result'>> =
   SetQueryReturns<T, 'oneOrThrow'>;
+
+export type SetQueryReturnsOneKind<
+  T extends Pick<Query, 'result' | 'meta'>,
+  Kind extends string,
+> = SetQueryReturnsKind<T, 'oneOrThrow', Kind>;
 
 export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 
@@ -256,8 +282,34 @@ export type SetQueryReturnsColumn<
     : T[K];
 } & { meta: { hasSelect: true } };
 
-export type SetQueryReturnsRowCount<T extends Pick<Query, 'result'>> =
-  SetQueryReturns<T, 'rowCount'>;
+export type SetQueryReturnsColumnKind<
+  T extends Pick<Query, 'meta'>,
+  Column extends QueryColumn,
+  Kind extends string,
+  ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
+  Data = ReturnType extends 'value'
+    ? Column['outputType'] | undefined
+    : Column['outputType'],
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'result'
+    ? { value: Column }
+    : K extends 'returnType'
+    ? ReturnType
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : T[K];
+} & { meta: { hasSelect: true } };
+
+export type SetQueryReturnsRowCount<
+  T extends Pick<Query, 'result' | 'meta'>,
+  Kind extends string,
+> = SetQueryReturnsKind<T, 'rowCount', Kind>;
 
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
 

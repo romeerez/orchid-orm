@@ -14,14 +14,9 @@ import {
 } from 'orchid-core';
 import { RelationJoinQuery } from '../relations';
 
-type ItemOf3Or4Length =
+type ItemOf2Or3Length =
+  | [leftColumn: string | Expression, rightColumn: string | Expression]
   | [
-      _: unknown,
-      leftColumn: string | Expression,
-      rightColumn: string | Expression,
-    ]
-  | [
-      _: unknown,
       leftColumn: string | Expression,
       op: string,
       rightColumn?: string | Expression,
@@ -31,14 +26,13 @@ export const processJoinItem = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
-  item: Pick<SimpleJoinItem, 'args' | 'isSubQuery'>,
+  item: Pick<SimpleJoinItem, 'first' | 'args' | 'isSubQuery'>,
   quotedAs: string | undefined,
 ): { target: string; conditions?: string } => {
   let target: string;
   let conditions: string | undefined;
 
-  const { args } = item;
-  const [first] = args;
+  const { first, args } = item;
   if (typeof first === 'string') {
     if (first in table.relations) {
       const { query: toQuery, joinQuery } =
@@ -70,8 +64,8 @@ export const processJoinItem = (
         or: j.or ? [...j.or] : [],
       };
 
-      if (args[1]) {
-        const arg = (args[1] as (q: unknown) => QueryBase)(
+      if (args[0]) {
+        const arg = (args[0] as (q: unknown) => QueryBase)(
           new ctx.queryBuilder.onQueryBuilder(jq, j, table),
         ).q;
 
@@ -172,8 +166,8 @@ const processArgs = (
   joinShape: QueryColumns,
   quotedAs?: string,
 ) => {
-  if (args.length === 2) {
-    const arg = args[1];
+  if (args.length === 1) {
+    const arg = args[0];
     if (typeof arg === 'function') {
       const joinedShapes = {
         ...query.joinedShapes,
@@ -249,13 +243,13 @@ const processArgs = (
         joinShape,
       );
     }
-  } else if (args.length >= 3) {
+  } else if (args.length >= 2) {
     return getConditionsFor3Or4LengthItem(
       ctx,
       query,
       joinAs,
       quotedAs,
-      args as ItemOf3Or4Length,
+      args as ItemOf2Or3Length,
       joinShape,
     );
   }
@@ -268,10 +262,10 @@ const getConditionsFor3Or4LengthItem = (
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   target: string,
   quotedAs: string | undefined,
-  args: ItemOf3Or4Length,
+  args: ItemOf2Or3Length,
   joinShape: QueryColumns,
 ): string => {
-  const [, leftColumn, opOrRightColumn, maybeRightColumn] = args;
+  const [leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
   const op = maybeRightColumn ? opOrRightColumn : '=';
   const rightColumn = maybeRightColumn ? maybeRightColumn : opOrRightColumn;

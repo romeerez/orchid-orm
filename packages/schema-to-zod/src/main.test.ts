@@ -275,6 +275,7 @@ describe('zod schema config', () => {
   const char = t.char();
   const text = t.text(0, Infinity);
   const string = t.string();
+
   assertAllTypes<
     | typeof numeric
     | typeof decimal

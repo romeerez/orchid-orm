@@ -17,7 +17,7 @@ import {
   VirtualColumn,
   WhereArg,
 } from 'pqb';
-import { ColumnSchemaConfig, EmptyObject } from 'orchid-core';
+import { ColumnSchemaConfig, emptyArray, EmptyObject } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
@@ -375,7 +375,8 @@ const makeRelationQuery = (
         query = _queryWhere(_queryAll(toTable), [
           {
             EXISTS: {
-              args: [data.reverseJoin(this, toTable)],
+              first: data.reverseJoin(this, toTable),
+              args: emptyArray,
             },
           },
         ]);

@@ -43,19 +43,19 @@ export abstract class IntegerBaseColumn<
 
 export abstract class NumberAsStringBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsNumber> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsNumber> {
   operators = Operators.number;
   declare data: ColumnData;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 }
 
 // exact numeric of selectable precision
 export class DecimalColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsNumber> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsNumber> {
   declare data: ColumnData & {
     numericPrecision?: number;
     numericScale?: number;
@@ -68,7 +68,7 @@ export class DecimalColumn<
     numericPrecision?: number,
     numericScale?: number,
   ) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
     this.data.numericPrecision = numericPrecision;
     this.data.numericScale = numericScale;
   }

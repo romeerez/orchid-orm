@@ -1,7 +1,7 @@
 import {
   Query,
   SetQueryKind,
-  SetQueryReturnsOne,
+  SetQueryReturnsOneKind,
   SetQueryReturnsVoid,
 } from '../query/query';
 import { _queryUpdate, UpdateData } from './update';
@@ -44,7 +44,7 @@ type UpsertArgWithData<
 
 // unless upsert query has a select, it returns void
 export type UpsertResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? SetQueryReturnsOne<SetQueryKind<T, 'upsert'>>
+  ? SetQueryReturnsOneKind<T, 'upsert'>
   : SetQueryReturnsVoid<SetQueryKind<T, 'upsert'>>;
 
 // Require type of query object to query only one record
@@ -208,7 +208,7 @@ export class QueryUpsertOrCreate {
     }
 
     if (!isObjectEmpty(updateData)) {
-      _queryUpdate(q, updateData as UpdateData<WhereResult<Query>>);
+      _queryUpdate(q, updateData as unknown as UpdateData<WhereResult<Query>>);
     }
 
     return orCreate(q, data.create, updateData, mergeData);

@@ -26,8 +26,8 @@ export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
     cloned.q = getClonedQueryData(this.q);
     return cloned;
   }
-  abstract result: QueryColumns;
   __isQuery!: true;
+  result!: QueryColumns;
   q = {} as QueryData;
   table?: string;
   shape!: QueryColumns;

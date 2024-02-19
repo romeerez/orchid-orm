@@ -233,7 +233,11 @@ const processWhere = (
     } else if (key === 'EXISTS') {
       const joinItems = (
         Array.isArray((value as unknown[])[0]) ? value : [value]
-      ) as { args: SimpleJoinItem['args']; isSubQuery: boolean }[];
+      ) as {
+        first: SimpleJoinItem['first'];
+        args: SimpleJoinItem['args'];
+        isSubQuery: boolean;
+      }[];
 
       for (const args of joinItems) {
         const { target, conditions } = processJoinItem(

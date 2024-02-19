@@ -366,6 +366,16 @@ export type JoinLateralCallback<
   Q extends QueryBase = JoinArgToQuery<T, Arg>,
 > = (q: Q & OnQueryBuilder<T, Q>) => R;
 
+export type JoinQueryMethod = <
+  T extends Query,
+  Arg extends JoinFirstArg<T>,
+  Args extends JoinArgs<T, Arg>,
+>(
+  this: T,
+  arg: Arg,
+  ...args: Args
+) => JoinResultFromArgs<T, Arg, Args, true, true>;
+
 export class Join {
   /**
    * ## Select relation
@@ -740,10 +750,7 @@ export class Join {
     arg: Arg,
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, true, true> {
-    return _join(this.clone(), true, 'JOIN', [
-      arg,
-      ...(args as never),
-    ]) as never;
+    return _join(this.clone(), true, 'JOIN', arg, args) as never;
   }
 
   /**
@@ -779,10 +786,7 @@ export class Join {
     arg: Arg,
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, false, true> {
-    return _join(this.clone(), false, 'LEFT JOIN', [
-      arg,
-      ...(args as never),
-    ]) as never;
+    return _join(this.clone(), false, 'LEFT JOIN', arg, args) as never;
   }
 
   /**
@@ -815,10 +819,7 @@ export class Join {
     arg: Arg,
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, true, false> {
-    return _join(this.clone(), true, 'RIGHT JOIN', [
-      arg,
-      ...(args as never),
-    ]) as never;
+    return _join(this.clone(), true, 'RIGHT JOIN', arg, args) as never;
   }
 
   /**
@@ -851,10 +852,7 @@ export class Join {
     arg: Arg,
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, false, false> {
-    return _join(this.clone(), false, 'FULL JOIN', [
-      arg,
-      ...(args as never),
-    ]) as never;
+    return _join(this.clone(), false, 'FULL JOIN', arg, args) as never;
   }
 
   /**

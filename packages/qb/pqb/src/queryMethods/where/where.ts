@@ -36,8 +36,7 @@ export type WhereArg<T extends QueryBase> =
         | keyof T['meta']['selectable']
         | 'NOT'
         | 'OR'
-        | 'IN'
-        | 'EXISTS']?: K extends 'NOT'
+        | 'IN']?: K extends 'NOT'
         ? MaybeArray<WhereArg<T>>
         : K extends 'OR'
         ? MaybeArray<WhereArg<T>>[]
@@ -259,15 +258,13 @@ export const _queryWhereIn = <T extends QueryBase>(
  *
  * @param args - first element is a query, or relation name, or `with` alias, or a query builder callback that returns a query. Other arguments have conditions to join the query or a `with` table, no other arguments needed in case of a relation
  */
-const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
-  const q = args[0];
-
+const existsArgs = (q: JoinFirstArg<Query>, args: JoinArgs<Query, Query>) => {
   let isSubQuery;
   if (typeof q === 'object') {
     isSubQuery = getIsJoinSubQuery(q.q, q.baseQuery.q);
     if (isSubQuery) {
-      args[0] = q.clone();
-      args[0].shape = getShapeFromSelect(q, true) as ColumnsShapeBase;
+      q = q.clone();
+      q.shape = getShapeFromSelect(q, true) as ColumnsShapeBase;
     }
   } else {
     isSubQuery = false;
@@ -276,6 +273,7 @@ const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
   return [
     {
       EXISTS: {
+        first: q,
         args,
         isSubQuery,
       },
@@ -781,11 +779,7 @@ export class Where {
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(
-      this.clone(),
-      true,
-      ...(args as unknown as [WhereInArg<T>, undefined]),
-    );
+    return _queryWhereIn(this.clone(), true, args[0], args[1]);
   }
 
   /**
@@ -802,11 +796,7 @@ export class Where {
       | [column: Column, values: WhereInValues<T, Column>]
       | [WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(
-      this.clone(),
-      false,
-      ...(args as unknown as [WhereInArg<T>, undefined]),
-    );
+    return _queryWhereIn(this.clone(), false, args[0], args[1]);
   }
 
   /**
@@ -822,12 +812,7 @@ export class Where {
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(
-      this.clone(),
-      true,
-      ...(args as unknown as [WhereInArg<T>, undefined]),
-      true,
-    );
+    return _queryWhereIn(this.clone(), true, args[0], args[1], true);
   }
 
   /**
@@ -843,12 +828,7 @@ export class Where {
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(
-      this.clone(),
-      false,
-      ...(args as unknown as [WhereInArg<T>, undefined]),
-      true,
-    );
+    return _queryWhereIn(this.clone(), false, args[0], args[1], true);
   }
 
   /**
@@ -873,7 +853,7 @@ export class Where {
     arg: Arg,
     ...args: JoinArgs<T, Arg>
   ): WhereResult<T> {
-    return _queryWhere(this.clone(), existsArgs([arg as never, args as never]));
+    return _queryWhere(this.clone(), existsArgs(arg as never, args as never));
   }
 
   /**
@@ -890,7 +870,7 @@ export class Where {
     arg: Arg,
     ...args: JoinArgs<T, Arg>
   ): WhereResult<T> {
-    return _queryOr(this.clone(), existsArgs([arg as never, args as never]));
+    return _queryOr(this.clone(), existsArgs(arg as never, args as never));
   }
 
   /**
@@ -912,7 +892,7 @@ export class Where {
   ): WhereResult<T> {
     return _queryWhereNot(
       this.clone(),
-      existsArgs([arg as never, args as never]),
+      existsArgs(arg as never, args as never),
     );
   }
 
@@ -930,7 +910,7 @@ export class Where {
     arg: Arg,
     ...args: JoinArgs<T, Arg>
   ): WhereResult<T> {
-    return _queryOrNot(this.clone(), existsArgs([arg as never, args as never]));
+    return _queryOrNot(this.clone(), existsArgs(arg as never, args as never));
   }
 }
 
