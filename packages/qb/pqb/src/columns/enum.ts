@@ -1,10 +1,10 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Code, ColumnSchemaConfig } from 'orchid-core';
+import { Code, ColumnTypeSchemaArg } from 'orchid-core';
 import { Operators, OperatorsAny } from './operators';
 
 export class EnumColumn<
-  Schema extends ColumnSchemaConfig,
+  Schema extends ColumnTypeSchemaArg,
   SchemaType extends Schema['type'],
   U extends string = string,
   T extends [U, ...U[]] = [U],

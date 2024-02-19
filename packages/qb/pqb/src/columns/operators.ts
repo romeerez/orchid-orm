@@ -6,17 +6,19 @@ import {
   getValueKey,
   isExpression,
   OperatorToSQL,
-  QueryColumn,
+  PickOutputTypeAndOperators,
 } from 'orchid-core';
 import { extendQuery } from '../query/queryUtils';
-import { BooleanColumn } from './boolean';
-import { DefaultSchemaConfig } from './defaultSchemaConfig';
+import { BooleanQueryColumn } from './boolean';
 
 // Operator function type.
 // Table.count().gt(10) <- here `.gt(10)` is this operator function.
 // It discards previously defined column type operators and applies new ones,
 // for a case when operator gives a different column type.
-export type Operator<Value, Column extends QueryColumn = QueryColumn> = {
+export interface Operator<
+  Value,
+  Column extends PickOutputTypeAndOperators = PickOutputTypeAndOperators,
+> {
   <T extends Pick<Query, 'result'>>(this: T, arg: Value): Omit<
     SetQueryReturnsColumn<T, Column>,
     keyof T['result']['value']['operators']
@@ -26,7 +28,7 @@ export type Operator<Value, Column extends QueryColumn = QueryColumn> = {
   _opType: Value;
   // function to turn the operator expression into SQL
   _op: OperatorToSQL<Value, ToSQLCtx>;
-};
+}
 
 // any column has 'operators' record that implements this type
 export type BaseOperators = Record<string, Operator<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -108,19 +110,10 @@ const quoteValue = (
 
 // common operators that exist for any types
 type Base<Value> = {
-  equals: Operator<
-    Value | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  not: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  in: Operator<
-    Value[] | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  notIn: Operator<
-    Value[] | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  equals: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  not: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  in: Operator<Value[] | Query | Expression, BooleanQueryColumn>;
+  notIn: Operator<Value[] | Query | Expression, BooleanQueryColumn>;
 };
 
 const base = {
@@ -148,15 +141,15 @@ const base = {
 export type OperatorsBoolean = Base<boolean> & {
   and: Operator<
     {
-      result: { value: BooleanColumn<DefaultSchemaConfig> };
+      result: { value: BooleanQueryColumn };
     } & OperatorsBoolean,
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
   or: Operator<
     {
-      result: { value: BooleanColumn<DefaultSchemaConfig> };
+      result: { value: BooleanQueryColumn };
     } & OperatorsBoolean,
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
 };
 
@@ -174,13 +167,13 @@ const boolean = {
 
 // Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
 type Ord<Value> = Base<Value> & {
-  lt: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  lte: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  gt: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  gte: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
+  lt: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  lte: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  gt: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  gte: Operator<Value | Query | Expression, BooleanQueryColumn>;
   between: Operator<
     [Value | Query | Expression, Value | Query | Expression],
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
 };
 
@@ -216,30 +209,15 @@ const numeric = {
 
 // Text type operators
 export type OperatorsText = Base<string> & {
-  contains: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  containsSensitive: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  startsWith: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  contains: Operator<string | Query | Expression, BooleanQueryColumn>;
+  containsSensitive: Operator<string | Query | Expression, BooleanQueryColumn>;
+  startsWith: Operator<string | Query | Expression, BooleanQueryColumn>;
   startsWithSensitive: Operator<
     string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
-  endsWith: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  endsWithSensitive: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  endsWith: Operator<string | Query | Expression, BooleanQueryColumn>;
+  endsWithSensitive: Operator<string | Query | Expression, BooleanQueryColumn>;
 };
 
 const text = {
@@ -274,16 +252,10 @@ const text = {
 export type OperatorsJson = Base<unknown> & {
   jsonPath: Operator<
     [path: string, op: string, value: unknown | Query | Expression],
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
-  jsonSupersetOf: Operator<
-    unknown | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  jsonSubsetOf: Operator<
-    unknown | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  jsonSupersetOf: Operator<unknown | Query | Expression, BooleanQueryColumn>;
+  jsonSubsetOf: Operator<unknown | Query | Expression, BooleanQueryColumn>;
 };
 
 const json = {

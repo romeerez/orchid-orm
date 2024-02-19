@@ -2,7 +2,7 @@ import { Code } from './code';
 import { RawSQLBase } from '../raw';
 import { QueryBaseCommon } from '../query';
 import { BaseOperators, OperatorBase } from './operators';
-import { ColumnSchemaConfig, ColumnTypeSchemaArg } from './columnSchema';
+import { ColumnTypeSchemaArg } from './columnSchema';
 import { RecordString } from '../utils';
 
 // get columns object type where nullable columns or columns with a default are optional
@@ -366,6 +366,19 @@ export type AsTypeArg<Schema> =
   | AsTypeArgWithType<Schema>
   | AsTypeArgWithoutType<Schema>;
 
+export interface PickType {
+  type: unknown;
+}
+
+export interface PickOutputType {
+  outputType: unknown;
+}
+
+export interface PickOutputTypeAndOperators {
+  outputType: unknown;
+  operators: unknown;
+}
+
 // Workaround for the "type instantiation is too deep" error.
 export interface QueryColumn<T = unknown, Op = BaseOperators> {
   dataType: string;
@@ -444,7 +457,7 @@ export abstract class ColumnTypeBase<
   errors: Schema['errors'];
 
   constructor(
-    schema: ColumnSchemaConfig,
+    schema: ColumnTypeSchemaArg,
     // type for validation lib for inserting and updating records
     // public inputSchema: InputSchema = undefined as InputSchema,
     public inputSchema: InputSchema,

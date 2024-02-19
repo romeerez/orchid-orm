@@ -7,6 +7,7 @@ import {
   QueryMetaBase,
   QueryColumns,
   RecordKeyTrue,
+  QueryThen,
 } from 'orchid-core';
 import { RelationsBase } from '../relations';
 import { getClonedQueryData } from '../common/utils';
@@ -37,4 +38,8 @@ export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
   internal!: QueryInternal;
   meta!: QueryMetaBase<Scopes>;
   returnType!: QueryReturnType;
+}
+
+export interface QueryBaseThen<T> extends QueryBase {
+  then: QueryThen<T>;
 }

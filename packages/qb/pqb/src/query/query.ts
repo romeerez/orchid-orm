@@ -13,6 +13,9 @@ import {
   ColumnShapeOutput,
   EmptyObject,
   Expression,
+  PickOutputType,
+  PickOutputTypeAndOperators,
+  PickType,
   QueryCatch,
   QueryColumn,
   QueryColumns,
@@ -64,7 +67,7 @@ export type SelectableOfType<T extends Pick<QueryBase, 'meta'>, Type> = {
 
 export type SelectableOrExpressionOfType<
   T extends Pick<Query, 'meta'>,
-  C extends QueryColumn,
+  C extends PickType,
 > = SelectableOfType<T, C['type']> | Expression<QueryColumn<C['type'] | null>>;
 
 export interface QueryWithTable extends Query {
@@ -251,7 +254,7 @@ export type SetQueryReturnsValue<
   T extends Pick<Query, 'meta'>,
   Arg extends GetStringArg<T>,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-  Column extends QueryColumn = Arg extends keyof T['meta']['selectable']
+  Column extends PickOutputTypeAndOperators = Arg extends keyof T['meta']['selectable']
     ? T['meta']['selectable'][Arg]['column']
     : Arg extends Query
     ? Arg['result']['value']
@@ -260,12 +263,12 @@ export type SetQueryReturnsValue<
 
 export type SetQueryReturnsColumnOptional<
   T,
-  Column extends QueryColumn,
+  Column extends PickOutputType,
 > = SetQueryReturnsColumn<T, Column, 'value'>;
 
 export type SetQueryReturnsColumn<
   T,
-  Column extends QueryColumn,
+  Column extends PickOutputType,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
   Data = ReturnType extends 'value'
     ? Column['outputType'] | undefined

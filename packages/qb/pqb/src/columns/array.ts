@@ -6,6 +6,7 @@ import {
   ArrayMethodsData,
   arrayDataToCode,
   ColumnSchemaConfig,
+  ColumnTypeSchemaArg,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { Operators, OperatorsArray } from './operators';
@@ -32,7 +33,7 @@ export interface ArrayData<Item extends ArrayColumnValue>
 }
 
 export class ArrayColumn<
-  Schema extends ColumnSchemaConfig,
+  Schema extends ColumnTypeSchemaArg,
   Item extends ArrayColumnValue,
   InputType,
   OutputType,

@@ -25,7 +25,7 @@ import {
   RecordUnknown,
   toArray,
 } from 'orchid-core';
-import { Operator } from '../columns/operators';
+import { BaseOperators, Operator } from '../columns/operators';
 
 export const pushWhereStatementSql = (
   ctx: ToSQLCtx,
@@ -297,7 +297,7 @@ const processWhere = (
           ands.push(`${quotedColumn} = (${(value as Query).toSQL(ctx).text})`);
         } else {
           for (const op in value) {
-            const operator = column.operators[op];
+            const operator = (column.operators as BaseOperators)[op];
             if (!operator) {
               // TODO: custom error classes
               throw new Error(`Unknown operator ${op} provided to condition`);

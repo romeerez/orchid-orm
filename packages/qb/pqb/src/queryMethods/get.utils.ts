@@ -19,7 +19,11 @@ import {
 } from './select';
 import { getQueryAs } from '../common/utils';
 import { SelectItemExpression } from '../common/selectItemExpression';
-import { Operators, setQueryOperators } from '../columns/operators';
+import {
+  BaseOperators,
+  Operators,
+  setQueryOperators,
+} from '../columns/operators';
 
 export type QueryGetSelf = Pick<
   Query,
@@ -100,7 +104,7 @@ const _get = <
 
   return setQueryOperators(
     q,
-    type?.operators || Operators.any,
+    (type?.operators || Operators.any) as BaseOperators,
   ) as unknown as GetResult<T, Arg> & GetResultOptional<T, Arg>;
 };
 
