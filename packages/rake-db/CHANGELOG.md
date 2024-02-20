@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.14.0
+
+### Minor Changes
+
+- 506d8c51: Create "schemaMigrations" table if not exists when executing migrations (#238)
+
 ## 2.13.0
 
 ### Minor Changes
