@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.12.0
+
+### Minor Changes
+
+- 851e840e: Significantly optimize types
+
 ## 0.11.2
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.13.0
+
+### Minor Changes
+
+- 851e840e: Significantly optimize types
+
+### Patch Changes
+
+- Updated dependencies [851e840e]
+  - pqb@0.24.0
+  - orchid-core@0.12.0
+
 ## 2.12.7
 
 ### Patch Changes

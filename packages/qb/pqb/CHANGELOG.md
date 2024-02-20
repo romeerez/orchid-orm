@@ -1,5 +1,16 @@
 # pqb
 
+## 0.24.0
+
+### Minor Changes
+
+- 851e840e: Significantly optimize types
+
+### Patch Changes
+
+- Updated dependencies [851e840e]
+  - orchid-core@0.12.0
+
 ## 0.23.5
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "myqb",
-  "version": "0.2.52",
+  "version": "0.3.0",
   "private": true,
   "description": "MySQL query builder",
   "repository": {

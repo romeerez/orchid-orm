@@ -1,5 +1,18 @@
 # orchid-orm-test-factory
 
+## 0.5.0
+
+### Minor Changes
+
+- 851e840e: Significantly optimize types
+
+### Patch Changes
+
+- Updated dependencies [851e840e]
+  - orchid-orm-schema-to-zod@0.6.0
+  - pqb@0.24.0
+  - orchid-core@0.12.0
+
 ## 0.4.7
 
 ### Patch Changes

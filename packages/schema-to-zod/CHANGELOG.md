@@ -1,5 +1,17 @@
 # orchid-orm-schema-to-zod
 
+## 0.6.0
+
+### Minor Changes
+
+- 851e840e: Significantly optimize types
+
+### Patch Changes
+
+- Updated dependencies [851e840e]
+  - pqb@0.24.0
+  - orchid-core@0.12.0
+
 ## 0.5.7
 
 ### Patch Changes
