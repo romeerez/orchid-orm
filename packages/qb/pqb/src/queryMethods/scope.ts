@@ -1,9 +1,16 @@
 import { QueryBase } from '../query/queryBase';
-import { QueryColumns, QueryMetaBase } from 'orchid-core';
+import { PickQueryMeta, QueryColumns, QueryMetaBase } from 'orchid-core';
 import { QueryScopes, SelectQueryData, WhereItem } from '../sql';
 import { pushQueryArray, setQueryObjectValue } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
-import { SelectableFromShape } from '../query/query';
+import { Query, SelectableFromShape } from '../query/query';
+
+interface ScopeArgumentQueryMeta<
+  Table extends string | undefined,
+  Shape extends QueryColumns,
+> extends QueryMetaBase {
+  selectable: SelectableFromShape<Shape, Table>;
+}
 
 export interface ScopeArgumentQuery<
   Table extends string | undefined,
@@ -12,9 +19,7 @@ export interface ScopeArgumentQuery<
     QueryBase {
   table: Table;
   shape: Shape;
-  meta: Omit<QueryMetaBase, 'selectable'> & {
-    selectable: SelectableFromShape<Shape, Table>;
-  };
+  meta: ScopeArgumentQueryMeta<Table, Shape>;
 }
 
 /**
@@ -63,14 +68,14 @@ export class ScopeMethods {
    *
    * @param scope - name of the scope to apply
    */
-  scope<T extends QueryBase>(
+  scope<T extends PickQueryMeta>(
     this: T,
     scope: keyof T['meta']['scopes'],
   ): WhereResult<T> {
-    const q = this.clone();
+    const q = (this as unknown as Query).clone();
 
     if (!q.q.scopes?.[scope as string]) {
-      const s = (this.internal.scopes as QueryScopes)[scope as string];
+      const s = (q.internal.scopes as QueryScopes)[scope as string];
 
       if (s.and) pushQueryArray(q, 'and', s.and);
       if (s.or) pushQueryArray(q, 'or', s.or);
@@ -78,7 +83,7 @@ export class ScopeMethods {
       setQueryObjectValue(q, 'scopes', scope as string, s);
     }
 
-    return q as WhereResult<T>;
+    return q as never;
   }
 
   /**
@@ -93,8 +98,11 @@ export class ScopeMethods {
    *
    * @param scope - name of the scope to remove from the query
    */
-  unscope<T extends QueryBase>(this: T, scope: keyof T['meta']['scopes']): T {
-    const q = this.clone();
+  unscope<T extends PickQueryMeta>(
+    this: T,
+    scope: keyof T['meta']['scopes'],
+  ): T {
+    const q = (this as unknown as Query).clone();
     const data = q.q as SelectQueryData;
 
     const s = q.q.scopes?.[scope as string];
@@ -113,6 +121,6 @@ export class ScopeMethods {
       delete (q.q.scopes as QueryScopes)[scope as string];
     }
 
-    return q as WhereResult<T>;
+    return q as never;
   }
 }

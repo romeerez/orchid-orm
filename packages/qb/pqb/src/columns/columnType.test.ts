@@ -7,7 +7,8 @@ import {
   assertType,
   expectSql,
   testAdapter,
-  testColumnTypes as t,
+  testColumnTypes as td,
+  testZodColumnTypes as tz,
   testDb,
   testSchemaConfig,
   useTestDatabase,
@@ -16,6 +17,7 @@ import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
 import { z, ZodLiteral, ZodNumber } from 'zod';
 import { instantiateColumn } from './columnType.utils';
+import { zodSchemaConfig } from 'schema-to-zod';
 
 describe('column type', () => {
   useTestDatabase();
@@ -50,7 +52,7 @@ describe('column type', () => {
     it('should have toCode', () => {
       class Table {
         readonly table = 'table';
-        columns = { column: t.integer() };
+        columns = { column: td.integer() };
       }
 
       expect(column.foreignKey(() => Table, 'column').toCode('t')).toBe(
@@ -166,7 +168,7 @@ describe('column type', () => {
     it('should not override the type to search records with', () => {
       const table = testDb('table', (t) => ({
         id: t.serial().primaryKey(),
-        column: t.text().parse(z.number(), parseInt),
+        column: t.text().parse(parseInt),
       }));
 
       const q = table.findBy({ column: 'text' });
@@ -201,23 +203,36 @@ describe('column type', () => {
   });
 
   describe('as', () => {
-    const numberTimestamp = t
-      .timestampNoTZ()
-      .encode(z.number(), (input: number) => new Date(input))
-      .parse(z.number(), Date.parse)
-      .as(t.integer());
-
-    const dateTimestamp = t
-      .timestampNoTZ()
-      .parse(z.date(), (input) => new Date(input));
-
     const db = createDb({
       adapter: testAdapter,
       columnTypes: (t) => ({
         ...t,
         text: (min = 0, max = Infinity) => t.text(min, max),
-        numberTimestamp: () => numberTimestamp,
-        dateTimestamp: () => dateTimestamp,
+        numberTimestamp: () =>
+          td
+            .timestampNoTZ()
+            .encode((input: number) => new Date(input))
+            .parse(Date.parse)
+            .as(td.integer()),
+        dateTimestamp: () =>
+          td.timestampNoTZ().parse((input) => new Date(input)),
+      }),
+    });
+
+    const dbZod = createDb({
+      adapter: testAdapter,
+      schemaConfig: zodSchemaConfig,
+      columnTypes: (t) => ({
+        ...t,
+        text: (min = 0, max = Infinity) => t.text(min, max),
+        numberTimestamp: () =>
+          tz
+            .timestampNoTZ()
+            .encode(z.number(), (input: number) => new Date(input))
+            .parse(z.number(), Date.parse)
+            .as(tz.integer()),
+        dateTimestamp: () =>
+          tz.timestampNoTZ().parse(z.date(), (input) => new Date(input)),
       }),
     });
 
@@ -229,131 +244,211 @@ describe('column type', () => {
       updatedAt: t.dateTimestamp(),
     }));
 
-    it('should have toCode', () => {
-      expect(column.as(t.integer()).toCode('t')).toEqual(
-        't.column().as(t.integer())',
-      );
-    });
+    const UserWithCustomTimestampsZod = dbZod('user', (t) => ({
+      id: t.serial().primaryKey(),
+      name: t.text(),
+      password: t.text(),
+      createdAt: t.numberTimestamp(),
+      updatedAt: t.dateTimestamp(),
+    }));
 
-    it('should return same column with `as` property in data', () => {
-      const timestamp = t
-        .timestampNoTZ()
-        .encode(z.number(), (input: number) => new Date(input))
-        .parse(z.number(), Date.parse);
+    describe.each`
+      schema
+      ${'default'}
+      ${'zod'}
+    `('$schema schema', ({ schema }) => {
+      const table =
+        schema === 'default'
+          ? UserWithCustomTimestamps
+          : UserWithCustomTimestampsZod;
 
-      const integer = t.integer();
+      it('should have toCode', () => {
+        const t = schema === 'default' ? td : tz;
 
-      const column = timestamp.as(integer);
-
-      expect(column.dataType).toBe(timestamp.dataType);
-      expect(column.data.as).toBe(integer);
-    });
-
-    it('should parse correctly', async () => {
-      const id = await User.get('id').create(userData);
-
-      const user = await UserWithCustomTimestamps.find(id);
-
-      expect(typeof user.createdAt).toBe('number');
-      expect(user.updatedAt).toBeInstanceOf(Date);
-    });
-
-    it('should encode columns when creating', () => {
-      const createdAt = Date.now();
-      const updatedAt = new Date();
-
-      const query = UserWithCustomTimestamps.create({
-        ...userData,
-        createdAt,
-        updatedAt,
+        expect(column.as(t.integer()).toCode('t')).toEqual(
+          't.column().as(t.integer())',
+        );
       });
 
-      expectSql(
-        query.toSQL(),
-        `
+      it('should return same column with `as` property in data', () => {
+        let timestamp, integer;
+
+        if (schema === 'default') {
+          timestamp = td
+            .timestampNoTZ()
+            .encode((input: number) => new Date(input))
+            .parse(Date.parse);
+
+          integer = td.integer();
+        } else {
+          timestamp = tz
+            .timestampNoTZ()
+            .encode(z.number(), (input: number) => new Date(input))
+            .parse(z.number(), Date.parse);
+
+          integer = tz.integer();
+        }
+
+        const column = timestamp.as(integer);
+
+        expect(column.dataType).toBe(timestamp.dataType);
+        expect(column.data.as).toBe(integer);
+      });
+
+      it('should parse correctly', async () => {
+        const id = await User.get('id').create(userData);
+
+        const user = await table.find(id);
+
+        expect(typeof user.createdAt).toBe('number');
+        expect(user.updatedAt).toBeInstanceOf(Date);
+      });
+
+      it('should encode columns when creating', () => {
+        const createdAt = Date.now();
+        const updatedAt = new Date();
+
+        const query = table.create({
+          ...userData,
+          createdAt,
+          updatedAt,
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
           INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
           VALUES ($1, $2, $3, $4)
           RETURNING *
         `,
-        [userData.name, userData.password, new Date(createdAt), updatedAt],
-      );
-    });
-
-    it('should encode columns when update', async () => {
-      const id = await User.get('id').create(userData);
-      const createdAt = Date.now();
-      const updatedAt = new Date();
-
-      const query = UserWithCustomTimestamps.find(id).update({
-        createdAt,
-        updatedAt,
+          [userData.name, userData.password, new Date(createdAt), updatedAt],
+        );
       });
 
-      expectSql(
-        query.toSQL(),
-        `
+      it('should encode columns when update', async () => {
+        const id = await User.get('id').create(userData);
+        const createdAt = Date.now();
+        const updatedAt = new Date();
+
+        const query = table.find(id).update({
+          createdAt,
+          updatedAt,
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
           UPDATE "user"
           SET "createdAt" = $1, "updatedAt" = $2
           WHERE "user"."id" = $3
         `,
-        [new Date(createdAt), updatedAt, id],
-      );
+          [new Date(createdAt), updatedAt, id],
+        );
+      });
     });
   });
 
-  describe('.asType', () => {
+  describe.each`
+    schema
+    ${'default'}
+    ${'zod'}
+  `('asType for $schema schema', ({ schema }) => {
     it('should use custom type', () => {
-      const withType = t.string().asType({
-        type: z.literal('value'),
-      });
+      if (schema === 'default') {
+        const type = td.string().asType((t) => t<'value'>());
 
-      assertType<typeof withType.type, 'value'>();
-      assertType<typeof withType.inputType, 'value'>();
-      assertType<typeof withType.inputSchema, ZodLiteral<'value'>>();
-      assertType<typeof withType.outputType, 'value'>();
-      assertType<typeof withType.outputSchema, ZodLiteral<'value'>>();
-      assertType<typeof withType.queryType, 'value'>();
-      assertType<typeof withType.querySchema, ZodLiteral<'value'>>();
+        assertType<typeof type.type, 'value'>();
+        assertType<typeof type.inputType, 'value'>();
+        assertType<typeof type.outputType, 'value'>();
+        assertType<typeof type.queryType, 'value'>();
+      } else {
+        const type = tz.string().asType({
+          type: z.literal('value'),
+        });
+
+        assertType<typeof type.type, 'value'>();
+        assertType<typeof type.inputType, 'value'>();
+        assertType<typeof type.inputSchema, ZodLiteral<'value'>>();
+        assertType<typeof type.outputType, 'value'>();
+        assertType<typeof type.outputSchema, ZodLiteral<'value'>>();
+        assertType<typeof type.queryType, 'value'>();
+        assertType<typeof type.querySchema, ZodLiteral<'value'>>();
+      }
     });
 
     it('should use custom type along with parse', () => {
-      const withType = t
-        .string()
-        .asType({ type: z.literal('value') })
-        .parse(z.number(), () => 123);
+      if (schema === 'default') {
+        const type = td
+          .string()
+          .asType((t) => t<'value'>())
+          .parse(() => 123);
 
-      assertType<typeof withType.type, 'value'>();
-      assertType<typeof withType.inputType, 'value'>();
-      assertType<typeof withType.outputType, number>();
-      assertType<typeof withType.outputSchema, ZodNumber>();
-      assertType<typeof withType.queryType, 'value'>();
+        assertType<typeof type.type, 'value'>();
+        assertType<typeof type.inputType, 'value'>();
+        assertType<typeof type.outputType, number>();
+        assertType<typeof type.queryType, 'value'>();
+      } else {
+        const type = tz
+          .string()
+          .asType({ type: z.literal('value') })
+          .parse(z.number(), () => 123);
+
+        assertType<typeof type.type, 'value'>();
+        assertType<typeof type.inputType, 'value'>();
+        assertType<typeof type.outputType, number>();
+        assertType<typeof type.outputSchema, ZodNumber>();
+        assertType<typeof type.queryType, 'value'>();
+      }
     });
 
     it('should use custom type along with encode', () => {
-      const withType = t
-        .string()
-        .asType({ type: z.literal('value') })
-        .encode(z.number(), (value: number) => '' + value);
+      if (schema === 'default') {
+        const type = td
+          .string()
+          .asType((t) => t<'value'>())
+          .encode((value: number) => '' + value);
 
-      assertType<typeof withType.type, 'value'>();
-      assertType<typeof withType.inputType, number>();
-      assertType<typeof withType.inputSchema, ZodNumber>();
-      assertType<typeof withType.outputType, 'value'>();
-      assertType<typeof withType.queryType, 'value'>();
+        assertType<typeof type.type, 'value'>();
+        assertType<typeof type.inputType, number>();
+        assertType<typeof type.outputType, 'value'>();
+        assertType<typeof type.queryType, 'value'>();
+      } else {
+        const type = tz
+          .string()
+          .asType({ type: z.literal('value') })
+          .encode(z.number(), (value: number) => '' + value);
+
+        assertType<typeof type.type, 'value'>();
+        assertType<typeof type.inputType, number>();
+        assertType<typeof type.inputSchema, ZodNumber>();
+        assertType<typeof type.outputType, 'value'>();
+        assertType<typeof type.queryType, 'value'>();
+      }
     });
 
     it('should use individual custom types', () => {
-      const withType = t.string().asType({
-        type: z.literal('type'),
-        input: z.literal('input'),
-        output: z.literal('output'),
-        query: z.literal('query'),
-      });
+      if (schema === 'default') {
+        const type = td
+          .string()
+          .asType((t) => t<'type', 'input', 'output', 'query'>());
 
-      assertType<typeof withType.type, 'type'>();
-      assertType<typeof withType.inputType, 'input'>();
-      assertType<typeof withType.outputType, 'output'>();
-      assertType<typeof withType.queryType, 'query'>();
+        assertType<typeof type.type, 'type'>();
+        assertType<typeof type.inputType, 'input'>();
+        assertType<typeof type.outputType, 'output'>();
+        assertType<typeof type.queryType, 'query'>();
+      } else {
+        const type = tz.string().asType({
+          type: z.literal('type'),
+          input: z.literal('input'),
+          output: z.literal('output'),
+          query: z.literal('query'),
+        });
+
+        assertType<typeof type.type, 'type'>();
+        assertType<typeof type.inputType, 'input'>();
+        assertType<typeof type.outputType, 'output'>();
+        assertType<typeof type.queryType, 'query'>();
+      }
     });
   });
 
@@ -372,7 +467,7 @@ describe('column type', () => {
 
     describe('value is null', () => {
       it('should not be added by toCode', () => {
-        const uuid = t.uuid().primaryKey();
+        const uuid = td.uuid().primaryKey();
         expect(uuid.default(null).toCode('t')).toBe(
           `t.uuid().primaryKey().default(null)`,
         );

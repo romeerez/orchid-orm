@@ -17,9 +17,19 @@ import {
 import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
-import { JoinedShapes, QueryData } from './data';
-import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
-import { Operator } from '../columns/operators';
+import {
+  JoinedShapes,
+  PickQueryDataShapeAndJoinedShapes,
+  QueryData,
+} from './data';
+import {
+  Expression,
+  isExpression,
+  MaybeArray,
+  RecordUnknown,
+  toArray,
+} from 'orchid-core';
+import { BaseOperators, Operator } from '../columns/operators';
 
 export const pushWhereStatementSql = (
   ctx: ToSQLCtx,
@@ -136,7 +146,7 @@ const processWhere = (
   }
 
   for (const key in data) {
-    const value = (data as Record<string, unknown>)[key];
+    const value = (data as RecordUnknown)[key];
     if (value === undefined) continue;
 
     if (key === 'AND') {
@@ -227,7 +237,11 @@ const processWhere = (
     } else if (key === 'EXISTS') {
       const joinItems = (
         Array.isArray((value as unknown[])[0]) ? value : [value]
-      ) as { args: SimpleJoinItem['args']; isSubQuery: boolean }[];
+      ) as {
+        first: SimpleJoinItem['first'];
+        args: SimpleJoinItem['args'];
+        isSubQuery: boolean;
+      }[];
 
       for (const args of joinItems) {
         const { target, conditions } = processJoinItem(
@@ -287,7 +301,7 @@ const processWhere = (
           ands.push(`${quotedColumn} = (${(value as Query).toSQL(ctx).text})`);
         } else {
           for (const op in value) {
-            const operator = column.operators[op];
+            const operator = (column.operators as BaseOperators)[op];
             if (!operator) {
               // TODO: custom error classes
               throw new Error(`Unknown operator ${op} provided to condition`);
@@ -322,7 +336,7 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 
 const pushIn = (
   ctx: ToSQLCtx,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   ands: string[],
   quotedAs: string | undefined,
   arg: {

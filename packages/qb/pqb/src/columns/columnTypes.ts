@@ -1,48 +1,25 @@
-import {
-  BigIntColumn,
-  BigSerialColumn,
-  DecimalColumn,
-  DoublePrecisionColumn,
-  IdentityColumn,
-  IntegerColumn,
-  RealColumn,
-  SerialColumn,
-  SmallIntColumn,
-  SmallSerialColumn,
-} from './number';
+import { IdentityColumn, IntegerColumn } from './number';
 import {
   BitColumn,
   BitVaryingColumn,
   BoxColumn,
   ByteaColumn,
-  CharColumn,
   CidrColumn,
   CircleColumn,
-  CitextColumn,
   InetColumn,
   LineColumn,
   LsegColumn,
   MacAddr8Column,
   MacAddrColumn,
-  MoneyColumn,
   PathColumn,
   PointColumn,
   PolygonColumn,
-  StringColumn,
-  TextColumn,
   TsQueryColumn,
   TsVectorColumn,
   UUIDColumn,
-  VarCharColumn,
   XMLColumn,
 } from './string';
-import {
-  DateColumn,
-  IntervalColumn,
-  TimeColumn,
-  TimestampColumn,
-  TimestampTZColumn,
-} from './dateTime';
+import { IntervalColumn, TimeColumn } from './dateTime';
 import { BooleanColumn } from './boolean';
 import { JSONTextColumn } from './json';
 import {
@@ -56,6 +33,7 @@ import {
   QueryColumn,
   QueryColumnsInit,
   RawSQLBase,
+  RecordUnknown,
   setCurrentColumnName,
   setDefaultLanguage,
   setDefaultNowFn,
@@ -74,54 +52,57 @@ import { makeRegexToFindInSql } from '../common/utils';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL } from '../sql/rawSql';
 
-export type TableData = {
+export interface TableData {
   primaryKey?: TableData.PrimaryKey;
   indexes?: TableData.Index[];
   constraints?: TableData.Constraint[];
-};
+}
 
 export namespace TableData {
-  export type PrimaryKey = {
+  export interface PrimaryKey {
     columns: string[];
     options?: { name?: string };
-  };
+  }
 
-  export type Index = {
+  export interface Index {
     columns: IndexColumnOptions[];
     options: IndexOptions;
-  };
+  }
 
-  export type Constraint = {
+  export interface Constraint {
     name?: string;
     check?: Check;
     identity?: Identity;
     references?: References;
     dropMode?: DropMode;
-  };
+  }
 
   export type Check = RawSQLBase;
 
-  export type References = {
+  export interface References {
     columns: string[];
     fnOrTable: (() => ForeignKeyTable) | string;
     foreignColumns: string[];
     options?: ForeignKeyOptions;
-  };
+  }
 
-  export type Identity = {
+  export interface Identity extends SequenceBaseOptions {
     always?: boolean;
-  } & Omit<SequenceOptions, 'dataType' | 'ownedBy'>;
+  }
 
-  export type SequenceOptions = {
-    dataType?: 'smallint' | 'integer' | 'bigint';
+  interface SequenceBaseOptions {
     incrementBy?: number;
     startWith?: number;
     min?: number;
     max?: number;
     cache?: number;
     cycle?: boolean;
+  }
+
+  export interface SequenceOptions extends SequenceBaseOptions {
+    dataType?: 'smallint' | 'integer' | 'bigint';
     ownedBy?: string;
-  };
+  }
 }
 
 export const newTableData = (): TableData => ({});
@@ -148,72 +129,51 @@ export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
   return fn(types);
 };
 
-export type DefaultColumnTypes<
-  SchemaConfig extends ColumnSchemaConfig,
-  NumberMethods = SchemaConfig['numberMethods'],
-  StringMethods = SchemaConfig['stringMethods'],
-  DateMethods = SchemaConfig['dateMethods'],
-> = TimestampHelpers & {
+export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
+  extends TimestampHelpers {
   schema: SchemaConfig;
   enum: SchemaConfig['enum'];
   array: SchemaConfig['array'];
 
   name<T>(this: T, name: string): T;
 
-  sql<T>(
-    this: T,
-    sql: TemplateStringsArray,
-    ...values: unknown[]
-  ): RawSQLBase<QueryColumn, T>;
-  sql<T>(this: T, sql: string): RawSQLBase<QueryColumn, T>;
-  sql<T>(
-    this: T,
-    values: Record<string, unknown>,
-    sql: string,
-  ): RawSQLBase<QueryColumn, T>;
-  sql<T>(
-    this: T,
-    values: Record<string, unknown>,
-  ): (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>;
-  sql(
-    ...args:
+  sql<
+    T,
+    Args extends
       | [sql: TemplateStringsArray, ...values: unknown[]]
       | [sql: string]
-      | [values: Record<string, unknown>, sql?: string]
-  ): ((...sql: TemplateLiteralArgs) => RawSQLBase) | RawSQLBase;
+      | [values: RecordUnknown, sql?: string],
+  >(
+    this: T,
+    ...args: Args
+  ): Args extends [RecordUnknown]
+    ? (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>
+    : RawSQLBase<QueryColumn, T>;
 
-  smallint(): SmallIntColumn<SchemaConfig> & NumberMethods;
-  integer(): IntegerColumn<SchemaConfig> & NumberMethods;
-  bigint(): BigIntColumn<SchemaConfig> & StringMethods;
-  numeric(
-    precision?: number,
-    scale?: number,
-  ): DecimalColumn<SchemaConfig> & StringMethods;
-  decimal(
-    precision?: number,
-    scale?: number,
-  ): DecimalColumn<SchemaConfig> & StringMethods;
-  real(): RealColumn<SchemaConfig> & NumberMethods;
-  doublePrecision(): DoublePrecisionColumn<SchemaConfig> & StringMethods;
+  smallint: SchemaConfig['smallint'];
+  integer: SchemaConfig['integer'];
+  bigint: SchemaConfig['bigint'];
+  numeric: SchemaConfig['decimal'];
+  decimal: SchemaConfig['decimal'];
+  real: SchemaConfig['real'];
+  doublePrecision: SchemaConfig['doublePrecision'];
   identity(
     options?: TableData.Identity,
-  ): IdentityColumn<IntegerColumn<SchemaConfig> & NumberMethods>;
-  smallSerial(): SmallSerialColumn<SchemaConfig> & NumberMethods;
-  serial(): SerialColumn<SchemaConfig> & NumberMethods;
-  bigSerial(): BigSerialColumn<SchemaConfig> & StringMethods;
-  money(): MoneyColumn<SchemaConfig> & StringMethods;
-  varchar(limit?: number): VarCharColumn<SchemaConfig> & StringMethods;
-  char(limit?: number): CharColumn<SchemaConfig> & StringMethods;
-  text(min: number, max: number): TextColumn<SchemaConfig> & StringMethods;
+  ): IdentityColumn<ReturnType<SchemaConfig['integer']>>;
+  smallSerial: SchemaConfig['smallSerial'];
+  serial: SchemaConfig['serial'];
+  bigSerial: SchemaConfig['bigSerial'];
+  money: SchemaConfig['money'];
+  varchar: SchemaConfig['varchar'];
+  char: SchemaConfig['char'];
+  text: SchemaConfig['text'];
   // `varchar` column with optional limit defaulting to 255.
-  string(limit?: number): StringColumn<SchemaConfig> & StringMethods;
-  citext(min: number, max: number): CitextColumn<SchemaConfig> & StringMethods;
+  string: SchemaConfig['string'];
+  citext: SchemaConfig['citext'];
   bytea(): ByteaColumn<SchemaConfig>;
-  date(): DateColumn<SchemaConfig> & DateMethods;
-  timestampNoTZ(
-    precision?: number,
-  ): TimestampColumn<SchemaConfig> & DateMethods;
-  timestamp(precision?: number): TimestampTZColumn<SchemaConfig> & DateMethods;
+  date: SchemaConfig['date'];
+  timestampNoTZ: SchemaConfig['timestampNoTZ'];
+  timestamp: SchemaConfig['timestamp'];
   time(precision?: number): TimeColumn<SchemaConfig>;
   interval(fields?: string, precision?: number): IntervalColumn<SchemaConfig>;
   boolean(): BooleanColumn<SchemaConfig>;
@@ -300,38 +260,11 @@ export type DefaultColumnTypes<
   ): EmptyObject;
 
   check(check: RawSQLBase): EmptyObject;
-};
+}
 
 export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
   schema: SchemaConfig,
 ): DefaultColumnTypes<SchemaConfig> => {
-  const columnsWithMethods: Record<
-    string,
-    { new (...args: unknown[]): unknown }
-  > = {};
-
-  function columnWithMethods<
-    Methods extends Record<string, unknown>,
-    Args extends unknown[],
-    Klass extends { new (...args: Args): EmptyObject },
-  >(klass: Klass, methods: Methods, ...args: Args): never {
-    if (columnsWithMethods[klass.name]) {
-      return new columnsWithMethods[klass.name](...args) as never;
-    }
-
-    // @ts-expect-error don't know how to fix that error
-    const withMethods = class extends klass {};
-    Object.assign(withMethods.prototype, methods);
-
-    return new (columnsWithMethods[klass.name] = withMethods as unknown as {
-      new (...args: unknown[]): unknown;
-    })(...args) as never;
-  }
-
-  const numberMethods = schema.numberMethods;
-  const stringMethods = schema.stringMethods;
-  const dateMethods = schema.dateMethods;
-
   return {
     schema,
     enum: schema.enum,
@@ -358,97 +291,36 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       }
 
       return (...args: TemplateLiteralArgs) =>
-        new RawSQL(args, arg as Record<string, unknown>);
+        new RawSQL(args, arg as RecordUnknown);
     },
 
-    smallint() {
-      return columnWithMethods(SmallIntColumn, numberMethods, schema);
-    },
-    integer() {
-      return columnWithMethods(IntegerColumn, numberMethods, schema);
-    },
-    bigint() {
-      return columnWithMethods(BigIntColumn, stringMethods, schema);
-    },
-    numeric(precision, scale) {
-      return columnWithMethods(
-        DecimalColumn,
-        stringMethods,
-        schema,
-        precision,
-        scale,
-      );
-    },
-    decimal(precision, scale) {
-      return columnWithMethods(
-        DecimalColumn,
-        stringMethods,
-        schema,
-        precision,
-        scale,
-      );
-    },
-    real() {
-      return columnWithMethods(RealColumn, numberMethods, schema);
-    },
-    doublePrecision() {
-      return columnWithMethods(DoublePrecisionColumn, stringMethods, schema);
-    },
+    smallint: schema.smallint,
+    integer: schema.integer,
+    bigint: schema.bigint,
+    numeric: schema.decimal,
+    decimal: schema.decimal,
+    real: schema.real,
+    doublePrecision: schema.doublePrecision,
     identity(options) {
-      return (
-        columnWithMethods(
-          IntegerColumn,
-          numberMethods,
-          schema,
-        ) as IntegerColumn<SchemaConfig>
-      ).identity(options) as unknown as IdentityColumn<
-        IntegerColumn<SchemaConfig> & SchemaConfig['numberMethods']
-      >;
+      return (schema.integer() as IntegerColumn<SchemaConfig>).identity(
+        options,
+      ) as never;
     },
-    smallSerial() {
-      return columnWithMethods(SmallSerialColumn, numberMethods, schema);
-    },
-    serial() {
-      return columnWithMethods(SerialColumn, numberMethods, schema);
-    },
-    bigSerial() {
-      return columnWithMethods(BigSerialColumn, stringMethods, schema);
-    },
-    money() {
-      return columnWithMethods(MoneyColumn, stringMethods, schema);
-    },
-    varchar(limit) {
-      return columnWithMethods(VarCharColumn, stringMethods, schema, limit);
-    },
-    char(limit) {
-      return columnWithMethods(CharColumn, stringMethods, schema, limit);
-    },
-    text(min, max) {
-      return columnWithMethods(TextColumn, stringMethods, schema, min, max);
-    },
-    string(limit = 255) {
-      return columnWithMethods(StringColumn, stringMethods, schema, limit);
-    },
-    citext(min, max) {
-      return columnWithMethods(CitextColumn, stringMethods, schema, min, max);
-    },
+    smallSerial: schema.smallSerial,
+    serial: schema.serial,
+    bigSerial: schema.bigSerial,
+    money: schema.money,
+    varchar: schema.varchar,
+    char: schema.char,
+    text: schema.text,
+    string: schema.string,
+    citext: schema.citext,
     bytea() {
       return new ByteaColumn<SchemaConfig>(schema);
     },
-    date() {
-      return columnWithMethods(DateColumn, dateMethods, schema);
-    },
-    timestampNoTZ(precision) {
-      return columnWithMethods(TimestampColumn, dateMethods, schema, precision);
-    },
-    timestamp(precision) {
-      return columnWithMethods(
-        TimestampTZColumn,
-        dateMethods,
-        schema,
-        precision,
-      );
-    },
+    date: schema.date,
+    timestampNoTZ: schema.timestampNoTZ,
+    timestamp: schema.timestamp,
     time(precision) {
       return new TimeColumn<SchemaConfig>(schema, precision);
     },

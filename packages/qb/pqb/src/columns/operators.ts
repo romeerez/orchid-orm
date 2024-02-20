@@ -1,4 +1,9 @@
-import { Query, SetQueryReturnsColumn } from '../query/query';
+import {
+  PickQueryBaseQuery,
+  PickQueryQ,
+  Query,
+  SetQueryReturnsColumnOrThrow,
+} from '../query/query';
 import { ToSQLCtx } from '../sql';
 import { addValue } from '../sql/common';
 import {
@@ -6,49 +11,57 @@ import {
   getValueKey,
   isExpression,
   OperatorToSQL,
-  QueryColumn,
+  PickOutputTypeAndOperators,
+  PickQueryResult,
 } from 'orchid-core';
 import { extendQuery } from '../query/queryUtils';
-import { BooleanColumn } from './boolean';
-import { DefaultSchemaConfig } from './defaultSchemaConfig';
+import { BooleanQueryColumn } from './boolean';
 
 // Operator function type.
 // Table.count().gt(10) <- here `.gt(10)` is this operator function.
 // It discards previously defined column type operators and applies new ones,
 // for a case when operator gives a different column type.
-export type Operator<Value, Column extends QueryColumn = QueryColumn> = {
-  <T extends Pick<Query, 'result'>>(this: T, arg: Value): Omit<
-    SetQueryReturnsColumn<T, Column>,
+export interface Operator<
+  Value,
+  Column extends PickOutputTypeAndOperators = PickOutputTypeAndOperators,
+> {
+  <T extends PickQueryResult>(this: T, arg: Value): Omit<
+    SetQueryReturnsColumnOrThrow<T, Column>,
     keyof T['result']['value']['operators']
   > &
     Column['operators'];
   // argument type of the function
   _opType: Value;
   // function to turn the operator expression into SQL
-  _op: OperatorToSQL<Value, ToSQLCtx>;
-};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // unknown fails tests in rake-db when applying nullable
+  _op: OperatorToSQL<any, ToSQLCtx>;
+}
 
 // any column has 'operators' record that implements this type
-export type BaseOperators = Record<string, Operator<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+export interface BaseOperators {
+  [K: string]: Operator<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
 
 // Extend query object with given operator methods, so that user can call `gt` after calling `count`.
 // If query already has the same operators, nothing is changed.
 // Previously defined operators, if any, are dropped form the query.
 // Adds new operators, saves `Query.baseQuery` into `QueryData.originalQuery`, saves operators to `QueryData.operators`.
 export function setQueryOperators(
-  q: Pick<Query, 'q' | 'baseQuery'>,
+  query: PickQueryBaseQuery,
   operators: BaseOperators,
 ) {
-  if (q.q.operators) {
-    if (q.q.operators === operators) return q;
+  const q = (query as unknown as PickQueryQ).q;
+  if (q.operators) {
+    if (q.operators === operators) return query;
 
-    q.baseQuery = q.q.originalQuery as Query;
+    query.baseQuery = q.originalQuery as Query;
   } else {
-    q.q.originalQuery = q.baseQuery;
+    q.originalQuery = query.baseQuery;
   }
 
-  q.q.operators = operators;
-  return extendQuery(q, operators);
+  q.operators = operators;
+  return extendQuery(query as never, operators);
 }
 
 /**
@@ -78,7 +91,7 @@ const make = (
       _op,
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ) as unknown as Operator<any>;
+  ) as never;
 };
 
 // Handles array, expression object, query object to insert into sql.
@@ -108,19 +121,10 @@ const quoteValue = (
 
 // common operators that exist for any types
 type Base<Value> = {
-  equals: Operator<
-    Value | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  not: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  in: Operator<
-    Value[] | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  notIn: Operator<
-    Value[] | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  equals: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  not: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  in: Operator<Value[] | Query | Expression, BooleanQueryColumn>;
+  notIn: Operator<Value[] | Query | Expression, BooleanQueryColumn>;
 };
 
 const base = {
@@ -148,15 +152,15 @@ const base = {
 export type OperatorsBoolean = Base<boolean> & {
   and: Operator<
     {
-      result: { value: BooleanColumn<DefaultSchemaConfig> };
+      result: { value: BooleanQueryColumn };
     } & OperatorsBoolean,
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
   or: Operator<
     {
-      result: { value: BooleanColumn<DefaultSchemaConfig> };
+      result: { value: BooleanQueryColumn };
     } & OperatorsBoolean,
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
 };
 
@@ -174,13 +178,13 @@ const boolean = {
 
 // Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
 type Ord<Value> = Base<Value> & {
-  lt: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  lte: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  gt: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
-  gte: Operator<Value | Query | Expression, BooleanColumn<DefaultSchemaConfig>>;
+  lt: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  lte: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  gt: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  gte: Operator<Value | Query | Expression, BooleanQueryColumn>;
   between: Operator<
     [Value | Query | Expression, Value | Query | Expression],
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
 };
 
@@ -216,30 +220,15 @@ const numeric = {
 
 // Text type operators
 export type OperatorsText = Base<string> & {
-  contains: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  containsSensitive: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  startsWith: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  contains: Operator<string | Query | Expression, BooleanQueryColumn>;
+  containsSensitive: Operator<string | Query | Expression, BooleanQueryColumn>;
+  startsWith: Operator<string | Query | Expression, BooleanQueryColumn>;
   startsWithSensitive: Operator<
     string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
-  endsWith: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  endsWithSensitive: Operator<
-    string | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  endsWith: Operator<string | Query | Expression, BooleanQueryColumn>;
+  endsWithSensitive: Operator<string | Query | Expression, BooleanQueryColumn>;
 };
 
 const text = {
@@ -274,16 +263,10 @@ const text = {
 export type OperatorsJson = Base<unknown> & {
   jsonPath: Operator<
     [path: string, op: string, value: unknown | Query | Expression],
-    BooleanColumn<DefaultSchemaConfig>
+    BooleanQueryColumn
   >;
-  jsonSupersetOf: Operator<
-    unknown | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
-  jsonSubsetOf: Operator<
-    unknown | Query | Expression,
-    BooleanColumn<DefaultSchemaConfig>
-  >;
+  jsonSupersetOf: Operator<unknown | Query | Expression, BooleanQueryColumn>;
+  jsonSubsetOf: Operator<unknown | Query | Expression, BooleanQueryColumn>;
 };
 
 const json = {

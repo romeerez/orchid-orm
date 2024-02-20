@@ -21,17 +21,25 @@ import {
   callWithThis,
   TemplateLiteralArgs,
   emptyObject,
+  RecordUnknown,
+  QueryMetaBase,
+  PickQueryShape,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
 import { RawSQL } from '../sql/rawSql';
 import { resolveSubQueryCallback } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
-import { CloneSelfKeys } from '../query/queryBase';
 
 export type UpdateSelf = Pick<
   Query,
-  'meta' | 'inputType' | 'relations' | keyof JsonModifiers | CloneSelfKeys
+  | 'meta'
+  | 'inputType'
+  | 'relations'
+  | 'shape'
+  | 'result'
+  | 'returnType'
+  | keyof JsonModifiers
 >;
 
 // Type of argument for `update` and `updateOrThrow`
@@ -51,6 +59,23 @@ export type UpdateData<T extends UpdateSelf> = {
   >;
 };
 
+type UpdateColumnArgKeys =
+  | keyof JsonModifiers
+  | 'meta'
+  | 'shape'
+  | 'result'
+  | 'returnType';
+
+type UpdateColumnCallbackResult = JsonItem | ResultRelationQueryBase;
+
+interface ResultRelationQueryBaseMeta extends QueryMetaBase {
+  kind: 'select';
+}
+
+interface ResultRelationQueryBase extends RelationQueryBase {
+  meta: ResultRelationQueryBaseMeta;
+}
+
 // Type of available variants to provide for a specific column when updating.
 // The column value may be a specific value, or raw SQL, or a query returning a single value,
 // or a callback with a relation query that is returning a single value,
@@ -63,13 +88,15 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
         ? QueryThen<T['inputType'][Key]>
         : Query[K];
     }
-  | ((
-      q: {
-        [K in keyof JsonModifiers]: K extends 'selectable'
-          ? T['meta']['selectable']
-          : T[K];
-      } & T['relations'],
-    ) => JsonItem | (RelationQueryBase & { meta: { kind: 'select' } }));
+  | ((q: {
+      [K in
+        | keyof T['relations']
+        | UpdateColumnArgKeys]: K extends keyof T['relations']
+        ? T['relations'][K]
+        : K extends UpdateColumnArgKeys
+        ? T[K]
+        : never;
+    }) => UpdateColumnCallbackResult);
 
 // Add relation operations to the update argument.
 type UpdateRelationData<
@@ -97,19 +124,19 @@ type UpdateRawArgs<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
 type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
   ? SetQueryKind<T, 'update'>
-  : SetQueryReturnsRowCount<SetQueryKind<T, 'update'>>;
+  : SetQueryReturnsRowCount<T, 'update'>;
 
 // `increment` and `decrement` methods argument type.
 // Accepts a column name to change, or an object with column names and number values to increment or decrement with.
-type ChangeCountArg<T extends Pick<Query, 'shape'>> =
+type ChangeCountArg<T extends PickQueryShape> =
   | keyof T['shape']
-  | Partial<Record<keyof T['shape'], number>>;
+  | { [K in keyof T['shape']]?: number };
 
 // Context object for `update` logic used internally.
 // It's being used by relations logic in the ORM.
 export type UpdateCtx = {
   queries?: ((queryResult: QueryResult) => Promise<void>)[];
-  updateData?: Record<string, unknown>;
+  updateData?: RecordUnknown;
 };
 
 // apply `increment` or a `decrement`,
@@ -119,16 +146,14 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
   op: string,
   data: ChangeCountArg<T>,
 ) => {
-  self.q.type = 'update';
+  const q = (self as unknown as Query).q;
+  q.type = 'update';
 
-  if (!self.q.select) {
-    if (
-      self.q.returnType === 'oneOrThrow' ||
-      self.q.returnType === 'valueOrThrow'
-    ) {
-      self.q.throwOnNotFound = true;
+  if (!q.select) {
+    if (q.returnType === 'oneOrThrow' || q.returnType === 'valueOrThrow') {
+      q.throwOnNotFound = true;
     }
-    self.q.returnType = 'rowCount';
+    q.returnType = 'rowCount';
   }
 
   let map: Record<string, { op: string; arg: number }>;
@@ -141,31 +166,32 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
     map = { [data as string]: { op, arg: 1 } };
   }
 
-  pushQueryValue(self, 'updateData', map);
-  return self as unknown as UpdateResult<T>;
+  pushQueryValue(self as unknown as Query, 'updateData', map);
+  return self as never;
 };
 
 // sets query type, `returnType`, casts type from Query to UpdateResult
-const update = <T extends UpdateSelf>(q: T): UpdateResult<T> => {
-  q.q.type = 'update';
+const update = <T extends UpdateSelf>(self: T): UpdateResult<T> => {
+  const q = (self as unknown as Query).q;
+  q.type = 'update';
 
-  if (!q.q.select) {
-    q.q.returnType = 'rowCount';
+  if (!q.select) {
+    q.returnType = 'rowCount';
   }
 
-  throwIfNoWhere(q, 'update');
+  throwIfNoWhere(self as unknown as Query, 'update');
 
-  return q as unknown as UpdateResult<T>;
+  return self as never;
 };
 
 export const _queryUpdate = <T extends UpdateSelf>(
   query: T,
   arg: UpdateArg<T>,
 ): UpdateResult<T> => {
-  const { q } = query;
+  const { q } = query as unknown as Query;
 
-  const set: Record<string, unknown> = { ...arg };
-  pushQueryValue(query, 'updateData', set);
+  const set: RecordUnknown = { ...arg };
+  pushQueryValue(query as unknown as Query, 'updateData', set);
 
   const { shape } = q;
 
@@ -185,7 +211,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
       let value = set[key];
       if (typeof value === 'function') {
         value = resolveSubQueryCallback(
-          query.baseQuery,
+          (query as unknown as Query).baseQuery,
           value as (q: ToSQLQuery) => ToSQLQuery,
         );
         if (value instanceof Db && value.q.type) {
@@ -203,8 +229,16 @@ export const _queryUpdate = <T extends UpdateSelf>(
           // if it is not a select query,
           // move it into `WITH` statement and select from it with a raw SQL
           if (value.q.type) {
-            const as = saveSearchAlias(query, 'q', 'withShapes');
-            pushQueryValue(query, 'with', [as, emptyObject, value]);
+            const as = saveSearchAlias(
+              query as unknown as Query,
+              'q',
+              'withShapes',
+            );
+            pushQueryValue(query as unknown as Query, 'with', [
+              as,
+              emptyObject,
+              value,
+            ]);
 
             set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
           }
@@ -223,7 +257,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
       await Promise.all(queries.map(callWithThis, queryResult));
 
       if (ctx.updateData) {
-        const t = query.baseQuery.clone();
+        const t = (query as unknown as Query).baseQuery.clone();
         const keys = (query as unknown as Query).primaryKeys;
 
         (
@@ -257,9 +291,9 @@ export const _queryUpdateRaw = <T extends UpdateSelf>(
   q: T,
   sql: Expression,
 ): UpdateResult<T> => {
-  pushQueryValue(q, 'updateData', sql);
+  pushQueryValue(q as unknown as Query, 'updateData', sql);
 
-  q.q.type = 'update';
+  (q as unknown as Query).q.type = 'update';
 
   return update(q);
 };
@@ -268,7 +302,7 @@ export const _queryUpdateOrThrow = <T extends UpdateSelf>(
   q: T,
   arg: UpdateArg<T>,
 ): UpdateResult<T> => {
-  q.q.throwOnNotFound = true;
+  (q as unknown as Query).q.throwOnNotFound = true;
   return _queryUpdate(q, arg);
 };
 
@@ -434,7 +468,10 @@ export class Update {
    * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
    */
   update<T extends UpdateSelf>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
-    return _queryUpdate(this.clone(), arg);
+    return _queryUpdate(
+      (this as unknown as Query).clone(),
+      arg as never,
+    ) as never;
   }
 
   /**
@@ -460,14 +497,14 @@ export class Update {
     this: T,
     ...args: UpdateRawArgs<T>
   ): UpdateResult<T> {
-    const q = this.clone();
+    const q = (this as unknown as Query).clone();
 
     if (Array.isArray(args[0])) {
       const sql = new RawSQL(args as TemplateLiteralArgs);
-      return _queryUpdateRaw(q as T & { meta: { hasWhere: true } }, sql);
+      return _queryUpdateRaw(q as never, sql);
     }
 
-    return _queryUpdateRaw(q, args[0] as Expression);
+    return _queryUpdateRaw(q, args[0] as Expression) as never;
   }
 
   /**
@@ -500,7 +537,10 @@ export class Update {
     this: T,
     arg: UpdateArg<T>,
   ): UpdateResult<T> {
-    return _queryUpdateOrThrow(this.clone(), arg);
+    return _queryUpdateOrThrow(
+      (this as unknown as Query).clone(),
+      arg as never,
+    ) as never;
   }
 
   /**
@@ -545,7 +585,11 @@ export class Update {
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
-    return _queryChangeCounter(this.clone(), '+', data);
+    return _queryChangeCounter(
+      (this as unknown as Query).clone(),
+      '+',
+      data as never,
+    );
   }
 
   /**
@@ -590,6 +634,10 @@ export class Update {
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
-    return _queryChangeCounter(this.clone(), '-', data);
+    return _queryChangeCounter(
+      (this as unknown as Query).clone(),
+      '-',
+      data as never,
+    );
   }
 }

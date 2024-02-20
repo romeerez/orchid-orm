@@ -3,6 +3,7 @@ import {
   makeColumnTypes,
   createDb,
   testTransaction,
+  defaultSchemaConfig,
 } from '../../qb/pqb/src';
 import { MaybeArray, toArray } from 'orchid-core';
 import { z } from 'zod';
@@ -19,7 +20,7 @@ export const testSchemaConfig = zodSchemaConfig;
 
 export const testAdapter = new Adapter(testDbOptions);
 
-const columnTypes = makeColumnTypes(zodSchemaConfig);
+const columnTypes = makeColumnTypes(defaultSchemaConfig);
 
 export const testColumnTypes = {
   ...columnTypes,
@@ -27,23 +28,41 @@ export const testColumnTypes = {
     return columnTypes.text(min, max);
   },
   timestamp() {
-    return columnTypes.timestamp().parse(z.date(), (input) => new Date(input));
+    return columnTypes.timestamp().parse((input) => new Date(input));
   },
   timestampNoTZ() {
-    return columnTypes
-      .timestampNoTZ()
-      .parse(z.date(), (input) => new Date(input));
+    return columnTypes.timestampNoTZ().parse((input) => new Date(input));
   },
 };
 
 export const testDb = createDb({
   adapter: testAdapter,
-  schemaConfig: zodSchemaConfig,
   columnTypes: testColumnTypes,
 });
 
-export const testDbDefaultTypes = createDb({
+const zodColumnTypes = makeColumnTypes(zodSchemaConfig);
+
+export const testZodColumnTypes = {
+  ...zodColumnTypes,
+  text(min = 0, max = Infinity) {
+    return zodColumnTypes.text(min, max);
+  },
+  timestamp() {
+    return zodColumnTypes
+      .timestamp()
+      .parse(z.date(), (input) => new Date(input));
+  },
+  timestampNoTZ() {
+    return zodColumnTypes
+      .timestampNoTZ()
+      .parse(z.date(), (input) => new Date(input));
+  },
+};
+
+export const testDbZodTypes = createDb({
   adapter: testAdapter,
+  schemaConfig: zodSchemaConfig,
+  columnTypes: testZodColumnTypes,
 });
 
 export const line = (s: string) =>

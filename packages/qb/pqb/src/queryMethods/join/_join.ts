@@ -11,7 +11,6 @@ import { RelationQueryBase } from '../../relations';
 import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
 import {
   JoinArgs,
-  JoinCallback,
   JoinFirstArg,
   JoinLateralCallback,
   JoinLateralResult,
@@ -29,7 +28,8 @@ import { QueryBase } from '../../query/queryBase';
  * @param q - query object to join to
  * @param require - true for INNER kind of JOIN
  * @param type - SQL of the JOIN kind: JOIN, LEFT JOIN, RIGHT JOIN, etc.
- * @param args - join arguments to join a query, or `with` table, or a callback returning a query, etc.
+ * @param first - the first argument of join: join target
+ * @param args - rest join arguments: columns to join with, or a callback
  */
 export const _join = <
   T extends Query,
@@ -41,23 +41,22 @@ export const _join = <
   q: T,
   require: RequireJoined,
   type: string,
-  args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
+  first: Arg,
+  args: Args,
 ): JoinResult<T, Arg, RequireJoined, RequireMain> => {
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
   let isSubQuery = false;
 
-  if (typeof args[0] === 'function') {
-    args[0] = (args[0] as (q: Record<string, Query>) => Arg)(q.relations);
+  if (typeof first === 'function') {
+    first = (first as (q: Record<string, Query>) => Arg)(q.relations);
     (
-      args[0] as unknown as { joinQueryAfterCallback: unknown }
+      first as unknown as { joinQueryAfterCallback: unknown }
     ).joinQueryAfterCallback = (
-      args[0] as unknown as { joinQuery: unknown }
+      first as unknown as { joinQuery: unknown }
     ).joinQuery;
   }
-
-  const first = args[0];
 
   if (typeof first === 'object') {
     isSubQuery = getIsJoinSubQuery(first.q, first.baseQuery.q);
@@ -68,8 +67,8 @@ export const _join = <
       parsers = first.q.parsers;
 
       if (isSubQuery) {
-        args[0] = first.clone() as Arg;
-        (args[0] as Query).shape = shape as ColumnsShapeBase;
+        first = first.clone() as Arg;
+        (first as Query).shape = shape as ColumnsShapeBase;
       }
     }
   } else {
@@ -103,9 +102,10 @@ export const _join = <
 
   return pushQueryValue(q, 'join', {
     type,
+    first,
     args,
     isSubQuery,
-  }) as unknown as JoinResult<T, Arg, RequireJoined, RequireMain>;
+  }) as never;
 };
 
 /**
@@ -114,24 +114,26 @@ export const _join = <
  * Adds column parsers of the joined table into `joinedParsers`.
  * Adds join data into `join` of the query data.
  *
- * @param q - query object to join to
+ * @param self - query object to join to
  * @param type - SQL of the JOIN kind: JOIN or LEFT JOIN
  * @param arg - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
  * @param cb - callback where you can use `on` to join by columns, select needed data from the joined table, add where conditions, etc.
  * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
  */
 export const _joinLateral = <
-  T extends Query,
+  T extends QueryBase,
   Arg extends JoinFirstArg<T>,
   R extends QueryBase,
   RequireJoined extends boolean,
 >(
-  q: T,
+  self: T,
   type: string,
   arg: Arg,
   cb: JoinLateralCallback<T, Arg, R>,
   as?: string,
 ): JoinLateralResult<T, R, RequireJoined> => {
+  const q = self as unknown as Query;
+
   let relation: RelationQueryBase | undefined;
   if (typeof arg === 'string') {
     relation = q.relations[arg];
@@ -140,7 +142,7 @@ export const _joinLateral = <
     } else {
       const shape = q.q.withShapes?.[arg];
       if (shape) {
-        const t = Object.create(q.queryBuilder);
+        const t = Object.create((q as unknown as Query).queryBuilder);
         t.table = arg;
         t.shape = shape;
         t.q = {
@@ -161,7 +163,7 @@ export const _joinLateral = <
   if (relation) {
     result = relation.relationConfig.joinQuery(
       result as unknown as Query,
-      q,
+      q as unknown as Query,
     ) as unknown as R;
   }
 
@@ -176,5 +178,5 @@ export const _joinLateral = <
     type,
     result,
     as || getQueryAs(result),
-  ]) as JoinLateralResult<T, R, RequireJoined>;
+  ]) as never;
 };

@@ -1,5 +1,5 @@
 import { Query } from '../query/query';
-import { isExpression } from 'orchid-core';
+import { isExpression, RecordUnknown } from 'orchid-core';
 
 export type ClearStatement =
   | 'with'
@@ -28,7 +28,7 @@ export class Clear {
             if (!isExpression(item) && typeof item !== 'function') {
               let removed = false;
               for (const key in item) {
-                const value = item[key] as Record<string, unknown>;
+                const value = item[key] as RecordUnknown;
                 if (
                   typeof value === 'object' &&
                   (value.op === '+' || value.op === '-')
@@ -46,7 +46,7 @@ export class Clear {
           });
         }
       } else {
-        delete (q.q as Record<string, unknown>)[clear];
+        delete (q.q as RecordUnknown)[clear];
       }
     });
     return q;

@@ -447,7 +447,7 @@ describe('baseTable', () => {
     it('should have a columns shape type returned from database and parsed', () => {
       class SomeTable extends BaseTable {
         columns = this.setColumns((t) => ({
-          foo: t.text().parse(z.boolean(), () => true),
+          foo: t.text().parse(() => true),
         }));
       }
 

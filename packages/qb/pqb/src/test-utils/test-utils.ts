@@ -1,11 +1,23 @@
 import { Query } from '../query/query';
 import { quote } from '../quote';
-import { expectSql, testDb, testDbDefaultTypes } from 'test-utils';
+import { expectSql, testDb, testDbZodTypes } from 'test-utils';
 import { z } from 'zod';
+import { RecordUnknown } from 'orchid-core';
 
 export type UserRecord = typeof User.outputType;
 export type UserInsert = typeof User.inputType;
 export const User = testDb('user', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.text(),
+  password: t.text(),
+  picture: t.text().nullable(),
+  data: t.json<{ name: string; tags: string[] }>().nullable(),
+  age: t.integer().nullable(),
+  active: t.boolean().nullable(),
+  ...t.timestamps(),
+}));
+
+export const UserZodTypes = testDbZodTypes('user', (t) => ({
   id: t.identity().primaryKey(),
   name: t.text(),
   password: t.text(),
@@ -18,17 +30,6 @@ export const User = testDb('user', (t) => ({
       }),
     )
     .nullable(),
-  age: t.integer().nullable(),
-  active: t.boolean().nullable(),
-  ...t.timestamps(),
-}));
-
-export const UserDefaultTypes = testDbDefaultTypes('user', (t) => ({
-  id: t.identity().primaryKey(),
-  name: t.text(0, Infinity),
-  password: t.text(0, Infinity),
-  picture: t.text(0, Infinity).nullable(),
-  data: t.json<{ name: string; tags: string[] }>().nullable(),
   age: t.integer().nullable(),
   active: t.boolean().nullable(),
   ...t.timestamps(),
@@ -115,9 +116,7 @@ export const expectQueryNotMutated = (q: Query) => {
   expectSql(q.toSQL(), `SELECT * FROM "${q.table}"`);
 };
 
-export const insert = async <
-  T extends Record<string, unknown> & { id: number },
->(
+export const insert = async <T extends RecordUnknown & { id: number }>(
   table: string,
   record: T,
 ): Promise<T> => {

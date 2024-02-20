@@ -1,8 +1,9 @@
 import { RawSQL } from '../sql/rawSql';
-import { ColumnFromDbParams, ColumnType } from './columnType';
+import { ColumnFromDbParams } from './columnType';
 import { TableData } from './columnTypes';
+import { ColumnTypeBase, RecordString } from 'orchid-core';
 
-const knownDefaults: Record<string, string> = {
+const knownDefaults: RecordString = {
   current_timestamp: 'now()',
   'transaction_timestamp()': 'now()',
 };
@@ -16,9 +17,9 @@ export const simplifyColumnDefault = (value?: string) => {
 };
 
 export const instantiateColumn = (
-  typeFn: () => ColumnType,
+  typeFn: () => ColumnTypeBase,
   params: ColumnFromDbParams,
-): ColumnType => {
+): ColumnTypeBase => {
   const column = typeFn();
 
   Object.assign(column.data, {
@@ -26,7 +27,7 @@ export const instantiateColumn = (
     default: simplifyColumnDefault(params.default),
   });
 
-  return column as unknown as ColumnType;
+  return column as unknown as ColumnTypeBase;
 };
 
 export const getConstraintKind = (

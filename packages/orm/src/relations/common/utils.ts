@@ -4,6 +4,7 @@ import {
   CreateCtx,
   getQueryAs,
   JoinCallback,
+  JoinQueryMethod,
   pushQueryOn,
   Query,
   RelationConfigBase,
@@ -13,26 +14,26 @@ import {
   WhereArg,
   WhereQueryBase,
 } from 'pqb';
-import { MaybeArray } from 'orchid-core';
+import { emptyArray, MaybeArray, RecordUnknown } from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 
 // INNER JOIN the current relation instead of the default OUTER behavior
-export type RelJoin = <T extends Query>(this: T) => T;
+export type RelJoin = JoinQueryMethod & (<T extends Query>(this: T) => T);
 
-export type NestedInsertOneItem = {
+export interface NestedInsertOneItem {
   create?: NestedInsertOneItemCreate;
   connect?: NestedInsertOneItemConnect;
   connectOrCreate?: NestedInsertOneItemConnectOrCreate;
-};
+}
 
-export type NestedInsertOneItemCreate = Record<string, unknown>;
+export type NestedInsertOneItemCreate = RecordUnknown;
 
 export type NestedInsertOneItemConnect = WhereArg<WhereQueryBase>;
 
 export type NestedInsertOneItemConnectOrCreate = {
   where: WhereArg<WhereQueryBase>;
-  create: Record<string, unknown>;
+  create: RecordUnknown;
 };
 
 export type NestedInsertManyItems = {
@@ -41,13 +42,13 @@ export type NestedInsertManyItems = {
   connectOrCreate?: NestedInsertManyConnectOrCreate;
 };
 
-export type NestedInsertManyCreate = Record<string, unknown>[];
+export type NestedInsertManyCreate = RecordUnknown[];
 
 export type NestedInsertManyConnect = WhereArg<WhereQueryBase>[];
 
 export type NestedInsertManyConnectOrCreate = {
   where: WhereArg<WhereQueryBase>;
-  create: Record<string, unknown>;
+  create: RecordUnknown;
 }[];
 
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
@@ -59,9 +60,9 @@ export type NestedUpdateOneItem = {
   update?: UpdateData<Query>;
   upsert?: {
     update: UpdateData<Query>;
-    create: Record<string, unknown> | (() => Record<string, unknown>);
+    create: RecordUnknown | (() => RecordUnknown);
   };
-  create: Record<string, unknown>;
+  create: RecordUnknown;
 };
 
 export type NestedUpdateManyItems = {
@@ -72,7 +73,7 @@ export type NestedUpdateManyItems = {
     where: MaybeArray<WhereArg<WhereQueryBase>>;
     data: UpdateData<Query>;
   };
-  create: Record<string, unknown>[];
+  create: RecordUnknown[];
 };
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
@@ -94,7 +95,7 @@ export const getSourceRelation = (
 export const hasRelationHandleCreate = (
   q: Query,
   ctx: CreateCtx,
-  item: Record<string, unknown>,
+  item: RecordUnknown,
   rowIndex: number,
   key: string,
   primaryKeys: string[],
@@ -143,7 +144,7 @@ export const hasRelationHandleCreate = (
 
 export const hasRelationHandleUpdate = (
   q: Query,
-  set: Record<string, unknown>,
+  set: RecordUnknown,
   key: string,
   primaryKeys: string[],
   nestedUpdate: HasOneNestedUpdate | HasManyNestedUpdate,
@@ -191,8 +192,8 @@ export const selectIfNotSelected = (q: Query, columns: string[]) => {
 
 export const relationWhere =
   (len: number, keys: string[], valueKeys: string[]) =>
-  (params: Record<string, unknown>) => {
-    const obj: Record<string, unknown> = {};
+  (params: RecordUnknown) => {
+    const obj: RecordUnknown = {};
     for (let i = 0; i < len; i++) {
       obj[keys[i]] = params[valueKeys[i]];
     }
@@ -262,7 +263,8 @@ export const joinQueryChainingHOF =
 
     return joiningQuery.where({
       EXISTS: {
-        args: [inner],
+        first: inner,
+        args: emptyArray,
       },
     });
   };

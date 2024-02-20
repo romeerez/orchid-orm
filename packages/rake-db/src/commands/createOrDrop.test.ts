@@ -7,10 +7,11 @@ import {
 import { migrate } from './migrateOrRollback';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
+import { RecordUnknown } from 'orchid-core';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
-  setAdminCredentialsToOptions: jest.fn((options: Record<string, unknown>) => ({
+  setAdminCredentialsToOptions: jest.fn((options: RecordUnknown) => ({
     ...options,
     user: 'admin-user',
     password: 'admin-password',

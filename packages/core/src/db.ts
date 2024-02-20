@@ -2,7 +2,6 @@ import { AdapterBase } from './adapter';
 import {
   ColumnShapeInput,
   ColumnShapeOutput,
-  DefaultSelectColumns,
   QueryColumns,
   QueryColumnsInit,
   SinglePrimaryKey,
@@ -19,10 +18,6 @@ export type DbBase<
   Shape extends QueryColumnsInit,
   CT,
   ShapeWithComputed extends QueryColumns = Shape,
-  Result extends QueryColumns = Pick<
-    Shape,
-    DefaultSelectColumns<Shape>[number]
-  >,
 > = {
   adapter: Adapter;
   table: Table;
@@ -32,7 +27,6 @@ export type DbBase<
   singlePrimaryKey: SinglePrimaryKey<Shape>;
   outputType: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
-  result: Result;
   internal: QueryInternal;
   query(...args: SQLQueryArgs): Promise<unknown>;
   queryArrays(...args: SQLQueryArgs): Promise<unknown>;

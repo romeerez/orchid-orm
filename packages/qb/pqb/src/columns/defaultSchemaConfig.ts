@@ -6,22 +6,34 @@ import {
   ParseColumn,
   setColumnData,
 } from 'orchid-core';
-import { DateBaseColumn } from './dateTime';
+import {
+  DateBaseColumn,
+  DateColumn,
+  TimestampColumn,
+  TimestampTZColumn,
+} from './dateTime';
 import { EnumColumn } from './enum';
 import { ArrayColumn, ArrayColumnValue } from './array';
 import { JSONColumn } from './json';
-
-type ParseDateToNumber = ParseColumn<
-  DateBaseColumn<DefaultSchemaConfig>,
-  unknown,
-  number
->;
-
-type ParseDateToDate = ParseColumn<
-  DateBaseColumn<DefaultSchemaConfig>,
-  unknown,
-  Date
->;
+import {
+  BigIntColumn,
+  BigSerialColumn,
+  DecimalColumn,
+  DoublePrecisionColumn,
+  IntegerColumn,
+  RealColumn,
+  SerialColumn,
+  SmallIntColumn,
+  SmallSerialColumn,
+} from './number';
+import {
+  CharColumn,
+  CitextColumn,
+  MoneyColumn,
+  StringColumn,
+  TextColumn,
+  VarCharColumn,
+} from './string';
 
 export interface DefaultSchemaConfig extends ColumnSchemaConfig {
   parse<T extends { type: unknown }, Output>(
@@ -38,9 +50,9 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig {
     T,
     Types extends {
       type: unknown;
-      input: unknown;
-      output: unknown;
-      query: unknown;
+      inputType: unknown;
+      outputType: unknown;
+      queryType: unknown;
     },
   >(
     this: T,
@@ -48,16 +60,20 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig {
     _fn: (
       type: <Type, Input = Type, Output = Type, Query = Type>() => {
         type: Type;
-        input: Input;
-        output: Output;
-        query: Query;
+        inputType: Input;
+        outputType: Output;
+        queryType: Query;
       },
     ) => Types,
-  ): Omit<T, 'type' | 'inputType' | 'outputType' | 'queryType'> & Types;
+  ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
 
-  dateAsNumber(): ParseDateToNumber;
+  dateAsNumber(): ParseColumn<
+    DateBaseColumn<DefaultSchemaConfig>,
+    unknown,
+    number
+  >;
 
-  dateAsDate(): ParseDateToDate;
+  dateAsDate(): ParseColumn<DateBaseColumn<DefaultSchemaConfig>, unknown, Date>;
 
   enum<U extends string, T extends [U, ...U[]]>(
     dataType: string,
@@ -75,6 +91,30 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig {
   querySchema(): undefined;
   updateSchema(): undefined;
   pkeySchema(): undefined;
+
+  smallint(): SmallIntColumn<DefaultSchemaConfig>;
+  integer(): IntegerColumn<DefaultSchemaConfig>;
+  real(): RealColumn<DefaultSchemaConfig>;
+  smallSerial(): SmallSerialColumn<DefaultSchemaConfig>;
+  serial(): SerialColumn<DefaultSchemaConfig>;
+
+  bigint(): BigIntColumn<DefaultSchemaConfig>;
+  decimal(
+    precision?: number,
+    scale?: number,
+  ): DecimalColumn<DefaultSchemaConfig>;
+  doublePrecision(): DoublePrecisionColumn<DefaultSchemaConfig>;
+  bigSerial(): BigSerialColumn<DefaultSchemaConfig>;
+  money(): MoneyColumn<DefaultSchemaConfig>;
+  varchar(limit?: number): VarCharColumn<DefaultSchemaConfig>;
+  char(limit?: number): CharColumn<DefaultSchemaConfig>;
+  text(min: number, max: number): TextColumn<DefaultSchemaConfig>;
+  string(limit?: number): StringColumn<DefaultSchemaConfig>;
+  citext(min: number, max: number): CitextColumn<DefaultSchemaConfig>;
+
+  date(): DateColumn<DefaultSchemaConfig>;
+  timestampNoTZ(precision?: number): TimestampColumn<DefaultSchemaConfig>;
+  timestamp(precision?: number): TimestampTZColumn<DefaultSchemaConfig>;
 }
 
 // parse a date string to number, with respect to null
@@ -123,4 +163,30 @@ export const defaultSchemaConfig = {
     return new JSONColumn(defaultSchemaConfig, undefined);
   },
   setErrors: noop,
+
+  smallint: () => new SmallIntColumn(defaultSchemaConfig),
+  integer: () => new IntegerColumn(defaultSchemaConfig),
+  real: () => new RealColumn(defaultSchemaConfig),
+  smallSerial: () => new SmallSerialColumn(defaultSchemaConfig),
+  serial: () => new SerialColumn(defaultSchemaConfig),
+
+  bigint: () => new BigIntColumn(defaultSchemaConfig),
+  decimal: (precision?: number, scale?: number) =>
+    new DecimalColumn(defaultSchemaConfig, precision, scale),
+  doublePrecision: () => new DoublePrecisionColumn(defaultSchemaConfig),
+  bigSerial: () => new BigSerialColumn(defaultSchemaConfig),
+  money: () => new MoneyColumn(defaultSchemaConfig),
+  varchar: (limit?: number) => new VarCharColumn(defaultSchemaConfig, limit),
+  char: (limit?: number) => new CharColumn(defaultSchemaConfig, limit),
+  text: (min: number, max: number) =>
+    new TextColumn(defaultSchemaConfig, min, max),
+  string: (limit?: number) => new StringColumn(defaultSchemaConfig, limit),
+  citext: (min: number, max: number) =>
+    new CitextColumn(defaultSchemaConfig, min, max),
+
+  date: () => new DateColumn(defaultSchemaConfig),
+  timestampNoTZ: (precision?: number) =>
+    new TimestampColumn(defaultSchemaConfig, precision),
+  timestamp: (precision?: number) =>
+    new TimestampTZColumn(defaultSchemaConfig, precision),
 } as unknown as DefaultSchemaConfig;

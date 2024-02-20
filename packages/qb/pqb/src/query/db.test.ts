@@ -9,7 +9,7 @@ import {
   testDbOptions,
   useTestDatabase,
 } from 'test-utils';
-import { TransactionState } from 'orchid-core';
+import { RecordUnknown, TransactionState } from 'orchid-core';
 import { raw } from '../sql/rawSql';
 
 describe('db connection', () => {
@@ -200,8 +200,7 @@ describe('db', () => {
     });
 
     expect(
-      (db.adapter.pool as unknown as { options: Record<string, unknown> })
-        .options.ssl,
+      (db.adapter.pool as unknown as { options: RecordUnknown }).options.ssl,
     ).toBe(true);
   });
 

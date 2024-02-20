@@ -1,7 +1,11 @@
 import { QueryData } from '../sql';
-import { emptyObject, pushOrNewArrayToObject } from 'orchid-core';
+import {
+  emptyObject,
+  pushOrNewArrayToObject,
+  RecordUnknown,
+} from 'orchid-core';
 import { OrchidOrmInternalError } from '../errors';
-import { Query } from './query';
+import { PickQueryQ, PickQueryQAndBaseQuery, Query } from './query';
 import { QueryBase } from './queryBase';
 import { getClonedQueryData } from '../common/utils';
 
@@ -18,8 +22,7 @@ export const pushQueryArray = <T extends { q: QueryData }>(
   key: string,
   value: unknown,
 ): T => {
-  if (!q.q[key as keyof typeof q.q])
-    (q.q as Record<string, unknown>)[key] = value;
+  if (!q.q[key as keyof typeof q.q]) (q.q as RecordUnknown)[key] = value;
   else
     (q.q[key as keyof typeof q.q] as unknown[]).push(...(value as unknown[]));
   return q as T;
@@ -32,7 +35,7 @@ export const pushQueryArray = <T extends { q: QueryData }>(
  * @param key - key to get the array
  * @param value - new element to push
  */
-export const pushQueryValue = <T extends { q: QueryData }>(
+export const pushQueryValue = <T extends PickQueryQ>(
   q: T,
   key: string,
   value: unknown,
@@ -60,12 +63,10 @@ export const setQueryObjectValue = <T extends { q: QueryData }>(
   value: unknown,
 ): T => {
   if (!q.q[object as keyof typeof q.q])
-    (q.q as unknown as Record<string, Record<string, unknown>>)[object] = {
+    (q.q as unknown as Record<string, RecordUnknown>)[object] = {
       [key]: value,
     };
-  else
-    (q.q as unknown as Record<string, Record<string, unknown>>)[object][key] =
-      value;
+  else (q.q as unknown as Record<string, RecordUnknown>)[object][key] = value;
   return q as unknown as T;
 };
 
@@ -75,7 +76,7 @@ export const setQueryObjectValue = <T extends { q: QueryData }>(
  * @param q - query
  * @param method - 'update' or 'delete'
  */
-export const throwIfNoWhere = (q: Pick<Query, 'q'>, method: string): void => {
+export const throwIfNoWhere = (q: PickQueryQ, method: string): void => {
   if (!q.q.or && !q.q.and && !q.q.all) {
     throw new OrchidOrmInternalError(
       q as Query,
@@ -112,8 +113,8 @@ export const saveSearchAlias = (
  * @param methods - methods to add
  */
 export const extendQuery = <
-  T extends Pick<Query, 'q' | 'baseQuery'>,
-  Methods extends Record<string, unknown>,
+  T extends PickQueryQAndBaseQuery,
+  Methods extends RecordUnknown,
 >(
   q: T,
   methods: Methods,

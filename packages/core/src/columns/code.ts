@@ -1,14 +1,14 @@
-import { singleQuote } from '../utils';
+import { RecordKeyTrue, RecordString, singleQuote } from '../utils';
 import { ColumnDataBase } from './columnType';
 import {
   arrayMethodNames,
-  ArrayMethodsData,
   BaseNumberData,
   StringTypeData,
   DateColumnData,
   dateMethodNames,
   numberMethodNames,
   stringMethodNames,
+  ArrayMethodsDataForBaseColumn,
 } from './columnDataTypes';
 import { isRawSQL } from '../raw';
 
@@ -89,10 +89,10 @@ export const columnDefaultArgumentToCode = (
  */
 export const columnMethodsToCode = <T extends ColumnDataBase>(
   methodNames: (keyof T)[],
-  skip?: Record<string, true>,
-  aliases?: Record<string, string>,
+  skip?: RecordKeyTrue,
+  aliases?: RecordString,
 ) => {
-  return (data: T, skipLocal?: Record<string, true>) => {
+  return (data: T, skipLocal?: RecordKeyTrue) => {
     return methodNames
       .map((key) =>
         (skipLocal || skip)?.[key as string] ||
@@ -178,16 +178,14 @@ export const dateDataToCode =
 
 // Function to encode array column methods
 export const arrayDataToCode =
-  columnMethodsToCode<ArrayMethodsData>(arrayMethodNames);
+  columnMethodsToCode<ArrayMethodsDataForBaseColumn>(arrayMethodNames);
 
 /**
  * Converts column type and JSON type custom errors into code
  *
  * @param errors - custom error messages
  */
-export const columnErrorMessagesToCode = (
-  errors: Record<string, string>,
-): Code => {
+export const columnErrorMessagesToCode = (errors: RecordString): Code => {
   const props: Code[] = [];
 
   if (errors.required) {

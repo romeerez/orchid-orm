@@ -1,5 +1,10 @@
-import { BelongsTo, BelongsToInfo, makeBelongsToMethod } from './belongsTo';
-import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
+import {
+  BelongsTo,
+  BelongsToInfo,
+  BelongsToParams,
+  makeBelongsToMethod,
+} from './belongsTo';
+import { HasOne, HasOneInfo, HasOneParams, makeHasOneMethod } from './hasOne';
 import { DbTable, Table, TableClass } from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
@@ -10,18 +15,29 @@ import {
   CreateData,
   getQueryAs,
   Query,
-  RelationConfigBase,
   RelationJoinQuery,
   RelationQuery,
   RelationsBase,
   VirtualColumn,
   WhereArg,
 } from 'pqb';
-import { ColumnSchemaConfig, EmptyObject } from 'orchid-core';
-import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
+import {
+  ColumnSchemaConfig,
+  ColumnsShapeBase,
+  emptyArray,
+  EmptyObject,
+  RecordUnknown,
+} from 'orchid-core';
+import {
+  HasMany,
+  HasManyInfo,
+  HasManyParams,
+  makeHasManyMethod,
+} from './hasMany';
 import {
   HasAndBelongsToMany,
   HasAndBelongsToManyInfo,
+  HasAndBelongsToManyParams,
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './common/utils';
@@ -53,6 +69,26 @@ export type RelationToOneDataForCreate<
       };
     };
 
+export type RelationToOneDataForCreateSameQuery<Q extends Query> =
+  | {
+      create: CreateData<Q>;
+      connect?: never;
+      connectOrCreate?: never;
+    }
+  | {
+      create?: never;
+      connect: WhereArg<Q>;
+      connectOrCreate?: never;
+    }
+  | {
+      create?: never;
+      connect?: never;
+      connectOrCreate: {
+        where: WhereArg<Q>;
+        create: CreateData<Q>;
+      };
+    };
+
 // `hasMany` and `hasAndBelongsToMany` relation data available for create. It supports:
 // - `create` to create related records
 // - `connect` to find existing records by `where` conditions and update their foreign keys with the new id
@@ -76,69 +112,72 @@ export interface RelationThunkBase {
 
 export type RelationThunk = BelongsTo | HasOne | HasMany | HasAndBelongsToMany;
 
-export type RelationThunks = Record<string, RelationThunk>;
+export interface RelationThunks {
+  [K: string]: RelationThunk;
+}
 
-export type RelationData = {
+export interface RelationData {
   returns: 'one' | 'many';
-  method(params: Record<string, unknown>): Query;
+  method(params: RecordUnknown): Query;
   virtualColumn?: VirtualColumn<ColumnSchemaConfig>;
   joinQuery: RelationJoinQuery;
   reverseJoin: RelationJoinQuery;
   modifyRelatedQuery?(relatedQuery: Query): (query: Query) => void;
-};
+}
 
 export type RelationScopeOrTable<Relation extends RelationThunkBase> =
   Relation['options']['scope'] extends (q: Query) => Query
     ? ReturnType<Relation['options']['scope']>
-    : RelationQueryFromFn<Relation>;
+    : DbTable<InstanceType<ReturnType<Relation['fn']>>>;
 
-type RelationQueryFromFn<
-  Relation extends RelationThunkBase,
-  TC extends TableClass = ReturnType<Relation['fn']>,
-  Q extends Query = DbTable<TC>,
-> = Q;
+export interface RelationConfigSelf {
+  columns: ColumnsShapeBase;
+  relations: RelationThunks;
+}
 
-export type RelationConfig<
-  T extends Table = Table,
-  Relations extends RelationThunks = RelationThunks,
-  Relation extends RelationThunk = RelationThunk,
-  K extends string = string,
-  TableQuery extends Query = Query,
-  Result extends RelationConfigBase = Relation extends BelongsTo
-    ? BelongsToInfo<T, Relation, K, TableQuery>
-    : Relation extends HasOne
-    ? HasOneInfo<T, Relations, Relation, K, TableQuery>
-    : Relation extends HasMany
-    ? HasManyInfo<T, Relations, Relation, K, TableQuery>
-    : Relation extends HasAndBelongsToMany
-    ? HasAndBelongsToManyInfo<T, Relation, K, TableQuery>
-    : never,
-> = Result;
+export type RelationConfigParams<
+  T extends RelationConfigSelf,
+  Relation extends RelationThunk,
+> = Relation extends BelongsTo
+  ? BelongsToParams<T, Relation>
+  : Relation extends HasOne
+  ? HasOneParams<T, Relation>
+  : Relation extends HasMany
+  ? HasManyParams<T, Relation>
+  : Relation extends HasAndBelongsToMany
+  ? HasAndBelongsToManyParams<T, Relation>
+  : never;
 
 export type MapRelation<
-  T extends Table,
-  Relations extends RelationThunks,
-  RelationName extends keyof Relations & string,
-  Relation extends RelationThunk = Relations[RelationName],
-  TableQuery extends Query = RelationScopeOrTable<Relation>,
+  T extends RelationConfigSelf,
+  K extends keyof T['relations'] & string,
 > = RelationQuery<
-  RelationConfig<T, Relations, Relation, RelationName, TableQuery>
+  T['relations'][K] extends BelongsTo
+    ? BelongsToInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
+    : T['relations'][K] extends HasOne
+    ? HasOneInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
+    : T['relations'][K] extends HasMany
+    ? HasManyInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
+    : T['relations'][K] extends HasAndBelongsToMany
+    ? HasAndBelongsToManyInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
+    : never
 >;
 
-export type MapRelations<T extends Table> = T extends {
+export type MapRelations<T> = T extends {
+  columns: ColumnsShapeBase;
   relations: RelationThunks;
 }
   ? {
-      [K in keyof T['relations'] & string]: MapRelation<T, T['relations'], K>;
+      [K in keyof T['relations'] & string]: MapRelation<T, K>;
     }
   : EmptyObject;
 
-type ApplyRelationData = {
+interface ApplyRelationData {
   relationName: string;
   relation: RelationThunk;
-  dbTable: DbTable<TableClass>;
-  otherDbTable: DbTable<TableClass>;
-};
+  dbTable: DbTable<Table>;
+  otherDbTable: DbTable<Table>;
+}
 
 type DelayedRelations = Map<Query, Record<string, ApplyRelationData[]>>;
 
@@ -241,7 +280,7 @@ export const applyRelations = (
           !throughRel.table.relations[source as never]
         ) {
           message += `: cannot find \`${source}\` relation in \`${
-            (throughRel.table as DbTable<TableClass>).definedAs
+            (throughRel.table as DbTable<Table>).definedAs
           }\` required by the \`source\` option`;
         }
 
@@ -344,7 +383,7 @@ const applyRelation = (
     joinQuery: data.joinQuery,
   };
 
-  (dbTable.relations as Record<string, unknown>)[relationName] = query;
+  (dbTable.relations as RecordUnknown)[relationName] = query;
 
   const tableRelations = delayedRelations.get(dbTable);
   if (!tableRelations) return;
@@ -375,7 +414,8 @@ const makeRelationQuery = (
         query = _queryWhere(_queryAll(toTable), [
           {
             EXISTS: {
-              args: [data.reverseJoin(this, toTable)],
+              first: data.reverseJoin(this, toTable),
+              args: emptyArray,
             },
           },
         ]);
@@ -398,7 +438,7 @@ const makeRelationQuery = (
 
       return new Proxy(data.method, {
         get(_, prop) {
-          return (query as unknown as Record<string, unknown>)[prop as string];
+          return (query as unknown as RecordUnknown)[prop as string];
         },
       }) as unknown as RelationQuery;
     },

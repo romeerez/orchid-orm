@@ -1,14 +1,25 @@
-import { TextBaseColumn } from './string';
 import {
   assertType,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   testDb,
   TestSchemaConfig,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
 
 const testStringColumnMethods = (
-  type: TextBaseColumn<TestSchemaConfig> & TestSchemaConfig['stringMethods'],
+  type: ReturnType<
+    TestSchemaConfig[
+      | 'bigint'
+      | 'decimal'
+      | 'doublePrecision'
+      | 'bigSerial'
+      | 'money'
+      | 'varchar'
+      | 'char'
+      | 'text'
+      | 'string'
+      | 'citext']
+  >,
   name: string,
 ) => {
   expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);

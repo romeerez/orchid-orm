@@ -1,7 +1,7 @@
 import { CustomTypeColumn } from './customType';
 import {
   assertType,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   testDb,
   testSchemaConfig,
 } from 'test-utils';

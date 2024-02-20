@@ -30,7 +30,7 @@ export abstract class DateBaseColumn<
   OperatorsDate,
   DateColumnInput,
   string,
-  Schema['string']
+  Schema['stringSchema']
 > {
   declare data: DateColumnData;
   operators = Operators.date;
@@ -138,7 +138,7 @@ export class TimestampTZColumn<
 export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['string'],
+  Schema['stringSchema'],
   OperatorsTime
 > {
   declare data: DateColumnData & { dateTimePrecision?: number };
@@ -146,7 +146,7 @@ export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   operators = Operators.time;
 
   constructor(schema: Schema, dateTimePrecision?: number) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
     this.data.dateTimePrecision = dateTimePrecision;
   }
 

@@ -3,24 +3,24 @@ import {
   ColumnWithDefault,
   getDefaultNowFn,
 } from './columnType';
-import { pushOrNewArrayToObject } from '../utils';
+import { pushOrNewArrayToObject, RecordUnknown } from '../utils';
 import { snakeCaseKey } from './types';
 import { isRawSQL, RawSQLBase } from '../raw';
 
 // Column types returned by `...t.timestamps()` and variations.
-type Timestamps<T extends ColumnTypeBase> = {
+export interface Timestamps<T extends ColumnTypeBase> {
   // Timestamp column with a `now()` default
   createdAt: ColumnWithDefault<T, RawSQLBase>;
   // Timestamp column with a `now()` default, and it's being updated on every record update.
   updatedAt: ColumnWithDefault<T, RawSQLBase>;
-};
+}
 
 // Builds a function which is triggered on every update of records.
 // It tries to find if `updatedAt` column is being updated with a user-provided value.
 // And if there is no value for `updatedAt`, it is setting the new value for it.
 const makeInjector =
   (updatedAtRegex: RegExp, updateUpdatedAtItem: RawSQLBase, key: string) =>
-  (data: (RawSQLBase | Record<string, unknown> | (() => void))[]) => {
+  (data: (RawSQLBase | RecordUnknown | (() => void))[]) => {
     const alreadyUpdatesUpdatedAt = data.some((item) => {
       if (isRawSQL(item)) {
         updatedAtRegex.lastIndex = 0;
@@ -51,7 +51,7 @@ class SimpleRawSQL extends RawSQLBase {
 // Construct a simplified raw SQL.
 const raw = (sql: string) => new SimpleRawSQL(sql);
 
-export type TimestampHelpers = {
+export interface TimestampHelpers {
   /**
    * Add `createdAt` and `updatedAt timestamps. Both have `now()` as a default, `updatedAt` is automatically updated during update.
    */
@@ -85,7 +85,7 @@ export type TimestampHelpers = {
     name(name: string): { timestampNoTZ(): T };
     timestampNoTZ(): T;
   }): Timestamps<T>;
-};
+}
 
 // Build `timestamps`, `timestampsNoTZ`, and similar helpers.
 export const makeTimestampsHelpers = (

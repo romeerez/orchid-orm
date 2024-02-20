@@ -1,5 +1,5 @@
 import { codeToString } from 'orchid-core';
-import { testColumnTypes as t, useTestDatabase } from 'test-utils';
+import { testZodColumnTypes as t, useTestDatabase } from 'test-utils';
 import { z } from 'zod';
 
 describe('json columns', () => {

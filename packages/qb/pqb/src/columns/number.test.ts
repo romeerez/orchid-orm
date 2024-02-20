@@ -1,15 +1,15 @@
-import { NumberBaseColumn } from './number';
 import {
   assertType,
   expectSql,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   testDb,
   TestSchemaConfig,
 } from 'test-utils';
 
 const testNumberColumnMethods = (
-  type: NumberBaseColumn<TestSchemaConfig, TestSchemaConfig['type']> &
-    TestSchemaConfig['numberMethods'],
+  type: ReturnType<
+    TestSchemaConfig['smallint' | 'integer' | 'real' | 'smallSerial' | 'serial']
+  >,
   name: string,
 ) => {
   expect(

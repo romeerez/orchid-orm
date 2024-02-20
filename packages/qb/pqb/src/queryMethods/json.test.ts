@@ -3,12 +3,12 @@ import {
   Snake,
   User,
   userData,
-  UserDefaultTypes,
+  UserZodTypes,
 } from '../test-utils/test-utils';
 import {
   assertType,
   expectSql,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
 
@@ -168,7 +168,7 @@ describe('json methods', () => {
 
       it('should work inside `update` callback', () => {
         // using user with default types because of issue https://github.com/romeerez/orchid-orm/issues/230
-        const q = UserDefaultTypes.all().update({
+        const q = UserZodTypes.all().update({
           data: (q) => q.jsonSet('data', ['name'], 'new name'),
         });
 

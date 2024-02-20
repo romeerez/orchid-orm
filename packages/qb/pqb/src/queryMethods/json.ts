@@ -1,16 +1,20 @@
 import {
   AddQuerySelect,
+  PickQueryMetaResultReturnType,
   Query,
   SetQueryReturnsColumnOptional,
 } from '../query/query';
 import { pushQueryValue } from '../query/queryUtils';
 import { JsonItem } from '../sql';
-import { QueryColumn } from 'orchid-core';
-import { QueryBase } from '../query/queryBase';
+import {
+  PickQueryMeta,
+  PickQueryMetaShapeResultReturnType,
+  QueryColumn,
+} from 'orchid-core';
 import { queryJson } from './json.utils';
 
 // union of column names that have a `jsonb` type
-type JsonColumnName<T extends QueryBase> = {
+type JsonColumnName<T extends PickQueryMeta> = {
   [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['dataType'] extends 'jsonb'
     ? K
     : never;
@@ -18,27 +22,40 @@ type JsonColumnName<T extends QueryBase> = {
   string;
 
 // union of `jsonb` column names, or a JsonItem type for nesting json methods one in other
-type ColumnOrJsonMethod<T extends QueryBase> = JsonColumnName<T> | JsonItem;
+type ColumnOrJsonMethod<T extends PickQueryMeta> = JsonColumnName<T> | JsonItem;
 
 // result of `jsonSet`:
 // adds a select to a query,
 // adds a `JsonItem` properties that allows nesting of json methods
 type JsonSetResult<
-  T extends QueryBase,
+  T extends PickQueryMetaShapeResultReturnType,
   Column extends ColumnOrJsonMethod<T>,
   As extends string,
-  Type extends QueryColumn = Column extends keyof T['shape']
+> = JsonItem<
+  As,
+  Column extends keyof T['shape']
     ? T['shape'][Column]
     : Column extends JsonItem
     ? Column['__json'][2]
-    : QueryColumn,
-> = JsonItem<As, Type> & AddQuerySelect<T, Record<As, Type>>;
+    : QueryColumn
+> &
+  AddQuerySelect<
+    T,
+    Record<
+      As,
+      Column extends keyof T['shape']
+        ? T['shape'][Column]
+        : Column extends JsonItem
+        ? Column['__json'][2]
+        : QueryColumn
+    >
+  >;
 
 // result of `jsonPathQuery`:
 // adds a select to a query,
 // adds a `JsonItem` properties that allows nesting of json methods
 type JsonPathQueryResult<
-  T extends QueryBase,
+  T extends PickQueryMetaResultReturnType,
   As extends string,
   Type extends QueryColumn,
 > = JsonItem &
@@ -49,7 +66,7 @@ type JsonPathQueryResult<
     }
   >;
 
-export abstract class JsonModifiers extends QueryBase {
+export abstract class JsonModifiers {
   /**
    * Return a JSON value/object/array where a given value is set at the given path.
    * The path is an array of keys to access the value.
@@ -77,7 +94,7 @@ export abstract class JsonModifiers extends QueryBase {
    * @param options - `as` to alias the json value when selecting, `createIfMissing: true` will create a new JSON property if it didn't exist before
    */
   jsonSet<
-    T extends JsonModifiers,
+    T extends PickQueryMetaShapeResultReturnType,
     Column extends ColumnOrJsonMethod<T>,
     As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
   >(
@@ -90,7 +107,7 @@ export abstract class JsonModifiers extends QueryBase {
       createIfMissing?: boolean;
     },
   ): JsonSetResult<T, Column, As> {
-    const q = this.clone() as T;
+    const q = (this as unknown as Query).clone();
     const json: JsonItem = {
       __json: [
         'set',
@@ -147,7 +164,7 @@ export abstract class JsonModifiers extends QueryBase {
    * @param options - `as` to alias the json value when selecting, `insertAfter: true` to insert after the specified position
    */
   jsonInsert<
-    T extends JsonModifiers,
+    T extends PickQueryMetaShapeResultReturnType,
     Column extends ColumnOrJsonMethod<T>,
     As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
   >(
@@ -160,7 +177,7 @@ export abstract class JsonModifiers extends QueryBase {
       insertAfter?: boolean;
     },
   ): JsonSetResult<T, Column, As> {
-    const q = this.clone() as T;
+    const q = (this as unknown as Query).clone();
     const json: JsonItem = {
       __json: [
         'insert',
@@ -210,7 +227,7 @@ export abstract class JsonModifiers extends QueryBase {
    * @param options - `as` to alias the json value when selecting
    */
   jsonRemove<
-    T extends JsonModifiers,
+    T extends PickQueryMetaShapeResultReturnType,
     Column extends ColumnOrJsonMethod<T>,
     As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
   >(
@@ -219,7 +236,7 @@ export abstract class JsonModifiers extends QueryBase {
     path: Array<string | number>,
     options?: { as?: As },
   ): JsonSetResult<T, Column, As> {
-    const q = this.clone() as T;
+    const q = (this as unknown as Query).clone();
     const json: JsonItem = {
       __json: [
         'remove',
@@ -281,7 +298,7 @@ export abstract class JsonModifiers extends QueryBase {
    * @param options - supports `vars` and `silent`, check Postgres docs of `json_path_query` for these
    */
   jsonPathQuery<
-    T extends JsonModifiers,
+    T extends PickQueryMetaShapeResultReturnType,
     As extends string,
     Type extends QueryColumn,
   >(
@@ -295,7 +312,7 @@ export abstract class JsonModifiers extends QueryBase {
       silent?: boolean;
     },
   ): JsonPathQueryResult<T, As, Type> {
-    const q = this.clone() as T;
+    const q = (this as unknown as Query).clone();
 
     const json: JsonItem = {
       __json: ['pathQuery', as, type, column, path, options],
@@ -321,10 +338,13 @@ export abstract class JsonMethods {
    *
    * @param coalesce
    */
-  json<T extends Query>(
+  json<T>(
     this: T,
     coalesce?: boolean,
   ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
-    return queryJson(this.clone(), coalesce);
+    return queryJson(
+      (this as unknown as Query).clone(),
+      coalesce,
+    ) as SetQueryReturnsColumnOptional<T, QueryColumn<string>>;
   }
 }

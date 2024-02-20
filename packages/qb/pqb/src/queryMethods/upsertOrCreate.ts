@@ -1,14 +1,14 @@
 import {
   Query,
   SetQueryKind,
-  SetQueryReturnsOne,
+  SetQueryReturnsOneKind,
   SetQueryReturnsVoid,
 } from '../query/query';
 import { _queryUpdate, UpdateData } from './update';
 import { CreateData } from './create';
 import { WhereResult } from './where/where';
 import { MoreThanOneRowError } from '../errors';
-import { isObjectEmpty, SetOptional } from 'orchid-core';
+import { isObjectEmpty, PickQueryMetaResult, RecordUnknown } from 'orchid-core';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -27,19 +27,24 @@ export type UpsertArg<T extends Query, Data> =
 
 // `data` and `create` upsert arg.
 // `create` callback arg is of exact `data` type.
-type UpsertArgWithData<
-  T extends Query,
-  Data,
-  Create = SetOptional<CreateData<T>, keyof Data>,
-> = {
+type UpsertArgWithData<T extends Query, Data> = {
   data: Data;
-  create: Create | ((update: Data) => Create);
+  create:
+    | UpsertCreate<keyof Data, CreateData<T>>
+    | ((update: Data) => UpsertCreate<keyof Data, CreateData<T>>);
+};
+
+type UpsertCreate<DataKey extends PropertyKey, CD> = {
+  [K in keyof CD as K extends DataKey ? never : K]: CD[K];
+} & {
+  [K in DataKey]?: K extends keyof CD ? CD[K] : never;
 };
 
 // unless upsert query has a select, it returns void
-export type UpsertResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? SetQueryReturnsOne<SetQueryKind<T, 'upsert'>>
-  : SetQueryReturnsVoid<SetQueryKind<T, 'upsert'>>;
+export type UpsertResult<T extends PickQueryMetaResult> =
+  T['meta']['hasSelect'] extends true
+    ? SetQueryReturnsOneKind<T, 'upsert'>
+    : SetQueryReturnsVoid<SetQueryKind<T, 'upsert'>>;
 
 // Require type of query object to query only one record
 // because upserting multiple isn't possible
@@ -71,8 +76,7 @@ function orCreate<T extends Query>(
         data = data(updateData);
       }
 
-      if (mergeData)
-        data = { ...mergeData, ...(data as Record<string, unknown>) };
+      if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
 
       const inner = q.create(data as CreateData<Query>);
       const { handleResult } = inner.q;
@@ -203,7 +207,7 @@ export class QueryUpsertOrCreate {
     }
 
     if (!isObjectEmpty(updateData)) {
-      _queryUpdate(q, updateData as UpdateData<WhereResult<Query>>);
+      _queryUpdate(q, updateData as unknown as UpdateData<WhereResult<Query>>);
     }
 
     return orCreate(q, data.create, updateData, mergeData);

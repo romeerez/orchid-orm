@@ -1,13 +1,19 @@
 import {
+  PickQueryMetaResultRelations,
+  PickQueryMetaResultReturnTypeWithDataWindowsTable,
+  PickQueryQ,
+  PickQueryShapeResultSinglePrimaryKey,
+  PickQueryShapeSinglePrimaryKey,
   Query,
-  SetQueryKind,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
   SetQueryReturnsPluck,
   SetQueryReturnsRows,
   SetQueryReturnsVoid,
+  SetQueryReturnsVoidKind,
   SetQueryTableAlias,
+  WithDataBase,
 } from '../query/query';
 import { AliasOrTable, SelectableOrExpression } from '../common/utils';
 import {
@@ -18,6 +24,7 @@ import {
   toSQL,
   ToSQLCtx,
   ToSQLOptions,
+  ToSQLQuery,
   TruncateQueryData,
 } from '../sql';
 import {
@@ -28,7 +35,7 @@ import {
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
-import { From, FromQueryArg, FromQuerySelf } from './from';
+import { From, FromQuerySelf } from './from';
 import { Join, OnQueryBuilder } from './join/join';
 import { With } from './with';
 import { Union } from './union';
@@ -38,13 +45,7 @@ import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
-import {
-  _queryWhere,
-  Where,
-  WhereArg,
-  WhereQueryBase,
-  WhereResult,
-} from './where/where';
+import { _queryWhere, Where, WhereArg, WhereResult } from './where/where';
 import { SearchMethods } from './search';
 import { Clear } from './clear';
 import { Having } from './having';
@@ -57,15 +58,24 @@ import { RawSqlMethods } from './rawSql';
 import {
   applyMixins,
   ColumnTypeBase,
+  EmptyObject,
   Expression,
+  PickQueryMeta,
+  PickQueryMetaResult,
+  PickQueryMetaShape,
+  PickQueryResult,
+  PickQueryShape,
+  PickQueryTableMetaResult,
   QueryColumn,
   QueryColumns,
-  QueryThen,
+  QueryMetaBase,
+  QueryReturnType,
+  RecordUnknown,
   Sql,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { AsMethods } from './as';
-import { CloneSelfKeys, QueryBase } from '../query/queryBase';
+import { QueryBase } from '../query/queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { RawSQL } from '../sql/rawSql';
@@ -78,54 +88,54 @@ import { queryWrap } from './queryMethods.utils';
 // argument of the window method
 // it is an object where keys are name of windows
 // and values can be a window options or a raw SQL
-export type WindowArg<T extends Query> = Record<
-  string,
-  WindowArgDeclaration<T> | Expression
->;
+export interface WindowArg<T extends OrderArgSelf> {
+  [K: string]: WindowArgDeclaration<T> | Expression;
+}
 
 // SQL window options to specify partitionBy and order of the window
-export type WindowArgDeclaration<T extends Query = Query> = {
+export interface WindowArgDeclaration<T extends OrderArgSelf = OrderArgSelf> {
   partitionBy?: SelectableOrExpression<T> | SelectableOrExpression<T>[];
   order?: OrderArg<T>;
-};
+}
 
 // add new windows to a query
-type WindowResult<T extends Query, W extends WindowArg<T>> = T & {
+type WindowResult<T, W extends RecordUnknown> = T & {
   windows: Record<keyof W, true>;
 };
 
-export type OrderArgSelf = Pick<
-  Query,
-  'meta' | 'result' | 'clone' | 'q' | 'baseQuery'
->;
+export type OrderArgSelf = PickQueryMetaResult;
 
-export type OrderArg<
-  T extends OrderArgSelf,
-  TsQuery extends PropertyKey = string | undefined extends T['meta']['tsQuery']
-    ? never
-    : Exclude<T['meta']['tsQuery'], undefined>,
-  Key extends PropertyKey =
-    | keyof T['meta']['selectable']
-    | {
-        [K in keyof T['result']]: T['result'][K]['dataType'] extends
-          | 'array'
-          | 'object'
-          ? never
-          : K;
-      }[keyof T['result']]
-    | TsQuery,
-> =
-  | Key
+export type OrderArg<T extends OrderArgSelf> =
+  | OrderArgKey<T>
+  | OrderArgTsQuery<T>
   | {
-      [K in Key]?: K extends TsQuery ? OrderTsQueryConfig : SortDir;
+      [K in OrderArgKey<T> | OrderArgTsQuery<T>]?: K extends OrderArgTsQuery<T>
+        ? OrderTsQueryConfig
+        : SortDir;
     }
   | Expression;
+
+type OrderArgTsQuery<T extends OrderArgSelf> =
+  | string
+  | undefined extends T['meta']['tsQuery']
+  ? never
+  : Exclude<T['meta']['tsQuery'], undefined>;
+
+type OrderArgKey<T extends OrderArgSelf> =
+  | keyof T['meta']['selectable']
+  | {
+      [K in keyof T['result']]: T['result'][K]['dataType'] extends
+        | 'array'
+        | 'object'
+        ? never
+        : K;
+    }[keyof T['result']];
 
 export type OrderArgs<T extends OrderArgSelf> =
   | OrderArg<T>[]
   | TemplateLiteralArgs;
 
-export type GroupArg<T extends Query> =
+export type GroupArg<T extends PickQueryResult> =
   | {
       [K in keyof T['result']]: T['result'][K]['dataType'] extends
         | 'array'
@@ -135,25 +145,27 @@ export type GroupArg<T extends Query> =
     }[keyof T['result']]
   | Expression;
 
-type FindArgs<T extends Pick<Query, 'shape' | 'singlePrimaryKey'>> =
+type FindArgs<T extends PickQueryShapeSinglePrimaryKey> =
   | [T['shape'][T['singlePrimaryKey']]['queryType'] | Expression]
   | TemplateLiteralArgs;
 
-type QueryHelper<T extends Query, Args extends unknown[], Result> = {
+type QueryHelper<
+  T extends PickQueryMetaShape,
+  Args extends unknown[],
+  Result,
+> = {
   <
     Q extends {
-      [K in keyof T]: K extends 'then'
-        ? QueryThen<unknown>
-        : K extends 'result'
-        ? QueryColumns
-        : K extends 'meta'
-        ? Omit<T['meta'], 'as' | 'selectable'> & {
-            selectable: Omit<
-              T['meta']['selectable'],
-              `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
-            >;
-          }
-        : T[K];
+      returnType: QueryReturnType;
+      meta: QueryMetaBase & {
+        selectable: Omit<
+          T['meta']['selectable'],
+          `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
+        >;
+      };
+      result: QueryColumns;
+      windows: EmptyObject;
+      withData: WithDataBase;
     },
   >(
     q: Q,
@@ -168,12 +180,6 @@ export type QueryHelperResult<
   T extends QueryHelper<Query, unknown[], unknown>,
 > = T['result'];
 
-// Result of `truncate` method: query has kind 'truncate' and returns nothing.
-type TruncateResult<T extends Query> = SetQueryKind<
-  SetQueryReturnsVoid<T>,
-  'truncate'
->;
-
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
   constructor(public _type: T, public name: string) {
@@ -186,27 +192,27 @@ export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
 }
 
 export interface QueryMethods<ColumnTypes>
-  extends Omit<AsMethods, 'result'>,
+  extends AsMethods,
     AggregateMethods,
     Select,
     From,
     Join,
     With,
     Union,
-    Omit<JsonModifiers, 'result'>,
+    JsonModifiers,
     JsonMethods,
     Create,
     Update,
     Delete,
     Transaction,
     For,
-    Omit<Where, 'result'>,
+    Where,
     SearchMethods,
     Clear,
     Having,
     Then,
     QueryLog,
-    Omit<QueryHooks, 'result'>,
+    QueryHooks,
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,
@@ -215,43 +221,41 @@ export interface QueryMethods<ColumnTypes>
     ScopeMethods,
     SoftDeleteMethods {}
 
-export type WrapQuerySelf = FromQueryArg;
-export type WrapQueryArg = FromQuerySelf &
-  Pick<Query, 'meta' | 'table' | 'shape'>;
+export type WrapQueryArg = FromQuerySelf;
 
 export const _queryAll = <T extends Query>(q: T): SetQueryReturnsAll<T> => {
   q.q.returnType = 'all';
   q.q.all = true;
-  return q as unknown as SetQueryReturnsAll<T>;
+  return q as never;
 };
 
-export const _queryTake = <T extends Pick<Query, 'result' | 'q'>>(
+export const _queryTake = <T extends PickQueryResult>(
   q: T,
 ): SetQueryReturnsOne<T> => {
-  q.q.returnType = 'oneOrThrow';
-  return q as unknown as SetQueryReturnsOne<T>;
+  (q as unknown as PickQueryQ).q.returnType = 'oneOrThrow';
+  return q as never;
 };
 
-export const _queryTakeOptional = <T extends Pick<Query, 'result' | 'q'>>(
+export const _queryTakeOptional = <T extends PickQueryResult>(
   q: T,
 ): SetQueryReturnsOneOptional<T> => {
-  q.q.returnType = 'one';
-  return q as unknown as SetQueryReturnsOneOptional<T>;
+  (q as unknown as PickQueryQ).q.returnType = 'one';
+  return q as never;
 };
 
 export const _queryExec = <T extends Query>(q: T) => {
   q.q.returnType = 'void';
-  return q as unknown as SetQueryReturnsVoid<T>;
+  return q as never;
 };
 
-export const _queryFindBy = <T extends WhereQueryBase>(
+export const _queryFindBy = <T extends QueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): SetQueryReturnsOne<WhereResult<T>> => {
   return _queryTake(_queryWhere(q, args));
 };
 
-export const _queryFindByOptional = <T extends WhereQueryBase>(
+export const _queryFindByOptional = <T extends QueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): SetQueryReturnsOneOptional<WhereResult<T>> => {
@@ -260,7 +264,7 @@ export const _queryFindByOptional = <T extends WhereQueryBase>(
 
 export const _queryRows = <T extends Query>(q: T): SetQueryReturnsRows<T> => {
   q.q.returnType = 'rows';
-  return q as unknown as SetQueryReturnsRows<T>;
+  return q as never;
 };
 
 export class QueryMethods<ColumnTypes> {
@@ -273,8 +277,8 @@ export class QueryMethods<ColumnTypes> {
    *   .all();
    * ```
    */
-  all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    return _queryAll(this.clone());
+  all<T extends PickQueryResult>(this: T): SetQueryReturnsAll<T> {
+    return _queryAll((this as unknown as Query).clone()) as never;
   }
 
   /**
@@ -285,8 +289,8 @@ export class QueryMethods<ColumnTypes> {
    * const result: TableType = await db.table.where({ key: 'value' }).take();
    * ```
    */
-  take<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    return _queryTake(this.clone());
+  take<T extends PickQueryResult>(this: T): SetQueryReturnsOne<T> {
+    return _queryTake((this as unknown as Query).clone()) as never;
   }
 
   /**
@@ -299,8 +303,10 @@ export class QueryMethods<ColumnTypes> {
    *   .takeOptional();
    * ```
    */
-  takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
-    return _queryTakeOptional(this.clone());
+  takeOptional<T extends PickQueryResult>(
+    this: T,
+  ): SetQueryReturnsOneOptional<T> {
+    return _queryTakeOptional((this as unknown as Query).clone()) as never;
   }
 
   /**
@@ -319,8 +325,8 @@ export class QueryMethods<ColumnTypes> {
    * });
    * ```
    */
-  rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    return _queryRows(this.clone());
+  rows<T extends PickQueryResult>(this: T): SetQueryReturnsRows<T> {
+    return _queryRows((this as unknown as Query).clone()) as never;
   }
 
   /**
@@ -332,15 +338,15 @@ export class QueryMethods<ColumnTypes> {
    * ```
    * @param select - column name or a raw SQL
    */
-  pluck<
-    T extends Pick<Query, 'meta' | 'table' | CloneSelfKeys>,
-    S extends SelectableOrExpression<T>,
-  >(this: T, select: S): SetQueryReturnsPluck<T, S> {
-    const q = this.clone();
+  pluck<T extends PickQueryMeta, S extends SelectableOrExpression<T>>(
+    this: T,
+    select: S,
+  ): SetQueryReturnsPluck<T, S> {
+    const q = (this as unknown as Query).clone();
     q.q.returnType = 'pluck';
     (q.q as SelectQueryData).select = [select as SelectItem];
-    addParserForSelectItem(q as any, q.q.as || q.table, 'pluck', select);
-    return q as unknown as SetQueryReturnsPluck<T, S>;
+    addParserForSelectItem(q as never, q.q.as || q.table, 'pluck', select);
+    return q as never;
   }
 
   /**
@@ -350,8 +356,8 @@ export class QueryMethods<ColumnTypes> {
    * const nothing = await db.table.take().exec();
    * ```
    */
-  exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    return _queryExec(this.clone());
+  exec<T>(this: T): SetQueryReturnsVoid<T> {
+    return _queryExec((this as unknown as Query).clone()) as never;
   }
 
   /**
@@ -379,7 +385,7 @@ export class QueryMethods<ColumnTypes> {
    * };
    * ```
    */
-  toSQL(this: Query, options?: ToSQLOptions): Sql {
+  toSQL(this: ToSQLQuery, options?: ToSQLOptions): Sql {
     return toSQL(this, options);
   }
 
@@ -399,11 +405,15 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param columns - column names or a raw SQL
    */
-  distinct<T extends Query>(
+  distinct<T extends PickQueryMeta>(
     this: T,
     ...columns: SelectableOrExpression<T>[]
   ): T {
-    return pushQueryArray(this.clone(), 'distinct', columns as string[]);
+    return pushQueryArray(
+      (this as unknown as Query).clone(),
+      'distinct',
+      columns as string[],
+    ) as never;
   }
 
   /**
@@ -425,18 +435,16 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - primary key value to find by, or a raw SQL
    */
-  find<
-    T extends Pick<
-      Query,
-      'shape' | 'result' | 'singlePrimaryKey' | CloneSelfKeys
-    >,
-  >(this: T, ...args: FindArgs<T>): SetQueryReturnsOne<WhereResult<T>> {
+  find<T extends PickQueryShapeResultSinglePrimaryKey>(
+    this: T,
+    ...args: FindArgs<T>
+  ): SetQueryReturnsOne<WhereResult<T>> {
     let [value] = args;
     if (Array.isArray(value)) {
       value = new RawSQL(args as TemplateLiteralArgs);
     }
 
-    const q = this.clone() as unknown as Query;
+    const q = (this as unknown as Query).clone();
 
     if (value === null || value === undefined) {
       throw new OrchidOrmInternalError(
@@ -449,9 +457,9 @@ export class QueryMethods<ColumnTypes> {
       _queryWhere(q, [
         {
           [q.singlePrimaryKey]: value,
-        } as WhereArg<Query>,
+        } as never,
       ]),
-    ) as SetQueryReturnsOne<WhereResult<T>>;
+    ) as never;
   }
 
   /**
@@ -464,13 +472,13 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - primary key value to find by, or a raw SQL
    */
-  findOptional<T extends Query>(
+  findOptional<T extends PickQueryShapeResultSinglePrimaryKey>(
     this: T,
     ...args: FindArgs<T>
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
     return _queryTakeOptional(
-      this.find(...args),
-    ) as unknown as SetQueryReturnsOneOptional<WhereResult<T>>;
+      (this as unknown as Query).find(...args),
+    ) as never;
   }
 
   /**
@@ -485,11 +493,14 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - `where` conditions
    */
-  findBy<T extends WhereQueryBase>(
+  findBy<T extends PickQueryMetaResultRelations>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOne<WhereResult<T>> {
-    return _queryFindBy(this.clone(), args);
+    return _queryFindBy(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
   }
 
   /**
@@ -504,11 +515,14 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - `where` conditions
    */
-  findByOptional<T extends WhereQueryBase>(
+  findByOptional<T extends PickQueryMetaResultRelations>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return _queryFindByOptional(this.clone(), args);
+    return _queryFindByOptional(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
   }
 
   /**
@@ -529,10 +543,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param schema - a name of the database schema to use
    */
-  withSchema<T extends Query>(this: T, schema: string): T {
-    const q = this.clone();
+  withSchema<T>(this: T, schema: string): T {
+    const q = (this as unknown as Query).clone();
     q.q.schema = schema;
-    return q;
+    return q as T;
   }
 
   /**
@@ -565,8 +579,12 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param columns - column names or a raw SQL
    */
-  group<T extends Query>(this: T, ...columns: GroupArg<T>[]): T {
-    return pushQueryArray(this.clone(), 'group', columns);
+  group<T extends PickQueryResult>(this: T, ...columns: GroupArg<T>[]): T {
+    return pushQueryArray(
+      (this as unknown as Query).clone(),
+      'group',
+      columns,
+    ) as never;
   }
 
   /**
@@ -595,23 +613,23 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param arg - window config
    */
-  window<T extends Query, W extends WindowArg<T>>(
+  window<T extends OrderArgSelf, W extends WindowArg<T>>(
     this: T,
     arg: W,
   ): WindowResult<T, W> {
     return pushQueryValue(
-      this.clone(),
+      (this as unknown as Query).clone(),
       'window',
       arg,
-    ) as unknown as WindowResult<T, W>;
+    ) as never;
   }
 
   wrap<
-    T extends WrapQuerySelf,
+    T extends PickQueryTableMetaResult,
     Q extends WrapQueryArg,
     As extends string = 't',
   >(this: T, query: Q, as?: As): SetQueryTableAlias<Q, As> {
-    return queryWrap(this, query.clone(), as);
+    return queryWrap(this, (query as unknown as Query).clone(), as) as never;
   }
 
   /**
@@ -657,12 +675,17 @@ export class QueryMethods<ColumnTypes> {
   order<T extends OrderArgSelf>(this: T, ...args: OrderArgs<T>): T {
     if (Array.isArray(args[0])) {
       return pushQueryValue(
-        this.clone(),
+        (this as unknown as Query).clone(),
         'order',
         new RawSQL(args as TemplateLiteralArgs),
-      );
+      ) as never;
     }
-    return pushQueryArray(this.clone(), 'order', args);
+
+    return pushQueryArray(
+      (this as unknown as Query).clone(),
+      'order',
+      args,
+    ) as never;
   }
 
   /**
@@ -674,13 +697,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param arg - limit number
    */
-  limit<T extends Pick<Query, CloneSelfKeys>>(
-    this: T,
-    arg: number | undefined,
-  ): T {
-    const q = this.clone();
+  limit<T>(this: T, arg: number | undefined): T {
+    const q = (this as unknown as Query).clone();
     (q.q as SelectQueryData).limit = arg;
-    return q;
+    return q as T;
   }
 
   /**
@@ -692,13 +712,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param arg - offset number
    */
-  offset<T extends Pick<Query, CloneSelfKeys>>(
-    this: T,
-    arg: number | undefined,
-  ): T {
-    const q = this.clone();
+  offset<T extends Query>(this: T, arg: number | undefined): T {
+    const q = (this as unknown as Query).clone();
     (q.q as SelectQueryData).offset = arg;
-    return q;
+    return q as T;
   }
 
   /**
@@ -717,11 +734,11 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param options - truncate options, may have `cascade: true` and `restartIdentity: true`
    */
-  truncate<T extends Query>(
+  truncate<T extends PickQueryMeta>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
-  ): TruncateResult<T> {
-    const query = this.clone();
+  ): SetQueryReturnsVoidKind<T, 'truncate'> {
+    const query = (this as unknown as Query).clone();
     const q = query.q as TruncateQueryData;
     q.type = 'truncate';
     if (options?.restartIdentity) {
@@ -730,7 +747,7 @@ export class QueryMethods<ColumnTypes> {
     if (options?.cascade) {
       q.cascade = true;
     }
-    return _queryExec(query) as TruncateResult<T>;
+    return _queryExec(query) as never;
   }
 
   /**
@@ -752,8 +769,8 @@ export class QueryMethods<ColumnTypes> {
    * await db.table.all().delete(); // -> 0
    * ```
    */
-  none<T extends Query>(this: T): T {
-    return extendQuery(this, noneMethods);
+  none<T>(this: T): T {
+    return extendQuery(this as Query, noneMethods) as T;
   }
 
   /**
@@ -799,13 +816,17 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param fn - function to modify the query with. The result type will be merged with the main query as if the `merge` method was used.
    */
-  modify<T extends Query, Arg extends Query & { table: T['table'] }, Result>(
+  modify<
+    T extends PickQueryMetaResultReturnTypeWithDataWindowsTable<
+      string | undefined
+    >,
+    Arg extends PickQueryMetaResultReturnTypeWithDataWindowsTable<T['table']>,
+    Result,
+  >(
     this: T,
     fn: (q: Arg) => Result,
   ): Result extends Query ? MergeQuery<T, Result> : Result {
-    return fn(this as unknown as Arg) as Result extends Query
-      ? MergeQuery<T, Result>
-      : Result;
+    return fn(this as unknown as Arg) as never;
   }
 
   /**
@@ -859,15 +880,15 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param fn - helper function
    */
-  makeHelper<T extends Query, Args extends unknown[], Result>(
+  makeHelper<T extends PickQueryMetaShape, Args extends unknown[], Result>(
     this: T,
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {
     return ((query: T, ...args: Args) => {
-      const q = query.clone();
+      const q = (query as unknown as Query).clone();
       q.q.as = undefined;
-      return fn(q, ...args);
-    }) as unknown as QueryHelper<T, Args, Result>;
+      return fn(q as never, ...args);
+    }) as never;
   }
 
   /**
@@ -880,7 +901,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param name
    */
-  column<T extends Query, K extends keyof T['shape']>(
+  column<T extends PickQueryShape, K extends keyof T['shape']>(
     this: T,
     name: K,
   ): ColumnRefExpression<T['shape'][K]> {

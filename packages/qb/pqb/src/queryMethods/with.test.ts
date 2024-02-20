@@ -9,7 +9,7 @@ import {
 import {
   assertType,
   expectSql,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   testDb,
 } from 'test-utils';
 

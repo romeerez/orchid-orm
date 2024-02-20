@@ -3,20 +3,25 @@ import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
-import { JoinedShapes, QueryData, SelectQueryData } from './data';
+import {
+  JoinedShapes,
+  PickQueryDataShapeAndJoinedShapes,
+  QueryData,
+  SelectQueryData,
+} from './data';
 import { pushQueryArray } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
-import { Expression, isExpression, QueryColumns } from 'orchid-core';
+import {
+  Expression,
+  isExpression,
+  QueryColumns,
+  RecordUnknown,
+} from 'orchid-core';
 import { RelationJoinQuery } from '../relations';
 
-type ItemOf3Or4Length =
+type ItemOf2Or3Length =
+  | [leftColumn: string | Expression, rightColumn: string | Expression]
   | [
-      _: unknown,
-      leftColumn: string | Expression,
-      rightColumn: string | Expression,
-    ]
-  | [
-      _: unknown,
       leftColumn: string | Expression,
       op: string,
       rightColumn?: string | Expression,
@@ -25,15 +30,14 @@ type ItemOf3Or4Length =
 export const processJoinItem = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
-  item: Pick<SimpleJoinItem, 'args' | 'isSubQuery'>,
+  query: PickQueryDataShapeAndJoinedShapes,
+  item: Pick<SimpleJoinItem, 'first' | 'args' | 'isSubQuery'>,
   quotedAs: string | undefined,
 ): { target: string; conditions?: string } => {
   let target: string;
   let conditions: string | undefined;
 
-  const { args } = item;
-  const [first] = args;
+  const { first, args } = item;
   if (typeof first === 'string') {
     if (first in table.relations) {
       const { query: toQuery, joinQuery } =
@@ -65,8 +69,8 @@ export const processJoinItem = (
         or: j.or ? [...j.or] : [],
       };
 
-      if (args[1]) {
-        const arg = (args[1] as (q: unknown) => QueryBase)(
+      if (args[0]) {
+        const arg = (args[0] as (q: unknown) => QueryBase)(
           new ctx.queryBuilder.onQueryBuilder(jq, j, table),
         ).q;
 
@@ -157,7 +161,7 @@ const processArgs = (
   args: SimpleJoinItem['args'],
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   first:
     | string
     | (QueryWithTable & {
@@ -167,8 +171,8 @@ const processArgs = (
   joinShape: QueryColumns,
   quotedAs?: string,
 ) => {
-  if (args.length === 2) {
-    const arg = args[1];
+  if (args.length === 1) {
+    const arg = args[0];
     if (typeof arg === 'function') {
       const joinedShapes = {
         ...query.joinedShapes,
@@ -244,13 +248,13 @@ const processArgs = (
         joinShape,
       );
     }
-  } else if (args.length >= 3) {
+  } else if (args.length >= 2) {
     return getConditionsFor3Or4LengthItem(
       ctx,
       query,
       joinAs,
       quotedAs,
-      args as ItemOf3Or4Length,
+      args as ItemOf2Or3Length,
       joinShape,
     );
   }
@@ -260,13 +264,13 @@ const processArgs = (
 
 const getConditionsFor3Or4LengthItem = (
   ctx: ToSQLCtx,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   target: string,
   quotedAs: string | undefined,
-  args: ItemOf3Or4Length,
+  args: ItemOf2Or3Length,
   joinShape: QueryColumns,
 ): string => {
-  const [, leftColumn, opOrRightColumn, maybeRightColumn] = args;
+  const [leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
   const op = maybeRightColumn ? opOrRightColumn : '=';
   const rightColumn = maybeRightColumn ? maybeRightColumn : opOrRightColumn;
@@ -282,7 +286,7 @@ const getConditionsFor3Or4LengthItem = (
 
 const getObjectOrRawConditions = (
   ctx: ToSQLCtx,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   data: Record<string, string | Expression> | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
@@ -365,8 +369,7 @@ export const getIsJoinSubQuery = (query: QueryData, baseQuery: QueryData) => {
   for (const key in query) {
     if (
       !skipQueryKeysForSubQuery[key] &&
-      (query as Record<string, unknown>)[key] !==
-        (baseQuery as Record<string, unknown>)[key]
+      (query as RecordUnknown)[key] !== (baseQuery as RecordUnknown)[key]
     ) {
       return true;
     }

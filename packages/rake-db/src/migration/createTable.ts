@@ -37,18 +37,18 @@ import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
 import { emptyObject, snakeCaseKey } from 'orchid-core';
 
-export type TableQuery = {
+export interface TableQuery {
   text: string;
   values?: unknown[];
   then?(result: QueryArraysResult): void;
-};
+}
 
-export type CreateTableResult<
+export interface CreateTableResult<
   Table extends string,
   Shape extends ColumnsShape,
-> = {
+> {
   table: Db<Table, Shape>;
-};
+}
 
 export const createTable = async <
   CT extends RakeDbColumnTypes,

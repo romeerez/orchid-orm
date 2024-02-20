@@ -20,10 +20,15 @@ import { DbTable, Table, TableClasses } from './baseTable';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { ColumnsShapeBase, SQLQueryArgs, TransactionState } from 'orchid-core';
+import {
+  ColumnsShapeBase,
+  RecordUnknown,
+  SQLQueryArgs,
+  TransactionState,
+} from 'orchid-core';
 
 export type OrchidORM<T extends TableClasses = TableClasses> = {
-  [K in keyof T]: DbTable<T[K]>;
+  [K in keyof T]: DbTable<InstanceType<T[K]>>;
 } & {
   $transaction: typeof transaction;
   $adapter: Adapter;
@@ -187,7 +192,7 @@ export const orchidORM = <T extends TableClasses>(
       );
     }
 
-    (result as Record<string, unknown>)[key] = dbTable;
+    (result as RecordUnknown)[key] = dbTable;
   }
 
   applyRelations(qb, tableInstances, result);

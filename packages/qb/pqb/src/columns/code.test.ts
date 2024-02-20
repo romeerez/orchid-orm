@@ -1,7 +1,7 @@
 import { columnsShapeToCode } from './code';
 import { codeToString } from 'orchid-core';
 import { raw } from '../sql/rawSql';
-import { testColumnTypes as t } from 'test-utils';
+import { testZodColumnTypes as t } from 'test-utils';
 
 describe('code', () => {
   describe('codeToString', () => {

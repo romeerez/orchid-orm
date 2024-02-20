@@ -1,20 +1,20 @@
-import { Query, SetQueryTableAlias } from '../query/query';
-import { QueryBase } from '../query/queryBase';
-
-export type AsQueryArg = Pick<
+import {
+  PickQueryMetaTableShape,
   Query,
-  'table' | 'meta' | 'q' | 'clone' | 'baseQuery' | 'shape'
->;
+  SetQueryTableAlias,
+} from '../query/query';
+
+export type AsQueryArg = PickQueryMetaTableShape;
 
 export const _queryAs = <T extends AsQueryArg, As extends string>(
   self: T,
   as: As,
 ): SetQueryTableAlias<T, As> => {
-  self.q.as = as;
+  (self as unknown as Query).q.as = as;
   return self as SetQueryTableAlias<T, As>;
 };
 
-export abstract class AsMethods extends QueryBase {
+export abstract class AsMethods {
   /**
    * Sets table alias:
    *
@@ -31,6 +31,6 @@ export abstract class AsMethods extends QueryBase {
     this: T,
     as: As,
   ): SetQueryTableAlias<T, As> {
-    return _queryAs(this.clone(), as);
+    return _queryAs((this as unknown as Query).clone(), as) as never;
   }
 }

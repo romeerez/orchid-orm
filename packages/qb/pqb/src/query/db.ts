@@ -46,6 +46,7 @@ import {
   ColumnSchemaConfig,
   QueryColumns,
   QueryColumnsInit,
+  RecordUnknown,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -81,10 +82,10 @@ export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
   };
 
 // Options of `createDb`.
-export type DbTableOptions<
+export interface DbTableOptions<
   Table extends string | undefined,
   Shape extends QueryColumns,
-> = {
+> extends QueryLogOptions {
   schema?: string;
   // prepare all SQL queries before executing
   // true by default
@@ -101,7 +102,7 @@ export type DbTableOptions<
    * See {@link SoftDeleteMethods}
    */
   softDelete?: SoftDeleteOption<Shape>;
-} & QueryLogOptions;
+}
 
 /**
  * See {@link ScopeMethods}
@@ -121,14 +122,14 @@ export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = Pick<
 
 export interface Db<
   Table extends string | undefined = undefined,
-  Shape extends QueryColumnsInit = Record<string, never>,
+  Shape extends QueryColumnsInit = QueryColumnsInit,
   Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
   ShapeWithComputed extends QueryColumnsInit = Shape,
   Scopes extends CoreQueryScopes | undefined = EmptyObject,
-  Data = QueryDefaultReturnData<Shape>,
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
-    QueryMethods<ColumnTypes> {
+    QueryMethods<ColumnTypes>,
+    QueryBase {
   new (
     adapter: Adapter,
     queryBuilder: Db<Table, Shape, Relations, ColumnTypes>,
@@ -136,14 +137,13 @@ export interface Db<
     shape?: Shape,
     options?: DbTableOptions<Table, ShapeWithComputed>,
   ): this;
-  internal: QueryInternal;
+  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   queryBuilder: Db;
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
-  q: QueryData;
   returnType: Query['returnType'];
-  then: QueryThen<Data>;
-  catch: QueryCatch<Data>;
+  then: QueryThen<QueryDefaultReturnData<Shape>>;
+  catch: QueryCatch<QueryDefaultReturnData<Shape>>;
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: Relations;
@@ -169,7 +169,7 @@ export const anyShape = {} as QueryColumnsInit;
 
 export class Db<
   Table extends string | undefined = undefined,
-  Shape extends QueryColumnsInit = Record<string, never>,
+  Shape extends QueryColumnsInit = QueryColumnsInit,
   Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
   ShapeWithComputed extends QueryColumnsInit = Shape,
@@ -335,7 +335,7 @@ export class Db<
         if (q.and) s.and = q.and;
         if (q.or) s.or = q.or;
 
-        (scopes as Record<string, unknown>)[key] = s;
+        (scopes as RecordUnknown)[key] = s;
       }
 
       if (scopes.default) {
@@ -504,16 +504,14 @@ export type MapTableScopesOption<
     | (SoftDelete extends true | PropertyKey ? 'nonDeleted' : never)]: unknown;
 };
 
-export type DbResult<ColumnTypes> = Db<
-  string,
-  Record<string, never>,
-  EmptyObject,
-  ColumnTypes
-> &
-  DbTableConstructor<ColumnTypes> & {
-    adapter: Adapter;
-    close: Adapter['close'];
-  };
+export interface DbResult<ColumnTypes>
+  extends Db<string, Record<string, never>, EmptyObject, ColumnTypes>,
+    DbTableConstructor<ColumnTypes> {
+  adapter: Adapter;
+  close: Adapter['close'];
+}
+{
+}
 
 /**
  * For the case of using the query builder as a standalone tool, use `createDb` from `pqb` package.
@@ -627,7 +625,7 @@ export const createDb = <
     transactionStorage,
     commonOptions,
   );
-  qb.queryBuilder = qb as unknown as Db;
+  qb.queryBuilder = qb as never;
 
   const tableConstructor: DbTableConstructor<ColumnTypes> = (
     table,
@@ -636,7 +634,7 @@ export const createDb = <
   ) =>
     new Db(
       adapter,
-      qb as unknown as Db,
+      qb as never,
       table,
       typeof shape === 'function'
         ? getColumnTypes(ct, shape, nowSQL, options?.language)
@@ -653,9 +651,9 @@ export const createDb = <
 
   // Set all methods from prototype to the db instance (needed for transaction at least):
   for (const name of Object.getOwnPropertyNames(Db.prototype)) {
-    (db as unknown as Record<string, unknown>)[name] =
+    (db as unknown as RecordUnknown)[name] =
       Db.prototype[name as keyof typeof Db.prototype];
   }
 
-  return db as unknown as DbResult<ColumnTypes>;
+  return db as never;
 };

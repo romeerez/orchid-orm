@@ -1,4 +1,4 @@
-import { Query } from '../query/query';
+import { PickQueryQAndInternal } from '../query/query';
 import {
   AfterCommitHook,
   emptyArray,
@@ -8,8 +8,6 @@ import {
   TransactionState,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
-
-export type TransactionSelf = Pick<Query, 'q' | 'internal'>;
 
 const commitSql = {
   text: 'COMMIT',
@@ -27,23 +25,23 @@ export type IsolationLevel =
   | 'READ COMMITTED'
   | 'READ UNCOMMITTED';
 
-export type TransactionOptions = {
+export interface TransactionOptions {
   level: IsolationLevel;
   readOnly?: boolean;
   deferrable?: boolean;
-};
+}
 
 export class Transaction {
-  transaction<T extends TransactionSelf, Result>(
+  transaction<T extends PickQueryQAndInternal, Result>(
     this: T,
     cb: () => Promise<Result>,
   ): Promise<Result>;
-  transaction<T extends TransactionSelf, Result>(
+  transaction<T extends PickQueryQAndInternal, Result>(
     this: T,
     options: IsolationLevel | TransactionOptions,
     cb: () => Promise<Result>,
   ): Promise<Result>;
-  async transaction<T extends TransactionSelf, Result>(
+  async transaction<T extends PickQueryQAndInternal, Result>(
     this: T,
     cbOrOptions: IsolationLevel | TransactionOptions | (() => Promise<Result>),
     cb?: () => Promise<Result>,

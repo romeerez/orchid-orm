@@ -1,5 +1,4 @@
 import { Message, Profile, User } from '../test-utils/test-utils';
-import { QueryReturnType } from '../query/query';
 import { logParamToLogObject } from './log';
 import {
   ColumnInfoQueryData,
@@ -12,10 +11,10 @@ import {
 import {
   assertType,
   expectSql,
-  testColumnTypes as t,
+  testZodColumnTypes as t,
   testDb,
 } from 'test-utils';
-import { Expression, getValueKey } from 'orchid-core';
+import { Expression, getValueKey, QueryReturnType } from 'orchid-core';
 
 describe('merge queries', () => {
   describe('select', () => {
@@ -371,10 +370,10 @@ describe('merge queries', () => {
       i2.columns = ['name'];
       i1.values = [[1]];
       i2.values = [['name']];
-      i1.using = [{ type: 'a', args: ['a'], isSubQuery: false }];
-      i2.using = [{ type: 'b', args: ['b'], isSubQuery: false }];
-      i1.join = [{ type: 'a', args: ['a'], isSubQuery: false }];
-      i2.join = [{ type: 'b', args: ['b'], isSubQuery: false }];
+      i1.using = [{ type: 'a', first: 'a', args: [], isSubQuery: false }];
+      i2.using = [{ type: 'b', first: 'b', args: [], isSubQuery: false }];
+      i1.join = [{ type: 'a', first: 'a', args: [], isSubQuery: false }];
+      i2.join = [{ type: 'b', first: 'b', args: [], isSubQuery: false }];
       i1.onConflict = { type: 'ignore' };
       i2.onConflict = { type: 'merge' };
       i1.beforeCreate = [() => {}];

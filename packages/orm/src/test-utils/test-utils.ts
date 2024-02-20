@@ -2,12 +2,9 @@ import { createBaseTable, Selectable } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
-import { z } from 'zod';
-import { zodSchemaConfig } from 'schema-to-zod';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
-  schemaConfig: zodSchemaConfig,
 });
 
 export type User = Selectable<UserTable>;
@@ -19,15 +16,7 @@ export class UserTable extends BaseTable {
     UserKey: t.name('userKey').text(),
     Password: t.name('password').text(),
     Picture: t.name('picture').text().nullable(),
-    Data: t
-      .name('data')
-      .json(
-        z.object({
-          name: z.string(),
-          tags: z.string().array(),
-        }),
-      )
-      .nullable(),
+    Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
     Age: t.name('age').integer().nullable(),
     Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
@@ -279,14 +268,7 @@ export class ActiveUserWithProfile extends BaseTable {
     bio: t.text().nullable(),
     password: t.text(),
     picture: t.text().nullable(),
-    data: t
-      .json(
-        z.object({
-          name: z.string(),
-          tags: z.string().array(),
-        }),
-      )
-      .nullable(),
+    data: t.json<{ name: string; tags: string[] }>().nullable(),
     age: t.integer().nullable(),
     active: t.boolean().nullable(),
     ...t.timestamps(),

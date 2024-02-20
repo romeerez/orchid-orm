@@ -18,6 +18,7 @@ import {
   getStackTrace,
   MaybeArray,
   RawSQLBase,
+  RecordUnknown,
   singleQuote,
 } from 'orchid-core';
 import path from 'path';
@@ -28,7 +29,7 @@ import { TableQuery } from './migration/createTable';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { DropMode } from './migration/migration';
 
-export type RakeDbColumnTypes = {
+export interface RakeDbColumnTypes {
   index(
     columns: MaybeArray<string | IndexColumnOptions>,
     options?: IndexOptions,
@@ -46,10 +47,10 @@ export type RakeDbColumnTypes = {
   check(check: RawSQLBase): EmptyObject;
 
   constraint(arg: ConstraintArg): EmptyObject;
-};
+}
 
 // Constraint config, it can be a foreign key or a check
-export type ConstraintArg = {
+export interface ConstraintArg {
   // Name of the constraint
   name?: string;
   // Foreign key options
@@ -63,11 +64,11 @@ export type ConstraintArg = {
   check?: RawSQLBase;
   // Drop mode to use when dropping the constraint
   dropMode?: DropMode;
-};
+}
 
 type Db = DbResult<RakeDbColumnTypes>;
 
-type BaseTable<CT> = {
+interface BaseTable<CT> {
   exportAs: string;
   getFilePath(): string;
   nowSQL?: string;
@@ -77,7 +78,7 @@ type BaseTable<CT> = {
     snakeCase?: boolean;
     language?: string;
   };
-};
+}
 
 export type InputRakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
@@ -92,10 +93,10 @@ export type InputRakeDbConfig<
       }
   );
 
-export type RakeDbConfig<
+export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
   CT = DefaultColumnTypes<ColumnSchemaConfig>,
-> = {
+> extends QueryLogOptions {
   schemaConfig: SchemaConfig;
   columnTypes: CT;
   basePath: string;
@@ -125,23 +126,25 @@ export type RakeDbConfig<
   afterMigrate?(db: Db): Promise<void>;
   beforeRollback?(db: Db): Promise<void>;
   afterRollback?(db: Db): Promise<void>;
-} & QueryLogOptions;
+}
 
-export type ModuleExportsRecord = Record<string, () => Promise<unknown>>;
+export interface ModuleExportsRecord {
+  [K: string]: () => Promise<unknown>;
+}
 
-export type AppCodeUpdaterParams = {
+export interface AppCodeUpdaterParams {
   options: AdapterOptions;
   basePath: string;
   cache: object;
   logger: QueryLogOptions['logger'];
   baseTable: { getFilePath(): string; exportAs: string };
   import(path: string): Promise<unknown>;
-};
+}
 
-export type AppCodeUpdater = {
+export interface AppCodeUpdater {
   process(params: AppCodeUpdaterParams & { ast: RakeDbAst }): Promise<void>;
   afterAll(params: AppCodeUpdaterParams): Promise<void>;
-};
+}
 
 export const migrationConfigDefaults = {
   schemaConfig: defaultSchemaConfig,
@@ -355,7 +358,7 @@ export const createSchemaMigrations = async (
     );
     config.logger?.log('Created versions table');
   } catch (err) {
-    if ((err as Record<string, unknown>).code === '42P07') {
+    if ((err as RecordUnknown).code === '42P07') {
       config.logger?.log('Versions table exists');
     } else {
       throw err;
@@ -401,7 +404,7 @@ export const getTextAfterFrom = (input: string): string | undefined => {
   return getTextAfterRegExp(input, /(From|-from|_from)[A-Z-_]/, 4);
 };
 
-export type MigrationItem = {
+export interface MigrationItem {
   path: string;
   version: string;
   /**
@@ -410,7 +413,7 @@ export type MigrationItem = {
    * Promise can return `{ default: x }` where `x` is a return of `change` or an array of such returns.
    */
   load(): Promise<unknown>;
-};
+}
 
 // If the config has a `migrations` object, it will be returned as array of migration items.
 // If `up` is false, will reverse the resulting array.

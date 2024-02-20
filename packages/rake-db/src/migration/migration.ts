@@ -21,6 +21,7 @@ import {
   MaybeArray,
   QueryInput,
   RawSQLBase,
+  RecordUnknown,
   singleQuote,
   Sql,
 } from 'orchid-core';
@@ -145,8 +146,7 @@ export const createMigrationInterface = <
 
   const { prototype: proto } = Migration;
   for (const key of Object.getOwnPropertyNames(proto)) {
-    (db as unknown as Record<string, unknown>)[key] =
-      proto[key as keyof typeof proto];
+    (db as unknown as RecordUnknown)[key] = proto[key as keyof typeof proto];
   }
 
   db.migratedAsts = asts;

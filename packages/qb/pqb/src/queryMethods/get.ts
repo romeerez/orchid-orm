@@ -25,11 +25,11 @@ export class QueryGet {
    *
    * @param arg - string for a column to get, or a raw SQL
    */
-  get<T extends Query, Arg extends GetArg<T>>(
+  get<T extends QueryGetSelf, Arg extends GetArg<T>>(
     this: T,
     arg: Arg,
   ): GetResult<T, Arg> {
-    return _queryGet(this.clone(), arg);
+    return _queryGet((this as unknown as Query).clone(), arg) as never;
   }
 
   /**
@@ -45,6 +45,6 @@ export class QueryGet {
     this: T,
     arg: Arg,
   ): GetResultOptional<T, Arg> {
-    return _queryGetOptional(this.clone(), arg);
+    return _queryGetOptional((this as unknown as Query).clone(), arg) as never;
   }
 }

@@ -1,23 +1,23 @@
 import { Adapter } from 'pqb';
 
 export namespace DbStructure {
-  export type Table = {
+  export interface Table {
     schemaName: string;
     name: string;
     comment?: string;
     columns: Column[];
-  };
+  }
 
-  export type View = {
+  export interface View {
     schemaName: string;
     name: string;
     isRecursive: boolean;
     with?: string[]; // ['check_option=LOCAL', 'security_barrier=true']
     columns: Column[];
     sql: string;
-  };
+  }
 
-  export type Procedure = {
+  export interface Procedure {
     schemaName: string;
     name: string;
     returnSet: boolean;
@@ -28,9 +28,9 @@ export namespace DbStructure {
     argTypes: string[];
     argModes: ('i' | 'o')[];
     argNames?: string[];
-  };
+  }
 
-  export type Column = {
+  export interface Column {
     schemaName: string;
     tableName: string;
     name: string;
@@ -55,9 +55,9 @@ export namespace DbStructure {
       cache?: number;
       cycle?: boolean;
     };
-  };
+  }
 
-  export type Index = {
+  export interface Index {
     schemaName: string;
     tableName: string;
     name: string;
@@ -73,21 +73,21 @@ export namespace DbStructure {
     with?: string;
     tablespace?: string;
     where?: string;
-  };
+  }
 
   // a = no action, r = restrict, c = cascade, n = set null, d = set default
   type ForeignKeyAction = 'a' | 'r' | 'c' | 'n' | 'd';
 
-  export type Constraint = {
+  export interface Constraint {
     schemaName: string;
     tableName: string;
     name: string;
     primaryKey?: string[];
     references?: References;
     check?: Check;
-  };
+  }
 
-  export type References = {
+  export interface References {
     foreignSchema: string;
     foreignTable: string;
     columns: string[];
@@ -95,14 +95,14 @@ export namespace DbStructure {
     match: 'f' | 'p' | 's'; // FULL | PARTIAL | SIMPLE
     onUpdate: ForeignKeyAction;
     onDelete: ForeignKeyAction;
-  };
+  }
 
-  export type Check = {
+  export interface Check {
     columns?: string[];
     expression: string;
-  };
+  }
 
-  export type Trigger = {
+  export interface Trigger {
     schemaName: string;
     tableName: string;
     triggerSchema: string;
@@ -111,21 +111,21 @@ export namespace DbStructure {
     activation: string;
     condition?: string;
     definition: string;
-  };
+  }
 
-  export type Extension = {
+  export interface Extension {
     schemaName: string;
     name: string;
     version?: string;
-  };
+  }
 
-  export type Enum = {
+  export interface Enum {
     schemaName: string;
     name: string;
     values: [string, ...string[]];
-  };
+  }
 
-  export type Domain = {
+  export interface Domain {
     schemaName: string;
     name: string;
     type: string;
@@ -139,9 +139,9 @@ export namespace DbStructure {
     collation?: string;
     default?: string;
     check?: string;
-  };
+  }
 
-  export type Collation = {
+  export interface Collation {
     schema: string;
     name: string;
     provider: string;
@@ -150,7 +150,7 @@ export namespace DbStructure {
     lcCType?: string;
     locale?: string;
     version?: string;
-  };
+  }
 }
 
 const filterSchema = (table: string) =>

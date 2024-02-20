@@ -1,9 +1,15 @@
-import { Query, SetQueryReturnsColumn } from '../query/query';
+import {
+  PickQueryMetaResultRelationsWindows,
+  PickQueryQ,
+  Query,
+  SetQueryReturnsColumnOrThrow,
+} from '../query/query';
 import {
   ColumnTypeBase,
   emptyObject,
   Expression,
   getValueKey,
+  PickQueryMetaResultWindows,
   QueryColumn,
   setParserToQuery,
   toArray,
@@ -18,7 +24,9 @@ import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
 import { BaseOperators, setQueryOperators } from '../columns/operators';
 
 // Additional SQL options that can be accepted by any aggregate function.
-export type AggregateOptions<T extends Query> = {
+export interface AggregateOptions<
+  T extends PickQueryMetaResultRelationsWindows,
+> {
   // Add DISTINCT inside of function call.
   distinct?: boolean;
   // The same argument as in .order() to be set inside of function call.
@@ -33,10 +41,10 @@ export type AggregateOptions<T extends Query> = {
   // Can be the name of a window defined by calling the .window() method,
   // or object the same as the .window() method takes to define a window.
   over?: Over<T>;
-};
+}
 
 // Window definition or name.
-export type Over<T extends Query> =
+export type Over<T extends PickQueryMetaResultWindows> =
   | keyof T['windows']
   | WindowArgDeclaration<T>;
 
@@ -50,11 +58,13 @@ export type FnExpressionArgs<Q extends Query> = (
   | FnExpressionArgsValue
 )[];
 
-export type FnExpressionArgsPairs<Q extends Query> = {
+export interface FnExpressionArgsPairs<Q extends Query> {
   pairs: Record<string, SelectableOrExpression<Q>>;
-};
+}
 
-export type FnExpressionArgsValue = { value: unknown };
+export interface FnExpressionArgsValue {
+  value: unknown;
+}
 
 // Expression for SQL function calls.
 export class FnExpression<
@@ -105,9 +115,7 @@ export class FnExpression<
                 `${addValue(values, key)}::text, ${rawOrColumnToSql(
                   ctx,
                   this.q.q,
-                  pairs[
-                    key as keyof typeof pairs
-                  ] as unknown as SelectableOrExpression,
+                  pairs[key as keyof typeof pairs] as never,
                   quotedAs,
                 )}`,
               );
@@ -176,9 +184,9 @@ export type ColumnExpression<
 export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
   self: T,
   expr: Expression,
-): SetQueryReturnsColumn<T, C> & C['operators'] => {
+): SetQueryReturnsColumnOrThrow<T, C> & C['operators'] => {
   const type = expr._type as ColumnTypeBase;
-  const q = setQueryOperators(self, type.operators);
+  const q = setQueryOperators(self, type.operators) as unknown as PickQueryQ;
 
   // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
   q.q.returnType = 'valueOrThrow';
@@ -191,25 +199,28 @@ export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
     setParserToQuery(q.q, getValueKey, type.parseFn);
   }
 
-  return q as SetQueryReturnsColumn<T, C> & C['operators'];
+  return q as never;
 };
 
 // Applies a function expression to the query.
-export function makeFnExpression<T extends Query, C extends QueryColumn>(
+export function makeFnExpression<
+  T extends PickQueryMetaResultRelationsWindows,
+  C extends QueryColumn,
+>(
   self: T,
   type: C,
   fn: string,
   args: FnExpressionArgs<Query>,
   options?: AggregateOptions<T>,
-): SetQueryReturnsColumn<T, C> & C['operators'] {
+): SetQueryReturnsColumnOrThrow<T, C> & C['operators'] {
   return makeExpression(
-    self.clone(),
+    (self as unknown as Query).clone(),
     new FnExpression<Query, QueryColumn>(
-      self,
+      self as unknown as Query,
       fn,
       args,
       options as AggregateOptions<Query> | undefined,
       type,
     ),
-  ) as unknown as SetQueryReturnsColumn<T, C> & C['operators'];
+  ) as never;
 }

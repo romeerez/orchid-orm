@@ -42,6 +42,7 @@ type ToSqlOptionsInternal = ToSQLOptions & {
 
 export type ToSQLQuery = Pick<
   Query,
+  | '__isQuery'
   | 'q'
   | 'queryBuilder'
   | 'table'

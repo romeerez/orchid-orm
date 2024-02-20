@@ -1,4 +1,5 @@
 import { Query } from './query/query';
+import { RecordUnknown } from 'orchid-core';
 
 export type RelationsChain = (Query | RelationQuery)[];
 
@@ -7,7 +8,7 @@ export type RelationJoinQuery = (
   baseQuery: Query,
 ) => Query;
 
-export type RelationConfigBase = {
+export interface RelationConfigBase {
   query: Query;
   methodQuery: Query;
   joinQuery: RelationJoinQuery;
@@ -25,19 +26,21 @@ export type RelationConfigBase = {
   optionalDataForCreate: unknown;
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
-  params: Record<string, unknown>;
-};
+  params: RecordUnknown;
+}
 
-export type RelationConfigDataForCreate = {
-  columns: Record<string, unknown>;
-  nested: Record<string, unknown>;
-};
+export interface RelationConfigDataForCreate {
+  columns: RecordUnknown;
+  nested: RecordUnknown;
+}
 
-export type RelationsBase = Record<string, RelationQueryBase>;
+export interface RelationsBase {
+  [K: string]: RelationQueryBase;
+}
 
-export type RelationQueryBase = Query & {
+export interface RelationQueryBase extends Query {
   relationConfig: RelationConfigBase;
-};
+}
 
 export type RelationQuery<
   Config extends RelationConfigBase = RelationConfigBase,

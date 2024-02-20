@@ -8,8 +8,8 @@ import {
   setColumnData,
   addCode,
   ColumnWithDefault,
-  ColumnTypeBase,
   ColumnSchemaConfig,
+  PickColumnBaseData,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
 import type { TableData } from './columnTypes';
@@ -43,19 +43,19 @@ export abstract class IntegerBaseColumn<
 
 export abstract class NumberAsStringBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsNumber> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsNumber> {
   operators = Operators.number;
   declare data: ColumnData;
 
   constructor(schema: Schema) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
   }
 }
 
 // exact numeric of selectable precision
 export class DecimalColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['string'], OperatorsNumber> {
+> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsNumber> {
   declare data: ColumnData & {
     numericPrecision?: number;
     numericScale?: number;
@@ -68,7 +68,7 @@ export class DecimalColumn<
     numericPrecision?: number,
     numericScale?: number,
   ) {
-    super(schema, schema.string);
+    super(schema, schema.stringSchema);
     this.data.numericPrecision = numericPrecision;
     this.data.numericScale = numericScale;
   }
@@ -114,8 +114,10 @@ const intToCode = (column: ColumnType, t: string): Code => {
   return columnCode(column, t, code);
 };
 
-export type IdentityColumn<T extends Pick<ColumnTypeBase, 'data'>> =
-  ColumnWithDefault<T, Expression>;
+export type IdentityColumn<T extends PickColumnBaseData> = ColumnWithDefault<
+  T,
+  Expression
+>;
 
 // signed two-byte integer
 export class SmallIntColumn<

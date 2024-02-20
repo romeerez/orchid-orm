@@ -11,23 +11,25 @@ import {
 
 const { types } = pg;
 
-export type TypeParsers = Record<number, (input: string) => unknown>;
+export interface TypeParsers {
+  [K: number]: (input: string) => unknown;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type QueryResult<T extends QueryResultRow = any> = {
+export interface QueryResult<T extends QueryResultRow = any> {
   rowCount: number;
   rows: T[];
   fields: {
     name: string;
   }[];
-};
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type QueryArraysResult<R extends any[] = any[]> = {
+export interface QueryArraysResult<R extends any[] = any[]> {
   rowCount: number;
   rows: R[];
   fields: { name: string }[];
-};
+}
 
 const defaultTypeParsers: TypeParsers = {};
 
@@ -55,9 +57,9 @@ export interface AdapterConfig
   databaseURL?: string;
 }
 
-export type AdapterOptions = AdapterConfig & {
+export interface AdapterOptions extends AdapterConfig {
   types?: TypeParsers;
-};
+}
 
 export class Adapter implements AdapterBase {
   types: TypeParsers;
@@ -110,9 +112,7 @@ export class Adapter implements AdapterBase {
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryResult<T>> {
-    return performQuery(this, query, types) as unknown as Promise<
-      QueryResult<T>
-    >;
+    return performQuery(this, query, types) as never;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,9 +120,7 @@ export class Adapter implements AdapterBase {
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryArraysResult<R>> {
-    return performQuery(this, query, types, 'array') as unknown as Promise<
-      QueryArraysResult<R>
-    >;
+    return performQuery(this, query, types, 'array') as never;
   }
 
   async transaction<Result>(
@@ -160,7 +158,9 @@ const defaultTypesConfig = {
   },
 };
 
-type ConnectionSchema = { connection: { schema?: string } };
+interface ConnectionSchema {
+  connection: { schema?: string };
+}
 
 const setSearchPath = (client: PoolClient, schema?: string) => {
   if ((client as unknown as ConnectionSchema).connection.schema !== schema) {

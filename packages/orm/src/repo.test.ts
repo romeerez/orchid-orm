@@ -1,8 +1,8 @@
 import { orchidORM } from './orm';
-import { QueryReturnType } from 'pqb';
 import { createRepo } from './repo';
 import { BaseTable } from './test-utils/test-utils';
 import { assertType, expectSql, testDbOptions } from 'test-utils';
+import { QueryReturnType } from 'orchid-core';
 
 class SomeTable extends BaseTable {
   readonly table = 'someTable';

@@ -1,7 +1,9 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Code, ColumnSchemaConfig } from 'orchid-core';
+import { Code, ColumnSchemaConfig, QueryColumn } from 'orchid-core';
 import { Operators, OperatorsBoolean } from './operators';
+
+export type BooleanQueryColumn = QueryColumn<boolean, OperatorsBoolean>;
 
 // 1 byte, true or false
 export class BooleanColumn<

@@ -1,4 +1,4 @@
-import { Query, QueryReturnType, WithDataBase } from './query';
+import { Query, WithDataBase } from './query';
 import { QueryData } from '../sql';
 import {
   EmptyObject,
@@ -7,6 +7,8 @@ import {
   QueryMetaBase,
   QueryColumns,
   RecordKeyTrue,
+  QueryThen,
+  QueryReturnType,
 } from 'orchid-core';
 import { RelationsBase } from '../relations';
 import { getClonedQueryData } from '../common/utils';
@@ -21,12 +23,13 @@ export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
    *
    * Used under the hood, and not really needed on the app side.
    */
-  clone<T extends Pick<QueryBase, 'baseQuery' | 'q'>>(this: T): T {
-    const cloned = Object.create(this.baseQuery);
-    cloned.q = getClonedQueryData(this.q);
+  clone<T>(this: T): T {
+    const cloned = Object.create((this as unknown as Query).baseQuery);
+    cloned.q = getClonedQueryData((this as unknown as Query).q);
     return cloned;
   }
-  abstract result: QueryColumns;
+  __isQuery!: true;
+  result!: QueryColumns;
   q = {} as QueryData;
   table?: string;
   shape!: QueryColumns;
@@ -36,4 +39,8 @@ export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
   internal!: QueryInternal;
   meta!: QueryMetaBase<Scopes>;
   returnType!: QueryReturnType;
+}
+
+export interface QueryBaseThen<T> extends QueryBase {
+  then: QueryThen<T>;
 }
