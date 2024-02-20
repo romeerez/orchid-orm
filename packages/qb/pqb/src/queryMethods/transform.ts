@@ -14,19 +14,16 @@ export type QueryTransformFn<T extends Query> = (
 // Changes the `returnType` to `valueOrThrow`,
 // because it's always returning a single value - the result of the transform function.
 // Changes the query result to a type returned by the transform function.
-export type QueryTransform<
-  T extends QueryBase,
-  Fn extends QueryTransformFn<Query>,
-  Data = ReturnType<Fn>,
-> = {
-  [K in keyof QueryBase]: K extends 'returnType'
+export type QueryTransform<T extends QueryBase, Data> = {
+  [K in keyof T]: K extends 'returnType'
     ? 'valueOrThrow'
     : K extends 'result'
     ? { value: QueryColumn<Data> }
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
     : T[K];
-} & {
-  then: QueryThen<Data>;
-  catch: QueryCatch<Data>;
 };
 
 export class TransformMethods {
@@ -84,10 +81,7 @@ export class TransformMethods {
   transform<T extends Query, Fn extends QueryTransformFn<T>>(
     this: T,
     fn: Fn,
-  ): QueryTransform<T, Fn> {
-    return pushQueryValue(this.clone(), 'transform', fn) as QueryTransform<
-      T,
-      Fn
-    >;
+  ): QueryTransform<T, ReturnType<Fn>> {
+    return pushQueryValue(this.clone(), 'transform', fn) as never;
   }
 }

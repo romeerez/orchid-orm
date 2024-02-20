@@ -52,39 +52,39 @@ import { makeRegexToFindInSql } from '../common/utils';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL } from '../sql/rawSql';
 
-export type TableData = {
+export interface TableData {
   primaryKey?: TableData.PrimaryKey;
   indexes?: TableData.Index[];
   constraints?: TableData.Constraint[];
-};
+}
 
 export namespace TableData {
-  export type PrimaryKey = {
+  export interface PrimaryKey {
     columns: string[];
     options?: { name?: string };
-  };
+  }
 
-  export type Index = {
+  export interface Index {
     columns: IndexColumnOptions[];
     options: IndexOptions;
-  };
+  }
 
-  export type Constraint = {
+  export interface Constraint {
     name?: string;
     check?: Check;
     identity?: Identity;
     references?: References;
     dropMode?: DropMode;
-  };
+  }
 
   export type Check = RawSQLBase;
 
-  export type References = {
+  export interface References {
     columns: string[];
     fnOrTable: (() => ForeignKeyTable) | string;
     foreignColumns: string[];
     options?: ForeignKeyOptions;
-  };
+  }
 
   export interface Identity extends SequenceBaseOptions {
     always?: boolean;
@@ -304,7 +304,7 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
     identity(options) {
       return (schema.integer() as IntegerColumn<SchemaConfig>).identity(
         options,
-      ) as unknown as IdentityColumn<ReturnType<SchemaConfig['integer']>>;
+      ) as never;
     },
     smallSerial: schema.smallSerial,
     serial: schema.serial,

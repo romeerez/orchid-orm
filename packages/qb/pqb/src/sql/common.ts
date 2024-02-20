@@ -1,5 +1,5 @@
 import { SelectableOrExpression } from '../common/utils';
-import { QueryData } from './data';
+import { PickQueryDataShapeAndJoinedShapes, QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
 import {
   ColumnTypeBase,
@@ -160,7 +160,7 @@ export const ownColumnToSql = (
 
 export const rawOrColumnToSql = (
   ctx: ToSQLCtx,
-  data: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  data: PickQueryDataShapeAndJoinedShapes,
   expr: SelectableOrExpression,
   quotedAs: string | undefined,
   shape: QueryColumns = data.shape,

@@ -5,7 +5,7 @@ import {
   RecordUnknown,
 } from 'orchid-core';
 import { OrchidOrmInternalError } from '../errors';
-import { Query } from './query';
+import { PickQueryQ, PickQueryQAndBaseQuery, Query } from './query';
 import { QueryBase } from './queryBase';
 import { getClonedQueryData } from '../common/utils';
 
@@ -35,7 +35,7 @@ export const pushQueryArray = <T extends { q: QueryData }>(
  * @param key - key to get the array
  * @param value - new element to push
  */
-export const pushQueryValue = <T extends { q: QueryData }>(
+export const pushQueryValue = <T extends PickQueryQ>(
   q: T,
   key: string,
   value: unknown,
@@ -76,7 +76,7 @@ export const setQueryObjectValue = <T extends { q: QueryData }>(
  * @param q - query
  * @param method - 'update' or 'delete'
  */
-export const throwIfNoWhere = (q: Pick<Query, 'q'>, method: string): void => {
+export const throwIfNoWhere = (q: PickQueryQ, method: string): void => {
   if (!q.q.or && !q.q.and && !q.q.all) {
     throw new OrchidOrmInternalError(
       q as Query,
@@ -113,7 +113,7 @@ export const saveSearchAlias = (
  * @param methods - methods to add
  */
 export const extendQuery = <
-  T extends Pick<Query, 'q' | 'baseQuery'>,
+  T extends PickQueryQAndBaseQuery,
   Methods extends RecordUnknown,
 >(
   q: T,

@@ -2,10 +2,11 @@ import { cloneQuery, QueryData, toSQLCacheKey, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
 import type { QueryColumn } from 'orchid-core';
 import { RelationQuery } from '../relations';
-import { Expression } from 'orchid-core';
+import { Expression, PickQueryMeta } from 'orchid-core';
 import { QueryBase, QueryBaseThen } from '../query/queryBase';
+import { PickQueryMetaTable } from '../query/query';
 
-export type AliasOrTable<T extends Pick<Query, 'table' | 'meta'>> =
+export type AliasOrTable<T extends PickQueryMetaTable> =
   T['meta']['as'] extends string
     ? T['meta']['as']
     : T['table'] extends string
@@ -13,12 +14,12 @@ export type AliasOrTable<T extends Pick<Query, 'table' | 'meta'>> =
     : never;
 
 export type SelectableOrExpression<
-  T extends Pick<QueryBase, 'meta'> = QueryBase,
+  T extends PickQueryMeta = QueryBase,
   C extends QueryColumn = QueryColumn,
 > = '*' | keyof T['meta']['selectable'] | Expression<C>;
 
 export type ExpressionOutput<
-  T extends QueryBase,
+  T extends PickQueryMeta,
   Expr extends SelectableOrExpression<T>,
 > = Expr extends keyof T['meta']['selectable']
   ? T['meta']['selectable'][Expr]['column']

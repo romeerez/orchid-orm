@@ -50,7 +50,11 @@ import {
 import { tableMethods } from './tableMethods';
 import { TableQuery } from './createTable';
 
-type ChangeTableData = { add: TableData; drop: TableData };
+interface ChangeTableData {
+  add: TableData;
+  drop: TableData;
+}
+
 const newChangeTableData = (): ChangeTableData => ({
   add: {},
   drop: {},
@@ -358,11 +362,11 @@ const makeAst = (
   };
 };
 
-type PrimaryKeys = {
+interface PrimaryKeys {
   columns: string[];
   change?: true;
   options?: { name?: string };
-};
+}
 
 const astToQueries = (
   ast: RakeDbAst.ChangeTable,

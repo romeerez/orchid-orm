@@ -3,11 +3,12 @@ import {
   QueryReturnsAll,
   queryTypeWithLimitOne,
   SetQueryKind,
-  SetQueryReturns,
-  SetQueryReturnsAll,
+  SetQueryReturnsAllKind,
   SetQueryReturnsColumnKind,
+  SetQueryReturnsColumnOptional,
   SetQueryReturnsOneKind,
-  SetQueryReturnsPluckColumn,
+  SetQueryReturnsOneOptional,
+  SetQueryReturnsPluckColumnKind,
   SetQueryReturnsRowCount,
 } from '../query/query';
 import { RelationConfigDataForCreate, RelationsBase } from '../relations';
@@ -96,7 +97,10 @@ export type CreateRelationsData<T extends CreateSelf> =
   CreateDataWithDefaultsForRelations<T> &
     // Intersection of objects for `belongsTo` relations:
     // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-    CreateRelationsDataOmittingFKeys<T> &
+    CreateRelationsDataOmittingFKeys<
+      T,
+      T['relations'][keyof T['relations']]['relationConfig']['dataForCreate']
+    > &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
     T['relations'][keyof T['relations']]['relationConfig']['optionalDataForCreate'];
@@ -106,7 +110,7 @@ export type CreateRelationsData<T extends CreateSelf> =
 export type CreateRelationsDataOmittingFKeys<
   T extends CreateSelf,
   // Collect a union of `belongsTo` relation objects.
-  Union = T['relations'][keyof T['relations']]['relationConfig']['dataForCreate'],
+  Union,
 > =
   // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
   (
@@ -135,7 +139,7 @@ type CreateResult<T extends CreateSelf> = T extends { isCount: true }
   : QueryReturnsAll<T['returnType']> extends true
   ? SetQueryReturnsOneKind<T, 'create'>
   : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumnKind<T, T['result']['pluck'], 'create'>
+  ? SetQueryReturnsColumnKind<T, 'create'>
   : SetQueryKind<T, 'create'>;
 
 // `insert` method output type
@@ -147,7 +151,7 @@ type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
   ? QueryReturnsAll<T['returnType']> extends true
     ? SetQueryReturnsOneKind<T, 'create'>
     : T['returnType'] extends 'pluck'
-    ? SetQueryReturnsColumnKind<T, T['result']['pluck'], 'create'>
+    ? SetQueryReturnsColumnKind<T, 'create'>
     : SetQueryKind<T, 'create'>
   : SetQueryReturnsRowCount<T, 'create'>;
 
@@ -158,9 +162,9 @@ type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
 type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
+  ? SetQueryReturnsAllKind<T, 'create'>
   : T['returnType'] extends 'value' | 'valueOrThrow'
-  ? SetQueryReturnsPluckColumn<SetQueryKind<T, 'create'>, T['result']['value']>
+  ? SetQueryReturnsPluckColumnKind<T, 'create'>
   : SetQueryKind<T, 'create'>;
 
 // `insertMany` method output type
@@ -170,12 +174,9 @@ type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
 type InsertManyResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
     ? T['returnType'] extends 'one' | 'oneOrThrow'
-      ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
+      ? SetQueryReturnsAllKind<T, 'create'>
       : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetQueryReturnsPluckColumn<
-          SetQueryKind<T, 'create'>,
-          T['result']['value']
-        >
+      ? SetQueryReturnsPluckColumnKind<T, 'create'>
       : SetQueryKind<T, 'create'>
     : SetQueryReturnsRowCount<T, 'create'>;
 
@@ -183,32 +184,30 @@ type InsertManyResult<T extends CreateSelf> =
 // overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',
 // because `ignore` won't return any data in case of a conflict.
 type IgnoreResult<T extends CreateSelf> = T['returnType'] extends 'oneOrThrow'
-  ? SetQueryReturns<T, 'one'>
+  ? SetQueryReturnsOneOptional<T>
   : T['returnType'] extends 'valueOrThrow'
-  ? SetQueryReturns<T, 'value'>
+  ? SetQueryReturnsColumnOptional<T, T['result']['value']>
   : T;
 
 // `createRaw` method argument.
 // Contains array of columns and a raw SQL for values.
-type CreateRawData<T extends CreateSelf> = {
+interface CreateRawData<T extends CreateSelf> {
   columns: (keyof T['shape'])[];
   values: Expression;
-};
+}
 
 // `createManyRaw` method argument.
 // Contains array of columns and an array of raw SQL for values.
-type CreateManyRawData<T extends CreateSelf> = {
+interface CreateManyRawData<T extends CreateSelf> {
   columns: (keyof T['shape'])[];
   values: Expression[];
-};
+}
 
 // Record<(column name), true> where the column doesn't have a default, and it is not nullable.
 type RawRequiredColumns<T extends CreateSelf> = {
   [K in keyof T['inputType'] as K extends keyof T['meta']['defaults']
     ? never
-    : null extends T['inputType'][K]
-    ? never
-    : undefined extends T['inputType'][K]
+    : null | undefined extends T['inputType'][K]
     ? never
     : K]: true;
 };
@@ -253,11 +252,11 @@ export type AddQueryDefaults<
  * Used by ORM to access the context of current create query.
  * Is passed to the `create` method of a {@link VirtualColumn}
  */
-export type CreateCtx = {
+export interface CreateCtx {
   columns: Map<string, number>;
   returnTypeAll?: true;
   resultAll: RecordUnknown[];
-};
+}
 
 // Type of `encodeFn` of columns.
 type Encoder = (input: unknown) => unknown;

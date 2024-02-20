@@ -3,7 +3,12 @@ import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
-import { JoinedShapes, QueryData, SelectQueryData } from './data';
+import {
+  JoinedShapes,
+  PickQueryDataShapeAndJoinedShapes,
+  QueryData,
+  SelectQueryData,
+} from './data';
 import { pushQueryArray } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
 import {
@@ -25,7 +30,7 @@ type ItemOf2Or3Length =
 export const processJoinItem = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   item: Pick<SimpleJoinItem, 'first' | 'args' | 'isSubQuery'>,
   quotedAs: string | undefined,
 ): { target: string; conditions?: string } => {
@@ -156,7 +161,7 @@ const processArgs = (
   args: SimpleJoinItem['args'],
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   first:
     | string
     | (QueryWithTable & {
@@ -259,7 +264,7 @@ const processArgs = (
 
 const getConditionsFor3Or4LengthItem = (
   ctx: ToSQLCtx,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   target: string,
   quotedAs: string | undefined,
   args: ItemOf2Or3Length,
@@ -281,7 +286,7 @@ const getConditionsFor3Or4LengthItem = (
 
 const getObjectOrRawConditions = (
   ctx: ToSQLCtx,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   data: Record<string, string | Expression> | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,

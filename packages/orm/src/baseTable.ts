@@ -13,14 +13,12 @@ import {
   QueryBeforeHook,
   QueryData,
   QueryHooks,
-  QueryWithTable,
   RelationQueryBase,
 } from 'pqb';
 import {
   applyMixins,
   ColumnShapeInput,
   ColumnShapeOutput,
-  ColumnShapeQueryType,
   ColumnsShapeBase,
   EmptyObject,
   getCallerFilePath,
@@ -29,6 +27,8 @@ import {
   snakeCaseKey,
   toSnakeCase,
   ColumnSchemaConfig,
+  RecordUnknown,
+  ColumnShapeInputPartial,
 } from 'orchid-core';
 import { MapRelations } from './relations/relations';
 import { OrchidORM } from './orm';
@@ -39,56 +39,57 @@ import { HasAndBelongsToManyOptions } from './relations/hasAndBelongsToMany';
 import { defaultSchemaConfig, DefaultSchemaConfig } from 'pqb';
 
 // type of table class itself
-export type TableClass<T extends Table = Table> = {
+export interface TableClass<T extends Table = Table> {
   new (): T;
   instance(): T;
-};
+}
 
 // object with table classes, used on orchidORM() for setting tables
-export type TableClasses = Record<string, TableClass>;
+export interface TableClasses {
+  [K: string]: TableClass;
+}
+
+interface RelationQueriesBase {
+  [K: string]: RelationQueryBase;
+}
 
 // convert table instance type to queryable interface
 // processes relations to a type that's understandable by `pqb`
 // add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
-export type TableToDb<
+export interface TableToDb<
   T extends Table,
-  RelationQueries extends Record<string, RelationQueryBase>,
-> = Db<
-  T['table'],
-  T['columns'],
-  RelationQueries,
-  T['types'],
-  T['computed'] extends ComputedColumnsBase<never>
-    ? T['columns'] & {
-        [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
-      }
-    : T['columns'],
-  MapTableScopesOption<T['scopes'], T['softDelete']>
-> & {
+  RelationQueries extends RelationQueriesBase,
+> extends Db<
+    T['table'],
+    T['columns'],
+    RelationQueries,
+    T['types'],
+    T['computed'] extends RecordUnknown
+      ? T['columns'] & {
+          [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
+        }
+      : T['columns'],
+    MapTableScopesOption<T['scopes'], T['softDelete']>
+  > {
   definedAs: string;
   db: OrchidORM;
   getFilePath(): string;
   name: string;
-};
+}
 
 // convert a table class type into queryable interface
 // add relation methods
-export type DbTable<
-  TC extends TableClass,
-  T extends Table = InstanceType<TC>,
-  RelationQueries extends Record<string, RelationQueryBase> = MapRelations<T>,
-  Q extends QueryWithTable = TableToDb<T, RelationQueries>,
-  Result extends QueryWithTable = Q & RelationQueries,
-> = Result;
+export type DbTable<T extends Table> = TableToDb<T, MapRelations<T>> &
+  MapRelations<T>;
 
 // `columns` property of table has a shape and an output type of the columns
 // callback with a query of relation, to use as a default scope
 export type ScopeFn<Related extends TableClass, Scope extends Query> = (
-  q: DbTable<Related>,
+  q: DbTable<InstanceType<Related>>,
 ) => Scope;
 
 // type of table instance created by a table class
-export type Table = {
+export interface Table {
   // table name
   table: string;
   // columns shape and the record type
@@ -111,12 +112,12 @@ export type Table = {
   scopes?: CoreQueryScopes;
   // enable soft delete, true for `deletedAt` column, string for column name
   readonly softDelete?: true | string;
-};
+}
 
 // Object type that's allowed in `where` and similar methods of the table.
-export type Queryable<T extends Table> = Partial<
-  ColumnShapeQueryType<T['columns']>
->;
+export type Queryable<T extends Table> = {
+  [K in keyof T['columns']]?: T['columns'][K]['queryType'];
+};
 
 // Object type of table's record that's returned from database and is parsed.
 export type Selectable<T extends Table> = ColumnShapeOutput<T['columns']>;
@@ -125,7 +126,7 @@ export type Selectable<T extends Table> = ColumnShapeOutput<T['columns']>;
 export type Insertable<T extends Table> = ColumnShapeInput<T['columns']>;
 
 // Object type that conforms `update` method of the table.
-export type Updateable<T extends Table> = Partial<Insertable<T>>;
+export type Updateable<T extends Table> = ColumnShapeInputPartial<T['columns']>;
 
 // type of before hook function for the table
 type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
@@ -136,7 +137,7 @@ type AfterHookMethod = <T extends Table>(cb: QueryAfterHook) => T;
 // type of after hook function that allows selecting columns for the table
 type AfterSelectableHookMethod = <
   T extends Table,
-  S extends (keyof T['columns'] & string)[],
+  S extends (keyof T['columns'])[],
 >(
   this: T,
   select: S,

@@ -1,4 +1,4 @@
-import { Query, QueryReturnType } from '../query/query';
+import { Query } from '../query/query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
 import {
@@ -15,6 +15,7 @@ import {
   ColumnsParsers,
   emptyArray,
   getValueKey,
+  QueryReturnType,
   RecordString,
   RecordUnknown,
   Sql,
@@ -59,7 +60,7 @@ let getThen: (this: Query) => typeof Then.prototype.then;
 
 // workaround for the bun issue: https://github.com/romeerez/orchid-orm/issues/198
 if (process.versions.bun) {
-  getThen = function (this: Query) {
+  getThen = function () {
     queryError = new Error();
 
     // In rake-db `then` might be called on a lightweight query object that has no `internal`.

@@ -1,11 +1,11 @@
-import { Query } from '../query/query';
 import { pushQueryArray } from '../query/queryUtils';
-import { Expression } from 'orchid-core';
+import { Expression, PickQueryResult } from 'orchid-core';
+import { Query } from '../query/query';
 
 // argument of `union`-like query methods.
 // it supports query objects with the same result as in the previous query,
 // or a raw SQL
-export type UnionArg<T extends Pick<Query, 'result'>> =
+export type UnionArg<T extends PickQueryResult> =
   | {
       result: { [K in keyof T['result']]: Pick<T['result'][K], 'dataType'> };
     }
@@ -29,16 +29,16 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  union<T extends Pick<Query, 'clone' | 'result' | 'q' | 'baseQuery'>>(
+  union<T extends PickQueryResult>(
     this: T,
     args: UnionArg<T>[],
     wrap?: boolean,
   ): T {
     return pushQueryArray(
-      this.clone() as T,
+      (this as unknown as Query).clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'UNION' as const, wrap })),
-    );
+    ) as never;
   }
 
   /**
@@ -47,12 +47,16 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  unionAll<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
+  unionAll<T extends PickQueryResult>(
+    this: T,
+    args: UnionArg<T>[],
+    wrap?: boolean,
+  ): T {
     return pushQueryArray(
-      this.clone(),
+      (this as unknown as Query).clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'UNION ALL' as const, wrap })),
-    );
+    ) as never;
   }
 
   /**
@@ -61,12 +65,16 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  intersect<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
+  intersect<T extends PickQueryResult>(
+    this: T,
+    args: UnionArg<T>[],
+    wrap?: boolean,
+  ): T {
     return pushQueryArray(
-      this.clone(),
+      (this as unknown as Query).clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'INTERSECT' as const, wrap })),
-    );
+    ) as never;
   }
 
   /**
@@ -75,16 +83,16 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  intersectAll<T extends Query>(
+  intersectAll<T extends PickQueryResult>(
     this: T,
     args: UnionArg<T>[],
     wrap?: boolean,
   ): T {
     return pushQueryArray(
-      this.clone(),
+      (this as unknown as Query).clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'INTERSECT ALL' as const, wrap })),
-    );
+    ) as never;
   }
 
   /**
@@ -93,12 +101,16 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  except<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
+  except<T extends PickQueryResult>(
+    this: T,
+    args: UnionArg<T>[],
+    wrap?: boolean,
+  ): T {
     return pushQueryArray(
-      this.clone(),
+      (this as unknown as Query).clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'EXCEPT' as const, wrap })),
-    );
+    ) as never;
   }
 
   /**
@@ -107,11 +119,15 @@ export class Union {
    * @param args - array of queries or raw SQLs
    * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
    */
-  exceptAll<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
+  exceptAll<T extends PickQueryResult>(
+    this: T,
+    args: UnionArg<T>[],
+    wrap?: boolean,
+  ): T {
     return pushQueryArray(
-      this.clone(),
+      (this as unknown as Query).clone(),
       'union',
       args.map((arg) => ({ arg, kind: 'EXCEPT ALL' as const, wrap })),
-    );
+    ) as never;
   }
 }

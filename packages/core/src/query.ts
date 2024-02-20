@@ -1,18 +1,18 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
 import { EmptyObject, RecordKeyTrue } from './utils';
-import { QueryColumn } from './columns';
+import { QueryColumn, QueryColumns } from './columns';
 
 // Output type of the `toSQL` method of query objects.
 // This will be passed to database adapter to perform query.
-export type Sql = {
+export interface Sql {
   // SQL string
   text: string;
   // bind values passed along with SQL string
   values: unknown[];
   // additional columns to select for `after` hooks
   hookSelect?: string[];
-};
+}
 
 // query metadata that is stored only on TS side, not available in runtime
 export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
@@ -37,7 +37,7 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
-export type QueryInternal = {
+export interface QueryInternal {
   columnsForSelectAll?: string[];
   runtimeDefaultColumns?: string[];
   indexes?: {
@@ -47,7 +47,7 @@ export type QueryInternal = {
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.
   scopes?: CoreQueryScopes;
-};
+}
 
 // Scopes data stored in table instance. Doesn't change after defining a table.
 export type CoreQueryScopes<Keys extends string = string> = Record<
@@ -55,19 +55,77 @@ export type CoreQueryScopes<Keys extends string = string> = Record<
   unknown
 >;
 
+export type QueryReturnType =
+  | 'all'
+  | 'one'
+  | 'oneOrThrow'
+  | 'rows'
+  | 'pluck'
+  | 'value'
+  | 'valueOrThrow'
+  | 'rowCount'
+  | 'void';
+
+export interface PickQueryTable {
+  table?: string;
+}
+
+export interface PickQueryMeta {
+  meta: QueryMetaBase;
+}
+
+export interface PickQueryResult {
+  result: QueryColumns;
+}
+
+export interface PickQueryShape {
+  shape: QueryColumns;
+}
+
+export interface PickQueryReturnType {
+  returnType: QueryReturnType;
+}
+
+export interface PickQueryMetaShape extends PickQueryMeta, PickQueryShape {}
+
+export interface PickQueryMetaResult extends PickQueryMeta, PickQueryResult {}
+
+export interface PickQueryMetaResultWindows extends PickQueryMetaResult {
+  windows: EmptyObject;
+}
+
+export interface PickQueryTableMetaResult
+  extends PickQueryTable,
+    PickQueryMetaResult {}
+
+export interface PickQueryTableMetaShape
+  extends PickQueryTable,
+    PickQueryMetaShape {}
+
+export interface PickQueryMetaResultReturnType
+  extends PickQueryMetaResult,
+    PickQueryReturnType {}
+
+export interface PickQueryMetaShapeResultReturnType
+  extends PickQueryMetaResultReturnType,
+    PickQueryShape {}
+
+export interface IsQuery {
+  __isQuery: true;
+}
+
 // It is a generic interface that covers any query:
 // both the table query objects
 // and the lightweight queries inside `where` and `on` callbacks
-export type QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue> = {
-  __isQuery: true;
+export interface QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue>
+  extends IsQuery {
   meta: QueryMetaBase<Scopes>;
   internal: QueryInternal;
-};
+}
 
-export type SelectableBase = Record<
-  PropertyKey,
-  { as: string; column: QueryColumn }
->;
+export interface SelectableBase {
+  [K: PropertyKey]: { as: string; column: QueryColumn };
+}
 
 // Symbol that is used in the parsers in the query data for a column that doesn't have a name
 // this is for the case when using query.get('column') or query.count() - it returns anonymous value

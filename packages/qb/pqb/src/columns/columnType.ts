@@ -76,13 +76,13 @@ export type ForeignKey<Table extends string, Columns extends string[]> = (
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
 // Used in migrations to make foreign key SQL
-export type ForeignKeyOptions = {
+export interface ForeignKeyOptions {
   name?: string;
   match?: ForeignKeyMatch;
   onUpdate?: ForeignKeyAction;
   onDelete?: ForeignKeyAction;
   dropMode?: DropMode;
-};
+}
 
 interface IndexColumnOptionsForColumn {
   collate?: string;
@@ -122,16 +122,18 @@ export interface SingleColumnIndexOptionsForColumn
 // Options for the `index` method of a column.
 export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
 
-export type ColumnFromDbParams = {
+export interface ColumnFromDbParams {
   isNullable?: boolean;
   default?: string;
   maxChars?: number;
   numericPrecision?: number;
   numericScale?: number;
   dateTimePrecision?: number;
-};
+}
 
-type PickColumnData = { data: ColumnData };
+export interface PickColumnData {
+  data: ColumnData;
+}
 
 export abstract class ColumnType<
   Schema extends ColumnTypeSchemaArg = ColumnTypeSchemaArg,
@@ -177,11 +179,7 @@ export abstract class ColumnType<
    * ```
    */
   primaryKey<T extends PickColumnBaseData>(this: T): PrimaryKeyColumn<T> {
-    return setColumnData(
-      this,
-      'isPrimaryKey',
-      true,
-    ) as unknown as PrimaryKeyColumn<T>;
+    return setColumnData(this, 'isPrimaryKey', true) as never;
   }
 
   /**

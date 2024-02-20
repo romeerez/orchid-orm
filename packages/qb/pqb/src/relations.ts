@@ -8,7 +8,7 @@ export type RelationJoinQuery = (
   baseQuery: Query,
 ) => Query;
 
-export type RelationConfigBase = {
+export interface RelationConfigBase {
   query: Query;
   methodQuery: Query;
   joinQuery: RelationJoinQuery;
@@ -27,14 +27,16 @@ export type RelationConfigBase = {
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
   params: RecordUnknown;
-};
+}
 
-export type RelationConfigDataForCreate = {
+export interface RelationConfigDataForCreate {
   columns: RecordUnknown;
   nested: RecordUnknown;
-};
+}
 
-export type RelationsBase = Record<string, RelationQueryBase>;
+export interface RelationsBase {
+  [K: string]: RelationQueryBase;
+}
 
 export interface RelationQueryBase extends Query {
   relationConfig: RelationConfigBase;

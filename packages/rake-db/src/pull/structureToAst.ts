@@ -20,6 +20,7 @@ import {
 } from 'pqb';
 import {
   ColumnSchemaConfig,
+  RecordString,
   singleQuote,
   toCamelCase,
   toSnakeCase,
@@ -40,7 +41,7 @@ const fkeyActionMap: Record<string, undefined | ForeignKeyAction> = {
   d: 'SET DEFAULT',
 };
 
-type Data = {
+interface Data {
   schemas: string[];
   tables: DbStructure.Table[];
   views: DbStructure.View[];
@@ -50,22 +51,23 @@ type Data = {
   enums: DbStructure.Enum[];
   domains: DbStructure.Domain[];
   collations: DbStructure.Collation[];
-};
+}
 
-type Domains = Record<string, ColumnType>;
+interface Domains {
+  [K: string]: ColumnType;
+}
 
-type PendingTables = Record<
-  string,
-  { table: DbStructure.Table; dependsOn: Set<string> }
->;
+interface PendingTables {
+  [K: string]: { table: DbStructure.Table; dependsOn: Set<string> };
+}
 
-export type StructureToAstCtx = {
+export interface StructureToAstCtx {
   snakeCase?: boolean;
   unsupportedTypes: Record<string, string[]>;
   currentSchema: string;
   columnSchemaConfig: ColumnSchemaConfig;
   columnsByType: ColumnsByType;
-};
+}
 
 export const structureToAst = async (
   ctx: StructureToAstCtx,
@@ -418,15 +420,12 @@ const pushTableAst = (
     [],
   );
 
-  const columnChecks = innerConstraints.reduce<Record<string, string>>(
-    (acc, item) => {
-      if (belongsToTable(item) && isColumnCheck(item)) {
-        acc[item.check.columns[0]] = item.check.expression;
-      }
-      return acc;
-    },
-    {},
-  );
+  const columnChecks = innerConstraints.reduce<RecordString>((acc, item) => {
+    if (belongsToTable(item) && isColumnCheck(item)) {
+      acc[item.check.columns[0]] = item.check.expression;
+    }
+    return acc;
+  }, {});
 
   const shape = makeColumnsShape(
     ctx,
@@ -605,7 +604,7 @@ const makeColumnsShape = (
   primaryKey?: { columns: string[]; name?: string },
   indexes?: DbStructure.Index[],
   constraints?: TableData.Constraint[],
-  checks?: Record<string, string>,
+  checks?: RecordString,
 ): ColumnsShape => {
   const shape: ColumnsShape = {};
 

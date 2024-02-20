@@ -1,5 +1,4 @@
 import { Message, Profile, User } from '../test-utils/test-utils';
-import { QueryReturnType } from '../query/query';
 import { logParamToLogObject } from './log';
 import {
   ColumnInfoQueryData,
@@ -15,7 +14,7 @@ import {
   testZodColumnTypes as t,
   testDb,
 } from 'test-utils';
-import { Expression, getValueKey } from 'orchid-core';
+import { Expression, getValueKey, QueryReturnType } from 'orchid-core';
 
 describe('merge queries', () => {
   describe('select', () => {

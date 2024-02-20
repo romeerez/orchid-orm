@@ -8,12 +8,12 @@ import { snakeCaseKey } from './types';
 import { isRawSQL, RawSQLBase } from '../raw';
 
 // Column types returned by `...t.timestamps()` and variations.
-type Timestamps<T extends ColumnTypeBase> = {
+export interface Timestamps<T extends ColumnTypeBase> {
   // Timestamp column with a `now()` default
   createdAt: ColumnWithDefault<T, RawSQLBase>;
   // Timestamp column with a `now()` default, and it's being updated on every record update.
   updatedAt: ColumnWithDefault<T, RawSQLBase>;
-};
+}
 
 // Builds a function which is triggered on every update of records.
 // It tries to find if `updatedAt` column is being updated with a user-provided value.

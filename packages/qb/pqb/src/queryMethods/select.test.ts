@@ -32,6 +32,12 @@ const insertUserAndProfile = async () => {
 describe('select', () => {
   useTestDatabase();
 
+  it('should respect previous select', () => {
+    const q = User.select('id').select('name');
+
+    assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+  });
+
   // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
   it('should handle nested sub selects', async () => {
     await User.create(userData);

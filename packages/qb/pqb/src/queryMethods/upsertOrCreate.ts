@@ -8,7 +8,7 @@ import { _queryUpdate, UpdateData } from './update';
 import { CreateData } from './create';
 import { WhereResult } from './where/where';
 import { MoreThanOneRowError } from '../errors';
-import { isObjectEmpty, RecordUnknown } from 'orchid-core';
+import { isObjectEmpty, PickQueryMetaResult, RecordUnknown } from 'orchid-core';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -27,25 +27,24 @@ export type UpsertArg<T extends Query, Data> =
 
 // `data` and `create` upsert arg.
 // `create` callback arg is of exact `data` type.
-type UpsertArgWithData<
-  T extends Query,
-  Data,
-  DataKey extends PropertyKey = keyof Data,
-  CD = CreateData<T>,
-  Create = {
-    [K in keyof CD as K extends DataKey ? never : K]: CD[K];
-  } & {
-    [K in DataKey]?: K extends keyof CD ? CD[K] : never;
-  },
-> = {
+type UpsertArgWithData<T extends Query, Data> = {
   data: Data;
-  create: Create | ((update: Data) => Create);
+  create:
+    | UpsertCreate<keyof Data, CreateData<T>>
+    | ((update: Data) => UpsertCreate<keyof Data, CreateData<T>>);
+};
+
+type UpsertCreate<DataKey extends PropertyKey, CD> = {
+  [K in keyof CD as K extends DataKey ? never : K]: CD[K];
+} & {
+  [K in DataKey]?: K extends keyof CD ? CD[K] : never;
 };
 
 // unless upsert query has a select, it returns void
-export type UpsertResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? SetQueryReturnsOneKind<T, 'upsert'>
-  : SetQueryReturnsVoid<SetQueryKind<T, 'upsert'>>;
+export type UpsertResult<T extends PickQueryMetaResult> =
+  T['meta']['hasSelect'] extends true
+    ? SetQueryReturnsOneKind<T, 'upsert'>
+    : SetQueryReturnsVoid<SetQueryKind<T, 'upsert'>>;
 
 // Require type of query object to query only one record
 // because upserting multiple isn't possible

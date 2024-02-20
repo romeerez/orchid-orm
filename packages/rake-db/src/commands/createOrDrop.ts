@@ -1,5 +1,10 @@
 import { Adapter, AdapterOptions } from 'pqb';
-import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  MaybeArray,
+  RecordUnknown,
+  toArray,
+} from 'orchid-core';
 import {
   getDatabaseAndUserFromOptions,
   setAdminCredentialsToOptions,
@@ -22,7 +27,7 @@ const execute = async (
     await db.query(sql);
     return 'ok';
   } catch (error) {
-    const err = error as Record<string, unknown>;
+    const err = error as RecordUnknown;
 
     if (
       typeof err.message === 'string' &&

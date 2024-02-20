@@ -1,9 +1,10 @@
 import {
+  RelationConfigSelf,
   RelationData,
   RelationThunkBase,
   RelationToManyDataForCreate,
 } from './relations';
-import { Table, TableClass } from '../baseTable';
+import { TableClass } from '../baseTable';
 import {
   _queryCreateFrom,
   _queryCreateMany,
@@ -38,6 +39,8 @@ import {
   ColumnTypeBase,
   EmptyObject,
   MaybeArray,
+  RecordString,
+  RecordUnknown,
 } from 'orchid-core';
 import {
   hasRelationHandleCreate,
@@ -52,10 +55,10 @@ import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 import { RelationCommonOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 
-export type HasAndBelongsToMany = RelationThunkBase & {
+export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
   options: HasAndBelongsToManyOptions;
-};
+}
 
 export type HasAndBelongsToManyOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
@@ -81,10 +84,23 @@ export type HasAndBelongsToManyOptions<
       }
   );
 
+export type HasAndBelongsToManyParams<
+  T extends RelationConfigSelf,
+  Relation extends RelationThunkBase,
+> = Relation['options'] extends { columns: string[] }
+  ? {
+      [Name in Relation['options']['columns'][number]]: T['columns'][Name]['type'];
+    }
+  : Relation['options'] extends { primaryKey: string }
+  ? Record<
+      Relation['options']['primaryKey'],
+      T['columns'][Relation['options']['primaryKey']]['type']
+    >
+  : never;
+
 export interface HasAndBelongsToManyInfo<
-  T extends Table,
-  Relation extends HasAndBelongsToMany,
-  Name extends string,
+  T extends RelationConfigSelf,
+  Name extends keyof T['relations'] & string,
   TableQuery extends Query,
   Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
@@ -127,19 +143,10 @@ export interface HasAndBelongsToManyInfo<
   };
   dataForUpdateOne: EmptyObject;
 
-  params: Relation['options'] extends { columns: string[] }
-    ? {
-        [Name in Relation['options']['columns'][number]]: T['columns'][Name]['type'];
-      }
-    : Relation['options'] extends { primaryKey: string }
-    ? Record<
-        Relation['options']['primaryKey'],
-        T['columns'][Relation['options']['primaryKey']]['type']
-      >
-    : never;
+  params: HasAndBelongsToManyParams<T, T['relations'][Name]>;
 }
 
-type State = {
+interface State {
   relatedTableQuery: Query;
   joinTableQuery: Query;
   primaryKeys: string[];
@@ -149,7 +156,7 @@ type State = {
   foreignKeysFull: string[];
   throughForeignKeysFull: string[];
   throughPrimaryKeysFull: string[];
-};
+}
 
 class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasManyNestedInsert;
@@ -165,12 +172,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
     this.nestedUpdate = nestedUpdate(state);
   }
 
-  create(
-    q: Query,
-    ctx: CreateCtx,
-    item: Record<string, unknown>,
-    rowIndex: number,
-  ) {
+  create(q: Query, ctx: CreateCtx, item: RecordUnknown, rowIndex: number) {
     hasRelationHandleCreate(
       q,
       ctx,
@@ -182,7 +184,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
     );
   }
 
-  update(q: Query, _: UpdateCtx, set: Record<string, unknown>) {
+  update(q: Query, _: UpdateCtx, set: RecordUnknown) {
     hasRelationHandleUpdate(
       q,
       set,
@@ -298,7 +300,7 @@ export const makeHasAndBelongsToManyMethod = (
     });
   };
 
-  const obj: Record<string, string> = {};
+  const obj: RecordString = {};
   for (let i = 0; i < len; i++) {
     obj[foreignKeys[i]] = primaryKeys[i];
   }
@@ -314,11 +316,11 @@ export const makeHasAndBelongsToManyMethod = (
 
   return {
     returns: 'many',
-    method(params: Record<string, unknown>) {
+    method(params: RecordUnknown) {
       return query.whereExists(subQuery, (q) => {
         q = q.clone();
 
-        const where: Record<string, unknown> = {};
+        const where: RecordUnknown = {};
         for (let i = 0; i < len; i++) {
           where[foreignKeysFull[i]] = params[primaryKeys[i]];
         }
@@ -330,7 +332,7 @@ export const makeHasAndBelongsToManyMethod = (
           ]);
         }
 
-        return _queryWhere(q, [where]);
+        return _queryWhere(q, [where as never]);
       });
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(
@@ -369,9 +371,9 @@ export const makeHasAndBelongsToManyMethod = (
         const baseQuery = ref.q.clone();
         baseQuery.q.select = selectPrimaryKeysAsForeignKeys;
 
-        const data: Record<string, unknown> = {};
+        const data: RecordUnknown = {};
         for (let i = 0; i < throughLen; i++) {
-          data[throughForeignKeys[i]] = (result[0] as Record<string, unknown>)[
+          data[throughForeignKeys[i]] = (result[0] as RecordUnknown)[
             throughPrimaryKeys[i]
           ];
         }
@@ -379,7 +381,7 @@ export const makeHasAndBelongsToManyMethod = (
         const createdCount = await _queryCreateFrom(
           subQuery.count(),
           baseQuery as Query & { returnType: 'one' | 'oneOrThrow' },
-          data,
+          data as never,
         );
 
         if ((createdCount as unknown as number) === 0) {
@@ -396,7 +398,7 @@ export const makeHasAndBelongsToManyMethod = (
 
 const queryJoinTable = (
   state: State,
-  data: Record<string, unknown>[],
+  data: RecordUnknown[],
   conditions?: MaybeArray<WhereArg<Query>>,
 ) => {
   const t = state.joinTableQuery.where({
@@ -431,15 +433,15 @@ const conditionsToWhereArg = (
 const insertToJoinTable = (
   state: State,
   joinTableTransaction: Query,
-  data: Record<string, unknown>[],
+  data: RecordUnknown[],
   idsRows: unknown[][],
 ) => {
   const len = state.primaryKeys.length;
   const throughLen = state.throughPrimaryKeys.length;
 
-  const records: Record<string, unknown>[] = [];
+  const records: RecordUnknown[] = [];
   for (const item of data) {
-    const obj: Record<string, unknown> = {};
+    const obj: RecordUnknown = {};
     for (let i = 0; i < len; i++) {
       obj[state.foreignKeys[i]] = item[state.primaryKeys[i]];
     }
@@ -478,7 +480,7 @@ const nestedInsert = ({
       }
     }
 
-    let connected: Record<string, unknown>[];
+    let connected: RecordUnknown[];
     if (items.length) {
       const queries: Query[] = [];
 
@@ -505,7 +507,7 @@ const nestedInsert = ({
       }
     }
 
-    let connectOrCreated: (Record<string, unknown> | undefined)[];
+    let connectOrCreated: (RecordUnknown | undefined)[];
     if (items.length) {
       const queries: Query[] = [];
 
@@ -522,10 +524,7 @@ const nestedInsert = ({
         }
       }
 
-      connectOrCreated = (await Promise.all(queries)) as Record<
-        string,
-        unknown
-      >[];
+      connectOrCreated = (await Promise.all(queries)) as RecordUnknown[];
     } else {
       connectOrCreated = [];
     }
@@ -548,9 +547,9 @@ const nestedInsert = ({
     }
 
     connectOrCreateI = 0;
-    let created: Record<string, unknown>[];
+    let created: RecordUnknown[];
     if (items.length) {
-      const records: Record<string, unknown>[] = [];
+      const records: RecordUnknown[] = [];
 
       for (const [, { create, connectOrCreate }] of items as [
         unknown,
@@ -578,8 +577,8 @@ const nestedInsert = ({
     }
 
     const allKeys = data as unknown as [
-      selfData: Record<string, unknown>,
-      relationKeys: Record<string, unknown>[],
+      selfData: RecordUnknown,
+      relationKeys: RecordUnknown[],
     ][];
 
     let createI = 0;
@@ -595,7 +594,7 @@ const nestedInsert = ({
           createI += len;
         }
         if (item.connectOrCreate) {
-          const arr: Record<string, unknown>[] = [];
+          const arr: RecordUnknown[] = [];
           allKeys[index][1] = arr;
 
           const len = item.connectOrCreate.length;
@@ -617,9 +616,9 @@ const nestedInsert = ({
       }
     }
 
-    const records: Record<string, unknown>[] = [];
+    const records: RecordUnknown[] = [];
     for (const [selfData, relationKeys] of allKeys) {
-      const obj: Record<string, unknown> = {};
+      const obj: RecordUnknown = {};
       for (let i = 0; i < len; i++) {
         obj[foreignKeys[i]] = selfData[primaryKeys[i]];
       }
@@ -650,9 +649,9 @@ const nestedUpdate = (state: State) => {
         params.create,
       );
 
-      const records: Record<string, unknown>[] = [];
+      const records: RecordUnknown[] = [];
       for (const item of data) {
-        const obj: Record<string, unknown> = {};
+        const obj: RecordUnknown = {};
         for (let i = 0; i < len; i++) {
           obj[state.foreignKeys[i]] = item[state.primaryKeys[i]];
         }

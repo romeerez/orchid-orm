@@ -1,4 +1,4 @@
-import { Query, QueryReturnType } from '../query/query';
+import { PickQueryQ, Query } from '../query/query';
 import { QueryLogger, QueryLogObject } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { toSQLCacheKey } from './toSQL';
@@ -27,8 +27,9 @@ import {
   QueryColumn,
   RecordString,
   RecordUnknown,
+  QueryReturnType,
+  PickQueryTable,
 } from 'orchid-core';
-import { QueryBase } from '../query/queryBase';
 import { BaseOperators } from '../columns/operators';
 import { RelationsChain } from '../relations';
 
@@ -55,7 +56,7 @@ export type QueryScopeData = {
   or?: WhereItem[][];
 };
 
-export type QueryDataJoinTo = Pick<QueryBase, 'table' | 'q'>;
+export interface QueryDataJoinTo extends PickQueryTable, PickQueryQ {}
 
 export type CommonQueryData = {
   adapter: Adapter;
@@ -271,6 +272,11 @@ export type QueryData =
   | TruncateQueryData
   | ColumnInfoQueryData
   | CopyQueryData;
+
+export interface PickQueryDataShapeAndJoinedShapes {
+  shape: ColumnsShapeBase;
+  joinedShapes?: JoinedShapes;
+}
 
 export const cloneQuery = (q: QueryData) => {
   if (q.with) q.with = q.with.slice(0);

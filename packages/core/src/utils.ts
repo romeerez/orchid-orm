@@ -50,11 +50,17 @@ export type MergeObjects<A extends RecordUnknown, B extends RecordUnknown> = {
 // Utility type to store info to know which keys are available.
 // Use it for cases where you'd want to pick a string union,
 // this record type solves the same use case, but is better at handling the empty case.
-export type RecordKeyTrue = Record<PropertyKey, true>;
+export interface RecordKeyTrue {
+  [K: string]: true;
+}
 
-export type RecordString = Record<string, string>;
+export interface RecordString {
+  [K: string]: string;
+}
 
-export type RecordUnknown = Record<string, unknown>;
+export interface RecordUnknown {
+  [K: string]: unknown;
+}
 
 // Use a default string if the first argument string is undefined.
 export type CoalesceString<

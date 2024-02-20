@@ -17,7 +17,11 @@ import {
 import { getClonedQueryData, getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
-import { JoinedShapes, QueryData } from './data';
+import {
+  JoinedShapes,
+  PickQueryDataShapeAndJoinedShapes,
+  QueryData,
+} from './data';
 import {
   Expression,
   isExpression,
@@ -332,7 +336,7 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 
 const pushIn = (
   ctx: ToSQLCtx,
-  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  query: PickQueryDataShapeAndJoinedShapes,
   ands: string[],
   quotedAs: string | undefined,
   arg: {

@@ -5,7 +5,7 @@ import {
   RakeDbConfig,
 } from '../common';
 import { SilentQueries } from './migration';
-import { ColumnSchemaConfig } from 'orchid-core';
+import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
 
 export const saveMigratedVersion = async <
   SchemaConfig extends ColumnSchemaConfig,
@@ -50,7 +50,7 @@ export const getMigratedVersionsMap = async <
     );
     return Object.fromEntries(result.rows.map((row) => [row[0], true]));
   } catch (err) {
-    if ((err as Record<string, unknown>).code === '42P01') {
+    if ((err as RecordUnknown).code === '42P01') {
       await createSchemaMigrations(db, config);
       return {};
     }

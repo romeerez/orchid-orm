@@ -1,11 +1,12 @@
 import { Query, SetQueryKind } from '../query/query';
 import { CopyOptions } from '../sql';
+import { PickQueryMeta, PickQueryMetaShape, PickQueryShape } from 'orchid-core';
 
 // argument of the `copy` function can accept various options
-type CopyArg<T extends Query> = CopyOptions<keyof T['shape']>;
+type CopyArg<T extends PickQueryShape> = CopyOptions<keyof T['shape']>;
 
 // Result type for the `copy` method, simply setting a query kind.
-type CopyResult<T extends Query> = SetQueryKind<T, 'copy'>;
+type CopyResult<T extends PickQueryMeta> = SetQueryKind<T, 'copy'>;
 
 /**
  * `copyTableData` is a function to invoke a `COPY` SQL statement, it can copy from or to a file or a program.
@@ -55,14 +56,14 @@ type CopyResult<T extends Query> = SetQueryKind<T, 'copy'>;
  *
  * @param arg - object with copy options
  */
-export function copyTableData<T extends Query>(
+export function copyTableData<T extends PickQueryMetaShape>(
   query: T,
   arg: CopyArg<T>,
 ): CopyResult<T> {
-  const q = query.clone();
+  const q = (query as unknown as Query).clone();
   Object.assign(q.q, {
     type: 'copy',
     copy: arg,
   });
-  return q as CopyResult<T>;
+  return q as never;
 }

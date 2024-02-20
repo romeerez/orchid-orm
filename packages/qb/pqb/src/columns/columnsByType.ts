@@ -2,7 +2,9 @@ import { ColumnSchemaConfig, ColumnTypeBase } from 'orchid-core';
 import { makeColumnTypes } from './columnTypes';
 import { ColumnType } from './columnType';
 
-export type ColumnsByType = Record<string, () => ColumnTypeBase>;
+export interface ColumnsByType {
+  [K: string]: () => ColumnTypeBase;
+}
 
 export const makeColumnsByType = (schema: ColumnSchemaConfig) => {
   const t = makeColumnTypes(schema);

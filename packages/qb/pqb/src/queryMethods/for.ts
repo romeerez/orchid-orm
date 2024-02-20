@@ -1,67 +1,67 @@
 import { Query } from '../query/query';
 import { SelectQueryData } from '../sql';
-import { Expression } from 'orchid-core';
+import { Expression, IsQuery } from 'orchid-core';
 import { extendQuery } from '../query/queryUtils';
 
-type ForQueryBuilder<Q extends Query> = Q & {
-  noWait<T extends ForQueryBuilder<Q>>(this: T): T;
-  skipLocked<T extends ForQueryBuilder<Q>>(this: T): T;
+type ForQueryBuilder<Q> = Q & {
+  noWait<T extends Q>(this: T): T;
+  skipLocked<T extends Q>(this: T): T;
 };
 
 const forMethods = {
-  noWait<T extends ForQueryBuilder<Query>>(this: T): T {
-    const q = this.clone();
+  noWait() {
+    const q = (this as unknown as Query).clone();
     const data = q.q as SelectQueryData | undefined;
     if (data?.for) data.for.mode = 'NO WAIT';
-    return q;
+    return q as never;
   },
-  skipLocked<T extends ForQueryBuilder<Query>>(this: T): T {
-    const q = this.clone();
+  skipLocked() {
+    const q = (this as unknown as Query).clone();
     const data = q.q as SelectQueryData | undefined;
     if (data?.for) data.for.mode = 'SKIP LOCKED';
-    return q;
+    return q as never;
   },
 };
 
 // Extends the query with `for` methods, the query is cloned, and sets `for` data.
-const forQueryBuilder = <T extends Query>(
-  q: T,
+const forQueryBuilder = <T>(
+  arg: T,
   type: Exclude<SelectQueryData['for'], undefined>['type'],
   tableNames?: string[] | Expression,
-) => {
-  q = extendQuery(q, forMethods);
+): ForQueryBuilder<T> => {
+  const q = extendQuery(arg as Query, forMethods);
 
   (q.q as SelectQueryData).for = {
     type,
     tableNames,
   };
 
-  return q as ForQueryBuilder<T>;
+  return q as never;
 };
 
 export class For {
-  forUpdate<T extends Query>(
+  forUpdate<T extends IsQuery>(
     this: T,
     tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return forQueryBuilder(this, 'UPDATE', tableNames);
   }
 
-  forNoKeyUpdate<T extends Query>(
+  forNoKeyUpdate<T extends IsQuery>(
     this: T,
     tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return forQueryBuilder(this, 'NO KEY UPDATE', tableNames);
   }
 
-  forShare<T extends Query>(
+  forShare<T extends IsQuery>(
     this: T,
     tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return forQueryBuilder(this, 'SHARE', tableNames);
   }
 
-  forKeyShare<T extends Query>(
+  forKeyShare<T extends IsQuery>(
     this: T,
     tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {

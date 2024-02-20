@@ -1,4 +1,9 @@
-import { Query, SetQueryReturnsColumn } from '../query/query';
+import {
+  PickQueryBaseQuery,
+  PickQueryQ,
+  Query,
+  SetQueryReturnsColumnOrThrow,
+} from '../query/query';
 import { ToSQLCtx } from '../sql';
 import { addValue } from '../sql/common';
 import {
@@ -7,6 +12,7 @@ import {
   isExpression,
   OperatorToSQL,
   PickOutputTypeAndOperators,
+  PickQueryResult,
 } from 'orchid-core';
 import { extendQuery } from '../query/queryUtils';
 import { BooleanQueryColumn } from './boolean';
@@ -19,38 +25,43 @@ export interface Operator<
   Value,
   Column extends PickOutputTypeAndOperators = PickOutputTypeAndOperators,
 > {
-  <T extends Pick<Query, 'result'>>(this: T, arg: Value): Omit<
-    SetQueryReturnsColumn<T, Column>,
+  <T extends PickQueryResult>(this: T, arg: Value): Omit<
+    SetQueryReturnsColumnOrThrow<T, Column>,
     keyof T['result']['value']['operators']
   > &
     Column['operators'];
   // argument type of the function
   _opType: Value;
   // function to turn the operator expression into SQL
-  _op: OperatorToSQL<Value, ToSQLCtx>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // unknown fails tests in rake-db when applying nullable
+  _op: OperatorToSQL<any, ToSQLCtx>;
 }
 
 // any column has 'operators' record that implements this type
-export type BaseOperators = Record<string, Operator<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+export interface BaseOperators {
+  [K: string]: Operator<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
 
 // Extend query object with given operator methods, so that user can call `gt` after calling `count`.
 // If query already has the same operators, nothing is changed.
 // Previously defined operators, if any, are dropped form the query.
 // Adds new operators, saves `Query.baseQuery` into `QueryData.originalQuery`, saves operators to `QueryData.operators`.
 export function setQueryOperators(
-  q: Pick<Query, 'q' | 'baseQuery'>,
+  query: PickQueryBaseQuery,
   operators: BaseOperators,
 ) {
-  if (q.q.operators) {
-    if (q.q.operators === operators) return q;
+  const q = (query as unknown as PickQueryQ).q;
+  if (q.operators) {
+    if (q.operators === operators) return query;
 
-    q.baseQuery = q.q.originalQuery as Query;
+    query.baseQuery = q.originalQuery as Query;
   } else {
-    q.q.originalQuery = q.baseQuery;
+    q.originalQuery = query.baseQuery;
   }
 
-  q.q.operators = operators;
-  return extendQuery(q, operators);
+  q.operators = operators;
+  return extendQuery(query as never, operators);
 }
 
 /**
@@ -80,7 +91,7 @@ const make = (
       _op,
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ) as unknown as Operator<any>;
+  ) as never;
 };
 
 // Handles array, expression object, query object to insert into sql.

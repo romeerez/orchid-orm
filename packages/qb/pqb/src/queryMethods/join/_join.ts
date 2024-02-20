@@ -28,7 +28,8 @@ import { QueryBase } from '../../query/queryBase';
  * @param q - query object to join to
  * @param require - true for INNER kind of JOIN
  * @param type - SQL of the JOIN kind: JOIN, LEFT JOIN, RIGHT JOIN, etc.
- * @param args - join arguments to join a query, or `with` table, or a callback returning a query, etc.
+ * @param first - the first argument of join: join target
+ * @param args - rest join arguments: columns to join with, or a callback
  */
 export const _join = <
   T extends Query,
@@ -104,7 +105,7 @@ export const _join = <
     first,
     args,
     isSubQuery,
-  }) as unknown as JoinResult<T, Arg, RequireJoined, RequireMain>;
+  }) as never;
 };
 
 /**
@@ -177,5 +178,5 @@ export const _joinLateral = <
     type,
     result,
     as || getQueryAs(result),
-  ]) as JoinLateralResult<T, R, RequireJoined>;
+  ]) as never;
 };

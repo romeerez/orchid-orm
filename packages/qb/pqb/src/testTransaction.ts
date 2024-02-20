@@ -9,7 +9,7 @@ class Rollback extends Error {}
 const trxForTest: unique symbol = Symbol('trxForTest');
 
 // The state of `testTransaction` that will be stored in the `db.internal`.
-type TrxData = {
+interface TrxData {
   // promise of the full transaction lifecycle, from start to rollback.
   promise?: Promise<void>;
   // reject function of the transaction.
@@ -22,12 +22,12 @@ type TrxData = {
     arrays: unknown;
     transaction: unknown;
   };
-};
+}
 
 // Type to store transaction data on `db.internal`.
-type Internal = {
+interface Internal {
   [trxForTest]?: TrxData[];
-};
+}
 
 // Argument of the transaction, $queryBuilder is to use ORM instance, Query to use any other queryable instance.
 type Arg = { $queryBuilder: Query } | Query;

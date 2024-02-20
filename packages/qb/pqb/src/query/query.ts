@@ -1,8 +1,8 @@
 import {
   GetStringArg,
   OnQueryBuilder,
+  QueryMetaHasWhere,
   QueryMethods,
-  WhereResult,
 } from '../queryMethods';
 import { QueryData } from '../sql';
 import { AliasOrTable } from '../common/utils';
@@ -14,11 +14,18 @@ import {
   EmptyObject,
   Expression,
   PickOutputType,
-  PickOutputTypeAndOperators,
+  PickQueryMeta,
+  PickQueryMetaResult,
+  PickQueryResult,
+  PickQueryReturnType,
+  PickQueryShape,
+  PickQueryTable,
   PickType,
   QueryCatch,
   QueryColumn,
   QueryColumns,
+  QueryInternal,
+  QueryReturnType,
   QueryThen,
   RecordUnknown,
   Spread,
@@ -35,8 +42,16 @@ export type SelectableFromShape<
   };
 };
 
-export type WithDataItem = { table: string; shape: QueryColumns };
-export type WithDataBase = Record<never, WithDataItem>;
+export interface WithDataItem {
+  table: string;
+  shape: QueryColumns;
+}
+
+export interface WithDataItems {
+  [K: string]: WithDataItem;
+}
+
+export type WithDataBase = EmptyObject;
 
 export interface Query extends QueryBase, QueryMethods<unknown> {
   queryBuilder: Db;
@@ -59,31 +74,134 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
   ) => QueryError;
 }
 
-export type SelectableOfType<T extends Pick<QueryBase, 'meta'>, Type> = {
+export interface PickQueryWithData {
+  withData: WithDataBase;
+}
+
+export interface PickQueryWindows {
+  windows: EmptyObject;
+}
+
+export interface PickQueryRelations {
+  relations: RelationsBase;
+}
+
+export interface PickQueryQ {
+  q: QueryData;
+}
+
+export interface PickQueryInternal {
+  internal: QueryInternal;
+}
+
+export interface PickQueryBaseQuery {
+  baseQuery: Query;
+}
+
+export interface PickQueryMetaRelations
+  extends PickQueryMeta,
+    PickQueryRelations {}
+
+export interface PickQueryMetaResultRelations
+  extends PickQueryResult,
+    PickQueryMeta,
+    PickQueryRelations {}
+
+export interface PickQueryMetaResultRelationsWindows
+  extends PickQueryMetaResultRelations,
+    PickQueryWindows {}
+
+export interface PickQueryMetaResultRelationsWindowsColumnTypes
+  extends PickQueryMetaResultRelationsWindows {
+  columnTypes: unknown;
+}
+
+export interface PickQueryMetaResultReturnType
+  extends PickQueryMeta,
+    PickQueryResult,
+    PickQueryReturnType {}
+
+export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
+
+export interface PickQueryMetaTableShape
+  extends PickQueryMetaTable,
+    PickQueryShape {}
+
+export interface PickQueryMetaWithData
+  extends PickQueryMeta,
+    PickQueryWithData {}
+
+export interface PickQueryRelationsWithData
+  extends PickQueryWithData,
+    PickQueryRelations {}
+
+export interface PickQueryMetaShapeRelationsWithData
+  extends PickQueryMeta,
+    PickQueryShape,
+    PickQueryRelations,
+    PickQueryWithData {}
+
+export interface PickQueryMetaResultRelationsWithDataReturnType
+  extends PickQueryMeta,
+    PickQueryResult,
+    PickQueryRelations,
+    PickQueryWithData,
+    PickQueryReturnType {}
+
+export interface PickQueryMetaTableShapeReturnTypeWithData
+  extends PickQueryMetaTableShape,
+    PickQueryReturnType,
+    PickQueryMetaWithData {}
+
+export interface PickQueryMetaResultRelationsWithDataReturnTypeShape
+  extends PickQueryMetaResultRelationsWithDataReturnType,
+    PickQueryShape {}
+
+export interface PickQueryMetaResultReturnTypeWithDataWindows
+  extends PickQueryMetaResultReturnType,
+    PickQueryWithData,
+    PickQueryWindows {}
+
+export interface PickQueryMetaResultReturnTypeWithDataWindowsTable<
+  Table extends string | undefined,
+> extends PickQueryMetaResultReturnType,
+    PickQueryWithData,
+    PickQueryWindows {
+  table: Table;
+}
+
+export interface PickQueryQAndInternal extends PickQueryQ, PickQueryInternal {}
+
+export interface PickQueryQAndBaseQuery
+  extends PickQueryQ,
+    PickQueryBaseQuery {}
+
+export interface PickQuerySinglePrimaryKey {
+  singlePrimaryKey: string;
+}
+
+export interface PickQueryShapeSinglePrimaryKey
+  extends PickQueryShape,
+    PickQuerySinglePrimaryKey {}
+
+export interface PickQueryShapeResultSinglePrimaryKey
+  extends PickQueryShapeSinglePrimaryKey,
+    PickQueryResult {}
+
+export type SelectableOfType<T extends PickQueryMeta, Type> = {
   [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends Type | null
     ? K
     : never;
 }[keyof T['meta']['selectable']];
 
 export type SelectableOrExpressionOfType<
-  T extends Pick<Query, 'meta'>,
+  T extends PickQueryMeta,
   C extends PickType,
 > = SelectableOfType<T, C['type']> | Expression<QueryColumn<C['type'] | null>>;
 
 export interface QueryWithTable extends Query {
   table: string;
 }
-
-export type QueryReturnType =
-  | 'all'
-  | 'one'
-  | 'oneOrThrow'
-  | 'rows'
-  | 'pluck'
-  | 'value'
-  | 'valueOrThrow'
-  | 'rowCount'
-  | 'void';
 
 export const queryTypeWithLimitOne = {
   one: true,
@@ -125,102 +243,111 @@ export type GetQueryResult<
   : never;
 
 export type AddQuerySelect<
-  T extends Pick<Query, 'result' | 'meta' | 'returnType'>,
+  T extends PickQueryMetaResultReturnType,
   Result extends QueryColumns,
-  Data = GetQueryResult<T['returnType'], Result>,
-> = T['meta']['hasSelect'] extends true
-  ? MergeSelect<T, Result, Data>
-  : SetSelect<T, Result, Data>;
-
-type MergeSelect<
-  T extends Pick<Query, 'result'>,
-  Result extends QueryColumns,
-  Data,
 > = {
   [K in keyof T]: K extends 'result'
     ? {
-        [K in keyof T['result'] | keyof Result]: K extends keyof Result
+        [K in
+          | (T['meta']['hasSelect'] extends true ? keyof T['result'] : never)
+          | keyof Result]: K extends keyof Result
           ? Result[K]
           : K extends keyof T['result']
           ? T['result'][K]
           : never;
       }
     : K extends 'then'
-    ? QueryThen<Data>
+    ? QueryThen<GetQueryResult<T['returnType'], Result>>
     : K extends 'catch'
-    ? QueryCatch<Data>
+    ? QueryCatch<GetQueryResult<T['returnType'], Result>>
     : T[K];
-};
+} & QueryMetaHasSelect;
 
-type SetSelect<
-  T extends Pick<Query, 'result' | 'meta'>,
-  Result extends QueryColumns,
-  Data,
-> = {
-  [K in keyof T]: K extends 'meta'
-    ? T['meta'] & { hasSelect: true }
-    : K extends 'result'
-    ? Result
-    : K extends 'then'
-    ? QueryThen<Data>
-    : K extends 'catch'
-    ? QueryCatch<Data>
-    : T[K];
-};
+// Merge { hasSelect: true } into 'meta' if it's not true yet.
+export interface QueryMetaHasSelect {
+  meta: {
+    hasSelect: true;
+  };
+}
 
-export type SetQueryReturns<
-  T extends Pick<Query, 'result'>,
-  R extends QueryReturnType,
-  Data = GetQueryResult<R, T['result']>,
-> = {
+// Change the query type to return multiple object records.
+// It wraps the query with `WhereResult` to allow updating and deleting all records when the `all` method is used.
+export type SetQueryReturnsAll<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
-    ? R
+    ? 'all'
     : K extends 'then'
-    ? QueryThen<Data>
+    ? QueryThen<ColumnShapeOutput<T['result']>[]>
     : K extends 'catch'
-    ? QueryCatch<Data>
+    ? QueryCatch<ColumnShapeOutput<T['result']>[]>
     : T[K];
-};
+} & QueryMetaHasWhere;
 
-export type SetQueryReturnsKind<
-  T extends Pick<Query, 'meta' | 'result'>,
-  R extends QueryReturnType,
+export type SetQueryReturnsAllKind<
+  T extends PickQueryMetaResult,
   Kind extends string,
-  Data = GetQueryResult<R, T['result']>,
 > = {
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
       }
     : K extends 'returnType'
-    ? R
+    ? 'all'
     : K extends 'then'
-    ? QueryThen<Data>
+    ? QueryThen<ColumnShapeOutput<T['result']>[]>
     : K extends 'catch'
-    ? QueryCatch<Data>
+    ? QueryCatch<ColumnShapeOutput<T['result']>[]>
+    : T[K];
+} & QueryMetaHasWhere;
+
+export type SetQueryReturnsOneOptional<T extends PickQueryResult> = {
+  [K in keyof T]: K extends 'returnType'
+    ? 'one'
+    : K extends 'then'
+    ? QueryThen<ColumnShapeOutput<T['result']> | undefined>
+    : K extends 'catch'
+    ? QueryCatch<ColumnShapeOutput<T['result']> | undefined>
     : T[K];
 };
 
-// Change the query type to return multiple object records.
-// It wraps the query with `WhereResult` to allow updating and deleting all records when the `all` method is used.
-export type SetQueryReturnsAll<T extends Pick<Query, 'result'>> =
-  SetQueryReturns<WhereResult<T>, 'all'>;
-
-export type SetQueryReturnsOneOptional<T extends Pick<Query, 'result'>> =
-  SetQueryReturns<T, 'one'>;
-
-export type SetQueryReturnsOne<T extends Pick<Query, 'result'>> =
-  SetQueryReturns<T, 'oneOrThrow'>;
+export type SetQueryReturnsOne<T extends PickQueryResult> = {
+  [K in keyof T]: K extends 'returnType'
+    ? 'oneOrThrow'
+    : K extends 'then'
+    ? QueryThen<ColumnShapeOutput<T['result']>>
+    : K extends 'catch'
+    ? QueryCatch<ColumnShapeOutput<T['result']>>
+    : T[K];
+};
 
 export type SetQueryReturnsOneKind<
-  T extends Pick<Query, 'result' | 'meta'>,
+  T extends PickQueryMetaResult,
   Kind extends string,
-> = SetQueryReturnsKind<T, 'oneOrThrow', Kind>;
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? 'oneOrThrow'
+    : K extends 'then'
+    ? QueryThen<ColumnShapeOutput<T['result']>>
+    : K extends 'catch'
+    ? QueryCatch<ColumnShapeOutput<T['result']>>
+    : T[K];
+};
 
-export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
+export type SetQueryReturnsRows<T extends PickQueryResult> = {
+  [K in keyof T]: K extends 'returnType'
+    ? 'rows'
+    : K extends 'then'
+    ? QueryThen<ColumnShapeOutput<T['result']>[keyof T['result']][][]>
+    : K extends 'catch'
+    ? QueryCatch<ColumnShapeOutput<T['result']>[keyof T['result']][][]>
+    : T[K];
+};
 
 export type SetQueryReturnsPluck<
-  T extends Pick<Query, 'meta'>,
+  T extends PickQueryMeta,
   S extends keyof T['meta']['selectable'] | Expression,
 > = SetQueryReturnsPluckColumn<
   T,
@@ -232,9 +359,7 @@ export type SetQueryReturnsPluck<
 >;
 
 export type SetQueryReturnsPluckColumn<T, C extends QueryColumn> = {
-  [K in keyof T]: K extends 'meta'
-    ? T[K] & { hasSelect: true }
-    : K extends 'result'
+  [K in keyof T]: K extends 'result'
     ? { pluck: C }
     : K extends 'returnType'
     ? 'pluck'
@@ -243,82 +368,129 @@ export type SetQueryReturnsPluckColumn<T, C extends QueryColumn> = {
     : K extends 'catch'
     ? QueryCatch<C['outputType'][]>
     : T[K];
-};
+} & QueryMetaHasSelect;
 
-export type SetQueryReturnsValueOptional<
-  T extends Pick<Query, 'meta'>,
-  Arg extends GetStringArg<T>,
-> = SetQueryReturnsValue<T, Arg, 'value'>;
-
-export type SetQueryReturnsValue<
-  T extends Pick<Query, 'meta'>,
-  Arg extends GetStringArg<T>,
-  ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-  Column extends PickOutputTypeAndOperators = Arg extends keyof T['meta']['selectable']
-    ? T['meta']['selectable'][Arg]['column']
-    : Arg extends Query
-    ? Arg['result']['value']
-    : never,
-> = SetQueryReturnsColumn<T, Column, ReturnType> & Column['operators'];
-
-export type SetQueryReturnsColumnOptional<
-  T,
-  Column extends PickOutputType,
-> = SetQueryReturnsColumn<T, Column, 'value'>;
-
-export type SetQueryReturnsColumn<
-  T,
-  Column extends PickOutputType,
-  ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-  Data = ReturnType extends 'value'
-    ? Column['outputType'] | undefined
-    : Column['outputType'],
-> = {
-  [K in keyof T]: K extends 'result'
-    ? { value: Column }
-    : K extends 'returnType'
-    ? ReturnType
-    : K extends 'then'
-    ? QueryThen<Data>
-    : K extends 'catch'
-    ? QueryCatch<Data>
-    : T[K];
-} & { meta: { hasSelect: true } };
-
-export type SetQueryReturnsColumnKind<
-  T extends Pick<Query, 'meta'>,
-  Column extends QueryColumn,
+export type SetQueryReturnsPluckColumnKind<
+  T extends PickQueryMetaResult,
   Kind extends string,
-  ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
-  Data = ReturnType extends 'value'
-    ? Column['outputType'] | undefined
-    : Column['outputType'],
 > = {
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
       }
     : K extends 'result'
+    ? { pluck: T['result']['value'] }
+    : K extends 'returnType'
+    ? 'pluck'
+    : K extends 'then'
+    ? QueryThen<T['result']['value']['outputType'][]>
+    : K extends 'catch'
+    ? QueryCatch<T['result']['value']['outputType'][]>
+    : T[K];
+} & QueryMetaHasSelect;
+
+export type SetQueryReturnsValueOrThrow<
+  T extends PickQueryMeta,
+  Arg extends GetStringArg<T>,
+> = SetQueryReturnsColumnOrThrow<T, T['meta']['selectable'][Arg]['column']> &
+  T['meta']['selectable'][Arg]['column']['operators'];
+
+export type SetQueryReturnsValueOptional<
+  T extends PickQueryMeta,
+  Arg extends GetStringArg<T>,
+> = SetQueryReturnsColumnOptional<T, T['meta']['selectable'][Arg]['column']> &
+  T['meta']['selectable'][Arg]['column']['operators'];
+
+export type SetQueryReturnsColumnOrThrow<T, Column extends PickOutputType> = {
+  [K in keyof T]: K extends 'result'
     ? { value: Column }
     : K extends 'returnType'
-    ? ReturnType
+    ? 'valueOrThrow'
     : K extends 'then'
-    ? QueryThen<Data>
+    ? QueryThen<Column['outputType']>
     : K extends 'catch'
-    ? QueryCatch<Data>
+    ? QueryCatch<Column['outputType']>
     : T[K];
-} & { meta: { hasSelect: true } };
+} & QueryMetaHasSelect;
+
+export type SetQueryReturnsColumnOptional<T, Column extends PickOutputType> = {
+  [K in keyof T]: K extends 'result'
+    ? { value: Column }
+    : K extends 'returnType'
+    ? 'value'
+    : K extends 'then'
+    ? QueryThen<Column['outputType'] | undefined>
+    : K extends 'catch'
+    ? QueryCatch<Column['outputType'] | undefined>
+    : T[K];
+} & QueryMetaHasSelect;
+
+export type SetQueryReturnsColumnKind<
+  T extends PickQueryMetaResult,
+  Kind extends string,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'result'
+    ? { value: T['result']['pluck'] }
+    : K extends 'returnType'
+    ? 'valueOrThrow'
+    : K extends 'then'
+    ? QueryThen<T['result']['pluck']['outputType']>
+    : K extends 'catch'
+    ? QueryCatch<T['result']['pluck']['outputType']>
+    : T[K];
+} & QueryMetaHasSelect;
 
 export type SetQueryReturnsRowCount<
-  T extends Pick<Query, 'result' | 'meta'>,
+  T extends PickQueryMetaResult,
   Kind extends string,
-> = SetQueryReturnsKind<T, 'rowCount', Kind>;
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? 'rowCount'
+    : K extends 'then'
+    ? QueryThen<number>
+    : K extends 'catch'
+    ? QueryCatch<number>
+    : T[K];
+};
 
-export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
+export type SetQueryReturnsVoid<T> = {
+  [K in keyof T]: K extends 'returnType'
+    ? 'void'
+    : K extends 'then'
+    ? QueryThen<void>
+    : K extends 'catch'
+    ? QueryCatch<void>
+    : T[K];
+};
+
+export type SetQueryReturnsVoidKind<
+  T extends PickQueryMeta,
+  Kind extends string,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? 'void'
+    : K extends 'then'
+    ? QueryThen<void>
+    : K extends 'catch'
+    ? QueryCatch<void>
+    : T[K];
+};
 
 // Set the kind of the query, can be 'select', 'update', 'create', etc.
 // `update` method is using the kind of query to allow only 'select' as a callback return for a column.
-export type SetQueryKind<T extends Pick<Query, 'meta'>, Kind extends string> = {
+export type SetQueryKind<T extends PickQueryMeta, Kind extends string> = {
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
@@ -327,7 +499,7 @@ export type SetQueryKind<T extends Pick<Query, 'meta'>, Kind extends string> = {
 };
 
 export type SetQueryTableAlias<
-  T extends Pick<Query, 'table' | 'meta' | 'shape'>,
+  T extends PickQueryMetaTableShape,
   As extends string,
 > = {
   [K in keyof T]: K extends 'meta'
@@ -349,12 +521,11 @@ export type SetQueryTableAlias<
     : T[K];
 };
 
-export type SetQueryWith<
-  T extends Query,
-  WithData extends Record<string, WithDataItem>,
-> = { [K in keyof T]: K extends 'withData' ? WithData : T[K] };
+export type SetQueryWith<T, WithData extends WithDataItems> = {
+  [K in keyof T]: K extends 'withData' ? WithData : T[K];
+};
 
 export type AddQueryWith<
-  T extends Query,
+  T extends PickQueryWithData,
   With extends WithDataItem,
 > = SetQueryWith<T, Spread<[T['withData'], { [K in With['table']]: With }]>>;

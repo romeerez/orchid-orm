@@ -50,17 +50,17 @@ export type WithItem = [
   query: Query | Expression,
 ];
 
-export type WithOptions = {
+export interface WithOptions {
   columns?: string[];
   recursive?: true;
   materialized?: true;
   notMaterialized?: true;
-};
+}
 
-export type JsonItem<
+export interface JsonItem<
   As extends string = string,
   Type extends QueryColumn = QueryColumn,
-> = {
+> {
   __json:
     | [
         kind: 'set',
@@ -102,22 +102,26 @@ export type JsonItem<
           silent?: boolean;
         },
       ];
-};
+}
 
 export type SelectItem = string | SelectAs | JsonItem | Expression;
 
-export type SelectAs = {
-  selectAs: Record<string, string | Query | Expression>;
-};
+export interface SelectAs {
+  selectAs: SelectAsValue;
+}
 
-export type OrderTsQueryConfig =
-  | true
-  | {
-      coverDensity?: boolean;
-      weights?: number[];
-      normalization?: number;
-      dir?: SortDir;
-    };
+interface SelectAsValue {
+  [K: string]: string | Query | Expression;
+}
+
+export type OrderTsQueryConfig = true | OrderTsQueryConfigObject;
+
+interface OrderTsQueryConfigObject {
+  coverDensity?: boolean;
+  weights?: number[];
+  normalization?: number;
+  dir?: SortDir;
+}
 
 export type QuerySourceItem = {
   queryAs: string;
@@ -162,7 +166,7 @@ export type QuerySourceItem = {
 
 export type JoinItem = SimpleJoinItem | JoinLateralItem;
 
-export type SimpleJoinItem = {
+export interface SimpleJoinItem {
   type: string;
   first: string | QueryWithTable;
   args:
@@ -182,7 +186,7 @@ export type SimpleJoinItem = {
       ];
   // available only for QueryWithTable as first argument
   isSubQuery: boolean;
-};
+}
 
 export type JoinLateralItem = [type: string, joined: Query, as: string];
 
@@ -205,10 +209,10 @@ export type WhereItem =
   | Query
   | Expression;
 
-export type WhereInItem = {
+export interface WhereInItem {
   columns: string[];
   values: unknown[][] | Query | Expression;
-};
+}
 
 export type WhereJsonPathEqualsItem = [
   leftColumn: string,
@@ -217,22 +221,22 @@ export type WhereJsonPathEqualsItem = [
   rightPath: string,
 ];
 
-export type WhereOnItem = {
+export interface WhereOnItem {
   joinFrom: WhereOnJoinItem;
   joinTo: WhereOnJoinItem;
   on:
     | [leftFullColumn: string, rightFullColumn: string]
     | [leftFullColumn: string, op: string, rightFullColumn: string];
-};
+}
 
 export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
 
 export type SearchWeight = 'A' | 'B' | 'C' | 'D';
 
-export type WhereSearchItem = {
+export interface WhereSearchItem {
   as: string;
   vectorSQL: string;
-};
+}
 
 export type SortDir = 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
 
@@ -250,10 +254,10 @@ export type HavingItem = TemplateLiteralArgs | Expression[];
 
 export type WindowItem = Record<string, WindowDeclaration | Expression>;
 
-export type WindowDeclaration = {
+export interface WindowDeclaration {
   partitionBy?: SelectableOrExpression | SelectableOrExpression[];
   order?: OrderItem;
-};
+}
 
 export type UnionItem = Query | Expression;
 

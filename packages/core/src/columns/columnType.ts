@@ -22,6 +22,10 @@ export type ColumnShapeInput<
   Optional
 > & { [K in Optional]?: Shape[K]['inputType'] };
 
+export type ColumnShapeInputPartial<Shape extends QueryColumnsInit> = {
+  [K in keyof Shape]?: Shape[K]['inputType'];
+};
+
 // output of a shape of columns
 export type ColumnShapeOutput<Shape extends QueryColumns> = {
   [K in keyof Shape]: Shape[K]['outputType'];
@@ -123,7 +127,9 @@ export type ParseColumn<T, OutputSchema, Output> = {
     : T[K];
 };
 
-export type PickColumnBaseData = { data: ColumnDataBase };
+export interface PickColumnBaseData {
+  data: ColumnDataBase;
+}
 
 // adds default type to the column
 // removes the default if the Value is null

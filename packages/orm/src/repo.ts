@@ -1,12 +1,5 @@
-import {
-  getClonedQueryData,
-  MergeQuery,
-  Query,
-  QueryReturnType,
-  SetQueryReturns,
-  WhereResult,
-} from 'pqb';
-import { EmptyObject } from 'orchid-core';
+import { getClonedQueryData, MergeQuery, Query, WhereResult } from 'pqb';
+import { EmptyObject, QueryReturnType, RecordUnknown } from 'orchid-core';
 
 type QueryMethods<T extends Query> = Record<
   string,
@@ -14,18 +7,19 @@ type QueryMethods<T extends Query> = Record<
   (q: T, ...args: any[]) => any
 >;
 
-type QueryOne<T extends Query> = SetQueryReturns<
-  T,
-  Exclude<QueryReturnType, 'all'>
->;
+type QueryOne<T extends Query> = {
+  [K in keyof T]: K extends 'returnType'
+    ? Exclude<QueryReturnType, 'all'>
+    : T[K];
+};
 
-export type MethodsBase<T extends Query> = {
+export interface MethodsBase<T extends Query> {
   queryMethods?: QueryMethods<T>;
   queryOneMethods?: QueryMethods<QueryOne<T>>;
   queryWithWhereMethods?: QueryMethods<WhereResult<T>>;
   queryOneWithWhereMethods?: QueryMethods<QueryOne<WhereResult<T>>>;
-  methods?: Record<string, unknown>;
-};
+  methods?: RecordUnknown;
+}
 
 export type MapQueryMethods<
   T extends Query,
@@ -99,7 +93,7 @@ export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
 
     for (const key in queryMethods) {
       const method = queryMethods[key] as (...args: unknown[]) => unknown;
-      (proto.baseQuery as unknown as Record<string, unknown>)[key] = function (
+      (proto.baseQuery as unknown as RecordUnknown)[key] = function (
         ...args: unknown[]
       ) {
         return method(this, ...args);

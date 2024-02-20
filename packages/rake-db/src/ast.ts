@@ -22,7 +22,7 @@ export type RakeDbAst =
   | RakeDbAst.View;
 
 export namespace RakeDbAst {
-  export type Table = {
+  export interface Table extends TableData {
     type: 'table';
     action: 'create' | 'drop';
     schema?: string;
@@ -33,9 +33,9 @@ export namespace RakeDbAst {
     dropIfExists?: boolean;
     dropMode?: DropMode;
     comment?: string;
-  } & TableData;
+  }
 
-  export type ChangeTable = {
+  export interface ChangeTable {
     type: 'changeTable';
     schema?: string;
     name: string;
@@ -43,7 +43,7 @@ export namespace RakeDbAst {
     shape: Record<string, ChangeTableItem>;
     add: TableData;
     drop: TableData;
-  };
+  }
 
   export type ChangeTableItem =
     | ChangeTableItem.Column
@@ -51,27 +51,27 @@ export namespace RakeDbAst {
     | ChangeTableItem.Rename;
 
   export namespace ChangeTableItem {
-    export type Column = {
+    export interface Column {
       type: 'add' | 'drop';
       item: ColumnType;
       dropMode?: DropMode;
-    };
+    }
 
-    export type Change = {
+    export interface Change {
       type: 'change';
       name?: string;
       from: ColumnChange;
       to: ColumnChange;
       using?: RawSQLBase;
-    };
+    }
 
-    export type Rename = {
+    export interface Rename {
       type: 'rename';
       name: string;
-    };
+    }
   }
 
-  export type ColumnChange = {
+  export interface ColumnChange {
     column?: ColumnType;
     type?: string;
     collate?: string;
@@ -87,23 +87,23 @@ export namespace RakeDbAst {
     } & ForeignKeyOptions)[];
     indexes?: Omit<SingleColumnIndexOptions, 'column' | 'expression'>[];
     identity?: TableData.Identity;
-  };
+  }
 
-  export type RenameTable = {
+  export interface RenameTable {
     type: 'renameTable';
     fromSchema?: string;
     from: string;
     toSchema?: string;
     to: string;
-  };
+  }
 
-  export type Schema = {
+  export interface Schema {
     type: 'schema';
     action: 'create' | 'drop';
     name: string;
-  };
+  }
 
-  export type Extension = {
+  export interface Extension {
     type: 'extension';
     action: 'create' | 'drop';
     name: string;
@@ -112,9 +112,9 @@ export namespace RakeDbAst {
     cascade?: boolean;
     createIfNotExists?: boolean;
     dropIfExists?: boolean;
-  };
+  }
 
-  export type Enum = {
+  export interface Enum {
     type: 'enum';
     action: 'create' | 'drop';
     schema?: string;
@@ -122,9 +122,9 @@ export namespace RakeDbAst {
     values: [string, ...string[]];
     cascade?: boolean;
     dropIfExists?: boolean;
-  };
+  }
 
-  export type Domain = {
+  export interface Domain {
     type: 'domain';
     action: 'create' | 'drop';
     schema?: string;
@@ -135,10 +135,10 @@ export namespace RakeDbAst {
     default?: RawSQLBase;
     check?: RawSQLBase;
     cascade?: boolean;
-  };
+  }
 
   // Database collation.
-  export type Collation = {
+  export interface Collation {
     // Type of RakeDb.AST for the collation.
     type: 'collation';
     // Create or drop the collation.
@@ -174,21 +174,21 @@ export namespace RakeDbAst {
     dropIfExists?: boolean;
     // Add CASCADE when dropping a collation.
     cascade?: boolean;
-  };
+  }
 
-  export type EnumOptions = {
+  export interface EnumOptions {
     createIfNotExists?: boolean;
     dropIfExists?: boolean;
-  };
+  }
 
-  export type Constraint = {
+  export interface Constraint extends TableData.Constraint {
     type: 'constraint';
     action: 'create';
     tableSchema?: string;
     tableName: string;
-  } & TableData.Constraint;
+  }
 
-  export type View = {
+  export interface View {
     type: 'view';
     action: 'create' | 'drop';
     schema?: string;
@@ -196,9 +196,9 @@ export namespace RakeDbAst {
     shape: ColumnsShape;
     sql: RawSQLBase;
     options: ViewOptions;
-  };
+  }
 
-  export type ViewOptions = {
+  export interface ViewOptions {
     createOrReplace?: boolean;
     dropIfExists?: boolean;
     dropMode?: DropMode;
@@ -210,5 +210,5 @@ export namespace RakeDbAst {
       securityBarrier?: boolean;
       securityInvoker?: boolean;
     };
-  };
+  }
 }

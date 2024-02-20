@@ -1,5 +1,5 @@
 import { WithOptions } from '../sql';
-import { AddQueryWith, Query } from '../query/query';
+import { AddQueryWith, PickQueryWithData, Query } from '../query/query';
 import { Db } from '../query/db';
 import { pushQueryValue, setQueryObjectValue } from '../query/queryUtils';
 import {
@@ -54,7 +54,7 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
 
 // Adds a `withData` entry to a query
 type WithResult<
-  T extends Query,
+  T extends PickQueryWithData,
   Args extends WithArgs,
   Shape extends QueryColumns,
 > = AddQueryWith<
@@ -133,11 +133,11 @@ export class With {
    * @param args - first argument is an alias for this CTE, other arguments can be column shape, query object, or raw SQL.
    */
   with<
-    T extends Query,
+    T extends PickQueryWithData,
     Args extends WithArgs,
     Shape extends QueryColumns = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
-    const q = this.clone();
+    const q = (this as unknown as Query).clone();
 
     let options =
       (args.length === 3 && !isExpression(args[2])) || args.length === 4
@@ -167,11 +167,6 @@ export class With {
 
     pushQueryValue(q, 'with', [args[0], options || emptyObject, query]);
 
-    return setQueryObjectValue(
-      q,
-      'withShapes',
-      args[0],
-      shape,
-    ) as unknown as WithResult<T, Args, Shape>;
+    return setQueryObjectValue(q, 'withShapes', args[0], shape) as never;
   }
 }

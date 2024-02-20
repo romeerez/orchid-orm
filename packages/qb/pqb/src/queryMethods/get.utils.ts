@@ -1,15 +1,17 @@
 import {
+  PickQueryMetaTable,
   Query,
-  SetQueryReturnsColumn,
   SetQueryReturnsColumnOptional,
-  SetQueryReturnsValue,
+  SetQueryReturnsColumnOrThrow,
   SetQueryReturnsValueOptional,
+  SetQueryReturnsValueOrThrow,
 } from '../query/query';
 import {
   ColumnTypeBase,
   emptyObject,
   Expression,
   getValueKey,
+  PickQueryMeta,
   QueryColumn,
 } from 'orchid-core';
 import { SelectQueryData } from '../sql';
@@ -25,31 +27,28 @@ import {
   setQueryOperators,
 } from '../columns/operators';
 
-export type QueryGetSelf = Pick<
-  Query,
-  'meta' | 'q' | 'table' | 'baseQuery' | 'clone'
->;
+export type QueryGetSelf = PickQueryMetaTable;
 
 // `get` method argument, accepts a string for a column name or a raw SQL
 export type GetArg<T extends QueryGetSelf> = GetStringArg<T> | Expression;
 
-export type GetStringArg<T extends Pick<Query, 'meta'>> =
+export type GetStringArg<T extends PickQueryMeta> =
   keyof T['meta']['selectable'] & string;
 
 // `get` method result: returns a column type for raw expression or a value type for string argument
 export type GetResult<
   T extends QueryGetSelf,
   Arg extends GetArg<T>,
-> = Arg extends GetStringArg<T>
-  ? SetQueryReturnsValue<T, Arg>
+> = Arg extends string
+  ? SetQueryReturnsValueOrThrow<T, Arg>
   : Arg extends Expression
-  ? SetQueryReturnsColumn<T, Arg['_type']>
+  ? SetQueryReturnsColumnOrThrow<T, Arg['_type']>
   : never;
 
 export type GetResultOptional<
   T extends QueryGetSelf,
   Arg extends GetArg<T>,
-> = Arg extends GetStringArg<T>
+> = Arg extends string
   ? SetQueryReturnsValueOptional<T, Arg>
   : Arg extends Expression
   ? SetQueryReturnsColumnOptional<T, Arg['_type']>
@@ -61,49 +60,55 @@ const _get = <
   R extends 'value' | 'valueOrThrow',
   Arg extends GetArg<T>,
 >(
-  q: T,
+  query: T,
   returnType: R,
   arg: Arg,
 ): R extends 'value' ? GetResultOptional<T, Arg> : GetResult<T, Arg> => {
-  q.q.returnType = returnType;
+  const q = (query as unknown as Query).q;
+  q.returnType = returnType;
 
   let type: QueryColumn | undefined;
   if (typeof arg === 'string') {
-    type = q.q.shape[arg];
+    type = q.shape[arg];
     if (!type) {
       const index = arg.indexOf('.');
       if (index !== -1) {
         const table = arg.slice(0, index);
         const column = arg.slice(index + 1);
 
-        if (table === (q.q.as || q.table)) {
-          type = q.q.shape[column];
+        if (table === (q.as || (query as unknown as Query).table)) {
+          type = q.shape[column];
         } else {
-          type = q.q.joinedShapes?.[table]?.[column];
+          type = q.joinedShapes?.[table]?.[column];
         }
       }
     }
 
-    (q.q as SelectQueryData)[getValueKey] = type;
+    (q as SelectQueryData)[getValueKey] = type;
 
-    setParserForSelectedString(q, arg, getQueryAs(q), getValueKey);
+    setParserForSelectedString(
+      query as unknown as Query,
+      arg,
+      getQueryAs(query as unknown as Query),
+      getValueKey,
+    );
 
-    q.q.expr = new SelectItemExpression(
-      q as unknown as Query,
+    q.expr = new SelectItemExpression(
+      query as unknown as Query,
       arg,
       type || (emptyObject as ColumnTypeBase),
     );
   } else {
     type = arg._type;
-    (q.q as SelectQueryData)[getValueKey] = type;
-    addParserForRawExpression(q, getValueKey, arg);
-    q.q.expr = arg;
+    (q as SelectQueryData)[getValueKey] = type;
+    addParserForRawExpression(query as unknown as Query, getValueKey, arg);
+    q.expr = arg;
   }
 
-  q.q.select = [q.q.expr];
+  q.select = [q.expr];
 
   return setQueryOperators(
-    q,
+    query as unknown as Query,
     (type?.operators || Operators.any) as BaseOperators,
   ) as unknown as GetResult<T, Arg> & GetResultOptional<T, Arg>;
 };

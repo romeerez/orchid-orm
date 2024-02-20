@@ -1,4 +1,10 @@
-import { QueryColumns, QueryColumnsInit, RecordUnknown } from 'orchid-core';
+import {
+  PickQueryMetaResult,
+  QueryColumns,
+  QueryColumnsInit,
+  QueryMetaBase,
+  RecordUnknown,
+} from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
 import { QueryScopes } from '../sql';
 import { Query } from '../query/query';
@@ -54,9 +60,9 @@ const _softDelete = (column: PropertyKey) => {
   };
 };
 
-export type QueryWithSoftDelete = Query & {
-  meta: { scopes: { nonDeleted: unknown } };
-};
+export interface QueryWithSoftDelete extends PickQueryMetaResult {
+  meta: QueryMetaBase & { scopes: { nonDeleted: unknown } };
+}
 
 /**
  * `softDelete` configures the table to set `deletedAt` to current time instead of deleting records.
@@ -98,7 +104,7 @@ export class SoftDeleteMethods {
    * ```
    */
   includeDeleted<T extends QueryWithSoftDelete>(this: T): T {
-    return this.unscope('nonDeleted');
+    return (this as unknown as Query).unscope('nonDeleted' as never) as never;
   }
 
   /**
@@ -113,6 +119,8 @@ export class SoftDeleteMethods {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {
-    return _queryDelete(this.clone().unscope('nonDeleted' as never));
+    return _queryDelete(
+      (this as unknown as Query).clone().unscope('nonDeleted' as never),
+    ) as never;
   }
 }

@@ -1,4 +1,9 @@
-import { Query } from '../../query/query';
+import {
+  PickQueryMetaRelations,
+  PickQueryMetaShapeRelationsWithData,
+  PickQueryRelations,
+  Query,
+} from '../../query/query';
 import { ColumnOperators } from '../../sql';
 import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
 import { JoinArgs, JoinFirstArg } from '../join/join';
@@ -7,6 +12,7 @@ import {
   ColumnsShapeBase,
   Expression,
   MaybeArray,
+  PickQueryMeta,
   QueryColumn,
   TemplateLiteralArgs,
 } from 'orchid-core';
@@ -30,7 +36,7 @@ Argument of `where`:
   - raw SQL: q.where({ num: q.raw`sql` })
   - sub query returning a single column: q.where({ num: db.someTable.where(...).get('column') })
  */
-export type WhereArg<T extends QueryBase> =
+export type WhereArg<T extends PickQueryMetaRelations> =
   | {
       [K in
         | keyof T['meta']['selectable']
@@ -45,14 +51,12 @@ export type WhereArg<T extends QueryBase> =
             columns: (keyof T['meta']['selectable'])[];
             values: unknown[][] | QueryBase | Expression;
           }>
-        : K extends keyof T['meta']['selectable']
-        ?
+        :
             | T['meta']['selectable'][K]['column']['queryType']
             | null
             | ColumnOperators<T['meta']['selectable'], K>
             | Expression
-            | QueryBase
-        : never;
+            | QueryBase;
     }
   | QueryBase
   | Expression<QueryColumn<boolean | null>>
@@ -68,7 +72,7 @@ export type WhereArg<T extends QueryBase> =
  * db.table.where((q) => q.relation.count().equals(10))
  * ```
  */
-export type WhereQueryBuilder<T extends QueryBase> =
+export type WhereQueryBuilder<T extends PickQueryRelations> =
   RelationsBase extends T['relations']
     ? {
         [K in keyof T]: K extends keyof QueryBase | keyof Where ? T[K] : never;
@@ -76,29 +80,27 @@ export type WhereQueryBuilder<T extends QueryBase> =
     : {
         [K in keyof T]: K extends keyof T['relations']
           ? T['relations'][K]
-          : K extends keyof QueryBase | keyof Where
-          ? T[K]
-          : never;
+          : T[K];
       };
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
-export type WhereArgs<T extends QueryBase> =
+export type WhereArgs<T extends PickQueryMetaRelations> =
   | WhereArg<T>[]
   | TemplateLiteralArgs;
 
-export type WhereNotArgs<T extends QueryBase> =
+export type WhereNotArgs<T extends PickQueryMetaRelations> =
   | [WhereArg<T>]
   | TemplateLiteralArgs;
 
 // Argument of `whereIn`: can be a column name or a tuple with column names to search in.
-export type WhereInColumn<T extends QueryBase> =
+export type WhereInColumn<T extends PickQueryMetaRelations> =
   | keyof T['meta']['selectable']
   | [keyof T['meta']['selectable'], ...(keyof T['meta']['selectable'])[]];
 
 // If `WhereInColumn` is a single column, it accepts array of values, or Query returning single column, or raw SQL expression.
 // If `WhereInColumn` is a tuple, it accepts a tuple of values described above.
 export type WhereInValues<
-  T extends QueryBase,
+  T extends PickQueryMetaRelations,
   Column extends WhereInColumn<T>,
 > = Column extends keyof T['meta']['selectable']
   ?
@@ -118,7 +120,7 @@ export type WhereInValues<
 
 // In addition to `WhereInColumn` + `WhereInValues` where user can provide a tuple with columns and a tuple with values, enable `whereIn` with object syntax.
 // Each key is a column name, value is array of column values, or a query returning single column, or a raw SQL expression.
-export type WhereInArg<T extends Pick<Query, 'meta'>> = {
+export type WhereInArg<T extends PickQueryMeta> = {
   [K in keyof T['meta']['selectable']]?:
     | T['meta']['selectable'][K]['column']['queryType'][]
     | Query
@@ -126,11 +128,13 @@ export type WhereInArg<T extends Pick<Query, 'meta'>> = {
 };
 
 // After applying `where`, attach `hasWhere: true` to query meta to allow updating and deleting.
-export type WhereResult<T> = T & {
+export type WhereResult<T> = T & QueryMetaHasWhere;
+
+export interface QueryMetaHasWhere {
   meta: {
     hasWhere: true;
   };
-};
+}
 
 /**
  * Adds `where` arguments to query data: SQL template string is added as `RawSQL` object, other arguments are added as is.
@@ -138,19 +142,23 @@ export type WhereResult<T> = T & {
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryWhere = <T extends QueryBase>(
+export const _queryWhere = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
   if (Array.isArray(args[0])) {
     return pushQueryValue(
-      q,
+      q as unknown as Query,
       'and',
       new RawSQL(args as TemplateLiteralArgs),
     ) as unknown as WhereResult<T>;
   }
 
-  return pushQueryArray(q, 'and', args) as unknown as WhereResult<T>;
+  return pushQueryArray(
+    q as unknown as Query,
+    'and',
+    args,
+  ) as unknown as WhereResult<T>;
 };
 
 /**
@@ -159,16 +167,16 @@ export const _queryWhere = <T extends QueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryWhereNot = <T extends QueryBase>(
+export const _queryWhereNot = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereNotArgs<T>,
 ): WhereResult<T> => {
   if (Array.isArray(args[0])) {
-    return pushQueryValue(q, 'and', {
+    return pushQueryValue(q as unknown as Query, 'and', {
       NOT: new RawSQL(args as TemplateLiteralArgs),
     }) as unknown as WhereResult<T>;
   }
-  return pushQueryValue(q, 'and', {
+  return pushQueryValue(q as unknown as Query, 'and', {
     NOT: args,
   }) as unknown as WhereResult<T>;
 };
@@ -179,12 +187,12 @@ export const _queryWhereNot = <T extends QueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryOr = <T extends QueryBase>(
+export const _queryOr = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
   return pushQueryArray(
-    q,
+    q as unknown as Query,
     'or',
     args.map((item) => [item]),
   ) as unknown as WhereResult<T>;
@@ -196,12 +204,12 @@ export const _queryOr = <T extends QueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const _queryOrNot = <T extends QueryBase>(
+export const _queryOrNot = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
   return pushQueryArray(
-    q,
+    q as unknown as Query,
     'or',
     args.map((item) => [{ NOT: item }]),
   ) as unknown as WhereResult<T>;
@@ -216,7 +224,7 @@ export const _queryOrNot = <T extends QueryBase>(
  * @param values - if the `arg` is a column name or a tuple, `values` are the values for the column/columns. If `arg` is an object, `values` are `undefined`.
  * @param not - adds the `NOT` keyword.
  */
-export const _queryWhereIn = <T extends QueryBase>(
+export const _queryWhereIn = <T>(
   q: T,
   and: boolean,
   arg: unknown,
@@ -245,9 +253,9 @@ export const _queryWhereIn = <T extends QueryBase>(
   if (not) item = { NOT: item };
 
   if (and) {
-    pushQueryValue(q, 'and', item);
+    pushQueryValue(q as unknown as Query, 'and', item);
   } else {
-    pushQueryValue(q, 'or', [item]);
+    pushQueryValue(q as unknown as Query, 'or', [item]);
   }
 
   return q as unknown as WhereResult<T>;
@@ -670,8 +678,14 @@ export class Where {
    *
    * @param args - {@link WhereArgs}
    */
-  where<T extends QueryBase>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
-    return _queryWhere(this.clone(), args);
+  where<T extends PickQueryMetaRelations>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
+    return _queryWhere(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
   }
 
   /**
@@ -689,11 +703,14 @@ export class Where {
    *
    * @param args - {@link WhereArgs}
    */
-  whereNot<T extends QueryBase>(
+  whereNot<T extends PickQueryMetaRelations>(
     this: T,
     ...args: WhereNotArgs<T>
   ): WhereResult<T> {
-    return _queryWhereNot(this.clone(), args);
+    return _queryWhereNot(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
   }
 
   /**
@@ -719,11 +736,11 @@ export class Where {
    *
    * @param args - {@link WhereArgs} will be joined with `OR`
    */
-  orWhere<T extends QueryBase>(
+  orWhere<T extends PickQueryMetaRelations>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
-    return _queryOr(this.clone(), args);
+    return _queryOr((this as unknown as Query).clone(), args as never) as never;
   }
 
   /**
@@ -731,11 +748,14 @@ export class Where {
    *
    * @param args - {@link WhereArgs} will be prefixed with `NOT` and joined with `OR`
    */
-  orWhereNot<T extends QueryBase>(
+  orWhereNot<T extends PickQueryMetaRelations>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
-    return _queryOrNot(this.clone(), args);
+    return _queryOrNot(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
   }
 
   /**
@@ -773,13 +793,18 @@ export class Where {
    * db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
    * ```
    */
-  whereIn<T extends QueryBase, Column extends WhereInColumn<T>>(
+  whereIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(
     this: T,
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), true, args[0], args[1]);
+    return _queryWhereIn(
+      (this as unknown as Query).clone(),
+      true,
+      args[0],
+      args[1],
+    ) as never;
   }
 
   /**
@@ -790,13 +815,18 @@ export class Where {
    * db.table.whereIn('a', [1, 2, 3]).orWhereIn('b', ['one', 'two']);
    * ```
    */
-  orWhereIn<T extends QueryBase, Column extends WhereInColumn<T>>(
+  orWhereIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(
     this: T,
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), false, args[0], args[1]);
+    return _queryWhereIn(
+      (this as unknown as Query).clone(),
+      false,
+      args[0],
+      args[1],
+    ) as never;
   }
 
   /**
@@ -806,13 +836,19 @@ export class Where {
    * db.table.whereNotIn('color', ['red', 'green', 'blue']);
    * ```
    */
-  whereNotIn<T extends QueryBase, Column extends WhereInColumn<T>>(
+  whereNotIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(
     this: T,
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), true, args[0], args[1], true);
+    return _queryWhereIn(
+      (this as unknown as Query).clone(),
+      true,
+      args[0],
+      args[1],
+      true,
+    ) as never;
   }
 
   /**
@@ -822,13 +858,22 @@ export class Where {
    * db.table.whereNotIn('a', [1, 2, 3]).orWhereNoIn('b', ['one', 'two']);
    * ```
    */
-  orWhereNotIn<T extends QueryBase, Column extends WhereInColumn<T>>(
+  orWhereNotIn<
+    T extends PickQueryMetaRelations,
+    Column extends WhereInColumn<T>,
+  >(
     this: T,
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
   ): WhereResult<T> {
-    return _queryWhereIn(this.clone(), false, args[0], args[1], true);
+    return _queryWhereIn(
+      (this as unknown as Query).clone(),
+      false,
+      args[0],
+      args[1],
+      true,
+    ) as never;
   }
 
   /**
@@ -848,12 +893,14 @@ export class Where {
    * db.user.whereExists(db.account, (q) => q.on('account.id', '=', 'user.id'));
    * ```
    */
-  whereExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
-    this: T,
-    arg: Arg,
-    ...args: JoinArgs<T, Arg>
-  ): WhereResult<T> {
-    return _queryWhere(this.clone(), existsArgs(arg as never, args as never));
+  whereExists<
+    T extends PickQueryMetaShapeRelationsWithData,
+    Arg extends JoinFirstArg<T>,
+  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+    return _queryWhere(
+      (this as unknown as Query).clone(),
+      existsArgs(arg as never, args as never),
+    ) as never;
   }
 
   /**
@@ -865,12 +912,14 @@ export class Where {
    * db.user.whereExist('account').orWhereExists('profile');
    * ```
    */
-  orWhereExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
-    this: T,
-    arg: Arg,
-    ...args: JoinArgs<T, Arg>
-  ): WhereResult<T> {
-    return _queryOr(this.clone(), existsArgs(arg as never, args as never));
+  orWhereExists<
+    T extends PickQueryMetaShapeRelationsWithData,
+    Arg extends JoinFirstArg<T>,
+  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+    return _queryOr(
+      (this as unknown as Query).clone(),
+      existsArgs(arg as never, args as never),
+    ) as never;
   }
 
   /**
@@ -885,15 +934,14 @@ export class Where {
    * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
-  whereNotExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
-    this: T,
-    arg: Arg,
-    ...args: JoinArgs<T, Arg>
-  ): WhereResult<T> {
+  whereNotExists<
+    T extends PickQueryMetaShapeRelationsWithData,
+    Arg extends JoinFirstArg<T>,
+  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     return _queryWhereNot(
-      this.clone(),
+      (this as unknown as Query).clone(),
       existsArgs(arg as never, args as never),
-    );
+    ) as never;
   }
 
   /**
@@ -905,12 +953,14 @@ export class Where {
    * db.user.whereNotExists('account').orWhereNotExists('profile');
    * ```
    */
-  orWhereNotExists<T extends QueryBase, Arg extends JoinFirstArg<T>>(
-    this: T,
-    arg: Arg,
-    ...args: JoinArgs<T, Arg>
-  ): WhereResult<T> {
-    return _queryOrNot(this.clone(), existsArgs(arg as never, args as never));
+  orWhereNotExists<
+    T extends PickQueryMetaShapeRelationsWithData,
+    Arg extends JoinFirstArg<T>,
+  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+    return _queryOrNot(
+      (this as unknown as Query).clone(),
+      existsArgs(arg as never, args as never),
+    ) as never;
   }
 }
 

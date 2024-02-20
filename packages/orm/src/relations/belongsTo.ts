@@ -1,4 +1,4 @@
-import { Table, TableClass } from '../baseTable';
+import { TableClass } from '../baseTable';
 import {
   _queryCreate,
   _queryCreateMany,
@@ -32,9 +32,10 @@ import {
   WhereArg,
 } from 'pqb';
 import {
+  RelationConfigSelf,
   RelationData,
   RelationThunkBase,
-  RelationToOneDataForCreate,
+  RelationToOneDataForCreateSameQuery,
 } from './relations';
 import {
   joinQueryChainingHOF,
@@ -51,6 +52,7 @@ import {
   ColumnsShapeBase,
   emptyArray,
   EmptyObject,
+  RecordUnknown,
 } from 'orchid-core';
 import {
   RelationCommonOptions,
@@ -60,10 +62,10 @@ import {
 } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 
-export type BelongsTo = RelationThunkBase & {
+export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';
   options: BelongsToOptions;
-};
+}
 
 export type BelongsToOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
@@ -77,20 +79,32 @@ export type BelongsToOptions<
     keyof Columns
   >;
 
-export interface BelongsToInfo<
-  T extends Table,
-  Relation extends BelongsTo,
-  Name extends string,
-  TableQuery extends Query,
-  FK extends string = Relation['options'] extends RelationRefsOptions
+type BelongsToFKey<Relation extends RelationThunkBase> =
+  Relation['options'] extends RelationRefsOptions
     ? Relation['options']['columns'][number]
     : Relation['options'] extends RelationKeysOptions
     ? Relation['options']['foreignKey']
-    : never,
-  Required = Relation['options']['required'] extends true ? true : false,
+    : never;
+
+export type BelongsToParams<
+  T extends RelationConfigSelf,
+  Relation extends RelationThunkBase,
+> = {
+  [Name in BelongsToFKey<Relation>]: T['columns'][Name]['type'];
+};
+
+export interface BelongsToInfo<
+  T extends RelationConfigSelf,
+  Name extends keyof T['relations'] & string,
+  TableQuery extends Query,
+  FK extends string = BelongsToFKey<T['relations'][Name]>,
+  Required = T['relations'][Name]['options']['required'] extends true
+    ? true
+    : false,
   Q extends Query = {
     [K in keyof TableQuery]: K extends 'meta'
-      ? Omit<TableQuery['meta'], 'selectable'> & {
+      ? // Omit is optimal
+        Omit<TableQuery['meta'], 'selectable'> & {
           as: Name;
           hasWhere: true;
           selectable: SelectableFromShape<TableQuery['shape'], Name>;
@@ -113,16 +127,10 @@ export interface BelongsToInfo<
     columns: { [L in FK]: T['columns'][L]['inputType'] };
     nested: Required extends true
       ? {
-          [Key in Name]: RelationToOneDataForCreate<{
-            nestedCreateQuery: Q;
-            table: Q;
-          }>;
+          [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;
         }
       : {
-          [Key in Name]?: RelationToOneDataForCreate<{
-            nestedCreateQuery: Q;
-            table: Q;
-          }>;
+          [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
         };
   };
   optionalDataForCreate: EmptyObject;
@@ -149,28 +157,28 @@ export interface BelongsToInfo<
     };
   };
 
-  params: { [Name in FK]: T['columns'][FK]['type'] };
+  params: BelongsToParams<T, T['relations'][Name]>;
 }
 
-type State = {
+interface State {
   query: Query;
   primaryKeys: string[];
   foreignKeys: string[];
   len: number;
-};
+}
 
 type BelongsToNestedInsert = (
   query: Query,
   relationData: NestedInsertOneItem[],
-) => Promise<Record<string, unknown>[]>;
+) => Promise<RecordUnknown[]>;
 
 type BelongsToNestedUpdate = (
   q: Query,
-  update: Record<string, unknown>,
+  update: RecordUnknown,
   params: NestedUpdateOneItem,
   state: {
     queries?: ((queryResult: QueryResult) => Promise<void>)[];
-    updateData?: Record<string, unknown>;
+    updateData?: RecordUnknown;
   },
 ) => void;
 
@@ -188,12 +196,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     this.nestedUpdate = nestedUpdate(this.state);
   }
 
-  create(
-    q: Query,
-    ctx: CreateCtx,
-    item: Record<string, unknown>,
-    rowIndex: number,
-  ) {
+  create(q: Query, ctx: CreateCtx, item: RecordUnknown, rowIndex: number) {
     const {
       key,
       state: { primaryKeys, foreignKeys },
@@ -246,7 +249,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     });
   }
 
-  update(q: Query, ctx: UpdateCtx, set: Record<string, unknown>) {
+  update(q: Query, ctx: UpdateCtx, set: RecordUnknown) {
     q.q.wrapInTransaction = true;
 
     const data = set[this.key] as NestedUpdateOneItem;
@@ -300,8 +303,8 @@ export const makeBelongsToMethod = (
 
   return {
     returns: 'one',
-    method(params: Record<string, unknown>) {
-      return query.where(makeWhere(params));
+    method(params: RecordUnknown) {
+      return query.where(makeWhere(params) as never);
     },
     virtualColumn: new BelongsToVirtualColumn(
       defaultSchemaConfig,
@@ -320,7 +323,7 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
     const t = query.clone();
 
     // array to store specific items will be reused
-    const items: Record<string, unknown>[] = [];
+    const items: NestedInsertOneItem[] = [];
     for (const item of data) {
       if (item.connectOrCreate) {
         items.push(item);
@@ -333,7 +336,7 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
         items[i] = t.findByOptional(
           (items[i].connectOrCreate as NestedInsertOneItemConnectOrCreate)
             .where,
-        );
+        ) as never;
       }
 
       connectOrCreated = await Promise.all(items);
@@ -361,7 +364,10 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
                 .create;
       }
 
-      created = await _queryCreateMany(t.select(...primaryKeys), items);
+      created = await _queryCreateMany(
+        t.select(...primaryKeys),
+        items as never,
+      );
     } else {
       created = emptyArray;
     }
@@ -376,7 +382,7 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
     let connected: unknown[];
     if (items.length) {
       for (let i = 0, len = items.length; i < len; i++) {
-        items[i] = t.findBy(items[i].connect as WhereArg<Query>);
+        items[i] = t.findBy(items[i].connect as WhereArg<Query>) as never;
       }
 
       connected = await Promise.all(items);
@@ -393,7 +399,7 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
         : item.connect
         ? connected[connectedI++]
         : created[createdI++];
-    }) as Record<string, unknown>[];
+    }) as RecordUnknown[];
   }) as BelongsToNestedInsert;
 };
 
@@ -426,7 +432,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         if (loadPrimaryKeys) {
           const record = (await _queryFindBy(query.select(...loadPrimaryKeys), [
             params.set,
-          ])) as Record<string, unknown>;
+          ])) as RecordUnknown;
 
           for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
             update[(loadForeignKeys as string[])[i]] =
@@ -462,7 +468,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
     if (upsert) {
       (state.queries ??= []).push(async (queryResult) => {
         const row = queryResult.rows[0];
-        let obj: Record<string, unknown> | undefined = {};
+        let obj: RecordUnknown | undefined = {};
         for (let i = 0; i < len; i++) {
           const id = row[foreignKeys[i]];
           if (id === null) {
@@ -475,7 +481,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
         if (obj) {
           await _queryUpdate(
-            query.findBy(obj),
+            query.findBy(obj as never),
             upsert.update as UpdateArg<Query>,
           );
         } else {
@@ -501,7 +507,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           for (const item of data) {
             let row: unknown[] | undefined;
             for (const foreignKey of foreignKeys) {
-              const id = (item as Record<string, unknown>)[foreignKey];
+              const id = (item as RecordUnknown)[foreignKey];
               if (id === null) {
                 row = undefined;
                 break;

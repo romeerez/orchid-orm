@@ -1,7 +1,13 @@
 import { Query, SelectableOrExpressionOfType } from '../query/query';
 import { ColumnExpression } from '../common/fn';
 import { AggregateMethods } from './aggregate';
-import { emptyObject, Expression, MaybeArray, QueryColumn } from 'orchid-core';
+import {
+  emptyObject,
+  Expression,
+  MaybeArray,
+  PickQueryMeta,
+  QueryColumn,
+} from 'orchid-core';
 import {
   OrderTsQueryConfig,
   QueryData,
@@ -9,7 +15,6 @@ import {
   SearchWeight,
   ToSQLCtx,
 } from '../sql';
-import { QueryBase } from '../query/queryBase';
 import {
   pushQueryValue,
   saveSearchAlias,
@@ -20,7 +25,7 @@ import { OrchidOrmInternalError } from '../errors';
 import { addValue, columnToSql } from '../sql/common';
 
 // `headline` first argument is a name of the search.
-type HeadlineSearchArg<T extends Query> = Exclude<
+type HeadlineSearchArg<T extends PickQueryMeta> = Exclude<
   T['meta']['tsQuery'],
   undefined
 >;
@@ -28,10 +33,10 @@ type HeadlineSearchArg<T extends Query> = Exclude<
 // Options of the `headline` function:
 // - text: column name or a raw SQL with the full text to select headline from.
 // - options: string or an expression returning Postgres headline options (https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
-type HeadlineParams<T extends Query> = {
+interface HeadlineParams<T extends PickQueryMeta> {
   text?: SelectableOrExpressionOfType<T, QueryColumn<string>>;
   options?: string | Expression;
-};
+}
 
 // define a `headline` method on a query builder
 declare module './aggregate' {
@@ -106,7 +111,7 @@ declare module './aggregate' {
      * @param search - name of the search to use the query from
      * @param options - `text` for a text source, `options` for `ts_headline` options
      */
-    headline<T extends Query>(
+    headline<T extends PickQueryMeta>(
       this: T,
       search: HeadlineSearchArg<T>,
       options?: HeadlineParams<T>,
@@ -115,7 +120,7 @@ declare module './aggregate' {
 }
 
 // type of `search` argument
-export type SearchArg<T extends QueryBase, As extends string> = {
+export type SearchArg<T extends PickQueryMeta, As extends string> = {
   // alias this search to use in `order` and/or in `headline`
   as?: As;
   // order results by search rank
@@ -171,7 +176,7 @@ export type SearchArg<T extends QueryBase, As extends string> = {
   );
 
 // query type after `search`: this is collecting search aliases in `meta.tsQuery`
-export type WhereSearchResult<T extends QueryBase, As extends string> = T & {
+export type WhereSearchResult<T, As extends string> = T & {
   meta: { tsQuery: string extends As ? never : As };
 };
 
@@ -208,16 +213,18 @@ class Headline extends Expression<QueryColumn<string>> {
   }
 }
 
-AggregateMethods.prototype.headline = function (this: Query, search, params) {
-  const source = this.q.sources?.[search];
+AggregateMethods.prototype.headline = function (
+  this: PickQueryMeta,
+  search,
+  params,
+) {
+  const q = this as unknown as Query;
+  const source = q.q.sources?.[search];
   if (!source)
-    throw new OrchidOrmInternalError(
-      this,
-      `Search \`${search}\` is not defined`,
-    );
+    throw new OrchidOrmInternalError(q, `Search \`${search}\` is not defined`);
 
   return new Headline(
-    this.q,
+    q.q,
     source,
     params as HeadlineParams<Query> | undefined,
   ) as unknown as ColumnExpression<QueryColumn<string>>;
@@ -412,11 +419,11 @@ export class SearchMethods {
    *
    * @param arg - search config
    */
-  search<T extends Query, As extends string>(
+  search<T extends PickQueryMeta, As extends string>(
     this: T,
     arg: SearchArg<T, As>,
   ): WhereSearchResult<T, As> {
-    const q = this.clone();
+    const q = (this as unknown as Query).clone();
 
     if (!arg.as) {
       const as = saveSearchAlias(q, '@q', 'joinedShapes') as As;
@@ -432,9 +439,6 @@ export class SearchMethods {
       pushQueryValue(q, 'order', arg.as);
     }
 
-    return pushQueryValue(q, 'and', { SEARCH: arg }) as WhereSearchResult<
-      T,
-      As
-    >;
+    return pushQueryValue(q, 'and', { SEARCH: arg }) as never;
   }
 }

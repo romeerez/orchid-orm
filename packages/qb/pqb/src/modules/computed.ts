@@ -1,17 +1,21 @@
 import { Query, SelectableFromShape } from '../query/query';
-import { ColumnTypeBase, Expression, QueryColumns } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  Expression,
+  PickQueryTableMetaShape,
+  QueryColumns,
+} from 'orchid-core';
 
 // Type of argument for computed columns, each value is a function returning an Expression.
-export type ComputedColumnsBase<T extends Query> = Record<
-  string,
-  (q: T) => Expression
->;
+export interface ComputedColumnsBase<T extends PickQueryTableMetaShape> {
+  [K: string]: (q: T) => Expression;
+}
 
 // Map query type to apply computed columns to it.
 // Computed columns are added to the query shape and to `selectable`.
 // Not added to `result`, `then`, `catch`, so it doesn't return computed columns by default, only after explicit selecting.
 export type QueryWithComputed<
-  T extends Query,
+  T extends PickQueryTableMetaShape,
   Computed extends ComputedColumnsBase<T>,
   Shape extends QueryColumns = {
     [K in keyof Computed]: ReturnType<Computed[K]>['_type'];
@@ -35,15 +39,15 @@ declare module 'orchid-core' {
 
 // Adds computed columns to the shape of query object.
 export function addComputedColumns<
-  T extends Query,
+  T extends PickQueryTableMetaShape,
   Computed extends ComputedColumnsBase<T>,
 >(q: T, computed: Computed): QueryWithComputed<T, Computed> {
-  const { shape } = q;
+  const { shape } = q as unknown as Query;
   for (const key in computed) {
     const expr = computed[key](q);
     (shape as QueryColumns)[key] = expr._type;
     (expr._type as ColumnTypeBase).data.computed = expr;
   }
 
-  return q as QueryWithComputed<T, Computed>;
+  return q as never;
 }

@@ -1,15 +1,20 @@
 import {
   AddQuerySelect,
+  PickQueryMetaResultReturnType,
   Query,
   SetQueryReturnsColumnOptional,
 } from '../query/query';
 import { pushQueryValue } from '../query/queryUtils';
 import { JsonItem } from '../sql';
-import { QueryColumn } from 'orchid-core';
+import {
+  PickQueryMeta,
+  PickQueryMetaShapeResultReturnType,
+  QueryColumn,
+} from 'orchid-core';
 import { queryJson } from './json.utils';
 
 // union of column names that have a `jsonb` type
-type JsonColumnName<T extends Pick<Query, 'meta'>> = {
+type JsonColumnName<T extends PickQueryMeta> = {
   [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['dataType'] extends 'jsonb'
     ? K
     : never;
@@ -17,29 +22,40 @@ type JsonColumnName<T extends Pick<Query, 'meta'>> = {
   string;
 
 // union of `jsonb` column names, or a JsonItem type for nesting json methods one in other
-type ColumnOrJsonMethod<T extends Pick<Query, 'meta'>> =
-  | JsonColumnName<T>
-  | JsonItem;
+type ColumnOrJsonMethod<T extends PickQueryMeta> = JsonColumnName<T> | JsonItem;
 
 // result of `jsonSet`:
 // adds a select to a query,
 // adds a `JsonItem` properties that allows nesting of json methods
 type JsonSetResult<
-  T extends Pick<Query, 'meta' | 'shape' | 'result' | 'returnType'>,
+  T extends PickQueryMetaShapeResultReturnType,
   Column extends ColumnOrJsonMethod<T>,
   As extends string,
-  Type extends QueryColumn = Column extends keyof T['shape']
+> = JsonItem<
+  As,
+  Column extends keyof T['shape']
     ? T['shape'][Column]
     : Column extends JsonItem
     ? Column['__json'][2]
-    : QueryColumn,
-> = JsonItem<As, Type> & AddQuerySelect<T, Record<As, Type>>;
+    : QueryColumn
+> &
+  AddQuerySelect<
+    T,
+    Record<
+      As,
+      Column extends keyof T['shape']
+        ? T['shape'][Column]
+        : Column extends JsonItem
+        ? Column['__json'][2]
+        : QueryColumn
+    >
+  >;
 
 // result of `jsonPathQuery`:
 // adds a select to a query,
 // adds a `JsonItem` properties that allows nesting of json methods
 type JsonPathQueryResult<
-  T extends Pick<Query, 'result' | 'meta' | 'returnType'>,
+  T extends PickQueryMetaResultReturnType,
   As extends string,
   Type extends QueryColumn,
 > = JsonItem &
@@ -78,7 +94,7 @@ export abstract class JsonModifiers {
    * @param options - `as` to alias the json value when selecting, `createIfMissing: true` will create a new JSON property if it didn't exist before
    */
   jsonSet<
-    T extends Pick<Query, 'meta' | 'shape' | 'result' | 'returnType'>,
+    T extends PickQueryMetaShapeResultReturnType,
     Column extends ColumnOrJsonMethod<T>,
     As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
   >(
@@ -148,7 +164,7 @@ export abstract class JsonModifiers {
    * @param options - `as` to alias the json value when selecting, `insertAfter: true` to insert after the specified position
    */
   jsonInsert<
-    T extends Pick<Query, 'meta' | 'shape' | 'result' | 'returnType'>,
+    T extends PickQueryMetaShapeResultReturnType,
     Column extends ColumnOrJsonMethod<T>,
     As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
   >(
@@ -211,7 +227,7 @@ export abstract class JsonModifiers {
    * @param options - `as` to alias the json value when selecting
    */
   jsonRemove<
-    T extends Pick<Query, 'meta' | 'shape' | 'result' | 'returnType'>,
+    T extends PickQueryMetaShapeResultReturnType,
     Column extends ColumnOrJsonMethod<T>,
     As extends string = Column extends JsonItem ? Column['__json'][1] : Column,
   >(
@@ -282,7 +298,7 @@ export abstract class JsonModifiers {
    * @param options - supports `vars` and `silent`, check Postgres docs of `json_path_query` for these
    */
   jsonPathQuery<
-    T extends Pick<Query, 'meta' | 'shape' | 'result' | 'returnType'>,
+    T extends PickQueryMetaShapeResultReturnType,
     As extends string,
     Type extends QueryColumn,
   >(

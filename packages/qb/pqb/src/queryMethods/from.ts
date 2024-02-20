@@ -3,7 +3,9 @@ import {
   GetQueryResult,
   SelectableFromShape,
   SetQueryTableAlias,
-  WithDataItem,
+  WithDataItems,
+  PickQueryQ,
+  PickQueryMetaTableShapeReturnTypeWithData,
 } from '../query/query';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../common/utils';
@@ -14,30 +16,18 @@ import {
   TemplateLiteralArgs,
   isExpression,
   ColumnsShapeBase,
-  SelectableBase,
+  PickQueryTableMetaResult,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { RawSQL } from '../sql/rawSql';
 import { QueryBase } from '../query/queryBase';
 
-export type FromQuerySelf = Pick<
-  Query,
-  | 'withData'
-  | 'meta'
-  | 'table'
-  | 'returnType'
-  | 'clone'
-  | 'baseQuery'
-  | 'q'
-  | 'shape'
->;
-
-export type FromQueryArg = Pick<Query, 'result' | 'table' | 'meta' | 'q'>;
+export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
 
 export type FromArgs<T extends FromQuerySelf> =
   | [
       first:
-        | FromQueryArg
+        | PickQueryTableMetaResult
         | Expression
         | Exclude<keyof T['withData'], symbol | number>,
       second?: { only?: boolean },
@@ -50,7 +40,7 @@ export type FromResult<
 > = Args extends TemplateStringsArray
   ? T
   : Args[0] extends string
-  ? T['withData'] extends Record<string, WithDataItem>
+  ? T['withData'] extends WithDataItems
     ? Args[0] extends keyof T['withData']
       ? {
           [K in keyof T]: K extends 'meta'
@@ -68,43 +58,36 @@ export type FromResult<
         }
       : SetQueryTableAlias<T, Args[0]>
     : SetQueryTableAlias<T, Args[0]>
-  : Args[0] extends FromQueryArg
-  ? FromQueryResult<T, Args[0]>
+  : Args[0] extends PickQueryTableMetaResult
+  ? {
+      [K in keyof T]: K extends 'meta'
+        ? {
+            [K in keyof T['meta']]: K extends 'hasSelect'
+              ? undefined
+              : K extends 'as'
+              ? AliasOrTable<Args[0]>
+              : K extends 'selectable'
+              ? {
+                  [K in keyof Args[0]['result']]: K extends string
+                    ? {
+                        as: K;
+                        column: Args[0]['result'][K];
+                      }
+                    : never;
+                }
+              : T['meta'][K];
+          }
+        : K extends 'result'
+        ? Args[0]['result']
+        : K extends 'shape'
+        ? Args[0]['result']
+        : K extends 'then'
+        ? QueryThen<GetQueryResult<T['returnType'], Args[0]['result']>>
+        : K extends 'catch'
+        ? QueryCatch<GetQueryResult<T['returnType'], Args[0]['result']>>
+        : T[K];
+    }
   : T;
-
-type FromQueryResult<
-  T extends FromQuerySelf,
-  Q extends FromQueryArg,
-  Selectable extends SelectableBase = {
-    [K in keyof Q['result']]: K extends string
-      ? {
-          as: K;
-          column: Q['result'][K];
-        }
-      : never;
-  },
-  Data = GetQueryResult<T['returnType'], Q['result']>,
-> = {
-  [K in keyof T]: K extends 'meta'
-    ? {
-        [K in keyof T['meta']]: K extends 'hasSelect'
-          ? undefined
-          : K extends 'as'
-          ? AliasOrTable<Q>
-          : K extends 'selectable'
-          ? Selectable
-          : T['meta'][K];
-      }
-    : K extends 'result'
-    ? Q['result']
-    : K extends 'shape'
-    ? Q['result']
-    : K extends 'then'
-    ? QueryThen<Data>
-    : K extends 'catch'
-    ? QueryCatch<Data>
-    : T[K];
-};
 
 export function queryFrom<T extends FromQuerySelf, Args extends FromArgs<T>>(
   self: T,
@@ -116,26 +99,27 @@ export function queryFrom<T extends FromQuerySelf, Args extends FromArgs<T>>(
     ]) as FromResult<T, Args>;
   }
 
+  const data = (self as unknown as PickQueryQ).q;
   if (typeof args[0] === 'string') {
-    self.q.as ||= args[0];
+    data.as ||= args[0];
   } else if (!isExpression(args[0])) {
-    const q = args[0] as FromQueryArg;
-    self.q.as ||= q.q.as || q.table || 't';
-    self.q.shape = getShapeFromSelect(
+    const q = args[0] as Query;
+    data.as ||= q.q.as || q.table || 't';
+    data.shape = getShapeFromSelect(
       args[0] as QueryBase,
       true,
     ) as ColumnsShapeBase;
-    self.q.parsers = q.q.parsers;
+    data.parsers = q.q.parsers;
   } else {
-    self.q.as ||= 't';
+    data.as ||= 't';
   }
 
   const options = args[1] as { only?: boolean } | undefined;
   if (options?.only) {
-    (self.q as SelectQueryData).fromOnly = options.only;
+    (data as SelectQueryData).fromOnly = options.only;
   }
 
-  self.q.from = args[0] as Query;
+  data.from = args[0] as Query;
 
   return self as unknown as FromResult<T, Args>;
 }
@@ -173,6 +157,9 @@ export class From {
     this: T,
     ...args: Args
   ): FromResult<T, Args> {
-    return queryFrom(this.clone(), args);
+    return queryFrom(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
   }
 }

@@ -17,7 +17,12 @@ import {
   RelationsBase,
   TextBaseColumn,
 } from 'pqb';
-import { ColumnShapeOutput, ColumnTypeBase, EmptyObject } from 'orchid-core';
+import {
+  ColumnShapeOutput,
+  ColumnTypeBase,
+  EmptyObject,
+  RecordUnknown,
+} from 'orchid-core';
 import { generateMock } from '@anatine/zod-mock';
 
 type UniqueField =
@@ -35,11 +40,11 @@ type UniqueField =
       gte?: number;
     };
 
-type FactoryOptions = {
+interface FactoryOptions {
   sequence?: number;
   sequenceDistance?: number;
   maxTextLength?: number;
-};
+}
 
 type metaKey = typeof metaKey;
 const metaKey = Symbol('meta');
@@ -61,7 +66,7 @@ type BuildArg<T extends TestFactory> = {
   [K in keyof T[metaKey]['type']]?:
     | T[metaKey]['type'][K]
     | ((sequence: number) => T[metaKey]['type'][K]);
-} & Record<string, unknown>;
+} & RecordUnknown;
 
 type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
   T,
@@ -74,38 +79,45 @@ type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
       }
 >;
 
-export type CreateArg<T extends TestFactory> = CreateData<
-  Omit<T['table'], 'inputType' | 'relations'> & {
-    inputType: {
-      [K in keyof T['table']['inputType']]?:
-        | T['table']['inputType'][K]
-        | ((sequence: number) => T['table']['inputType'][K]);
-    };
-    /**
+export type CreateArg<T extends TestFactory> = CreateData<{
+  [K in keyof T['table']]: K extends 'inputType'
+    ? {
+        [K in keyof T['table']['inputType']]?:
+          | T['table']['inputType'][K]
+          | ((sequence: number) => T['table']['inputType'][K]);
+      }
+    : /**
      * Allow defining async functions that create relation records and returns id
      */
-    relations: MapRelations<T['table']['relations']>;
-  }
->;
+    K extends 'relations'
+    ? MapRelations<T['table']['relations']>
+    : T['table'][K];
+}>;
 
 type MapRelations<T extends RelationsBase> = {
-  [K in keyof T]: Omit<T[K], 'relationConfig'> & {
-    relationConfig: Omit<T[K]['relationConfig'], 'dataForCreate'> & {
-      dataForCreate: MapDataForCreate<T[K]['relationConfig']['dataForCreate']>;
-    };
+  [P in keyof T]: {
+    [K in keyof T[P]]: K extends 'relationConfig'
+      ? {
+          [L in keyof T[P]['relationConfig']]: L extends 'dataForCreate'
+            ? MapDataForCreate<T[P]['relationConfig']['dataForCreate']>
+            : T[P]['relationConfig'][L];
+        }
+      : T[P][K];
   };
 };
 
 type MapDataForCreate<T extends RelationConfigDataForCreate | undefined> =
   T extends RelationConfigDataForCreate
-    ? Omit<T, 'columns'> & {
-        columns: {
-          [K in keyof T['columns']]:
-            | T['columns'][K]
-            | ((
-                sequence: number,
-              ) => T['columns'][K] | Promise<T['columns'][K]>);
-        };
+    ? {
+        [K in keyof T]: K extends 'columns'
+          ? {
+              [K in keyof T['columns']]:
+                | T['columns'][K]
+                | ((
+                    sequence: number,
+                  ) => T['columns'][K] | Promise<T['columns'][K]>);
+            }
+          : T[K];
       }
     : undefined;
 
@@ -114,26 +126,26 @@ type CreateResult<T extends TestFactory> = Result<
   ColumnShapeOutput<T['table']['shape']>
 >;
 
-const omit = <T, Keys extends Record<string, unknown>>(
+const omit = <T, Keys extends RecordUnknown>(
   obj: T,
   keys: Keys,
 ): Omit<T, keyof Keys> => {
   const res = { ...obj };
   Object.keys(keys).forEach((key) => {
-    delete (res as unknown as Record<string, unknown>)[key];
+    delete (res as unknown as RecordUnknown)[key];
   });
   return res;
 };
 
-const pick = <T, Keys extends Record<string, unknown>>(
+const pick = <T, Keys extends RecordUnknown>(
   obj: T,
   keys: Keys,
 ): Pick<T, { [K in keyof T]: K extends keyof Keys ? K : never }[keyof T]> => {
   const res = {} as T;
   Object.keys(keys).forEach((key) => {
-    const value = (obj as unknown as Record<string, unknown>)[key];
+    const value = (obj as unknown as RecordUnknown)[key];
     if (value !== undefined) {
-      (res as unknown as Record<string, unknown>)[key] = value;
+      (res as unknown as RecordUnknown)[key] = value;
     }
   });
   return res;
@@ -152,7 +164,7 @@ const makeUniqueNumber = (sequence: number) => sequence;
 
 const makeSetUniqueValues = (
   uniqueFields: UniqueField[],
-  data: Record<string, unknown>,
+  data: RecordUnknown,
 ) => {
   type Fn = (sequence: number, value: unknown) => unknown;
 
@@ -198,7 +210,7 @@ const makeSetUniqueValues = (
     }
   }
 
-  return (record: Record<string, unknown>, sequence: number) => {
+  return (record: RecordUnknown, sequence: number) => {
     for (const key in fns) {
       record[key] = fns[key](sequence, record[key]);
     }
@@ -207,7 +219,7 @@ const makeSetUniqueValues = (
 
 const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
   factory: T,
-  data: Record<string, unknown>,
+  data: RecordUnknown,
   omitValues: Record<PropertyKey, true>,
   pickValues: Record<PropertyKey, true>,
   uniqueFields: UniqueField[],
@@ -231,9 +243,9 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
   return (arg?: BuildArg<T>) => {
     const data = arg ? { ...allData, ...arg } : allData;
 
-    const result = generateMock(schema) as Record<string, unknown>;
+    const result = generateMock(schema) as RecordUnknown;
     for (const key in data) {
-      const value = (data as Record<string, unknown>)[key];
+      const value = (data as RecordUnknown)[key];
       if (typeof value === 'function') {
         result[key] = value(factory.sequence);
       } else {
@@ -251,7 +263,7 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
 
 const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   factory: T,
-  data: Record<string, unknown>,
+  data: RecordUnknown,
   uniqueFields: UniqueField[],
   arg?: Data,
 ) => {
@@ -268,11 +280,11 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     }
   });
 
-  const shared: Record<string, unknown> = {};
+  const shared: RecordUnknown = {};
 
   const fns: Record<string, (sequence: number) => unknown> = {};
 
-  const allData = (arg ? { ...data, ...arg } : data) as Record<string, unknown>;
+  const allData = (arg ? { ...data, ...arg } : data) as RecordUnknown;
 
   for (const key in allData) {
     delete pick[key];
@@ -345,7 +357,7 @@ export class TestFactory<
     public table: Q,
     public schema: Schema,
     private uniqueFields: UniqueField[],
-    private readonly data: Record<string, unknown> = {},
+    private readonly data: RecordUnknown = {},
     options: FactoryOptions = {},
   ) {
     if (options.sequence !== undefined) {
@@ -362,7 +374,7 @@ export class TestFactory<
     Meta extends { type: EmptyObject },
     Data extends {
       [K in keyof Meta['type']]?: Meta['type'][K] | (() => Meta['type'][K]);
-    } & Record<string, unknown>,
+    } & RecordUnknown,
   >(
     this: T & { [metaKey]: Meta },
     data: Data,
@@ -514,7 +526,7 @@ export const tableFactory = <T extends Query>(
 
   const schema = z.object(shape);
 
-  const data: Record<string, unknown> = {};
+  const data: RecordUnknown = {};
   const now = Date.now();
 
   const uniqueFields: UniqueField[] = [];
@@ -609,7 +621,7 @@ export const ormFactory = <T>(
   options?: FactoryOptions,
 ): ORMFactory<T> => {
   const factory = {} as ORMFactory<T>;
-  const defined: Record<string, unknown> = {};
+  const defined: RecordUnknown = {};
 
   for (const key in orm) {
     const table = orm[key];

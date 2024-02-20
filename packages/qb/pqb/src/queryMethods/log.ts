@@ -2,23 +2,23 @@ import { Query } from '../query/query';
 import { quote } from '../quote';
 import { Sql } from 'orchid-core';
 
-export type QueryLogObject = {
+export interface QueryLogObject {
   colors: boolean;
   beforeQuery(sql: Sql): unknown;
   afterQuery(sql: Sql, logData: unknown): void;
   onError(error: Error, sql: Sql, logData: unknown): void;
-};
+}
 
-export type QueryLogger = {
+export interface QueryLogger {
   log(message: string): void;
   warn(message: string): void;
   error(message: string): void;
-};
+}
 
-export type QueryLogOptions = {
+export interface QueryLogOptions {
   log?: boolean | Partial<QueryLogObject>;
   logger?: QueryLogger;
-};
+}
 
 export const logColors = {
   boldCyanBright: (message: string) =>
@@ -113,9 +113,9 @@ export const logParamToLogObject = (
 };
 
 export class QueryLog {
-  log<T extends Query>(this: T, log = true): T {
-    const q = this.clone();
+  log<T>(this: T, log = true): T {
+    const q = (this as Query).clone();
     q.q.log = logParamToLogObject(q.q.logger, log);
-    return q;
+    return q as T;
   }
 }

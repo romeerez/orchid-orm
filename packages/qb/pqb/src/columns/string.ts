@@ -1,4 +1,4 @@
-import { ColumnData, ColumnType } from './columnType';
+import { ColumnData, ColumnType, PickColumnData } from './columnType';
 import { NumberBaseColumn } from './number';
 import {
   Code,
@@ -9,9 +9,9 @@ import {
   TemplateLiteralArgs,
   getDefaultLanguage,
   RawSQLBase,
-  ColumnTypeBase,
   StaticSQLArgs,
   ColumnSchemaConfig,
+  PickColumnBaseData,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
@@ -509,7 +509,7 @@ export class TsVectorColumn<
    *
    * @param args
    */
-  generated<T extends Pick<ColumnType, 'data'>>(
+  generated<T extends PickColumnData>(
     this: T,
     ...args:
       | StaticSQLArgs
@@ -585,7 +585,7 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.uuid);
   }
 
-  primaryKey<T extends Pick<ColumnTypeBase, 'data'>>(
+  primaryKey<T extends PickColumnBaseData>(
     this: T,
   ): // using & bc otherwise the return type doesn't match `primaryKey` in ColumnType and TS complains
   PrimaryKeyColumn<T> & { data: { default: RawSQLBase } } {

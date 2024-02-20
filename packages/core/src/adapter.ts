@@ -8,10 +8,12 @@ export type QueryInput = string | { text: string; values?: unknown[] };
 /**
  * Generic result returning from query methods.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type QueryResultRow = Record<string, any>;
+export interface QueryResultRow {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [K: string]: any;
+}
 
-export type AdapterConfigBase = {
+export interface AdapterConfigBase {
   /**
    * This option may be useful in CI when database container has started, CI starts performing next steps,
    * migrations begin to apply though database may be not fully ready for connections yet.
@@ -59,24 +61,24 @@ export type AdapterConfigBase = {
    * ```
    */
   connectRetry?: AdapterConfigConnectRetryParam | true;
-};
+}
 
-type AdapterConfigConnectRetryParam = {
+interface AdapterConfigConnectRetryParam {
   attempts?: number;
   strategy?:
     | AdapterConfigConnectRetryStrategyParam
     | AdapterConfigConnectRetryStrategy;
-};
+}
 
-type AdapterConfigConnectRetryStrategyParam = {
+interface AdapterConfigConnectRetryStrategyParam {
   delay?: number;
   factor?: number;
-};
+}
 
-export type AdapterConfigConnectRetry = {
+export interface AdapterConfigConnectRetry {
   attempts: number;
   strategy: AdapterConfigConnectRetryStrategy;
-};
+}
 
 type AdapterConfigConnectRetryStrategy = (
   attempt: number,
@@ -84,7 +86,7 @@ type AdapterConfigConnectRetryStrategy = (
 ) => Promise<void> | void;
 
 // Interface of a database adapter to use for different databases.
-export type AdapterBase = {
+export interface AdapterBase {
   connectRetryConfig?: AdapterConfigConnectRetry;
 
   connect(): Promise<unknown>;
@@ -105,13 +107,15 @@ export type AdapterBase = {
   ): Promise<unknown>;
   // close connection
   close(): Promise<void>;
-};
+}
 
 // Database adapter type for transaction that contains a connected db client.
-export type TransactionAdapterBase = AdapterBase & { client: unknown };
+export interface TransactionAdapterBase extends AdapterBase {
+  client: unknown;
+}
 
 // Wrapper type for transactions.
-export type TransactionState = {
+export interface TransactionState {
   // Database adapter that is connected to a currently running transaction.
   adapter: TransactionAdapterBase;
   // Number of transaction nesting.
@@ -120,7 +124,7 @@ export type TransactionState = {
   // Array of data and functions to call after commit.
   // 1st element is a query result, 2nd element is a query object, 3rd element is array of functions to call with the query result and object.
   afterCommit?: TransactionAfterCommitHook[];
-};
+}
 
 /**
  * Element of `afterCommit` transaction array. See {@link TransactionState.afterCommit}.

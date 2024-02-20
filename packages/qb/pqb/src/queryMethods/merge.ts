@@ -1,32 +1,22 @@
-import { Query, QueryReturnType, GetQueryResult } from '../query/query';
+import {
+  Query,
+  GetQueryResult,
+  PickQueryMetaResultReturnTypeWithDataWindows,
+} from '../query/query';
 import { SelectQueryData } from '../sql';
 import {
   getValueKey,
   MergeObjects,
+  PickQueryMetaResult,
   QueryCatch,
-  QueryColumns,
+  QueryReturnType,
   QueryThen,
   RecordUnknown,
 } from 'orchid-core';
 
 export type MergeQuery<
-  T extends Query,
-  Q extends Query,
-  ReturnType extends QueryReturnType = QueryReturnType extends Q['returnType']
-    ? T['returnType']
-    : Q['returnType'],
-  Result extends QueryColumns = T['meta']['hasSelect'] extends true
-    ? Q['meta']['hasSelect'] extends true
-      ? {
-          [K in
-            | keyof T['result']
-            | keyof Q['result']]: K extends keyof Q['result']
-            ? Q['result'][K]
-            : T['result'][K];
-        }
-      : T['result']
-    : Q['result'],
-  Data = GetQueryResult<ReturnType, Result>,
+  T extends PickQueryMetaResultReturnTypeWithDataWindows,
+  Q extends PickQueryMetaResultReturnTypeWithDataWindows,
 > = {
   [K in keyof T]: K extends 'meta'
     ? {
@@ -34,24 +24,53 @@ export type MergeQuery<
           ? MergeObjects<T['meta']['selectable'], Q['meta']['selectable']>
           : K extends keyof Q['meta']
           ? Q['meta'][K]
-          : K extends keyof T['meta']
-          ? T['meta'][K]
-          : never;
+          : T['meta'][K];
       }
     : K extends 'result'
-    ? Result
+    ? MergeQueryResult<T, Q>
     : K extends 'returnType'
-    ? ReturnType
+    ? QueryReturnType extends Q['returnType']
+      ? T['returnType']
+      : Q['returnType']
     : K extends 'then'
-    ? QueryThen<Data>
+    ? QueryThen<
+        GetQueryResult<
+          QueryReturnType extends Q['returnType']
+            ? T['returnType']
+            : Q['returnType'],
+          MergeQueryResult<T, Q>
+        >
+      >
     : K extends 'catch'
-    ? QueryCatch<Data>
+    ? QueryCatch<
+        GetQueryResult<
+          QueryReturnType extends Q['returnType']
+            ? T['returnType']
+            : Q['returnType'],
+          MergeQueryResult<T, Q>
+        >
+      >
     : K extends 'windows'
     ? MergeObjects<T['windows'], Q['windows']>
     : K extends 'withData'
     ? MergeObjects<T['withData'], Q['withData']>
     : T[K];
 };
+
+type MergeQueryResult<
+  T extends PickQueryMetaResult,
+  Q extends PickQueryMetaResult,
+> = T['meta']['hasSelect'] extends true
+  ? Q['meta']['hasSelect'] extends true
+    ? {
+        [K in
+          | keyof T['result']
+          | keyof Q['result']]: K extends keyof Q['result']
+          ? Q['result'][K]
+          : T['result'][K];
+      }
+    : T['result']
+  : Q['result'];
 
 const mergableObjects: Record<string, boolean> = {
   shape: true,
@@ -94,6 +113,6 @@ export class MergeQueryMethods {
 
     if (b.returnType) a.returnType = b.returnType;
 
-    return query as unknown as MergeQuery<T, Q>;
+    return query as never;
   }
 }
