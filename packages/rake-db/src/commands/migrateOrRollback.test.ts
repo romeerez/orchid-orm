@@ -151,7 +151,7 @@ describe('migrateOrRollback', () => {
         expect(file.load).not.toBeCalled();
       }
 
-      expect(queries).toHaveLength(0);
+      expect(queries).toHaveLength(1);
       expect(config.logger?.log).not.toBeCalled();
     });
 
@@ -347,7 +347,7 @@ describe('migrateOrRollback', () => {
         expect(file.load).not.toBeCalled();
       }
 
-      expect(queries).toHaveLength(0);
+      expect(queries).toHaveLength(1);
       expect(config.logger?.log).not.toBeCalled();
     });
 

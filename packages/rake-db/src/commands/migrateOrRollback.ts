@@ -14,6 +14,7 @@ import {
 } from 'orchid-core';
 import {
   AppCodeUpdater,
+  createSchemaMigrations,
   getMigrations,
   MigrationItem,
   RakeDbColumnTypes,
@@ -27,6 +28,7 @@ import {
 import { createMigrationInterface } from '../migration/migration';
 import {
   getMigratedVersionsMap,
+  NoMigrationsTableError,
   removeMigratedVersion,
   saveMigratedVersion,
 } from '../migration/manageMigratedVersions';
@@ -72,10 +74,6 @@ function makeMigrateFn<
 
       try {
         await adapter.transaction(begin, async (trx) => {
-          await trx.query(
-            `SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`,
-          );
-
           await fn(
             trx,
             conf as unknown as RakeDbConfig<SchemaConfig, CT>,
@@ -84,6 +82,18 @@ function makeMigrateFn<
             localAsts,
           );
         });
+      } catch (err) {
+        if (err instanceof NoMigrationsTableError) {
+          await adapter.transaction(begin, async (trx) => {
+            const config = conf as unknown as RakeDbConfig<SchemaConfig, CT>;
+
+            await createSchemaMigrations(trx, config);
+
+            await fn(trx, config, files, count ?? defaultCount, localAsts);
+          });
+        } else {
+          throw err;
+        }
       } finally {
         await adapter.close();
       }
@@ -143,7 +153,7 @@ export const redo: MigrateFn = makeMigrateFn(
 
     files.reverse();
 
-    await migrateOrRollback(trx, config, files, count, asts, true);
+    await migrateOrRollback(trx, config, files, count, asts, true, true);
 
     files.reverse();
   },
@@ -181,7 +191,12 @@ export const migrateOrRollback = async (
   count: number,
   asts: RakeDbAst[],
   up: boolean,
+  skipLock?: boolean,
 ): Promise<void> => {
+  if (!skipLock) {
+    await trx.query(`SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`);
+  }
+
   let db: DbResult<RakeDbColumnTypes> | undefined;
 
   await config[up ? 'beforeMigrate' : 'beforeRollback']?.((db ??= getDb(trx)));

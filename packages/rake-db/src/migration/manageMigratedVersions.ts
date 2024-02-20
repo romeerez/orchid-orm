@@ -1,9 +1,5 @@
 import { TransactionAdapter } from 'pqb';
-import {
-  createSchemaMigrations,
-  quoteWithSchema,
-  RakeDbConfig,
-} from '../common';
+import { quoteWithSchema, RakeDbConfig } from '../common';
 import { SilentQueries } from './migration';
 import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
 
@@ -37,6 +33,8 @@ export const removeMigratedVersion = async <
   );
 };
 
+export class NoMigrationsTableError extends Error {}
+
 export const getMigratedVersionsMap = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
@@ -51,9 +49,9 @@ export const getMigratedVersionsMap = async <
     return Object.fromEntries(result.rows.map((row) => [row[0], true]));
   } catch (err) {
     if ((err as RecordUnknown).code === '42P01') {
-      await createSchemaMigrations(db, config);
-      return {};
+      throw new NoMigrationsTableError();
+    } else {
+      throw err;
     }
-    throw err;
   }
 };
