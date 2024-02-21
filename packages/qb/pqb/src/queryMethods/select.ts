@@ -516,7 +516,8 @@ const addColumnToShapeFromSelect = (
 
 // un-name a column if `isSubQuery` is true
 const maybeUnNameColumn = (column: QueryColumn, isSubQuery?: boolean) => {
-  return isSubQuery && (column as ColumnTypeBase).data.name
+  // `?` is needed for case when wrong column is passed to subquery (see issue #236)
+  return isSubQuery && (column as ColumnTypeBase)?.data.name
     ? setColumnData(column as ColumnTypeBase, 'name', undefined)
     : column;
 };

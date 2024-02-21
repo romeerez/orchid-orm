@@ -350,7 +350,7 @@ export class Db<
   }
 
   [inspect.custom]() {
-    return `QueryObject<${this.table}>`;
+    return `Query<${this.table}>`;
   }
 
   /**
