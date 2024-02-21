@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.23.0
+
+### Minor Changes
+
+- 46809633: Fix nested subquery `where` problem (#222)
+
+### Patch Changes
+
+- Updated dependencies [46809633]
+  - pqb@0.25.0
+
 ## 1.22.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.25.0
+
+### Minor Changes
+
+- 46809633: Fix nested subquery `where` problem (#222)
+
 ## 0.24.1
 
 ### Patch Changes
