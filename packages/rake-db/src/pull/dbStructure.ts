@@ -285,56 +285,7 @@ JOIN pg_rewrite r ON r.ev_class = c.oid
 WHERE ${filterSchema('nc.nspname')}
 ORDER BY c.relname`;
 
-// procedures
-// `SELECT
-//   n.nspname AS "schemaName",
-//   proname AS name,
-//   proretset AS "returnSet",
-//   (
-//     SELECT typname FROM pg_type WHERE oid = prorettype
-//   ) AS "returnType",
-//   prokind AS "kind",
-//   coalesce((
-//     SELECT true FROM information_schema.triggers
-//     WHERE n.nspname = trigger_schema AND trigger_name = proname
-//     LIMIT 1
-//   ), false) AS "isTrigger",
-//   coalesce((
-//     SELECT json_agg(pg_type.typname)
-//     FROM unnest(coalesce(proallargtypes, proargtypes)) typeId
-//     JOIN pg_type ON pg_type.oid = typeId
-//   ), '[]') AS "types",
-//   coalesce(to_json(proallargtypes::int[]), to_json(proargtypes::int[])) AS "argTypes",
-//   coalesce(to_json(proargmodes), '[]') AS "argModes",
-//   to_json(proargnames) AS "argNames"
-// FROM pg_proc p
-// JOIN pg_namespace n ON p.pronamespace = n.oid
-// WHERE ${filterSchema('n.nspname')}`
-
-const sql = `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
-  tablesSql,
-  'tables',
-)}, ${jsonAgg(viewsSql, 'views')}`;
-
-type Structure = {
-  schemas: string[];
-  tables: DbStructure.Table[];
-  views: DbStructure.View[];
-};
-
-export class DbStructure {
-  constructor(private db: Adapter) {}
-
-  async getStructure(): Promise<Structure> {
-    const {
-      rows: [structure],
-    } = await this.db.query<Structure>(sql);
-    return structure;
-  }
-
-  async getIndexes() {
-    const { rows } = await this.db.query<DbStructure.Index>(
-      `SELECT
+const indexesSql = `SELECT
   n.nspname "schemaName",
   t.relname "tableName",
   ic.relname "name",
@@ -429,14 +380,9 @@ JOIN pg_am am ON am.oid = ic.relam
 LEFT JOIN pg_catalog.pg_class tc ON (ic.reltoastrelid = tc.oid)
 WHERE ${filterSchema('n.nspname')}
   AND NOT i.indisprimary
-ORDER BY ic.relname`,
-    );
-    return rows;
-  }
+ORDER BY ic.relname`;
 
-  async getConstraints() {
-    const { rows } = await this.db.query<DbStructure.Constraint>(
-      `SELECT
+const constraintsSql = `SELECT
   s.nspname AS "schemaName",
   t.relname AS "tableName",
   c.conname AS "name",
@@ -502,14 +448,9 @@ JOIN pg_catalog.pg_namespace s
   ON s.oid = t.relnamespace
  AND contype IN ('p', 'f', 'c')
  AND ${filterSchema('s.nspname')}
-ORDER BY c.conname`,
-    );
-    return rows;
-  }
+ORDER BY c.conname`;
 
-  async getTriggers() {
-    const { rows } = await this.db.query<DbStructure.Trigger>(
-      `SELECT event_object_schema AS "schemaName",
+const triggersSql = `SELECT event_object_schema AS "schemaName",
   event_object_table AS "tableName",
   trigger_schema AS "triggerSchema",
   trigger_name AS name,
@@ -520,27 +461,17 @@ ORDER BY c.conname`,
 FROM information_schema.triggers
 WHERE ${filterSchema('event_object_schema')}
 GROUP BY event_object_schema, event_object_table, trigger_schema, trigger_name, action_timing, action_condition, action_statement
-ORDER BY trigger_name`,
-    );
-    return rows;
-  }
+ORDER BY trigger_name`;
 
-  async getExtensions() {
-    const { rows } = await this.db.query<DbStructure.Extension>(
-      `SELECT
+const extensionsSql = `SELECT
   nspname AS "schemaName",
   extname AS "name",
   extversion AS version
 FROM pg_extension
 JOIN pg_catalog.pg_namespace n ON n.oid = extnamespace
- AND ${filterSchema('n.nspname')}`,
-    );
-    return rows;
-  }
+ AND ${filterSchema('n.nspname')}`;
 
-  async getEnums() {
-    const { rows } = await this.db.query<DbStructure.Enum>(
-      `SELECT
+const enumsSql = `SELECT
   n.nspname as "schemaName",
   t.typname as name,
   json_agg(e.enumlabel) as values
@@ -548,13 +479,9 @@ FROM pg_type t
 JOIN pg_enum e ON t.oid = e.enumtypid
 JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
 WHERE ${filterSchema('n.nspname')}
-GROUP BY n.nspname, t.typname`,
-    );
-    return rows;
-  }
+GROUP BY n.nspname, t.typname`;
 
-  async getDomains(): Promise<DbStructure.Domain[]> {
-    const { rows } = await this.db.query<DbStructure.Domain>(`SELECT
+const domainsSql = `SELECT
   n.nspname AS "schemaName",
   d.typname AS "name",
   t.typname AS "type",
@@ -582,13 +509,9 @@ JOIN pg_catalog.pg_type t
   ) = d.typbasetype
 JOIN pg_catalog.pg_namespace s ON s.oid = t.typnamespace
 LEFT JOIN pg_catalog.pg_constraint c ON c.contypid = d.oid
-WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`);
+WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`;
 
-    return rows;
-  }
-
-  async getCollations(): Promise<DbStructure.Collation[]> {
-    const { rows } = await this.db.query<DbStructure.Collation>(`SELECT
+const collationsSql = `SELECT
   nspname "schema",
   collname "name",
   CASE WHEN collprovider = 'i' THEN 'icu' WHEN collprovider = 'c' THEN 'libc' ELSE collprovider::text END "provider",
@@ -599,9 +522,62 @@ WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`);
   collversion "version"
 FROM pg_collation
 JOIN pg_namespace n on pg_collation.collnamespace = n.oid
-WHERE ${filterSchema('n.nspname')}
-    `);
+WHERE ${filterSchema('n.nspname')}`;
 
-    return rows;
-  }
+// procedures
+// `SELECT
+//   n.nspname AS "schemaName",
+//   proname AS name,
+//   proretset AS "returnSet",
+//   (
+//     SELECT typname FROM pg_type WHERE oid = prorettype
+//   ) AS "returnType",
+//   prokind AS "kind",
+//   coalesce((
+//     SELECT true FROM information_schema.triggers
+//     WHERE n.nspname = trigger_schema AND trigger_name = proname
+//     LIMIT 1
+//   ), false) AS "isTrigger",
+//   coalesce((
+//     SELECT json_agg(pg_type.typname)
+//     FROM unnest(coalesce(proallargtypes, proargtypes)) typeId
+//     JOIN pg_type ON pg_type.oid = typeId
+//   ), '[]') AS "types",
+//   coalesce(to_json(proallargtypes::int[]), to_json(proargtypes::int[])) AS "argTypes",
+//   coalesce(to_json(proargmodes), '[]') AS "argModes",
+//   to_json(proargnames) AS "argNames"
+// FROM pg_proc p
+// JOIN pg_namespace n ON p.pronamespace = n.oid
+// WHERE ${filterSchema('n.nspname')}`
+
+const sql = `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
+  tablesSql,
+  'tables',
+)}, ${jsonAgg(viewsSql, 'views')}, ${jsonAgg(indexesSql, 'indexes')}, ${jsonAgg(
+  constraintsSql,
+  'constraints',
+)}, ${jsonAgg(triggersSql, 'triggers')}, ${jsonAgg(
+  extensionsSql,
+  'extensions',
+)}, ${jsonAgg(enumsSql, 'enums')}, ${jsonAgg(domainsSql, 'domains')}, ${jsonAgg(
+  collationsSql,
+  'collations',
+)}`;
+
+interface Structure {
+  schemas: string[];
+  tables: DbStructure.Table[];
+  views: DbStructure.View[];
+  indexes: DbStructure.Index[];
+  constraints: DbStructure.Constraint[];
+  triggers: DbStructure.Trigger[];
+  extensions: DbStructure.Extension[];
+  enums: DbStructure.Enum[];
+  domains: DbStructure.Domain[];
+  collations: DbStructure.Collation[];
+}
+
+export async function introspectDbSchema(db: Adapter): Promise<Structure> {
+  const data = await db.query<Structure>(sql);
+  return data.rows[0];
 }

@@ -1,4 +1,4 @@
-import { DbStructure } from './dbStructure';
+import { DbStructure, introspectDbSchema } from './dbStructure';
 import { RakeDbAst } from '../ast';
 import {
   ArrayColumn,
@@ -17,6 +17,7 @@ import {
   simplifyColumnDefault,
   TableData,
   ColumnsByType,
+  Adapter,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -71,11 +72,11 @@ export interface StructureToAstCtx {
 
 export const structureToAst = async (
   ctx: StructureToAstCtx,
-  db: DbStructure,
+  adapter: Adapter,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
 
-  const data = await getData(db);
+  const data = await introspectDbSchema(adapter);
 
   for (const name of data.schemas) {
     if (name === 'public') continue;
@@ -220,38 +221,6 @@ export const structureToAst = async (
   }
 
   return ast;
-};
-
-const getData = async (db: DbStructure): Promise<Data> => {
-  const [
-    { schemas, tables, views },
-    constraints,
-    indexes,
-    extensions,
-    enums,
-    domains,
-    collations,
-  ] = await Promise.all([
-    db.getStructure(),
-    db.getConstraints(),
-    db.getIndexes(),
-    db.getExtensions(),
-    db.getEnums(),
-    db.getDomains(),
-    db.getCollations(),
-  ]);
-
-  return {
-    schemas,
-    tables,
-    views,
-    constraints,
-    indexes,
-    extensions,
-    enums,
-    domains,
-    collations,
-  };
 };
 
 const makeBelongsToTable =

@@ -1,4 +1,4 @@
-import { DbStructure } from './dbStructure';
+import { introspectDbSchema } from './dbStructure';
 import { pullDbStructure } from './pull';
 import { AppCodeUpdater, processRakeDbConfig, RakeDbConfig } from '../common';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
@@ -27,15 +27,7 @@ import {
 import { asMock } from 'test-utils';
 import { ColumnSchemaConfig } from 'orchid-core';
 
-jest.mock('./dbStructure', () => {
-  const { DbStructure } = jest.requireActual('./dbStructure');
-  for (const key of Object.getOwnPropertyNames(DbStructure.prototype)) {
-    (DbStructure.prototype as unknown as Record<string, () => unknown[]>)[key] =
-      () => [];
-  }
-
-  return { DbStructure };
-});
+jest.mock('./dbStructure');
 
 jest.mock('../commands/generate', () => ({
   makeFileTimeStamp: jest.fn(),
@@ -46,23 +38,18 @@ jest.mock('../migration/manageMigratedVersions', () => ({
   saveMigratedVersion: jest.fn(),
 }));
 
-const db = DbStructure.prototype;
-
-let schemas: string[] = [];
-let tables: DbStructure.Table[] = [];
-db.getStructure = async () => ({ schemas, tables, views: [] });
-
-let domains: DbStructure.Domain[] = [];
-db.getDomains = async () => domains;
-
-let collations: DbStructure.Collation[] = [];
-db.getCollations = async () => collations;
-
-let enums: DbStructure.Enum[] = [];
-db.getEnums = async () => enums;
-
-let constraints: DbStructure.Constraint[] = [];
-db.getConstraints = async () => constraints;
+const structure = {
+  schemas: [],
+  tables: [],
+  views: [],
+  indexes: [],
+  constraints: [],
+  triggers: [],
+  extensions: [],
+  enums: [],
+  domains: [],
+  collations: [],
+} as Awaited<ReturnType<typeof introspectDbSchema>>;
 
 asMock(makeFileTimeStamp).mockReturnValue('timestamp');
 
@@ -106,18 +93,17 @@ const expectWritten = (expected: string) => {
 
 describe('pull', () => {
   beforeEach(() => {
-    schemas = [];
-    domains = [];
-    collations = [];
-    tables = [];
-    enums = [];
-    constraints = [];
-
     jest.clearAllMocks();
+
+    for (const key in structure) {
+      structure[key as keyof typeof structure].length = 0;
+    }
+
+    asMock(introspectDbSchema).mockResolvedValue(structure);
   });
 
   it('should log success message', async () => {
-    tables = [
+    structure.tables = [
       {
         schemaName: 'schema',
         name: 'table',
@@ -131,7 +117,7 @@ describe('pull', () => {
   });
 
   it('should write migration file with correct arguments', async () => {
-    tables = [table];
+    structure.tables = [table];
 
     await pullDbStructure(options, config);
 
@@ -142,23 +128,23 @@ describe('pull', () => {
   });
 
   it('should get db structure, convert it to ast, generate migrations', async () => {
-    schemas = ['schema1', 'schema2'];
+    structure.schemas = ['schema1', 'schema2'];
 
-    domains = [
+    structure.domains = [
       {
         ...domain,
         schemaName: 'schema',
       },
     ];
 
-    collations = [
+    structure.collations = [
       {
         ...collation,
         schema: 'schema',
       },
     ];
 
-    tables = [
+    structure.tables = [
       {
         schemaName: 'schema',
         name: 'table1',
@@ -245,7 +231,7 @@ describe('pull', () => {
       },
     ];
 
-    constraints = [
+    structure.constraints = [
       {
         schemaName: 'schema',
         tableName: 'table1',
@@ -381,7 +367,7 @@ Append \`as\` method manually to this column to treat it as other column type`);
   });
 
   it('should pluralize warning when many columns have unknown types', async () => {
-    tables = [
+    structure.tables = [
       {
         ...table,
         columns: [
@@ -410,7 +396,7 @@ Append \`as\` method manually to these columns to treat them as other column typ
   });
 
   it(`should add simple timestamps and do not add name('snake_case'), but add name('camelCase') when snakeCase: true`, async () => {
-    tables = [
+    structure.tables = [
       {
         ...table,
         columns: [
@@ -464,7 +450,7 @@ change(async (db) => {
   });
 
   it('should handle enum', async () => {
-    tables = [
+    structure.tables = [
       {
         ...table,
         columns: [
@@ -476,7 +462,7 @@ change(async (db) => {
         ],
       },
     ];
-    enums = [enumType];
+    structure.enums = [enumType];
 
     await pullDbStructure(
       {

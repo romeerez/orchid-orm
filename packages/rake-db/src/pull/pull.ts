@@ -1,6 +1,5 @@
 import { RakeDbConfig } from '../common';
 import { Adapter, AdapterOptions, makeColumnsByType } from 'pqb';
-import { DbStructure } from './dbStructure';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
@@ -16,7 +15,6 @@ export const pullDbStructure = async <
 ): Promise<void> => {
   const adapter = new Adapter(options);
   const currentSchema = adapter.schema || 'public';
-  const db = new DbStructure(adapter);
 
   const ctx: StructureToAstCtx = {
     snakeCase: config.snakeCase,
@@ -26,7 +24,7 @@ export const pullDbStructure = async <
     columnsByType: makeColumnsByType(config.schemaConfig),
   };
 
-  const ast = await structureToAst(ctx, db);
+  const ast = await structureToAst(ctx, adapter);
   await adapter.close();
 
   const result = astToMigration(config, ast);
