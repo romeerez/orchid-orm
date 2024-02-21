@@ -1,5 +1,11 @@
 # pqb
 
+## 0.24.1
+
+### Patch Changes
+
+- cc95e071: Prevent internal query builder error when passing wrong column to subquery select (#236)
+
 ## 0.24.0
 
 ### Minor Changes
