@@ -255,4 +255,35 @@ describe('relations', () => {
       `,
     );
   });
+
+  it('should support nested where with count conditions', async () => {
+    const q = db.user.count().where((q) =>
+      q.posts
+        .where((q) => q.postTags.where({ Tag: 'tag' }).exists())
+        .count()
+        .gt(3),
+    );
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT count(*)
+        FROM "user"
+        WHERE (
+          SELECT count(*) > $1
+          FROM "post" AS "posts"
+          WHERE (
+            SELECT true
+            FROM "postTag" AS "postTags"
+            WHERE "postTags"."tag" = $2
+              AND "postTags"."postId" = "posts"."id"
+            LIMIT 1
+          )
+          AND "posts"."userId" = "user"."id"
+          AND "posts"."title" = "user"."userKey"
+        )
+      `,
+      [3, 'tag'],
+    );
+  });
 });

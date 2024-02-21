@@ -14,7 +14,12 @@ import {
   simpleColumnToSQL,
   simpleExistingColumnToSQL,
 } from './common';
-import { getClonedQueryData, getQueryAs } from '../common/utils';
+import {
+  getClonedQueryData,
+  getQueryAs,
+  joinSubQuery,
+  resolveSubQueryCallback,
+} from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
@@ -109,14 +114,10 @@ const processWhere = (
     qb.q.and = qb.q.or = undefined;
     qb.q.isSubQuery = true;
 
-    const res = data(qb);
+    const res = resolveSubQueryCallback(qb, data as never);
     const expr = res instanceof Expression ? res : res.q.expr;
     if (!(res instanceof Expression) && res.q.expr) {
-      const q =
-        'relationConfig' in res
-          ? res.relationConfig.joinQuery(res, table as Query)
-          : res.clone();
-
+      const q = joinSubQuery(table, res as Query);
       q.q.select = [expr as Expression];
       ands.push(`(${makeSQL(q as Query, ctx).text})`);
     } else {

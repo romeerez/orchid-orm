@@ -16,7 +16,7 @@ import {
   JoinLateralResult,
   JoinResult,
 } from './join';
-import { getQueryAs } from '../../common/utils';
+import { getQueryAs, resolveSubQueryCallback } from '../../common/utils';
 import { QueryBase } from '../../query/queryBase';
 
 /**
@@ -158,7 +158,7 @@ export const _joinLateral = <
   const query = arg as Query;
   query.q.joinTo = q;
   (query.q.joinedShapes ??= {})[getQueryAs(q)] = q.q.shape;
-  let result = cb(query as never);
+  let result = resolveSubQueryCallback(query, cb as never) as unknown as R;
 
   if (relation) {
     result = relation.relationConfig.joinQuery(
