@@ -1,5 +1,11 @@
 # pqb
 
+## 0.25.1
+
+### Patch Changes
+
+- 404dda21: Separate query methods accepting SQL template
+
 ## 0.25.0
 
 ### Minor Changes

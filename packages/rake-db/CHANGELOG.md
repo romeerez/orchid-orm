@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.14.3
+
+### Patch Changes
+
+- 10278b53: Refactor query fetching db structure to a single query
+- Updated dependencies [404dda21]
+  - pqb@0.25.1
+
 ## 2.14.2
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.23.1
+
+### Patch Changes
+
+- 404dda21: Separate query methods accepting SQL template
+- Updated dependencies [404dda21]
+  - pqb@0.25.1
+
 ## 1.23.0
 
 ### Minor Changes
