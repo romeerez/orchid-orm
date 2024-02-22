@@ -24,12 +24,17 @@ JSONColumn.prototype.encodeFn = JSON.stringify;
 // JSON non-binary type, stored as a text in the database, so it doesn't have rich functionality.
 export class JSONTextColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsText
+> {
   dataType = 'json' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {

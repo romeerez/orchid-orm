@@ -152,10 +152,20 @@ export const defaultSchemaConfig = {
   array<Item extends ArrayColumnValue>(item: Item) {
     return new ArrayColumn(defaultSchemaConfig, item, undefined);
   },
+  boolean: noop,
+  buffer: noop,
+  unknown: noop,
+  never: noop,
+  stringSchema: noop,
   stringMin: noop,
   stringMax: noop,
   stringMinMax: noop,
+  number: noop,
+  int: noop,
+  stringNumberDate: noop,
+  timeInterval: noop,
   bit: noop,
+  uuid: noop,
   nullable(this: ColumnTypeBase) {
     return setColumnData(this, 'isNullable', true);
   },

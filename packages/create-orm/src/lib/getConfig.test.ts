@@ -10,7 +10,7 @@ jest.mock('prompts', () => jest.fn());
 const userConfig: UserProvidedConfig = {
   path: 'project',
   testDatabase: false,
-  addSchemaToZod: false,
+  validation: 'no',
   addTestFactory: false,
   demoTables: false,
   timestamp: 'string',

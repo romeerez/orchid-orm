@@ -200,7 +200,7 @@ export const columnErrorMessagesToCode = (errors: RecordString): Code => {
 
   if (!props.length) return code;
 
-  addCode(code, '.errors({');
+  addCode(code, '.error({');
   code.push(props);
   addCode(code, '})');
 

@@ -358,21 +358,31 @@ export class Table extends BaseTable {
 }
 ```
 
-When having a validation library enabled, `json` accepts a callback where you can define a Zod schema.
+When having a validation library enabled, `json` accepts a callback where you can define a validation schema.
 If omitted, the type is `unknown`.
 
 ```ts
 import { z } from 'zod';
+import { object, number, string, optional, array } from 'valibot';
 
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json(() =>
+    dataZod: t.json(() =>
       z.object({
         age: z.number(),
         name: z.string(),
         description: z.string().optional(),
         tags: z.string().array(),
+      }),
+    ),
+    // or
+    dataValibot: t.json(() =>
+      object({
+        age: number(),
+        name: string(),
+        description: optional(string()),
+        tags: array(string()),
       }),
     ),
   }));

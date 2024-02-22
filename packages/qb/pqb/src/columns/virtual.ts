@@ -5,14 +5,14 @@ import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
 
 export abstract class VirtualColumn<
   Schema extends ColumnSchemaConfig,
-  InputSchema extends Schema['type'] = Schema['never'],
+  InputSchema extends Schema['type'] = ReturnType<Schema['never']>,
 > extends ColumnType<Schema, unknown, InputSchema, OperatorsAny> {
   dataType = '';
   operators = Operators.any;
 
   constructor(
     schema: Schema,
-    inputSchema: InputSchema = schema.never as InputSchema,
+    inputSchema: InputSchema = schema.never() as InputSchema,
   ) {
     super(schema, inputSchema);
   }

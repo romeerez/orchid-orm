@@ -1,9 +1,4 @@
-import {
-  ColumnTypeBase,
-  ColumnTypesBase,
-  ErrorMessages,
-  NullableColumn,
-} from './columnType';
+import { ColumnTypeBase, ColumnTypesBase, NullableColumn } from './columnType';
 
 export interface ColumnSchemaGetterTableClass {
   prototype: { columns: ColumnTypesBase };
@@ -22,7 +17,7 @@ export interface ColumnTypeSchemaArg {
   encode: unknown;
   parse: unknown;
   asType: unknown;
-  errors?<T extends ColumnTypeBase>(this: T, errors: ErrorMessages): void;
+  error?: unknown;
 }
 
 export interface ColumnSchemaConfig extends ColumnTypeSchemaArg {
@@ -30,20 +25,20 @@ export interface ColumnSchemaConfig extends ColumnTypeSchemaArg {
   dateAsDate: unknown;
   enum: unknown;
   array: unknown;
-  boolean: unknown;
-  buffer: unknown;
-  unknown: unknown;
-  never: unknown;
-  stringSchema: unknown;
+  boolean(): unknown;
+  buffer(): unknown;
+  unknown(): unknown;
+  never(): unknown;
+  stringSchema(): unknown;
   stringMin(max: number): unknown;
   stringMax(max: number): unknown;
   stringMinMax(min: number, max: number): unknown;
-  number: unknown;
-  int: unknown;
-  stringNumberDate: unknown;
-  timeInterval: unknown;
+  number(): unknown;
+  int(): unknown;
+  stringNumberDate(): unknown;
+  timeInterval(): unknown;
   bit(max?: number): unknown;
-  uuid: unknown;
+  uuid(): unknown;
   json(): ColumnTypeBase;
   inputSchema(this: ColumnSchemaGetterTableClass): unknown;
   outputSchema(this: ColumnSchemaGetterTableClass): unknown;

@@ -7,25 +7,34 @@ ORM and query builder do not perform validation because it's expected that data 
 You can convert the column schema into a validation schema with the use of an additional package.
 
 Column methods described in this section have **no** effect on parsing, or encoding values, or tables schema in migrations,
-they only alter the validation schema exposed by `Table.inputSchema()`, `Table.outputSchema()`, and similar,
-and you are supposed to use the `Table.inputSchema()` when validating incoming parameters.
+they only alter the validation schema exposed by `Table.inputSchema()`, `Table.outputSchema()`, and similar.
 
-For now, only [Zod](https://github.com/colinhacks/zod) is supported.
+Use the `Table.inputSchema()` when validating incoming parameters.
+
+[Zod](https://github.com/colinhacks/zod) and [Valibot](https://valibot.dev/) are supported.
 
 Install a package:
 
 ```sh
+# for zod
 npm i orchid-orm-schema-to-zod
+# for valibot
+npm i orchid-orm-valibot
 ```
 
-Set `schemaConfig` of the `BaseTable` to `zodSchemaConfig`:
+Set `schemaConfig` of the `BaseTable` to `zodSchemaConfig` or `valibotSchemaConfig`:
 
 ```ts
 import { createBaseTable } from 'orchid-orm';
+
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+// or
+import { valibotSchemaConfig } from 'orchid-orm-valibot';
 
 export const BaseTable = createBaseTable({
   schemaConfig: zodSchemaConfig,
+  // or
+  schemaConfig: valibotSchemaConfig,
 });
 ```
 
@@ -34,8 +43,8 @@ All table classes will now expose schemas for different purposes:
 - `Table.inputSchema()` - validating input data for inserting records.
 - `Table.updateSchema()` - partial `inputSchema` for updating records.
 - `Table.ouputSchema()` - not sure why you might want to validate output, but you can. Perhaps, for testing purposes.
-- `Table.querySchema()` - validating parameters for use in `where` or `find`. It's a very rare case when it does not much the `inputSchema`, so you can simply use the `inputSchema` for this instead.
-- `Table.pkeySchema()` - picked table primary keys from `querySchema`, validates object like `{ id: 123 }`.
+- `Table.querySchema()` - validating parameters for use in `where` or `find`. It's a very rare case when it does not match the `inputSchema`, so you can simply use the `inputSchema` for this instead.
+- `Table.pkeySchema()` - picked primary keys from `querySchema`, validates object like `{ id: 123 }`.
 
 Use it in your controllers:
 
@@ -43,35 +52,57 @@ Use it in your controllers:
 // we want to validate params which are sent from client:
 const params = req.body;
 
-// validate params with the `parse` method:
-const validated = SomeTable.inputSchema().parse(params);
+// `inputSchema` is of type of the library you have chosen.
+// Parse with zod:
+const zodValidated = SomeTable.inputSchema().parse(params);
+// Parse with valibot:
+const valibotValidated = parse(SomeTable.inputSchema(), params);
 
-// the schema is a Zod schema, it can be extended with `pick`, `omit`, `and`, `merge`, `extend` and other methods:
-const extendedSchema = SomeTable.inputSchema()
+// zod schema can be extended with `pick`, `omit`, `and`, `merge`, `extend` and other methods:
+const extendedZodSchema = SomeTable.inputSchema()
   .pick({
     name: true,
   })
   .extend({
     additional: z.number(),
   });
+
+// the same for valibot:
+const extendedValibotSchema = merge(
+  pick(SomeTable.inputSchema(), ['name']),
+  object({
+    additional: number(),
+  }),
+);
 ```
 
-The schema of table is memoized when calling the schema function, so calling it multiple times doesn't have a performance penalty.
-
-`inputSchema()` and similar are building `zod` schema on the first call and remembers it for next calls.
+`inputSchema()` and similar are building a schema on the first call and remembers it for next calls.
 
 ## errors
 
-`errors` allows to set validation messages for `required` and `invalidType` errors:
+Customize column type error with `errors` method.
+
+For zod, set messages for `required` and `invalidType` errors:
 
 ```ts
 class SomeTable extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    textColumn: t.text().errors({
+    intColumn: t.integer().errors({
       required: 'This column is required',
       invalidType: 'This column must be an integer',
     }),
+  }));
+}
+```
+
+For valibot, provide a single validation message:
+
+```ts
+class SomeTable extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    intColumn: t.integer().errors('This column must be an integer'),
   }));
 }
 ```
@@ -96,35 +127,41 @@ class SomeTable extends BaseTable {
 }
 ```
 
-Except for `text().datetime()` and `text().ip()`:
-
-these methods can have their own parameters, so the error message is passed in object.
+Only for zod: `text().datetime()` and `text().ip()` methods can have their own parameters,
+so the error message is being passed via object.
 
 ```ts
 class SomeTable extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    stringDate: t
-      .text()
-      .datetime({ message: 'Invalid datetime string! Must be UTC.' }),
-    ipAddress: t.text().ip({ message: 'Invalid IP address' }),
+    stringDate: t.text().datetime({
+      message: 'Invalid datetime string! Must be UTC.',
+      offset: true,
+    }),
+    ipAddress: t.text().ip({ message: 'Invalid IP address', version: 'v4' }),
   }));
 }
 ```
 
 ## extending validation schemas
 
-Use `inputSchema`, `outputSchema`, `querySchema` to extend Zod schemas, any zod specific methods can be used inside a callback:
+Use `inputSchema`, `outputSchema`, `querySchema` to extend validation schemas:
 
 ```ts
 class SomeTable extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    column: t
+    zodColumn: t
       .string()
       .inputSchema((s) => s.default('Default only for validation'))
       .outputSchema((s) =>
         s.transform((val) => val.split('').reverse().join('')),
+      ),
+    valibotColumn: t
+      .string()
+      .inputSchema((s) => optional(s, 'Default only for validation'))
+      .outputSchema((s) =>
+        transform(s, (val) => val.split('').reverse().join('')),
       ),
   }));
 }
@@ -152,7 +189,7 @@ class SomeTable extends BaseTable {
       .nonPositive() // must be lower than or equal to 0
       .step(number) // must be a multiple of the number
       .finite() // useful only for `numeric`, `decimal`, `real`, because Infinity won't pass integer check
-      .safe(), // equivalient to .lte(Number.MAX_SAFE_INTEGER)
+      .safe(), // between number.MIN_SAFE_INTEGER and number.MAX_SAFE_INTEGER
   }));
 }
 ```
@@ -178,8 +215,10 @@ class SomeTable extends BaseTable {
       .cuid()
       .cuid2()
       .ulid()
-      .datetime({ offset: true, precision: 5 }) // see Zod docs for details
-      .ip({ version: 'v4' }) // v4, v6 or don't pass the parameter for both
+      // see Zod docs for datetime params, Valibot doesn't support params
+      .datetime({ offset: true, precision: 5 })
+      // params for Zod only: v4, v6 or don't pass the parameter for both
+      .ip({ version: 'v4' })
       .regex(/regex/)
       .includes('str')
       .startsWith('str')

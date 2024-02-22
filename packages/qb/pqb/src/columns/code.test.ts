@@ -411,7 +411,7 @@ bool: t.boolean(),
         const code = codeToString(
           t
             .integer()
-            .errors({
+            .error({
               required: 'column is required',
               invalidType: 'column must be a number',
             })
@@ -421,7 +421,7 @@ bool: t.boolean(),
         );
 
         expect(code).toBe(
-          `t.integer().errors({
+          `t.integer().error({
   required: 'column is required',
   invalidType: 'column must be a number',
 })`,

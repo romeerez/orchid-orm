@@ -88,14 +88,18 @@ Optionally, you can customize column types behavior here for all future tables:
 
 ```ts
 import { createBaseTable } from 'orchid-orm';
-import { zodSchemaConfig } from 'orchid-orm-schema-to-zod'; // separate package
+// optionally, use one of the following validation integrations:
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+import { valibotSchemaConfig } from 'orchid-orm-valibot';
 
 export const BaseTable = createBaseTable({
   // set to true if columns in database are in snake_case
   snakeCase: true,
 
-  // optional, but recommended: makes zod schemas for your tables
+  // optional, but recommended: derive and use validation schemas from your tables
   schemaConfig: zodSchemaConfig,
+  // or
+  schemaConfig: valibotSchemaConfig,
 
   columnTypes: (t) => ({
     // by default timestamp is returned as a string, override to a number
@@ -217,7 +221,10 @@ It is accepting the same options as `orchidORM` + options of `createBaseTable`:
 
 ```ts
 import { createDb } from 'orchid-orm';
-import { zodSchemaConfig } from 'orchid-orm-schema-to-zod'; // separate package
+
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+// or
+import { SchemaConfig } from 'orchid-orm-valibot';
 
 const db = createDb({
   // db connection options
@@ -232,6 +239,8 @@ const db = createDb({
 
   // optional, but recommended: makes zod schemas for your tables
   schemaConfig: zodSchemaConfig,
+  // or
+  schemaConfig: valibotSchemaConfig,
 
   // override column types:
   columnTypes: (t) => ({

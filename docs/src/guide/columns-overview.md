@@ -151,22 +151,27 @@ export const BaseTable = createBaseTable({
 });
 ```
 
-The same when using `orchid-orm-schema-to-zod`, specify validation schemas:
+The same when using Zod or Valibot integration, specify validation schemas:
 
 ```ts
 import { zodSchemaConfig } from 'orchid-orm-zod-schema-to-zod';
 import { z } from 'zod';
 
-export const BaseTable = createBaseTable({
+export const BaseTableWithZod = createBaseTable({
+  // or valibotSchemaConfig from 'orchid-orm-valibot'
   schemaConfig: zodSchemaConfig,
+
   columnTypes: (t) => ({
     ...t,
     timestamp() {
-      return t
-        .timestamp()
-        .encode(z.number(), (input: number) => new Date(input))
-        .parse(z.number(), (input) => new Date(input).getTime())
-        .as(t.integer());
+      return (
+        t
+          .timestamp()
+          // first argument is schema of chosen validation library
+          .encode(z.number(), (input: number) => new Date(input))
+          .parse(z.number(), (input) => new Date(input).getTime())
+          .as(t.integer())
+      );
     },
   }),
 });

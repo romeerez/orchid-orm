@@ -13,8 +13,10 @@ const header = `// Set \`snakeCase\` to \`true\` if columns in your database are
 
 const columnTypesComment = `// Customize column types for all tables.`;
 
-const textColumnComment = `// Set min and max validations for all text columns,
-    // it is only checked when validating with Zod schemas derived from the table.`;
+const textColumnComment = (
+  name: string,
+) => `// Set min and max validations for all text columns,
+    // it is only checked when validating with ${name} schemas derived from the table.`;
 
 describe('setupBaseTable', () => {
   beforeEach(jest.resetAllMocks);
@@ -36,7 +38,7 @@ export const BaseTable = createBaseTable({
   });
 
   it('should create base table with zod schema provider if it is in config', async () => {
-    await initSteps.setupBaseTable({ ...testInitConfig, addSchemaToZod: true });
+    await initSteps.setupBaseTable({ ...testInitConfig, validation: 'zod' });
 
     const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
     expect(call?.[1]).toBe(`import { createBaseTable } from 'orchid-orm';
@@ -49,7 +51,31 @@ export const BaseTable = createBaseTable({
   ${columnTypesComment}
   columnTypes: (t) => ({
     ...t,
-    ${textColumnComment}
+    ${textColumnComment('zod')}
+    text: (min = 0, max = Infinity) => t.text(min, max),
+  }),
+});
+`);
+  });
+
+  it('should create base table with valibot schema provider if it is in config', async () => {
+    await initSteps.setupBaseTable({
+      ...testInitConfig,
+      validation: 'valibot',
+    });
+
+    const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
+    expect(call?.[1]).toBe(`import { createBaseTable } from 'orchid-orm';
+import { valibotSchemaConfig } from 'orchid-orm-valibot';
+
+export const BaseTable = createBaseTable({
+  ${header}
+  schemaConfig: valibotSchemaConfig,
+
+  ${columnTypesComment}
+  columnTypes: (t) => ({
+    ...t,
+    ${textColumnComment('valibot')}
     text: (min = 0, max = Infinity) => t.text(min, max),
   }),
 });
@@ -60,6 +86,7 @@ export const BaseTable = createBaseTable({
     await initSteps.setupBaseTable({
       ...testInitConfig,
       timestamp: 'date',
+      validation: 'no',
     });
 
     const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
@@ -81,6 +108,7 @@ export const BaseTable = createBaseTable({
     await initSteps.setupBaseTable({
       ...testInitConfig,
       timestamp: 'number',
+      validation: 'no',
     });
 
     const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);

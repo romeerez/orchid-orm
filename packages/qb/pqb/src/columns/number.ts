@@ -33,29 +33,39 @@ export abstract class NumberBaseColumn<
 
 export abstract class IntegerBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends NumberBaseColumn<Schema, Schema['int']> {
+> extends NumberBaseColumn<Schema, ReturnType<Schema['int']>> {
   declare data: NumberColumnData;
   constructor(schema: Schema) {
-    super(schema, schema.int);
+    super(schema, schema.int() as never);
     this.data.int = true;
   }
 }
 
 export abstract class NumberAsStringBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsNumber> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsNumber
+> {
   operators = Operators.number;
   declare data: ColumnData;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 }
 
 // exact numeric of selectable precision
 export class DecimalColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsNumber> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsNumber
+> {
   declare data: ColumnData & {
     numericPrecision?: number;
     numericScale?: number;
@@ -68,7 +78,7 @@ export class DecimalColumn<
     numericPrecision?: number,
     numericScale?: number,
   ) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
     this.data.numericPrecision = numericPrecision;
     this.data.numericScale = numericScale;
   }
@@ -175,12 +185,12 @@ export class BigIntColumn<
 // single precision floating-point number (4 bytes)
 export class RealColumn<
   Schema extends ColumnSchemaConfig,
-> extends NumberBaseColumn<Schema, Schema['number']> {
+> extends NumberBaseColumn<Schema, ReturnType<Schema['number']>> {
   dataType = 'real' as const;
   parseItem = parseFloat;
 
   constructor(schema: Schema) {
-    super(schema, schema.number);
+    super(schema, schema.number() as never);
   }
 
   toCode(t: string): Code {

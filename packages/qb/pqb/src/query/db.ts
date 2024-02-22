@@ -514,7 +514,7 @@ export interface DbResult<ColumnTypes>
 }
 
 /**
- * For the case of using the query builder as a standalone tool, use `createDb` from `pqb` package.
+ * For the case of using the query builder as a standalone tool, use `createDb`.
  *
  * As `Orchid ORM` focuses on ORM usage, docs examples mostly demonstrates how to work with ORM-defined tables,
  * but everything that's not related to table relations should also work with `pqb` query builder on its own.
@@ -523,6 +523,10 @@ export interface DbResult<ColumnTypes>
  *
  * ```ts
  * import { createDb } from 'orchid-orm';
+ *
+ * import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+ * // or
+ * import { SchemaConfig } from 'orchid-orm-valibot';
  *
  * const db = createDb({
  *   // db connection options
@@ -534,6 +538,11 @@ export interface DbResult<ColumnTypes>
  *
  *   // override default SQL for timestamp, see `nowSQL` above
  *   nowSQL: `now() AT TIME ZONE 'UTC'`,
+ *
+ *   // optional, but recommended: makes zod schemas for your tables
+ *   schemaConfig: zodSchemaConfig,
+ *   // or
+ *   schemaConfig: valibotSchemaConfig,
  *
  *   // override column types:
  *   columnTypes: (t) => ({

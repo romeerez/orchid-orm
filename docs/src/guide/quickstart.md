@@ -28,7 +28,7 @@ This script will ask a few questions to customize the setup:
 
 > Where to install Orchid ORM?
 
-Hit enter to use the current directory, or enter a name for a new directory, or a relative or absolute path.
+Hit enter to choose the current directory, or enter a name for a new directory, or a relative or absolute path.
 It will create directories recursively unless they exist.
 
 > Choose a tool for executing TS files
@@ -52,9 +52,10 @@ Orchid ORM has special utilities (see [testTransaction](/guide/transactions.html
 and [record factories](/guide/test-factories.html)
 to make writing tests easy and fun.
 
-> Add Zod for validations?
+> Integrate with a validation library?
 
-Hit `y` to have a `Zod` integration (see [validation methods](/guide/columns-validation-methods.html)).
+Optionally, add integration with Zod or Valibot, read more about this in [validation methods](/guide/columns-validation-methods.html) section.
+
 Orchid ORM does not validate data on its own.
 
 > Add object factories for writing tests?

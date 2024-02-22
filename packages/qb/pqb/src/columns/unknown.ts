@@ -8,7 +8,7 @@ export class UnknownColumn<
   Schema extends ColumnSchemaConfig,
 > extends VirtualColumn<Schema> {
   constructor(schema: Schema) {
-    super(schema, schema.unknown);
+    super(schema, schema.unknown() as never);
   }
 }
 

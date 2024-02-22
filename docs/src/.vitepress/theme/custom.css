@@ -16,6 +16,8 @@
 html:not(.dark) {
   --vp-c-bg: #f6f8fa;
   --vp-c-bg-alt: #eaedef;
+  --vp-c-text-code: #5f2caa;
+  --vp-c-bg-mute: #efefef;
 }
 
 html.dark {

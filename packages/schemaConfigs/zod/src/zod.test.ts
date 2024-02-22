@@ -1,4 +1,4 @@
-import { ZodSchemaConfig, zodSchemaConfig } from './main';
+import { ZodSchemaConfig, zodSchemaConfig } from './zod';
 import { CustomTypeColumn, makeColumnTypes, VirtualColumn } from 'pqb';
 import {
   z,
@@ -49,6 +49,15 @@ function expectAllParse(type: TypeBase, input: unknown, expected: unknown) {
 function expectAllThrow(type: TypeBase, input: unknown, message: string) {
   expect(() => type.inputSchema.parse(input)).toThrow(message);
   expect(() => type.outputSchema.parse(input)).toThrow(message);
+  expect(() => type.querySchema.parse(input)).toThrow(message);
+}
+
+function expectInputQueryThrow(
+  type: TypeBase,
+  input: unknown,
+  message: string,
+) {
+  expect(() => type.inputSchema.parse(input)).toThrow(message);
   expect(() => type.querySchema.parse(input)).toThrow(message);
 }
 
@@ -414,8 +423,6 @@ describe('zod schema config', () => {
     });
   });
 
-  // describe()
-
   describe('bytea', () => {
     it('should check Buffer', () => {
       const type = t.bytea();
@@ -454,11 +461,7 @@ describe('zod schema config', () => {
     ZodDate
   >();
 
-  describe.each([
-    'date',
-    // 'timestampNoTZ',
-    // 'timestamp'
-  ])('%s', (method) => {
+  describe.each(['date', 'timestampNoTZ', 'timestamp'])('%s', (method) => {
     const type = t[method as 'date']();
 
     const asDate = type.asDate();
@@ -472,7 +475,7 @@ describe('zod schema config', () => {
 
       expectAllParse(type, date.toISOString(), date);
 
-      expectAllThrow(type, 'malformed', 'Invalid date');
+      expectInputQueryThrow(type, 'malformed', 'Invalid date');
     });
 
     it('should parse from number to a Date', () => {
@@ -480,7 +483,7 @@ describe('zod schema config', () => {
 
       expectAllParse(type, date.getTime(), date);
 
-      expectAllThrow(type, new Date(NaN), 'Invalid date');
+      expectInputQueryThrow(type, new Date(NaN), 'Invalid date');
     });
 
     it('should parse from Date to a Date', () => {
@@ -488,31 +491,31 @@ describe('zod schema config', () => {
 
       expectAllParse(type, date, date);
 
-      expectAllThrow(type, new Date(NaN), 'Invalid date');
+      expectInputQueryThrow(type, new Date(NaN), 'Invalid date');
     });
 
     it('should support date methods', () => {
       const now = new Date();
 
-      expectAllThrow(
+      expectInputQueryThrow(
         type.min(new Date(now.getTime() + 100)),
         now,
         'Date must be greater than or equal to',
       );
 
-      expectAllThrow(
+      expectInputQueryThrow(
         type.min(new Date(now.getTime() + 100), 'custom'),
         now,
         'custom',
       );
 
-      expectAllThrow(
+      expectInputQueryThrow(
         type.max(new Date(now.getTime() - 100)),
         now,
         'Date must be smaller than or equal to',
       );
 
-      expectAllThrow(
+      expectInputQueryThrow(
         type.max(new Date(now.getTime() - 100), 'custom'),
         now,
         'custom',
@@ -748,7 +751,7 @@ describe('zod schema config', () => {
 
   describe('error messages', () => {
     it('should support `required_error`', () => {
-      const type = t.string().errors({
+      const type = t.string().error({
         required: 'custom message',
       });
 
@@ -758,7 +761,7 @@ describe('zod schema config', () => {
     });
 
     it('should support `invalid_type_error`', () => {
-      const type = t.string().errors({
+      const type = t.string().error({
         invalidType: 'custom message',
       });
 

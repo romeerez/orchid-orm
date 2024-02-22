@@ -602,7 +602,7 @@ interface TimestampColumnZod
 class TimestampColumnZod extends TimestampTZColumn<ZodSchemaConfig> {}
 Object.assign(TimestampColumnZod.prototype, dateMethods);
 
-export type ZodSchemaConfig = {
+export interface ZodSchemaConfig {
   type: ZodTypeAny;
 
   parse<
@@ -689,18 +689,18 @@ export type ZodSchemaConfig = {
     schema?: ZodSchema,
   ): ZodJSONColumn<ZodSchema>;
 
-  boolean: ZodBoolean;
-  buffer: ZodType<Buffer>;
-  unknown: ZodUnknown;
-  never: ZodNever;
-  stringSchema: ZodString;
+  boolean(): ZodBoolean;
+  buffer(): ZodType<Buffer>;
+  unknown(): ZodUnknown;
+  never(): ZodNever;
+  stringSchema(): ZodString;
   stringMin(max: number): ZodString;
   stringMax(max: number): ZodString;
   stringMinMax(min: number, max: number): ZodString;
-  number: ZodNumber;
-  int: ZodNumber;
-  stringNumberDate: ZodDate;
-  timeInterval: ZodObject<{
+  number(): ZodNumber;
+  int(): ZodNumber;
+  stringNumberDate(): ZodDate;
+  timeInterval(): ZodObject<{
     years: ZodOptional<ZodNumber>;
     months: ZodOptional<ZodNumber>;
     days: ZodOptional<ZodNumber>;
@@ -709,7 +709,7 @@ export type ZodSchemaConfig = {
     seconds: ZodOptional<ZodNumber>;
   }>;
   bit(max: number): ZodString;
-  uuid: ZodString;
+  uuid(): ZodString;
 
   inputSchema<T extends ColumnSchemaGetterTableClass>(
     this: T,
@@ -729,7 +729,7 @@ export type ZodSchemaConfig = {
 
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T): PkeySchema<T>;
 
-  errors<T extends ColumnTypeBase>(this: T, errors: ErrorMessages): T;
+  error<T extends ColumnTypeBase>(this: T, error: ErrorMessages): T;
 
   smallint(): SmallIntColumnZod;
   integer(): IntegerColumnZod;
@@ -751,7 +751,7 @@ export type ZodSchemaConfig = {
   date(): DateColumnZod;
   timestampNoTZ(precision?: number): TimestampNoTzColumnZod;
   timestamp(precision?: number): TimestampColumnZod;
-};
+}
 
 // parse a date string to number, with respect to null
 const parseDateToNumber = (value: unknown) =>
@@ -781,13 +781,13 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
   dateAsNumber() {
     return this.parse(
-      this.number,
+      z.number(),
       parseDateToNumber,
     ) as unknown as ParseDateToNumber;
   },
   dateAsDate() {
     return this.parse(
-      this.number,
+      z.number(),
       parseDateToDate,
     ) as unknown as ParseDateToDate;
   },
@@ -808,11 +808,11 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   json<ZodSchema extends ZodTypeAny = ZodUnknown>(schema?: ZodSchema) {
     return new ZodJSONColumn((schema ?? z.unknown()) as ZodSchema);
   },
-  boolean: z.boolean(),
-  buffer: z.instanceof(Buffer),
-  unknown: z.unknown(),
-  never: z.never(),
-  stringSchema: z.string(),
+  boolean: () => z.boolean(),
+  buffer: () => z.instanceof(Buffer),
+  unknown: () => z.unknown(),
+  never: () => z.never(),
+  stringSchema: () => z.string(),
   stringMin(min) {
     return z.string().min(min);
   },
@@ -822,24 +822,25 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   stringMinMax(min, max) {
     return z.string().min(min).max(max);
   },
-  number: z.number(),
-  int: z.number().int(),
+  number: () => z.number(),
+  int: () => z.number().int(),
 
-  stringNumberDate: z.coerce.date(),
+  stringNumberDate: () => z.coerce.date(),
 
-  timeInterval: z.object({
-    years: z.number().optional(),
-    months: z.number().optional(),
-    days: z.number().optional(),
-    hours: z.number().optional(),
-    minutes: z.number().optional(),
-    seconds: z.number().optional(),
-  }),
+  timeInterval: () =>
+    z.object({
+      years: z.number().optional(),
+      months: z.number().optional(),
+      days: z.number().optional(),
+      hours: z.number().optional(),
+      minutes: z.number().optional(),
+      seconds: z.number().optional(),
+    }),
 
   bit: (max?: number) =>
     (max ? z.string().max(max) : z.string()).regex(/[10]/g),
 
-  uuid: z.string().uuid(),
+  uuid: () => z.string().uuid(),
 
   inputSchema() {
     return mapSchema(this, 'inputSchema');
@@ -875,10 +876,10 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
 
   /**
-   * `errors` allows to specify two following validation messages:
+   * `error` allows to specify two following validation messages:
    *
    * ```ts
-   * t.text().errors({
+   * t.text().error({
    *   required: 'This column is required',
    *   invalidType: 'This column must be an integer',
    * });
@@ -924,20 +925,20 @@ export const zodSchemaConfig: ZodSchemaConfig = {
    *   j.object({
    *     one: j
    *       .string()
-   *       .errors({ required: 'One is required' })
+   *       .error({ required: 'One is required' })
    *       .min(5, 'Must be 5 or more characters long'),
    *     two: j
    *       .string()
-   *       .errors({ invalidType: 'Two should be a string' })
+   *       .error({ invalidType: 'Two should be a string' })
    *       .max(5, 'Must be 5 or fewer characters long'),
    *     three: j.string().length(5, 'Must be exactly 5 characters long'),
    *   }),
    * );
    * ```
    *
-   * @param errorMessages - object, key is either 'required' or 'invalidType', value is an error message
+   * @param errors - object, key is either 'required' or 'invalidType', value is an error message
    */
-  errors(errors) {
+  error(errors) {
     const { errors: old } = this.data;
     const newErrors = old ? { ...old, ...errors } : errors;
     const { required, invalidType } = newErrors;
