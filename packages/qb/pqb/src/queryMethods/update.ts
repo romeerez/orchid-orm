@@ -19,15 +19,15 @@ import {
   Expression,
   QueryThen,
   callWithThis,
-  TemplateLiteralArgs,
   emptyObject,
   RecordUnknown,
   QueryMetaBase,
   PickQueryShape,
+  SQLQueryArgs,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
-import { RawSQL } from '../sql/rawSql';
+import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
 import { resolveSubQueryCallback } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
 
@@ -117,7 +117,7 @@ export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
 // Type of argument for `updateRaw`.
 // not available when there are no conditions on the query.
 type UpdateRawArgs<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
-  ? [sql: Expression] | TemplateLiteralArgs
+  ? SQLQueryArgs
   : never;
 
 // `update` and `updateOrThrow` methods output type.
@@ -497,14 +497,10 @@ export class Update {
     this: T,
     ...args: UpdateRawArgs<T>
   ): UpdateResult<T> {
-    const q = (this as unknown as Query).clone();
-
-    if (Array.isArray(args[0])) {
-      const sql = new RawSQL(args as TemplateLiteralArgs);
-      return _queryUpdateRaw(q as never, sql);
-    }
-
-    return _queryUpdateRaw(q, args[0] as Expression) as never;
+    return _queryUpdateRaw(
+      (this as unknown as Query).clone(),
+      sqlQueryArgsToExpression(args),
+    ) as never;
   }
 
   /**

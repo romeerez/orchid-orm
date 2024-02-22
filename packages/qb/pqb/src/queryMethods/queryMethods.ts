@@ -45,7 +45,13 @@ import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
-import { _queryWhere, Where, WhereArg, WhereResult } from './where/where';
+import {
+  _queryWhere,
+  _queryWhereSql,
+  Where,
+  WhereArg,
+  WhereResult,
+} from './where/where';
 import { SearchMethods } from './search';
 import { Clear } from './clear';
 import { Having } from './having';
@@ -72,13 +78,13 @@ import {
   QueryReturnType,
   RecordUnknown,
   Sql,
-  TemplateLiteralArgs,
+  SQLQueryArgs,
 } from 'orchid-core';
 import { AsMethods } from './as';
 import { QueryBase } from '../query/queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
-import { RawSQL } from '../sql/rawSql';
+import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { noneMethods } from './none';
 import { simpleExistingColumnToSQL } from '../sql/common';
 import { ScopeMethods } from './scope';
@@ -131,9 +137,7 @@ type OrderArgKey<T extends OrderArgSelf> =
         : K;
     }[keyof T['result']];
 
-export type OrderArgs<T extends OrderArgSelf> =
-  | OrderArg<T>[]
-  | TemplateLiteralArgs;
+export type OrderArgs<T extends OrderArgSelf> = OrderArg<T>[];
 
 export type GroupArg<T extends PickQueryResult> =
   | {
@@ -145,9 +149,9 @@ export type GroupArg<T extends PickQueryResult> =
     }[keyof T['result']]
   | Expression;
 
-type FindArgs<T extends PickQueryShapeSinglePrimaryKey> =
-  | [T['shape'][T['singlePrimaryKey']]['queryType'] | Expression]
-  | TemplateLiteralArgs;
+type FindArg<T extends PickQueryShapeSinglePrimaryKey> =
+  | T['shape'][T['singlePrimaryKey']]['queryType']
+  | Expression;
 
 type QueryHelper<
   T extends PickQueryMetaShape,
@@ -420,7 +424,7 @@ export class QueryMethods<ColumnTypes> {
    * The `find` method is available only for tables which has exactly one primary key.
    * And also it can accept raw SQL template literal, then the primary key is not required.
    *
-   * Find record by id, throw [NotFoundError](/guide/error-handling.html) if not found:
+   * Finds a record by id, throws {@link NotFoundError} if not found:
    *
    * ```ts
    * await db.table.find(1);
@@ -433,17 +437,12 @@ export class QueryMethods<ColumnTypes> {
    * `;
    * ```
    *
-   * @param args - primary key value to find by, or a raw SQL
+   * @param value - primary key value to find by
    */
   find<T extends PickQueryShapeResultSinglePrimaryKey>(
     this: T,
-    ...args: FindArgs<T>
+    value: FindArg<T>,
   ): SetQueryReturnsOne<WhereResult<T>> {
-    let [value] = args;
-    if (Array.isArray(value)) {
-      value = new RawSQL(args as TemplateLiteralArgs);
-    }
-
     const q = (this as unknown as Query).clone();
 
     if (value === null || value === undefined) {
@@ -463,26 +462,66 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * Find a single record by the primary key (id), adds `LIMIT 1`, can accept a raw SQL.
+   * Finds a single record with a given SQL, throws {@link NotFoundError} if not found:
+   *
+   * ```ts
+   * await db.user.find`
+   *   age = ${age} AND
+   *   name = ${name}
+   * `;
+   * ```
+   *
+   * @param args - SQL expression
+   */
+  findBySql<T extends PickQueryShapeResultSinglePrimaryKey>(
+    this: T,
+    ...args: SQLQueryArgs
+  ): SetQueryReturnsOne<WhereResult<T>> {
+    const q = (this as unknown as Query).clone();
+    return _queryTake(_queryWhereSql(q, args)) as never;
+  }
+
+  /**
+   * Find a single record by the primary key (id), adds `LIMIT 1`.
    * Returns `undefined` when not found.
    *
    * ```ts
    * const result: TableType | undefined = await db.table.find(123);
    * ```
    *
-   * @param args - primary key value to find by, or a raw SQL
+   * @param value - primary key value to find by, or a raw SQL
    */
   findOptional<T extends PickQueryShapeResultSinglePrimaryKey>(
     this: T,
-    ...args: FindArgs<T>
+    value: FindArg<T>,
+  ): SetQueryReturnsOneOptional<WhereResult<T>> {
+    return _queryTakeOptional((this as unknown as Query).find(value)) as never;
+  }
+
+  /**
+   * Finds a single record with a given SQL.
+   * Returns `undefined` when not found.
+   *
+   * ```ts
+   * await db.user.find`
+   *   age = ${age} AND
+   *   name = ${name}
+   * `;
+   * ```
+   *
+   * @param args - SQL expression
+   */
+  findBySqlOptional<T extends PickQueryShapeResultSinglePrimaryKey>(
+    this: T,
+    ...args: SQLQueryArgs
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
     return _queryTakeOptional(
-      (this as unknown as Query).find(...args),
+      (this as unknown as Query).findBySql(...args),
     ) as never;
   }
 
   /**
-   * The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
+   * The same as `where(conditions).take()`, takes the same arguments as {@link Where.where}, it will filter records and add a `LIMIT 1`.
    * Throws `NotFoundError` if not found.
    *
    * ```ts
@@ -635,7 +674,7 @@ export class QueryMethods<ColumnTypes> {
   /**
    * Adds an order by clause to the query.
    *
-   * Takes one or more arguments, each argument can be a column name, an object, or a raw expression.
+   * Takes one or more arguments, each argument can be a column name or an object.
    *
    * ```ts
    * db.table.order('id', 'name'); // ASC by default
@@ -647,11 +686,6 @@ export class QueryMethods<ColumnTypes> {
    *   name: 'ASC NULLS FIRST',
    *   age: 'DESC NULLS LAST',
    * });
-   *
-   * // order by raw SQL expression:
-   * db.table.order`raw sql`;
-   * // or
-   * db.table.order(db.table.sql`raw sql`);
    * ```
    *
    * `order` can refer to the values returned from `select` sub-queries (unlike `where` which cannot).
@@ -670,21 +704,34 @@ export class QueryMethods<ColumnTypes> {
    *   });
    * ```
    *
-   * @param args - column name(s), raw SQL, or an object with column names and sort directions.
+   * @param args - column name(s) or an object with column names and sort directions.
    */
   order<T extends OrderArgSelf>(this: T, ...args: OrderArgs<T>): T {
-    if (Array.isArray(args[0])) {
-      return pushQueryValue(
-        (this as unknown as Query).clone(),
-        'order',
-        new RawSQL(args as TemplateLiteralArgs),
-      ) as never;
-    }
-
     return pushQueryArray(
       (this as unknown as Query).clone(),
       'order',
       args,
+    ) as never;
+  }
+
+  /**
+   * Order by SQL expression
+   *
+   * Order by raw SQL expression.
+   *
+   * ```ts
+   * db.table.order`raw sql`;
+   * // or
+   * db.table.order(db.table.sql`raw sql`);
+   * ```
+   *
+   * @param args - SQL expression
+   */
+  orderSql<T>(this: T, ...args: SQLQueryArgs): T {
+    return pushQueryValue(
+      (this as unknown as Query).clone(),
+      'order',
+      sqlQueryArgsToExpression(args),
     ) as never;
   }
 

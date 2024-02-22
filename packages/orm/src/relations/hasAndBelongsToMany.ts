@@ -23,7 +23,6 @@ import {
   NotFoundError,
   OrchidOrmInternalError,
   Query,
-  RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
   toSQLCacheKey,
@@ -113,7 +112,7 @@ export interface HasAndBelongsToManyInfo<
       ? RelJoin
       : TableQuery[K];
   },
-> extends RelationConfigBase {
+> {
   query: Q;
   methodQuery: Q;
   joinQuery: RelationJoinQuery;

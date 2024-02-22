@@ -35,9 +35,9 @@ describe('queryMethods', () => {
     it('generates sql', () => {
       const sql = User.toSQL();
 
-      expectSql(sql, `SELECT * FROM "user"`);
-
       assertType<typeof sql, { text: string; values: unknown[] }>();
+
+      expectSql(sql, `SELECT * FROM "user"`);
     });
   });
 
@@ -317,24 +317,6 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should accept raw sql with template literal', () => {
-      const q = User.all();
-      const query = q.find`${1} + ${2}`;
-
-      assertType<Awaited<typeof query>, UserRecord>();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT * FROM "user"
-          WHERE "user"."id" = $1 + $2
-          LIMIT 1
-        `,
-        [1, 2],
-      );
-      expectQueryNotMutated(q);
-    });
-
     it.each([undefined, null])('should throw if %s is passed', (value) => {
       expect(() => User.find(value as unknown as number)).toThrow(
         `${value} is not allowed in the find method`,
@@ -415,20 +397,24 @@ describe('queryMethods', () => {
   describe('findBy', () => {
     it('should be like where but with take', () => {
       const q = User.all();
+
       expectSql(
         q.findBy({ name: 's' }).toSQL(),
         `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT 1`,
         ['s'],
       );
+
       expectQueryNotMutated(q);
     });
 
     it('should accept raw', () => {
       const q = User.all();
+
       expectSql(
         q.findBy({ name: testDb.sql`'string'` }).toSQL(),
         `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
       );
+
       expectQueryNotMutated(q);
     });
   });
@@ -459,6 +445,26 @@ describe('queryMethods', () => {
         `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
       );
       expectQueryNotMutated(q);
+    });
+  });
+
+  describe('findBySql', () => {
+    it('should find one by sql', () => {
+      const q = User.findBySql`sql`;
+
+      assertType<Awaited<typeof q>, UserRecord>();
+
+      expectSql(q.toSQL(), `SELECT * FROM "user" WHERE (sql) LIMIT 1`);
+    });
+  });
+
+  describe('findBySqlOptional', () => {
+    it('should find one optional by sql', () => {
+      const q = User.findBySqlOptional`sql`;
+
+      assertType<Awaited<typeof q>, UserRecord | undefined>();
+
+      expectSql(q.toSQL(), `SELECT * FROM "user" WHERE (sql) LIMIT 1`);
     });
   });
 
@@ -769,18 +775,6 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
     });
 
-    it('adds order with raw sql template literal', () => {
-      const q = User.all();
-      expectSql(
-        q.order`id ASC NULLS FIRST`.toSQL(),
-        `
-        SELECT * FROM "user"
-        ORDER BY id ASC NULLS FIRST
-      `,
-      );
-      expectQueryNotMutated(q);
-    });
-
     it('should be able to order by a selected value in a sub-query', () => {
       const q = User.select({
         count: () => User.count(),
@@ -806,6 +800,21 @@ describe('queryMethods', () => {
         arr: () => User.all(),
         // @ts-expect-error should disallow ordering by array
       }).order('arr');
+    });
+  });
+
+  describe('orderSql', () => {
+    it('adds order with raw sql template literal', () => {
+      const q = User.all();
+
+      expectSql(
+        q.orderSql`id ASC NULLS FIRST`.toSQL(),
+        `
+        SELECT * FROM "user"
+        ORDER BY id ASC NULLS FIRST
+      `,
+      );
+      expectQueryNotMutated(q);
     });
   });
 

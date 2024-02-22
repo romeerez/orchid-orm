@@ -9,5 +9,5 @@ export function queryWrap<
   Q extends WrapQueryArg,
   As extends string = 't',
 >(self: T, query: Q, as: As = 't' as As): SetQueryTableAlias<Q, As> {
-  return _queryAs(queryFrom(query, [self]), as) as never;
+  return _queryAs(queryFrom(query, self), as) as never;
 }

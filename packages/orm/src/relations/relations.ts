@@ -1,5 +1,6 @@
 import {
   BelongsTo,
+  BelongsToFKey,
   BelongsToInfo,
   BelongsToParams,
   makeBelongsToMethod,
@@ -153,7 +154,13 @@ export type MapRelation<
   K extends keyof T['relations'] & string,
 > = RelationQuery<
   T['relations'][K] extends BelongsTo
-    ? BelongsToInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
+    ? BelongsToInfo<
+        T,
+        K,
+        RelationScopeOrTable<T['relations'][K]>,
+        BelongsToFKey<T['relations'][K]>,
+        T['relations'][K]['options']['required']
+      >
     : T['relations'][K] extends HasOne
     ? HasOneInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
     : T['relations'][K] extends HasMany

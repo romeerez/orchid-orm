@@ -1,11 +1,6 @@
-import { Query } from '../query/query';
-import { TemplateLiteralArgs } from 'orchid-core';
+import { PickQueryQ, Query } from '../query/query';
+import { SQLQueryArgs } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
-import { QueryData } from '../sql';
-
-// Arguments of `having`:
-// can be a SQL template literal or one or multiple callbacks returning a boolean expression.
-type HavingArgs<T> = TemplateLiteralArgs | HavingArgFn<T>[];
 
 // Function argument of `having`:
 // the same query builder as in `select` is passed in, boolean expression is expected to be returned.
@@ -22,12 +17,6 @@ export class Having {
    * ```ts
    * db.table.having((q) => q.count().gte(10));
    * // HAVING count(*) >= 10
-   * ```
-   *
-   * Alternatively, it accepts a raw SQL template:
-   *
-   * ```ts
-   * db.table.having`count(*) >= ${10}`;
    * ```
    *
    * Multiple having conditions will be combined with `AND`:
@@ -70,18 +59,27 @@ export class Having {
    *
    * @param args - raw SQL template string or one or multiple callbacks returning a boolean expression
    */
-  having<T extends Query>(this: T, ...args: HavingArgs<T>): T {
+  having<T extends Query>(this: T, ...args: HavingArgFn<T>[]): T {
     const q = this.clone();
     return pushQueryValue(
       q,
       'having',
-      'raw' in args[0]
-        ? args
-        : args.map(
-            (arg) =>
-              ((arg as HavingArgFn<T>)(q) as unknown as { q: QueryData }).q
-                .expr,
-          ),
+      args.map(
+        (arg) => ((arg as HavingArgFn<T>)(q) as unknown as PickQueryQ).q.expr,
+      ),
     );
+  }
+
+  /**
+   * Provide SQL expression for the `HAVING` SQL statement:
+   *
+   * ```ts
+   * db.table.having`count(*) >= ${10}`;
+   * ```
+   *
+   * @param args - SQL expression
+   */
+  havingSql<T extends Query>(this: T, ...args: SQLQueryArgs): T {
+    return pushQueryValue(this.clone(), 'having', args);
   }
 }

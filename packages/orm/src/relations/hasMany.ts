@@ -28,7 +28,6 @@ import {
   _queryDelete,
   CreateMethodsNames,
   SelectableFromShape,
-  RelationConfigBase,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -126,7 +125,7 @@ export interface HasManyInfo<
           ? RelJoin
           : TableQuery[K];
       },
-> extends RelationConfigBase {
+> {
   query: Q;
   methodQuery: Q;
   joinQuery: RelationJoinQuery;

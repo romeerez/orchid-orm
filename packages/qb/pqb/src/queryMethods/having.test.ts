@@ -2,20 +2,6 @@ import { expectSql } from 'test-utils';
 import { User } from '../test-utils/test-utils';
 
 describe('having', () => {
-  it('should support SQL template literal', () => {
-    const q = User.having`count(*) = ${5}`;
-
-    expectSql(
-      q.toSQL(),
-      `
-        SELECT *
-        FROM "user"
-        HAVING count(*) = $1
-      `,
-      [5],
-    );
-  });
-
   it('should support simple object as an argument', () => {
     User.count().equals(5);
     const q = User.having((q) => q.count().equals(5));
@@ -80,6 +66,22 @@ describe('having', () => {
             OR (sum("user"."id") >= $3 AND avg("user"."id") <= $4)
       `,
       [1, 10, 2, 9],
+    );
+  });
+});
+
+describe('havingSql', () => {
+  it('should support SQL template literal', () => {
+    const q = User.havingSql`count(*) = ${5}`;
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT *
+        FROM "user"
+        HAVING count(*) = $1
+      `,
+      [5],
     );
   });
 });

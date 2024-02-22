@@ -1,6 +1,5 @@
 import {
   Query,
-  GetQueryResult,
   WithDataBase,
   WithDataItem,
   PickQueryWithData,
@@ -9,6 +8,7 @@ import {
   PickQueryMetaWithData,
   PickQueryMetaResultRelationsWithDataReturnType,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  GetQueryResult,
 } from '../../query/query';
 import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
 import { WhereQueryBase } from '../where/where';
@@ -296,7 +296,7 @@ type JoinOptionalMain<
     : K extends 'then'
     ? QueryThen<
         GetQueryResult<
-          T['returnType'],
+          T,
           {
             [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
           }
@@ -305,7 +305,7 @@ type JoinOptionalMain<
     : K extends 'catch'
     ? QueryCatch<
         GetQueryResult<
-          T['returnType'],
+          T,
           {
             [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
           }

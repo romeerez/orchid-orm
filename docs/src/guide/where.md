@@ -21,7 +21,7 @@ db.table.where({
   },
 
   // where column equals to raw SQL
-  column: db.table.sql`raw expression`,
+  column: db.table.sql`sql expression`,
 });
 ```
 
@@ -70,9 +70,6 @@ db.table.where({ id: 1 }, otherQuery);
 `where` supports raw SQL:
 
 ```ts
-db.table.where`a = b`;
-
-// or
 db.table.where(db.table.sql`a = b`);
 
 // or
@@ -397,6 +394,22 @@ db.table.where({
 });
 ```
 
+## whereSql
+
+Use a custom SQL expression in `WHERE` statement:
+
+```ts
+db.table.where`a = b`;
+
+// or
+db.table.where(db.table.sql`a = b`);
+
+// or
+import { raw } from 'orchid-orm';
+
+db.table.where(raw`a = b`);
+```
+
 ## orWhere
 
 [//]: # 'has JSDoc'
@@ -421,63 +434,6 @@ WHERE id = 1 AND color = 'red'
    OR id = 2 AND color = 'blue'
 ```
 
-## find
-
-[//]: # 'has JSDoc'
-
-The `find` method is available only for tables which has exactly one primary key.
-And also it can accept raw SQL template literal, then the primary key is not required.
-
-Find record by id, throw [NotFoundError](/guide/error-handling.html) if not found:
-
-```ts
-await db.table.find(1);
-```
-
-```ts
-await db.user.find`
-  age = ${age} AND
-  name = ${name}
-`;
-```
-
-## findOptional
-
-[//]: # 'has JSDoc'
-
-Find a single record by the primary key (id), adds `LIMIT 1`, can accept a raw SQL.
-Returns `undefined` when not found.
-
-```ts
-const result: TableType | undefined = await db.table.find(123);
-```
-
-## findBy
-
-[//]: # 'has JSDoc'
-
-The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
-Throws `NotFoundError` if not found.
-
-```ts
-const result: TableType = await db.table.findBy({ key: 'value' });
-// is equivalent to:
-db.table.where({ key: 'value' }).take();
-```
-
-## findByOptional
-
-[//]: # 'has JSDoc'
-
-The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
-Returns `undefined` when not found.
-
-```ts
-const result: TableType | undefined = await db.table.findByOptional({
-  key: 'value',
-});
-```
-
 ## whereNot
 
 [//]: # 'has JSDoc'
@@ -494,11 +450,15 @@ db.table.whereNot({ one: 1, two: 2 });
 // WHERE NOT (one = 1 AND two = 2)
 ```
 
-## andNot
+## whereNotSql
 
 [//]: # 'has JSDoc'
 
-`andNot` is an alias for `whereNot`.
+`whereNot` version accepting SQL expression:
+
+```ts
+db.table.whereNot`sql expression`;
+```
 
 ## orWhereNot
 

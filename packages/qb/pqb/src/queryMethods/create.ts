@@ -24,7 +24,6 @@ import {
   Expression,
   QueryThen,
   ColumnSchemaConfig,
-  RecordKeyTrue,
   RecordUnknown,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
@@ -48,12 +47,12 @@ export interface CreateSelf extends QueryBase {
 export type CreateData<T extends CreateSelf> =
   RelationsBase extends T['relations']
     ? // if no relations, don't load TS with extra calculations
-      CreateDataWithDefaults<T>
+      CreateDataWithDefaults<T, keyof T['meta']['defaults']>
     : CreateRelationsData<T>;
 
 type CreateDataWithDefaults<
   T extends CreateSelf,
-  Defaults extends PropertyKey = keyof T['meta']['defaults'],
+  Defaults extends PropertyKey,
 > = {
   [K in keyof T['inputType'] as K extends Defaults ? never : K]: CreateColumn<
     T['inputType'],
@@ -67,8 +66,8 @@ type CreateDataWithDefaults<
 
 type CreateDataWithDefaultsForRelations<
   T extends CreateSelf,
-  Defaults extends PropertyKey = keyof T['meta']['defaults'],
-  OmitFKeys extends PropertyKey = T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate'],
+  Defaults extends PropertyKey,
+  OmitFKeys extends PropertyKey,
 > = {
   [K in keyof T['inputType'] as K extends Defaults | OmitFKeys
     ? never
@@ -80,10 +79,7 @@ type CreateDataWithDefaultsForRelations<
 };
 
 // Type of available variants to provide for a specific column when creating
-export type CreateColumn<
-  InputType extends RecordUnknown,
-  Key extends keyof InputType,
-> =
+export type CreateColumn<InputType, Key extends keyof InputType> =
   | Expression
   | InputType[Key]
   | {
@@ -94,7 +90,11 @@ export type CreateColumn<
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<T extends CreateSelf> =
   // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
-  CreateDataWithDefaultsForRelations<T> &
+  CreateDataWithDefaultsForRelations<
+    T,
+    keyof T['meta']['defaults'],
+    T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']
+  > &
     // Intersection of objects for `belongsTo` relations:
     // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
     CreateRelationsDataOmittingFKeys<
@@ -235,10 +235,7 @@ type OnConflictArg<T extends CreateSelf> =
   | (keyof T['shape'])[]
   | Expression;
 
-export type AddQueryDefaults<
-  T extends CreateSelf,
-  Defaults extends RecordKeyTrue,
-> = {
+export type AddQueryDefaults<T extends CreateSelf, Defaults> = {
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta']]: K extends 'defaults'

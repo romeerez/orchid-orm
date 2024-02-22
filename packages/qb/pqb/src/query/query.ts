@@ -220,25 +220,25 @@ export type QueryReturnsAll<T extends QueryReturnType> = (
   : false;
 
 export type GetQueryResult<
-  ReturnType extends QueryReturnType,
+  T extends PickQueryReturnType,
   Result extends QueryColumns,
-> = QueryReturnsAll<ReturnType> extends true
+> = QueryReturnsAll<T['returnType']> extends true
   ? ColumnShapeOutput<Result>[]
-  : ReturnType extends 'one'
+  : T['returnType'] extends 'one'
   ? ColumnShapeOutput<Result> | undefined
-  : ReturnType extends 'oneOrThrow'
+  : T['returnType'] extends 'oneOrThrow'
   ? ColumnShapeOutput<Result>
-  : ReturnType extends 'value'
+  : T['returnType'] extends 'value'
   ? Result['value']['outputType'] | undefined
-  : ReturnType extends 'valueOrThrow'
+  : T['returnType'] extends 'valueOrThrow'
   ? Result['value']['outputType']
-  : ReturnType extends 'rows'
+  : T['returnType'] extends 'rows'
   ? ColumnShapeOutput<Result>[keyof Result][][]
-  : ReturnType extends 'pluck'
+  : T['returnType'] extends 'pluck'
   ? Result['pluck']['outputType'][]
-  : ReturnType extends 'rowCount'
+  : T['returnType'] extends 'rowCount'
   ? number
-  : ReturnType extends 'void'
+  : T['returnType'] extends 'void'
   ? void
   : never;
 
@@ -257,9 +257,9 @@ export type AddQuerySelect<
           : never;
       }
     : K extends 'then'
-    ? QueryThen<GetQueryResult<T['returnType'], Result>>
+    ? QueryThen<GetQueryResult<T, Result>>
     : K extends 'catch'
-    ? QueryCatch<GetQueryResult<T['returnType'], Result>>
+    ? QueryCatch<GetQueryResult<T, Result>>
     : T[K];
 } & QueryMetaHasSelect;
 

@@ -18,7 +18,6 @@ import {
   pushQueryValue,
   Query,
   QueryResult,
-  RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
   SelectQueryData,
@@ -79,7 +78,7 @@ export type BelongsToOptions<
     keyof Columns
   >;
 
-type BelongsToFKey<Relation extends RelationThunkBase> =
+export type BelongsToFKey<Relation extends RelationThunkBase> =
   Relation['options'] extends RelationRefsOptions
     ? Relation['options']['columns'][number]
     : Relation['options'] extends RelationKeysOptions
@@ -97,25 +96,23 @@ export interface BelongsToInfo<
   T extends RelationConfigSelf,
   Name extends keyof T['relations'] & string,
   TableQuery extends Query,
-  FK extends string = BelongsToFKey<T['relations'][Name]>,
-  Required = T['relations'][Name]['options']['required'] extends true
-    ? true
-    : false,
+  FK extends string,
+  Required,
   Q extends Query = {
-    [K in keyof TableQuery]: K extends 'meta'
+    [P in keyof TableQuery]: P extends 'meta'
       ? // Omit is optimal
         Omit<TableQuery['meta'], 'selectable'> & {
           as: Name;
           hasWhere: true;
           selectable: SelectableFromShape<TableQuery['shape'], Name>;
         }
-      : K extends 'join'
+      : P extends 'join'
       ? RelJoin
-      : K extends CreateMethodsNames | DeleteMethodsNames
+      : P extends CreateMethodsNames | DeleteMethodsNames
       ? never
-      : TableQuery[K];
+      : TableQuery[P];
   },
-> extends RelationConfigBase {
+> {
   query: Q;
   methodQuery: Required extends true
     ? SetQueryReturnsOne<Q>

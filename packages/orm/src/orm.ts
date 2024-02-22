@@ -8,13 +8,14 @@ import {
   Db,
   DbTableOptions,
   DbTableOptionScopes,
-  FromArgs,
+  FromArg,
   FromResult,
   NoPrimaryKeyOption,
   Query,
   QueryData,
   QueryLogOptions,
   defaultSchemaConfig,
+  FromArgOptions,
 } from 'pqb';
 import { DbTable, Table, TableClasses } from './baseTable';
 import { applyRelations } from './relations/relations';
@@ -90,7 +91,10 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
    */
   $queryArrays: Db['queryArrays'];
-  $from<Args extends FromArgs<Query>>(...args: Args): FromResult<Query, Args>;
+  $from<Arg extends FromArg<Query>>(
+    arg: Arg,
+    options?: FromArgOptions,
+  ): FromResult<Query, Arg>;
   $close(): Promise<void>;
 };
 
@@ -145,7 +149,8 @@ export const orchidORM = <T extends TableClasses>(
     $queryBuilder: qb,
     $query: (...args: SQLQueryArgs) => qb.query(...args),
     $queryArrays: (...args: SQLQueryArgs) => qb.queryArrays(...args),
-    $from: (...args: FromArgs<Query>) => qb.from(...args),
+    $from: (arg: FromArg<Query>, options?: FromArgOptions) =>
+      qb.from(arg, options),
     $close: () => adapter.close(),
   } as unknown as OrchidORM;
 

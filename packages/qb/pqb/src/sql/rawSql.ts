@@ -10,6 +10,7 @@ import {
   StaticSQLArgs,
   ColumnSchemaConfig,
   QueryColumn,
+  SQLQueryArgs,
 } from 'orchid-core';
 import { DefaultColumnTypes } from '../columns';
 import { ToSQLCtx } from './toSQL';
@@ -162,3 +163,11 @@ export function raw(...args: SQLArgs) {
 
 // Raw SQL count(*) to apply directly to `QueryData.select`.
 export const countSelect = [new RawSQL('count(*)')];
+
+export function sqlQueryArgsToExpression(
+  args: SQLQueryArgs,
+): RawSQL<QueryColumn> {
+  return Array.isArray(args[0])
+    ? new RawSQL(args as TemplateLiteralArgs)
+    : (args[0] as never);
+}

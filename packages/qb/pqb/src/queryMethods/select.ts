@@ -31,7 +31,6 @@ import {
   QueryMetaBase,
   QueryReturnType,
   QueryThen,
-  RecordUnknown,
   setColumnData,
   setParserToQuery,
 } from 'orchid-core';
@@ -80,58 +79,114 @@ type SelectSubQueryArg<T extends SelectSelf> = {
 };
 
 // Result type of select without the ending object argument.
-type SelectResult<
-  T extends SelectSelf,
-  Columns extends PropertyKey[],
-  Result extends QueryColumns = ('*' extends Columns[number]
-    ? {
-        [K in
-          | Columns[number]
-          | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-      }
-    : {
-        [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-      }) &
-    (T['meta']['hasSelect'] extends true
-      ? Omit<T['result'], Columns[number]>
-      : unknown),
-> = {
+type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
   [K in keyof T]: K extends 'result'
-    ? Result
+    ? ('*' extends Columns[number]
+        ? {
+            [K in
+              | Columns[number]
+              | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+          }
+        : {
+            [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+          }) &
+        (T['meta']['hasSelect'] extends true
+          ? Omit<T['result'], Columns[number]>
+          : unknown)
     : K extends 'then'
-    ? QueryThen<GetQueryResult<T['returnType'], Result>>
+    ? QueryThen<
+        GetQueryResult<
+          T,
+          // result is copy-pasted to save on TS instantiations
+          ('*' extends Columns[number]
+            ? {
+                [K in
+                  | Columns[number]
+                  | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+              }
+            : {
+                [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+              }) &
+            (T['meta']['hasSelect'] extends true
+              ? Omit<T['result'], Columns[number]>
+              : unknown)
+        >
+      >
     : K extends 'catch'
-    ? QueryCatch<GetQueryResult<T['returnType'], Result>>
+    ? QueryCatch<
+        GetQueryResult<
+          T,
+          ('*' extends Columns[number]
+            ? {
+                [K in
+                  | Columns[number]
+                  | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+              }
+            : {
+                [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+              }) &
+            (T['meta']['hasSelect'] extends true
+              ? Omit<T['result'], Columns[number]>
+              : unknown)
+        >
+      >
     : T[K];
 } & QueryMetaHasSelect;
 
-type SelectResultObj<
-  T extends SelectSelf,
-  Obj extends SelectAsArg<T>,
-  // Combine previously selected items, all columns if * was provided,
-  // and the selected by string and object arguments.
-  Result extends QueryColumns = {
-    [K in
-      | keyof Obj
-      | (T['meta']['hasSelect'] extends true
-          ? keyof T['result']
-          : never)]: K extends keyof Obj
-      ? SelectAsValueResult<T, Obj[K]>
-      : K extends keyof T['result']
-      ? T['result'][K]
-      : never;
-  },
-> = {
+type SelectResultObj<T extends SelectSelf, Obj extends SelectAsArg<T>> = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & {
         selectable: SelectAsSelectable<Obj>;
       }
     : K extends 'result'
-    ? Result
+    ? // Combine previously selected items, all columns if * was provided,
+      // and the selected by string and object arguments.
+      {
+        [K in
+          | keyof Obj
+          | (T['meta']['hasSelect'] extends true
+              ? keyof T['result']
+              : never)]: K extends keyof Obj
+          ? SelectAsValueResult<T, Obj[K]>
+          : K extends keyof T['result']
+          ? T['result'][K]
+          : never;
+      }
     : K extends 'then'
-    ? QueryThen<GetQueryResult<T['returnType'], Result>>
+    ? QueryThen<
+        GetQueryResult<
+          T,
+          // result is copy-pasted to save on TS instantiations
+          {
+            [K in
+              | keyof Obj
+              | (T['meta']['hasSelect'] extends true
+                  ? keyof T['result']
+                  : never)]: K extends keyof Obj
+              ? SelectAsValueResult<T, Obj[K]>
+              : K extends keyof T['result']
+              ? T['result'][K]
+              : never;
+          }
+        >
+      >
     : K extends 'catch'
-    ? QueryCatch<GetQueryResult<T['returnType'], Result>>
+    ? QueryCatch<
+        GetQueryResult<
+          T,
+          {
+            [K in
+              | keyof Obj
+              | (T['meta']['hasSelect'] extends true
+                  ? keyof T['result']
+                  : never)]: K extends keyof Obj
+              ? SelectAsValueResult<T, Obj[K]>
+              : K extends keyof T['result']
+              ? T['result'][K]
+              : never;
+          }
+        >
+      >
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -140,39 +195,77 @@ type SelectResultColumnsAndObj<
   T extends SelectSelf,
   Columns extends PropertyKey[],
   Obj extends SelectAsArg<T>,
-  // Combine previously selected items, all columns if * was provided,
-  // and the selected by string and object arguments.
-  Result extends QueryColumns = {
-    [K in
-      | ('*' extends Columns[number]
-          ? Exclude<Columns[number], '*'> | keyof T['shape']
-          : Columns[number])
-      | keyof Obj as K extends keyof T['meta']['selectable']
-      ? T['meta']['selectable'][K]['as']
-      : K]: K extends keyof T['meta']['selectable']
-      ? T['meta']['selectable'][K]['column']
-      : K extends keyof Obj
-      ? SelectAsValueResult<T, Obj[K]>
-      : never;
-  } & (T['meta']['hasSelect'] extends true
-    ? Omit<T['result'], Columns[number]>
-    : unknown),
 > = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & {
         selectable: SelectAsSelectable<Obj>;
       }
     : K extends 'result'
-    ? Result
+    ? // Combine previously selected items, all columns if * was provided,
+      // and the selected by string and object arguments.
+      {
+        [K in
+          | ('*' extends Columns[number]
+              ? Exclude<Columns[number], '*'> | keyof T['shape']
+              : Columns[number])
+          | keyof Obj as K extends keyof T['meta']['selectable']
+          ? T['meta']['selectable'][K]['as']
+          : K]: K extends keyof T['meta']['selectable']
+          ? T['meta']['selectable'][K]['column']
+          : K extends keyof Obj
+          ? SelectAsValueResult<T, Obj[K]>
+          : never;
+      } & (T['meta']['hasSelect'] extends true
+        ? Omit<T['result'], Columns[number]>
+        : unknown)
     : K extends 'then'
-    ? QueryThen<GetQueryResult<T['returnType'], Result>>
+    ? QueryThen<
+        GetQueryResult<
+          T,
+          // result is copy-pasted to save on TS instantiations
+          {
+            [K in
+              | ('*' extends Columns[number]
+                  ? Exclude<Columns[number], '*'> | keyof T['shape']
+                  : Columns[number])
+              | keyof Obj as K extends keyof T['meta']['selectable']
+              ? T['meta']['selectable'][K]['as']
+              : K]: K extends keyof T['meta']['selectable']
+              ? T['meta']['selectable'][K]['column']
+              : K extends keyof Obj
+              ? SelectAsValueResult<T, Obj[K]>
+              : never;
+          } & (T['meta']['hasSelect'] extends true
+            ? Omit<T['result'], Columns[number]>
+            : unknown)
+        >
+      >
     : K extends 'catch'
-    ? QueryCatch<GetQueryResult<T['returnType'], Result>>
+    ? QueryCatch<
+        GetQueryResult<
+          T,
+          {
+            [K in
+              | ('*' extends Columns[number]
+                  ? Exclude<Columns[number], '*'> | keyof T['shape']
+                  : Columns[number])
+              | keyof Obj as K extends keyof T['meta']['selectable']
+              ? T['meta']['selectable'][K]['as']
+              : K]: K extends keyof T['meta']['selectable']
+              ? T['meta']['selectable'][K]['column']
+              : K extends keyof Obj
+              ? SelectAsValueResult<T, Obj[K]>
+              : never;
+          } & (T['meta']['hasSelect'] extends true
+            ? Omit<T['result'], Columns[number]>
+            : unknown)
+        >
+      >
     : T[K];
 } & QueryMetaHasSelect;
 
 // Add new 'selectable' types based on the select object argument.
-type SelectAsSelectable<Arg extends RecordUnknown> = {
+type SelectAsSelectable<Arg> = {
   [K in keyof Arg]: Arg[keyof Arg] extends (q: never) => {
     result: QueryColumns;
   }
@@ -189,7 +282,7 @@ type SelectAsSelectable<Arg extends RecordUnknown> = {
 // map a single value of select object arg into a column
 type SelectAsValueResult<
   T extends SelectSelf,
-  Arg extends SelectAsValue<T>,
+  Arg,
 > = Arg extends keyof T['meta']['selectable']
   ? T['meta']['selectable'][Arg]['column']
   : Arg extends Expression
@@ -209,7 +302,7 @@ type SelectAsValueResult<
 // query that returns a single value becomes a column of that value
 // query that returns 'pluck' becomes a column with array type of specific value type
 // query that returns a single record becomes an object column, possibly nullable
-export type SelectSubQueryResult<Arg extends QueryBase> = QueryReturnsAll<
+export type SelectSubQueryResult<Arg extends SelectSelf> = QueryReturnsAll<
   Arg['returnType']
 > extends true
   ? ColumnsShapeToObjectArray<Arg['result']>

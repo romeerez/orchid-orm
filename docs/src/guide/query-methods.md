@@ -60,36 +60,81 @@ const takenOptional: TableType | undefined = await db.table
   .takeOptional();
 ```
 
-## find and findOptional
+## find
+
+[//]: # 'has JSDoc'
+
+The `find` method is available only for tables which has exactly one primary key.
+And also it can accept raw SQL template literal, then the primary key is not required.
+
+Finds a record by id, throws [NotFoundError](/guide/error-handling.html) if not found:
+
+```ts
+await db.table.find(1);
+```
+
+## findOptional
 
 [//]: # 'has JSDoc'
 
 Find a single record by the primary key (id), adds `LIMIT 1`.
-
-`find` throws a `NotFoundError` when not found, and `findOptional` returns `undefined`.
+Returns `undefined` when not found.
 
 ```ts
-const found: TableType = await db.table.find(123);
-
-const foundOptional: TableType | undefined = await db.table.find(123);
+const result: TableType | undefined = await db.table.find(123);
 ```
 
-## findBy and findByOptional
+## findBy
 
 [//]: # 'has JSDoc'
 
-The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
-
-`findBy` throws a `NotFoundError` when not found, and `findByOptional` returns `undefined`.
+The same as `where(conditions).take()`, takes the same arguments as [where](/guide/where), it will filter records and add a `LIMIT 1`.
+Throws `NotFoundError` if not found.
 
 ```ts
-const found: TableType = await db.table.findBy({
-  key: 'value',
-});
+const result: TableType = await db.table.findBy({ key: 'value' });
+// is equivalent to:
+db.table.where({ key: 'value' }).take();
+```
 
-const foundOptional: TableType | undefined = await db.table.findByOptional({
+## findByOptional
+
+[//]: # 'has JSDoc'
+
+The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
+Returns `undefined` when not found.
+
+```ts
+const result: TableType | undefined = await db.table.findByOptional({
   key: 'value',
 });
+```
+
+# findBySql
+
+[//]: # 'has JSDoc'
+
+Finds a single record with a given SQL, throws [NotFoundError](/guide/error-handling.html) if not found:
+
+```ts
+await db.user.find`
+  age = ${age} AND
+  name = ${name}
+`;
+```
+
+## findBySqlOptional
+
+[//]: # 'has JSDoc'
+
+Finds a single record with a given SQL.
+Returns `undefined` when not found.
+
+```ts
+await db.user.find`
+  age = ${age} AND
+  name = ${name}
+`;
 ```
 
 ## get and getOptional
@@ -460,13 +505,6 @@ Set the `FROM` value, by default the table name is used.
 // accepts sub-query:
 db.table.from(Otherdb.table.select('foo', 'bar'));
 
-// accepts raw SQL by template literal:
-const value = 123;
-db.table.from`value = ${value}`;
-
-// accepts raw SQL:
-db.table.from(db.table.sql`value = ${value}`);
-
 // accepts alias of `WITH` expression:
 q.with('foo', Otherdb.table.select('id', 'name')).from('foo');
 ```
@@ -477,6 +515,18 @@ Optionally takes a second argument of type `{ only?: boolean }`, (see `FROM ONLY
 db.table.from(Otherdb.table.select('foo', 'bar'), {
   only: true,
 });
+```
+
+## fromSql
+
+[//]: # 'has JSDoc'
+
+Set the `FROM` value with custom SQL:
+
+```ts
+const value = 123;
+db.table.from`value = ${value}`;
+db.table.from(db.table.sql`value = ${value}`);
 ```
 
 ## offset
@@ -561,7 +611,7 @@ const results = db.product
 
 Adds an order by clause to the query.
 
-Takes one or more arguments, each argument can be a column name, an object, or a raw SQL expression.
+Takes one or more arguments, each argument can be a column name or an object
 
 ```ts
 db.table.order('id', 'name'); // ASC by default
@@ -573,11 +623,6 @@ db.table.order({
   name: 'ASC NULLS FIRST',
   age: 'DESC NULLS LAST',
 });
-
-// order by raw SQL expression:
-db.table.order`raw sql`;
-// or
-db.table.order(db.table.sql`raw sql`);
 ```
 
 `order` can refer to the values returned from `select` sub-queries (unlike `where` which cannot).
@@ -596,6 +641,18 @@ db.comment
   });
 ```
 
+## orderSql
+
+[//]: # 'has JSDoc'
+
+Order by raw SQL expression.
+
+```ts
+db.table.order`raw sql`;
+// or
+db.table.order(db.table.sql`raw sql`);
+```
+
 ## having
 
 [//]: # 'has JSDoc'
@@ -607,12 +664,6 @@ The argument of `having` is a function where you call the aggregate function and
 ```ts
 db.table.having((q) => q.count().gte(10));
 // HAVING count(*) >= 10
-```
-
-Alternatively, it accepts a raw SQL template:
-
-```ts
-db.table.having`count(*) >= ${10}`;
 ```
 
 Multiple having conditions will be combined with `AND`:
@@ -651,6 +702,16 @@ Arguments of the aggregate function and of the comparison can be raw SQL:
 
 ```ts
 db.table.having((q) => q.count(q.sql('coalesce(one, two)')).gte(q.sql`2 + 2`));
+```
+
+## havingSql
+
+[//]: # 'has JSDoc'
+
+Provide SQL expression for the `HAVING` SQL statement:
+
+```ts
+db.table.having`count(*) >= ${10}`;
 ```
 
 ## transform

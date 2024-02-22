@@ -35,18 +35,14 @@ export type MergeQuery<
     : K extends 'then'
     ? QueryThen<
         GetQueryResult<
-          QueryReturnType extends Q['returnType']
-            ? T['returnType']
-            : Q['returnType'],
+          QueryReturnType extends Q['returnType'] ? T : Q,
           MergeQueryResult<T, Q>
         >
       >
     : K extends 'catch'
     ? QueryCatch<
         GetQueryResult<
-          QueryReturnType extends Q['returnType']
-            ? T['returnType']
-            : Q['returnType'],
+          QueryReturnType extends Q['returnType'] ? T : Q,
           MergeQueryResult<T, Q>
         >
       >

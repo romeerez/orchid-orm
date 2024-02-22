@@ -9,6 +9,7 @@ import {
   emptyObject,
   Expression,
   getValueKey,
+  PickQueryMeta,
   PickQueryMetaResultWindows,
   QueryColumn,
   setParserToQuery,
@@ -52,13 +53,13 @@ export type Over<T extends PickQueryMetaResultWindows> =
 // It can be a column name, expression,
 // `pairs` is for { key: value } which is translated to ('key', value) (used by `jsonObjectAgg`),
 // `value` is for a query variable (used by `stringAgg` for a delimiter).
-export type FnExpressionArgs<Q extends Query> = (
+export type FnExpressionArgs<Q extends PickQueryMeta> = (
   | SelectableOrExpression<Q>
   | FnExpressionArgsPairs<Q>
   | FnExpressionArgsValue
 )[];
 
-export interface FnExpressionArgsPairs<Q extends Query> {
+export interface FnExpressionArgsPairs<Q extends PickQueryMeta> {
   pairs: Record<string, SelectableOrExpression<Q>>;
 }
 

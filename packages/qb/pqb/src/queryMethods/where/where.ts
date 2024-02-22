@@ -14,12 +14,12 @@ import {
   MaybeArray,
   PickQueryMeta,
   QueryColumn,
-  TemplateLiteralArgs,
+  SQLQueryArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { QueryBase } from '../../query/queryBase';
-import { RawSQL } from '../../sql/rawSql';
+import { sqlQueryArgsToExpression } from '../../sql/rawSql';
 import { ExpressionOrQueryReturning } from '../../common/utils';
 import { RelationsBase } from '../../relations';
 
@@ -84,13 +84,9 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
       };
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
-export type WhereArgs<T extends PickQueryMetaRelations> =
-  | WhereArg<T>[]
-  | TemplateLiteralArgs;
+export type WhereArgs<T extends PickQueryMetaRelations> = WhereArg<T>[];
 
-export type WhereNotArgs<T extends PickQueryMetaRelations> =
-  | [WhereArg<T>]
-  | TemplateLiteralArgs;
+export type WhereNotArgs<T extends PickQueryMetaRelations> = [WhereArg<T>];
 
 // Argument of `whereIn`: can be a column name or a tuple with column names to search in.
 export type WhereInColumn<T extends PickQueryMetaRelations> =
@@ -101,7 +97,7 @@ export type WhereInColumn<T extends PickQueryMetaRelations> =
 // If `WhereInColumn` is a tuple, it accepts a tuple of values described above.
 export type WhereInValues<
   T extends PickQueryMetaRelations,
-  Column extends WhereInColumn<T>,
+  Column,
 > = Column extends keyof T['meta']['selectable']
   ?
       | T['meta']['selectable'][Column]['column']['queryType'][]
@@ -136,24 +132,10 @@ export interface QueryMetaHasWhere {
   };
 }
 
-/**
- * Adds `where` arguments to query data: SQL template string is added as `RawSQL` object, other arguments are added as is.
- *
- * @param q - query object to add the data to
- * @param args - `where` arguments, may be a template literal
- */
 export const _queryWhere = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
-  if (Array.isArray(args[0])) {
-    return pushQueryValue(
-      q as unknown as Query,
-      'and',
-      new RawSQL(args as TemplateLiteralArgs),
-    ) as unknown as WhereResult<T>;
-  }
-
   return pushQueryArray(
     q as unknown as Query,
     'and',
@@ -161,23 +143,33 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
   ) as unknown as WhereResult<T>;
 };
 
+export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
+  return pushQueryValue(
+    q as unknown as Query,
+    'and',
+    sqlQueryArgsToExpression(args),
+  ) as unknown as WhereResult<T>;
+};
+
 /**
- * Adds `where` arguments to query data with a `NOT` keyword: SQL template string is added as `RawSQL` object, other arguments are added as is.
+ * Adds `where` arguments to query data with a `NOT` keyword:
+ * SQL template string is added as `RawSQL` object, other arguments are added as is.
  *
  * @param q - query object to add the data to
- * @param args - `where` arguments, may be a template literal
+ * @param args - `where` arguments
  */
 export const _queryWhereNot = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereNotArgs<T>,
 ): WhereResult<T> => {
-  if (Array.isArray(args[0])) {
-    return pushQueryValue(q as unknown as Query, 'and', {
-      NOT: new RawSQL(args as TemplateLiteralArgs),
-    }) as unknown as WhereResult<T>;
-  }
   return pushQueryValue(q as unknown as Query, 'and', {
     NOT: args,
+  }) as never;
+};
+
+export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
+  return pushQueryValue(q as unknown as Query, 'and', {
+    NOT: sqlQueryArgsToExpression(args),
   }) as unknown as WhereResult<T>;
 };
 
@@ -185,7 +177,7 @@ export const _queryWhereNot = <T extends PickQueryMetaRelations>(
  * Adds `where` arguments to query data. Arguments will be separated from each other with `OR`.
  *
  * @param q - query object to add the data to
- * @param args - `where` arguments, may be a template literal
+ * @param args - `where` arguments
  */
 export const _queryOr = <T extends PickQueryMetaRelations>(
   q: T,
@@ -308,7 +300,7 @@ export class Where {
    *   },
    *
    *   // where column equals to raw SQL
-   *   column: db.table.sql`raw expression`,
+   *   column: db.table.sql`sql expression`,
    * });
    * ```
    *
@@ -357,9 +349,6 @@ export class Where {
    * `where` supports raw SQL:
    *
    * ```ts
-   * db.table.where`a = b`;
-   *
-   * // or
    * db.table.where(db.table.sql`a = b`);
    *
    * // or
@@ -689,6 +678,30 @@ export class Where {
   }
 
   /**
+   * Use a custom SQL expression in `WHERE` statement:
+   *
+   * ```ts
+   * db.table.where`a = b`;
+   *
+   * // or
+   * db.table.where(db.table.sql`a = b`);
+   *
+   * // or
+   * import { raw } from 'orchid-orm';
+   *
+   * db.table.where(raw`a = b`);
+   * ```
+   *
+   * @param args - SQL expression
+   */
+  whereSql<T>(this: T, ...args: SQLQueryArgs): T {
+    return _queryWhereSql(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
+  }
+
+  /**
    * `whereNot` takes the same argument as `where`,
    * multiple conditions are combined with `AND`,
    * the whole group of conditions is negated with `NOT`.
@@ -711,6 +724,19 @@ export class Where {
       (this as unknown as Query).clone(),
       args as never,
     ) as never;
+  }
+
+  /**
+   * `whereNot` version accepting SQL expression:
+   *
+   * ```ts
+   * db.table.whereNot`sql expression`
+   * ```
+   *
+   * @param args - SQL expression
+   */
+  whereNotSql<T>(this: T, ...args: SQLQueryArgs): T {
+    return _queryWhereNotSql((this as unknown as Query).clone(), args) as never;
   }
 
   /**

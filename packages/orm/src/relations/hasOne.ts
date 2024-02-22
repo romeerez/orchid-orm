@@ -12,7 +12,6 @@ import {
   InsertQueryData,
   isQueryReturnsAll,
   Query,
-  RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
   SetQueryReturnsOne,
@@ -48,7 +47,6 @@ import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
   EmptyObject,
-  RecordKeyTrue,
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
@@ -98,7 +96,7 @@ export interface HasOneInfo<
   T extends RelationConfigSelf,
   Name extends keyof T['relations'] & string,
   TableQuery extends Query,
-  Populate extends RecordKeyTrue = T['relations'][Name]['options'] extends RelationRefsOptions
+  Populate = T['relations'][Name]['options'] extends RelationRefsOptions
     ? Record<T['relations'][Name]['options']['references'][number], true>
     : T['relations'][Name]['options'] extends RelationKeysOptions
     ? Record<T['relations'][Name]['options']['foreignKey'], true>
@@ -133,7 +131,7 @@ export interface HasOneInfo<
   NestedCreateQuery extends Query = T['relations'][Name]['options'] extends RelationThroughOptions
     ? Q
     : AddQueryDefaults<Q, Populate>,
-> extends RelationConfigBase {
+> {
   query: Q;
   methodQuery: T['relations'][Name]['options']['required'] extends true
     ? SetQueryReturnsOne<Q>

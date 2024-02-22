@@ -4,17 +4,9 @@ import {
   userData,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import { raw } from '../sql/rawSql';
 
 describe('from', () => {
-  it('should accept raw parameter', () => {
-    const q = User.all();
-    expectSql(
-      q.from`(SELECT * FROM profile)`.as('t').toSQL(),
-      `SELECT * FROM (SELECT * FROM profile) AS "t"`,
-    );
-    expectQueryNotMutated(q);
-  });
-
   it('should accept query parameter', () => {
     const q = User.all();
     expectSql(
@@ -80,5 +72,32 @@ describe('from', () => {
         },
       ]);
     });
+  });
+});
+
+describe('fromSql', () => {
+  it('should accept sql', () => {
+    const q = User.all();
+
+    expectSql(
+      q.fromSql`(SELECT * FROM profile)`.as('t').toSQL(),
+      `SELECT * FROM (SELECT * FROM profile) AS "t"`,
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should accept raw', () => {
+    const q = User.all();
+
+    expectSql(
+      q
+        .fromSql(raw({ raw: `(SELECT * FROM profile)` }))
+        .as('t')
+        .toSQL(),
+      `SELECT * FROM (SELECT * FROM profile) AS "t"`,
+    );
+
+    expectQueryNotMutated(q);
   });
 });

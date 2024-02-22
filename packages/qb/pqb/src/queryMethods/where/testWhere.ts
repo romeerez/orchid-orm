@@ -125,7 +125,7 @@ export const testWhere = (
 
     it('should accept raw sql with template', () => {
       expectSql(
-        buildSql((q) => q.where`column = ${123}`),
+        buildSql((q) => q.whereSql`column = ${123}`),
         `
               ${startSql} (column = $1)
             `,
@@ -260,7 +260,7 @@ export const testWhere = (
 
     it('should accept raw sql with template', () => {
       expectSql(
-        buildSql((q) => q.whereNot`column = ${123}`),
+        buildSql((q) => q.whereNotSql`column = ${123}`),
         `
               ${startSql} NOT (column = $1)
             `,
