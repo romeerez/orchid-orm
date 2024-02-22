@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.5.4
+
+### Patch Changes
+
+- 012752d0: Add valibot integration
+- Updated dependencies [012752d0]
+  - pqb@0.26.0
+  - orchid-orm-schema-to-zod@0.6.4
+  - orchid-core@0.12.1
+
 ## 0.5.3
 
 ### Patch Changes

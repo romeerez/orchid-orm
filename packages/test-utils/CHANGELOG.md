@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.2.1
+
+### Patch Changes
+
+- 012752d0: Add valibot integration
+
 ## 0.2.0
 
 ### Minor Changes

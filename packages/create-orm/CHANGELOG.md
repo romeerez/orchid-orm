@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.1.1
+
+### Patch Changes
+
+- 012752d0: Add valibot integration
+
 ## 0.1.0
 
 ### Minor Changes

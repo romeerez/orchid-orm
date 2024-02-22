@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.14.4
+
+### Patch Changes
+
+- 012752d0: Add valibot integration
+- Updated dependencies [012752d0]
+  - pqb@0.26.0
+  - orchid-core@0.12.1
+
 ## 2.14.3
 
 ### Patch Changes

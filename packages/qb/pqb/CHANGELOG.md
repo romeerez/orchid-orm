@@ -1,5 +1,16 @@
 # pqb
 
+## 0.26.0
+
+### Minor Changes
+
+- 012752d0: Add valibot integration
+
+### Patch Changes
+
+- Updated dependencies [012752d0]
+  - orchid-core@0.12.1
+
 ## 0.25.1
 
 ### Patch Changes
