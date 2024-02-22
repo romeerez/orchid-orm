@@ -26,11 +26,11 @@ export abstract class DateBaseColumn<
 > extends ColumnType<
   Schema,
   string,
-  Schema['stringNumberDate'],
+  ReturnType<Schema['stringNumberDate']>,
   OperatorsDate,
   DateColumnInput,
   string,
-  Schema['stringSchema']
+  ReturnType<Schema['stringSchema']>
 > {
   declare data: DateColumnData;
   operators = Operators.date;
@@ -39,7 +39,12 @@ export abstract class DateBaseColumn<
   asDate: Schema['dateAsDate'];
 
   constructor(schema: Schema) {
-    super(schema, schema.stringNumberDate);
+    super(
+      schema,
+      schema.stringNumberDate() as never,
+      schema.stringSchema() as never,
+      schema.stringNumberDate() as never,
+    );
     this.asNumber = schema.dateAsNumber;
     this.asDate = schema.dateAsDate;
   }
@@ -138,7 +143,7 @@ export class TimestampTZColumn<
 export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsTime
 > {
   declare data: DateColumnData & { dateTimePrecision?: number };
@@ -146,7 +151,7 @@ export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   operators = Operators.time;
 
   constructor(schema: Schema, dateTimePrecision?: number) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
     this.data.dateTimePrecision = dateTimePrecision;
   }
 
@@ -168,7 +173,7 @@ export class IntervalColumn<
 > extends ColumnType<
   Schema,
   TimeInterval,
-  Schema['timeInterval'],
+  ReturnType<Schema['timeInterval']>,
   OperatorsDate
 > {
   declare data: ColumnData & { fields?: string; precision?: number };
@@ -176,7 +181,7 @@ export class IntervalColumn<
   operators = Operators.date;
 
   constructor(schema: Schema, fields?: string, precision?: number) {
-    super(schema, schema.timeInterval);
+    super(schema, schema.timeInterval() as never);
     this.data.fields = fields;
     this.data.precision = precision;
   }

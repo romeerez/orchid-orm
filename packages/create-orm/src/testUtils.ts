@@ -38,4 +38,5 @@ export const testInitConfig: InitConfig = {
   projectName: 'project',
   runner: 'tsx',
   esm: true,
+  validation: 'no',
 };

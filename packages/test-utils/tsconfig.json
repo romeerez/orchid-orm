@@ -6,7 +6,7 @@
     "paths": {
       "orchid-core": ["../core/src"],
       "pqb": ["../qb/pqb/src"],
-      "schema-to-zod": ["../schema-to-zod/src"]
+      "schema-to-zod": ["../schemaConfigs/zod/src"]
     }
   }
 }

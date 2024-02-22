@@ -11,7 +11,7 @@
       "orchid-orm": ["../orm/src"],
       "rake-db": ["./src"],
       "test-utils": ["../test-utils/src"],
-      "schema-to-zod": ["../schema-to-zod/src"]
+      "schema-to-zod": ["../schemaConfigs/zod/src"]
     }
   }
 }

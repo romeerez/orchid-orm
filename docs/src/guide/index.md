@@ -1,46 +1,84 @@
 # Overview
 
-`Orchid ORM` is a library for node.js to help to work with a Postgres database (more databases to come),
-allows to perform queries in a query builder style, and defines tables and relations like an ORM.
+`Orchid ORM` is a library for node.js to help to work with a Postgres database,
+with super-flexible and type-safe query builder,
+allowing to easily define and compose queries with table relations.
 
 The main focus is to keep it as powerful as possible, concise and intuitive, performant, and completely type-safe.
 
-Node.js already has a lot of ORMs, and query builders, but all of them force compromises.
+To get maximum control over the db, it has a query builder `pqb` which is inspired by [knex](http://knexjs.org/) and has all the same functionalities,
+but `pqb` is written from scratch with TypeScript in mind.
 
-To get maximum control over the db, it has a query builder `pqb` which is inspired by [knex](http://knexjs.org/) and has all the same functionalities, but `pqb` is written from scratch with TypeScript in mind.
+Type safeness is achieved by defining a schema of columns and using inferred types in all query methods.
 
-Type safeness is achieved by defining a schema of columns in the way [Zod](https://github.com/colinhacks/zod) works and using inferred types in all methods.
-
-## Not an ORM in OOP sense
-
-ORMs in OOP languages make it so all the records loaded from the database are instantiated as instances of a specific class,
-and it is allowed to call methods on these instances, this is called Active Record pattern. For example:
+Unlike other ORMs in OOP style that rely on Active Record pattern and may look similar to:
 
 ```ts
+// In some other ORMs, post is an instance of class Post
 const post = await Post.findBy({ id: 123 });
 await post.update({ title: 'new title' });
 ```
 
-Orchid ORM is designed with different goals, so the records are returned as a plain objects, for example:
+`Orchid ORM` is designed with different goals, so the records are returned as a plain objects:
 
 ```ts
+// In Orchid ORM, post is a plain object
 const post = await Post.findBy({ id: 123 });
 await Post.update(post, { title: 'new title' });
 ```
 
-This is done because instantiating records consumes some CPU time,
-accessing record data through getters/setters also takes some CPU time,
-serializing records to JSON would require a separate step.
-Only when selecting all columns it is possible to instantiate properly,
-because the table class requires all columns to be defined.
-So, in author's opinion, Active Record pattern only complicates things and takes away a bit of performance.
+This approach allows to select relations in a nested way, perform customized sub-queries, and keep everything type-safe:
 
-For the same reasons, Data Mapper pattern, Unit of Work, and Data encapsulation are not included, therefore,
-`Orchid ORM` is not an ORM in a traditional OOP sense.
+```ts
+// post type is completely inferred
+const post = await Post.find(123).select('title', 'body', {
+  likesCount: (q) => q.likes.count(),
+  comments: (q) =>
+    q.comments
+      .order({ createdAt: 'DESC' })
+      .limit(50)
+      .select('body', {
+        author: (q) => q.author.select('avatar', 'username'),
+      }),
+});
+```
+
+The query builder functionality is aimed to be as flexible as possible, allowing to chain queries with relations and conditions.
+
+For example, selecting posts that have 2 specific tags:
+
+```ts
+const posts = await Post.where((q) =>
+  q.tags.whereIn('tagName', ['typescript', 'node.js']).count().gte(2),
+);
+```
+
+Relations can be chained in a sub-query.
+Collecting array of all commenters' names for every post:
+
+```ts
+const posts = await Post.select({
+  // `pluck` collects a plain array
+  commentedBy: (q) => q.comments.author.pluck('username'),
+});
+```
+
+Custom SQL can be injected into any place of the query.
+Inserted values are properly handled to not allow SQL injections.
+
+```ts
+const posts = await;
+Customer.select({
+  upper: Post.sql<string>`upper(title)`,
+}).whereSql`reverse(title) = ${reversedTitle}`.orderSql`reverse(title)`
+  .havingSql`count("someColumn") > 300`;
+```
 
 ## Comparison with other database tools
 
-Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison) about it. And I concluded that there is not a single ORM that can satisfy the typical needs of a TS node.js project. And that's why `Orchid ORM` was born because an alternative is needed.
+Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison) about it.
+And I concluded that there is not a single ORM that can satisfy the typical needs of a TS node.js project.
+And that's why `Orchid ORM` was born because an alternative is needed.
 
 If all the ORMs feel limiting and messy, you may want to try using query builders or raw SQL instead, but they bring their disadvantages:
 

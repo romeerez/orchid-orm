@@ -22,13 +22,20 @@ export type TextColumnData = StringTypeData;
 
 export abstract class TextBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsText
+> {
   declare data: TextColumnData;
   operators = Operators.text;
 
   constructor(
     schema: Schema,
-    schemaType: Schema['stringSchema'] = schema.stringSchema,
+    schemaType: ReturnType<
+      Schema['stringSchema']
+    > = schema.stringSchema() as never,
   ) {
     super(schema, schemaType);
   }
@@ -40,7 +47,10 @@ export abstract class LimitedTextBaseColumn<
   declare data: TextColumnData & { maxChars?: number };
 
   constructor(schema: Schema, limit?: number) {
-    super(schema, limit ? schema.stringMax(limit) : schema.stringSchema);
+    super(
+      schema,
+      (limit ? schema.stringMax(limit) : schema.stringSchema()) as never,
+    );
     this.data.maxChars = limit;
   }
 
@@ -150,7 +160,7 @@ const minMaxToSchema = <Schema extends ColumnSchemaConfig>(
     ? max
       ? schema.stringMinMax(min, max)
       : schema.stringMin(min)
-    : schema.stringSchema;
+    : schema.stringSchema();
 
 // text	variable unlimited length
 export class TextColumn<
@@ -160,7 +170,7 @@ export class TextColumn<
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
   constructor(schema: Schema, min?: number, max?: number) {
-    super(schema, minMaxToSchema(schema, min, max));
+    super(schema, minMaxToSchema(schema, min, max) as never);
     setTextColumnData(this, min, max);
   }
 
@@ -173,14 +183,14 @@ export class TextColumn<
 export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   Buffer,
-  Schema['buffer'],
+  ReturnType<Schema['buffer']>,
   OperatorsText
 > {
   dataType = 'bytea' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.buffer);
+    super(schema, schema.buffer() as never);
   }
 
   toCode(t: string): Code {
@@ -192,14 +202,14 @@ export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class PointColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'point' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -211,14 +221,14 @@ export class PointColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class LineColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'line' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -230,14 +240,14 @@ export class LineColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class LsegColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'lseg' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -249,14 +259,14 @@ export class LsegColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class BoxColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'box' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -269,14 +279,14 @@ export class BoxColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class PathColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'path' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -287,12 +297,17 @@ export class PathColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 // polygon	40+16n bytes	Polygon (similar to closed path)	((x1,y1),...)
 export class PolygonColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsText
+> {
   dataType = 'polygon' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -304,14 +319,14 @@ export class PolygonColumn<
 export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'circle' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -321,11 +336,11 @@ export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
 export class MoneyColumn<
   Schema extends ColumnSchemaConfig,
-> extends NumberBaseColumn<Schema, Schema['stringSchema']> {
+> extends NumberBaseColumn<Schema, ReturnType<Schema['stringSchema']>> {
   dataType = 'money' as const;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -346,14 +361,14 @@ export class MoneyColumn<
 export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'cidr' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -365,14 +380,14 @@ export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'inet' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -383,12 +398,17 @@ export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 // macaddr	6 bytes	MAC addresses
 export class MacAddrColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsText
+> {
   dataType = 'macaddr' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -399,12 +419,17 @@ export class MacAddrColumn<
 // macaddr8	8 bytes	MAC addresses (EUI-64 format)
 export class MacAddr8Column<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsText
+> {
   dataType = 'macaddr8' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -473,12 +498,17 @@ type TsVectorGeneratedColumns = string[] | Record<string, SearchWeight>;
 // A tsvector value is a sorted list of distinct lexemes
 export class TsVectorColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsText
+> {
   dataType = 'tsvector' as const;
   operators = Operators.text;
 
   constructor(schema: Schema, public defaultLanguage = getDefaultLanguage()) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -555,12 +585,17 @@ export class TsVectorColumn<
 // A tsquery value stores lexemes that are to be searched for
 export class TsQueryColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, Schema['stringSchema'], OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['stringSchema']>,
+  OperatorsText
+> {
   dataType = 'tsquery' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -575,14 +610,14 @@ const uuidDefault = new RawSQL(uuidDefaultSQL);
 export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['uuid'],
+  ReturnType<Schema['uuid']>,
   OperatorsText
 > {
   dataType = 'uuid' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.uuid);
+    super(schema, schema.uuid() as never);
   }
 
   primaryKey<T extends PickColumnBaseData>(
@@ -614,14 +649,14 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class XMLColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
-  Schema['stringSchema'],
+  ReturnType<Schema['stringSchema']>,
   OperatorsText
 > {
   dataType = 'xml' as const;
   operators = Operators.text;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema);
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string): Code {
@@ -637,7 +672,7 @@ export class CitextColumn<
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
   constructor(schema: Schema, min?: number, max?: number) {
-    super(schema, minMaxToSchema(schema, min, max));
+    super(schema, minMaxToSchema(schema, min, max) as never);
     setTextColumnData(this, min, max);
   }
 

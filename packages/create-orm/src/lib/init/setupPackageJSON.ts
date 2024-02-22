@@ -7,8 +7,11 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
   const pairs = await Promise.all([
     getLatestPackageVersion('dotenv', 'dependencies'),
     getLatestPackageVersion('orchid-orm', 'dependencies'),
-    config.addSchemaToZod &&
-      getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies'),
+    config.validation === 'zod'
+      ? getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies')
+      : config.validation === 'valibot'
+      ? getLatestPackageVersion('orchid-orm-valibot', 'dependencies')
+      : undefined,
     getLatestPackageVersion('rake-db', 'devDependencies'),
     config.addTestFactory &&
       getLatestPackageVersion('orchid-orm-test-factory', 'devDependencies'),

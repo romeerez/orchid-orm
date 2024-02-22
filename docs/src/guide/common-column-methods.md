@@ -164,7 +164,7 @@ export class Table extends BaseTable {
     // encode boolean, number, or string to text before saving
     column: t
       .text(3, 100)
-      // when having validation library, the first argument is a schema
+      // when having validation library, the first argument is a validation schema
       .encode(
         z.boolean().or(z.number()).or(z.string()),
         (input: boolean | number | string) => String(input),
@@ -193,15 +193,21 @@ first argument is a schema for validating the output.
 
 ```ts
 import { z } from 'zod';
+import { number, integer } from 'valibot';
 
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    column: t
+    columnZod: t
       .text(3, 100)
       // when having validation library, the first argument is a schema
       .parse(z.number().int(), (input) => parseInt(input))
       // no schema argument otherwise
+      .parse((input) => parseInt(input)),
+
+    columnValibot: t
+      .text(3, 100)
+      .parse(number([integer()]), (input) => parseInt(input))
       .parse((input) => parseInt(input)),
   }));
 }

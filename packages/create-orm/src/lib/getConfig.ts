@@ -68,9 +68,23 @@ export async function getConfig(
         message: 'Add a separate database for tests?',
       },
       {
-        type: 'confirm',
-        name: 'addSchemaToZod',
-        message: 'Add Zod for validations?',
+        type: 'select',
+        name: 'validation',
+        message: 'Integrate with a validation library?',
+        choices: [
+          {
+            title: 'no',
+            value: 'no',
+          },
+          {
+            title: 'zod',
+            value: 'zod',
+          },
+          {
+            title: 'valibot',
+            value: 'valibot',
+          },
+        ],
       },
       {
         type: 'confirm',

@@ -1,8 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "include": [
-    "./src"
-  ],
+  "include": ["./src"],
   "compilerOptions": {
     "outDir": "./dist",
     "baseUrl": ".",
@@ -10,7 +8,7 @@
       "pqb": ["../qb/pqb/src"],
       "orchid-core": ["src"],
       "test-utils": ["../test-utils/src"],
-      "schema-to-zod": ["../schema-to-zod/src"]
+      "schema-to-zod": ["../schemaConfigs/zod/src"]
     }
   }
 }

@@ -20,6 +20,7 @@ Here is how centralized error handler may look like:
 
 ```ts
 import { ZodError } from 'zod';
+import { ValiError } from 'valibot';
 import { NotFoundError } from 'orchid-orm';
 
 // generic error class that the code of your app will use to throw errors
@@ -62,10 +63,16 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // catch validation errors
+  // catch Zod errors
   if (err instanceof ZodError) {
     return res.status(400).send({
       // serialize validation error somehow
+    });
+  }
+
+  if (err instanceof ValiError) {
+    return res.status(400).send({
+      error: err.issues.map((iss) => iss.message).join('. '),
     });
   }
 

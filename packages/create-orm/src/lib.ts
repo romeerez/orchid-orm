@@ -1,7 +1,7 @@
 export type UserProvidedConfig = {
   path: string;
   testDatabase?: boolean;
-  addSchemaToZod?: boolean;
+  validation: 'no' | 'zod' | 'valibot';
   addTestFactory?: boolean;
   demoTables?: boolean;
   timestamp?: 'string' | 'date' | 'number';

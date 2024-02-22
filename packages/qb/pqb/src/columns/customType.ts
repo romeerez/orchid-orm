@@ -12,11 +12,21 @@ import { Operators } from './operators';
 // for a user-defined type, or for unsupported yet type from some module
 export class CustomTypeColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, unknown, Schema['unknown'], typeof Operators.any> {
+> extends ColumnType<
+  Schema,
+  unknown,
+  ReturnType<Schema['unknown']>,
+  typeof Operators.any
+> {
   operators = Operators.any;
 
   constructor(schema: Schema, public dataType: string) {
-    super(schema, schema.unknown, schema.unknown, schema.unknown);
+    super(
+      schema,
+      schema.unknown() as never,
+      schema.unknown() as never,
+      schema.unknown() as never,
+    );
     this.data.isOfCustomType = true;
   }
 

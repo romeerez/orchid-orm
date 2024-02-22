@@ -385,7 +385,7 @@ export interface PickOutputTypeAndOperators {
   operators: unknown;
 }
 
-// Workaround for the "type instantiation is too deep" error.
+// Use a lightweight column type across the query builder, this helps TS significantly.
 export interface QueryColumn<T = unknown, Op = BaseOperators> {
   dataType: string;
   type: T;
@@ -460,7 +460,7 @@ export abstract class ColumnTypeBase<
   // data of the column that specifies column characteristics and validations
   data: Data;
 
-  errors: Schema['errors'];
+  error: Schema['error'];
 
   constructor(
     schema: ColumnTypeSchemaArg,
@@ -478,7 +478,7 @@ export abstract class ColumnTypeBase<
     this.asType = schema.asType;
     this.nullable = schema.nullable;
     this.data = {} as Data;
-    this.errors = schema.errors;
+    this.error = schema.error;
     const name = consumeColumnName();
     if (name) {
       this.data.name = name;
@@ -579,13 +579,24 @@ export abstract class ColumnTypeBase<
    *
    * The type of `input` argument will be used as the type of the column when creating and updating.
    *
+   * If you have a validation library [installed and configured](/guide/columns-validation-methods.html),
+   * first argument is a schema to validate the input.
+   *
    * ```ts
+   * import { z } from 'zod';
+   *
    * export class Table extends BaseTable {
    *   readonly table = 'table';
    *   columns = this.setColumns((t) => ({
    *     // encode boolean, number, or string to text before saving
    *     column: t
    *       .text(3, 100)
+   *       // when having validation library, the first argument is a validation schema
+   *       .encode(
+   *         z.boolean().or(z.number()).or(z.string()),
+   *         (input: boolean | number | string) => String(input),
+   *       )
+   *       // no schema argument otherwise
    *       .encode((input: boolean | number | string) => String(input)),
    *   }));
    * }
@@ -605,12 +616,27 @@ export abstract class ColumnTypeBase<
    *
    * The type of input is the type of column before `.parse`, the resulting type will replace the type of column.
    *
+   * If you have a validation library [installed and configured](/guide/columns-validation-methods.html),
+   * first argument is a schema for validating the output.
+   *
    * ```ts
+   * import { z } from 'zod';
+   * import { number, integer } from 'valibot';
+   *
    * export class Table extends BaseTable {
    *   readonly table = 'table';
    *   columns = this.setColumns((t) => ({
-   *     // parse text to integer
-   *     column: t.text(3, 100).parse((input) => parseInt(input)),
+   *     columnZod: t
+   *       .text(3, 100)
+   *       // when having validation library, the first argument is a schema
+   *       .parse(z.number().int(), (input) => parseInt(input))
+   *       // no schema argument otherwise
+   *       .parse((input) => parseInt(input)),
+   *
+   *     columnValibot: t
+   *       .text(3, 100)
+   *       .parse(number([integer()]), (input) => parseInt(input))
+   *       .parse((input) => parseInt(input)),
    *   }));
    * }
    *

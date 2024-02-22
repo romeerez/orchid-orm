@@ -19,9 +19,17 @@ jest.mock('rake-db', () => require('./packages/rake-db/src'), {
   virtual: true,
 });
 
-jest.mock('schema-to-zod', () => require('./packages/schema-to-zod/src'), {
+jest.mock('schema-to-zod', () => require('./packages/schemaConfigs/zod/src'), {
   virtual: true,
 });
+
+jest.mock(
+  'orchid-orm-valibot',
+  () => require('./packages/schemaConfigs/valibot/src'),
+  {
+    virtual: true,
+  },
+);
 
 jest.mock('test-utils', () => require('./packages/test-utils/src'), {
   virtual: true,

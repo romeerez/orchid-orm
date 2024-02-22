@@ -1,0 +1,61 @@
+{
+  "name": "orchid-orm-valibot",
+  "version": "0.0.0",
+  "description": "OrchidORM valibot integration",
+  "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/schemaConfigs/valibot"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "jest --watch --verbose false",
+    "check": "jest",
+    "types": "tsc",
+    "test:ci": "jest --coverage --coverageReporters json-summary",
+    "build": "rimraf ./dist/ && rollup -c ../../../rollup.config.mjs",
+    "prepublishOnly": "pnpm build"
+  },
+  "jest": {
+    "rootDir": "src",
+    "coverageDirectory": "../../coverage",
+    "setupFiles": [
+      "dotenv/config"
+    ],
+    "globalSetup": "../../../../jest-global-setup.ts",
+    "setupFilesAfterEnv": [
+      "../../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
+  },
+  "keywords": [
+    "orchid-orm",
+    "query-builder",
+    "schema",
+    "valibot"
+  ],
+  "author": "Roman Kushyn",
+  "license": "ISC",
+  "dependencies": {
+    "orchid-core": "workspace:*",
+    "pqb": "workspace:*",
+    "valibot": "^0.29.0"
+  },
+  "devDependencies": {
+    "test-utils": "workspace:*"
+  }
+}

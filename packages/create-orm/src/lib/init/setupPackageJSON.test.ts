@@ -69,24 +69,40 @@ describe('setupPackageJSON', () => {
 `);
   });
 
-  it('should create package.json with additional deps if not exist', async () => {
-    readFile.mockRejectedValueOnce(new EnoentError());
+  it('should create package.json with additional deps if not exist or when such dependencies are missing', async () => {
+    for (const content of [null, '{}']) {
+      for (const validation of ['zod', 'valibot'] as const) {
+        jest.clearAllMocks();
 
-    await initSteps.setupPackageJSON({
-      ...testInitConfig,
-      addSchemaToZod: true,
-      addTestFactory: true,
-    });
+        if (content) {
+          readFile.mockResolvedValueOnce(content);
+        } else {
+          readFile.mockRejectedValueOnce(new EnoentError());
+        }
 
-    expect(writeFile.mock.calls[0][1]).toBe(`{
-  "name": "project",
+        await initSteps.setupPackageJSON({
+          ...testInitConfig,
+          validation,
+          addTestFactory: true,
+        });
+
+        expect(writeFile.mock.calls[0][1]).toBe(`{${
+          content
+            ? ''
+            : `
+  "name": "project",`
+        }
   "type": "module",
   "scripts": {
     ${tsxScripts}
   },
   "dependencies": {
     ${dependencies},
-    "orchid-orm-schema-to-zod": "^1.2.3"
+    ${
+      validation === 'zod'
+        ? '"orchid-orm-schema-to-zod"'
+        : '"orchid-orm-valibot"'
+    }: "^1.2.3"
   },
   "devDependencies": {
     "rake-db": "^1.2.3",
@@ -97,39 +113,13 @@ describe('setupPackageJSON', () => {
   }
 }
 `);
-  });
-
-  it('should add scripts, dependencies and devDependencies if they are not present in package.json', async () => {
-    readFile.mockResolvedValueOnce('{}');
-
-    await initSteps.setupPackageJSON({
-      ...testInitConfig,
-      addSchemaToZod: true,
-      addTestFactory: true,
-    });
-
-    expect(writeFile.mock.calls[0][1]).toBe(`{
-  "type": "module",
-  "scripts": {
-    ${tsxScripts}
-  },
-  "dependencies": {
-    ${dependencies},
-    "orchid-orm-schema-to-zod": "^1.2.3"
-  },
-  "devDependencies": {
-    "rake-db": "^1.2.3",
-    "orchid-orm-test-factory": "^1.2.3",
-    "@types/node": "^1.2.3",
-    "typescript": "^1.2.3",
-    ${tsxDeps}
-  }
-}
-`);
+      }
+    }
   });
 
   it('should insert scripts and dependencies', async () => {
-    readFile.mockResolvedValueOnce(`{
+    for (const validation of ['zod', 'valibot'] as const) {
+      readFile.mockResolvedValueOnce(`{
   "scripts": {
     "ko": "ko"
   },
@@ -141,15 +131,17 @@ describe('setupPackageJSON', () => {
   }
 }`);
 
-    await initSteps.setupPackageJSON({
-      ...testInitConfig,
-      addSchemaToZod: true,
-      addTestFactory: true,
-    });
+      writeFile.mock.calls.length = 0;
 
-    const call = writeFile.mock.calls.find(([to]) => to === packageJSONPath);
-    expect(call?.[1]).toBe(
-      `{
+      await initSteps.setupPackageJSON({
+        ...testInitConfig,
+        validation,
+        addTestFactory: true,
+      });
+
+      const call = writeFile.mock.calls.find(([to]) => to === packageJSONPath);
+      expect(call?.[1]).toBe(
+        `{
   "type": "module",
   "scripts": {
     "ko": "ko",
@@ -159,7 +151,11 @@ describe('setupPackageJSON', () => {
     "ko": "ko",
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
-    "orchid-orm-schema-to-zod": "^1.2.3"
+    ${
+      validation === 'zod'
+        ? '"orchid-orm-schema-to-zod"'
+        : '"orchid-orm-valibot"'
+    }: "^1.2.3"
   },
   "devDependencies": {
     "ko": "ko",
@@ -171,7 +167,8 @@ describe('setupPackageJSON', () => {
   }
 }
 `,
-    );
+      );
+    }
   });
 
   it('should support tsx runner', async () => {

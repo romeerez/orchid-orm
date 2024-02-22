@@ -8,12 +8,17 @@ export type BooleanQueryColumn = QueryColumn<boolean, OperatorsBoolean>;
 // 1 byte, true or false
 export class BooleanColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, boolean, Schema['boolean'], OperatorsBoolean> {
+> extends ColumnType<
+  Schema,
+  boolean,
+  ReturnType<Schema['boolean']>,
+  OperatorsBoolean
+> {
   dataType = 'boolean' as const;
   operators = Operators.boolean;
 
   constructor(schema: Schema) {
-    super(schema, schema.boolean);
+    super(schema, schema.boolean() as never);
   }
 
   toCode(t: string): Code {

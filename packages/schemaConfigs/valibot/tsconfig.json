@@ -1,13 +1,14 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["./src", "bun.test.ts"],
+  "include": ["./src"],
   "compilerOptions": {
+    "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
       "orchid-core": ["../../core/src"],
+      "pqb": ["../../qb/pqb/src"],
       "test-utils": ["../../test-utils/src"],
-      "schema-to-zod": ["../../schemaConfigs/zod/src"]
-    },
-    "types": ["@types/jest", "bun-types"]
+      "schema-to-zod": ["../zod/src"]
+    }
   }
 }

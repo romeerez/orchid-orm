@@ -17,7 +17,8 @@
     "myqb": "pnpm --filter myqb",
     "pqb": "pnpm --filter pqb",
     "rake-db": "pnpm --filter rake-db",
-    "schema-to-zod": "pnpm --filter orchid-orm-schema-to-zod",
+    "zod": "pnpm --filter orchid-orm-schema-to-zod",
+    "valibot": "pnpm --filter orchid-orm-valibot",
     "test-factory": "pnpm --filter orchid-orm-test-factory",
     "test-utils": "pnpm --filter test-utils",
     "doc": "cd docs && npm start"
