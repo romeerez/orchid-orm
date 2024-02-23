@@ -13,6 +13,7 @@ import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
 import { ChangeCallback, pushChange } from './migration/change';
 import { runRecurrentMigrations } from './commands/recurrent';
+import { migrationList } from './migration/migrationList';
 
 /**
  * Type of {@link rakeDb} function
@@ -136,6 +137,8 @@ const runCommand = async <
     await generate(config, args.slice(1));
   } else if (arg === 'pull') {
     await pullDbStructure(toArray(options)[0], config);
+  } else if (arg === 'list' || arg === 'l') {
+    await migrationList(config, args.slice(1));
   } else if (config.commands[arg]) {
     await config.commands[arg](toArray(options), config, args.slice(1));
   } else if (arg !== 'rec' && arg !== 'recurrent') {
