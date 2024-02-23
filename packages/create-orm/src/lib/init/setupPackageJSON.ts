@@ -12,6 +12,8 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
       : config.validation === 'valibot'
       ? getLatestPackageVersion('orchid-orm-valibot', 'dependencies')
       : undefined,
+    config.validation === 'valibot' &&
+      getLatestPackageVersion('valibot', 'dependencies'),
     getLatestPackageVersion('rake-db', 'devDependencies'),
     config.addTestFactory &&
       getLatestPackageVersion('orchid-orm-test-factory', 'devDependencies'),

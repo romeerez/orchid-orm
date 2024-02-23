@@ -100,9 +100,10 @@ describe('setupPackageJSON', () => {
     ${dependencies},
     ${
       validation === 'zod'
-        ? '"orchid-orm-schema-to-zod"'
-        : '"orchid-orm-valibot"'
-    }: "^1.2.3"
+        ? '"orchid-orm-schema-to-zod": "^1.2.3"'
+        : `"orchid-orm-valibot": "^1.2.3",
+    "valibot": "^1.2.3"`
+    }
   },
   "devDependencies": {
     "rake-db": "^1.2.3",
@@ -153,9 +154,10 @@ describe('setupPackageJSON', () => {
     "orchid-orm": "^1.2.3",
     ${
       validation === 'zod'
-        ? '"orchid-orm-schema-to-zod"'
-        : '"orchid-orm-valibot"'
-    }: "^1.2.3"
+        ? '"orchid-orm-schema-to-zod": "^1.2.3"'
+        : `"orchid-orm-valibot": "^1.2.3",
+    "valibot": "^1.2.3"`
+    }
   },
   "devDependencies": {
     "ko": "ko",
