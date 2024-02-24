@@ -1,4 +1,4 @@
-import { TransactionAdapter } from 'pqb';
+import { Adapter, TransactionAdapter } from 'pqb';
 import { quoteWithSchema, RakeDbConfig } from '../common';
 import { SilentQueries } from './migration';
 import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
@@ -39,11 +39,11 @@ export const getMigratedVersionsMap = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
 >(
-  db: TransactionAdapter,
+  adapter: Adapter | TransactionAdapter,
   config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<Record<string, boolean>> => {
   try {
-    const result = await db.arrays<[string]>(
+    const result = await adapter.arrays<[string]>(
       `SELECT * FROM ${quoteWithSchema({ name: config.migrationsTable })}`,
     );
     return Object.fromEntries(result.rows.map((row) => [row[0], true]));

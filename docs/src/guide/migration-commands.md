@@ -118,7 +118,7 @@ change(async (db) => {
 
 If timestamps in your database don't have a time zone, all the above works as well, but will use `timestampNoTZ` and `timestampNoTZSnakeCase` instead.
 
-### Custom and unknown columns
+### custom and unknown columns
 
 If column type is a custom one defined by user, or if it is not supported yet, `db pull` will log a warning and output the column as follows:
 
@@ -210,6 +210,43 @@ npm run db redo
 
 # redo 3 last migrations:
 npm run db redo 3
+```
+
+## status, s
+
+`status` or `s` command will display a list of migrations to your terminal:
+
+```sh
+$ pnpm db s
+
+ Database: db-name
+
+ Status | Migration ID | Name
+------------------------------------------
+   Up   | 0001         | First migration
+   Up   | 0002         | Second migration
+  Down  | 0003         | Third migration
+------------------------------------------
+```
+
+Add `path` or `p` command argument to also output paths to migration files:
+
+```sh
+$ pnpm db s p
+
+ Database: db-name
+
+ Status | Migration ID | Name
+------------------------------------------
+   Up   | 0001         | First migration
+file:///migrations/0001_first_migration
+
+   Up   | 0002         | Second migration
+file:///migrations/0002_second_migration
+
+  Down  | 0003         | Third migration
+file:///migrations/0003_third_migration
+------------------------------------------
 ```
 
 ## recurrent, rec

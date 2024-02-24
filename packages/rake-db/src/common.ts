@@ -128,6 +128,9 @@ export interface RakeDbConfig<
   afterRollback?(db: Db): Promise<void>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyRakeDbConfig = RakeDbConfig<any, any>;
+
 export interface ModuleExportsRecord {
   [K: string]: () => Promise<unknown>;
 }
