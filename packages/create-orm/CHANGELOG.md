@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.1.2
+
+### Patch Changes
+
+- 5853befe: Add valibot dependency when choosing valibot
+
 ## 0.1.1
 
 ### Patch Changes

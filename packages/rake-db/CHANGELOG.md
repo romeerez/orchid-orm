@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.14.5
+
+### Patch Changes
+
+- 59468272: showing list of up & down migrations on pnpm db list
+- 4acd5dff: Change rake-db migrations status command
+
 ## 2.14.4
 
 ### Patch Changes
