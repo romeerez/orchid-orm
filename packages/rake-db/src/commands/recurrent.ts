@@ -1,8 +1,8 @@
 import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import { Adapter, AdapterOptions, createDb, DbResult } from 'pqb';
-import { RakeDbConfig } from '../common';
 import { join } from 'path';
 import { readdir, stat, readFile } from 'fs/promises';
+import { RakeDbConfig } from 'rake-db';
 
 export const runRecurrentMigrations = async <
   SchemaConfig extends ColumnSchemaConfig,

@@ -1,8 +1,6 @@
 import {
   createSchemaMigrations,
-  getDatabaseAndUserFromOptions,
   getFirstWordAndRest,
-  processRakeDbConfig,
   getMigrations,
   getTextAfterTo,
   joinColumns,
@@ -12,7 +10,6 @@ import {
   setAdminCredentialsToOptions,
   sortAsc,
   sortDesc,
-  AppCodeUpdater,
 } from './common';
 import prompts from 'prompts';
 import { Adapter, defaultSchemaConfig, makeColumnTypes } from 'pqb';
@@ -21,6 +18,11 @@ import path from 'path';
 import { asMock } from 'test-utils';
 import { testConfig } from './rake-db.test-utils';
 import { getCallerFilePath, getStackTrace } from 'orchid-core';
+import {
+  AppCodeUpdater,
+  getDatabaseAndUserFromOptions,
+  processRakeDbConfig,
+} from './config';
 
 jest.mock('prompts', () => jest.fn());
 

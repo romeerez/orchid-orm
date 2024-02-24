@@ -28,7 +28,6 @@ import {
 import { createTable, CreateTableResult } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {
-  RakeDbConfig,
   quoteWithSchema,
   getSchemaAndTableFromName,
   quoteNameFromString,
@@ -38,6 +37,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { columnTypeToSql } from './migrationUtils';
 import { createView } from './createView';
+import { RakeDbConfig } from '../config';
 
 // Drop mode to use when dropping various database entities.
 export type DropMode = 'CASCADE' | 'RESTRICT';

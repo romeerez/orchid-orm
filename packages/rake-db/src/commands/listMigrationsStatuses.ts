@@ -1,8 +1,9 @@
-import { getMigrations, AnyRakeDbConfig } from '../common';
+import { getMigrations } from '../common';
 import path from 'path';
 import { Adapter, AdapterOptions } from 'pqb';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { pathToFileURL } from 'node:url';
+import { AnyRakeDbConfig } from '../config';
 
 export const listMigrationsStatuses = async (
   options: AdapterOptions[],

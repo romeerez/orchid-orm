@@ -20,7 +20,8 @@ import {
   quoteObjectKey,
   singleQuote,
 } from 'orchid-core';
-import { quoteSchemaTable, RakeDbConfig } from '../common';
+import { quoteSchemaTable } from '../common';
+import { RakeDbConfig } from 'rake-db';
 
 export const astToMigration = <SchemaConfig extends ColumnSchemaConfig, CT>(
   config: RakeDbConfig<SchemaConfig, CT>,

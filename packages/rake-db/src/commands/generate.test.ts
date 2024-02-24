@@ -1,10 +1,10 @@
 import { generate } from './generate';
-import { migrationConfigDefaults } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { pathToLog } from 'orchid-core';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
+import { migrationConfigDefaults } from '../config';
 
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),

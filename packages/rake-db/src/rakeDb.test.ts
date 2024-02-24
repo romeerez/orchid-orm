@@ -8,7 +8,7 @@ import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock } from 'test-utils';
 import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
-import { processRakeDbConfig } from './common';
+import { processRakeDbConfig } from './config';
 
 jest.mock('./commands/createOrDrop', () => ({
   createDb: jest.fn(),

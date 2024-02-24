@@ -13,12 +13,10 @@ import {
   toArray,
 } from 'orchid-core';
 import {
-  AppCodeUpdater,
   createSchemaMigrations,
   getMigrations,
   MigrationItem,
   RakeDbColumnTypes,
-  RakeDbConfig,
 } from '../common';
 import {
   ChangeCallback,
@@ -34,6 +32,7 @@ import {
 } from '../migration/manageMigratedVersions';
 import { RakeDbError } from '../errors';
 import { RakeDbAst } from '../ast';
+import { AppCodeUpdater, RakeDbConfig } from '../config';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 

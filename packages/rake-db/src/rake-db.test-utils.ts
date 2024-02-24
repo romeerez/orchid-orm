@@ -8,8 +8,8 @@ import {
   defaultSchemaConfig,
 } from 'pqb';
 import { ColumnSchemaConfig, MaybeArray, noop, toArray } from 'orchid-core';
-import { migrationConfigDefaults, RakeDbConfig } from './common';
 import { join } from 'path';
+import { migrationConfigDefaults, RakeDbConfig } from './config';
 
 let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;
 

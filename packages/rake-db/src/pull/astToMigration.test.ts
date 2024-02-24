@@ -1,7 +1,7 @@
 import { astToMigration } from './astToMigration';
 import { makeColumnTypes, raw, TableData, defaultSchemaConfig } from 'pqb';
 import { RakeDbAst } from '../ast';
-import { processRakeDbConfig } from '../common';
+import { processRakeDbConfig } from '../config';
 
 const t = makeColumnTypes(defaultSchemaConfig);
 

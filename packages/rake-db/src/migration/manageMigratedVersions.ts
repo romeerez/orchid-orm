@@ -1,7 +1,8 @@
 import { Adapter, TransactionAdapter } from 'pqb';
-import { quoteWithSchema, RakeDbConfig } from '../common';
+import { quoteWithSchema } from '../common';
 import { SilentQueries } from './migration';
 import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
+import { RakeDbConfig } from '../config';
 
 export const saveMigratedVersion = async <
   SchemaConfig extends ColumnSchemaConfig,

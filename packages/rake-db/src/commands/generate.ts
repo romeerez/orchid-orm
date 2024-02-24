@@ -2,11 +2,11 @@ import {
   getFirstWordAndRest,
   getTextAfterFrom,
   getTextAfterTo,
-  RakeDbConfig,
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { ColumnSchemaConfig, getImportPath, pathToLog } from 'orchid-core';
+import { RakeDbConfig } from '../config';
 
 export const writeMigrationFile = async <
   SchemaConfig extends ColumnSchemaConfig,

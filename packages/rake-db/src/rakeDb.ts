@@ -2,18 +2,14 @@ import { AdapterOptions } from 'pqb';
 import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
-import {
-  InputRakeDbConfig,
-  processRakeDbConfig,
-  RakeDbColumnTypes,
-  RakeDbConfig,
-} from './common';
+import { RakeDbColumnTypes } from './common';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
 import { ChangeCallback, pushChange } from './migration/change';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { listMigrationsStatuses } from './commands/listMigrationsStatuses';
+import { InputRakeDbConfig, processRakeDbConfig, RakeDbConfig } from './config';
 
 /**
  * Type of {@link rakeDb} function

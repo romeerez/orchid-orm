@@ -8,7 +8,6 @@ import {
 import {
   createSchemaMigrations,
   getMigrations,
-  AppCodeUpdater,
   RakeDbColumnTypes,
 } from '../common';
 import {
@@ -22,6 +21,7 @@ import { RakeDbAst } from '../ast';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
+import { AppCodeUpdater } from 'rake-db';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),

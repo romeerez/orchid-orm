@@ -1,21 +1,14 @@
 import {
   Adapter,
   AdapterOptions,
-  makeColumnTypes as defaultColumnTypes,
-  DbResult,
-  DefaultColumnTypes,
   EnumColumn,
-  NoPrimaryKeyOption,
-  QueryLogOptions,
+  ForeignKeyOptions,
   IndexColumnOptions,
   IndexOptions,
-  ForeignKeyOptions,
-  defaultSchemaConfig,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
   EmptyObject,
-  getStackTrace,
   MaybeArray,
   RawSQLBase,
   RecordUnknown,
@@ -23,251 +16,11 @@ import {
 } from 'orchid-core';
 import path from 'path';
 import { readdir } from 'fs/promises';
-import { RakeDbAst } from './ast';
-import prompts from 'prompts';
 import { TableQuery } from './migration/createTable';
-import { pathToFileURL, fileURLToPath } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { DropMode } from './migration/migration';
-
-export interface RakeDbColumnTypes {
-  index(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
-  ): EmptyObject;
-
-  foreignKey(
-    columns: [string, ...string[]],
-    foreignTable: string,
-    foreignColumns: [string, ...string[]],
-    options?: ForeignKeyOptions,
-  ): EmptyObject;
-
-  primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
-
-  check(check: RawSQLBase): EmptyObject;
-
-  constraint(arg: ConstraintArg): EmptyObject;
-}
-
-// Constraint config, it can be a foreign key or a check
-export interface ConstraintArg {
-  // Name of the constraint
-  name?: string;
-  // Foreign key options
-  references?: [
-    columns: [string, ...string[]],
-    table: string,
-    foreignColumn: [string, ...string[]],
-    options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
-  ];
-  // Database check raw SQL
-  check?: RawSQLBase;
-  // Drop mode to use when dropping the constraint
-  dropMode?: DropMode;
-}
-
-type Db = DbResult<RakeDbColumnTypes>;
-
-interface BaseTable<CT> {
-  exportAs: string;
-  getFilePath(): string;
-  nowSQL?: string;
-
-  new (): {
-    types: CT;
-    snakeCase?: boolean;
-    language?: string;
-  };
-}
-
-export type InputRakeDbConfig<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
-> = Partial<Omit<RakeDbConfig<SchemaConfig, CT>, 'columnTypes'>> &
-  (
-    | {
-        columnTypes?: CT | ((t: DefaultColumnTypes<ColumnSchemaConfig>) => CT);
-      }
-    | {
-        baseTable?: BaseTable<CT>;
-      }
-  );
-
-export interface RakeDbConfig<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT = DefaultColumnTypes<ColumnSchemaConfig>,
-> extends QueryLogOptions {
-  schemaConfig: SchemaConfig;
-  columnTypes: CT;
-  basePath: string;
-  dbScript: string;
-  migrationsPath: string;
-  migrations?: ModuleExportsRecord;
-  recurrentPath: string;
-  migrationsTable: string;
-  snakeCase: boolean;
-  language?: string;
-  commands: Record<
-    string,
-    (
-      options: AdapterOptions[],
-      config: RakeDbConfig<SchemaConfig, CT>,
-      args: string[],
-    ) => void | Promise<void>
-  >;
-  noPrimaryKey?: NoPrimaryKeyOption;
-  baseTable?: BaseTable<CT>;
-  appCodeUpdater?: AppCodeUpdater;
-  useCodeUpdater?: boolean;
-  // throw if a migration doesn't have a default export
-  forceDefaultExports?: boolean;
-  import(path: string): Promise<unknown>;
-  beforeMigrate?(db: Db): Promise<void>;
-  afterMigrate?(db: Db): Promise<void>;
-  beforeRollback?(db: Db): Promise<void>;
-  afterRollback?(db: Db): Promise<void>;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyRakeDbConfig = RakeDbConfig<any, any>;
-
-export interface ModuleExportsRecord {
-  [K: string]: () => Promise<unknown>;
-}
-
-export interface AppCodeUpdaterParams {
-  options: AdapterOptions;
-  basePath: string;
-  cache: object;
-  logger: QueryLogOptions['logger'];
-  baseTable: { getFilePath(): string; exportAs: string };
-  import(path: string): Promise<unknown>;
-}
-
-export interface AppCodeUpdater {
-  process(params: AppCodeUpdaterParams & { ast: RakeDbAst }): Promise<void>;
-  afterAll(params: AppCodeUpdaterParams): Promise<void>;
-}
-
-export const migrationConfigDefaults = {
-  schemaConfig: defaultSchemaConfig,
-  migrationsPath: path.join('src', 'db', 'migrations'),
-  migrationsTable: 'schemaMigrations',
-  snakeCase: false,
-  commands: {},
-  import: (path: string) => {
-    return import(path).catch((err) => {
-      if (err.code === 'ERR_UNKNOWN_FILE_EXTENSION') {
-        require(path);
-      } else {
-        throw err;
-      }
-    });
-  },
-  log: true,
-  logger: console,
-  useCodeUpdater: true,
-} satisfies Omit<
-  RakeDbConfig<ColumnSchemaConfig>,
-  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
->;
-
-export const processRakeDbConfig = <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
-  config: InputRakeDbConfig<SchemaConfig, CT>,
-): RakeDbConfig<SchemaConfig, CT> => {
-  const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<
-    SchemaConfig,
-    CT
-  >;
-  if (!result.recurrentPath) {
-    result.recurrentPath = path.join(result.migrationsPath, 'recurrent');
-  }
-
-  if (
-    config.appCodeUpdater &&
-    (!('baseTable' in config) || !config.baseTable)
-  ) {
-    throw new Error(
-      '`baseTable` option is required in `rakeDb` for `appCodeUpdater`',
-    );
-  }
-
-  if (!result.log) {
-    delete result.logger;
-  }
-
-  if (!result.basePath || !result.dbScript) {
-    // 0 is getStackTrace file, 1 is this function, 2 is a caller in rakeDb.ts, 3 is the user db script file.
-    // bundlers can bundle all files into a single file, or change file structure, so this must rely only on the caller index.
-    let filePath = getStackTrace()?.[3].getFileName();
-    if (!filePath) {
-      throw new Error(
-        'Failed to determine path to db script. Please set basePath option of rakeDb',
-      );
-    }
-
-    if (filePath.startsWith('file://')) {
-      filePath = fileURLToPath(filePath);
-    }
-
-    const ext = path.extname(filePath);
-    if (ext !== '.ts' && ext !== '.js' && ext !== '.mjs') {
-      throw new Error(
-        `Add a .ts suffix to the "${path.basename(filePath)}" when calling it`,
-      );
-    }
-
-    result.basePath = path.dirname(filePath);
-    result.dbScript = path.basename(filePath);
-  }
-
-  if ('migrationsPath' in result && !path.isAbsolute(result.migrationsPath)) {
-    result.migrationsPath = path.resolve(
-      result.basePath,
-      result.migrationsPath,
-    );
-  }
-
-  if ('recurrentPath' in result && !path.isAbsolute(result.recurrentPath)) {
-    result.recurrentPath = path.resolve(result.basePath, result.recurrentPath);
-  }
-
-  if ('baseTable' in config) {
-    const proto = config.baseTable?.prototype;
-    result.columnTypes = proto.types || defaultColumnTypes(defaultSchemaConfig);
-    if (proto.snakeCase) result.snakeCase = true;
-    if (proto.language) result.language = proto.language;
-  } else {
-    const ct = 'columnTypes' in config && config.columnTypes;
-    result.columnTypes = ((typeof ct === 'function'
-      ? (ct as (t: DefaultColumnTypes<ColumnSchemaConfig>) => CT)(
-          defaultColumnTypes(defaultSchemaConfig),
-        )
-      : ct) || defaultColumnTypes) as CT;
-  }
-
-  return result as RakeDbConfig<SchemaConfig, CT>;
-};
-
-export const getDatabaseAndUserFromOptions = (
-  options: AdapterOptions,
-): { database: string; user: string } => {
-  if (options.databaseURL) {
-    const url = new URL(options.databaseURL);
-    return {
-      database: url.pathname.slice(1),
-      user: url.username,
-    };
-  } else {
-    return {
-      database: options.database as string,
-      user: options.user as string,
-    };
-  }
-};
+import { ModuleExportsRecord, RakeDbConfig } from './config';
+import prompts from 'prompts';
 
 export const setAdapterOptions = (
   options: AdapterOptions,
@@ -336,6 +89,43 @@ export const setAdminCredentialsToOptions = async (
     password: values.password || undefined,
   });
 };
+
+export interface RakeDbColumnTypes {
+  index(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options?: IndexOptions,
+  ): EmptyObject;
+
+  foreignKey(
+    columns: [string, ...string[]],
+    foreignTable: string,
+    foreignColumns: [string, ...string[]],
+    options?: ForeignKeyOptions,
+  ): EmptyObject;
+
+  primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
+
+  check(check: RawSQLBase): EmptyObject;
+
+  constraint(arg: ConstraintArg): EmptyObject;
+}
+
+// Constraint config, it can be a foreign key or a check
+export interface ConstraintArg {
+  // Name of the constraint
+  name?: string;
+  // Foreign key options
+  references?: [
+    columns: [string, ...string[]],
+    table: string,
+    foreignColumn: [string, ...string[]],
+    options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
+  ];
+  // Database check raw SQL
+  check?: RawSQLBase;
+  // Drop mode to use when dropping the constraint
+  dropMode?: DropMode;
+}
 
 export const createSchemaMigrations = async (
   db: Adapter,

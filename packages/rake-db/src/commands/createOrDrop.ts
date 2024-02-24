@@ -6,14 +6,13 @@ import {
   toArray,
 } from 'orchid-core';
 import {
-  getDatabaseAndUserFromOptions,
-  setAdminCredentialsToOptions,
-  setAdapterOptions,
   createSchemaMigrations,
-  RakeDbConfig,
   RakeDbColumnTypes,
+  setAdapterOptions,
+  setAdminCredentialsToOptions,
 } from '../common';
 import { migrate } from './migrateOrRollback';
+import { getDatabaseAndUserFromOptions, RakeDbConfig } from '../config';
 
 const execute = async (
   options: AdapterOptions,

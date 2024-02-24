@@ -1,6 +1,5 @@
 import { introspectDbSchema } from './dbStructure';
 import { pullDbStructure } from './pull';
-import { AppCodeUpdater, processRakeDbConfig, RakeDbConfig } from '../common';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import {
   check,
@@ -26,6 +25,8 @@ import {
 } from 'pqb';
 import { asMock } from 'test-utils';
 import { ColumnSchemaConfig } from 'orchid-core';
+import { AppCodeUpdater, RakeDbConfig } from 'rake-db';
+import { processRakeDbConfig } from '../config';
 
 jest.mock('./dbStructure');
 

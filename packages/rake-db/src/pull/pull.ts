@@ -1,10 +1,10 @@
-import { RakeDbConfig } from '../common';
 import { Adapter, AdapterOptions, makeColumnsByType } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import { ColumnSchemaConfig } from 'orchid-core';
+import { RakeDbConfig } from 'rake-db';
 
 export const pullDbStructure = async <
   SchemaConfig extends ColumnSchemaConfig,
