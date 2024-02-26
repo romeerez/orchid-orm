@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.15.1
+
+### Patch Changes
+
+- b7505735: rake-db: fix create schemaMigration name column when it was absent
+
 ## 2.15.0
 
 ### Minor Changes
