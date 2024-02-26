@@ -1,22 +1,23 @@
 import { createDb, dropDb, resetDb } from './createOrDrop';
 import { Adapter } from 'pqb';
-import {
-  createSchemaMigrations,
-  setAdminCredentialsToOptions,
-} from '../common';
 import { migrate } from './migrateOrRollback';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
 import { RecordUnknown } from 'orchid-core';
+import { setAdminCredentialsToOptions } from './createOrDrop.utils';
+import { createMigrationsTable } from '../migration/migrationsTable';
 
-jest.mock('../common', () => ({
-  ...jest.requireActual('../common'),
+jest.mock('./createOrDrop.utils.ts', () => ({
+  ...jest.requireActual('./createOrDrop.utils.ts'),
   setAdminCredentialsToOptions: jest.fn((options: RecordUnknown) => ({
     ...options,
     user: 'admin-user',
     password: 'admin-password',
   })),
-  createSchemaMigrations: jest.fn(),
+}));
+
+jest.mock('../migration/migrationsTable', () => ({
+  createMigrationsTable: jest.fn(),
 }));
 
 jest.mock('./migrateOrRollback', () => ({
@@ -47,7 +48,7 @@ describe('createOrDrop', () => {
         [`Database dbname successfully created`],
       ]);
 
-      expect(createSchemaMigrations).toHaveBeenCalled();
+      expect(createMigrationsTable).toHaveBeenCalled();
     });
 
     it('should create database when user is an admin', async () => {
@@ -61,7 +62,7 @@ describe('createOrDrop', () => {
       expect(logMock.mock.calls).toEqual([
         [`Database dbname successfully created`],
       ]);
-      expect(createSchemaMigrations).toHaveBeenCalled();
+      expect(createMigrationsTable).toHaveBeenCalled();
     });
 
     it('should create databases for each provided option', async () => {
@@ -80,7 +81,7 @@ describe('createOrDrop', () => {
         [`Database dbname successfully created`],
         [`Database dbname-test successfully created`],
       ]);
-      expect(createSchemaMigrations).toHaveBeenCalledTimes(2);
+      expect(createMigrationsTable).toHaveBeenCalledTimes(2);
     });
 
     it('should inform if database already exists', async () => {
@@ -92,7 +93,7 @@ describe('createOrDrop', () => {
         [`CREATE DATABASE "dbname" OWNER "user"`],
       ]);
       expect(logMock.mock.calls).toEqual([[`Database dbname already exists`]]);
-      expect(createSchemaMigrations).toHaveBeenCalled();
+      expect(createMigrationsTable).toHaveBeenCalled();
     });
 
     it('should inform if ssl is required', async () => {
@@ -109,7 +110,7 @@ describe('createOrDrop', () => {
       expect(logMock.mock.calls).toEqual([
         ['SSL is required: append ?ssl=true to the database url string'],
       ]);
-      expect(createSchemaMigrations).not.toHaveBeenCalled();
+      expect(createMigrationsTable).not.toHaveBeenCalled();
     });
 
     it('should ask and use admin credentials when cannot connect', async () => {
@@ -128,7 +129,7 @@ describe('createOrDrop', () => {
         ],
         [`Database dbname successfully created`],
       ]);
-      expect(createSchemaMigrations).toHaveBeenCalled();
+      expect(createMigrationsTable).toHaveBeenCalled();
     });
   });
 
@@ -182,7 +183,7 @@ describe('createOrDrop', () => {
       expect(logMock.mock.calls).toEqual([
         ['SSL is required: append ?ssl=true to the database url string'],
       ]);
-      expect(createSchemaMigrations).not.toHaveBeenCalled();
+      expect(createMigrationsTable).not.toHaveBeenCalled();
     });
 
     it('should ask and use admin credentials when cannot connect', async () => {
@@ -218,7 +219,7 @@ describe('createOrDrop', () => {
         [`Database dbname was successfully dropped`],
         [`Database dbname successfully created`],
       ]);
-      expect(createSchemaMigrations).toHaveBeenCalled();
+      expect(createMigrationsTable).toHaveBeenCalled();
       expect(migrate).toBeCalled();
     });
   });

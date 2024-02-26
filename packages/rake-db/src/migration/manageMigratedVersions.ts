@@ -1,8 +1,10 @@
 import { Adapter, TransactionAdapter } from 'pqb';
-import { quoteWithSchema } from '../common';
+import { quoteWithSchema, RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
-import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
+import { ColumnSchemaConfig, RecordString, RecordUnknown } from 'orchid-core';
 import { RakeDbConfig } from '../config';
+import path from 'path';
+import { getDigitsPrefix, getMigrations } from './migrationsSet';
 
 export const saveMigratedVersion = async <
   SchemaConfig extends ColumnSchemaConfig,
@@ -10,13 +12,15 @@ export const saveMigratedVersion = async <
 >(
   db: SilentQueries,
   version: string,
+  name: string,
   config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
-  await db.silentArrays(
-    `INSERT INTO ${quoteWithSchema({
+  await db.silentArrays({
+    text: `INSERT INTO ${quoteWithSchema({
       name: config.migrationsTable,
-    })} VALUES ('${version}')`,
-  );
+    })}(version, name) VALUES ($1, $2)`,
+    values: [version, name],
+  });
 };
 
 export const removeMigratedVersion = async <
@@ -25,13 +29,19 @@ export const removeMigratedVersion = async <
 >(
   db: SilentQueries,
   version: string,
+  name: string,
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  await db.silentArrays(
-    `DELETE FROM ${quoteWithSchema({
+  const res = await db.silentArrays({
+    text: `DELETE FROM ${quoteWithSchema({
       name: config.migrationsTable,
-    })} WHERE version = '${version}'`,
-  );
+    })} WHERE version = $1 AND name = $2`,
+    values: [version, name],
+  });
+
+  if (res.rowCount === 0) {
+    throw new Error(`Migration ${version}_${name} was not found in db`);
+  }
 };
 
 export class NoMigrationsTableError extends Error {}
@@ -40,14 +50,56 @@ export const getMigratedVersionsMap = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
 >(
+  ctx: RakeDbCtx,
   adapter: Adapter | TransactionAdapter,
   config: RakeDbConfig<SchemaConfig, CT>,
-): Promise<Record<string, boolean>> => {
+): Promise<RecordString> => {
   try {
-    const result = await adapter.arrays<[string]>(
-      `SELECT * FROM ${quoteWithSchema({ name: config.migrationsTable })}`,
-    );
-    return Object.fromEntries(result.rows.map((row) => [row[0], true]));
+    const table = quoteWithSchema({
+      name: config.migrationsTable,
+    });
+
+    const result = await adapter.arrays<[string]>(`SELECT * FROM ${table}`);
+
+    if (!result.fields[1]) {
+      const { migrations } = await getMigrations(ctx, config, true);
+
+      const map: RecordString = {};
+      for (const item of migrations) {
+        const name = path.basename(item.path);
+        map[item.version] = name.slice(getDigitsPrefix(name).length + 1);
+      }
+
+      const data: { version: string; name: string }[] = result.rows.map(
+        ([version]) => {
+          const name = map[version];
+          if (!name) {
+            throw new Error(
+              `Migration for version ${version} is stored in db but is not found among available migrations`,
+            );
+          }
+
+          return { version, name };
+        },
+      );
+
+      await adapter.arrays(`ALTER TABLE ${table} ADD COLUMN name TEXT`);
+
+      await Promise.all(
+        data.map(({ version, name }) =>
+          adapter.arrays({
+            text: `UPDATE ${table} SET name = $2 WHERE version = $1`,
+            values: [version, name],
+          }),
+        ),
+      );
+
+      await adapter.arrays(
+        `ALTER TABLE ${table} ALTER COLUMN name SET NOT NULL`,
+      );
+    }
+
+    return Object.fromEntries(result.rows);
   } catch (err) {
     if ((err as RecordUnknown).code === '42P01') {
       throw new NoMigrationsTableError();

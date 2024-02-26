@@ -9,7 +9,8 @@ Migrations allow you to evolve your database schema over time. This migration to
 
 ## how it works
 
-`rake-db` automatically creates a table `schemaMigrations` where it saves all migration file names that were applied.
+`rake-db` automatically creates a table `schemaMigrations` where it saves all the migrated files prefixes and names.
+It's allowed to have two migrations with the same name, but all the migrations must have different numeric prefixes.
 
 All changes are wrapped into a single transaction. If you have 3 pending migrations, and the last one throws an error,
 none of them will be applied.
@@ -104,6 +105,10 @@ export const change = rakeDb(config.database, {
   // This is needed only if you use a bundler such as Vite:
   migrations: import.meta.glob('./migrations/*.ts'),
 
+  // 'serial' (0001, 0002, and so on) is by default, also can be 'timestamp'.
+  // Read more about serial vs timestamp below.
+  migrationId: 'serial',
+
   // column type overrides and snakeCase option will be taken from the BaseTable:
   baseTable: BaseTable,
 
@@ -148,6 +153,25 @@ npm run db new createSomeTable
 pnpm db new createSomeTable
 yarn db new createSomeTable
 ```
+
+## serial vs timestamp
+
+Migration files can be prefixed with serial numbers (0001, 0002, and so on), or with timestamps.
+Serial is the default, for timestamp prefixes set `migrationId: 'timetamp'` in the config.
+
+The key difference is in handling possible conflicts.
+
+Consider a scenario when you have created a migration in your local branch, then your colleague creates a migration and commits their work to the repository.
+You pull the changes, they work on your machine, you push your work and migrations are executed in a different order than they were ran for you,
+because on a remote server your colleague's migration ran first, and in your local it ran last.
+
+Using serial numbers are making the case described above impossible, at the cost of having to solve such conflicts.
+
+You can resolve file conflicts automatically with the `rebase` command, read more [about rebase here](/guide/migration-commands#rebase).
+
+Using timestamps frees from file conflicts, at the cost of potential problems caused by wrong migration execution order.
+
+If you'd like to rename existing migrations from timestamps to serial numbers, there is a [change-ids](/guide/migration-commands#change-ids).
 
 ## awaiting rakeDb
 
@@ -253,6 +277,9 @@ type MigrationConfig = {
 
   // path to migrations directory
   migrationsPath?: string;
+
+  // prefix migration files with a serial number (default) or with a timestamp
+  migrationId?: 'serial' | 'timestamp';
 
   // path to recurrent migrations directory
   // migrationsPath + '/recurrent' is the default

@@ -1,9 +1,10 @@
-import { getMigrations } from '../common';
+import { RakeDbCtx } from '../common';
 import path from 'path';
 import { Adapter, AdapterOptions } from 'pqb';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { pathToFileURL } from 'node:url';
 import { AnyRakeDbConfig } from '../config';
+import { getMigrations } from '../migration/migrationsSet';
 
 export const listMigrationsStatuses = async (
   options: AdapterOptions[],
@@ -12,9 +13,11 @@ export const listMigrationsStatuses = async (
 ) => {
   const adapters = options.map((opts) => new Adapter(opts));
 
-  const [migrations, ...migrated] = await Promise.all([
-    getMigrations(config, true),
-    ...adapters.map((adapter) => getMigratedVersionsMap(adapter, config)),
+  const ctx: RakeDbCtx = {};
+
+  const [{ migrations }, ...migrated] = await Promise.all([
+    getMigrations(ctx, config, true),
+    ...adapters.map((adapter) => getMigratedVersionsMap(ctx, adapter, config)),
   ]);
 
   const map: {
@@ -69,7 +72,7 @@ export const listMigrationsStatuses = async (
         }
 
         return {
-          up: list[item.version],
+          up: !!list[item.version],
           version: item.version,
           name,
           url: pathToFileURL(item.path),

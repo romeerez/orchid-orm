@@ -3,13 +3,12 @@ import { testConfig } from '../rake-db.test-utils';
 import path from 'path';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { asMock } from 'test-utils';
-import { getMigrations } from '../common';
+import { getMigrations } from '../migration/migrationsSet';
 
-jest.mock('../common');
+jest.mock('../migration/migrationsSet');
 jest.mock('../migration/manageMigratedVersions');
 
-// const options = { databaseURL: 'postgres://user@localhost/dbname' };
-const options = [{ databaseURL: 'postgres://romeo:@localhost/orchid-orm' }];
+const options = [{ databaseURL: 'postgres://user@localhost/dbname' }];
 
 describe('listMigrationsStatuses', () => {
   it('should log a list of migrations', async () => {
@@ -19,20 +18,22 @@ describe('listMigrationsStatuses', () => {
       log: { colors: false },
     };
 
-    asMock(getMigrations).mockResolvedValueOnce([
-      {
-        version: '0001',
-        path: '/migrations/0001_first_migration',
-      },
-      {
-        version: '0002',
-        path: '/migrations/0002_second-migration',
-      },
-      {
-        version: '0003',
-        path: '/migrations/0003_thirdMigration',
-      },
-    ]);
+    asMock(getMigrations).mockResolvedValueOnce({
+      migrations: [
+        {
+          version: '0001',
+          path: '/migrations/0001_first_migration',
+        },
+        {
+          version: '0002',
+          path: '/migrations/0002_second-migration',
+        },
+        {
+          version: '0003',
+          path: '/migrations/0003_thirdMigration',
+        },
+      ],
+    });
 
     asMock(getMigratedVersionsMap).mockResolvedValueOnce({
       '0001': true,
@@ -42,7 +43,7 @@ describe('listMigrationsStatuses', () => {
 
     await listMigrationsStatuses(options, config, []);
 
-    expect(config.logger.log).toBeCalledWith(` Database: orchid-orm
+    expect(config.logger.log).toBeCalledWith(` Database: dbname
 
  Status | Migration ID | Name
 ------------------------------------------
@@ -59,20 +60,22 @@ describe('listMigrationsStatuses', () => {
       log: { colors: false },
     };
 
-    asMock(getMigrations).mockResolvedValueOnce([
-      {
-        version: '0001',
-        path: '/migrations/0001_first_migration',
-      },
-      {
-        version: '0002',
-        path: '/migrations/0002_second-migration',
-      },
-      {
-        version: '0003',
-        path: '/migrations/0003_thirdMigration',
-      },
-    ]);
+    asMock(getMigrations).mockResolvedValueOnce({
+      migrations: [
+        {
+          version: '0001',
+          path: '/migrations/0001_first_migration',
+        },
+        {
+          version: '0002',
+          path: '/migrations/0002_second-migration',
+        },
+        {
+          version: '0003',
+          path: '/migrations/0003_thirdMigration',
+        },
+      ],
+    });
 
     asMock(getMigratedVersionsMap).mockResolvedValueOnce({
       '0001': true,
@@ -82,7 +85,7 @@ describe('listMigrationsStatuses', () => {
 
     await listMigrationsStatuses(options, config, ['p']);
 
-    expect(config.logger.log).toBeCalledWith(` Database: orchid-orm
+    expect(config.logger.log).toBeCalledWith(` Database: dbname
 
  Status | Migration ID | Name
 ------------------------------------------

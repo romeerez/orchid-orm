@@ -8,10 +8,10 @@ import {
   QueryLogOptions,
 } from 'pqb';
 import { ColumnSchemaConfig, getStackTrace } from 'orchid-core';
-import { RakeDbColumnTypes } from './common';
 import path from 'path';
 import { RakeDbAst } from './ast';
 import { fileURLToPath } from 'node:url';
+import { RakeDbColumnTypes } from './migration/migration';
 
 export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
@@ -22,6 +22,7 @@ export interface RakeDbConfig<
   basePath: string;
   dbScript: string;
   migrationsPath: string;
+  migrationId: RakeDbMigrationId;
   migrations?: ModuleExportsRecord;
   recurrentPath: string;
   migrationsTable: string;
@@ -89,6 +90,8 @@ export interface ModuleExportsRecord {
   [K: string]: () => Promise<unknown>;
 }
 
+export type RakeDbMigrationId = 'serial' | 'timestamp';
+
 export interface AppCodeUpdaterParams {
   options: AdapterOptions;
   basePath: string;
@@ -108,6 +111,7 @@ export interface AppCodeUpdater {
 export const migrationConfigDefaults = {
   schemaConfig: defaultSchemaConfig,
   migrationsPath: path.join('src', 'db', 'migrations'),
+  migrationId: 'serial',
   migrationsTable: 'schemaMigrations',
   snakeCase: false,
   commands: {},
@@ -127,6 +131,7 @@ export const migrationConfigDefaults = {
   RakeDbConfig<ColumnSchemaConfig>,
   'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
 >;
+
 export const processRakeDbConfig = <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
@@ -206,6 +211,7 @@ export const processRakeDbConfig = <
 
   return result as RakeDbConfig<SchemaConfig, CT>;
 };
+
 export const getDatabaseAndUserFromOptions = (
   options: AdapterOptions,
 ): { database: string; user: string } => {

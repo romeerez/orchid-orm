@@ -10,11 +10,6 @@ import { raw } from 'pqb';
 
 const db = getDb();
 
-jest.mock('./migrationUtils', () => ({
-  ...jest.requireActual('./migrationUtils'),
-  getPrimaryKeysOfTable: jest.fn(),
-}));
-
 describe('migration', () => {
   beforeEach(() => {
     resetDb();

@@ -265,6 +265,67 @@ npm run recurrent
 npm run rec
 ```
 
+## rebase
+
+Use `rebase` when you pull changes from a repository, and the changes contain new migrations with the same numbers that you already have locally.
+
+Imagine you have such migration files locally:
+
+- 0001_a.ts
+- 0002_b.ts
+
+Your colleague pushed their work that also contains migration files:
+
+- 0001_c.ts
+- 0002_d.ts
+
+After pulling the change, you have:
+
+- 0001_a.ts
+- 0001_c.ts
+- 0002_b.ts
+- 0002_d.ts
+
+Running `pnpm db migrate` fails because of conflicting numbers. Run the command:
+
+```sh
+pnpm db rebase
+```
+
+It will roll back your local migrations "0001_a.ts" and "0002_b.ts",
+rename them to "0003_a.ts" and "0004_b.ts", and will migrate all files.
+
+Migrations after running the command:
+
+- 0001_c.ts
+- 0002_d.ts
+- 0003_a.ts
+- 0004_b.ts
+
+The `rebase` command relies on the fact that your local migrations were already applied to the database.
+In case if they were not, and there are files "0001_a.ts" and "0001_b.ts", `rebase` command will ask interactively which file to keep above the other.
+
+If supply migrations via the `migrations` setting in the config (might be useful with Vite), `rebase` can't work with that.
+
+## change-ids
+
+When switching migrations from the timestamp prefixes to serial prefixes (or vice-versa),
+run `change-ids` command to rename files and reflect the change in the database table that tracks migrations:
+
+```sh
+pnpm db change-ids serial
+# or to migrate to timestamp
+pnpm db change-ids timestamp
+```
+
+After running the command, change `migrationId` to the desired prefix kind in the rake-db config.
+
+This will create a special file in migrations: `.rename-to-serial.json`.
+
+After deploying to a remote server which is going to run migrations,
+`rake-db` will notice that applied migrations have timestamp prefix, but migration files have serial,
+and it will use the `.rename-to-serial.json` file to apply the renaming on a remote server.
+
 ## custom commands
 
 `rakeDb` allows to specify your own functions for a custom commands:

@@ -2,7 +2,6 @@ import { AdapterOptions } from 'pqb';
 import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
-import { RakeDbColumnTypes } from './common';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
@@ -10,6 +9,9 @@ import { ChangeCallback, pushChange } from './migration/change';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { listMigrationsStatuses } from './commands/listMigrationsStatuses';
 import { InputRakeDbConfig, processRakeDbConfig, RakeDbConfig } from './config';
+import { changeIds } from './commands/changeIds';
+import { RakeDbColumnTypes } from './migration/migration';
+import { rebase } from './commands/rebase';
 
 /**
  * Type of {@link rakeDb} function
@@ -124,17 +126,21 @@ const runCommand = async <
   } else if (arg === 'reset') {
     await resetDb(options, config);
   } else if (arg === 'up' || arg === 'migrate') {
-    await migrate(options, config, args.slice(1));
+    await migrate({}, options, config, args.slice(1));
   } else if (arg === 'down' || arg === 'rollback') {
-    await rollback(options, config, args.slice(1));
+    await rollback({}, options, config, args.slice(1));
   } else if (arg === 'redo') {
-    await redo(options, config, args.slice(1));
+    await redo({}, options, config, args.slice(1));
   } else if (arg === 'new') {
     await generate(config, args.slice(1));
   } else if (arg === 'pull') {
     await pullDbStructure(toArray(options)[0], config);
   } else if (arg === 'status' || arg === 's') {
     await listMigrationsStatuses(toArray(options), config, args.slice(1));
+  } else if (arg === 'rebase') {
+    await rebase(toArray(options), config);
+  } else if (arg === 'change-ids') {
+    await changeIds(toArray(options), config, args.slice(1));
   } else if (config.commands[arg]) {
     await config.commands[arg](toArray(options), config, args.slice(1));
   } else if (arg !== 'rec' && arg !== 'recurrent') {
@@ -169,6 +175,9 @@ Commands:
   status or s             list migrations statuses
   status path or s p      list migrations statuses and paths to files
   rec or recurrent        run recurrent migrations
+  change-ids serial       change migrations ids to 4 digit serial
+  change-ids serial 42    change migrations ids to custom digits serial
+  change-ids timestamp    change migrations ids to timestamps
   no or unknown command   prints this message
   
 Migrate arguments:

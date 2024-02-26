@@ -1,5 +1,4 @@
-import { DbMigration } from './migration';
-import { RakeDbColumnTypes } from '../common';
+import { DbMigration, RakeDbColumnTypes } from './migration';
 
 let currentChanges: ChangeCallback<RakeDbColumnTypes>[] = [];
 

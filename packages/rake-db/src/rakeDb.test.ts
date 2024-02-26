@@ -75,14 +75,24 @@ describe('rakeDb', () => {
   it('should run migrations and recurrent on `migrate` command', async () => {
     await rakeDb(options, config, ['migrate', 'arg']).promise;
 
-    expect(migrate).toBeCalledWith(options, processedConfig, ['arg']);
+    expect(migrate).toBeCalledWith(
+      expect.any(Object),
+      options,
+      processedConfig,
+      ['arg'],
+    );
     expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
   });
 
   it('should run migrations without recurrent on `up` command', async () => {
     await rakeDb(options, config, ['up', 'arg']).promise;
 
-    expect(migrate).toBeCalledWith(options, processedConfig, ['arg']);
+    expect(migrate).toBeCalledWith(
+      expect.any(Object),
+      options,
+      processedConfig,
+      ['arg'],
+    );
     expect(runRecurrentMigrations).not.toBeCalled();
   });
 
@@ -91,15 +101,17 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['down', 'arg']).promise;
 
     expect(asMock(rollback).mock.calls).toEqual([
-      [options, processedConfig, ['arg']],
-      [options, processedConfig, ['arg']],
+      [expect.any(Object), options, processedConfig, ['arg']],
+      [expect.any(Object), options, processedConfig, ['arg']],
     ]);
   });
 
   it('should run redo and recurrent on `redo` command', async () => {
     await rakeDb(options, config, ['redo', 'arg']).promise;
 
-    expect(redo).toBeCalledWith(options, processedConfig, ['arg']);
+    expect(redo).toBeCalledWith(expect.any(Object), options, processedConfig, [
+      'arg',
+    ]);
     expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
   });
 

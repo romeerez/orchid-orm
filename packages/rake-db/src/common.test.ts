@@ -1,22 +1,13 @@
 import {
-  createSchemaMigrations,
   getFirstWordAndRest,
-  getMigrations,
   getTextAfterTo,
   joinColumns,
   joinWords,
   quoteWithSchema,
-  setAdapterOptions,
-  setAdminCredentialsToOptions,
-  sortAsc,
-  sortDesc,
 } from './common';
-import prompts from 'prompts';
-import { Adapter, defaultSchemaConfig, makeColumnTypes } from 'pqb';
-import { readdir } from 'fs/promises';
+import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 import path from 'path';
 import { asMock } from 'test-utils';
-import { testConfig } from './rake-db.test-utils';
 import { getCallerFilePath, getStackTrace } from 'orchid-core';
 import {
   AppCodeUpdater,
@@ -24,19 +15,11 @@ import {
   processRakeDbConfig,
 } from './config';
 
-jest.mock('prompts', () => jest.fn());
-
-jest.mock('fs/promises', () => ({
-  readdir: jest.fn(),
-}));
-
 jest.mock('orchid-core', () => ({
   ...jest.requireActual('../../core/src'),
   getStackTrace: jest.fn(),
   getCallerFilePath: jest.fn(),
 }));
-
-const config = testConfig;
 
 describe('common', () => {
   describe('processRakeDbConfig', () => {
@@ -53,6 +36,7 @@ describe('common', () => {
         basePath: __dirname,
         dbScript: 'dbScript.ts',
         columnTypes: makeColumnTypes,
+        migrationId: 'serial',
         migrationsPath,
         recurrentPath: path.join(migrationsPath, 'recurrent'),
         migrationsTable: 'schemaMigrations',
@@ -124,164 +108,6 @@ describe('common', () => {
     });
   });
 
-  describe('setAdapterOptions', () => {
-    it('should set options in databaseURL to postgres', () => {
-      const result = setAdapterOptions(
-        {
-          databaseURL: 'postgres://user:password@localhost:5432/dbname',
-        },
-        {
-          database: 'updated-db',
-          user: 'updated-user',
-          password: 'updated-password',
-        },
-      );
-
-      expect(result).toEqual({
-        databaseURL:
-          'postgres://updated-user:updated-password@localhost:5432/updated-db',
-      });
-    });
-
-    it('should set object options', () => {
-      const result = setAdapterOptions(
-        {
-          database: 'dbname',
-          user: 'user',
-          password: 'password',
-        },
-        {
-          database: 'updated-db',
-          user: 'updated-user',
-          password: 'updated-password',
-        },
-      );
-
-      expect(result).toEqual({
-        database: 'updated-db',
-        user: 'updated-user',
-        password: 'updated-password',
-      });
-    });
-  });
-
-  describe('setAdminCredentialsToOptions', () => {
-    beforeEach(() => {
-      asMock(prompts).mockResolvedValueOnce({
-        confirm: true,
-      });
-
-      asMock(prompts).mockResolvedValueOnce({
-        user: 'admin-user',
-        password: 'admin-password',
-      });
-    });
-
-    it('should set admin credentials to databaseURL', async () => {
-      const result = await setAdminCredentialsToOptions({
-        databaseURL: 'postgres://user:password@localhost:5432/dbname',
-      });
-
-      expect(result).toEqual({
-        databaseURL:
-          'postgres://admin-user:admin-password@localhost:5432/dbname',
-      });
-    });
-
-    it('should set admin credentials to options', async () => {
-      const result = await setAdminCredentialsToOptions({
-        database: 'dbname',
-        user: 'user',
-        password: 'password',
-      });
-
-      expect(result).toEqual({
-        database: 'dbname',
-        user: 'admin-user',
-        password: 'admin-password',
-      });
-    });
-  });
-
-  describe('createSchemaMigrations', () => {
-    const mockedQuery = jest.fn();
-
-    const db = new Adapter({
-      databaseURL: 'postgres://user:password@host:1234/db-name',
-    });
-    db.query = mockedQuery;
-
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it('should create a "schemaMigrations" table', async () => {
-      mockedQuery.mockReturnValueOnce(undefined);
-
-      await createSchemaMigrations(db, config);
-
-      expect(mockedQuery.mock.calls).toEqual([
-        [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Created versions table'],
-      ]);
-    });
-
-    it('should inform if table already exists', async () => {
-      mockedQuery.mockRejectedValueOnce({ code: '42P07' });
-
-      await createSchemaMigrations(db, config);
-
-      expect(mockedQuery.mock.calls).toEqual([
-        [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Versions table exists'],
-      ]);
-    });
-
-    it('should create a custom schema if config has a schema other than public', async () => {
-      db.schema = 'custom';
-
-      await createSchemaMigrations(db, config);
-
-      expect(mockedQuery.mock.calls).toEqual([
-        [`CREATE SCHEMA "custom"`],
-        [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Created schema custom'],
-        ['Created versions table'],
-      ]);
-
-      db.schema = undefined;
-    });
-
-    it('should be fine when the custom schema already exists', async () => {
-      mockedQuery.mockRejectedValueOnce({ code: '42P06' });
-      mockedQuery.mockResolvedValue(null);
-
-      db.schema = 'custom';
-
-      await createSchemaMigrations(db, config);
-
-      expect(mockedQuery.mock.calls).toEqual([
-        [`CREATE SCHEMA "custom"`],
-        [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Created versions table'],
-      ]);
-
-      db.schema = undefined;
-    });
-  });
-
   describe('getFirstWordAndRest', () => {
     it('should return pair of first word and rest', () => {
       expect(getFirstWordAndRest('fooBarBaz')).toEqual(['foo', 'barBaz']);
@@ -299,106 +125,6 @@ describe('common', () => {
       expect(getTextAfterTo('addColumnToTable')).toBe('table');
       expect(getTextAfterTo('add-column-to-table')).toBe('table');
       expect(getTextAfterTo('add_column_to_table')).toBe('table');
-    });
-  });
-
-  describe('getMigrations', () => {
-    it('should return migrations from a specified directory path', async () => {
-      const version = '12345678901234';
-      const files = [`${version}_a.ts`, `${version}_b.ts`, `${version}_c.ts`];
-      (readdir as jest.Mock).mockReturnValueOnce(files);
-
-      const result = await getMigrations(config, true);
-      expect(result).toEqual(
-        files.map((file) => ({
-          path: path.resolve(config.migrationsPath, file),
-          version,
-          load: expect.any(Function),
-        })),
-      );
-    });
-
-    it('should return migrations from an object with migrations', async () => {
-      const version = '12345678901234';
-
-      const fn1 = async () => {};
-      const fn2 = async () => {};
-
-      const migrations = {
-        [`${version}_a.ts`]: fn1,
-        [`${version}_b.ts`]: fn2,
-      };
-
-      const result = await getMigrations({ ...config, migrations }, true);
-      expect(result).toEqual([
-        {
-          path: path.resolve(__dirname, `${version}_a.ts`),
-          version,
-          load: fn1,
-        },
-        {
-          path: path.resolve(__dirname, `${version}_b.ts`),
-          version,
-          load: fn2,
-        },
-      ]);
-    });
-
-    it('should return migrations in a reverse order from an object with migrations for a rollback', async () => {
-      const version = '12345678901234';
-
-      const migrations = {
-        [`${version}_a.ts`]: async () => {},
-        [`${version}_b.ts`]: async () => {},
-      };
-
-      const result = await getMigrations({ ...config, migrations }, false);
-      expect(result.map((item) => item.path)).toEqual([
-        path.resolve(__dirname, `${version}_b.ts`),
-        path.resolve(__dirname, `${version}_a.ts`),
-      ]);
-    });
-
-    it('should return empty array on error', async () => {
-      (readdir as jest.Mock).mockRejectedValue(new Error());
-
-      const result = await getMigrations(config, true);
-      expect(result).toEqual([]);
-    });
-
-    it('should skip files (or dirs) without extension', async () => {
-      (readdir as jest.Mock).mockRejectedValue(['dir']);
-
-      const result = await getMigrations(config, true);
-      expect(result).toEqual([]);
-    });
-
-    it('should throw if file is not a .ts, .js, and .mjs file', async () => {
-      (readdir as jest.Mock).mockReturnValueOnce(['file.c']);
-
-      await expect(getMigrations(config, true)).rejects.toThrow(
-        'Only .ts, .js, and .mjs files are supported',
-      );
-    });
-
-    it('should throw on improper version', async () => {
-      (readdir as jest.Mock).mockReturnValueOnce(['1234567890_file.ts']);
-
-      await expect(getMigrations(config, true)).rejects.toThrow(
-        'Migration file name should start with 14 digit version',
-      );
-    });
-  });
-
-  describe('sortAsc', () => {
-    it('should sort ascending', () => {
-      expect(sortAsc(['a', 'c', 'b'])).toEqual(['a', 'b', 'c']);
-    });
-  });
-
-  describe('sortDesc', () => {
-    it('should sort descending', () => {
-      expect(sortDesc(['a', 'c', 'b'])).toEqual(['c', 'b', 'a']);
     });
   });
 

@@ -5,14 +5,14 @@ import {
   RecordUnknown,
   toArray,
 } from 'orchid-core';
-import {
-  createSchemaMigrations,
-  RakeDbColumnTypes,
-  setAdapterOptions,
-  setAdminCredentialsToOptions,
-} from '../common';
 import { migrate } from './migrateOrRollback';
 import { getDatabaseAndUserFromOptions, RakeDbConfig } from '../config';
+import {
+  setAdapterOptions,
+  setAdminCredentialsToOptions,
+} from './createOrDrop.utils';
+import { RakeDbColumnTypes } from '../migration/migration';
+import { createMigrationsTable } from '../migration/migrationsTable';
 
 const execute = async (
   options: AdapterOptions,
@@ -109,7 +109,7 @@ const createOrDrop = async (
 
   const db = new Adapter(options);
 
-  await createSchemaMigrations(db, config);
+  await createMigrationsTable(db, config);
   await db.close();
 };
 
@@ -161,5 +161,5 @@ export const resetDb = async <
 ) => {
   await dropDb(arg, config);
   await createDb(arg, config);
-  await migrate(arg, config);
+  await migrate({}, arg, config);
 };

@@ -26,6 +26,7 @@ import {
   DropMode,
   Migration,
   MigrationColumnTypes,
+  RakeDbColumnTypes,
 } from './migration';
 import { RakeDbAst } from '../ast';
 import {
@@ -33,7 +34,6 @@ import {
   makePopulateEnumQuery,
   quoteNameFromString,
   quoteWithSchema,
-  RakeDbColumnTypes,
 } from '../common';
 import {
   addColumnComment,

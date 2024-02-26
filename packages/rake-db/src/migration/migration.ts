@@ -1,22 +1,23 @@
 import {
+  Adapter,
   ColumnsShape,
   ColumnType,
+  createDb,
+  DbResult,
+  EnumColumn,
   ForeignKeyOptions,
   IndexColumnOptions,
   IndexOptions,
   logParamToLogObject,
   QueryLogObject,
-  TransactionAdapter,
-  TextColumn,
-  createDb,
-  DbResult,
-  EnumColumn,
   quote,
-  Adapter,
   raw,
+  TextColumn,
+  TransactionAdapter,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
+  EmptyObject,
   emptyObject,
   MaybeArray,
   QueryInput,
@@ -28,11 +29,9 @@ import {
 import { createTable, CreateTableResult } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {
-  quoteWithSchema,
   getSchemaAndTableFromName,
   quoteNameFromString,
-  RakeDbColumnTypes,
-  ConstraintArg,
+  quoteWithSchema,
 } from '../common';
 import { RakeDbAst } from '../ast';
 import { columnTypeToSql } from './migrationUtils';
@@ -99,6 +98,43 @@ export type SilentQueries = {
   // Query arrays without logging
   silentArrays: Adapter['arrays'];
 };
+
+export interface RakeDbColumnTypes {
+  index(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options?: IndexOptions,
+  ): EmptyObject;
+
+  foreignKey(
+    columns: [string, ...string[]],
+    foreignTable: string,
+    foreignColumns: [string, ...string[]],
+    options?: ForeignKeyOptions,
+  ): EmptyObject;
+
+  primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
+
+  check(check: RawSQLBase): EmptyObject;
+
+  constraint(arg: ConstraintArg): EmptyObject;
+}
+
+// Constraint config, it can be a foreign key or a check
+export interface ConstraintArg {
+  // Name of the constraint
+  name?: string;
+  // Foreign key options
+  references?: [
+    columns: [string, ...string[]],
+    table: string,
+    foreignColumn: [string, ...string[]],
+    options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
+  ];
+  // Database check raw SQL
+  check?: RawSQLBase;
+  // Drop mode to use when dropping the constraint
+  dropMode?: DropMode;
+}
 
 // Combined queryable database instance and a migration interface
 export type DbMigration<CT extends RakeDbColumnTypes> = DbResult<CT> &

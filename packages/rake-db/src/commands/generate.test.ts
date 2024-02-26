@@ -5,11 +5,9 @@ import { pathToLog } from 'orchid-core';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
 import { migrationConfigDefaults } from '../config';
+import fs from 'fs/promises';
 
-jest.mock('fs/promises', () => ({
-  mkdir: jest.fn(),
-  writeFile: jest.fn(),
-}));
+jest.mock('fs/promises');
 
 const migrationsPath = migrationConfigDefaults.migrationsPath;
 const config = {
@@ -25,7 +23,7 @@ const testGenerate = async (args: string[], content: string) => {
 
   expect(mkdir).toHaveBeenCalledWith(migrationsPath, { recursive: true });
 
-  const filePath = path.resolve(migrationsPath, `20000101000000_${name}.ts`);
+  const filePath = path.resolve(migrationsPath, `0001_${name}.ts`);
   expect(writeFile).toHaveBeenCalledWith(filePath, content);
 
   expect(log.mock.calls).toEqual([[`Created ${pathToLog(filePath)}`]]);
@@ -35,6 +33,7 @@ describe('generate', () => {
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date(2000, 0, 1, 0, 0, 0));
     jest.clearAllMocks();
+    asMock(fs.readdir).mockReturnValue(Promise.resolve([]));
   });
 
   it('should throw if migration name is not provided', async () => {

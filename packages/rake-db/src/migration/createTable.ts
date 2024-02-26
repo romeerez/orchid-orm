@@ -14,6 +14,7 @@ import {
   ColumnsShapeCallback,
   DbMigration,
   Migration,
+  RakeDbColumnTypes,
   TableOptions,
 } from './migration';
 import {
@@ -30,7 +31,6 @@ import {
   getSchemaAndTableFromName,
   makePopulateEnumQuery,
   quoteWithSchema,
-  RakeDbColumnTypes,
 } from '../common';
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';

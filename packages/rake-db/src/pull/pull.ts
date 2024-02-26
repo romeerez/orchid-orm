@@ -1,7 +1,7 @@
 import { Adapter, AdapterOptions, makeColumnsByType } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
-import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
+import { makeFileVersion, writeMigrationFile } from '../commands/generate';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import { ColumnSchemaConfig } from 'orchid-core';
 import { RakeDbConfig } from 'rake-db';
@@ -30,14 +30,14 @@ export const pullDbStructure = async <
   const result = astToMigration(config, ast);
   if (!result) return;
 
-  const version = makeFileTimeStamp();
+  const version = await makeFileVersion({}, config);
   await writeMigrationFile(config, version, 'pull', result);
 
   const silentQueries = Object.assign(adapter, {
     silentQuery: adapter.query,
     silentArrays: adapter.arrays,
   });
-  await saveMigratedVersion(silentQueries, version, config);
+  await saveMigratedVersion(silentQueries, version, 'pull', config);
 
   const cache = {};
   for (const item of ast) {

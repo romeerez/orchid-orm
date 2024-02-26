@@ -2,11 +2,13 @@ import {
   getFirstWordAndRest,
   getTextAfterFrom,
   getTextAfterTo,
+  RakeDbCtx,
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { ColumnSchemaConfig, getImportPath, pathToLog } from 'orchid-core';
-import { RakeDbConfig } from '../config';
+import { AnyRakeDbConfig, RakeDbConfig } from '../config';
+import { getMigrations } from '../migration/migrationsSet';
 
 export const writeMigrationFile = async <
   SchemaConfig extends ColumnSchemaConfig,
@@ -29,17 +31,33 @@ export const writeMigrationFile = async <
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 
-export const generate = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  config: RakeDbConfig<SchemaConfig, CT>,
+export const generate = async (
+  config: AnyRakeDbConfig,
   [name]: string[],
 ): Promise<void> => {
   if (!name) throw new Error('Migration name is missing');
 
-  const version = makeFileTimeStamp();
+  const version = await makeFileVersion({}, config);
   await writeMigrationFile(config, version, name, makeContent);
 };
 
-export const makeFileTimeStamp = () => {
+export const makeFileVersion = async (
+  ctx: RakeDbCtx,
+  config: AnyRakeDbConfig,
+) => {
+  if (config.migrationId === 'timestamp') {
+    return generateTimeStamp();
+  } else {
+    const {
+      migrations: [first],
+    } = await getMigrations(ctx, config, false);
+    return first
+      ? String(parseInt(first.version) + 1).padStart(4, '0')
+      : '0001';
+  }
+};
+
+export const generateTimeStamp = () => {
   const now = new Date();
   return [
     now.getUTCFullYear(),

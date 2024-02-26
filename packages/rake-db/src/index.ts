@@ -5,6 +5,4 @@ export * from './migration/migration';
 export { rakeDb } from './rakeDb';
 export * from './ast';
 export * from './migration/manageMigratedVersions';
-export { RakeDbConfig } from './config';
-export { AppCodeUpdater } from './config';
-export { AppCodeUpdaterParams } from './config';
+export * from './config';

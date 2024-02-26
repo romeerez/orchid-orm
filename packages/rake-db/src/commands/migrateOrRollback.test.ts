@@ -6,37 +6,39 @@ import {
   rollback,
 } from './migrateOrRollback';
 import {
-  createSchemaMigrations,
-  getMigrations,
-  RakeDbColumnTypes,
-} from '../common';
-import {
   Adapter,
   DefaultColumnTypes,
   TransactionAdapter,
   DefaultSchemaConfig,
 } from 'pqb';
-import { noop, pathToLog } from 'orchid-core';
+import { noop, pathToLog, Sql } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
-import { AppCodeUpdater } from 'rake-db';
+import { AppCodeUpdater, RakeDbColumnTypes } from 'rake-db';
+import { AnyRakeDbConfig } from '../config';
+import { createMigrationsTable } from '../migration/migrationsTable';
+import { getMigrations } from '../migration/migrationsSet';
 
-jest.mock('../common', () => ({
-  ...jest.requireActual('../common'),
+jest.mock('../migration/migrationsSet', () => ({
   getMigrations: jest.fn(),
-  createSchemaMigrations: jest.fn(),
+}));
+
+jest.mock('../migration/migrationsTable', () => ({
+  createMigrationsTable: jest.fn(),
 }));
 
 const options = { databaseURL: 'postgres://user@localhost/dbname' };
 
-const files = [
-  { path: 'file1', version: '1', load: jest.fn() },
-  { path: 'file2', version: '2', load: jest.fn() },
-  { path: 'file3', version: '3', load: jest.fn() },
-  { path: 'file4', version: '4', load: jest.fn() },
-];
+const makeFile = (version: number) => ({
+  path: `path/${version}_file.ts`,
+  name: `file.ts`,
+  version: `${version}`,
+  load: jest.fn(),
+});
+
+const files = [makeFile(1), makeFile(2), makeFile(3), makeFile(4)];
 
 Adapter.prototype.transaction = (_, cb) => {
   return cb({
@@ -50,12 +52,14 @@ const queries: string[] = [];
 const transactionQueryMock = jest.fn().mockImplementation((q) => {
   if (q === 'SELECT * FROM "schemaMigrations"') {
     return {
-      rows: migratedVersions.map((version) => [version]),
+      rows: migratedVersions.map((version) => [version, 'name']),
+      fields: [{}, {}],
     };
   } else {
     queries.push(q);
     return {
       rows: [],
+      fields: [{}, {}],
     };
   }
 });
@@ -80,13 +84,89 @@ const createTableCallback = () => {
 };
 
 let migrationFiles: { path: string; version: string; load(): void }[] = [];
-asMock(getMigrations).mockImplementation((_, up) =>
-  up ? migrationFiles : [...migrationFiles].reverse(),
-);
+asMock(getMigrations).mockImplementation((_ctx, _config, up) => ({
+  migrations: up ? migrationFiles : [...migrationFiles].reverse(),
+}));
+
+let currentConfig = undefined as unknown as AnyRakeDbConfig;
+
+const arrange = <
+  T extends {
+    files?: typeof migrationFiles;
+    versions?: string[];
+    config?: AnyRakeDbConfig;
+  },
+>(
+  config: T,
+): T => {
+  if (config.files) migrationFiles = config.files;
+  if (config.versions) migratedVersions = config.versions;
+  if (config.config) currentConfig = config.config;
+  return config;
+};
+
+const act = (
+  fn: typeof migrate | typeof rollback | typeof redo,
+  args?: string[],
+) => fn({}, options, currentConfig, args ?? []);
 
 const appCodeUpdater: AppCodeUpdater = {
   process: jest.fn(),
   afterAll: jest.fn(),
+};
+
+const sql = (text: string, values: unknown[]) => ({
+  text,
+  values,
+});
+
+const insertMigration = ({
+  version,
+  name,
+}: {
+  version: string;
+  name: string;
+}) =>
+  sql('INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)', [
+    version,
+    name,
+  ]);
+
+const deleteMigration = ({
+  version,
+  name,
+}: {
+  version: string;
+  name: string;
+}) =>
+  sql('DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2', [
+    version,
+    name,
+  ]);
+
+const assert = {
+  getMigrationsUp: (conf: AnyRakeDbConfig) =>
+    expect(getMigrations).toBeCalledWith(expect.any(Object), conf, true),
+
+  getMigrationsDown: (conf: AnyRakeDbConfig) =>
+    expect(getMigrations).toBeCalledWith(expect.any(Object), conf, false),
+
+  queries: (sqls: Sql[]) =>
+    expect(queries).toEqual([
+      `SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`,
+      ...sqls,
+    ]),
+
+  logs: (
+    args: ({ migrated: { path: string } } | { rolledBack: { path: string } })[],
+  ) =>
+    expect(asMock(config.logger?.log).mock.calls).toEqual(
+      args.map((arg) =>
+        'migrated' in arg
+          ? [`Migrated ${pathToLog(arg.migrated.path)}`]
+          : [`Rolled back ${pathToLog(arg.rolledBack.path)}`],
+      ),
+    ),
 };
 
 describe('migrateOrRollback', () => {
@@ -100,21 +180,23 @@ describe('migrateOrRollback', () => {
 
   describe('migrate', () => {
     it('should work properly', async () => {
-      migrationFiles = files.slice(0, 3);
-      migratedVersions = ['1'];
-      const conf = {
-        ...config,
-        basePath: __dirname,
-        beforeMigrate: jest.fn(),
-        afterMigrate: jest.fn(),
-      };
+      const env = arrange({
+        files: files.slice(0, 3),
+        versions: ['1'],
+        config: {
+          ...config,
+          basePath: __dirname,
+          beforeMigrate: jest.fn(),
+          afterMigrate: jest.fn(),
+        },
+      });
 
-      await migrate(options, conf, []);
+      await act(migrate);
 
-      expect(getMigrations).toBeCalledWith(conf, true);
+      assert.getMigrationsUp(env.config);
 
-      expect(conf.beforeMigrate).toBeCalled();
-      expect(conf.afterMigrate).toBeCalled();
+      expect(env.config.beforeMigrate).toBeCalled();
+      expect(env.config.afterMigrate).toBeCalled();
 
       files.forEach((file, i) => {
         if (i === 1 || i === 2) {
@@ -124,100 +206,116 @@ describe('migrateOrRollback', () => {
         }
       });
 
-      expect(queries).toEqual([
-        `SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`,
-        `INSERT INTO "schemaMigrations" VALUES ('2')`,
-        `INSERT INTO "schemaMigrations" VALUES ('3')`,
-      ]);
+      assert.queries([insertMigration(files[1]), insertMigration(files[2])]);
 
-      expect(asMock(config.logger?.log).mock.calls).toEqual([
-        [`Migrated ${pathToLog('file2')}`],
-        [`Migrated ${pathToLog('file3')}`],
-      ]);
+      assert.logs([{ migrated: files[1] }, { migrated: files[2] }]);
     });
 
     it('should create migrations table if it not exist', async () => {
-      migrationFiles = [];
+      arrange({
+        files: [],
+        config,
+      });
+
       transactionQueryMock.mockResolvedValueOnce({});
       transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
-      (createSchemaMigrations as jest.Mock).mockResolvedValueOnce(undefined);
+      asMock(createMigrationsTable).mockResolvedValueOnce(undefined);
 
-      await migrate(options, config, []);
+      await act(migrate);
 
-      expect(getMigrations).toBeCalledWith(config, true);
-      expect(createSchemaMigrations).toBeCalled();
+      assert.getMigrationsUp(config);
+      expect(createMigrationsTable).toBeCalled();
 
       for (const file of files) {
         expect(file.load).not.toBeCalled();
       }
 
       expect(queries).toHaveLength(1);
-      expect(config.logger?.log).not.toBeCalled();
+      assert.logs([]);
     });
 
     it('should call appCodeUpdater only for the first db options', async () => {
-      migrationFiles = [files[0]];
-      migratedVersions = [];
+      arrange({
+        files: [files[0]],
+        versions: [],
+        config: {
+          ...config,
+          appCodeUpdater,
+          useCodeUpdater: true,
+        },
+      });
+
       files[0].load.mockImplementationOnce(createTableCallback);
 
-      await migrate(
-        [options, options],
-        { ...config, appCodeUpdater, useCodeUpdater: true },
-        [],
-      );
+      await act(migrate);
 
       expect(appCodeUpdater.process).toBeCalledTimes(1);
       expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
     });
 
     it('should not call appCodeUpdater when useCodeUpdater is set to false in config', async () => {
-      migrationFiles = [files[0]];
-      migratedVersions = [];
+      arrange({
+        files: [files[0]],
+        versions: [],
+        config: {
+          ...config,
+          appCodeUpdater,
+          useCodeUpdater: false,
+        },
+      });
+
       files[0].load.mockImplementation(createTableCallback);
 
-      await migrate(
-        options,
-        { ...config, appCodeUpdater, useCodeUpdater: false },
-        [],
-      );
+      await act(migrate);
 
       expect(appCodeUpdater.process).not.toBeCalled();
       expect(appCodeUpdater.afterAll).not.toBeCalled();
     });
 
     it('should not call appCodeUpdater when having argument --code false', async () => {
-      migrationFiles = [files[0]];
-      migratedVersions = [];
+      arrange({
+        files: [files[0]],
+        versions: [],
+        config: {
+          ...config,
+          appCodeUpdater,
+          useCodeUpdater: true,
+        },
+      });
+
       files[0].load.mockImplementation(createTableCallback);
 
-      await migrate(
-        options,
-        { ...config, appCodeUpdater, useCodeUpdater: true },
-        ['--code', 'false'],
-      );
+      await act(migrate, ['--code', 'false']);
 
       expect(appCodeUpdater.process).not.toBeCalled();
       expect(appCodeUpdater.afterAll).not.toBeCalled();
     });
 
     it('should call appCodeUpdater when having argument --code', async () => {
-      migrationFiles = [files[0]];
-      migratedVersions = [];
+      arrange({
+        files: [files[0]],
+        versions: [],
+        config: {
+          ...config,
+          appCodeUpdater,
+          useCodeUpdater: false,
+        },
+      });
+
       files[0].load.mockImplementation(createTableCallback);
 
-      await migrate(
-        options,
-        { ...config, appCodeUpdater, useCodeUpdater: false },
-        ['--code'],
-      );
+      await act(migrate, ['--code']);
 
       expect(appCodeUpdater.process).toBeCalled();
       expect(appCodeUpdater.afterAll).toBeCalled();
     });
 
     it('should call multiple change callbacks from top to bottom', async () => {
-      migrationFiles = [files[0]];
-      migratedVersions = [];
+      arrange({
+        files: [files[0]],
+        versions: [],
+        config,
+      });
 
       const called: string[] = [];
       files[0].load.mockImplementation(() => {
@@ -229,7 +327,7 @@ describe('migrateOrRollback', () => {
         });
       });
 
-      await migrate(options, config, []);
+      await act(migrate);
 
       expect(called).toEqual(['one', 'two']);
     });
@@ -238,23 +336,26 @@ describe('migrateOrRollback', () => {
       const changes1 = jest.fn();
       const changes2 = jest.fn();
 
-      migrationFiles = [
-        {
-          ...files[0],
-          load: async () => {
-            return { default: changes1 };
+      arrange({
+        files: [
+          {
+            ...files[0],
+            load: async () => {
+              return { default: changes1 };
+            },
           },
-        },
-        {
-          ...files[1],
-          load: async () => {
-            return { default: changes2 };
+          {
+            ...files[1],
+            load: async () => {
+              return { default: changes2 };
+            },
           },
-        },
-      ];
-      migratedVersions = [];
+        ],
+        versions: [],
+        config,
+      });
 
-      await migrate(options, config, []);
+      await act(migrate);
 
       expect(changes1).toBeCalled();
       expect(changes2).toBeCalled();
@@ -264,34 +365,40 @@ describe('migrateOrRollback', () => {
       const changes1 = jest.fn();
       const changes2 = jest.fn();
 
-      migrationFiles = [
-        {
-          ...files[0],
-          load: async () => {
-            return { default: [changes1, changes2] };
+      arrange({
+        files: [
+          {
+            ...files[0],
+            load: async () => {
+              return { default: [changes1, changes2] };
+            },
           },
-        },
-      ];
-      migratedVersions = [];
+        ],
+        versions: [],
+      });
 
-      await migrate(options, config, []);
+      await act(migrate);
 
       expect(changes1).toBeCalled();
       expect(changes2).toBeCalled();
     });
 
     it('should throw when `forceDefaultExports` is true and migration has no default export', async () => {
-      migrationFiles = [
-        {
-          ...files[0],
-          load: noop,
+      arrange({
+        files: [
+          {
+            ...files[0],
+            load: noop,
+          },
+        ],
+        versions: [],
+        config: {
+          ...config,
+          forceDefaultExports: true,
         },
-      ];
-      migratedVersions = [];
+      });
 
-      await expect(
-        migrate(options, { ...config, forceDefaultExports: true }, []),
-      ).rejects.toThrow(
+      await expect(act(migrate)).rejects.toThrow(
         `Missing a default export in ${files[0].path} migration`,
       );
     });
@@ -299,20 +406,22 @@ describe('migrateOrRollback', () => {
 
   describe('rollback', () => {
     it('should work properly', async () => {
-      migrationFiles = files.slice(0, 3);
-      migratedVersions = ['1', '2'];
-      const conf = {
-        ...config,
-        beforeRollback: jest.fn(),
-        afterRollback: jest.fn(),
-      };
+      const env = arrange({
+        files: files.slice(0, 3),
+        versions: ['1', '2'],
+        config: {
+          ...config,
+          beforeRollback: jest.fn(),
+          afterRollback: jest.fn(),
+        },
+      });
 
-      await rollback(options, conf, []);
+      await act(rollback);
 
-      expect(conf.beforeRollback).toBeCalled();
-      expect(conf.afterRollback).toBeCalled();
+      expect(env.config.beforeRollback).toBeCalled();
+      expect(env.config.afterRollback).toBeCalled();
 
-      expect(getMigrations).toBeCalledWith(conf, false);
+      assert.getMigrationsDown(env.config);
 
       files.forEach((file, i) => {
         if (i === 1) {
@@ -322,38 +431,39 @@ describe('migrateOrRollback', () => {
         }
       });
 
-      expect(queries).toEqual([
-        `SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`,
-        `DELETE FROM "schemaMigrations" WHERE version = '2'`,
-      ]);
+      assert.queries([deleteMigration(files[1])]);
 
-      expect(asMock(config.logger?.log).mock.calls).toEqual([
-        [`Rolled back ${pathToLog('file2')}`],
-      ]);
+      assert.logs([{ rolledBack: files[1] }]);
     });
 
     it('should create migrations table if it not exist', async () => {
-      migrationFiles = [];
+      arrange({
+        files: [],
+        config,
+      });
+
       transactionQueryMock.mockResolvedValueOnce({});
       transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
-      (createSchemaMigrations as jest.Mock).mockResolvedValueOnce(undefined);
+      asMock(createMigrationsTable).mockResolvedValueOnce(undefined);
 
-      await rollback(options, config, []);
+      await act(rollback);
 
-      expect(getMigrations).toBeCalledWith(config, false);
-      expect(createSchemaMigrations).toBeCalled();
+      assert.getMigrationsDown(config);
+      expect(createMigrationsTable).toBeCalled();
 
       for (const file of files) {
         expect(file.load).not.toBeCalled();
       }
 
-      expect(queries).toHaveLength(1);
-      expect(config.logger?.log).not.toBeCalled();
+      assert.queries([]);
+      assert.logs([]);
     });
 
     it('should call multiple change callbacks from top to bottom', async () => {
-      migrationFiles = [files[0]];
-      migratedVersions = [files[0].version];
+      arrange({
+        files: [files[0]],
+        versions: [files[0].version],
+      });
 
       const called: string[] = [];
       files[0].load.mockImplementation(() => {
@@ -365,7 +475,7 @@ describe('migrateOrRollback', () => {
         });
       });
 
-      await rollback(options, config, []);
+      await act(rollback);
 
       expect(called).toEqual(['two', 'one']);
     });
@@ -373,28 +483,30 @@ describe('migrateOrRollback', () => {
 
   describe('redo', () => {
     it('should rollback and migrate', async () => {
-      migrationFiles = files;
-      migratedVersions = files.slice(0, 3).map((file) => file.version);
-
       const callbackCalls: string[] = [];
-      const conf = {
-        ...config,
-        appCodeUpdater,
-        basePath: __dirname,
-        beforeMigrate: jest.fn(async () => {
-          callbackCalls.push('beforeMigrate');
-        }),
-        afterMigrate: jest.fn(async () => {
-          callbackCalls.push('afterMigrate');
-        }),
-        beforeRollback: jest.fn(async () => {
-          callbackCalls.push('beforeRollback');
-        }),
-        afterRollback: jest.fn(async () => {
-          callbackCalls.push('afterRollback');
-          migratedVersions = [files[0].version];
-        }),
-      };
+
+      arrange({
+        files,
+        versions: files.slice(0, 3).map((file) => file.version),
+        config: {
+          ...config,
+          appCodeUpdater,
+          basePath: __dirname,
+          beforeMigrate: jest.fn(async () => {
+            callbackCalls.push('beforeMigrate');
+          }),
+          afterMigrate: jest.fn(async () => {
+            callbackCalls.push('afterMigrate');
+          }),
+          beforeRollback: jest.fn(async () => {
+            callbackCalls.push('beforeRollback');
+          }),
+          afterRollback: jest.fn(async () => {
+            callbackCalls.push('afterRollback');
+            migratedVersions = [files[3].version];
+          }),
+        },
+      });
 
       const ranMigrations: [string, boolean][] = [];
       for (const file of files) {
@@ -406,7 +518,7 @@ describe('migrateOrRollback', () => {
         });
       }
 
-      await redo(options, conf, ['2']);
+      await act(redo, ['2']);
 
       expect(callbackCalls).toEqual([
         'beforeRollback',
@@ -416,29 +528,40 @@ describe('migrateOrRollback', () => {
       ]);
 
       expect(asMock(getMigrations).mock.calls).toEqual([
-        [expect.any(Object), false],
+        [expect.any(Object), expect.any(Object), true],
       ]);
 
       expect(ranMigrations).toEqual([
-        ['file3', false],
-        ['file2', false],
-        ['file2', true],
-        ['file3', true],
+        [files[2].path, false],
+        [files[1].path, false],
+        [files[1].path, true],
+        [files[2].path, true],
       ]);
 
-      expect(queries).toEqual([
-        `SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`,
-        `DELETE FROM "schemaMigrations" WHERE version = '3'`,
-        `DELETE FROM "schemaMigrations" WHERE version = '2'`,
-        `INSERT INTO "schemaMigrations" VALUES ('2')`,
-        `INSERT INTO "schemaMigrations" VALUES ('3')`,
+      assert.queries([
+        sql(`DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2`, [
+          '3',
+          'file.ts',
+        ]),
+        sql(`DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2`, [
+          '2',
+          'file.ts',
+        ]),
+        sql(`INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)`, [
+          '2',
+          'file.ts',
+        ]),
+        sql(`INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)`, [
+          '3',
+          'file.ts',
+        ]),
       ]);
 
-      expect(asMock(config.logger?.log).mock.calls).toEqual([
-        [`Rolled back ${pathToLog('file3')}`],
-        [`Rolled back ${pathToLog('file2')}`],
-        [`Migrated ${pathToLog('file2')}`],
-        [`Migrated ${pathToLog('file3')}`],
+      assert.logs([
+        { rolledBack: files[2] },
+        { rolledBack: files[1] },
+        { migrated: files[1] },
+        { migrated: files[2] },
       ]);
 
       expect(appCodeUpdater.process).toBeCalledTimes(4);
@@ -446,12 +569,10 @@ describe('migrateOrRollback', () => {
     });
 
     it('should migrate just one if number argument is not provided', async () => {
-      migrationFiles = files;
-      migratedVersions = files.map((file) => file.version);
-
-      await redo(
-        options,
-        {
+      arrange({
+        files,
+        versions: files.map((file) => file.version),
+        config: {
           ...config,
           afterRollback: async () => {
             const last = migratedVersions[migratedVersions.length - 1];
@@ -460,13 +581,11 @@ describe('migrateOrRollback', () => {
             );
           },
         },
-        [],
-      );
+      });
 
-      expect(asMock(config.logger?.log).mock.calls).toEqual([
-        [`Rolled back ${pathToLog('file4')}`],
-        [`Migrated ${pathToLog('file4')}`],
-      ]);
+      await act(redo);
+
+      assert.logs([{ rolledBack: files[3] }, { migrated: files[3] }]);
     });
 
     it('should rollback migration changes bottom to top, then migrate them top to bottom', async () => {
@@ -476,29 +595,30 @@ describe('migrateOrRollback', () => {
         path: 'file1',
         version: '1',
         load() {
-          pushChange(async () => {
+          pushChange(top);
+          async function top() {
             executed.push('top');
-          });
+          }
 
-          pushChange(async () => {
+          pushChange(bottom);
+          async function bottom() {
             executed.push('bottom');
-          });
+          }
         },
       };
 
-      migrationFiles = [file];
-      migratedVersions = ['1'];
-
-      await redo(
-        options,
-        {
+      arrange({
+        files: [file],
+        versions: ['1'],
+        config: {
           ...config,
           afterRollback: async () => {
             migratedVersions = [];
           },
         },
-        [],
-      );
+      });
+
+      await act(redo);
 
       expect(executed).toEqual(['bottom', 'top', 'top', 'bottom']);
     });

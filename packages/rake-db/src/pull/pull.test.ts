@@ -1,6 +1,6 @@
 import { introspectDbSchema } from './dbStructure';
 import { pullDbStructure } from './pull';
-import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
+import { makeFileVersion, writeMigrationFile } from '../commands/generate';
 import {
   check,
   collation,
@@ -31,7 +31,7 @@ import { processRakeDbConfig } from '../config';
 jest.mock('./dbStructure');
 
 jest.mock('../commands/generate', () => ({
-  makeFileTimeStamp: jest.fn(),
+  makeFileVersion: jest.fn(),
   writeMigrationFile: jest.fn(),
 }));
 
@@ -52,7 +52,7 @@ const structure = {
   collations: [],
 } as Awaited<ReturnType<typeof introspectDbSchema>>;
 
-asMock(makeFileTimeStamp).mockReturnValue('timestamp');
+asMock(makeFileVersion).mockReturnValue('timestamp');
 
 const appCodeUpdater: AppCodeUpdater = {
   process: jest.fn(),
@@ -355,6 +355,7 @@ change(async (db) => {
     expect(saveMigratedVersion).toBeCalledWith(
       expect.any(Object),
       'timestamp',
+      'pull',
       config,
     );
 
@@ -443,6 +444,7 @@ change(async (db) => {
     expect(saveMigratedVersion).toBeCalledWith(
       expect.any(Object),
       'timestamp',
+      'pull',
       config,
     );
 

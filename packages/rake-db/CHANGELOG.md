@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.15.0
+
+### Minor Changes
+
+- acd9e43e: Add serial migration prefix format and use it by default, add `change-ids` and `rebase` commands
+
 ## 2.14.5
 
 ### Patch Changes
