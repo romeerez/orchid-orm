@@ -59,7 +59,9 @@ export const getMigratedVersionsMap = async <
       name: config.migrationsTable,
     });
 
-    const result = await adapter.arrays<[string]>(`SELECT * FROM ${table}`);
+    const result = await adapter.arrays<[string, string]>(
+      `SELECT * FROM ${table}`,
+    );
 
     if (!result.fields[1]) {
       const { migrations } = await getMigrations(ctx, config, true);
@@ -70,23 +72,22 @@ export const getMigratedVersionsMap = async <
         map[item.version] = name.slice(getDigitsPrefix(name).length + 1);
       }
 
-      const data: { version: string; name: string }[] = result.rows.map(
-        ([version]) => {
-          const name = map[version];
-          if (!name) {
-            throw new Error(
-              `Migration for version ${version} is stored in db but is not found among available migrations`,
-            );
-          }
+      for (const row of result.rows) {
+        const [version] = row;
+        const name = map[version];
+        if (!name) {
+          throw new Error(
+            `Migration for version ${version} is stored in db but is not found among available migrations`,
+          );
+        }
 
-          return { version, name };
-        },
-      );
+        row[1] = name;
+      }
 
       await adapter.arrays(`ALTER TABLE ${table} ADD COLUMN name TEXT`);
 
       await Promise.all(
-        data.map(({ version, name }) =>
+        result.rows.map(([version, name]) =>
           adapter.arrays({
             text: `UPDATE ${table} SET name = $2 WHERE version = $1`,
             values: [version, name],
