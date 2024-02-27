@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.15.3
+
+### Patch Changes
+
+- 7e7fb35c: Add command `up force` for timestamp migrations
+- Updated dependencies [7e7fb35c]
+  - orchid-core@0.12.2
+  - pqb@0.26.2
+
 ## 2.15.2
 
 ### Patch Changes

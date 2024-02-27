@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.12.2
+
+### Patch Changes
+
+- 7e7fb35c: Add command `up force` for timestamp migrations
+
 ## 0.12.1
 
 ### Patch Changes
