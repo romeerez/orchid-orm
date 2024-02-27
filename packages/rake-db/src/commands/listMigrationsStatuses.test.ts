@@ -36,9 +36,11 @@ describe('listMigrationsStatuses', () => {
     });
 
     asMock(getMigratedVersionsMap).mockResolvedValueOnce({
-      '0001': true,
-      '0002': true,
-      '0003': false,
+      map: {
+        '0001': 'First migration',
+        '0002': 'Second migration',
+      },
+      sequence: ['0001', '0002'],
     });
 
     await listMigrationsStatuses(options, config, []);
@@ -78,9 +80,11 @@ describe('listMigrationsStatuses', () => {
     });
 
     asMock(getMigratedVersionsMap).mockResolvedValueOnce({
-      '0001': true,
-      '0002': true,
-      '0003': false,
+      map: {
+        '0001': 'First migration',
+        '0002': 'Second migration',
+      },
+      sequence: ['0001', '0002'],
     });
 
     await listMigrationsStatuses(options, config, ['p']);

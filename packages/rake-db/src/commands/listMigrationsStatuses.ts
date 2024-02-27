@@ -37,7 +37,7 @@ export const listMigrationsStatuses = async (
 
   for (let i = 0; i < options.length; i++) {
     const list = migrated[i];
-    const key = Object.entries(list)
+    const key = Object.entries(list.map)
       .map(([version, up]) => `${version}${up ? 't' : 'f'}`)
       .join('');
 
@@ -72,7 +72,7 @@ export const listMigrationsStatuses = async (
         }
 
         return {
-          up: !!list[item.version],
+          up: !!list.map[item.version],
           version: item.version,
           name,
           url: pathToFileURL(item.path),

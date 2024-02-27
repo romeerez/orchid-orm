@@ -168,13 +168,15 @@ Commands:
   reset                   drop, create and migrate databases
   pull                    generate a combined migration for an existing database
   new                     create new migration file, see below
-  migrate                 migrate pending migrations, run recurrent
-  up                      migrate pending migrations, don't run recurrent
+  up                      migrate pending migrations
+  migrate                 migrate pending migrations, also run recurrent
+  up|migrate force        resolve the case of a non-migrated file in the middle
   rollback or down        rollback the last migrated
   redo                    rollback and migrate, run recurrent
   status or s             list migrations statuses
   status path or s p      list migrations statuses and paths to files
   rec or recurrent        run recurrent migrations
+  rebase                  move local migrations below the new ones from upstream
   change-ids serial       change migrations ids to 4 digit serial
   change-ids serial 42    change migrations ids to custom digits serial
   change-ids timestamp    change migrations ids to timestamps

@@ -6,7 +6,7 @@ import { getMigrations, MigrationItem } from '../migration/migrationsSet';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { RakeDbCtx } from '../common';
 import prompts from 'prompts';
-import { RecordString } from 'orchid-core';
+import { RecordOptionalString } from 'orchid-core';
 import { redo } from 'rake-db';
 
 interface RebaseFile extends MigrationItem {
@@ -51,9 +51,9 @@ export const rebase = async (
   );
   if (start === -1) return;
 
-  const combinedVersionsMap: RecordString = {};
-  for (const map of versionMaps) {
-    Object.assign(combinedVersionsMap, map);
+  const combinedVersionsMap: RecordOptionalString = {};
+  for (const versions of versionMaps) {
+    Object.assign(combinedVersionsMap, versions.map);
   }
 
   type Rename = [path: string, version: number];

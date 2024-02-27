@@ -9,7 +9,6 @@ import {
   ColumnSchemaConfig,
   MaybeArray,
   pathToLog,
-  RecordString,
   toArray,
 } from 'orchid-core';
 import { queryLock, RakeDbCtx, transaction } from '../common';
@@ -25,29 +24,17 @@ import {
 import {
   getMigratedVersionsMap,
   NoMigrationsTableError,
-  removeMigratedVersion,
+  deleteMigratedVersion,
   saveMigratedVersion,
+  RakeDbAppliedVersions,
 } from '../migration/manageMigratedVersions';
 import { RakeDbError } from '../errors';
 import { RakeDbAst } from '../ast';
-import {
-  AnyRakeDbConfig,
-  AppCodeUpdater,
-  RakeDbConfig,
-  RakeDbMigrationId,
-} from '../config';
+import { AppCodeUpdater, RakeDbConfig } from '../config';
 import path from 'path';
-import {
-  fileNamesToChangeMigrationId,
-  renameMigrationVersionsInDb,
-  RenameMigrationVersionsValue,
-} from './changeIds';
-import fs from 'fs/promises';
-import { pathToFileURL } from 'node:url';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import {
   getMigrations,
-  getMigrationVersion,
   MigrationItem,
   MigrationsSet,
 } from '../migration/migrationsSet';
@@ -71,18 +58,30 @@ function makeMigrateFn<
   defaultCount: number,
   up: boolean,
   fn: (
-    ctx: RakeDbCtx,
     trx: TransactionAdapter,
     config: RakeDbConfig<SchemaConfig, CT>,
-    migrations: MigrationsSet,
+    set: MigrationsSet,
+    versions: RakeDbAppliedVersions,
     count: number,
     asts: RakeDbAst[],
+    force: boolean,
   ) => Promise<void>,
 ): MigrateFn {
   return async (ctx: RakeDbCtx, options, config, args = []) => {
     const set = await getMigrations(ctx, config, up);
-    const count = getCount(args);
-    const conf = prepareConfig(config, args, count);
+
+    const arg = args[0];
+    let force = arg === 'force';
+    let count: number | undefined;
+    if (arg === 'force') {
+      force = true;
+    } else {
+      force = false;
+      const num = arg === 'all' ? Infinity : parseInt(arg);
+      count = isNaN(num) ? undefined : num;
+    }
+
+    const conf = prepareConfig(config, args, count === undefined || force);
     const asts: RakeDbAst[] = [];
     const appCodeUpdaterCache = {};
     const { appCodeUpdater } = conf;
@@ -93,13 +92,21 @@ function makeMigrateFn<
 
       try {
         await transaction(adapter, async (trx) => {
-          await fn(
+          const versions = await getMigratedVersionsMap(
             ctx,
+            trx,
+            config,
+            set.renameTo,
+          );
+
+          await fn(
             trx,
             conf as unknown as RakeDbConfig<SchemaConfig, CT>,
             set,
+            versions,
             count ?? defaultCount,
             localAsts,
+            force,
           );
         });
       } catch (err) {
@@ -109,7 +116,22 @@ function makeMigrateFn<
 
             await createMigrationsTable(trx, config);
 
-            await fn(ctx, trx, config, set, count ?? defaultCount, localAsts);
+            const versions = await getMigratedVersionsMap(
+              ctx,
+              trx,
+              config,
+              set.renameTo,
+            );
+
+            await fn(
+              trx,
+              config,
+              set,
+              versions,
+              count ?? defaultCount,
+              localAsts,
+              force,
+            );
           });
         } else {
           throw err;
@@ -143,8 +165,8 @@ function makeMigrateFn<
 export const migrate: MigrateFn = makeMigrateFn(
   Infinity,
   true,
-  (ctx, trx, config, migrations, count, asts) =>
-    migrateOrRollback(ctx, trx, config, migrations, count, asts, true),
+  (trx, config, set, versions, count, asts, force) =>
+    migrateOrRollback(trx, config, set, versions, count, asts, true, force),
 );
 
 /**
@@ -156,8 +178,8 @@ export const migrate: MigrateFn = makeMigrateFn(
 export const rollback: MigrateFn = makeMigrateFn(
   1,
   false,
-  (ctx, trx, config, migrations, count, asts) =>
-    migrateOrRollback(ctx, trx, config, migrations, count, asts, false),
+  (trx, config, set, versions, count, asts, force) =>
+    migrateOrRollback(trx, config, set, versions, count, asts, false, force),
 );
 
 /**
@@ -168,33 +190,38 @@ export const rollback: MigrateFn = makeMigrateFn(
 export const redo: MigrateFn = makeMigrateFn(
   1,
   true,
-  async (ctx, trx, config, set, count, asts) => {
+  async (trx, config, set, versions, count, asts, force) => {
     set.migrations.reverse();
 
-    await migrateOrRollback(ctx, trx, config, set, count, asts, false);
+    await migrateOrRollback(trx, config, set, versions, count, asts, false);
 
     set.migrations.reverse();
 
-    await migrateOrRollback(ctx, trx, config, set, count, asts, true, true);
+    await migrateOrRollback(
+      trx,
+      config,
+      set,
+      versions,
+      count,
+      asts,
+      true,
+      force,
+      true,
+    );
   },
 );
 
 const getDb = (adapter: Adapter) =>
   createDb<ColumnSchemaConfig, RakeDbColumnTypes>({ adapter });
 
-const getCount = (args: string[]): number | undefined => {
-  const num = args[0] === 'all' ? Infinity : parseInt(args[0]);
-  return isNaN(num) ? undefined : num;
-};
-
 function prepareConfig<SchemaConfig extends ColumnSchemaConfig, CT>(
   config: RakeDbConfig<SchemaConfig, CT>,
   args: string[],
-  count?: number,
+  hasArg: boolean,
 ): RakeDbConfig<SchemaConfig, CT> {
   config = { ...config };
 
-  const i = count === undefined ? 0 : 1;
+  const i = hasArg ? 0 : 1;
   const arg = args[i];
   if (arg === '--code') {
     config.useCodeUpdater = args[i + 1] !== 'false';
@@ -205,36 +232,57 @@ function prepareConfig<SchemaConfig extends ColumnSchemaConfig, CT>(
 }
 
 export const migrateOrRollback = async (
-  ctx: RakeDbCtx,
   trx: TransactionAdapter,
   config: RakeDbConfig<ColumnSchemaConfig, RakeDbColumnTypes>,
   set: MigrationsSet,
+  versions: RakeDbAppliedVersions,
   count: number,
   asts: RakeDbAst[],
   up: boolean,
+  force?: boolean,
   skipLock?: boolean,
 ): Promise<void> => {
+  const { sequence, map: versionsMap } = versions;
+
+  if (up) {
+    const rollbackTo = checkMigrationOrder(set, versions, force);
+
+    if (rollbackTo) {
+      let i = sequence.length - 1;
+      for (; i >= 0; i--) {
+        if (rollbackTo >= sequence[i]) {
+          i++;
+          break;
+        }
+      }
+      if (i < 0) i = 0;
+
+      set.migrations.reverse();
+
+      await migrateOrRollback(
+        trx,
+        config,
+        set,
+        versions,
+        sequence.length - i,
+        asts,
+        false,
+      );
+
+      set.migrations.reverse();
+    }
+  }
+
   if (!skipLock) await queryLock(trx);
 
   let db: DbResult<RakeDbColumnTypes> | undefined;
 
   await config[up ? 'beforeMigrate' : 'beforeRollback']?.((db ??= getDb(trx)));
 
-  let migratedVersions = await getMigratedVersionsMap(ctx, trx, config);
-
-  if (set.renameTo) {
-    migratedVersions = await renameMigrations(
-      config,
-      trx,
-      migratedVersions,
-      set.renameTo,
-    );
-  }
-
   for (const file of set.migrations) {
     if (
-      (up && migratedVersions[file.version]) ||
-      (!up && !migratedVersions[file.version])
+      (up && versionsMap[file.version]) ||
+      (!up && !versionsMap[file.version])
     ) {
       continue;
     }
@@ -242,6 +290,15 @@ export const migrateOrRollback = async (
     if (count-- <= 0) break;
 
     await runMigration(trx, up, file, config, asts);
+
+    if (up) {
+      const name = path.basename(file.path);
+      versionsMap[file.version] = name;
+      sequence.push(+file.version);
+    } else {
+      versionsMap[file.version] = undefined;
+      sequence.pop();
+    }
 
     config.logger?.log(
       `${up ? 'Migrated' : 'Rolled back'} ${pathToLog(file.path)}`,
@@ -251,62 +308,32 @@ export const migrateOrRollback = async (
   await config[up ? 'afterMigrate' : 'afterRollback']?.((db ??= getDb(trx)));
 };
 
-async function renameMigrations(
-  config: AnyRakeDbConfig,
-  trx: TransactionAdapter,
-  migratedVersions: RecordString,
-  renameTo: RakeDbMigrationId,
-) {
-  let first: string | undefined;
-  for (const version in migratedVersions) {
-    first = version;
-    break;
-  }
+const checkMigrationOrder = (
+  set: MigrationsSet,
+  { sequence, map }: RakeDbAppliedVersions,
+  force?: boolean,
+) => {
+  const last = sequence[sequence.length - 1];
+  if (last) {
+    for (const file of set.migrations) {
+      const version = +file.version;
+      if (version > last || map[version]) continue;
 
-  if (!first || getMigrationVersion(config, first)) return migratedVersions;
+      if (!force) {
+        throw new Error(
+          `Cannot migrate ${path.basename(
+            file.path,
+          )} because the higher position ${
+            map[last]
+          } was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
+        );
+      }
 
-  const fileName = fileNamesToChangeMigrationId[renameTo];
-  const filePath = path.join(config.migrationsPath, fileName);
-
-  const json = await fs.readFile(filePath, 'utf-8');
-
-  let data: RecordString;
-  try {
-    data = JSON.parse(json);
-    if (typeof data !== 'object')
-      throw new Error('Config for renaming is not an object');
-  } catch (err) {
-    throw new Error(`Failed to read ${pathToFileURL(filePath)}`, {
-      cause: err,
-    });
-  }
-
-  const values: RenameMigrationVersionsValue[] = [];
-
-  const updatedVersions: RecordString = {};
-
-  for (const version in migratedVersions) {
-    const name = migratedVersions[version];
-    const key = `${version}_${name}`;
-    let newVersion = data[key];
-    if (!newVersion) {
-      throw new Error(
-        `Failed to find an entry for the migrated ${key} in the ${fileName} config`,
-      );
+      return version;
     }
-
-    if (renameTo === 'serial') {
-      newVersion = String(newVersion).padStart(4, '0');
-    }
-
-    updatedVersions[newVersion] = name;
-    values.push([version, name, newVersion]);
   }
-
-  await renameMigrationVersionsInDb(config, trx, values);
-
-  return updatedVersions;
-}
+  return;
+};
 
 async function runCodeUpdaterAfterAll<
   SchemaConfig extends ColumnSchemaConfig,
@@ -400,7 +427,7 @@ const runMigration = async <
     }
   }
 
-  await (up ? saveMigratedVersion : removeMigratedVersion)(
+  await (up ? saveMigratedVersion : deleteMigratedVersion)(
     db.adapter,
     file.version,
     path.basename(file.path).slice(file.version.length + 1),

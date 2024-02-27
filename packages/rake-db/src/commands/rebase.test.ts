@@ -4,7 +4,10 @@ import { AnyRakeDbConfig } from '../config';
 import fs from 'fs/promises';
 import path from 'path';
 import { asMock } from 'test-utils';
-import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
+import {
+  getMigratedVersionsMap,
+  RakeDbAppliedVersions,
+} from '../migration/manageMigratedVersions';
 import { getMigrationVersionOrThrow } from '../migration/migrationsSet';
 import { RecordString } from 'orchid-core';
 import prompts from 'prompts';
@@ -28,7 +31,7 @@ const options = [
 
 const dbChanges: { name: string; up: boolean; count: number }[] = [];
 
-let migrationsMap: RecordString = {};
+let migrationsMap: RakeDbAppliedVersions = { map: {}, sequence: [] };
 
 const defaultConfig = {
   ...testConfig,
@@ -64,18 +67,30 @@ const arrange = (arg: {
     arg.files?.map((name) => ({ path: name, name, isFile: () => true })) ?? [],
   );
 
-  migrationsMap = arg.migrated
-    ? Object.fromEntries(
-        arg.migrated.map((name) => [
-          getMigrationVersionOrThrow(config, name),
-          name,
-        ]),
-      )
-    : {};
+  const versions =
+    arg.migrated &&
+    arg.migrated.map((name) => [
+      getMigrationVersionOrThrow(config, name),
+      name,
+    ]);
 
-  let i = 0;
-  asMock(getMigratedVersionsMap).mockImplementation(() => {
-    return i++ % 2 ? {} : migrationsMap;
+  migrationsMap = versions
+    ? {
+        map: Object.fromEntries(versions),
+        sequence: versions.map(([version]) => +version),
+      }
+    : { map: {}, sequence: [] };
+
+  asMock(getMigratedVersionsMap).mockResolvedValueOnce(migrationsMap);
+  asMock(getMigratedVersionsMap).mockResolvedValueOnce({
+    map: { ...migrationsMap.map },
+    sequence: [...migrationsMap.sequence],
+  });
+
+  asMock(getMigratedVersionsMap).mockResolvedValueOnce(migrationsMap);
+  asMock(getMigratedVersionsMap).mockResolvedValueOnce({
+    map: { ...migrationsMap.map },
+    sequence: [...migrationsMap.sequence],
   });
 
   if (arg.promptResponses) {

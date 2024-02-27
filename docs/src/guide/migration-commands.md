@@ -179,6 +179,30 @@ npm run db migrate 3
 
 The same as `migrate`, but it won't run `recurrent` migrations.
 
+## up or migrate force
+
+This command may be useful if you're using timestamp-prefixed migrations.
+
+If your co-worker has committed a migration with an earlier timestamp than your local migration:
+
+```
+migrations/
+├── 20221017200326_theirMigration.ts
+└── 20221017200326_yourMigration.ts
+```
+
+Your migration was already applied, running `migrate` or `up` fails because their migration comes above, run:
+
+```sh
+npm run db up force
+# or
+npm run db migrate force
+```
+
+Your migration will be rolled back, then both of them will be applied.
+
+May the `force` be used only if your migrations aren't committed to a remote repository yet.
+
 ## rollback, down
 
 The rollback command will revert one last applied migration. `down` is an alias.

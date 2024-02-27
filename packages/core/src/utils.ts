@@ -58,6 +58,10 @@ export interface RecordString {
   [K: string]: string;
 }
 
+export interface RecordOptionalString {
+  [K: string]: string | undefined;
+}
+
 export interface RecordUnknown {
   [K: string]: unknown;
 }

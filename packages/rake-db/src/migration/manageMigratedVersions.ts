@@ -1,10 +1,26 @@
 import { Adapter, TransactionAdapter } from 'pqb';
 import { quoteWithSchema, RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
-import { ColumnSchemaConfig, RecordString, RecordUnknown } from 'orchid-core';
-import { RakeDbConfig } from '../config';
+import {
+  ColumnSchemaConfig,
+  RecordOptionalString,
+  RecordString,
+  RecordUnknown,
+} from 'orchid-core';
+import { AnyRakeDbConfig, RakeDbConfig, RakeDbMigrationId } from '../config';
 import path from 'path';
-import { getDigitsPrefix, getMigrations } from './migrationsSet';
+import {
+  getDigitsPrefix,
+  getMigrations,
+  getMigrationVersion,
+} from './migrationsSet';
+import {
+  fileNamesToChangeMigrationId,
+  renameMigrationVersionsInDb,
+  RenameMigrationVersionsValue,
+} from '../commands/changeIds';
+import fs from 'fs/promises';
+import { pathToFileURL } from 'node:url';
 
 export const saveMigratedVersion = async <
   SchemaConfig extends ColumnSchemaConfig,
@@ -23,7 +39,7 @@ export const saveMigratedVersion = async <
   });
 };
 
-export const removeMigratedVersion = async <
+export const deleteMigratedVersion = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
 >(
@@ -46,6 +62,11 @@ export const removeMigratedVersion = async <
 
 export class NoMigrationsTableError extends Error {}
 
+export type RakeDbAppliedVersions = {
+  map: RecordOptionalString;
+  sequence: number[];
+};
+
 export const getMigratedVersionsMap = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
@@ -53,14 +74,15 @@ export const getMigratedVersionsMap = async <
   ctx: RakeDbCtx,
   adapter: Adapter | TransactionAdapter,
   config: RakeDbConfig<SchemaConfig, CT>,
-): Promise<RecordString> => {
+  renameTo?: RakeDbMigrationId,
+): Promise<RakeDbAppliedVersions> => {
   try {
     const table = quoteWithSchema({
       name: config.migrationsTable,
     });
 
     const result = await adapter.arrays<[string, string]>(
-      `SELECT * FROM ${table}`,
+      `SELECT * FROM ${table} ORDER BY version`,
     );
 
     if (!result.fields[1]) {
@@ -100,7 +122,13 @@ export const getMigratedVersionsMap = async <
       );
     }
 
-    return Object.fromEntries(result.rows);
+    let versions = Object.fromEntries(result.rows);
+
+    if (renameTo) {
+      versions = await renameMigrations(config, adapter, versions, renameTo);
+    }
+
+    return { map: versions, sequence: result.rows.map((row) => +row[0]) };
   } catch (err) {
     if ((err as RecordUnknown).code === '42P01') {
       throw new NoMigrationsTableError();
@@ -109,3 +137,60 @@ export const getMigratedVersionsMap = async <
     }
   }
 };
+
+async function renameMigrations(
+  config: AnyRakeDbConfig,
+  trx: Adapter | TransactionAdapter,
+  versions: RecordString,
+  renameTo: RakeDbMigrationId,
+) {
+  let first: string | undefined;
+  for (const version in versions) {
+    first = version;
+    break;
+  }
+
+  if (!first || getMigrationVersion(config, first)) return versions;
+
+  const fileName = fileNamesToChangeMigrationId[renameTo];
+  const filePath = path.join(config.migrationsPath, fileName);
+
+  const json = await fs.readFile(filePath, 'utf-8');
+
+  let data: RecordString;
+  try {
+    data = JSON.parse(json);
+    if (typeof data !== 'object')
+      throw new Error('Config for renaming is not an object');
+  } catch (err) {
+    throw new Error(`Failed to read ${pathToFileURL(filePath)}`, {
+      cause: err,
+    });
+  }
+
+  const values: RenameMigrationVersionsValue[] = [];
+
+  const updatedVersions: RecordString = {};
+
+  for (const version in versions) {
+    const name = versions[version];
+    const key = `${version}_${name}`;
+    let newVersion = data[key];
+    if (!newVersion) {
+      throw new Error(
+        `Failed to find an entry for the migrated ${key} in the ${fileName} config`,
+      );
+    }
+
+    if (renameTo === 'serial') {
+      newVersion = String(newVersion).padStart(4, '0');
+    }
+
+    updatedVersions[newVersion] = name;
+    values.push([version, name, newVersion]);
+  }
+
+  await renameMigrationVersionsInDb(config, trx, values);
+
+  return updatedVersions;
+}

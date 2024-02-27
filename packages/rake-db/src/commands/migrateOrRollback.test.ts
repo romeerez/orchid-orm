@@ -31,11 +31,11 @@ jest.mock('../migration/migrationsTable', () => ({
 
 const options = { databaseURL: 'postgres://user@localhost/dbname' };
 
-const makeFile = (version: number) => ({
+const makeFile = (version: number, load = jest.fn()) => ({
   path: `path/${version}_file.ts`,
   name: `file.ts`,
   version: `${version}`,
-  load: jest.fn(),
+  load,
 });
 
 const files = [makeFile(1), makeFile(2), makeFile(3), makeFile(4)];
@@ -50,7 +50,7 @@ Adapter.prototype.transaction = (_, cb) => {
 let migratedVersions: string[] = [];
 const queries: string[] = [];
 const transactionQueryMock = jest.fn().mockImplementation((q) => {
-  if (q === 'SELECT * FROM "schemaMigrations"') {
+  if (q === 'SELECT * FROM "schemaMigrations" ORDER BY version') {
     return {
       rows: migratedVersions.map((version) => [version, 'name']),
       fields: [{}, {}],
@@ -101,7 +101,7 @@ const arrange = <
 ): T => {
   if (config.files) migrationFiles = config.files;
   if (config.versions) migratedVersions = config.versions;
-  if (config.config) currentConfig = config.config;
+  currentConfig = config.config ??= testConfig;
   return config;
 };
 
@@ -217,7 +217,6 @@ describe('migrateOrRollback', () => {
         config,
       });
 
-      transactionQueryMock.mockResolvedValueOnce({});
       transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
       asMock(createMigrationsTable).mockResolvedValueOnce(undefined);
 
@@ -402,6 +401,65 @@ describe('migrateOrRollback', () => {
         `Missing a default export in ${files[0].path} migration`,
       );
     });
+
+    it('should throw if there is a not migrated migration of version lower than the last migrated', async () => {
+      arrange({
+        files: [makeFile(1), makeFile(2), makeFile(3)],
+        versions: ['1', '3'],
+      });
+
+      await expect(act(migrate)).rejects.toThrow(
+        `Cannot migrate 2_file.ts because the higher position name was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
+      );
+    });
+  });
+
+  describe('migrate force', () => {
+    it('should rollback to the first out of order migration and then migrate all', async () => {
+      const called: [version: number, dir: 'up' | 'down'][] = [];
+      const load = (version: number) =>
+        jest.fn(() => {
+          pushChange(async (_, up) => {
+            called.push([version, up ? 'up' : 'down']);
+          });
+        });
+
+      const env = arrange({
+        files: [
+          makeFile(1, load(1)),
+          makeFile(2, load(2)),
+          makeFile(3, load(3)),
+          makeFile(4, load(4)),
+          makeFile(5, load(5)),
+        ],
+        versions: ['1', '4', '5'],
+        config: {
+          ...config,
+          beforeRollback: jest.fn(),
+          afterRollback: jest.fn(),
+          beforeMigrate: jest.fn(),
+          afterMigrate: jest.fn(),
+        },
+      });
+
+      await act(migrate, ['force']);
+
+      expect(env.config.beforeRollback).toBeCalled();
+      expect(env.config.afterRollback).toBeCalled();
+      expect(env.config.beforeMigrate).toBeCalled();
+      expect(env.config.afterMigrate).toBeCalled();
+
+      assert.getMigrationsUp(env.config);
+
+      expect(called).toEqual([
+        [5, 'down'],
+        [4, 'down'],
+        [2, 'up'],
+        [3, 'up'],
+        [4, 'up'],
+        [5, 'up'],
+      ]);
+    });
   });
 
   describe('rollback', () => {
@@ -442,7 +500,6 @@ describe('migrateOrRollback', () => {
         config,
       });
 
-      transactionQueryMock.mockResolvedValueOnce({});
       transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
       asMock(createMigrationsTable).mockResolvedValueOnce(undefined);
 
