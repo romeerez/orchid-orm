@@ -11,7 +11,6 @@ import {
 import {
   addValue,
   columnToSql,
-  joinStatementsSet,
   simpleColumnToSQL,
   simpleExistingColumnToSQL,
 } from './common';
@@ -245,7 +244,7 @@ const processWhere = (
         isSubQuery: boolean;
       }[];
 
-      joinStatementsSet.clear();
+      const joinSet = joinItems.length > 1 ? new Set<string>() : null;
 
       for (const args of joinItems) {
         const { target, conditions } = processJoinItem(
@@ -257,10 +256,12 @@ const processWhere = (
         );
 
         const sql = `EXISTS (SELECT 1 FROM ${target} WHERE ${conditions})`;
-        if (!joinStatementsSet.has(sql)) {
-          joinStatementsSet.add(sql);
-          ands.push(sql);
+        if (joinSet) {
+          if (joinSet.has(sql)) continue;
+          joinSet.add(sql);
         }
+
+        ands.push(sql);
       }
     } else if (key === 'SEARCH') {
       const search = value as WhereSearchItem;

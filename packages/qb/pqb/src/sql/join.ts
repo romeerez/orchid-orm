@@ -1,9 +1,4 @@
-import {
-  quoteSchemaAndTable,
-  rawOrColumnToSql,
-  columnToSql,
-  joinStatementsSet,
-} from './common';
+import { quoteSchemaAndTable, rawOrColumnToSql, columnToSql } from './common';
 import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
@@ -331,7 +326,7 @@ export const pushJoinSql = (
   },
   quotedAs?: string,
 ) => {
-  joinStatementsSet.clear();
+  const joinSet = query.join.length > 1 ? new Set<string>() : null;
 
   for (const item of query.join) {
     let sql;
@@ -360,10 +355,12 @@ export const pushJoinSql = (
         : `${item.type} ${target} ON true`;
     }
 
-    if (!joinStatementsSet.has(sql)) {
-      joinStatementsSet.add(sql);
-      ctx.sql.push(sql);
+    if (joinSet) {
+      if (joinSet.has(sql)) continue;
+      joinSet.add(sql);
     }
+
+    ctx.sql.push(sql);
   }
 };
 

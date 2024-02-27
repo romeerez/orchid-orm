@@ -3,7 +3,6 @@ import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { DeleteQueryData, QueryHookSelect } from './data';
-import { joinStatementsSet } from './common';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
@@ -22,7 +21,7 @@ export const pushDeleteSql = (
   if (query.join?.length) {
     const items: { target: string; conditions?: string }[] = [];
 
-    joinStatementsSet.clear();
+    const joinSet = query.join.length > 1 ? new Set<string>() : null;
 
     for (const item of query.join) {
       // skip join lateral: it's not supported here, and it's not clean if it's supported in DELETE by the db
@@ -30,10 +29,11 @@ export const pushDeleteSql = (
         const join = processJoinItem(ctx, table, query, item, quotedAs);
 
         const key = `${join.target}${join.conditions}`;
-        if (!joinStatementsSet.has(key)) {
-          joinStatementsSet.add(key);
-          items.push(join);
+        if (joinSet) {
+          if (joinSet.has(key)) continue;
+          joinSet.add(key);
         }
+        items.push(join);
       }
     }
 
