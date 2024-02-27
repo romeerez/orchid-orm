@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.23.3
+
+### Patch Changes
+
+- f0324edb: Ignore duplicate joins (#242)
+- Updated dependencies [f0324edb]
+  - pqb@0.26.1
+
 ## 1.23.2
 
 ### Patch Changes

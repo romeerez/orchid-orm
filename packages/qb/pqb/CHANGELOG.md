@@ -1,5 +1,11 @@
 # pqb
 
+## 0.26.1
+
+### Patch Changes
+
+- f0324edb: Ignore duplicate joins (#242)
+
 ## 0.26.0
 
 ### Minor Changes
