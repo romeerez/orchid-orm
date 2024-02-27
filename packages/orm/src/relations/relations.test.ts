@@ -286,4 +286,19 @@ describe('relations', () => {
       [3, 'tag'],
     );
   });
+
+  it('should ignore duplicated joins', () => {
+    const q = db.user.select('Id').join('posts').join('posts');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" "Id"
+        FROM "user"
+        JOIN "post" AS "posts"
+          ON "posts"."userId" = "user"."id"
+         AND "posts"."title" = "user"."userKey"
+      `,
+    );
+  });
 });

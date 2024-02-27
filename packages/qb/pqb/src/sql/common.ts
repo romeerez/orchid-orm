@@ -8,6 +8,8 @@ import {
   QueryColumns,
 } from 'orchid-core';
 
+export const joinStatementsSet: Set<string> = new Set();
+
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
  */

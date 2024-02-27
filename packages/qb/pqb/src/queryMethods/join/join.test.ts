@@ -20,7 +20,27 @@ jest.mock('./_join', () => {
 });
 
 it('should not accept wrong column as join arg', () => {
-  User.join(Message, 'message.id', 'user.id');
+  // @ts-expect-error wrong message column
+  User.join(Message, 'message.wrong', 'user.id');
+
+  // @ts-expect-error wrong user column
+  User.join(Message, 'message.id', 'user.wrong');
+});
+
+it('should ignore duplicated joins', () => {
+  const q = User.join(Message, 'message.id', 'user.id').join(
+    Message,
+    'message.id',
+    'user.id',
+  );
+
+  expectSql(
+    q.toSQL(),
+    `
+      SELECT "user".* FROM "user"
+      JOIN "message" ON "message"."id" = "user"."id"
+    `,
+  );
 });
 
 describe('join', () => {

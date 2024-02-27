@@ -1,4 +1,9 @@
-import { quoteSchemaAndTable, rawOrColumnToSql, columnToSql } from './common';
+import {
+  quoteSchemaAndTable,
+  rawOrColumnToSql,
+  columnToSql,
+  joinStatementsSet,
+} from './common';
 import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
@@ -326,17 +331,20 @@ export const pushJoinSql = (
   },
   quotedAs?: string,
 ) => {
+  joinStatementsSet.clear();
+
   for (const item of query.join) {
+    let sql;
     if (Array.isArray(item)) {
       const q = item[1];
       const { aliasValue } = ctx;
       ctx.aliasValue = true;
+
       const as = item[2];
-      ctx.sql.push(
-        `${item[0]} LATERAL (${q.toSQL(ctx).text}) "${
-          query.joinOverrides?.[as] || as
-        }" ON true`,
-      );
+      sql = `${item[0]} LATERAL (${q.toSQL(ctx).text}) "${
+        query.joinOverrides?.[as] || as
+      }" ON true`;
+
       ctx.aliasValue = aliasValue;
     } else {
       const { target, conditions } = processJoinItem(
@@ -347,8 +355,14 @@ export const pushJoinSql = (
         quotedAs,
       );
 
-      ctx.sql.push(item.type, target);
-      if (conditions) ctx.sql.push('ON', conditions);
+      sql = conditions
+        ? `${item.type} ${target} ON ${conditions}`
+        : `${item.type} ${target} ON true`;
+    }
+
+    if (!joinStatementsSet.has(sql)) {
+      joinStatementsSet.add(sql);
+      ctx.sql.push(sql);
     }
   }
 };

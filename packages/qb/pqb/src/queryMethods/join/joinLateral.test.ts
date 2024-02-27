@@ -18,6 +18,21 @@ const insertUserAndMessage = async () => {
 describe('joinLateral', () => {
   useTestDatabase();
 
+  it('should ignore duplicated joins', () => {
+    const q = User.joinLateral(Message, (q) => q.on('authorId', 'id'));
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user".* FROM "user"
+        JOIN LATERAL (
+          SELECT * FROM "message"
+          WHERE "message"."authorId" = "user"."id"
+        ) "message" ON true
+      `,
+    );
+  });
+
   it('should join query, use joined columns in select and where', async () => {
     await insertUserAndMessage();
 

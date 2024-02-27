@@ -510,6 +510,35 @@ export class Join {
    *
    * When no matching record is found, it will skip records of the main table.
    *
+   * When joining the same table with the same condition more than once, duplicated joins will be ignored:
+   *
+   * ```ts
+   * // joining a relation
+   * db.post.join('comments').join('comments');
+   *
+   * // joining a table with a condition
+   * db.post
+   *   .join('comments', 'comments.postId', 'post.id')
+   *   .join('comments', 'comments.postId', 'post.id');
+   * ```
+   *
+   * Both queries will produce SQL with only 1 join
+   *
+   * ```sql
+   * SELECT * FROM post JOIN comments ON comments.postId = post.id
+   * ```
+   *
+   * However, this is only possible if the join has no dynamic values:
+   *
+   * ```ts
+   * db.post
+   *   .join('comments', (q) => q.where({ rating: { gt: 5 } }))
+   *   .join('comments', (q) => q.where({ rating: { gt: 5 } }));
+   * ```
+   *
+   * Both joins above have the same `{ gt: 5 }`, but still, the `5` is a dynamic value and in this case joins will be duplicated,
+   * resulting in a database error.
+   *
    * ### join relation
    *
    * When relations are defined between the tables, you can join them by a relation name.
