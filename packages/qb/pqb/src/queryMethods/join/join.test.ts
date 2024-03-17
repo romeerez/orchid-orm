@@ -9,7 +9,7 @@ import {
 import { _join } from './_join';
 import { testWhere, testWhereExists } from '../where/testWhere';
 import { testJoin } from './testJoin';
-import { asMock, expectSql } from 'test-utils';
+import { asMock, assertType, expectSql } from 'test-utils';
 
 jest.mock('./_join', () => {
   const { _join } = jest.requireActual('./_join');
@@ -541,6 +541,14 @@ describe('join callback with query builder', () => {
       fkey: 'id',
       text: 'name',
       selectFrom: `SELECT ${snakeSelectAll} FROM "snake"`,
+    });
+  });
+
+  // for https://github.com/romeerez/orchid-orm/issues/247
+  it('should have a proper table type in the callback', () => {
+    User.join(Message, (q) => {
+      assertType<typeof q.table, 'message'>();
+      return q;
     });
   });
 });

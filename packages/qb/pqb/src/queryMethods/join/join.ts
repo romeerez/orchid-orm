@@ -1122,6 +1122,7 @@ interface JBase {
   result: QueryColumns;
   shape: QueryColumns;
   meta: QueryMetaBase;
+  table?: string;
 }
 
 // Query builder with `or` methods that is passed to the `join` and `joinLateral` callbacks.
@@ -1133,6 +1134,7 @@ export class OnQueryBuilder<
     Omit<S['meta']['selectable'], keyof S['shape']>;
   declare relations: J['relations'];
   declare result: J['result'];
+  table: J['table'];
   shape: J['shape'];
   withData = emptyObject;
 

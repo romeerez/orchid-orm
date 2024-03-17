@@ -1,5 +1,5 @@
 import { getClonedQueryData, MergeQuery, Query, WhereResult } from 'pqb';
-import { EmptyObject, QueryReturnType, RecordUnknown } from 'orchid-core';
+import { QueryReturnType, RecordUnknown } from 'orchid-core';
 
 type QueryMethods<T extends Query> = Record<
   string,
@@ -21,52 +21,47 @@ export interface MethodsBase<T extends Query> {
   methods?: RecordUnknown;
 }
 
-export type MapQueryMethods<
-  T extends Query,
-  BaseQuery extends Query,
-  Methods,
-> = Methods extends QueryMethods<T>
-  ? {
-      [K in keyof Methods]: Methods[K] extends (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        q: any,
-        ...args: infer Args
-      ) => // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      infer Result
-        ? <T extends BaseQuery>(
-            this: T,
-            ...args: Args
-          ) => Result extends Query ? MergeQuery<T, Result> : Result
-        : never;
-    }
-  : EmptyObject;
+export type MapQueryMethods<BaseQuery extends Query, Method> = Method extends (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  q: any,
+  ...args: infer Args
+) => // eslint-disable-next-line @typescript-eslint/no-explicit-any
+infer Result
+  ? <T extends BaseQuery>(
+      this: T,
+      ...args: Args
+    ) => Result extends Query ? MergeQuery<T, Result> : Result
+  : never;
 
-export type MapMethods<
-  T extends Query,
-  Methods extends MethodsBase<T>,
-> = MapQueryMethods<T, Query, Methods['queryMethods']> &
-  MapQueryMethods<QueryOne<T>, QueryOne<Query>, Methods['queryOneMethods']> &
-  MapQueryMethods<
-    WhereResult<T>,
-    WhereResult<Query>,
-    Methods['queryWithWhereMethods']
-  > &
-  MapQueryMethods<
-    QueryOne<WhereResult<T>>,
-    QueryOne<WhereResult<Query>>,
-    Methods['queryOneWithWhereMethods']
-  > &
-  (Methods['methods'] extends Record<string, unknown>
-    ? Methods['methods']
-    : EmptyObject);
+export type MapMethods<T extends Query, Methods extends MethodsBase<T>> = {
+  [K in
+    | keyof Methods['queryMethods']
+    | keyof Methods['queryOneMethods']
+    | keyof Methods['queryWithWhereMethods']
+    | keyof Methods['queryOneWithWhereMethods']
+    | keyof Methods['methods']]: K extends keyof Methods['methods']
+    ? Methods['methods'][K]
+    : K extends keyof Methods['queryOneWithWhereMethods']
+    ? MapQueryMethods<
+        QueryOne<WhereResult<Query>>,
+        Methods['queryOneWithWhereMethods'][K]
+      >
+    : K extends keyof Methods['queryWithWhereMethods']
+    ? MapQueryMethods<WhereResult<Query>, Methods['queryWithWhereMethods'][K]>
+    : K extends keyof Methods['queryOneMethods']
+    ? MapQueryMethods<QueryOne<Query>, Methods['queryOneMethods'][K]>
+    : K extends keyof Methods['queryMethods']
+    ? MapQueryMethods<Query, Methods['queryMethods'][K]>
+    : never;
+};
 
-export type Repo<
-  T extends Query,
-  Methods extends MethodsBase<T>,
-  Mapped = MapMethods<T, Methods>,
-> = (<Q extends { table: T['table']; shape: T['shape'] }>(q: Q) => Q & Mapped) &
+export type Repo<T extends Query, Methods extends MethodsBase<T>> = (<
+  Q extends { table: T['table']; shape: T['shape'] },
+>(
+  q: Q,
+) => Query & Q & MapMethods<T, Methods>) &
   T &
-  Mapped;
+  MapMethods<T, Methods>;
 
 export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
   table: T,

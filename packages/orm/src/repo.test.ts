@@ -115,6 +115,12 @@ describe('createRepo', () => {
         [123],
       );
     });
+
+    // for https://github.com/romeerez/orchid-orm/issues/247:
+    // `q` is not `Query`, but `one` should have `this` of type `Query`
+    it('should support join callback arg', () => {
+      db.other.join('some', (q) => repo(q).one());
+    });
   });
 
   describe('queryOneMethods', () => {
