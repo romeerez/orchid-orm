@@ -1,5 +1,11 @@
 # pqb
 
+## 0.26.3
+
+### Patch Changes
+
+- 216988fc: Support passing join callback arg to repo (#247)
+
 ## 0.26.2
 
 ### Patch Changes

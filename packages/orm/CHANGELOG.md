@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.23.5
+
+### Patch Changes
+
+- 216988fc: Support passing join callback arg to repo (#247)
+- Updated dependencies [216988fc]
+  - pqb@0.26.3
+
 ## 1.23.4
 
 ### Patch Changes
