@@ -30,7 +30,7 @@ import {
 } from '../migration/manageMigratedVersions';
 import { RakeDbError } from '../errors';
 import { RakeDbAst } from '../ast';
-import { AppCodeUpdater, RakeDbConfig } from '../config';
+import { AnyRakeDbConfig, AppCodeUpdater, RakeDbConfig } from '../config';
 import path from 'path';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import {
@@ -38,6 +38,7 @@ import {
   MigrationItem,
   MigrationsSet,
 } from '../migration/migrationsSet';
+import { versionToString } from '../migration/migrationUtils';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 
@@ -245,7 +246,7 @@ export const migrateOrRollback = async (
   const { sequence, map: versionsMap } = versions;
 
   if (up) {
-    const rollbackTo = checkMigrationOrder(set, versions, force);
+    const rollbackTo = checkMigrationOrder(config, set, versions, force);
 
     if (rollbackTo) {
       let i = sequence.length - 1;
@@ -309,6 +310,7 @@ export const migrateOrRollback = async (
 };
 
 const checkMigrationOrder = (
+  config: AnyRakeDbConfig,
   set: MigrationsSet,
   { sequence, map }: RakeDbAppliedVersions,
   force?: boolean,
@@ -317,14 +319,14 @@ const checkMigrationOrder = (
   if (last) {
     for (const file of set.migrations) {
       const version = +file.version;
-      if (version > last || map[version]) continue;
+      if (version > last || map[file.version]) continue;
 
       if (!force) {
         throw new Error(
           `Cannot migrate ${path.basename(
             file.path,
           )} because the higher position ${
-            map[last]
+            map[versionToString(config, last)]
           } was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
         );
       }

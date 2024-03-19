@@ -15,6 +15,12 @@ import {
   quoteNameFromString,
   quoteWithSchema,
 } from '../common';
+import { AnyRakeDbConfig } from 'rake-db';
+
+export const versionToString = (config: AnyRakeDbConfig, version: number) =>
+  config.migrationId === 'serial'
+    ? `${version}`.padStart(4, '0')
+    : `${version}`;
 
 export const columnTypeToSql = (item: ColumnTypeBase) => {
   return item.data.isOfCustomType ? `"${item.toSQL()}"` : item.toSQL();

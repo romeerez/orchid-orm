@@ -32,9 +32,9 @@ jest.mock('../migration/migrationsTable', () => ({
 const options = { databaseURL: 'postgres://user@localhost/dbname' };
 
 const makeFile = (version: number, load = jest.fn()) => ({
-  path: `path/${version}_file.ts`,
+  path: `path/000${version}_file.ts`,
   name: `file.ts`,
-  version: `${version}`,
+  version: `000${version}`,
   load,
 });
 
@@ -182,7 +182,7 @@ describe('migrateOrRollback', () => {
     it('should work properly', async () => {
       const env = arrange({
         files: files.slice(0, 3),
-        versions: ['1'],
+        versions: ['0001'],
         config: {
           ...config,
           basePath: __dirname,
@@ -405,11 +405,11 @@ describe('migrateOrRollback', () => {
     it('should throw if there is a not migrated migration of version lower than the last migrated', async () => {
       arrange({
         files: [makeFile(1), makeFile(2), makeFile(3)],
-        versions: ['1', '3'],
+        versions: ['0001', '0003'],
       });
 
       await expect(act(migrate)).rejects.toThrow(
-        `Cannot migrate 2_file.ts because the higher position name was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
+        `Cannot migrate 0002_file.ts because the higher position name was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
       );
     });
   });
@@ -432,7 +432,7 @@ describe('migrateOrRollback', () => {
           makeFile(4, load(4)),
           makeFile(5, load(5)),
         ],
-        versions: ['1', '4', '5'],
+        versions: ['0001', '0004', '0005'],
         config: {
           ...config,
           beforeRollback: jest.fn(),
@@ -466,7 +466,7 @@ describe('migrateOrRollback', () => {
     it('should work properly', async () => {
       const env = arrange({
         files: files.slice(0, 3),
-        versions: ['1', '2'],
+        versions: ['0001', '0002'],
         config: {
           ...config,
           beforeRollback: jest.fn(),
@@ -575,7 +575,7 @@ describe('migrateOrRollback', () => {
         });
       }
 
-      await act(redo, ['2']);
+      await act(redo, ['0002']);
 
       expect(callbackCalls).toEqual([
         'beforeRollback',
@@ -597,19 +597,19 @@ describe('migrateOrRollback', () => {
 
       assert.queries([
         sql(`DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2`, [
-          '3',
+          '0003',
           'file.ts',
         ]),
         sql(`DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2`, [
-          '2',
+          '0002',
           'file.ts',
         ]),
         sql(`INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)`, [
-          '2',
+          '0002',
           'file.ts',
         ]),
         sql(`INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)`, [
-          '3',
+          '0003',
           'file.ts',
         ]),
       ]);
@@ -650,7 +650,7 @@ describe('migrateOrRollback', () => {
 
       const file = {
         path: 'file1',
-        version: '1',
+        version: '0001',
         load() {
           pushChange(top);
           async function top() {
@@ -666,7 +666,7 @@ describe('migrateOrRollback', () => {
 
       arrange({
         files: [file],
-        versions: ['1'],
+        versions: ['0001'],
         config: {
           ...config,
           afterRollback: async () => {
