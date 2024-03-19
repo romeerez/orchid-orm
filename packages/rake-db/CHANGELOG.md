@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.15.6
+
+### Patch Changes
+
+- f2f0ed5a: Fix bug in rake-db
+
 ## 2.15.5
 
 ### Patch Changes
