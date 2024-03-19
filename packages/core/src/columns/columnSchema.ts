@@ -20,7 +20,8 @@ export interface ColumnTypeSchemaArg {
   error?: unknown;
 }
 
-export interface ColumnSchemaConfig extends ColumnTypeSchemaArg {
+export interface ColumnSchemaConfig<T extends ColumnTypeBase = ColumnTypeBase>
+  extends ColumnTypeSchemaArg {
   dateAsNumber: unknown;
   dateAsDate: unknown;
   enum: unknown;
@@ -39,31 +40,31 @@ export interface ColumnSchemaConfig extends ColumnTypeSchemaArg {
   timeInterval(): unknown;
   bit(max?: number): unknown;
   uuid(): unknown;
-  json(): ColumnTypeBase;
+  json(): T;
   inputSchema(this: ColumnSchemaGetterTableClass): unknown;
   outputSchema(this: ColumnSchemaGetterTableClass): unknown;
   querySchema(this: ColumnSchemaGetterTableClass): unknown;
   updateSchema(this: ColumnSchemaGetterTableClass): unknown;
   pkeySchema(this: ColumnSchemaGetterTableClass): unknown;
 
-  smallint(): ColumnTypeBase;
-  integer(): ColumnTypeBase;
-  real(): ColumnTypeBase;
-  smallSerial(): ColumnTypeBase;
-  serial(): ColumnTypeBase;
+  smallint(): T;
+  integer(): T;
+  real(): T;
+  smallSerial(): T;
+  serial(): T;
 
-  bigint(): ColumnTypeBase;
-  decimal(precision?: number, scale?: number): ColumnTypeBase;
-  doublePrecision(): ColumnTypeBase;
-  bigSerial(): ColumnTypeBase;
-  money(): ColumnTypeBase;
-  varchar(limit?: number): ColumnTypeBase;
-  char(limit?: number): ColumnTypeBase;
-  text(min: number, max: number): ColumnTypeBase;
-  string(limit?: number): ColumnTypeBase;
-  citext(min: number, max: number): ColumnTypeBase;
+  bigint(): T;
+  decimal(precision?: number, scale?: number): T;
+  doublePrecision(): T;
+  bigSerial(): T;
+  money(): T;
+  varchar(limit?: number): T;
+  char(limit?: number): T;
+  text(min: number, max: number): T;
+  string(limit?: number): T;
+  citext(min: number, max: number): T;
 
-  date(): ColumnTypeBase;
-  timestampNoTZ(precision?: number): ColumnTypeBase;
-  timestamp(precision?: number): ColumnTypeBase;
+  date(): T;
+  timestampNoTZ(precision?: number): T;
+  timestamp(precision?: number): T;
 }

@@ -1,4 +1,4 @@
-import { AdapterOptions } from 'pqb';
+import { AdapterOptions, DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
@@ -18,12 +18,14 @@ import { rebase } from './commands/rebase';
  */
 export type RakeDbFn = (<
   SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
+  CT extends RakeDbColumnTypes | undefined = undefined,
 >(
   options: MaybeArray<AdapterOptions>,
   partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
   args?: string[],
-) => RakeDbChangeFn<CT> & {
+) => RakeDbChangeFn<
+  CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
+> & {
   promise: Promise<void>;
 }) & {
   /**

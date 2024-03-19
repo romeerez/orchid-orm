@@ -2,6 +2,7 @@ import {
   AdapterOptions,
   DbResult,
   DefaultColumnTypes,
+  DefaultSchemaConfig,
   defaultSchemaConfig,
   makeColumnTypes as defaultColumnTypes,
   NoPrimaryKeyOption,
@@ -15,7 +16,7 @@ import { RakeDbColumnTypes } from './migration/migration';
 
 export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
-  CT = DefaultColumnTypes<ColumnSchemaConfig>,
+  CT = DefaultColumnTypes<DefaultSchemaConfig>,
 > extends QueryLogOptions {
   schemaConfig: SchemaConfig;
   columnTypes: CT;
@@ -42,30 +43,48 @@ export interface RakeDbConfig<
   useCodeUpdater?: boolean;
   // throw if a migration doesn't have a default export
   forceDefaultExports?: boolean;
-
   import(path: string): Promise<unknown>;
-
   beforeMigrate?(db: Db): Promise<void>;
-
   afterMigrate?(db: Db): Promise<void>;
-
   beforeRollback?(db: Db): Promise<void>;
-
   afterRollback?(db: Db): Promise<void>;
 }
 
-export type InputRakeDbConfig<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
-> = Partial<Omit<RakeDbConfig<SchemaConfig, CT>, 'columnTypes'>> &
-  (
-    | {
-        columnTypes?: CT | ((t: DefaultColumnTypes<ColumnSchemaConfig>) => CT);
-      }
-    | {
-        baseTable?: RakeDbBaseTable<CT>;
-      }
-  );
+export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
+  extends QueryLogOptions {
+  columnTypes?: CT | ((t: DefaultColumnTypes<DefaultSchemaConfig>) => CT);
+  baseTable?: RakeDbBaseTable<CT>;
+  schemaConfig?: SchemaConfig;
+  basePath?: string;
+  dbScript?: string;
+  migrationsPath?: string;
+  migrationId?: RakeDbMigrationId;
+  migrations?: ModuleExportsRecord;
+  recurrentPath?: string;
+  migrationsTable?: string;
+  snakeCase?: boolean;
+  language?: string;
+  commands?: Record<
+    string,
+    (
+      options: AdapterOptions[],
+      config: RakeDbConfig<
+        SchemaConfig,
+        CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
+      >,
+      args: string[],
+    ) => void | Promise<void>
+  >;
+  noPrimaryKey?: NoPrimaryKeyOption;
+  appCodeUpdater?: AppCodeUpdater;
+  useCodeUpdater?: boolean;
+  forceDefaultExports?: boolean;
+  import?(path: string): Promise<unknown>;
+  beforeMigrate?(db: Db): Promise<void>;
+  afterMigrate?(db: Db): Promise<void>;
+  beforeRollback?(db: Db): Promise<void>;
+  afterRollback?(db: Db): Promise<void>;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyRakeDbConfig = RakeDbConfig<any, any>;

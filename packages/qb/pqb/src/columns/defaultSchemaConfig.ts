@@ -34,8 +34,9 @@ import {
   TextColumn,
   VarCharColumn,
 } from './string';
+import { ColumnType } from './columnType';
 
-export interface DefaultSchemaConfig extends ColumnSchemaConfig {
+export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   parse<T extends { type: unknown }, Output>(
     this: T,
     fn: (input: T['type']) => Output,
