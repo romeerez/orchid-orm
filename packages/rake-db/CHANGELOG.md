@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.15.5
+
+### Patch Changes
+
+- ff771568: Minor column type fix for proper default columns in rake-db
+- Updated dependencies [ff771568]
+  - pqb@0.26.4
+  - orchid-core@0.12.3
+
 ## 2.15.4
 
 ### Patch Changes
