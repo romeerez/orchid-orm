@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.23.7
+
+### Patch Changes
+
+- ce23936a: Add TS check to enforce strict: true when creating ORM instance
+
 ## 1.23.6
 
 ### Patch Changes
