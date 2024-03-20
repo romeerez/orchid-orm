@@ -105,11 +105,13 @@ export const orchidORM = <T extends TableClasses>(
     autoPreparedStatements,
     noPrimaryKey = 'error',
     ...options
-  }: ({ db: Query } | { adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
-    QueryLogOptions & {
-      autoPreparedStatements?: boolean;
-      noPrimaryKey?: NoPrimaryKeyOption;
-    },
+  }: true | null extends true
+    ? 'Set strict: true to tsconfig'
+    : ({ db: Query } | { adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
+        QueryLogOptions & {
+          autoPreparedStatements?: boolean;
+          noPrimaryKey?: NoPrimaryKeyOption;
+        },
   tables: T,
 ): OrchidORM<T> => {
   const commonOptions = {
