@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.23.8
+
+### Patch Changes
+
+- 76798e65: Fix enforcing strict: true when instantiating ORM
+
 ## 1.23.7
 
 ### Patch Changes
