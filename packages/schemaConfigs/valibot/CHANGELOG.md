@@ -1,5 +1,13 @@
 # orchid-orm-valibot
 
+## 0.0.7
+
+### Patch Changes
+
+- f6dacede: Fix type in valibot
+- Updated dependencies [f6dacede]
+  - pqb@0.26.6
+
 ## 0.0.6
 
 ### Patch Changes

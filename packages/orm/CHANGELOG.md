@@ -1,5 +1,12 @@
 # orchid-orm
 
+## 1.23.10
+
+### Patch Changes
+
+- Updated dependencies [f6dacede]
+  - pqb@0.26.6
+
 ## 1.23.9
 
 ### Patch Changes

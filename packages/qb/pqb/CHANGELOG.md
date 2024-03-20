@@ -1,5 +1,11 @@
 # pqb
 
+## 0.26.6
+
+### Patch Changes
+
+- f6dacede: Fix type in valibot
+
 ## 0.26.5
 
 ### Patch Changes
