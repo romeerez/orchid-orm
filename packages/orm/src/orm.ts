@@ -98,6 +98,14 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
   $close(): Promise<void>;
 };
 
+type OrchidOrmArg = true | null extends true
+  ? 'Set strict: true to tsconfig'
+  : ({ db: Query } | { adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
+      QueryLogOptions & {
+        autoPreparedStatements?: boolean;
+        noPrimaryKey?: NoPrimaryKeyOption;
+      };
+
 export const orchidORM = <T extends TableClasses>(
   {
     log,
@@ -105,13 +113,7 @@ export const orchidORM = <T extends TableClasses>(
     autoPreparedStatements,
     noPrimaryKey = 'error',
     ...options
-  }: true | null extends true
-    ? 'Set strict: true to tsconfig'
-    : ({ db: Query } | { adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
-        QueryLogOptions & {
-          autoPreparedStatements?: boolean;
-          noPrimaryKey?: NoPrimaryKeyOption;
-        },
+  }: OrchidOrmArg,
   tables: T,
 ): OrchidORM<T> => {
   const commonOptions = {
