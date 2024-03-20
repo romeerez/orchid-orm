@@ -1,5 +1,10 @@
 import { ColumnType } from './columnType';
-import { User, userData } from '../test-utils/test-utils';
+import {
+  profileData,
+  User,
+  userData,
+  UserRecord,
+} from '../test-utils/test-utils';
 import { createDb } from '../query/db';
 import { columnCode } from './code';
 import { Code, ColumnSchemaConfig } from 'orchid-core';
@@ -176,8 +181,9 @@ describe('column type', () => {
     });
 
     describe('parsing columns', () => {
+      let user = {} as UserRecord;
       beforeEach(async () => {
-        await User.create(userData);
+        user = await User.create(userData);
       });
 
       it('should return column data as returned from db if not set', async () => {
@@ -198,6 +204,25 @@ describe('column type', () => {
         expect((await User.take()).createdAt instanceof Date).toBe(true);
         const idx = Object.keys(User.q.shape).indexOf('createdAt');
         expect((await User.rows())[0][idx] instanceof Date).toBe(true);
+      });
+
+      it('should parse joined record columns', async () => {
+        const ProfileWithoutTimestamps = testDb('profile', (t) => ({
+          id: t.identity().primaryKey(),
+          userId: t.integer().foreignKey('user', 'id'),
+          bio: t.text().nullable(),
+        }));
+
+        await ProfileWithoutTimestamps.create({
+          ...profileData,
+          userId: user.id,
+        });
+
+        const result = await ProfileWithoutTimestamps.join(User, 'id', 'userId')
+          .select('*', { user: 'user.*' })
+          .take();
+
+        expect(result.user.createdAt).toBeInstanceOf(Date);
       });
     });
   });

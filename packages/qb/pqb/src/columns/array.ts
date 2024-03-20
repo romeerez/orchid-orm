@@ -2,29 +2,31 @@ import { ColumnData, ColumnType } from './columnType';
 import {
   addCode,
   Code,
-  ColumnTypeBase,
   ArrayMethodsData,
   arrayDataToCode,
   ColumnSchemaConfig,
   ColumnTypeSchemaArg,
+  ColumnDataBase,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { Operators, OperatorsArray } from './operators';
 
-export type ArrayColumnValue = Pick<
-  ColumnTypeBase,
-  | 'type'
-  | 'inputSchema'
-  | 'inputType'
-  | 'outputType'
-  | 'outputSchema'
-  | 'queryType'
-  | 'querySchema'
-  | 'toSQL'
-  | 'toCode'
-  | 'parseItem'
-  | 'data'
->;
+export interface ArrayColumnValue {
+  type: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  inputSchema: any;
+  inputType: unknown;
+  outputType: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  outputSchema: any;
+  queryType: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  querySchema: any;
+  toSQL(): string;
+  toCode(t: string, migration?: boolean): Code;
+  parseItem?(input: string): unknown;
+  data: ColumnDataBase;
+}
 
 export interface ArrayData<Item extends ArrayColumnValue>
   extends ColumnData,

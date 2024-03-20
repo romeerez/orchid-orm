@@ -15,13 +15,13 @@ import { columnCode, identityToCode } from './code';
 import type { TableData } from './columnTypes';
 import { Operators, OperatorsNumber } from './operators';
 
-export type NumberColumnData = BaseNumberData & {
+export interface NumberColumnData extends BaseNumberData {
   identity: TableData.Identity;
-};
+}
 
-export type SerialColumnData = NumberColumnData & {
+export interface SerialColumnData extends NumberColumnData {
   default: Expression;
-};
+}
 
 export abstract class NumberBaseColumn<
   Schema extends ColumnSchemaConfig,
@@ -57,6 +57,11 @@ export abstract class NumberAsStringBaseColumn<
   }
 }
 
+interface DecimalColumnData extends ColumnData {
+  numericPrecision?: number;
+  numericScale?: number;
+}
+
 // exact numeric of selectable precision
 export class DecimalColumn<
   Schema extends ColumnSchemaConfig,
@@ -66,10 +71,7 @@ export class DecimalColumn<
   ReturnType<Schema['stringSchema']>,
   OperatorsNumber
 > {
-  declare data: ColumnData & {
-    numericPrecision?: number;
-    numericScale?: number;
-  };
+  declare data: DecimalColumnData;
   operators = Operators.number;
   dataType = 'decimal' as const;
 

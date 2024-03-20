@@ -43,6 +43,7 @@ import {
 import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 import { RelationsBase } from '../relations';
+import { parseRecord } from './then';
 
 interface SelectSelf {
   shape: QueryColumns;
@@ -341,10 +342,7 @@ const addParsersForSelectJoined = (
 ) => {
   const parsers = q.q.joinedParsers?.[arg];
   if (parsers) {
-    setParserToQuery(q.q, as, (item) => {
-      subQueryResult.rows = [item];
-      return q.q.handleResult(q as Query, 'one', subQueryResult, true);
-    });
+    setParserToQuery(q.q, as, (row) => parseRecord(parsers, row));
   }
 };
 
