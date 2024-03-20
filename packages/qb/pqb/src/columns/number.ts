@@ -57,7 +57,7 @@ export abstract class NumberAsStringBaseColumn<
   }
 }
 
-interface DecimalColumnData extends ColumnData {
+export interface DecimalColumnData extends ColumnData {
   numericPrecision?: number;
   numericScale?: number;
 }

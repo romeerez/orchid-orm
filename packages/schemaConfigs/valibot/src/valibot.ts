@@ -153,7 +153,7 @@ function applyMethod<T extends ColumnTypeBase>(
 function applySimpleMethod<T extends ColumnTypeBase>(
   column: T,
   key: string,
-  validation: (...args: never) => BaseValidation | BaseTransformation,
+  validation: (...args: never[]) => BaseValidation | BaseTransformation,
   params?: ErrorMessage,
   ...args: unknown[]
 ) {
