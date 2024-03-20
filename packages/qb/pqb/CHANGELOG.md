@@ -1,5 +1,11 @@
 # pqb
 
+## 0.26.5
+
+### Patch Changes
+
+- 04e441da: Fix parsing columns of joined record
+
 ## 0.26.4
 
 ### Patch Changes
