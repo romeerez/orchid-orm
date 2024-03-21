@@ -21,18 +21,21 @@ import {
   singleQuote,
 } from 'orchid-core';
 import { quoteSchemaTable } from '../common';
-import { RakeDbConfig } from 'rake-db';
+import { AnyRakeDbConfig } from 'rake-db';
 
-export const astToMigration = <SchemaConfig extends ColumnSchemaConfig, CT>(
-  config: RakeDbConfig<SchemaConfig, CT>,
+export const astToMigration = (
+  currentSchema: string,
+  config: AnyRakeDbConfig,
   ast: RakeDbAst[],
 ): ((importPath: string) => string) | undefined => {
   const first: Code[] = [];
   const tablesAndViews: Code[] = [];
-  const constraints: Code[] = [];
+  const last: Code[] = [];
   for (const item of ast) {
-    if (item.type === 'schema' && item.action === 'create') {
-      first.push(createSchema(item));
+    if (item.type === 'schema') {
+      (item.action === 'create' ? first : last).push(handleSchema(item));
+    } else if (item.type === 'renameSchema') {
+      first.push(renameSchema(item));
     } else if (item.type === 'extension' && item.action === 'create') {
       if (first.length) first.push([]);
       first.push(...createExtension(item));
@@ -47,49 +50,56 @@ export const astToMigration = <SchemaConfig extends ColumnSchemaConfig, CT>(
       first.push(...createCollation(item));
     } else if (item.type === 'table' && item.action === 'create') {
       tablesAndViews.push(createTable(config, item));
+    } else if (item.type === 'renameTable') {
+      tablesAndViews.push(renameTable(currentSchema, item));
     } else if (item.type === 'view' && item.action === 'create') {
       tablesAndViews.push(createView(item));
     } else if (item.type === 'constraint') {
-      if (constraints.length) constraints.push([]);
-      constraints.push(...createConstraint(item));
+      if (last.length) last.push([]);
+      last.push(...createConstraint(item));
     }
   }
 
-  if (!first.length && !tablesAndViews.length && !constraints.length) return;
-
   let code = '';
 
+  if (!tablesAndViews.length) {
+    first.push(...last);
+    last.length = 0;
+  }
+
   if (first.length) {
-    code += `
-change(async (db) => {
-${codeToString(first, '  ', '  ')}
-});
-`;
+    code += codeToChange(first);
   }
 
   if (tablesAndViews.length) {
     for (const table of tablesAndViews) {
-      code += `
-change(async (db) => {
-${codeToString(table, '  ', '  ')}
-});
-`;
+      code += codeToChange(table);
     }
   }
 
-  if (constraints.length) {
-    code += `
-change(async (db) => {
-${codeToString(constraints, '  ', '  ')}
-});
-`;
-  }
+  if (last.length) code += codeToChange(last);
 
-  return (importPath) => `import { change } from '${importPath}';\n${code}`;
+  return code.length
+    ? (importPath) => `import { change } from '${importPath}';\n${code}`
+    : undefined;
 };
 
-const createSchema = (ast: RakeDbAst.Schema) => {
-  return `await db.createSchema(${singleQuote(ast.name)});`;
+const codeToChange = (code: Code) => `
+change(async (db) => {
+${codeToString(code, '  ', '  ')}
+});
+`;
+
+const handleSchema = (ast: RakeDbAst.Schema) => {
+  return `await db.${
+    ast.action === 'create' ? 'createSchema' : 'dropSchema'
+  }(${singleQuote(ast.name)});`;
+};
+
+const renameSchema = (ast: RakeDbAst.RenameSchema) => {
+  return `await db.renameSchema(${singleQuote(ast.from)}, ${singleQuote(
+    ast.to,
+  )});`;
 };
 
 const createExtension = (ast: RakeDbAst.Extension): Code[] => {
@@ -153,10 +163,7 @@ const createCollation = (ast: RakeDbAst.Collation): Code[] => {
   ];
 };
 
-const createTable = <SchemaConfig extends ColumnSchemaConfig, CT>(
-  config: RakeDbConfig<SchemaConfig, CT>,
-  ast: RakeDbAst.Table,
-) => {
+const createTable = (config: AnyRakeDbConfig, ast: RakeDbAst.Table) => {
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 
@@ -210,6 +217,21 @@ const createTable = <SchemaConfig extends ColumnSchemaConfig, CT>(
   return code;
 };
 
+const renameTable = (currentSchema: string, item: RakeDbAst.RenameTable) => {
+  const code: Code[] = [];
+
+  if (item.from === item.to) {
+    addCode(
+      code,
+      `await db.changeTableSchema(${singleQuote(item.to)}, ${singleQuote(
+        item.fromSchema ?? currentSchema,
+      )}, ${singleQuote(item.toSchema ?? currentSchema)});`,
+    );
+  }
+
+  return code;
+};
+
 const isTimestamp = (
   column: ColumnType | undefined,
   type:
@@ -229,8 +251,8 @@ const isTimestamp = (
   );
 };
 
-const getTimestampsInfo = <SchemaConfig extends ColumnSchemaConfig, CT>(
-  config: RakeDbConfig<SchemaConfig, CT>,
+const getTimestampsInfo = (
+  config: AnyRakeDbConfig,
   ast: RakeDbAst.Table,
   type:
     | typeof TimestampTZColumn<ColumnSchemaConfig>

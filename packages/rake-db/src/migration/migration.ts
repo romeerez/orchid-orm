@@ -441,6 +441,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
   async renameTable(from: string, to: string): Promise<void> {
     const [fromSchema, f] = getSchemaAndTableFromName(this.up ? from : to);
     const [toSchema, t] = getSchemaAndTableFromName(this.up ? to : from);
+
     const ast: RakeDbAst.RenameTable = {
       type: 'renameTable',
       fromSchema,
@@ -810,6 +811,28 @@ export class Migration<CT extends RakeDbColumnTypes> {
    */
   createSchema(schemaName: string): Promise<void> {
     return createSchema(this, this.up, schemaName);
+  }
+
+  /**
+   * Renames a database schema, renames it backwards on roll back.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameSchema('from', 'to');
+   * });
+   * ```
+   *
+   * @param from - existing schema to rename
+   * @param to - desired schema name
+   */
+  async renameSchema(from: string, to: string): Promise<void> {
+    await this.adapter.query(
+      `ALTER SCHEMA "${this.up ? from : to}" RENAME TO "${
+        this.up ? to : from
+      }"`,
+    );
   }
 
   /**

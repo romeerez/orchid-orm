@@ -10,13 +10,13 @@ import {
 } from '../migration/manageMigratedVersions';
 import { getMigrationVersionOrThrow } from '../migration/migrationsSet';
 import { RecordString } from 'orchid-core';
-import prompts from 'prompts';
 import { Adapter } from 'pqb';
 import { pushChange } from '../migration/change';
+import { promptSelect } from '../prompt';
 
 jest.mock('fs/promises');
 jest.mock('../migration/manageMigratedVersions');
-jest.mock('prompts');
+jest.mock('../prompt');
 jest.mock('../common', () => ({
   transaction(adapter: Adapter, fn: (adapter: Adapter) => unknown) {
     return fn(adapter);
@@ -95,9 +95,7 @@ const arrange = (arg: {
 
   if (arg.promptResponses) {
     for (const file of arg.promptResponses) {
-      asMock(prompts).mockResolvedValueOnce({
-        file: file === 'first' ? 'prev' : 'current',
-      });
+      asMock(promptSelect).mockResolvedValueOnce(file === 'first' ? 0 : 1);
     }
   }
 };

@@ -4,6 +4,8 @@ import path from 'node:path';
 // It may be a value or an array of such values.
 export type MaybeArray<T> = T | T[];
 
+export type MaybePromise<T> = T | Promise<T>;
+
 // Converts union to overloaded function.
 type OptionalPropertyNames<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types

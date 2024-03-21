@@ -31,7 +31,7 @@ export const writeMigrationFile = async <
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 
-export const generate = async (
+export const newMigration = async (
   config: AnyRakeDbConfig,
   [name]: string[],
 ): Promise<void> => {
