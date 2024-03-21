@@ -13,6 +13,7 @@ import {
   getSchemaAndTableFromName,
   joinColumns,
   quoteNameFromString,
+  quoteTable,
   quoteWithSchema,
 } from '../common';
 import { AnyRakeDbConfig } from 'rake-db';
@@ -131,7 +132,7 @@ const sequenceOptionsToSql = (item: TableData.SequenceOptions) => {
   if (item.cycle) line.push(`CYCLE`);
   if (item.ownedBy) {
     const [schema, table] = getSchemaAndTableFromName(item.ownedBy);
-    line.push(`OWNED BY ${quoteWithSchema({ schema, name: table })}`);
+    line.push(`OWNED BY ${quoteTable(schema, table)}`);
   }
   return line.join(' ');
 };
@@ -227,7 +228,7 @@ export const referencesToSql = (
   const [schema, table] = getForeignKeyTable(references.fnOrTable);
 
   const sql: string[] = [
-    `REFERENCES ${quoteWithSchema({ schema, name: table })}(${joinColumns(
+    `REFERENCES ${quoteTable(schema, table)}(${joinColumns(
       snakeCase
         ? references.foreignColumns.map(toSnakeCase)
         : references.foreignColumns,
@@ -289,7 +290,7 @@ export const indexesToQuery = (
       sql.push('UNIQUE');
     }
 
-    sql.push(`INDEX "${indexName}" ON ${quoteWithSchema({ schema, name })}`);
+    sql.push(`INDEX "${indexName}" ON ${quoteTable(schema, name)}`);
 
     const using = options.using || (options.tsVector && 'GIN');
     if (using) {

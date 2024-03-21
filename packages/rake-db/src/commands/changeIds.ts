@@ -1,5 +1,4 @@
 import { AnyRakeDbConfig } from '../config';
-import { quoteWithSchema } from '../common';
 import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './generate';
@@ -110,9 +109,9 @@ export const renameMigrationVersionsInDb = async (
   values: RenameMigrationVersionsValue[],
 ) => {
   await adapter.arrays({
-    text: `UPDATE ${quoteWithSchema({
-      name: config.migrationsTable,
-    })} AS t SET version = v.version FROM (VALUES ${values
+    text: `UPDATE "${
+      config.migrationsTable
+    }" AS t SET version = v.version FROM (VALUES ${values
       .map(
         ([oldVersion, , newVersion], i) =>
           `('${oldVersion}', $${i + 1}, '${newVersion}')`,

@@ -441,6 +441,30 @@ change(async (db) => {
 });
 ```
 
+Prefix table name with a schema to set a different schema:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.renameTable('fromSchema.oldTable', 'toSchema.newTable');
+});
+```
+
+## changeTableSchema
+
+[//]: # 'has JSDoc'
+
+Set a different schema to the table:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTableSchema('tableName', 'fromSchema', 'toSchema');
+});
+```
+
 ## addColumn, dropColumn
 
 [//]: # 'has JSDoc'

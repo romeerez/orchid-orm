@@ -1,5 +1,5 @@
 import { Adapter, TransactionAdapter } from 'pqb';
-import { quoteWithSchema, RakeDbCtx } from '../common';
+import { RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
 import {
   ColumnSchemaConfig,
@@ -32,9 +32,7 @@ export const saveMigratedVersion = async <
   config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
   await db.silentArrays({
-    text: `INSERT INTO ${quoteWithSchema({
-      name: config.migrationsTable,
-    })}(version, name) VALUES ($1, $2)`,
+    text: `INSERT INTO "${config.migrationsTable}"(version, name) VALUES ($1, $2)`,
     values: [version, name],
   });
 };
@@ -49,9 +47,7 @@ export const deleteMigratedVersion = async <
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
   const res = await db.silentArrays({
-    text: `DELETE FROM ${quoteWithSchema({
-      name: config.migrationsTable,
-    })} WHERE version = $1 AND name = $2`,
+    text: `DELETE FROM "${config.migrationsTable}" WHERE version = $1 AND name = $2`,
     values: [version, name],
   });
 
@@ -77,9 +73,7 @@ export const getMigratedVersionsMap = async <
   renameTo?: RakeDbMigrationId,
 ): Promise<RakeDbAppliedVersions> => {
   try {
-    const table = quoteWithSchema({
-      name: config.migrationsTable,
-    });
+    const table = `"${config.migrationsTable}"`;
 
     const result = await adapter.arrays<[string, string]>(
       `SELECT * FROM ${table} ORDER BY version`,

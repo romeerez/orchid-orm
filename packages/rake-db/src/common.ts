@@ -66,9 +66,10 @@ export const quoteWithSchema = ({
 }: {
   schema?: string;
   name: string;
-}) => {
-  return schema ? `"${schema}"."${name}"` : `"${name}"`;
-};
+}) => quoteTable(schema, name);
+
+export const quoteTable = (schema: string | undefined, table: string) =>
+  schema ? `"${schema}"."${table}"` : `"${table}"`;
 
 export const getSchemaAndTableFromName = (
   name: string,
@@ -80,8 +81,7 @@ export const getSchemaAndTableFromName = (
 };
 
 export const quoteNameFromString = (string: string) => {
-  const [schema, name] = getSchemaAndTableFromName(string);
-  return quoteWithSchema({ schema, name });
+  return quoteTable(...getSchemaAndTableFromName(string));
 };
 
 export const quoteSchemaTable = ({
@@ -99,10 +99,7 @@ export const makePopulateEnumQuery = (
 ): TableQuery => {
   const [schema, name] = getSchemaAndTableFromName(item.enumName);
   return {
-    text: `SELECT unnest(enum_range(NULL::${quoteWithSchema({
-      schema,
-      name,
-    })}))::text`,
+    text: `SELECT unnest(enum_range(NULL::${quoteTable(schema, name)}))::text`,
     then(result) {
       // populate empty options array with values from db
       item.options.push(...result.rows.map(([value]) => value));

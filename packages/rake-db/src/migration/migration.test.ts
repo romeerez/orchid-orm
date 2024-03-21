@@ -23,41 +23,83 @@ describe('migration', () => {
       expect(db.migratedAsts.length).toBe(1);
     });
 
+    const testRenameTable = makeTestUpAndDown('renameTable');
+
     it('should rename a table', async () => {
-      const fn = () => {
-        return db.renameTable('from', 'to');
-      };
+      await testRenameTable(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER TABLE "from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "to" RENAME TO "from"
+          `),
+      );
+    });
 
-      await fn();
-      expectSql(`
-        ALTER TABLE "from" RENAME TO "to"
-      `);
+    it('should rename a table and change schema', async () => {
+      await testRenameTable(
+        (action) => db[action]('a.from', 'b.to'),
+        () =>
+          expectSql([
+            `ALTER TABLE "a"."from" RENAME TO "to"`,
+            `ALTER TABLE "a"."to" SET SCHEMA "b"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER TABLE "b"."to" RENAME TO "from"`,
+            `ALTER TABLE "b"."from" SET SCHEMA "a"`,
+          ]),
+      );
+    });
 
-      db.up = false;
-      queryMock.mockClear();
-      await fn();
-      expectSql(`
-        ALTER TABLE "to" RENAME TO "from"
-      `);
+    it('should only change schema', async () => {
+      await testRenameTable(
+        (action) => db[action]('a.t', 'b.t'),
+        () =>
+          expectSql(`
+            ALTER TABLE "a"."t" SET SCHEMA "b"
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "b"."t" SET SCHEMA "a"
+          `),
+      );
+    });
+
+    it('should set default schema when it is not set', async () => {
+      await testRenameTable(
+        (action) => db[action]('a.from', 'to'),
+        () =>
+          expectSql([
+            `ALTER TABLE "a"."from" RENAME TO "to"`,
+            `ALTER TABLE "a"."to" SET SCHEMA "public"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER TABLE "to" RENAME TO "from"`,
+            `ALTER TABLE "from" SET SCHEMA "a"`,
+          ]),
+      );
     });
   });
 
-  it('should rename table with schema', async () => {
-    const fn = () => {
-      return db.renameTable('one.from', 'two.to');
-    };
-
-    await fn();
-    expectSql(`
-        ALTER TABLE "one"."from" RENAME TO "two"."to"
-      `);
-
-    db.up = false;
-    queryMock.mockClear();
-    await fn();
-    expectSql(`
-        ALTER TABLE "two"."to" RENAME TO "one"."from"
-      `);
+  describe('changeTableSchema', () => {
+    it('should change table schema', async () => {
+      await makeTestUpAndDown('changeTableSchema')(
+        (action) => db[action]('table', 'from', 'to'),
+        () =>
+          expectSql(`
+            ALTER TABLE "from"."table" SET SCHEMA "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "to"."table" SET SCHEMA "from"
+          `),
+      );
+    });
   });
 
   describe('addColumn and dropColumn', () => {

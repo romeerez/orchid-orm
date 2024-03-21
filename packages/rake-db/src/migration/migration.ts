@@ -31,6 +31,7 @@ import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {
   getSchemaAndTableFromName,
   quoteNameFromString,
+  quoteTable,
   quoteWithSchema,
 } from '../common';
 import { RakeDbAst } from '../ast';
@@ -161,7 +162,13 @@ export const createMigrationInterface = <
   config: RakeDbConfig<SchemaConfig, CT>,
   asts: RakeDbAst[],
 ): DbMigration<CT> => {
-  const adapter = new TransactionAdapter(tx, tx.client, tx.types);
+  const adapter = new TransactionAdapter(
+    tx,
+    tx.client,
+    tx.types,
+  ) as MigrationAdapter;
+  adapter.schema = adapter.adapter.schema ?? 'public';
+
   const { query, arrays } = adapter;
   const log = logParamToLogObject(config.logger || console, config.log);
 
@@ -195,10 +202,14 @@ export const createMigrationInterface = <
   });
 };
 
+export interface MigrationAdapter extends TransactionAdapter {
+  schema: string;
+}
+
 // Migration interface to use inside the `change` callback.
 export class Migration<CT extends RakeDbColumnTypes> {
   // Database adapter to perform queries with.
-  public adapter!: TransactionAdapter;
+  public adapter!: MigrationAdapter;
   // The logger config.
   public log?: QueryLogObject;
   // Is migrating or rolling back.
@@ -414,6 +425,16 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * });
    * ```
    *
+   * Prefix table name with a schema to set a different schema:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameTable('fromSchema.oldTable', 'toSchema.newTable');
+   * });
+   * ```
+   *
    * @param from - rename the table from
    * @param to - rename the table to
    */
@@ -428,17 +449,42 @@ export class Migration<CT extends RakeDbColumnTypes> {
       to: t,
     };
 
-    await this.adapter.query(
-      `ALTER TABLE ${quoteWithSchema({
-        schema: ast.fromSchema,
-        name: ast.from,
-      })} RENAME TO ${quoteWithSchema({
-        schema: ast.toSchema,
-        name: ast.to,
-      })}`,
-    );
+    if (ast.from !== ast.to) {
+      await this.adapter.query(
+        `ALTER TABLE ${quoteTable(ast.fromSchema, ast.from)} RENAME TO "${
+          ast.to
+        }"`,
+      );
+    }
+
+    if (ast.fromSchema !== ast.toSchema) {
+      await this.adapter.query(
+        `ALTER TABLE ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
+          ast.toSchema ?? this.adapter.schema
+        }"`,
+      );
+    }
 
     this.migratedAsts.push(ast);
+  }
+
+  /**
+   * Set a different schema to the table:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.changeTableSchema('tableName', 'fromSchema', 'toSchema');
+   * });
+   * ```
+   *
+   * @param table - table name
+   * @param from - current table schema
+   * @param to - desired table schema
+   */
+  changeTableSchema(table: string, from: string, to: string) {
+    return this.renameTable(`${from}.${table}`, `${to}.${table}`);
   }
 
   /**

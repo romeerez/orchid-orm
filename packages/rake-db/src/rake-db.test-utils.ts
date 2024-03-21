@@ -91,26 +91,28 @@ export const makeTestUpAndDown = <
   up: Up,
   down?: Down,
 ) => {
+  type Action = Exclude<Up | Down, undefined>;
+
   return async (
-    fn: (action: Up | Down) => Promise<void>,
+    fn: (action: Action) => Promise<void>,
     expectUp: () => void,
     expectDown: () => void,
   ) => {
     resetDb(true);
-    await fn(up);
+    await fn(up as Action);
     expectUp();
 
     resetDb(false);
-    await fn(up);
+    await fn(up as Action);
     expectDown();
 
     if (down) {
       resetDb(true);
-      await fn(down);
+      await fn(down as Action);
       expectDown();
 
       resetDb(false);
-      await fn(down);
+      await fn(down as Action);
       expectUp();
     }
   };

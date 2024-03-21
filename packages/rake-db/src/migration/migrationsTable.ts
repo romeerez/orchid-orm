@@ -1,7 +1,6 @@
 import { Adapter } from 'pqb';
 import { RakeDbConfig } from '../config';
 import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
-import { quoteWithSchema } from '../common';
 
 export const createMigrationsTable = async (
   db: Adapter,
@@ -21,9 +20,7 @@ export const createMigrationsTable = async (
 
   try {
     await db.query(
-      `CREATE TABLE ${quoteWithSchema({
-        name: config.migrationsTable,
-      })} ( version TEXT NOT NULL, name TEXT NOT NULL )`,
+      `CREATE TABLE "${config.migrationsTable}" ( version TEXT NOT NULL, name TEXT NOT NULL )`,
     );
     config.logger?.log('Created versions table');
   } catch (err) {
