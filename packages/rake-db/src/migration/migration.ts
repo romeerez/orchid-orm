@@ -788,6 +788,28 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
+   * Renames a database schema, renames it backwards on roll back.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameSchema('from', 'to');
+   * });
+   * ```
+   *
+   * @param from - existing schema to rename
+   * @param to - desired schema name
+   */
+  async renameSchema(from: string, to: string): Promise<void> {
+    await this.adapter.query(
+      `ALTER SCHEMA "${this.up ? from : to}" RENAME TO "${
+        this.up ? to : from
+      }"`,
+    );
+  }
+
+  /**
    * Drop the schema, create it on rollback. See {@link createSchema}.
    *
    * @param schemaName - name of the schema

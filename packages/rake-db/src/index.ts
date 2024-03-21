@@ -1,5 +1,5 @@
 export * from './commands/createOrDrop';
-export * from './commands/generate';
+export * from './commands/newMigration';
 export * from './commands/migrateOrRollback';
 export * from './migration/migration';
 export * from './rakeDb';

@@ -564,7 +564,7 @@ const sql = `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
   'collations',
 )}`;
 
-interface Structure {
+export interface IntrospectedStructure {
   schemas: string[];
   tables: DbStructure.Table[];
   views: DbStructure.View[];
@@ -577,7 +577,9 @@ interface Structure {
   collations: DbStructure.Collation[];
 }
 
-export async function introspectDbSchema(db: Adapter): Promise<Structure> {
-  const data = await db.query<Structure>(sql);
+export async function introspectDbSchema(
+  db: Adapter,
+): Promise<IntrospectedStructure> {
+  const data = await db.query<IntrospectedStructure>(sql);
   return data.rows[0];
 }

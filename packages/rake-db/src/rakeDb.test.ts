@@ -1,8 +1,8 @@
 import { rakeDb } from './rakeDb';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
-import { generate } from './commands/generate';
-import { pullDbStructure } from './pull/pull';
+import { newMigration } from './commands/newMigration';
+import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock } from 'test-utils';
@@ -10,29 +10,11 @@ import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
 import { processRakeDbConfig } from './config';
 
-jest.mock('./commands/createOrDrop', () => ({
-  createDb: jest.fn(),
-  dropDb: jest.fn(),
-  resetDb: jest.fn(),
-}));
-
-jest.mock('./commands/migrateOrRollback', () => ({
-  migrate: jest.fn(),
-  rollback: jest.fn(),
-  redo: jest.fn(),
-}));
-
-jest.mock('./commands/generate', () => ({
-  generate: jest.fn(),
-}));
-
-jest.mock('./commands/recurrent', () => ({
-  runRecurrentMigrations: jest.fn(),
-}));
-
-jest.mock('./pull/pull', () => ({
-  pullDbStructure: jest.fn(),
-}));
+jest.mock('./commands/createOrDrop');
+jest.mock('./commands/migrateOrRollback');
+jest.mock('./commands/newMigration');
+jest.mock('./commands/recurrent');
+jest.mock('./generate/pull');
 
 const options = [
   {
@@ -106,7 +88,7 @@ describe('rakeDb', () => {
   it('should support new command', async () => {
     await rakeDb(options, config, ['new', 'arg']).promise;
 
-    expect(generate).toBeCalledWith(processedConfig, ['arg']);
+    expect(newMigration).toBeCalledWith(processedConfig, ['arg']);
   });
 
   it('should support pull command', async () => {

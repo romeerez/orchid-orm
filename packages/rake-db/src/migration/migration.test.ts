@@ -444,6 +444,22 @@ describe('migration', () => {
     });
   });
 
+  describe('renameSchema', () => {
+    it('should rename a schema', async () => {
+      await makeTestUpAndDown('renameSchema')(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER SCHEMA "from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER SCHEMA "to" RENAME TO "from"
+          `),
+      );
+    });
+  });
+
   describe('createExtension and dropExtension', () => {
     const testUpAndDown = makeTestUpAndDown('createExtension', 'dropExtension');
 

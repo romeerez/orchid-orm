@@ -5,6 +5,12 @@ import { processRakeDbConfig } from '../config';
 
 const t = makeColumnTypes(defaultSchemaConfig);
 
+const config = processRakeDbConfig({
+  migrationsPath: 'migrations',
+});
+
+const act = (ast: RakeDbAst[]) => astToMigration('public', config, ast);
+
 const template = (content: string) => `import { change } from '../dbScript';
 
 change(async (db) => {
@@ -89,10 +95,6 @@ const check: RakeDbAst.Constraint & { check: TableData.Check } = {
   check: raw({ raw: 'sql' }),
 };
 
-const config = processRakeDbConfig({
-  migrationsPath: 'migrations',
-});
-
 const view: RakeDbAst.View = {
   type: 'view',
   action: 'create',
@@ -123,13 +125,13 @@ describe('astToMigration', () => {
   beforeEach(jest.clearAllMocks);
 
   it('should return undefined when ast is empty', () => {
-    const result = astToMigration(config, []);
+    const result = act([]);
 
     expect(result).toBe(undefined);
   });
 
   it('should put schema, extension, enum to first change, tables to separate changes, foreignKeys in last change', () => {
-    const result = astToMigration(config, [
+    const result = act([
       schema,
       extension,
       enumType,
@@ -182,13 +184,13 @@ change(async (db) => {
   });
 
   it('should create schema', () => {
-    const result = astToMigration(config, [schema]);
+    const result = act([schema]);
 
     expectResult(result, template(`  await db.createSchema('schemaName');`));
   });
 
   it('should create extension', () => {
-    const result = astToMigration(config, [
+    const result = act([
       {
         ...extension,
         schema: 'schema',
@@ -206,7 +208,7 @@ change(async (db) => {
   });
 
   it('should create enum', () => {
-    const result = astToMigration(config, [
+    const result = act([
       {
         ...enumType,
         schema: 'schema',
@@ -221,7 +223,7 @@ change(async (db) => {
 
   describe('table', () => {
     it('should create table', () => {
-      const result = astToMigration(config, [table]);
+      const result = act([table]);
 
       expectResult(
         result,
@@ -232,7 +234,7 @@ change(async (db) => {
     });
 
     it('should add columns with indexes and foreignKeys', () => {
-      const result = astToMigration(config, [
+      const result = act([
         {
           ...table,
           shape: {
@@ -271,7 +273,7 @@ change(async (db) => {
     });
 
     it('should add composite primaryKeys, indexes, foreignKeys', () => {
-      const result = astToMigration(config, [
+      const result = act([
         {
           ...table,
           shape: {
@@ -330,7 +332,7 @@ change(async (db) => {
 
   describe('foreignKey', () => {
     it('should add standalone foreignKey', () => {
-      const result = astToMigration(config, [
+      const result = act([
         {
           ...foreignKey,
           tableSchema: 'custom',
@@ -366,7 +368,7 @@ change(async (db) => {
 
   describe('check', () => {
     it('should add column check', () => {
-      const result = astToMigration(config, [
+      const result = act([
         {
           ...table,
           shape: {
@@ -389,7 +391,7 @@ change(async (db) => {
     });
 
     it('should add table check', () => {
-      const result = astToMigration(config, [
+      const result = act([
         {
           ...table,
           constraints: [
@@ -415,7 +417,7 @@ change(async (db) => {
     });
 
     it('should add check', () => {
-      const result = astToMigration(config, [check]);
+      const result = act([check]);
 
       expectResult(
         result,
@@ -426,7 +428,7 @@ change(async (db) => {
 
   describe('constraint', () => {
     it('should add table constraint', () => {
-      const result = astToMigration(config, [
+      const result = act([
         {
           ...foreignKey,
           tableSchema: 'custom',
@@ -465,7 +467,7 @@ change(async (db) => {
 
   describe('domain', () => {
     it('should add domain', () => {
-      const result = astToMigration(config, [domain]);
+      const result = act([domain]);
 
       expectResult(
         result,
@@ -486,7 +488,7 @@ change(async (db) => {
 
   describe('collation', () => {
     it('should add collation', () => {
-      const result = astToMigration(config, [collation]);
+      const result = act([collation]);
 
       expectResult(
         result,
@@ -509,7 +511,7 @@ change(async (db) => {
 
   describe('identity', () => {
     it('should add identity columns', () => {
-      const result = astToMigration(config, [
+      const result = act([
         {
           ...table,
           shape: {
@@ -551,7 +553,7 @@ change(async (db) => {
 
   describe('view', () => {
     it('should create view', () => {
-      const result = astToMigration(config, [view]);
+      const result = act([view]);
 
       expectResult(
         result,
@@ -570,7 +572,7 @@ change(async (db) => {
     });
 
     it('should create view with sql values', () => {
-      const result = astToMigration(config, [
+      const result = act([
         { ...view, sql: raw({ raw: '$a' }).values({ a: 1 }) },
       ]);
 

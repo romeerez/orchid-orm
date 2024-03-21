@@ -775,6 +775,20 @@ change(async (db) => {
 });
 ```
 
+## renameSchema
+
+[//]: # 'has JSDoc'
+
+Renames a database schema, renames it backwards on roll back.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.renameSchema('from', 'to');
+});
+```
+
 ## createExtension, dropExtension
 
 [//]: # 'has JSDoc'

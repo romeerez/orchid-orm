@@ -1,6 +1,6 @@
 import { introspectDbSchema } from './dbStructure';
 import { pullDbStructure } from './pull';
-import { makeFileVersion, writeMigrationFile } from '../commands/generate';
+import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
 import {
   check,
   collation,
@@ -30,7 +30,7 @@ import { processRakeDbConfig } from '../config';
 
 jest.mock('./dbStructure');
 
-jest.mock('../commands/generate', () => ({
+jest.mock('../commands/newMigration', () => ({
   makeFileVersion: jest.fn(),
   writeMigrationFile: jest.fn(),
 }));

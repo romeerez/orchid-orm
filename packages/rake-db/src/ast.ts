@@ -14,6 +14,7 @@ export type RakeDbAst =
   | RakeDbAst.ChangeTable
   | RakeDbAst.RenameType
   | RakeDbAst.Schema
+  | RakeDbAst.RenameSchema
   | RakeDbAst.Extension
   | RakeDbAst.Enum
   | RakeDbAst.EnumValues
@@ -105,6 +106,12 @@ export namespace RakeDbAst {
     type: 'schema';
     action: 'create' | 'drop';
     name: string;
+  }
+
+  export interface RenameSchema {
+    type: 'renameSchema';
+    from: string;
+    to: string;
   }
 
   export interface Extension {

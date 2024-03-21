@@ -1,4 +1,4 @@
-import { generate } from './generate';
+import { newMigration } from './newMigration';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { pathToLog } from 'orchid-core';
@@ -19,7 +19,7 @@ const log = asMock(testConfig.logger.log);
 
 const testGenerate = async (args: string[], content: string) => {
   const name = args[0];
-  await generate(config, args);
+  await newMigration(config, args);
 
   expect(mkdir).toHaveBeenCalledWith(migrationsPath, { recursive: true });
 
@@ -29,7 +29,7 @@ const testGenerate = async (args: string[], content: string) => {
   expect(log.mock.calls).toEqual([[`Created ${pathToLog(filePath)}`]]);
 };
 
-describe('generate', () => {
+describe('newMigration', () => {
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date(2000, 0, 1, 0, 0, 0));
     jest.clearAllMocks();
@@ -37,7 +37,9 @@ describe('generate', () => {
   });
 
   it('should throw if migration name is not provided', async () => {
-    expect(generate(config, [])).rejects.toThrow('Migration name is missing');
+    expect(newMigration(config, [])).rejects.toThrow(
+      'Migration name is missing',
+    );
   });
 
   it('should create a file for create table migration', async () => {

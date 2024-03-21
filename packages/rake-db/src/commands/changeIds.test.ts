@@ -6,11 +6,11 @@ import { asMock } from 'test-utils';
 import { Adapter, QueryLogger } from 'pqb';
 import fs from 'fs/promises';
 import path from 'path';
-import { generateTimeStamp } from './generate';
+import { generateTimeStamp } from './newMigration';
 
 jest.mock('../migration/migrationsSet');
 jest.mock('fs/promises');
-jest.mock('./generate');
+jest.mock('./newMigration');
 
 const options = [
   { databaseURL: 'postgres://user@localhost/dbname' },

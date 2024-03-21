@@ -7,8 +7,8 @@ import {
 } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
-import { generate } from './commands/generate';
-import { pullDbStructure } from './pull/pull';
+import { newMigration } from './commands/newMigration';
+import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
 import { ChangeCallback, pushChange } from './migration/change';
 import { runRecurrentMigrations } from './commands/recurrent';
@@ -22,6 +22,7 @@ import {
 import { changeIds } from './commands/changeIds';
 import { RakeDbColumnTypes } from './migration/migration';
 import { rebase } from './commands/rebase';
+import { generate } from './generate/generate';
 
 /**
  * Type of {@link rakeDb} function
@@ -168,8 +169,10 @@ const runCommand = async <
     await rollback({}, options, config, args.slice(1));
   } else if (arg === 'redo') {
     await redo({}, options, config, args.slice(1));
+  } else if (arg === 'g' || arg === 'generate') {
+    await generate(toArray(options), config);
   } else if (arg === 'new') {
-    await generate(config, args.slice(1));
+    await newMigration(config, args.slice(1));
   } else if (arg === 'pull') {
     await pullDbStructure(options[0], config);
   } else if (arg === 'status') {

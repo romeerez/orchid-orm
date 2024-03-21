@@ -1,7 +1,7 @@
 import { Adapter, AdapterOptions, makeColumnsByType } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
-import { makeFileVersion, writeMigrationFile } from '../commands/generate';
+import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import { ColumnSchemaConfig } from 'orchid-core';
 import { RakeDbConfig } from 'rake-db';
@@ -27,7 +27,7 @@ export const pullDbStructure = async <
   const ast = await structureToAst(ctx, adapter);
   await adapter.close();
 
-  const result = astToMigration(config, ast);
+  const result = astToMigration(currentSchema, config, ast);
   if (!result) return;
 
   const version = await makeFileVersion({}, config);

@@ -1,5 +1,5 @@
 import { AdapterOptions } from 'pqb';
-import prompts from 'prompts';
+import { promptConfirm, promptText } from '../prompt';
 
 export const setAdapterOptions = (
   options: AdapterOptions,
@@ -33,38 +33,29 @@ export const setAdminCredentialsToOptions = async (
   options: AdapterOptions,
   create?: boolean,
 ): Promise<AdapterOptions | undefined> => {
-  const confirm = await prompts([
-    {
-      message: `Would you like to share admin credentials to ${
-        create ? 'create' : 'drop'
-      } a database`,
-      type: 'confirm',
-      name: 'confirm',
-      initial: true,
-    },
-  ]);
+  const ok = await promptConfirm({
+    message: `Would you like to share admin credentials to ${
+      create ? 'create' : 'drop'
+    } a database?`,
+  });
 
-  if (!confirm.confirm) {
+  if (!ok) {
     return;
   }
 
-  const values = await prompts([
-    {
-      message: 'Enter admin user:',
-      type: 'text',
-      name: 'user',
-      initial: 'postgres',
-      min: 1,
-    },
-    {
-      message: 'Enter admin password:',
-      type: 'password',
-      name: 'password',
-    },
-  ]);
+  const user = await promptText({
+    message: 'Enter admin user:',
+    default: 'postgres',
+    min: 1,
+  });
+
+  const password = await promptText({
+    message: 'Enter admin password:',
+    password: true,
+  });
 
   return setAdapterOptions(options, {
-    ...values,
-    password: values.password || undefined,
+    user,
+    password: password || undefined,
   });
 };
