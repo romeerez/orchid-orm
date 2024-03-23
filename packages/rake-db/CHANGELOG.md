@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.15.9
+
+### Patch Changes
+
+- e8f1fe63: Support changing schema with `renameTable`, add `changeTableSchema` migration method
+- a9a2dbf7: Export rake-db types for portability
+
 ## 2.15.8
 
 ### Patch Changes
