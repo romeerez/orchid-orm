@@ -23,11 +23,7 @@ export type RakeDbFn = (<
   options: MaybeArray<AdapterOptions>,
   partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
   args?: string[],
-) => RakeDbChangeFn<
-  CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
-> & {
-  promise: Promise<void>;
-}) & {
+) => RakeDbFnReturns<CT>) & {
   /**
    * Unlike the original `rakeDb` that executes immediately,
    * `rakeDb.lazy` returns the `run` function to be later called programmatically.
@@ -38,6 +34,13 @@ export type RakeDbFn = (<
    */
   lazy: RakeDbLazyFn;
 };
+
+export type RakeDbFnReturns<CT extends RakeDbColumnTypes | undefined> =
+  RakeDbChangeFn<
+    CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
+  > & {
+    promise: Promise<void>;
+  };
 
 /**
  * Type of {@link rakeDb.lazy} function
