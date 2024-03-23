@@ -24,6 +24,6 @@ export type OperatorToSQL<Value, Ctx> = (
 ) => string;
 
 // Base type for the object with column operators.
-export interface BaseOperators {
+export interface CoreBaseOperators {
   [K: string]: OperatorBase<any, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 }

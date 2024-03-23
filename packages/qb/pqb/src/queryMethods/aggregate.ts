@@ -8,7 +8,7 @@ import {
 } from '../query/query';
 import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
 import {
-  BaseOperators,
+  CoreBaseOperators,
   emptyArray,
   emptyObject,
   PickQueryMeta,
@@ -59,7 +59,7 @@ nullableFloat.parseItem = nullableFloat.parseFn = (input): number =>
 type QueryReturnsAgg<
   T,
   C,
-  Op extends BaseOperators,
+  Op extends CoreBaseOperators,
 > = SetQueryReturnsColumnOrThrow<T, QueryColumn<C, Op>> & Op;
 
 type CountReturn<T> = QueryReturnsAgg<T, number, OperatorsNumber> & {

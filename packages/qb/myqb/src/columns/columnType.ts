@@ -1,5 +1,5 @@
 import {
-  BaseOperators,
+  CoreBaseOperators,
   ColumnDataBase,
   ColumnSchemaConfig,
   ColumnTypeBase,
@@ -12,7 +12,7 @@ export abstract class ColumnType<
   Type = unknown,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   InputSchema extends Schema['type'] = any,
-  Ops extends BaseOperators = BaseOperators,
+  Ops extends CoreBaseOperators = CoreBaseOperators,
   InputType = Type,
   OutputType = Type,
   OutputSchema extends Schema['type'] = InputSchema,

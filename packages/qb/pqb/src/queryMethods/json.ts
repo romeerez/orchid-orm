@@ -1,6 +1,5 @@
 import {
   AddQuerySelect,
-  PickQueryMetaResultReturnType,
   Query,
   SetQueryReturnsColumnOptional,
 } from '../query/query';
@@ -8,6 +7,7 @@ import { pushQueryValue } from '../query/queryUtils';
 import { JsonItem } from '../sql';
 import {
   PickQueryMeta,
+  PickQueryMetaResultReturnType,
   PickQueryMetaShapeResultReturnType,
   QueryColumn,
 } from 'orchid-core';

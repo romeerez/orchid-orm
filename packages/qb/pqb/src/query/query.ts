@@ -16,6 +16,7 @@ import {
   PickOutputType,
   PickQueryMeta,
   PickQueryMetaResult,
+  PickQueryMetaResultReturnType,
   PickQueryResult,
   PickQueryReturnType,
   PickQueryShape,
@@ -115,11 +116,6 @@ export interface PickQueryMetaResultRelationsWindowsColumnTypes
   extends PickQueryMetaResultRelationsWindows {
   columnTypes: unknown;
 }
-
-export interface PickQueryMetaResultReturnType
-  extends PickQueryMeta,
-    PickQueryResult,
-    PickQueryReturnType {}
 
 export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
 

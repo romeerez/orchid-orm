@@ -1,7 +1,7 @@
 import { Code } from './code';
 import { RawSQLBase } from '../raw';
 import { QueryBaseCommon } from '../query';
-import { BaseOperators, OperatorBase } from './operators';
+import { CoreBaseOperators, OperatorBase } from './operators';
 import { ColumnTypeSchemaArg } from './columnSchema';
 import { RecordString } from '../utils';
 
@@ -386,7 +386,7 @@ export interface PickOutputTypeAndOperators {
 }
 
 // Use a lightweight column type across the query builder, this helps TS significantly.
-export interface QueryColumn<T = unknown, Op = BaseOperators> {
+export interface QueryColumn<T = unknown, Op = CoreBaseOperators> {
   dataType: string;
   type: T;
   outputType: T;
@@ -422,7 +422,7 @@ export abstract class ColumnTypeBase<
   Type = unknown,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   InputSchema = any,
-  Ops extends BaseOperators = BaseOperators,
+  Ops extends CoreBaseOperators = CoreBaseOperators,
   InputType = Type,
   OutputType = Type,
   OutputSchema = InputSchema,
