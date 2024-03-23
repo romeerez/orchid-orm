@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.12.4
+
+### Patch Changes
+
+- 79da9a41: Re-export orchid-core from orchid-orm for compatibility
+
 ## 0.12.3
 
 ### Patch Changes

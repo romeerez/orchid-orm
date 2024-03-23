@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.23.11
+
+### Patch Changes
+
+- 79da9a41: Re-export orchid-core from orchid-orm for compatibility
+- Updated dependencies [79da9a41]
+  - pqb@0.26.7
+  - orchid-core@0.12.4
+
 ## 1.23.10
 
 ### Patch Changes
