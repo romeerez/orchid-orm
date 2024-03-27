@@ -122,3 +122,8 @@ export const transaction = <T>(
 
 export const queryLock = (trx: TransactionAdapter) =>
   trx.query(`SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const exhaustive = (_: never) => {
+  throw new Error('Condition was not exhaustive');
+};

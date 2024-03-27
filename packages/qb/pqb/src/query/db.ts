@@ -17,6 +17,7 @@ import {
   getTableData,
   DefaultColumnTypes,
   makeColumnTypes,
+  TableData,
 } from '../columns';
 import { QueryError, QueryErrorName } from '../errors';
 import {
@@ -181,6 +182,7 @@ export class Db<
     public columnTypes: ColumnTypes,
     transactionStorage: AsyncLocalStorage<TransactionState>,
     options: DbTableOptions<Table, ShapeWithComputed>,
+    public tableData: TableData = getTableData(),
   ) {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
@@ -190,7 +192,6 @@ export class Db<
       options.scopes || softDelete ? {} : emptyObject
     ) as QueryScopes;
 
-    const tableData = getTableData();
     this.internal = {
       ...tableData,
       transactionStorage,

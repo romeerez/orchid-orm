@@ -7,7 +7,18 @@ import {
   IntrospectedStructure,
 } from './dbStructure';
 import { asMock } from 'test-utils';
-import { AdapterOptions } from 'pqb';
+import {
+  AdapterOptions,
+  ColumnsShape,
+  DefaultColumnTypes,
+  DefaultSchemaConfig,
+  defaultSchemaConfig,
+  getColumnTypes,
+  getTableData,
+  makeColumnTypes,
+  TableData,
+  UnknownColumn,
+} from 'pqb';
 import fs from 'fs/promises';
 import { promptSelect } from '../prompt';
 
@@ -24,13 +35,23 @@ const defaultOptions: AdapterOptions[] = [
 ];
 let options = defaultOptions;
 
+type ColumnTypes = DefaultColumnTypes<DefaultSchemaConfig>;
+const t: ColumnTypes = makeColumnTypes(defaultSchemaConfig);
+
 class BaseTable {
   schema?: string;
+  types = t;
+  tableData!: TableData;
+  setColumns(fn: (t: ColumnTypes) => ColumnsShape) {
+    const shape = getColumnTypes(t, fn, undefined, undefined);
+    this.tableData = getTableData();
+    return shape;
+  }
 }
 
 const defaultConfig = {
   ...testConfig,
-  baseTable: BaseTable as AnyRakeDbConfig['baseTable'],
+  baseTable: BaseTable as unknown as AnyRakeDbConfig['baseTable'],
 };
 let config: AnyRakeDbConfig = defaultConfig;
 
@@ -75,6 +96,9 @@ const arrange = (arg: {
               return [
                 klass.name,
                 Object.assign(t, {
+                  internal: {
+                    ...t.tableData,
+                  },
                   q: {
                     schema: t.schema,
                   },
@@ -158,7 +182,7 @@ describe('generate', () => {
     );
   });
 
-  describe('schema', () => {
+  describe('schemas', () => {
     it('should create db schemas and set tables schemas', async () => {
       arrange({
         tables: [
@@ -191,14 +215,13 @@ describe('generate', () => {
 
 change(async (db) => {
   await db.createSchema('one');
+
   await db.createSchema('two');
 });
 
 change(async (db) => {
   await db.changeTableSchema('one', 'public', 'one');
-});
 
-change(async (db) => {
   await db.changeTableSchema('two', 'public', 'two');
 });
 `);
@@ -233,7 +256,7 @@ change(async (db) => {
 `);
     });
 
-    it('should create new schema and drop old when selecting `create schema` option', async () => {
+    it('should create new schema and drop the old one when selecting `create schema` option', async () => {
       arrange({
         tables: [
           class One extends BaseTable {
@@ -259,12 +282,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createSchema('to');
+
   await db.dropSchema('from');
 });
 `);
     });
 
-    it('should rename schema and set table schema when selecting `rename schema` option', async () => {
+    it('should rename schema when selecting `rename schema` option', async () => {
       arrange({
         tables: [
           class One extends BaseTable {
@@ -285,10 +309,6 @@ change(async (db) => {
 
 change(async (db) => {
   await db.renameSchema('from', 'to');
-});
-
-change(async (db) => {
-  await db.changeTableSchema('one', 'from', 'to');
 });
 `);
     });
@@ -319,13 +339,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.renameSchema('from', 'to');
-});
 
-change(async (db) => {
-  await db.changeTableSchema('one', 'from', 'to');
-});
-
-change(async (db) => {
   await db.dropSchema('drop');
 });
 `);
@@ -364,10 +378,175 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTableSchema('one', 'from', 'to');
+
+  await db.changeTableSchema('two', 'to', 'from');
+});
+`);
+    });
+  });
+
+  describe('tables', () => {
+    it(
+      'should create table, ignore virtual column, add table comment, add noPrimaryKey option, ' +
+        'add composite primary key, index, constraint',
+      async () => {
+        arrange({
+          tables: [
+            class One extends BaseTable {
+              schema = 'schema';
+              table = 'one';
+              comment = 'table comment';
+              noPrimaryKey = true;
+              shape = this.setColumns((t) => ({
+                name: t.string(),
+                int: t.integer(),
+                virtual: new UnknownColumn(defaultSchemaConfig),
+                ...t.primaryKey(['name', 'int']),
+                ...t.index(['name', 'int']),
+                ...t.constraint({
+                  name: 'constraintName',
+                  check: t.sql`int > 5`,
+                }),
+              }));
+            },
+          ],
+          structure: makeStructure({
+            schemas: ['schema'],
+          }),
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'schema.one',
+    {
+      comment: "table comment",
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      name: t.string(),
+      int: t.integer(),
+      ...t.primaryKey(['name', 'int']),
+      ...t.index(['name', 'int']),
+      ...t.check(t.sql\`int > 5\`),
+    }),
+  );
+});
+`);
+      },
+    );
+
+    it('should drop table with same properties as when creating a table', async () => {
+      arrange({
+        structure: makeStructure({
+          schemas: ['public', 'schema'],
+          tables: [
+            {
+              schemaName: 'schema',
+              name: 'one',
+              comment: 'table comment',
+              columns: [
+                {
+                  schemaName: 'schema',
+                  tableName: 'one',
+                  name: 'name',
+                  type: 'varchar',
+                  typeSchema: 'pg_catalog',
+                  isArray: false,
+                  maxChars: 255,
+                  isNullable: false,
+                },
+                {
+                  schemaName: 'schema',
+                  tableName: 'one',
+                  name: 'int',
+                  type: 'int4',
+                  typeSchema: 'pg_catalog',
+                  isArray: false,
+                  numericPrecision: 32,
+                  numericScale: 0,
+                  isNullable: false,
+                },
+              ],
+            },
+            {
+              schemaName: 'public',
+              name: 'schemaMigrations',
+              columns: [
+                {
+                  schemaName: 'public',
+                  tableName: 'schemaMigrations',
+                  name: 'version',
+                  type: 'text',
+                  typeSchema: 'pg_catalog',
+                  isArray: false,
+                  isNullable: false,
+                },
+                {
+                  schemaName: 'public',
+                  tableName: 'schemaMigrations',
+                  name: 'name',
+                  type: 'text',
+                  typeSchema: 'pg_catalog',
+                  isArray: false,
+                  isNullable: false,
+                },
+              ],
+            },
+          ],
+          views: [],
+          indexes: [
+            {
+              schemaName: 'schema',
+              tableName: 'one',
+              name: 'one_name_int_idx',
+              using: 'btree',
+              isUnique: false,
+              columns: [{ column: 'name' }, { column: 'int' }],
+              nullsNotDistinct: false,
+            },
+          ],
+          constraints: [
+            {
+              schemaName: 'schema',
+              tableName: 'one',
+              name: 'one_check',
+              check: { columns: ['int'], expression: '("int" > 5)' },
+            },
+            {
+              schemaName: 'schema',
+              tableName: 'one',
+              name: 'one_pkey',
+              primaryKey: ['name', 'int'],
+            },
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.dropTable(
+    'schema.one',
+    {
+      comment: "table comment",
+    },
+    (t) => ({
+      name: t.varchar(255),
+      int: t.integer().check(t.sql({ raw: '("int" > 5)' })),
+      ...t.primaryKey(['name', 'int']),
+      ...t.index(['name', 'int']),
+    }),
+  );
 });
 
 change(async (db) => {
-  await db.changeTableSchema('two', 'to', 'from');
+  await db.dropSchema('schema');
 });
 `);
     });

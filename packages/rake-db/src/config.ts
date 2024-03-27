@@ -41,7 +41,7 @@ export interface RakeDbConfig<
   >;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: RakeDbBaseTable<CT>;
-  db?: () => MaybePromise<{ $queryBuilder: Query }>;
+  db?: RakeDbConfigDb;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
   // throw if a migration doesn't have a default export
@@ -55,6 +55,8 @@ export interface RakeDbConfig<
   beforeRollback?: MigrationCallback;
   afterRollback?: MigrationCallback;
 }
+
+export type RakeDbConfigDb = () => MaybePromise<{ $queryBuilder: Query }>;
 
 export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   extends QueryLogOptions {

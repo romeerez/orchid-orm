@@ -42,7 +42,7 @@ const table: RakeDbAst.Table = {
   action: 'create',
   schema: 'schema',
   name: 'table',
-  noPrimaryKey: 'ignore',
+  noPrimaryKey: 'error',
   indexes: [],
   constraints: [],
   shape: {
@@ -112,6 +112,7 @@ const view: RakeDbAst.View = {
       securityInvoker: true,
     },
   },
+  deps: [],
 };
 
 const expectResult = (
@@ -156,6 +157,17 @@ change(async (db) => {
   await db.createExtension('extensionName');
 
   await db.createEnum('mood', ['sad', 'ok', 'happy']);
+
+  await db.createTable('schema.other', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
+
+  await db.addForeignKey(
+    'table',
+    ['otherId'],
+    'otherTable',
+    ['id'],
+  );
 });
 
 change(async (db) => {
@@ -163,21 +175,6 @@ change(async (db) => {
     id: t.uuid().primaryKey(),
     enum: t.enum('mood'),
   }));
-});
-
-change(async (db) => {
-  await db.createTable('schema.other', (t) => ({
-    id: t.identity().primaryKey(),
-  }));
-});
-
-change(async (db) => {
-  await db.addForeignKey(
-    'table',
-    ['otherId'],
-    'otherTable',
-    ['id'],
-  );
 });
 `,
     );
