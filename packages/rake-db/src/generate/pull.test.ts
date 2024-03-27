@@ -276,6 +276,7 @@ describe('pull', () => {
         ...foreignKey,
         ...check,
         tableName: 'table2',
+        name: 'refAndCheck',
         references: {
           ...foreignKey.references,
           columns: ['id', 'text'],
@@ -287,12 +288,12 @@ describe('pull', () => {
     ];
 
     await pullDbStructure(options, config);
-
     expectWritten(
       `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createSchema('schema1');
+
   await db.createSchema('schema2');
 
   await db.createCollation('schema.collation', {
@@ -309,7 +310,7 @@ change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
     id: t.identity().primaryKey(),
     columnName: t.name('column_name').integer(),
-    domainColumn: t.array(t.domain('domain').as(t.integer())),
+    domainColumn: t.array(t.domain('schema.domain').as(t.integer())),
     customTypeColumn: t.type('customType'),
     jsonArray: t.json().default(t.sql({ raw: '\\'[]\\'' })),
     ...t.timestamps(),
@@ -334,7 +335,7 @@ change(async (db) => {
       },
     ),
     ...t.constraint({
-      name: 'table_column_check',
+      name: 'refAndCheck',
       references: [
         ['id', 'text'],
         'schema.table1',
@@ -432,11 +433,17 @@ Append \`as\` method manually to these columns to treat them as other column typ
       `import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    snakeCase: t.integer(),
-    camelCase: t.name('camelCase').integer(),
-    ...t.timestamps(),
-  }));
+  await db.createTable(
+    'table',
+    {
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      snakeCase: t.integer(),
+      camelCase: t.name('camelCase').integer(),
+      ...t.timestamps(),
+    }),
+  );
 });
 `,
     );
@@ -481,9 +488,15 @@ change(async (db) => {
 });
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    text: t.enum('mood'),
-  }));
+  await db.createTable(
+    'table',
+    {
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      text: t.enum('mood'),
+    }),
+  );
 });
 `);
   });

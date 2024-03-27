@@ -190,7 +190,7 @@ export namespace RakeDbAst {
 
   export interface Constraint extends TableData.Constraint {
     type: 'constraint';
-    action: 'create';
+    action: 'create' | 'drop';
     tableSchema?: string;
     tableName: string;
   }
@@ -203,6 +203,7 @@ export namespace RakeDbAst {
     shape: ColumnsShape;
     sql: RawSQLBase;
     options: ViewOptions;
+    deps: { schemaName: string; name: string }[];
   }
 
   export interface ViewOptions {

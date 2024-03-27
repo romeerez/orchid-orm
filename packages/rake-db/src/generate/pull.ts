@@ -1,5 +1,5 @@
-import { Adapter, AdapterOptions, makeColumnsByType } from 'pqb';
-import { structureToAst, StructureToAstCtx } from './structureToAst';
+import { Adapter, AdapterOptions } from 'pqb';
+import { structureToAst, makeStructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
@@ -16,13 +16,7 @@ export const pullDbStructure = async <
   const adapter = new Adapter(options);
   const currentSchema = adapter.schema || 'public';
 
-  const ctx: StructureToAstCtx = {
-    snakeCase: config.snakeCase,
-    unsupportedTypes: {},
-    currentSchema,
-    columnSchemaConfig: config.schemaConfig,
-    columnsByType: makeColumnsByType(config.schemaConfig),
-  };
+  const ctx = makeStructureToAstCtx(config, currentSchema);
 
   const ast = await structureToAst(ctx, adapter);
   await adapter.close();

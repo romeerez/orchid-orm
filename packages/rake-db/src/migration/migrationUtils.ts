@@ -175,11 +175,16 @@ export const getForeignKeyTable = (
 
 export const getConstraintName = (
   table: string,
-  constraint: TableData.Constraint,
+  constraint: {
+    references?: { columns: string[] };
+    check?: unknown;
+    identity?: unknown;
+  },
 ) => {
   if (constraint.references)
     return `${table}_${constraint.references.columns.join('_')}_fkey`;
   if (constraint.check) return `${table}_check`;
+  if (constraint.identity) return `${table}_identity`;
   return `${table}_constraint`;
 };
 
@@ -253,7 +258,7 @@ export const referencesToSql = (
 
 export const getIndexName = (
   table: string,
-  columns: TableData.Index['columns'],
+  columns: ({ column: string } | { expression: string })[],
 ) => {
   return `${table}_${columns
     .map((it) =>
@@ -292,9 +297,9 @@ export const indexesToQuery = (
 
     sql.push(`INDEX "${indexName}" ON ${quoteTable(schema, name)}`);
 
-    const using = options.using || (options.tsVector && 'GIN');
-    if (using) {
-      sql.push(`USING ${using}`);
+    const u = options.using || (options.tsVector && 'GIN');
+    if (u) {
+      sql.push(`USING ${u}`);
     }
 
     const columnsSql: string[] = [];

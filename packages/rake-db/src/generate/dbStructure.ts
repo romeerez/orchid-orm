@@ -1,4 +1,5 @@
 import { Adapter } from 'pqb';
+import { RakeDbAst } from '../ast';
 
 export namespace DbStructure {
   export interface Table {
@@ -11,6 +12,7 @@ export namespace DbStructure {
   export interface View {
     schemaName: string;
     name: string;
+    deps: RakeDbAst.View['deps'];
     isRecursive: boolean;
     with?: string[]; // ['check_option=LOCAL', 'security_barrier=true']
     columns: Column[];
@@ -268,6 +270,19 @@ ORDER BY relname`;
 const viewsSql = `SELECT
   nc.nspname AS "schemaName",
   c.relname AS "name",
+  (
+    SELECT COALESCE(json_agg(t.*), '[]')
+    FROM (
+      SELECT
+        ns.nspname AS "schemaName",
+        obj.relname AS "name"
+      FROM pg_class obj
+      JOIN pg_depend dep ON dep.refobjid = obj.oid
+      JOIN pg_rewrite rew ON rew.oid = dep.objid
+      JOIN pg_namespace ns ON ns.oid = obj.relnamespace
+      WHERE rew.ev_class = c.oid AND obj.oid <> c.oid
+    ) t
+  ) "deps",
   right(substring(r.ev_action from ':hasRecursive \w'), 1)::bool AS "isRecursive",
   array_to_json(c.reloptions) AS "with",
   (SELECT coalesce(json_agg(t), '[]') FROM (${columnsSql({

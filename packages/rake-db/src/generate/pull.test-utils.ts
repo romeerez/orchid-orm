@@ -167,4 +167,5 @@ export const view: DbStructure.View = {
   ],
   columns: [intColumn],
   sql: 'sql',
+  deps: [],
 };

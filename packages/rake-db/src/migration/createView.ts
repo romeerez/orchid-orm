@@ -35,6 +35,7 @@ const makeAst = (
     shape: {},
     sql,
     options,
+    deps: [],
   };
 };
 

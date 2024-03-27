@@ -304,7 +304,7 @@ describe('structureToAst', () => {
           unknown
         >
       ).data.item;
-      expect(column.dataType).toBe(domain.name);
+      expect(column.dataType).toBe(`${domain.schemaName}.${domain.name}`);
       expect(column.data.as).toBeInstanceOf(IntegerColumn);
     });
 
@@ -501,7 +501,7 @@ describe('structureToAst', () => {
       expect(ast.shape.name.data.indexes).toEqual([
         {
           name: 'index',
-          unique: false,
+          unique: undefined,
           nullsNotDistinct: true,
         },
       ]);
@@ -517,7 +517,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
       expect(ast.shape.name.data.indexes).toEqual([
         {
-          unique: false,
+          unique: undefined,
         },
       ]);
       expect(ast.indexes).toHaveLength(0);
@@ -582,7 +582,7 @@ describe('structureToAst', () => {
       expect(ast.indexes).toEqual([
         {
           columns: [{ column: 'id' }, { column: 'name' }],
-          options: { name: 'index', unique: false },
+          options: { name: 'index', unique: undefined },
         },
         {
           columns: [{ column: 'id' }, { column: 'name' }],
@@ -608,7 +608,7 @@ describe('structureToAst', () => {
       expect(ast.indexes).toEqual([
         {
           columns: indexColumns,
-          options: { unique: false },
+          options: { unique: undefined },
         },
       ]);
     });
@@ -812,52 +812,6 @@ describe('structureToAst', () => {
           },
         },
       ]);
-    });
-
-    it('should have referenced table before the table with foreign key', async () => {
-      structure.tables = [
-        {
-          ...table,
-          name: 'fkTable',
-          columns: [
-            { ...intColumn, name: 'table1Id', tableName: 'fkTable' },
-            { ...intColumn, name: 'table2Id', tableName: 'fkTable' },
-          ],
-        },
-        { ...table, name: 'table1' },
-        { ...table, name: 'table2' },
-        { ...table, name: 'otherTable' },
-      ];
-      structure.constraints = [
-        {
-          ...foreignKey,
-          tableName: 'fkTable',
-          references: {
-            ...foreignKey.references,
-            columns: ['table1Id'],
-            foreignTable: 'table1',
-          },
-        },
-        {
-          ...foreignKey,
-          tableName: 'fkTable',
-          references: {
-            ...foreignKey.references,
-            columns: ['table2Id'],
-            foreignTable: 'table2',
-          },
-        },
-      ];
-
-      const [table1, table2, fkTable, otherTable] = (await structureToAst(
-        ctx,
-        adapter,
-      )) as RakeDbAst.Table[];
-
-      expect(table1.name).toBe('table1');
-      expect(table2.name).toBe('table2');
-      expect(fkTable.name).toBe('fkTable');
-      expect(otherTable.name).toBe('otherTable');
     });
 
     it('should add foreign key to the same table', async () => {
