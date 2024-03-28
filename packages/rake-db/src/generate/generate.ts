@@ -15,7 +15,11 @@ import {
   RakeDbConfigDb,
   writeMigrationFile,
 } from 'rake-db';
-import { introspectDbSchema, IntrospectedStructure } from './dbStructure';
+import {
+  DbStructure,
+  introspectDbSchema,
+  IntrospectedStructure,
+} from './dbStructure';
 import { astToMigration } from './astToMigration';
 import { colors } from '../colors';
 import { promptSelect } from '../prompt';
@@ -49,7 +53,13 @@ export const generate = async (
   const [ast, renameSchemas] = await processSchemas(schemas, dbStructure);
 
   ast.push(
-    ...processTables(tables, dbStructure, currentSchema, config, renameSchemas),
+    ...(await processTables(
+      tables,
+      dbStructure,
+      currentSchema,
+      config,
+      renameSchemas,
+    )),
   );
 
   const result = astToMigration(currentSchema, config, ast);
@@ -165,6 +175,8 @@ const getActualItems = async (
     tables: [],
   };
 
+  const tableNames = new Set<string>();
+
   const exported = await db();
   for (const key in exported) {
     const table = exported[key as keyof typeof exported];
@@ -176,7 +188,17 @@ const getActualItems = async (
       );
     }
 
-    if (table.q.schema) actualItems.schemas.add(table.q.schema);
+    const { schema } = table.q;
+    const name = `${schema ? schema : `${schema}.`}${table.table}`;
+    if (tableNames.has(name)) {
+      throw new Error(
+        `Table ${schema}.${table.table} is defined more than once`,
+      );
+    }
+
+    tableNames.add(name);
+
+    if (schema) actualItems.schemas.add(schema);
 
     actualItems.tables.push(table as Table);
   }
@@ -207,33 +229,7 @@ const processSchemas = async (
 
   for (const schema of createSchemas) {
     if (dropSchemas.length) {
-      let max = 0;
-      const add = schema.length + 3;
-      for (const schema of dropSchemas) {
-        if (schema.length + add > max) {
-          max = schema.length + add;
-        }
-      }
-
-      const index = await promptSelect({
-        message: `Create or rename ${colors.blueBold(
-          schema,
-        )} schema from another schema?`,
-        options: [
-          `${colors.greenBold('+')} ${schema} ${colors
-            .pale('create schema')
-            .padStart(max + 13 - schema.length, ' ')}`,
-          ...dropSchemas.map(
-            (d) =>
-              `${colors.yellowBold('~')} ${d} ${colors.yellowBold(
-                '>',
-              )} ${schema} ${colors
-                .pale('rename schema')
-                .padStart(max + 13 - d.length - add, ' ')}`,
-          ),
-        ],
-      });
-
+      const index = await select('schema', schema, dropSchemas);
       if (index) {
         const from = dropSchemas[index - 1];
         dropSchemas.splice(index - 1, 1);
@@ -265,15 +261,16 @@ const processSchemas = async (
   return [ast, renameSchemas];
 };
 
-const processTables = (
+const processTables = async (
   tables: Table[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   config: AnyRakeDbConfig,
   renameSchemas: Map<string, string>,
-): RakeDbAst[] => {
+): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
   const createTables: Table[] = [];
+  const dropTables: DbStructure.Table[] = [];
 
   for (const table of tables) {
     const tableSchema = table.schema ?? currentSchema;
@@ -317,16 +314,75 @@ const processTables = (
       continue;
     }
 
+    dropTables.push(table);
+  }
+
+  for (const table of createTables) {
+    if (dropTables.length) {
+      const index = await select(
+        'table',
+        table.table,
+        dropTables.map((table) => table.name),
+      );
+      if (index) {
+        const drop = dropTables[index - 1];
+        dropTables.splice(index - 1, 1);
+
+        ast.push({
+          type: 'renameTable',
+          fromSchema: drop.schemaName,
+          from: drop.name,
+          toSchema: table.schema ?? currentSchema,
+          to: table.table,
+        });
+
+        continue;
+      }
+    }
+
+    ast.push(createTableAst(currentSchema, table));
+  }
+
+  for (const table of dropTables) {
     ast.push(
       tableToAst(structureToAstCtx, dbStructure, table, 'drop', domainsMap),
     );
   }
 
-  ast.push(
-    ...[...createTables.values()].map((table) =>
-      createTableAst(currentSchema, table),
-    ),
-  );
-
   return ast;
+};
+
+const select = (
+  kind: string,
+  name: string,
+  drop: string[],
+): Promise<number> => {
+  let max = 0;
+  const add = name.length + 3;
+  for (const name of drop) {
+    if (name.length + add > max) {
+      max = name.length + add;
+    }
+  }
+
+  const renameMessage = `rename ${name}`;
+
+  return promptSelect({
+    message: `Create or rename ${colors.blueBold(
+      name,
+    )} ${kind} from another ${kind}?`,
+    options: [
+      `${colors.greenBold('+')} ${name} ${colors
+        .pale('create name')
+        .padStart(max + renameMessage.length - name.length, ' ')}`,
+      ...drop.map(
+        (d) =>
+          `${colors.yellowBold('~')} ${d} ${colors.yellowBold(
+            '>',
+          )} ${name} ${colors
+            .pale(renameMessage)
+            .padStart(max + renameMessage.length - d.length - add, ' ')}`,
+      ),
+    ],
+  });
 };

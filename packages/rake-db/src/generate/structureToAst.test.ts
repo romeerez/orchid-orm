@@ -1,4 +1,4 @@
-import { DbStructure, introspectDbSchema } from './dbStructure';
+import { introspectDbSchema } from './dbStructure';
 import {
   Adapter,
   ArrayColumn,
@@ -21,25 +21,9 @@ import {
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName } from '../migration/migrationUtils';
-import {
-  table,
-  intColumn,
-  varCharColumn,
-  decimalColumn,
-  timestampColumn,
-  index,
-  foreignKey,
-  extension,
-  enumType,
-  primaryKey,
-  check,
-  domain,
-  identityColumn,
-  view,
-  collation,
-} from './pull.test-utils';
 import { isRawSQL, RawSQLBase } from 'orchid-core';
 import { asMock } from 'test-utils';
+import { dbStructureMockFactory } from './dbStructure.mockFactory';
 
 jest.mock('./dbStructure');
 
@@ -47,11 +31,6 @@ const adapter = new Adapter({ databaseURL: 'file:path' });
 const query = jest.fn().mockImplementation(() => ({ rows: [] }));
 adapter.query = query;
 adapter.arrays = query;
-
-const columns = [
-  { ...intColumn, name: 'id' },
-  { ...intColumn, name: 'name', type: 'text' },
-];
 
 const ctx: StructureToAstCtx = {
   unsupportedTypes: {},
@@ -106,14 +85,7 @@ describe('structureToAst', () => {
 
   describe('table', () => {
     it('should add table', async () => {
-      structure.tables = [
-        {
-          schemaName: 'public',
-          name: 'table',
-          comment: 'comment',
-          columns: [],
-        },
-      ];
+      structure.tables = [dbStructureMockFactory.table({ comment: 'comment' })];
 
       const ast = await structureToAst(ctx, adapter);
 
@@ -133,7 +105,11 @@ describe('structureToAst', () => {
     });
 
     it('should ignore current schema', async () => {
-      structure.tables = [{ schemaName: 'custom', name: 'table', columns: [] }];
+      structure.tables = [
+        dbStructureMockFactory.table({
+          schemaName: 'custom',
+        }),
+      ];
 
       const ast = await structureToAst(ctx, adapter);
 
@@ -152,7 +128,9 @@ describe('structureToAst', () => {
 
     it('should ignore schemaMigrations table', async () => {
       structure.tables = [
-        { schemaName: 'public', name: 'schemaMigrations', columns: [] },
+        dbStructureMockFactory.table({
+          name: 'schemaMigrations',
+        }),
       ];
 
       const ast = await structureToAst(ctx, adapter);
@@ -161,11 +139,13 @@ describe('structureToAst', () => {
     });
 
     it('should add columns', async () => {
-      structure.tables = [{ ...table, columns }];
+      const [table] = (structure.tables = [
+        dbStructureMockFactory.tableWithColumns(),
+      ]);
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
-      expect(Object.keys(ast.shape).length).toBe(columns.length);
+      expect(Object.keys(ast.shape).length).toBe(table.columns.length);
       expect(ast.noPrimaryKey).toBe('ignore');
       expect(ast.shape.id).toBeInstanceOf(IntegerColumn);
       expect(ast.shape.name).toBeInstanceOf(TextColumn);
@@ -173,7 +153,11 @@ describe('structureToAst', () => {
 
     it('should rename column to camelCase and save original name in data.name', async () => {
       structure.tables = [
-        { ...table, columns: [{ ...intColumn, name: '__column__name__' }] },
+        dbStructureMockFactory.table({
+          columns: [
+            dbStructureMockFactory.intColumn({ name: '__column__name__' }),
+          ],
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -184,16 +168,9 @@ describe('structureToAst', () => {
 
     it('should add array column', async () => {
       structure.tables = [
-        {
-          ...table,
-          columns: [
-            {
-              ...intColumn,
-              type: 'int4',
-              isArray: true,
-            },
-          ],
-        },
+        dbStructureMockFactory.table({
+          columns: [dbStructureMockFactory.intColumn({ isArray: true })],
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -214,37 +191,30 @@ describe('structureToAst', () => {
 
     it('should support enum column', async () => {
       structure.tables = [
-        {
-          ...table,
-          columns: [
-            {
-              ...intColumn,
-              typeSchema: enumType.schemaName,
-              type: enumType.name,
-            },
-          ],
-        },
+        dbStructureMockFactory.table({
+          columns: [dbStructureMockFactory.enumColumn()],
+        }),
       ];
-      structure.enums = [enumType];
+      structure.enums = [dbStructureMockFactory.enum()];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
       expect(ast.shape.column).toBeInstanceOf(EnumColumn);
       expect(
         (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).enumName,
-      ).toBe(enumType.name);
+      ).toBe(structure.enums[0].name);
       expect(
         (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).options,
-      ).toBe(enumType.values);
+      ).toBe(structure.enums[0].values);
     });
 
     it('should support column with check', async () => {
       structure.tables = [
-        {
-          ...table,
-          columns: [intColumn],
-        },
+        dbStructureMockFactory.table({
+          columns: [dbStructureMockFactory.intColumn()],
+        }),
       ];
+      const check = dbStructureMockFactory.check();
       structure.constraints = [check];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -255,11 +225,12 @@ describe('structureToAst', () => {
     });
 
     it('should support column of custom type', async () => {
+      const column = dbStructureMockFactory.intColumn({ type: 'customType' });
+
       structure.tables = [
-        {
-          ...table,
-          columns: [{ ...intColumn, type: 'customType' }],
-        },
+        dbStructureMockFactory.table({
+          columns: [column],
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -268,27 +239,21 @@ describe('structureToAst', () => {
       expect(ast.shape.column.dataType).toBe('customType');
 
       expect(ctx.unsupportedTypes).toEqual({
-        customType: [
-          `${intColumn.schemaName}.${intColumn.tableName}.${intColumn.name}`,
-        ],
+        customType: [`${column.schemaName}.${column.tableName}.${column.name}`],
       });
     });
 
     it('should support column of domain type', async () => {
       structure.tables = [
-        {
-          ...table,
+        dbStructureMockFactory.table({
           columns: [
-            {
-              ...intColumn,
-              type: domain.name,
-              typeSchema: domain.schemaName,
+            dbStructureMockFactory.domainColumn({
               isArray: true,
-            },
+            }),
           ],
-        },
+        }),
       ];
-      structure.domains = [domain];
+      const [domain] = (structure.domains = [dbStructureMockFactory.domain()]);
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
@@ -310,10 +275,11 @@ describe('structureToAst', () => {
 
     it('should wrap column default into raw', async () => {
       structure.tables = [
-        {
-          ...table,
-          columns: [{ ...timestampColumn, default: 'now()' }],
-        },
+        dbStructureMockFactory.table({
+          columns: [
+            dbStructureMockFactory.timestampColumn({ default: 'now()' }),
+          ],
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -325,18 +291,22 @@ describe('structureToAst', () => {
 
     it('should replace current_timestamp and transaction_timestamp() with now() in timestamp default', async () => {
       structure.tables = [
-        {
-          ...table,
+        dbStructureMockFactory.table({
           columns: [
-            { ...timestampColumn, name: 'one', default: 'current_timestamp' },
-            {
-              ...timestampColumn,
+            dbStructureMockFactory.timestampColumn({
+              name: 'one',
+              default: 'current_timestamp',
+            }),
+            dbStructureMockFactory.timestampColumn({
               name: 'two',
               default: 'transaction_timestamp()',
-            },
-            { ...timestampColumn, name: 'three', default: 'now()' },
+            }),
+            dbStructureMockFactory.timestampColumn({
+              name: 'three',
+              default: 'now()',
+            }),
           ],
-        },
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -348,12 +318,7 @@ describe('structureToAst', () => {
 
     describe('serial column', () => {
       it('should add serial column based on various default values', async () => {
-        const table: DbStructure.Table = {
-          schemaName: 'schema',
-          name: 'table',
-          columns: [],
-        };
-        structure.tables = [table];
+        const [table] = (structure.tables = [dbStructureMockFactory.table()]);
 
         const defaults = [
           `nextval('table_id_seq'::regclass)`,
@@ -366,13 +331,11 @@ describe('structureToAst', () => {
 
         for (const def of defaults) {
           table.columns = [
-            {
-              ...intColumn,
+            dbStructureMockFactory.intColumn({
               name: 'id',
               schemaName: 'schema',
-              tableName: 'table',
               default: def,
-            },
+            }),
           ];
 
           const [ast] = (await structureToAst(ctx, adapter)) as [
@@ -385,12 +348,7 @@ describe('structureToAst', () => {
       });
 
       it('should support smallserial, serial, and bigserial', async () => {
-        const table: DbStructure.Table = {
-          schemaName: 'schema',
-          name: 'table',
-          columns: [],
-        };
-        structure.tables = [table];
+        const [table] = (structure.tables = [dbStructureMockFactory.table()]);
 
         const types = [
           ['int2', SmallSerialColumn],
@@ -400,14 +358,12 @@ describe('structureToAst', () => {
 
         for (const [type, Column] of types) {
           table.columns = [
-            {
-              ...intColumn,
+            dbStructureMockFactory.intColumn({
               type,
               name: 'id',
               schemaName: 'schema',
-              tableName: 'table',
               default: `nextval('table_id_seq'::regclass)`,
-            },
+            }),
           ];
 
           const [ast] = (await structureToAst(ctx, adapter)) as [
@@ -421,17 +377,29 @@ describe('structureToAst', () => {
     });
 
     it('should set maxChars to char column', async () => {
-      structure.tables = [{ ...table, columns: [varCharColumn] }];
+      const varcharColumn = dbStructureMockFactory.varcharColumn();
+
+      structure.tables = [
+        dbStructureMockFactory.table({
+          columns: [varcharColumn],
+        }),
+      ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
-      const column = ast.shape[varCharColumn.name];
+      const column = ast.shape[varcharColumn.name];
       expect(column).toBeInstanceOf(VarCharColumn);
-      expect(column.data.maxChars).toBe(varCharColumn.maxChars);
+      expect(column.data.maxChars).toBe(varcharColumn.maxChars);
     });
 
     it('should set numericPrecision and numericScale to decimal column', async () => {
-      structure.tables = [{ ...table, columns: [decimalColumn] }];
+      const decimalColumn = dbStructureMockFactory.decimalColumn();
+
+      structure.tables = [
+        dbStructureMockFactory.table({
+          columns: [decimalColumn],
+        }),
+      ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
@@ -442,7 +410,13 @@ describe('structureToAst', () => {
     });
 
     it('should set dateTimePrecision to timestamp column', async () => {
-      structure.tables = [{ ...table, columns: [timestampColumn] }];
+      const timestampColumn = dbStructureMockFactory.timestampColumn();
+
+      structure.tables = [
+        dbStructureMockFactory.table({
+          columns: [timestampColumn],
+        }),
+      ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
@@ -454,8 +428,8 @@ describe('structureToAst', () => {
     });
 
     it('should set primaryKey to column', async () => {
-      structure.tables = [{ ...table, columns }];
-      structure.constraints = [primaryKey];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
+      structure.constraints = [dbStructureMockFactory.primaryKey()];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
@@ -465,8 +439,10 @@ describe('structureToAst', () => {
     });
 
     it('should add composite primary key', async () => {
-      structure.tables = [{ ...table, columns }];
-      structure.constraints = [{ ...primaryKey, primaryKey: ['id', 'name'] }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
+      structure.constraints = [
+        dbStructureMockFactory.primaryKey({ primaryKey: ['id', 'name'] }),
+      ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
@@ -479,9 +455,12 @@ describe('structureToAst', () => {
     });
 
     it('should ignore primary key name if it is standard', async () => {
-      structure.tables = [{ ...table, columns }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
       structure.constraints = [
-        { ...primaryKey, primaryKey: ['id', 'name'], name: 'table_pkey' },
+        dbStructureMockFactory.primaryKey({
+          primaryKey: ['id', 'name'],
+          name: 'table_pkey',
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -494,8 +473,10 @@ describe('structureToAst', () => {
     });
 
     it('should add index to column', async () => {
-      structure.tables = [{ ...table, columns }];
-      structure.indexes = [{ ...index, nullsNotDistinct: true }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
+      structure.indexes = [
+        dbStructureMockFactory.index({ nullsNotDistinct: true }),
+      ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
       expect(ast.shape.name.data.indexes).toEqual([
@@ -509,9 +490,11 @@ describe('structureToAst', () => {
     });
 
     it('should ignore standard index name', async () => {
-      structure.tables = [{ ...table, columns }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
       structure.indexes = [
-        { ...index, name: getIndexName(table.name, index.columns) },
+        dbStructureMockFactory.index({
+          name: getIndexName('table', [{ column: 'name' }]),
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -524,10 +507,9 @@ describe('structureToAst', () => {
     });
 
     it('should set index options to column index', async () => {
-      structure.tables = [{ ...table, columns }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
       structure.indexes = [
-        {
-          ...index,
+        dbStructureMockFactory.index({
           using: 'gist',
           isUnique: true,
           nullsNotDistinct: true,
@@ -543,7 +525,7 @@ describe('structureToAst', () => {
           with: 'fillfactor=80',
           tablespace: 'tablespace',
           where: 'condition',
-        },
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -566,15 +548,16 @@ describe('structureToAst', () => {
     });
 
     it('should add composite indexes to the table', async () => {
-      structure.tables = [{ ...table, columns }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
       structure.indexes = [
-        { ...index, columns: [{ column: 'id' }, { column: 'name' }] },
-        {
-          ...index,
+        dbStructureMockFactory.index({
+          columns: [{ column: 'id' }, { column: 'name' }],
+        }),
+        dbStructureMockFactory.index({
           columns: [{ column: 'id' }, { column: 'name' }],
           isUnique: true,
           nullsNotDistinct: true,
-        },
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -592,15 +575,14 @@ describe('structureToAst', () => {
     });
 
     it('should ignore standard index name in composite index', async () => {
-      structure.tables = [{ ...table, columns }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
 
       const indexColumns = [{ column: 'id' }, { column: 'name' }];
       structure.indexes = [
-        {
-          ...index,
+        dbStructureMockFactory.index({
           columns: indexColumns,
-          name: getIndexName(table.name, indexColumns),
-        },
+          name: getIndexName('table', indexColumns),
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -614,10 +596,9 @@ describe('structureToAst', () => {
     });
 
     it('should add index with expression and options to the table', async () => {
-      structure.tables = [{ ...table, columns }];
+      structure.tables = [dbStructureMockFactory.tableWithColumns()];
       structure.indexes = [
-        {
-          ...index,
+        dbStructureMockFactory.index({
           using: 'gist',
           isUnique: true,
           nullsNotDistinct: true,
@@ -633,7 +614,7 @@ describe('structureToAst', () => {
           with: 'fillfactor=80',
           tablespace: 'tablespace',
           where: 'condition',
-        },
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
@@ -664,19 +645,18 @@ describe('structureToAst', () => {
 
     it('should add foreign key to the column', async () => {
       structure.tables = [
-        { ...table, name: 'table1' },
-        {
-          ...table,
+        dbStructureMockFactory.table({ name: 'table1' }),
+        dbStructureMockFactory.table({
           name: 'table2',
-          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
-        },
+          columns: [
+            dbStructureMockFactory.intColumn({
+              name: 'otherId',
+            }),
+          ],
+        }),
       ];
       structure.constraints = [
-        {
-          ...foreignKey,
-          tableName: 'table2',
-          references: { ...foreignKey.references, foreignTable: 'table1' },
-        },
+        dbStructureMockFactory.foreignKey('table2', 'table1'),
       ];
 
       const [, ast] = (await structureToAst(ctx, adapter)) as RakeDbAst.Table[];
@@ -696,23 +676,20 @@ describe('structureToAst', () => {
 
     it('should ignore standard foreign key name', async () => {
       structure.tables = [
-        { ...table, name: 'table1' },
-        {
-          ...table,
+        dbStructureMockFactory.table({ name: 'table1' }),
+        dbStructureMockFactory.table({
           name: 'table2',
-          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
-        },
+          columns: [
+            dbStructureMockFactory.intColumn({
+              name: 'otherId',
+            }),
+          ],
+        }),
       ];
       structure.constraints = [
-        {
-          ...foreignKey,
-          tableName: 'table2',
+        dbStructureMockFactory.foreignKey('table2', 'table1', {
           name: `table2_otherId_fkey`,
-          references: {
-            ...foreignKey.references,
-            foreignTable: 'table1',
-          },
-        },
+        }),
       ];
 
       const [, ast] = (await structureToAst(ctx, adapter)) as RakeDbAst.Table[];
@@ -731,24 +708,23 @@ describe('structureToAst', () => {
 
     it('should add composite foreign key', async () => {
       structure.tables = [
-        { ...table, name: 'table1' },
-        {
-          ...table,
+        dbStructureMockFactory.table({ name: 'table1' }),
+        dbStructureMockFactory.table({
           name: 'table2',
-          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
-        },
+          columns: [
+            dbStructureMockFactory.intColumn({
+              name: 'otherId',
+            }),
+          ],
+        }),
       ];
       structure.constraints = [
-        {
-          ...foreignKey,
-          tableName: 'table2',
+        dbStructureMockFactory.foreignKey('table2', 'table1', {
           references: {
-            ...foreignKey.references,
             columns: ['name', 'id'],
-            foreignTable: 'table1',
             foreignColumns: ['otherName', 'otherId'],
           },
-        },
+        }),
       ];
 
       const [, ast] = (await structureToAst(ctx, adapter)) as RakeDbAst.Table[];
@@ -774,25 +750,24 @@ describe('structureToAst', () => {
 
     it('should ignore standard foreign key name in a composite foreign key', async () => {
       structure.tables = [
-        { ...table, name: 'table1' },
-        {
-          ...table,
+        dbStructureMockFactory.table({ name: 'table1' }),
+        dbStructureMockFactory.table({
           name: 'table2',
-          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
-        },
+          columns: [
+            dbStructureMockFactory.intColumn({
+              name: 'otherId',
+            }),
+          ],
+        }),
       ];
       structure.constraints = [
-        {
-          ...foreignKey,
-          tableName: 'table2',
+        dbStructureMockFactory.foreignKey('table2', 'table1', {
           name: 'table2_name_otherId_fkey',
           references: {
-            ...foreignKey.references,
-            foreignTable: 'table1',
             columns: ['name', 'otherId'],
             foreignColumns: ['name', 'id'],
           },
-        },
+        }),
       ];
 
       const [, ast] = (await structureToAst(ctx, adapter)) as RakeDbAst.Table[];
@@ -815,17 +790,11 @@ describe('structureToAst', () => {
     });
 
     it('should add foreign key to the same table', async () => {
-      structure.tables = [{ ...table, columns: [intColumn] }];
+      const [table] = (structure.tables = [
+        dbStructureMockFactory.tableWithColumns(),
+      ]);
       structure.constraints = [
-        {
-          ...foreignKey,
-          tableName: table.name,
-          references: {
-            ...foreignKey.references,
-            columns: [intColumn.name],
-            foreignTable: table.name,
-          },
-        },
+        dbStructureMockFactory.foreignKey(table.name, table.name),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as RakeDbAst.Table[];
@@ -835,36 +804,26 @@ describe('structureToAst', () => {
 
     it('should add standalone foreign key when it is recursive', async () => {
       structure.tables = [
-        {
-          ...table,
+        dbStructureMockFactory.table({
           name: 'table1',
-          columns: [{ ...intColumn, tableName: 'table1' }],
-        },
-        {
-          ...table,
+          columns: [dbStructureMockFactory.intColumn()],
+        }),
+        dbStructureMockFactory.table({
           name: 'table2',
-          columns: [{ ...intColumn, tableName: 'table2' }],
-        },
+          columns: [dbStructureMockFactory.intColumn()],
+        }),
       ];
       structure.constraints = [
-        {
-          ...foreignKey,
-          tableName: 'table1',
+        dbStructureMockFactory.foreignKey('table1', 'table2', {
           references: {
-            ...foreignKey.references,
-            columns: [intColumn.name],
-            foreignTable: 'table2',
+            columns: ['column'],
           },
-        },
-        {
-          ...foreignKey,
-          tableName: 'table2',
+        }),
+        dbStructureMockFactory.foreignKey('table2', 'table1', {
           references: {
-            ...foreignKey.references,
-            columns: [intColumn.name],
-            foreignTable: 'table1',
+            columns: ['column'],
           },
-        },
+        }),
       ];
 
       const [table1, table2, fkey] = (await structureToAst(
@@ -873,9 +832,9 @@ describe('structureToAst', () => {
       )) as RakeDbAst.Table[];
 
       expect(table1.name).toBe('table1');
-      expect(table1.shape[intColumn.name].data.foreignKeys).toBe(undefined);
+      expect(table1.shape.column.data.foreignKeys).toBe(undefined);
       expect(table2.name).toBe('table2');
-      expect(table2.shape[intColumn.name].data.foreignKeys).toEqual([
+      expect(table2.shape.column.data.foreignKeys).toEqual([
         {
           table: 'public.table1',
           columns: ['id'],
@@ -908,7 +867,11 @@ describe('structureToAst', () => {
 
     describe('identity', () => {
       it('should add `as default` identity', async () => {
-        structure.tables = [{ ...table, columns: [identityColumn] }];
+        structure.tables = [
+          dbStructureMockFactory.table({
+            columns: [dbStructureMockFactory.identityColumn()],
+          }),
+        ];
 
         const [{ shape }] = (await structureToAst(
           ctx,
@@ -930,15 +893,11 @@ describe('structureToAst', () => {
         };
 
         structure.tables = [
-          {
-            ...table,
+          dbStructureMockFactory.table({
             columns: [
-              {
-                ...identityColumn,
-                identity: options,
-              },
+              dbStructureMockFactory.identityColumn({ identity: options }),
             ],
-          },
+          }),
         ];
 
         const [{ shape }] = (await structureToAst(
@@ -953,20 +912,17 @@ describe('structureToAst', () => {
 
   describe('constraint', () => {
     it('should add constraint with references and check', async () => {
-      structure.tables = [table];
+      structure.tables = [dbStructureMockFactory.table()];
       structure.constraints = [
         {
-          schemaName: table.schemaName,
-          tableName: table.name,
+          ...dbStructureMockFactory.check({ check: { expression: 'check' } }),
+          ...dbStructureMockFactory.foreignKey('table', 'otherTable', {
+            references: {
+              columns: ['id', 'name'],
+              foreignColumns: ['foreignId', 'foreignName'],
+            },
+          }),
           name: 'constraintName',
-          references: {
-            ...foreignKey.references,
-            columns: ['id', 'name'],
-            foreignColumns: ['foreignId', 'foreignName'],
-          },
-          check: {
-            expression: 'check',
-          },
         },
       ];
 
@@ -978,7 +934,7 @@ describe('structureToAst', () => {
           references: {
             columns: ['id', 'name'],
             foreignColumns: ['foreignId', 'foreignName'],
-            fnOrTable: `public.${foreignKey.references.foreignTable}`,
+            fnOrTable: `public.otherTable`,
             options: {
               name: 'constraintName',
               match: 'FULL',
@@ -994,7 +950,9 @@ describe('structureToAst', () => {
 
   describe('extension', () => {
     it('should add extension', async () => {
-      structure.extensions = [{ ...extension, schemaName: 'custom' }];
+      structure.extensions = [
+        dbStructureMockFactory.extension({ schemaName: 'custom' }),
+      ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [
         RakeDbAst.Extension,
@@ -1009,7 +967,7 @@ describe('structureToAst', () => {
     });
 
     it('should not ignore schema if it is not current schema', async () => {
-      structure.extensions = [extension];
+      structure.extensions = [dbStructureMockFactory.extension()];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [
         RakeDbAst.Extension,
@@ -1027,7 +985,9 @@ describe('structureToAst', () => {
 
   describe('enum', () => {
     it('should add enum', async () => {
-      structure.enums = [{ ...enumType, schemaName: 'custom' }];
+      const [enumType] = (structure.enums = [
+        dbStructureMockFactory.enum({ schemaName: 'custom' }),
+      ]);
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Enum];
 
@@ -1040,7 +1000,7 @@ describe('structureToAst', () => {
     });
 
     it('should not ignore schema if it is not a current schema', async () => {
-      structure.enums = [enumType];
+      const [enumType] = (structure.enums = [dbStructureMockFactory.enum()]);
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Enum];
 
@@ -1056,16 +1016,15 @@ describe('structureToAst', () => {
 
   describe('domain', () => {
     it('should add domain', async () => {
-      structure.domains = [
-        {
-          ...domain,
-          schemaName: 'custom',
-          notNull: true,
-          collation: 'C',
-          default: '123',
-          check: 'VALUE = 42',
-        },
-      ];
+      const domain = dbStructureMockFactory.domain({
+        schemaName: 'custom',
+        notNull: true,
+        collation: 'C',
+        default: '123',
+        check: 'VALUE = 42',
+      });
+
+      structure.domains = [domain];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Domain];
 
@@ -1082,7 +1041,7 @@ describe('structureToAst', () => {
     });
 
     it('should not ignore schema if it not current schema', async () => {
-      structure.domains = [domain];
+      structure.domains = [dbStructureMockFactory.domain()];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Domain];
 
@@ -1092,14 +1051,13 @@ describe('structureToAst', () => {
 
   describe('collation', () => {
     it('should add collation', async () => {
-      structure.collations = [
-        {
-          ...collation,
+      const [collation] = (structure.collations = [
+        dbStructureMockFactory.collation({
           schema: 'custom',
           lcCollate: 'C',
           lcCType: 'C',
-        },
-      ];
+        }),
+      ]);
 
       const [ast] = (await structureToAst(ctx, adapter)) as [
         RakeDbAst.Collation,
@@ -1116,7 +1074,7 @@ describe('structureToAst', () => {
     });
 
     it('should not ignore schema if it not current schema', async () => {
-      structure.collations = [collation];
+      structure.collations = [dbStructureMockFactory.collation()];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [
         RakeDbAst.Collation,
@@ -1128,7 +1086,7 @@ describe('structureToAst', () => {
 
   describe('view', () => {
     it('should add view', async () => {
-      structure.views = [view];
+      structure.views = [dbStructureMockFactory.view()];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.View];
 
@@ -1140,7 +1098,7 @@ describe('structureToAst', () => {
       expect(ast.options.with?.securityBarrier).toBe(true);
       expect(ast.options.with?.securityInvoker).toBe(true);
 
-      const column = ast.shape[intColumn.name];
+      const column = ast.shape.column;
       expect(column.dataType).toBe('integer');
     });
   });

@@ -176,7 +176,10 @@ const astEncoders: {
 
       code.push('{', options, '},', '(t) => ({');
     } else {
-      addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
+      addCode(
+        code,
+        `await db.${ast.action}Table(${quoteSchemaTable(ast)}, (t) => ({`,
+      );
     }
 
     const timestamps = getTimestampsInfo(config, ast, TimestampTZColumn);
@@ -247,6 +250,17 @@ const astEncoders: {
         `await db.changeTableSchema(${singleQuote(ast.to)}, ${singleQuote(
           ast.fromSchema ?? currentSchema,
         )}, ${singleQuote(ast.toSchema ?? currentSchema)});`,
+      );
+    } else {
+      addCode(
+        code,
+        `await db.renameTable(${quoteSchemaTable({
+          schema: ast.fromSchema === currentSchema ? undefined : ast.fromSchema,
+          name: ast.from,
+        })}, ${quoteSchemaTable({
+          schema: ast.toSchema === currentSchema ? undefined : ast.toSchema,
+          name: ast.to,
+        })});`,
       );
     }
 
