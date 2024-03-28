@@ -14,6 +14,7 @@ export type RakeDbAst =
   | RakeDbAst.ChangeTable
   | RakeDbAst.RenameTable
   | RakeDbAst.Schema
+  | RakeDbAst.RenameSchema
   | RakeDbAst.Extension
   | RakeDbAst.Enum
   | RakeDbAst.Domain
@@ -103,6 +104,12 @@ export namespace RakeDbAst {
     name: string;
   }
 
+  export interface RenameSchema {
+    type: 'renameSchema';
+    from: string;
+    to: string;
+  }
+
   export interface Extension {
     type: 'extension';
     action: 'create' | 'drop';
@@ -183,7 +190,7 @@ export namespace RakeDbAst {
 
   export interface Constraint extends TableData.Constraint {
     type: 'constraint';
-    action: 'create';
+    action: 'create' | 'drop';
     tableSchema?: string;
     tableName: string;
   }
@@ -196,6 +203,7 @@ export namespace RakeDbAst {
     shape: ColumnsShape;
     sql: RawSQLBase;
     options: ViewOptions;
+    deps: { schemaName: string; name: string }[];
   }
 
   export interface ViewOptions {

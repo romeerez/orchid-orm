@@ -187,6 +187,7 @@ export const orchidORM = <T extends TableClasses>(
       table.types,
       transactionStorage,
       options,
+      table.constructor.prototype.tableData,
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;

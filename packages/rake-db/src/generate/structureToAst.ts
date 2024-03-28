@@ -1,4 +1,8 @@
-import { DbStructure, introspectDbSchema } from './dbStructure';
+import {
+  DbStructure,
+  introspectDbSchema,
+  IntrospectedStructure,
+} from './dbStructure';
 import { RakeDbAst } from '../ast';
 import {
   ArrayColumn,
@@ -11,13 +15,13 @@ import {
   ForeignKeyAction,
   ForeignKeyMatch,
   ForeignKeyOptions,
-  getConstraintKind,
   instantiateColumn,
   raw,
   simplifyColumnDefault,
   TableData,
   ColumnsByType,
   Adapter,
+  makeColumnsByType,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -27,6 +31,7 @@ import {
   toSnakeCase,
 } from 'orchid-core';
 import { getConstraintName, getIndexName } from '../migration/migrationUtils';
+import { AnyRakeDbConfig } from 'rake-db';
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
   s: undefined,
@@ -42,24 +47,8 @@ const fkeyActionMap: Record<string, undefined | ForeignKeyAction> = {
   d: 'SET DEFAULT',
 };
 
-interface Data {
-  schemas: string[];
-  tables: DbStructure.Table[];
-  views: DbStructure.View[];
-  constraints: DbStructure.Constraint[];
-  indexes: DbStructure.Index[];
-  extensions: DbStructure.Extension[];
-  enums: DbStructure.Enum[];
-  domains: DbStructure.Domain[];
-  collations: DbStructure.Collation[];
-}
-
 interface Domains {
   [K: string]: ColumnType;
-}
-
-interface PendingTables {
-  [K: string]: { table: DbStructure.Table; dependsOn: Set<string> };
 }
 
 export interface StructureToAstCtx {
@@ -69,6 +58,22 @@ export interface StructureToAstCtx {
   columnSchemaConfig: ColumnSchemaConfig;
   columnsByType: ColumnsByType;
 }
+
+interface PrimaryKey {
+  columns: string[];
+  name?: string;
+}
+
+export const makeStructureToAstCtx = (
+  config: AnyRakeDbConfig,
+  currentSchema: string,
+): StructureToAstCtx => ({
+  snakeCase: config.snakeCase,
+  unsupportedTypes: {},
+  currentSchema,
+  columnSchemaConfig: config.schemaConfig,
+  columnsByType: makeColumnsByType(config.schemaConfig),
+});
 
 export const structureToAst = async (
   ctx: StructureToAstCtx,
@@ -97,49 +102,13 @@ export const structureToAst = async (
     });
   }
 
-  const pendingTables: PendingTables = {};
+  const domains = makeDomainsMap(ctx, data);
+
   for (const table of data.tables) {
-    const key = `${table.schemaName}.${table.name}`;
-    const dependsOn = new Set<string>();
+    if (table.name === 'schemaMigrations') continue;
 
-    for (const fk of data.constraints) {
-      const { references } = fk;
-      if (
-        !references ||
-        fk.schemaName !== table.schemaName ||
-        fk.tableName !== table.name
-      )
-        continue;
-
-      const otherKey = `${references.foreignSchema}.${references.foreignTable}`;
-      if (otherKey !== key) {
-        dependsOn.add(otherKey);
-      }
-    }
-
-    pendingTables[key] = { table, dependsOn };
+    ast.push(tableToAst(ctx, data, table, 'create', domains));
   }
-
-  const domains: Domains = {};
-  for (const it of data.domains) {
-    domains[`${it.schemaName}.${it.name}`] = getColumn(ctx, data, domains, {
-      schemaName: it.schemaName,
-      name: it.name,
-      type: it.type,
-      typeSchema: it.typeSchema,
-      isArray: it.isArray,
-      isSerial: false,
-    });
-  }
-
-  for (const key in pendingTables) {
-    const { table, dependsOn } = pendingTables[key];
-    if (!dependsOn.size) {
-      pushTableAst(ctx, ast, data, domains, table, pendingTables);
-    }
-  }
-
-  const outerConstraints: [DbStructure.Constraint, DbStructure.Table][] = [];
 
   for (const it of data.extensions) {
     ast.push({
@@ -175,45 +144,26 @@ export const structureToAst = async (
     });
   }
 
-  for (const key in pendingTables) {
-    const innerConstraints: DbStructure.Constraint[] = [];
-    const { table } = pendingTables[key];
-
+  for (const table of data.tables) {
     for (const fkey of data.constraints) {
-      if (fkey.schemaName !== table.schemaName || fkey.tableName !== table.name)
-        continue;
-
-      const otherKey =
+      if (
         fkey.references &&
-        `${fkey.references.foreignSchema}.${fkey.references.foreignTable}`;
-
-      if (!otherKey || !pendingTables[otherKey] || otherKey === key) {
-        innerConstraints.push(fkey);
-      } else {
-        outerConstraints.push([fkey, table]);
+        fkey.tableName === table.name &&
+        fkey.schemaName === table.schemaName &&
+        checkIfIsOuterRecursiveFkey(data, table, fkey.references)
+      ) {
+        ast.push({
+          ...constraintToAst(ctx, fkey),
+          type: 'constraint',
+          action: 'create',
+          tableSchema:
+            table.schemaName === ctx.currentSchema
+              ? undefined
+              : table.schemaName,
+          tableName: fkey.tableName,
+        });
       }
     }
-
-    pushTableAst(
-      ctx,
-      ast,
-      data,
-      domains,
-      table,
-      pendingTables,
-      innerConstraints,
-    );
-  }
-
-  for (const [fkey, table] of outerConstraints) {
-    ast.push({
-      ...constraintToAst(ctx, fkey),
-      type: 'constraint',
-      action: 'create',
-      tableSchema:
-        table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
-      tableName: fkey.tableName,
-    });
   }
 
   for (const view of data.views) {
@@ -223,10 +173,25 @@ export const structureToAst = async (
   return ast;
 };
 
-const makeBelongsToTable =
-  (schema: string | undefined, table: string) =>
-  (item: { schemaName: string; tableName: string }) =>
-    item.schemaName === schema && item.tableName === table;
+export const makeDomainsMap = (
+  ctx: StructureToAstCtx,
+  data: IntrospectedStructure,
+): Domains => {
+  const domains: Domains = {};
+
+  for (const it of data.domains) {
+    domains[`${it.schemaName}.${it.name}`] = getColumn(ctx, data, domains, {
+      schemaName: it.schemaName,
+      name: it.name,
+      type: it.type,
+      typeSchema: it.typeSchema,
+      isArray: it.isArray,
+      isSerial: false,
+    });
+  }
+
+  return domains;
+};
 
 const getIsSerial = (item: DbStructure.Column) => {
   if (item.type === 'int2' || item.type === 'int4' || item.type === 'int8') {
@@ -250,7 +215,7 @@ const getIsSerial = (item: DbStructure.Column) => {
 
 const getColumn = (
   ctx: StructureToAstCtx,
-  data: Data,
+  data: IntrospectedStructure,
   domains: Domains,
   {
     schemaName,
@@ -278,9 +243,12 @@ const getColumn = (
   if (typeFn) {
     column = instantiateColumn(typeFn, params) as ColumnType;
   } else {
-    const domainColumn = domains[`${typeSchema}.${type}`];
+    const domainId = `${typeSchema}.${type}`;
+    const domainColumn = domains[domainId];
     if (domainColumn) {
-      column = new DomainColumn(ctx.columnSchemaConfig, type).as(domainColumn);
+      column = new DomainColumn(ctx.columnSchemaConfig, domainId).as(
+        domainColumn,
+      );
     } else {
       const enumType = data.enums.find(
         (item) => item.name === type && item.schemaName === typeSchema,
@@ -321,100 +289,37 @@ const getColumnType = (type: string, isSerial: boolean) => {
     : 'bigserial';
 };
 
-const pushTableAst = (
+export const tableToAst = (
   ctx: StructureToAstCtx,
-  ast: RakeDbAst[],
-  data: Data,
-  domains: Domains,
+  data: IntrospectedStructure,
   table: DbStructure.Table,
-  pendingTables: PendingTables,
-  innerConstraints = data.constraints,
-) => {
+  action: 'create' | 'drop',
+  domains: Domains,
+): RakeDbAst.Table => {
   const { schemaName, name: tableName, columns } = table;
 
-  const key = `${schemaName}.${table.name}`;
-  delete pendingTables[key];
-
-  if (tableName === 'schemaMigrations') return;
-
-  const belongsToTable = makeBelongsToTable(schemaName, tableName);
-
-  let primaryKey: { columns: string[]; name?: string } | undefined;
-  for (const item of data.constraints) {
-    if (belongsToTable(item) && item.primaryKey)
-      primaryKey = { columns: item.primaryKey, name: item.name };
-  }
-
-  const tableIndexes = data.indexes.filter(belongsToTable);
-
-  const tableConstraints = innerConstraints.reduce<TableData.Constraint[]>(
-    (acc, item) => {
-      const { references, check } = item;
-      if (
-        belongsToTable(item) &&
-        (references || (check && !isColumnCheck(item)))
-      ) {
-        const constraint: TableData.Constraint = {
-          references: references
-            ? {
-                columns: references.columns,
-                fnOrTable: getReferencesTable(ctx, references),
-                foreignColumns: references.foreignColumns,
-                options: {
-                  match: matchMap[references.match],
-                  onUpdate: fkeyActionMap[references.onUpdate],
-                  onDelete: fkeyActionMap[references.onDelete],
-                },
-              }
-            : undefined,
-          check: check ? raw({ raw: check.expression }) : undefined,
-        };
-
-        const name =
-          item.name && item.name !== getConstraintName(tableName, constraint)
-            ? item.name
-            : undefined;
-
-        if (name) {
-          constraint.name = name;
-          if (constraint.references?.options) {
-            constraint.references.options.name = name;
-          }
-        }
-
-        acc.push(constraint);
-      }
-      return acc;
-    },
-    [],
+  const tableIndexes = data.indexes.filter(
+    (it) => it.tableName === table.name && it.schemaName === table.schemaName,
   );
 
-  const columnChecks = innerConstraints.reduce<RecordString>((acc, item) => {
-    if (belongsToTable(item) && isColumnCheck(item)) {
-      acc[item.check.columns[0]] = item.check.expression;
-    }
-    return acc;
-  }, {});
+  const primaryKey = getPrimaryKey(data, table);
 
-  const shape = makeColumnsShape(
-    ctx,
-    data,
-    domains,
-    tableName,
-    columns,
-    primaryKey,
-    tableIndexes,
-    tableConstraints,
-    columnChecks,
-  );
-
-  ast.push({
+  return {
     type: 'table',
-    action: 'create',
+    action,
     schema: schemaName === ctx.currentSchema ? undefined : schemaName,
     comment: table.comment,
     name: tableName,
-    shape,
+    shape: makeColumnsShape(
+      ctx,
+      data,
+      domains,
+      tableName,
+      columns,
+      table,
+      primaryKey,
+      tableIndexes,
+    ),
     noPrimaryKey: primaryKey ? 'error' : 'ignore',
     primaryKey:
       primaryKey && primaryKey.columns.length > 1
@@ -426,46 +331,41 @@ const pushTableAst = (
                 : { name: primaryKey.name },
           }
         : undefined,
-    indexes: tableIndexes
-      .filter(
-        (index) =>
-          index.columns.length > 1 ||
-          index.columns.some((it) => 'expression' in it),
-      )
-      .map((index) => ({
-        columns: index.columns.map((it) => ({
-          ...('column' in it
-            ? { column: it.column }
-            : { expression: it.expression }),
-          collate: it.collate,
-          opclass: it.opclass,
-          order: it.order,
-        })),
-        options: {
-          name:
-            index.name !== getIndexName(tableName, index.columns)
-              ? index.name
-              : undefined,
-          using: index.using === 'btree' ? undefined : index.using,
-          unique: index.isUnique,
-          include: index.include,
-          nullsNotDistinct: index.nullsNotDistinct,
-          with: index.with,
-          tablespace: index.tablespace,
-          where: index.where,
-        },
-      })),
-    constraints: tableConstraints.filter(
-      (it) => getConstraintKind(it) === 'constraint' || !isColumnFkey(it),
-    ),
-  });
+    indexes: tableIndexes.reduce<TableData.Index[]>((acc, index) => {
+      if (
+        index.columns.length > 1 ||
+        index.columns.some((it) => 'expression' in it)
+      ) {
+        acc.push({
+          columns: index.columns.map((it) => ({
+            ...('column' in it
+              ? { column: it.column }
+              : { expression: it.expression }),
+            collate: it.collate,
+            opclass: it.opclass,
+            order: it.order,
+          })),
+          options: makeIndexOptions(tableName, index),
+        });
+      }
+      return acc;
+    }, []),
+    constraints: data.constraints.reduce<TableData.Constraint[]>((acc, it) => {
+      if (
+        it.schemaName === table.schemaName &&
+        it.tableName === table.name &&
+        ((it.check && it.references) ||
+          (it.check && it.check.columns?.length !== 1) ||
+          (it.references &&
+            it.references.columns.length !== 1 &&
+            !checkIfIsOuterRecursiveFkey(data, table, it.references)))
+      ) {
+        acc.push(dbConstraintToTableConstraint(ctx, table, it));
+      }
 
-  for (const otherKey in pendingTables) {
-    const item = pendingTables[otherKey];
-    if (item.dependsOn.delete(key) && item.dependsOn.size === 0) {
-      pushTableAst(ctx, ast, data, domains, item.table, pendingTables);
-    }
-  }
+      return acc;
+    }, []),
+  };
 };
 
 const constraintToAst = (
@@ -526,15 +426,9 @@ const isColumnCheck = (
   return !it.references && it.check?.columns?.length === 1;
 };
 
-const isColumnFkey = (
-  it: TableData.Constraint,
-): it is TableData.Constraint & { references: TableData.References } => {
-  return !it.check && it.references?.columns.length === 1;
-};
-
 const viewToAst = (
   ctx: StructureToAstCtx,
-  data: Data,
+  data: IntrospectedStructure,
   domains: Domains,
   view: DbStructure.View,
 ): RakeDbAst.View => {
@@ -561,21 +455,50 @@ const viewToAst = (
     shape,
     sql: raw({ raw: view.sql }),
     options,
+    deps: view.deps,
   };
+};
+
+const getPrimaryKey = (
+  data: IntrospectedStructure,
+  table: DbStructure.Table,
+): PrimaryKey | undefined => {
+  for (const item of data.constraints) {
+    if (
+      item.tableName === table.name &&
+      item.schemaName === table.schemaName &&
+      item.primaryKey
+    )
+      return { columns: item.primaryKey, name: item.name };
+  }
+  return undefined;
 };
 
 const makeColumnsShape = (
   ctx: StructureToAstCtx,
-  data: Data,
+  data: IntrospectedStructure,
   domains: Domains,
   tableName: string,
   columns: DbStructure.Column[],
+  table?: DbStructure.Table,
   primaryKey?: { columns: string[]; name?: string },
   indexes?: DbStructure.Index[],
-  constraints?: TableData.Constraint[],
-  checks?: RecordString,
 ): ColumnsShape => {
   const shape: ColumnsShape = {};
+
+  let checks: RecordString | undefined;
+  if (table) {
+    checks = data.constraints.reduce<RecordString>((acc, item) => {
+      if (
+        item.tableName === table.name &&
+        item.schemaName === table.schemaName &&
+        isColumnCheck(item)
+      ) {
+        acc[item.check.columns[0]] = item.check.expression;
+      }
+      return acc;
+    }, {});
+  }
 
   for (let item of columns) {
     const isSerial = getIsSerial(item);
@@ -615,30 +538,30 @@ const makeColumnsShape = (
           collate: options.collate,
           opclass: options.opclass,
           order: options.order,
-          name:
-            index.name !== getIndexName(tableName, index.columns)
-              ? index.name
-              : undefined,
-          using: index.using === 'btree' ? undefined : index.using,
-          unique: index.isUnique,
-          include: index.include,
-          nullsNotDistinct: index.nullsNotDistinct,
-          with: index.with,
-          tablespace: index.tablespace,
-          where: index.where,
+          ...makeIndexOptions(tableName, index),
         });
       }
     }
 
-    if (constraints) {
-      for (const it of constraints) {
-        if (!isColumnFkey(it) || it.references.columns[0] !== item.name)
+    if (table) {
+      for (const it of data.constraints) {
+        if (
+          it.tableName !== table.name ||
+          it.schemaName !== table.schemaName ||
+          it.check ||
+          it.references?.columns.length !== 1 ||
+          it.references.columns[0] !== item.name ||
+          checkIfIsOuterRecursiveFkey(data, table, it.references)
+        ) {
           continue;
+        }
+
+        const c = dbConstraintToTableConstraint(ctx, table, it);
 
         column = column.foreignKey(
-          it.references.fnOrTable as string,
+          c.references?.fnOrTable as string,
           it.references.foreignColumns[0],
-          it.references.options,
+          c.references?.options,
         );
       }
     }
@@ -662,4 +585,85 @@ const makeColumnsShape = (
   }
 
   return shape;
+};
+
+const dbConstraintToTableConstraint = (
+  ctx: StructureToAstCtx,
+  table: DbStructure.Table,
+  item: DbStructure.Constraint,
+) => {
+  const { references, check } = item;
+
+  const constraint: TableData.Constraint = {
+    references: references
+      ? {
+          columns: references.columns,
+          fnOrTable: getReferencesTable(ctx, references),
+          foreignColumns: references.foreignColumns,
+          options: {
+            match: matchMap[references.match],
+            onUpdate: fkeyActionMap[references.onUpdate],
+            onDelete: fkeyActionMap[references.onDelete],
+          },
+        }
+      : undefined,
+    check: check ? raw({ raw: check.expression }) : undefined,
+  };
+
+  const name =
+    item.name && item.name !== getConstraintName(table.name, constraint)
+      ? item.name
+      : undefined;
+
+  if (name) {
+    constraint.name = name;
+    if (constraint.references?.options) {
+      constraint.references.options.name = name;
+    }
+  }
+
+  return constraint;
+};
+
+const makeIndexOptions = (tableName: string, index: DbStructure.Index) => {
+  return {
+    name:
+      index.name !== getIndexName(tableName, index.columns)
+        ? index.name
+        : undefined,
+    using: index.using === 'btree' ? undefined : index.using,
+    unique: index.isUnique || undefined,
+    include: index.include,
+    nullsNotDistinct: index.nullsNotDistinct || undefined,
+    with: index.with,
+    tablespace: index.tablespace,
+    where: index.where,
+  };
+};
+
+const checkIfIsOuterRecursiveFkey = (
+  data: IntrospectedStructure,
+  table: DbStructure.Table,
+  references: DbStructure.References,
+) => {
+  const referencesId = `${references.foreignSchema}.${references.foreignTable}`;
+  const tableId = `${table.schemaName}.${table.name}`;
+  for (const other of data.tables) {
+    const id = `${other.schemaName}.${other.name}`;
+    if (referencesId === id) {
+      for (const c of data.constraints) {
+        if (
+          c.tableName === other.name &&
+          c.schemaName === other.schemaName &&
+          c.references?.foreignTable === table.name &&
+          c.references.foreignSchema === table.schemaName &&
+          tableId < id
+        ) {
+          return true;
+        }
+      }
+      break;
+    }
+  }
+  return false;
 };

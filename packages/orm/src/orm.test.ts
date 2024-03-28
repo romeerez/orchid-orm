@@ -2,6 +2,7 @@ import { orchidORM } from './orm';
 import { BaseTable, db, useTestORM } from './test-utils/test-utils';
 import { assertType, expectSql } from 'test-utils';
 import { Selectable } from './baseTable';
+import { raw } from 'pqb';
 
 describe('orm', () => {
   useTestORM();
@@ -24,6 +25,39 @@ describe('orm', () => {
       id: t.identity().primaryKey(),
     }));
   }
+
+  it('should save `tableData` to the table`s query builder `internal`', () => {
+    const checkSql = raw({ raw: 'one > 5' });
+
+    class Table extends BaseTable {
+      readonly table = 'table';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string(),
+        ...t.primaryKey(['id', 'name']),
+        ...t.index(['id', 'name']),
+        ...t.constraint({
+          name: 'constraintName',
+          check: checkSql,
+        }),
+      }));
+    }
+
+    const local = orchidORM(
+      { db: db.$queryBuilder },
+      {
+        table: Table,
+      },
+    );
+
+    expect(local.table.internal).toMatchObject({
+      primaryKey: { columns: ['id', 'name'] },
+      indexes: [
+        { columns: [{ column: 'id' }, { column: 'name' }], options: {} },
+      ],
+      constraints: [{ name: 'constraintName', check: checkSql }],
+    });
+  });
 
   it('should return object with provided adapter, close and transaction method, tables', () => {
     const local = orchidORM(

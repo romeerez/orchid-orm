@@ -5,9 +5,10 @@ import fs from 'fs/promises';
 import { getMigrations, MigrationItem } from '../migration/migrationsSet';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { RakeDbCtx } from '../common';
-import prompts from 'prompts';
 import { RecordOptionalString } from 'orchid-core';
 import { redo } from 'rake-db';
+import { promptSelect } from '../prompt';
+import { colors } from '../colors';
 
 interface RebaseFile extends MigrationItem {
   name: string;
@@ -94,25 +95,13 @@ export const rebase = async (
       } else if (!moveFile) {
         move++;
 
-        const result = await prompts([
-          {
-            type: 'select',
-            name: 'file',
-            message: 'Which should go first?',
-            choices: [
-              {
-                title: prev.name,
-                value: 'prev',
-              },
-              {
-                title: file.name,
-                value: 'current',
-              },
-            ],
-          },
-        ]);
+        const result = await promptSelect({
+          message: 'Which should go first?',
+          options: [prev.name, file.name],
+          active: (s) => `${colors.yellow('❯')} ${colors.yellow(s)}`,
+        });
 
-        moveFile = result.file === 'prev' ? prev : file;
+        moveFile = result ? file : prev;
       }
     }
 

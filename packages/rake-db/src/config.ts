@@ -6,9 +6,10 @@ import {
   defaultSchemaConfig,
   makeColumnTypes as defaultColumnTypes,
   NoPrimaryKeyOption,
+  Query,
   QueryLogOptions,
 } from 'pqb';
-import { ColumnSchemaConfig, getStackTrace } from 'orchid-core';
+import { ColumnSchemaConfig, getStackTrace, MaybePromise } from 'orchid-core';
 import path from 'path';
 import { RakeDbAst } from './ast';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +40,7 @@ export interface RakeDbConfig<
   >;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: RakeDbBaseTable<CT>;
+  db?: RakeDbConfigDb;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
   // throw if a migration doesn't have a default export
@@ -49,6 +51,8 @@ export interface RakeDbConfig<
   beforeRollback?(db: Db): Promise<void>;
   afterRollback?(db: Db): Promise<void>;
 }
+
+export type RakeDbConfigDb = () => MaybePromise<{ $queryBuilder: Query }>;
 
 export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   extends QueryLogOptions {

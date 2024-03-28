@@ -14,6 +14,8 @@ import {
   QueryData,
   QueryHooks,
   RelationQueryBase,
+  TableData,
+  getTableData,
 } from 'pqb';
 import {
   applyMixins,
@@ -474,6 +476,7 @@ export function createBaseTable<
 
     table!: string;
     columns!: ColumnsShapeBase;
+    tableData!: TableData;
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
@@ -505,6 +508,7 @@ export function createBaseTable<
         this.snakeCase;
 
       const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
+      this.constructor.prototype.tableData = getTableData();
 
       if (this.snakeCase) {
         for (const key in shape) {
