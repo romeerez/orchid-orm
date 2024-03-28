@@ -1,21 +1,6 @@
 import { introspectDbSchema } from './dbStructure';
 import { pullDbStructure } from './pull';
 import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
-import {
-  check,
-  collation,
-  column,
-  createdAtColumn,
-  domain,
-  enumType,
-  foreignKey,
-  idColumn,
-  identityColumn,
-  intColumn,
-  table,
-  textColumn,
-  updatedAtColumn,
-} from './pull.test-utils';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import {
   makeColumnTypes,
@@ -27,6 +12,7 @@ import { asMock } from 'test-utils';
 import { ColumnSchemaConfig } from 'orchid-core';
 import { AppCodeUpdater, RakeDbConfig } from 'rake-db';
 import { processRakeDbConfig } from '../config';
+import { dbStructureMockFactory } from './dbStructure.mockFactory';
 
 jest.mock('./dbStructure');
 
@@ -104,13 +90,7 @@ describe('pull', () => {
   });
 
   it('should log success message', async () => {
-    structure.tables = [
-      {
-        schemaName: 'schema',
-        name: 'table',
-        columns: [],
-      },
-    ];
+    structure.tables = [dbStructureMockFactory.table()];
 
     await pullDbStructure(options, makeConfig());
 
@@ -118,7 +98,7 @@ describe('pull', () => {
   });
 
   it('should write migration file with correct arguments', async () => {
-    structure.tables = [table];
+    structure.tables = [dbStructureMockFactory.table()];
 
     await pullDbStructure(options, config);
 
@@ -132,159 +112,109 @@ describe('pull', () => {
     structure.schemas = ['schema1', 'schema2'];
 
     structure.domains = [
-      {
-        ...domain,
-        schemaName: 'schema',
-      },
+      dbStructureMockFactory.domain({ schemaName: 'schema' }),
     ];
 
     structure.collations = [
-      {
-        ...collation,
+      dbStructureMockFactory.collation({
         schema: 'schema',
-      },
+      }),
     ];
 
     structure.tables = [
-      {
+      dbStructureMockFactory.table({
         schemaName: 'schema',
         name: 'table1',
         columns: [
-          {
-            ...identityColumn,
+          dbStructureMockFactory.identityColumn({
             name: 'id',
-            schemaName: 'schema',
-            tableName: 'table1',
-          },
-          {
-            ...idColumn,
-            schemaName: 'schema',
-            tableName: 'table1',
+          }),
+          dbStructureMockFactory.idColumn({
             name: 'column_name',
             default: undefined,
-          },
-          {
-            ...idColumn,
-            schemaName: 'schema',
-            tableName: 'table1',
+          }),
+          dbStructureMockFactory.domainColumn({
             name: 'domainColumn',
-            type: domain.name,
             typeSchema: 'schema',
             isArray: true,
-          },
-          {
-            ...idColumn,
-            schemaName: 'schema',
-            tableName: 'table1',
+          }),
+          dbStructureMockFactory.intColumn({
             name: 'customTypeColumn',
             type: 'customType',
             typeSchema: 'schema',
-          },
-          {
-            ...textColumn,
-            schemaName: 'schema',
-            tableName: 'table1',
+          }),
+          dbStructureMockFactory.intColumn({
             name: 'jsonArray',
             type: 'jsonb',
             typeSchema: 'schema',
             default: "'[]'",
-          },
-          {
-            ...createdAtColumn,
-            schemaName: 'schema',
-            tableName: 'table1',
+          }),
+          dbStructureMockFactory.createdAtColumn({
             default: 'Current_Timestamp',
-          },
-          {
-            ...updatedAtColumn,
-            schemaName: 'schema',
-            tableName: 'table1',
+          }),
+          dbStructureMockFactory.updatedAtColumn({
             default: 'transaction_timestamp()',
-          },
+          }),
         ],
-      },
-      {
-        schemaName: 'public',
+      }),
+      dbStructureMockFactory.table({
         name: 'table2',
         columns: [
-          {
-            ...identityColumn,
+          dbStructureMockFactory.identityColumn({
             name: 'id',
-            tableName: 'table2',
-          },
-          {
-            ...textColumn,
-            tableName: 'table2',
-          },
-          {
-            ...createdAtColumn,
-            tableName: 'table2',
+          }),
+          dbStructureMockFactory.textColumn({ tableName: 'table2' }),
+          dbStructureMockFactory.createdAtColumn({
             name: 'created_at',
             default: 'Current_Timestamp',
-          },
-          {
-            ...updatedAtColumn,
-            tableName: 'table2',
+          }),
+          dbStructureMockFactory.updatedAtColumn({
             name: 'updated_at',
             default: 'transaction_timestamp()',
-          },
+          }),
         ],
-      },
+      }),
     ];
 
     structure.constraints = [
-      {
+      dbStructureMockFactory.primaryKey({
         schemaName: 'schema',
         tableName: 'table1',
-        name: 'table1_pkey',
         primaryKey: ['id'],
-      },
-      {
-        schemaName: 'public',
-        tableName: 'table2',
-        name: 'table2_pkey',
-        primaryKey: ['id'],
-      },
-      {
-        ...check,
-        tableName: 'table2',
-        check: {
-          columns: ['text'],
-          expression: 'length(text) > 5',
-        },
-      },
-      {
-        ...check,
-        tableName: 'table2',
-        check: {
-          columns: ['one', 'two'],
-          expression: 'table check',
-        },
-      },
-      {
-        ...foreignKey,
-        tableName: 'table2',
-        references: {
-          ...foreignKey.references,
-          columns: ['id', 'text'],
-          foreignSchema: 'schema',
-          foreignTable: 'table1',
-          foreignColumns: ['id', 'name'],
-        },
-      },
-      {
-        ...foreignKey,
-        ...check,
-        tableName: 'table2',
-        name: 'refAndCheck',
-        references: {
-          ...foreignKey.references,
-          columns: ['id', 'text'],
-          foreignSchema: 'schema',
-          foreignTable: 'table1',
-          foreignColumns: ['id', 'name'],
-        },
-      },
+      }),
+      ...dbStructureMockFactory.constraints({ tableName: 'table2' }, [
+        dbStructureMockFactory.primaryKey({
+          primaryKey: ['id'],
+        }),
+        dbStructureMockFactory.check({
+          check: {
+            columns: ['text'],
+            expression: 'length(text) > 5',
+          },
+        }),
+        dbStructureMockFactory.check({
+          check: {
+            columns: ['one', 'two'],
+            expression: 'table check',
+          },
+        }),
+        dbStructureMockFactory.foreignKey('table2', 'table1', {
+          references: {
+            columns: ['id', 'text'],
+            foreignSchema: 'schema',
+            foreignColumns: ['id', 'name'],
+          },
+        }),
+        dbStructureMockFactory.foreignKey('table2', 'table1', {
+          ...dbStructureMockFactory.check(),
+          name: 'refAndCheck',
+          references: {
+            columns: ['id', 'text'],
+            foreignSchema: 'schema',
+            foreignColumns: ['id', 'name'],
+          },
+        }),
+      ]),
     ];
 
     await pullDbStructure(options, config);
@@ -371,21 +301,18 @@ Append \`as\` method manually to this column to treat it as other column type`);
 
   it('should pluralize warning when many columns have unknown types', async () => {
     structure.tables = [
-      {
-        ...table,
+      dbStructureMockFactory.table({
         columns: [
-          {
-            ...column,
+          dbStructureMockFactory.column({
             name: 'column1',
             type: 'unknown1',
-          },
-          {
-            ...column,
+          }),
+          dbStructureMockFactory.column({
             name: 'column2',
             type: 'unknown2',
-          },
+          }),
         ],
-      },
+      }),
     ];
 
     await pullDbStructure(options, config);
@@ -400,29 +327,22 @@ Append \`as\` method manually to these columns to treat them as other column typ
 
   it(`should add simple timestamps and do not add name('snake_case'), but add name('camelCase') when snakeCase: true`, async () => {
     structure.tables = [
-      {
-        ...table,
+      dbStructureMockFactory.table({
         columns: [
-          {
-            ...intColumn,
+          dbStructureMockFactory.intColumn({
             name: 'snake_case',
-            default: undefined,
-          },
-          {
-            ...intColumn,
+          }),
+          dbStructureMockFactory.intColumn({
             name: 'camelCase',
-            default: undefined,
-          },
-          {
-            ...createdAtColumn,
+          }),
+          dbStructureMockFactory.createdAtColumn({
             name: 'created_at',
-          },
-          {
-            ...updatedAtColumn,
+          }),
+          dbStructureMockFactory.updatedAtColumn({
             name: 'updated_at',
-          },
+          }),
         ],
-      },
+      }),
     ];
 
     const config = makeConfig({ snakeCase: true });
@@ -461,18 +381,11 @@ change(async (db) => {
 
   it('should handle enum', async () => {
     structure.tables = [
-      {
-        ...table,
-        columns: [
-          {
-            ...textColumn,
-            type: enumType.name,
-            typeSchema: enumType.schemaName,
-          },
-        ],
-      },
+      dbStructureMockFactory.table({
+        columns: [dbStructureMockFactory.enumColumn()],
+      }),
     ];
-    structure.enums = [enumType];
+    structure.enums = [dbStructureMockFactory.enum()];
 
     await pullDbStructure(
       {
@@ -494,7 +407,7 @@ change(async (db) => {
       noPrimaryKey: true,
     },
     (t) => ({
-      text: t.enum('mood'),
+      column: t.enum('mood'),
     }),
   );
 });

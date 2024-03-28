@@ -21,6 +21,7 @@ import {
 } from 'pqb';
 import fs from 'fs/promises';
 import { promptSelect } from '../prompt';
+import { dbStructureMockFactory } from './dbStructure.mockFactory';
 
 jest.mock('../generate/dbStructure');
 jest.mock('fs/promises', () => ({
@@ -386,6 +387,25 @@ change(async (db) => {
   });
 
   describe('tables', () => {
+    it('should throw if found more than one table with same schema and name', async () => {
+      arrange({
+        tables: [
+          class One extends BaseTable {
+            schema = 'schema';
+            table = 'table';
+          },
+          class Two extends BaseTable {
+            schema = 'schema';
+            table = 'table';
+          },
+        ],
+      });
+
+      await expect(act()).rejects.toThrow(
+        `Table schema.table is defined more than once`,
+      );
+    });
+
     it(
       'should create table, ignore virtual column, add table comment, add noPrimaryKey option, ' +
         'add composite primary key, index, constraint',
@@ -444,85 +464,45 @@ change(async (db) => {
         structure: makeStructure({
           schemas: ['public', 'schema'],
           tables: [
-            {
+            dbStructureMockFactory.table({
               schemaName: 'schema',
               name: 'one',
               comment: 'table comment',
               columns: [
-                {
-                  schemaName: 'schema',
-                  tableName: 'one',
+                dbStructureMockFactory.varcharColumn({
                   name: 'name',
-                  type: 'varchar',
-                  typeSchema: 'pg_catalog',
-                  isArray: false,
-                  maxChars: 255,
-                  isNullable: false,
-                },
-                {
-                  schemaName: 'schema',
-                  tableName: 'one',
+                }),
+                dbStructureMockFactory.intColumn({
                   name: 'int',
-                  type: 'int4',
-                  typeSchema: 'pg_catalog',
-                  isArray: false,
-                  numericPrecision: 32,
-                  numericScale: 0,
-                  isNullable: false,
-                },
+                }),
               ],
-            },
-            {
-              schemaName: 'public',
+            }),
+            dbStructureMockFactory.table({
               name: 'schemaMigrations',
-              columns: [
-                {
-                  schemaName: 'public',
-                  tableName: 'schemaMigrations',
-                  name: 'version',
-                  type: 'text',
-                  typeSchema: 'pg_catalog',
-                  isArray: false,
-                  isNullable: false,
-                },
-                {
-                  schemaName: 'public',
-                  tableName: 'schemaMigrations',
-                  name: 'name',
-                  type: 'text',
-                  typeSchema: 'pg_catalog',
-                  isArray: false,
-                  isNullable: false,
-                },
-              ],
-            },
+            }),
           ],
           views: [],
           indexes: [
-            {
+            dbStructureMockFactory.index({
               schemaName: 'schema',
               tableName: 'one',
               name: 'one_name_int_idx',
-              using: 'btree',
-              isUnique: false,
               columns: [{ column: 'name' }, { column: 'int' }],
-              nullsNotDistinct: false,
-            },
+            }),
           ],
-          constraints: [
-            {
-              schemaName: 'schema',
-              tableName: 'one',
-              name: 'one_check',
-              check: { columns: ['int'], expression: '("int" > 5)' },
-            },
-            {
-              schemaName: 'schema',
-              tableName: 'one',
-              name: 'one_pkey',
-              primaryKey: ['name', 'int'],
-            },
-          ],
+          constraints: dbStructureMockFactory.constraints(
+            { schemaName: 'schema', tableName: 'one' },
+            [
+              dbStructureMockFactory.check({
+                name: 'one_check',
+                check: { columns: ['int'], expression: '("int" > 5)' },
+              }),
+              dbStructureMockFactory.primaryKey({
+                name: 'one_pkey',
+                primaryKey: ['name', 'int'],
+              }),
+            ],
+          ),
         }),
       });
 
@@ -547,6 +527,81 @@ change(async (db) => {
 
 change(async (db) => {
   await db.dropSchema('schema');
+});
+`);
+    });
+
+    it('should create a new table and drop the old one when choosing such option', async () => {
+      arrange({
+        tables: [
+          class Two extends BaseTable {
+            table = 'two';
+          },
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'one',
+              columns: [dbStructureMockFactory.intColumn({ name: 'id' })],
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({ tableName: 'one' }),
+          ],
+        }),
+        selects: [0],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createTable('two', (t) => ({}));
+
+  await db.dropTable('one', (t) => ({
+    id: t.integer().primaryKey(),
+  }));
+});
+`);
+    });
+
+    it('should rename table when is selected so, and drop the remaining table', async () => {
+      arrange({
+        tables: [
+          class Three extends BaseTable {
+            table = 'three';
+          },
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'one',
+              columns: [dbStructureMockFactory.intColumn({ name: 'id' })],
+            }),
+            dbStructureMockFactory.table({
+              name: 'two',
+              columns: [dbStructureMockFactory.intColumn({ name: 'id' })],
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({ tableName: 'one' }),
+            dbStructureMockFactory.primaryKey({ tableName: 'two' }),
+          ],
+        }),
+        selects: [1],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.renameTable('one', 'three');
+
+  await db.dropTable('two', (t) => ({
+    id: t.integer().primaryKey(),
+  }));
 });
 `);
     });
