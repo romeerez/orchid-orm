@@ -608,7 +608,8 @@ For `hasOne` and `hasMany` it is available only when updating one record, so the
 
 For `hasOne` and `hasMany`, if there was a related record before the update, its `foreignKey` column will be updated to `NULL`, so it has to be nullable.
 
-In the `hasAndBelongsToMany` relation this will delete all previous rows of the join table and create new ones.
+For `hasAndBelongsToMany` relation this will delete all previous rows of the join table and create new ones.
+When empty array or empty object is given, this is going to delete all relevant join table rows, without creating new ones.
 
 ```ts
 const author = await db.author.find(1);
@@ -645,6 +646,14 @@ await db.author.find(1).update({
   books: {
     // array of conditions can be provided:
     set: [{ id: 1 }, { id: 2 }],
+  },
+});
+
+// for `hasMany` this will nullify all relevant books `authorId`s,
+// for `hasAndBelongsToMany` this will delete all relevant join table records.
+await db.author.find(1).update({
+  books: {
+    set: [],
   },
 });
 ```

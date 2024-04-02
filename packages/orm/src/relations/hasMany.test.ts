@@ -1442,6 +1442,29 @@ describe('hasMany', () => {
         expect(message3.AuthorId).toBe(id);
       });
 
+      it('should nullify all related records foreign keys when giving empty array', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const id = await db.user.get('Id').create({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, ChatId, Text: 'message 1' },
+              { ...messageData, ChatId, Text: 'message 2' },
+            ],
+          },
+        });
+
+        await db.user.find(id).update({
+          messages: {
+            set: [],
+          },
+        });
+
+        const messages = await db.message;
+
+        expect(messages.map((m) => m.AuthorId)).toEqual([null, null]);
+      });
+
       it('should throw in batch update', async () => {
         expect(() =>
           db.user.where({ Id: { in: [1, 2, 3] } }).update({

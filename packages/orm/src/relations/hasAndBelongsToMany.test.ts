@@ -14,6 +14,8 @@ import {
 } from '../test-utils/test-utils';
 import { Sql } from 'orchid-core';
 import { assertType, expectSql, now } from 'test-utils';
+import { createBaseTable } from '../baseTable';
+import { orchidORM } from '../orm';
 
 describe('hasAndBelongsToMany', () => {
   useTestORM();
@@ -1306,7 +1308,30 @@ describe('hasAndBelongsToMany', () => {
           .chats({ Id, UserKey: 'key' })
           .select('Title')
           .order('Title');
+
         expect(chats).toEqual([{ Title: 'chat 2' }, { Title: 'chat 3' }]);
+      });
+
+      it('should delete all previous connections when empty array is given', async () => {
+        const Id = await db.user.get('Id').create({
+          ...userData,
+          chats: {
+            create: [
+              { ...chatData, Title: 'chat 1' },
+              { ...chatData, Title: 'chat 2' },
+            ],
+          },
+        });
+
+        await db.user.where({ Id, UserKey: 'key' }).update({
+          chats: {
+            set: [],
+          },
+        });
+
+        const chats = await db.user.chats({ Id, UserKey: 'key' });
+
+        expect(chats).toEqual([]);
       });
     });
 
@@ -1679,6 +1704,84 @@ describe('hasAndBelongsToMany', () => {
         )
       `,
       [10, 'a', 'b'],
+    );
+  });
+
+  // for: https://github.com/romeerez/orchid-orm/issues/250
+  it('should obey to `snake_case` properly for the intermediate table', async () => {
+    const BaseTable = createBaseTable({
+      snakeCase: true,
+    });
+
+    class PostTable extends BaseTable {
+      readonly table = 'post';
+      columns = this.setColumns((t) => ({
+        postId: t.integer().primaryKey(),
+      }));
+
+      relations = {
+        tags: this.hasAndBelongsToMany(() => TagTable, {
+          columns: ['postId'],
+          references: ['postId'],
+          through: {
+            table: 'postTag',
+            columns: ['tagId'],
+            references: ['tagId'],
+          },
+        }),
+      };
+    }
+
+    class TagTable extends BaseTable {
+      readonly table = 'tag';
+      columns = this.setColumns((t) => ({
+        tagId: t.text(1, 2).primaryKey(),
+      }));
+
+      relations = {
+        posts: this.hasAndBelongsToMany(() => PostTable, {
+          columns: ['tagId'],
+          references: ['tagId'],
+          through: {
+            table: 'postTag',
+            columns: ['postId'],
+            references: ['postId'],
+          },
+        }),
+      };
+    }
+
+    const local = orchidORM(
+      { db: db.$queryBuilder },
+      {
+        post: PostTable,
+        tag: TagTable,
+      },
+    );
+
+    const q = local.post.select({
+      tags: (q) => q.tags,
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT COALESCE("tags".r, '[]') "tags"
+        FROM "post"
+        LEFT JOIN LATERAL (
+          SELECT json_agg(row_to_json("t".*)) r
+          FROM (
+            SELECT "tag_id" AS "tagId"
+            FROM "tag" AS "tags"
+            WHERE EXISTS (
+              SELECT 1
+              FROM "postTag"
+              WHERE "postTag"."tag_id" = "tags"."tag_id"
+                AND "postTag"."post_id" = "post"."post_id"
+            )
+          ) AS "t"
+        ) "tags" ON true
+      `,
     );
   });
 });

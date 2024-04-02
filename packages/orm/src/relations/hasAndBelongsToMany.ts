@@ -38,8 +38,10 @@ import {
   ColumnTypeBase,
   EmptyObject,
   MaybeArray,
+  objectHasValues,
   RecordString,
   RecordUnknown,
+  toSnakeCase,
 } from 'orchid-core';
 import {
   hasRelationHandleCreate,
@@ -126,7 +128,7 @@ export interface HasAndBelongsToManyInfo<
   };
   // `hasAndBelongsToMany` relation data available for update. It supports:
   // - `disconnect` to delete join table records for related records found by conditions
-  // - `set` to create join table records for related records found by conditions
+  // - `set` to create join table records for related records found by conditions, deletes previous connects
   // - `delete` to delete join table records and related records found by conditions
   // - `update` to update related records found by conditions with a provided data
   // - `create` to create related records and a join table records
@@ -230,10 +232,19 @@ export const makeHasAndBelongsToManyMethod = (
     throughPrimaryKeys = [options.associationPrimaryKey];
   }
 
-  const foreignKeysFull = foreignKeys.map((key) => `${joinTable}.${key}`);
-  const throughForeignKeysFull = throughForeignKeys.map(
-    (key) => `${joinTable}.${key}`,
-  );
+  const { snakeCase } = table.internal;
+
+  const foreignKeysFull = foreignKeys.map((key, i) => {
+    if (snakeCase) key = foreignKeys[i] = toSnakeCase(key);
+
+    return `${joinTable}.${key}`;
+  });
+
+  const throughForeignKeysFull = throughForeignKeys.map((key, i) => {
+    if (snakeCase) key = throughForeignKeys[i] = toSnakeCase(key);
+
+    return `${joinTable}.${key}`;
+  });
 
   const foreignTable = getQueryAs(query);
   const throughPrimaryKeysFull = throughPrimaryKeys.map(
@@ -725,16 +736,22 @@ const nestedUpdate = (state: State) => {
       await _queryDelete(j);
       delete j.q[toSQLCacheKey];
 
-      const idsRows = await _queryRows(
-        _querySelect(
-          state.relatedTableQuery.where(
-            conditionsToWhereArg(params.set as WhereArg<Query>),
+      if (
+        Array.isArray(params.set)
+          ? params.set.length
+          : objectHasValues(params.set)
+      ) {
+        const idsRows = await _queryRows(
+          _querySelect(
+            state.relatedTableQuery.where(
+              conditionsToWhereArg(params.set as WhereArg<Query>),
+            ),
+            state.throughPrimaryKeys,
           ),
-          state.throughPrimaryKeys,
-        ),
-      );
+        );
 
-      await insertToJoinTable(state, j, data, idsRows);
+        await insertToJoinTable(state, j, data, idsRows);
+      }
     }
   }) as HasManyNestedUpdate;
 };

@@ -345,8 +345,12 @@ export class PatientTable extends BaseTable {
 
 ## hasAndBelongsToMany
 
-A `hasAndBelongsToMany` association creates a direct many-to-many connection with another table, with no intervening table.
-This association indicates that each instance of the declaring table refers to zero or more instances of another table.
+A `hasAndBelongsToMany` association creates a direct many-to-many connection with another table.
+The table in between must exist in the database, but you can skip defining a table class in the code.
+
+This association indicates that each instance of the declaring table refers to zero or more instances of another table, and vice-versa.
+
+If `snakeCase: true` config is set, you can write join table column in `camelCase`, they will be translated to `snake_case`.
 
 For example, if your application includes posts and tags, with each post having many tags and each tag appearing in many posts, you could declare the tables this way:
 

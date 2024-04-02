@@ -47,6 +47,8 @@ export interface QueryInternal {
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.
   scopes?: CoreQueryScopes;
+  // `camelCase` by default, set to true to map column names to and from `snake_case`
+  snakeCase?: boolean;
 }
 
 // Scopes data stored in table instance. Doesn't change after defining a table.

@@ -34,6 +34,7 @@ import {
   ColumnsShapeBase,
   EmptyObject,
   MaybeArray,
+  objectHasValues,
   RecordString,
   RecordUnknown,
   toArray,
@@ -525,7 +526,12 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         obj as never,
       );
 
-      if (params.set) {
+      if (
+        params.set &&
+        (Array.isArray(params.set)
+          ? params.set.length
+          : objectHasValues(params.set))
+      ) {
         delete t.q[toSQLCacheKey];
 
         const obj: RecordUnknown = {};

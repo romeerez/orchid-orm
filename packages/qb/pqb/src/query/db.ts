@@ -197,6 +197,7 @@ export class Db<
       ...tableData,
       transactionStorage,
       scopes,
+      snakeCase: options.snakeCase,
     };
 
     this.baseQuery = this as Query;
