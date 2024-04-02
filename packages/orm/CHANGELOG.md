@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.24.0
+
+### Minor Changes
+
+- ba3d9c2e: Change behavior of `set` inside `update` in `hasMany` and `hasAndBelongsToMany` relations for when empty array or empty object is given.
+  Before, empty array/object was setting to all records, which is a bug.
+  Now, empty array/object means "set to no records".
+  It will nullify all connected records' foreign keys for `hasMany` and will delete all join table records for `hasAndBelongsToMany`.
+
+### Patch Changes
+
+- Updated dependencies [ba3d9c2e]
+  - pqb@0.27.0
+  - orchid-core@0.13.0
+
 ## 1.23.11
 
 ### Patch Changes
