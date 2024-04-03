@@ -23,32 +23,36 @@ await post.update({ title: 'new title' });
 
 ```ts
 // In Orchid ORM, post is a plain object
-const post = await Post.findBy({ id: 123 });
-await Post.update(post, { title: 'new title' });
+const post = await db.post.findBy({ id: 123 });
+await db.post.update(post, { title: 'new title' });
 ```
 
 This approach allows to select relations in a nested way, perform customized sub-queries, and keep everything type-safe:
 
+<!-- prettier-ignore-start -->
 ```ts
 // post type is completely inferred
-const post = await Post.find(123).select('title', 'body', {
-  likesCount: (q) => q.likes.count(),
-  comments: (q) =>
-    q.comments
-      .order({ createdAt: 'DESC' })
-      .limit(50)
-      .select('body', {
-        author: (q) => q.author.select('avatar', 'username'),
-      }),
-});
+const post = await db.post
+  .find(123)
+  .select('title', 'body', {
+    likesCount: (q) => q.likes.count(),
+    comments: (q) =>
+      q.comments
+        .order({ createdAt: 'DESC' })
+        .limit(50)
+        .select('body', {
+          author: (q) => q.author.select('avatar', 'username'),
+        }),
+  });
 ```
+<!-- prettier-ignore-end -->
 
 The query builder functionality is aimed to be as flexible as possible, allowing to chain queries with relations and conditions.
 
 For example, selecting posts that have 2 specific tags:
 
 ```ts
-const posts = await Post.where((q) =>
+const posts = await db.post.where((q) =>
   q.tags.whereIn('tagName', ['typescript', 'node.js']).count().gte(2),
 );
 ```
@@ -57,7 +61,7 @@ Relations can be chained in a sub-query.
 Collecting array of all commenters' names for every post:
 
 ```ts
-const posts = await Post.select({
+const posts = await db.post.select({
   // `pluck` collects a plain array
   commentedBy: (q) => q.comments.author.pluck('username'),
 });
@@ -66,13 +70,19 @@ const posts = await Post.select({
 Custom SQL can be injected into any place of the query.
 Inserted values are properly handled to not allow SQL injections.
 
+<!-- prettier-ignore-start -->
+
 ```ts
-const posts = await;
-Customer.select({
-  upper: Post.sql<string>`upper(title)`,
-}).whereSql`reverse(title) = ${reversedTitle}`.orderSql`reverse(title)`
+const posts = await db.customer
+  .select({
+    upper: Post.sql<string>`upper(title)`,
+  })
+  .whereSql`reverse(title) = ${reversedTitle}`
+  .orderSql`reverse(title)`
   .havingSql`count("someColumn") > 300`;
 ```
+
+<!-- prettier-ignore-end -->
 
 ## Comparison with other database tools
 
