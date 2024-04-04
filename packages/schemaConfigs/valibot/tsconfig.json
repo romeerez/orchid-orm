@@ -8,7 +8,6 @@
       "orchid-core": ["../../core/src"],
       "pqb": ["../../qb/pqb/src"],
       "test-utils": ["../../test-utils/src"],
-      "schema-to-zod": ["../zod/src"]
     }
   }
 }

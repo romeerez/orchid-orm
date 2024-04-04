@@ -1,4 +1,4 @@
-# Orchid ORM schema to zod converter
+# Orchid ORM schema to valibot converter
 
 [Valibot](https://valibot.dev/) integration for OrchidORM.
 
