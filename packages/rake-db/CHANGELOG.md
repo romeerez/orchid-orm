@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.16.0
+
+### Minor Changes
+
+- 0c67c17c: Return result from rakeDb to have command data; Make `migrate` an alias of `up` eliminating a subtle difference.
+
 ## 2.15.11
 
 ### Patch Changes
