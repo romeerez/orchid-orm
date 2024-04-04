@@ -1,10 +1,5 @@
 import { Adapter, AdapterOptions } from 'pqb';
-import {
-  ColumnSchemaConfig,
-  MaybeArray,
-  RecordUnknown,
-  toArray,
-} from 'orchid-core';
+import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
 import { migrate } from './migrateOrRollback';
 import { getDatabaseAndUserFromOptions, RakeDbConfig } from '../config';
 import {
@@ -114,11 +109,11 @@ const createOrDrop = async (
 };
 
 export const createDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  arg: MaybeArray<AdapterOptions>,
+  options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  for (const options of toArray(arg)) {
-    await createOrDrop(options, options, config, {
+  for (const opts of options) {
+    await createOrDrop(opts, opts, config, {
       sql({ database, user }) {
         return `CREATE DATABASE "${database}"${user ? ` OWNER "${user}"` : ''}`;
       },
@@ -134,11 +129,11 @@ export const createDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
 };
 
 export const dropDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  arg: MaybeArray<AdapterOptions>,
+  options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  for (const options of toArray(arg)) {
-    await createOrDrop(options, options, config, {
+  for (const opts of options) {
+    await createOrDrop(opts, opts, config, {
       sql({ database }) {
         return `DROP DATABASE "${database}"`;
       },
@@ -156,10 +151,10 @@ export const resetDb = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT extends RakeDbColumnTypes,
 >(
-  arg: MaybeArray<AdapterOptions>,
+  options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  await dropDb(arg, config);
-  await createDb(arg, config);
-  await migrate({}, arg, config);
+  await dropDb(options, config);
+  await createDb(options, config);
+  await migrate({}, options, config);
 };

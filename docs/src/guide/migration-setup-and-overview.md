@@ -186,6 +186,50 @@ export const change = rakeDb(dbConfig, rakeDbConfig);
 await change.promise;
 ```
 
+The promise resolves into a result object:
+
+```ts
+interface RakeDbResult {
+  // database connection options
+  options: AdapterOptions[];
+  // rake-db config
+  config: AnyRakeDbConfig;
+  // command and arguments passed to `rakeDb.lazy` or taken from process.argv
+  args: string[];
+}
+```
+
+Example: dumping structure after running a command that affects the db structure:
+
+```ts
+import { execSync } from 'node:child_process';
+
+export const change = rakeDb(
+  { databaseURL: 'postgres://...' },
+  {
+    migrationsPath: 'migrations',
+  },
+);
+
+change.promise.then(({ options, args: [command] }) => {
+  if (process.env.NODE_ENV !== 'development') return;
+
+  if (['up', 'down', 'redo', 'recurrent'].includes(command)) {
+    // `as string` is safe because you can see that databaseURL was set above
+    dump(options[0].databaseURL as string);
+  }
+});
+
+function dump(databaseURL: string) {
+  execSync(`pg_dump --schema-only ${databaseURL} > structure.sql`);
+
+  console.log('Db structure was dumped to structure.sql');
+}
+```
+
+Aliases of commands are resolved, so if this was run with `pnpm db migrate`, the command will be `up`.
+See full list of aliases in `rakeDbAliases` exported from the `rake-db` package.
+
 ## rakeDb lazy
 
 `rakeDb` is designed to be launched with CLI, it will execute one command, and finish.
@@ -200,7 +244,7 @@ await run(['migrate']);
 
 // optionally, you can provide a partial `rakeDbConfig` to override some values,
 // here we override the logger.
-await run(['migrate'], {
+const result = await run(['migrate'], {
   log: true,
   logger: {
     log(message: string): void {
@@ -214,6 +258,11 @@ await run(['migrate'], {
     },
   },
 });
+
+// the same result type as in "awaiting rakeDb" section above.
+result.options;
+result.config;
+result.args;
 ```
 
 `rakeDb.lazy` is accepting the same options as `rakeDb`, and returns two functions.
@@ -339,7 +388,7 @@ Defaults are:
 
 - `basePath` is the dir name of the file you're calling `rakeDb` from
 - `migrationPath` is `src/db/migrations`
-- `recurrentPath` is `src/db/migrations/recurrent` (directory doesn't have to exist if don't need it)
+- `recurrentPath` is `src/db/migrations/recurrent` (directory doesn't have to exist if you don't need it)
 - `migrationsTable` is `schemaMigrations`
 - `snakeCase` is `false`, so camelCase is expected in both the app and the database
 - `import` will use a standard `import` function
@@ -468,17 +517,29 @@ src/
 
 ## before and after callbacks
 
-To run custom code before or after `migrate` or `rollback` command, define functions in `rakeDb` config object:
+[//]: # 'has JSdoc'
 
-Supported callbacks are `beforeMigrate`, `afterMigrate`, `beforeRollback`, `afterRollback`.
+To run custom code before or after `migrate` or `rollback` command, define functions in `rakeDb` config object.
 
-Example: each time when `npm run db migrate` is run, after the migration was successfully applied, this will create new records of a specific table if it is empty.
+These callbacks are triggered only once per commend.
+If 5 migrations were applied, the callback will be called either before all 5, or after.
 
-If `options` is an array of multiple database configs, callbacks are run for each of the databases.
+Supported callbacks are:
+
+- `beforeChange`, `afterChange`: is called before or after migrate or rollback
+- `beforeMigrate`, `afterMigrate`: is called before or after migrating up
+- `beforeRollback`, `afterRollback`: is called before migrating down
+
+If rake-db options are an array of multiple database configs, callbacks are run for each of the databases.
+
+First argument is a query builder instance, not OrchidORM instance, so it doesn't have project tables,
+but it is still can be used for building and executing queries.
+
+For example, each time when `npm run db migrate` is run, after all migrations were successfully applied, this will create new records of a specific table if it is empty.
 
 ```ts
 export const change = rakeDb(options, {
-  async afterMigrate(db: Db) {
+  async afterMigrate(db) {
     const haveRecords = await db('table').exists();
     if (!haveRecords) {
       await db('table').createMany([
@@ -487,6 +548,21 @@ export const change = rakeDb(options, {
         { name: 'three' },
       ]);
     }
+  },
+});
+```
+
+`beforeChange` and `afterChange` receive two additional arguments: boolean `up` to check whether it's migrate or rollback,
+and boolean `redo` to check whether it's migrating down then up for [redo](/guide/migration-commands.html#redo) command.
+
+Example for how to run your code after migrating or rolling back, but not in the middle of `redo`:
+
+```ts
+export const change = rakeDb(options, {
+  afterChange(db, up, redo) {
+    if (!up && redo) return;
+
+    console.log('migrate, rollback, or redo command is finished');
   },
 });
 ```

@@ -40,7 +40,7 @@ describe('createOrDrop', () => {
     it('should create a database without a specified user', async () => {
       queryMock.mockResolvedValueOnce(undefined);
 
-      await createDb({ ...options, user: undefined }, config);
+      await createDb([{ ...options, user: undefined }], config);
 
       expect(queryMock.mock.calls).toEqual([[`CREATE DATABASE "dbname"`]]);
 
@@ -54,7 +54,7 @@ describe('createOrDrop', () => {
     it('should create database when user is an admin', async () => {
       queryMock.mockResolvedValueOnce(undefined);
 
-      await createDb(options, config);
+      await createDb([options], config);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -87,7 +87,7 @@ describe('createOrDrop', () => {
     it('should inform if database already exists', async () => {
       queryMock.mockRejectedValueOnce({ code: '42P04' });
 
-      await createDb(options, config);
+      await createDb([options], config);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -102,7 +102,7 @@ describe('createOrDrop', () => {
         message: 'sslmode=require',
       });
 
-      await createDb(options, config);
+      await createDb([options], config);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -116,7 +116,7 @@ describe('createOrDrop', () => {
     it('should ask and use admin credentials when cannot connect', async () => {
       queryMock.mockRejectedValueOnce({ code: '42501' });
 
-      await createDb(options, config);
+      await createDb([options], config);
 
       expect(setAdminCredentialsToOptions).toHaveBeenCalled();
       expect(queryMock.mock.calls).toEqual([
@@ -137,7 +137,7 @@ describe('createOrDrop', () => {
     it('should drop database when user is an admin', async () => {
       queryMock.mockResolvedValueOnce(undefined);
 
-      await dropDb(options, config);
+      await dropDb([options], config);
 
       expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
       expect(logMock.mock.calls).toEqual([
@@ -163,7 +163,7 @@ describe('createOrDrop', () => {
     it('should inform if database does not exist', async () => {
       queryMock.mockRejectedValueOnce({ code: '3D000' });
 
-      await dropDb(options, config);
+      await dropDb([options], config);
 
       expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
       expect(logMock.mock.calls).toEqual([[`Database dbname does not exist`]]);
@@ -175,7 +175,7 @@ describe('createOrDrop', () => {
         message: 'sslmode=require',
       });
 
-      await createDb(options, config);
+      await createDb([options], config);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -189,7 +189,7 @@ describe('createOrDrop', () => {
     it('should ask and use admin credentials when cannot connect', async () => {
       queryMock.mockRejectedValueOnce({ code: '42501' });
 
-      await dropDb(options, config);
+      await dropDb([options], config);
 
       expect(setAdminCredentialsToOptions).toHaveBeenCalled();
       expect(queryMock.mock.calls).toEqual([
@@ -209,7 +209,7 @@ describe('createOrDrop', () => {
     it('should drop and create database', async () => {
       queryMock.mockResolvedValue(undefined);
 
-      await resetDb(options, config);
+      await resetDb([options], config);
 
       expect(queryMock.mock.calls).toEqual([
         [`DROP DATABASE "dbname"`],

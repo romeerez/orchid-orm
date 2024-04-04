@@ -1,5 +1,10 @@
 import { AdapterOptions, DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
-import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  MaybeArray,
+  RecordOptionalString,
+  toArray,
+} from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
 import { generate } from './commands/generate';
@@ -8,7 +13,12 @@ import { RakeDbError } from './errors';
 import { ChangeCallback, pushChange } from './migration/change';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { listMigrationsStatuses } from './commands/listMigrationsStatuses';
-import { InputRakeDbConfig, processRakeDbConfig, RakeDbConfig } from './config';
+import {
+  AnyRakeDbConfig,
+  InputRakeDbConfig,
+  processRakeDbConfig,
+  RakeDbConfig,
+} from './config';
 import { changeIds } from './commands/changeIds';
 import { RakeDbColumnTypes } from './migration/migration';
 import { rebase } from './commands/rebase';
@@ -39,8 +49,17 @@ export type RakeDbFnReturns<CT extends RakeDbColumnTypes | undefined> =
   RakeDbChangeFn<
     CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
   > & {
-    promise: Promise<void>;
+    promise: Promise<RakeDbResult>;
   };
+
+export interface RakeDbResult {
+  // database connection options
+  options: AdapterOptions[];
+  // rake-db config
+  config: AnyRakeDbConfig;
+  // command and arguments passed to `rakeDb.lazy` or taken from process.argv
+  args: string[];
+}
 
 /**
  * Type of {@link rakeDb.lazy} function
@@ -56,7 +75,7 @@ export type RakeDbLazyFn = <
   run(
     args: string[],
     config?: Partial<RakeDbConfig<SchemaConfig, CT>>,
-  ): Promise<void>;
+  ): Promise<RakeDbResult>;
 };
 
 /**
@@ -114,15 +133,28 @@ function change(fn: ChangeCallback<RakeDbColumnTypes>) {
   return fn;
 }
 
+export const rakeDbAliases: RecordOptionalString = {
+  migrate: 'up',
+  rollback: 'down',
+  s: 'status',
+  rec: 'recurrent',
+};
+
 const runCommand = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT extends RakeDbColumnTypes,
 >(
-  options: MaybeArray<AdapterOptions>,
+  opts: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<SchemaConfig, CT>,
   args: string[] = process.argv.slice(2),
-): Promise<void> => {
-  const arg = args[0]?.split(':')[0];
+): Promise<RakeDbResult> => {
+  let arg = args[0]?.split(':')[0];
+  if (rakeDbAliases[arg]) {
+    args = [...args]; // to not mutate given arguments
+    arg = args[0] = rakeDbAliases[arg] as string;
+  }
+
+  const options = toArray(opts);
 
   if (arg === 'create') {
     await createDb(options, config);
@@ -130,36 +162,37 @@ const runCommand = async <
     await dropDb(options, config);
   } else if (arg === 'reset') {
     await resetDb(options, config);
-  } else if (arg === 'up' || arg === 'migrate') {
+  } else if (arg === 'up') {
     await migrate({}, options, config, args.slice(1));
-  } else if (arg === 'down' || arg === 'rollback') {
+  } else if (arg === 'down') {
     await rollback({}, options, config, args.slice(1));
   } else if (arg === 'redo') {
     await redo({}, options, config, args.slice(1));
   } else if (arg === 'new') {
     await generate(config, args.slice(1));
   } else if (arg === 'pull') {
-    await pullDbStructure(toArray(options)[0], config);
-  } else if (arg === 'status' || arg === 's') {
-    await listMigrationsStatuses(toArray(options), config, args.slice(1));
+    await pullDbStructure(options[0], config);
+  } else if (arg === 'status') {
+    await listMigrationsStatuses(options, config, args.slice(1));
   } else if (arg === 'rebase') {
-    await rebase(toArray(options), config);
+    await rebase(options, config);
   } else if (arg === 'change-ids') {
-    await changeIds(toArray(options), config, args.slice(1));
+    await changeIds(options, config, args.slice(1));
   } else if (config.commands[arg]) {
-    await config.commands[arg](toArray(options), config, args.slice(1));
-  } else if (arg !== 'rec' && arg !== 'recurrent') {
+    await config.commands[arg](options, config, args.slice(1));
+  } else if (arg !== 'recurrent') {
     config.logger?.log(help);
   }
 
-  if (
-    arg === 'migrate' ||
-    arg === 'rec' ||
-    arg === 'recurrent' ||
-    arg === 'redo'
-  ) {
+  if (arg === 'up' || arg === 'recurrent' || arg === 'redo') {
     await runRecurrentMigrations(options, config);
   }
+
+  return {
+    options,
+    config,
+    args,
+  };
 };
 
 const help = `Usage: rake-db [command] [arguments]

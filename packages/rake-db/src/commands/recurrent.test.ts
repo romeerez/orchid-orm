@@ -62,7 +62,7 @@ describe('recurrent', () => {
 
     asMock(readFile).mockImplementation((path) => path);
 
-    await runRecurrentMigrations(options[0], testConfig);
+    await runRecurrentMigrations([options[0]], testConfig);
 
     expect(readdir).toBeCalledWith(testConfig.recurrentPath);
 

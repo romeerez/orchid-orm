@@ -29,7 +29,7 @@ jest.mock('../migration/migrationsTable', () => ({
   createMigrationsTable: jest.fn(),
 }));
 
-const options = { databaseURL: 'postgres://user@localhost/dbname' };
+const options = [{ databaseURL: 'postgres://user@localhost/dbname' }];
 
 const makeFile = (version: number, load = jest.fn()) => ({
   path: `path/000${version}_file.ts`,
@@ -186,6 +186,8 @@ describe('migrateOrRollback', () => {
         config: {
           ...config,
           basePath: __dirname,
+          beforeChange: jest.fn(),
+          afterChange: jest.fn(),
           beforeMigrate: jest.fn(),
           afterMigrate: jest.fn(),
         },
@@ -195,6 +197,8 @@ describe('migrateOrRollback', () => {
 
       assert.getMigrationsUp(env.config);
 
+      expect(env.config.beforeChange).toBeCalled();
+      expect(env.config.afterChange).toBeCalled();
       expect(env.config.beforeMigrate).toBeCalled();
       expect(env.config.afterMigrate).toBeCalled();
 
@@ -435,6 +439,8 @@ describe('migrateOrRollback', () => {
         versions: ['0001', '0004', '0005'],
         config: {
           ...config,
+          beforeChange: jest.fn(),
+          afterChange: jest.fn(),
           beforeRollback: jest.fn(),
           afterRollback: jest.fn(),
           beforeMigrate: jest.fn(),
@@ -444,6 +450,8 @@ describe('migrateOrRollback', () => {
 
       await act(migrate, ['force']);
 
+      expect(env.config.beforeChange).toBeCalled();
+      expect(env.config.afterChange).toBeCalled();
       expect(env.config.beforeRollback).toBeCalled();
       expect(env.config.afterRollback).toBeCalled();
       expect(env.config.beforeMigrate).toBeCalled();
@@ -469,6 +477,8 @@ describe('migrateOrRollback', () => {
         versions: ['0001', '0002'],
         config: {
           ...config,
+          beforeChange: jest.fn(),
+          afterChange: jest.fn(),
           beforeRollback: jest.fn(),
           afterRollback: jest.fn(),
         },
@@ -476,6 +486,8 @@ describe('migrateOrRollback', () => {
 
       await act(rollback);
 
+      expect(env.config.beforeChange).toBeCalled();
+      expect(env.config.afterChange).toBeCalled();
       expect(env.config.beforeRollback).toBeCalled();
       expect(env.config.afterRollback).toBeCalled();
 
@@ -549,19 +561,25 @@ describe('migrateOrRollback', () => {
           ...config,
           appCodeUpdater,
           basePath: __dirname,
-          beforeMigrate: jest.fn(async () => {
+          beforeChange: async () => {
+            callbackCalls.push('beforeChange');
+          },
+          afterChange: async () => {
+            callbackCalls.push('afterChange');
+          },
+          beforeMigrate: async () => {
             callbackCalls.push('beforeMigrate');
-          }),
-          afterMigrate: jest.fn(async () => {
+          },
+          afterMigrate: async () => {
             callbackCalls.push('afterMigrate');
-          }),
-          beforeRollback: jest.fn(async () => {
+          },
+          beforeRollback: async () => {
             callbackCalls.push('beforeRollback');
-          }),
-          afterRollback: jest.fn(async () => {
+          },
+          afterRollback: async () => {
             callbackCalls.push('afterRollback');
             migratedVersions = [files[3].version];
-          }),
+          },
         },
       });
 
@@ -579,8 +597,12 @@ describe('migrateOrRollback', () => {
 
       expect(callbackCalls).toEqual([
         'beforeRollback',
+        'beforeChange',
+        'afterChange',
         'afterRollback',
         'beforeMigrate',
+        'beforeChange',
+        'afterChange',
         'afterMigrate',
       ]);
 

@@ -160,24 +160,21 @@ If the migration name matches one of the known patterns, it will generate a temp
 - `add[something]To[table]` to add columns to a table, example: `addDetailsToProduct`
 - `remove[something]From[table]` to remove columns from a table, ex.: `removeDetailsFromProduct`
 
-## migrate
+## up or migrate
 
-Migrate command will run all not applied yet migrations, sequentially in order.
+The `up` command will run all not applied yet migrations, sequentially in order.
+`migrate` is an alias.
 After applying migrations, it will also run `recurrent` migrations if they exist.
 
 ```sh
-npm run db migrate
+npm run db up
 ```
 
 Pass a number to migrate only this specific number of migrations:
 
 ```sh
-npm run db migrate 3
+npm run db up 3
 ```
-
-## up
-
-The same as `migrate`, but it won't run `recurrent` migrations.
 
 ## up or migrate force
 
@@ -195,34 +192,31 @@ Your migration was already applied, running `migrate` or `up` fails because thei
 
 ```sh
 npm run db up force
-# or
-npm run db migrate force
 ```
 
 Your migration will be rolled back, then both of them will be applied.
 
 May the `force` be used only if your migrations aren't committed to a remote repository yet.
 
-## rollback, down
+## down or rollback
 
-The rollback command will revert one last applied migration. `down` is an alias.
+The `down` command will revert one last applied migration.
+`rollback` is an alias.
 
 ```sh
-npm run db rollback
-# or
 npm run db down
 ```
 
 Pass a number to revert multiple last applied migrations, or pass `all` to revert all of them:
 
 ```sh
-npm run db rollback 3
-npm run db rollback all
+npm run db down 3
+npm run db down all
 ```
 
 ## redo
 
-Shortcut for `rollback` + `migrate`. It is useful when you edit a migration and want to reapply it.
+Shortcut for `down` + `up`. It is useful when you edit a migration and want to reapply it.
 
 By default, rolls back and migrate one migration. Pass a number to re-run multiple file.
 

@@ -44,10 +44,12 @@ export interface RakeDbConfig<
   // throw if a migration doesn't have a default export
   forceDefaultExports?: boolean;
   import(path: string): Promise<unknown>;
-  beforeMigrate?(db: Db): Promise<void>;
-  afterMigrate?(db: Db): Promise<void>;
-  beforeRollback?(db: Db): Promise<void>;
-  afterRollback?(db: Db): Promise<void>;
+  beforeChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
+  afterChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
+  beforeMigrate?(db: Db): void | Promise<void>;
+  afterMigrate?(db: Db): void | Promise<void>;
+  beforeRollback?(db: Db): void | Promise<void>;
+  afterRollback?(db: Db): void | Promise<void>;
 }
 
 export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
@@ -80,10 +82,46 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   useCodeUpdater?: boolean;
   forceDefaultExports?: boolean;
   import?(path: string): Promise<unknown>;
-  beforeMigrate?(db: Db): Promise<void>;
-  afterMigrate?(db: Db): Promise<void>;
-  beforeRollback?(db: Db): Promise<void>;
-  afterRollback?(db: Db): Promise<void>;
+  /**
+   * Is called once before migrating (up) or rolling back one or more migrations.
+   *
+   * @param db - query builder
+   * @param up - whether it's migrating up or down
+   * @param redo - whether it's migrating down and then up for `redo` command
+   */
+  beforeChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
+  /**
+   * Is called once after migrating (up) or rolling back one or more migrations.
+   *
+   * @param db - query builder
+   * @param up - whether it's migrating up or down
+   * @param redo - whether it's migrating down and then up for `redo` command
+   */
+  afterChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
+  /**
+   * Is called once before migrating (up) one or more migrations.
+   *
+   * @param db - query builder
+   */
+  beforeMigrate?(db: Db): void | Promise<void>;
+  /**
+   * Is called once after migrating (up) one or more migrations.
+   *
+   * @param db - query builder
+   */
+  afterMigrate?(db: Db): void | Promise<void>;
+  /**
+   * Is called once before rolling back one or more migrations.
+   *
+   * @param db - query builder
+   */
+  beforeRollback?(db: Db): void | Promise<void>;
+  /**
+   * Is called once before rolling back one or more migrations.
+   *
+   * @param db - query builder
+   */
+  afterRollback?(db: Db): void | Promise<void>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

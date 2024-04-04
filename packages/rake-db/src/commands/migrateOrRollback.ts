@@ -47,7 +47,7 @@ type MigrateFn = <
   CT extends RakeDbColumnTypes,
 >(
   ctx: RakeDbCtx,
-  options: MaybeArray<AdapterOptions>,
+  options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
   args?: string[],
 ) => Promise<void>;
@@ -86,9 +86,8 @@ function makeMigrateFn<
     const asts: RakeDbAst[] = [];
     const appCodeUpdaterCache = {};
     const { appCodeUpdater } = conf;
-    const arrOptions = toArray(options);
     let localAsts = asts;
-    for (const opts of arrOptions) {
+    for (const opts of options) {
       const adapter = new Adapter(opts);
 
       try {
@@ -146,7 +145,7 @@ function makeMigrateFn<
     }
 
     await runCodeUpdaterAfterAll(
-      arrOptions[0],
+      options[0],
       config,
       appCodeUpdater,
       asts,
@@ -167,7 +166,17 @@ export const migrate: MigrateFn = makeMigrateFn(
   Infinity,
   true,
   (trx, config, set, versions, count, asts, force) =>
-    migrateOrRollback(trx, config, set, versions, count, asts, true, force),
+    migrateOrRollback(
+      trx,
+      config,
+      set,
+      versions,
+      count,
+      asts,
+      true,
+      false,
+      force,
+    ),
 );
 
 /**
@@ -180,7 +189,17 @@ export const rollback: MigrateFn = makeMigrateFn(
   1,
   false,
   (trx, config, set, versions, count, asts, force) =>
-    migrateOrRollback(trx, config, set, versions, count, asts, false, force),
+    migrateOrRollback(
+      trx,
+      config,
+      set,
+      versions,
+      count,
+      asts,
+      false,
+      false,
+      force,
+    ),
 );
 
 /**
@@ -194,7 +213,16 @@ export const redo: MigrateFn = makeMigrateFn(
   async (trx, config, set, versions, count, asts, force) => {
     set.migrations.reverse();
 
-    await migrateOrRollback(trx, config, set, versions, count, asts, false);
+    await migrateOrRollback(
+      trx,
+      config,
+      set,
+      versions,
+      count,
+      asts,
+      false,
+      true,
+    );
 
     set.migrations.reverse();
 
@@ -205,6 +233,7 @@ export const redo: MigrateFn = makeMigrateFn(
       versions,
       count,
       asts,
+      true,
       true,
       force,
       true,
@@ -240,6 +269,7 @@ export const migrateOrRollback = async (
   count: number,
   asts: RakeDbAst[],
   up: boolean,
+  redo: boolean,
   force?: boolean,
   skipLock?: boolean,
 ): Promise<void> => {
@@ -268,6 +298,7 @@ export const migrateOrRollback = async (
         sequence.length - i,
         asts,
         false,
+        redo,
       );
 
       set.migrations.reverse();
@@ -279,6 +310,7 @@ export const migrateOrRollback = async (
   let db: DbResult<RakeDbColumnTypes> | undefined;
 
   await config[up ? 'beforeMigrate' : 'beforeRollback']?.((db ??= getDb(trx)));
+  await config.beforeChange?.((db ??= getDb(trx)), up, redo);
 
   for (const file of set.migrations) {
     if (
@@ -306,6 +338,7 @@ export const migrateOrRollback = async (
     );
   }
 
+  await config.afterChange?.((db ??= getDb(trx)), up, redo);
   await config[up ? 'afterMigrate' : 'afterRollback']?.((db ??= getDb(trx)));
 };
 

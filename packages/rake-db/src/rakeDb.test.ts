@@ -72,19 +72,7 @@ describe('rakeDb', () => {
     expect(resetDb).toBeCalledWith(options, processedConfig);
   });
 
-  it('should run migrations and recurrent on `migrate` command', async () => {
-    await rakeDb(options, config, ['migrate', 'arg']).promise;
-
-    expect(migrate).toBeCalledWith(
-      expect.any(Object),
-      options,
-      processedConfig,
-      ['arg'],
-    );
-    expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
-  });
-
-  it('should run migrations without recurrent on `up` command', async () => {
+  it('should run migrations and recurrent on `up` command', async () => {
     await rakeDb(options, config, ['up', 'arg']).promise;
 
     expect(migrate).toBeCalledWith(
@@ -93,7 +81,7 @@ describe('rakeDb', () => {
       processedConfig,
       ['arg'],
     );
-    expect(runRecurrentMigrations).not.toBeCalled();
+    expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
   });
 
   it('should run rollback on `rollback` and `down` commands', async () => {
