@@ -9,6 +9,9 @@ import {
   constraintPropsToCode,
   TimestampTZColumn,
   TimestampColumn,
+  primaryKeyInnerToCode,
+  indexInnerToCode,
+  constraintInnerToCode,
 } from 'pqb';
 import {
   addCode,
@@ -20,7 +23,7 @@ import {
   quoteObjectKey,
   singleQuote,
 } from 'orchid-core';
-import { quoteSchemaTable } from '../common';
+import { exhaustive, quoteSchemaTable } from '../common';
 import { AnyRakeDbConfig } from 'rake-db';
 import { astToGenerateItems } from './astToGenerateItems';
 
@@ -182,15 +185,17 @@ const astEncoders: {
       );
     }
 
-    const timestamps = getTimestampsInfo(config, ast, TimestampTZColumn);
-    const timestampsNoTZ = getTimestampsInfo(config, ast, TimestampTZColumn);
-    const hasAnyTimestamps =
-      timestamps.hasTimestamps || timestampsNoTZ.hasTimestamps;
-    const hasAnyCamelCaseTimestamps =
-      timestamps.camelCaseTimestamps || timestampsNoTZ.camelCaseTimestamps;
+    const timestamps = getHasTimestamps(
+      config,
+      ast.shape.createdAt,
+      ast.shape.updatedAt,
+    );
 
     for (const key in ast.shape) {
-      if (hasAnyTimestamps && (key === 'createdAt' || key === 'updatedAt'))
+      if (
+        timestamps.hasAnyTimestamps &&
+        (key === 'createdAt' || key === 'updatedAt')
+      )
         continue;
 
       const line: Code[] = [`${quoteObjectKey(key)}: `];
@@ -201,16 +206,8 @@ const astEncoders: {
       code.push(line);
     }
 
-    if (hasAnyTimestamps) {
-      const key = timestamps.hasTimestamps ? 'timestamps' : 'timestampsNoTZ';
-
-      code.push([
-        `...t.${
-          hasAnyCamelCaseTimestamps || config.snakeCase
-            ? key
-            : `${key}SnakeCase`
-        }(),`,
-      ]);
+    if (timestamps.hasAnyTimestamps) {
+      code.push([`...${timestampsToCode(config, timestamps)},`]);
     }
 
     if (ast.primaryKey) {
@@ -238,8 +235,139 @@ const astEncoders: {
 
     return result;
   },
-  changeTable() {
-    return 'todo';
+  changeTable(ast, config, currentSchema) {
+    let code: Code[] = [];
+    const result = code;
+
+    const schemaTable = quoteSchemaTable({
+      schema: ast.schema === currentSchema ? undefined : ast.schema,
+      name: ast.name,
+    });
+
+    const { comment } = ast;
+    if (comment !== undefined) {
+      addCode(code, `await db.changeTable(`);
+
+      const inner: Code[] = [
+        `${schemaTable},`,
+        `{ comment: ${JSON.stringify(ast.comment)} },`,
+        '(t) => ({',
+      ];
+      code.push(inner);
+      code = inner;
+    } else {
+      addCode(code, `await db.changeTable(${schemaTable}, (t) => ({`);
+    }
+
+    const [addTimestamps, dropTimestamps] = (['add', 'drop'] as const).map(
+      (type) =>
+        getHasTimestamps(
+          config,
+          ast.shape.createdAt?.type === type
+            ? ast.shape.createdAt.item
+            : undefined,
+          ast.shape.updatedAt?.type === type
+            ? ast.shape.updatedAt.item
+            : undefined,
+        ),
+    );
+
+    for (const key in ast.shape) {
+      const change = ast.shape[key];
+      if (change.type === 'add' || change.type === 'drop') {
+        if (
+          (addTimestamps.hasAnyTimestamps || dropTimestamps.hasAnyTimestamps) &&
+          (key === 'createdAt' || key === 'updatedAt')
+        )
+          continue;
+
+        const line: Code[] = [`${quoteObjectKey(key)}: t.${change.type}(`];
+        for (const part of change.item.toCode('t', true)) {
+          addCode(line, part);
+        }
+        addCode(line, '),');
+        code.push(line);
+      } else if (change.type === 'change') {
+        if (!change.from.column || !change.to.column) continue;
+
+        const line: Code[] = [
+          `${quoteObjectKey(key)}: t${
+            change.name ? `.name(${singleQuote(change.name)})` : ''
+          }.change(`,
+        ];
+        for (const part of change.from.column.toCode('t', true)) {
+          addCode(line, part);
+        }
+        addCode(line, ', ');
+        for (const part of change.to.column.toCode('t', true)) {
+          addCode(line, part);
+        }
+
+        if (change.using) {
+          addCode(line, ', {');
+          const u: string[] = [];
+          if (change.using.usingUp) {
+            u.push(`usingUp: ${change.using.usingUp.toCode('t')},`);
+          }
+          if (change.using.usingDown) {
+            u.push(`usingDown: ${change.using.usingDown.toCode('t')},`);
+          }
+          addCode(line, u);
+          addCode(line, '}');
+        }
+
+        addCode(line, '),');
+        code.push(line);
+      } else if (change.type === 'rename') {
+        code.push([
+          `${quoteObjectKey(key)}: t.rename(${singleQuote(change.name)}),`,
+        ]);
+      } else {
+        exhaustive(change.type);
+      }
+    }
+
+    for (const key of ['drop', 'add'] as const) {
+      const timestamps = key === 'add' ? addTimestamps : dropTimestamps;
+      if (timestamps.hasAnyTimestamps) {
+        addCode(code, [
+          `...t.${key}(${timestampsToCode(config, timestamps)}),`,
+        ]);
+      }
+
+      const { primaryKey, indexes, constraints } = ast[key];
+
+      if (primaryKey) {
+        addCode(code, [
+          `...t.${key}(${primaryKeyInnerToCode(primaryKey, 't')}),`,
+        ]);
+      }
+
+      if (indexes) {
+        for (const index of indexes) {
+          addCode(code, [`...t.${key}(`, indexInnerToCode(index, 't'), '),']);
+        }
+      }
+
+      if (constraints) {
+        for (const item of constraints) {
+          addCode(code, [
+            `...t.${key}(`,
+            constraintInnerToCode(item, 't'),
+            '),',
+          ]);
+        }
+      }
+    }
+
+    if (ast.comment !== undefined) {
+      addCode(code, '}),');
+      addCode(result, ');');
+    } else {
+      addCode(result, '}));');
+    }
+
+    return result;
   },
   renameTable(ast, _, currentSchema) {
     const code: Code[] = [];
@@ -409,46 +537,82 @@ const isTimestamp = (
   type:
     | typeof TimestampTZColumn<ColumnSchemaConfig>
     | typeof TimestampColumn<ColumnSchemaConfig>,
-) => {
+): boolean => {
   if (!column) return false;
 
   const { default: def } = column.data;
-  return (
+  return Boolean(
     column instanceof type &&
-    !column.data.isNullable &&
-    def &&
-    typeof def === 'object' &&
-    isRawSQL(def) &&
-    def._sql === 'now()'
+      !column.data.isNullable &&
+      def &&
+      typeof def === 'object' &&
+      isRawSQL(def) &&
+      def._sql === 'now()',
   );
 };
 
+interface AnyTimestampsInfo {
+  hasTZTimestamps: boolean;
+  hasAnyTimestamps: boolean;
+  hasAnyCamelCaseTimestamps: boolean;
+}
+
+const getHasTimestamps = (
+  config: AnyRakeDbConfig,
+  createdAt: ColumnType | undefined,
+  updatedAt: ColumnType | undefined,
+): AnyTimestampsInfo => {
+  const timestamps = getTimestampsInfo(
+    config,
+    createdAt,
+    updatedAt,
+    TimestampTZColumn,
+  );
+  const timestampsNoTZ = getTimestampsInfo(
+    config,
+    createdAt,
+    updatedAt,
+    TimestampColumn,
+  );
+
+  return {
+    hasTZTimestamps: timestamps.hasTimestamps,
+    hasAnyTimestamps: timestamps.hasTimestamps || timestampsNoTZ.hasTimestamps,
+    hasAnyCamelCaseTimestamps:
+      timestamps.camelCaseTimestamps || timestampsNoTZ.camelCaseTimestamps,
+  };
+};
+
+interface TimestampsInfo {
+  hasTimestamps: boolean;
+  camelCaseTimestamps: boolean;
+  snakeCaseTimestamps: boolean;
+}
+
 const getTimestampsInfo = (
   config: AnyRakeDbConfig,
-  ast: RakeDbAst.Table,
+  createdAt: ColumnType | undefined,
+  updatedAt: ColumnType | undefined,
   type:
     | typeof TimestampTZColumn<ColumnSchemaConfig>
     | typeof TimestampColumn<ColumnSchemaConfig>,
-) => {
+): TimestampsInfo => {
   let hasTimestamps =
-    isTimestamp(ast.shape.createdAt, type) &&
-    isTimestamp(ast.shape.updatedAt, type);
+    isTimestamp(createdAt, type) && isTimestamp(updatedAt, type);
 
   const camelCaseTimestamps =
     !config.snakeCase &&
     hasTimestamps &&
-    !ast.shape.createdAt?.data.name &&
-    !ast.shape.updatedAt?.data.name;
+    !createdAt?.data.name &&
+    !updatedAt?.data.name;
 
   const snakeCaseTimestamps =
     hasTimestamps &&
     !camelCaseTimestamps &&
     ((!config.snakeCase &&
-      ast.shape.createdAt?.data.name === 'created_at' &&
-      ast.shape.updatedAt?.data.name === 'updated_at') ||
-      (config.snakeCase &&
-        !ast.shape.createdAt?.data.name &&
-        !ast.shape.updatedAt?.data.name));
+      createdAt?.data.name === 'created_at' &&
+      updatedAt?.data.name === 'updated_at') ||
+      (config.snakeCase && !createdAt?.data.name && !updatedAt?.data.name));
 
   if (!camelCaseTimestamps && !snakeCaseTimestamps) {
     hasTimestamps = false;
@@ -459,4 +623,15 @@ const getTimestampsInfo = (
     camelCaseTimestamps,
     snakeCaseTimestamps,
   };
+};
+
+const timestampsToCode = (
+  config: AnyRakeDbConfig,
+  { hasTZTimestamps, hasAnyCamelCaseTimestamps }: AnyTimestampsInfo,
+): string => {
+  const key = hasTZTimestamps ? 'timestamps' : 'timestampsNoTZ';
+
+  return `t.${
+    hasAnyCamelCaseTimestamps || config.snakeCase ? key : `${key}SnakeCase`
+  }()`;
 };

@@ -10,8 +10,6 @@ import { asMock } from 'test-utils';
 import {
   AdapterOptions,
   ColumnsShape,
-  DefaultColumnTypes,
-  DefaultSchemaConfig,
   defaultSchemaConfig,
   getColumnTypes,
   getTableData,
@@ -36,14 +34,18 @@ const defaultOptions: AdapterOptions[] = [
 ];
 let options = defaultOptions;
 
-type ColumnTypes = DefaultColumnTypes<DefaultSchemaConfig>;
-const t: ColumnTypes = makeColumnTypes(defaultSchemaConfig);
+const columnTypes = makeColumnTypes(defaultSchemaConfig);
+const t = {
+  ...columnTypes,
+  text: (min = 0, max = Infinity) => columnTypes.text(min, max),
+};
 
 class BaseTable {
   schema?: string;
   types = t;
   tableData!: TableData;
-  setColumns(fn: (t: ColumnTypes) => ColumnsShape) {
+  columns!: ColumnsShape;
+  setColumns(fn: (types: typeof t) => ColumnsShape) {
     const shape = getColumnTypes(t, fn, undefined, undefined);
     this.tableData = getTableData();
     return shape;
@@ -97,6 +99,7 @@ const arrange = (arg: {
               return [
                 klass.name,
                 Object.assign(t, {
+                  shape: t.columns,
                   internal: {
                     ...t.tableData,
                   },
@@ -417,10 +420,11 @@ change(async (db) => {
               table = 'one';
               comment = 'table comment';
               noPrimaryKey = true;
-              shape = this.setColumns((t) => ({
+              columns = this.setColumns((t) => ({
                 name: t.string(),
                 int: t.integer(),
                 virtual: new UnknownColumn(defaultSchemaConfig),
+                ...t.timestamps(),
                 ...t.primaryKey(['name', 'int']),
                 ...t.index(['name', 'int']),
                 ...t.constraint({
@@ -449,6 +453,7 @@ change(async (db) => {
     (t) => ({
       name: t.string(),
       int: t.integer(),
+      ...t.timestamps(),
       ...t.primaryKey(['name', 'int']),
       ...t.index(['name', 'int']),
       ...t.check(t.sql\`int > 5\`),
@@ -474,6 +479,14 @@ change(async (db) => {
                 }),
                 dbStructureMockFactory.intColumn({
                   name: 'int',
+                }),
+                dbStructureMockFactory.timestampColumn({
+                  name: 'createdAt',
+                  default: 'now()',
+                }),
+                dbStructureMockFactory.timestampColumn({
+                  name: 'updatedAt',
+                  default: 'now()',
                 }),
               ],
             }),
@@ -519,6 +532,7 @@ change(async (db) => {
     (t) => ({
       name: t.varchar(255),
       int: t.integer().check(t.sql({ raw: '("int" > 5)' })),
+      ...t.timestamps(),
       ...t.primaryKey(['name', 'int']),
       ...t.index(['name', 'int']),
     }),
@@ -566,6 +580,55 @@ change(async (db) => {
 `);
     });
 
+    it('should create a new table and drop the old one when choosing such option, with schema', async () => {
+      arrange({
+        tables: [
+          class Two extends BaseTable {
+            schema = 'to';
+            table = 'two';
+          },
+          class Unchanged extends BaseTable {
+            schema = 'from';
+            table = 'unchanged';
+          },
+        ],
+        structure: makeStructure({
+          schemas: ['public', 'from', 'to'],
+          tables: [
+            dbStructureMockFactory.table({
+              schemaName: 'from',
+              name: 'one',
+              columns: [dbStructureMockFactory.intColumn({ name: 'id' })],
+            }),
+            dbStructureMockFactory.table({
+              schemaName: 'from',
+              name: 'unchanged',
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({
+              schemaName: 'from',
+              tableName: 'one',
+            }),
+          ],
+        }),
+        selects: [0],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createTable('to.two', (t) => ({}));
+
+  await db.dropTable('from.one', (t) => ({
+    id: t.integer().primaryKey(),
+  }));
+});
+`);
+    });
+
     it('should rename table when is selected so, and drop the remaining table', async () => {
       arrange({
         tables: [
@@ -601,6 +664,134 @@ change(async (db) => {
 
   await db.dropTable('two', (t) => ({
     id: t.integer().primaryKey(),
+  }));
+});
+`);
+    });
+
+    it('should rename table when is selected so, and drop the remaining table, with schema', async () => {
+      arrange({
+        tables: [
+          class Three extends BaseTable {
+            schema = 'to';
+            table = 'three';
+          },
+          class Unchanged extends BaseTable {
+            schema = 'from';
+            table = 'unchanged';
+          },
+        ],
+        structure: makeStructure({
+          schemas: ['public', 'from', 'to'],
+          tables: [
+            dbStructureMockFactory.table({
+              schemaName: 'from',
+              name: 'one',
+              columns: [dbStructureMockFactory.intColumn({ name: 'id' })],
+            }),
+            dbStructureMockFactory.table({
+              schemaName: 'from',
+              name: 'two',
+              columns: [dbStructureMockFactory.intColumn({ name: 'id' })],
+            }),
+            dbStructureMockFactory.table({
+              schemaName: 'from',
+              name: 'unchanged',
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({
+              schemaName: 'from',
+              tableName: 'one',
+            }),
+            dbStructureMockFactory.primaryKey({
+              schemaName: 'from',
+              tableName: 'two',
+            }),
+          ],
+        }),
+        selects: [1],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.renameTable('from.one', 'to.three');
+
+  await db.dropTable('from.two', (t) => ({
+    id: t.integer().primaryKey(),
+  }));
+});
+`);
+    });
+  });
+
+  describe('columns', () => {
+    it('should add a column', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            columns = this.setColumns((t) => ({
+              id: t.identity(),
+              name: t.text(),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [dbStructureMockFactory.identityColumn({ name: 'id' })],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    name: t.add(t.text()),
+  }));
+});
+`);
+    });
+
+    it('should drop a column', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            columns = this.setColumns((t) => ({
+              id: t.identity(),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'id' }),
+                dbStructureMockFactory.textColumn({ name: 'name' }),
+              ],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    name: t.drop(t.text()),
   }));
 });
 `);

@@ -47,7 +47,7 @@ const fkeyActionMap: Record<string, undefined | ForeignKeyAction> = {
   d: 'SET DEFAULT',
 };
 
-interface Domains {
+export interface DbStructureDomainsMap {
   [K: string]: ColumnType;
 }
 
@@ -57,6 +57,12 @@ export interface StructureToAstCtx {
   currentSchema: string;
   columnSchemaConfig: ColumnSchemaConfig;
   columnsByType: ColumnsByType;
+}
+
+interface StructureToAstTableData {
+  primaryKey?: PrimaryKey;
+  indexes: DbStructure.Index[];
+  constraints: DbStructure.Constraint[];
 }
 
 interface PrimaryKey {
@@ -176,8 +182,8 @@ export const structureToAst = async (
 export const makeDomainsMap = (
   ctx: StructureToAstCtx,
   data: IntrospectedStructure,
-): Domains => {
-  const domains: Domains = {};
+): DbStructureDomainsMap => {
+  const domains: DbStructureDomainsMap = {};
 
   for (const it of data.domains) {
     domains[`${it.schemaName}.${it.name}`] = getColumn(ctx, data, domains, {
@@ -216,7 +222,7 @@ const getIsSerial = (item: DbStructure.Column) => {
 const getColumn = (
   ctx: StructureToAstCtx,
   data: IntrospectedStructure,
-  domains: Domains,
+  domains: DbStructureDomainsMap,
   {
     schemaName,
     tableName,
@@ -294,15 +300,12 @@ export const tableToAst = (
   data: IntrospectedStructure,
   table: DbStructure.Table,
   action: 'create' | 'drop',
-  domains: Domains,
+  domains: DbStructureDomainsMap,
 ): RakeDbAst.Table => {
-  const { schemaName, name: tableName, columns } = table;
+  const { schemaName, name: tableName } = table;
 
-  const tableIndexes = data.indexes.filter(
-    (it) => it.tableName === table.name && it.schemaName === table.schemaName,
-  );
-
-  const primaryKey = getPrimaryKey(data, table);
+  const tableData = getDbStructureTableData(data, table);
+  const { primaryKey, indexes, constraints } = tableData;
 
   return {
     type: 'table',
@@ -310,17 +313,8 @@ export const tableToAst = (
     schema: schemaName === ctx.currentSchema ? undefined : schemaName,
     comment: table.comment,
     name: tableName,
-    shape: makeColumnsShape(
-      ctx,
-      data,
-      domains,
-      tableName,
-      columns,
-      table,
-      primaryKey,
-      tableIndexes,
-    ),
-    noPrimaryKey: primaryKey ? 'error' : 'ignore',
+    shape: makeDbStructureColumnsShape(ctx, data, domains, table, tableData),
+    noPrimaryKey: tableData.primaryKey ? 'error' : 'ignore',
     primaryKey:
       primaryKey && primaryKey.columns.length > 1
         ? {
@@ -331,7 +325,7 @@ export const tableToAst = (
                 : { name: primaryKey.name },
           }
         : undefined,
-    indexes: tableIndexes.reduce<TableData.Index[]>((acc, index) => {
+    indexes: indexes.reduce<TableData.Index[]>((acc, index) => {
       if (
         index.columns.length > 1 ||
         index.columns.some((it) => 'expression' in it)
@@ -350,21 +344,43 @@ export const tableToAst = (
       }
       return acc;
     }, []),
-    constraints: data.constraints.reduce<TableData.Constraint[]>((acc, it) => {
+    constraints: constraints.reduce<TableData.Constraint[]>((acc, it) => {
       if (
-        it.schemaName === table.schemaName &&
-        it.tableName === table.name &&
-        ((it.check && it.references) ||
-          (it.check && it.check.columns?.length !== 1) ||
-          (it.references &&
-            it.references.columns.length !== 1 &&
-            !checkIfIsOuterRecursiveFkey(data, table, it.references)))
+        (it.check && it.references) ||
+        (it.check && it.check.columns?.length !== 1) ||
+        (it.references &&
+          it.references.columns.length !== 1 &&
+          !checkIfIsOuterRecursiveFkey(data, table, it.references))
       ) {
         acc.push(dbConstraintToTableConstraint(ctx, table, it));
       }
 
       return acc;
     }, []),
+  };
+};
+
+export const getDbStructureTableData = (
+  data: IntrospectedStructure,
+  { name, schemaName }: DbStructure.Table,
+): StructureToAstTableData => {
+  const constraints = data.constraints.filter(
+    (c) => c.tableName === name && c.schemaName === schemaName,
+  );
+
+  const primaryKey = constraints.find((c) => c.primaryKey);
+
+  return {
+    primaryKey: primaryKey
+      ? ({
+          columns: primaryKey.primaryKey,
+          name: primaryKey.name,
+        } as PrimaryKey)
+      : undefined,
+    indexes: data.indexes.filter(
+      (it) => it.tableName === name && it.schemaName === schemaName,
+    ),
+    constraints,
   };
 };
 
@@ -429,10 +445,10 @@ const isColumnCheck = (
 const viewToAst = (
   ctx: StructureToAstCtx,
   data: IntrospectedStructure,
-  domains: Domains,
+  domains: DbStructureDomainsMap,
   view: DbStructure.View,
 ): RakeDbAst.View => {
-  const shape = makeColumnsShape(ctx, data, domains, view.name, view.columns);
+  const shape = makeDbStructureColumnsShape(ctx, data, domains, view);
 
   const options: RakeDbAst.ViewOptions = {};
   if (view.isRecursive) options.recursive = true;
@@ -459,132 +475,133 @@ const viewToAst = (
   };
 };
 
-const getPrimaryKey = (
-  data: IntrospectedStructure,
-  table: DbStructure.Table,
-): PrimaryKey | undefined => {
-  for (const item of data.constraints) {
-    if (
-      item.tableName === table.name &&
-      item.schemaName === table.schemaName &&
-      item.primaryKey
-    )
-      return { columns: item.primaryKey, name: item.name };
-  }
-  return undefined;
-};
-
-const makeColumnsShape = (
+export const makeDbStructureColumnsShape = (
   ctx: StructureToAstCtx,
   data: IntrospectedStructure,
-  domains: Domains,
-  tableName: string,
-  columns: DbStructure.Column[],
-  table?: DbStructure.Table,
-  primaryKey?: { columns: string[]; name?: string },
-  indexes?: DbStructure.Index[],
+  domains: DbStructureDomainsMap,
+  table: DbStructure.Table | DbStructure.View,
+  tableData?: StructureToAstTableData,
 ): ColumnsShape => {
   const shape: ColumnsShape = {};
 
   let checks: RecordString | undefined;
-  if (table) {
-    checks = data.constraints.reduce<RecordString>((acc, item) => {
-      if (
-        item.tableName === table.name &&
-        item.schemaName === table.schemaName &&
-        isColumnCheck(item)
-      ) {
+  if (tableData) {
+    checks = tableData.constraints.reduce<RecordString>((acc, item) => {
+      if (isColumnCheck(item)) {
         acc[item.check.columns[0]] = item.check.expression;
       }
       return acc;
     }, {});
   }
 
-  for (let item of columns) {
-    const isSerial = getIsSerial(item);
-    if (isSerial) {
-      item = { ...item, default: undefined };
-    }
-
-    let column = getColumn(ctx, data, domains, {
-      ...item,
-      type: item.type,
-      isArray: item.isArray,
-      isSerial,
-    });
-
-    if (item.identity) {
-      column.data.identity = item.identity;
-      if (!item.identity.always) delete column.data.identity?.always;
-    }
-
-    if (
-      primaryKey?.columns?.length === 1 &&
-      primaryKey?.columns[0] === item.name
-    ) {
-      column = column.primaryKey();
-    }
-
-    if (indexes) {
-      const columnIndexes = indexes.filter(
-        (it) =>
-          it.columns.length === 1 &&
-          'column' in it.columns[0] &&
-          it.columns[0].column === item.name,
-      );
-      for (const index of columnIndexes) {
-        const options = index.columns[0];
-        column = column.index({
-          collate: options.collate,
-          opclass: options.opclass,
-          order: options.order,
-          ...makeIndexOptions(tableName, index),
-        });
-      }
-    }
-
-    if (table) {
-      for (const it of data.constraints) {
-        if (
-          it.tableName !== table.name ||
-          it.schemaName !== table.schemaName ||
-          it.check ||
-          it.references?.columns.length !== 1 ||
-          it.references.columns[0] !== item.name ||
-          checkIfIsOuterRecursiveFkey(data, table, it.references)
-        ) {
-          continue;
-        }
-
-        const c = dbConstraintToTableConstraint(ctx, table, it);
-
-        column = column.foreignKey(
-          c.references?.fnOrTable as string,
-          it.references.foreignColumns[0],
-          c.references?.options,
-        );
-      }
-    }
-
-    const check = checks?.[item.name];
-    if (check) {
-      column.data.check = raw({ raw: check });
-    }
-
-    const camelCaseName = toCamelCase(item.name);
-
-    if (ctx.snakeCase) {
-      const snakeCaseName = toSnakeCase(camelCaseName);
-
-      if (snakeCaseName !== item.name) column.data.name = item.name;
-    } else if (camelCaseName !== item.name) {
-      column.data.name = item.name;
-    }
-
-    shape[camelCaseName] = column;
+  for (const item of table.columns) {
+    const [key, column] = columnToAst(
+      ctx,
+      data,
+      domains,
+      table.name,
+      item,
+      table,
+      tableData,
+      checks,
+    );
+    shape[key] = column;
   }
 
   return shape;
+};
+
+const columnToAst = (
+  ctx: StructureToAstCtx,
+  data: IntrospectedStructure,
+  domains: DbStructureDomainsMap,
+  tableName: string,
+  item: DbStructure.Column,
+  table?: DbStructure.Table,
+  tableData?: StructureToAstTableData,
+  checks?: RecordString,
+): [key: string, column: ColumnType] => {
+  const isSerial = getIsSerial(item);
+  if (isSerial) {
+    item = { ...item, default: undefined };
+  }
+
+  let column = getColumn(ctx, data, domains, {
+    ...item,
+    type: item.type,
+    isArray: item.isArray,
+    isSerial,
+  });
+
+  if (item.identity) {
+    column.data.identity = item.identity;
+    if (!item.identity.always) delete column.data.identity?.always;
+  }
+
+  if (
+    tableData?.primaryKey?.columns?.length === 1 &&
+    tableData?.primaryKey?.columns[0] === item.name
+  ) {
+    column = column.primaryKey();
+  }
+
+  if (tableData?.indexes) {
+    const columnIndexes = tableData?.indexes.filter(
+      (it) =>
+        it.columns.length === 1 &&
+        'column' in it.columns[0] &&
+        it.columns[0].column === item.name,
+    );
+    for (const index of columnIndexes) {
+      const options = index.columns[0];
+      column = column.index({
+        collate: options.collate,
+        opclass: options.opclass,
+        order: options.order,
+        ...makeIndexOptions(tableName, index),
+      });
+    }
+  }
+
+  if (table) {
+    for (const it of data.constraints) {
+      if (
+        it.tableName !== table.name ||
+        it.schemaName !== table.schemaName ||
+        it.check ||
+        it.references?.columns.length !== 1 ||
+        it.references.columns[0] !== item.name ||
+        checkIfIsOuterRecursiveFkey(data, table, it.references)
+      ) {
+        continue;
+      }
+
+      const c = dbConstraintToTableConstraint(ctx, table, it);
+
+      column = column.foreignKey(
+        c.references?.fnOrTable as string,
+        it.references.foreignColumns[0],
+        c.references?.options,
+      );
+    }
+  }
+
+  const check = checks?.[item.name];
+  if (check) {
+    column.data.check = raw({ raw: check });
+  }
+
+  const camelCaseName = toCamelCase(item.name);
+
+  if (ctx.snakeCase) {
+    const snakeCaseName = toSnakeCase(camelCaseName);
+
+    if (snakeCaseName !== item.name) column.data.name = item.name;
+  } else if (camelCaseName !== item.name) {
+    column.data.name = item.name;
+  }
+
+  return [camelCaseName, column];
 };
 
 const dbConstraintToTableConstraint = (

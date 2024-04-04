@@ -24,8 +24,12 @@ import { astToMigration } from './astToMigration';
 import { colors } from '../colors';
 import { promptSelect } from '../prompt';
 import {
+  DbStructureDomainsMap,
+  getDbStructureTableData,
+  makeDbStructureColumnsShape,
   makeDomainsMap,
   makeStructureToAstCtx,
+  StructureToAstCtx,
   tableToAst,
 } from './structureToAst';
 
@@ -286,15 +290,25 @@ const processTables = async (
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 
   for (const table of dbStructure.tables) {
-    if (
-      table.name === 'schemaMigrations' ||
-      tables.some(
-        (t) =>
-          t.table === table.name &&
-          (t.schema ?? currentSchema) === table.schemaName,
-      )
-    )
+    if (table.name === 'schemaMigrations') continue;
+
+    const codeTable = tables.find(
+      (t) =>
+        t.table === table.name &&
+        (t.schema ?? currentSchema) === table.schemaName,
+    );
+    if (codeTable) {
+      processTableChange(
+        structureToAstCtx,
+        dbStructure,
+        domainsMap,
+        ast,
+        currentSchema,
+        table,
+        codeTable,
+      );
       continue;
+    }
 
     const i = createTables.findIndex((t) => t.table === table.name);
     if (i !== -1) {
@@ -350,6 +364,69 @@ const processTables = async (
   }
 
   return ast;
+};
+
+const processTableChange = (
+  structureToAstCtx: StructureToAstCtx,
+  dbStructure: IntrospectedStructure,
+  domainsMap: DbStructureDomainsMap,
+  ast: RakeDbAst[],
+  currentSchema: string,
+  dbTable: DbStructure.Table,
+  codeTable: Table,
+) => {
+  const shape: RakeDbAst.ChangeTable['shape'] = {};
+  const add: TableData = {};
+  const drop: TableData = {};
+
+  const tableData = getDbStructureTableData(dbStructure, dbTable);
+  const dbColumns = makeDbStructureColumnsShape(
+    structureToAstCtx,
+    dbStructure,
+    domainsMap,
+    dbTable,
+    tableData,
+  );
+
+  const columnsToChange = new Set<string>();
+
+  for (const key in codeTable.shape) {
+    const column = codeTable.shape[key] as ColumnType;
+    const name = column.data.name ?? key;
+    if (dbColumns[name]) {
+      columnsToChange.add(name);
+      continue;
+    }
+
+    shape[name] = {
+      type: 'add',
+      item: column,
+    };
+  }
+
+  for (const name in dbColumns) {
+    if (columnsToChange.has(name)) continue;
+
+    shape[name] = {
+      type: 'drop',
+      item: dbColumns[name],
+    };
+  }
+
+  if (
+    Object.keys(shape).length ||
+    Object.keys(add).length ||
+    Object.keys(drop).length
+  ) {
+    ast.push({
+      type: 'changeTable',
+      schema: codeTable.schema ?? currentSchema,
+      name: codeTable.table,
+      shape,
+      add,
+      drop,
+    });
+  }
 };
 
 const select = (

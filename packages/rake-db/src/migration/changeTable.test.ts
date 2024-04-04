@@ -1413,8 +1413,8 @@ describe('changeTable', () => {
           () =>
             db.changeTable('table', (t) => ({
               changeTypeUsing: t.change(t.integer(), t.text(), {
-                usingUp: t.sql('b::text'),
-                usingDown: t.sql('b::int'),
+                usingUp: t.sql`b::text`,
+                usingDown: t.sql`b::int`,
               }),
             })),
           () =>
@@ -1512,8 +1512,8 @@ describe('changeTable', () => {
           () =>
             db.changeTable('table', (t) => ({
               column: t.change(
-                t.text().check(t.sql('length(column) < 20')),
-                t.text().check(t.sql('length(column) > 10')),
+                t.text().check(t.sql`length(column) < 20`),
+                t.text().check(t.sql`length(column) > 10`),
               ),
             })),
           () =>

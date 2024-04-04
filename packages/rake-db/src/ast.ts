@@ -43,7 +43,7 @@ export namespace RakeDbAst {
     type: 'changeTable';
     schema?: string;
     name: string;
-    comment?: string | null;
+    comment?: string | [string, string] | null;
     shape: Record<string, ChangeTableItem>;
     add: TableData;
     drop: TableData;
@@ -66,7 +66,12 @@ export namespace RakeDbAst {
       name?: string;
       from: ColumnChange;
       to: ColumnChange;
-      using?: RawSQLBase;
+      using?: ChangeUsing;
+    }
+
+    export interface ChangeUsing {
+      usingUp?: RawSQLBase;
+      usingDown?: RawSQLBase;
     }
 
     export interface Rename {

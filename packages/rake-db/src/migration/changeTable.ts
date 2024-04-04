@@ -177,10 +177,7 @@ const addOrDrop = (
 
 type Change = RakeDbAst.ChangeTableItem.Change & ChangeOptions;
 
-type ChangeOptions = {
-  usingUp?: RawSQLBase;
-  usingDown?: RawSQLBase;
-};
+type ChangeOptions = RakeDbAst.ChangeTableItem.ChangeUsing;
 
 const columnTypeToColumnChange = (
   item: ColumnType | Change,
@@ -220,14 +217,14 @@ const tableChangeMethods = {
   change(
     from: ColumnType | Change,
     to: ColumnType | Change,
-    options?: ChangeOptions,
+    using?: ChangeOptions,
   ): Change {
     return {
       type: 'change',
       name: (this as { [nameKey]?: string })[nameKey],
       from: columnTypeToColumnChange(from),
       to: columnTypeToColumnChange(to),
-      ...options,
+      using,
     };
   },
   default(value: unknown | RawSQLBase): Change {
@@ -319,10 +316,7 @@ const makeAst = (
 
     if ('type' in item) {
       if (up) {
-        shape[key] =
-          item.type === 'change' && item.usingUp
-            ? { ...item, using: item.usingUp }
-            : item;
+        shape[key] = item;
       } else {
         if (item.type === 'rename') {
           shape[item.name] = { ...item, name: key };
@@ -333,7 +327,15 @@ const makeAst = (
               : item.type === 'drop'
               ? { ...item, type: 'add' }
               : item.type === 'change'
-              ? { ...item, from: item.to, to: item.from, using: item.usingDown }
+              ? {
+                  ...item,
+                  from: item.to,
+                  to: item.from,
+                  using: item.using && {
+                    usingUp: item.using.usingDown,
+                    usingDown: item.using.usingUp,
+                  },
+                }
               : item;
         }
       }
@@ -508,7 +510,11 @@ const astToQueries = (
         alterTable.push(
           `ALTER COLUMN "${name}" TYPE ${type}${
             to.collate ? ` COLLATE ${quoteNameFromString(to.collate)}` : ''
-          }${item.using ? ` USING ${item.using.toSQL({ values })}` : ''}`,
+          }${
+            item.using?.usingUp
+              ? ` USING ${item.using.usingUp.toSQL({ values })}`
+              : ''
+          }`,
         );
       }
 

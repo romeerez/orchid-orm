@@ -13,6 +13,7 @@ import {
   singleQuoteArray,
   toArray,
   RawSQLBase,
+  omit,
 } from 'orchid-core';
 import { getConstraintKind } from './columnType.utils';
 
@@ -99,17 +100,32 @@ export const primaryKeyToCode = (
   primaryKey: TableData.PrimaryKey,
   t: string,
 ): string => {
+  return `...${primaryKeyInnerToCode(primaryKey, t)},`;
+};
+
+export const primaryKeyInnerToCode = (
+  primaryKey: TableData.PrimaryKey,
+  t: string,
+): string => {
   const name = primaryKey.options?.name;
 
-  return `...${t}.primaryKey([${primaryKey.columns
-    .map(singleQuote)
-    .join(', ')}]${name ? `, { name: ${singleQuote(name)} }` : ''}),`;
+  return `${t}.primaryKey([${primaryKey.columns.map(singleQuote).join(', ')}]${
+    name ? `, { name: ${singleQuote(name)} }` : ''
+  })`;
 };
 
 export const indexToCode = (index: TableData.Index, t: string): Code[] => {
+  const code = indexInnerToCode(index, t);
+  code[0] = `...${code[0]}`;
+  const last = code[code.length - 1];
+  if (typeof last === 'string' && !last.endsWith(',')) addCode(code, ',');
+  return code;
+};
+
+export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
   const code: Code[] = [];
 
-  code.push(`...${t}.index(`);
+  code.push(`${t}.${index.options.tsVector ? 'searchIndex' : 'index'}(`);
 
   const columnsMultiline = index.columns.some((column) => {
     for (const key in column) {
@@ -139,14 +155,11 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
             expr,
           )},`,
         ];
-        if (column.collate !== undefined) {
-          props.push(`collate: ${singleQuote(column.collate)},`);
-        }
-        if (column.opclass !== undefined) {
-          props.push(`opclass: ${singleQuote(column.opclass)},`);
-        }
-        if (column.order !== undefined) {
-          props.push(`order: ${singleQuote(column.order)},`);
+        for (const key of ['collate', 'opclass', 'order', 'weight'] as const) {
+          const value = column[key];
+          if (value !== undefined) {
+            props.push(`${key}: ${singleQuote(value)},`);
+          }
         }
 
         objects.push('{', props, '},');
@@ -163,7 +176,8 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     );
   }
 
-  const hasOptions = objectHasValues(index.options);
+  const indexOptions = omit(index.options, ['tsVector']);
+  const hasOptions = objectHasValues(indexOptions);
   if (hasOptions) {
     if (columnsMultiline) {
       const columns = code[code.length - 1] as string[];
@@ -174,8 +188,8 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     }
 
     const options: string[] = [];
-    for (const key in index.options) {
-      const value = index.options[key as keyof typeof index.options];
+    for (const key in indexOptions) {
+      const value = indexOptions[key as keyof typeof indexOptions];
       if (value === null || value === undefined) continue;
 
       options.push(
@@ -200,7 +214,7 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
   if (columnsMultiline) {
     code.push('),');
   } else {
-    addCode(code, '),');
+    addCode(code, ')');
   }
 
   return code;
@@ -209,19 +223,31 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
 export const constraintToCode = (
   item: TableData.Constraint,
   t: string,
-): Code => {
+): Code[] => {
+  const code = constraintInnerToCode(item, t);
+  code[0] = `...${code[0]}`;
+  const last = code[code.length - 1];
+  if (typeof last === 'string' && !last.endsWith(','))
+    code[code.length - 1] += ',';
+  return code;
+};
+
+export const constraintInnerToCode = (
+  item: TableData.Constraint,
+  t: string,
+): Code[] => {
   const kind = getConstraintKind(item);
 
   if (kind === 'foreignKey' && item.references) {
     return [
-      `...${t}.foreignKey(`,
+      `${t}.foreignKey(`,
       referencesArgsToCode(item.references, item.name),
       '),',
     ];
   } else if (kind === 'check' && item.check) {
-    return [`...${t}.check(${item.check.toCode(t)}),`];
+    return [`${t}.check(${item.check.toCode(t)})`];
   } else {
-    return [`...${t}.constraint({`, constraintPropsToCode(t, item), '}),'];
+    return [`${t}.constraint({`, constraintPropsToCode(t, item), '}),'];
   }
 };
 

@@ -3,7 +3,11 @@ import { makeColumnTypes, raw, TableData, defaultSchemaConfig } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../config';
 
-const t = makeColumnTypes(defaultSchemaConfig);
+const columnTypes = makeColumnTypes(defaultSchemaConfig);
+const t = {
+  ...columnTypes,
+  text: (min = 0, max = Infinity) => columnTypes.text(min, max),
+};
 
 const config = processRakeDbConfig({
   migrationsPath: 'migrations',
@@ -323,6 +327,403 @@ change(async (db) => {
       },
     ),
   }));`),
+      );
+    });
+
+    it('should change table comment', () => {
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          comment: ['from', 'two'],
+          shape: {},
+          add: {},
+          drop: {},
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable(
+    'schema.table',
+    { comment: ["from","two"] },
+    (t) => ({}),
+  );
+});
+`,
+      );
+    });
+
+    it('should add, drop, change columns', () => {
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          shape: {
+            add: {
+              type: 'add',
+              item: t.integer(),
+            },
+            drop: {
+              type: 'drop',
+              item: t.text(),
+            },
+            change: {
+              type: 'change',
+              name: 'name',
+              from: { column: t.boolean() },
+              to: { column: t.timestamp() },
+              using: {
+                usingUp: t.sql`up`,
+                usingDown: t.sql`down`,
+              },
+            },
+          },
+          add: {},
+          drop: {},
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('schema.table', (t) => ({
+    add: t.add(t.integer()),
+    drop: t.drop(t.text()),
+    change: t.name('name').change(t.boolean(), t.timestamp(), {
+      usingUp: t.sql\`up\`,
+      usingDown: t.sql\`down\`,
+    }),
+  }));
+});
+`,
+      );
+    });
+
+    it('should add timestamps', () => {
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          shape: {
+            createdAt: {
+              type: 'add',
+              item: t.timestamp().default(raw({ raw: 'now()' })),
+            },
+            updatedAt: {
+              type: 'add',
+              item: t.timestamp().default(raw({ raw: 'now()' })),
+            },
+          },
+          add: {},
+          drop: {},
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('schema.table', (t) => ({
+    ...t.add(t.timestamps()),
+  }));
+});
+`,
+      );
+    });
+
+    it('should drop timestamps', () => {
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          shape: {
+            createdAt: {
+              type: 'drop',
+              item: t.timestamp().default(raw({ raw: 'now()' })),
+            },
+            updatedAt: {
+              type: 'drop',
+              item: t.timestamp().default(raw({ raw: 'now()' })),
+            },
+          },
+          add: {},
+          drop: {},
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('schema.table', (t) => ({
+    ...t.drop(t.timestamps()),
+  }));
+});
+`,
+      );
+    });
+
+    it('should add and drop primary key', () => {
+      const primaryKey: TableData.PrimaryKey = {
+        columns: ['one', 'two'],
+        options: { name: 'pkey' },
+      };
+
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          shape: {},
+          add: {
+            primaryKey,
+          },
+          drop: {
+            primaryKey,
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('schema.table', (t) => ({
+    ...t.drop(t.primaryKey(['one', 'two'], { name: 'pkey' })),
+    ...t.add(t.primaryKey(['one', 'two'], { name: 'pkey' })),
+  }));
+});
+`,
+      );
+    });
+
+    it('should add and drop index', () => {
+      const index: TableData.Index = {
+        columns: [
+          {
+            column: 'column',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            weight: 'A',
+          },
+          { expression: 'expression' },
+        ],
+        options: {
+          name: 'idx',
+          unique: true,
+          nullsNotDistinct: true,
+          using: 'using',
+          include: ['include'],
+          with: 'with',
+          tablespace: 'tablespace',
+          where: 'where',
+          dropMode: 'CASCADE',
+          language: 'language',
+          languageColumn: 'languageColumn',
+          tsVector: true,
+        },
+      };
+
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          shape: {},
+          add: {
+            indexes: [index],
+          },
+          drop: {
+            indexes: [index],
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('schema.table', (t) => ({
+    ...t.drop(
+      t.searchIndex(
+        [
+          {
+            column: 'column',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            weight: 'A',
+          },
+          'expression',
+        ],
+        {
+          name: 'idx',
+          unique: true,
+          nullsNotDistinct: true,
+          using: 'using',
+          include: ['include'],
+          with: 'with',
+          tablespace: 'tablespace',
+          where: 'where',
+          dropMode: 'CASCADE',
+          language: 'language',
+          languageColumn: 'languageColumn',
+        },
+      ),
+    ),
+    ...t.add(
+      t.searchIndex(
+        [
+          {
+            column: 'column',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            weight: 'A',
+          },
+          'expression',
+        ],
+        {
+          name: 'idx',
+          unique: true,
+          nullsNotDistinct: true,
+          using: 'using',
+          include: ['include'],
+          with: 'with',
+          tablespace: 'tablespace',
+          where: 'where',
+          dropMode: 'CASCADE',
+          language: 'language',
+          languageColumn: 'languageColumn',
+        },
+      ),
+    ),
+  }));
+});
+`,
+      );
+    });
+
+    it('should add and drop constraint', () => {
+      const constraint: TableData.Constraint = {
+        name: 'constraintName',
+        check: raw({ raw: 'sql' }),
+        identity: {
+          always: true,
+        },
+        references: {
+          columns: ['one', 'two'],
+          fnOrTable: 'otherTable',
+          foreignColumns: ['three', 'four'],
+          options: {
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          },
+        },
+        dropMode: 'CASCADE',
+      };
+
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          shape: {},
+          add: {
+            constraints: [constraint],
+          },
+          drop: {
+            constraints: [constraint],
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('schema.table', (t) => ({
+    ...t.drop(
+      t.constraint({
+        name: 'constraintName',
+        references: [
+          ['one', 'two'],
+          'otherTable',
+          ['three', 'four'],
+          {
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          },
+        ],
+        check: t.sql({ raw: 'sql' }),
+      }),
+    ),
+    ...t.add(
+      t.constraint({
+        name: 'constraintName',
+        references: [
+          ['one', 'two'],
+          'otherTable',
+          ['three', 'four'],
+          {
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          },
+        ],
+        check: t.sql({ raw: 'sql' }),
+      }),
+    ),
+  }));
+});
+`,
+      );
+    });
+
+    it('should rename a column', () => {
+      const result = act([
+        {
+          type: 'changeTable',
+          name: 'table',
+          shape: {
+            from: {
+              type: 'rename',
+              name: 'to',
+            },
+          },
+          add: {},
+          drop: {},
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    from: t.rename('to'),
+  }));
+});
+`,
       );
     });
   });
