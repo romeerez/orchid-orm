@@ -142,6 +142,12 @@ function makeMigrateFn<
 
       // ignore asts after the first db was migrated
       localAsts = [];
+
+      config.afterChangeCommit?.({
+        options: opts,
+        up,
+        migrations: set.migrations,
+      });
     }
 
     await runCodeUpdaterAfterAll(
@@ -309,8 +315,13 @@ export const migrateOrRollback = async (
 
   let db: DbResult<RakeDbColumnTypes> | undefined;
 
-  await config[up ? 'beforeMigrate' : 'beforeRollback']?.((db ??= getDb(trx)));
-  await config.beforeChange?.((db ??= getDb(trx)), up, redo);
+  const beforeMigrate = config[up ? 'beforeMigrate' : 'beforeRollback'];
+  if (beforeMigrate || config.beforeChange) {
+    db ??= getDb(trx);
+    const { migrations } = set;
+    await beforeMigrate?.({ db, migrations });
+    await config.beforeChange?.({ db, migrations, up, redo });
+  }
 
   for (const file of set.migrations) {
     if (
@@ -338,8 +349,13 @@ export const migrateOrRollback = async (
     );
   }
 
-  await config.afterChange?.((db ??= getDb(trx)), up, redo);
-  await config[up ? 'afterMigrate' : 'afterRollback']?.((db ??= getDb(trx)));
+  const afterMigrate = config[up ? 'afterMigrate' : 'afterRollback'];
+  if (config.afterChange || afterMigrate) {
+    db ??= getDb(trx);
+    const { migrations } = set;
+    await config.afterChange?.({ db, up, redo, migrations });
+    await afterMigrate?.({ db, migrations });
+  }
 };
 
 const checkMigrationOrder = (

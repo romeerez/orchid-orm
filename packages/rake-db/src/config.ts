@@ -13,6 +13,7 @@ import path from 'path';
 import { RakeDbAst } from './ast';
 import { fileURLToPath } from 'node:url';
 import { RakeDbColumnTypes } from './migration/migration';
+import { MigrationItem } from './migration/migrationsSet';
 
 export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
@@ -44,12 +45,13 @@ export interface RakeDbConfig<
   // throw if a migration doesn't have a default export
   forceDefaultExports?: boolean;
   import(path: string): Promise<unknown>;
-  beforeChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
-  afterChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
-  beforeMigrate?(db: Db): void | Promise<void>;
-  afterMigrate?(db: Db): void | Promise<void>;
-  beforeRollback?(db: Db): void | Promise<void>;
-  afterRollback?(db: Db): void | Promise<void>;
+  beforeChange?: ChangeCallback;
+  afterChange?: ChangeCallback;
+  afterChangeCommit?: ChangeCommitCallback;
+  beforeMigrate?: MigrationCallback;
+  afterMigrate?: MigrationCallback;
+  beforeRollback?: MigrationCallback;
+  afterRollback?: MigrationCallback;
 }
 
 export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
@@ -83,46 +85,81 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   forceDefaultExports?: boolean;
   import?(path: string): Promise<unknown>;
   /**
-   * Is called once before migrating (up) or rolling back one or more migrations.
+   * Is called once per db before migrating or rolling back a set of migrations.
    *
-   * @param db - query builder
-   * @param up - whether it's migrating up or down
-   * @param redo - whether it's migrating down and then up for `redo` command
+   * @param arg.db - query builder
+   * @param arg.up - whether it's migrating up or down
+   * @param arg.redo - whether it's migrating down and then up for `redo` command
+   * @param arg.migrations - array of executed (up or down) migrations
    */
-  beforeChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
+  beforeChange?: ChangeCallback;
   /**
-   * Is called once after migrating (up) or rolling back one or more migrations.
+   * Is called once per db after migrating or rolling back a set of migrations.
+   * Runs inside the same transaction as migrations,
+   * for running after commit use {@link afterChangeCommit}.
    *
-   * @param db - query builder
-   * @param up - whether it's migrating up or down
-   * @param redo - whether it's migrating down and then up for `redo` command
+   * @param arg.db - query builder
+   * @param arg.up - whether it's migrating up or down
+   * @param arg.redo - whether it's migrating down and then up for `redo` command
+   * @param arg.migrations - array of executed (up or down) migrations
    */
-  afterChange?(db: Db, up: boolean, redo: boolean): void | Promise<void>;
+  afterChange?: ChangeCallback;
   /**
-   * Is called once before migrating (up) one or more migrations.
+   * Is called once per db after migrating or rolling back a set of migrations.
+   * Runs **after** committing migrations transaction.
    *
-   * @param db - query builder
+   * @param arg.options - database connection options
+   * @param arg.up - whether it's migrating up or down
+   * @param arg.migrations - array of executed (up or down) migrations
    */
-  beforeMigrate?(db: Db): void | Promise<void>;
+  afterChangeCommit?: ChangeCommitCallback;
   /**
-   * Is called once after migrating (up) one or more migrations.
+   * Is called once per db before migrating (up) a set of migrations.
    *
-   * @param db - query builder
+   * @param arg.db - query builder
+   * @param arg.migrations - applied migrations
    */
-  afterMigrate?(db: Db): void | Promise<void>;
+  beforeMigrate?: MigrationCallback;
   /**
-   * Is called once before rolling back one or more migrations.
+   * Is called once per db after migrating (up) a set of migrations.
    *
-   * @param db - query builder
+   * @param arg.db - query builder
+   * @param arg.migrations - applied migrations
    */
-  beforeRollback?(db: Db): void | Promise<void>;
+  afterMigrate?: MigrationCallback;
   /**
-   * Is called once before rolling back one or more migrations.
+   * Is called once per db before rolling back a set of migrations.
    *
-   * @param db - query builder
+   * @param arg.db - query builder
+   * @param arg.migrations - rolled back migrations
    */
-  afterRollback?(db: Db): void | Promise<void>;
+  beforeRollback?: MigrationCallback;
+  /**
+   * Is called once per db before rolling back a set of migrations.
+   *
+   * @param arg.db - query builder
+   * @param arg.migrations - rolled back migrations
+   */
+  afterRollback?: MigrationCallback;
 }
+
+type ChangeCallback = (arg: {
+  db: Db;
+  up: boolean;
+  redo: boolean;
+  migrations: MigrationItem[];
+}) => void | Promise<void>;
+
+type ChangeCommitCallback = (arg: {
+  options: AdapterOptions;
+  up: boolean;
+  migrations: MigrationItem[];
+}) => void | Promise<void>;
+
+type MigrationCallback = (arg: {
+  db: Db;
+  migrations: MigrationItem[];
+}) => void | Promise<void>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyRakeDbConfig = RakeDbConfig<any, any>;

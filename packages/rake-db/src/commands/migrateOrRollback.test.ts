@@ -188,6 +188,7 @@ describe('migrateOrRollback', () => {
           basePath: __dirname,
           beforeChange: jest.fn(),
           afterChange: jest.fn(),
+          afterChangeCommit: jest.fn(),
           beforeMigrate: jest.fn(),
           afterMigrate: jest.fn(),
         },
@@ -199,6 +200,7 @@ describe('migrateOrRollback', () => {
 
       expect(env.config.beforeChange).toBeCalled();
       expect(env.config.afterChange).toBeCalled();
+      expect(env.config.afterChangeCommit).toBeCalled();
       expect(env.config.beforeMigrate).toBeCalled();
       expect(env.config.afterMigrate).toBeCalled();
 
@@ -441,6 +443,7 @@ describe('migrateOrRollback', () => {
           ...config,
           beforeChange: jest.fn(),
           afterChange: jest.fn(),
+          afterChangeCommit: jest.fn(),
           beforeRollback: jest.fn(),
           afterRollback: jest.fn(),
           beforeMigrate: jest.fn(),
@@ -452,6 +455,7 @@ describe('migrateOrRollback', () => {
 
       expect(env.config.beforeChange).toBeCalled();
       expect(env.config.afterChange).toBeCalled();
+      expect(env.config.afterChangeCommit).toBeCalled();
       expect(env.config.beforeRollback).toBeCalled();
       expect(env.config.afterRollback).toBeCalled();
       expect(env.config.beforeMigrate).toBeCalled();
@@ -479,6 +483,7 @@ describe('migrateOrRollback', () => {
           ...config,
           beforeChange: jest.fn(),
           afterChange: jest.fn(),
+          afterChangeCommit: jest.fn(),
           beforeRollback: jest.fn(),
           afterRollback: jest.fn(),
         },
@@ -488,6 +493,7 @@ describe('migrateOrRollback', () => {
 
       expect(env.config.beforeChange).toBeCalled();
       expect(env.config.afterChange).toBeCalled();
+      expect(env.config.afterChangeCommit).toBeCalled();
       expect(env.config.beforeRollback).toBeCalled();
       expect(env.config.afterRollback).toBeCalled();
 
@@ -567,6 +573,9 @@ describe('migrateOrRollback', () => {
           afterChange: async () => {
             callbackCalls.push('afterChange');
           },
+          afterChangeCommit: async () => {
+            callbackCalls.push('afterChangeCommit');
+          },
           beforeMigrate: async () => {
             callbackCalls.push('beforeMigrate');
           },
@@ -604,6 +613,7 @@ describe('migrateOrRollback', () => {
         'beforeChange',
         'afterChange',
         'afterMigrate',
+        'afterChangeCommit',
       ]);
 
       expect(asMock(getMigrations).mock.calls).toEqual([

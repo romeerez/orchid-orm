@@ -199,34 +199,6 @@ interface RakeDbResult {
 }
 ```
 
-Example: dumping structure after running a command that affects the db structure:
-
-```ts
-import { execSync } from 'node:child_process';
-
-export const change = rakeDb(
-  { databaseURL: 'postgres://...' },
-  {
-    migrationsPath: 'migrations',
-  },
-);
-
-change.promise.then(({ options, args: [command] }) => {
-  if (process.env.NODE_ENV !== 'development') return;
-
-  if (['up', 'down', 'redo', 'recurrent'].includes(command)) {
-    // `as string` is safe because you can see that databaseURL was set above
-    dump(options[0].databaseURL as string);
-  }
-});
-
-function dump(databaseURL: string) {
-  execSync(`pg_dump --schema-only ${databaseURL} > structure.sql`);
-
-  console.log('Db structure was dumped to structure.sql');
-}
-```
-
 Aliases of commands are resolved, so if this was run with `pnpm db migrate`, the command will be `up`.
 See full list of aliases in `rakeDbAliases` exported from the `rake-db` package.
 
@@ -519,27 +491,30 @@ src/
 
 [//]: # 'has JSdoc'
 
-To run custom code before or after `migrate` or `rollback` command, define functions in `rakeDb` config object.
+To run arbitrary code before or after `migrate` or `rollback` commands, define functions in `rakeDb` config object.
 
-These callbacks are triggered only once per commend.
+These callbacks are triggered once per database per command.
 If 5 migrations were applied, the callback will be called either before all 5, or after.
 
-Supported callbacks are:
+All callbacks except `afterChangeCommit` are executed inside a transaction together with migrations.
+If callback throws an error, the transaction is rolled back and all migration changes aren't saved.
 
-- `beforeChange`, `afterChange`: is called before or after migrate or rollback
 - `beforeMigrate`, `afterMigrate`: is called before or after migrating up
 - `beforeRollback`, `afterRollback`: is called before migrating down
+- `beforeChange`, `afterChange`: is called before or after migrate or rollback
+- `afterChangeCommit`: happens after the migrations transaction is committed and database locks are released.
 
-If rake-db options are an array of multiple database configs, callbacks are run for each of the databases.
+Non-"Change" callbacks receive a single query builder instance argument, this is not ORM instance,
+and yet it can be used for building and executing queries.
 
-First argument is a query builder instance, not OrchidORM instance, so it doesn't have project tables,
-but it is still can be used for building and executing queries.
-
-For example, each time when `npm run db migrate` is run, after all migrations were successfully applied, this will create new records of a specific table if it is empty.
+Example: each time when `npm run db migrate` is run, after all migrations were successfully applied, this will create new records of a specific table if it is empty.
 
 ```ts
 export const change = rakeDb(options, {
-  async afterMigrate(db) {
+  async afterMigrate({ db, migrations }) {
+    // skip if no migrations were executed
+    if (!migrations.length) return;
+
     const haveRecords = await db('table').exists();
     if (!haveRecords) {
       await db('table').createMany([
@@ -559,10 +534,38 @@ Example for how to run your code after migrating or rolling back, but not in the
 
 ```ts
 export const change = rakeDb(options, {
-  afterChange(db, up, redo) {
+  afterChange({ db, up, redo, migrations }) {
     if (!up && redo) return;
 
-    console.log('migrate, rollback, or redo command is finished');
+    console.log('migrate, rollback, or redo command is finished', {
+      migrations, // list of migrations that were executed
+    });
   },
 });
+```
+
+For dumping database you should use `afterChangeCommit` because `pg_dump` won't work until the transaction is committed (because of database locks).
+Example:
+
+```ts
+import { execSync } from 'node:child_process';
+
+export const change = rakeDb(
+  { databaseURL: 'postgres://...' },
+  {
+    afterChangeCommit({ options, migrations }) {
+      // skip dumping if there were no pending migrations
+      if (!migrations.length) return;
+
+      // `as string` is safe because you can see that databaseURL was set above
+      dump(options[0].databaseURL as string);
+    },
+  },
+);
+
+function dump(databaseURL: string) {
+  execSync(`pg_dump --schema-only ${databaseURL} > structure.sql`);
+
+  console.log('Db structure was dumped to structure.sql');
+}
 ```
