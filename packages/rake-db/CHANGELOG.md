@@ -1,5 +1,19 @@
 # rake-db
 
+## 2.17.0
+
+### Minor Changes
+
+- bbe7f4eb: Add `afterChangeCommit`, change callbacks signatures.
+
+  `beforeMigrate`, `afterMigrate`, `beforeRollback`, `afterRollback` were previously receiving only `db` argument,
+  now they're receiving an object `{ db, migrations }` where `migrations` is an array of executed migrations.
+
+  `beforeChange`, `afterChange` were previously receiving `db, up, redo` arguments,
+  now they're receiving an object `{ db, up, redo, migrations }`.
+
+  `afterChangeCommit` receives object `{ options, up, migrations }` where `options` is for database connection options.
+
 ## 2.16.0
 
 ### Minor Changes
