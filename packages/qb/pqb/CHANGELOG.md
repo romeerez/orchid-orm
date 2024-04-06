@@ -1,5 +1,13 @@
 # pqb
 
+## 0.27.1
+
+### Patch Changes
+
+- ca5d8543: Fix json sub-queries for tables with a default scope
+
+  Specifically, this fixes selecting relation data from a table that has `softDelete` enabled.
+
 ## 0.27.0
 
 ### Minor Changes
