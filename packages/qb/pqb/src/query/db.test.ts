@@ -24,9 +24,12 @@ describe('db connection', () => {
   });
 
   it('should support setting a default schema via url parameters', async () => {
+    const url = new URL(testDbOptions.databaseURL as string);
+    url.searchParams.set('schema', 'geo');
+
     const db = createDb({
       ...testDbOptions,
-      databaseURL: testDbOptions.databaseURL + '?schema=geo',
+      databaseURL: url.toString(),
     });
 
     await db('city');
@@ -194,9 +197,12 @@ describe('db', () => {
   });
 
   it('should use ssl when ssl=true query parameter provided on a databaseUrl option', () => {
+    const url = new URL(testDbOptions.databaseURL as string);
+    url.searchParams.set('ssl', 'true');
+
     const db = createDb({
       ...testDbOptions,
-      databaseURL: testDbOptions.databaseURL + '?ssl=true',
+      databaseURL: url.toString(),
     });
 
     expect(

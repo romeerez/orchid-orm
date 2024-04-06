@@ -3,6 +3,7 @@ import {
   Snake,
   User,
   userData,
+  UserSoftDelete,
   UserZodTypes,
 } from '../test-utils/test-utils';
 import {
@@ -57,6 +58,22 @@ describe('json methods', () => {
       );
 
       expectQueryNotMutated(query);
+    });
+
+    it('should not duplicate the default scope inside the inner `FROM` and after `AS t`', () => {
+      const q = UserSoftDelete.json();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+          FROM (
+            SELECT *
+            FROM "user"
+            WHERE "user"."deletedAt" IS NULL
+          ) AS "t"
+        `,
+      );
     });
   });
 

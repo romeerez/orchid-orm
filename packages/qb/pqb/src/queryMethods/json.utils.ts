@@ -7,7 +7,7 @@ import {
 } from '../query/query';
 import { SelectQueryData } from '../sql';
 import { QueryColumn } from 'orchid-core';
-import { queryWrap } from './queryMethods.utils';
+import { cloneQueryBaseUnscoped, queryWrap } from './queryMethods.utils';
 
 export function queryJson<T>(
   self: T,
@@ -15,7 +15,7 @@ export function queryJson<T>(
 ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
   const q = queryWrap(
     self as Query,
-    (self as Query).baseQuery.clone(),
+    cloneQueryBaseUnscoped(self as Query),
   ) as unknown as Query;
   // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
   _queryGetOptional(
