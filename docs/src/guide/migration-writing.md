@@ -630,7 +630,7 @@ Third argument for options is optional.
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createEnum('number', ['one', 'two', 'three']);
+  await db.createEnum('numbers', ['one', 'two', 'three']);
 
   // use `schemaName.enumName` format to specify a schema
   await db.createEnum('customSchema.mood', ['sad', 'ok', 'happy'], {
@@ -638,6 +638,101 @@ change(async (db) => {
     dropIfExists: true,
     cascade: true,
   });
+});
+```
+
+## addEnumValues, dropEnumValues
+
+[//]: # 'has JSDoc'
+
+Use these methods to add or drop one or multiple values from an existing enum.
+
+`addEnumValues` will drop values when rolling back the migration.
+
+Dropping a value internally acts in multiple steps:
+
+1. Select all columns from the database that depends on the enum;
+2. Alter all these columns to have text type;
+3. Drop the enum;
+4. Re-create the enum without the value given;
+5. Alter all columns from the first step to have the enum type;
+
+In the case when the value is used by some table,
+migrating `dropEnumValue` or rolling back `addEnumValue` will throw an error with a descriptive message,
+in such case you'd need to manually resolve the issue by deleting rows with the value, or changing such values.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.addEnumValue('numbers', 'four');
+
+  // you can pass options
+  await db.addEnumValue('numbers', 'three', {
+    // where to insert
+    before: 'four',
+    // skip if already exists
+    ifNotExists: true,
+  });
+
+  // enum name can be prefixed with schema
+  await db.addEnumValue('public.numbers', 'five', {
+    after: 'four',
+  });
+});
+```
+
+## renameEnumValues
+
+[//]: # 'has JSDoc'
+
+Rename one or multiple enum values using this method:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  // rename value "from" to "to"
+  await db.rename('numbers', { from: 'to' });
+
+  // enum name can be prefixed with schema
+  await db.rename('public.numbers', { from: 'to' });
+});
+```
+
+## renameType
+
+[//]: # 'has JSDoc'
+
+Rename a type (such as enum):
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.renameType('oldTypeName', 'newTypeName');
+});
+```
+
+Prefix the type name with a schema to set a different schema:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.renameType('fromSchema.oldType', 'toSchema.newType');
+});
+```
+
+## changeTypeSchema
+
+Set a different schema to the type (such as enum):
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTypeSchema('typeName', 'fromSchema', 'toSchema');
 });
 ```
 

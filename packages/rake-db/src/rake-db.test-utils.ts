@@ -58,7 +58,6 @@ export const queryMock = jest.fn();
 
 export const resetDb = (up = true) => {
   queryMock.mockClear();
-  queryMock.mockResolvedValue(undefined);
   const db = getDb();
   db.up = up;
   db.migratedAsts.length = 0;

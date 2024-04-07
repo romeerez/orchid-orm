@@ -1,23 +1,23 @@
 import {
   ColumnType,
-  resetTableData,
-  getTableData,
-  TableData,
-  quote,
   EnumColumn,
+  getTableData,
+  quote,
+  resetTableData,
+  TableData,
   UnknownColumn,
 } from 'pqb';
 import {
+  ColumnTypeBase,
+  consumeColumnName,
+  deepCompare,
   EmptyObject,
   emptyObject,
+  RawSQLBase,
+  setCurrentColumnName,
+  setDefaultLanguage,
   snakeCaseKey,
   toSnakeCase,
-  deepCompare,
-  consumeColumnName,
-  RawSQLBase,
-  setDefaultLanguage,
-  ColumnTypeBase,
-  setCurrentColumnName,
 } from 'orchid-core';
 import {
   ChangeTableCallback,

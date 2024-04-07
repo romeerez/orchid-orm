@@ -313,18 +313,35 @@ db.table.create({ name: 'Joe' });
 
 ## enum
 
-Create the enum database type:
+First argument is the name of an enum in the database, the second is an array of possible values:
 
 ```ts
-await db.query`
-  CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
-`;
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    enumColumn: t.enum('enumName', ['value1', 'value2', 'value3']),
+  }));
+}
 ```
 
-Define enum, first argument is the name of an enum in the database, second is an array of possible values:
+For convenience and to avoid duplication, you can define enum column in `columnTypes` of `BaseTable`, then reuse it in multiple tables:
 
 ```ts
-t.enum('mood', ['sad', 'ok', 'happy']); // -> outputs Mood type
+export const BaseTable = createBaseTable({
+  columnTypes: (t) => ({
+    ...t,
+    orderStatus: () =>
+      t.enum('orderStatus', ['pending', 'cancelled', 'processed']),
+  }),
+});
+
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    // it still can be chained with common column methods
+    orderStatus: t.orderStatus().nullable(),
+  }));
+}
 ```
 
 ## json

@@ -506,6 +506,180 @@ describe('migration', () => {
     });
   });
 
+  describe('renameType', () => {
+    it('should call appCodeUpdater', async () => {
+      await db.renameType('from', 'to');
+
+      expect(db.migratedAsts.length).toBe(1);
+    });
+
+    const testRenameType = makeTestUpAndDown('renameType');
+
+    it('should rename a type', async () => {
+      await testRenameType(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER TYPE "from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER TYPE "to" RENAME TO "from"
+          `),
+      );
+    });
+
+    it('should rename a type and change schema', async () => {
+      await testRenameType(
+        (action) => db[action]('a.from', 'b.to'),
+        () =>
+          expectSql([
+            `ALTER TYPE "a"."from" RENAME TO "to"`,
+            `ALTER TYPE "a"."to" SET SCHEMA "b"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER TYPE "b"."to" RENAME TO "from"`,
+            `ALTER TYPE "b"."from" SET SCHEMA "a"`,
+          ]),
+      );
+    });
+
+    it('should only change schema', async () => {
+      await testRenameType(
+        (action) => db[action]('a.t', 'b.t'),
+        () =>
+          expectSql(`
+            ALTER TYPE "a"."t" SET SCHEMA "b"
+          `),
+        () =>
+          expectSql(`
+            ALTER TYPE "b"."t" SET SCHEMA "a"
+          `),
+      );
+    });
+
+    it('should set default schema when it is not set', async () => {
+      await testRenameType(
+        (action) => db[action]('a.from', 'to'),
+        () =>
+          expectSql([
+            `ALTER TYPE "a"."from" RENAME TO "to"`,
+            `ALTER TYPE "a"."to" SET SCHEMA "public"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER TYPE "to" RENAME TO "from"`,
+            `ALTER TYPE "from" SET SCHEMA "a"`,
+          ]),
+      );
+    });
+  });
+
+  describe('changeTypeSchema', () => {
+    it('should change type schema', async () => {
+      await makeTestUpAndDown('changeTypeSchema')(
+        (action) => db[action]('type', 'from', 'to'),
+        () =>
+          expectSql(`
+            ALTER TYPE "from"."type" SET SCHEMA "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER TYPE "to"."type" SET SCHEMA "from"
+          `),
+      );
+    });
+  });
+
+  describe('addEnumValues and dropEnumValues', () => {
+    const testUpAndDown = makeTestUpAndDown('addEnumValues', 'dropEnumValues');
+
+    afterAll(() => queryMock.mockReset());
+
+    it('should add and drop enum value', async () => {
+      queryMock.mockImplementation((arg) => {
+        const q = arg as string;
+        if (q.includes('enum_range')) {
+          return {
+            rows: [{ value: 'one' }, { value: 'two' }, { value: 'four' }],
+          };
+        }
+
+        if (q.includes('columns')) {
+          return {
+            rows: [
+              {
+                schema: 'public',
+                table: 'one',
+                columns: ['columnOne', 'columnTwo'],
+              },
+              { schema: 'custom', table: 'two', columns: ['columnThree'] },
+            ],
+          };
+        }
+
+        return;
+      });
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('schemaName.enumName', ['three'], {
+            after: 'two',
+            ifNotExists: true,
+          }),
+        () =>
+          expectSql(`
+            ALTER TYPE "schemaName"."enumName" ADD VALUE IF NOT EXISTS 'three' AFTER 'two'
+          `),
+        () =>
+          expectSql([
+            `SELECT unnest(enum_range(NULL::"schemaName"."enumName"))::text value`,
+            `SELECT n.nspname AS "schema",
+  c.relname AS "table",
+  json_agg(a.attname ORDER BY a.attnum) AS "columns"
+FROM pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
+JOIN pg_attribute a ON a.attrelid = c.oid
+JOIN pg_type t ON a.atttypid = t.oid AND t.typname = 'enumName'
+JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = 'schemaName'
+GROUP BY n.nspname, c.relname`,
+            `ALTER TABLE "public"."one"
+  ALTER COLUMN "columnOne" TYPE text,
+  ALTER COLUMN "columnTwo" TYPE text;
+ALTER TABLE "custom"."two"
+  ALTER COLUMN "columnThree" TYPE text;
+DROP TYPE "schemaName"."enumName";
+CREATE TYPE "schemaName"."enumName" AS ENUM ('one', 'two', 'four')`,
+            `ALTER TABLE "public"."one"
+  ALTER COLUMN "columnOne" TYPE "schemaName"."enumName" USING "columnOne"::"schemaName"."enumName"`,
+            `ALTER TABLE "public"."one"
+  ALTER COLUMN "columnTwo" TYPE "schemaName"."enumName" USING "columnTwo"::"schemaName"."enumName"`,
+            `ALTER TABLE "custom"."two"
+  ALTER COLUMN "columnThree" TYPE "schemaName"."enumName" USING "columnThree"::"schemaName"."enumName"`,
+          ]),
+      );
+    });
+  });
+
+  describe('renameEnumValues', () => {
+    it('should rename enum values', async () => {
+      await makeTestUpAndDown('renameEnumValues')(
+        (action) => db[action]('schema.enum', { a: 'b', c: 'd' }),
+        () =>
+          expectSql([
+            `ALTER TYPE "schema"."enum" RENAME VALUE "a" TO "b"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE "c" TO "d"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER TYPE "schema"."enum" RENAME VALUE "b" TO "a"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE "d" TO "c"`,
+          ]),
+      );
+    });
+  });
+
   describe('createDomain and dropDomain', () => {
     const testUpAndDown = makeTestUpAndDown('createDomain', 'dropDomain');
 

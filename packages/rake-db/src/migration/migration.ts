@@ -22,6 +22,7 @@ import {
   MaybeArray,
   QueryInput,
   RawSQLBase,
+  RecordString,
   RecordUnknown,
   singleQuote,
   Sql,
@@ -438,34 +439,8 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param from - rename the table from
    * @param to - rename the table to
    */
-  async renameTable(from: string, to: string): Promise<void> {
-    const [fromSchema, f] = getSchemaAndTableFromName(this.up ? from : to);
-    const [toSchema, t] = getSchemaAndTableFromName(this.up ? to : from);
-    const ast: RakeDbAst.RenameTable = {
-      type: 'renameTable',
-      fromSchema,
-      from: f,
-      toSchema,
-      to: t,
-    };
-
-    if (ast.from !== ast.to) {
-      await this.adapter.query(
-        `ALTER TABLE ${quoteTable(ast.fromSchema, ast.from)} RENAME TO "${
-          ast.to
-        }"`,
-      );
-    }
-
-    if (ast.fromSchema !== ast.toSchema) {
-      await this.adapter.query(
-        `ALTER TABLE ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
-          ast.toSchema ?? this.adapter.schema
-        }"`,
-      );
-    }
-
-    this.migratedAsts.push(ast);
+  renameTable(from: string, to: string): Promise<void> {
+    return renameType(this, from, to, true);
   }
 
   /**
@@ -913,6 +888,159 @@ export class Migration<CT extends RakeDbColumnTypes> {
     >,
   ): Promise<void> {
     return createEnum(this, !this.up, name, values, options);
+  }
+
+  /**
+   * Use these methods to add or drop one or multiple values from an existing enum.
+   *
+   * `addEnumValues` will drop values when rolling back the migration.
+   *
+   * Dropping a value internally acts in multiple steps:
+   *
+   * 1. Select all columns from the database that depends on the enum;
+   * 2. Alter all these columns to have text type;
+   * 3. Drop the enum;
+   * 4. Re-create the enum without the value given;
+   * 5. Alter all columns from the first step to have the enum type;
+   *
+   * In the case when the value is used by some table,
+   * migrating `dropEnumValue` or rolling back `addEnumValue` will throw an error with a descriptive message,
+   * in such case you'd need to manually resolve the issue by deleting rows with the value, or changing such values.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.addEnumValue('numbers', 'four');
+   *
+   *   // you can pass options
+   *   await db.addEnumValue('numbers', 'three', {
+   *     // where to insert
+   *     before: 'four',
+   *     // skip if already exists
+   *     ifNotExists: true,
+   *   });
+   *
+   *   // enum name can be prefixed with schema
+   *   await db.addEnumValue('public.numbers', 'five', {
+   *     after: 'four',
+   *   });
+   * });
+   * ```
+   *
+   * @param enumName - target enum name
+   * @param values - array of values to add
+   * @param options - optional object with options
+   * @param options.before - insert before the specified value
+   * @param options.after - insert after the specified value
+   * @param options.ifNotExists - skip adding if already exists
+   */
+  addEnumValues(
+    enumName: string,
+    values: string[],
+    options?: AddEnumValueOptions,
+  ): Promise<void> {
+    return addOrDropEnumValues(this, this.up, enumName, values, options);
+  }
+
+  /**
+   * See {@link addEnumValues}
+   */
+  dropEnumValues(
+    enumName: string,
+    values: string[],
+    options?: AddEnumValueOptions,
+  ): Promise<void> {
+    return addOrDropEnumValues(this, !this.up, enumName, values, options);
+  }
+
+  /**
+   * Rename one or multiple enum values using this method:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   // rename value "from" to "to"
+   *   await db.rename('numbers', { from: 'to' });
+   *
+   *   // enum name can be prefixed with schema
+   *   await db.rename('public.numbers', { from: 'to' });
+   * });
+   * ```
+   *
+   * @param enumName - target enum name, can be prefixed with schema
+   * @param values - object where keys are for old names, values are for new names
+   */
+  async renameEnumValues(
+    enumName: string,
+    values: RecordString,
+  ): Promise<void> {
+    const [schema, name] = getSchemaAndTableFromName(enumName);
+
+    const ast: RakeDbAst.RenameEnumValues = {
+      type: 'renameEnumValues',
+      schema,
+      name,
+      values,
+    };
+
+    for (const pair of Object.entries(ast.values)) {
+      const [from, to] = this.up ? pair : [pair[1], pair[0]];
+      await this.adapter.query(
+        `ALTER TYPE ${quoteTable(
+          ast.schema,
+          ast.name,
+        )} RENAME VALUE "${from}" TO "${to}"`,
+      );
+    }
+  }
+
+  /**
+   * Rename a type (such as enum):
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameType('oldTypeName', 'newTypeName');
+   * });
+   * ```
+   *
+   * Prefix the type name with a schema to set a different schema:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameType('fromSchema.oldType', 'toSchema.newType');
+   * });
+   * ```
+   *
+   * @param from - rename the type from
+   * @param to - rename the type to
+   */
+  renameType(from: string, to: string): Promise<void> {
+    return renameType(this, from, to, false);
+  }
+
+  /**
+   * Set a different schema to the type (such as enum):
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.changeTypeSchema('typeName', 'fromSchema', 'toSchema');
+   * });
+   * ```
+   *
+   * @param name - type name
+   * @param from - current table schema
+   * @param to - desired table schema
+   */
+  changeTypeSchema(name: string, from: string, to: string): Promise<void> {
+    return this.renameType(`${from}.${name}`, `${to}.${name}`);
   }
 
   /**
@@ -1588,4 +1716,154 @@ const queryExists = (
   sql: { text: string; values: unknown[] },
 ): Promise<boolean> => {
   return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);
+};
+
+export const renameType = async (
+  migration: Migration<RakeDbColumnTypes>,
+  from: string,
+  to: string,
+  table: boolean,
+): Promise<void> => {
+  const [fromSchema, f] = getSchemaAndTableFromName(migration.up ? from : to);
+  const [toSchema, t] = getSchemaAndTableFromName(migration.up ? to : from);
+  const ast: RakeDbAst.RenameType = {
+    type: 'renameType',
+    table,
+    fromSchema,
+    from: f,
+    toSchema,
+    to: t,
+  };
+
+  const sqlKind = ast.table ? 'TABLE' : 'TYPE';
+  if (ast.from !== ast.to) {
+    await migration.adapter.query(
+      `ALTER ${sqlKind} ${quoteTable(ast.fromSchema, ast.from)} RENAME TO "${
+        ast.to
+      }"`,
+    );
+  }
+
+  if (ast.fromSchema !== ast.toSchema) {
+    await migration.adapter.query(
+      `ALTER ${sqlKind} ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
+        ast.toSchema ?? migration.adapter.schema
+      }"`,
+    );
+  }
+
+  migration.migratedAsts.push(ast);
+};
+
+interface AddEnumValueOptions {
+  // add only if not already exists
+  ifNotExists?: boolean;
+  // insert before other value
+  before?: string;
+  // insert after other value
+  after?: string;
+}
+
+export const addOrDropEnumValues = async (
+  migration: Migration<RakeDbColumnTypes>,
+  up: boolean,
+  enumName: string,
+  values: string[],
+  options?: AddEnumValueOptions,
+): Promise<void> => {
+  const defaultSchema = migration.adapter.schema;
+  const [schema, name] = getSchemaAndTableFromName(enumName);
+  const quotedName = quoteTable(schema, name);
+
+  const ast: RakeDbAst.EnumValues = {
+    type: 'enumValues',
+    action: up ? 'add' : 'drop',
+    schema,
+    name,
+    values,
+    place: options?.before ? 'before' : options?.after ? 'after' : undefined,
+    relativeTo: options?.before ?? options?.after,
+    ifNotExists: options?.ifNotExists,
+  };
+
+  if (ast.action === 'add') {
+    await Promise.all(
+      (ast.place === 'after' ? [...ast.values].reverse() : ast.values).map(
+        (value) =>
+          migration.adapter.query(
+            `ALTER TYPE ${quoteTable(ast.schema, ast.name)} ADD VALUE${
+              ast.ifNotExists ? ' IF NOT EXISTS' : ''
+            } ${singleQuote(value)}${
+              ast.place && ast.relativeTo
+                ? ` ${ast.place.toUpperCase()} ${singleQuote(ast.relativeTo)}`
+                : ''
+            }`,
+          ),
+      ),
+    );
+    return;
+  }
+
+  const { rows: valuesRows } = await migration.adapter.query<{ value: string }>(
+    `SELECT unnest(enum_range(NULL::${quotedName}))::text value`,
+  );
+  const existingValues = valuesRows.map((r) => r.value);
+
+  const { rows: tables } = await migration.adapter.query<{
+    schema: string;
+    table: string;
+    columns: string[];
+  }>(
+    `SELECT n.nspname AS "schema",
+  c.relname AS "table",
+  json_agg(a.attname ORDER BY a.attnum) AS "columns"
+FROM pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
+JOIN pg_attribute a ON a.attrelid = c.oid
+JOIN pg_type t ON a.atttypid = t.oid AND t.typname = ${singleQuote(name)}
+JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = ${singleQuote(
+      schema ?? defaultSchema,
+    )}
+GROUP BY n.nspname, c.relname`,
+  );
+
+  const sql = tables.map(
+    (t) =>
+      `ALTER TABLE ${quoteTable(t.schema, t.table)}
+        ${t.columns.map((c) => `  ALTER COLUMN "${c}" TYPE text`).join(',\n')}`,
+  );
+
+  sql.push(
+    `DROP TYPE ${quotedName}`,
+    `CREATE TYPE ${quotedName} AS ENUM (${existingValues
+      .filter((v) => !ast.values.includes(v))
+      .map(singleQuote)
+      .join(', ')})`,
+  );
+
+  await migration.adapter.query(sql.join(';\n'));
+
+  for (const t of tables) {
+    const table = quoteTable(t.schema, t.table);
+    for (const c of t.columns) {
+      try {
+        await migration.adapter.query(
+          `ALTER TABLE ${table}
+  ALTER COLUMN "${c}" TYPE ${quotedName} USING "${c}"::${quotedName}`,
+        );
+      } catch (err) {
+        if ((err as { code: string }).code === '22P02') {
+          throw new Error(
+            `Cannot drop ${quotedName} enum values [${ast.values
+              .map(singleQuote)
+              .join(
+                ', ',
+              )}]: table ${table} has a row with such value in the column "${c}"`,
+            { cause: err },
+          );
+        }
+        throw err;
+      }
+    }
+  }
 };

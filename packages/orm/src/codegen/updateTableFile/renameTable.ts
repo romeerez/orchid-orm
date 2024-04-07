@@ -10,7 +10,7 @@ export const renameTable = async ({
   ast,
   logger,
   ...params
-}: UpdateTableFileParams & { ast: RakeDbAst.RenameTable }) => {
+}: UpdateTableFileParams & { ast: RakeDbAst.RenameType }) => {
   const tablePath = params.tablePath(toCamelCase(ast.from));
   const content = await fs.readFile(tablePath, 'utf-8').catch(() => undefined);
   if (!content) return;

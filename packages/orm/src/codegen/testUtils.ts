@@ -54,8 +54,9 @@ const makeAst = () => {
     action: 'drop',
   };
 
-  const renameTable: RakeDbAst.RenameTable = {
-    type: 'renameTable',
+  const renameTable: RakeDbAst.RenameType = {
+    type: 'renameType',
+    table: true,
     from: 'foo_bar',
     to: 'bip_bop',
   };

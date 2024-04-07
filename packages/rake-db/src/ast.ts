@@ -7,15 +7,17 @@ import {
   TableData,
 } from 'pqb';
 import { DropMode } from './migration/migration';
-import { ColumnTypeBase, RawSQLBase } from 'orchid-core';
+import { ColumnTypeBase, RawSQLBase, RecordString } from 'orchid-core';
 
 export type RakeDbAst =
   | RakeDbAst.Table
   | RakeDbAst.ChangeTable
-  | RakeDbAst.RenameTable
+  | RakeDbAst.RenameType
   | RakeDbAst.Schema
   | RakeDbAst.Extension
   | RakeDbAst.Enum
+  | RakeDbAst.EnumValues
+  | RakeDbAst.RenameEnumValues
   | RakeDbAst.Domain
   | RakeDbAst.Collation
   | RakeDbAst.Constraint
@@ -89,8 +91,9 @@ export namespace RakeDbAst {
     identity?: TableData.Identity;
   }
 
-  export interface RenameTable {
-    type: 'renameTable';
+  export interface RenameType {
+    type: 'renameType';
+    table: boolean;
     fromSchema?: string;
     from: string;
     toSchema?: string;
@@ -122,6 +125,24 @@ export namespace RakeDbAst {
     values: [string, ...string[]];
     cascade?: boolean;
     dropIfExists?: boolean;
+  }
+
+  export interface EnumValues {
+    type: 'enumValues';
+    action: 'add' | 'drop';
+    schema?: string;
+    name: string;
+    values: string[];
+    place?: 'before' | 'after';
+    relativeTo?: string;
+    ifNotExists?: boolean;
+  }
+
+  export interface RenameEnumValues {
+    type: 'renameEnumValues';
+    schema?: string;
+    name: string;
+    values: RecordString;
   }
 
   export interface Domain {
