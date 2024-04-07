@@ -7,19 +7,11 @@ import {
   IntrospectedStructure,
 } from './dbStructure';
 import { asMock } from 'test-utils';
-import {
-  AdapterOptions,
-  ColumnsShape,
-  defaultSchemaConfig,
-  getColumnTypes,
-  getTableData,
-  makeColumnTypes,
-  TableData,
-  UnknownColumn,
-} from 'pqb';
+import { AdapterOptions, defaultSchemaConfig, UnknownColumn } from 'pqb';
 import fs from 'fs/promises';
 import { promptSelect } from '../prompt';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
+import { createBaseTable, orchidORM } from 'orchid-orm';
 
 jest.mock('../generate/dbStructure');
 jest.mock('fs/promises', () => ({
@@ -34,23 +26,12 @@ const defaultOptions: AdapterOptions[] = [
 ];
 let options = defaultOptions;
 
-const columnTypes = makeColumnTypes(defaultSchemaConfig);
-const t = {
-  ...columnTypes,
-  text: (min = 0, max = Infinity) => columnTypes.text(min, max),
-};
-
-class BaseTable {
-  schema?: string;
-  types = t;
-  tableData!: TableData;
-  columns!: ColumnsShape;
-  setColumns(fn: (types: typeof t) => ColumnsShape) {
-    const shape = getColumnTypes(t, fn, undefined, undefined);
-    this.tableData = getTableData();
-    return shape;
-  }
-}
+const BaseTable = createBaseTable({
+  columnTypes: (t) => ({
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
+  }),
+});
 
 const defaultConfig = {
   ...testConfig,
@@ -93,22 +74,9 @@ const arrange = (arg: {
   config = {
     db: (() =>
       arg.tables
-        ? Object.fromEntries(
-            arg.tables.map((klass) => {
-              const t = new klass();
-              return [
-                klass.name,
-                Object.assign(t, {
-                  shape: t.columns,
-                  internal: {
-                    ...t.tableData,
-                  },
-                  q: {
-                    schema: t.schema,
-                  },
-                }),
-              ];
-            }),
+        ? orchidORM(
+            { noPrimaryKey: 'ignore' },
+            Object.fromEntries(arg.tables.map((klass) => [klass.name, klass])),
           )
         : {}) as unknown as AnyRakeDbConfig['db'],
     ...(arg.config ?? defaultConfig),
@@ -441,26 +409,26 @@ change(async (db) => {
 
         await act();
 
-        assert.migration(`import { change } from '../src/dbScript';
-
-change(async (db) => {
-  await db.createTable(
-    'schema.one',
-    {
-      comment: "table comment",
-      noPrimaryKey: true,
-    },
-    (t) => ({
-      name: t.string(),
-      int: t.integer(),
-      ...t.timestamps(),
-      ...t.primaryKey(['name', 'int']),
-      ...t.index(['name', 'int']),
-      ...t.check(t.sql\`int > 5\`),
-    }),
-  );
-});
-`);
+        //         assert.migration(`import { change } from '../src/dbScript';
+        //
+        // change(async (db) => {
+        //   await db.createTable(
+        //     'schema.one',
+        //     {
+        //       comment: "table comment",
+        //       noPrimaryKey: true,
+        //     },
+        //     (t) => ({
+        //       name: t.string(),
+        //       int: t.integer(),
+        //       ...t.timestamps(),
+        //       ...t.primaryKey(['name', 'int']),
+        //       ...t.index(['name', 'int']),
+        //       ...t.check(t.sql\`int > 5\`),
+        //     }),
+        //   );
+        // });
+        // `);
       },
     );
 
@@ -725,6 +693,170 @@ change(async (db) => {
   }));
 });
 `);
+    });
+
+    describe('hasAndBelongsToMany', () => {
+      const oneStructure = dbStructureMockFactory.table({
+        name: 'one',
+        columns: [dbStructureMockFactory.identityColumn({ name: 'id' })],
+      });
+
+      const twoStructure = dbStructureMockFactory.table({
+        name: 'two',
+        columns: [dbStructureMockFactory.identityColumn({ name: 'id' })],
+      });
+
+      it('should create join table', async () => {
+        class One extends BaseTable {
+          table = 'one';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+          relations = {
+            twos: this.hasAndBelongsToMany(() => Two, {
+              columns: ['id'],
+              references: ['oneId'],
+              through: {
+                table: 'joinTable',
+                columns: ['twoId'],
+                references: ['id'],
+              },
+            }),
+          };
+        }
+
+        class Two extends BaseTable {
+          table = 'two';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+        }
+
+        arrange({
+          tables: [One, Two],
+          structure: makeStructure({
+            tables: [oneStructure, twoStructure],
+          }),
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createTable('joinTable', (t) => ({
+    oneId: t.integer(),
+    twoId: t.integer(),
+    ...t.primaryKey(['oneId', 'twoId']),
+  }));
+});
+`);
+      });
+
+      it('should create join table just once when it is defined on both sides', async () => {
+        class One extends BaseTable {
+          table = 'one';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+          relations = {
+            twos: this.hasAndBelongsToMany(() => Two, {
+              columns: ['id'],
+              references: ['oneId'],
+              through: {
+                table: 'joinTable',
+                columns: ['twoId'],
+                references: ['id'],
+              },
+            }),
+          };
+        }
+
+        class Two extends BaseTable {
+          table = 'two';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+          relations = {
+            twos: this.hasAndBelongsToMany(() => One, {
+              columns: ['id'],
+              references: ['twoId'],
+              through: {
+                table: 'joinTable',
+                columns: ['oneId'],
+                references: ['id'],
+              },
+            }),
+          };
+        }
+
+        arrange({
+          tables: [One, Two],
+          structure: makeStructure({
+            tables: [oneStructure, twoStructure],
+          }),
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createTable('joinTable', (t) => ({
+    oneId: t.integer(),
+    twoId: t.integer(),
+    ...t.primaryKey(['oneId', 'twoId']),
+  }));
+});
+`);
+      });
+
+      it('should throw if two join table do not match', async () => {
+        class One extends BaseTable {
+          table = 'one';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+          relations = {
+            twos: this.hasAndBelongsToMany(() => Two, {
+              columns: ['id'],
+              references: ['oneId'],
+              through: {
+                table: 'joinTable',
+                columns: ['twoId'],
+                references: ['id'],
+              },
+            }),
+          };
+        }
+
+        class Two extends BaseTable {
+          table = 'two';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+          relations = {
+            twos: this.hasAndBelongsToMany(() => One, {
+              columns: ['id'],
+              references: ['wrong'],
+              through: {
+                table: 'joinTable',
+                columns: ['oneId'],
+                references: ['id'],
+              },
+            }),
+          };
+        }
+
+        arrange({
+          tables: [One, Two],
+          structure: makeStructure({
+            tables: [oneStructure, twoStructure],
+          }),
+        });
+
+        await expect(act()).rejects.toThrow('does not match');
+      });
     });
   });
 

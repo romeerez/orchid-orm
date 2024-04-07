@@ -143,6 +143,7 @@ export const orchidORM = <T extends TableClasses>(
       makeColumnTypes(defaultSchemaConfig),
       transactionStorage,
       commonOptions,
+      {},
     ) as unknown as Db;
     qb.queryBuilder = qb as unknown as Db;
   }
@@ -188,7 +189,7 @@ export const orchidORM = <T extends TableClasses>(
       table.types,
       transactionStorage,
       options,
-      table.constructor.prototype.tableData,
+      table.constructor.prototype.tableData ?? {},
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;

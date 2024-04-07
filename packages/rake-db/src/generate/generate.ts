@@ -11,7 +11,6 @@ import {
   AnyRakeDbConfig,
   makeFileVersion,
   RakeDbAst,
-  RakeDbBaseTable,
   RakeDbConfigDb,
   writeMigrationFile,
 } from 'rake-db';
@@ -33,13 +32,9 @@ import {
   tableToAst,
 } from './structureToAst';
 
-interface Table extends QueryWithTable {
-  schema?: string;
-}
-
 interface ActualItems {
   schemas: Set<string>;
-  tables: Table[];
+  tables: QueryWithTable[];
 }
 
 export const generate = async (
@@ -52,7 +47,7 @@ export const generate = async (
   const currentSchema = adapters[0].schema ?? 'public';
   const dbStructure = await migrateAndPullStructures(adapters);
 
-  const { schemas, tables } = await getActualItems(config.db, config.baseTable);
+  const { schemas, tables } = await getActualItems(config.db);
 
   const [ast, renameSchemas] = await processSchemas(schemas, dbStructure);
 
@@ -143,12 +138,12 @@ const deepCompare = (a: unknown, b: unknown, i: number, path?: string) => {
 
 const createTableAst = (
   currentSchema: string,
-  table: Table,
+  table: QueryWithTable,
 ): RakeDbAst.Table => {
   return {
     type: 'table',
     action: 'create',
-    schema: table.schema === currentSchema ? undefined : table.schema,
+    schema: table.q.schema === currentSchema ? undefined : table.q.schema,
     comment: (table as { comment?: string }).comment,
     name: table.table,
     shape: makeTableShape(table),
@@ -159,7 +154,7 @@ const createTableAst = (
   };
 };
 
-const makeTableShape = (table: Table): ColumnsShape => {
+const makeTableShape = (table: QueryWithTable): ColumnsShape => {
   const shape: ColumnsShape = {};
   for (const key in table.shape) {
     const column = table.shape[key];
@@ -170,30 +165,27 @@ const makeTableShape = (table: Table): ColumnsShape => {
   return shape;
 };
 
-const getActualItems = async (
-  db: RakeDbConfigDb,
-  baseTable: RakeDbBaseTable<unknown>,
-): Promise<ActualItems> => {
+const getActualItems = async (db: RakeDbConfigDb): Promise<ActualItems> => {
   const actualItems: ActualItems = {
     schemas: new Set(),
     tables: [],
   };
 
   const tableNames = new Set<string>();
+  const habtmTables = new Map<string, QueryWithTable>();
 
   const exported = await db();
   for (const key in exported) {
+    if (key[0] === '$') continue;
+
     const table = exported[key as keyof typeof exported];
-    if (!(table instanceof baseTable)) continue;
 
     if (!table.table) {
-      throw new Error(
-        `Table ${table.constructor.name} is missing table property`,
-      );
+      throw new Error(`Table ${key} is missing table property`);
     }
 
     const { schema } = table.q;
-    const name = `${schema ? schema : `${schema}.`}${table.table}`;
+    const name = `${schema ? `${schema}.` : ''}${table.table}`;
     if (tableNames.has(name)) {
       throw new Error(
         `Table ${schema}.${table.table} is defined more than once`,
@@ -204,7 +196,43 @@ const getActualItems = async (
 
     if (schema) actualItems.schemas.add(schema);
 
-    actualItems.tables.push(table as Table);
+    actualItems.tables.push(table as QueryWithTable);
+
+    for (const key in table.relations) {
+      const column = table.shape[key];
+      if ('joinTable' in column) {
+        const q = column.joinTable as QueryWithTable;
+        const prev = habtmTables.get(q.table);
+        if (prev) {
+          for (const key in q.shape) {
+            if (q.shape[key] !== prev.shape[key]) {
+              throw new Error(
+                `Column ${key} in ${q.table} in hasAndBelongsToMany relation does not match with the relation on the other side`,
+              );
+            }
+          }
+          continue;
+        }
+        habtmTables.set(q.table, q);
+
+        const joinTable = Object.create(q);
+
+        const shape: ColumnsShape = {};
+        for (const key in joinTable.shape) {
+          const column = Object.create(joinTable.shape[key]);
+          delete column.data.identity;
+          delete column.data.isPrimaryKey;
+          delete column.data.default;
+          shape[key] = column;
+        }
+        joinTable.shape = shape;
+        joinTable.internal.primaryKey = {
+          columns: Object.keys(shape),
+        };
+
+        actualItems.tables.push(joinTable);
+      }
+    }
   }
 
   return actualItems;
@@ -266,18 +294,18 @@ const processSchemas = async (
 };
 
 const processTables = async (
-  tables: Table[],
+  tables: QueryWithTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   config: AnyRakeDbConfig,
   renameSchemas: Map<string, string>,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
-  const createTables: Table[] = [];
+  const createTables: QueryWithTable[] = [];
   const dropTables: DbStructure.Table[] = [];
 
   for (const table of tables) {
-    const tableSchema = table.schema ?? currentSchema;
+    const tableSchema = table.q.schema ?? currentSchema;
     const stored = dbStructure.tables.find(
       (t) => t.name === table.table && t.schemaName === tableSchema,
     );
@@ -295,7 +323,7 @@ const processTables = async (
     const codeTable = tables.find(
       (t) =>
         t.table === table.name &&
-        (t.schema ?? currentSchema) === table.schemaName,
+        (t.q.schema ?? currentSchema) === table.schemaName,
     );
     if (codeTable) {
       processTableChange(
@@ -315,7 +343,7 @@ const processTables = async (
       const tableToCreate = createTables[i];
       createTables.splice(i, 1);
       const fromSchema = table.schemaName;
-      const toSchema = tableToCreate.schema ?? currentSchema;
+      const toSchema = tableToCreate.q.schema ?? currentSchema;
       if (renameSchemas.get(fromSchema) === toSchema) continue;
 
       ast.push({
@@ -346,7 +374,7 @@ const processTables = async (
           type: 'renameTable',
           fromSchema: drop.schemaName,
           from: drop.name,
-          toSchema: table.schema ?? currentSchema,
+          toSchema: table.q.schema ?? currentSchema,
           to: table.table,
         });
 
@@ -373,7 +401,7 @@ const processTableChange = (
   ast: RakeDbAst[],
   currentSchema: string,
   dbTable: DbStructure.Table,
-  codeTable: Table,
+  codeTable: QueryWithTable,
 ) => {
   const shape: RakeDbAst.ChangeTable['shape'] = {};
   const add: TableData = {};
@@ -392,6 +420,9 @@ const processTableChange = (
 
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
+    // skip virtual column
+    if (!column.dataType) continue;
+
     const name = column.data.name ?? key;
     if (dbColumns[name]) {
       columnsToChange.add(name);
@@ -420,7 +451,7 @@ const processTableChange = (
   ) {
     ast.push({
       type: 'changeTable',
-      schema: codeTable.schema ?? currentSchema,
+      schema: codeTable.q.schema ?? currentSchema,
       name: codeTable.table,
       shape,
       add,

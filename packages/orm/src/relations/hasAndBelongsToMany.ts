@@ -166,6 +166,8 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
   private readonly nestedUpdate: HasManyNestedUpdate;
 
   constructor(
+    // is used to generate a migration for join table
+    public joinTable: Query,
     schema: ColumnSchemaConfig,
     private key: string,
     private state: State,
@@ -353,6 +355,7 @@ export const makeHasAndBelongsToManyMethod = (
       });
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(
+      subQuery,
       defaultSchemaConfig,
       relationName,
       state,
