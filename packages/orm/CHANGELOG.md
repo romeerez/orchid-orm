@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.24.2
+
+### Patch Changes
+
+- 2c19eb70: Add migration methods for enums:
+
+  - `addEnumValues`
+  - `dropEnumValues`
+  - `renameEnumValues`
+  - `renameType`
+  - `changeTypeSchema`
+
 ## 1.24.1
 
 ### Patch Changes

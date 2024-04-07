@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.17.2
+
+### Patch Changes
+
+- 2c19eb70: Add migration methods for enums:
+
+  - `addEnumValues`
+  - `dropEnumValues`
+  - `renameEnumValues`
+  - `renameType`
+  - `changeTypeSchema`
+
 ## 2.17.1
 
 ### Patch Changes
