@@ -397,7 +397,43 @@ const processEnums = async (
   for (const dbEnum of dbStructure.enums) {
     const codeEnum = enums.get(`${dbEnum.schemaName}.${dbEnum.name}`);
     if (codeEnum) {
-      // TODO: maybe change
+      const { values: dbValues } = dbEnum;
+      const { values: codeValues } = codeEnum;
+
+      if (dbValues.length < codeValues.length) {
+        if (!dbValues.some((value, i) => value !== codeValues[i])) {
+          ast.push({
+            type: 'enumValues',
+            action: 'add',
+            schema: dbEnum.schemaName,
+            name: dbEnum.name,
+            values: codeValues.slice(-(codeValues.length - dbValues.length)),
+          });
+          continue;
+        }
+      } else if (dbValues.length > codeValues.length) {
+        if (!codeValues.some((value, i) => value !== dbValues[i])) {
+          ast.push({
+            type: 'enumValues',
+            action: 'drop',
+            schema: dbEnum.schemaName,
+            name: dbEnum.name,
+            values: dbValues.slice(-(dbValues.length - codeValues.length)),
+          });
+          continue;
+        }
+      } else if (!dbValues.some((value, i) => value !== codeValues[i])) {
+        continue;
+      }
+
+      ast.push({
+        type: 'changeEnumValues',
+        schema: dbEnum.schemaName,
+        name: dbEnum.name,
+        fromValues: dbValues,
+        toValues: codeValues,
+      });
+
       continue;
     }
 

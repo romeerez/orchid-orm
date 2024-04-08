@@ -103,7 +103,7 @@ const arrange = (arg: {
 const act = () => generate(options, config);
 
 const assert = {
-  migration: (code: string) => {
+  migration: (code?: string) => {
     expect(asMock(fs.writeFile).mock.calls[0]?.[1]).toBe(code);
   },
 };
@@ -1268,6 +1268,97 @@ change(async (db) => {
   await db.renameType('toSchema.fromEnum', 'toSchema.toEnum');
 });
 `);
+      });
+    });
+
+    describe('enum values', () => {
+      const tableWithEnum = (values: [string, ...string[]]) =>
+        class Table extends BaseTable {
+          table = 'table';
+          noPrimaryKey = true;
+          columns = this.setColumns((t) => ({
+            numbers: t.enum('numbers', values),
+          }));
+        };
+
+      const dbWithEnum = (values: [string, ...string[]]) =>
+        makeStructure({
+          enums: [
+            dbStructureMockFactory.enum({
+              name: 'numbers',
+              values,
+            }),
+          ],
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.enumColumn({
+                  type: 'numbers',
+                  name: 'numbers',
+                }),
+              ],
+            }),
+          ],
+        });
+
+      it('should add values to enum', async () => {
+        arrange({
+          tables: [tableWithEnum(['one', 'two', 'three'])],
+          structure: dbWithEnum(['one']),
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.addEnumValues('public.numbers', ['two', 'three']);
+});
+`);
+      });
+
+      it('should drop values from enum', async () => {
+        arrange({
+          tables: [tableWithEnum(['one'])],
+          structure: dbWithEnum(['one', 'two', 'three']),
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.dropEnumValues('public.numbers', ['two', 'three']);
+});
+`);
+      });
+
+      it('should recreate enum when values do not match', async () => {
+        arrange({
+          tables: [tableWithEnum(['three', 'four'])],
+          structure: dbWithEnum(['one', 'two']),
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeEnumValues('public.numbers', ['one', 'two'], ['three', 'four']);
+});
+`);
+      });
+
+      it('should do nothing if enum was not changed', async () => {
+        arrange({
+          tables: [tableWithEnum(['one', 'two', 'three'])],
+          structure: dbWithEnum(['one', 'two', 'three']),
+        });
+
+        await act();
+
+        assert.migration();
       });
     });
   });

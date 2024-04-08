@@ -846,18 +846,21 @@ describe('astToGenerateItem', () => {
     );
   });
 
-  describe.each(['enumValues', 'renameEnumValues'])('%s', (type) => {
-    it('should have schema dep', () => {
-      arrange({
-        type,
-        schema: 'schema',
-      } as RakeDbAst);
+  describe.each(['enumValues', 'renameEnumValues', 'changeEnumValues'])(
+    '%s',
+    (type) => {
+      it('should have schema dep', () => {
+        arrange({
+          type,
+          schema: 'schema',
+        } as RakeDbAst);
 
-      act();
+        act();
 
-      assertDeps(['schema']);
-    });
-  });
+        assertDeps(['schema']);
+      });
+    },
+  );
 
   describe.each(['add', 'drop'] as const)('%s domain', (action) => {
     it(`should have domain key and have a default schema dep`, () => {

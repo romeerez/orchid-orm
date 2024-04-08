@@ -437,6 +437,13 @@ const astEncoders: {
       .map(([from, to]) => `${quoteObjectKey(from)}: ${singleQuote(to)}`)
       .join(', ')} });`;
   },
+  changeEnumValues(ast) {
+    return `await db.changeEnumValues(${quoteSchemaTable(
+      ast,
+    )}, [${ast.fromValues.map(singleQuote).join(', ')}], [${ast.toValues
+      .map(singleQuote)
+      .join(', ')}]);`;
+  },
   domain(ast) {
     const code: Code[] = [
       `await db.createDomain(${quoteSchemaTable(
