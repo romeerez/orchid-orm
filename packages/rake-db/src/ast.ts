@@ -18,6 +18,7 @@ export type RakeDbAst =
   | RakeDbAst.Enum
   | RakeDbAst.EnumValues
   | RakeDbAst.RenameEnumValues
+  | RakeDbAst.ChangeEnumValues
   | RakeDbAst.Domain
   | RakeDbAst.Collation
   | RakeDbAst.Constraint
@@ -143,6 +144,14 @@ export namespace RakeDbAst {
     schema?: string;
     name: string;
     values: RecordString;
+  }
+
+  export interface ChangeEnumValues {
+    type: 'changeEnumValues';
+    schema?: string;
+    name: string;
+    fromValues: string[];
+    toValues: string[];
   }
 
   export interface Domain {

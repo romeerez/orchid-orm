@@ -7,6 +7,7 @@ import {
   toLine,
 } from '../rake-db.test-utils';
 import { raw } from 'pqb';
+import { singleQuote } from 'orchid-core';
 
 const db = getDb();
 
@@ -592,12 +593,10 @@ describe('migration', () => {
     });
   });
 
-  describe('addEnumValues and dropEnumValues', () => {
+  describe('addEnumValues, dropEnumValues, changeEnumValues', () => {
     const testUpAndDown = makeTestUpAndDown('addEnumValues', 'dropEnumValues');
 
-    afterAll(() => queryMock.mockReset());
-
-    it('should add and drop enum value', async () => {
+    beforeAll(() => {
       queryMock.mockImplementation((arg) => {
         const q = arg as string;
         if (q.includes('enum_range')) {
@@ -621,7 +620,38 @@ describe('migration', () => {
 
         return;
       });
+    });
 
+    afterAll(() => queryMock.mockReset());
+
+    const changeEnumTemplateSql = (values: string[]) => [
+      `SELECT n.nspname AS "schema",
+  c.relname AS "table",
+  json_agg(a.attname ORDER BY a.attnum) AS "columns"
+FROM pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
+JOIN pg_attribute a ON a.attrelid = c.oid
+JOIN pg_type t ON a.atttypid = t.oid AND t.typname = 'enumName'
+JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = 'schemaName'
+GROUP BY n.nspname, c.relname`,
+      `ALTER TABLE "public"."one"
+  ALTER COLUMN "columnOne" TYPE text,
+  ALTER COLUMN "columnTwo" TYPE text;
+ALTER TABLE "custom"."two"
+  ALTER COLUMN "columnThree" TYPE text;
+DROP TYPE "schemaName"."enumName";
+CREATE TYPE "schemaName"."enumName" AS ENUM (${values
+        .map(singleQuote)
+        .join(', ')})`,
+      `ALTER TABLE "public"."one"
+  ALTER COLUMN "columnOne" TYPE "schemaName"."enumName" USING "columnOne"::"schemaName"."enumName"`,
+      `ALTER TABLE "public"."one"
+  ALTER COLUMN "columnTwo" TYPE "schemaName"."enumName" USING "columnTwo"::"schemaName"."enumName"`,
+      `ALTER TABLE "custom"."two"
+  ALTER COLUMN "columnThree" TYPE "schemaName"."enumName" USING "columnThree"::"schemaName"."enumName"`,
+    ];
+
+    it('should add and drop enum value', async () => {
       await testUpAndDown(
         (action) =>
           db[action]('schemaName.enumName', ['three'], {
@@ -635,29 +665,17 @@ describe('migration', () => {
         () =>
           expectSql([
             `SELECT unnest(enum_range(NULL::"schemaName"."enumName"))::text value`,
-            `SELECT n.nspname AS "schema",
-  c.relname AS "table",
-  json_agg(a.attname ORDER BY a.attnum) AS "columns"
-FROM pg_class c
-JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
-JOIN pg_attribute a ON a.attrelid = c.oid
-JOIN pg_type t ON a.atttypid = t.oid AND t.typname = 'enumName'
-JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = 'schemaName'
-GROUP BY n.nspname, c.relname`,
-            `ALTER TABLE "public"."one"
-  ALTER COLUMN "columnOne" TYPE text,
-  ALTER COLUMN "columnTwo" TYPE text;
-ALTER TABLE "custom"."two"
-  ALTER COLUMN "columnThree" TYPE text;
-DROP TYPE "schemaName"."enumName";
-CREATE TYPE "schemaName"."enumName" AS ENUM ('one', 'two', 'four')`,
-            `ALTER TABLE "public"."one"
-  ALTER COLUMN "columnOne" TYPE "schemaName"."enumName" USING "columnOne"::"schemaName"."enumName"`,
-            `ALTER TABLE "public"."one"
-  ALTER COLUMN "columnTwo" TYPE "schemaName"."enumName" USING "columnTwo"::"schemaName"."enumName"`,
-            `ALTER TABLE "custom"."two"
-  ALTER COLUMN "columnThree" TYPE "schemaName"."enumName" USING "columnThree"::"schemaName"."enumName"`,
+            ...changeEnumTemplateSql(['one', 'two', 'four']),
           ]),
+      );
+    });
+
+    it('should change enum values', async () => {
+      await makeTestUpAndDown('changeEnumValues')(
+        (action) =>
+          db[action]('schemaName.enumName', ['one', 'two'], ['three', 'four']),
+        () => expectSql(changeEnumTemplateSql(['three', 'four'])),
+        () => expectSql(changeEnumTemplateSql(['one', 'two'])),
       );
     });
   });

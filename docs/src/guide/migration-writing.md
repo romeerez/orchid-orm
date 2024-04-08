@@ -682,6 +682,29 @@ change(async (db) => {
 });
 ```
 
+## changeEnumValues
+
+[//]: # 'has JSDoc'
+
+Drops the enum and re-creates it with a new set of values.
+Before dropping, changes all related column types to text, and after creating changes types back to the enum,
+in the same way as [dropEnumValues](/guide/migration-writing.html#addenumvalues,-dropenumvalues) works.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeEnumValues(
+    // can be prefixed with schema: 'public.numbers'
+    'numbers',
+    // change from:
+    ['one', 'two'],
+    // change to:
+    ['three', 'four'],
+  );
+});
+```
+
 ## renameEnumValues
 
 [//]: # 'has JSDoc'

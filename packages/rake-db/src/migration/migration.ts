@@ -997,6 +997,38 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
+   * Drops the enum and re-creates it with a new set of values.
+   * Before dropping, changes all related column types to text, and after creating changes types back to the enum,
+   * in the same way as [dropEnumValues](/guide/migration-writing.html#addenumvalues,-dropenumvalues) works.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.changeEnumValues(
+   *     // can be prefixed with schema: 'public.numbers'
+   *     'numbers',
+   *     // change from:
+   *     ['one', 'two'],
+   *     // change to:
+   *     ['three', 'four'],
+   *   );
+   * });
+   * ```
+   *
+   * @param enumName - target enum name, can be prefixed with schema
+   * @param fromValues - array of values before the change
+   * @param toValues - array of values to set
+   */
+  changeEnumValues(
+    enumName: string,
+    fromValues: string[],
+    toValues: string[],
+  ): Promise<void> {
+    return changeEnumValues(this, enumName, fromValues, toValues);
+  }
+
+  /**
    * Rename a type (such as enum):
    *
    * ```ts
@@ -1771,7 +1803,6 @@ export const addOrDropEnumValues = async (
   values: string[],
   options?: AddEnumValueOptions,
 ): Promise<void> => {
-  const defaultSchema = migration.adapter.schema;
   const [schema, name] = getSchemaAndTableFromName(enumName);
   const quotedName = quoteTable(schema, name);
 
@@ -1809,6 +1840,65 @@ export const addOrDropEnumValues = async (
   );
   const existingValues = valuesRows.map((r) => r.value);
 
+  await recreateEnum(
+    migration,
+    ast,
+    existingValues.filter((v) => !ast.values.includes(v)),
+    (quotedName, table, column) =>
+      `Cannot drop ${quotedName} enum values [${ast.values
+        .map(singleQuote)
+        .join(
+          ', ',
+        )}]: table ${table} has a row with such value in the column "${column}"`,
+  );
+};
+
+export const changeEnumValues = async (
+  migration: Migration<RakeDbColumnTypes>,
+  enumName: string,
+  fromValues: string[],
+  toValues: string[],
+): Promise<void> => {
+  const [schema, name] = getSchemaAndTableFromName(enumName);
+
+  if (!migration.up) {
+    const values = fromValues;
+    fromValues = toValues;
+    toValues = values;
+  }
+
+  const ast: RakeDbAst.ChangeEnumValues = {
+    type: 'changeEnumValues',
+    schema,
+    name,
+    fromValues,
+    toValues,
+  };
+
+  await recreateEnum(
+    migration,
+    ast,
+    ast.toValues,
+    (quotedName, table, column) =>
+      `Cannot change ${quotedName} enum values from [${fromValues
+        .map(singleQuote)
+        .join(', ')}] to [${toValues
+        .map(singleQuote)
+        .join(
+          ', ',
+        )}]: table ${table} has a row with removed value in the column "${column}"`,
+  );
+};
+
+const recreateEnum = async (
+  migration: Migration<RakeDbColumnTypes>,
+  { schema, name }: { schema?: string; name: string },
+  values: string[],
+  errorMessage: (quotedName: string, table: string, column: string) => string,
+) => {
+  const defaultSchema = migration.adapter.schema;
+  const quotedName = quoteTable(schema, name);
+
   const { rows: tables } = await migration.adapter.query<{
     schema: string;
     table: string;
@@ -1835,10 +1925,7 @@ GROUP BY n.nspname, c.relname`,
 
   sql.push(
     `DROP TYPE ${quotedName}`,
-    `CREATE TYPE ${quotedName} AS ENUM (${existingValues
-      .filter((v) => !ast.values.includes(v))
-      .map(singleQuote)
-      .join(', ')})`,
+    `CREATE TYPE ${quotedName} AS ENUM (${values.map(singleQuote).join(', ')})`,
   );
 
   await migration.adapter.query(sql.join(';\n'));
@@ -1853,14 +1940,7 @@ GROUP BY n.nspname, c.relname`,
         );
       } catch (err) {
         if ((err as { code: string }).code === '22P02') {
-          throw new Error(
-            `Cannot drop ${quotedName} enum values [${ast.values
-              .map(singleQuote)
-              .join(
-                ', ',
-              )}]: table ${table} has a row with such value in the column "${c}"`,
-            { cause: err },
-          );
+          throw new Error(errorMessage(quotedName, table, c), { cause: err });
         }
         throw err;
       }
