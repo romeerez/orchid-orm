@@ -3,6 +3,7 @@ import {
   AdapterOptions,
   ColumnsShape,
   ColumnType,
+  EnumColumn,
   QueryWithTable,
   TableData,
   VirtualColumn,
@@ -23,18 +24,29 @@ import { astToMigration } from './astToMigration';
 import { colors } from '../colors';
 import { promptSelect } from '../prompt';
 import {
+  dbColumnToAst,
   DbStructureDomainsMap,
   getDbStructureTableData,
-  makeDbStructureColumnsShape,
+  getDbTableColumnsChecks,
+  instantiateDbColumn,
   makeDomainsMap,
   makeStructureToAstCtx,
   StructureToAstCtx,
   tableToAst,
 } from './structureToAst';
+import { QueryColumn } from 'orchid-core';
+import { getSchemaAndTableFromName } from '../common';
 
 interface ActualItems {
   schemas: Set<string>;
+  enums: Map<string, EnumItem>;
   tables: QueryWithTable[];
+}
+
+interface EnumItem {
+  schema?: string;
+  name: string;
+  values: [string, ...string[]];
 }
 
 export const generate = async (
@@ -47,18 +59,18 @@ export const generate = async (
   const currentSchema = adapters[0].schema ?? 'public';
   const dbStructure = await migrateAndPullStructures(adapters);
 
-  const { schemas, tables } = await getActualItems(config.db);
+  const { schemas, enums, tables } = await getActualItems(
+    config.db,
+    currentSchema,
+  );
 
-  const [ast, renameSchemas] = await processSchemas(schemas, dbStructure);
+  const ast = await processSchemas(schemas, dbStructure);
+
+  const enumsAst = await processEnums(enums, dbStructure, currentSchema);
 
   ast.push(
-    ...(await processTables(
-      tables,
-      dbStructure,
-      currentSchema,
-      config,
-      renameSchemas,
-    )),
+    ...enumsAst,
+    ...(await processTables(tables, dbStructure, currentSchema, config)),
   );
 
   const result = astToMigration(currentSchema, config, ast);
@@ -144,13 +156,11 @@ const createTableAst = (
     type: 'table',
     action: 'create',
     schema: table.q.schema === currentSchema ? undefined : table.q.schema,
-    comment: (table as { comment?: string }).comment,
+    comment: table.internal.comment,
     name: table.table,
     shape: makeTableShape(table),
-    noPrimaryKey: (table as { noPrimaryKey?: boolean }).noPrimaryKey
-      ? 'ignore'
-      : 'error',
     ...(table.internal as TableData),
+    noPrimaryKey: table.internal.noPrimaryKey ? 'ignore' : 'error',
   };
 };
 
@@ -165,9 +175,13 @@ const makeTableShape = (table: QueryWithTable): ColumnsShape => {
   return shape;
 };
 
-const getActualItems = async (db: RakeDbConfigDb): Promise<ActualItems> => {
+const getActualItems = async (
+  db: RakeDbConfigDb,
+  currentSchema: string,
+): Promise<ActualItems> => {
   const actualItems: ActualItems = {
     schemas: new Set(),
+    enums: new Map(),
     tables: [],
   };
 
@@ -198,39 +212,18 @@ const getActualItems = async (db: RakeDbConfigDb): Promise<ActualItems> => {
 
     actualItems.tables.push(table as QueryWithTable);
 
+    for (const key in table.shape) {
+      const column = table.shape[key];
+      if (column.dataType === 'enum') {
+        processEnumColumn(column, currentSchema, actualItems);
+      }
+    }
+
     for (const key in table.relations) {
       const column = table.shape[key];
+
       if ('joinTable' in column) {
-        const q = column.joinTable as QueryWithTable;
-        const prev = habtmTables.get(q.table);
-        if (prev) {
-          for (const key in q.shape) {
-            if (q.shape[key] !== prev.shape[key]) {
-              throw new Error(
-                `Column ${key} in ${q.table} in hasAndBelongsToMany relation does not match with the relation on the other side`,
-              );
-            }
-          }
-          continue;
-        }
-        habtmTables.set(q.table, q);
-
-        const joinTable = Object.create(q);
-
-        const shape: ColumnsShape = {};
-        for (const key in joinTable.shape) {
-          const column = Object.create(joinTable.shape[key]);
-          delete column.data.identity;
-          delete column.data.isPrimaryKey;
-          delete column.data.default;
-          shape[key] = column;
-        }
-        joinTable.shape = shape;
-        joinTable.internal.primaryKey = {
-          columns: Object.keys(shape),
-        };
-
-        actualItems.tables.push(joinTable);
+        processHasAndBelongsToManyColumn(column, habtmTables, actualItems);
       }
     }
   }
@@ -238,14 +231,74 @@ const getActualItems = async (db: RakeDbConfigDb): Promise<ActualItems> => {
   return actualItems;
 };
 
+const processEnumColumn = (
+  column: QueryColumn,
+  currentSchema: string,
+  actualItems: ActualItems,
+) => {
+  const { enumName, options } = column as unknown as {
+    enumName: string;
+    options: [string, ...string[]];
+  };
+
+  const [schema, name] = getSchemaAndTableFromName(enumName);
+  const enumSchema = schema ?? currentSchema;
+
+  actualItems.enums.set(`${enumSchema}.${name}`, {
+    schema: enumSchema,
+    name,
+    values: options,
+  });
+  if (schema) actualItems.schemas.add(schema);
+};
+
+const processHasAndBelongsToManyColumn = (
+  column: QueryColumn & { joinTable: unknown },
+  habtmTables: Map<string, QueryWithTable>,
+  actualItems: ActualItems,
+) => {
+  const q = (column as { joinTable: QueryWithTable }).joinTable;
+  const prev = habtmTables.get(q.table);
+  if (prev) {
+    for (const key in q.shape) {
+      if (q.shape[key] !== prev.shape[key]) {
+        throw new Error(
+          `Column ${key} in ${q.table} in hasAndBelongsToMany relation does not match with the relation on the other side`,
+        );
+      }
+    }
+    return;
+  }
+  habtmTables.set(q.table, q);
+
+  const joinTable = Object.create(q);
+
+  const shape: ColumnsShape = {};
+  for (const key in joinTable.shape) {
+    const column = Object.create(joinTable.shape[key]);
+    delete column.data.identity;
+    delete column.data.isPrimaryKey;
+    delete column.data.default;
+    shape[key] = column;
+  }
+  joinTable.shape = shape;
+  joinTable.internal.primaryKey = {
+    columns: Object.keys(shape),
+  };
+  joinTable.internal.noPrimaryKey = false;
+
+  actualItems.tables.push(joinTable);
+
+  return;
+};
+
 const processSchemas = async (
   schemas: Set<string>,
   dbStructure: IntrospectedStructure,
-): Promise<[schemasAst: RakeDbAst[], renameSchemas: Map<string, string>]> => {
+): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
   const createSchemas: string[] = [];
   const dropSchemas: string[] = [];
-  const renameSchemas = new Map<string, string>();
 
   for (const schema of schemas) {
     if (!dbStructure.schemas.includes(schema)) {
@@ -265,7 +318,24 @@ const processSchemas = async (
       if (index) {
         const from = dropSchemas[index - 1];
         dropSchemas.splice(index - 1, 1);
-        renameSchemas.set(from, schema);
+
+        renameSchemaInStructures(dbStructure.tables, from, schema);
+        renameSchemaInStructures(dbStructure.views, from, schema);
+        renameSchemaInStructures(dbStructure.indexes, from, schema);
+        renameSchemaInStructures(dbStructure.constraints, from, schema);
+        renameSchemaInStructures(dbStructure.triggers, from, schema);
+        renameSchemaInStructures(dbStructure.extensions, from, schema);
+        renameSchemaInStructures(dbStructure.enums, from, schema);
+        renameSchemaInStructures(dbStructure.domains, from, schema);
+        renameSchemaInStructures(dbStructure.collations, from, schema);
+        for (const table of dbStructure.tables) {
+          for (const column of table.columns) {
+            if (column.typeSchema === from) {
+              column.typeSchema = schema;
+            }
+          }
+        }
+
         ast.push({
           type: 'renameSchema',
           from,
@@ -290,7 +360,143 @@ const processSchemas = async (
     });
   }
 
-  return [ast, renameSchemas];
+  return ast;
+};
+
+const renameSchemaInStructures = (
+  items: { schemaName: string }[],
+  from: string,
+  to: string,
+) => {
+  for (const item of items) {
+    if (item.schemaName === from) {
+      item.schemaName = to;
+    }
+  }
+};
+
+const processEnums = async (
+  enums: ActualItems['enums'],
+  dbStructure: IntrospectedStructure,
+  currentSchema: string,
+): Promise<RakeDbAst[]> => {
+  const ast: RakeDbAst[] = [];
+  const createEnums: EnumItem[] = [];
+  const dropEnums: DbStructure.Enum[] = [];
+
+  for (const [, codeEnum] of enums) {
+    const { schema = currentSchema, name } = codeEnum;
+    const dbEnum = dbStructure.enums.find(
+      (x) => x.schemaName === schema && x.name === name,
+    );
+    if (!dbEnum) {
+      createEnums.push(codeEnum);
+    }
+  }
+
+  for (const dbEnum of dbStructure.enums) {
+    const codeEnum = enums.get(`${dbEnum.schemaName}.${dbEnum.name}`);
+    if (codeEnum) {
+      // TODO: maybe change
+      continue;
+    }
+
+    const i = createEnums.findIndex((x) => x.name === dbEnum.name);
+    if (i !== -1) {
+      const item = createEnums[i];
+      createEnums.splice(i, 1);
+      const fromSchema = dbEnum.schemaName;
+      const toSchema = item.schema ?? currentSchema;
+
+      renameColumnsTypeSchema(dbStructure, fromSchema, toSchema);
+
+      ast.push({
+        type: 'renameType',
+        table: false,
+        fromSchema,
+        from: dbEnum.name,
+        toSchema,
+        to: dbEnum.name,
+      });
+      continue;
+    }
+
+    dropEnums.push(dbEnum);
+  }
+
+  for (const codeEnum of createEnums) {
+    if (dropEnums.length) {
+      const index = await select(
+        'enum',
+        codeEnum.name,
+        dropEnums.map((x) => x.name),
+      );
+      if (index) {
+        const drop = dropEnums[index - 1];
+        dropEnums.splice(index - 1, 1);
+
+        const fromSchema = drop.schemaName;
+        const from = drop.name;
+        const toSchema = codeEnum.schema ?? currentSchema;
+        const to = codeEnum.name;
+
+        if (fromSchema !== toSchema) {
+          renameColumnsTypeSchema(dbStructure, fromSchema, toSchema);
+        }
+
+        for (const table of dbStructure.tables) {
+          for (const column of table.columns) {
+            if (column.type === from) {
+              column.type = to;
+            }
+          }
+        }
+
+        ast.push({
+          type: 'renameType',
+          table: false,
+          fromSchema,
+          from,
+          toSchema,
+          to,
+        });
+
+        continue;
+      }
+    }
+
+    ast.push({
+      type: 'enum',
+      action: 'create',
+      ...codeEnum,
+    });
+  }
+
+  for (const dbEnum of dropEnums) {
+    ast.push({
+      type: 'enum',
+      action: 'drop',
+      schema: dbEnum.schemaName,
+      name: dbEnum.name,
+      values: dbEnum.values,
+    });
+  }
+
+  return ast;
+};
+
+const renameColumnsTypeSchema = (
+  dbStructure: IntrospectedStructure,
+  from: string,
+  to: string,
+) => {
+  for (const table of dbStructure.tables) {
+    for (const column of table.columns) {
+      if (column.typeSchema === from) {
+        column.typeSchema = to;
+      }
+    }
+  }
 };
 
 const processTables = async (
@@ -298,32 +504,31 @@ const processTables = async (
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   config: AnyRakeDbConfig,
-  renameSchemas: Map<string, string>,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
   const createTables: QueryWithTable[] = [];
   const dropTables: DbStructure.Table[] = [];
 
-  for (const table of tables) {
-    const tableSchema = table.q.schema ?? currentSchema;
-    const stored = dbStructure.tables.find(
-      (t) => t.name === table.table && t.schemaName === tableSchema,
+  for (const codeTable of tables) {
+    const tableSchema = codeTable.q.schema ?? currentSchema;
+    const dbTable = dbStructure.tables.find(
+      (t) => t.name === codeTable.table && t.schemaName === tableSchema,
     );
-    if (!stored) {
-      createTables.push(table);
+    if (!dbTable) {
+      createTables.push(codeTable);
     }
   }
 
   const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 
-  for (const table of dbStructure.tables) {
-    if (table.name === 'schemaMigrations') continue;
+  for (const dbTable of dbStructure.tables) {
+    if (dbTable.name === 'schemaMigrations') continue;
 
     const codeTable = tables.find(
       (t) =>
-        t.table === table.name &&
-        (t.q.schema ?? currentSchema) === table.schemaName,
+        t.table === dbTable.name &&
+        (t.q.schema ?? currentSchema) === dbTable.schemaName,
     );
     if (codeTable) {
       processTableChange(
@@ -332,62 +537,63 @@ const processTables = async (
         domainsMap,
         ast,
         currentSchema,
-        table,
+        dbTable,
         codeTable,
       );
       continue;
     }
 
-    const i = createTables.findIndex((t) => t.table === table.name);
+    const i = createTables.findIndex((t) => t.table === dbTable.name);
     if (i !== -1) {
-      const tableToCreate = createTables[i];
+      const table = createTables[i];
       createTables.splice(i, 1);
-      const fromSchema = table.schemaName;
-      const toSchema = tableToCreate.q.schema ?? currentSchema;
-      if (renameSchemas.get(fromSchema) === toSchema) continue;
+      const fromSchema = dbTable.schemaName;
+      const toSchema = table.q.schema ?? currentSchema;
 
       ast.push({
-        type: 'renameTable',
+        type: 'renameType',
+        table: true,
         fromSchema,
-        from: table.name,
+        from: dbTable.name,
         toSchema,
-        to: table.name,
+        to: dbTable.name,
       });
       continue;
     }
 
-    dropTables.push(table);
+    dropTables.push(dbTable);
   }
 
-  for (const table of createTables) {
+  for (const codeTable of createTables) {
     if (dropTables.length) {
       const index = await select(
         'table',
-        table.table,
-        dropTables.map((table) => table.name),
+        codeTable.table,
+        dropTables.map((x) => x.name),
       );
       if (index) {
         const drop = dropTables[index - 1];
         dropTables.splice(index - 1, 1);
 
         ast.push({
-          type: 'renameTable',
+          type: 'renameType',
+          table: true,
           fromSchema: drop.schemaName,
           from: drop.name,
-          toSchema: table.q.schema ?? currentSchema,
-          to: table.table,
+          toSchema: codeTable.q.schema ?? currentSchema,
+          to: codeTable.table,
         });
 
         continue;
       }
     }
 
-    ast.push(createTableAst(currentSchema, table));
+    ast.push(createTableAst(currentSchema, codeTable));
   }
 
-  for (const table of dropTables) {
+  for (const dbTable of dropTables) {
     ast.push(
-      tableToAst(structureToAstCtx, dbStructure, table, 'drop', domainsMap),
+      tableToAst(structureToAstCtx, dbStructure, dbTable, 'drop', domainsMap),
     );
   }
 
@@ -408,15 +614,12 @@ const processTableChange = (
   const drop: TableData = {};
 
   const tableData = getDbStructureTableData(dbStructure, dbTable);
-  const dbColumns = makeDbStructureColumnsShape(
-    structureToAstCtx,
-    dbStructure,
-    domainsMap,
-    dbTable,
-    tableData,
+  const checks = getDbTableColumnsChecks(tableData);
+  const dbColumns = Object.fromEntries(
+    dbTable.columns.map((column) => [column.name, column]),
   );
 
-  const columnsToChange = new Set<string>();
+  const columnsToChange = new Map<string, ColumnType>();
 
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
@@ -425,7 +628,7 @@ const processTableChange = (
 
     const name = column.data.name ?? key;
     if (dbColumns[name]) {
-      columnsToChange.add(name);
+      columnsToChange.set(name, column);
       continue;
     }
 
@@ -438,10 +641,48 @@ const processTableChange = (
   for (const name in dbColumns) {
     if (columnsToChange.has(name)) continue;
 
-    shape[name] = {
+    const [key, column] = dbColumnToAst(
+      structureToAstCtx,
+      dbStructure,
+      domainsMap,
+      dbTable.name,
+      dbColumns[name],
+      dbTable,
+      tableData,
+      checks,
+    );
+
+    shape[key] = {
       type: 'drop',
-      item: dbColumns[name],
+      item: column,
     };
+  }
+
+  for (const [name, codeColumn] of columnsToChange) {
+    const dbColumnStructure = dbColumns[name];
+
+    let changed = false;
+
+    const dbColumn = instantiateDbColumn(
+      structureToAstCtx,
+      dbStructure,
+      domainsMap,
+      dbColumnStructure,
+    );
+
+    const dbType = getColumnType(dbColumn, currentSchema);
+    const codeType = getColumnType(codeColumn, currentSchema);
+    if (dbType !== codeType) {
+      changed = true;
+    }
+
+    if (changed) {
+      shape[name] = {
+        type: 'change',
+        from: { column: dbColumn },
+        to: { column: codeColumn },
+      };
+    }
   }
 
   if (
@@ -457,6 +698,17 @@ const processTableChange = (
       add,
       drop,
     });
+  }
+};
+
+const getColumnType = (column: ColumnType, currentSchema: string) => {
+  if (column instanceof EnumColumn) {
+    const [schema = currentSchema, name] = getSchemaAndTableFromName(
+      column.enumName,
+    );
+    return (column.enumName = `${schema}.${name}`);
+  } else {
+    return column.dataType;
   }
 };
 

@@ -102,6 +102,8 @@ export interface DbTableOptions<
    * See {@link SoftDeleteMethods}
    */
   softDelete?: SoftDeleteOption<Shape>;
+  // table comment, for migrations generator
+  comment?: string;
 }
 
 /**
@@ -197,6 +199,8 @@ export class Db<
       transactionStorage,
       scopes,
       snakeCase: options.snakeCase,
+      noPrimaryKey: options.noPrimaryKey === 'ignore',
+      comment: options.comment,
     };
 
     this.baseQuery = this as Query;

@@ -153,7 +153,7 @@ const extension: DbStructure.Extension = {
 };
 
 const collation: DbStructure.Collation = {
-  schema: 'public',
+  schemaName: 'public',
   name: 'collation',
   provider: 'icu',
   deterministic: true,

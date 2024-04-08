@@ -104,7 +104,7 @@ export const structureToAst = async (
       type: 'collation',
       action: 'create',
       ...it,
-      schema: it.schema === ctx.currentSchema ? undefined : it.schema,
+      schema: it.schemaName === ctx.currentSchema ? undefined : it.schemaName,
     });
   }
 
@@ -186,20 +186,26 @@ export const makeDomainsMap = (
   const domains: DbStructureDomainsMap = {};
 
   for (const it of data.domains) {
-    domains[`${it.schemaName}.${it.name}`] = getColumn(ctx, data, domains, {
-      schemaName: it.schemaName,
-      name: it.name,
-      type: it.type,
-      typeSchema: it.typeSchema,
-      isArray: it.isArray,
-      isSerial: false,
-    });
+    domains[`${it.schemaName}.${it.name}`] = instantiateDbColumn(
+      ctx,
+      data,
+      domains,
+      {
+        schemaName: it.schemaName,
+        name: it.name,
+        type: it.type,
+        typeSchema: it.typeSchema,
+        isArray: it.isArray,
+        tableName: '',
+        isNullable: false,
+      },
+    );
   }
 
   return domains;
 };
 
-const getIsSerial = (item: DbStructure.Column) => {
+const getDbColumnIsSerial = (item: DbStructure.Column) => {
   if (item.type === 'int2' || item.type === 'int4' || item.type === 'int8') {
     const { default: def, schemaName, tableName, name } = item;
     const seq = `${tableName}_${name}_seq`;
@@ -219,64 +225,56 @@ const getIsSerial = (item: DbStructure.Column) => {
   return false;
 };
 
-const getColumn = (
+export const instantiateDbColumn = (
   ctx: StructureToAstCtx,
   data: IntrospectedStructure,
   domains: DbStructureDomainsMap,
-  {
-    schemaName,
-    tableName,
-    name,
-    type,
-    typeSchema,
-    isArray,
-    isSerial,
-    ...params
-  }: {
-    schemaName: string;
-    tableName?: string;
-    name: string;
-    type: string;
-    typeSchema: string;
-    isArray: boolean;
-    isSerial: boolean;
-  } & ColumnFromDbParams,
+  dbColumn: DbStructure.Column,
 ) => {
+  const isSerial = getDbColumnIsSerial(dbColumn);
+  if (isSerial) {
+    dbColumn = { ...dbColumn, default: undefined };
+  }
+
   let column: ColumnType;
 
-  const columnType = getColumnType(type, isSerial);
-  const typeFn = ctx.columnsByType[columnType];
-  if (typeFn) {
-    column = instantiateColumn(typeFn, params) as ColumnType;
+  const col = instantiateColumnByDbType(ctx, dbColumn.type, isSerial, dbColumn);
+  if (col) {
+    column = col;
   } else {
-    const domainId = `${typeSchema}.${type}`;
-    const domainColumn = domains[domainId];
+    const { typeSchema, type: typeName } = dbColumn;
+    const typeId = `${typeSchema}.${typeName}`;
+    const domainColumn = domains[typeId];
     if (domainColumn) {
-      column = new DomainColumn(ctx.columnSchemaConfig, domainId).as(
+      column = new DomainColumn(ctx.columnSchemaConfig, typeId).as(
         domainColumn,
       );
     } else {
       const enumType = data.enums.find(
-        (item) => item.name === type && item.schemaName === typeSchema,
+        (x) => x.name === typeName && x.schemaName === typeSchema,
       );
       if (enumType) {
         column = new EnumColumn(
           ctx.columnSchemaConfig,
-          type,
+          typeId,
           enumType.values,
           ctx.columnSchemaConfig.type,
         );
       } else {
-        column = new CustomTypeColumn(ctx.columnSchemaConfig, type);
+        column = new CustomTypeColumn(ctx.columnSchemaConfig, typeId);
 
-        (ctx.unsupportedTypes[type] ??= []).push(
-          `${schemaName}${tableName ? `.${tableName}` : ''}.${name}`,
+        (ctx.unsupportedTypes[dbColumn.type] ??= []).push(
+          `${dbColumn.schemaName}${
+            dbColumn.tableName ? `.${dbColumn.tableName}` : ''
+          }.${dbColumn.name}`,
         );
       }
     }
   }
 
-  return isArray
+  column.data.name = undefined;
+
+  return dbColumn.isArray
     ? new ArrayColumn(
         ctx.columnSchemaConfig,
         column,
@@ -285,14 +283,26 @@ const getColumn = (
     : column;
 };
 
-const getColumnType = (type: string, isSerial: boolean) => {
-  if (!isSerial) return type;
+const instantiateColumnByDbType = (
+  ctx: StructureToAstCtx,
+  type: string,
+  isSerial: boolean,
+  params: ColumnFromDbParams,
+) => {
+  const columnFn =
+    ctx.columnsByType[
+      !isSerial
+        ? type
+        : type === 'int2'
+        ? 'smallserial'
+        : type === 'int4'
+        ? 'serial'
+        : 'bigserial'
+    ];
 
-  return type === 'int2'
-    ? 'smallserial'
-    : type === 'int4'
-    ? 'serial'
-    : 'bigserial';
+  return columnFn
+    ? (instantiateColumn(columnFn, params) as ColumnType)
+    : undefined;
 };
 
 export const tableToAst = (
@@ -483,19 +493,10 @@ export const makeDbStructureColumnsShape = (
   tableData?: StructureToAstTableData,
 ): ColumnsShape => {
   const shape: ColumnsShape = {};
-
-  let checks: RecordString | undefined;
-  if (tableData) {
-    checks = tableData.constraints.reduce<RecordString>((acc, item) => {
-      if (isColumnCheck(item)) {
-        acc[item.check.columns[0]] = item.check.expression;
-      }
-      return acc;
-    }, {});
-  }
+  const checks = tableData ? getDbTableColumnsChecks(tableData) : undefined;
 
   for (const item of table.columns) {
-    const [key, column] = columnToAst(
+    const [key, column] = dbColumnToAst(
       ctx,
       data,
       domains,
@@ -511,7 +512,15 @@ export const makeDbStructureColumnsShape = (
   return shape;
 };
 
-const columnToAst = (
+export const getDbTableColumnsChecks = (tableData: StructureToAstTableData) =>
+  tableData.constraints.reduce<RecordString>((acc, item) => {
+    if (isColumnCheck(item)) {
+      acc[item.check.columns[0]] = item.check.expression;
+    }
+    return acc;
+  }, {});
+
+export const dbColumnToAst = (
   ctx: StructureToAstCtx,
   data: IntrospectedStructure,
   domains: DbStructureDomainsMap,
@@ -521,17 +530,7 @@ const columnToAst = (
   tableData?: StructureToAstTableData,
   checks?: RecordString,
 ): [key: string, column: ColumnType] => {
-  const isSerial = getIsSerial(item);
-  if (isSerial) {
-    item = { ...item, default: undefined };
-  }
-
-  let column = getColumn(ctx, data, domains, {
-    ...item,
-    type: item.type,
-    isArray: item.isArray,
-    isSerial,
-  });
+  let column = instantiateDbColumn(ctx, data, domains, item);
 
   if (item.identity) {
     column.data.identity = item.identity;

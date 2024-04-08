@@ -144,7 +144,7 @@ export namespace DbStructure {
   }
 
   export interface Collation {
-    schema: string;
+    schemaName: string;
     name: string;
     provider: string;
     deterministic: boolean;
@@ -527,7 +527,7 @@ LEFT JOIN pg_catalog.pg_constraint c ON c.contypid = d.oid
 WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`;
 
 const collationsSql = `SELECT
-  nspname "schema",
+  nspname "schemaName",
   collname "name",
   CASE WHEN collprovider = 'i' THEN 'icu' WHEN collprovider = 'c' THEN 'libc' ELSE collprovider::text END "provider",
   collisdeterministic "deterministic",

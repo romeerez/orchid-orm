@@ -40,8 +40,8 @@ let result: GenerateItem | TableGenerateItem | undefined;
 const act = () => {
   if ('action' in item) {
     result = [
-      astToGenerateItem({ ...item, action: 'create' }, 'public'),
-      astToGenerateItem({ ...item, action: 'drop' as 'create' }, 'public'),
+      astToGenerateItem({ ...item, action: 'create' } as RakeDbAst, 'public'),
+      astToGenerateItem({ ...item, action: 'drop' } as RakeDbAst, 'public'),
     ];
   } else {
     result = astToGenerateItem(item, 'public');
@@ -289,7 +289,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('public.some', 'integer');
+        assertDeps('public.some', 'public.integer');
       });
 
       it('should have a column fkey dep with schema', () => {
@@ -301,7 +301,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('schema.some', 'integer');
+        assertDeps('schema.some', 'public.integer');
       });
 
       it('should have a column fn fkey dep', () => {
@@ -313,7 +313,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('public.some', 'integer');
+        assertDeps('public.some', 'public.integer');
       });
 
       it('should have a column fn fkey dep with schema', () => {
@@ -325,7 +325,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('schema.some', 'integer');
+        assertDeps('schema.some', 'public.integer');
       });
 
       it('should have a composite fkey dep', () => {
@@ -409,7 +409,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('varchar', 'customCollation');
+        assertDeps('public.varchar', 'customCollation');
       });
 
       it('should have enum deps', () => {
@@ -656,7 +656,7 @@ describe('astToGenerateItem', () => {
 
             assertDeps(
               `${type.includes('schema') ? 'schema' : 'public'}.some`,
-              'integer',
+              'public.integer',
             );
           });
 
@@ -705,7 +705,7 @@ describe('astToGenerateItem', () => {
 
           act();
 
-          assertDeps('public.some', 'integer', 'varchar');
+          assertDeps('public.some', 'public.integer', 'public.varchar');
         });
       });
     });
@@ -714,7 +714,8 @@ describe('astToGenerateItem', () => {
   describe('renameTable', () => {
     it('should drop old table name and add a new one', () => {
       arrange({
-        type: 'renameTable',
+        type: 'renameType',
+        table: true,
         fromSchema: 'fromSchema',
         from: 'fromTable',
         toSchema: 'toSchema',
@@ -731,7 +732,8 @@ describe('astToGenerateItem', () => {
 
     it('should drop old table name and add a new one with default schema', () => {
       arrange({
-        type: 'renameTable',
+        type: 'renameType',
+        table: true,
         from: 'fromTable',
         to: 'toTable',
       });
@@ -746,7 +748,8 @@ describe('astToGenerateItem', () => {
 
     it('should add schemas to deps', () => {
       arrange({
-        type: 'renameTable',
+        type: 'renameType',
+        table: true,
         fromSchema: 'fromSchema',
         from: 'fromTable',
         toSchema: 'toSchema',
@@ -760,7 +763,8 @@ describe('astToGenerateItem', () => {
 
     it('should add default schema to deps', () => {
       arrange({
-        type: 'renameTable',
+        type: 'renameType',
+        table: true,
         from: 'fromTable',
         to: 'toTable',
       });
@@ -842,6 +846,19 @@ describe('astToGenerateItem', () => {
     );
   });
 
+  describe.each(['enumValues', 'renameEnumValues'])('%s', (type) => {
+    it('should have schema dep', () => {
+      arrange({
+        type,
+        schema: 'schema',
+      } as RakeDbAst);
+
+      act();
+
+      assertDeps(['schema']);
+    });
+  });
+
   describe.each(['add', 'drop'] as const)('%s domain', (action) => {
     it(`should have domain key and have a default schema dep`, () => {
       arrange({
@@ -854,7 +871,7 @@ describe('astToGenerateItem', () => {
       act();
 
       assertKey('public.domain');
-      assertDeps(['public', 'integer']);
+      assertDeps(['public', 'public.integer']);
     });
 
     it(`should have domain key with schema`, () => {
@@ -869,7 +886,7 @@ describe('astToGenerateItem', () => {
       act();
 
       assertKey('schema.domain');
-      assertDeps(['schema', 'integer']);
+      assertDeps(['schema', 'public.integer']);
     });
 
     it('should have collation deps', () => {
@@ -883,7 +900,7 @@ describe('astToGenerateItem', () => {
 
       act();
 
-      assertDeps(['public', 'integer', 'customCollation']);
+      assertDeps(['public', 'public.integer', 'customCollation']);
     });
   });
 
@@ -979,7 +996,12 @@ describe('astToGenerateItem', () => {
         act();
 
         assertKey(`${expectSchema}.viewName`);
-        assertDeps([expectSchema, 'public.table', 'varchar', 'collationName']);
+        assertDeps([
+          expectSchema,
+          'public.table',
+          'public.varchar',
+          'collationName',
+        ]);
       });
     });
   });

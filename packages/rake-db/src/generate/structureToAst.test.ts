@@ -202,7 +202,7 @@ describe('structureToAst', () => {
       expect(ast.shape.column).toBeInstanceOf(EnumColumn);
       expect(
         (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).enumName,
-      ).toBe(structure.enums[0].name);
+      ).toBe(`${structure.enums[0].schemaName}.${structure.enums[0].name}`);
       expect(
         (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).options,
       ).toBe(structure.enums[0].values);
@@ -236,7 +236,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
       expect(ast.shape.column).toBeInstanceOf(CustomTypeColumn);
-      expect(ast.shape.column.dataType).toBe('customType');
+      expect(ast.shape.column.dataType).toBe('pg_catalog.customType');
 
       expect(ctx.unsupportedTypes).toEqual({
         customType: [`${column.schemaName}.${column.tableName}.${column.name}`],
@@ -1053,7 +1053,7 @@ describe('structureToAst', () => {
     it('should add collation', async () => {
       const [collation] = (structure.collations = [
         dbStructureMockFactory.collation({
-          schema: 'custom',
+          schemaName: 'custom',
           lcCollate: 'C',
           lcCType: 'C',
         }),

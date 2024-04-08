@@ -114,6 +114,8 @@ export interface Table {
   scopes?: CoreQueryScopes;
   // enable soft delete, true for `deletedAt` column, string for column name
   readonly softDelete?: true | string;
+  // database table comment
+  comment?: string;
 }
 
 // Object type that's allowed in `where` and similar methods of the table.

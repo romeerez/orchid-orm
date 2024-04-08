@@ -208,18 +208,59 @@ change(async (db) => {
     );
   });
 
-  it('should create enum', () => {
-    const result = act([
-      {
-        ...enumType,
-        schema: 'schema',
-      },
-    ]);
+  describe('enum', () => {
+    it('should create enum', () => {
+      const result = act([
+        {
+          ...enumType,
+          schema: 'schema',
+        },
+      ]);
 
-    expectResult(
-      result,
-      template(`  await db.createEnum('schema.mood', ['sad', 'ok', 'happy']);`),
-    );
+      expectResult(
+        result,
+        template(
+          `  await db.createEnum('schema.mood', ['sad', 'ok', 'happy']);`,
+        ),
+      );
+    });
+
+    it.each(['add', 'drop'] as const)('should %s enum values', (action) => {
+      const result = act([
+        {
+          type: 'enumValues',
+          action,
+          schema: 'schema',
+          name: 'mood',
+          values: ['ok', 'happy'],
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(
+          `  await db.${action}EnumValues('schema.mood', ['ok', 'happy']);`,
+        ),
+      );
+    });
+
+    it('should rename enum values', () => {
+      const result = act([
+        {
+          type: 'renameEnumValues',
+          schema: 'schema',
+          name: 'enum',
+          values: { a: 'b', c: 'd' },
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(
+          `  await db.renameEnumValues('schema.enum', { a: 'b', c: 'd' });`,
+        ),
+      );
+    });
   });
 
   describe('table', () => {

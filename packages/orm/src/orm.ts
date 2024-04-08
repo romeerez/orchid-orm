@@ -116,7 +116,10 @@ export const orchidORM = <T extends TableClasses>(
   }: OrchidOrmArg,
   tables: T,
 ): OrchidORM<T> => {
-  const commonOptions = {
+  const commonOptions: QueryLogOptions & {
+    autoPreparedStatements?: boolean;
+    noPrimaryKey?: NoPrimaryKeyOption;
+  } = {
     log,
     logger,
     autoPreparedStatements,
@@ -176,9 +179,9 @@ export const orchidORM = <T extends TableClasses>(
       scopes: table.scopes as DbTableOptionScopes<string, ColumnsShapeBase>,
       softDelete: table.softDelete,
       snakeCase: (table as { snakeCase?: boolean }).snakeCase,
+      comment: table.comment,
+      noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
     };
-
-    if (table.noPrimaryKey) options.noPrimaryKey = 'ignore';
 
     const dbTable = new Db(
       adapter,

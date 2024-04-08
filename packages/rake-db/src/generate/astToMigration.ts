@@ -369,20 +369,21 @@ const astEncoders: {
 
     return result;
   },
-  renameTable(ast, _, currentSchema) {
+  renameType(ast, _, currentSchema) {
     const code: Code[] = [];
+    const kind = ast.table ? 'Table' : 'Type';
 
     if (ast.from === ast.to) {
       addCode(
         code,
-        `await db.changeTableSchema(${singleQuote(ast.to)}, ${singleQuote(
+        `await db.change${kind}Schema(${singleQuote(ast.to)}, ${singleQuote(
           ast.fromSchema ?? currentSchema,
         )}, ${singleQuote(ast.toSchema ?? currentSchema)});`,
       );
     } else {
       addCode(
         code,
-        `await db.renameTable(${quoteSchemaTable({
+        `await db.rename${kind}(${quoteSchemaTable({
           schema: ast.fromSchema === currentSchema ? undefined : ast.fromSchema,
           name: ast.from,
         })}, ${quoteSchemaTable({
@@ -420,9 +421,21 @@ const astEncoders: {
     return code;
   },
   enum(ast) {
-    return `await db.createEnum(${quoteSchemaTable(ast)}, [${ast.values
-      .map(singleQuote)
-      .join(', ')}]);`;
+    return `await db.${
+      ast.action === 'create' ? 'createEnum' : 'dropEnum'
+    }(${quoteSchemaTable(ast)}, [${ast.values.map(singleQuote).join(', ')}]);`;
+  },
+  enumValues(ast) {
+    return `await db.${ast.action}EnumValues(${quoteSchemaTable(
+      ast,
+    )}, [${ast.values.map(singleQuote).join(', ')}]);`;
+  },
+  renameEnumValues(ast) {
+    return `await db.renameEnumValues(${quoteSchemaTable(
+      ast,
+    )}, { ${Object.entries(ast.values)
+      .map(([from, to]) => `${quoteObjectKey(from)}: ${singleQuote(to)}`)
+      .join(', ')} });`;
   },
   domain(ast) {
     const code: Code[] = [

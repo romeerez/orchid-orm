@@ -41,6 +41,16 @@ export const astToGenerateItem = (
   const add: string[] = [];
   const drop: string[] = [];
   const deps: string[] = [];
+  const typeSchemaCache = new Map<string, string>();
+  const resolveType = (type: string): string => {
+    let dep = typeSchemaCache.get(type);
+    if (!dep) {
+      const [schema = currentSchema, name] = getSchemaAndTableFromName(type);
+      dep = `${schema}.${name}`;
+      typeSchemaCache.set(type, dep);
+    }
+    return dep;
+  };
 
   switch (ast.type) {
     case 'table':
@@ -58,7 +68,14 @@ export const astToGenerateItem = (
           ([name, column]) => [keys, name, { column }],
         );
 
-        analyzeTableColumns(currentSchema, schema, table, deps, columns);
+        analyzeTableColumns(
+          currentSchema,
+          schema,
+          table,
+          deps,
+          resolveType,
+          columns,
+        );
 
         if (ast.type === 'table') {
           analyzeTableData(currentSchema, schema, table, keys, deps, ast);
@@ -84,13 +101,20 @@ export const astToGenerateItem = (
           }
         }
 
-        analyzeTableColumns(currentSchema, schema, table, deps, columns);
+        analyzeTableColumns(
+          currentSchema,
+          schema,
+          table,
+          deps,
+          resolveType,
+          columns,
+        );
         analyzeTableData(currentSchema, schema, table, add, deps, ast.add);
         analyzeTableData(currentSchema, schema, table, drop, deps, ast.drop);
       }
       break;
     }
-    case 'renameTable': {
+    case 'renameType': {
       const { fromSchema = currentSchema, toSchema = currentSchema } = ast;
       add.push(`${toSchema}.${ast.to}`);
       drop.push(`${fromSchema}.${ast.from}`);
@@ -114,10 +138,15 @@ export const astToGenerateItem = (
       deps.push(schema);
       break;
     }
+    case 'enumValues':
+    case 'renameEnumValues': {
+      deps.push(ast.schema ?? currentSchema);
+      break;
+    }
     case 'domain': {
       const schema = ast.schema ?? currentSchema;
       (ast.action === 'create' ? add : drop).push(`${schema}.${ast.name}`);
-      deps.push(schema, ast.baseType.dataType);
+      deps.push(schema, resolveType(ast.baseType.dataType));
       if (ast.collation) deps.push(ast.collation);
       break;
     }
@@ -147,6 +176,7 @@ const analyzeTableColumns = (
   schema: string,
   table: string,
   deps: string[],
+  resolveType: (type: string) => string,
   columns: TableColumn[],
 ) => {
   for (const [keys, name, change] of columns) {
@@ -166,16 +196,16 @@ const analyzeTableColumns = (
         ).data.item as ColumnType;
       }
 
+      let type: string;
       if (c.dataType === 'enum') {
-        const { enumName } = c as EnumColumn<ColumnTypeSchemaArg, unknown>;
-        const [schema = currentSchema, name] =
-          getSchemaAndTableFromName(enumName);
-        deps.push(`${schema}.${name}`);
+        type = (c as EnumColumn<ColumnTypeSchemaArg, unknown>).enumName;
       } else {
-        deps.push(c.dataType);
+        type = c.dataType;
       }
+
+      deps.push(resolveType(type));
     } else if (change.type) {
-      deps.push(change.type);
+      deps.push(resolveType(change.type));
     }
 
     const collate = change.column?.data.collate ?? change.collate;

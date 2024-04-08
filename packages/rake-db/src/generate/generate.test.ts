@@ -317,7 +317,7 @@ change(async (db) => {
 `);
     });
 
-    it('should only change table schema when both schemas exist', async () => {
+    it('should change table schema when both schemas exist', async () => {
       arrange({
         tables: [
           class One extends BaseTable {
@@ -409,26 +409,26 @@ change(async (db) => {
 
         await act();
 
-        //         assert.migration(`import { change } from '../src/dbScript';
-        //
-        // change(async (db) => {
-        //   await db.createTable(
-        //     'schema.one',
-        //     {
-        //       comment: "table comment",
-        //       noPrimaryKey: true,
-        //     },
-        //     (t) => ({
-        //       name: t.string(),
-        //       int: t.integer(),
-        //       ...t.timestamps(),
-        //       ...t.primaryKey(['name', 'int']),
-        //       ...t.index(['name', 'int']),
-        //       ...t.check(t.sql\`int > 5\`),
-        //     }),
-        //   );
-        // });
-        // `);
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'schema.one',
+    {
+      comment: "table comment",
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      name: t.string(),
+      int: t.integer(),
+      ...t.timestamps(),
+      ...t.primaryKey(['name', 'int']),
+      ...t.index(['name', 'int']),
+      ...t.check(t.sql\`int > 5\`),
+    }),
+  );
+});
+`);
       },
     );
 
@@ -860,12 +860,425 @@ change(async (db) => {
     });
   });
 
+  describe('enums', () => {
+    it('should create enum when creating a table', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            columns = this.setColumns((t) => ({
+              id: t.identity().primaryKey(),
+              numbers: t.enum('numbers', ['one', 'two', 'three']),
+            }));
+          },
+        ],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createEnum('public.numbers', ['one', 'two', 'three']);
+});
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.identity().primaryKey(),
+    numbers: t.enum('numbers'),
+  }));
+});
+`);
+    });
+
+    it('should drop unused enum', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            columns = this.setColumns((t) => ({
+              id: t.identity().primaryKey(),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          schemas: ['public'],
+          enums: [
+            dbStructureMockFactory.enum({
+              name: 'numbers',
+              values: ['one', 'two', 'three'],
+            }),
+          ],
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'id' }),
+                dbStructureMockFactory.column({
+                  typeSchema: 'public',
+                  type: 'numbers',
+                  name: 'numbers',
+                }),
+              ],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    numbers: t.drop(t.enum('public.numbers')),
+  }));
+});
+
+change(async (db) => {
+  await db.dropEnum('public.numbers', ['one', 'two', 'three']);
+});
+`);
+    });
+
+    it('should change enum schema', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            noPrimaryKey = true;
+            columns = this.setColumns((t) => ({
+              numbers: t.enum('schema.numbers', ['one', 'two', 'three']),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          schemas: ['public', 'schema'],
+          enums: [
+            dbStructureMockFactory.enum({
+              name: 'numbers',
+              values: ['one', 'two', 'three'],
+            }),
+          ],
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.column({
+                  typeSchema: 'public',
+                  type: 'numbers',
+                  name: 'numbers',
+                }),
+              ],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTypeSchema('numbers', 'public', 'schema');
+});
+`);
+    });
+
+    it('should drop the old and create a new enum after prompt', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            noPrimaryKey = true;
+            columns = this.setColumns((t) => ({
+              column: t.enum('to', ['one', 'two', 'three']),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          enums: [
+            dbStructureMockFactory.enum({
+              name: 'from',
+              values: ['one', 'two', 'three'],
+            }),
+          ],
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.enumColumn({
+                  type: 'from',
+                  name: 'column',
+                }),
+              ],
+            }),
+          ],
+        }),
+        selects: [0],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createEnum('public.to', ['one', 'two', 'three']);
+});
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    column: t.change(t.enum('public.from'), t.enum('public.to')),
+  }));
+});
+
+change(async (db) => {
+  await db.dropEnum('public.from', ['one', 'two', 'three']);
+});
+`);
+    });
+
+    it('should rename enum after prompt', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            noPrimaryKey = true;
+            columns = this.setColumns((t) => ({
+              column: t.enum('to', ['one', 'two', 'three']),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          enums: [
+            dbStructureMockFactory.enum({
+              name: 'from',
+              values: ['one', 'two', 'three'],
+            }),
+          ],
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.enumColumn({
+                  type: 'from',
+                  name: 'column',
+                }),
+              ],
+            }),
+          ],
+        }),
+        selects: [1],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.renameType('from', 'to');
+});
+`);
+    });
+
+    it('should rename schema without touching enum', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            noPrimaryKey = true;
+            columns = this.setColumns((t) => ({
+              column: t.enum('to.enum', ['one', 'two', 'three']),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          schemas: ['public', 'from'],
+          enums: [
+            dbStructureMockFactory.enum({
+              schemaName: 'from',
+              name: 'enum',
+              values: ['one', 'two', 'three'],
+            }),
+          ],
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.enumColumn({
+                  typeSchema: 'from',
+                  type: 'enum',
+                  name: 'column',
+                }),
+              ],
+            }),
+          ],
+        }),
+        selects: [1],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.renameSchema('from', 'to');
+});
+`);
+    });
+
+    describe('recreating and renaming both schema and enum', () => {
+      const arrangeData = () => ({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            noPrimaryKey = true;
+            columns = this.setColumns((t) => ({
+              column: t.enum('toSchema.toEnum', ['one', 'two', 'three']),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          schemas: ['public', 'fromSchema'],
+          enums: [
+            dbStructureMockFactory.enum({
+              schemaName: 'fromSchema',
+              name: 'fromEnum',
+              values: ['one', 'two', 'three'],
+            }),
+          ],
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.enumColumn({
+                  typeSchema: 'fromSchema',
+                  type: 'fromEnum',
+                  name: 'column',
+                }),
+              ],
+            }),
+          ],
+        }),
+      });
+
+      it('should recreate schema and enum', async () => {
+        arrange({
+          ...arrangeData(),
+          selects: [0, 0],
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createSchema('toSchema');
+});
+
+change(async (db) => {
+  await db.createEnum('toSchema.toEnum', ['one', 'two', 'three']);
+});
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    column: t.change(t.enum('fromSchema.fromEnum'), t.enum('toSchema.toEnum')),
+  }));
+});
+
+change(async (db) => {
+  await db.dropEnum('fromSchema.fromEnum', ['one', 'two', 'three']);
+});
+
+change(async (db) => {
+  await db.dropSchema('fromSchema');
+});
+`);
+      });
+
+      it('should recreate schema and rename enum', async () => {
+        arrange({
+          ...arrangeData(),
+          selects: [0, 1],
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.createSchema('toSchema');
+});
+
+change(async (db) => {
+  await db.renameType('fromSchema.fromEnum', 'toSchema.toEnum');
+});
+
+change(async (db) => {
+  await db.dropSchema('fromSchema');
+});
+`);
+      });
+
+      it('should rename schema and recreate enum', async () => {
+        arrange({
+          ...arrangeData(),
+          selects: [1, 0],
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.renameSchema('fromSchema', 'toSchema');
+});
+
+change(async (db) => {
+  await db.createEnum('toSchema.toEnum', ['one', 'two', 'three']);
+});
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    column: t.change(t.enum('toSchema.fromEnum'), t.enum('toSchema.toEnum')),
+  }));
+});
+
+change(async (db) => {
+  await db.dropEnum('toSchema.fromEnum', ['one', 'two', 'three']);
+});
+`);
+      });
+
+      it('should rename schema and enum', async () => {
+        arrange({
+          ...arrangeData(),
+          selects: [1, 1],
+        });
+
+        await act();
+
+        assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.renameSchema('fromSchema', 'toSchema');
+});
+
+change(async (db) => {
+  await db.renameType('toSchema.fromEnum', 'toSchema.toEnum');
+});
+`);
+      });
+    });
+  });
+
   describe('columns', () => {
     it('should add a column', async () => {
       arrange({
         tables: [
           class Table extends BaseTable {
             table = 'table';
+            noPrimaryKey = true;
             columns = this.setColumns((t) => ({
               id: t.identity(),
               name: t.text(),
@@ -899,6 +1312,7 @@ change(async (db) => {
         tables: [
           class Table extends BaseTable {
             table = 'table';
+            noPrimaryKey = true;
             columns = this.setColumns((t) => ({
               id: t.identity(),
             }));
@@ -924,6 +1338,39 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     name: t.drop(t.text()),
+  }));
+});
+`);
+    });
+
+    it('should change column type', async () => {
+      arrange({
+        tables: [
+          class Table extends BaseTable {
+            table = 'table';
+            noPrimaryKey = true;
+            columns = this.setColumns((t) => ({
+              name: t.text(),
+            }));
+          },
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [dbStructureMockFactory.intColumn({ name: 'name' })],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    name: t.change(t.integer(), t.text()),
   }));
 });
 `);

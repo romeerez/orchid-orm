@@ -117,7 +117,7 @@ describe('pull', () => {
 
     structure.collations = [
       dbStructureMockFactory.collation({
-        schema: 'schema',
+        schemaName: 'schema',
       }),
     ];
 
@@ -241,7 +241,7 @@ change(async (db) => {
     id: t.identity().primaryKey(),
     columnName: t.name('column_name').integer(),
     domainColumn: t.array(t.domain('schema.domain').as(t.integer())),
-    customTypeColumn: t.type('customType'),
+    customTypeColumn: t.type('schema.customType'),
     jsonArray: t.json().default(t.sql({ raw: '\\'[]\\'' })),
     ...t.timestamps(),
   }));
@@ -407,7 +407,7 @@ change(async (db) => {
       noPrimaryKey: true,
     },
     (t) => ({
-      column: t.enum('mood'),
+      column: t.enum('public.mood'),
     }),
   );
 });

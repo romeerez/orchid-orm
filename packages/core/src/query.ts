@@ -49,6 +49,10 @@ export interface QueryInternal {
   scopes?: CoreQueryScopes;
   // `camelCase` by default, set to true to map column names to and from `snake_case`
   snakeCase?: boolean;
+  // true means ignore, for migration generator
+  noPrimaryKey: boolean;
+  // table comment, for migration generator
+  comment?: string;
 }
 
 // Scopes data stored in table instance. Doesn't change after defining a table.
