@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.17.3
+
+### Patch Changes
+
+- 7bc009e0: Add `changeEnumValues` method to rake-db
+
 ## 2.17.2
 
 ### Patch Changes
