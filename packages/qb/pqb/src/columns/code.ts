@@ -424,7 +424,8 @@ export const identityToCode = (
   if (identity.startWith) props.push(`startWith: ${identity.startWith},`);
   if (identity.min) props.push(`min: ${identity.min},`);
   if (identity.max) props.push(`max: ${identity.max},`);
-  if (identity.cache) props.push(`cache: ${identity.cache},`);
+  if (identity.cache && identity.cache !== 1)
+    props.push(`cache: ${identity.cache},`);
 
   if (props.length) {
     addCode(code, '{');

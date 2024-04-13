@@ -57,7 +57,7 @@ const timestampColumn: DbStructure.Column = {
   ...column,
   name: 'timestamp',
   type: 'timestamptz',
-  dateTimePrecision: 10,
+  dateTimePrecision: 6,
 };
 
 const createdAtColumn: DbStructure.Column = {
@@ -76,7 +76,6 @@ const varcharColumn: DbStructure.Column = {
   ...column,
   name: 'varchar',
   type: 'character varying',
-  collation: 'en_US',
   maxChars: 255,
 };
 
@@ -94,6 +93,10 @@ const identityColumn: DbStructure.Column = {
   type: 'integer',
   identity: {
     always: false,
+    start: 1,
+    increment: 1,
+    cache: 1,
+    cycle: false,
   },
 };
 

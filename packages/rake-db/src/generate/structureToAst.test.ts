@@ -410,7 +410,9 @@ describe('structureToAst', () => {
     });
 
     it('should set dateTimePrecision to timestamp column', async () => {
-      const timestampColumn = dbStructureMockFactory.timestampColumn();
+      const timestampColumn = dbStructureMockFactory.timestampColumn({
+        dateTimePrecision: 10,
+      });
 
       structure.tables = [
         dbStructureMockFactory.table({
@@ -422,9 +424,7 @@ describe('structureToAst', () => {
 
       const column = ast.shape[timestampColumn.name];
       expect(column).toBeInstanceOf(TimestampTZColumn);
-      expect(column.data.dateTimePrecision).toBe(
-        timestampColumn.dateTimePrecision,
-      );
+      expect(column.data.dateTimePrecision).toBe(10);
     });
 
     it('should set primaryKey to column', async () => {
@@ -867,9 +867,10 @@ describe('structureToAst', () => {
 
     describe('identity', () => {
       it('should add `as default` identity', async () => {
+        const column = dbStructureMockFactory.identityColumn();
         structure.tables = [
           dbStructureMockFactory.table({
-            columns: [dbStructureMockFactory.identityColumn()],
+            columns: [column],
           }),
         ];
 
@@ -878,7 +879,12 @@ describe('structureToAst', () => {
           adapter,
         )) as RakeDbAst.Table[];
 
-        expect(shape.identity.data.identity).toEqual({});
+        expect(shape.identity.data.identity).toEqual({
+          start: 1,
+          increment: 1,
+          cache: 1,
+          cycle: false,
+        });
       });
 
       it('should add `always` identity with options', async () => {

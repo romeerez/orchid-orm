@@ -522,11 +522,15 @@ const astToQueries = (
         typeof from.identity !== typeof to.identity ||
         !deepCompare(from.identity, to.identity)
       ) {
-        alterTable.push(
-          `ALTER COLUMN "${name}" ${
-            to.identity ? `ADD ${identityToSql(to.identity)}` : `DROP IDENTITY`
-          }`,
-        );
+        if (from.identity) {
+          alterTable.push(`ALTER COLUMN "${name}" DROP IDENTITY`);
+        }
+
+        if (to.identity) {
+          alterTable.push(
+            `ALTER COLUMN "${name}" ADD ${identityToSql(to.identity)}`,
+          );
+        }
       }
 
       if (from.default !== to.default) {

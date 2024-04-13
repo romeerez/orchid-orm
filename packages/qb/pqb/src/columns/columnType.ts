@@ -129,6 +129,8 @@ export interface ColumnFromDbParams {
   numericPrecision?: number;
   numericScale?: number;
   dateTimePrecision?: number;
+  compression?: string;
+  collation?: string;
 }
 
 export interface PickColumnData {

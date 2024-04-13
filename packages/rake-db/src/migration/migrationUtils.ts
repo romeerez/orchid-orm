@@ -101,7 +101,7 @@ export const encodeColumnDefault = (
   def: unknown,
   values: unknown[],
   column?: ColumnTypeBase,
-) => {
+): string | null => {
   if (def !== undefined && def !== null && typeof def !== 'function') {
     if (isRawSQL(def)) {
       return def.toSQL({ values });

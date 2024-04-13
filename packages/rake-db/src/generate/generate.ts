@@ -34,8 +34,9 @@ import {
   StructureToAstCtx,
   tableToAst,
 } from './structureToAst';
-import { QueryColumn } from 'orchid-core';
+import { deepCompare, QueryColumn, RecordUnknown } from 'orchid-core';
 import { getSchemaAndTableFromName } from '../common';
+import { encodeColumnDefault } from '../migration/migrationUtils';
 
 interface ActualItems {
   schemas: Set<string>;
@@ -47,6 +48,15 @@ interface EnumItem {
   schema?: string;
   name: string;
   values: [string, ...string[]];
+}
+
+interface CompareSql {
+  values: unknown[];
+  expressions: {
+    inDb: string;
+    inCode: string;
+    change(): void;
+  }[];
 }
 
 export const generate = async (
@@ -70,7 +80,13 @@ export const generate = async (
 
   ast.push(
     ...enumsAst,
-    ...(await processTables(tables, dbStructure, currentSchema, config)),
+    ...(await processTables(
+      adapters[0],
+      tables,
+      dbStructure,
+      currentSchema,
+      config,
+    )),
   );
 
   const result = astToMigration(currentSchema, config, ast);
@@ -105,13 +121,18 @@ const migrateAndPullStructures = async (adapters: Adapter[]) => {
 
   const dbStructure = dbStructures[0];
   for (let i = 1; i < dbStructures.length; i++) {
-    deepCompare(dbStructure, dbStructures[i], i);
+    compareDbStructures(dbStructure, dbStructures[i], i);
   }
 
   return dbStructure;
 };
 
-const deepCompare = (a: unknown, b: unknown, i: number, path?: string) => {
+const compareDbStructures = (
+  a: unknown,
+  b: unknown,
+  i: number,
+  path?: string,
+) => {
   let err: true | undefined;
   if (typeof a !== typeof b) {
     err = true;
@@ -124,7 +145,7 @@ const deepCompare = (a: unknown, b: unknown, i: number, path?: string) => {
   } else {
     if (Array.isArray(a)) {
       for (let n = 0, len = a.length; n < len; n++) {
-        deepCompare(
+        compareDbStructures(
           a[n],
           (b as unknown[])[n],
           i,
@@ -133,7 +154,7 @@ const deepCompare = (a: unknown, b: unknown, i: number, path?: string) => {
       }
     } else {
       for (const key in a) {
-        deepCompare(
+        compareDbStructures(
           a[key as keyof typeof a],
           (b as Record<string, unknown>)[key],
           i,
@@ -276,9 +297,12 @@ const processHasAndBelongsToManyColumn = (
   const shape: ColumnsShape = {};
   for (const key in joinTable.shape) {
     const column = Object.create(joinTable.shape[key]);
-    delete column.data.identity;
-    delete column.data.isPrimaryKey;
-    delete column.data.default;
+    column.data = {
+      ...column.data,
+      identity: undefined,
+      isPrimaryKey: undefined,
+      default: undefined,
+    };
     shape[key] = column;
   }
   joinTable.shape = shape;
@@ -536,6 +560,7 @@ const renameColumnsTypeSchema = (
 };
 
 const processTables = async (
+  adapter: Adapter,
   tables: QueryWithTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
@@ -544,6 +569,7 @@ const processTables = async (
   const ast: RakeDbAst[] = [];
   const createTables: QueryWithTable[] = [];
   const dropTables: DbStructure.Table[] = [];
+  const compareExpressions: CompareSql = { values: [], expressions: [] };
 
   for (const codeTable of tables) {
     const tableSchema = codeTable.q.schema ?? currentSchema;
@@ -567,7 +593,7 @@ const processTables = async (
         (t.q.schema ?? currentSchema) === dbTable.schemaName,
     );
     if (codeTable) {
-      processTableChange(
+      await processTableChange(
         structureToAstCtx,
         dbStructure,
         domainsMap,
@@ -575,6 +601,7 @@ const processTables = async (
         currentSchema,
         dbTable,
         codeTable,
+        compareExpressions,
       );
       continue;
     }
@@ -598,6 +625,25 @@ const processTables = async (
     }
 
     dropTables.push(dbTable);
+  }
+
+  if (compareExpressions.expressions.length) {
+    const {
+      rows: [results],
+    } = await adapter.arrays({
+      text:
+        'SELECT ' +
+        compareExpressions.expressions
+          .map((x) => `${x.inDb} = (${x.inCode})`)
+          .join(', '),
+      values: compareExpressions.values,
+    });
+
+    for (let i = 0; i < results.length; i++) {
+      if (!results[i]) {
+        compareExpressions.expressions[i].change();
+      }
+    }
   }
 
   for (const codeTable of createTables) {
@@ -636,7 +682,7 @@ const processTables = async (
   return ast;
 };
 
-const processTableChange = (
+const processTableChange = async (
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
@@ -644,10 +690,20 @@ const processTableChange = (
   currentSchema: string,
   dbTable: DbStructure.Table,
   codeTable: QueryWithTable,
+  compareExpressions: CompareSql,
 ) => {
   const shape: RakeDbAst.ChangeTable['shape'] = {};
   const add: TableData = {};
   const drop: TableData = {};
+  const changeTableAst: RakeDbAst.ChangeTable = {
+    type: 'changeTable',
+    schema: codeTable.q.schema ?? currentSchema,
+    name: codeTable.table,
+    shape,
+    add,
+    drop,
+  };
+  let pushedChangeTable = false;
 
   const tableData = getDbStructureTableData(dbStructure, dbTable);
   const checks = getDbTableColumnsChecks(tableData);
@@ -656,6 +712,8 @@ const processTableChange = (
   );
 
   const columnsToChange = new Map<string, ColumnType>();
+  const addColumns: { key: string; column: ColumnType }[] = [];
+  const dropColumns: { key: string; column: ColumnType }[] = [];
 
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
@@ -668,10 +726,7 @@ const processTableChange = (
       continue;
     }
 
-    shape[name] = {
-      type: 'add',
-      item: column,
-    };
+    addColumns.push({ key: name, column });
   }
 
   for (const name in dbColumns) {
@@ -688,6 +743,36 @@ const processTableChange = (
       checks,
     );
 
+    dropColumns.push({ key, column });
+  }
+
+  for (const { key, column } of addColumns) {
+    if (dropColumns.length) {
+      const index = await select(
+        'column',
+        column.data.name ?? key,
+        dropColumns.map((x) => x.key),
+      );
+      if (index) {
+        const drop = dropColumns[index - 1];
+        dropColumns.splice(index - 1, 1);
+
+        shape[drop.key] = {
+          type: 'rename',
+          name: key,
+        };
+
+        continue;
+      }
+    }
+
+    shape[key] = {
+      type: 'add',
+      item: column,
+    };
+  }
+
+  for (const { key, column } of dropColumns) {
     shape[key] = {
       type: 'drop',
       item: column,
@@ -712,13 +797,93 @@ const processTableChange = (
       changed = true;
     }
 
-    if (changed) {
-      shape[name] = {
-        type: 'change',
-        from: { column: dbColumn },
-        to: { column: codeColumn },
-      };
+    const dbData = dbColumn.data as unknown as RecordUnknown;
+    const codeData = codeColumn.data as unknown as RecordUnknown;
+
+    if (!changed) {
+      for (const key of [
+        'maxChars',
+        'collation',
+        'compression',
+        'numericPrecision',
+        'numericScale',
+        'dateTimePrecision',
+        'comment',
+      ]) {
+        if (dbData[key] !== codeData[key]) {
+          changed = true;
+          break;
+        }
+      }
     }
+
+    if (
+      !changed &&
+      !deepCompare(
+        dbData.identity,
+        codeData.identity
+          ? {
+              always: false,
+              start: 1,
+              increment: 1,
+              cache: 1,
+              cycle: false,
+              ...(codeData.identity ?? {}),
+            }
+          : undefined,
+      )
+    ) {
+      changed = true;
+    }
+
+    if (
+      !changed &&
+      dbData.default !== undefined &&
+      dbData.default !== null &&
+      codeData.default !== undefined &&
+      codeData.default !== null
+    ) {
+      const valuesBeforeLen = compareExpressions.values.length;
+      const dbDefault = encodeColumnDefault(
+        dbData.default,
+        compareExpressions.values,
+        dbColumn,
+      ) as string;
+      const dbValues = compareExpressions.values.slice(valuesBeforeLen);
+
+      const codeDefault = encodeColumnDefault(
+        codeData.default,
+        compareExpressions.values,
+        codeColumn,
+      ) as string;
+      const codeValues = compareExpressions.values.slice(valuesBeforeLen);
+
+      if (
+        dbValues.length !== codeValues.length ||
+        (dbValues.length &&
+          JSON.stringify(dbValues) !== JSON.stringify(codeValues))
+      ) {
+        changed = true;
+        compareExpressions.values.length = valuesBeforeLen;
+      } else if (
+        dbDefault !== codeDefault &&
+        dbDefault !== `(${codeDefault})`
+      ) {
+        compareExpressions.expressions.push({
+          inDb: dbDefault,
+          inCode: codeDefault,
+          change: () => {
+            changeColumn(shape, name, dbColumn, codeColumn);
+            if (!pushedChangeTable) {
+              pushedChangeTable = true;
+              ast.push(changeTableAst);
+            }
+          },
+        });
+      }
+    }
+
+    if (changed) changeColumn(shape, name, dbColumn, codeColumn);
   }
 
   if (
@@ -726,16 +891,25 @@ const processTableChange = (
     Object.keys(add).length ||
     Object.keys(drop).length
   ) {
-    ast.push({
-      type: 'changeTable',
-      schema: codeTable.q.schema ?? currentSchema,
-      name: codeTable.table,
-      shape,
-      add,
-      drop,
-    });
+    pushedChangeTable = true;
+    ast.push(changeTableAst);
   }
 };
+
+function changeColumn(
+  shape: RakeDbAst.ChangeTable['shape'],
+  name: string,
+  dbColumn: ColumnType,
+  codeColumn: ColumnType,
+) {
+  codeColumn.data.as = undefined;
+
+  shape[name] = {
+    type: 'change',
+    from: { column: dbColumn },
+    to: { column: codeColumn },
+  };
+}
 
 const getColumnType = (column: ColumnType, currentSchema: string) => {
   if (column instanceof EnumColumn) {

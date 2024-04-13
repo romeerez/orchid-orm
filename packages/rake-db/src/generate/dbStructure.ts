@@ -50,12 +50,12 @@ export namespace DbStructure {
     comment?: string;
     identity?: {
       always: boolean;
-      start?: number;
-      increment?: number;
+      start: number;
+      increment: number;
       min?: number;
       max?: number;
-      cache?: number;
-      cycle?: boolean;
+      cache: number;
+      cycle: boolean;
     };
   }
 
@@ -596,5 +596,15 @@ export async function introspectDbSchema(
   db: Adapter,
 ): Promise<IntrospectedStructure> {
   const data = await db.query<IntrospectedStructure>(sql);
-  return data.rows[0];
+  const result = data.rows[0];
+  for (const table of result.tables) {
+    for (const column of table.columns) {
+      const id = column.identity;
+      if (id) {
+        if (id.min === null) id.min = undefined;
+        if (id.max === null) id.max = undefined;
+      }
+    }
+  }
+  return result;
 }

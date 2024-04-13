@@ -22,8 +22,16 @@ export const instantiateColumn = (
 ): ColumnTypeBase => {
   const column = typeFn();
 
+  const { dateTimePrecision } = params;
+
   Object.assign(column.data, {
     ...params,
+    dateTimePrecision:
+      // 0 is default for date, 6 is default for timestamp
+      dateTimePrecision && dateTimePrecision !== 6
+        ? dateTimePrecision
+        : undefined,
+    collate: params.collation,
     default: simplifyColumnDefault(params.default),
   });
 
