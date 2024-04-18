@@ -125,6 +125,17 @@ const assert = {
   },
 };
 
+const table = (
+  columns?: (t: typeof BaseTable.columnTypes) => ColumnsShapeBase,
+  noPrimaryKey = true,
+) => {
+  return class Table extends BaseTable {
+    table = 'table';
+    noPrimaryKey = noPrimaryKey;
+    columns = columns ? this.setColumns(columns) : {};
+  };
+};
+
 describe('generate', () => {
   beforeEach(jest.clearAllMocks);
 
@@ -726,8 +737,9 @@ change(async (db) => {
       it('should create join table', async () => {
         class One extends BaseTable {
           table = 'one';
+          noPrimaryKey = true;
           columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
+            id: t.identity(),
           }));
           relations = {
             twos: this.hasAndBelongsToMany(() => Two, {
@@ -744,8 +756,9 @@ change(async (db) => {
 
         class Two extends BaseTable {
           table = 'two';
+          noPrimaryKey = true;
           columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
+            id: t.identity(),
           }));
         }
 
@@ -773,8 +786,9 @@ change(async (db) => {
       it('should create join table just once when it is defined on both sides', async () => {
         class One extends BaseTable {
           table = 'one';
+          noPrimaryKey = true;
           columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
+            id: t.identity(),
           }));
           relations = {
             twos: this.hasAndBelongsToMany(() => Two, {
@@ -791,8 +805,9 @@ change(async (db) => {
 
         class Two extends BaseTable {
           table = 'two';
+          noPrimaryKey = true;
           columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
+            id: t.identity(),
           }));
           relations = {
             twos: this.hasAndBelongsToMany(() => One, {
@@ -881,13 +896,13 @@ change(async (db) => {
     it('should create enum when creating a table', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            columns = this.setColumns((t) => ({
+          table(
+            (t) => ({
               id: t.identity().primaryKey(),
               numbers: t.enum('numbers', ['one', 'two', 'three']),
-            }));
-          },
+            }),
+            false,
+          ),
         ],
       });
 
@@ -910,14 +925,7 @@ change(async (db) => {
 
     it('should drop unused enum', async () => {
       arrange({
-        tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            columns = this.setColumns((t) => ({
-              id: t.identity().primaryKey(),
-            }));
-          },
-        ],
+        tables: [table()],
         structure: makeStructure({
           schemas: ['public'],
           enums: [
@@ -930,7 +938,6 @@ change(async (db) => {
             dbStructureMockFactory.table({
               name: 'table',
               columns: [
-                dbStructureMockFactory.identityColumn({ name: 'id' }),
                 dbStructureMockFactory.column({
                   typeSchema: 'public',
                   type: 'numbers',
@@ -961,13 +968,9 @@ change(async (db) => {
     it('should change enum schema', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              numbers: t.enum('schema.numbers', ['one', 'two', 'three']),
-            }));
-          },
+          table((t) => ({
+            numbers: t.enum('schema.numbers', ['one', 'two', 'three']),
+          })),
         ],
         structure: makeStructure({
           schemas: ['public', 'schema'],
@@ -1005,13 +1008,9 @@ change(async (db) => {
     it('should drop the old and create a new enum after prompt', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.enum('to', ['one', 'two', 'three']),
-            }));
-          },
+          table((t) => ({
+            column: t.enum('to', ['one', 'two', 'three']),
+          })),
         ],
         structure: makeStructure({
           enums: [
@@ -1058,13 +1057,9 @@ change(async (db) => {
     it('should rename enum after prompt', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.enum('to', ['one', 'two', 'three']),
-            }));
-          },
+          table((t) => ({
+            column: t.enum('to', ['one', 'two', 'three']),
+          })),
         ],
         structure: makeStructure({
           enums: [
@@ -1101,13 +1096,9 @@ change(async (db) => {
     it('should rename schema without touching enum', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.enum('to.enum', ['one', 'two', 'three']),
-            }));
-          },
+          table((t) => ({
+            column: t.enum('to.enum', ['one', 'two', 'three']),
+          })),
         ],
         structure: makeStructure({
           schemas: ['public', 'from'],
@@ -1147,13 +1138,9 @@ change(async (db) => {
     describe('recreating and renaming both schema and enum', () => {
       const arrangeData = () => ({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.enum('toSchema.toEnum', ['one', 'two', 'three']),
-            }));
-          },
+          table((t) => ({
+            column: t.enum('toSchema.toEnum', ['one', 'two', 'three']),
+          })),
         ],
         structure: makeStructure({
           schemas: ['public', 'fromSchema'],
@@ -1290,13 +1277,9 @@ change(async (db) => {
 
     describe('enum values', () => {
       const tableWithEnum = (values: [string, ...string[]]) =>
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            numbers: t.enum('numbers', values),
-          }));
-        };
+        table((t) => ({
+          numbers: t.enum('numbers', values),
+        }));
 
       const dbWithEnum = (values: [string, ...string[]]) =>
         makeStructure({
@@ -1384,14 +1367,10 @@ change(async (db) => {
     it('should add a column', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              id: t.identity(),
-              name: t.text(),
-            }));
-          },
+          table((t) => ({
+            id: t.identity(),
+            name: t.text(),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1418,13 +1397,9 @@ change(async (db) => {
     it('should drop a column', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              id: t.identity(),
-            }));
-          },
+          table((t) => ({
+            id: t.identity(),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1454,13 +1429,9 @@ change(async (db) => {
     it('should change column type', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              name: t.text(),
-            }));
-          },
+          table((t) => ({
+            name: t.text(),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1487,13 +1458,9 @@ change(async (db) => {
     it('should change column type when type schema is changed', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.type('to.custom').as(t.integer()),
-            }));
-          },
+          table((t) => ({
+            column: t.type('to.custom').as(t.integer()),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1525,13 +1492,9 @@ change(async (db) => {
     it('should change text data type properties', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.varchar(20).collate('toCollation').compression('l'),
-            }));
-          },
+          table((t) => ({
+            column: t.varchar(20).collate('toCollation').compression('l'),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1565,13 +1528,9 @@ change(async (db) => {
     it('change number data type properties', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.decimal(11, 13),
-            }));
-          },
+          table((t) => ({
+            column: t.decimal(11, 13),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1604,13 +1563,9 @@ change(async (db) => {
     it('change date precision', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.timestamp(13),
-            }));
-          },
+          table((t) => ({
+            column: t.timestamp(13),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1642,17 +1597,13 @@ change(async (db) => {
     it('change default', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              valueNotChanged: t.integer().default(1),
-              valueChanged: t.integer().default(3),
-              ignoreFunction: t.integer().default(() => 1),
-              sqlNotChanged: t.integer().default(t.sql`1 + 2`),
-              sqlChanged: t.integer().default(t.sql`1 + 3`),
-            }));
-          },
+          table((t) => ({
+            valueNotChanged: t.integer().default(1),
+            valueChanged: t.integer().default(3),
+            ignoreFunction: t.integer().default(() => 1),
+            sqlNotChanged: t.integer().default(t.sql`1 + 2`),
+            sqlChanged: t.integer().default(t.sql`1 + 3`),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1701,21 +1652,17 @@ change(async (db) => {
     it('change identity', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.identity({
-                incrementBy: 2,
-                startWith: 3,
-                min: 4,
-                max: 5,
-                cache: 6,
-                cycle: true,
-                always: true,
-              }),
-            }));
-          },
+          table((t) => ({
+            column: t.identity({
+              incrementBy: 2,
+              startWith: 3,
+              min: 4,
+              max: 5,
+              cache: 6,
+              cycle: true,
+              always: true,
+            }),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1753,13 +1700,9 @@ change(async (db) => {
     it('change column comment', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.text().comment('to'),
-            }));
-          },
+          table((t) => ({
+            column: t.text().comment('to'),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1791,13 +1734,9 @@ change(async (db) => {
     it('change to array type', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.array(t.integer()),
-            }));
-          },
+          table((t) => ({
+            column: t.array(t.integer()),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1824,13 +1763,9 @@ change(async (db) => {
     it('change from array type', async () => {
       arrange({
         tables: [
-          class Table extends BaseTable {
-            table = 'table';
-            noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              column: t.integer(),
-            }));
-          },
+          table((t) => ({
+            column: t.integer(),
+          })),
         ],
         structure: makeStructure({
           tables: [
@@ -1859,16 +1794,6 @@ change(async (db) => {
     });
 
     describe('recreating and renaming', () => {
-      const table = (
-        columns: (t: typeof BaseTable.columnTypes) => ColumnsShapeBase,
-      ) => {
-        return class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns(columns);
-        };
-      };
-
       const dbTable = dbStructureMockFactory.table({
         name: 'table',
         columns: [
@@ -1953,6 +1878,322 @@ change(async (db) => {
 });
 `);
       });
+    });
+  });
+
+  describe('primaryKey', () => {
+    it('should add a column primary key', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            id: t.identity().primaryKey(),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [dbStructureMockFactory.identityColumn({ name: 'id' })],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(t.primaryKey(['id'])),
+  }));
+});
+`);
+    });
+
+    it('should drop a column primary key', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            id: t.identity(),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [dbStructureMockFactory.identityColumn({ name: 'id' })],
+            }),
+          ],
+          constraints: [dbStructureMockFactory.primaryKey({ name: 'custom' })],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(t.primaryKey(['id'], { name: 'custom' })),
+  }));
+});
+`);
+    });
+
+    it('should change a primary key column', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            id: t.identity(),
+            key: t.text().primaryKey(),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'id' }),
+                dbStructureMockFactory.textColumn({ name: 'key' }),
+              ],
+            }),
+          ],
+          constraints: [dbStructureMockFactory.primaryKey()],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(t.primaryKey(['id'])),
+    ...t.add(t.primaryKey(['key'])),
+  }));
+});
+`);
+    });
+
+    it('should add a composite primary key', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            id: t.identity(),
+            key: t.text(),
+            ...t.primaryKey(['id', 'key'], { name: 'custom' }),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'id' }),
+                dbStructureMockFactory.textColumn({ name: 'key' }),
+              ],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(t.primaryKey(['id', 'key'], { name: 'custom' })),
+  }));
+});
+`);
+    });
+
+    it('should add a composite primary key defined on columns', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            id: t.identity().primaryKey(),
+            key: t.text().primaryKey(),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'id' }),
+                dbStructureMockFactory.textColumn({ name: 'key' }),
+              ],
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(t.primaryKey(['id', 'key'])),
+  }));
+});
+`);
+    });
+
+    it('should drop a composite primary key', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            id: t.identity(),
+            key: t.text(),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'id' }),
+                dbStructureMockFactory.textColumn({ name: 'key' }),
+              ],
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({ primaryKey: ['id', 'key'] }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(t.primaryKey(['id', 'key'])),
+  }));
+});
+`);
+    });
+
+    it('should change a composite primary key', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            a: t.identity(),
+            b: t.text(),
+            c: t.integer(),
+            ...t.primaryKey(['b', 'c']),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'a' }),
+                dbStructureMockFactory.textColumn({ name: 'b' }),
+                dbStructureMockFactory.intColumn({ name: 'c' }),
+              ],
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({ primaryKey: ['a', 'b'] }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(t.primaryKey(['a', 'b'])),
+    ...t.add(t.primaryKey(['b', 'c'])),
+  }));
+});
+`);
+    });
+
+    it('should change a composite primary key defined on columns', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            a: t.identity(),
+            b: t.text().primaryKey(),
+            c: t.integer().primaryKey(),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'a' }),
+                dbStructureMockFactory.textColumn({ name: 'b' }),
+                dbStructureMockFactory.intColumn({ name: 'c' }),
+              ],
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({ primaryKey: ['a', 'b'] }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(t.primaryKey(['a', 'b'])),
+    ...t.add(t.primaryKey(['b', 'c'])),
+  }));
+});
+`);
+    });
+
+    it('should rename primary key', async () => {
+      arrange({
+        tables: [
+          table((t) => ({
+            a: t.identity(),
+            b: t.text(),
+            ...t.primaryKey(['a', 'b'], { name: 'to' }),
+          })),
+        ],
+        structure: makeStructure({
+          tables: [
+            dbStructureMockFactory.table({
+              name: 'table',
+              columns: [
+                dbStructureMockFactory.identityColumn({ name: 'a' }),
+                dbStructureMockFactory.textColumn({ name: 'b' }),
+              ],
+            }),
+          ],
+          constraints: [
+            dbStructureMockFactory.primaryKey({
+              primaryKey: ['a', 'b'],
+              name: 'from',
+            }),
+          ],
+        }),
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.renameConstraint('public.table', 'from', 'to');
+});
+`);
     });
   });
 });

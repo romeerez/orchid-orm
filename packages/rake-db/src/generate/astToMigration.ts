@@ -507,6 +507,14 @@ const astEncoders: {
       '});',
     ];
   },
+  renameConstraint(ast) {
+    return [
+      `await db.renameConstraint(${quoteSchemaTable({
+        schema: ast.tableSchema,
+        name: ast.tableName,
+      })}, ${singleQuote(ast.from)}, ${singleQuote(ast.to)});`,
+    ];
+  },
   view(ast) {
     const code: Code[] = [`await db.createView(${quoteSchemaTable(ast)}`];
 

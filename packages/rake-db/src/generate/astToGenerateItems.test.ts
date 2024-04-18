@@ -977,6 +977,26 @@ describe('astToGenerateItem', () => {
     });
   });
 
+  describe('renameConstraint', () => {
+    it('should have schema and table dep', () => {
+      arrange({
+        type: 'renameConstraint',
+        tableSchema: 'schema',
+        tableName: 'table',
+        from: 'from',
+        to: 'to',
+      });
+
+      act();
+
+      assertChange({
+        drop: ['from'],
+        add: ['to'],
+      });
+      assertDeps(['schema', 'schema.table']);
+    });
+  });
+
   describe.each(['add', 'drop'] as const)('%s view', (action) => {
     describe.each(['default', 'custom'] as const)('%s schema', (schema) => {
       const viewSchema = schema === 'default' ? undefined : schema;

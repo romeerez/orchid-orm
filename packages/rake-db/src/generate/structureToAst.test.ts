@@ -441,7 +441,10 @@ describe('structureToAst', () => {
     it('should add composite primary key', async () => {
       structure.tables = [dbStructureMockFactory.tableWithColumns()];
       structure.constraints = [
-        dbStructureMockFactory.primaryKey({ primaryKey: ['id', 'name'] }),
+        dbStructureMockFactory.primaryKey({
+          primaryKey: ['id', 'name'],
+          name: 'pkey',
+        }),
       ];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];

@@ -748,6 +748,40 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
+   * Rename a table constraint, such as primary key, or check.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameConstraint(
+   *     'tableName', // may include schema: 'schema.table'
+   *     'oldConstraintName',
+   *     'newConstraintName',
+   *   );
+   * });
+   * ```
+   *
+   * @param tableName - name of the table containing the constraint, may include schema name, may include schema name
+   * @param from - current name of the constraint
+   * @param to - desired name
+   */
+  async renameConstraint(
+    tableName: string,
+    from: string,
+    to: string,
+  ): Promise<void> {
+    const [schema, table] = getSchemaAndTableFromName(tableName);
+    const [f, t] = this.up ? [from, to] : [to, from];
+    await this.adapter.query(
+      `ALTER TABLE ${quoteTable(
+        schema,
+        table,
+      )} RENAME CONSTRAINT "${f}" TO "${t}"`,
+    );
+  }
+
+  /**
    * Rename a column:
    *
    * ```ts

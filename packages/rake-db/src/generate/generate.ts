@@ -32,6 +32,7 @@ import {
   makeDomainsMap,
   makeStructureToAstCtx,
   StructureToAstCtx,
+  StructureToAstTableData,
   tableToAst,
 } from './structureToAst';
 import { deepCompare, QueryColumn, RecordUnknown } from 'orchid-core';
@@ -695,25 +696,119 @@ const processTableChange = async (
   const shape: RakeDbAst.ChangeTable['shape'] = {};
   const add: TableData = {};
   const drop: TableData = {};
+  const schema = codeTable.q.schema ?? currentSchema;
   const changeTableAst: RakeDbAst.ChangeTable = {
     type: 'changeTable',
-    schema: codeTable.q.schema ?? currentSchema,
+    schema,
     name: codeTable.table,
     shape,
     add,
     drop,
   };
-  let pushedChangeTable = false;
+  const pushedChangeTableRef = { current: false };
 
-  const tableData = getDbStructureTableData(dbStructure, dbTable);
-  const checks = getDbTableColumnsChecks(tableData);
   const dbColumns = Object.fromEntries(
     dbTable.columns.map((column) => [column.name, column]),
   );
 
+  const tableData = getDbStructureTableData(dbStructure, dbTable);
+
+  const { columnsToAdd, columnsToDrop, columnsToChange, columnsPrimaryKey } =
+    groupColumns(
+      structureToAstCtx,
+      dbStructure,
+      domainsMap,
+      dbTable,
+      codeTable,
+      dbColumns,
+      tableData,
+    );
+
+  await addOrRenameColumns(shape, columnsToAdd, columnsToDrop);
+  dropColumns(shape, columnsToDrop);
+  changeColumns(
+    structureToAstCtx,
+    dbStructure,
+    domainsMap,
+    ast,
+    currentSchema,
+    dbColumns,
+    columnsToChange,
+    compareExpressions,
+    shape,
+    pushedChangeTableRef,
+    changeTableAst,
+  );
+
+  const { primaryKey: dbPrimaryKey } = tableData;
+
+  const tablePrimaryKey = codeTable.internal.primaryKey;
+  const primaryKey = [
+    ...new Set([...columnsPrimaryKey, ...(tablePrimaryKey?.columns ?? [])]),
+  ];
+
+  if (
+    !dbPrimaryKey ||
+    primaryKey.length !== dbPrimaryKey.columns.length ||
+    primaryKey.some((a) => !dbPrimaryKey.columns.some((b) => a === b))
+  ) {
+    if (dbPrimaryKey) {
+      drop.primaryKey = dbPrimaryKey;
+    }
+    if (primaryKey.length) {
+      add.primaryKey = {
+        columns: primaryKey,
+        options: tablePrimaryKey?.options,
+      };
+    }
+  }
+
+  if (
+    Object.keys(shape).length ||
+    Object.keys(add).length ||
+    Object.keys(drop).length
+  ) {
+    pushedChangeTableRef.current = true;
+    ast.push(changeTableAst);
+  }
+
+  if (
+    dbPrimaryKey &&
+    tablePrimaryKey &&
+    dbPrimaryKey?.options?.name !== tablePrimaryKey?.options?.name
+  ) {
+    ast.push({
+      type: 'renameConstraint',
+      tableSchema: schema,
+      tableName: codeTable.table,
+      from: dbPrimaryKey.options?.name ?? `${dbTable.name}_pkey`,
+      to: tablePrimaryKey.options?.name ?? `${codeTable}_pkey`,
+    });
+  }
+};
+
+type KeyAndColumn = { key: string; column: ColumnType };
+
+const groupColumns = (
+  structureToAstCtx: StructureToAstCtx,
+  dbStructure: IntrospectedStructure,
+  domainsMap: DbStructureDomainsMap,
+  dbTable: DbStructure.Table,
+  codeTable: QueryWithTable,
+  dbColumns: { [K: string]: DbStructure.Column },
+  tableData: StructureToAstTableData,
+): {
+  columnsToAdd: KeyAndColumn[];
+  columnsToDrop: KeyAndColumn[];
+  columnsToChange: Map<string, ColumnType>;
+  columnsPrimaryKey: string[];
+} => {
+  const columnsToAdd: { key: string; column: ColumnType }[] = [];
+  const columnsToDrop: { key: string; column: ColumnType }[] = [];
   const columnsToChange = new Map<string, ColumnType>();
-  const addColumns: { key: string; column: ColumnType }[] = [];
-  const dropColumns: { key: string; column: ColumnType }[] = [];
+  const columnsPrimaryKey = [];
+
+  const checks = getDbTableColumnsChecks(tableData);
 
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
@@ -723,10 +818,13 @@ const processTableChange = async (
     const name = column.data.name ?? key;
     if (dbColumns[name]) {
       columnsToChange.set(name, column);
-      continue;
+    } else {
+      columnsToAdd.push({ key: name, column });
     }
 
-    addColumns.push({ key: name, column });
+    if (column.data.isPrimaryKey) {
+      columnsPrimaryKey.push(name);
+    }
   }
 
   for (const name in dbColumns) {
@@ -743,19 +841,27 @@ const processTableChange = async (
       checks,
     );
 
-    dropColumns.push({ key, column });
+    columnsToDrop.push({ key, column });
   }
 
-  for (const { key, column } of addColumns) {
-    if (dropColumns.length) {
+  return { columnsToAdd, columnsToDrop, columnsToChange, columnsPrimaryKey };
+};
+
+const addOrRenameColumns = async (
+  shape: RakeDbAst.ChangeTable['shape'],
+  columnsToAdd: KeyAndColumn[],
+  columnsToDrop: KeyAndColumn[],
+) => {
+  for (const { key, column } of columnsToAdd) {
+    if (columnsToDrop.length) {
       const index = await select(
         'column',
         column.data.name ?? key,
-        dropColumns.map((x) => x.key),
+        columnsToDrop.map((x) => x.key),
       );
       if (index) {
-        const drop = dropColumns[index - 1];
-        dropColumns.splice(index - 1, 1);
+        const drop = columnsToDrop[index - 1];
+        columnsToDrop.splice(index - 1, 1);
 
         shape[drop.key] = {
           type: 'rename',
@@ -771,14 +877,37 @@ const processTableChange = async (
       item: column,
     };
   }
+};
 
-  for (const { key, column } of dropColumns) {
+const dropColumns = (
+  shape: RakeDbAst.ChangeTable['shape'],
+  columnsToDrop: KeyAndColumn[],
+) => {
+  for (const { key, column } of columnsToDrop) {
     shape[key] = {
       type: 'drop',
       item: column,
     };
   }
+};
 
+interface BoolRef {
+  current: boolean;
+}
+
+const changeColumns = (
+  structureToAstCtx: StructureToAstCtx,
+  dbStructure: IntrospectedStructure,
+  domainsMap: DbStructureDomainsMap,
+  ast: RakeDbAst[],
+  currentSchema: string,
+  dbColumns: { [K: string]: DbStructure.Column },
+  columnsToChange: Map<string, ColumnType>,
+  compareExpressions: CompareSql,
+  shape: RakeDbAst.ChangeTable['shape'],
+  pushedChangeTableRef: BoolRef,
+  changeTableAst: RakeDbAst.ChangeTable,
+) => {
   for (const [name, codeColumn] of columnsToChange) {
     const dbColumnStructure = dbColumns[name];
 
@@ -874,8 +1003,8 @@ const processTableChange = async (
           inCode: codeDefault,
           change: () => {
             changeColumn(shape, name, dbColumn, codeColumn);
-            if (!pushedChangeTable) {
-              pushedChangeTable = true;
+            if (!pushedChangeTableRef.current) {
+              pushedChangeTableRef.current = true;
               ast.push(changeTableAst);
             }
           },
@@ -885,23 +1014,14 @@ const processTableChange = async (
 
     if (changed) changeColumn(shape, name, dbColumn, codeColumn);
   }
-
-  if (
-    Object.keys(shape).length ||
-    Object.keys(add).length ||
-    Object.keys(drop).length
-  ) {
-    pushedChangeTable = true;
-    ast.push(changeTableAst);
-  }
 };
 
-function changeColumn(
+const changeColumn = (
   shape: RakeDbAst.ChangeTable['shape'],
   name: string,
   dbColumn: ColumnType,
   codeColumn: ColumnType,
-) {
+) => {
   codeColumn.data.as = undefined;
 
   shape[name] = {
@@ -909,7 +1029,7 @@ function changeColumn(
     from: { column: dbColumn },
     to: { column: codeColumn },
   };
-}
+};
 
 const getColumnType = (column: ColumnType, currentSchema: string) => {
   if (column instanceof EnumColumn) {

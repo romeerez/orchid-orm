@@ -602,6 +602,24 @@ change(async (db) => {
 });
 ```
 
+## renameConstraint
+
+[//]: # 'has JSDoc'
+
+Rename a table constraint, such as primary key, or check.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.renameConstraint(
+    'tableName', // may include schema: 'schema.table'
+    'oldConstraintName',
+    'newConstraintName',
+  );
+});
+```
+
 ## renameColumn
 
 [//]: # 'has JSDoc'

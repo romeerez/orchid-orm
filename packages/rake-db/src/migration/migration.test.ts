@@ -323,6 +323,24 @@ describe('migration', () => {
     });
   });
 
+  describe('renameConstraint', () => {
+    const testUpAndDown = makeTestUpAndDown('renameConstraint');
+
+    it('should rename a constraint', async () => {
+      await testUpAndDown(
+        (action) => db[action]('schema.table', 'from', 'to'),
+        () =>
+          expectSql(
+            `ALTER TABLE "schema"."table" RENAME CONSTRAINT "from" TO "to"`,
+          ),
+        () =>
+          expectSql(
+            `ALTER TABLE "schema"."table" RENAME CONSTRAINT "to" TO "from"`,
+          ),
+      );
+    });
+  });
+
   describe('addPrimaryKey and dropPrimaryKey', () => {
     const testUpAndDown = makeTestUpAndDown('addPrimaryKey', 'dropPrimaryKey');
 

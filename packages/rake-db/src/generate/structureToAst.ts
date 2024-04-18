@@ -59,15 +59,10 @@ export interface StructureToAstCtx {
   columnsByType: ColumnsByType;
 }
 
-interface StructureToAstTableData {
-  primaryKey?: PrimaryKey;
+export interface StructureToAstTableData {
+  primaryKey?: TableData.PrimaryKey;
   indexes: DbStructure.Index[];
   constraints: DbStructure.Constraint[];
-}
-
-interface PrimaryKey {
-  columns: string[];
-  name?: string;
 }
 
 export const makeStructureToAstCtx = (
@@ -326,15 +321,7 @@ export const tableToAst = (
     shape: makeDbStructureColumnsShape(ctx, data, domains, table, tableData),
     noPrimaryKey: tableData.primaryKey ? 'error' : 'ignore',
     primaryKey:
-      primaryKey && primaryKey.columns.length > 1
-        ? {
-            columns: primaryKey.columns,
-            options:
-              primaryKey.name === `${tableName}_pkey`
-                ? undefined
-                : { name: primaryKey.name },
-          }
-        : undefined,
+      primaryKey && primaryKey.columns.length > 1 ? primaryKey : undefined,
     indexes: indexes.reduce<TableData.Index[]>((acc, index) => {
       if (
         index.columns.length > 1 ||
@@ -381,11 +368,14 @@ export const getDbStructureTableData = (
   const primaryKey = constraints.find((c) => c.primaryKey);
 
   return {
-    primaryKey: primaryKey
-      ? ({
+    primaryKey: primaryKey?.primaryKey
+      ? {
           columns: primaryKey.primaryKey,
-          name: primaryKey.name,
-        } as PrimaryKey)
+          options:
+            primaryKey.name === `${name}_pkey`
+              ? undefined
+              : { name: primaryKey.name },
+        }
       : undefined,
     indexes: data.indexes.filter(
       (it) => it.tableName === name && it.schemaName === schemaName,

@@ -904,6 +904,25 @@ change(async (db) => {
     });
   });
 
+  describe('renameConstraint', () => {
+    it('should rename a constraint', () => {
+      const result = act([
+        {
+          type: 'renameConstraint',
+          tableSchema: 'schema',
+          tableName: 'table',
+          from: 'from',
+          to: 'to',
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(`  await db.renameConstraint('schema.table', 'from', 'to');`),
+      );
+    });
+  });
+
   describe('domain', () => {
     it('should add domain', () => {
       const result = act([domain]);

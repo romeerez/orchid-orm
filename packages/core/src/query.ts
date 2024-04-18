@@ -40,6 +40,10 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
 export interface QueryInternal {
   columnsForSelectAll?: string[];
   runtimeDefaultColumns?: string[];
+  primaryKey?: {
+    columns: string[];
+    options?: { name?: string };
+  };
   indexes?: {
     columns: ({ column: string } | { expression: string })[];
     options: { unique?: boolean };

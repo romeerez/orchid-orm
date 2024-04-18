@@ -23,6 +23,7 @@ export type RakeDbAst =
   | RakeDbAst.Domain
   | RakeDbAst.Collation
   | RakeDbAst.Constraint
+  | RakeDbAst.RenameConstraint
   | RakeDbAst.View;
 
 export namespace RakeDbAst {
@@ -228,6 +229,14 @@ export namespace RakeDbAst {
     action: 'create' | 'drop';
     tableSchema?: string;
     tableName: string;
+  }
+
+  export interface RenameConstraint {
+    type: 'renameConstraint';
+    tableSchema?: string;
+    tableName: string;
+    from: string;
+    to: string;
   }
 
   export interface View {

@@ -119,7 +119,7 @@ const check: DbStructure.Constraint & { check: DbStructure.Check } = {
 const primaryKey: DbStructure.Constraint = {
   schemaName: 'public',
   tableName: 'table',
-  name: 'pkey',
+  name: 'table_pkey',
   primaryKey: ['id'],
 };
 
