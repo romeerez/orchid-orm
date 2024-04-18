@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.13.1
+
+### Patch Changes
+
+- 0a2795d6: Implicit join lateral (#247)
+
 ## 0.13.0
 
 ### Minor Changes

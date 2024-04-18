@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.24.3
+
+### Patch Changes
+
+- 0a2795d6: Implicit join lateral (#247)
+- Updated dependencies [0a2795d6]
+  - pqb@0.27.2
+  - orchid-core@0.13.1
+
 ## 1.24.2
 
 ### Patch Changes

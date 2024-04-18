@@ -1,5 +1,13 @@
 # pqb
 
+## 0.27.2
+
+### Patch Changes
+
+- 0a2795d6: Implicit join lateral (#247)
+- Updated dependencies [0a2795d6]
+  - orchid-core@0.13.1
+
 ## 0.27.1
 
 ### Patch Changes
