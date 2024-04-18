@@ -458,12 +458,7 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       return emptyObject;
     },
 
-    ...makeTimestampsHelpers(
-      makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*='),
-      '"updatedAt"',
-      makeRegexToFindInSql('\\bupdated_at\\b"?\\s*='),
-      '"updated_at"',
-    ),
+    ...makeTimestampsHelpers(makeRegexToFindInSql),
   };
 };
 

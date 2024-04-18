@@ -274,6 +274,9 @@ export interface ColumnDataTypes<
 
 // base data of column
 export interface ColumnDataBase {
+  // column key is assigned when instantiating a table interface
+  key: string;
+
   // name of the column in the database, if different from the code
   name?: string;
 
@@ -300,7 +303,7 @@ export interface ColumnDataBase {
 
   // hook for modifying base query object of the table
   // used for automatic updating of `updatedAt`
-  modifyQuery?(q: QueryBaseCommon): void;
+  modifyQuery?(q: QueryBaseCommon, column: ColumnTypeBase): void;
 
   // raw database check expression
   check?: RawSQLBase;
@@ -761,11 +764,20 @@ export abstract class ColumnTypeBase<
   }
 
   /**
+   * Set a database column name.
+   *
+   * @param name - name of the column in database.
+   */
+  name<T extends PickColumnBaseData>(this: T, name: string): T {
+    return setColumnData(this, 'name', name);
+  }
+
+  /**
    * @deprecated this feature is in a draft state
    *
    * Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
    */
   hidden<T extends PickColumnBaseData>(this: T): HiddenColumn<T> {
-    return setColumnData(this, 'isHidden', true) as HiddenColumn<T>;
+    return setColumnData(this, 'isHidden', true) as never;
   }
 }

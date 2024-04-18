@@ -344,6 +344,21 @@ export class SomeTable extends BaseTable {
 }
 ```
 
+Customizing columns names is possible in a such way:
+
+```ts
+export class SomeTable extends BaseTable {
+  readonly table = 'someTable';
+  columns = this.setColumns((t) => ({
+    // `created` is for referencing this column in the app code,
+    // `crt` is a column name in the database.
+    // The `name` method isn't needed if it is named equally in the database.
+    created: t.timestamps().createdAt.name('crt'),
+    updated: t.timestamps().updatedAt.name('upd'),
+  }));
+}
+```
+
 ## timestampsNoTZ
 
 The same as `timestamps`, but without a time zone.
@@ -367,8 +382,9 @@ When mutating a query in this callback, the changes will be applied to all futur
 export class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
-    name: t.text(3, 100).modifyQuery((table) => {
+    name: t.text(3, 100).modifyQuery((table, column) => {
       // table argument is the query interface of SomeTable
+      // column object contains data with column name and other properties
     }),
   }));
 }

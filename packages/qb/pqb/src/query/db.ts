@@ -209,13 +209,16 @@ export class Db<
     const { snakeCase } = options;
     for (const key in shape) {
       const column = shape[key] as unknown as ColumnTypeBase;
+      column.data.key = key;
+
       if (column.parseFn) {
         hasParsers = true;
         parsers[key] = column.parseFn;
       }
 
-      if (column.data.modifyQuery) {
-        modifyQuery = pushOrNewArray(modifyQuery, column.data.modifyQuery);
+      const { modifyQuery: mq } = column.data;
+      if (mq) {
+        modifyQuery = pushOrNewArray(modifyQuery, (q: Query) => mq(q, column));
       }
 
       if (column.data.name) {
@@ -318,7 +321,11 @@ export class Db<
 
     this.relations = {} as Relations;
 
-    modifyQuery?.forEach((cb) => cb(this));
+    if (modifyQuery) {
+      for (const cb of modifyQuery) {
+        cb(this);
+      }
+    }
 
     this.error = class extends QueryError {
       constructor(message?: string) {

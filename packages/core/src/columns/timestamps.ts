@@ -15,28 +15,6 @@ export interface Timestamps<T extends ColumnTypeBase> {
   updatedAt: ColumnWithDefault<T, RawSQLBase>;
 }
 
-// Builds a function which is triggered on every update of records.
-// It tries to find if `updatedAt` column is being updated with a user-provided value.
-// And if there is no value for `updatedAt`, it is setting the new value for it.
-const makeInjector =
-  (updatedAtRegex: RegExp, updateUpdatedAtItem: RawSQLBase, key: string) =>
-  (data: (RawSQLBase | RecordUnknown | (() => void))[]) => {
-    const alreadyUpdatesUpdatedAt = data.some((item) => {
-      if (isRawSQL(item)) {
-        updatedAtRegex.lastIndex = 0;
-        return updatedAtRegex.test(
-          typeof item._sql === 'string'
-            ? item._sql
-            : (item._sql[0] as unknown as string[]).join(''),
-        );
-      } else {
-        return typeof item !== 'function' && item[key];
-      }
-    });
-
-    return alreadyUpdatesUpdatedAt ? undefined : updateUpdatedAtItem;
-  };
-
 // Simplified SQL type that returns raw SQL as it is, without dealing with SQL variables.
 class SimpleRawSQL extends RawSQLBase {
   // Column types are stored to be passed to the `type` callback.
@@ -89,45 +67,58 @@ export interface TimestampHelpers {
 
 // Build `timestamps`, `timestampsNoTZ`, and similar helpers.
 export const makeTimestampsHelpers = (
-  // Regular expression to search for setting of the `updatedAt` timestamp in a raw SQL.
-  updatedAtRegex: RegExp,
-  // Quoted `updatedAt` column name.
-  quotedUpdatedAt: string,
-  // Regular expression to search for setting of the `updated_at` timestamp in a raw SQL.
-  updatedAtRegexSnake: RegExp,
-  // Quoted `updated_at` column name.
-  quotedUpdatedAtSnakeCase: string,
+  makeRegexToFindInSql: (s: string) => RegExp,
 ): TimestampHelpers => {
-  // builds a function to modify a query object of a specific table where timestamps are defined in.
-  const addHookForUpdate = (now: string) => (q: unknown) => {
-    const updatedAtInjector = makeInjector(
-      updatedAtRegex,
-      new SimpleRawSQL(`${quotedUpdatedAt} = ${now}`),
-      'updatedAt',
-    );
+  const makeTimestamps = <T extends ColumnTypeBase>(timestamp: () => T) => {
+    const now = getDefaultNowFn();
+    const nowRaw = raw(now);
+    const updatedAt = timestamp().default(nowRaw);
+    let updatedAtInjector:
+      | ((
+          data: (RawSQLBase | RecordUnknown | (() => void))[],
+        ) => SimpleRawSQL | undefined)
+      | undefined;
 
-    // push a function to the query to search for existing timestamp and add a new timestamp value if it's not set in the update.
-    pushOrNewArrayToObject(
-      (q as { q: Record<string, (typeof updatedAtInjector)[]> }).q,
-      'updateData',
-      updatedAtInjector,
-    );
-  };
+    updatedAt.data.modifyQuery = (q: unknown, column: ColumnTypeBase) => {
+      if (!updatedAtInjector) {
+        const key = column.data.key;
+        const name = column.data.name ?? key;
+        const nowSql = new SimpleRawSQL(`"${name}" = ${now}`);
 
-  // builds a function to modify a query object of a specific table where snake case timestamps are defined in.
-  const addHookForUpdateSnake = (now: string) => (q: unknown) => {
-    const updatedAtInjectorSnake = makeInjector(
-      updatedAtRegexSnake,
-      raw(`${quotedUpdatedAtSnakeCase} = ${now}`),
-      'updatedAt',
-    );
+        const updatedAtRegex = makeRegexToFindInSql(`\\b${name}\\b"?\\s*=`);
 
-    // push a function to the query to search for existing timestamp and add a new timestamp value if it's not set in the update.
-    pushOrNewArrayToObject(
-      (q as { q: Record<string, (typeof updatedAtInjectorSnake)[]> }).q,
-      'updateData',
-      updatedAtInjectorSnake,
-    );
+        // A function which is triggered on every update of records.
+        // It tries to find if `updatedAt` column is being updated with a user-provided value.
+        // And if there is no value for `updatedAt`, it is setting the new value for it.
+        updatedAtInjector = (
+          data: (RawSQLBase | RecordUnknown | (() => void))[],
+        ) => {
+          const alreadyUpdatesUpdatedAt = data.some((item) => {
+            if (isRawSQL(item)) {
+              updatedAtRegex.lastIndex = 0;
+              return updatedAtRegex.test(
+                typeof item._sql === 'string'
+                  ? item._sql
+                  : (item._sql[0] as unknown as string[]).join(''),
+              );
+            } else {
+              return typeof item !== 'function' && item[key];
+            }
+          });
+
+          return alreadyUpdatesUpdatedAt ? undefined : nowSql;
+        };
+      }
+
+      // push a function to the query to search for existing timestamp and add a new timestamp value if it's not set in the update.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pushOrNewArrayToObject((q as any).q, 'updateData', updatedAtInjector);
+    };
+
+    return {
+      createdAt: timestamp().default(nowRaw),
+      updatedAt,
+    };
   };
 
   return {
@@ -136,33 +127,20 @@ export const makeTimestampsHelpers = (
       timestamp(): T;
       timestampsSnakeCase(): Timestamps<T>;
     }): Timestamps<T> {
-      if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
-        return this.timestampsSnakeCase();
-
-      const now = getDefaultNowFn();
-      const nowRaw = raw(now);
-      const updatedAt = this.timestamp().default(nowRaw);
-      updatedAt.data.modifyQuery = addHookForUpdate(now);
-
-      return {
-        createdAt: this.timestamp().default(nowRaw),
-        updatedAt,
-      };
+      return (this as { [snakeCaseKey]?: boolean })[snakeCaseKey]
+        ? this.timestampsSnakeCase()
+        : makeTimestamps(this.timestamp);
     },
 
     timestampsSnakeCase<T extends ColumnTypeBase>(this: {
       name(name: string): { timestamp(): T };
       timestamp(): T;
+      timestamps(): Timestamps<T>;
     }): Timestamps<T> {
-      const now = getDefaultNowFn();
-      const nowRaw = raw(now);
-      const updatedAt = this.name('updated_at').timestamp().default(nowRaw);
-      updatedAt.data.modifyQuery = addHookForUpdateSnake(now);
-
-      return {
-        createdAt: this.name('created_at').timestamp().default(nowRaw),
-        updatedAt,
-      };
+      const columns = makeTimestamps(this.timestamp);
+      columns.createdAt.data.name = 'created_at';
+      columns.updatedAt.data.name = 'updated_at';
+      return columns;
     },
 
     timestampsNoTZ<T extends ColumnTypeBase>(this: {
@@ -170,33 +148,19 @@ export const makeTimestampsHelpers = (
       timestampNoTZ(): T;
       timestampsNoTZSnakeCase(): Timestamps<T>;
     }): Timestamps<T> {
-      if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
-        return this.timestampsNoTZSnakeCase();
-
-      const now = getDefaultNowFn();
-      const nowRaw = raw(now);
-      const updatedAt = this.timestampNoTZ().default(nowRaw);
-      updatedAt.data.modifyQuery = addHookForUpdate(now);
-
-      return {
-        createdAt: this.timestampNoTZ().default(nowRaw),
-        updatedAt,
-      };
+      return (this as { [snakeCaseKey]?: boolean })[snakeCaseKey]
+        ? this.timestampsNoTZSnakeCase()
+        : makeTimestamps(this.timestampNoTZ);
     },
 
     timestampsNoTZSnakeCase<T extends ColumnTypeBase>(this: {
       name(name: string): { timestampNoTZ(): T };
       timestampNoTZ(): T;
     }): Timestamps<T> {
-      const now = getDefaultNowFn();
-      const nowRaw = raw(now);
-      const updatedAt = this.name('updated_at').timestampNoTZ().default(nowRaw);
-      updatedAt.data.modifyQuery = addHookForUpdateSnake(now);
-
-      return {
-        createdAt: this.name('created_at').timestampNoTZ().default(nowRaw),
-        updatedAt,
-      };
+      const columns = makeTimestamps(this.timestampNoTZ);
+      columns.createdAt.data.name = 'created_at';
+      columns.updatedAt.data.name = 'updated_at';
+      return columns;
     },
   };
 };
