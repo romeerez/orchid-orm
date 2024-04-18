@@ -12,6 +12,7 @@ import {
   PickQueryMeta,
   PickQueryMetaResultWindows,
   QueryColumn,
+  QueryColumnBooleanOrNull,
   setParserToQuery,
   toArray,
 } from 'orchid-core';
@@ -177,7 +178,7 @@ export type ColumnExpression<
 > = Expression<C> & {
   [K in keyof Ops]: (
     arg: Ops[K]['_opType'],
-  ) => ColumnExpression<QueryColumn<boolean | null>>;
+  ) => ColumnExpression<QueryColumnBooleanOrNull>;
 };
 
 // Applies Expression to the query.

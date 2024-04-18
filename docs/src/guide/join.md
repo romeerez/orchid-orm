@@ -169,7 +169,7 @@ const result = await db.user.join((q) =>
 
 Optionally, you can pass a second callback argument, it makes `on` and `orOn` methods available.
 
-But remember that when joining a relation, the needed `ON` conditions are already handled automatically.
+But remember that when joining a relation, the relevant `ON` conditions are already handled automatically.
 
 ```ts
 const result = await db.user.join(
@@ -346,8 +346,6 @@ db.user.join(
 );
 ```
 
-Join query builder supports all `where` methods: `.where`, `.whereIn`, `.whereExists`, and all `.or`, `.not`, and `.orNot` forms.
-
 Column names in the where conditions are applied for the joined table, but you can specify a table name to add a condition for the main table.
 
 ```ts
@@ -402,19 +400,42 @@ JOIN (
 ) "t" ON "t"."userId" = "user"."id"
 ```
 
+## implicit join lateral
+
+`JOIN`'s source expression that comes before `ON` cannot access other tables, but in some cases this may be needed.
+
+For example, let's consider joining last 10 messages of a user:
+
+```ts
+await db.user.join('messages', (q) => q.order({ createdAt: 'DESC' }).limit(10));
+```
+
+When the `join`'s callback returns a more complex query than the one that simply applies certain conditions,
+it will implicitly generate a `JOIN LATERAL` SQL query, as the following:
+
+```sql
+SELECT "user".*
+FROM "user"
+JOIN LATERAL (
+  SELECT *
+  FROM "message" AS "messages"
+  WHERE "message"."userId" = "user"."id"
+  ORDER BY "message"."createdAt" DESC
+  LIMIT 10
+) "messages" ON true
+```
+
 ## joinLateral
 
 [//]: # 'has JSDoc'
 
 `joinLateral` allows joining a table with a sub-query that can reference the main table of current query and the other joined tables.
 
-Regular `JOIN` also can have a sub-query in its definition, but it cannot reference other tables of this query.
-
-`JOIN LATERAL` of Postgres can have conditions in the `ON` statement, but `Orchid ORM` decided that there are no useful use-cases for such conditions, and it is only building a sub-query.
-
 First argument is the other table you want to join, or a name of relation, or a name of `with` defined table.
 
 Second argument is a callback where you can reference other tables using `on` and `orOn`, select columns, do `where` conditions, and use any other query methods to build a sub-query.
+
+Note that the regular `join` will also generate `JOIN LATERAL` SQL expression when the query returned from callback is complex enough (see [implicit join lateral](/guide/join.html#implicit-join-lateral)).
 
 ```ts
 // joinLateral a Message table, alias it as `m`

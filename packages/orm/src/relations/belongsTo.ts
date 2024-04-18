@@ -332,7 +332,7 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
       for (let i = 0, len = items.length; i < len; i++) {
         items[i] = t.findByOptional(
           (items[i].connectOrCreate as NestedInsertOneItemConnectOrCreate)
-            .where,
+            .where as never,
         ) as never;
       }
 
@@ -428,7 +428,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         }
         if (loadPrimaryKeys) {
           const record = (await _queryFindBy(query.select(...loadPrimaryKeys), [
-            params.set,
+            params.set as never,
           ])) as RecordUnknown;
 
           for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {

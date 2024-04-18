@@ -17,9 +17,11 @@ import {
   _querySelect,
   _queryUpdate,
   _queryWhere,
+  _queryWhereExists,
   CreateCtx,
   CreateData,
   getQueryAs,
+  JoinedShapes,
   NotFoundError,
   OrchidOrmInternalError,
   Query,
@@ -275,7 +277,7 @@ export const makeHasAndBelongsToManyMethod = (
     ...baseQuery.q,
     shape: baseQuery.shape,
   };
-  const subQuery = Object.create(baseQuery);
+  const subQuery = Object.create(baseQuery) as Query;
 
   const state: State = {
     relatedTableQuery: query,
@@ -293,21 +295,26 @@ export const makeHasAndBelongsToManyMethod = (
     joiningQuery: Query,
     tableAs: string,
     foreignAs: string,
+    joinedShapes: JoinedShapes,
   ) => {
-    return joiningQuery.whereExists(subQuery, (q) => {
-      for (let i = 0; i < throughLen; i++) {
-        _queryJoinOn(q, [
-          throughForeignKeysFull[i],
-          `${foreignAs}.${throughPrimaryKeys[i]}`,
-        ]);
-      }
+    const cloned = joiningQuery.clone();
+    cloned.q.joinedShapes = joinedShapes;
+    return _queryWhereExists(cloned, subQuery, [
+      (q) => {
+        for (let i = 0; i < throughLen; i++) {
+          _queryJoinOn(q, [
+            throughForeignKeysFull[i],
+            `${foreignAs}.${throughPrimaryKeys[i]}`,
+          ]);
+        }
 
-      for (let i = 0; i < len; i++) {
-        _queryJoinOn(q, [foreignKeysFull[i], `${tableAs}.${primaryKeys[i]}`]);
-      }
+        for (let i = 0; i < len; i++) {
+          _queryJoinOn(q, [foreignKeysFull[i], `${tableAs}.${primaryKeys[i]}`]);
+        }
 
-      return q;
-    });
+        return q;
+      },
+    ]);
   };
 
   const obj: RecordString = {};
@@ -317,11 +324,11 @@ export const makeHasAndBelongsToManyMethod = (
   const selectPrimaryKeysAsForeignKeys = [{ selectAs: obj }];
 
   const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
-    return joinQuery(
-      baseQuery,
-      getQueryAs(baseQuery),
-      getQueryAs(joiningQuery),
-    );
+    const foreignAs = getQueryAs(joiningQuery);
+    return joinQuery(baseQuery, getQueryAs(baseQuery), foreignAs, {
+      ...baseQuery.q.joinedShapes,
+      [foreignAs]: joiningQuery.q.shape,
+    });
   };
 
   return {
@@ -350,20 +357,12 @@ export const makeHasAndBelongsToManyMethod = (
       relationName,
       state,
     ),
-    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) => {
-      const joined = joinQuery(
-        joiningQuery,
-        getQueryAs(baseQuery),
-        getQueryAs(joiningQuery),
-      );
-
-      joined.q.joinedShapes = {
-        ...joined.q.joinedShapes,
+    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
+      joinQuery(joiningQuery, getQueryAs(baseQuery), getQueryAs(joiningQuery), {
+        ...joiningQuery.q.joinedShapes,
         [(baseQuery.q.as || baseQuery.table) as string]: baseQuery.q.shape,
-      };
-
-      return joined;
-    }),
+      }),
+    ),
     reverseJoin,
     modifyRelatedQuery(relationQuery) {
       const ref = {} as { q: Query };
@@ -500,7 +499,9 @@ const nestedInsert = ({
       ][]) {
         for (const item of connect) {
           queries.push(
-            _queryFindBy(t.select(...throughPrimaryKeys), [item]) as Query,
+            _queryFindBy(t.select(...throughPrimaryKeys), [
+              item as never,
+            ]) as Query,
           );
         }
       }
@@ -528,7 +529,7 @@ const nestedInsert = ({
         for (const item of connectOrCreate) {
           queries.push(
             _queryFindByOptional(t.select(...throughPrimaryKeys), [
-              item.where,
+              item.where as never,
             ]) as Query,
           );
         }

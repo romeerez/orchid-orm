@@ -1,6 +1,7 @@
 import {
   expectQueryNotMutated,
   Message,
+  Profile,
   Snake,
   snakeSelectAll,
   snakeSelectAllWithTable,
@@ -550,5 +551,133 @@ describe('join callback with query builder', () => {
       assertType<typeof q.table, 'message'>();
       return q;
     });
+  });
+});
+
+describe('implicit lateral joins', () => {
+  it(`should disallow selecting joined columns that weren't selected inside join`, () => {
+    User.join(Message, (q) => q.on('authorId', 'user.id').select('text'))
+      .select('message.text')
+      .select(
+        // @ts-expect-error the column is not selected inside join
+        'message.id',
+      );
+  });
+
+  it('should work when joining a table', () => {
+    const q = User.join(Message, (q) =>
+      q.on('message.id', 'user.id').where({ text: 'text' }).limit(5).offset(10),
+    );
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user".*
+        FROM "user"
+        JOIN LATERAL (
+          SELECT *
+          FROM "message"
+          WHERE "message"."id" = "user"."id" AND "message"."text" = $1
+          LIMIT $2
+          OFFSET $3
+        ) "message" ON true
+      `,
+      ['text', 5, 10],
+    );
+  });
+
+  it('should work when joining a sub-query', () => {
+    const q = User.join(
+      () => Message.limit(5),
+      (q) => q.on('message.id', 'user.id').where({ text: 'text' }).offset(10),
+    );
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user".*
+        FROM "user"
+        JOIN LATERAL (
+          SELECT *
+          FROM "message"
+          WHERE "message"."id" = "user"."id" AND "message"."text" = $1
+          LIMIT $2
+          OFFSET $3
+        ) "message" ON true
+      `,
+      ['text', 5, 10],
+    );
+  });
+
+  it('should work when joining with statement', () => {
+    const q = User.with('p', Profile).join('p', (q) =>
+      q.on('userId', 'user.id').limit(5).offset(10),
+    );
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "p" AS (SELECT * FROM "profile")
+        SELECT "user".*
+        FROM "user"
+        JOIN LATERAL (
+          SELECT *
+          FROM "p"
+          WHERE "p"."userId" = "user"."id"
+          LIMIT $1
+          OFFSET $2
+        ) "p" ON true
+      `,
+      [5, 10],
+    );
+  });
+
+  it('should not resolve column names inside join closure if nothing was selected explicitly', () => {
+    const q = User.join(Snake, (q) => q.on('snake.snakeId', 'user.id').limit(1))
+      .where({
+        'snake.snakeName': 'name',
+      })
+      .select('snake.snakeName');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "snake"."snake_name" "snakeName"
+        FROM "user"
+        JOIN LATERAL (
+          SELECT "snake".*
+          FROM "snake"
+          WHERE "snake"."snake_id" = "user"."id"
+          LIMIT $1
+        ) "snake" ON true
+        WHERE "snake"."snake_name" = $2
+      `,
+      [1, 'name'],
+    );
+  });
+
+  it('should use resolved column names outside of join closure when names are resolved inside', () => {
+    const q = User.join(Snake, (q) =>
+      q.on('snake.snakeId', 'user.id').select('snake.snakeName'),
+    )
+      .where({
+        'snake.snakeName': 'name',
+      })
+      .select('snake.snakeName');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "snake"."snakeName"
+        FROM "user"
+        JOIN LATERAL (
+          SELECT "snake"."snake_name" "snakeName"
+          FROM "snake"
+          WHERE "snake"."snake_id" = "user"."id"
+        ) "snake" ON true
+        WHERE "snake"."snakeName" = $1
+      `,
+      ['name'],
+    );
   });
 });

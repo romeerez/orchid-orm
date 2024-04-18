@@ -1,8 +1,6 @@
 import { Query } from '../../query/query';
-import { addQueryOn } from './join';
 import { columnSqlForTest } from '../where/testWhere';
 import { expectSql, testDb } from 'test-utils';
-import { RelationQueryBase } from '../../relations';
 
 export const testJoin = ({
   method,
@@ -43,8 +41,6 @@ export const testJoin = ({
 
   const asFkeySql =
     columnsOf === joinTarget ? `"as".${fkeySql.split('.')[1]}` : fkeySql;
-  const asTextSql =
-    columnsOf === joinTarget ? `"as".${textSql.split('.')[1]}` : textSql;
 
   const makeSql = ({
     select = selectFrom,
@@ -227,58 +223,6 @@ export const testJoin = ({
       ),
       [...values, 'text'],
     );
-  });
-
-  describe('relation', () => {
-    const withRelation = Object.create(joinTo) as Query & {
-      relations: {
-        as: RelationQueryBase;
-      };
-    };
-    withRelation.baseQuery = Object.create(withRelation.baseQuery);
-
-    beforeAll(() => {
-      Object.assign(withRelation.baseQuery, {
-        relations: {
-          as: {
-            relationConfig: {
-              query: joinTarget,
-              joinQuery(joiningQuery: Query, baseQuery: Query) {
-                const rel = joiningQuery.as('as');
-                return addQueryOn(rel, baseQuery, rel, fkey, pkey);
-              },
-            },
-          },
-        },
-      });
-    });
-
-    it('should join relation', () => {
-      expectSql(
-        withRelation[join]('as').toSQL(),
-        sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
-        values,
-      );
-    });
-
-    if (columnsOf === joinTarget) {
-      it('should join relation with additional conditions', () => {
-        expectSql(
-          withRelation[join]('as', (q) =>
-            q.where({
-              [`as.${text}`]: 'text',
-            }),
-          ).toSQL(),
-          sql(
-            `"${joinTable}" AS "as"`,
-            `${asFkeySql} = ${pkeySql} AND ${asTextSql} = $${
-              values.length + 1
-            }`,
-          ),
-          [...values, 'text'],
-        );
-      });
-    }
   });
 
   if (columnsOf === joinTarget) {

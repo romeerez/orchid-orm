@@ -104,6 +104,10 @@ export interface PickQueryTableMetaShape
   extends PickQueryTable,
     PickQueryMetaShape {}
 
+export interface PickQueryTableMetaResultShape
+  extends PickQueryTableMetaResult,
+    PickQueryMetaShape {}
+
 export interface PickQueryMetaResultReturnType
   extends PickQueryMetaResult,
     PickQueryReturnType {}

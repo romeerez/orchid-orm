@@ -301,4 +301,51 @@ describe('relations', () => {
       `,
     );
   });
+
+  it('should support implicit lateral join', () => {
+    const q = db.user
+      .select('Id')
+      .join('messages', (q) => q.limit(5))
+      .where({ 'messages.Text': 'text' });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" "Id"
+        FROM "user"
+        JOIN LATERAL (
+          SELECT "message".*
+          FROM "message" AS "messages"
+          WHERE "messages"."authorId" = "user"."id"
+            AND "messages"."messageKey" = "user"."userKey"
+          LIMIT $1
+        ) "messages" ON true
+        WHERE "messages"."text" = $2
+      `,
+      [5, 'text'],
+    );
+  });
+
+  it('should support implicit lateral join with select inside', () => {
+    const q = db.user
+      .select('Id')
+      .join('messages', (q) => q.select('Text'))
+      .where({ 'messages.Text': 'text' });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" "Id"
+        FROM "user"
+        JOIN LATERAL (
+          SELECT "messages"."text" "Text"
+          FROM "message" AS "messages"
+          WHERE "messages"."authorId" = "user"."id"
+            AND "messages"."messageKey" = "user"."userKey"
+        ) "messages" ON true
+        WHERE "messages"."Text" = $1
+      `,
+      ['text'],
+    );
+  });
 });

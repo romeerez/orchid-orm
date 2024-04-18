@@ -36,7 +36,7 @@ import { Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { From, FromQuerySelf } from './from';
-import { Join, OnQueryBuilder } from './join/join';
+import { Join, OnMethods } from './join/join';
 import { With } from './with';
 import { Union } from './union';
 import { JsonMethods, JsonModifiers } from './json';
@@ -964,7 +964,7 @@ applyMixins(QueryMethods, [
   Select,
   From,
   Join,
-  OnQueryBuilder,
+  OnMethods,
   With,
   Union,
   JsonModifiers,

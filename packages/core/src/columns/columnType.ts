@@ -394,6 +394,8 @@ export interface QueryColumn<T = unknown, Op = CoreBaseOperators> {
   operators: Op;
 }
 
+export type QueryColumnBooleanOrNull = QueryColumn<boolean | null>;
+
 export type QueryColumns = Record<string, QueryColumn>;
 
 export interface QueryColumnInit extends QueryColumn {

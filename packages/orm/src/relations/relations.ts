@@ -25,7 +25,6 @@ import {
 import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
-  emptyArray,
   EmptyObject,
   RecordUnknown,
 } from 'orchid-core';
@@ -420,10 +419,7 @@ const makeRelationQuery = (
         // but when called as a query chain like `q.user.profile` it should return many.
         query = _queryWhere(_queryAll(toTable), [
           {
-            EXISTS: {
-              first: data.reverseJoin(this, toTable),
-              args: emptyArray,
-            },
+            EXISTS: { q: data.reverseJoin(this, toTable) },
           },
         ]);
       }

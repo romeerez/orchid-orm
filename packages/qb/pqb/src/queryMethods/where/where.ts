@@ -8,20 +8,19 @@ import { ColumnOperators } from '../../sql';
 import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
 import { JoinArgs, JoinFirstArg } from '../join/join';
 import {
-  applyMixins,
   ColumnsShapeBase,
   Expression,
   MaybeArray,
   PickQueryMeta,
-  QueryColumn,
+  QueryColumnBooleanOrNull,
   SQLQueryArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
-import { QueryBase } from '../../query/queryBase';
+import { QueryBase, QueryBaseThen } from '../../query/queryBase';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
-import { ExpressionOrQueryReturning } from '../../common/utils';
 import { RelationsBase } from '../../relations';
+import { processJoinArgs } from '../join/processJoinArgs';
 
 /*
 Argument of `where`:
@@ -59,10 +58,13 @@ export type WhereArg<T extends PickQueryMetaRelations> =
             | QueryBase;
     }
   | QueryBase
-  | Expression<QueryColumn<boolean | null>>
+  | Expression<QueryColumnBooleanOrNull>
   | ((
       q: WhereQueryBuilder<T>,
-    ) => ExpressionOrQueryReturning<boolean | null> | WhereQueryBuilder<T>);
+    ) =>
+      | QueryColumnBooleanOrNull
+      | QueryBaseThen<boolean | null>
+      | WhereQueryBuilder<T>);
 
 /**
  * Callback argument of `where`.
@@ -132,6 +134,9 @@ export interface QueryMetaHasWhere {
   };
 }
 
+/**
+ * Mutative {@link Where.where}
+ */
 export const _queryWhere = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArgs<T>,
@@ -143,6 +148,9 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
   ) as unknown as WhereResult<T>;
 };
 
+/**
+ * Mutative {@link Where.whereSql}
+ */
 export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
   return pushQueryValue(
     q as unknown as Query,
@@ -152,11 +160,7 @@ export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
 };
 
 /**
- * Adds `where` arguments to query data with a `NOT` keyword:
- * SQL template string is added as `RawSQL` object, other arguments are added as is.
- *
- * @param q - query object to add the data to
- * @param args - `where` arguments
+ * Mutative {@link Where.whereNot}
  */
 export const _queryWhereNot = <T extends PickQueryMetaRelations>(
   q: T,
@@ -167,6 +171,9 @@ export const _queryWhereNot = <T extends PickQueryMetaRelations>(
   }) as never;
 };
 
+/**
+ * Mutative {@link Where.whereNotSql}
+ */
 export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
   return pushQueryValue(q as unknown as Query, 'and', {
     NOT: sqlQueryArgsToExpression(args),
@@ -174,10 +181,7 @@ export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
 };
 
 /**
- * Adds `where` arguments to query data. Arguments will be separated from each other with `OR`.
- *
- * @param q - query object to add the data to
- * @param args - `where` arguments
+ * Mutative {@link Where.orWhere}
  */
 export const _queryOr = <T extends PickQueryMetaRelations>(
   q: T,
@@ -191,10 +195,7 @@ export const _queryOr = <T extends PickQueryMetaRelations>(
 };
 
 /**
- * Adds `where` arguments to query data with a `NOT` keyword. Arguments will be separated from each other with `OR`.
- *
- * @param q - query object to add the data to
- * @param args - `where` arguments, may be a template literal
+ * Mutative {@link Where.orWhereNot}
  */
 export const _queryOrNot = <T extends PickQueryMetaRelations>(
   q: T,
@@ -208,13 +209,7 @@ export const _queryOrNot = <T extends PickQueryMetaRelations>(
 };
 
 /**
- * Process arguments of `whereIn` to add them to query data properly.
- *
- * @param q - query object to add the data to.
- * @param and - `true` to join arguments with `AND`, `false` to join them with `OR.
- * @param arg - `whereIn` argument: can be a single column name, tuple of column names, or object with column names and values.
- * @param values - if the `arg` is a column name or a tuple, `values` are the values for the column/columns. If `arg` is an object, `values` are `undefined`.
- * @param not - adds the `NOT` keyword.
+ * Mutative {@link Where.whereIn}
  */
 export const _queryWhereIn = <T>(
   q: T,
@@ -255,30 +250,50 @@ export const _queryWhereIn = <T>(
 
 /**
  * Process arguments of `whereExists`.
- *
- * @param args - first element is a query, or relation name, or `with` alias, or a query builder callback that returns a query. Other arguments have conditions to join the query or a `with` table, no other arguments needed in case of a relation
  */
-const existsArgs = (q: JoinFirstArg<Query>, args: JoinArgs<Query, Query>) => {
-  let isSubQuery;
+const existsArgs = (
+  self: Query,
+  q: JoinFirstArg<Query>,
+  args: JoinArgs<Query, Query>,
+) => {
+  let joinSubQuery;
   if (typeof q === 'object') {
-    isSubQuery = getIsJoinSubQuery(q.q, q.baseQuery.q);
-    if (isSubQuery) {
-      q = q.clone();
-      q.shape = getShapeFromSelect(q, true) as ColumnsShapeBase;
+    joinSubQuery = getIsJoinSubQuery(q as Query);
+    if (joinSubQuery) {
+      q = (q as Query).clone();
+      (q as Query).shape = getShapeFromSelect(
+        q as Query,
+        true,
+      ) as ColumnsShapeBase;
     }
   } else {
-    isSubQuery = false;
+    joinSubQuery = false;
   }
+
+  const joinArgs = processJoinArgs(self, q, args as never, joinSubQuery);
 
   return [
     {
-      EXISTS: {
-        first: q,
-        args,
-        isSubQuery,
-      },
+      EXISTS: joinArgs,
     },
   ] as never;
+};
+
+/**
+ * Mutative {@link Where.whereExists}
+ */
+export const _queryWhereExists = <
+  T extends PickQueryMetaShapeRelationsWithData,
+  Arg extends JoinFirstArg<T>,
+>(
+  q: T,
+  arg: Arg,
+  args: JoinArgs<T, Arg>,
+): WhereResult<T> => {
+  return _queryWhere(
+    q,
+    existsArgs(q as unknown as Query, arg as never, args as never),
+  ) as never;
 };
 
 export class Where {
@@ -923,10 +938,11 @@ export class Where {
     T extends PickQueryMetaShapeRelationsWithData,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
-    return _queryWhere(
-      (this as unknown as Query).clone(),
-      existsArgs(arg as never, args as never),
-    ) as never;
+    return _queryWhereExists(
+      (this as unknown as Query).clone() as unknown as T,
+      arg,
+      args,
+    );
   }
 
   /**
@@ -942,10 +958,8 @@ export class Where {
     T extends PickQueryMetaShapeRelationsWithData,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
-    return _queryOr(
-      (this as unknown as Query).clone(),
-      existsArgs(arg as never, args as never),
-    ) as never;
+    const q = (this as unknown as Query).clone();
+    return _queryOr(q, existsArgs(q, arg as never, args as never)) as never;
   }
 
   /**
@@ -964,9 +978,10 @@ export class Where {
     T extends PickQueryMetaShapeRelationsWithData,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+    const q = (this as unknown as Query).clone();
     return _queryWhereNot(
-      (this as unknown as Query).clone(),
-      existsArgs(arg as never, args as never),
+      q,
+      existsArgs(q, arg as never, args as never),
     ) as never;
   }
 
@@ -983,15 +998,7 @@ export class Where {
     T extends PickQueryMetaShapeRelationsWithData,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
-    return _queryOrNot(
-      (this as unknown as Query).clone(),
-      existsArgs(arg as never, args as never),
-    ) as never;
+    const q = (this as unknown as Query).clone();
+    return _queryOrNot(q, existsArgs(q, arg as never, args as never)) as never;
   }
 }
-
-// Query builder class that only has Where methods.
-// Used for `where` callback argument, and for callback argument of `join`.
-export interface WhereQueryBase extends Where, QueryBase {}
-export abstract class WhereQueryBase extends QueryBase {}
-applyMixins(WhereQueryBase, [Where]);

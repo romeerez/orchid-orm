@@ -19,37 +19,46 @@ export const pushDeleteSql = (
 
   let conditions: string | undefined;
   if (query.join?.length) {
-    const items: { target: string; conditions?: string }[] = [];
+    const targets: string[] = [];
+    const ons: string[] = [];
 
     const joinSet = query.join.length > 1 ? new Set<string>() : null;
 
     for (const item of query.join) {
-      // skip join lateral: it's not supported here, and it's not clean if it's supported in DELETE by the db
-      if (!Array.isArray(item)) {
-        const join = processJoinItem(ctx, table, query, item, quotedAs);
+      if (Array.isArray(item)) {
+        const q = item[1];
+        const { aliasValue } = ctx;
+        ctx.aliasValue = true;
 
-        const key = `${join.target}${join.conditions}`;
+        const as = item[2];
+        targets.push(
+          `LATERAL (${q.toSQL(ctx).text}) "${query.joinOverrides?.[as] || as}"`,
+        );
+
+        ctx.aliasValue = aliasValue;
+      } else {
+        const join = processJoinItem(ctx, table, query, item.args, quotedAs);
+
+        const key = `${join.target}${join.on}`;
         if (joinSet) {
           if (joinSet.has(key)) continue;
           joinSet.add(key);
         }
-        items.push(join);
+        targets.push(join.target);
+        if (join.on) ons.push(join.on);
       }
     }
 
-    if (items.length) {
-      ctx.sql.push(`USING ${items.map((item) => item.target).join(', ')}`);
-
-      conditions = items
-        .map((item) => item.conditions)
-        .filter(Boolean)
-        .join(' AND ');
+    if (targets.length) {
+      ctx.sql.push(`USING ${targets.join(', ')}`);
     }
+
+    conditions = ons.join(' AND ');
   }
 
   pushWhereStatementSql(ctx, table, query, quotedAs);
 
-  if (conditions?.length) {
+  if (conditions) {
     if (query.and?.length || query.or?.length) {
       ctx.sql.push('AND', conditions);
     } else {

@@ -1,9 +1,15 @@
-import { Query } from '../../query/query';
+import {
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  PickQueryQ,
+  Query,
+} from '../../query/query';
 import {
   ColumnsParsers,
   ColumnsShapeBase,
   ColumnTypeBase,
+  PickQueryTableMetaResult,
   QueryColumns,
+  QueryMetaBase,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
@@ -17,7 +23,7 @@ import {
   JoinResult,
 } from './join';
 import { getQueryAs, resolveSubQueryCallback } from '../../common/utils';
-import { QueryBase } from '../../query/queryBase';
+import { processJoinArgs } from './processJoinArgs';
 
 /**
  * Generic function to construct all JOIN queries.
@@ -32,25 +38,26 @@ import { QueryBase } from '../../query/queryBase';
  * @param args - rest join arguments: columns to join with, or a callback
  */
 export const _join = <
-  T extends Query,
-  Arg extends JoinFirstArg<T>,
+  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  R extends PickQueryTableMetaResult,
   RequireJoined extends boolean,
   RequireMain extends boolean,
-  Args extends JoinArgs<T, Arg>,
 >(
   q: T,
   require: RequireJoined,
   type: string,
-  first: Arg,
-  args: Args,
-): JoinResult<T, Arg, RequireJoined, RequireMain> => {
+  first: JoinFirstArg<never>,
+  args: JoinArgs<Query, JoinFirstArg<Query>>,
+): JoinResult<T, R, RequireJoined, RequireMain> => {
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
-  let isSubQuery = false;
+  let joinSubQuery = false;
 
   if (typeof first === 'function') {
-    first = (first as (q: Record<string, Query>) => Arg)(q.relations);
+    first = (
+      first as unknown as (q: Record<string, Query>) => JoinFirstArg<Query>
+    )(q.relations);
     (
       first as unknown as { joinQueryAfterCallback: unknown }
     ).joinQueryAfterCallback = (
@@ -59,15 +66,16 @@ export const _join = <
   }
 
   if (typeof first === 'object') {
-    isSubQuery = getIsJoinSubQuery(first.q, first.baseQuery.q);
+    const q = first as Query;
+    joinSubQuery = getIsJoinSubQuery(q);
 
-    joinKey = first.q.as || first.table;
+    joinKey = q.q.as || q.table;
     if (joinKey) {
-      shape = getShapeFromSelect(first, isSubQuery);
-      parsers = first.q.parsers;
+      shape = getShapeFromSelect(q, joinSubQuery);
+      parsers = q.q.parsers;
 
-      if (isSubQuery) {
-        first = first.clone() as Arg;
+      if (joinSubQuery) {
+        first = q.clone() as JoinFirstArg<Query>;
         (first as Query).shape = shape as ColumnsShapeBase;
       }
     }
@@ -79,7 +87,7 @@ export const _join = <
       shape = getShapeFromSelect(relation.relationConfig.query);
       parsers = relation.relationConfig.query.q.parsers;
     } else {
-      shape = q.q.withShapes?.[joinKey];
+      shape = (q as unknown as PickQueryQ).q.withShapes?.[joinKey];
       if (shape) {
         // clone the shape to mutate it below, in other cases the shape is newly created
         if (!require) shape = { ...shape };
@@ -96,15 +104,55 @@ export const _join = <
   }
 
   if (joinKey) {
-    setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
-    setQueryObjectValue(q, 'joinedParsers', joinKey, parsers);
+    setQueryObjectValue(
+      q as unknown as PickQueryQ,
+      'joinedShapes',
+      joinKey,
+      shape,
+    );
+    setQueryObjectValue(
+      q as unknown as PickQueryQ,
+      'joinedParsers',
+      joinKey,
+      parsers,
+    );
   }
 
-  return pushQueryValue(q, 'join', {
-    type,
+  const joinArgs = processJoinArgs(
+    q as unknown as Query,
     first,
     args,
-    isSubQuery,
+    joinSubQuery,
+  );
+
+  if (joinKey && 's' in joinArgs && joinArgs.s) {
+    const j =
+      'j' in joinArgs
+        ? joinArgs.r ?? joinArgs.j
+        : 'r' in joinArgs
+        ? joinArgs.r
+        : joinArgs.q;
+
+    if (j.q.select || !j.internal.columnsForSelectAll) {
+      const shape = getShapeFromSelect(j, true);
+      setQueryObjectValue(
+        q as unknown as PickQueryQ,
+        'joinedShapes',
+        joinKey,
+        shape,
+      );
+      setQueryObjectValue(
+        q as unknown as PickQueryQ,
+        'joinedParsers',
+        joinKey,
+        j.q.parsers,
+      );
+    }
+  }
+
+  return pushQueryValue(q as unknown as PickQueryQ, 'join', {
+    type,
+    args: joinArgs,
   }) as never;
 };
 
@@ -121,24 +169,26 @@ export const _join = <
  * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
  */
 export const _joinLateral = <
-  T extends QueryBase,
+  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
   Arg extends JoinFirstArg<T>,
-  R extends QueryBase,
+  Table extends string,
+  Meta extends QueryMetaBase,
+  Result extends QueryColumns,
   RequireJoined extends boolean,
 >(
   self: T,
   type: string,
   arg: Arg,
-  cb: JoinLateralCallback<T, Arg, R>,
+  cb: JoinLateralCallback<T, Arg, Table, Meta, Result>,
   as?: string,
-): JoinLateralResult<T, R, RequireJoined> => {
+): JoinLateralResult<T, Table, Meta, Result, RequireJoined> => {
   const q = self as unknown as Query;
 
   let relation: RelationQueryBase | undefined;
   if (typeof arg === 'string') {
     relation = q.relations[arg];
     if (relation) {
-      arg = relation.relationConfig.query as Arg;
+      arg = relation.relationConfig.query.clone() as unknown as Arg;
     } else {
       const shape = q.q.withShapes?.[arg];
       if (shape) {
@@ -158,13 +208,13 @@ export const _joinLateral = <
   const query = arg as Query;
   query.q.joinTo = q;
   (query.q.joinedShapes ??= {})[getQueryAs(q)] = q.q.shape;
-  let result = resolveSubQueryCallback(query, cb as never) as unknown as R;
+  let result = resolveSubQueryCallback(query, cb as never) as unknown as Query;
 
   if (relation) {
     result = relation.relationConfig.joinQuery(
       result as unknown as Query,
       q as unknown as Query,
-    ) as unknown as R;
+    ) as unknown as Query;
   }
 
   const joinKey = as || result.q.as || result.table;

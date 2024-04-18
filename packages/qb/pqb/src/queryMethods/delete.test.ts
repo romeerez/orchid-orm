@@ -5,6 +5,7 @@ import {
   snakeSelectAll,
   User,
   userData,
+  UserRecord,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
@@ -84,7 +85,7 @@ describe('delete', () => {
       [1],
     );
 
-    assertType<Awaited<typeof query>, (typeof User.outputType)[]>();
+    assertType<Awaited<typeof query>, UserRecord[]>();
 
     expectQueryNotMutated(q);
   });
@@ -148,9 +149,49 @@ describe('delete', () => {
       [1],
     );
 
-    assertType<Awaited<typeof query>, (typeof User.outputType)[]>();
+    assertType<Awaited<typeof query>, UserRecord[]>();
 
     expectQueryNotMutated(q);
+  });
+
+  it('should support implicit lateral join', () => {
+    const q = User.selectAll()
+      .where({ id: 1 })
+      .join(Profile, (q) => q.on('userId', 'id').limit(5))
+      .delete();
+
+    expectSql(
+      q.toSQL(),
+      `
+        DELETE FROM "user"
+        USING LATERAL (SELECT * FROM "profile" WHERE "profile"."userId" = "user"."id" LIMIT $1) "profile"
+        WHERE "user"."id" = $2
+        RETURNING "user".*
+      `,
+      [5, 1],
+    );
+
+    assertType<Awaited<typeof q>, UserRecord[]>();
+  });
+
+  it('should support explicit lateral join', () => {
+    const q = User.selectAll()
+      .where({ id: 1 })
+      .joinLateral(Profile, (q) => q.on('userId', 'id').limit(5))
+      .delete();
+
+    expectSql(
+      q.toSQL(),
+      `
+        DELETE FROM "user"
+        USING LATERAL (SELECT * FROM "profile" WHERE "profile"."userId" = "user"."id" LIMIT $1) "profile"
+        WHERE "user"."id" = $2
+        RETURNING "user".*
+      `,
+      [5, 1],
+    );
+
+    assertType<Awaited<typeof q>, UserRecord[]>();
   });
 
   it('should throw NotFoundError when no records to delete for a `one` query kind', async () => {

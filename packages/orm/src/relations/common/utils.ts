@@ -5,6 +5,7 @@ import {
   getQueryAs,
   JoinCallback,
   JoinQueryMethod,
+  PickQueryMetaRelations,
   pushQueryOn,
   Query,
   RelationConfigBase,
@@ -12,9 +13,8 @@ import {
   setQueryObjectValue,
   UpdateData,
   WhereArg,
-  WhereQueryBase,
 } from 'pqb';
-import { emptyArray, MaybeArray, RecordUnknown } from 'orchid-core';
+import { MaybeArray, RecordUnknown } from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 
@@ -29,10 +29,10 @@ export interface NestedInsertOneItem {
 
 export type NestedInsertOneItemCreate = RecordUnknown;
 
-export type NestedInsertOneItemConnect = WhereArg<WhereQueryBase>;
+export type NestedInsertOneItemConnect = WhereArg<PickQueryMetaRelations>;
 
 export type NestedInsertOneItemConnectOrCreate = {
-  where: WhereArg<WhereQueryBase>;
+  where: WhereArg<PickQueryMetaRelations>;
   create: RecordUnknown;
 };
 
@@ -44,10 +44,10 @@ export type NestedInsertManyItems = {
 
 export type NestedInsertManyCreate = RecordUnknown[];
 
-export type NestedInsertManyConnect = WhereArg<WhereQueryBase>[];
+export type NestedInsertManyConnect = WhereArg<PickQueryMetaRelations>[];
 
 export type NestedInsertManyConnectOrCreate = {
-  where: WhereArg<WhereQueryBase>;
+  where: WhereArg<PickQueryMetaRelations>;
   create: RecordUnknown;
 }[];
 
@@ -55,7 +55,7 @@ export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
 export type NestedUpdateOneItem = {
   disconnect?: boolean;
-  set?: WhereArg<WhereQueryBase>;
+  set?: WhereArg<PickQueryMetaRelations>;
   delete?: boolean;
   update?: UpdateData<Query>;
   upsert?: {
@@ -66,11 +66,11 @@ export type NestedUpdateOneItem = {
 };
 
 export type NestedUpdateManyItems = {
-  disconnect?: MaybeArray<WhereArg<WhereQueryBase>>;
-  set?: MaybeArray<WhereArg<WhereQueryBase>>;
-  delete?: MaybeArray<WhereArg<WhereQueryBase>>;
+  disconnect?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
+  set?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
+  delete?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
   update?: {
-    where: MaybeArray<WhereArg<WhereQueryBase>>;
+    where: MaybeArray<WhereArg<PickQueryMetaRelations>>;
     data: UpdateData<Query>;
   };
   create: RecordUnknown[];
@@ -259,12 +259,7 @@ export const joinQueryChainingHOF =
         ? last.relationConfig.joinQuery(last, baseQuery)
         : last;
 
-    const inner = reverseJoin(query, joiningQuery);
-
     return joiningQuery.where({
-      EXISTS: {
-        first: inner,
-        args: emptyArray,
-      },
+      EXISTS: { q: reverseJoin(query, joiningQuery) },
     });
   };

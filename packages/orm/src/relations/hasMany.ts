@@ -17,7 +17,6 @@ import {
   VirtualColumn,
   CreateCtx,
   UpdateCtx,
-  WhereQueryBase,
   UpdateData,
   AddQueryDefaults,
   RelationJoinQuery,
@@ -28,6 +27,7 @@ import {
   _queryDelete,
   CreateMethodsNames,
   SelectableFromShape,
+  PickQueryMetaRelations,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -351,7 +351,7 @@ export const makeHasManyMethod = (
 const getWhereForNestedUpdate = (
   t: Query,
   data: RecordUnknown[],
-  params: MaybeArray<WhereArg<WhereQueryBase>> | undefined,
+  params: MaybeArray<WhereArg<PickQueryMetaRelations>> | undefined,
   primaryKeys: string[],
   foreignKeys: string[],
 ): WhereResult<Query> => {

@@ -134,7 +134,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
     : T[K];
 } & QueryMetaHasSelect;
 
-type SelectResultObj<T extends SelectSelf, Obj extends SelectAsArg<T>> = {
+type SelectResultObj<T extends SelectSelf, Obj> = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & {
         selectable: SelectAsSelectable<Obj>;
@@ -195,7 +195,7 @@ type SelectResultObj<T extends SelectSelf, Obj extends SelectAsArg<T>> = {
 type SelectResultColumnsAndObj<
   T extends SelectSelf,
   Columns extends PropertyKey[],
-  Obj extends SelectAsArg<T>,
+  Obj,
 > = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & {
@@ -452,7 +452,7 @@ export const processSelectArg = <T extends SelectSelf>(
         value.q.joinedForSelect = asOverride;
 
         _joinLateral(
-          q as unknown as QueryBase,
+          q,
           value.q.innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
           query,
           (q) => q,

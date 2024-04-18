@@ -73,7 +73,7 @@ type NumberNullable = QueryColumn<number | null, OperatorsNumber>;
 type NullableNumberReturn<T> = SetQueryReturnsColumnOrThrow<T, NumberNullable> &
   OperatorsNumber;
 
-type BooleanColumn = QueryColumn<boolean, OperatorsBoolean>;
+export type BooleanQueryColumn = QueryColumn<boolean, OperatorsBoolean>;
 
 type BooleanNullable = QueryColumn<boolean | null, OperatorsBoolean>;
 
@@ -203,7 +203,7 @@ export class AggregateMethods {
    */
   exists<T extends QueryGetSelf>(
     this: T,
-  ): SetQueryReturnsColumnOrThrow<T, BooleanColumn> {
+  ): SetQueryReturnsColumnOrThrow<T, BooleanQueryColumn> {
     const q = _queryGetOptional(
       (this as unknown as Query).clone(),
       new RawSQL('true'),
@@ -467,7 +467,7 @@ export class AggregateMethods {
    */
   boolAnd<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
+    arg: SelectableOrExpressionOfType<T, BooleanQueryColumn>,
     options?: AggregateOptions<T>,
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
@@ -501,7 +501,7 @@ export class AggregateMethods {
    */
   boolOr<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
+    arg: SelectableOrExpressionOfType<T, BooleanQueryColumn>,
     options?: AggregateOptions<T>,
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
@@ -518,7 +518,7 @@ export class AggregateMethods {
    */
   every<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanColumn>,
+    arg: SelectableOrExpressionOfType<T, BooleanQueryColumn>,
     options?: AggregateOptions<T>,
   ): NullableBooleanReturn<T> {
     return makeFnExpression(

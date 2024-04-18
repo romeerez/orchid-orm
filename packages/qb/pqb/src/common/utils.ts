@@ -3,7 +3,6 @@ import type { Query } from '../query/query';
 import type { QueryColumn } from 'orchid-core';
 import { RelationQuery } from '../relations';
 import { Expression, PickQueryMeta } from 'orchid-core';
-import { QueryBase, QueryBaseThen } from '../query/queryBase';
 import { PickQueryMetaTable } from '../query/query';
 
 export type AliasOrTable<T extends PickQueryMetaTable> =
@@ -14,7 +13,7 @@ export type AliasOrTable<T extends PickQueryMetaTable> =
     : never;
 
 export type SelectableOrExpression<
-  T extends PickQueryMeta = QueryBase,
+  T extends PickQueryMeta = PickQueryMeta,
   C extends QueryColumn = QueryColumn,
 > = '*' | keyof T['meta']['selectable'] | Expression<C>;
 
@@ -26,10 +25,6 @@ export type ExpressionOutput<
   : Expr extends Expression
   ? Expr['_type']
   : never;
-
-export type ExpressionOrQueryReturning<T> =
-  | Expression<QueryColumn<T>>
-  | QueryBaseThen<T>;
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };

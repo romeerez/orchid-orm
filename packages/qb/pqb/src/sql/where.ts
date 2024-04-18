@@ -1,6 +1,6 @@
 import { Query } from '../query/query';
 import {
-  SimpleJoinItem,
+  JoinItemArgs,
   WhereInItem,
   WhereItem,
   WhereJsonPathEqualsItem,
@@ -238,16 +238,12 @@ const processWhere = (
     } else if (key === 'EXISTS') {
       const joinItems = (
         Array.isArray((value as unknown[])[0]) ? value : [value]
-      ) as {
-        first: SimpleJoinItem['first'];
-        args: SimpleJoinItem['args'];
-        isSubQuery: boolean;
-      }[];
+      ) as JoinItemArgs[];
 
       const joinSet = joinItems.length > 1 ? new Set<string>() : null;
 
       for (const args of joinItems) {
-        const { target, conditions } = processJoinItem(
+        const { target, on } = processJoinItem(
           ctx,
           table,
           query,
@@ -255,7 +251,9 @@ const processWhere = (
           quotedAs,
         );
 
-        const sql = `EXISTS (SELECT 1 FROM ${target} WHERE ${conditions})`;
+        const sql = `EXISTS (SELECT 1 FROM ${target}${
+          on ? ` WHERE ${on}` : ''
+        })`;
         if (joinSet) {
           if (joinSet.has(sql)) continue;
           joinSet.add(sql);

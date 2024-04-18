@@ -2,7 +2,6 @@ import { Query, SelectableFromShape } from './query';
 import {
   QueryMethods,
   handleResult,
-  OnQueryBuilder,
   logParamToLogObject,
   QueryLogOptions,
 } from '../queryMethods';
@@ -139,7 +138,6 @@ export interface Db<
   ): this;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   queryBuilder: Db;
-  onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
   returnType: Query['returnType'];
   then: QueryThen<QueryDefaultReturnData<Shape>>;
@@ -476,7 +474,6 @@ const performQuery = async <Result>(
 
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
-Db.prototype.onQueryBuilder = OnQueryBuilder;
 
 // Function to build a new table instance.
 export type DbTableConstructor<ColumnTypes> = <

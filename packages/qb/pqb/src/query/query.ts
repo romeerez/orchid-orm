@@ -1,9 +1,4 @@
-import {
-  GetStringArg,
-  OnQueryBuilder,
-  QueryMetaHasWhere,
-  QueryMethods,
-} from '../queryMethods';
+import { GetStringArg, QueryMetaHasWhere, QueryMethods } from '../queryMethods';
 import { QueryData } from '../sql';
 import { AliasOrTable } from '../common/utils';
 import { Db } from './db';
@@ -57,7 +52,6 @@ export type WithDataBase = EmptyObject;
 export interface Query extends QueryBase, QueryMethods<unknown> {
   queryBuilder: Db;
   columnTypes: unknown;
-  onQueryBuilder: typeof OnQueryBuilder;
   shape: QueryColumns;
   singlePrimaryKey: string;
   primaryKeys: string[];

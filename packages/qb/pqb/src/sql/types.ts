@@ -166,26 +166,64 @@ export type QuerySourceItem = {
 
 export type JoinItem = SimpleJoinItem | JoinLateralItem;
 
+export type SimpleJoinItemNonSubQueryArgs =
+  | [Record<string, string | Expression> | Expression | true]
+  | [leftColumn: string | Expression, rightColumn: string | Expression]
+  | [
+      leftColumn: string | Expression,
+      op: string,
+      rightColumn: string | Expression,
+    ];
+
+export type JoinItemArgs =
+  | {
+      // relation query from `relationConfig.joinQuery`
+      j: Query;
+      // join sub query
+      s: boolean;
+      // callback result, if callback is present
+      r?: Query;
+    }
+  | {
+      // `with` item name
+      w: string;
+      // callback result
+      r: Query;
+      // join sub query
+      s: boolean;
+    }
+  | {
+      // `with` item name
+      w: string;
+      // join arguments
+      a: SimpleJoinItemNonSubQueryArgs;
+    }
+  | {
+      // joining query
+      q: QueryWithTable;
+      // join sub query
+      s: boolean;
+    }
+  | {
+      // joining query
+      q: QueryWithTable;
+      // callback result
+      r: Query;
+      // join sub query
+      s: boolean;
+    }
+  | {
+      // joining query
+      q: QueryWithTable;
+      // join arguments
+      a: SimpleJoinItemNonSubQueryArgs;
+      // join sub query
+      s: boolean;
+    };
+
 export interface SimpleJoinItem {
   type: string;
-  first: string | QueryWithTable;
-  args:
-    | []
-    | [
-        conditions:
-          | Record<string, string | Expression>
-          | Expression
-          | ((q: unknown) => QueryBase)
-          | true,
-      ]
-    | [leftColumn: string | Expression, rightColumn: string | Expression]
-    | [
-        leftColumn: string | Expression,
-        op: string,
-        rightColumn: string | Expression,
-      ];
-  // available only for QueryWithTable as first argument
-  isSubQuery: boolean;
+  args: JoinItemArgs;
 }
 
 export type JoinLateralItem = [type: string, joined: Query, as: string];
@@ -201,7 +239,7 @@ export type WhereItem =
       AND?: MaybeArray<WhereItem>;
       OR?: MaybeArray<WhereItem>[];
       IN?: MaybeArray<WhereInItem>;
-      EXISTS?: MaybeArray<SimpleJoinItem['args']>;
+      EXISTS?: MaybeArray<JoinItemArgs>;
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
     }

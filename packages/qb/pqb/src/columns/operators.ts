@@ -15,7 +15,7 @@ import {
   PickQueryResult,
 } from 'orchid-core';
 import { extendQuery } from '../query/queryUtils';
-import { BooleanQueryColumn } from './boolean';
+import { BooleanQueryColumn } from '../queryMethods';
 
 // Operator function type.
 // Table.count().gt(10) <- here `.gt(10)` is this operator function.

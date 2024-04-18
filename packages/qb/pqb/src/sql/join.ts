@@ -1,23 +1,20 @@
 import { quoteSchemaAndTable, rawOrColumnToSql, columnToSql } from './common';
-import { JoinItem, SimpleJoinItem } from './types';
-import { Query, QueryWithTable } from '../query/query';
+import { JoinItem, JoinItemArgs, SimpleJoinItemNonSubQueryArgs } from './types';
+import { PickQueryQAndBaseQuery, Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
   JoinedShapes,
   PickQueryDataShapeAndJoinedShapes,
   QueryData,
-  SelectQueryData,
 } from './data';
-import { pushQueryArray } from '../query/queryUtils';
-import { QueryBase } from '../query/queryBase';
 import {
   Expression,
   isExpression,
   QueryColumns,
   RecordUnknown,
 } from 'orchid-core';
-import { RelationJoinQuery } from '../relations';
+import { RawSQL } from './rawSql';
 
 type ItemOf2Or3Length =
   | [leftColumn: string | Expression, rightColumn: string | Expression]
@@ -27,228 +24,181 @@ type ItemOf2Or3Length =
       rightColumn?: string | Expression,
     ];
 
+interface SqlJoinItem {
+  target: string;
+  on?: string;
+}
+
 export const processJoinItem = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: PickQueryDataShapeAndJoinedShapes,
-  item: Pick<SimpleJoinItem, 'first' | 'args' | 'isSubQuery'>,
+  args: JoinItemArgs,
   quotedAs: string | undefined,
-): { target: string; conditions?: string } => {
+): SqlJoinItem => {
   let target: string;
-  let conditions: string | undefined;
+  let on: string | undefined;
 
-  const { first, args } = item;
-  if (typeof first === 'string') {
-    if (first in table.relations) {
-      const { query: toQuery, joinQuery } =
-        table.relations[first].relationConfig;
+  if ('j' in args) {
+    const { j, s, r } = args;
 
-      const jq = joinQuery(toQuery, table as Query);
-      const { q: j } = jq;
+    const tableName = (
+      typeof j.q.from === 'string' ? j.q.from : j.table
+    ) as string;
 
-      const tableName = (
-        typeof j.from === 'string' ? j.from : jq.table
-      ) as string;
+    const quotedTable = quoteSchemaAndTable(j.q.schema, tableName);
+    target = quotedTable;
 
-      target = quoteSchemaAndTable(j.schema, tableName);
+    const as = j.q.as as string;
+    const joinAs = `"${as}"`;
+    if (as !== tableName) {
+      target += ` AS ${joinAs}`;
+    }
 
-      const as = j.as || first;
-      const joinAs = `"${as}"`;
-      if (as !== tableName) {
-        target += ` AS ${joinAs}`;
-      }
-
-      const queryData = {
-        shape: j.shape,
-        joinedShapes: {
-          ...query.joinedShapes,
-          ...j.joinedShapes,
-          [(table.q.as || table.table) as string]: table.shape,
-        } as JoinedShapes,
-        and: j.and ? [...j.and] : [],
-        or: j.or ? [...j.or] : [],
-      };
-
-      if (args[0]) {
-        const arg = (args[0] as (q: unknown) => QueryBase)(
-          new ctx.queryBuilder.onQueryBuilder(jq, j, table),
-        ).q;
-
-        if (arg.and) queryData.and.push(...arg.and);
-        if (arg.or) queryData.or.push(...arg.or);
-      }
-
-      conditions = whereToSql(ctx, jq, queryData, joinAs);
+    if (r && s) {
+      target = `LATERAL ${subJoinToSql(ctx, j, quotedTable, joinAs, true)}`;
     } else {
-      target = `"${first}"`;
-      const joinShape = (query.joinedShapes as JoinedShapes)[first];
-      conditions = processArgs(
-        args,
+      on = whereToSql(ctx, j, j.q, joinAs);
+    }
+  } else if ('w' in args) {
+    const { w } = args;
+    target = `"${w}"`;
+
+    if ('r' in args) {
+      const { s, r } = args;
+      if (s) {
+        target = `LATERAL ${subJoinToSql(ctx, r, target, target)}`;
+      } else {
+        on = whereToSql(ctx, r as Query, r.q, target);
+      }
+    } else {
+      on = processArgs(
+        args.a,
         ctx,
-        table,
         query,
-        first,
         target,
-        joinShape,
+        (query.joinedShapes as JoinedShapes)[w],
         quotedAs,
       );
     }
   } else {
-    const joinQuery = first.q;
+    const { q, s } = args;
+    let joinAs;
 
-    const quotedFrom =
-      typeof joinQuery.from === 'string' ? `"${joinQuery.from}"` : undefined;
+    if ('r' in args) {
+      const { r } = args;
 
-    target = quotedFrom || quoteSchemaAndTable(joinQuery.schema, first.table);
+      const res = getArgQueryTarget(ctx, q, s, s);
+      target = s ? `LATERAL ${res.target}` : res.target;
+      joinAs = res.joinAs;
 
-    let joinAs = quotedFrom || `"${first.table}"`;
-
-    const qAs = joinQuery.as ? `"${joinQuery.as}"` : undefined;
-    const addAs = qAs && qAs !== joinAs;
-
-    const joinedShape = first.shape;
-    if (item.isSubQuery) {
-      const subQuery = first.toSQL({
-        values: ctx.values,
-      });
-
-      target = `(${subQuery.text}) ${qAs || joinAs}`;
-      if (addAs) joinAs = qAs;
+      if (!s) {
+        on = whereToSql(ctx, r, r.q, joinAs);
+      }
     } else {
-      if (addAs) {
-        joinAs = qAs;
-        target += ` AS ${qAs}`;
+      const res = getArgQueryTarget(ctx, q, s);
+      target = res.target;
+      joinAs = res.joinAs;
+
+      if ('a' in args) {
+        on = processArgs(args.a, ctx, query, joinAs, q.shape, quotedAs);
       }
     }
 
-    conditions = processArgs(
-      args,
-      ctx,
-      table,
-      query,
-      first,
-      joinAs,
-      joinedShape,
-      quotedAs,
-    );
-
     // if it's a sub query, WHERE conditions are already in the sub query
-    if (!item.isSubQuery) {
+    if (!s) {
       const whereSql = whereToSql(
         ctx,
-        first,
+        q,
         {
-          ...joinQuery,
+          ...q.q,
           joinedShapes: {
             ...query.joinedShapes,
-            ...joinQuery.joinedShapes,
+            ...q.q.joinedShapes,
             [(table.q.as || table.table) as string]: table.q.shape,
           },
         },
         joinAs,
       );
       if (whereSql) {
-        if (conditions) conditions += ` AND ${whereSql}`;
-        else conditions = whereSql;
+        if (on) on += ` AND ${whereSql}`;
+        else on = whereSql;
       }
     }
   }
 
-  return { target, conditions };
+  return { target, on };
+};
+
+const getArgQueryTarget = (
+  ctx: ToSQLCtx,
+  first: QueryWithTable,
+  joinSubQuery: boolean,
+  cloned?: boolean,
+) => {
+  const joinQuery = first.q;
+
+  const quotedFrom =
+    typeof joinQuery.from === 'string' ? `"${joinQuery.from}"` : undefined;
+
+  let joinAs = quotedFrom || `"${first.table}"`;
+
+  const qAs = joinQuery.as ? `"${joinQuery.as}"` : undefined;
+  const addAs = qAs && qAs !== joinAs;
+
+  if (joinSubQuery) {
+    return {
+      target: subJoinToSql(ctx, first, joinAs, qAs, cloned),
+      joinAs: addAs ? qAs : joinAs,
+    };
+  } else {
+    let target =
+      quotedFrom || quoteSchemaAndTable(joinQuery.schema, first.table);
+    if (addAs) {
+      joinAs = qAs;
+      target += ` AS ${qAs}`;
+    }
+    return { target, joinAs };
+  }
+};
+
+const subJoinToSql = (
+  ctx: ToSQLCtx,
+  jq: Query,
+  innerAs: string,
+  outerAs?: string,
+  cloned?: boolean,
+) => {
+  if (!jq.q.select && jq.internal.columnsForSelectAll) {
+    if (!cloned) jq = jq.clone();
+    jq.q.select = [new RawSQL(`${innerAs}.*`)];
+  }
+
+  return `(${
+    jq.toSQL({
+      values: ctx.values,
+    }).text
+  }) ${outerAs || innerAs}`;
 };
 
 const processArgs = (
-  args: SimpleJoinItem['args'],
+  args: SimpleJoinItemNonSubQueryArgs,
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
   query: PickQueryDataShapeAndJoinedShapes,
-  first:
-    | string
-    | (QueryWithTable & {
-        joinQueryAfterCallback?: RelationJoinQuery;
-      }),
   joinAs: string,
   joinShape: QueryColumns,
   quotedAs?: string,
 ) => {
   if (args.length === 1) {
-    const arg = args[0];
-    if (typeof arg === 'function') {
-      const joinedShapes = {
-        ...query.joinedShapes,
-        [(table.q.as || table.table) as string]: table.shape,
-      } as JoinedShapes;
-
-      let q: QueryBase;
-      let data;
-      if (typeof first === 'string') {
-        const name = first;
-        const query = table.q;
-        const shape = query.withShapes?.[name];
-        if (!shape) {
-          throw new Error('Cannot get shape of `with` statement');
-        }
-        q = Object.create(table);
-        q.q = {
-          type: undefined,
-          shape,
-          adapter: query.adapter,
-          handleResult: query.handleResult,
-          returnType: 'all',
-          logger: query.logger,
-        } as SelectQueryData;
-        data = { shape, joinedShapes };
-      } else {
-        q = first;
-
-        if (first.joinQueryAfterCallback) {
-          let base = q.baseQuery;
-          if (q.q.as) {
-            base = base.as(q.q.as);
-          }
-
-          const { q: query } = first.joinQueryAfterCallback(
-            base,
-            table as Query,
-          );
-          if (query.and) {
-            pushQueryArray(q, 'and', query.and);
-          }
-          if (query.or) {
-            pushQueryArray(q, 'or', query.or);
-          }
-        }
-
-        data = {
-          ...first.q,
-          joinedShapes: {
-            ...first.q.joinedShapes,
-            ...joinedShapes,
-          } as JoinedShapes,
-        };
-      }
-
-      const jq = arg(new ctx.queryBuilder.onQueryBuilder(q, data, table));
-
-      if (jq.q.joinedShapes !== joinedShapes) {
-        jq.q.joinedShapes = {
-          ...jq.q.joinedShapes,
-          ...joinedShapes,
-        } as JoinedShapes;
-      }
-
-      return whereToSql(ctx, jq as Query, jq.q, joinAs);
-    } else {
-      return getObjectOrRawConditions(
-        ctx,
-        query,
-        arg,
-        quotedAs,
-        joinAs,
-        joinShape,
-      );
-    }
-  } else if (args.length >= 2) {
+    return getObjectOrRawConditions(
+      ctx,
+      query,
+      args[0],
+      quotedAs,
+      joinAs,
+      joinShape,
+    );
+  } else {
     return getConditionsFor3Or4LengthItem(
       ctx,
       query,
@@ -258,8 +208,6 @@ const processArgs = (
       joinShape,
     );
   }
-
-  return undefined;
 };
 
 const getConditionsFor3Or4LengthItem = (
@@ -342,17 +290,15 @@ export const pushJoinSql = (
 
       ctx.aliasValue = aliasValue;
     } else {
-      const { target, conditions } = processJoinItem(
+      const { target, on = 'true' } = processJoinItem(
         ctx,
         table,
         query,
-        item,
+        item.args,
         quotedAs,
       );
 
-      sql = conditions
-        ? `${item.type} ${target} ON ${conditions}`
-        : `${item.type} ${target} ON true`;
+      sql = `${item.type} ${target} ON ${on}`;
     }
 
     if (joinSet) {
@@ -376,11 +322,15 @@ const skipQueryKeysForSubQuery: Record<string, boolean> = {
   returnsOne: true,
 };
 
-export const getIsJoinSubQuery = (query: QueryData, baseQuery: QueryData) => {
-  for (const key in query) {
+export const getIsJoinSubQuery = (query: PickQueryQAndBaseQuery) => {
+  const {
+    q,
+    baseQuery: { q: baseQ },
+  } = query;
+  for (const key in q) {
     if (
       !skipQueryKeysForSubQuery[key] &&
-      (query as RecordUnknown)[key] !== (baseQuery as RecordUnknown)[key]
+      (q as RecordUnknown)[key] !== (baseQ as RecordUnknown)[key]
     ) {
       return true;
     }
