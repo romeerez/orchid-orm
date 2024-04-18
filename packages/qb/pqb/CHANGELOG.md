@@ -1,5 +1,13 @@
 # pqb
 
+## 0.27.3
+
+### Patch Changes
+
+- 14465bf7: Allow to customize timestamps names (#256)
+- Updated dependencies [14465bf7]
+  - orchid-core@0.13.2
+
 ## 0.27.2
 
 ### Patch Changes

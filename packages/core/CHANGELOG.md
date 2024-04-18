@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.13.2
+
+### Patch Changes
+
+- 14465bf7: Allow to customize timestamps names (#256)
+
 ## 0.13.1
 
 ### Patch Changes
