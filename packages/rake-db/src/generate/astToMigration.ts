@@ -371,7 +371,7 @@ const astEncoders: {
   },
   renameType(ast, _, currentSchema) {
     const code: Code[] = [];
-    const kind = ast.table ? 'Table' : 'Type';
+    const kind = ast.kind === 'TABLE' ? 'Table' : 'Type';
 
     if (ast.from === ast.to) {
       addCode(
@@ -507,9 +507,11 @@ const astEncoders: {
       '});',
     ];
   },
-  renameConstraint(ast) {
+  renameTableItem(ast) {
     return [
-      `await db.renameConstraint(${quoteSchemaTable({
+      `await db.rename${
+        ast.kind === 'INDEX' ? 'Index' : 'Constraint'
+      }(${quoteSchemaTable({
         schema: ast.tableSchema,
         name: ast.tableName,
       })}, ${singleQuote(ast.from)}, ${singleQuote(ast.to)});`,

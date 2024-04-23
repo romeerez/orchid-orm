@@ -258,14 +258,10 @@ export const referencesToSql = (
 
 export const getIndexName = (
   table: string,
-  columns: ({ column: string } | { expression: string })[],
+  columns: ({ column?: string } | { expression: string })[],
 ) => {
   return `${table}_${columns
-    .map((it) =>
-      'column' in it
-        ? it.column
-        : it.expression.match(/\w+/g)?.join('_') || 'expression',
-    )
+    .map((it) => ('column' in it ? it.column : 'expression'))
     .join('_')}_idx`;
 };
 
@@ -308,9 +304,7 @@ export const indexesToQuery = (
       options.tsVector && options.languageColumn
         ? `"${options.languageColumn}"`
         : options.language
-        ? typeof options.language === 'string'
-          ? `'${options.language}'`
-          : options.language.toSQL({ values })
+        ? `'${options.language}'`
         : `'${language || 'english'}'`;
 
     let hasWeight =
@@ -347,11 +341,13 @@ export const indexesToQuery = (
       columnsSql.push(sql);
     }
 
-    let columnList = columnsSql.join(hasWeight ? ' || ' : ', ');
-
-    if (!hasWeight && options.tsVector) {
-      if (columnsSql.length > 1) columnList = `concat_ws(' ', ${columnList})`;
-      columnList = `to_tsvector(${lang}, ${columnList})`;
+    let columnList;
+    if (hasWeight) {
+      columnList = `(${columnsSql.join(' || ')})`;
+    } else if (options.tsVector) {
+      columnList = `to_tsvector(${lang}, ${columnsSql.join(" || ' ' || ")})`;
+    } else {
+      columnList = columnsSql.join(', ');
     }
 
     sql.push(`(${columnList})`);

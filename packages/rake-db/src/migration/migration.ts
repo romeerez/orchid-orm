@@ -440,7 +440,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param to - rename the table to
    */
   renameTable(from: string, to: string): Promise<void> {
-    return renameType(this, from, to, true);
+    return renameType(this, from, to, 'TABLE');
   }
 
   /**
@@ -550,6 +550,26 @@ export class Migration<CT extends RakeDbColumnTypes> {
     options?: IndexOptions,
   ): Promise<void> {
     return addIndex(this, !this.up, tableName, columns, options);
+  }
+
+  /**
+   * Rename index:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   // tableName can be prefixed with a schema
+   *   await db.renameIndex('tableName', 'oldIndexName', 'newIndexName');
+   * });
+   * ```
+   *
+   * @param tableName - table which this index belongs to
+   * @param from - rename the index from
+   * @param to - rename the index to
+   */
+  renameIndex(tableName: string, from: string, to: string): Promise<void> {
+    return renameTableItem(this, tableName, from, to, 'INDEX');
   }
 
   /**
@@ -766,19 +786,8 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param from - current name of the constraint
    * @param to - desired name
    */
-  async renameConstraint(
-    tableName: string,
-    from: string,
-    to: string,
-  ): Promise<void> {
-    const [schema, table] = getSchemaAndTableFromName(tableName);
-    const [f, t] = this.up ? [from, to] : [to, from];
-    await this.adapter.query(
-      `ALTER TABLE ${quoteTable(
-        schema,
-        table,
-      )} RENAME CONSTRAINT "${f}" TO "${t}"`,
-    );
+  renameConstraint(tableName: string, from: string, to: string): Promise<void> {
+    return renameTableItem(this, tableName, from, to, 'CONSTRAINT');
   }
 
   /**
@@ -1109,7 +1118,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param to - rename the type to
    */
   renameType(from: string, to: string): Promise<void> {
-    return renameType(this, from, to, false);
+    return renameType(this, from, to, 'TYPE');
   }
 
   /**
@@ -1810,23 +1819,22 @@ export const renameType = async (
   migration: Migration<RakeDbColumnTypes>,
   from: string,
   to: string,
-  table: boolean,
+  kind: RakeDbAst.RenameType['kind'],
 ): Promise<void> => {
   const [fromSchema, f] = getSchemaAndTableFromName(migration.up ? from : to);
   const [toSchema, t] = getSchemaAndTableFromName(migration.up ? to : from);
   const ast: RakeDbAst.RenameType = {
     type: 'renameType',
-    table,
+    kind,
     fromSchema,
     from: f,
     toSchema,
     to: t,
   };
 
-  const sqlKind = ast.table ? 'TABLE' : 'TYPE';
   if (ast.from !== ast.to) {
     await migration.adapter.query(
-      `ALTER ${sqlKind} ${quoteTable(ast.fromSchema, ast.from)} RENAME TO "${
+      `ALTER ${ast.kind} ${quoteTable(ast.fromSchema, ast.from)} RENAME TO "${
         ast.to
       }"`,
     );
@@ -1834,13 +1842,32 @@ export const renameType = async (
 
   if (ast.fromSchema !== ast.toSchema) {
     await migration.adapter.query(
-      `ALTER ${sqlKind} ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
+      `ALTER ${ast.kind} ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
         ast.toSchema ?? migration.adapter.schema
       }"`,
     );
   }
 
   migration.migratedAsts.push(ast);
+};
+
+const renameTableItem = async (
+  migration: Migration<RakeDbColumnTypes>,
+  tableName: string,
+  from: string,
+  to: string,
+  kind: RakeDbAst.RenameTableItem['kind'],
+) => {
+  const [schema, table] = getSchemaAndTableFromName(tableName);
+  const [f, t] = migration.up ? [from, to] : [to, from];
+  await migration.adapter.query(
+    kind === 'INDEX'
+      ? `ALTER INDEX ${quoteTable(schema, f)} RENAME TO "${t}"`
+      : `ALTER TABLE ${quoteTable(
+          schema,
+          table,
+        )} RENAME CONSTRAINT "${f}" TO "${t}"`,
+  );
 };
 
 interface AddEnumValueOptions {

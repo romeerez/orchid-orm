@@ -23,7 +23,7 @@ export type RakeDbAst =
   | RakeDbAst.Domain
   | RakeDbAst.Collation
   | RakeDbAst.Constraint
-  | RakeDbAst.RenameConstraint
+  | RakeDbAst.RenameTableItem
   | RakeDbAst.View;
 
 export namespace RakeDbAst {
@@ -45,10 +45,12 @@ export namespace RakeDbAst {
     schema?: string;
     name: string;
     comment?: string | [string, string] | null;
-    shape: Record<string, ChangeTableItem>;
+    shape: ChangeTableShape;
     add: TableData;
     drop: TableData;
   }
+
+  export type ChangeTableShape = Record<string, ChangeTableItem>;
 
   export type ChangeTableItem =
     | ChangeTableItem.Column
@@ -101,7 +103,7 @@ export namespace RakeDbAst {
 
   export interface RenameType {
     type: 'renameType';
-    table: boolean;
+    kind: 'TABLE' | 'TYPE';
     fromSchema?: string;
     from: string;
     toSchema?: string;
@@ -231,8 +233,9 @@ export namespace RakeDbAst {
     tableName: string;
   }
 
-  export interface RenameConstraint {
-    type: 'renameConstraint';
+  export interface RenameTableItem {
+    type: 'renameTableItem';
+    kind: 'INDEX' | 'CONSTRAINT';
     tableSchema?: string;
     tableName: string;
     from: string;

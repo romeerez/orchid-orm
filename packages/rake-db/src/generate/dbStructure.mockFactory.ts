@@ -145,7 +145,7 @@ const index: DbStructure.Index = {
   tableName: 'table',
   name: 'index',
   using: 'btree',
-  isUnique: false,
+  unique: false,
   columns: [{ column: 'name' }],
 };
 

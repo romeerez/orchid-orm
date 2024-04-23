@@ -174,7 +174,7 @@ bool: t.boolean(),
 ...t.index(['id'], {
   name: 'indexName',
 }),
-...t.index(
+...t.unique(
   [
     {
       column: 'id',
@@ -186,9 +186,8 @@ bool: t.boolean(),
   ],
   {
     name: 'indexName',
-    unique: true,
-    nullsNotDistinct: true,
     using: 'using',
+    nullsNotDistinct: true,
     include: ['one', 'two'],
     with: 'with',
     tablespace: 'tablespace',

@@ -236,7 +236,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
       expect(ast.shape.column).toBeInstanceOf(CustomTypeColumn);
-      expect(ast.shape.column.dataType).toBe('pg_catalog.customType');
+      expect(ast.shape.column.dataType).toBe('customType');
 
       expect(ctx.unsupportedTypes).toEqual({
         customType: [`${column.schemaName}.${column.tableName}.${column.name}`],
@@ -514,7 +514,7 @@ describe('structureToAst', () => {
       structure.indexes = [
         dbStructureMockFactory.index({
           using: 'gist',
-          isUnique: true,
+          unique: true,
           nullsNotDistinct: true,
           columns: [
             {
@@ -558,7 +558,7 @@ describe('structureToAst', () => {
         }),
         dbStructureMockFactory.index({
           columns: [{ column: 'id' }, { column: 'name' }],
-          isUnique: true,
+          unique: true,
           nullsNotDistinct: true,
         }),
       ];
@@ -603,7 +603,7 @@ describe('structureToAst', () => {
       structure.indexes = [
         dbStructureMockFactory.index({
           using: 'gist',
-          isUnique: true,
+          unique: true,
           nullsNotDistinct: true,
           columns: [
             {

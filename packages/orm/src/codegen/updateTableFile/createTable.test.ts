@@ -151,9 +151,8 @@ describe('createTable', () => {
         columns: `{
     id: t.identity().primaryKey(),
     ...t.primaryKey(['one', 'two'], { name: 'name' }),
-    ...t.index(['one', 'two'], {
+    ...t.unique(['one', 'two'], {
       name: 'indexName',
-      unique: true,
       nullsNotDistinct: true,
     }),
     ...t.foreignKey(

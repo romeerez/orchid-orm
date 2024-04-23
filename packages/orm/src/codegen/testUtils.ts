@@ -56,7 +56,7 @@ const makeAst = () => {
 
   const renameTable: RakeDbAst.RenameType = {
     type: 'renameType',
-    table: true,
+    kind: 'TABLE',
     from: 'foo_bar',
     to: 'bip_bop',
   };

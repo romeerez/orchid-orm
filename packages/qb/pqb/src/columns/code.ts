@@ -1,4 +1,4 @@
-import { ColumnData, ColumnType, ForeignKey } from './columnType';
+import { ColumnData, ColumnType, ForeignKey, IndexOptions } from './columnType';
 import { TableData } from './columnTypes';
 import {
   addCode,
@@ -13,7 +13,6 @@ import {
   singleQuoteArray,
   toArray,
   RawSQLBase,
-  omit,
 } from 'orchid-core';
 import { getConstraintKind } from './columnType.utils';
 
@@ -125,7 +124,17 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
 export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
   const code: Code[] = [];
 
-  code.push(`${t}.${index.options.tsVector ? 'searchIndex' : 'index'}(`);
+  code.push(
+    `${t}.${
+      index.options.tsVector
+        ? 'searchIndex'
+        : index.options.unique
+        ? 'unique'
+        : 'index'
+    }(`,
+  );
+
+  const columnOptions = ['collate', 'opclass', 'order', 'weight'] as const;
 
   const columnsMultiline = index.columns.some((column) => {
     for (const key in column) {
@@ -134,6 +143,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
     }
     return false;
   });
+
   if (columnsMultiline) {
     const objects: Code[] = [];
 
@@ -142,7 +152,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
 
       let hasOptions = false;
       for (const key in column) {
-        if (key !== 'column' && key !== 'expression') {
+        if (key !== 'column') {
           hasOptions = true;
         }
       }
@@ -155,7 +165,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
             expr,
           )},`,
         ];
-        for (const key of ['collate', 'opclass', 'order', 'weight'] as const) {
+        for (const key of columnOptions) {
           const value = column[key];
           if (value !== undefined) {
             props.push(`${key}: ${singleQuote(value)},`);
@@ -176,9 +186,23 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
     );
   }
 
-  const indexOptions = omit(index.options, ['tsVector']);
-  const hasOptions = objectHasValues(indexOptions);
-  if (hasOptions) {
+  const indexOptionsKeys: (keyof Omit<IndexOptions, 'unique'>)[] = [
+    'name',
+    'using',
+    'nullsNotDistinct',
+    'include',
+    'with',
+    'tablespace',
+    'where',
+    'language',
+    'languageColumn',
+    'dropMode',
+  ];
+  if (index.options.tsVector && index.options.unique) {
+    (indexOptionsKeys as (keyof IndexOptions)[]).unshift('unique');
+  }
+
+  if (indexOptionsKeys.some((key) => index.options[key])) {
     if (columnsMultiline) {
       const columns = code[code.length - 1] as string[];
       columns[columns.length - 1] += ',';
@@ -188,8 +212,8 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
     }
 
     const options: string[] = [];
-    for (const key in indexOptions) {
-      const value = indexOptions[key as keyof typeof indexOptions];
+    for (const key of indexOptionsKeys) {
+      const value = index.options[key];
       if (value === null || value === undefined) continue;
 
       options.push(

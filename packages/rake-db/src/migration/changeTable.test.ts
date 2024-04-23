@@ -936,7 +936,7 @@ describe('changeTable', () => {
             })),
           () =>
             expectSql(`
-              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('english', concat_ws(' ', "title", "text")))
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('english', "title" || ' ' || "text"))
             `),
           () =>
             expectSql(`
@@ -955,7 +955,7 @@ describe('changeTable', () => {
             })),
           () =>
             expectSql(`
-              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', concat_ws(' ', "title", "text")))
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', "title" || ' ' || "text"))
             `),
           () =>
             expectSql(`
@@ -972,7 +972,7 @@ describe('changeTable', () => {
             })),
           () =>
             expectSql(`
-              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', concat_ws(' ', "title", "text")))
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', "title" || ' ' || "text"))
             `),
           () =>
             expectSql(`
@@ -991,7 +991,7 @@ describe('changeTable', () => {
             })),
           () =>
             expectSql(`
-              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', concat_ws(' ', "title", "text")))
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', "title" || ' ' || "text"))
             `),
           () =>
             expectSql(`
@@ -1010,26 +1010,7 @@ describe('changeTable', () => {
             })),
           () =>
             expectSql(`
-              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector("lang", concat_ws(' ', "title", "text")))
-            `),
-          () =>
-            expectSql(`
-              DROP INDEX "table_title_text_idx"
-            `),
-        );
-      });
-
-      it('should use a language from a raw SQL', async () => {
-        await testUpAndDown(
-          (action) =>
-            db.changeTable('table', (t) => ({
-              ...t[action](
-                t.searchIndex(['title', 'text'], { language: db.sql`'lang'` }),
-              ),
-            })),
-          () =>
-            expectSql(`
-              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('lang', concat_ws(' ', "title", "text")))
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector("lang", "title" || ' ' || "text"))
             `),
           () =>
             expectSql(`
@@ -1053,8 +1034,8 @@ describe('changeTable', () => {
             expectSql(
               toLine(`
                 CREATE INDEX "table_title_text_idx" ON "table" USING GIN
-                  (setweight(to_tsvector('english', coalesce("title", '')), 'A') ||
-                   setweight(to_tsvector('english', coalesce("text", '')), 'B'))
+                  ((setweight(to_tsvector('english', coalesce("title", '')), 'A') ||
+                   setweight(to_tsvector('english', coalesce("text", '')), 'B')))
               `),
             ),
           () =>
@@ -1104,7 +1085,7 @@ describe('changeTable', () => {
             expectSql([
               `
                 ALTER TABLE "table"
-                ADD COLUMN "generated" tsvector GENERATED ALWAYS AS (setweight(to_tsvector(coalesce("title", '')), 'A') || setweight(to_tsvector(coalesce("text", '')), 'B')) STORED NOT NULL
+                ADD COLUMN "generated" tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('english', coalesce("title", '')), 'A') || setweight(to_tsvector('english', coalesce("text", '')), 'B'))) STORED NOT NULL
               `,
               `
                 CREATE INDEX "table_generated_idx" ON "table" USING GIN ("generated")

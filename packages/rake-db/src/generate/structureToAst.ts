@@ -238,7 +238,8 @@ export const instantiateDbColumn = (
     column = col;
   } else {
     const { typeSchema, type: typeName } = dbColumn;
-    const typeId = `${typeSchema}.${typeName}`;
+    const typeId =
+      typeSchema === 'pg_catalog' ? typeName : `${typeSchema}.${typeName}`;
     const domainColumn = domains[typeId];
     if (domainColumn) {
       column = new DomainColumn(ctx.columnSchemaConfig, typeId).as(
@@ -638,7 +639,7 @@ const makeIndexOptions = (tableName: string, index: DbStructure.Index) => {
         ? index.name
         : undefined,
     using: index.using === 'btree' ? undefined : index.using,
-    unique: index.isUnique || undefined,
+    unique: index.unique || undefined,
     include: index.include,
     nullsNotDistinct: index.nullsNotDistinct || undefined,
     with: index.with,

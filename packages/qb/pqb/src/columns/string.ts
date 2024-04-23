@@ -550,6 +550,12 @@ export class TsVectorColumn<
     if (typeof first === 'string' || !('raw' in first)) {
       const target = typeof first === 'string' ? (args[1] as string[]) : first;
 
+      const language =
+        typeof first === 'string'
+          ? first
+          : (this as unknown as TsVectorColumn<ColumnSchemaConfig>)
+              .defaultLanguage;
+
       let sql;
       if (Array.isArray(target)) {
         const columns =
@@ -559,18 +565,14 @@ export class TsVectorColumn<
                 .map((column) => `coalesce("${column}", '')`)
                 .join(` || ' ' || `);
 
-        sql = `to_tsvector('${
-          typeof first === 'string'
-            ? first
-            : (this as unknown as TsVectorColumn<ColumnSchemaConfig>)
-                .defaultLanguage
-        }', ${columns})`;
+        sql = `to_tsvector('${language}', ${columns})`;
       } else {
         for (const key in target) {
           sql =
-            (sql ? sql + ' || ' : '') +
-            `setweight(to_tsvector(coalesce("${key}", '')), '${target[key]}')`;
+            (sql ? sql + ' || ' : '(') +
+            `setweight(to_tsvector('${language}', coalesce("${key}", '')), '${target[key]}')`;
         }
+        if (sql) sql += ')';
       }
 
       const arr = [sql] as string[] & { raw: string[] };

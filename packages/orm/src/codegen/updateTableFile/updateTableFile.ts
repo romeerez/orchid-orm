@@ -28,7 +28,7 @@ export const updateTableFile = async (params: UpdateTableFileParams) => {
     await createTable({ ...params, ast });
   } else if (ast.type === 'changeTable') {
     await changeTable({ ...params, ast });
-  } else if (ast.type === 'renameType' && ast.table) {
+  } else if (ast.type === 'renameType' && ast.kind === 'TABLE') {
     await renameTable({ ...params, ast });
   } else if (ast.type === 'constraint' && ast.references) {
     const ref = ast.references;

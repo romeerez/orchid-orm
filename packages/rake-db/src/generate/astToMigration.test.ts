@@ -351,9 +351,8 @@ change(async (db) => {
         template(`  await db.createTable('schema.table', (t) => ({
     id: t.identity().primaryKey(),
     ...t.primaryKey(['id', 'name'], { name: 'pkey' }),
-    ...t.index(['id', 'name'], {
+    ...t.unique(['id', 'name'], {
       name: 'index',
-      unique: true,
       nullsNotDistinct: true,
     }),
     ...t.foreignKey(
@@ -566,16 +565,16 @@ change(async (db) => {
         options: {
           name: 'idx',
           unique: true,
-          nullsNotDistinct: true,
           using: 'using',
+          nullsNotDistinct: true,
           include: ['include'],
           with: 'with',
           tablespace: 'tablespace',
           where: 'where',
-          dropMode: 'CASCADE',
           language: 'language',
           languageColumn: 'languageColumn',
           tsVector: true,
+          dropMode: 'CASCADE',
         },
       };
 
@@ -610,20 +609,22 @@ change(async (db) => {
             order: 'order',
             weight: 'A',
           },
-          'expression',
+          {
+            expression: 'expression',
+          },
         ],
         {
-          name: 'idx',
           unique: true,
-          nullsNotDistinct: true,
+          name: 'idx',
           using: 'using',
+          nullsNotDistinct: true,
           include: ['include'],
           with: 'with',
           tablespace: 'tablespace',
           where: 'where',
-          dropMode: 'CASCADE',
           language: 'language',
           languageColumn: 'languageColumn',
+          dropMode: 'CASCADE',
         },
       ),
     ),
@@ -637,20 +638,22 @@ change(async (db) => {
             order: 'order',
             weight: 'A',
           },
-          'expression',
+          {
+            expression: 'expression',
+          },
         ],
         {
-          name: 'idx',
           unique: true,
-          nullsNotDistinct: true,
+          name: 'idx',
           using: 'using',
+          nullsNotDistinct: true,
           include: ['include'],
           with: 'with',
           tablespace: 'tablespace',
           where: 'where',
-          dropMode: 'CASCADE',
           language: 'language',
           languageColumn: 'languageColumn',
+          dropMode: 'CASCADE',
         },
       ),
     ),
@@ -908,7 +911,8 @@ change(async (db) => {
     it('should rename a constraint', () => {
       const result = act([
         {
-          type: 'renameConstraint',
+          type: 'renameTableItem',
+          kind: 'CONSTRAINT',
           tableSchema: 'schema',
           tableName: 'table',
           from: 'from',
@@ -919,6 +923,26 @@ change(async (db) => {
       expectResult(
         result,
         template(`  await db.renameConstraint('schema.table', 'from', 'to');`),
+      );
+    });
+  });
+
+  describe('renameIndex', () => {
+    it('should rename an index', () => {
+      const result = act([
+        {
+          type: 'renameTableItem',
+          kind: 'INDEX',
+          tableSchema: 'schema',
+          tableName: 'table',
+          from: 'from',
+          to: 'to',
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(`  await db.renameIndex('schema.table', 'from', 'to');`),
       );
     });
   });

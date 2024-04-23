@@ -160,7 +160,7 @@ export const astToGenerateItem = (
       deps.push(tableSchema, `${tableSchema}.${tableName}`);
       break;
     }
-    case 'renameConstraint': {
+    case 'renameTableItem': {
       const { tableSchema = currentSchema, tableName } = ast;
       drop.push(ast.from);
       add.push(ast.to);

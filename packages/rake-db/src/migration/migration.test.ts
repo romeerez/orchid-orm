@@ -194,6 +194,24 @@ describe('migration', () => {
     });
   });
 
+  describe('renameIndex', () => {
+    const test = makeTestUpAndDown('renameIndex');
+
+    it('should rename an index', async () => {
+      await test(
+        (action) => db[action]('schema.table', 'from', 'to'),
+        () =>
+          expectSql(`
+            ALTER INDEX "schema"."from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER INDEX "schema"."to" RENAME TO "from"
+          `),
+      );
+    });
+  });
+
   describe('addForeignKey and dropForeignKey', () => {
     const testUpAndDown = makeTestUpAndDown('addForeignKey', 'dropForeignKey');
 

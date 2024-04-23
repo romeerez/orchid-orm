@@ -715,7 +715,7 @@ describe('astToGenerateItem', () => {
     it('should drop old table name and add a new one', () => {
       arrange({
         type: 'renameType',
-        table: true,
+        kind: 'TABLE',
         fromSchema: 'fromSchema',
         from: 'fromTable',
         toSchema: 'toSchema',
@@ -733,7 +733,7 @@ describe('astToGenerateItem', () => {
     it('should drop old table name and add a new one with default schema', () => {
       arrange({
         type: 'renameType',
-        table: true,
+        kind: 'TABLE',
         from: 'fromTable',
         to: 'toTable',
       });
@@ -749,7 +749,7 @@ describe('astToGenerateItem', () => {
     it('should add schemas to deps', () => {
       arrange({
         type: 'renameType',
-        table: true,
+        kind: 'TABLE',
         fromSchema: 'fromSchema',
         from: 'fromTable',
         toSchema: 'toSchema',
@@ -764,7 +764,7 @@ describe('astToGenerateItem', () => {
     it('should add default schema to deps', () => {
       arrange({
         type: 'renameType',
-        table: true,
+        kind: 'TABLE',
         from: 'fromTable',
         to: 'toTable',
       });
@@ -977,10 +977,11 @@ describe('astToGenerateItem', () => {
     });
   });
 
-  describe('renameConstraint', () => {
+  describe.each(['renameConstraint', 'renameIndex'])('%s', (action) => {
     it('should have schema and table dep', () => {
       arrange({
-        type: 'renameConstraint',
+        type: 'renameTableItem',
+        kind: action === 'renameConstraint' ? 'CONSTRAINT' : 'INDEX',
         tableSchema: 'schema',
         tableName: 'table',
         from: 'from',

@@ -286,11 +286,13 @@ export const deepCompare = (a: unknown, b: unknown): boolean => {
     }
 
     for (const key in b as RecordUnknown) {
-      if (!(key in a)) return false;
+      if (!(key in a) && (b as RecordUnknown)[key] !== undefined) return false;
     }
+
+    return true;
   }
 
-  return true;
+  return a === b;
 };
 
 /**

@@ -1,4 +1,4 @@
-import { Adapter } from 'pqb';
+import { Adapter, SearchWeight } from 'pqb';
 import { RakeDbAst } from '../ast';
 
 export namespace DbStructure {
@@ -64,17 +64,21 @@ export namespace DbStructure {
     tableName: string;
     name: string;
     using: string;
-    isUnique: boolean;
+    unique: boolean;
     columns: (({ column: string } | { expression: string }) & {
       collate?: string;
       opclass?: string;
       order?: string;
+      weight?: SearchWeight;
     })[];
     include?: string[];
     nullsNotDistinct?: boolean;
     with?: string;
     tablespace?: string;
     where?: string;
+    tsVector?: boolean;
+    language?: string;
+    languageColumn?: string;
   }
 
   // a = no action, r = restrict, c = cascade, n = set null, d = set default
@@ -305,7 +309,7 @@ const indexesSql = `SELECT
   t.relname "tableName",
   ic.relname "name",
   am.amname AS "using",
-  i.indisunique "isUnique",
+  i.indisunique "unique",
   (
     SELECT json_agg(
       (
@@ -606,5 +610,84 @@ export async function introspectDbSchema(
       }
     }
   }
+
+  for (const index of result.indexes) {
+    for (const column of index.columns) {
+      if (!('expression' in column)) continue;
+
+      const s = column.expression;
+      const columnR = `"?\\w+"?`;
+      const langR = `(${columnR}|'\\w+'::regconfig)`;
+      const firstColumnR = `[(]*${columnR}`;
+      const concatR = `\\|\\|`;
+      const restColumnR = ` ${concatR} ' '::text\\) ${concatR} ${columnR}\\)`;
+      const coalesceColumn = `COALESCE\\(${columnR}, ''::text\\)`;
+      const tsVectorR = `to_tsvector\\(${langR}, (${firstColumnR}|${restColumnR}|${coalesceColumn})+\\)`;
+      const weightR = `'\\w'::"char"`;
+      const setWeightR = `setweight\\(${tsVectorR}, ${weightR}\\)`;
+      const setWeightOrTsVectorR = `(${setWeightR}|${tsVectorR})`;
+
+      const match = s.match(
+        new RegExp(`^([\\(]*${setWeightOrTsVectorR}[\\)]*( ${concatR} )?)+$`),
+      );
+      if (!match) continue;
+
+      let language: string | undefined;
+      let languageColumn: string | undefined;
+      const tokens = match[0]
+        .match(
+          new RegExp(
+            `setweight\\(|to_tsvector\\(${langR}|[:']?${columnR}\\(?`,
+            'g',
+          ),
+        )
+        ?.reduce<
+          (
+            | { kind: 'weight'; value: SearchWeight }
+            | { kind: 'column'; value: string }
+          )[]
+        >((acc, token) => {
+          if (
+            token === 'setweight(' ||
+            token === 'COALESCE(' ||
+            token[0] === ':'
+          )
+            return acc;
+
+          if (token.startsWith('to_tsvector(')) {
+            if (token[12] === "'") {
+              language = token.slice(13, -12);
+            } else {
+              languageColumn = token.slice(12);
+            }
+          } else if (token[0] === "'") {
+            acc.push({ kind: 'weight', value: token[1] as SearchWeight });
+          } else {
+            if (token[0] === '"') token = token.slice(1, -1);
+            acc.push({ kind: 'column', value: token });
+          }
+
+          return acc;
+        }, []);
+
+      if (!tokens) continue;
+
+      index.language = language;
+      index.languageColumn = languageColumn;
+      index.tsVector = true;
+      index.columns = [];
+
+      for (const token of tokens) {
+        if (token.kind === 'column') {
+          index.columns.push({
+            column: token.value,
+          });
+        } else if (token.kind === 'weight') {
+          index.columns[index.columns.length - 1].weight = token.value;
+        }
+      }
+    }
+  }
+
   return result;
 }

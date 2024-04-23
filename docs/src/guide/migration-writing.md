@@ -507,6 +507,21 @@ change(async (db) => {
 });
 ```
 
+## renameIndex
+
+[//]: # 'has JSDoc'
+
+Rename index:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  // tableName can be prefixed with a schema
+  await db.renameIndex('tableName', 'oldIndexName', 'newIndexName');
+});
+```
+
 ## addForeignKey, dropForeignKey
 
 [//]: # 'has JSDoc'
