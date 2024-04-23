@@ -387,7 +387,7 @@ change(async (db) => {
 `);
   });
 
-  it('should not recreate composite index when is identical', async () => {
+  it('should not recreate composite index when it is identical', async () => {
     arrange({
       tables: [
         table((t) => ({

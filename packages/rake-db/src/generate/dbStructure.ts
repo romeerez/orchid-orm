@@ -81,8 +81,11 @@ export namespace DbStructure {
     languageColumn?: string;
   }
 
+  // FULL | PARTIAL | SIMPLE
+  export type ForeignKeyMatch = 'f' | 'p' | 's';
+
   // a = no action, r = restrict, c = cascade, n = set null, d = set default
-  type ForeignKeyAction = 'a' | 'r' | 'c' | 'n' | 'd';
+  export type ForeignKeyAction = 'a' | 'r' | 'c' | 'n' | 'd';
 
   export interface Constraint {
     schemaName: string;
@@ -98,7 +101,7 @@ export namespace DbStructure {
     foreignTable: string;
     columns: string[];
     foreignColumns: string[];
-    match: 'f' | 'p' | 's'; // FULL | PARTIAL | SIMPLE
+    match: ForeignKeyMatch;
     onUpdate: ForeignKeyAction;
     onDelete: ForeignKeyAction;
   }
