@@ -1,7 +1,6 @@
 import fs from 'fs/promises';
-import { basename, join } from 'path';
+import { basename } from 'path';
 import https from 'https';
-import { InitConfig } from '../lib';
 
 export async function readFileSafe(path: string) {
   try {
@@ -12,58 +11,6 @@ export async function readFileSafe(path: string) {
     }
     throw err;
   }
-}
-
-export function makeFileTimeStamp(now: Date): string {
-  return [
-    now.getUTCFullYear(),
-    now.getUTCMonth() + 1,
-    now.getUTCDate(),
-    now.getUTCHours(),
-    now.getUTCMinutes(),
-    now.getUTCSeconds(),
-  ]
-    .map((value) => (value < 10 ? `0${value}` : value))
-    .join('');
-}
-
-export async function createSeed(
-  config: InitConfig,
-  dirPath: string,
-): Promise<void> {
-  const filePath = join(dirPath, 'seed.ts');
-
-  let content;
-  if (config.demoTables) {
-    content = `await db.post.findBy({ title: 'Sample post' }).orCreate({
-    title: 'Post',
-    text: 'This is a text for a sample post. It contains words, spaces, and punctuation.',
-    comments: {
-      create: [
-        {
-          text: 'Nice post!',
-        },
-        {
-          text: \`Too long, didn't read\`,
-        },
-      ],
-    },
-  });`;
-  } else {
-    content = `// create records here`;
-  }
-
-  await fs.writeFile(
-    filePath,
-    `import { db } from './db';
-
-export const seed = async () => {
-  ${content}
-
-  await db.$close();
-};
-`,
-  );
 }
 
 export type DependencyKind = 'dependencies' | 'devDependencies';

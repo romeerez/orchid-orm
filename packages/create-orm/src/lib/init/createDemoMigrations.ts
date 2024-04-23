@@ -1,7 +1,6 @@
 import { join } from 'path';
 import fs from 'fs/promises';
 import { InitConfig } from '../../lib';
-import { makeFileTimeStamp } from '../utils';
 
 export async function createDemoMigrations(config: InitConfig): Promise<void> {
   const migrationsPath = join(config.dbDirPath, 'migrations');
@@ -11,10 +10,7 @@ export async function createDemoMigrations(config: InitConfig): Promise<void> {
 
   const now = new Date();
 
-  const postPath = join(
-    migrationsPath,
-    `${makeFileTimeStamp(now)}_createPost.ts`,
-  );
+  const postPath = join(migrationsPath, `0001_createPost.ts`);
   await fs.writeFile(
     postPath,
     `import { change } from '../dbScript';
@@ -32,10 +28,7 @@ change(async (db) => {
 
   now.setTime(now.getTime() + 1000);
 
-  const commentPath = join(
-    migrationsPath,
-    `${makeFileTimeStamp(now)}_createComment.ts`,
-  );
+  const commentPath = join(migrationsPath, `0002_createComment.ts`);
   await fs.writeFile(
     commentPath,
     `import { change } from '../dbScript';
