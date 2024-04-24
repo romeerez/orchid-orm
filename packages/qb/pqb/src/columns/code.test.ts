@@ -73,6 +73,26 @@ id: t.serial().primaryKey(),
       );
     });
 
+    it('should handle renamed timestamps', () => {
+      const code = columnsShapeToCode(
+        {
+          id: t.serial().primaryKey(),
+          created: t.timestamps().createdAt,
+          updated: t.timestamps().updatedAt,
+        },
+        tableData,
+        't',
+      );
+
+      expect(codeToString(code, '', '  ')).toEqual(
+        `
+id: t.serial().primaryKey(),
+created: t.timestamps().createdAt,
+updated: t.timestamps().updatedAt,
+        `.trim(),
+      );
+    });
+
     it('should add composite primaryKey', () => {
       const code = columnsShapeToCode(
         {

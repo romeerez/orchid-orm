@@ -18,6 +18,10 @@ import {
 } from '../appCodeUpdater';
 import { handleForeignKey } from './handleForeignKey';
 
+interface CreateTableFileParams extends UpdateTableFileParams {
+  ast: RakeDbAst.Table;
+}
+
 export const createTable = async ({
   ast,
   logger,
@@ -26,9 +30,7 @@ export const createTable = async ({
   tables,
   delayed,
   ...params
-}: UpdateTableFileParams & {
-  ast: RakeDbAst.Table;
-}) => {
+}: CreateTableFileParams) => {
   const key = toCamelCase(ast.name);
   const tablePath = params.tablePath(key);
   const baseTablePath = getImportPath(

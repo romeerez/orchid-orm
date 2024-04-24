@@ -6,8 +6,9 @@ import {
   defaultSchemaConfig,
 } from '../../qb/pqb/src';
 import { MaybeArray, toArray } from 'orchid-core';
-import { z } from 'zod';
 import { zodSchemaConfig, ZodSchemaConfig } from 'schema-to-zod';
+// is needed to get rid of TS portability error in zod column types
+import 'zod';
 
 export type TestSchemaConfig = ZodSchemaConfig;
 
@@ -48,14 +49,10 @@ export const testZodColumnTypes = {
     return zodColumnTypes.text(min, max);
   },
   timestamp() {
-    return zodColumnTypes
-      .timestamp()
-      .parse(z.date(), (input) => new Date(input));
+    return zodColumnTypes.timestamp().asDate();
   },
   timestampNoTZ() {
-    return zodColumnTypes
-      .timestampNoTZ()
-      .parse(z.date(), (input) => new Date(input));
+    return zodColumnTypes.timestampNoTZ().asDate();
   },
 };
 

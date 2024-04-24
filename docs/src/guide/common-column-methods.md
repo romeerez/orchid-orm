@@ -350,11 +350,9 @@ Customizing columns names is possible in a such way:
 export class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
-    // `created` is for referencing this column in the app code,
-    // `crt` is a column name in the database.
-    // The `name` method isn't needed if it is named equally in the database.
-    created: t.timestamps().createdAt.name('crt'),
-    updated: t.timestamps().updatedAt.name('upd'),
+    // `created` will be also used to refer to this column in SQL
+    created: t.timestamps().createdAt,
+    updated: t.timestamps().updatedAt,
   }));
 }
 ```

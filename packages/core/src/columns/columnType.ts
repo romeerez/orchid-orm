@@ -313,6 +313,9 @@ export interface ColumnDataBase {
 
   // error messages: key is camelCased version of Zod, like invalidType, and the value is the message
   errors?: RecordString;
+
+  // identify whether this column is from `timestamps()` helper for codegen purposes
+  defaultTimestamp?: 'createdAt' | 'updatedAt';
 }
 
 // current name of the column, set by `name` method

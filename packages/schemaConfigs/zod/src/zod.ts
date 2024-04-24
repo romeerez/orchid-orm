@@ -761,6 +761,10 @@ const parseDateToNumber = (value: unknown) =>
 const parseDateToDate = (value: unknown) =>
   (value ? new Date(value as string) : value) as Date;
 
+(parseDateToNumber as unknown as { hideFromCode: boolean }).hideFromCode = (
+  parseDateToDate as unknown as { hideFromCode: boolean }
+).hideFromCode = true;
+
 export const zodSchemaConfig: ZodSchemaConfig = {
   type: undefined as unknown as ZodTypeAny,
   parse(schema, fn) {
@@ -786,10 +790,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     ) as unknown as ParseDateToNumber;
   },
   dateAsDate() {
-    return this.parse(
-      z.number(),
-      parseDateToDate,
-    ) as unknown as ParseDateToDate;
+    return this.parse(z.date(), parseDateToDate) as unknown as ParseDateToDate;
   },
   enum(dataType, type) {
     return new EnumColumn(zodSchemaConfig, dataType, type, z.enum(type));

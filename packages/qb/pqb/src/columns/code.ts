@@ -16,7 +16,7 @@ import {
 } from 'orchid-core';
 import { getConstraintKind } from './columnType.utils';
 
-const isDefaultTimeStamp = (item: ColumnTypeBase) => {
+export const isDefaultTimeStamp = (item: ColumnTypeBase) => {
   if (item.dataType !== 'timestamptz') return false;
 
   const def = item.data.default;
@@ -415,7 +415,7 @@ export const columnCode = (
   t: string,
   code: Code,
   data = type.data,
-  skip?: Record<'encodeFn', unknown>,
+  skip?: { encodeFn: unknown },
 ): Code => {
   code = toArray(code);
 

@@ -11,7 +11,7 @@ import {
 } from '../appCodeUpdater';
 import { handleForeignKey } from './handleForeignKey';
 
-export type UpdateTableFileParams = {
+export interface UpdateTableFileParams {
   baseTable: BaseTableParam;
   tablePath: (name: string) => string;
   ast: RakeDbAst;
@@ -20,7 +20,7 @@ export type UpdateTableFileParams = {
   relations: AppCodeUpdaterRelations;
   tables: AppCodeUpdaterTables;
   delayed: (() => Promise<void>)[];
-};
+}
 
 export const updateTableFile = async (params: UpdateTableFileParams) => {
   const { ast } = params;

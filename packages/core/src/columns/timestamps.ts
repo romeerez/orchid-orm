@@ -114,9 +114,13 @@ export const makeTimestampsHelpers = (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       pushOrNewArrayToObject((q as any).q, 'updateData', updatedAtInjector);
     };
+    updatedAt.data.defaultTimestamp = 'updatedAt';
+
+    const createdAt = timestamp().default(nowRaw);
+    createdAt.data.defaultTimestamp = 'createdAt';
 
     return {
-      createdAt: timestamp().default(nowRaw),
+      createdAt,
       updatedAt,
     };
   };

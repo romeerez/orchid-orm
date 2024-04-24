@@ -107,15 +107,41 @@ const timestampToCode = (
   t: string,
 ) => {
   const { dateTimePrecision: p } = self.data;
-  return columnCode(
-    self,
-    t,
-    `${self instanceof TimestampColumn ? 'timestampNoTZ' : 'timestamp'}(${
-      p && p !== 6 ? p : ''
-    })${dateDataToCode(self.data)}`,
-    self.data,
-    skipDateMethodsFromToCode,
-  );
+
+  const { defaultTimestamp } = self.data;
+  if (defaultTimestamp) {
+    const noTz = self instanceof TimestampColumn ? 'NoTZ' : '';
+
+    const def = self.data.default;
+    const modifyQuery = self.data.modifyQuery;
+    self.data.default = undefined;
+    self.data.modifyQuery = undefined;
+
+    const code = columnCode(
+      self,
+      t,
+      `timestamps${noTz}(${
+        p && p !== 6 ? p : ''
+      }).${defaultTimestamp}${dateDataToCode(self.data)}`,
+      self.data,
+      skipDateMethodsFromToCode,
+    );
+
+    self.data.default = def;
+    self.data.modifyQuery = modifyQuery;
+
+    return code;
+  } else {
+    return columnCode(
+      self,
+      t,
+      `${self instanceof TimestampColumn ? 'timestampNoTZ' : 'timestamp'}(${
+        p && p !== 6 ? p : ''
+      })${dateDataToCode(self.data)}`,
+      self.data,
+      skipDateMethodsFromToCode,
+    );
+  }
 };
 
 // timestamp [ (p) ] [ without time zone ]	8 bytes	both date and time (no time zone)	4713 BC	294276 AD	1 microsecond
