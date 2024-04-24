@@ -1,5 +1,11 @@
 # pqb
 
+## 0.27.5
+
+### Patch Changes
+
+- 2385c314: Hide default `parse` method from code generated for timestamps
+
 ## 0.27.4
 
 ### Patch Changes

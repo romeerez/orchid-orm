@@ -1,5 +1,13 @@
 # orchid-orm-valibot
 
+## 0.0.14
+
+### Patch Changes
+
+- 2385c314: Hide default `parse` method from code generated for timestamps
+- Updated dependencies [2385c314]
+  - pqb@0.27.5
+
 ## 0.0.13
 
 ### Patch Changes
