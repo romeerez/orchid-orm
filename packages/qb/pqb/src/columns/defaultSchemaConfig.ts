@@ -126,6 +126,10 @@ const parseDateToNumber = (value: unknown) =>
 const parseDateToDate = (value: unknown) =>
   (value ? new Date(value as string) : value) as Date;
 
+(parseDateToNumber as unknown as { hideFromCode: boolean }).hideFromCode = (
+  parseDateToDate as unknown as { hideFromCode: boolean }
+).hideFromCode = true;
+
 export const defaultSchemaConfig = {
   parse(fn: unknown) {
     return Object.assign(Object.create(this), {

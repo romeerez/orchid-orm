@@ -928,6 +928,10 @@ const parseDateToNumber = (value: unknown) =>
 const parseDateToDate = (value: unknown) =>
   (value ? new Date(value as string) : value) as Date;
 
+(parseDateToNumber as unknown as { hideFromCode: boolean }).hideFromCode = (
+  parseDateToDate as unknown as { hideFromCode: boolean }
+).hideFromCode = true;
+
 export const valibotSchemaConfig: ValibotSchemaConfig = {
   type: undefined as unknown as BaseSchema,
   parse(schema, fn) {
