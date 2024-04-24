@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.13.3
+
+### Patch Changes
+
+- 465827b1: Fix code generation for `timestamps()` with custom name (#256)
+
 ## 0.13.2
 
 ### Patch Changes

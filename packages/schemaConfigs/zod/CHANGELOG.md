@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.6.16
+
+### Patch Changes
+
+- 465827b1: Fix code generation for `timestamps()` with custom name (#256)
+- Updated dependencies [465827b1]
+  - pqb@0.27.4
+  - orchid-core@0.13.3
+
 ## 0.6.15
 
 ### Patch Changes

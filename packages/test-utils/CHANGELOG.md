@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.2.2
+
+### Patch Changes
+
+- 465827b1: Fix code generation for `timestamps()` with custom name (#256)
+
 ## 0.2.1
 
 ### Patch Changes

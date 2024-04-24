@@ -1,5 +1,13 @@
 # pqb
 
+## 0.27.4
+
+### Patch Changes
+
+- 465827b1: Fix code generation for `timestamps()` with custom name (#256)
+- Updated dependencies [465827b1]
+  - orchid-core@0.13.3
+
 ## 0.27.3
 
 ### Patch Changes
