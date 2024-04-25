@@ -139,6 +139,40 @@ change(async (db) => {
 `);
   });
 
+  it('should change column nullability', async () => {
+    arrange({
+      tables: [
+        table((t) => ({
+          column: t.integer(),
+        })),
+      ],
+      structure: makeStructure({
+        tables: [
+          dbStructureMockFactory.table({
+            name: 'table',
+            columns: [
+              dbStructureMockFactory.intColumn({
+                name: 'column',
+                isNullable: true,
+              }),
+            ],
+          }),
+        ],
+      }),
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    column: t.change(t.integer().nullable(), t.integer()),
+  }));
+});
+`);
+  });
+
   it('should change text data type properties', async () => {
     arrange({
       tables: [

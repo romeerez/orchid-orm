@@ -134,9 +134,9 @@ const foreignKey: DbStructure.Constraint & {
     foreignTable: 'otherTable',
     columns: ['otherId'],
     foreignColumns: ['id'],
-    match: 'f',
-    onUpdate: 'c',
-    onDelete: 'c',
+    match: 's',
+    onUpdate: 'a',
+    onDelete: 'a',
   },
 };
 

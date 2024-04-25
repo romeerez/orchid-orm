@@ -1,4 +1,4 @@
-import { Query, SelectableFromShape } from './query';
+import { Query, QueryInternal, SelectableFromShape } from './query';
 import {
   QueryMethods,
   handleResult,
@@ -36,7 +36,6 @@ import {
   TransactionState,
   QueryResultRow,
   TemplateLiteralArgs,
-  QueryInternal,
   SQLQueryArgs,
   isRawSQL,
   EmptyObject,

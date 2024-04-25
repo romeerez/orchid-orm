@@ -20,13 +20,16 @@ import {
   QueryCatch,
   QueryColumn,
   QueryColumns,
-  QueryInternal,
+  QueryInternalBase,
   QueryReturnType,
   QueryThen,
   RecordUnknown,
   Spread,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
+import { TableData } from '../columns';
+
+export interface QueryInternal extends QueryInternalBase, TableData {}
 
 export type SelectableFromShape<
   Shape extends QueryColumns,

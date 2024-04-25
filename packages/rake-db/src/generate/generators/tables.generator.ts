@@ -14,12 +14,14 @@ import {
   makeDomainsMap,
   makeStructureToAstCtx,
   StructureToAstCtx,
+  StructureToAstTableData,
   tableToAst,
 } from '../structureToAst';
 import { promptCreateOrRename } from './generators.utils';
 import { processPrimaryKey } from './primaryKey.generator';
 import { processIndexes } from './indexes.generator';
 import { getColumnDbType, processColumns } from './columns.generator';
+import { processForeignKeys } from './foreignKeys.generator';
 
 export interface CompareSql {
   values: unknown[];
@@ -42,6 +44,22 @@ interface TableExpression extends CompareExpression {
   source: string;
 }
 
+export interface ChangeTableSchemaData {
+  codeTable: QueryWithTable;
+  dbTable: DbStructure.Table;
+}
+
+export interface ChangeTableData extends ChangeTableSchemaData {
+  dbTableData: StructureToAstTableData;
+  schema: string;
+  changeTableAst: RakeDbAst.ChangeTable;
+  pushedAst: boolean;
+}
+
+export interface TableShapes {
+  [K: string]: RakeDbAst.ChangeTableShape;
+}
+
 export const processTables = async (
   adapter: Adapter,
   tables: QueryWithTable[],
@@ -50,24 +68,86 @@ export const processTables = async (
   config: AnyRakeDbConfig,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
-  const createTables: QueryWithTable[] = [];
-  const dropTables: DbStructure.Table[] = [];
+  const createTables: QueryWithTable[] = collectCreateTables(
+    tables,
+    dbStructure,
+    currentSchema,
+  );
   const compareSql: CompareSql = { values: [], expressions: [] };
-  const compareExpressions: CompareExpression[] = [];
   const tableExpressions: TableExpression[] = [];
-
-  for (const codeTable of tables) {
-    const tableSchema = codeTable.q.schema ?? currentSchema;
-    const dbTable = dbStructure.tables.find(
-      (t) => t.name === codeTable.table && t.schemaName === tableSchema,
-    );
-    if (!dbTable) {
-      createTables.push(codeTable);
-    }
-  }
-
   const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
+  const { changeTables, changeTableSchemas, dropTables, tableShapes } =
+    collectChangeAndDropTables(
+      tables,
+      dbStructure,
+      currentSchema,
+      createTables,
+    );
+
+  applyChangeTableSchemas(changeTableSchemas, currentSchema, ast);
+
+  await applyChangeTables(
+    changeTables,
+    structureToAstCtx,
+    dbStructure,
+    domainsMap,
+    ast,
+    currentSchema,
+    config,
+    compareSql,
+    tableExpressions,
+  );
+
+  processForeignKeys(ast, changeTables, currentSchema, tableShapes);
+
+  await Promise.all([
+    applyCompareSql(compareSql, adapter),
+    applyCompareTableExpressions(tableExpressions, adapter),
+    applyCreateOrRenameTables(createTables, dropTables, currentSchema, ast),
+  ]);
+
+  for (const dbTable of dropTables) {
+    ast.push(
+      tableToAst(structureToAstCtx, dbStructure, dbTable, 'drop', domainsMap),
+    );
+  }
+
+  return ast;
+};
+
+const collectCreateTables = (
+  tables: QueryWithTable[],
+  dbStructure: IntrospectedStructure,
+  currentSchema: string,
+): QueryWithTable[] => {
+  return tables.reduce<QueryWithTable[]>((acc, codeTable) => {
+    const tableSchema = codeTable.q.schema ?? currentSchema;
+    const hasDbTable = dbStructure.tables.some(
+      (t) => t.name === codeTable.table && t.schemaName === tableSchema,
+    );
+    if (!hasDbTable) {
+      acc.push(codeTable);
+    }
+    return acc;
+  }, []);
+};
+
+const collectChangeAndDropTables = (
+  tables: QueryWithTable[],
+  dbStructure: IntrospectedStructure,
+  currentSchema: string,
+  createTables: QueryWithTable[],
+): {
+  changeTables: ChangeTableData[];
+  changeTableSchemas: ChangeTableSchemaData[];
+  dropTables: DbStructure.Table[];
+  tableShapes: TableShapes;
+} => {
+  const changeTables: ChangeTableData[] = [];
+  const changeTableSchemas: ChangeTableSchemaData[] = [];
+  const dropTables: DbStructure.Table[] = [];
+  const tableShapes: TableShapes = {};
 
   for (const dbTable of dbStructure.tables) {
     if (dbTable.name === 'schemaMigrations') continue;
@@ -78,66 +158,117 @@ export const processTables = async (
         (t.q.schema ?? currentSchema) === dbTable.schemaName,
     );
     if (codeTable) {
-      compareExpressions.length = 0;
-      await processTableChange(
-        structureToAstCtx,
-        dbStructure,
-        domainsMap,
-        ast,
-        currentSchema,
-        config,
-        dbTable,
+      const shape = {};
+      const schema = codeTable.q.schema ?? currentSchema;
+
+      changeTables.push({
         codeTable,
-        compareSql,
-        compareExpressions,
-      );
+        dbTable,
+        dbTableData: getDbStructureTableData(dbStructure, dbTable),
+        schema,
+        changeTableAst: {
+          type: 'changeTable',
+          schema,
+          name: codeTable.table,
+          shape: shape,
+          add: {},
+          drop: {},
+        },
+        pushedAst: false,
+      });
 
-      if (compareExpressions.length) {
-        const names: string[] = [];
-        const types: string[] = [];
-        for (const key in codeTable.shape) {
-          const column = codeTable.shape[key] as ColumnType;
-          const name = column.data.name ?? key;
-          names.push(name);
-          types.push(getColumnDbType(column, currentSchema));
-        }
-
-        const tableName = codeTable.table;
-        const source = `(VALUES (${types
-          .map((x) => `NULL::${x}`)
-          .join(', ')})) "${tableName}"(${names
-          .map((x) => `"${x}"`)
-          .join(', ')})`;
-
-        tableExpressions.push(
-          ...compareExpressions.map((x) => ({ ...x, source })),
-        );
-      }
-
+      tableShapes[`${schema}.${codeTable.table}`] = shape;
       continue;
     }
 
     const i = createTables.findIndex((t) => t.table === dbTable.name);
     if (i !== -1) {
-      const table = createTables[i];
+      const codeTable = createTables[i];
       createTables.splice(i, 1);
-      const fromSchema = dbTable.schemaName;
-      const toSchema = table.q.schema ?? currentSchema;
-
-      ast.push({
-        type: 'renameType',
-        kind: 'TABLE',
-        fromSchema,
-        from: dbTable.name,
-        toSchema,
-        to: dbTable.name,
-      });
+      changeTableSchemas.push({ codeTable, dbTable });
       continue;
     }
 
     dropTables.push(dbTable);
   }
 
+  return { changeTables, changeTableSchemas, dropTables, tableShapes };
+};
+
+const applyChangeTableSchemas = (
+  changeTableSchemas: ChangeTableSchemaData[],
+  currentSchema: string,
+  ast: RakeDbAst[],
+) => {
+  for (const { codeTable, dbTable } of changeTableSchemas) {
+    const fromSchema = dbTable.schemaName;
+    const toSchema = codeTable.q.schema ?? currentSchema;
+
+    ast.push({
+      type: 'renameType',
+      kind: 'TABLE',
+      fromSchema,
+      from: dbTable.name,
+      toSchema,
+      to: dbTable.name,
+    });
+  }
+};
+
+const applyChangeTables = async (
+  changeTables: ChangeTableData[],
+  structureToAstCtx: StructureToAstCtx,
+  dbStructure: IntrospectedStructure,
+  domainsMap: DbStructureDomainsMap,
+  ast: RakeDbAst[],
+  currentSchema: string,
+  config: AnyRakeDbConfig,
+  compareSql: CompareSql,
+  tableExpressions: TableExpression[],
+): Promise<void> => {
+  const compareExpressions: CompareExpression[] = [];
+  for (const changeTableData of changeTables) {
+    compareExpressions.length = 0;
+
+    await processTableChange(
+      structureToAstCtx,
+      dbStructure,
+      domainsMap,
+      ast,
+      currentSchema,
+      config,
+      changeTableData,
+      compareSql,
+      compareExpressions,
+    );
+
+    if (compareExpressions.length) {
+      const { codeTable } = changeTableData;
+      const names: string[] = [];
+      const types: string[] = [];
+
+      for (const key in codeTable.shape) {
+        const column = codeTable.shape[key] as ColumnType;
+        const name = column.data.name ?? key;
+        names.push(name);
+        types.push(getColumnDbType(column, currentSchema));
+      }
+
+      const tableName = codeTable.table;
+      const source = `(VALUES (${types
+        .map((x) => `NULL::${x}`)
+        .join(', ')})) "${tableName}"(${names
+        .map((x) => `"${x}"`)
+        .join(', ')})`;
+
+      tableExpressions.push(
+        ...compareExpressions.map((x) => ({ ...x, source })),
+      );
+    }
+  }
+};
+
+const applyCompareSql = async (compareSql: CompareSql, adapter: Adapter) => {
   if (compareSql.expressions.length) {
     const {
       rows: [results],
@@ -156,7 +287,12 @@ export const processTables = async (
       }
     }
   }
+};
 
+const applyCompareTableExpressions = async (
+  tableExpressions: TableExpression[],
+  adapter: Adapter,
+) => {
   if (tableExpressions.length) {
     let id = 1;
     await Promise.all(
@@ -211,7 +347,14 @@ export const processTables = async (
       }),
     );
   }
+};
 
+const applyCreateOrRenameTables = async (
+  createTables: QueryWithTable[],
+  dropTables: DbStructure.Table[],
+  currentSchema: string,
+  ast: RakeDbAst[],
+) => {
   for (const codeTable of createTables) {
     if (dropTables.length) {
       const index = await promptCreateOrRename(
@@ -238,14 +381,6 @@ export const processTables = async (
 
     ast.push(createTableAst(currentSchema, codeTable));
   }
-
-  for (const dbTable of dropTables) {
-    ast.push(
-      tableToAst(structureToAstCtx, dbStructure, dbTable, 'drop', domainsMap),
-    );
-  }
-
-  return ast;
 };
 
 const createTableAst = (
@@ -282,77 +417,33 @@ const processTableChange = async (
   ast: RakeDbAst[],
   currentSchema: string,
   config: AnyRakeDbConfig,
-  dbTable: DbStructure.Table,
-  codeTable: QueryWithTable,
+  changeTableData: ChangeTableData,
   compareSql: CompareSql,
   compareExpressions: CompareExpression[],
 ) => {
-  const shape: RakeDbAst.ChangeTableShape = {};
-  const add: TableData = {};
-  const drop: TableData = {};
-  const schema = codeTable.q.schema ?? currentSchema;
-  const tableName = codeTable.table;
-  const changeTableAst: RakeDbAst.ChangeTable = {
-    type: 'changeTable',
-    schema,
-    name: tableName,
-    shape,
-    add,
-    drop,
-  };
-  const pushedChangeTableRef = { current: false };
-  const tableData = getDbStructureTableData(dbStructure, dbTable);
-
   await processColumns(
     structureToAstCtx,
     dbStructure,
     domainsMap,
-    dbTable,
-    codeTable,
-    tableData,
-    shape,
+    changeTableData,
     ast,
     currentSchema,
     compareSql,
-    pushedChangeTableRef,
-    changeTableAst,
   );
 
   const delayedAst: RakeDbAst[] = [];
 
-  processPrimaryKey(
-    delayedAst,
-    tableData,
-    codeTable,
-    shape,
-    add,
-    drop,
-    schema,
-    tableName,
-  );
+  processPrimaryKey(delayedAst, changeTableData);
 
-  processIndexes(
-    config,
-    tableData,
-    codeTable,
-    shape,
-    add,
-    drop,
-    delayedAst,
-    ast,
-    schema,
-    tableName,
-    compareExpressions,
-    pushedChangeTableRef,
-    changeTableAst,
-  );
+  processIndexes(config, changeTableData, delayedAst, ast, compareExpressions);
 
+  const { changeTableAst } = changeTableData;
   if (
-    Object.keys(shape).length ||
-    Object.keys(add).length ||
-    Object.keys(drop).length
+    Object.keys(changeTableAst.shape).length ||
+    Object.keys(changeTableAst.add).length ||
+    Object.keys(changeTableAst.drop).length
   ) {
-    pushedChangeTableRef.current = true;
+    changeTableData.pushedAst = true;
     ast.push(changeTableAst);
   }
 

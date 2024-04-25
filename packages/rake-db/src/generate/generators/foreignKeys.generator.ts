@@ -1,36 +1,137 @@
-import {
-  ColumnType,
-  ForeignKeyAction,
-  ForeignKeyMatch,
-  ForeignKeyOptions,
-  QueryWithTable,
-} from 'pqb';
-import { RakeDbAst } from 'rake-db';
+import { ColumnType, ForeignKeyAction, ForeignKeyMatch, TableData } from 'pqb';
 import { DbStructure } from '../dbStructure';
 import { getSchemaAndTableFromName } from '../../common';
-import { StructureToAstTableData } from '../structureToAst';
+import { ChangeTableData, TableShapes } from './tables.generator';
+import { RakeDbAst } from 'rake-db';
+import { deepCompare } from 'orchid-core';
+import { getConstraintName } from '../../migration/migrationUtils';
 
-const mapMatch: { [K in ForeignKeyMatch]: DbStructure.ForeignKeyMatch } = {
+interface CodeForeignKey {
+  references: DbStructure.References;
+  codeConstraint: TableData.Constraint;
+}
+
+const mapMatchToDb: { [K in ForeignKeyMatch]: DbStructure.ForeignKeyMatch } = {
   FULL: 'f',
   PARTIAL: 'p',
   SIMPLE: 's',
 };
 
-const mapAction: { [K in ForeignKeyAction]: DbStructure.ForeignKeyAction } = {
-  'NO ACTION': 'a',
-  RESTRICT: 'r',
-  CASCADE: 'c',
-  'SET NULL': 'n',
-  'SET DEFAULT': 'd',
+const mapMatchToCode = {} as {
+  [K in DbStructure.ForeignKeyMatch]: ForeignKeyMatch;
 };
+for (const key in mapMatchToDb) {
+  mapMatchToCode[
+    mapMatchToDb[key as ForeignKeyMatch] as DbStructure.ForeignKeyMatch
+  ] = key as ForeignKeyMatch;
+}
+
+const mapActionToDb: { [K in ForeignKeyAction]: DbStructure.ForeignKeyAction } =
+  {
+    'NO ACTION': 'a',
+    RESTRICT: 'r',
+    CASCADE: 'c',
+    'SET NULL': 'n',
+    'SET DEFAULT': 'd',
+  };
+
+const mapActionToCode = {} as {
+  [K in DbStructure.ForeignKeyAction]: ForeignKeyAction;
+};
+for (const key in mapActionToDb) {
+  mapActionToCode[
+    mapActionToDb[key as ForeignKeyAction] as DbStructure.ForeignKeyAction
+  ] = key as ForeignKeyAction;
+}
 
 export const processForeignKeys = (
-  tableData: StructureToAstTableData,
-  codeTable: QueryWithTable,
-  shape: RakeDbAst.ChangeTableShape,
+  ast: RakeDbAst[],
+  changeTables: ChangeTableData[],
   currentSchema: string,
+  tableShapes: TableShapes,
 ) => {
-  const codeFkeys: DbStructure.References[] = [];
+  for (const changeTableData of changeTables) {
+    const codeForeignKeys = collectCodeFkeys(changeTableData, currentSchema);
+
+    const { codeTable, dbTableData, changeTableAst, schema } = changeTableData;
+    const { shape, add, drop } = changeTableAst;
+    let changed = false;
+
+    for (const dbConstraint of dbTableData.constraints) {
+      const { references: dbReferences } = dbConstraint;
+      if (!dbReferences) continue;
+
+      const hasChangedColumn = dbReferences.columns.some(
+        (column) => shape[column] && shape[column].type !== 'rename',
+      );
+      if (hasChangedColumn) continue;
+
+      const foreignShape =
+        tableShapes[
+          `${dbReferences.foreignSchema}.${dbReferences.foreignTable}`
+        ];
+      const hasForeignChangedColumn =
+        foreignShape &&
+        dbReferences.foreignColumns.some(
+          (column) =>
+            foreignShape[column] && foreignShape[column].type !== 'rename',
+        );
+      if (hasForeignChangedColumn) continue;
+
+      let found = false;
+      let rename: string | undefined;
+      for (let i = 0; i < codeForeignKeys.length; i++) {
+        const codeForeignKey = codeForeignKeys[i];
+        const codeReferences = codeForeignKey.references;
+        if (deepCompare(dbReferences, codeReferences)) {
+          found = true;
+          codeForeignKeys.splice(i, 1);
+
+          const codeName =
+            codeForeignKey.codeConstraint.name ??
+            getConstraintName(codeTable.table, codeForeignKey);
+          if (codeName !== dbConstraint.name) {
+            rename = codeName;
+          }
+        }
+      }
+
+      if (!found) {
+        (drop.constraints ??= []).push(
+          dbForeignKeyToCodeForeignKey(dbConstraint, dbReferences),
+        );
+        changed = true;
+      } else if (rename) {
+        ast.push({
+          type: 'renameTableItem',
+          kind: 'CONSTRAINT',
+          tableSchema: schema,
+          tableName: codeTable.table,
+          from: dbConstraint.name,
+          to: rename,
+        });
+      }
+    }
+
+    if (codeForeignKeys.length) {
+      (add.constraints ??= []).push(
+        ...codeForeignKeys.map((x) => x.codeConstraint),
+      );
+      changed = true;
+    }
+
+    if (changed && !changeTableData.pushedAst) {
+      changeTableData.pushedAst = true;
+      ast.push(changeTableData.changeTableAst);
+    }
+  }
+};
+
+const collectCodeFkeys = (
+  { codeTable, changeTableAst: { shape } }: ChangeTableData,
+  currentSchema: string,
+): CodeForeignKey[] => {
+  const codeForeignKeys: CodeForeignKey[] = [];
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
     if (!column.data.foreignKeys) continue;
@@ -38,49 +139,55 @@ export const processForeignKeys = (
     const name = column.data.name ?? key;
     if (shape[name] && shape[name].type !== 'rename') continue;
 
-    codeFkeys.push(
-      ...column.data.foreignKeys.map((x) =>
-        parseForeignKey(
+    codeForeignKeys.push(
+      ...column.data.foreignKeys.map((x) => {
+        const columns = [name];
+        const fnOrTable = 'fn' in x ? x.fn : x.table;
+        const references: TableData.References = {
+          columns,
+          fnOrTable,
+          foreignColumns: x.columns,
+          options: {
+            name: x.name,
+            match: x.match,
+            onUpdate: x.onUpdate,
+            onDelete: x.onDelete,
+          },
+        };
+
+        return parseForeignKey(
+          {
+            name: x.name,
+            references,
+          },
+          references,
           currentSchema,
-          'fn' in x ? x.fn : x.table,
-          [name],
-          x.columns,
-          x,
-        ),
-      ),
+        );
+      }),
     );
   }
 
   if (codeTable.internal.constraints) {
-    for (const { references } of codeTable.internal.constraints) {
+    for (const constraint of codeTable.internal.constraints) {
+      const { references } = constraint;
       if (!references) continue;
 
-      codeFkeys.push(
-        parseForeignKey(
-          currentSchema,
-          references.fnOrTable,
-          references.columns,
-          references.foreignColumns,
-          references.foreignKeyOptions,
-        ),
+      codeForeignKeys.push(
+        parseForeignKey(constraint, references, currentSchema),
       );
     }
   }
 
-  for (const { references: dbFkey } of tableData.constraints) {
-    if (!dbFkey) continue;
-    // TODO: it should handle full constraint
-    // rename this to constraints gen
-  }
+  return codeForeignKeys;
 };
 
 const parseForeignKey = (
+  codeConstraint: TableData.Constraint,
+  references: TableData.References,
   currentSchema: string,
-  fnOrTable: (() => { new (): { schema?: string; table: string } }) | string,
-  columns: string[],
-  foreignColumns: string[],
-  options: ForeignKeyOptions,
-): DbStructure.References => {
+): CodeForeignKey => {
+  const { fnOrTable, columns, foreignColumns, options } = references;
+
   let schema;
   let table;
   if (typeof fnOrTable === 'function') {
@@ -92,12 +199,45 @@ const parseForeignKey = (
   }
 
   return {
-    foreignSchema: schema ?? currentSchema,
-    foreignTable: table,
-    columns,
-    foreignColumns,
-    match: mapMatch[options.match || 'SIMPLE'],
-    onUpdate: mapAction[options.onUpdate || 'NO ACTION'],
-    onDelete: mapAction[options.onDelete || 'NO ACTION'],
+    references: {
+      foreignSchema: schema ?? currentSchema,
+      foreignTable: table,
+      columns,
+      foreignColumns,
+      match: mapMatchToDb[options?.match || 'SIMPLE'],
+      onUpdate: mapActionToDb[options?.onUpdate || 'NO ACTION'],
+      onDelete: mapActionToDb[options?.onDelete || 'NO ACTION'],
+    },
+    codeConstraint,
   };
 };
+
+const dbForeignKeyToCodeForeignKey = (
+  dbConstraint: DbStructure.Constraint,
+  dbReferences: DbStructure.References,
+): TableData.Constraint => ({
+  name:
+    dbConstraint.name ===
+    getConstraintName(dbConstraint.tableName, { references: dbReferences })
+      ? undefined
+      : dbConstraint.name,
+  references: {
+    columns: dbReferences.columns,
+    fnOrTable: `${dbReferences.foreignSchema}.${dbReferences.foreignTable}`,
+    foreignColumns: dbReferences.foreignColumns,
+    options: {
+      match:
+        dbReferences.match === 's'
+          ? undefined
+          : mapMatchToCode[dbReferences.match],
+      onUpdate:
+        dbReferences.onUpdate === 'a'
+          ? undefined
+          : mapActionToCode[dbReferences.onUpdate],
+      onDelete:
+        dbReferences.onDelete === 'a'
+          ? undefined
+          : mapActionToCode[dbReferences.onDelete],
+    },
+  },
+});

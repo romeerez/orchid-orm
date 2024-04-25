@@ -2,7 +2,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
 import { EmptyObject, RecordKeyTrue } from './utils';
 import { QueryColumn, QueryColumns } from './columns';
-import { RawSQLBase } from './raw';
 
 // Output type of the `toSQL` method of query objects.
 // This will be passed to database adapter to perform query.
@@ -38,53 +37,9 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
-export interface QueryInternal {
+export interface QueryInternalBase {
   columnsForSelectAll?: string[];
   runtimeDefaultColumns?: string[];
-  primaryKey?: {
-    columns: string[];
-    options?: { name?: string };
-  };
-  indexes?: {
-    columns: ({ column: string } | { expression: string })[];
-    options: { unique?: boolean };
-  }[];
-  constraints?: {
-    name?: string;
-    check?: RawSQLBase;
-    identity?: {
-      incrementBy?: number;
-      startWith?: number;
-      min?: number;
-      max?: number;
-      cache?: number;
-      cycle?: boolean;
-      always?: boolean;
-    };
-    references?: {
-      columns: string[];
-      fnOrTable:
-        | (() => { new (): { schema?: string; table: string } })
-        | string;
-      foreignColumns: string[];
-      foreignKeyOptions: {
-        name: string;
-        match: 'FULL' | 'PARTIAL' | 'SIMPLE';
-        onUpdate:
-          | 'NO ACTION'
-          | 'RESTRICT'
-          | 'CASCADE'
-          | 'SET NULL'
-          | 'SET DEFAULT';
-        onDelete:
-          | 'NO ACTION'
-          | 'RESTRICT'
-          | 'CASCADE'
-          | 'SET NULL'
-          | 'SET DEFAULT';
-      };
-    };
-  }[];
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.
   scopes?: CoreQueryScopes;
@@ -171,7 +126,7 @@ export interface IsQuery {
 export interface QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue>
   extends IsQuery {
   meta: QueryMetaBase<Scopes>;
-  internal: QueryInternal;
+  internal: QueryInternalBase;
 }
 
 export interface SelectableBase {

@@ -1,9 +1,8 @@
-import { Query, WithDataBase } from './query';
+import { Query, QueryInternal, WithDataBase } from './query';
 import { QueryData } from '../sql';
 import {
   EmptyObject,
   QueryBaseCommon,
-  QueryInternal,
   QueryMetaBase,
   QueryColumns,
   RecordKeyTrue,

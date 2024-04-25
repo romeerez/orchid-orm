@@ -669,9 +669,6 @@ describe('structureToAst', () => {
           columns: ['id'],
           name: 'fkey',
           table: 'public.table1',
-          match: 'FULL',
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
         },
       ]);
       expect(ast.constraints).toHaveLength(0);
@@ -701,9 +698,6 @@ describe('structureToAst', () => {
         {
           columns: ['id'],
           table: 'public.table1',
-          match: 'FULL',
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
         },
       ]);
       expect(ast.constraints).toHaveLength(0);
@@ -741,10 +735,7 @@ describe('structureToAst', () => {
             fnOrTable: 'public.table1',
             foreignColumns: ['otherName', 'otherId'],
             options: {
-              match: 'FULL',
               name: 'fkey',
-              onDelete: 'CASCADE',
-              onUpdate: 'CASCADE',
             },
           },
         },
@@ -782,11 +773,7 @@ describe('structureToAst', () => {
             columns: ['name', 'otherId'],
             fnOrTable: 'public.table1',
             foreignColumns: ['name', 'id'],
-            options: {
-              match: 'FULL',
-              onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
-            },
+            options: {},
           },
         },
       ]);
@@ -841,10 +828,7 @@ describe('structureToAst', () => {
         {
           table: 'public.table1',
           columns: ['id'],
-          match: 'FULL',
           name: 'fkey',
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
         },
       ]);
 
@@ -859,10 +843,7 @@ describe('structureToAst', () => {
           fnOrTable: 'public.table2',
           foreignColumns: ['id'],
           options: {
-            match: 'FULL',
             name: 'fkey',
-            onDelete: 'CASCADE',
-            onUpdate: 'CASCADE',
           },
         },
       });
@@ -946,9 +927,6 @@ describe('structureToAst', () => {
             fnOrTable: `public.otherTable`,
             options: {
               name: 'constraintName',
-              match: 'FULL',
-              onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
             },
           },
           check: raw({ raw: 'check' }),

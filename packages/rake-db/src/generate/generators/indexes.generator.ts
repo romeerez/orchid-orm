@@ -1,84 +1,41 @@
-import {
-  ColumnType,
-  IndexOptions,
-  QueryWithTable,
-  SearchWeight,
-  TableData,
-} from 'pqb';
-import { StructureToAstTableData } from '../structureToAst';
+import { ColumnType, IndexOptions, SearchWeight, TableData } from 'pqb';
 import { deepCompare, RecordUnknown, toArray } from 'orchid-core';
 import { AnyRakeDbConfig } from '../../config';
 import { RakeDbAst } from '../../ast';
 import { getIndexName } from '../../migration/migrationUtils';
-import { CompareExpression } from './tables.generator';
+import { ChangeTableData, CompareExpression } from './tables.generator';
 import { DbStructure } from '../dbStructure';
 
 export const processIndexes = (
   config: AnyRakeDbConfig,
-  tableData: StructureToAstTableData,
-  codeTable: QueryWithTable,
-  shape: RakeDbAst.ChangeTableShape,
-  add: TableData,
-  drop: TableData,
+  changeTableData: ChangeTableData,
   delayedAst: RakeDbAst[],
   ast: RakeDbAst[],
-  tableSchema: string,
-  tableName: string,
   compareExpressions: CompareExpression[],
-  pushedChangeTableRef: { current: boolean },
-  changeTableAst: RakeDbAst.ChangeTable,
 ) => {
-  const indexes: TableData.Index[] = [];
-  for (const key in codeTable.shape) {
-    const column = codeTable.shape[key] as ColumnType;
-    if (!column.data.indexes) continue;
+  const codeIndexes = collectCodeIndexes(changeTableData);
+  const codeComparableIndexes = collectCodeComparableIndexes(codeIndexes);
 
-    const name = column.data.name ?? key;
-    if (shape[name] && shape[name].type !== 'rename') continue;
-
-    indexes.push(
-      ...column.data.indexes.map(
-        ({ collate, opclass, order, weight, ...options }) => ({
-          columns: [{ collate, opclass, order, weight, column: name }],
-          options,
-        }),
-      ),
-    );
-  }
-
-  if (codeTable.internal.indexes) {
-    indexes.push(...codeTable.internal.indexes);
-  }
-
-  const codeComparableIndexes: ComparableIndex[] = [];
-  for (const codeIndex of indexes) {
-    normalizeIndex(codeIndex.options);
-    codeComparableIndexes.push(
-      indexToComparable({
-        ...codeIndex.options,
-        include:
-          codeIndex.options.include === undefined
-            ? undefined
-            : toArray(codeIndex.options.include),
-        columns: codeIndex.columns,
-      }),
-    );
-  }
-
+  // to skip indexes without SQL from being added when they are matched with already existing indexes
   const skipCodeIndexes = new Map<number, boolean>();
+
+  // to skip indexes with SQL from being added while their SQL is being asynchronously compared with existing indexes
   const holdCodeIndexes = new Map<TableData.Index, boolean>();
+
+  // counter for async SQL comparisons that are in progress
   let wait = 0;
 
-  for (const dbIndex of tableData.indexes) {
-    if (
-      dbIndex.columns.some(
-        (column) =>
-          'column' in column &&
-          shape[column.column] &&
-          shape[column.column].type !== 'rename',
-      )
-    )
-      continue;
+  const {
+    changeTableAst: { shape },
+  } = changeTableData;
+  for (const dbIndex of changeTableData.dbTableData.indexes) {
+    const hasChangedColumn = dbIndex.columns.some(
+      (column) =>
+        'column' in column &&
+        shape[column.column] &&
+        shape[column.column].type !== 'rename',
+    );
+    if (hasChangedColumn) continue;
 
     normalizeIndex(dbIndex);
 
@@ -88,9 +45,9 @@ export const processIndexes = (
     const { found, rename } = findMatchingIndexWithoutSql(
       dbComparableIndex,
       codeComparableIndexes,
-      indexes,
+      codeIndexes,
       skipCodeIndexes,
-      tableName,
+      changeTableData.codeTable.table,
       config,
     );
 
@@ -134,11 +91,9 @@ export const processIndexes = (
 
           handleIndexChange(
             ast,
-            drop,
+            changeTableData,
             dbIndex,
             dbColumns,
-            tableSchema,
-            tableName,
             codeIndex,
             index === undefined ? undefined : rename[index],
           );
@@ -148,11 +103,13 @@ export const processIndexes = (
           }
 
           if (!--wait && holdCodeIndexes.size) {
-            (add.indexes ??= []).push(...holdCodeIndexes.keys());
+            (changeTableData.changeTableAst.add.indexes ??= []).push(
+              ...holdCodeIndexes.keys(),
+            );
 
-            if (!pushedChangeTableRef.current) {
-              pushedChangeTableRef.current = true;
-              ast.push(changeTableAst);
+            if (!changeTableData.pushedAst) {
+              changeTableData.pushedAst = true;
+              ast.push(changeTableData.changeTableAst);
             }
           }
         },
@@ -160,23 +117,66 @@ export const processIndexes = (
     } else {
       handleIndexChange(
         delayedAst,
-        drop,
+        changeTableData,
         dbIndex,
         dbColumns,
-        tableSchema,
-        tableName,
         found[0],
         rename[0],
       );
     }
   }
 
-  const addIndexes = indexes.filter(
+  const addIndexes = codeIndexes.filter(
     (index, i) => !skipCodeIndexes.has(i) && !holdCodeIndexes.has(index),
   );
   if (addIndexes.length) {
-    add.indexes = addIndexes;
+    changeTableData.changeTableAst.add.indexes = addIndexes;
   }
+};
+
+const collectCodeIndexes = ({
+  codeTable,
+  changeTableAst: { shape },
+}: ChangeTableData): TableData.Index[] => {
+  const codeIndexes: TableData.Index[] = [];
+  for (const key in codeTable.shape) {
+    const column = codeTable.shape[key] as ColumnType;
+    if (!column.data.indexes) continue;
+
+    const name = column.data.name ?? key;
+    if (shape[name] && shape[name].type !== 'rename') continue;
+
+    codeIndexes.push(
+      ...column.data.indexes.map(
+        ({ collate, opclass, order, weight, ...options }) => ({
+          columns: [{ collate, opclass, order, weight, column: name }],
+          options,
+        }),
+      ),
+    );
+  }
+
+  if (codeTable.internal.indexes) {
+    codeIndexes.push(...codeTable.internal.indexes);
+  }
+
+  return codeIndexes;
+};
+
+const collectCodeComparableIndexes = (
+  codeIndexes: TableData.Index[],
+): ComparableIndex[] => {
+  return codeIndexes.map((codeIndex) => {
+    normalizeIndex(codeIndex.options);
+    return indexToComparable({
+      ...codeIndex.options,
+      include:
+        codeIndex.options.include === undefined
+          ? undefined
+          : toArray(codeIndex.options.include),
+      columns: codeIndex.columns,
+    });
+  });
 };
 
 const normalizeIndex = (
@@ -302,16 +302,14 @@ const checkIfIndexHasSql = (
 
 const handleIndexChange = (
   ast: RakeDbAst[],
-  drop: TableData,
+  { changeTableAst, schema, codeTable }: ChangeTableData,
   dbIndex: DbStructure.Index,
   dbColumns: DbStructure.Index['columns'],
-  tableSchema: string,
-  tableName: string,
   found?: TableData.Index,
   rename?: string,
 ) => {
   if (!found) {
-    (drop.indexes ??= []).push({
+    (changeTableAst.drop.indexes ??= []).push({
       columns: dbColumns,
       options: dbIndex,
     });
@@ -319,8 +317,8 @@ const handleIndexChange = (
     ast.push({
       type: 'renameTableItem',
       kind: 'INDEX',
-      tableSchema,
-      tableName,
+      tableSchema: schema,
+      tableName: codeTable.table,
       from: dbIndex.name,
       to: rename,
     });

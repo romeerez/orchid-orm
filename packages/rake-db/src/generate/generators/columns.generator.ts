@@ -4,31 +4,26 @@ import {
   getDbTableColumnsChecks,
   instantiateDbColumn,
   StructureToAstCtx,
-  StructureToAstTableData,
 } from '../structureToAst';
-import { ColumnType, EnumColumn, QueryWithTable } from 'pqb';
+import { ColumnType, EnumColumn } from 'pqb';
 import { DbStructure, IntrospectedStructure } from '../dbStructure';
 import { RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
 import { deepCompare, RecordUnknown } from 'orchid-core';
 import { encodeColumnDefault } from '../../migration/migrationUtils';
 import { getSchemaAndTableFromName } from '../../common';
-import { CompareSql } from './tables.generator';
+import { ChangeTableData, CompareSql } from './tables.generator';
 
 export const processColumns = async (
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
-  dbTable: DbStructure.Table,
-  codeTable: QueryWithTable,
-  tableData: StructureToAstTableData,
-  shape: RakeDbAst.ChangeTableShape,
+  changeTableData: ChangeTableData,
   ast: RakeDbAst[],
   currentSchema: string,
-  compareExpressions: CompareSql,
-  pushedChangeTableRef: { current: boolean },
-  changeTableAst: RakeDbAst.ChangeTable,
+  compareSql: CompareSql,
 ) => {
+  const { dbTable } = changeTableData;
   const dbColumns = Object.fromEntries(
     dbTable.columns.map((column) => [column.name, column]),
   );
@@ -37,14 +32,17 @@ export const processColumns = async (
     structureToAstCtx,
     dbStructure,
     domainsMap,
-    dbTable,
-    codeTable,
     dbColumns,
-    tableData,
+    changeTableData,
   );
 
-  await addOrRenameColumns(tableData, shape, columnsToAdd, columnsToDrop);
-  dropColumns(shape, columnsToDrop);
+  await addOrRenameColumns(
+    dbStructure,
+    changeTableData,
+    columnsToAdd,
+    columnsToDrop,
+  );
+  dropColumns(changeTableData, columnsToDrop);
   changeColumns(
     structureToAstCtx,
     dbStructure,
@@ -53,10 +51,8 @@ export const processColumns = async (
     currentSchema,
     dbColumns,
     columnsToChange,
-    compareExpressions,
-    shape,
-    pushedChangeTableRef,
-    changeTableAst,
+    compareSql,
+    changeTableData,
   );
 };
 
@@ -66,10 +62,8 @@ const groupColumns = (
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
-  dbTable: DbStructure.Table,
-  codeTable: QueryWithTable,
   dbColumns: { [K: string]: DbStructure.Column },
-  tableData: StructureToAstTableData,
+  changeTableData: ChangeTableData,
 ): {
   columnsToAdd: KeyAndColumn[];
   columnsToDrop: KeyAndColumn[];
@@ -79,7 +73,8 @@ const groupColumns = (
   const columnsToDrop: { key: string; column: ColumnType }[] = [];
   const columnsToChange = new Map<string, ColumnType>();
 
-  const checks = getDbTableColumnsChecks(tableData);
+  const { codeTable, dbTable, dbTableData } = changeTableData;
+  const checks = getDbTableColumnsChecks(changeTableData.dbTableData);
 
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
@@ -101,7 +96,7 @@ const groupColumns = (
       dbTable.name,
       dbColumns[name],
       dbTable,
-      tableData,
+      dbTableData,
       checks,
     );
 
@@ -116,8 +111,12 @@ const groupColumns = (
 };
 
 const addOrRenameColumns = async (
-  tableData: StructureToAstTableData,
-  shape: RakeDbAst.ChangeTableShape,
+  dbStructure: IntrospectedStructure,
+  {
+    dbTableData,
+    schema,
+    changeTableAst: { name: tableName, shape },
+  }: ChangeTableData,
   columnsToAdd: KeyAndColumn[],
   columnsToDrop: KeyAndColumn[],
 ) => {
@@ -138,18 +137,31 @@ const addOrRenameColumns = async (
           name: key,
         };
 
-        if (tableData.primaryKey) {
-          const { columns } = tableData.primaryKey;
-          for (let i = 0; i < columns.length; i++) {
-            if (columns[i] === from) columns[i] = key;
-          }
+        if (dbTableData.primaryKey) {
+          renameColumn(dbTableData.primaryKey.columns, from, key);
         }
 
-        for (const index of tableData.indexes) {
+        for (const index of dbTableData.indexes) {
           for (const column of index.columns) {
             if ('column' in column && column.column === from) {
               column.column = key;
             }
+          }
+        }
+
+        for (const c of dbTableData.constraints) {
+          if (c.references) {
+            renameColumn(c.references.columns, from, key);
+          }
+        }
+
+        for (const c of dbStructure.constraints) {
+          if (
+            c.references &&
+            c.references.foreignSchema === schema &&
+            c.references.foreignTable === tableName
+          ) {
+            renameColumn(c.references.foreignColumns, from, key);
           }
         }
 
@@ -165,7 +177,7 @@ const addOrRenameColumns = async (
 };
 
 const dropColumns = (
-  shape: RakeDbAst.ChangeTableShape,
+  { changeTableAst: { shape } }: ChangeTableData,
   columnsToDrop: KeyAndColumn[],
 ) => {
   for (const { key, column } of columnsToDrop) {
@@ -176,10 +188,6 @@ const dropColumns = (
   }
 };
 
-interface BoolRef {
-  current: boolean;
-}
-
 const changeColumns = (
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
@@ -188,11 +196,11 @@ const changeColumns = (
   currentSchema: string,
   dbColumns: { [K: string]: DbStructure.Column },
   columnsToChange: Map<string, ColumnType>,
-  compareExpressions: CompareSql,
-  shape: RakeDbAst.ChangeTableShape,
-  pushedChangeTableRef: BoolRef,
-  changeTableAst: RakeDbAst.ChangeTable,
+  compareSql: CompareSql,
+  changeTableData: ChangeTableData,
 ) => {
+  const { shape } = changeTableData.changeTableAst;
+
   for (const [name, codeColumn] of columnsToChange) {
     const dbColumnStructure = dbColumns[name];
 
@@ -215,7 +223,10 @@ const changeColumns = (
     const codeData = codeColumn.data as unknown as RecordUnknown;
 
     if (!changed) {
+      if (!dbData.isNullable) dbData.isNullable = undefined;
+
       for (const key of [
+        'isNullable',
         'maxChars',
         'collation',
         'compression',
@@ -257,20 +268,20 @@ const changeColumns = (
       codeData.default !== undefined &&
       codeData.default !== null
     ) {
-      const valuesBeforeLen = compareExpressions.values.length;
+      const valuesBeforeLen = compareSql.values.length;
       const dbDefault = encodeColumnDefault(
         dbData.default,
-        compareExpressions.values,
+        compareSql.values,
         dbColumn,
       ) as string;
-      const dbValues = compareExpressions.values.slice(valuesBeforeLen);
+      const dbValues = compareSql.values.slice(valuesBeforeLen);
 
       const codeDefault = encodeColumnDefault(
         codeData.default,
-        compareExpressions.values,
+        compareSql.values,
         codeColumn,
       ) as string;
-      const codeValues = compareExpressions.values.slice(valuesBeforeLen);
+      const codeValues = compareSql.values.slice(valuesBeforeLen);
 
       if (
         dbValues.length !== codeValues.length ||
@@ -278,19 +289,19 @@ const changeColumns = (
           JSON.stringify(dbValues) !== JSON.stringify(codeValues))
       ) {
         changed = true;
-        compareExpressions.values.length = valuesBeforeLen;
+        compareSql.values.length = valuesBeforeLen;
       } else if (
         dbDefault !== codeDefault &&
         dbDefault !== `(${codeDefault})`
       ) {
-        compareExpressions.expressions.push({
+        compareSql.expressions.push({
           inDb: dbDefault,
           inCode: codeDefault,
           change: () => {
             changeColumn(shape, name, dbColumn, codeColumn);
-            if (!pushedChangeTableRef.current) {
-              pushedChangeTableRef.current = true;
-              ast.push(changeTableAst);
+            if (!changeTableData.pushedAst) {
+              changeTableData.pushedAst = true;
+              ast.push(changeTableData.changeTableAst);
             }
           },
         });
@@ -324,5 +335,13 @@ export const getColumnDbType = (column: ColumnType, currentSchema: string) => {
     return (column.enumName = `${schema}.${name}`);
   } else {
     return column.dataType;
+  }
+};
+
+const renameColumn = (columns: string[], from: string, to: string) => {
+  for (let i = 0; i < columns.length; i++) {
+    if (columns[i] === from) {
+      columns[i] = to;
+    }
   }
 };

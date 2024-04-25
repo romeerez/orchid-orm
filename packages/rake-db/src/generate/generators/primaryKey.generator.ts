@@ -1,17 +1,13 @@
-import { ColumnType, QueryWithTable, TableData } from 'pqb';
-import { StructureToAstTableData } from '../structureToAst';
+import { ColumnType } from 'pqb';
 import { RakeDbAst } from '../../ast';
+import { ChangeTableData } from './tables.generator';
 
 export const processPrimaryKey = (
   ast: RakeDbAst[],
-  tableData: StructureToAstTableData,
-  codeTable: QueryWithTable,
-  shape: RakeDbAst.ChangeTableShape,
-  add: TableData,
-  drop: TableData,
-  schema: string,
-  tableName: string,
+  changeTableData: ChangeTableData,
 ) => {
+  const { codeTable } = changeTableData;
+
   const columnsPrimaryKey: string[] = [];
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
@@ -20,19 +16,18 @@ export const processPrimaryKey = (
     }
   }
 
-  changePrimaryKey(tableData, codeTable, columnsPrimaryKey, add, drop, shape);
-  renamePrimaryKey(tableData, codeTable, ast, schema, tableName);
+  changePrimaryKey(columnsPrimaryKey, changeTableData);
+  renamePrimaryKey(ast, changeTableData);
 };
 
 const changePrimaryKey = (
-  tableData: StructureToAstTableData,
-  codeTable: QueryWithTable,
   columnsPrimaryKey: string[],
-  add: TableData,
-  drop: TableData,
-  shape: RakeDbAst.ChangeTableShape,
+  {
+    codeTable,
+    dbTableData: { primaryKey: dbPrimaryKey },
+    changeTableAst: { shape, add, drop },
+  }: ChangeTableData,
 ) => {
-  const { primaryKey: dbPrimaryKey } = tableData;
   const tablePrimaryKey = codeTable.internal.primaryKey;
   const primaryKey = [
     ...new Set([...columnsPrimaryKey, ...(tablePrimaryKey?.columns ?? [])]),
@@ -63,13 +58,13 @@ const changePrimaryKey = (
 };
 
 const renamePrimaryKey = (
-  tableData: StructureToAstTableData,
-  codeTable: QueryWithTable,
   ast: RakeDbAst[],
-  schema: string | undefined,
-  tableName: string,
+  {
+    codeTable,
+    dbTableData: { primaryKey: dbPrimaryKey },
+    schema,
+  }: ChangeTableData,
 ) => {
-  const { primaryKey: dbPrimaryKey } = tableData;
   const tablePrimaryKey = codeTable.internal.primaryKey;
   if (
     dbPrimaryKey &&
@@ -81,7 +76,7 @@ const renamePrimaryKey = (
       kind: 'CONSTRAINT',
       tableSchema: schema,
       tableName: codeTable.table,
-      from: dbPrimaryKey.options?.name ?? `${tableName}_pkey`,
+      from: dbPrimaryKey.options?.name ?? `${codeTable.table}_pkey`,
       to: tablePrimaryKey.options?.name ?? `${codeTable}_pkey`,
     });
   }
