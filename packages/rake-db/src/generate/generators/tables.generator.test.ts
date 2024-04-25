@@ -156,7 +156,7 @@ change(async (db) => {
     },
     (t) => ({
       name: t.varchar(255),
-      int: t.integer().check(t.sql({ raw: '("int" > 5)' })),
+      int: t.integer().check(t.sql\`("int" > 5)\`),
       ...t.timestamps(),
       ...t.primaryKey(['name', 'int']),
       ...t.index(['name', 'int']),

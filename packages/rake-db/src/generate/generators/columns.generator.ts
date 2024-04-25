@@ -150,6 +150,9 @@ const addOrRenameColumns = async (
         }
 
         for (const c of dbTableData.constraints) {
+          if (c.check?.columns) {
+            renameColumn(c.check.columns, from, key);
+          }
           if (c.references) {
             renameColumn(c.references.columns, from, key);
           }

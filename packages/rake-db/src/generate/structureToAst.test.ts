@@ -17,11 +17,12 @@ import {
   VarCharColumn,
   DefaultSchemaConfig,
   defaultSchemaConfig,
+  RawSQL,
 } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName } from '../migration/migrationUtils';
-import { isRawSQL, RawSQLBase } from 'orchid-core';
+import { isRawSQL, RawSQLBase, TemplateLiteralArgs } from 'orchid-core';
 import { asMock } from 'test-utils';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 
@@ -220,7 +221,9 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
       expect(ast.shape.column.data.check).toEqual(
-        raw({ raw: check.check.expression }),
+        new RawSQL([
+          [check.check.expression],
+        ] as unknown as TemplateLiteralArgs),
       );
     });
 

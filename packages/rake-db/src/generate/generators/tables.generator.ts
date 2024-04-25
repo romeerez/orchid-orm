@@ -22,6 +22,8 @@ import { processPrimaryKey } from './primaryKey.generator';
 import { processIndexes } from './indexes.generator';
 import { getColumnDbType, processColumns } from './columns.generator';
 import { processForeignKeys } from './foreignKeys.generator';
+import { processChecks } from './checks.generator';
+import { RawSQLBase } from 'orchid-core';
 
 export interface CompareSql {
   values: unknown[];
@@ -35,7 +37,7 @@ export interface CompareSql {
 export interface CompareExpression {
   compare: {
     inDb: string;
-    inCode: string[];
+    inCode: (string | RawSQLBase)[];
   }[];
   handle(index?: number): void;
 }
@@ -298,16 +300,22 @@ const applyCompareTableExpressions = async (
     await Promise.all(
       tableExpressions.map(async ({ source, compare, handle }) => {
         const viewName = `orchidTmpView${id++}`;
+        const values: unknown[] = [];
         try {
           const sql = `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
             .map(
               ({ inDb, inCode }, i) =>
                 `${inDb} AS "*inDb-${i}*", ${inCode
-                  .map((s, j) => `(${s}) "*inCode-${i}-${j}*"`)
+                  .map(
+                    (s, j) =>
+                      `(${
+                        typeof s === 'string' ? s : s.toSQL({ values })
+                      }) "*inCode-${i}-${j}*"`,
+                  )
                   .join(', ')}`,
             )
             .join(', ')} FROM ${source})`;
-          await adapter.query(sql);
+          await adapter.query({ text: sql, values });
         } catch (err) {
           handle();
           return;
@@ -436,6 +444,8 @@ const processTableChange = async (
   processPrimaryKey(delayedAst, changeTableData);
 
   processIndexes(config, changeTableData, delayedAst, ast, compareExpressions);
+
+  processChecks(ast, changeTableData, compareExpressions);
 
   const { changeTableAst } = changeTableData;
   if (

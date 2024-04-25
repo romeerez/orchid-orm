@@ -22,11 +22,13 @@ import {
   ColumnsByType,
   Adapter,
   makeColumnsByType,
+  RawSQL,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
   RecordString,
   singleQuote,
+  TemplateLiteralArgs,
   toCamelCase,
   toSnakeCase,
 } from 'orchid-core';
@@ -578,7 +580,7 @@ export const dbColumnToAst = (
 
   const check = checks?.[item.name];
   if (check) {
-    column.data.check = raw({ raw: check });
+    column.data.check = new RawSQL([[check]] as unknown as TemplateLiteralArgs);
   }
 
   const camelCaseName = toCamelCase(item.name);

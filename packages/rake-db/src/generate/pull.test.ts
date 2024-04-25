@@ -256,7 +256,7 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('table2', (t) => ({
     id: t.identity().primaryKey(),
-    text: t.text().check(t.sql({ raw: 'length(text) > 5' })),
+    text: t.text().check(t.sql\`length(text) > 5\`),
     ...t.timestampsSnakeCase(),
     ...t.check(t.sql({ raw: 'table check' })),
     ...t.foreignKey(

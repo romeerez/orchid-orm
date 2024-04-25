@@ -49,7 +49,7 @@ export const processForeignKeys = (
   changeTables: ChangeTableData[],
   currentSchema: string,
   tableShapes: TableShapes,
-) => {
+): void => {
   for (const changeTableData of changeTables) {
     const codeForeignKeys = collectCodeFkeys(changeTableData, currentSchema);
 
