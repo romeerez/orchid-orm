@@ -11,19 +11,21 @@ import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
 import {
   DbStructureDomainsMap,
   getDbStructureTableData,
-  makeDomainsMap,
-  makeStructureToAstCtx,
   StructureToAstCtx,
   StructureToAstTableData,
   tableToAst,
 } from '../structureToAst';
-import { promptCreateOrRename } from './generators.utils';
+import {
+  CompareExpression,
+  compareSqlExpressions,
+  promptCreateOrRename,
+  TableExpression,
+} from './generators.utils';
 import { processPrimaryKey } from './primaryKey.generator';
 import { processIndexes } from './indexes.generator';
 import { getColumnDbType, processColumns } from './columns.generator';
 import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
-import { RawSQLBase } from 'orchid-core';
 
 export interface CompareSql {
   values: unknown[];
@@ -32,18 +34,6 @@ export interface CompareSql {
     inCode: string;
     change(): void;
   }[];
-}
-
-export interface CompareExpression {
-  compare: {
-    inDb: string;
-    inCode: (string | RawSQLBase)[];
-  }[];
-  handle(index?: number): void;
-}
-
-interface TableExpression extends CompareExpression {
-  source: string;
 }
 
 export interface ChangeTableSchemaData {
@@ -64,6 +54,8 @@ export interface TableShapes {
 
 export const processTables = async (
   ast: RakeDbAst[],
+  structureToAstCtx: StructureToAstCtx,
+  domainsMap: DbStructureDomainsMap,
   adapter: Adapter,
   tables: QueryWithTable[],
   dbStructure: IntrospectedStructure,
@@ -77,8 +69,6 @@ export const processTables = async (
   );
   const compareSql: CompareSql = { values: [], expressions: [] };
   const tableExpressions: TableExpression[] = [];
-  const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
-  const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
   const { changeTables, changeTableSchemas, dropTables, tableShapes } =
     collectChangeAndDropTables(
       tables,
@@ -105,7 +95,7 @@ export const processTables = async (
 
   await Promise.all([
     applyCompareSql(compareSql, adapter),
-    applyCompareTableExpressions(tableExpressions, adapter),
+    compareSqlExpressions(tableExpressions, adapter),
     applyCreateOrRenameTables(createTables, dropTables, currentSchema, ast),
   ]);
 
@@ -286,72 +276,6 @@ const applyCompareSql = async (compareSql: CompareSql, adapter: Adapter) => {
         compareSql.expressions[i].change();
       }
     }
-  }
-};
-
-const applyCompareTableExpressions = async (
-  tableExpressions: TableExpression[],
-  adapter: Adapter,
-) => {
-  if (tableExpressions.length) {
-    let id = 1;
-    await Promise.all(
-      tableExpressions.map(async ({ source, compare, handle }) => {
-        const viewName = `orchidTmpView${id++}`;
-        const values: unknown[] = [];
-        try {
-          const sql = `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
-            .map(
-              ({ inDb, inCode }, i) =>
-                `${inDb} AS "*inDb-${i}*", ${inCode
-                  .map(
-                    (s, j) =>
-                      `(${
-                        typeof s === 'string' ? s : s.toSQL({ values })
-                      }) "*inCode-${i}-${j}*"`,
-                  )
-                  .join(', ')}`,
-            )
-            .join(', ')} FROM ${source})`;
-          await adapter.query({ text: sql, values });
-        } catch (err) {
-          handle();
-          return;
-        }
-
-        const {
-          rows: [{ v }],
-        } = await adapter.query<{ v: string }>(
-          `SELECT pg_get_viewdef('${viewName}') v`,
-        );
-
-        await adapter.query(`DROP VIEW ${viewName}`);
-
-        let pos = 7;
-        const rgx = /\s+AS\s+"\*(inDb-\d+|inCode-\d+-\d+)\*",?/g;
-        let match;
-        let inDb = '';
-        let codeI = 0;
-        const matches = compare[0].inCode.map(() => true);
-        while ((match = rgx.exec(v))) {
-          const sql = v.slice(pos, rgx.lastIndex - match[0].length).trim();
-          const arr = match[1].split('-');
-          if (arr.length === 2) {
-            inDb = sql;
-            codeI = 0;
-          } else {
-            if (inDb !== sql) {
-              matches[codeI] = false;
-            }
-            codeI++;
-          }
-          pos = rgx.lastIndex;
-        }
-
-        const firstMatching = matches.indexOf(true);
-        handle(firstMatching === -1 ? undefined : firstMatching);
-      }),
-    );
   }
 };
 

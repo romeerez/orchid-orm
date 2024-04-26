@@ -471,27 +471,9 @@ const astEncoders: {
       .join(', ')}]);`;
   },
   domain(ast) {
-    const code: Code[] = [
-      `await db.createDomain(${quoteSchemaTable(
-        ast,
-      )}, (t) => ${ast.baseType.toCode('t')}`,
-    ];
-
-    if (ast.notNull || ast.collation || ast.default || ast.check) {
-      const props: Code[] = [];
-      if (ast.notNull) props.push(`notNull: true,`);
-      if (ast.collation)
-        props.push(`collation: ${singleQuote(ast.collation)},`);
-      if (ast.default) props.push(`default: ${ast.default.toCode('db')},`);
-      if (ast.check) props.push(`check: ${ast.check.toCode('db')},`);
-
-      addCode(code, ', {');
-      code.push(props);
-      addCode(code, '}');
-    }
-
-    addCode(code, ');');
-    return code;
+    return `await db.${ast.action}Domain(${quoteSchemaTable(
+      ast,
+    )}, (t) => ${ast.baseType.toCode('t')});`;
   },
   collation(ast) {
     const params: string[] = [];
@@ -603,7 +585,7 @@ const isTimestamp = (
       def &&
       typeof def === 'object' &&
       isRawSQL(def) &&
-      def._sql === 'now()',
+      (typeof def._sql === 'object' ? def._sql[0][0] : def._sql) === 'now()',
   );
 };
 

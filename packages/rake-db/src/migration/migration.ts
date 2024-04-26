@@ -3,6 +3,7 @@ import {
   ColumnsShape,
   ColumnType,
   createDb,
+  DbDomainArg,
   DbResult,
   EnumColumn,
   ForeignKeyOptions,
@@ -36,7 +37,7 @@ import {
   quoteWithSchema,
 } from '../common';
 import { RakeDbAst } from '../ast';
-import { columnTypeToSql } from './migrationUtils';
+import { columnTypeToSql, encodeColumnDefault } from './migrationUtils';
 import { createView } from './createView';
 import { RakeDbConfig } from '../config';
 import ExtensionArg = RakeDbAst.ExtensionArg;
@@ -1133,63 +1134,69 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
-   * Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+   * Domain is a custom database type that is based on other type and can include `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
    *
-   * `createDomain` and `dropDomain` take a domain name as first argument, callback returning inner column type as a second, and optional object with parameters as third.
+   * Construct a column type in the function as the second argument.
+   *
+   * Specifiers [nullable](/guide/common-column-methods.html#nullable), [default](/guide/common-column-methods.html#default), [check](/guide/migration-column-methods.html#check), [collate](/guide/migration-column-methods.html#collate)
+   * will be saved to the domain type on database level.
    *
    * ```ts
    * import { change } from '../dbScript';
    *
    * change(async (db) => {
-   *   await db.createDomain('domainName', (t) => t.integer(), {
-   *     check: db.sql`value = 42`,
-   *   });
+   *   await db.createDomain('domainName', (t) =>
+   *     t.integer().check(db.sql`value = 42`),
+   *   );
    *
    *   // use `schemaName.domainName` format to specify a schema
-   *   await db.createDomain('schemaName.domainName', (t) => t.text(), {
-   *     // unlike columns, domain is nullable by default, use notNull when needed:
-   *     notNull: true,
-   *     collation: 'C',
-   *     default: db.sql`'default text'`,
-   *     check: db.sql`length(value) > 10`,
-   *
-   *     // cascade is used when dropping domain
-   *     cascade: true,
-   *   });
+   *   await db.createDomain('schemaName.domainName', (t) =>
+   *     t
+   *       .text()
+   *       .nullable()
+   *       .collate('C')
+   *       .default('default text')
+   *       .check(db.sql`length(value) > 10`),
+   *   );
    * });
    * ```
    *
    * @param name - name of the domain
-   * @param fn - function returning a column type for the domain
-   * @param options - domain options
+   * @param fn - function returning a column type. Options `nullable`, `collate`, `default`, `check` will be applied to domain
    */
-  createDomain(
-    name: string,
-    fn: (t: CT) => ColumnType,
-    options?: Omit<
-      RakeDbAst.Domain,
-      'type' | 'action' | 'schema' | 'name' | 'baseType'
-    >,
-  ): Promise<void> {
-    return createDomain(this, this.up, name, fn, options);
+  createDomain(name: string, fn: DbDomainArg<CT>): Promise<void> {
+    return createDomain(this, this.up, name, fn);
   }
 
   /**
    * Drop the domain, create it on rollback. See {@link dropDomain}.
    *
    * @param name - name of the domain
-   * @param fn - function returning a column type for the domain
-   * @param options - domain options
+   * @param fn - function returning a column type. Options `nullable`, `collate`, `default`, `check` will be applied to domain
    */
-  dropDomain(
-    name: string,
-    fn: (t: CT) => ColumnType,
-    options?: Omit<
-      RakeDbAst.Domain,
-      'type' | 'action' | 'schema' | 'name' | 'baseType'
-    >,
-  ): Promise<void> {
-    return createDomain(this, !this.up, name, fn, options);
+  dropDomain(name: string, fn: DbDomainArg<CT>): Promise<void> {
+    return createDomain(this, !this.up, name, fn);
+  }
+
+  /**
+   * To rename a domain:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameDomain('oldName', 'newName');
+   *
+   *   // to move domain to a different schema
+   *   await db.renameDomain('oldSchema.domain', 'newSchema.domain');
+   * });
+   * ```
+   *
+   * @param from - old domain name (can include schema)
+   * @param to - new domain name (can include schema)
+   */
+  renameDomain(from: string, to: string): Promise<void> {
+    return renameType(this, from, to, 'DOMAIN');
   }
 
   /**
@@ -1695,11 +1702,7 @@ const createDomain = async <CT extends RakeDbColumnTypes>(
   migration: Migration<CT>,
   up: boolean,
   name: string,
-  fn: (t: CT) => ColumnType,
-  options?: Omit<
-    RakeDbAst.Domain,
-    'type' | 'action' | 'schema' | 'name' | 'baseType'
-  >,
+  fn: DbDomainArg<CT>,
 ): Promise<void> => {
   const [schema, domainName] = getSchemaAndTableFromName(name);
 
@@ -1709,31 +1712,31 @@ const createDomain = async <CT extends RakeDbColumnTypes>(
     schema,
     name: domainName,
     baseType: fn(migration.columnTypes),
-    ...options,
   };
 
   let query;
   const values: unknown[] = [];
   const quotedName = quoteWithSchema(ast);
   if (ast.action === 'create') {
-    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(ast.baseType)}${
-      ast.collation
+    const column = ast.baseType;
+    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(column)}${
+      column.data.collate
         ? `
-COLLATION ${singleQuote(ast.collation)}`
+COLLATE "${column.data.collate}"`
         : ''
     }${
-      ast.default
+      column.data.default !== undefined
         ? `
-DEFAULT ${ast.default.toSQL({ values })}`
+DEFAULT ${encodeColumnDefault(column.data.default, values)}`
         : ''
-    }${ast.notNull || ast.check ? '\n' : ''}${[
-      ast.notNull && 'NOT NULL',
-      ast.check && `CHECK ${ast.check.toSQL({ values })}`,
+    }${!column.data.isNullable || column.data.check ? '\n' : ''}${[
+      !column.data.isNullable && 'NOT NULL',
+      column.data.check && `CHECK (${column.data.check.toSQL({ values })})`,
     ]
       .filter(Boolean)
       .join(' ')}`;
   } else {
-    query = `DROP DOMAIN ${quotedName}${ast.cascade ? ' CASCADE' : ''}`;
+    query = `DROP DOMAIN ${quotedName}`;
   }
 
   await migration.adapter.query({

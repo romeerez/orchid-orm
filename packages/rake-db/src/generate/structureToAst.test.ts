@@ -22,7 +22,7 @@ import {
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName } from '../migration/migrationUtils';
-import { isRawSQL, RawSQLBase, TemplateLiteralArgs } from 'orchid-core';
+import { isRawSQL, TemplateLiteralArgs } from 'orchid-core';
 import { asMock } from 'test-utils';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 
@@ -289,7 +289,7 @@ describe('structureToAst', () => {
 
       const { default: def } = ast.shape.timestamp.data;
       expect(def && typeof def === 'object' && isRawSQL(def)).toBe(true);
-      expect((def as RawSQLBase)._sql).toBe('now()');
+      expect(def).toEqual(raw`now()`);
     });
 
     it('should replace current_timestamp and transaction_timestamp() with now() in timestamp default', async () => {
@@ -314,9 +314,9 @@ describe('structureToAst', () => {
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
-      expect((ast.shape.one.data.default as RawSQLBase)._sql).toBe('now()');
-      expect((ast.shape.two.data.default as RawSQLBase)._sql).toBe('now()');
-      expect((ast.shape.three.data.default as RawSQLBase)._sql).toBe('now()');
+      expect(ast.shape.one.data.default).toEqual(raw`now()`);
+      expect(ast.shape.two.data.default).toEqual(raw`now()`);
+      expect(ast.shape.three.data.default).toEqual(raw`now()`);
     });
 
     describe('serial column', () => {
@@ -1008,8 +1008,8 @@ describe('structureToAst', () => {
     it('should add domain', async () => {
       const domain = dbStructureMockFactory.domain({
         schemaName: 'custom',
-        notNull: true,
-        collation: 'C',
+        isNullable: false,
+        collate: 'C',
         default: '123',
         check: 'VALUE = 42',
       });
@@ -1023,10 +1023,13 @@ describe('structureToAst', () => {
         action: 'create',
         name: domain.name,
         baseType: expect.any(IntegerColumn),
-        notNull: true,
-        collation: 'C',
-        default: raw({ raw: '123' }),
-        check: raw({ raw: 'VALUE = 42' }),
+      });
+
+      expect(ast.baseType.data).toMatchObject({
+        isNullable: false,
+        collate: 'C',
+        default: raw`123`,
+        check: raw`VALUE = 42`,
       });
     });
 

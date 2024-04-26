@@ -842,29 +842,47 @@ change(async (db) => {
 
 [//]: # 'has JSDoc'
 
-Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+Domain is a custom database type that is based on other type and can include `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
-`createDomain` and `dropDomain` take a domain name as first argument, callback returning inner column type as a second, and optional object with parameters as third.
+Construct a column type in the function as the second argument.
+
+Specifiers [nullable](/guide/common-column-methods.html#nullable), [default](/guide/common-column-methods.html#default), [check](/guide/migration-column-methods.html#check), [collate](/guide/migration-column-methods.html#collate)
+will be saved to the domain type on database level.
 
 ```ts
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createDomain('domainName', (t) => t.integer(), {
-    check: db.sql`value = 42`,
-  });
+  await db.createDomain('domainName', (t) =>
+    t.integer().check(db.sql`value = 42`),
+  );
 
   // use `schemaName.domainName` format to specify a schema
-  await db.createDomain('schemaName.domainName', (t) => t.text(), {
-    // unlike columns, domain is nullable by default, use notNull when needed:
-    notNull: true,
-    collation: 'C',
-    default: db.sql`'default text'`,
-    check: db.sql`length(value) > 10`,
+  await db.createDomain('schemaName.domainName', (t) =>
+    t
+      .text()
+      .nullable()
+      .collate('C')
+      .default('default text')
+      .check(db.sql`length(value) > 10`),
+  );
+});
+```
 
-    // cascade is used when dropping domain
-    cascade: true,
-  });
+## renameDomain
+
+[//]: # 'has JSDoc'
+
+To rename a domain:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.renameDomain('oldName', 'newName');
+
+  // to move domain to a different schema
+  await db.renameDomain('oldSchema.domain', 'newSchema.domain');
 });
 ```
 

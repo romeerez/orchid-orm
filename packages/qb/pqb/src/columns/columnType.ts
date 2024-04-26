@@ -134,7 +134,7 @@ export interface ColumnFromDbParams {
   numericScale?: number;
   dateTimePrecision?: number;
   compression?: string;
-  collation?: string;
+  collate?: string;
 }
 
 export interface PickColumnData {

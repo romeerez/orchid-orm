@@ -897,8 +897,7 @@ describe('astToGenerateItem', () => {
         type: 'domain',
         action: action === 'add' ? 'create' : 'drop',
         name: 'domain',
-        baseType: t.integer(),
-        collation: 'customCollation',
+        baseType: t.integer().collate('customCollation'),
       });
 
       act();

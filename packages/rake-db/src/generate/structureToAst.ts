@@ -17,7 +17,6 @@ import {
   ForeignKeyOptions,
   instantiateColumn,
   raw,
-  simplifyColumnDefault,
   TableData,
   ColumnsByType,
   Adapter,
@@ -140,10 +139,6 @@ export const structureToAst = async (
       schema: it.schemaName === ctx.currentSchema ? undefined : it.schemaName,
       name: it.name,
       baseType: domains[`${it.schemaName}.${it.name}`],
-      notNull: it.notNull,
-      collation: it.collation,
-      default: simplifyColumnDefault(it.default),
-      check: it.check ? raw({ raw: it.check }) : undefined,
     });
   }
 
@@ -183,20 +178,25 @@ export const makeDomainsMap = (
   const domains: DbStructureDomainsMap = {};
 
   for (const it of data.domains) {
-    domains[`${it.schemaName}.${it.name}`] = instantiateDbColumn(
-      ctx,
-      data,
-      domains,
-      {
-        schemaName: it.schemaName,
-        name: it.name,
-        type: it.type,
-        typeSchema: it.typeSchema,
-        isArray: it.isArray,
-        tableName: '',
-        isNullable: false,
-      },
-    );
+    const column = instantiateDbColumn(ctx, data, domains, {
+      schemaName: it.schemaName,
+      name: it.name,
+      type: it.type,
+      typeSchema: it.typeSchema,
+      isArray: it.isArray,
+      tableName: '',
+      isNullable: it.isNullable,
+      collate: it.collate,
+      default: it.default,
+    });
+
+    if (it.check) {
+      column.data.check = new RawSQL([
+        [it.check],
+      ] as unknown as TemplateLiteralArgs);
+    }
+
+    domains[`${it.schemaName}.${it.name}`] = column;
   }
 
   return domains;

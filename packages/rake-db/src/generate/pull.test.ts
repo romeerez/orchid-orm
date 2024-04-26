@@ -248,7 +248,7 @@ change(async (db) => {
     columnName: t.name('column_name').integer(),
     domainColumn: t.array(t.domain('schema.domain').as(t.integer())),
     customTypeColumn: t.type('schema.customType'),
-    jsonArray: t.json().default(t.sql({ raw: '\\'[]\\'' })),
+    jsonArray: t.json().default(t.sql\`'[]'\`),
     ...t.timestamps(),
   }));
 });

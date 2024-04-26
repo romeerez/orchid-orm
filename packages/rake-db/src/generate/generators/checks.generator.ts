@@ -1,8 +1,9 @@
-import { ChangeTableData, CompareExpression } from './tables.generator';
+import { ChangeTableData } from './tables.generator';
 import { ColumnType, RawSQL, TableData } from 'pqb';
 import { RawSQLBase, TemplateLiteralArgs } from 'orchid-core';
 import { DbStructure } from '../dbStructure';
 import { RakeDbAst } from 'rake-db';
+import { CompareExpression } from './generators.utils';
 
 export const processChecks = (
   ast: RakeDbAst[],

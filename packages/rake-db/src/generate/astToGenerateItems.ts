@@ -147,8 +147,9 @@ export const astToGenerateItem = (
     case 'domain': {
       const schema = ast.schema ?? currentSchema;
       (ast.action === 'create' ? add : drop).push(`${schema}.${ast.name}`);
-      deps.push(schema, resolveType(ast.baseType.dataType));
-      if (ast.collation) deps.push(ast.collation);
+      const column = ast.baseType;
+      deps.push(schema, resolveType(column.dataType));
+      if (column.data.collate) deps.push(column.data.collate);
       break;
     }
     case 'constraint': {

@@ -1,7 +1,7 @@
 import { RawSQL } from '../sql/rawSql';
 import { ColumnFromDbParams } from './columnType';
 import { TableData } from './columnTypes';
-import { ColumnTypeBase, RecordString } from 'orchid-core';
+import { ColumnTypeBase, RecordString, TemplateLiteralArgs } from 'orchid-core';
 
 const knownDefaults: RecordString = {
   current_timestamp: 'now()',
@@ -10,8 +10,9 @@ const knownDefaults: RecordString = {
 
 export const simplifyColumnDefault = (value?: string) => {
   if (typeof value === 'string') {
-    const lower = value.toLowerCase();
-    return new RawSQL(knownDefaults[lower] || value);
+    return new RawSQL([
+      [knownDefaults[value.toLowerCase()] || value],
+    ] as unknown as TemplateLiteralArgs);
   }
   return;
 };
@@ -31,7 +32,7 @@ export const instantiateColumn = (
       dateTimePrecision && dateTimePrecision !== 6
         ? dateTimePrecision
         : undefined,
-    collate: params.collation,
+    collate: params.collate,
     default: simplifyColumnDefault(params.default),
   });
 

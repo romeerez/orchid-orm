@@ -1,4 +1,5 @@
 import {
+  DbDomainArg,
   DbExtension,
   Query,
   QueryInternal,
@@ -72,6 +73,9 @@ export interface DbSharedOptions extends QueryLogOptions {
   autoPreparedStatements?: boolean;
   noPrimaryKey?: NoPrimaryKeyOption;
   extensions?: (string | RecordString)[];
+  domains?: {
+    [K: string]: DbDomainArg<DefaultColumnTypes<DefaultSchemaConfig>>;
+  };
 }
 
 export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
@@ -715,6 +719,8 @@ export const _initQueryBuilder = (
     }
     qb.internal.extensions = arr;
   }
+
+  qb.internal.domains = options.domains;
 
   return (qb.queryBuilder = qb as never);
 };

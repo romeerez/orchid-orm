@@ -188,7 +188,7 @@ change(async (db) => {
               dbStructureMockFactory.column({
                 type: 'varchar',
                 maxChars: 10,
-                collation: 'fromCollation',
+                collate: 'fromCollation',
                 compression: 'p',
               }),
             ],
@@ -326,8 +326,8 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    valueChanged: t.change(t.integer().default(t.sql({ raw: '2' })), t.integer().default(3)),
-    sqlChanged: t.change(t.integer().default(t.sql({ raw: '(1 + 2)' })), t.integer().default(t.sql\`1 + 3\`)),
+    valueChanged: t.change(t.integer().default(t.sql\`2\`), t.integer().default(3)),
+    sqlChanged: t.change(t.integer().default(t.sql\`(1 + 2)\`), t.integer().default(t.sql\`1 + 3\`)),
   }));
 });
 `);

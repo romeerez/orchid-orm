@@ -45,7 +45,7 @@ export namespace DbStructure {
     dateTimePrecision?: number;
     default?: string;
     isNullable: boolean;
-    collation?: string;
+    collate?: string;
     compression?: 'p' | 'l'; // p for pglz, l for lz4
     comment?: string;
     identity?: {
@@ -140,12 +140,12 @@ export namespace DbStructure {
     type: string;
     typeSchema: string;
     isArray: boolean;
-    notNull: boolean;
+    isNullable: boolean;
     maxChars?: number;
     numericPrecision?: number;
     numericScale?: number;
     dateTimePrecision?: number;
-    collation?: string;
+    collate?: string;
     default?: string;
     check?: string;
   }
@@ -207,7 +207,7 @@ const columnsSql = ({
     END AS information_schema.character_data
   ) AS "default",
   NOT (a.attnotnull OR (t.typtype = 'd' AND t.typnotnull)) AS "isNullable",
-  co.collname AS "collation",
+  co.collname AS "collate",
   NULLIF(a.attcompression, '') AS compression,
   pgd.description AS "comment",
   (
@@ -508,15 +508,15 @@ const domainsSql = `SELECT
   d.typname AS "name",
   t.typname AS "type",
   s.nspname AS "typeSchema",
-  d.typnotnull AS "notNull",
+  NOT d.typnotnull AS "isNullable",
   d.typcategory = 'A' AS "isArray",
   character_maximum_length AS "maxChars",
   numeric_precision AS "numericPrecision",
   numeric_scale AS "numericScale",
   datetime_precision AS "dateTimePrecision",
-  collation_name AS "collation",
+  collation_name AS "collate",
   domain_default AS "default",
-  pg_get_expr(conbin, conrelid) AS "expression"
+  pg_get_expr(conbin, conrelid) AS "check"
 FROM pg_catalog.pg_type d
 JOIN pg_catalog.pg_namespace n ON n.oid = d.typnamespace
 JOIN information_schema.domains i

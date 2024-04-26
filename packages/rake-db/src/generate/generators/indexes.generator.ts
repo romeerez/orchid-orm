@@ -3,8 +3,9 @@ import { deepCompare, RecordUnknown, toArray } from 'orchid-core';
 import { AnyRakeDbConfig } from '../../config';
 import { RakeDbAst } from '../../ast';
 import { getIndexName } from '../../migration/migrationUtils';
-import { ChangeTableData, CompareExpression } from './tables.generator';
+import { ChangeTableData } from './tables.generator';
 import { DbStructure } from '../dbStructure';
+import { CompareExpression } from './generators.utils';
 
 export const processIndexes = (
   config: AnyRakeDbConfig,

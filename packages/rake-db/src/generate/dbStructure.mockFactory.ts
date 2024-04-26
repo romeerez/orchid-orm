@@ -43,7 +43,7 @@ const domain: DbStructure.Domain = {
   name: 'domain',
   type: 'int4',
   typeSchema: 'pg_catalog',
-  notNull: false,
+  isNullable: false,
   isArray: false,
 };
 

@@ -59,11 +59,11 @@ const domain: RakeDbAst.Domain = {
   action: 'create',
   schema: 'schema',
   name: 'domainName',
-  baseType: t.integer(),
-  notNull: true,
-  collation: 'C',
-  default: raw({ raw: '123' }),
-  check: raw({ raw: 'VALUE = 42' }),
+  baseType: t
+    .integer()
+    .collate('C')
+    .default(raw`123`)
+    .check(raw`VALUE = 42`),
 };
 
 const collation: RakeDbAst.Collation = {
@@ -489,11 +489,11 @@ change(async (db) => {
           shape: {
             createdAt: {
               type: 'drop',
-              item: t.timestamp().default(raw({ raw: 'now()' })),
+              item: t.timestamp().default(raw`now()`),
             },
             updatedAt: {
               type: 'drop',
-              item: t.timestamp().default(raw({ raw: 'now()' })),
+              item: t.timestamp().default(raw`now()`),
             },
           },
           add: {},
@@ -955,12 +955,7 @@ change(async (db) => {
         `import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createDomain('schema.domainName', (t) => t.integer(), {
-    notNull: true,
-    collation: 'C',
-    default: db.sql({ raw: '123' }),
-    check: db.sql({ raw: 'VALUE = 42' }),
-  });
+  await db.createDomain('schema.domainName', (t) => t.integer().default(t.sql\`123\`).check(t.sql\`VALUE = 42\`).collate('C'));
 });
 `,
       );

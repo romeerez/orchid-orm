@@ -27,15 +27,18 @@ import {
   Spread,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
-import { TableData } from '../columns';
+import { ColumnType, TableData } from '../columns';
 
 export interface DbExtension {
   name: string;
   version?: string;
 }
 
+export type DbDomainArg<ColumnTypes> = (columnTypes: ColumnTypes) => ColumnType;
+
 export interface QueryInternal extends QueryInternalBase, TableData {
   extensions?: DbExtension[];
+  domains?: { [K: string]: DbDomainArg<any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export type SelectableFromShape<

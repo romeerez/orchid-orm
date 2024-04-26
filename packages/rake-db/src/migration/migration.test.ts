@@ -510,10 +510,9 @@ describe('migration', () => {
     it(`should add and drop an extension`, async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('extensionName', {
+          db[action]('schemaName.extensionName', {
             dropIfExists: true,
             createIfNotExists: true,
-            schema: 'schemaName',
             version: '123',
             cascade: true,
           }),
@@ -764,24 +763,102 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
     it(`should create and drop domain`, async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('schema.domain', (t) => t.integer(), {
-            collation: 'C',
-            notNull: true,
-            default: db.sql`123`,
-            check: db.sql`VALUE = 42`,
-            cascade: true,
-          }),
+          db[action]('schema.domain', (t) =>
+            t
+              .integer()
+              .collate('C')
+              .default(123)
+              .check(t.sql`VALUE = 42`),
+          ),
         () =>
           expectSql(`
             CREATE DOMAIN "schema"."domain" AS integer
-            COLLATION 'C'
+            COLLATE "C"
             DEFAULT 123
-            NOT NULL CHECK VALUE = 42
+            NOT NULL CHECK (VALUE = 42)
           `),
         () =>
           expectSql(`
-            DROP DOMAIN "schema"."domain" CASCADE
+            DROP DOMAIN "schema"."domain"
           `),
+      );
+    });
+
+    it(`should create and drop nullable domain`, async () => {
+      await testUpAndDown(
+        (action) => db[action]('schema.domain', (t) => t.integer().nullable()),
+        () =>
+          expectSql(`
+            CREATE DOMAIN "schema"."domain" AS integer
+          `),
+        () =>
+          expectSql(`
+            DROP DOMAIN "schema"."domain"
+          `),
+      );
+    });
+  });
+
+  describe('renameDomain', () => {
+    const testRenameType = makeTestUpAndDown('renameDomain');
+
+    it('should rename a domain', async () => {
+      await testRenameType(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "to" RENAME TO "from"
+          `),
+      );
+    });
+
+    it('should rename a domain and change schema', async () => {
+      await testRenameType(
+        (action) => db[action]('a.from', 'b.to'),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "a"."from" RENAME TO "to"`,
+            `ALTER DOMAIN "a"."to" SET SCHEMA "b"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "b"."to" RENAME TO "from"`,
+            `ALTER DOMAIN "b"."from" SET SCHEMA "a"`,
+          ]),
+      );
+    });
+
+    it('should only change schema', async () => {
+      await testRenameType(
+        (action) => db[action]('a.t', 'b.t'),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "a"."t" SET SCHEMA "b"
+          `),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "b"."t" SET SCHEMA "a"
+          `),
+      );
+    });
+
+    it('should set default schema when it is not set', async () => {
+      await testRenameType(
+        (action) => db[action]('a.from', 'to'),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "a"."from" RENAME TO "to"`,
+            `ALTER DOMAIN "a"."to" SET SCHEMA "public"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "to" RENAME TO "from"`,
+            `ALTER DOMAIN "from" SET SCHEMA "a"`,
+          ]),
       );
     });
   });

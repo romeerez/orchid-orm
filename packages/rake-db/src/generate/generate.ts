@@ -2,30 +2,32 @@ import {
   Adapter,
   AdapterOptions,
   ColumnsShape,
-  DbExtension,
+  Query,
+  QueryInternal,
   QueryWithTable,
 } from 'pqb';
 import {
   AnyRakeDbConfig,
   makeFileVersion,
   RakeDbAst,
-  RakeDbConfigDb,
   writeMigrationFile,
 } from 'rake-db';
 import { introspectDbSchema } from './dbStructure';
 import { astToMigration } from './astToMigration';
-import { QueryColumn } from 'orchid-core';
+import { QueryColumn, RecordUnknown } from 'orchid-core';
 import { getSchemaAndTableFromName } from '../common';
 import { processSchemas } from './generators/schemas.generator';
 import { EnumItem, processEnums } from './generators/enums.generator';
 import { processTables } from './generators/tables.generator';
 import { processExtensions } from './generators/extensions.generator';
+import { CodeDomain, processDomains } from './generators/domains.generator';
+import { makeDomainsMap, makeStructureToAstCtx } from './structureToAst';
 
 interface ActualItems {
   schemas: Set<string>;
   enums: Map<string, EnumItem>;
   tables: QueryWithTable[];
-  extensions?: DbExtension[];
+  domains: CodeDomain[];
 }
 
 export const generate = async (
@@ -37,18 +39,36 @@ export const generate = async (
   const adapters = getAdapters(options);
   const currentSchema = adapters[0].schema ?? 'public';
   const dbStructure = await migrateAndPullStructures(adapters);
+  const db = await config.db();
+  const { columnTypes, internal } = db.$queryBuilder;
 
-  const { schemas, enums, tables, extensions } = await getActualItems(
-    config.db,
+  const { schemas, enums, tables, domains } = await getActualItems(
+    db,
     currentSchema,
+    internal,
+    columnTypes,
   );
+
+  const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
+  const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 
   const ast: RakeDbAst[] = [];
   await processSchemas(ast, schemas, dbStructure);
-  processExtensions(ast, dbStructure, currentSchema, extensions);
+  processExtensions(ast, dbStructure, currentSchema, internal.extensions);
+  await processDomains(
+    ast,
+    adapters[0],
+    structureToAstCtx,
+    domainsMap,
+    dbStructure,
+    currentSchema,
+    domains,
+  );
   await processEnums(ast, enums, dbStructure, currentSchema);
   await processTables(
     ast,
+    structureToAstCtx,
+    domainsMap,
     adapters[0],
     tables,
     dbStructure,
@@ -139,24 +159,25 @@ const compareDbStructures = (
 };
 
 const getActualItems = async (
-  db: RakeDbConfigDb,
+  db: RecordUnknown,
   currentSchema: string,
+  internal: QueryInternal,
+  columnTypes: unknown,
 ): Promise<ActualItems> => {
   const tableNames = new Set<string>();
   const habtmTables = new Map<string, QueryWithTable>();
-  const exported = await db();
 
   const actualItems: ActualItems = {
-    schemas: new Set(),
+    schemas: new Set(undefined),
     enums: new Map(),
     tables: [],
-    extensions: exported.$queryBuilder.internal.extensions,
+    domains: [],
   };
 
-  for (const key in exported) {
+  for (const key in db) {
     if (key[0] === '$') continue;
 
-    const table = exported[key as keyof typeof exported];
+    const table = db[key as keyof typeof db] as Query;
 
     if (!table.table) {
       throw new Error(`Table ${key} is missing table property`);
@@ -192,6 +213,21 @@ const getActualItems = async (
       } else if (column.dataType === 'enum') {
         processEnumColumn(column, currentSchema, actualItems);
       }
+    }
+  }
+
+  if (internal.domains) {
+    for (const key in internal.domains) {
+      const [schemaName = currentSchema, name] = getSchemaAndTableFromName(key);
+      const column = internal.domains[key](columnTypes);
+
+      actualItems.schemas.add(schemaName);
+
+      actualItems.domains.push({
+        schemaName,
+        name,
+        column,
+      });
     }
   }
 

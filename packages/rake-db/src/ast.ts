@@ -7,7 +7,7 @@ import {
   TableData,
 } from 'pqb';
 import { DropMode } from './migration/migration';
-import { ColumnTypeBase, RawSQLBase, RecordString } from 'orchid-core';
+import { RawSQLBase, RecordString } from 'orchid-core';
 
 export type RakeDbAst =
   | RakeDbAst.Table
@@ -103,7 +103,7 @@ export namespace RakeDbAst {
 
   export interface RenameType {
     type: 'renameType';
-    kind: 'TABLE' | 'TYPE';
+    kind: 'TABLE' | 'TYPE' | 'DOMAIN';
     fromSchema?: string;
     from: string;
     toSchema?: string;
@@ -177,12 +177,7 @@ export namespace RakeDbAst {
     action: 'create' | 'drop';
     schema?: string;
     name: string;
-    baseType: ColumnTypeBase;
-    notNull?: boolean;
-    collation?: string;
-    default?: RawSQLBase;
-    check?: RawSQLBase;
-    cascade?: boolean;
+    baseType: ColumnType;
   }
 
   // Database collation.

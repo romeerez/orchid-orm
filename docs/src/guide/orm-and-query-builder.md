@@ -50,9 +50,6 @@ export const db = orchidORM(
 
     // option to create named prepared statements implicitly, false by default
     autoPreparedStatements: true,
-
-    // list extensions to be tracked by migration code generator
-    extensions: ['pg_trgm'],
   },
   {
     user: UserTable,
