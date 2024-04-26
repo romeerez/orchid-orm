@@ -1,4 +1,4 @@
-import { Adapter, AdapterOptions } from 'pqb';
+import { Adapter, AdapterOptions, DbSharedOptions } from 'pqb';
 import { ColumnsShapeBase, createBaseTable, orchidORM } from 'orchid-orm';
 import { testConfig } from '../../rake-db.test-utils';
 import { AnyRakeDbConfig } from 'rake-db';
@@ -60,15 +60,16 @@ const arrange = (arg: {
   tables?: (typeof BaseTable)[];
   selects?: number[];
   compareExpressions?: boolean[];
+  dbOptions?: DbSharedOptions;
 }) => {
   config = {
-    db: (() =>
-      arg.tables
-        ? orchidORM(
-            { noPrimaryKey: 'ignore' },
-            Object.fromEntries(arg.tables.map((klass) => [klass.name, klass])),
-          )
-        : {}) as unknown as AnyRakeDbConfig['db'],
+    db: () =>
+      orchidORM(
+        { noPrimaryKey: 'ignore', ...arg.dbOptions },
+        arg.tables
+          ? Object.fromEntries(arg.tables.map((klass) => [klass.name, klass]))
+          : {},
+      ),
     ...(arg.config ?? defaultConfig),
   };
   options = arg.options ?? defaultOptions;

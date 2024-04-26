@@ -35,15 +35,26 @@ export const astToMigration = (
   const items = astToGenerateItems(asts, currentSchema);
 
   const toBeAdded = new Set<string>();
+  const toBeDropped = new Set<string>();
   const remainingDeps = new Map<string, number>();
   const added = new Set<string>();
+  const dropped = new Set<string>();
   const groups: RakeDbAst[][] = [[]];
   const cycleAdd = new Set<string>();
+  const cycleDrop = new Set<string>();
   const cycleDeps = new Map<string, number>();
 
   for (const item of items) {
     for (const add of item.add) {
       toBeAdded.add(add);
+    }
+
+    for (const drop of item.drop) {
+      // `toBeDropped` contains only those items that are dropped and added in separate asts.
+      // Skip it from `toBeDropped` if, for example, primary key is dropped and added inside a single table change.
+      if (!item.add.has(drop)) {
+        toBeDropped.add(drop);
+      }
     }
 
     for (const dep of item.deps) {
@@ -76,8 +87,23 @@ export const astToMigration = (
       }
 
       if (satisfied) {
+        // When the same thing is dropped and then added in a single migration,
+        // make it to first drop and then add at a separate section to preserve the correct `down` order.
+        for (const key of item.add) {
+          if (toBeDropped.has(key) && !dropped.has(key)) {
+            satisfied = false;
+            break;
+          }
+        }
+      }
+
+      if (satisfied) {
         for (const key of item.add) {
           cycleAdd.add(key);
+        }
+
+        for (const key of item.drop) {
+          cycleDrop.add(key);
         }
 
         for (const key of item.deps) {
@@ -109,6 +135,10 @@ export const astToMigration = (
 
     for (const add of cycleAdd) {
       added.add(add);
+    }
+
+    for (const drop of cycleDrop) {
+      dropped.add(drop);
     }
 
     for (const [key, num] of cycleDeps) {
@@ -406,16 +436,12 @@ const astEncoders: {
     )});`;
   },
   extension(ast) {
-    const code: Code[] = [`await db.createExtension(${singleQuote(ast.name)}`];
-    if (ast.schema || ast.version) {
+    const code: Code[] = [
+      `await db.${ast.action}Extension(${quoteSchemaTable(ast)}`,
+    ];
+    if (ast.version) {
       addCode(code, ', {');
-      if (ast.schema) {
-        code.push([`schema: ${singleQuote(ast.schema)},`]);
-      }
-      if (ast.version) {
-        code.push([`version: ${singleQuote(ast.version)},`]);
-      }
-      addCode(code, '}');
+      code.push([`version: ${singleQuote(ast.version)},`], '}');
     }
     addCode(code, ');');
     return code;

@@ -122,15 +122,18 @@ export namespace RakeDbAst {
     to: string;
   }
 
-  export interface Extension {
-    type: 'extension';
-    action: 'create' | 'drop';
-    name: string;
-    schema?: string;
+  export interface ExtensionArg {
     version?: string;
     cascade?: boolean;
     createIfNotExists?: boolean;
     dropIfExists?: boolean;
+  }
+
+  export interface Extension extends ExtensionArg {
+    type: 'extension';
+    action: 'create' | 'drop';
+    name: string;
+    schema?: string;
   }
 
   export interface Enum {

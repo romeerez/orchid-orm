@@ -3,10 +3,10 @@ import { RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
 
 export const processSchemas = async (
+  ast: RakeDbAst[],
   schemas: Set<string>,
   dbStructure: IntrospectedStructure,
-): Promise<RakeDbAst[]> => {
-  const ast: RakeDbAst[] = [];
+): Promise<void> => {
   const createSchemas: string[] = [];
   const dropSchemas: string[] = [];
 
@@ -38,11 +38,18 @@ export const processSchemas = async (
         renameSchemaInStructures(dbStructure.enums, from, schema);
         renameSchemaInStructures(dbStructure.domains, from, schema);
         renameSchemaInStructures(dbStructure.collations, from, schema);
+
         for (const table of dbStructure.tables) {
           for (const column of table.columns) {
             if (column.typeSchema === from) {
               column.typeSchema = schema;
             }
+          }
+        }
+
+        for (const ext of dbStructure.extensions) {
+          if (ext.schemaName === from) {
+            ext.schemaName = schema;
           }
         }
 
@@ -69,8 +76,6 @@ export const processSchemas = async (
       name: schema,
     });
   }
-
-  return ast;
 };
 
 const renameSchemaInStructures = (

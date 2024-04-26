@@ -29,7 +29,14 @@ import {
 import { QueryBase } from './queryBase';
 import { TableData } from '../columns';
 
-export interface QueryInternal extends QueryInternalBase, TableData {}
+export interface DbExtension {
+  name: string;
+  version?: string;
+}
+
+export interface QueryInternal extends QueryInternalBase, TableData {
+  extensions?: DbExtension[];
+}
 
 export type SelectableFromShape<
   Shape extends QueryColumns,

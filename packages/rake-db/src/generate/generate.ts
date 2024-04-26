@@ -1,7 +1,14 @@
-import { Adapter, AdapterOptions, ColumnsShape, QueryWithTable } from 'pqb';
+import {
+  Adapter,
+  AdapterOptions,
+  ColumnsShape,
+  DbExtension,
+  QueryWithTable,
+} from 'pqb';
 import {
   AnyRakeDbConfig,
   makeFileVersion,
+  RakeDbAst,
   RakeDbConfigDb,
   writeMigrationFile,
 } from 'rake-db';
@@ -12,11 +19,13 @@ import { getSchemaAndTableFromName } from '../common';
 import { processSchemas } from './generators/schemas.generator';
 import { EnumItem, processEnums } from './generators/enums.generator';
 import { processTables } from './generators/tables.generator';
+import { processExtensions } from './generators/extensions.generator';
 
 interface ActualItems {
   schemas: Set<string>;
   enums: Map<string, EnumItem>;
   tables: QueryWithTable[];
+  extensions?: DbExtension[];
 }
 
 export const generate = async (
@@ -29,23 +38,22 @@ export const generate = async (
   const currentSchema = adapters[0].schema ?? 'public';
   const dbStructure = await migrateAndPullStructures(adapters);
 
-  const { schemas, enums, tables } = await getActualItems(
+  const { schemas, enums, tables, extensions } = await getActualItems(
     config.db,
     currentSchema,
   );
 
-  const ast = await processSchemas(schemas, dbStructure);
-  const enumsAst = await processEnums(enums, dbStructure, currentSchema);
-
-  ast.push(
-    ...enumsAst,
-    ...(await processTables(
-      adapters[0],
-      tables,
-      dbStructure,
-      currentSchema,
-      config,
-    )),
+  const ast: RakeDbAst[] = [];
+  await processSchemas(ast, schemas, dbStructure);
+  processExtensions(ast, dbStructure, currentSchema, extensions);
+  await processEnums(ast, enums, dbStructure, currentSchema);
+  await processTables(
+    ast,
+    adapters[0],
+    tables,
+    dbStructure,
+    currentSchema,
+    config,
   );
 
   await Promise.all(adapters.map((x) => x.close()));
@@ -134,16 +142,17 @@ const getActualItems = async (
   db: RakeDbConfigDb,
   currentSchema: string,
 ): Promise<ActualItems> => {
+  const tableNames = new Set<string>();
+  const habtmTables = new Map<string, QueryWithTable>();
+  const exported = await db();
+
   const actualItems: ActualItems = {
     schemas: new Set(),
     enums: new Map(),
     tables: [],
+    extensions: exported.$queryBuilder.internal.extensions,
   };
 
-  const tableNames = new Set<string>();
-  const habtmTables = new Map<string, QueryWithTable>();
-
-  const exported = await db();
   for (const key in exported) {
     if (key[0] === '$') continue;
 

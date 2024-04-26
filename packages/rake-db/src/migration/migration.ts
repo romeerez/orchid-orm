@@ -39,6 +39,7 @@ import { RakeDbAst } from '../ast';
 import { columnTypeToSql } from './migrationUtils';
 import { createView } from './createView';
 import { RakeDbConfig } from '../config';
+import ExtensionArg = RakeDbAst.ExtensionArg;
 
 // Drop mode to use when dropping various database entities.
 export type DropMode = 'CASCADE' | 'RESTRICT';
@@ -877,10 +878,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param name - name of the extension
    * @param options - extension options
    */
-  createExtension(
-    name: string,
-    options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'> = {},
-  ): Promise<void> {
+  createExtension(name: string, options?: ExtensionArg): Promise<void> {
     return createExtension(this, this.up, name, options);
   }
 
@@ -890,13 +888,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param name - name of the extension
    * @param options - extension options
    */
-  dropExtension(
-    name: string,
-    options: Omit<
-      RakeDbAst.Extension,
-      'type' | 'action' | 'name' | 'values'
-    > = {},
-  ): Promise<void> {
+  dropExtension(name: string, options?: ExtensionArg): Promise<void> {
     return createExtension(this, !this.up, name, options);
   }
 
@@ -1624,12 +1616,15 @@ const createSchema = async (
 const createExtension = async (
   migration: Migration<RakeDbColumnTypes>,
   up: boolean,
-  name: string,
-  options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'>,
+  fullName: string,
+  options?: ExtensionArg,
 ): Promise<void> => {
+  const [schema, name] = getSchemaAndTableFromName(fullName);
+
   const ast: RakeDbAst.Extension = {
     type: 'extension',
     action: up ? 'create' : 'drop',
+    schema,
     name,
     ...options,
   };

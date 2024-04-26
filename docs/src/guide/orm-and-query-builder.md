@@ -37,7 +37,7 @@ export const db = orchidORM(
     // details for databaseURL are below
     databaseURL: process.env.DATABASE_URL,
 
-    // ssl and schema can be set here or as a databaseURL parameters:
+    // ssl and schema can be set here or as databaseURL parameters:
     ssl: true,
     schema: 'my_schema',
 
@@ -50,6 +50,9 @@ export const db = orchidORM(
 
     // option to create named prepared statements implicitly, false by default
     autoPreparedStatements: true,
+
+    // list extensions to be tracked by migration code generator
+    extensions: ['pg_trgm'],
   },
   {
     user: UserTable,

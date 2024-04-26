@@ -1,4 +1,9 @@
-import { Query, QueryInternal, SelectableFromShape } from './query';
+import {
+  DbExtension,
+  Query,
+  QueryInternal,
+  SelectableFromShape,
+} from './query';
 import {
   QueryMethods,
   handleResult,
@@ -46,6 +51,7 @@ import {
   QueryColumns,
   QueryColumnsInit,
   RecordUnknown,
+  RecordString,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -61,19 +67,24 @@ import { enableSoftDelete, SoftDeleteOption } from '../queryMethods/softDelete';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
+// Options that are also available in `orchidORM` of the ORM
+export interface DbSharedOptions extends QueryLogOptions {
+  autoPreparedStatements?: boolean;
+  noPrimaryKey?: NoPrimaryKeyOption;
+  extensions?: (string | RecordString)[];
+}
+
 export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
   | { adapter: Adapter }
   | Omit<AdapterOptions, 'log'>
 ) &
-  QueryLogOptions & {
+  DbSharedOptions & {
     schemaConfig?: SchemaConfig;
     // concrete column types or a callback for overriding standard column types
     // this types will be used in tables to define their columns
     columnTypes?:
       | ColumnTypes
       | ((t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes);
-    autoPreparedStatements?: boolean;
-    noPrimaryKey?: NoPrimaryKeyOption;
     // when set to true, all columns will be translated to `snake_case` when querying database
     snakeCase?: boolean;
     // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
@@ -634,16 +645,13 @@ export const createDb = <
 
   const transactionStorage = new AsyncLocalStorage<TransactionState>();
 
-  const qb = new Db(
+  const qb = _initQueryBuilder(
     adapter,
-    undefined as unknown as Db,
-    undefined,
-    anyShape,
     ct,
     transactionStorage,
     commonOptions,
+    options,
   );
-  qb.queryBuilder = qb as never;
 
   const tableConstructor: DbTableConstructor<ColumnTypes> = (
     table,
@@ -674,4 +682,39 @@ export const createDb = <
   }
 
   return db as never;
+};
+
+export const _initQueryBuilder = (
+  adapter: Adapter,
+  columnTypes: unknown,
+  transactionStorage: AsyncLocalStorage<TransactionState>,
+  commonOptions: DbTableOptions<undefined, QueryColumns>,
+  options: DbSharedOptions,
+): Db => {
+  const qb = new Db(
+    adapter,
+    undefined as unknown as Db,
+    undefined,
+    anyShape,
+    columnTypes,
+    transactionStorage,
+    commonOptions,
+    emptyObject,
+  );
+
+  if (options.extensions) {
+    const arr: DbExtension[] = [];
+    for (const x of options.extensions) {
+      if (typeof x === 'string') {
+        arr.push({ name: x });
+      } else {
+        for (const key in x) {
+          arr.push({ name: key, version: x[key] });
+        }
+      }
+    }
+    qb.internal.extensions = arr;
+  }
+
+  return (qb.queryBuilder = qb as never);
 };

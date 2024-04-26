@@ -201,8 +201,7 @@ change(async (db) => {
 
     expectResult(
       result,
-      template(`  await db.createExtension('extensionName', {
-    schema: 'schema',
+      template(`  await db.createExtension('schema.extensionName', {
     version: '123',
   });`),
     );

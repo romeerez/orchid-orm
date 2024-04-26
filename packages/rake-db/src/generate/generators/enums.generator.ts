@@ -9,11 +9,11 @@ export interface EnumItem {
 }
 
 export const processEnums = async (
+  ast: RakeDbAst[],
   enums: Map<string, EnumItem>,
   dbStructure: IntrospectedStructure,
   currentSchema: string,
-): Promise<RakeDbAst[]> => {
-  const ast: RakeDbAst[] = [];
+): Promise<void> => {
   const createEnums: EnumItem[] = [];
   const dropEnums: DbStructure.Enum[] = [];
 
@@ -150,8 +150,6 @@ export const processEnums = async (
       values: dbEnum.values,
     });
   }
-
-  return ast;
 };
 
 const renameColumnsTypeSchema = (

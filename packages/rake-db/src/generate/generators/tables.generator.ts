@@ -63,13 +63,13 @@ export interface TableShapes {
 }
 
 export const processTables = async (
+  ast: RakeDbAst[],
   adapter: Adapter,
   tables: QueryWithTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   config: AnyRakeDbConfig,
-): Promise<RakeDbAst[]> => {
-  const ast: RakeDbAst[] = [];
+): Promise<void> => {
   const createTables: QueryWithTable[] = collectCreateTables(
     tables,
     dbStructure,
@@ -114,8 +114,6 @@ export const processTables = async (
       tableToAst(structureToAstCtx, dbStructure, dbTable, 'drop', domainsMap),
     );
   }
-
-  return ast;
 };
 
 const collectCreateTables = (
