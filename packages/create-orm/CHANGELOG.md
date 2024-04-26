@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.1.3
+
+### Patch Changes
+
+- 064f399d: Republish create-orm script to fix demo migrations versions
+
 ## 0.1.2
 
 ### Patch Changes
