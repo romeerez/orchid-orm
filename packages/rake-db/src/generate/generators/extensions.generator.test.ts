@@ -1,6 +1,8 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -10,6 +12,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, makeStructure } = generatorsTestUtils;
+const { green, red, pale } = colors;
 
 describe('extensions', () => {
   beforeEach(jest.clearAllMocks);
@@ -33,6 +36,9 @@ change(async (db) => {
   });
 });
 `);
+
+    assert.report(`${green('+ create extension')} one
+${green('+ create extension')} schema.two ${pale('v1')}`);
   });
 
   it('should drop extension', async () => {
@@ -58,6 +64,8 @@ change(async (db) => {
   });
 });
 `);
+
+    assert.report(`${red('- drop extension')} schema.name ${pale('v1')}`);
   });
 
   it('should not recreate extension when it is not changed', async () => {
@@ -115,5 +123,8 @@ change(async (db) => {
   });
 });
 `);
+
+    assert.report(`${red('- drop extension')} schema.name ${pale('v1')}
+${green('+ create extension')} schema.name ${pale('v2')}`);
   });
 });

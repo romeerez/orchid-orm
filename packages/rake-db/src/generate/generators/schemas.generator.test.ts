@@ -1,5 +1,7 @@
 import { generatorsTestUtils } from './generators.test-utils';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -9,6 +11,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, BaseTable, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('schemas', () => {
   beforeEach(jest.clearAllMocks);
@@ -55,6 +58,13 @@ change(async (db) => {
   await db.changeTableSchema('two', 'public', 'two');
 });
 `);
+
+    assert.report(
+      `${green('+ create schema')} one`,
+      `${green('+ create schema')} two`,
+      `${yellow('~ change schema of table')} one ${yellow('=>')} one.one`,
+      `${yellow('~ change schema of table')} two ${yellow('=>')} two.two`,
+    );
   });
 
   it('should drop a db schema, do not drop the public schema', async () => {
@@ -84,6 +94,8 @@ change(async (db) => {
   await db.dropSchema('two');
 });
 `);
+
+    assert.report(`${red('- drop schema')} two`);
   });
 
   it('should create new schema and drop the old one when selecting `create schema` option', async () => {
@@ -116,6 +128,11 @@ change(async (db) => {
   await db.dropSchema('from');
 });
 `);
+
+    assert.report(
+      `${green('+ create schema')} to`,
+      `${red('- drop schema')} from`,
+    );
   });
 
   it('should rename schema when selecting `rename schema` option', async () => {
@@ -141,6 +158,8 @@ change(async (db) => {
   await db.renameSchema('from', 'to');
 });
 `);
+
+    assert.report(`${yellow('~ rename schema')} from ${yellow('=>')} to`);
   });
 
   it('should rename schema and drop other schema', async () => {
@@ -173,6 +192,11 @@ change(async (db) => {
   await db.dropSchema('drop');
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename schema')} from ${yellow('=>')} to`,
+      `${red('- drop schema')} drop`,
+    );
   });
 
   it('should change table schema when both schemas exist', async () => {
@@ -212,5 +236,10 @@ change(async (db) => {
   await db.changeTableSchema('two', 'to', 'from');
 });
 `);
+
+    assert.report(
+      `${yellow('~ change schema of table')} from.one ${yellow('=>')} to.one`,
+      `${yellow('~ change schema of table')} to.two ${yellow('=>')} from.two`,
+    );
   });
 });

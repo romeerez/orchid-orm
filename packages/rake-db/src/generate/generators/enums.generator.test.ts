@@ -1,6 +1,8 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -10,6 +12,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, table, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('enums', () => {
   beforeEach(jest.clearAllMocks);
@@ -42,6 +45,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${green('+ create enum')} numbers: (one, two, three)
+${green('+ create table')} table (2 columns)`);
   });
 
   it('should drop unused enum', async () => {
@@ -84,6 +90,10 @@ change(async (db) => {
   await db.dropEnum('public.numbers', ['one', 'two', 'three']);
 });
 `);
+
+    assert.report(`${red('- drop enum')} numbers: (one, two, three)
+${yellow('~ change table')} table:
+  ${red('- drop column')} numbers public.numbers`);
   });
 
   it('should change enum schema', async () => {
@@ -124,6 +134,12 @@ change(async (db) => {
   await db.changeTypeSchema('numbers', 'public', 'schema');
 });
 `);
+
+    assert.report(
+      `${yellow('~ change schema of type')} numbers ${yellow(
+        '=>',
+      )} schema.numbers`,
+    );
   });
 
   it('should drop the old and create a new enum after prompt', async () => {
@@ -173,6 +189,13 @@ change(async (db) => {
   await db.dropEnum('public.from', ['one', 'two', 'three']);
 });
 `);
+
+    assert.report(`${green('+ create enum')} to: (one, two, three)
+${red('- drop enum')} from: (one, two, three)
+${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.enum('public.from')
+      ${yellow('to')}: t.enum('public.to')`);
   });
 
   it('should rename enum after prompt', async () => {
@@ -212,6 +235,8 @@ change(async (db) => {
   await db.renameType('from', 'to');
 });
 `);
+
+    assert.report(`${yellow('~ rename type')} from ${yellow('=>')} to`);
   });
 
   it('should rename schema without touching enum', async () => {
@@ -254,6 +279,8 @@ change(async (db) => {
   await db.renameSchema('from', 'to');
 });
 `);
+
+    assert.report(`${yellow('~ rename schema')} from ${yellow('=>')} to`);
   });
 
   describe('recreating and renaming both schema and enum', () => {
@@ -319,6 +346,15 @@ change(async (db) => {
   await db.dropSchema('fromSchema');
 });
 `);
+
+      assert.report(`${green('+ create schema')} toSchema
+${red('- drop schema')} fromSchema
+${green('+ create enum')} toSchema.toEnum: (one, two, three)
+${red('- drop enum')} fromSchema.fromEnum: (one, two, three)
+${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.enum('fromSchema.fromEnum')
+      ${yellow('to')}: t.enum('toSchema.toEnum')`);
     });
 
     it('should recreate schema and rename enum', async () => {
@@ -343,6 +379,12 @@ change(async (db) => {
   await db.dropSchema('fromSchema');
 });
 `);
+
+      assert.report(`${green('+ create schema')} toSchema
+${red('- drop schema')} fromSchema
+${yellow('~ change schema and rename type')} fromSchema.fromEnum ${yellow(
+        '=>',
+      )} toSchema.toEnum`);
     });
 
     it('should rename schema and recreate enum', async () => {
@@ -373,6 +415,16 @@ change(async (db) => {
   await db.dropEnum('toSchema.fromEnum', ['one', 'two', 'three']);
 });
 `);
+
+      assert.report(`${yellow('~ rename schema')} fromSchema ${yellow(
+        '=>',
+      )} toSchema
+${green('+ create enum')} toSchema.toEnum: (one, two, three)
+${red('- drop enum')} toSchema.fromEnum: (one, two, three)
+${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.enum('toSchema.fromEnum')
+      ${yellow('to')}: t.enum('toSchema.toEnum')`);
     });
 
     it('should rename schema and enum', async () => {
@@ -393,6 +445,11 @@ change(async (db) => {
   await db.renameType('toSchema.fromEnum', 'toSchema.toEnum');
 });
 `);
+
+      assert.report(`${yellow('~ rename schema')} fromSchema ${yellow(
+        '=>',
+      )} toSchema
+${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
     });
   });
 
@@ -437,6 +494,8 @@ change(async (db) => {
   await db.addEnumValues('public.numbers', ['two', 'three']);
 });
 `);
+
+      assert.report(`${green('+ add values to enum')} numbers: two, three`);
     });
 
     it('should drop values from enum', async () => {
@@ -453,6 +512,8 @@ change(async (db) => {
   await db.dropEnumValues('public.numbers', ['two', 'three']);
 });
 `);
+
+      assert.report(`${red('- remove values from enum')} numbers: two, three`);
     });
 
     it('should recreate enum when values do not match', async () => {
@@ -469,6 +530,11 @@ change(async (db) => {
   await db.changeEnumValues('public.numbers', ['one', 'two'], ['three', 'four']);
 });
 `);
+
+      assert.report(
+        `${red('- remove values from enum')} numbers: one, two
+${green('+ add values to enum')} numbers: three, four`,
+      );
     });
 
     it('should do nothing if enum was not changed', async () => {

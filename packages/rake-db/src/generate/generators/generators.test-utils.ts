@@ -1,7 +1,7 @@
 import { Adapter, AdapterOptions, DbSharedOptions } from 'pqb';
 import { ColumnsShapeBase, createBaseTable, orchidORM } from 'orchid-orm';
 import { testConfig } from '../../rake-db.test-utils';
-import { AnyRakeDbConfig } from 'rake-db';
+import { AnyRakeDbConfig, migrate } from 'rake-db';
 import {
   DbStructure,
   introspectDbSchema,
@@ -74,6 +74,8 @@ const arrange = (arg: {
   };
   options = arg.options ?? defaultOptions;
 
+  asMock(migrate).mockResolvedValue(options.map((opts) => new Adapter(opts)));
+
   if (arg.structures) {
     for (const structure of arg.structures) {
       asMock(introspectDbSchema).mockResolvedValueOnce(structure);
@@ -105,8 +107,11 @@ const arrange = (arg: {
 const act = () => generate(options, config);
 
 const assert = {
-  migration: (code?: string) => {
+  migration(code?: string) {
     expect(asMock(fs.writeFile).mock.calls[0]?.[1]).toBe(code);
+  },
+  report(...logs: string[]) {
+    expect(asMock(config.logger?.log).mock.calls[0][0]).toBe(logs.join('\n'));
   },
 };
 

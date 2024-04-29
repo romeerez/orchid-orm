@@ -1,6 +1,8 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -10,6 +12,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, table, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('columns', () => {
   beforeEach(jest.clearAllMocks);
@@ -42,6 +45,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} name text`);
   });
 
   it('should drop a column', async () => {
@@ -74,6 +80,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop column')} name text`);
   });
 
   it('should change column type', async () => {
@@ -103,6 +112,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} name:
+    ${yellow('from')}: t.integer()
+      ${yellow('to')}: t.text()`);
   });
 
   it('should change column type when type schema is changed', async () => {
@@ -137,6 +151,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.type('from.custom')
+      ${yellow('to')}: t.type('to.custom')`);
   });
 
   it('should change column nullability', async () => {
@@ -171,6 +190,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.integer().nullable()
+      ${yellow('to')}: t.integer()`);
   });
 
   it('should change text data type properties', async () => {
@@ -207,6 +231,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.varchar(10).compression('p').collate('fromCollation')
+      ${yellow('to')}: t.varchar(20).compression('l').collate('toCollation')`);
   });
 
   it('change number data type properties', async () => {
@@ -242,6 +271,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.decimal(3, 7)
+      ${yellow('to')}: t.decimal(11, 13)`);
   });
 
   it('change date precision', async () => {
@@ -276,6 +310,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.timestamp(7)
+      ${yellow('to')}: t.timestamp(13)`);
   });
 
   it('change default', async () => {
@@ -331,6 +370,14 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} valueChanged:
+    ${yellow('from')}: t.integer().default(t.sql\`2\`)
+      ${yellow('to')}: t.integer().default(3)
+  ${yellow('~ change column')} sqlChanged:
+    ${yellow('from')}: t.integer().default(t.sql\`(1 + 2)\`)
+      ${yellow('to')}: t.integer().default(t.sql\`1 + 3\`)`);
   });
 
   it('change identity', async () => {
@@ -379,6 +426,18 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.identity()
+      ${yellow('to')}: t.identity({
+      always: true,
+      incrementBy: 2,
+      startWith: 3,
+      min: 4,
+      max: 5,
+      cache: 6,
+    })`);
   });
 
   it('change column comment', async () => {
@@ -413,6 +472,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.text().comment('from')
+      ${yellow('to')}: t.text().comment('to')`);
   });
 
   it('change to array type', async () => {
@@ -442,6 +506,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.integer()
+      ${yellow('to')}: t.array(t.integer())`);
   });
 
   it('change from array type', async () => {
@@ -475,6 +544,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} column:
+    ${yellow('from')}: t.array(t.integer())
+      ${yellow('to')}: t.integer()`);
   });
 
   describe('recreating and renaming', () => {
@@ -511,6 +585,10 @@ change(async (db) => {
   }));
 });
 `);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} to integer
+  ${red('- drop column')} from integer`);
     });
 
     it('should rename column when selected', async () => {
@@ -536,6 +614,9 @@ change(async (db) => {
   }));
 });
 `);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ rename column')} from ${yellow('=>')} to`);
     });
 
     it('should rename column when using custom name', async () => {
@@ -561,6 +642,9 @@ change(async (db) => {
   }));
 });
 `);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ rename column')} from ${yellow('=>')} to`);
     });
   });
 });

@@ -1,5 +1,6 @@
 import { generatorsTestUtils } from './generators/generators.test-utils';
 
+jest.mock('../commands/migrateOrRollback');
 jest.mock('../generate/dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),

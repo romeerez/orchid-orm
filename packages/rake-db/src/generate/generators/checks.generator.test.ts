@@ -1,6 +1,8 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -10,6 +12,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, table, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('checks', () => {
   beforeEach(jest.clearAllMocks);
@@ -43,6 +46,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add check')} sql`);
   });
 
   it('should drop a column check', async () => {
@@ -82,6 +88,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop check')} sql`);
   });
 
   it('should not recreate a column check when it is identical', async () => {
@@ -154,6 +163,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop check')} (id = 123)
+  ${green('+ add check')} id != 123`);
   });
 
   it('should create a table check', async () => {
@@ -186,6 +199,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add check')} sql`);
   });
 
   it('should be added together with a column', async () => {
@@ -215,6 +231,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} id integer, checks sql`);
   });
 
   it('should be dropped together with a column', async () => {
@@ -248,6 +267,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop column')} id integer, checks sql`);
   });
 
   it('should be added in a column change', async () => {
@@ -282,6 +304,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} id:
+    ${yellow('from')}: t.integer().nullable()
+      ${yellow('to')}: t.integer().check(t.sql\`sql\`)`);
   });
 
   it('should not be recreated when a column is renamed', async () => {
@@ -325,5 +352,8 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ rename column')} from ${yellow('=>')} to`);
   });
 });

@@ -1,7 +1,9 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { defaultSchemaConfig, UnknownColumn } from 'pqb';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -11,6 +13,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, BaseTable, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('tables', () => {
   beforeEach(jest.clearAllMocks);
@@ -86,6 +89,10 @@ change(async (db) => {
   );
 });
 `);
+
+      assert.report(
+        `${green('+ create table')} schema.one (4 columns, 1 index, 1 check)`,
+      );
     },
   );
 
@@ -168,6 +175,9 @@ change(async (db) => {
   await db.dropSchema('schema');
 });
 `);
+
+    assert.report(`${red('- drop schema')} schema
+${red('- drop table')} schema.one (4 columns, 1 index, 1 check)`);
   });
 
   it('should create a new table and drop the old one when choosing such option', async () => {
@@ -201,6 +211,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${green('+ create table')} two (0 columns, no primary key)`,
+      `${red('- drop table')} one (1 column)`,
+    );
   });
 
   it('should create a new table and drop the old one when choosing such option, with schema', async () => {
@@ -250,6 +265,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${green('+ create table')} to.two (0 columns, no primary key)`,
+      `${red('- drop table')} from.one (1 column)`,
+    );
   });
 
   it('should rename table when is selected so, and drop the remaining table', async () => {
@@ -290,6 +310,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename table')} one ${yellow('=>')} three`,
+      `${red('- drop table')} two (1 column)`,
+    );
   });
 
   it('should rename table when is selected so, and drop the remaining table, with schema', async () => {
@@ -348,6 +373,13 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change schema and rename table')} from.one ${yellow(
+        '=>',
+      )} to.three`,
+      `${red('- drop table')} from.two (1 column)`,
+    );
   });
 
   describe('hasAndBelongsToMany', () => {
@@ -408,6 +440,8 @@ change(async (db) => {
   }));
 });
 `);
+
+      assert.report(`${green('+ create table')} joinTable (2 columns)`);
     });
 
     it('should create join table just once when it is defined on both sides', async () => {
@@ -468,6 +502,8 @@ change(async (db) => {
   }));
 });
 `);
+
+      assert.report(`${green('+ create table')} joinTable (2 columns)`);
     });
 
     it('should throw if two join table do not match', async () => {

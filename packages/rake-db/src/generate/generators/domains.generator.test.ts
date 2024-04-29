@@ -1,6 +1,8 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -10,6 +12,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('domains', () => {
   beforeEach(jest.clearAllMocks);
@@ -40,6 +43,8 @@ change(async (db) => {
   await db.createDomain('schema.domain', (t) => t.integer().nullable().default(t.sql\`2 + 2\`).check(t.sql\`value = 42\`).collate('C'));
 });
 `);
+
+    assert.report(`${green('+ create domain')} schema.domain`);
   });
 
   it('should drop a domain', async () => {
@@ -66,6 +71,8 @@ change(async (db) => {
   await db.dropDomain('schema.domain', (t) => t.text().nullable().default(t.sql\`('a'::text || 'b'::text)\`).check(t.sql\`(VALUE = 'ab'::text)\`).collate('C'));
 });
 `);
+
+    assert.report(`${red('- drop domain')} schema.domain`);
   });
 
   it('should not recreate a domain when it is not changed', async () => {
@@ -133,6 +140,9 @@ change(async (db) => {
   await db.createDomain('schema.domain', (t) => t.text(1, 2).collate('C'));
 });
 `);
+
+    assert.report(`${red('- drop domain')} schema.domain
+${green('+ create domain')} schema.domain`);
   });
 
   it('should recreate a domain when sql value was changed', async () => {
@@ -175,6 +185,9 @@ change(async (db) => {
   await db.createDomain('schema.domain', (t) => t.text(1, 2).nullable().default(t.sql\`'a'||'c'\`).check(t.sql\`value = 'ab'\`).collate('C'));
 });
 `);
+
+    assert.report(`${red('- drop domain')} schema.domain
+${green('+ create domain')} schema.domain`);
   });
 
   it('should rename a domain when only name is changed', async () => {
@@ -206,6 +219,9 @@ change(async (db) => {
   await db.renameType('schema.from', 'schema.to');
 });
 `);
+    assert.report(
+      `${yellow('~ rename domain')} schema.from ${yellow('=>')} schema.to`,
+    );
   });
 
   it('should change domain schema', async () => {
@@ -237,6 +253,12 @@ change(async (db) => {
   await db.changeTypeSchema('domain', 'oldSchema', 'newSchema');
 });
 `);
+
+    assert.report(
+      `${yellow('~ change schema of domain')} oldSchema.domain ${yellow(
+        '=>',
+      )} newSchema.domain`,
+    );
   });
 
   it('should not change domain schema when renaming a schema', async () => {
@@ -267,5 +289,9 @@ change(async (db) => {
   await db.renameSchema('oldSchema', 'newSchema');
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename schema')} oldSchema ${yellow('=>')} newSchema`,
+    );
   });
 });

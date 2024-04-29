@@ -2,7 +2,9 @@ import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
 import { IndexColumnOptionsForColumn, IndexOptions } from 'pqb';
 import { DbStructure } from '../dbStructure';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -12,6 +14,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, table, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('primaryKey', () => {
   beforeEach(jest.clearAllMocks);
@@ -85,6 +88,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add unique index')} on (name)`);
   });
 
   it('should drop a column index', async () => {
@@ -122,6 +128,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop unique index')} on (name)`);
   });
 
   it('should rename an index', async () => {
@@ -155,6 +164,10 @@ change(async (db) => {
   await db.renameIndex('public.table', 'from', 'to');
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename index')} on table table: from ${yellow('=>')} to`,
+    );
   });
 
   it('should not be recreated when column index is identical', async () => {
@@ -273,6 +286,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop unique index')} on (name)
+  ${green('+ add index')} on (name)`);
   });
 
   it('should create a composite index', async () => {
@@ -327,6 +344,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add unique index')} on (a, b)`);
   });
 
   it('should drop a composite index', async () => {
@@ -385,6 +405,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop unique index')} on (a, b)`);
   });
 
   it('should not recreate composite index when it is identical', async () => {
@@ -434,7 +457,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(undefined);
+    assert.migration();
   });
 
   it('should recreate composite index', async () => {
@@ -516,6 +539,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop index')} on (a, b)
+  ${green('+ add unique index')} on (a, b)`);
   });
 
   it('should rename a composite index', async () => {
@@ -572,6 +599,10 @@ change(async (db) => {
   await db.renameIndex('public.table', 'from', 'to');
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename index')} on table table: from ${yellow('=>')} to`,
+    );
   });
 
   it('should be added together with a column', async () => {
@@ -601,6 +632,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${green('+ add column')} name text, has index`,
+    );
   });
 
   it('should be dropped together with a column', async () => {
@@ -632,6 +668,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop column')} name text, has index`,
+    );
   });
 
   it('should be added in a column change', async () => {
@@ -661,6 +702,13 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} name:
+    ${yellow('from')}: t.integer()
+      ${yellow('to')}: t.text().index()`,
+    );
   });
 
   it('should not be recreated when a column is renamed', async () => {
@@ -699,6 +747,14 @@ change(async (db) => {
   await db.renameIndex('public.table', 'table_from_idx', 'table_to_idx');
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ rename column')} from ${yellow('=>')} to
+${yellow('~ rename index')} on table table: table_from_idx ${yellow(
+        '=>',
+      )} table_to_idx`,
+    );
   });
 
   it('should recognize sql expressions by calling db', async () => {
@@ -763,7 +819,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(undefined);
+    assert.migration();
   });
 
   it('should detect sql expression difference by calling db', async () => {
@@ -839,6 +895,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop index')} on ((id || name) || active)
+  ${green('+ add index')} on (id||active||name)`);
   });
 
   describe('searchIndex', () => {
@@ -885,7 +945,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(undefined);
+      assert.migration();
     });
 
     it('should recognize a search index with weights', async () => {
@@ -929,7 +989,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(undefined);
+      assert.migration();
     });
 
     it('should recognize a search index with a language column', async () => {
@@ -967,7 +1027,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(undefined);
+      assert.migration();
     });
   });
 });

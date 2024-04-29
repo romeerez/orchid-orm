@@ -6,15 +6,12 @@ import {
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { ColumnSchemaConfig, getImportPath, pathToLog } from 'orchid-core';
-import { AnyRakeDbConfig, RakeDbConfig } from '../config';
+import { getImportPath, pathToLog } from 'orchid-core';
+import { AnyRakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrationsSet';
 
-export const writeMigrationFile = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
-  config: RakeDbConfig<SchemaConfig, CT>,
+export const writeMigrationFile = async (
+  config: AnyRakeDbConfig,
   version: string,
   name: string,
   content: (importPath: string, name: string) => string,

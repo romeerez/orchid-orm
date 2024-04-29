@@ -1,6 +1,8 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -11,6 +13,7 @@ jest.mock('../../prompt');
 
 const { arrange, act, assert, table, makeStructure, BaseTable } =
   generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('primaryKey', () => {
   beforeEach(jest.clearAllMocks);
@@ -48,6 +51,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add foreign key')} on (someId) to some(id)`);
   });
 
   it('should drop a column foreign key', async () => {
@@ -94,6 +100,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop foreign key')} on (someId) to some(id)`);
   });
 
   it('should rename a column foreign key', async () => {
@@ -130,6 +139,12 @@ change(async (db) => {
   await db.renameConstraint('public.table', 'fromName', 'table_someId_fkey');
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename constraint')} on table table: fromName ${yellow(
+        '=>',
+      )} table_someId_fkey`,
+    );
   });
 
   it('should not be recreated when a column foreign key is identical', async () => {
@@ -168,7 +183,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(undefined);
+    assert.migration();
   });
 
   it('should recreate a column foreign key with different options', async () => {
@@ -240,6 +255,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop foreign key')} on (someId) to some(id)
+  ${green('+ add foreign key')} on (someId) to some(id)`);
   });
 
   it('should create a composite foreign key', async () => {
@@ -280,6 +299,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add foreign key')} on (a, b) to some(fa, fb)`);
   });
 
   it('should drop a composite foreign key', async () => {
@@ -328,6 +350,9 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop foreign key')} on (a, b) to some(fa, fb)`);
   });
 
   it('should not recreate composite foreign key when it is identical', async () => {
@@ -363,7 +388,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(undefined);
+    assert.migration();
   });
 
   it('should recreate composite foreign key when option changes', async () => {
@@ -424,6 +449,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop foreign key')} on (a, b) to some(fa, fb)
+  ${green('+ add foreign key')} on (a, b) to some(fa, fb)`);
   });
 
   it('should rename a composite foreign key', async () => {
@@ -467,6 +496,12 @@ change(async (db) => {
   await db.renameConstraint('public.table', 'fromName', 'toName');
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename constraint')} on table table: fromName ${yellow(
+        '=>',
+      )} toName`,
+    );
   });
 
   it('should be added together with a column', async () => {
@@ -496,6 +531,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${green('+ add column')} someId integer references some(id)`,
+    );
   });
 
   it('should be dropped together with a column', async () => {
@@ -530,6 +570,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop column')} someId integer references some(id)`,
+    );
   });
 
   it('should be added in a column change', async () => {
@@ -564,6 +609,13 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} someId:
+    ${yellow('from')}: t.integer().nullable()
+      ${yellow('to')}: t.integer().foreignKey('some', 'id')`,
+    );
   });
 
   it('should not be recreated when a column is renamed', async () => {
@@ -610,6 +662,14 @@ change(async (db) => {
   await db.renameConstraint('public.table', 'table_a_b_fkey', 'table_a_c_fkey');
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ rename column')} b ${yellow('=>')} c
+${yellow('~ rename constraint')} on table table: table_a_b_fkey ${yellow(
+        '=>',
+      )} table_a_c_fkey`,
+    );
   });
 
   it('should not be recreated when a foreign column is renamed', async () => {
@@ -669,5 +729,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} some:
+  ${yellow('~ rename column')} fb ${yellow('=>')} fc`,
+    );
   });
 });

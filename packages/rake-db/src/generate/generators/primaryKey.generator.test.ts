@@ -1,6 +1,8 @@
 import { generatorsTestUtils } from './generators.test-utils';
 import { dbStructureMockFactory } from '../dbStructure.mockFactory';
+import { colors } from '../../colors';
 
+jest.mock('../../commands/migrateOrRollback');
 jest.mock('../dbStructure');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
@@ -10,6 +12,7 @@ jest.mock('fs/promises', () => ({
 jest.mock('../../prompt');
 
 const { arrange, act, assert, table, makeStructure } = generatorsTestUtils;
+const { green, red, yellow } = colors;
 
 describe('primaryKey', () => {
   beforeEach(jest.clearAllMocks);
@@ -41,6 +44,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${green('+ add primary key')} on (id)`,
+    );
   });
 
   it('should drop a column primary key', async () => {
@@ -71,6 +79,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop primary key')} on (id)`,
+    );
   });
 
   it('should change a primary key column', async () => {
@@ -106,6 +119,12 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop primary key')} on (id)
+  ${green('+ add primary key')} on (key)`,
+    );
   });
 
   it('should add a composite primary key', async () => {
@@ -140,6 +159,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${green('+ add primary key')} on (id, key)`,
+    );
   });
 
   it('should add a composite primary key defined on columns', async () => {
@@ -173,6 +197,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${green('+ add primary key')} on (id, key)`,
+    );
   });
 
   it('should drop a composite primary key', async () => {
@@ -209,6 +238,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop primary key')} on (id, key)`,
+    );
   });
 
   it('should change a composite primary key', async () => {
@@ -249,6 +283,12 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop primary key')} on (a, b)
+  ${green('+ add primary key')} on (b, c)`,
+    );
   });
 
   it('should change a composite primary key defined on columns', async () => {
@@ -288,6 +328,12 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop primary key')} on (a, b)
+  ${green('+ add primary key')} on (b, c)`,
+    );
   });
 
   it('should rename primary key', async () => {
@@ -326,6 +372,12 @@ change(async (db) => {
   await db.renameConstraint('public.table', 'from', 'to');
 });
 `);
+
+    assert.report(
+      `${yellow('~ rename constraint')} on table table: from ${yellow(
+        '=>',
+      )} to`,
+    );
   });
 
   it('should be added together with a column', async () => {
@@ -353,6 +405,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${green('+ add column')} id integer primary key`,
+    );
   });
 
   it('should be dropped together with a column', async () => {
@@ -383,6 +440,11 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop column')} id integer primary key`,
+    );
   });
 
   it('should be added in a column change', async () => {
@@ -412,6 +474,13 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} id:
+    ${yellow('from')}: t.integer()
+      ${yellow('to')}: t.identity().primaryKey()`,
+    );
   });
 
   it('should not be recreated when a column is renamed', async () => {
@@ -446,5 +515,10 @@ change(async (db) => {
   }));
 });
 `);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ rename column')} from ${yellow('=>')} to`,
+    );
   });
 });

@@ -50,7 +50,8 @@ type MigrateFn = <
   options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
   args?: string[],
-) => Promise<void>;
+  dontClose?: boolean,
+) => Promise<Adapter[]>;
 
 function makeMigrateFn<
   SchemaConfig extends ColumnSchemaConfig,
@@ -68,7 +69,13 @@ function makeMigrateFn<
     force: boolean,
   ) => Promise<void>,
 ): MigrateFn {
-  return async (ctx: RakeDbCtx, options, config, args = []) => {
+  return async (
+    ctx: RakeDbCtx,
+    options,
+    config,
+    args = [],
+    dontClose,
+  ): Promise<Adapter[]> => {
     const set = await getMigrations(ctx, config, up);
 
     const arg = args[0];
@@ -87,8 +94,11 @@ function makeMigrateFn<
     const appCodeUpdaterCache = {};
     const { appCodeUpdater } = conf;
     let localAsts = asts;
-    for (const opts of options) {
-      const adapter = new Adapter(opts);
+    const length = options.length;
+    const adapters = new Array<Adapter>(length);
+    for (let i = 0; i < length; i++) {
+      const opts = options[i];
+      const adapter = (adapters[i] = new Adapter(opts));
 
       try {
         await transaction(adapter, async (trx) => {
@@ -137,7 +147,7 @@ function makeMigrateFn<
           throw err;
         }
       } finally {
-        await adapter.close();
+        if (!dontClose) await adapter.close();
       }
 
       // ignore asts after the first db was migrated
@@ -157,6 +167,8 @@ function makeMigrateFn<
       asts,
       appCodeUpdaterCache,
     );
+
+    return adapters;
   };
 }
 
