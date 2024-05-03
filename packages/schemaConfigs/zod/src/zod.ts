@@ -25,7 +25,6 @@ import {
   columnCode,
   ColumnData,
   ColumnType,
-  DateBaseColumn,
   DateColumn,
   DecimalColumn,
   DoublePrecisionColumn,
@@ -62,18 +61,6 @@ import {
   ZodUnknown,
 } from 'zod';
 import { ZodErrorMap } from 'zod/lib/ZodError';
-
-type ParseDateToNumber = ParseColumn<
-  DateBaseColumn<ZodSchemaConfig>,
-  ZodNumber,
-  number
->;
-
-type ParseDateToDate = ParseColumn<
-  DateBaseColumn<ZodSchemaConfig>,
-  ZodDate,
-  Date
->;
 
 // skip adding the default `encode` function to code
 const toCodeSkip = { encodeFn: JSON.stringify };
@@ -665,9 +652,13 @@ export interface ZodSchemaConfig {
       : T[K];
   };
 
-  dateAsNumber(): ParseDateToNumber;
+  dateAsNumber<T extends ColumnType<ZodSchemaConfig>>(
+    this: T,
+  ): ParseColumn<T, ZodNumber, number>;
 
-  dateAsDate(): ParseDateToDate;
+  dateAsDate<T extends ColumnType<ZodSchemaConfig>>(
+    this: T,
+  ): ParseColumn<T, ZodDate, Date>;
 
   enum<U extends string, T extends [U, ...U[]]>(
     dataType: string,
@@ -784,13 +775,10 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     return this as never;
   },
   dateAsNumber() {
-    return this.parse(
-      z.number(),
-      parseDateToNumber,
-    ) as unknown as ParseDateToNumber;
+    return this.parse(z.number(), parseDateToNumber) as never;
   },
   dateAsDate() {
-    return this.parse(z.date(), parseDateToDate) as unknown as ParseDateToDate;
+    return this.parse(z.date(), parseDateToDate) as never;
   },
   enum(dataType, type) {
     return new EnumColumn(zodSchemaConfig, dataType, type, z.enum(type));

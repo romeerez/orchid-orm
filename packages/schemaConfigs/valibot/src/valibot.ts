@@ -100,10 +100,6 @@ import {
   uuid,
 } from 'valibot';
 
-type ParseDateToNumber = ParseColumn<DateColumnValibot, NumberSchema, number>;
-
-type ParseDateToDate = ParseColumn<DateColumnValibot, DateSchema, Date>;
-
 // skip adding the default `encode` function to code
 const toCodeSkip = { encodeFn: JSON.stringify };
 
@@ -829,9 +825,13 @@ export interface ValibotSchemaConfig {
       : T[K];
   };
 
-  dateAsNumber(): ParseDateToNumber;
+  dateAsNumber<T extends ColumnType<ValibotSchemaConfig>>(
+    this: T,
+  ): ParseColumn<T, NumberSchema, number>;
 
-  dateAsDate(): ParseDateToDate;
+  dateAsDate<T extends ColumnType<ValibotSchemaConfig>>(
+    this: T,
+  ): ParseColumn<T, DateSchema, Date>;
 
   enum<U extends string, T extends [U, ...U[]]>(
     dataType: string,
@@ -951,13 +951,10 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
     return this as never;
   },
   dateAsNumber() {
-    return this.parse(
-      number([]),
-      parseDateToNumber,
-    ) as unknown as ParseDateToNumber;
+    return this.parse(number([]), parseDateToNumber) as never;
   },
   dateAsDate() {
-    return this.parse(date([]), parseDateToDate) as unknown as ParseDateToDate;
+    return this.parse(date([]), parseDateToDate) as never;
   },
   enum(dataType, type) {
     return new EnumColumn(valibotSchemaConfig, dataType, type, picklist(type));
