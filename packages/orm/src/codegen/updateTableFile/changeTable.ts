@@ -404,7 +404,10 @@ const getColumnMethodArgs = (
   }
 
   if (key === 'foreignKeys') {
-    return columnForeignKeysToCode(value as ForeignKey<string, string[]>[]);
+    return columnForeignKeysToCode(
+      value as ForeignKey<string, string[]>[],
+      false,
+    );
   }
 
   if (key === 'check') {

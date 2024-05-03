@@ -1,4 +1,4 @@
-import { QueryColumn, RecordUnknown } from 'orchid-core';
+import { QueryColumn } from 'orchid-core';
 import {
   Adapter,
   AdapterOptions,
@@ -19,13 +19,14 @@ import {
 import { migrate } from '../../commands/migrateOrRollback';
 import { RakeDbAst } from '../../ast';
 import { introspectDbSchema, IntrospectedStructure } from '../dbStructure';
-import { getSchemaAndTableFromName } from '../../common';
+import { concatSchemaAndName, getSchemaAndTableFromName } from '../../common';
 import { EnumItem } from './generators/enums.generator';
 import { CodeDomain } from './generators/domains.generator';
 import { makeStructureToAstCtx } from '../structureToAst';
 import { composeMigration, ComposeMigrationParams } from './composeMigration';
 import { verifyMigration } from './verifyMigration';
 import { report } from './reportGeneratedMigration';
+import { DbInstance, getDbFromConfig } from '../generate.utils';
 
 export interface CodeItems {
   schemas: Set<string>;
@@ -39,9 +40,20 @@ export class AbortSignal extends Error {}
 export const generate = async (
   options: AdapterOptions[],
   config: AnyRakeDbConfig,
+  args: string[],
 ) => {
-  if (!config.db || !config.baseTable) throw invalidConfig(config);
+  const { dbPath } = config;
+  if (!dbPath || !config.baseTable) throw invalidConfig(config);
   if (!options.length) throw new Error(`Database options must not be empty`);
+
+  let migrationName = args[0] ?? 'generated';
+  let up: boolean;
+  if (migrationName === 'up') {
+    up = true;
+    migrationName = 'generated';
+  } else {
+    up = args[1] === 'up';
+  }
 
   const { dbStructure, adapters } = await migrateAndPullStructures(
     options,
@@ -50,7 +62,8 @@ export const generate = async (
 
   const [adapter] = adapters;
   const currentSchema = adapter.schema ?? 'public';
-  const db = await config.db();
+
+  const db = await getDbFromConfig(config, dbPath);
   const { columnTypes, internal } = db.$queryBuilder;
 
   const codeItems = await getActualItems(
@@ -103,13 +116,17 @@ export const generate = async (
     }
   }
 
-  await closeAdapters(adapters);
+  const { logger } = config;
 
-  if (!migrationCode) return;
+  if (!migrationCode) {
+    logger?.log('No changes were detected');
+    return;
+  }
+
+  if (!up) await closeAdapters(adapters);
 
   const version = await makeFileVersion({}, config);
 
-  const { logger } = config;
   const delayLog: string[] = [];
   await writeMigrationFile(
     {
@@ -117,7 +134,7 @@ export const generate = async (
       logger: logger ? { ...logger, log: (msg) => delayLog.push(msg) } : logger,
     },
     version,
-    'generated',
+    migrationName,
     migrationCode,
   );
 
@@ -128,12 +145,16 @@ export const generate = async (
       logger.log(`\n${msg}`);
     }
   }
+
+  if (up) {
+    await migrate({}, options, config, undefined, adapters);
+  }
 };
 
 const invalidConfig = (config: AnyRakeDbConfig) =>
   new Error(
     `\`${
-      config.db ? 'baseTable' : 'db'
+      config.dbPath ? 'baseTable' : 'dbPath'
     }\` setting must be set in the rake-db config for the generator to work`,
   );
 
@@ -141,7 +162,14 @@ const migrateAndPullStructures = async (
   options: AdapterOptions[],
   config: AnyRakeDbConfig,
 ): Promise<{ dbStructure: IntrospectedStructure; adapters: Adapter[] }> => {
-  const adapters = await migrate({}, options, config, undefined, true);
+  const adapters = await migrate(
+    {},
+    options,
+    config,
+    undefined,
+    undefined,
+    true,
+  );
 
   const dbStructures = await Promise.all(
     adapters.map((adapter) => introspectDbSchema(adapter)),
@@ -198,7 +226,7 @@ const compareDbStructures = (
 };
 
 const getActualItems = async (
-  db: RecordUnknown,
+  db: DbInstance,
   currentSchema: string,
   internal: QueryInternal,
   columnTypes: unknown,
@@ -225,11 +253,9 @@ const getActualItems = async (
     }
 
     const { schema } = table.q;
-    const name = `${schema ? `${schema}.` : ''}${table.table}`;
+    const name = concatSchemaAndName({ schema, name: table.table });
     if (tableNames.has(name)) {
-      throw new Error(
-        `Table ${schema}.${table.table} is defined more than once`,
-      );
+      throw new Error(`Table ${name} is defined more than once`);
     }
 
     tableNames.add(name);
@@ -240,8 +266,8 @@ const getActualItems = async (
 
     for (const key in table.relations) {
       const column = table.shape[key];
-
-      if ('joinTable' in column) {
+      // column won't be set for has and belongs to many
+      if (column && 'joinTable' in column) {
         processHasAndBelongsToManyColumn(column, habtmTables, codeItems);
       }
     }

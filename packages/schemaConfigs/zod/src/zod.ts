@@ -79,8 +79,8 @@ class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends ColumnType<
     super(zodSchemaConfig, schema);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, [`json()`], this.data, toCodeSkip);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, [`json()`], m, this.data, toCodeSkip);
   }
 }
 

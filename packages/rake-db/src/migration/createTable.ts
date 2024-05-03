@@ -103,8 +103,6 @@ export const createTable = async <
     then?.(result);
   }
 
-  migration.migratedAsts.push(ast);
-
   let table: Db<Table, Shape> | undefined;
 
   return {

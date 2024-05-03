@@ -10,7 +10,7 @@ import {
 } from 'pqb';
 import { asMock } from 'test-utils';
 import { ColumnSchemaConfig } from 'orchid-core';
-import { AppCodeUpdater, RakeDbConfig } from 'rake-db';
+import { RakeDbConfig } from 'rake-db';
 import { processRakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 
@@ -40,10 +40,6 @@ const structure = {
 
 asMock(makeFileVersion).mockReturnValue('timestamp');
 
-const appCodeUpdater: AppCodeUpdater = {
-  process: jest.fn(),
-  afterAll: jest.fn(),
-};
 const warn = jest.fn();
 const log = jest.fn();
 
@@ -62,7 +58,6 @@ BaseTable.prototype.types = makeColumnTypes(defaultSchemaConfig);
 const makeConfig = (config: Partial<RakeDbConfig<ColumnSchemaConfig>> = {}) =>
   processRakeDbConfig({
     baseTable: BaseTable,
-    appCodeUpdater,
     logger: {
       ...console,
       warn,
@@ -296,10 +291,6 @@ change(async (db) => {
       config,
     );
 
-    // 5 = 2 schemas + 1 domain + 2 tables
-    expect(appCodeUpdater.process).toBeCalledTimes(6);
-    expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
-
     expect(warn).toBeCalledWith(`Found unsupported types:
 - customType is used for column schema.table1.customTypeColumn
 Append \`as\` method manually to this column to treat it as other column type`);
@@ -380,9 +371,6 @@ change(async (db) => {
       'pull',
       config,
     );
-
-    expect(appCodeUpdater.process).toBeCalledTimes(1);
-    expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
   });
 
   it('should handle enum', async () => {

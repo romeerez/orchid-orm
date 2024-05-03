@@ -3,6 +3,7 @@ import { addCode, Code, codeToString, toArray } from 'orchid-core';
 import { colors } from '../../colors';
 import { exhaustive, getSchemaAndTableFromName, pluralize } from '../../common';
 import { getColumnDbType } from './generators/columns.generator';
+import { fnOrTableToString } from './generators/foreignKeys.generator';
 
 export const report = (
   ast: RakeDbAst[],
@@ -106,11 +107,11 @@ export const report = (
                 }${
                   foreignKeys
                     ? ` references ${foreignKeys
-                        .map(
-                          (fk) =>
-                            'table' in fk &&
-                            `${fk.table}(${fk.columns.join(', ')})`,
-                        )
+                        .map((fk) => {
+                          return `${fnOrTableToString(
+                            'fn' in fk ? fk.fn : fk.table,
+                          )}(${fk.columns.join(', ')})`;
+                        })
                         .join(', ')}`
                     : ''
                 }${

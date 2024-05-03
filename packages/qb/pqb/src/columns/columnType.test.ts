@@ -36,8 +36,8 @@ describe('column type', () => {
       super(schema, schema.unknown);
     }
 
-    toCode(t: string): Code {
-      return columnCode(this, t, 'column()');
+    toCode(t: string, m?: boolean): Code {
+      return columnCode(this, t, 'column()', m);
     }
   }
   const column = new Column(testSchemaConfig);

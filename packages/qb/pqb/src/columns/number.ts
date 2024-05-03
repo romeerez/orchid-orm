@@ -86,7 +86,7 @@ export class DecimalColumn<
     this.data.alias = 'decimal';
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { numericPrecision, numericScale } = this.data;
     return columnCode(
       this,
@@ -94,6 +94,7 @@ export class DecimalColumn<
       `decimal(${numericPrecision || ''}${
         numericScale ? `, ${numericScale}` : ''
       })`,
+      m,
     );
   }
 
@@ -113,7 +114,12 @@ export class DecimalColumn<
 
 const skipNumberMethods = { int: true } as const;
 
-const intToCode = (column: ColumnType, t: string, alias: string): Code => {
+const intToCode = (
+  column: ColumnType,
+  t: string,
+  alias: string,
+  m: boolean | undefined,
+): Code => {
   let code: Code[];
 
   if (column.data.identity) {
@@ -122,9 +128,9 @@ const intToCode = (column: ColumnType, t: string, alias: string): Code => {
     code = [`${alias}()`];
   }
 
-  addCode(code, numberDataToCode(column.data, skipNumberMethods));
+  addCode(code, numberDataToCode(column.data, m, skipNumberMethods));
 
-  return columnCode(column, t, code);
+  return columnCode(column, t, code, m);
 };
 
 export type IdentityColumn<T extends PickColumnBaseData> = ColumnWithDefault<
@@ -144,8 +150,8 @@ export class SmallIntColumn<
   }
 
   parseItem = parseInt;
-  toCode(t: string): Code {
-    return intToCode(this, t, 'smallint');
+  toCode(t: string, m?: boolean): Code {
+    return intToCode(this, t, 'smallint', m);
   }
 
   identity<T extends ColumnType>(
@@ -168,8 +174,8 @@ export class IntegerColumn<
   }
 
   parseItem = parseInt;
-  toCode(t: string): Code {
-    return intToCode(this, t, 'integer');
+  toCode(t: string, m?: boolean): Code {
+    return intToCode(this, t, 'integer', m);
   }
 
   identity<T extends ColumnType>(
@@ -191,8 +197,8 @@ export class BigIntColumn<
     this.data.alias = 'bigint';
   }
 
-  toCode(t: string): Code {
-    return intToCode(this, t, 'bigint');
+  toCode(t: string, m?: boolean): Code {
+    return intToCode(this, t, 'bigint', m);
   }
 
   identity<T extends ColumnType>(
@@ -215,8 +221,8 @@ export class RealColumn<
     this.data.alias = 'real';
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `real()${numberDataToCode(this.data)}`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `real()${numberDataToCode(this.data, m)}`, m);
   }
 }
 
@@ -231,8 +237,8 @@ export class DoublePrecisionColumn<
     this.data.alias = 'doublePrecision';
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `doublePrecision()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `doublePrecision()`, m);
   }
 }
 
@@ -254,11 +260,12 @@ export class SmallSerialColumn<
     return 'smallserial';
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     return columnCode(
       this,
       t,
-      `smallSerial()${numberDataToCode(this.data, skipNumberMethods)}`,
+      `smallSerial()${numberDataToCode(this.data, m, skipNumberMethods)}`,
+      m,
     );
   }
 }
@@ -281,11 +288,12 @@ export class SerialColumn<
     return 'serial';
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     return columnCode(
       this,
       t,
-      `serial()${numberDataToCode(this.data, skipNumberMethods)}`,
+      `serial()${numberDataToCode(this.data, m, skipNumberMethods)}`,
+      m,
     );
   }
 }
@@ -306,7 +314,7 @@ export class BigSerialColumn<
     return 'bigserial';
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `bigSerial()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `bigSerial()`, m);
   }
 }

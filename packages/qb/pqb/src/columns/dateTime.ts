@@ -55,11 +55,12 @@ export class DateColumn<
   Schema extends ColumnSchemaConfig,
 > extends DateBaseColumn<Schema> {
   dataType = 'date' as const;
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     return columnCode(
       this,
       t,
-      `date()${dateDataToCode(this.data)}`,
+      `date()${dateDataToCode(this.data, m)}`,
+      m,
       this.data,
       skipDateMethodsFromToCode,
     );
@@ -105,6 +106,7 @@ const timestampToCode = (
     | TimestampColumn<ColumnSchemaConfig>
     | TimestampTZColumn<ColumnSchemaConfig>,
   t: string,
+  m: boolean | undefined,
 ) => {
   const { dateTimePrecision: p } = self.data;
 
@@ -122,7 +124,8 @@ const timestampToCode = (
       t,
       `timestamps${noTz}(${
         p && p !== 6 ? p : ''
-      }).${defaultTimestamp}${dateDataToCode(self.data)}`,
+      }).${defaultTimestamp}${dateDataToCode(self.data, m)}`,
+      m,
       self.data,
       skipDateMethodsFromToCode,
     );
@@ -137,7 +140,8 @@ const timestampToCode = (
       t,
       `${self instanceof TimestampColumn ? 'timestampNoTZ' : 'timestamp'}(${
         p && p !== 6 ? p : ''
-      })${dateDataToCode(self.data)}`,
+      })${dateDataToCode(self.data, m)}`,
+      m,
       self.data,
       skipDateMethodsFromToCode,
     );
@@ -149,8 +153,8 @@ export class TimestampColumn<
   Schema extends ColumnSchemaConfig,
 > extends DateTimeBaseClass<Schema> {
   dataType = 'timestamp' as const;
-  toCode(t: string): Code {
-    return timestampToCode(this, t);
+  toCode(t: string, m?: boolean): Code {
+    return timestampToCode(this, t, m);
   }
 }
 
@@ -160,8 +164,8 @@ export class TimestampTZColumn<
 > extends DateTimeTzBaseClass<Schema> {
   dataType = 'timestamptz' as const;
   baseDataType = 'timestamp' as const;
-  toCode(t: string): Code {
-    return timestampToCode(this, t);
+  toCode(t: string, m?: boolean): Code {
+    return timestampToCode(this, t, m);
   }
 }
 
@@ -181,12 +185,13 @@ export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     this.data.dateTimePrecision = dateTimePrecision;
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { dateTimePrecision } = this.data;
     return columnCode(
       this,
       t,
-      `time(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
+      `time(${dateTimePrecision || ''})${dateDataToCode(this.data, m)}`,
+      m,
       this.data,
       skipDateMethodsFromToCode,
     );
@@ -212,7 +217,7 @@ export class IntervalColumn<
     this.data.precision = precision;
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { fields, precision } = this.data;
     return columnCode(
       this,
@@ -220,6 +225,7 @@ export class IntervalColumn<
       `interval(${[fields && `'${fields}'`, precision && String(precision)]
         .filter((part) => part)
         .join(', ')})`,
+      m,
       this.data,
       skipDateMethodsFromToCode,
     );

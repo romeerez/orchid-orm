@@ -51,6 +51,7 @@ export const columnsShapeToCode = (
   shape: ColumnsShapeBase,
   tableData: TableData,
   t: string,
+  m?: boolean,
 ): Code[] => {
   const hasTimestamps =
     'createdAt' in shape &&
@@ -89,7 +90,7 @@ export const columnsShapeToCode = (
 
   if (constraints) {
     for (const item of constraints) {
-      code.push(...constraintToCode(item, t));
+      code.push(...constraintToCode(item, t, m));
     }
   }
 
@@ -248,8 +249,9 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
 export const constraintToCode = (
   item: TableData.Constraint,
   t: string,
+  m?: boolean,
 ): Code[] => {
-  const code = constraintInnerToCode(item, t);
+  const code = constraintInnerToCode(item, t, m);
   code[0] = `...${code[0]}`;
   const last = code[code.length - 1];
   if (typeof last === 'string' && !last.endsWith(','))
@@ -260,13 +262,14 @@ export const constraintToCode = (
 export const constraintInnerToCode = (
   item: TableData.Constraint,
   t: string,
+  m?: boolean,
 ): Code[] => {
   const kind = getConstraintKind(item);
 
   if (kind === 'foreignKey' && item.references) {
     return [
       `${t}.foreignKey(`,
-      referencesArgsToCode(item.references, item.name),
+      referencesArgsToCode(item.references, item.name, m),
       '),',
     ];
   } else if (kind === 'check' && item.check) {
@@ -276,13 +279,14 @@ export const constraintInnerToCode = (
       })`,
     ];
   } else {
-    return [`${t}.constraint({`, constraintPropsToCode(t, item), '}),'];
+    return [`${t}.constraint({`, constraintPropsToCode(t, item, m), '}),'];
   }
 };
 
 export const constraintPropsToCode = (
   t: string,
   item: TableData.Constraint,
+  m?: boolean,
 ): Code[] => {
   const props: Code[] = [];
 
@@ -293,7 +297,7 @@ export const constraintPropsToCode = (
   if (item.references) {
     props.push(
       `references: [`,
-      referencesArgsToCode(item.references, false),
+      referencesArgsToCode(item.references, false, m),
       '],',
     );
   }
@@ -313,10 +317,16 @@ export const referencesArgsToCode = (
     options,
   }: Exclude<TableData.Constraint['references'], undefined>,
   name: string | false = options?.name || false,
+  m?: boolean,
 ): Code[] => {
   const args: Code[] = [];
 
   args.push(`${singleQuoteArray(columns)},`);
+
+  if (m && typeof fnOrTable !== 'string') {
+    const { schema, table } = new (fnOrTable())();
+    fnOrTable = schema ? `${schema}.${table}` : table;
+  }
 
   args.push(
     `${
@@ -344,11 +354,12 @@ export const referencesArgsToCode = (
 
 export const columnForeignKeysToCode = (
   foreignKeys: ForeignKey<string, string[]>[],
+  migration: boolean | undefined,
 ): Code[] => {
   const code: Code[] = [];
   for (const foreignKey of foreignKeys) {
     addCode(code, `.foreignKey(`);
-    for (const part of foreignKeyArgumentToCode(foreignKey)) {
+    for (const part of foreignKeyArgumentToCode(foreignKey, migration)) {
       addCode(code, part);
     }
     addCode(code, ')');
@@ -358,14 +369,22 @@ export const columnForeignKeysToCode = (
 
 export const foreignKeyArgumentToCode = (
   foreignKey: ForeignKey<string, string[]>,
+  migration: boolean | undefined,
 ): Code[] => {
   const code: Code = [];
 
-  if ('fn' in foreignKey) {
-    code.push(foreignKey.fn.toString());
-  } else {
-    code.push(singleQuote(foreignKey.table));
+  let fnOrTable = 'fn' in foreignKey ? foreignKey.fn : foreignKey.table;
+  if (migration && typeof fnOrTable !== 'string') {
+    const { schema, table } = new (fnOrTable())();
+    fnOrTable = schema ? `${schema}.${table}` : table;
   }
+
+  code.push(
+    typeof fnOrTable === 'string'
+      ? singleQuote(fnOrTable)
+      : fnOrTable.toString(),
+  );
+
   addCode(code, `, ${singleQuote(foreignKey.columns[0])}`);
 
   const hasOptions =
@@ -478,6 +497,7 @@ export const columnCode = (
   type: ColumnType,
   t: string,
   code: Code,
+  migration: boolean | undefined,
   data = type.data,
   skip?: { encodeFn: unknown },
 ): Code => {
@@ -504,7 +524,7 @@ export const columnCode = (
   }
 
   if (data.foreignKeys) {
-    for (const part of columnForeignKeysToCode(data.foreignKeys)) {
+    for (const part of columnForeignKeysToCode(data.foreignKeys, migration)) {
       addCode(code, part);
     }
   }

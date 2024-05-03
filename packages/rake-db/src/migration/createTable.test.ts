@@ -47,17 +47,6 @@ describe('create and drop table', () => {
     );
   });
 
-  it('should push ast to migratedAsts', async () => {
-    await testUpAndDown(
-      (action) =>
-        db[action]('name', (t) => ({
-          id: t.identity().primaryKey(),
-        })),
-      () => expect(db.migratedAsts.length).toBe(1),
-      () => expect(db.migratedAsts.length).toBe(1),
-    );
-  });
-
   it('should handle table with schema', async () => {
     await testUpAndDown(
       (action) =>

@@ -67,12 +67,13 @@ export class VarCharColumn<
   Schema extends ColumnSchemaConfig,
 > extends LimitedTextBaseColumn<Schema> {
   dataType = 'varchar' as const;
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { maxChars } = this.data;
     return columnCode(
       this,
       t,
-      `varchar(${maxChars ?? ''})${stringDataToCode(this.data)}`,
+      `varchar(${maxChars ?? ''})${stringDataToCode(this.data, m)}`,
+      m,
     );
   }
 }
@@ -84,13 +85,14 @@ export class StringColumn<
     super(schema, limit);
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     let max: number | undefined = this.data.maxChars;
     if (max === 255) max = undefined;
     return columnCode(
       this,
       t,
-      `string(${max ?? ''})${stringDataToCode(this.data)}`,
+      `string(${max ?? ''})${stringDataToCode(this.data, m)}`,
+      m,
     );
   }
 }
@@ -100,12 +102,13 @@ export class CharColumn<
   Schema extends ColumnSchemaConfig,
 > extends LimitedTextBaseColumn<Schema> {
   dataType = 'char' as const;
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { maxChars } = this.data;
     return columnCode(
       this,
       t,
-      `char(${maxChars ?? ''})${stringDataToCode(this.data)}`,
+      `char(${maxChars ?? ''})${stringDataToCode(this.data, m)}`,
+      m,
     );
   }
 }
@@ -128,6 +131,7 @@ const textColumnToCode = (
     data: TextColumnData & { minArg?: number; maxArg?: number };
   },
   t: string,
+  m?: boolean,
 ) => {
   const data = { ...column.data };
   let args = '';
@@ -147,7 +151,8 @@ const textColumnToCode = (
   return columnCode(
     column,
     t,
-    `${column.dataType}(${args})${stringDataToCode(data)}`,
+    `${column.dataType}(${args})${stringDataToCode(data, m)}`,
+    m,
   );
 };
 
@@ -174,8 +179,8 @@ export class TextColumn<
     setTextColumnData(this, min, max);
   }
 
-  toCode(t: string): Code {
-    return textColumnToCode(this, t);
+  toCode(t: string, m?: boolean): Code {
+    return textColumnToCode(this, t, m);
   }
 }
 
@@ -193,8 +198,8 @@ export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.buffer() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `bytea()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `bytea()`, m);
   }
 }
 
@@ -212,8 +217,8 @@ export class PointColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `point()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `point()`, m);
   }
 }
 
@@ -231,8 +236,8 @@ export class LineColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `line()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `line()`, m);
   }
 }
 
@@ -250,8 +255,8 @@ export class LsegColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `lseg()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `lseg()`, m);
   }
 }
 
@@ -269,8 +274,8 @@ export class BoxColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `box()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `box()`, m);
   }
 }
 
@@ -289,8 +294,8 @@ export class PathColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `path()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `path()`, m);
   }
 }
 
@@ -310,8 +315,8 @@ export class PolygonColumn<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `polygon()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `polygon()`, m);
   }
 }
 
@@ -329,8 +334,8 @@ export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `circle()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `circle()`, m);
   }
 }
 
@@ -343,8 +348,8 @@ export class MoneyColumn<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `money()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `money()`, m);
   }
 
   parseFn = Object.assign(
@@ -371,8 +376,8 @@ export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `cidr()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `cidr()`, m);
   }
 }
 
@@ -390,8 +395,8 @@ export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `inet()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `inet()`, m);
   }
 }
 
@@ -411,8 +416,8 @@ export class MacAddrColumn<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `macaddr()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `macaddr()`, m);
   }
 }
 
@@ -432,8 +437,8 @@ export class MacAddr8Column<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `macaddr8()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `macaddr8()`, m);
   }
 }
 
@@ -455,9 +460,9 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     this.data.length = length;
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { length } = this.data;
-    return columnCode(this, t, `bit(${length})`);
+    return columnCode(this, t, `bit(${length})`, m);
   }
 
   toSQL() {
@@ -481,9 +486,9 @@ export class BitVaryingColumn<
     this.data.alias = 'bitVarying';
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { length } = this.data;
-    return columnCode(this, t, `bitVarying(${length ?? ''})`);
+    return columnCode(this, t, `bitVarying(${length ?? ''})`, m);
   }
 
   toSQL() {
@@ -512,8 +517,8 @@ export class TsVectorColumn<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `tsvector()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `tsvector()`, m);
   }
 
   /**
@@ -601,8 +606,8 @@ export class TsQueryColumn<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `tsquery()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `tsquery()`, m);
   }
 }
 
@@ -634,12 +639,13 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     };
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { data } = this;
     return columnCode(
       this,
       t,
       `uuid()`,
+      m,
       // don't output the default default
       data.default instanceof RawSQLBase && data.default._sql === uuidDefaultSQL
         ? { ...data, default: undefined }
@@ -662,8 +668,8 @@ export class XMLColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `xml()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `xml()`, m);
   }
 }
 
@@ -679,7 +685,7 @@ export class CitextColumn<
     setTextColumnData(this, min, max);
   }
 
-  toCode(t: string): Code {
-    return textColumnToCode(this, t);
+  toCode(t: string, m?: boolean): Code {
+    return textColumnToCode(this, t, m);
   }
 }

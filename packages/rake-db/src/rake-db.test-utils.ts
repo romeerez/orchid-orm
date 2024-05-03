@@ -47,7 +47,6 @@ export const getDb = () => {
     {} as unknown as TransactionAdapter,
     true,
     testConfig,
-    [],
   );
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;
@@ -60,7 +59,6 @@ export const resetDb = (up = true) => {
   queryMock.mockClear();
   const db = getDb();
   db.up = up;
-  db.migratedAsts.length = 0;
 };
 
 export const trim = (s: string) => {

@@ -29,14 +29,6 @@ describe('changeTable', () => {
     db.options.snakeCase = false;
   });
 
-  it('should call appCodeUpdater', async () => {
-    await testUpAndDown(
-      () => db.changeTable('table', () => ({})),
-      () => expect(db.migratedAsts.length).toBe(1),
-      () => expect(db.migratedAsts.length).toBe(1),
-    );
-  });
-
   it('should work for table with schema', async () => {
     await testUpAndDown(
       () =>
@@ -674,10 +666,6 @@ describe('changeTable', () => {
                 ADD COLUMN "enum" "mood" NOT NULL
             `,
           ]);
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const [ast1] = db.migratedAsts as any[];
-          expect(ast1.shape.enum.item.options).toEqual(['one', 'two']);
         },
         () => {
           expectSql([
@@ -687,10 +675,6 @@ describe('changeTable', () => {
                 DROP COLUMN "enum"
             `,
           ]);
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const [ast2] = db.migratedAsts as any[];
-          expect(ast2.shape.enum.item.options).toEqual(['one', 'two']);
         },
       );
     });
@@ -1516,11 +1500,6 @@ describe('changeTable', () => {
           `,
           ]);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const [ast] = db.migratedAsts as any[];
-          expect(ast.shape.changeEnum.from.column.options).toEqual(enumOne);
-          expect(ast.shape.changeEnum.to.column.options).toEqual(enumTwo);
-
           asMock(queryMock).mockResolvedValueOnce({
             rows: enumTwo.map((value) => [value]),
           });
@@ -1537,11 +1516,6 @@ describe('changeTable', () => {
               ALTER COLUMN "changeEnum" TYPE "one" USING "changeEnum"::text::"one"
           `,
           ]);
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const [ast] = db.migratedAsts as any[];
-          expect(ast.shape.changeEnum.from.column.options).toEqual(enumTwo);
-          expect(ast.shape.changeEnum.to.column.options).toEqual(enumOne);
         },
       );
     });

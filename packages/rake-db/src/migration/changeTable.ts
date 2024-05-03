@@ -300,8 +300,6 @@ export const changeTable = async <CT extends RakeDbColumnTypes>(
     const result = await migration.adapter.arrays(query);
     query.then?.(result);
   }
-
-  migration.migratedAsts.push(ast);
 };
 
 const makeAst = (

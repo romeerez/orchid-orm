@@ -29,8 +29,7 @@ import {
   RakeDbAppliedVersions,
 } from '../migration/manageMigratedVersions';
 import { RakeDbError } from '../errors';
-import { RakeDbAst } from '../ast';
-import { AnyRakeDbConfig, AppCodeUpdater, RakeDbConfig } from '../config';
+import { AnyRakeDbConfig, RakeDbConfig } from '../config';
 import path from 'path';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import {
@@ -50,6 +49,7 @@ type MigrateFn = <
   options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
   args?: string[],
+  adapters?: Adapter[],
   dontClose?: boolean,
 ) => Promise<Adapter[]>;
 
@@ -65,7 +65,6 @@ function makeMigrateFn<
     set: MigrationsSet,
     versions: RakeDbAppliedVersions,
     count: number,
-    asts: RakeDbAst[],
     force: boolean,
   ) => Promise<void>,
 ): MigrateFn {
@@ -74,6 +73,7 @@ function makeMigrateFn<
     options,
     config,
     args = [],
+    adapters = options.map((opts) => new Adapter(opts)),
     dontClose,
   ): Promise<Adapter[]> => {
     const set = await getMigrations(ctx, config, up);
@@ -89,16 +89,11 @@ function makeMigrateFn<
       count = isNaN(num) ? undefined : num;
     }
 
-    const conf = prepareConfig(config, args, count === undefined || force);
-    const asts: RakeDbAst[] = [];
-    const appCodeUpdaterCache = {};
-    const { appCodeUpdater } = conf;
-    let localAsts = asts;
+    const conf = config;
     const length = options.length;
-    const adapters = new Array<Adapter>(length);
     for (let i = 0; i < length; i++) {
       const opts = options[i];
-      const adapter = (adapters[i] = new Adapter(opts));
+      const adapter = adapters[i];
 
       try {
         await transaction(adapter, async (trx) => {
@@ -115,7 +110,6 @@ function makeMigrateFn<
             set,
             versions,
             count ?? defaultCount,
-            localAsts,
             force,
           );
         });
@@ -133,15 +127,7 @@ function makeMigrateFn<
               set.renameTo,
             );
 
-            await fn(
-              trx,
-              config,
-              set,
-              versions,
-              count ?? defaultCount,
-              localAsts,
-              force,
-            );
+            await fn(trx, config, set, versions, count ?? defaultCount, force);
           });
         } else {
           throw err;
@@ -150,23 +136,12 @@ function makeMigrateFn<
         if (!dontClose) await adapter.close();
       }
 
-      // ignore asts after the first db was migrated
-      localAsts = [];
-
       config.afterChangeCommit?.({
         options: opts,
         up,
         migrations: set.migrations,
       });
     }
-
-    await runCodeUpdaterAfterAll(
-      options[0],
-      config,
-      appCodeUpdater,
-      asts,
-      appCodeUpdaterCache,
-    );
 
     return adapters;
   };
@@ -177,24 +152,14 @@ function makeMigrateFn<
  * will apply `change` functions top-to-bottom.
  *
  * @param options - options to construct db adapter with
- * @param config - specifies how to load migrations, may have `appCodeUpdater`, callbacks, and logger.
- * @param args - pass none or `all` to run all migrations, pass int for how many to migrate, `--code` to enable and `--code false` to disable `useCodeUpdater`.
+ * @param config - specifies how to load migrations, callbacks, and logger
+ * @param args - pass none or `all` to run all migrations, pass int for how many to migrate
  */
 export const migrate: MigrateFn = makeMigrateFn(
   Infinity,
   true,
-  (trx, config, set, versions, count, asts, force) =>
-    migrateOrRollback(
-      trx,
-      config,
-      set,
-      versions,
-      count,
-      asts,
-      true,
-      false,
-      force,
-    ),
+  (trx, config, set, versions, count, force) =>
+    migrateOrRollback(trx, config, set, versions, count, true, false, force),
 );
 
 /**
@@ -206,18 +171,8 @@ export const migrate: MigrateFn = makeMigrateFn(
 export const rollback: MigrateFn = makeMigrateFn(
   1,
   false,
-  (trx, config, set, versions, count, asts, force) =>
-    migrateOrRollback(
-      trx,
-      config,
-      set,
-      versions,
-      count,
-      asts,
-      false,
-      false,
-      force,
-    ),
+  (trx, config, set, versions, count, force) =>
+    migrateOrRollback(trx, config, set, versions, count, false, false, force),
 );
 
 /**
@@ -228,19 +183,10 @@ export const rollback: MigrateFn = makeMigrateFn(
 export const redo: MigrateFn = makeMigrateFn(
   1,
   true,
-  async (trx, config, set, versions, count, asts, force) => {
+  async (trx, config, set, versions, count, force) => {
     set.migrations.reverse();
 
-    await migrateOrRollback(
-      trx,
-      config,
-      set,
-      versions,
-      count,
-      asts,
-      false,
-      true,
-    );
+    await migrateOrRollback(trx, config, set, versions, count, false, true);
 
     set.migrations.reverse();
 
@@ -250,7 +196,6 @@ export const redo: MigrateFn = makeMigrateFn(
       set,
       versions,
       count,
-      asts,
       true,
       true,
       force,
@@ -262,30 +207,12 @@ export const redo: MigrateFn = makeMigrateFn(
 const getDb = (adapter: Adapter) =>
   createDb<ColumnSchemaConfig, RakeDbColumnTypes>({ adapter });
 
-function prepareConfig<SchemaConfig extends ColumnSchemaConfig, CT>(
-  config: RakeDbConfig<SchemaConfig, CT>,
-  args: string[],
-  hasArg: boolean,
-): RakeDbConfig<SchemaConfig, CT> {
-  config = { ...config };
-
-  const i = hasArg ? 0 : 1;
-  const arg = args[i];
-  if (arg === '--code') {
-    config.useCodeUpdater = args[i + 1] !== 'false';
-  }
-
-  if (!config.useCodeUpdater) delete config.appCodeUpdater;
-  return config;
-}
-
 export const migrateOrRollback = async (
   trx: TransactionAdapter,
   config: RakeDbConfig<ColumnSchemaConfig, RakeDbColumnTypes>,
   set: MigrationsSet,
   versions: RakeDbAppliedVersions,
   count: number,
-  asts: RakeDbAst[],
   up: boolean,
   redo: boolean,
   force?: boolean,
@@ -314,7 +241,6 @@ export const migrateOrRollback = async (
         set,
         versions,
         sequence.length - i,
-        asts,
         false,
         redo,
       );
@@ -335,6 +261,8 @@ export const migrateOrRollback = async (
     await config.beforeChange?.({ db, migrations, up, redo });
   }
 
+  let loggedAboutStarting = false;
+
   for (const file of set.migrations) {
     if (
       (up && versionsMap[file.version]) ||
@@ -345,7 +273,20 @@ export const migrateOrRollback = async (
 
     if (count-- <= 0) break;
 
-    await runMigration(trx, up, file, config, asts);
+    if (!loggedAboutStarting && (!redo || !up)) {
+      loggedAboutStarting = true;
+      config.logger?.log(
+        `${
+          redo ? 'Reapplying migrations for' : up ? 'Migrating' : 'Rolling back'
+        } database ${
+          trx.config.connectionString
+            ? new URL(trx.config.connectionString).pathname.slice(1)
+            : trx.config.database
+        }\n`,
+      );
+    }
+
+    await runMigration(trx, up, file, config);
 
     if (up) {
       const name = path.basename(file.path);
@@ -357,7 +298,7 @@ export const migrateOrRollback = async (
     }
 
     config.logger?.log(
-      `${up ? 'Migrated' : 'Rolled back'} ${pathToLog(file.path)}`,
+      `${up ? 'Migrated' : 'Rolled back'} ${pathToLog(file.path)}\n`,
     );
   }
 
@@ -398,40 +339,6 @@ const checkMigrationOrder = (
   return;
 };
 
-async function runCodeUpdaterAfterAll<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
-  options: AdapterOptions,
-  config: RakeDbConfig<SchemaConfig, CT>,
-  appCodeUpdater: AppCodeUpdater | undefined,
-  asts: RakeDbAst[],
-  cache: object,
-) {
-  for (const ast of asts) {
-    await appCodeUpdater?.process({
-      ast,
-      options,
-      basePath: config.basePath,
-      cache,
-      logger: config.logger,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      baseTable: config.baseTable!,
-      import: config.import,
-    });
-  }
-
-  await appCodeUpdater?.afterAll({
-    options,
-    basePath: config.basePath,
-    cache,
-    logger: config.logger,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    baseTable: config.baseTable!,
-    import: config.import,
-  });
-}
-
 // Cache `change` functions of migrations. Key is a migration file name, value is array of `change` functions.
 // When migrating two or more databases, files are loaded just once due to this cache.
 export const changeCache: Record<
@@ -443,7 +350,6 @@ export const changeCache: Record<
  * Process one migration file.
  * It performs a db transaction, loads `change` functions from a file, executes them in order specified by `up` parameter.
  * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
- * After transaction is committed, will call `appCodeUpdater` if exists with the migrated changes.
  */
 const runMigration = async <
   SchemaConfig extends ColumnSchemaConfig,
@@ -453,7 +359,6 @@ const runMigration = async <
   up: boolean,
   file: MigrationItem,
   config: RakeDbConfig<SchemaConfig, CT>,
-  asts: RakeDbAst[],
 ) => {
   clearChanges();
 
@@ -477,7 +382,7 @@ const runMigration = async <
     changeCache[file.path] = changes;
   }
 
-  const db = createMigrationInterface<SchemaConfig, CT>(trx, up, config, asts);
+  const db = createMigrationInterface<SchemaConfig, CT>(trx, up, config);
 
   if (changes.length) {
     // when up: for (let i = 0; i !== changes.length - 1; i++)

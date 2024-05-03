@@ -1,6 +1,9 @@
 import { ColumnType, ForeignKeyAction, ForeignKeyMatch, TableData } from 'pqb';
 import { DbStructure } from '../../dbStructure';
-import { getSchemaAndTableFromName } from '../../../common';
+import {
+  concatSchemaAndName,
+  getSchemaAndTableFromName,
+} from '../../../common';
 import { ChangeTableData, TableShapes } from './tables.generator';
 import { RakeDbAst } from 'rake-db';
 import { deepCompare } from 'orchid-core';
@@ -10,6 +13,10 @@ import { checkForColumnChange } from './generators.utils';
 interface CodeForeignKey {
   references: DbStructure.References;
   codeConstraint: TableData.Constraint;
+}
+
+interface ReferencesWithStringTable extends TableData.References {
+  fnOrTable: string;
 }
 
 const mapMatchToDb: { [K in ForeignKeyMatch]: DbStructure.ForeignKeyMatch } = {
@@ -142,10 +149,10 @@ const collectCodeFkeys = (
     codeForeignKeys.push(
       ...column.data.foreignKeys.map((x) => {
         const columns = [name];
-        const fnOrTable = 'fn' in x ? x.fn : x.table;
-        const references: TableData.References = {
+
+        const references: ReferencesWithStringTable = {
           columns,
-          fnOrTable,
+          fnOrTable: fnOrTableToString('fn' in x ? x.fn : x.table),
           foreignColumns: x.columns,
           options: {
             name: x.name,
@@ -172,8 +179,14 @@ const collectCodeFkeys = (
       const { references } = constraint;
       if (!references) continue;
 
+      references.fnOrTable = fnOrTableToString(references.fnOrTable);
+
       codeForeignKeys.push(
-        parseForeignKey(constraint, references, currentSchema),
+        parseForeignKey(
+          constraint,
+          references as ReferencesWithStringTable,
+          currentSchema,
+        ),
       );
     }
   }
@@ -181,22 +194,23 @@ const collectCodeFkeys = (
   return codeForeignKeys;
 };
 
+export const fnOrTableToString = (
+  fnOrTable: TableData.References['fnOrTable'],
+) => {
+  if (typeof fnOrTable !== 'string') {
+    const { schema, table } = new (fnOrTable())();
+    fnOrTable = concatSchemaAndName({ schema, name: table });
+  }
+  return fnOrTable;
+};
+
 const parseForeignKey = (
   codeConstraint: TableData.Constraint,
-  references: TableData.References,
+  references: ReferencesWithStringTable,
   currentSchema: string,
 ): CodeForeignKey => {
   const { fnOrTable, columns, foreignColumns, options } = references;
-
-  let schema;
-  let table;
-  if (typeof fnOrTable === 'function') {
-    const q = new (fnOrTable())();
-    schema = q.schema;
-    table = q.table;
-  } else {
-    [schema, table] = getSchemaAndTableFromName(fnOrTable);
-  }
+  const [schema, table] = getSchemaAndTableFromName(fnOrTable);
 
   return {
     references: {

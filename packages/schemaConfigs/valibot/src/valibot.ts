@@ -117,8 +117,8 @@ class ValibotJSONColumn<Schema extends BaseSchema> extends ColumnType<
     super(valibotSchemaConfig, schema);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, [`json()`], this.data, toCodeSkip);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, [`json()`], m, this.data, toCodeSkip);
   }
 }
 

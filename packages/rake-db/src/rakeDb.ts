@@ -170,7 +170,7 @@ const runCommand = async <
   } else if (arg === 'redo') {
     await redo({}, options, config, args.slice(1));
   } else if (arg === 'g' || arg === 'generate') {
-    await generate(toArray(options), config);
+    await generate(toArray(options), config, args.slice(1));
   } else if (arg === 'new') {
     await newMigration(config, args.slice(1));
   } else if (arg === 'pull') {
@@ -207,32 +207,35 @@ Commands:
   create                  create databases
   drop                    drop databases
   reset                   drop, create and migrate databases
+
+  g, generate             gen migration from OrchidORM tables
+    arguments:
+      no arguments            "generated" is a default file name
+      migration-name          set migration file name
+      up                      auto-apply migration
+      g migration-name up     with a custom name and apply it
+
+  up, migrate             migrate pending migrations
+    arguments:
+      no arguments            migrate all pending
+      a number                run a specific number of pending migrations
+      force                   enforce migrating a pending file in the middle
+
+  down, rollback          rollback the last migrated
+    arguments:
+      no arguments            migrate all pending
+      a number                run a specific number of pending migrations
+      all                     rollback all migrations
+
   pull                    generate a combined migration for an existing database
-  new                     create new migration file, see below
-  up                      migrate pending migrations
-  migrate                 migrate pending migrations, also run recurrent
-  up|migrate force        resolve the case of a non-migrated file in the middle
-  rollback or down        rollback the last migrated
+  new                     create new migration file
   redo                    rollback and migrate, run recurrent
-  status or s             list migrations statuses
-  status path or s p      list migrations statuses and paths to files
-  rec or recurrent        run recurrent migrations
+  s, status               list migrations statuses
+  s p, status path        list migrations statuses and paths to files
+  rec, recurrent          run recurrent migrations
   rebase                  move local migrations below the new ones from upstream
   change-ids serial       change migrations ids to 4 digit serial
-  change-ids serial 42    change migrations ids to custom digits serial
+  change-ids serial 69    change migrations ids to serial of custom length
   change-ids timestamp    change migrations ids to timestamps
-  no or unknown command   prints this message
-  
-Migrate arguments:
-  no arguments            run all pending migrations
-  number                  run specific number of pending migrations
-
-Rollback arguments:
-  no arguments            rollback one last applied migration
-  number                  rollback specific number of applied migrations
-  all                     rollback all applied migrations
-
-Migrate and rollback common arguments:
-  --code                  run code updater, overrides \`useCodeUpdater\` option
-  --code false            do not run code updater
+  no or unknown command   prints help
 `;

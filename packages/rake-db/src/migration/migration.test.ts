@@ -18,12 +18,6 @@ describe('migration', () => {
   });
 
   describe('renameTable', () => {
-    it('should call appCodeUpdater', async () => {
-      await db.renameTable('from', 'to');
-
-      expect(db.migratedAsts.length).toBe(1);
-    });
-
     const testRenameTable = makeTestUpAndDown('renameTable');
 
     it('should rename a table', async () => {
@@ -457,14 +451,6 @@ describe('migration', () => {
   describe('createSchema and dropSchema', () => {
     const testUpAndDown = makeTestUpAndDown('createSchema', 'dropSchema');
 
-    it('should call appCodeUpdater', async () => {
-      await testUpAndDown(
-        (action) => db[action]('schemaName'),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
-
     it(`should add and drop a schema`, async () => {
       await testUpAndDown(
         (action) => db[action]('schemaName'),
@@ -499,14 +485,6 @@ describe('migration', () => {
   describe('createExtension and dropExtension', () => {
     const testUpAndDown = makeTestUpAndDown('createExtension', 'dropExtension');
 
-    it('should call appCodeUpdater', async () => {
-      await testUpAndDown(
-        (action) => db[action]('extensionName'),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
-
     it(`should add and drop an extension`, async () => {
       await testUpAndDown(
         (action) =>
@@ -531,14 +509,6 @@ describe('migration', () => {
   describe('createEnum and dropEnum', () => {
     const testUpAndDown = makeTestUpAndDown('createEnum', 'dropEnum');
 
-    it('should push ast', async () => {
-      await testUpAndDown(
-        (action) => db[action]('enumName', ['one']),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
-
     it(`should add and drop an enum`, async () => {
       await testUpAndDown(
         (action) =>
@@ -559,12 +529,6 @@ describe('migration', () => {
   });
 
   describe('renameType', () => {
-    it('should call appCodeUpdater', async () => {
-      await db.renameType('from', 'to');
-
-      expect(db.migratedAsts.length).toBe(1);
-    });
-
     const testRenameType = makeTestUpAndDown('renameType');
 
     it('should rename a type', async () => {
@@ -752,14 +716,6 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
   describe('createDomain and dropDomain', () => {
     const testUpAndDown = makeTestUpAndDown('createDomain', 'dropDomain');
 
-    it('should push ast', async () => {
-      await testUpAndDown(
-        (action) => db[action]('domain', (t) => t.integer()),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
-
     it(`should create and drop domain`, async () => {
       await testUpAndDown(
         (action) =>
@@ -865,14 +821,6 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
 
   describe('createCollation and dropCollation', () => {
     const testUpAndDown = makeTestUpAndDown('createCollation', 'dropCollation');
-
-    it('should push ast', async () => {
-      await testUpAndDown(
-        (action) => db[action]('name', { locale: 'locale' }),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
 
     it(`should create and drop collation with options`, async () => {
       await testUpAndDown(

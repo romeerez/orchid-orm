@@ -43,7 +43,7 @@ describe('primaryKey', () => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey('some', 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'id'),
         })),
       ],
     });
@@ -126,7 +126,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey('some', 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'id'),
         })),
       ],
     });
@@ -166,7 +166,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey('some', 'id', {
+          someId: t.integer().foreignKey(() => someTable, 'id', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -200,7 +200,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey('some', 'id', {
+          someId: t.integer().foreignKey(() => someTable, 'id', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -269,7 +269,7 @@ change(async (db) => {
         table((t) => ({
           a: t.text(),
           b: t.text(),
-          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+          ...t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb']),
         })),
       ],
     });
@@ -358,7 +358,7 @@ change(async (db) => {
         table((t) => ({
           a: t.text(),
           b: t.text(),
-          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+          ...t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb']),
         })),
       ],
     });
@@ -389,7 +389,7 @@ change(async (db) => {
         table((t) => ({
           a: t.text(),
           b: t.text(),
-          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+          ...t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb']),
         })),
       ],
     });
@@ -447,7 +447,7 @@ change(async (db) => {
         table((t) => ({
           a: t.text(),
           b: t.text(),
-          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb'], {
+          ...t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb'], {
             name: 'toName',
           }),
         })),
@@ -482,7 +482,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey('some', 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'id'),
         })),
       ],
     });
@@ -549,7 +549,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey('some', 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'id'),
         })),
       ],
     });
@@ -592,7 +592,7 @@ change(async (db) => {
         table((t) => ({
           a: t.text(),
           c: t.text(),
-          ...t.foreignKey(['a', 'c'], 'some', ['fa', 'fb']),
+          ...t.foreignKey(['a', 'c'], () => someCompositeTable, ['fa', 'fb']),
         })),
       ],
       selects: [1],
@@ -621,6 +621,14 @@ ${yellow('~ rename constraint')} on table table: table_a_b_fkey ${yellow(
   });
 
   it('should not be recreated when a foreign column is renamed', async () => {
+    class Some extends BaseTable {
+      table = 'some';
+      columns = this.setColumns((t) => ({
+        fa: t.text().primaryKey(),
+        fc: t.text().primaryKey(),
+      }));
+    }
+
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
@@ -635,17 +643,11 @@ ${yellow('~ rename constraint')} on table table: table_a_b_fkey ${yellow(
         }));
       },
       tables: [
-        class Some extends BaseTable {
-          table = 'some';
-          columns = this.setColumns((t) => ({
-            fa: t.text().primaryKey(),
-            fc: t.text().primaryKey(),
-          }));
-        },
+        Some,
         table((t) => ({
           a: t.text(),
           b: t.text(),
-          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fc']),
+          ...t.foreignKey(['a', 'b'], () => Some, ['fa', 'fc']),
         })),
       ],
       selects: [1],

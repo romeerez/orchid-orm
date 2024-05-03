@@ -26,10 +26,16 @@ export const verifyMigration = async (
         changeFns.push(changeCb);
       });
 
+      const { log } = config;
+      config.log = false;
+
       const db = createMigrationInterface<
         ColumnSchemaConfig,
         RakeDbColumnTypes
-      >(trx, true, config, []);
+      >(trx, true, config);
+
+      config.log = log;
+
       for (const changeFn of changeFns) {
         await changeFn(db, true);
       }

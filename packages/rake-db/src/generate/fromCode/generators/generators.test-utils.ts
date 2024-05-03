@@ -51,14 +51,17 @@ const arrange = async (arg: {
   prepareDb?: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>;
 }) => {
   config = {
-    db: () =>
-      orchidORM(
-        { noPrimaryKey: 'ignore', ...arg.dbOptions },
-        arg.tables
-          ? Object.fromEntries(arg.tables.map((klass) => [klass.name, klass]))
-          : {},
-      ),
+    dbPath: './db',
     ...(arg.config ?? defaultConfig),
+    import: () =>
+      Promise.resolve({
+        db: orchidORM(
+          { noPrimaryKey: 'ignore', ...arg.dbOptions },
+          arg.tables
+            ? Object.fromEntries(arg.tables.map((klass) => [klass.name, klass]))
+            : {},
+        ),
+      }),
   };
 
   options = arg.options ?? defaultOptions;
@@ -82,7 +85,7 @@ const arrange = async (arg: {
             const db = createMigrationInterface<
               ColumnSchemaConfig,
               DefaultColumnTypes<DefaultSchemaConfig>
-            >(trx, true, config, []);
+            >(trx, true, config);
 
             await prepareDb(db, true);
 
@@ -104,7 +107,7 @@ const arrange = async (arg: {
   }
 };
 
-const act = () => generate(options, config);
+const act = () => generate(options, config, []);
 
 const assert = {
   migration(code?: string) {

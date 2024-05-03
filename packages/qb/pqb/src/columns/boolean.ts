@@ -20,8 +20,8 @@ export class BooleanColumn<
     this.data.alias = 'boolean';
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, 'boolean()');
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, 'boolean()', m);
   }
 
   parseItem = (input: string) => input[0] === 't';

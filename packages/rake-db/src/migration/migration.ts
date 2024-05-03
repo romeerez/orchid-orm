@@ -68,9 +68,8 @@ type TextColumnCreator = (
 ) => TextColumn<ColumnSchemaConfig>;
 
 // Overridden column types to simplify and adapt some column types for a migration.
-export type MigrationColumnTypes<CT> = Omit<CT, 'text' | 'string' | 'enum'> & {
+export type MigrationColumnTypes<CT> = Omit<CT, 'text' | 'citext' | 'enum'> & {
   text: TextColumnCreator;
-  string: TextColumnCreator;
   citext: TextColumnCreator;
   enum: (name: string) => EnumColumn<ColumnSchemaConfig, unknown>;
 };
@@ -153,7 +152,6 @@ export type DbMigration<CT extends RakeDbColumnTypes> = DbResult<CT> &
  * @param tx - database adapter that executes inside a transaction
  * @param up - migrate or rollback
  * @param config - config of `rakeDb`
- * @param asts - array of migration ASTs to collect changes into
  */
 export const createMigrationInterface = <
   SchemaConfig extends ColumnSchemaConfig,
@@ -162,7 +160,6 @@ export const createMigrationInterface = <
   tx: TransactionAdapter,
   up: boolean,
   config: RakeDbConfig<SchemaConfig, CT>,
-  asts: RakeDbAst[],
 ): DbMigration<CT> => {
   const adapter = new TransactionAdapter(
     tx,
@@ -194,8 +191,6 @@ export const createMigrationInterface = <
     (db as unknown as RecordUnknown)[key] = proto[key as keyof typeof proto];
   }
 
-  db.migratedAsts = asts;
-
   return Object.assign(db, {
     adapter,
     log,
@@ -218,8 +213,6 @@ export class Migration<CT extends RakeDbColumnTypes> {
   public up!: boolean;
   // `rakeDb` config.
   public options!: RakeDbConfig<ColumnSchemaConfig>;
-  // Collect objects that represents what was changed by a migration to pass it later to the `appCodeUpdater`.
-  public migratedAsts!: RakeDbAst[];
   // Available column types that may be customized by a user.
   // They are pulled from a `baseTable` or a `columnTypes` option of the `rakeDb` config.
   public columnTypes!: CT;
@@ -1615,8 +1608,6 @@ const createSchema = async (
   await migration.adapter.query(
     `${ast.action === 'create' ? 'CREATE' : 'DROP'} SCHEMA "${name}"`,
   );
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1652,8 +1643,6 @@ const createExtension = async (
   }
 
   await migration.adapter.query(query);
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1693,8 +1682,6 @@ const createEnum = async (
   }
 
   await migration.adapter.query(query);
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1745,8 +1732,6 @@ DEFAULT ${encodeColumnDefault(column.data.default, values)}`
     text: query,
     values,
   });
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1798,8 +1783,6 @@ const createCollation = async (
   await migration.adapter.query({
     text: query,
   });
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1847,8 +1830,6 @@ export const renameType = async (
       }"`,
     );
   }
-
-  migration.migratedAsts.push(ast);
 };
 
 const renameTableItem = async (

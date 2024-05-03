@@ -30,8 +30,8 @@ export class CustomTypeColumn<
     this.data.isOfCustomType = true;
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `type(${singleQuote(this.dataType)})`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `type(${singleQuote(this.dataType)})`, m);
   }
 
   as<
@@ -57,7 +57,7 @@ export class CustomTypeColumn<
 export class DomainColumn<
   Schema extends ColumnSchemaConfig,
 > extends CustomTypeColumn<Schema> {
-  toCode(t: string): Code {
-    return columnCode(this, t, `domain(${singleQuote(this.dataType)})`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `domain(${singleQuote(this.dataType)})`, m);
   }
 }

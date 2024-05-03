@@ -253,7 +253,7 @@ const astEncoders: {
 
     if (ast.constraints) {
       for (const constraint of ast.constraints) {
-        code.push(constraintToCode(constraint, 't'));
+        code.push(constraintToCode(constraint, 't', true));
       }
     }
 
@@ -399,7 +399,7 @@ const astEncoders: {
         for (const item of constraints) {
           addCode(code, [
             `...t.${key}(`,
-            constraintInnerToCode(item, 't'),
+            constraintInnerToCode(item, 't', true),
             '),',
           ]);
         }
@@ -516,7 +516,7 @@ const astEncoders: {
     if (kind === 'foreignKey' && ast.references) {
       return [
         `await db.addForeignKey(`,
-        [`${table},`, ...referencesArgsToCode(ast.references, ast.name)],
+        [`${table},`, ...referencesArgsToCode(ast.references, ast.name, true)],
         ');',
       ];
     }
@@ -527,7 +527,7 @@ const astEncoders: {
 
     return [
       `await db.addConstraint(${table}, {`,
-      constraintPropsToCode('t', ast),
+      constraintPropsToCode('t', ast, true),
       '});',
     ];
   },

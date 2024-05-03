@@ -2,7 +2,6 @@ import { config } from 'dotenv';
 import path from 'path';
 import { rakeDb } from '../src';
 import { AdapterOptions } from 'pqb';
-import { appCodeUpdater } from 'orchid-orm/codegen';
 import { BaseTable } from './baseTable';
 
 config({ path: path.resolve('..', '..', '.env') });
@@ -27,9 +26,5 @@ if (['create', 'drop'].includes(command)) {
 export const change = rakeDb(options, {
   baseTable: BaseTable,
   migrationsPath: 'migrations',
-  appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => `tables/${tableName}.ts`,
-    ormPath: 'db.ts',
-  }),
-  useCodeUpdater: false,
+  // tablePath: (tableName) => `tables/${tableName}.ts`,
 });

@@ -33,30 +33,6 @@ export const pullDbStructure = async <
   });
   await saveMigratedVersion(silentQueries, version, 'pull', config);
 
-  const cache = {};
-  for (const item of ast) {
-    await config?.appCodeUpdater?.process({
-      ast: item,
-      options,
-      basePath: config.basePath,
-      cache,
-      logger: config.logger,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      baseTable: config.baseTable!,
-      import: config.import,
-    });
-  }
-
-  await config?.appCodeUpdater?.afterAll({
-    options,
-    basePath: config.basePath,
-    cache,
-    logger: config.logger,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    baseTable: config.baseTable!,
-    import: config.import,
-  });
-
   const unsupportedEntries = Object.entries(ctx.unsupportedTypes);
   const len = unsupportedEntries.length;
   if (len) {

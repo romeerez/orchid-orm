@@ -23,13 +23,8 @@ import { BaseTable } from './baseTable';
 
 export const change = rakeDb(config.database, {
   baseTable: BaseTable,
+  dbPath: './db',
   migrationsPath: './migrations',
-  appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
-    ormPath: './db.ts',
-  }),
-  // set to false to disable code updater
-  useCodeUpdater: process.env.NODE_ENV === 'development',
   commands: {
     async seed() {
       const { seed } = await import('./seed');
@@ -57,13 +52,8 @@ import { BaseTable } from './baseTable';
 
 export const change = rakeDb(config.allDatabases, {
   baseTable: BaseTable,
+  dbPath: './db',
   migrationsPath: './migrations',
-  appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
-    ormPath: './db.ts',
-  }),
-  // set to false to disable code updater
-  useCodeUpdater: process.env.NODE_ENV === 'development',
   commands: {
     async seed() {
       const { seed } = await import('./seed');
@@ -75,7 +65,7 @@ export const change = rakeDb(config.allDatabases, {
 `);
   });
 
-  it('should have special migrations for vite-node, and useCodeUpdater: import.meta.env.DEV', async () => {
+  it('should have special migrations for vite-node', async () => {
     await initSteps.setupMigrationScript({
       ...testInitConfig,
       runner: 'vite-node',
@@ -85,6 +75,5 @@ export const change = rakeDb(config.allDatabases, {
     expect(content).toContain(
       "migrations: import.meta.glob('./migrations/*.ts')",
     );
-    expect(content).toContain('useCodeUpdater: import.meta.env.DEV');
   });
 });

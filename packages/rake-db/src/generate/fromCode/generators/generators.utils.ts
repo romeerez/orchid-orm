@@ -92,6 +92,12 @@ export const promptCreateOrRename = (
 ): Promise<number> => {
   if (verifying) throw new AbortSignal();
 
+  let hintPos = name.length + 4;
+  for (const from of drop) {
+    const value = from.length + 8 + name.length;
+    if (value > hintPos) hintPos = value;
+  }
+
   let max = 0;
   const add = name.length + 3;
   for (const name of drop) {
@@ -100,23 +106,29 @@ export const promptCreateOrRename = (
     }
   }
 
-  const renameMessage = `rename ${name}`;
+  const renameMessage = `rename ${kind}`;
 
   return promptSelect({
     message: `Create or rename ${colors.blueBold(
       name,
     )} ${kind} from another ${kind}?`,
     options: [
-      `${colors.greenBold('+')} ${name} ${colors
-        .pale('create name')
-        .padStart(max + renameMessage.length - name.length, ' ')}`,
+      `${colors.greenBold('+')} ${name}  ${colors.pale(
+        `create ${kind}`.padStart(
+          hintPos + renameMessage.length - name.length - 4,
+          ' ',
+        ),
+      )}`,
       ...drop.map(
         (d) =>
           `${colors.yellowBold('~')} ${d} ${colors.yellowBold(
-            '>',
-          )} ${name} ${colors
-            .pale(renameMessage)
-            .padStart(max + renameMessage.length - d.length - add, ' ')}`,
+            '=>',
+          )} ${name}  ${colors.pale(
+            renameMessage.padStart(
+              hintPos + renameMessage.length - d.length - name.length - 8,
+              ' ',
+            ),
+          )}`,
       ),
     ],
   });

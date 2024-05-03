@@ -23,7 +23,7 @@ export interface ArrayColumnValue {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   querySchema: any;
   toSQL(): string;
-  toCode(t: string, migration?: boolean): Code;
+  toCode(t: string, m?: boolean): Code;
   parseItem?(input: string): unknown;
   data: ColumnDataBase;
 }
@@ -80,11 +80,12 @@ export class ArrayColumn<
       unknown
     >,
     t: string,
+    m?: boolean,
   ): Code {
     const code: Code[] = ['array('];
     addCode(code, this.data.item.toCode(t));
-    addCode(code, `)${arrayDataToCode(this.data)}`);
-    return columnCode(this, t, code);
+    addCode(code, `)${arrayDataToCode(this.data, m)}`);
+    return columnCode(this, t, code, m);
   }
 
   parseFn = Object.assign(

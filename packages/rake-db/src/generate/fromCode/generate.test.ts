@@ -26,13 +26,13 @@ describe('generate', () => {
   const { arrange, act, defaultConfig, BaseTable, table } =
     useGeneratorsTestUtils();
 
-  it('should throw if no `db` setting in the config', async () => {
+  it('should throw if no `dbPath` setting in the config', async () => {
     await arrange({
-      config: { ...defaultConfig, db: undefined },
+      config: { ...defaultConfig, dbPath: undefined },
     });
 
     await expect(act()).rejects.toThrow(
-      '`db` setting must be set in the rake-db config for the generator to work',
+      '`dbPath` setting must be set in the rake-db config for the generator to work',
     );
   });
 
