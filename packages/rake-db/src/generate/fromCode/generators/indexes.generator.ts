@@ -1,11 +1,11 @@
 import { ColumnType, IndexOptions, SearchWeight, TableData } from 'pqb';
 import { deepCompare, RecordUnknown, toArray } from 'orchid-core';
-import { AnyRakeDbConfig } from '../../config';
-import { RakeDbAst } from '../../ast';
-import { getIndexName } from '../../migration/migrationUtils';
+import { AnyRakeDbConfig } from '../../../config';
+import { RakeDbAst } from '../../../ast';
+import { getIndexName } from '../../../migration/migrationUtils';
 import { ChangeTableData } from './tables.generator';
-import { DbStructure } from '../dbStructure';
-import { CompareExpression } from './generators.utils';
+import { DbStructure } from '../../dbStructure';
+import { checkForColumnChange, CompareExpression } from './generators.utils';
 
 export const processIndexes = (
   config: AnyRakeDbConfig,
@@ -32,9 +32,7 @@ export const processIndexes = (
   for (const dbIndex of changeTableData.dbTableData.indexes) {
     const hasChangedColumn = dbIndex.columns.some(
       (column) =>
-        'column' in column &&
-        shape[column.column] &&
-        shape[column.column].type !== 'rename',
+        'column' in column && checkForColumnChange(shape, column.column),
     );
     if (hasChangedColumn) continue;
 
@@ -145,7 +143,7 @@ const collectCodeIndexes = ({
     if (!column.data.indexes) continue;
 
     const name = column.data.name ?? key;
-    if (shape[name] && shape[name].type !== 'rename') continue;
+    if (checkForColumnChange(shape, name)) continue;
 
     codeIndexes.push(
       ...column.data.indexes.map(

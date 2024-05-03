@@ -7,7 +7,12 @@ import {
   TableData,
 } from 'pqb';
 import { DropMode } from './migration/migration';
-import { RawSQLBase, RecordString } from 'orchid-core';
+import {
+  ColumnDataCheckBase,
+  MaybeArray,
+  RawSQLBase,
+  RecordString,
+} from 'orchid-core';
 
 export type RakeDbAst =
   | RakeDbAst.Table
@@ -50,7 +55,8 @@ export namespace RakeDbAst {
     drop: TableData;
   }
 
-  export type ChangeTableShape = Record<string, ChangeTableItem>;
+  // it can be an array to allow adding and dropping the same column in a single `changeTable`
+  export type ChangeTableShape = Record<string, MaybeArray<ChangeTableItem>>;
 
   export type ChangeTableItem =
     | ChangeTableItem.Column
@@ -92,7 +98,7 @@ export namespace RakeDbAst {
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
-    check?: RawSQLBase;
+    check?: ColumnDataCheckBase;
     foreignKeys?: ({
       table: string;
       columns: string[];
@@ -132,8 +138,8 @@ export namespace RakeDbAst {
   export interface Extension extends ExtensionArg {
     type: 'extension';
     action: 'create' | 'drop';
-    name: string;
     schema?: string;
+    name: string;
   }
 
   export interface Enum {

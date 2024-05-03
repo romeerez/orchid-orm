@@ -1,5 +1,6 @@
 import { Adapter, SearchWeight } from 'pqb';
 import { RakeDbAst } from '../ast';
+import { EmptyObject, RecordUnknown } from 'orchid-core';
 
 export namespace DbStructure {
   export interface Table {
@@ -46,7 +47,7 @@ export namespace DbStructure {
     default?: string;
     isNullable: boolean;
     collate?: string;
-    compression?: 'p' | 'l'; // p for pglz, l for lz4
+    compression?: 'pglz' | 'lz4';
     comment?: string;
     identity?: {
       always: boolean;
@@ -200,7 +201,7 @@ const columnsSql = ({
   information_schema._pg_datetime_precision(
     information_schema._pg_truetypid(a, t),
     information_schema._pg_truetypmod(a, t)
-  ) AS "datetimePrecision",
+  ) AS "dateTimePrecision",
   CAST(
     CASE WHEN a.attgenerated = ''
       THEN pg_get_expr(ad.adbin, ad.adrelid)
@@ -496,7 +497,7 @@ JOIN pg_catalog.pg_namespace n ON n.oid = extnamespace
 const enumsSql = `SELECT
   n.nspname as "schemaName",
   t.typname as name,
-  json_agg(e.enumlabel) as values
+  json_agg(e.enumlabel ORDER BY e.enumsortorder) as values
 FROM pg_type t
 JOIN pg_enum e ON t.oid = e.enumtypid
 JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -604,17 +605,24 @@ export async function introspectDbSchema(
 ): Promise<IntrospectedStructure> {
   const data = await db.query<IntrospectedStructure>(sql);
   const result = data.rows[0];
+
+  for (const domain of result.domains) {
+    nullsToUndefined(domain);
+  }
+
   for (const table of result.tables) {
     for (const column of table.columns) {
-      const id = column.identity;
-      if (id) {
-        if (id.min === null) id.min = undefined;
-        if (id.max === null) id.max = undefined;
+      nullsToUndefined(column);
+      if (column.identity) nullsToUndefined(column.identity);
+      if (column.compression) {
+        column.compression =
+          (column.compression as string) === 'p' ? 'pglz' : 'lz4';
       }
     }
   }
 
   for (const index of result.indexes) {
+    nullsToUndefined(index);
     for (const column of index.columns) {
       if (!('expression' in column)) continue;
 
@@ -694,3 +702,10 @@ export async function introspectDbSchema(
 
   return result;
 }
+
+const nullsToUndefined = (obj: EmptyObject) => {
+  for (const key in obj) {
+    if ((obj as RecordUnknown)[key] === null)
+      (obj as RecordUnknown)[key] = undefined;
+  }
+};

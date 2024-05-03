@@ -72,11 +72,20 @@ export const createTable = async <
   );
   types[snakeCaseKey] = snakeCase;
 
-  const shape = !fn
-    ? emptyObject
-    : getColumnTypes(types, fn, migration.options.baseTable?.nowSQL, language);
+  let shape;
+  let tableData;
+  if (fn) {
+    shape = getColumnTypes(
+      types,
+      fn,
+      migration.options.baseTable?.nowSQL,
+      language,
+    );
+    tableData = getTableData();
+  } else {
+    shape = tableData = emptyObject;
+  }
 
-  const tableData = getTableData();
   const ast = makeAst(
     up,
     tableName,
@@ -121,7 +130,7 @@ const makeAst = (
   const shapePKeys: string[] = [];
   for (const key in shape) {
     const column = shape[key];
-    if (column.data.isPrimaryKey) {
+    if (column.data.primaryKey) {
       shapePKeys.push(key);
     }
   }
@@ -152,7 +161,7 @@ const validatePrimaryKey = (ast: RakeDbAst.Table) => {
     let hasPrimaryKey = !!ast.primaryKey?.columns?.length;
     if (!hasPrimaryKey) {
       for (const key in ast.shape) {
-        if (ast.shape[key].data.isPrimaryKey) {
+        if (ast.shape[key].data.primaryKey) {
           hasPrimaryKey = true;
           break;
         }

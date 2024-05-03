@@ -1,13 +1,17 @@
 import { Adapter, ArrayColumn, ColumnType, RawSQL } from 'pqb';
 import { RakeDbAst } from 'rake-db';
-import { getSchemaAndTableFromName } from '../../common';
-import { DbStructure, IntrospectedStructure } from '../dbStructure';
+import { getSchemaAndTableFromName } from '../../../common';
+import { DbStructure, IntrospectedStructure } from '../../dbStructure';
 import {
   DbStructureDomainsMap,
   instantiateDbColumn,
   StructureToAstCtx,
-} from '../structureToAst';
-import { deepCompare, TemplateLiteralArgs } from 'orchid-core';
+} from '../../structureToAst';
+import {
+  ColumnDataCheckBase,
+  deepCompare,
+  TemplateLiteralArgs,
+} from 'orchid-core';
 import { getColumnDbType } from './columns.generator';
 import {
   CompareExpression,
@@ -73,10 +77,11 @@ export const processDomains = async (
       },
     );
 
-    if (domain.check)
-      dbColumn.data.check = new RawSQL([
-        [domain.check],
-      ] as unknown as TemplateLiteralArgs);
+    if (domain.check) {
+      dbColumn.data.check = {
+        sql: new RawSQL([[domain.check]] as unknown as TemplateLiteralArgs),
+      };
+    }
 
     const dbDomain = makeComparableDomain(
       currentSchema,
@@ -89,7 +94,7 @@ export const processDomains = async (
       deepCompare(dbDomain.compare, codeDomain.compare),
     );
 
-    if (domain.default || domain.check) {
+    if ((domain.default || domain.check) && found.length) {
       for (const codeDomain of found) {
         holdCodeDomains.add(codeDomain);
       }
@@ -203,7 +208,13 @@ const pushCompare = (
   if (inDb) {
     compare.push({
       inDb,
-      inCode: found.map((codeDomain) => codeDomain.column.data[key] as string),
+      inCode: found.map((codeDomain) => {
+        const value = codeDomain.column.data[key];
+        if ('sql' in (value as ColumnDataCheckBase)) {
+          return (value as ColumnDataCheckBase).sql;
+        }
+        return value as string;
+      }),
     });
   }
 };

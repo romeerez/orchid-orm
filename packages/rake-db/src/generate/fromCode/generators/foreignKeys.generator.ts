@@ -1,10 +1,11 @@
 import { ColumnType, ForeignKeyAction, ForeignKeyMatch, TableData } from 'pqb';
-import { DbStructure } from '../dbStructure';
-import { getSchemaAndTableFromName } from '../../common';
+import { DbStructure } from '../../dbStructure';
+import { getSchemaAndTableFromName } from '../../../common';
 import { ChangeTableData, TableShapes } from './tables.generator';
 import { RakeDbAst } from 'rake-db';
 import { deepCompare } from 'orchid-core';
-import { getConstraintName } from '../../migration/migrationUtils';
+import { getConstraintName } from '../../../migration/migrationUtils';
+import { checkForColumnChange } from './generators.utils';
 
 interface CodeForeignKey {
   references: DbStructure.References;
@@ -61,8 +62,8 @@ export const processForeignKeys = (
       const { references: dbReferences } = dbConstraint;
       if (!dbReferences) continue;
 
-      const hasChangedColumn = dbReferences.columns.some(
-        (column) => shape[column] && shape[column].type !== 'rename',
+      const hasChangedColumn = dbReferences.columns.some((column) =>
+        checkForColumnChange(shape, column),
       );
       if (hasChangedColumn) continue;
 
@@ -72,9 +73,8 @@ export const processForeignKeys = (
         ];
       const hasForeignChangedColumn =
         foreignShape &&
-        dbReferences.foreignColumns.some(
-          (column) =>
-            foreignShape[column] && foreignShape[column].type !== 'rename',
+        dbReferences.foreignColumns.some((column) =>
+          checkForColumnChange(foreignShape, column),
         );
       if (hasForeignChangedColumn) continue;
 
@@ -137,7 +137,7 @@ const collectCodeFkeys = (
     if (!column.data.foreignKeys) continue;
 
     const name = column.data.name ?? key;
-    if (shape[name] && shape[name].type !== 'rename') continue;
+    if (checkForColumnChange(shape, name)) continue;
 
     codeForeignKeys.push(
       ...column.data.foreignKeys.map((x) => {

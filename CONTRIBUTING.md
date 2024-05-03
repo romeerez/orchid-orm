@@ -43,6 +43,9 @@ docker compose -f docker-compose.mysql.yml down
 
 Copy `.env.example` to `.env` and change the database URLs in it. Leave it unchanged if you're running a database with Docker.
 
+`PG_URL` will have tables for testing.
+`PG_GENERATE_URL` is for testing code generator, won't have tables.
+
 Create a database, unless running it with the Docker, with a command:
 
 ```sh

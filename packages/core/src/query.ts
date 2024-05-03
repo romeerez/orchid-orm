@@ -9,7 +9,7 @@ export interface Sql {
   // SQL string
   text: string;
   // bind values passed along with SQL string
-  values: unknown[];
+  values?: unknown[];
   // additional columns to select for `after` hooks
   hookSelect?: string[];
 }

@@ -4,17 +4,28 @@ import {
   getDbTableColumnsChecks,
   instantiateDbColumn,
   StructureToAstCtx,
-} from '../structureToAst';
-import { ColumnType, EnumColumn } from 'pqb';
-import { DbStructure, IntrospectedStructure } from '../dbStructure';
+} from '../../structureToAst';
+import { Adapter, ColumnType, DomainColumn, EnumColumn } from 'pqb';
+import { DbStructure, IntrospectedStructure } from '../../dbStructure';
 import { RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
-import { deepCompare, RecordUnknown } from 'orchid-core';
-import { encodeColumnDefault } from '../../migration/migrationUtils';
-import { getSchemaAndTableFromName } from '../../common';
+import { ColumnTypeBase, deepCompare, RecordUnknown } from 'orchid-core';
+import { encodeColumnDefault } from '../../../migration/migrationUtils';
+import {
+  concatSchemaAndName,
+  getSchemaAndTableFromName,
+} from '../../../common';
 import { ChangeTableData, CompareSql } from './tables.generator';
+import { promptSelect } from '../../../prompt';
+import { colors } from '../../../colors';
+import { AbortSignal } from '../generate';
+
+export interface TypeCastsCache {
+  value?: Map<string, Set<string>>;
+}
 
 export const processColumns = async (
+  adapter: Adapter,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
@@ -22,6 +33,8 @@ export const processColumns = async (
   ast: RakeDbAst[],
   currentSchema: string,
   compareSql: CompareSql,
+  typeCastsCache: TypeCastsCache,
+  verifying: boolean | undefined,
 ) => {
   const { dbTable } = changeTableData;
   const dbColumns = Object.fromEntries(
@@ -36,14 +49,8 @@ export const processColumns = async (
     changeTableData,
   );
 
-  await addOrRenameColumns(
-    dbStructure,
-    changeTableData,
-    columnsToAdd,
-    columnsToDrop,
-  );
-  dropColumns(changeTableData, columnsToDrop);
-  changeColumns(
+  await changeColumns(
+    adapter,
     structureToAstCtx,
     dbStructure,
     domainsMap,
@@ -53,7 +60,19 @@ export const processColumns = async (
     columnsToChange,
     compareSql,
     changeTableData,
+    typeCastsCache,
+    verifying,
   );
+
+  await addOrRenameColumns(
+    dbStructure,
+    changeTableData,
+    columnsToAdd,
+    columnsToDrop,
+    verifying,
+  );
+
+  dropColumns(changeTableData, columnsToDrop);
 };
 
 type KeyAndColumn = { key: string; column: ColumnType };
@@ -78,6 +97,9 @@ const groupColumns = (
 
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
+    // skip virtual columns
+    if (!column.dataType) continue;
+
     const name = column.data.name ?? key;
     if (dbColumns[name]) {
       columnsToChange.set(name, column);
@@ -119,6 +141,7 @@ const addOrRenameColumns = async (
   }: ChangeTableData,
   columnsToAdd: KeyAndColumn[],
   columnsToDrop: KeyAndColumn[],
+  verifying: boolean | undefined,
 ) => {
   for (const { key, column } of columnsToAdd) {
     if (columnsToDrop.length) {
@@ -126,6 +149,7 @@ const addOrRenameColumns = async (
         'column',
         column.data.name ?? key,
         columnsToDrop.map((x) => x.key),
+        verifying,
       );
       if (index) {
         const drop = columnsToDrop[index - 1];
@@ -191,7 +215,8 @@ const dropColumns = (
   }
 };
 
-const changeColumns = (
+const changeColumns = async (
+  adapter: Adapter,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
@@ -201,6 +226,8 @@ const changeColumns = (
   columnsToChange: Map<string, ColumnType>,
   compareSql: CompareSql,
   changeTableData: ChangeTableData,
+  typeCastsCache: TypeCastsCache,
+  verifying: boolean | undefined,
 ) => {
   const { shape } = changeTableData.changeTableAst;
 
@@ -219,6 +246,90 @@ const changeColumns = (
     const dbType = getColumnDbType(dbColumn, currentSchema);
     const codeType = getColumnDbType(codeColumn, currentSchema);
     if (dbType !== codeType) {
+      let typeCasts = typeCastsCache.value;
+      if (!typeCasts) {
+        const { rows } = await adapter.arrays(`SELECT s.typname, t.typname
+FROM pg_cast
+JOIN pg_type AS s ON s.oid = castsource
+JOIN pg_type AS t ON t.oid = casttarget`);
+
+        const directTypeCasts = new Map<string, Set<string>>();
+        for (const [source, target] of rows) {
+          const set = directTypeCasts.get(source);
+          if (set) {
+            set.add(target);
+          } else {
+            directTypeCasts.set(source, new Set([target]));
+          }
+        }
+
+        typeCasts = new Map<string, Set<string>>();
+        for (const [type, directSet] of directTypeCasts.entries()) {
+          const set = new Set<string>(directSet);
+          typeCasts.set(type, set);
+
+          for (const subtype of directSet) {
+            const subset = directTypeCasts.get(subtype);
+            if (subset) {
+              for (const type of subset) {
+                set.add(type);
+              }
+            }
+          }
+        }
+
+        typeCastsCache.value = typeCasts;
+      }
+
+      const dbBaseType =
+        dbColumn instanceof DomainColumn
+          ? domainsMap[dbColumn.dataType]?.dataType
+          : dbType;
+
+      const codeBaseType =
+        codeColumn instanceof DomainColumn
+          ? domainsMap[codeColumn.dataType]?.dataType
+          : codeType;
+
+      if (!typeCasts.get(dbBaseType)?.has(codeBaseType)) {
+        if (
+          !(dbColumn instanceof EnumColumn) ||
+          !(codeColumn instanceof EnumColumn) ||
+          !deepCompare(dbColumn.options, codeColumn.options)
+        ) {
+          if (verifying) throw new AbortSignal();
+
+          const tableName = concatSchemaAndName(changeTableData.changeTableAst);
+          const abort = await promptSelect({
+            message: `Cannot cast type of ${tableName}'s column ${name} from ${dbType} to ${codeType}`,
+            options: [
+              `${colors.yellowBold(
+                `-/+`,
+              )} recreate the column, existing data will be ${colors.red(
+                'lost',
+              )}`,
+              `write migration manually`,
+            ],
+          });
+          if (abort) {
+            throw new AbortSignal();
+          }
+
+          shape[name] = [
+            {
+              type: 'drop',
+              item: dbColumn,
+            },
+            {
+              type: 'add',
+              item: codeColumn,
+            },
+          ];
+
+          continue;
+        }
+      }
+
       changed = true;
     }
 
@@ -228,17 +339,26 @@ const changeColumns = (
     if (!changed) {
       if (!dbData.isNullable) dbData.isNullable = undefined;
 
+      for (const key of ['isNullable', 'comment']) {
+        if (dbData[key] !== codeData[key]) {
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    if (!changed) {
       for (const key of [
-        'isNullable',
         'maxChars',
         'collation',
         'compression',
         'numericPrecision',
         'numericScale',
         'dateTimePrecision',
-        'comment',
       ]) {
-        if (dbData[key] !== codeData[key]) {
+        // Check if key in codeData so that default precision/scale values for such columns as integer aren't counted.
+        // If column supports precision/scale, it should have it listed in the data, even if it's undefined.
+        if (key in codeData && dbData[key] !== codeData[key]) {
           changed = true;
           break;
         }
@@ -321,7 +441,7 @@ const changeColumn = (
   dbColumn: ColumnType,
   codeColumn: ColumnType,
 ) => {
-  codeColumn.data.as = undefined;
+  dbColumn.data.as = codeColumn.data.as = undefined;
 
   shape[name] = {
     type: 'change',
@@ -330,7 +450,10 @@ const changeColumn = (
   };
 };
 
-export const getColumnDbType = (column: ColumnType, currentSchema: string) => {
+export const getColumnDbType = (
+  column: ColumnTypeBase,
+  currentSchema: string,
+) => {
   if (column instanceof EnumColumn) {
     const [schema = currentSchema, name] = getSchemaAndTableFromName(
       column.enumName,

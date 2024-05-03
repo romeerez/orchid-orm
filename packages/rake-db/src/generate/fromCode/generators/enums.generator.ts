@@ -1,5 +1,5 @@
-import { DbStructure, IntrospectedStructure } from '../dbStructure';
-import { RakeDbAst } from 'rake-db';
+import { DbStructure, IntrospectedStructure } from '../../dbStructure';
+import { RakeDbAst } from '../../../index';
 import { promptCreateOrRename } from './generators.utils';
 
 export interface EnumItem {
@@ -13,6 +13,7 @@ export const processEnums = async (
   enums: Map<string, EnumItem>,
   dbStructure: IntrospectedStructure,
   currentSchema: string,
+  verifying: boolean | undefined,
 ): Promise<void> => {
   const createEnums: EnumItem[] = [];
   const dropEnums: DbStructure.Enum[] = [];
@@ -99,6 +100,7 @@ export const processEnums = async (
         'enum',
         codeEnum.name,
         dropEnums.map((x) => x.name),
+        verifying,
       );
       if (index) {
         const drop = dropEnums[index - 1];

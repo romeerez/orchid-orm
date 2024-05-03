@@ -5,6 +5,7 @@ import {
   ColumnsShapeBase,
   ColumnTypeBase,
   ColumnTypeSchemaArg,
+  ConstraintOptions,
   emptyObject,
   ForeignKeyTable,
   MaybeArray,
@@ -183,9 +184,14 @@ export abstract class ColumnType<
    * // primary key can be used by `find` later:
    * db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
    * ```
+   *
+   * @param options - to specify a constraint name
    */
-  primaryKey<T extends PickColumnBaseData>(this: T): PrimaryKeyColumn<T> {
-    return setColumnData(this, 'isPrimaryKey', true) as never;
+  primaryKey<T extends PickColumnBaseData>(
+    this: T,
+    options?: ConstraintOptions,
+  ): PrimaryKeyColumn<T> {
+    return setColumnData(this, 'primaryKey', options?.name ?? true) as never;
   }
 
   /**

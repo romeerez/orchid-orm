@@ -1,38 +1,34 @@
-import { generatorsTestUtils } from './generators.test-utils';
-import { dbStructureMockFactory } from '../dbStructure.mockFactory';
-import { colors } from '../../colors';
+import { useGeneratorsTestUtils } from './generators.test-utils';
+import { DbMigration } from 'rake-db';
+import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import { colors } from '../../../colors';
 
-jest.mock('../../commands/migrateOrRollback');
-jest.mock('../dbStructure');
+jest.mock('../../../commands/migrateOrRollback');
+jest.mock('../../../prompt');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),
   writeFile: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('../../prompt');
 
-const { arrange, act, assert, table, makeStructure } = generatorsTestUtils;
 const { green, red, yellow } = colors;
 
 describe('columns', () => {
-  beforeEach(jest.clearAllMocks);
+  const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
   it('should add a column', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          id: t.identity(),
+        }));
+      },
       tables: [
         table((t) => ({
           id: t.identity(),
           name: t.text(),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.identityColumn({ name: 'id' })],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -51,23 +47,18 @@ change(async (db) => {
   });
 
   it('should drop a column', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          id: t.identity(),
+          name: t.text(),
+        }));
+      },
       tables: [
         table((t) => ({
           id: t.identity(),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.identityColumn({ name: 'id' }),
-              dbStructureMockFactory.textColumn({ name: 'name' }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -86,20 +77,17 @@ change(async (db) => {
   });
 
   it('should change column type', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          name: t.integer(),
+        }));
+      },
       tables: [
         table((t) => ({
           name: t.text(),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn({ name: 'name' })],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -120,25 +108,24 @@ change(async (db) => {
   });
 
   it('should change column type when type schema is changed', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('from');
+        await db.createSchema('to');
+        await db.createDomain('from.custom', (t) => t.integer());
+        await db.createDomain('to.custom', (t) => t.varchar());
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          unchanged: t.domain('from.custom'),
+          column: t.domain('from.custom'),
+        }));
+      },
       tables: [
         table((t) => ({
-          column: t.type('to.custom').as(t.integer()),
+          unchanged: t.domain('from.custom').as(t.integer()),
+          column: t.domain('to.custom').as(t.varchar()),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.column({
-                typeSchema: 'from',
-                type: 'custom',
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -147,37 +134,29 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.type('from.custom'), t.type('to.custom')),
+    column: t.change(t.domain('from.custom'), t.domain('to.custom')),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${yellow('~ change column')} column:
-    ${yellow('from')}: t.type('from.custom')
-      ${yellow('to')}: t.type('to.custom')`);
+    ${yellow('from')}: t.domain('from.custom')
+      ${yellow('to')}: t.domain('to.custom')`);
   });
 
   it('should change column nullability', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.integer().nullable(),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.integer(),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.intColumn({
-                name: 'column',
-                isNullable: true,
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -198,27 +177,21 @@ change(async (db) => {
   });
 
   it('should change text data type properties', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        try {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            column: t.varchar(10).collate('es_ES').compression('pglz'),
+          }));
+        } catch (err) {
+          console.log(err);
+        }
+      },
       tables: [
         table((t) => ({
-          column: t.varchar(20).collate('toCollation').compression('l'),
+          column: t.varchar(20).collate('fr_FR').compression('lz4'),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.column({
-                type: 'varchar',
-                maxChars: 10,
-                collate: 'fromCollation',
-                compression: 'p',
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -227,38 +200,29 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.varchar(10).compression('p').collate('fromCollation'), t.varchar(20).compression('l').collate('toCollation')),
+    column: t.change(t.varchar(10).compression('pglz').collate('es_ES'), t.varchar(20).compression('lz4').collate('fr_FR')),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${yellow('~ change column')} column:
-    ${yellow('from')}: t.varchar(10).compression('p').collate('fromCollation')
-      ${yellow('to')}: t.varchar(20).compression('l').collate('toCollation')`);
+    ${yellow('from')}: t.varchar(10).compression('pglz').collate('es_ES')
+      ${yellow('to')}: t.varchar(20).compression('lz4').collate('fr_FR')`);
   });
 
   it('change number data type properties', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.decimal(3, 7),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.decimal(11, 13),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.column({
-                type: 'decimal',
-                numericPrecision: 3,
-                numericScale: 7,
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -279,25 +243,17 @@ change(async (db) => {
   });
 
   it('change date precision', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.timestamp(3),
+        }));
+      },
       tables: [
         table((t) => ({
-          column: t.timestamp(13),
+          column: t.timestamp(5),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.column({
-                type: 'timestamptz',
-                dateTimePrecision: 7,
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -306,19 +262,28 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.timestamp(7), t.timestamp(13)),
+    column: t.change(t.timestamp(3), t.timestamp(5)),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${yellow('~ change column')} column:
-    ${yellow('from')}: t.timestamp(7)
-      ${yellow('to')}: t.timestamp(13)`);
+    ${yellow('from')}: t.timestamp(3)
+      ${yellow('to')}: t.timestamp(5)`);
   });
 
   it('change default', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          valueNotChanged: t.integer().default(1),
+          valueChanged: t.integer().default(2),
+          ignoreFunction: t.integer(),
+          sqlNotChanged: t.integer().default(t.sql`1 + 2`),
+          sqlChanged: t.integer().default(t.sql`1 + 2`),
+        }));
+      },
       tables: [
         table((t) => ({
           valueNotChanged: t.integer().default(1),
@@ -328,35 +293,6 @@ change(async (db) => {
           sqlChanged: t.integer().default(t.sql`1 + 3`),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.intColumn({
-                name: 'valueNotChanged',
-                default: '1',
-              }),
-              dbStructureMockFactory.intColumn({
-                name: 'valueChanged',
-                default: '2',
-              }),
-              dbStructureMockFactory.intColumn({
-                name: 'ignoreFunction',
-              }),
-              dbStructureMockFactory.intColumn({
-                name: 'sqlNotChanged',
-                default: '(1 + 2)',
-              }),
-              dbStructureMockFactory.intColumn({
-                name: 'sqlChanged',
-                default: '(1 + 2)',
-              }),
-            ],
-          }),
-        ],
-      }),
-      compareExpressions: [false, false],
     });
 
     await act();
@@ -381,13 +317,18 @@ change(async (db) => {
   });
 
   it('change identity', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.identity(),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.identity({
-            incrementBy: 2,
-            startWith: 3,
-            min: 4,
+            increment: 2,
+            min: 3,
+            start: 4,
             max: 5,
             cache: 6,
             cycle: true,
@@ -395,18 +336,6 @@ change(async (db) => {
           }),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.identityColumn({
-                name: 'column',
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -417,11 +346,12 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     column: t.change(t.identity(), t.identity({
       always: true,
-      incrementBy: 2,
-      startWith: 3,
-      min: 4,
+      increment: 2,
+      start: 4,
+      min: 3,
       max: 5,
       cache: 6,
+      cycle: true,
     })),
   }));
 });
@@ -432,34 +362,27 @@ change(async (db) => {
     ${yellow('from')}: t.identity()
       ${yellow('to')}: t.identity({
       always: true,
-      incrementBy: 2,
-      startWith: 3,
-      min: 4,
+      increment: 2,
+      start: 4,
+      min: 3,
       max: 5,
       cache: 6,
+      cycle: true,
     })`);
   });
 
   it('change column comment', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.text().comment('from'),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.text().comment('to'),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({
-                name: 'column',
-                comment: 'from',
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -479,21 +402,19 @@ change(async (db) => {
       ${yellow('to')}: t.text().comment('to')`);
   });
 
-  it('change to array type', async () => {
-    arrange({
+  it('change to array type: prompt if should recreate the column or abort, selecting recreate', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.integer(),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.array(t.integer()),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn()],
-          }),
-        ],
-      }),
+      selects: [0],
     });
 
     await act();
@@ -502,75 +423,54 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.integer(), t.array(t.integer())),
+    ...t.drop(t.name('column').integer()),
+    ...t.add(t.name('column').array(t.integer())),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
-    ${yellow('from')}: t.integer()
-      ${yellow('to')}: t.array(t.integer())`);
+  ${red('- drop column')} column integer
+  ${green('+ add column')} column array`);
   });
 
-  it('change from array type', async () => {
-    arrange({
+  it('change from array type: prompt if should recreate the column or abort, selecting abort', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.array(t.integer()),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.integer(),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.intColumn({
-                isArray: true,
-              }),
-            ],
-          }),
-        ],
-      }),
+      selects: [1],
     });
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
-
-change(async (db) => {
-  await db.changeTable('table', (t) => ({
-    column: t.change(t.array(t.integer()), t.integer()),
-  }));
-});
-`);
-
-    assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
-    ${yellow('from')}: t.array(t.integer())
-      ${yellow('to')}: t.integer()`);
+    assert.migration();
   });
 
   describe('recreating and renaming', () => {
-    const dbTable = dbStructureMockFactory.table({
-      name: 'table',
-      columns: [
-        dbStructureMockFactory.intColumn({
-          name: 'from',
-        }),
-      ],
-    });
+    const prepareDb = async (
+      db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>,
+    ) => {
+      await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+        from: t.integer(),
+      }));
+    };
 
     it('should drop old and create new column when selected', async () => {
-      arrange({
+      await arrange({
+        prepareDb,
         tables: [
           table((t) => ({
             to: t.integer(),
           })),
         ],
-        structure: makeStructure({
-          tables: [dbTable],
-        }),
         selects: [0],
       });
 
@@ -592,15 +492,13 @@ change(async (db) => {
     });
 
     it('should rename column when selected', async () => {
-      arrange({
+      await arrange({
+        prepareDb,
         tables: [
           table((t) => ({
             to: t.integer(),
           })),
         ],
-        structure: makeStructure({
-          tables: [dbTable],
-        }),
         selects: [1],
       });
 
@@ -620,15 +518,13 @@ change(async (db) => {
     });
 
     it('should rename column when using custom name', async () => {
-      arrange({
+      await arrange({
+        prepareDb,
         tables: [
           table((t) => ({
             from: t.name('to').integer(),
           })),
         ],
-        structure: makeStructure({
-          tables: [dbTable],
-        }),
         selects: [1],
       });
 

@@ -14,7 +14,7 @@ export const writeMigrationFile = async (
   config: AnyRakeDbConfig,
   version: string,
   name: string,
-  content: (importPath: string, name: string) => string,
+  migrationCode: string,
 ) => {
   await mkdir(config.migrationsPath, { recursive: true });
 
@@ -24,7 +24,10 @@ export const writeMigrationFile = async (
     path.join(config.basePath, config.dbScript),
   );
 
-  await writeFile(filePath, content(importPath, name));
+  await writeFile(
+    filePath,
+    `import { change } from '${importPath}';\n${migrationCode}`,
+  );
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 
@@ -35,7 +38,7 @@ export const newMigration = async (
   if (!name) throw new Error('Migration name is missing');
 
   const version = await makeFileVersion({}, config);
-  await writeMigrationFile(config, version, name, makeContent);
+  await writeMigrationFile(config, version, name, makeContent(name));
 };
 
 export const makeFileVersion = async (
@@ -68,8 +71,8 @@ export const generateTimeStamp = () => {
     .join('');
 };
 
-const makeContent = (importPath: string, name: string): string => {
-  let content = `import { change } from '${importPath}';\n\nchange(async (db) => {`;
+const makeContent = (name: string): string => {
+  let content = `\nchange(async (db) => {`;
 
   const [first, rest] = getFirstWordAndRest(name);
   if (rest) {

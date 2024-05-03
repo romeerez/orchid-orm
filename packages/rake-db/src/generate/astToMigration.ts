@@ -22,6 +22,7 @@ import {
   isRawSQL,
   quoteObjectKey,
   singleQuote,
+  toArray,
 } from 'orchid-core';
 import { exhaustive, quoteSchemaTable } from '../common';
 import { AnyRakeDbConfig } from 'rake-db';
@@ -31,7 +32,7 @@ export const astToMigration = (
   currentSchema: string,
   config: AnyRakeDbConfig,
   asts: RakeDbAst[],
-): ((importPath: string) => string) | undefined => {
+): string | undefined => {
   const items = astToGenerateItems(asts, currentSchema);
 
   const toBeAdded = new Set<string>();
@@ -180,7 +181,7 @@ ${group
 `;
   }
 
-  return (importPath) => `import { change } from '${importPath}';\n${code}`;
+  return code;
 };
 
 const astEncoders: {
@@ -293,67 +294,82 @@ const astEncoders: {
       (type) =>
         getHasTimestamps(
           config,
-          ast.shape.createdAt?.type === type
+          ast.shape.createdAt &&
+            'type' in ast.shape.createdAt &&
+            ast.shape.createdAt?.type === type
             ? ast.shape.createdAt.item
             : undefined,
-          ast.shape.updatedAt?.type === type
+          ast.shape.updatedAt &&
+            'type' in ast.shape.updatedAt &&
+            ast.shape.updatedAt?.type === type
             ? ast.shape.updatedAt.item
             : undefined,
         ),
     );
 
     for (const key in ast.shape) {
-      const change = ast.shape[key];
-      if (change.type === 'add' || change.type === 'drop') {
-        if (
-          (addTimestamps.hasAnyTimestamps || dropTimestamps.hasAnyTimestamps) &&
-          (key === 'createdAt' || key === 'updatedAt')
-        )
-          continue;
+      const changes = toArray(ast.shape[key]);
+      for (const change of changes) {
+        if (change.type === 'add' || change.type === 'drop') {
+          if (
+            (addTimestamps.hasAnyTimestamps ||
+              dropTimestamps.hasAnyTimestamps) &&
+            (key === 'createdAt' || key === 'updatedAt')
+          )
+            continue;
 
-        const line: Code[] = [`${quoteObjectKey(key)}: t.${change.type}(`];
-        for (const part of change.item.toCode('t', true)) {
-          addCode(line, part);
-        }
-        addCode(line, '),');
-        code.push(line);
-      } else if (change.type === 'change') {
-        if (!change.from.column || !change.to.column) continue;
-
-        const line: Code[] = [
-          `${quoteObjectKey(key)}: t${
-            change.name ? `.name(${singleQuote(change.name)})` : ''
-          }.change(`,
-        ];
-        for (const part of change.from.column.toCode('t', true)) {
-          addCode(line, part);
-        }
-        addCode(line, ', ');
-        for (const part of change.to.column.toCode('t', true)) {
-          addCode(line, part);
-        }
-
-        if (change.using) {
-          addCode(line, ', {');
-          const u: string[] = [];
-          if (change.using.usingUp) {
-            u.push(`usingUp: ${change.using.usingUp.toCode('t')},`);
+          const recreate = changes.length > 1;
+          const line: Code[] = [
+            recreate
+              ? `...t.${change.type}(t.name(${singleQuote(key)})`
+              : `${quoteObjectKey(key)}: t.${change.type}(`,
+          ];
+          const columnCode = change.item.toCode('t', true);
+          for (let i = 0; i < columnCode.length; i++) {
+            let part = columnCode[i];
+            if (recreate && !i) part = part.slice(1);
+            addCode(line, part);
           }
-          if (change.using.usingDown) {
-            u.push(`usingDown: ${change.using.usingDown.toCode('t')},`);
-          }
-          addCode(line, u);
-          addCode(line, '}');
-        }
+          addCode(line, '),');
+          code.push(line);
+        } else if (change.type === 'change') {
+          if (!change.from.column || !change.to.column) continue;
 
-        addCode(line, '),');
-        code.push(line);
-      } else if (change.type === 'rename') {
-        code.push([
-          `${quoteObjectKey(key)}: t.rename(${singleQuote(change.name)}),`,
-        ]);
-      } else {
-        exhaustive(change.type);
+          const line: Code[] = [
+            `${quoteObjectKey(key)}: t${
+              change.name ? `.name(${singleQuote(change.name)})` : ''
+            }.change(`,
+          ];
+          for (const part of change.from.column.toCode('t', true)) {
+            addCode(line, part);
+          }
+          addCode(line, ', ');
+          for (const part of change.to.column.toCode('t', true)) {
+            addCode(line, part);
+          }
+
+          if (change.using) {
+            addCode(line, ', {');
+            const u: string[] = [];
+            if (change.using.usingUp) {
+              u.push(`usingUp: ${change.using.usingUp.toCode('t')},`);
+            }
+            if (change.using.usingDown) {
+              u.push(`usingDown: ${change.using.usingDown.toCode('t')},`);
+            }
+            addCode(line, u);
+            addCode(line, '}');
+          }
+
+          addCode(line, '),');
+          code.push(line);
+        } else if (change.type === 'rename') {
+          code.push([
+            `${quoteObjectKey(key)}: t.rename(${singleQuote(change.name)}),`,
+          ]);
+        } else {
+          exhaustive(change.type);
+        }
       }
     }
 

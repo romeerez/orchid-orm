@@ -772,7 +772,7 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
           ),
         () =>
           expectSql(`
-            CREATE DOMAIN "schema"."domain" AS integer
+            CREATE DOMAIN "schema"."domain" AS int4
             COLLATE "C"
             DEFAULT 123
             NOT NULL CHECK (VALUE = 42)
@@ -789,7 +789,7 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
         (action) => db[action]('schema.domain', (t) => t.integer().nullable()),
         () =>
           expectSql(`
-            CREATE DOMAIN "schema"."domain" AS integer
+            CREATE DOMAIN "schema"."domain" AS int4
           `),
         () =>
           expectSql(`

@@ -40,7 +40,6 @@ import { RakeDbAst } from '../ast';
 import { columnTypeToSql, encodeColumnDefault } from './migrationUtils';
 import { createView } from './createView';
 import { RakeDbConfig } from '../config';
-import ExtensionArg = RakeDbAst.ExtensionArg;
 
 // Drop mode to use when dropping various database entities.
 export type DropMode = 'CASCADE' | 'RESTRICT';
@@ -879,7 +878,10 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param name - name of the extension
    * @param options - extension options
    */
-  createExtension(name: string, options?: ExtensionArg): Promise<void> {
+  createExtension(
+    name: string,
+    options?: RakeDbAst.ExtensionArg,
+  ): Promise<void> {
     return createExtension(this, this.up, name, options);
   }
 
@@ -889,7 +891,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param name - name of the extension
    * @param options - extension options
    */
-  dropExtension(name: string, options?: ExtensionArg): Promise<void> {
+  dropExtension(name: string, options?: RakeDbAst.ExtensionArg): Promise<void> {
     return createExtension(this, !this.up, name, options);
   }
 
@@ -1624,7 +1626,7 @@ const createExtension = async (
   migration: Migration<RakeDbColumnTypes>,
   up: boolean,
   fullName: string,
-  options?: ExtensionArg,
+  options?: RakeDbAst.ExtensionArg,
 ): Promise<void> => {
   const [schema, name] = getSchemaAndTableFromName(fullName);
 
@@ -1731,7 +1733,7 @@ DEFAULT ${encodeColumnDefault(column.data.default, values)}`
         : ''
     }${!column.data.isNullable || column.data.check ? '\n' : ''}${[
       !column.data.isNullable && 'NOT NULL',
-      column.data.check && `CHECK (${column.data.check.toSQL({ values })})`,
+      column.data.check && `CHECK (${column.data.check.sql.toSQL({ values })})`,
     ]
       .filter(Boolean)
       .join(' ')}`;

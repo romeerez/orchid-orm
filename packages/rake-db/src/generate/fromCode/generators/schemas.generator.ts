@@ -1,4 +1,4 @@
-import { IntrospectedStructure } from '../dbStructure';
+import { IntrospectedStructure } from '../../dbStructure';
 import { RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
 
@@ -6,6 +6,7 @@ export const processSchemas = async (
   ast: RakeDbAst[],
   schemas: Set<string>,
   dbStructure: IntrospectedStructure,
+  verifying: boolean | undefined,
 ): Promise<void> => {
   const createSchemas: string[] = [];
   const dropSchemas: string[] = [];
@@ -24,7 +25,12 @@ export const processSchemas = async (
 
   for (const schema of createSchemas) {
     if (dropSchemas.length) {
-      const index = await promptCreateOrRename('schema', schema, dropSchemas);
+      const index = await promptCreateOrRename(
+        'schema',
+        schema,
+        dropSchemas,
+        verifying,
+      );
       if (index) {
         const from = dropSchemas[index - 1];
         dropSchemas.splice(index - 1, 1);
@@ -34,7 +40,6 @@ export const processSchemas = async (
         renameSchemaInStructures(dbStructure.indexes, from, schema);
         renameSchemaInStructures(dbStructure.constraints, from, schema);
         renameSchemaInStructures(dbStructure.triggers, from, schema);
-        renameSchemaInStructures(dbStructure.extensions, from, schema);
         renameSchemaInStructures(dbStructure.enums, from, schema);
         renameSchemaInStructures(dbStructure.domains, from, schema);
         renameSchemaInStructures(dbStructure.collations, from, schema);
@@ -44,12 +49,6 @@ export const processSchemas = async (
             if (column.typeSchema === from) {
               column.typeSchema = schema;
             }
-          }
-        }
-
-        for (const ext of dbStructure.extensions) {
-          if (ext.schemaName === from) {
-            ext.schemaName = schema;
           }
         }
 

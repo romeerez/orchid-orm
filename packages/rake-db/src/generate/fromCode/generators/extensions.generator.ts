@@ -1,9 +1,9 @@
 import { RakeDbAst } from 'rake-db';
-import { IntrospectedStructure } from '../dbStructure';
+import { IntrospectedStructure } from '../../dbStructure';
 import { DbExtension } from 'pqb';
-import { getSchemaAndTableFromName } from '../../common';
+import { getSchemaAndTableFromName } from '../../../common';
 
-interface Extention {
+interface Extension {
   schema?: string;
   name: string;
   version?: string;
@@ -15,7 +15,7 @@ export const processExtensions = (
   currentSchema: string,
   extensions?: DbExtension[],
 ) => {
-  const codeExtensions = extensions?.map((ext): Extention => {
+  const codeExtensions = extensions?.map((ext): Extension => {
     const [schema, name] = getSchemaAndTableFromName(ext.name);
     return { schema, name, version: ext.version };
   });
@@ -42,7 +42,7 @@ export const processExtensions = (
     ast.push({
       type: 'extension',
       action: 'drop',
-      schema: dbExt.schemaName,
+      schema: dbExt.schemaName === currentSchema ? undefined : dbExt.schemaName,
       name: dbExt.name,
       version: dbExt.version,
     });

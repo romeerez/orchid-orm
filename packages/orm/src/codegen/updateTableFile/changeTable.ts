@@ -28,12 +28,13 @@ import {
   addCode,
   Code,
   codeToString,
+  ColumnDataCheckBase,
   columnDefaultArgumentToCode,
   deepCompare,
   pathToLog,
   quoteObjectKey,
-  RawSQLBase,
   singleQuote,
+  toArray,
   toCamelCase,
   toPascalCase,
 } from 'orchid-core';
@@ -135,7 +136,8 @@ const makeChangeContext = (
   const existingColumns = getExistingColumns(props);
 
   for (const key in ast.shape) {
-    const item = ast.shape[key];
+    const arr = toArray(ast.shape[key]);
+    const item = arr[arr.length - 1];
     if (item.type === 'add' && !existingColumns[key]) {
       add[key] = item.item;
     }
@@ -406,7 +408,7 @@ const getColumnMethodArgs = (
   }
 
   if (key === 'check') {
-    return [columnCheckToCode(t, value as RawSQLBase)];
+    return [columnCheckToCode(t, value as ColumnDataCheckBase)];
   }
 
   if (key === 'identity') {

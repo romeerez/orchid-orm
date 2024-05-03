@@ -295,7 +295,7 @@ export class Db<
     }
 
     this.primaryKeys = Object.keys(shape).filter(
-      (key) => shape[key].data.isPrimaryKey,
+      (key) => shape[key].data.primaryKey,
     );
     const primaryKeysFromData = getTableData().primaryKey?.columns;
     if (primaryKeysFromData) this.primaryKeys.push(...primaryKeysFromData);

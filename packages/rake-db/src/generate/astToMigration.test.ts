@@ -119,11 +119,8 @@ const view: RakeDbAst.View = {
   deps: [],
 };
 
-const expectResult = (
-  result: ((importPath: string) => string) | undefined,
-  expected: string,
-) => {
-  expect(result?.('../dbScript')).toBe(expected);
+const expectResult = (code: string | undefined, expected: string) => {
+  expect(`import { change } from '../dbScript';\n${code}`).toBe(expected);
 };
 
 describe('astToMigration', () => {
@@ -194,14 +191,13 @@ change(async (db) => {
     const result = act([
       {
         ...extension,
-        schema: 'schema',
         version: '123',
       },
     ]);
 
     expectResult(
       result,
-      template(`  await db.createExtension('schema.extensionName', {
+      template(`  await db.createExtension('extensionName', {
     version: '123',
   });`),
     );
@@ -994,8 +990,8 @@ change(async (db) => {
             identity: t.smallint().identity(),
             identityAlways: t.identity({
               always: true,
-              incrementBy: 2,
-              startWith: 3,
+              increment: 2,
+              start: 3,
               min: 4,
               max: 5,
               cache: 6,
@@ -1014,11 +1010,12 @@ change(async (db) => {
     identity: t.smallint().identity(),
     identityAlways: t.identity({
       always: true,
-      incrementBy: 2,
-      startWith: 3,
+      increment: 2,
+      start: 3,
       min: 4,
       max: 5,
       cache: 6,
+      cycle: true,
     }),
   }));
 });

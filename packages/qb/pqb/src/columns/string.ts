@@ -471,13 +471,14 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 export class BitVaryingColumn<
   Schema extends ColumnSchemaConfig,
 > extends ColumnType<Schema, string, ReturnType<Schema['bit']>, OperatorsText> {
-  dataType = 'bit varying' as const;
+  dataType = 'varbit' as const;
   operators = Operators.text;
   declare data: ColumnData & { length?: number };
 
   constructor(schema: Schema, length?: number) {
     super(schema, schema.bit(length) as ReturnType<Schema['bit']>);
     this.data.length = length;
+    this.data.alias = 'bitVarying';
   }
 
   toCode(t: string): Code {

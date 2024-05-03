@@ -24,7 +24,9 @@ export const versionToString = (config: AnyRakeDbConfig, version: number) =>
     : `${version}`;
 
 export const columnTypeToSql = (item: ColumnTypeBase) => {
-  return item.data.isOfCustomType ? `"${item.toSQL()}"` : item.toSQL();
+  return item.data.isOfCustomType
+    ? quoteNameFromString(item.toSQL())
+    : item.toSQL();
 };
 
 export const getColumnName = (
@@ -60,14 +62,17 @@ export const columnToSql = (
     );
   }
 
-  if (item.data.isPrimaryKey && !hasMultiplePrimaryKeys) {
+  if (item.data.primaryKey && !hasMultiplePrimaryKeys) {
+    if (item.data.primaryKey !== true) {
+      line.push(`CONSTRAINT "${item.data.primaryKey}"`);
+    }
     line.push('PRIMARY KEY');
   } else if (!item.data.isNullable) {
     line.push('NOT NULL');
   }
 
   if (item.data.check) {
-    line.push(checkToSql(item.data.check, values));
+    line.push(checkToSql(item.data.check.sql, values));
   }
 
   const def = encodeColumnDefault(item.data.default, values, item);
@@ -123,11 +128,10 @@ export const identityToSql = (identity: TableData.Identity) => {
 const sequenceOptionsToSql = (item: TableData.SequenceOptions) => {
   const line: string[] = [];
   if (item.dataType) line.push(`AS ${item.dataType}`);
-  if (item.incrementBy !== undefined)
-    line.push(`INCREMENT BY ${item.incrementBy}`);
+  if (item.increment !== undefined) line.push(`INCREMENT BY ${item.increment}`);
   if (item.min !== undefined) line.push(`MINVALUE ${item.min}`);
   if (item.max !== undefined) line.push(`MAXVALUE ${item.max}`);
-  if (item.startWith !== undefined) line.push(`START WITH ${item.startWith}`);
+  if (item.start !== undefined) line.push(`START WITH ${item.start}`);
   if (item.cache !== undefined) line.push(`CACHE ${item.cache}`);
   if (item.cycle) line.push(`CYCLE`);
   if (item.ownedBy) {

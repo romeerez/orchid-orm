@@ -15,6 +15,7 @@ const mockQueryResult = (data: Partial<StructureToAstTableData>) => {
       rows: [
         {
           tables: [],
+          domains: [],
           ...data,
         },
       ],

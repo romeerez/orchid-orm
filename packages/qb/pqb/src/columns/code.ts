@@ -13,6 +13,7 @@ import {
   singleQuoteArray,
   toArray,
   RawSQLBase,
+  ColumnDataCheckBase,
 } from 'orchid-core';
 import { getConstraintKind } from './columnType.utils';
 
@@ -269,7 +270,11 @@ export const constraintInnerToCode = (
       '),',
     ];
   } else if (kind === 'check' && item.check) {
-    return [`${t}.check(${item.check.toCode(t)})`];
+    return [
+      `${t}.check(${item.check.toCode(t)}${
+        item.name ? `, { name: '${item.name}' }` : ''
+      })`,
+    ];
   } else {
     return [`${t}.constraint({`, constraintPropsToCode(t, item), '}),'];
   }
@@ -426,8 +431,13 @@ export const columnIndexesToCode = (
   return code;
 };
 
-export const columnCheckToCode = (t: string, check: RawSQLBase): string => {
-  return `.check(${check.toCode(t)})`;
+export const columnCheckToCode = (
+  t: string,
+  { sql, options }: ColumnDataCheckBase,
+): string => {
+  return `.check(${sql.toCode(t)}${
+    options?.name ? `, { name: '${options.name}' }` : ''
+  })`;
 };
 
 export const identityToCode = (
@@ -444,12 +454,15 @@ export const identityToCode = (
 
   const props: string[] = [];
   if (identity.always) props.push(`always: true,`);
-  if (identity.incrementBy) props.push(`incrementBy: ${identity.incrementBy},`);
-  if (identity.startWith) props.push(`startWith: ${identity.startWith},`);
+  if (identity.increment && identity.increment !== 1)
+    props.push(`increment: ${identity.increment},`);
+  if (identity.start && identity.start !== 1)
+    props.push(`start: ${identity.start},`);
   if (identity.min) props.push(`min: ${identity.min},`);
   if (identity.max) props.push(`max: ${identity.max},`);
   if (identity.cache && identity.cache !== 1)
     props.push(`cache: ${identity.cache},`);
+  if (identity.cycle) props.push(`cycle: true,`);
 
   if (props.length) {
     addCode(code, '{');
@@ -481,7 +494,14 @@ export const columnCode = (
     code[0].unshift(prepend);
   }
 
-  if (data.isPrimaryKey) addCode(code, '.primaryKey()');
+  if (data.primaryKey) {
+    addCode(
+      code,
+      `.primaryKey(${
+        data.primaryKey === true ? '' : `{ name: '${data.primaryKey}' }`
+      })`,
+    );
+  }
 
   if (data.foreignKeys) {
     for (const part of columnForeignKeysToCode(data.foreignKeys)) {

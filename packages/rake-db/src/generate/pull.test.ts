@@ -75,7 +75,7 @@ const config = makeConfig();
 
 const expectWritten = (expected: string) => {
   const call = asMock(writeMigrationFile).mock.calls[0];
-  expect(call[3]('../dbScript')).toBe(expected);
+  expect(`import { change } from '../dbScript';\n${call[3]}`).toBe(expected);
 };
 
 describe('pull', () => {
@@ -258,7 +258,7 @@ change(async (db) => {
     id: t.identity().primaryKey(),
     text: t.text().check(t.sql\`length(text) > 5\`),
     ...t.timestampsSnakeCase(),
-    ...t.check(t.sql({ raw: 'table check' })),
+    ...t.check(t.sql({ raw: 'table check' }), { name: 'table_column_check' }),
     ...t.foreignKey(
       ['id', 'text'],
       'schema.table1',

@@ -1,38 +1,51 @@
-import { generatorsTestUtils } from './generators.test-utils';
-import { dbStructureMockFactory } from '../dbStructure.mockFactory';
-import { colors } from '../../colors';
+import { useGeneratorsTestUtils } from './generators.test-utils';
+import { colors } from '../../../colors';
 
-jest.mock('../../commands/migrateOrRollback');
-jest.mock('../dbStructure');
+jest.mock('../../../commands/migrateOrRollback');
+jest.mock('../../../prompt');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),
   writeFile: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('../../prompt');
 
-const { arrange, act, assert, table, makeStructure, BaseTable } =
-  generatorsTestUtils;
 const { green, red, yellow } = colors;
 
 describe('primaryKey', () => {
-  beforeEach(jest.clearAllMocks);
+  const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
+
+  const someTable = class Some extends BaseTable {
+    table = 'some';
+    columns = this.setColumns((t) => ({
+      id: t.integer().primaryKey(),
+    }));
+  };
+
+  const someCompositeTable = class Some extends BaseTable {
+    table = 'some';
+    columns = this.setColumns((t) => ({
+      fa: t.text().primaryKey(),
+      fb: t.text().primaryKey(),
+    }));
+  };
 
   it('should create a column foreign key', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer(),
+        }));
+      },
       tables: [
+        someTable,
         table((t) => ({
           someId: t.integer().foreignKey('some', 'id'),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn({ name: 'someId' })],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -57,28 +70,22 @@ change(async (db) => {
   });
 
   it('should drop a column foreign key', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'id', { name: 'fkey' }),
+        }));
+      },
       tables: [
+        someTable,
         table((t) => ({
           someId: t.integer(),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn({ name: 'someId' })],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            references: {
-              columns: ['someId'],
-              foreignColumns: ['id'],
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -106,29 +113,22 @@ change(async (db) => {
   });
 
   it('should rename a column foreign key', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'id', { name: 'fromName' }),
+        }));
+      },
       tables: [
+        someTable,
         table((t) => ({
           someId: t.integer().foreignKey('some', 'id'),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn({ name: 'someId' })],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'fromName',
-            references: {
-              columns: ['someId'],
-              foreignColumns: ['id'],
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -148,8 +148,23 @@ change(async (db) => {
   });
 
   it('should not be recreated when a column foreign key is identical', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'id', {
+            name: 'fkeyName',
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          }),
+        }));
+      },
       tables: [
+        someTable,
         table((t) => ({
           someId: t.integer().foreignKey('some', 'id', {
             name: 'fkeyName',
@@ -159,26 +174,6 @@ change(async (db) => {
           }),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn({ name: 'someId' })],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'fkeyName',
-            references: {
-              columns: ['someId'],
-              foreignColumns: ['id'],
-              match: 'f',
-              onUpdate: 'c',
-              onDelete: 'c',
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -187,8 +182,23 @@ change(async (db) => {
   });
 
   it('should recreate a column foreign key with different options', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'id', {
+            name: 'fkeyName',
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'RESTRICT',
+          }),
+        }));
+      },
       tables: [
+        someTable,
         table((t) => ({
           someId: t.integer().foreignKey('some', 'id', {
             name: 'fkeyName',
@@ -198,26 +208,6 @@ change(async (db) => {
           }),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn({ name: 'someId' })],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'fkeyName',
-            references: {
-              columns: ['someId'],
-              foreignColumns: ['id'],
-              match: 'f',
-              onUpdate: 'c',
-              onDelete: 'r',
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -262,25 +252,26 @@ change(async (db) => {
   });
 
   it('should create a composite foreign key', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fa: t.text().primaryKey(),
+          fb: t.text().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.text(),
+          b: t.text(),
+        }));
+      },
       tables: [
+        someCompositeTable,
         table((t) => ({
           a: t.text(),
           b: t.text(),
           ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'a' }),
-              dbStructureMockFactory.textColumn({ name: 'b' }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -305,33 +296,26 @@ change(async (db) => {
   });
 
   it('should drop a composite foreign key', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fa: t.text().primaryKey(),
+          fb: t.text().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.text(),
+          b: t.text(),
+          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+        }));
+      },
       tables: [
+        someCompositeTable,
         table((t) => ({
           a: t.text(),
           b: t.text(),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'a' }),
-              dbStructureMockFactory.textColumn({ name: 'b' }),
-            ],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'table_a_b_fkey',
-            references: {
-              columns: ['a', 'b'],
-              foreignColumns: ['fa', 'fb'],
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -356,34 +340,27 @@ change(async (db) => {
   });
 
   it('should not recreate composite foreign key when it is identical', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fa: t.text().primaryKey(),
+          fb: t.text().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.text(),
+          b: t.text(),
+          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+        }));
+      },
       tables: [
+        someCompositeTable,
         table((t) => ({
           a: t.text(),
           b: t.text(),
           ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'a' }),
-              dbStructureMockFactory.textColumn({ name: 'b' }),
-            ],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'table_a_b_fkey',
-            references: {
-              columns: ['a', 'b'],
-              foreignColumns: ['fa', 'fb'],
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -392,35 +369,29 @@ change(async (db) => {
   });
 
   it('should recreate composite foreign key when option changes', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fa: t.text().primaryKey(),
+          fb: t.text().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.text(),
+          b: t.text(),
+          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb'], {
+            match: 'FULL',
+          }),
+        }));
+      },
       tables: [
+        someCompositeTable,
         table((t) => ({
           a: t.text(),
           b: t.text(),
           ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'a' }),
-              dbStructureMockFactory.textColumn({ name: 'b' }),
-            ],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'table_a_b_fkey',
-            references: {
-              columns: ['a', 'b'],
-              foreignColumns: ['fa', 'fb'],
-              match: 'p',
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -435,7 +406,7 @@ change(async (db) => {
         'public.some',
         ['fa', 'fb'],
         {
-          match: 'PARTIAL',
+          match: 'FULL',
         },
       ),
     ),
@@ -456,8 +427,23 @@ change(async (db) => {
   });
 
   it('should rename a composite foreign key', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fa: t.text().primaryKey(),
+          fb: t.text().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.text(),
+          b: t.text(),
+          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb'], {
+            name: 'fromName',
+          }),
+        }));
+      },
       tables: [
+        someCompositeTable,
         table((t) => ({
           a: t.text(),
           b: t.text(),
@@ -466,26 +452,6 @@ change(async (db) => {
           }),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'a' }),
-              dbStructureMockFactory.textColumn({ name: 'b' }),
-            ],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'fromName',
-            references: {
-              columns: ['a', 'b'],
-              foreignColumns: ['fa', 'fb'],
-            },
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -505,20 +471,20 @@ change(async (db) => {
   });
 
   it('should be added together with a column', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true });
+      },
       tables: [
+        someTable,
         table((t) => ({
           someId: t.integer().foreignKey('some', 'id'),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -539,25 +505,17 @@ change(async (db) => {
   });
 
   it('should be dropped together with a column', async () => {
-    arrange({
-      tables: [table()],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [dbStructureMockFactory.intColumn({ name: 'someId' })],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'table_someId_fkey',
-            references: {
-              columns: ['someId'],
-              foreignColumns: ['id'],
-            },
-          }),
-        ],
-      }),
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'id'),
+        }));
+      },
+      tables: [someTable, table()],
     });
 
     await act();
@@ -578,25 +536,22 @@ change(async (db) => {
   });
 
   it('should be added in a column change', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().nullable(),
+        }));
+      },
       tables: [
+        someTable,
         table((t) => ({
           someId: t.integer().foreignKey('some', 'id'),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.intColumn({
-                name: 'someId',
-                isNullable: true,
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -619,34 +574,27 @@ change(async (db) => {
   });
 
   it('should not be recreated when a column is renamed', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fa: t.text().primaryKey(),
+          fb: t.text().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.text(),
+          b: t.text(),
+          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+        }));
+      },
       tables: [
+        someCompositeTable,
         table((t) => ({
           a: t.text(),
           c: t.text(),
           ...t.foreignKey(['a', 'c'], 'some', ['fa', 'fb']),
         })),
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'a' }),
-              dbStructureMockFactory.textColumn({ name: 'b' }),
-            ],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'table_a_b_fkey',
-            references: {
-              columns: ['a', 'b'],
-              foreignColumns: ['fa', 'fb'],
-            },
-          }),
-        ],
-      }),
       selects: [1],
     });
 
@@ -673,49 +621,33 @@ ${yellow('~ rename constraint')} on table table: table_a_b_fkey ${yellow(
   });
 
   it('should not be recreated when a foreign column is renamed', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fa: t.text().primaryKey(),
+          fb: t.text().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.text(),
+          b: t.text(),
+          ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+        }));
+      },
       tables: [
+        class Some extends BaseTable {
+          table = 'some';
+          columns = this.setColumns((t) => ({
+            fa: t.text().primaryKey(),
+            fc: t.text().primaryKey(),
+          }));
+        },
         table((t) => ({
           a: t.text(),
           b: t.text(),
           ...t.foreignKey(['a', 'b'], 'some', ['fa', 'fc']),
         })),
-        class Some extends BaseTable {
-          table = 'some';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            fa: t.text(),
-            fc: t.text(),
-          }));
-        },
       ],
-      structure: makeStructure({
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'a' }),
-              dbStructureMockFactory.textColumn({ name: 'b' }),
-            ],
-          }),
-          dbStructureMockFactory.table({
-            name: 'some',
-            columns: [
-              dbStructureMockFactory.textColumn({ name: 'fa' }),
-              dbStructureMockFactory.textColumn({ name: 'fb' }),
-            ],
-          }),
-        ],
-        constraints: [
-          dbStructureMockFactory.foreignKey('table', 'some', {
-            name: 'table_a_b_fkey',
-            references: {
-              columns: ['a', 'b'],
-              foreignColumns: ['fa', 'fb'],
-            },
-          }),
-        ],
-      }),
       selects: [1],
     });
 

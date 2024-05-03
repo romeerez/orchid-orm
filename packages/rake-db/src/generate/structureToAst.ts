@@ -191,9 +191,9 @@ export const makeDomainsMap = (
     });
 
     if (it.check) {
-      column.data.check = new RawSQL([
-        [it.check],
-      ] as unknown as TemplateLiteralArgs);
+      column.data.check = {
+        sql: new RawSQL([[it.check]] as unknown as TemplateLiteralArgs),
+      };
     }
 
     domains[`${it.schemaName}.${it.name}`] = column;
@@ -580,7 +580,9 @@ export const dbColumnToAst = (
 
   const check = checks?.[item.name];
   if (check) {
-    column.data.check = new RawSQL([[check]] as unknown as TemplateLiteralArgs);
+    column.data.check = {
+      sql: new RawSQL([[check]] as unknown as TemplateLiteralArgs),
+    };
   }
 
   const camelCaseName = toCamelCase(item.name);

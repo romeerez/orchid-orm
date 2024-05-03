@@ -1,31 +1,30 @@
-import { generatorsTestUtils } from './generators.test-utils';
-import { dbStructureMockFactory } from '../dbStructure.mockFactory';
-import { colors } from '../../colors';
+import { useGeneratorsTestUtils } from './generators.test-utils';
+import { DbMigration } from 'rake-db';
+import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import { colors } from '../../../colors';
 
-jest.mock('../../commands/migrateOrRollback');
-jest.mock('../dbStructure');
+jest.mock('../../../commands/migrateOrRollback');
+jest.mock('../../../prompt');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),
   writeFile: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('../../prompt');
 
-const { arrange, act, assert, table, makeStructure } = generatorsTestUtils;
 const { green, red, yellow } = colors;
 
 describe('enums', () => {
-  beforeEach(jest.clearAllMocks);
+  const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
   it('should create enum when creating a table', async () => {
-    arrange({
+    await arrange({
       tables: [
         table(
           (t) => ({
             id: t.identity().primaryKey(),
             numbers: t.enum('numbers', ['one', 'two', 'three']),
           }),
-          false,
+          { noPrimaryKey: false },
         ),
       ],
     });
@@ -51,29 +50,15 @@ ${green('+ create table')} table (2 columns)`);
   });
 
   it('should drop unused enum', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('numbers', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          numbers: t.enum('numbers'),
+        }));
+      },
       tables: [table()],
-      structure: makeStructure({
-        schemas: ['public'],
-        enums: [
-          dbStructureMockFactory.enum({
-            name: 'numbers',
-            values: ['one', 'two', 'three'],
-          }),
-        ],
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.column({
-                typeSchema: 'public',
-                type: 'numbers',
-                name: 'numbers',
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -97,33 +82,21 @@ ${yellow('~ change table')} table:
   });
 
   it('should change enum schema', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createEnum('numbers', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          numbers: t.enum('numbers'),
+        }));
+      },
       tables: [
         table((t) => ({
           numbers: t.enum('schema.numbers', ['one', 'two', 'three']),
         })),
       ],
-      structure: makeStructure({
-        schemas: ['public', 'schema'],
-        enums: [
-          dbStructureMockFactory.enum({
-            name: 'numbers',
-            values: ['one', 'two', 'three'],
-          }),
-        ],
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.column({
-                typeSchema: 'public',
-                type: 'numbers',
-                name: 'numbers',
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -143,31 +116,19 @@ change(async (db) => {
   });
 
   it('should drop the old and create a new enum after prompt', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('from', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.enum('from'),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.enum('to', ['one', 'two', 'three']),
         })),
       ],
-      structure: makeStructure({
-        enums: [
-          dbStructureMockFactory.enum({
-            name: 'from',
-            values: ['one', 'two', 'three'],
-          }),
-        ],
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.enumColumn({
-                type: 'from',
-                name: 'column',
-              }),
-            ],
-          }),
-        ],
-      }),
       selects: [0],
     });
 
@@ -199,31 +160,19 @@ ${yellow('~ change table')} table:
   });
 
   it('should rename enum after prompt', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('from', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.enum('from'),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.enum('to', ['one', 'two', 'three']),
         })),
       ],
-      structure: makeStructure({
-        enums: [
-          dbStructureMockFactory.enum({
-            name: 'from',
-            values: ['one', 'two', 'three'],
-          }),
-        ],
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.enumColumn({
-                type: 'from',
-                name: 'column',
-              }),
-            ],
-          }),
-        ],
-      }),
       selects: [1],
     });
 
@@ -240,34 +189,21 @@ change(async (db) => {
   });
 
   it('should rename schema without touching enum', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('from');
+
+        await db.createEnum('from.enum', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.enum('from.enum'),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.enum('to.enum', ['one', 'two', 'three']),
         })),
       ],
-      structure: makeStructure({
-        schemas: ['public', 'from'],
-        enums: [
-          dbStructureMockFactory.enum({
-            schemaName: 'from',
-            name: 'enum',
-            values: ['one', 'two', 'three'],
-          }),
-        ],
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.enumColumn({
-                typeSchema: 'from',
-                type: 'enum',
-                name: 'column',
-              }),
-            ],
-          }),
-        ],
-      }),
       selects: [1],
     });
 
@@ -285,37 +221,26 @@ change(async (db) => {
 
   describe('recreating and renaming both schema and enum', () => {
     const arrangeData = () => ({
+      async prepareDb(
+        db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>,
+      ) {
+        await db.createSchema('fromSchema');
+
+        await db.createEnum('fromSchema.fromEnum', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.enum('fromSchema.fromEnum'),
+        }));
+      },
       tables: [
         table((t) => ({
           column: t.enum('toSchema.toEnum', ['one', 'two', 'three']),
         })),
       ],
-      structure: makeStructure({
-        schemas: ['public', 'fromSchema'],
-        enums: [
-          dbStructureMockFactory.enum({
-            schemaName: 'fromSchema',
-            name: 'fromEnum',
-            values: ['one', 'two', 'three'],
-          }),
-        ],
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.enumColumn({
-                typeSchema: 'fromSchema',
-                type: 'fromEnum',
-                name: 'column',
-              }),
-            ],
-          }),
-        ],
-      }),
     });
 
     it('should recreate schema and enum', async () => {
-      arrange({
+      await arrange({
         ...arrangeData(),
         selects: [0, 0],
       });
@@ -358,7 +283,7 @@ ${yellow('~ change table')} table:
     });
 
     it('should recreate schema and rename enum', async () => {
-      arrange({
+      await arrange({
         ...arrangeData(),
         selects: [0, 1],
       });
@@ -388,7 +313,7 @@ ${yellow('~ change schema and rename type')} fromSchema.fromEnum ${yellow(
     });
 
     it('should rename schema and recreate enum', async () => {
-      arrange({
+      await arrange({
         ...arrangeData(),
         selects: [1, 0],
       });
@@ -428,7 +353,7 @@ ${yellow('~ change table')} table:
     });
 
     it('should rename schema and enum', async () => {
-      arrange({
+      await arrange({
         ...arrangeData(),
         selects: [1, 1],
       });
@@ -459,31 +384,20 @@ ${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
         numbers: t.enum('numbers', values),
       }));
 
-    const dbWithEnum = (values: [string, ...string[]]) =>
-      makeStructure({
-        enums: [
-          dbStructureMockFactory.enum({
-            name: 'numbers',
-            values,
-          }),
-        ],
-        tables: [
-          dbStructureMockFactory.table({
-            name: 'table',
-            columns: [
-              dbStructureMockFactory.enumColumn({
-                type: 'numbers',
-                name: 'numbers',
-              }),
-            ],
-          }),
-        ],
-      });
+    const prepareDb =
+      (values: [string, ...string[]]) =>
+      async (db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>) => {
+        await db.createEnum('numbers', values);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          numbers: t.enum('numbers'),
+        }));
+      };
 
     it('should add values to enum', async () => {
-      arrange({
+      await arrange({
+        prepareDb: prepareDb(['one']),
         tables: [tableWithEnum(['one', 'two', 'three'])],
-        structure: dbWithEnum(['one']),
       });
 
       await act();
@@ -499,9 +413,9 @@ change(async (db) => {
     });
 
     it('should drop values from enum', async () => {
-      arrange({
+      await arrange({
+        prepareDb: prepareDb(['one', 'two', 'three']),
         tables: [tableWithEnum(['one'])],
-        structure: dbWithEnum(['one', 'two', 'three']),
       });
 
       await act();
@@ -517,9 +431,9 @@ change(async (db) => {
     });
 
     it('should recreate enum when values do not match', async () => {
-      arrange({
+      await arrange({
+        prepareDb: prepareDb(['one', 'two']),
         tables: [tableWithEnum(['three', 'four'])],
-        structure: dbWithEnum(['one', 'two']),
       });
 
       await act();
@@ -538,9 +452,9 @@ ${green('+ add values to enum')} numbers: three, four`,
     });
 
     it('should do nothing if enum was not changed', async () => {
-      arrange({
+      await arrange({
+        prepareDb: prepareDb(['one', 'two', 'three']),
         tables: [tableWithEnum(['one', 'two', 'three'])],
-        structure: dbWithEnum(['one', 'two', 'three']),
       });
 
       await act();

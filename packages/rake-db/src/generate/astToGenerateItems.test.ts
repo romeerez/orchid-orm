@@ -289,7 +289,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('public.some', 'public.integer');
+        assertDeps('public.some', 'public.int4');
       });
 
       it('should have a column fkey dep with schema', () => {
@@ -301,7 +301,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('schema.some', 'public.integer');
+        assertDeps('schema.some', 'public.int4');
       });
 
       it('should have a column fn fkey dep', () => {
@@ -313,7 +313,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('public.some', 'public.integer');
+        assertDeps('public.some', 'public.int4');
       });
 
       it('should have a column fn fkey dep with schema', () => {
@@ -325,7 +325,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertDeps('schema.some', 'public.integer');
+        assertDeps('schema.some', 'public.int4');
       });
 
       it('should have a composite fkey dep', () => {
@@ -656,7 +656,7 @@ describe('astToGenerateItem', () => {
 
             assertDeps(
               `${type.includes('schema') ? 'schema' : 'public'}.some`,
-              'public.integer',
+              'public.int4',
             );
           });
 
@@ -690,7 +690,7 @@ describe('astToGenerateItem', () => {
                 type: 'change',
                 from:
                   type === 'object'
-                    ? { type: 'integer', foreignKeys: [] }
+                    ? { type: 'int4', foreignKeys: [] }
                     : { column: t.integer() },
                 to:
                   type === 'object'
@@ -705,7 +705,7 @@ describe('astToGenerateItem', () => {
 
           act();
 
-          assertDeps('public.some', 'public.integer', 'public.varchar');
+          assertDeps('public.some', 'public.int4', 'public.varchar');
         });
       });
     });
@@ -874,7 +874,7 @@ describe('astToGenerateItem', () => {
       act();
 
       assertKey('public.domain');
-      assertDeps(['public', 'public.integer']);
+      assertDeps(['public', 'public.int4']);
     });
 
     it(`should have domain key with schema`, () => {
@@ -889,7 +889,7 @@ describe('astToGenerateItem', () => {
       act();
 
       assertKey('schema.domain');
-      assertDeps(['schema', 'public.integer']);
+      assertDeps(['schema', 'public.int4']);
     });
 
     it('should have collation deps', () => {
@@ -902,7 +902,7 @@ describe('astToGenerateItem', () => {
 
       act();
 
-      assertDeps(['public', 'public.integer', 'customCollation']);
+      assertDeps(['public', 'public.int4', 'customCollation']);
     });
   });
 

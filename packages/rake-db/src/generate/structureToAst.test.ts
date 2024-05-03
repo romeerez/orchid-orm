@@ -220,11 +220,11 @@ describe('structureToAst', () => {
 
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
-      expect(ast.shape.column.data.check).toEqual(
-        new RawSQL([
+      expect(ast.shape.column.data.check).toEqual({
+        sql: new RawSQL([
           [check.check.expression],
         ] as unknown as TemplateLiteralArgs),
-      );
+      });
     });
 
     it('should support column of custom type', async () => {
@@ -437,7 +437,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
       expect(ast.noPrimaryKey).toBe('error');
-      expect(ast.shape.id.data.isPrimaryKey).toBe(true);
+      expect(ast.shape.id.data.primaryKey).toBe(true);
       expect(ast.primaryKey).toBe(undefined);
     });
 
@@ -453,7 +453,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
       expect(ast.noPrimaryKey).toBe('error');
-      expect(ast.shape.id.data.isPrimaryKey).toBe(undefined);
+      expect(ast.shape.id.data.primaryKey).toBe(undefined);
       expect(ast.primaryKey).toEqual({
         columns: ['id', 'name'],
         options: { name: 'pkey' },
@@ -472,7 +472,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
 
       expect(ast.noPrimaryKey).toBe('error');
-      expect(ast.shape.id.data.isPrimaryKey).toBe(undefined);
+      expect(ast.shape.id.data.primaryKey).toBe(undefined);
       expect(ast.primaryKey).toEqual({
         columns: ['id', 'name'],
       });
@@ -940,9 +940,7 @@ describe('structureToAst', () => {
 
   describe('extension', () => {
     it('should add extension', async () => {
-      structure.extensions = [
-        dbStructureMockFactory.extension({ schemaName: 'custom' }),
-      ];
+      structure.extensions = [dbStructureMockFactory.extension()];
 
       const [ast] = (await structureToAst(ctx, adapter)) as [
         RakeDbAst.Extension,
@@ -951,6 +949,7 @@ describe('structureToAst', () => {
       expect(ast).toEqual({
         type: 'extension',
         action: 'create',
+        schema: 'public',
         name: 'name',
         version: '123',
       });
@@ -1029,7 +1028,7 @@ describe('structureToAst', () => {
         isNullable: false,
         collate: 'C',
         default: raw`123`,
-        check: raw`VALUE = 42`,
+        check: { sql: raw`VALUE = 42` },
       });
     });
 
@@ -1092,7 +1091,7 @@ describe('structureToAst', () => {
       expect(ast.options.with?.securityInvoker).toBe(true);
 
       const column = ast.shape.column;
-      expect(column.dataType).toBe('integer');
+      expect(column.dataType).toBe('int4');
     });
   });
 });

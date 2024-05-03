@@ -42,7 +42,7 @@ export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
 // marks the column as a primary
 export type PrimaryKeyColumn<T> = T & {
   data: {
-    isPrimaryKey: true;
+    primaryKey: true;
   };
 };
 
@@ -155,9 +155,9 @@ export type ColumnTypesBase = Record<string, ColumnTypeBase>;
 // resolves in string literal of single primary key
 // if table has two or more primary keys it will resolve in never
 export type SinglePrimaryKey<Shape extends QueryColumnsInit> = {
-  [K in keyof Shape]: Shape[K]['data']['isPrimaryKey'] extends true
+  [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends true
     ? {
-        [S in keyof Shape]: Shape[S]['data']['isPrimaryKey'] extends true
+        [S in keyof Shape]: Shape[S]['data']['primaryKey'] extends true
           ? S extends K
             ? null
             : S
@@ -180,6 +180,10 @@ export interface ForeignKeyTable {
     table: string;
     columns: QueryColumns;
   };
+}
+
+export interface ConstraintOptions {
+  name?: string;
 }
 
 // string union of available column names of the table
@@ -283,8 +287,8 @@ export interface ColumnDataBase {
   // is null value allowed
   isNullable?: true;
 
-  // is column a primary key in a database
-  isPrimaryKey?: true;
+  // true for primary key, string for primary key with a custom name
+  primaryKey?: true | string;
 
   // if column has a default value, then it can be omitted in `create` method
   default: unknown;
@@ -306,7 +310,7 @@ export interface ColumnDataBase {
   modifyQuery?(q: QueryBaseCommon, column: ColumnTypeBase): void;
 
   // raw database check expression
-  check?: RawSQLBase;
+  check?: ColumnDataCheckBase;
 
   // if the column is of domain or other user-defined type
   isOfCustomType?: boolean;
@@ -316,6 +320,14 @@ export interface ColumnDataBase {
 
   // identify whether this column is from `timestamps()` helper for codegen purposes
   defaultTimestamp?: 'createdAt' | 'updatedAt';
+
+  // alias of the type used as a column function name
+  alias?: string;
+}
+
+export interface ColumnDataCheckBase {
+  sql: RawSQLBase;
+  options?: ConstraintOptions;
 }
 
 // current name of the column, set by `name` method
@@ -408,7 +420,7 @@ export interface QueryColumnInit extends QueryColumn {
   inputType: unknown;
   data: {
     isHidden?: true;
-    isPrimaryKey?: true;
+    primaryKey?: true | string;
     isNullable?: true;
     default?: unknown;
   };
@@ -560,10 +572,15 @@ export abstract class ColumnTypeBase<
    * });
    * ```
    *
-   * @param value - raw SQL expression
+   * @param sql - raw SQL expression
+   * @param options - to specify a constraint name
    */
-  check<T extends PickColumnBaseData>(this: T, value: RawSQLBase): T {
-    return setColumnData(this, 'check', value);
+  check<T extends PickColumnBaseData>(
+    this: T,
+    sql: RawSQLBase,
+    options?: ConstraintOptions,
+  ): T {
+    return setColumnData(this, 'check', { sql, options });
   }
 
   /**

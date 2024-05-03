@@ -12,11 +12,12 @@ export class BooleanColumn<
   ReturnType<Schema['boolean']>,
   OperatorsBoolean
 > {
-  dataType = 'boolean' as const;
+  dataType = 'bool' as const;
   operators = Operators.boolean;
 
   constructor(schema: Schema) {
     super(schema, schema.boolean() as never);
+    this.data.alias = 'boolean';
   }
 
   toCode(t: string): Code {

@@ -1,0 +1,361 @@
+import { QueryColumn, RecordUnknown } from 'orchid-core';
+import {
+  Adapter,
+  AdapterOptions,
+  ColumnsShape,
+  ColumnType,
+  defaultSchemaConfig,
+  DomainColumn,
+  Query,
+  QueryInternal,
+  QueryWithTable,
+  UnknownColumn,
+} from 'pqb';
+import { AnyRakeDbConfig } from '../../config';
+import {
+  makeFileVersion,
+  writeMigrationFile,
+} from '../../commands/newMigration';
+import { migrate } from '../../commands/migrateOrRollback';
+import { RakeDbAst } from '../../ast';
+import { introspectDbSchema, IntrospectedStructure } from '../dbStructure';
+import { getSchemaAndTableFromName } from '../../common';
+import { EnumItem } from './generators/enums.generator';
+import { CodeDomain } from './generators/domains.generator';
+import { makeStructureToAstCtx } from '../structureToAst';
+import { composeMigration, ComposeMigrationParams } from './composeMigration';
+import { verifyMigration } from './verifyMigration';
+import { report } from './reportGeneratedMigration';
+
+export interface CodeItems {
+  schemas: Set<string>;
+  enums: Map<string, EnumItem>;
+  tables: QueryWithTable[];
+  domains: CodeDomain[];
+}
+
+export class AbortSignal extends Error {}
+
+export const generate = async (
+  options: AdapterOptions[],
+  config: AnyRakeDbConfig,
+) => {
+  if (!config.db || !config.baseTable) throw invalidConfig(config);
+  if (!options.length) throw new Error(`Database options must not be empty`);
+
+  const { dbStructure, adapters } = await migrateAndPullStructures(
+    options,
+    config,
+  );
+
+  const [adapter] = adapters;
+  const currentSchema = adapter.schema ?? 'public';
+  const db = await config.db();
+  const { columnTypes, internal } = db.$queryBuilder;
+
+  const codeItems = await getActualItems(
+    db,
+    currentSchema,
+    internal,
+    columnTypes,
+  );
+
+  const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
+
+  const generateMigrationParams: ComposeMigrationParams = {
+    structureToAstCtx,
+    codeItems,
+    currentSchema,
+    internal,
+  };
+
+  const ast: RakeDbAst[] = [];
+
+  let migrationCode;
+  try {
+    migrationCode = await composeMigration(
+      adapter,
+      config,
+      ast,
+      dbStructure,
+      generateMigrationParams,
+    );
+  } catch (err) {
+    if (err instanceof AbortSignal) {
+      await closeAdapters(adapters);
+      return;
+    }
+    throw err;
+  }
+
+  if (migrationCode) {
+    const ok = await verifyMigration(
+      adapter,
+      config,
+      migrationCode,
+      generateMigrationParams,
+    );
+
+    if (!ok) {
+      throw new Error(
+        `Failed to verify generated migration: some of database changes were not applied properly. This is a bug, please open an issue, attach the following migration code:\n${migrationCode}`,
+      );
+    }
+  }
+
+  await closeAdapters(adapters);
+
+  if (!migrationCode) return;
+
+  const version = await makeFileVersion({}, config);
+
+  const { logger } = config;
+  const delayLog: string[] = [];
+  await writeMigrationFile(
+    {
+      ...config,
+      logger: logger ? { ...logger, log: (msg) => delayLog.push(msg) } : logger,
+    },
+    version,
+    'generated',
+    migrationCode,
+  );
+
+  report(ast, config, currentSchema);
+
+  if (logger) {
+    for (const msg of delayLog) {
+      logger.log(`\n${msg}`);
+    }
+  }
+};
+
+const invalidConfig = (config: AnyRakeDbConfig) =>
+  new Error(
+    `\`${
+      config.db ? 'baseTable' : 'db'
+    }\` setting must be set in the rake-db config for the generator to work`,
+  );
+
+const migrateAndPullStructures = async (
+  options: AdapterOptions[],
+  config: AnyRakeDbConfig,
+): Promise<{ dbStructure: IntrospectedStructure; adapters: Adapter[] }> => {
+  const adapters = await migrate({}, options, config, undefined, true);
+
+  const dbStructures = await Promise.all(
+    adapters.map((adapter) => introspectDbSchema(adapter)),
+  );
+
+  const dbStructure = dbStructures[0];
+  for (let i = 1; i < dbStructures.length; i++) {
+    compareDbStructures(dbStructure, dbStructures[i], i);
+  }
+
+  return { dbStructure, adapters };
+};
+
+const compareDbStructures = (
+  a: unknown,
+  b: unknown,
+  i: number,
+  path?: string,
+) => {
+  let err: true | undefined;
+  if (typeof a !== typeof b) {
+    err = true;
+  }
+
+  if (!a || typeof a !== 'object') {
+    if (a !== b) {
+      err = true;
+    }
+  } else {
+    if (Array.isArray(a)) {
+      for (let n = 0, len = a.length; n < len; n++) {
+        compareDbStructures(
+          a[n],
+          (b as unknown[])[n],
+          i,
+          path ? `${path}[${n}]` : String(n),
+        );
+      }
+    } else {
+      for (const key in a) {
+        compareDbStructures(
+          a[key as keyof typeof a],
+          (b as Record<string, unknown>)[key],
+          i,
+          path ? `${path}.${key}` : key,
+        );
+      }
+    }
+  }
+
+  if (err) {
+    throw new Error(`${path} in the db 0 does not match db ${i}`);
+  }
+};
+
+const getActualItems = async (
+  db: RecordUnknown,
+  currentSchema: string,
+  internal: QueryInternal,
+  columnTypes: unknown,
+): Promise<CodeItems> => {
+  const tableNames = new Set<string>();
+  const habtmTables = new Map<string, QueryWithTable>();
+
+  const codeItems: CodeItems = {
+    schemas: new Set(undefined),
+    enums: new Map(),
+    tables: [],
+    domains: [],
+  };
+
+  const domains = new Map<string, CodeDomain>();
+
+  for (const key in db) {
+    if (key[0] === '$') continue;
+
+    const table = db[key as keyof typeof db] as Query;
+
+    if (!table.table) {
+      throw new Error(`Table ${key} is missing table property`);
+    }
+
+    const { schema } = table.q;
+    const name = `${schema ? `${schema}.` : ''}${table.table}`;
+    if (tableNames.has(name)) {
+      throw new Error(
+        `Table ${schema}.${table.table} is defined more than once`,
+      );
+    }
+
+    tableNames.add(name);
+
+    if (schema) codeItems.schemas.add(schema);
+
+    codeItems.tables.push(table as QueryWithTable);
+
+    for (const key in table.relations) {
+      const column = table.shape[key];
+
+      if ('joinTable' in column) {
+        processHasAndBelongsToManyColumn(column, habtmTables, codeItems);
+      }
+    }
+
+    for (const key in table.shape) {
+      const column = table.shape[key] as ColumnType;
+      if (column instanceof DomainColumn) {
+        const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
+          column.dataType,
+        );
+        domains.set(column.dataType, {
+          schemaName,
+          name,
+          column: (column.data.as ??
+            new UnknownColumn(defaultSchemaConfig)) as ColumnType,
+        });
+      } else if (column.dataType === 'enum') {
+        processEnumColumn(column, currentSchema, codeItems);
+      }
+    }
+  }
+
+  if (internal.extensions) {
+    for (const extension of internal.extensions) {
+      const [schema] = getSchemaAndTableFromName(extension.name);
+      if (schema) codeItems.schemas.add(schema);
+    }
+  }
+
+  if (internal.domains) {
+    for (const key in internal.domains) {
+      const [schemaName = currentSchema, name] = getSchemaAndTableFromName(key);
+      const column = internal.domains[key](columnTypes);
+
+      domains.set(key, {
+        schemaName,
+        name,
+        column,
+      });
+    }
+  }
+
+  for (const domain of domains.values()) {
+    codeItems.schemas.add(domain.schemaName);
+    codeItems.domains.push(domain);
+  }
+
+  return codeItems;
+};
+
+const processEnumColumn = (
+  column: QueryColumn,
+  currentSchema: string,
+  codeItems: CodeItems,
+) => {
+  const { enumName, options } = column as unknown as {
+    enumName: string;
+    options: [string, ...string[]];
+  };
+
+  const [schema, name] = getSchemaAndTableFromName(enumName);
+  const enumSchema = schema ?? currentSchema;
+
+  codeItems.enums.set(`${enumSchema}.${name}`, {
+    schema: enumSchema,
+    name,
+    values: options,
+  });
+  if (schema) codeItems.schemas.add(schema);
+};
+
+const processHasAndBelongsToManyColumn = (
+  column: QueryColumn & { joinTable: unknown },
+  habtmTables: Map<string, QueryWithTable>,
+  codeItems: CodeItems,
+) => {
+  const q = (column as { joinTable: QueryWithTable }).joinTable;
+  const prev = habtmTables.get(q.table);
+  if (prev) {
+    for (const key in q.shape) {
+      if (q.shape[key] !== prev.shape[key]) {
+        throw new Error(
+          `Column ${key} in ${q.table} in hasAndBelongsToMany relation does not match with the relation on the other side`,
+        );
+      }
+    }
+    return;
+  }
+  habtmTables.set(q.table, q);
+
+  const joinTable = Object.create(q);
+
+  const shape: ColumnsShape = {};
+  for (const key in joinTable.shape) {
+    const column = Object.create(joinTable.shape[key]);
+    column.data = {
+      ...column.data,
+      identity: undefined,
+      isPrimaryKey: undefined,
+      default: undefined,
+    };
+    shape[key] = column;
+  }
+  joinTable.shape = shape;
+  joinTable.internal.primaryKey = {
+    columns: Object.keys(shape),
+  };
+  joinTable.internal.noPrimaryKey = false;
+
+  codeItems.tables.push(joinTable);
+
+  return;
+};
+
+const closeAdapters = (adapters: Adapter[]) => {
+  return Promise.all(adapters.map((x) => x.close()));
+};

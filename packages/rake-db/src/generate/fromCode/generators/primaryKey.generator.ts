@@ -1,6 +1,7 @@
 import { ColumnType } from 'pqb';
-import { RakeDbAst } from '../../ast';
+import { RakeDbAst } from '../../../ast';
 import { ChangeTableData } from './tables.generator';
+import { checkForColumnChange } from './generators.utils';
 
 export const processPrimaryKey = (
   ast: RakeDbAst[],
@@ -11,7 +12,7 @@ export const processPrimaryKey = (
   const columnsPrimaryKey: string[] = [];
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
-    if (column.data.isPrimaryKey) {
+    if (column.data.primaryKey) {
       columnsPrimaryKey.push(column.data.name ?? key);
     }
   }
@@ -39,15 +40,13 @@ const changePrimaryKey = (
     primaryKey.some((a) => !dbPrimaryKey.columns.some((b) => a === b))
   ) {
     const toDrop = dbPrimaryKey?.columns.filter(
-      (key) => !shape[key] || shape[key].type === 'rename',
+      (key) => !checkForColumnChange(shape, key),
     );
     if (toDrop?.length) {
       drop.primaryKey = { columns: toDrop, options: dbPrimaryKey?.options };
     }
 
-    const toAdd = primaryKey.filter(
-      (key) => !shape[key] || shape[key].type === 'rename',
-    );
+    const toAdd = primaryKey.filter((key) => !checkForColumnChange(shape, key));
     if (toAdd.length) {
       add.primaryKey = {
         columns: toAdd,

@@ -66,7 +66,7 @@ export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
 
 export const expectSql = (
-  sql: MaybeArray<{ text: string; values: unknown[] }>,
+  sql: MaybeArray<{ text: string; values?: unknown[] }>,
   text: string,
   values: unknown[] = [],
 ) => {

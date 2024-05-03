@@ -1,5 +1,5 @@
 import { Adapter, EnumColumn, TransactionAdapter } from 'pqb';
-import { ColumnSchemaConfig, emptyArray, singleQuote } from 'orchid-core';
+import { ColumnSchemaConfig, singleQuote } from 'orchid-core';
 import { TableQuery } from './migration/createTable';
 import { RAKE_DB_LOCK_KEY } from './commands/migrateOrRollback';
 import { MigrationsSet } from './migration/migrationsSet';
@@ -84,14 +84,18 @@ export const quoteNameFromString = (string: string) => {
   return quoteTable(...getSchemaAndTableFromName(string));
 };
 
-export const quoteSchemaTable = ({
+export const quoteSchemaTable = (arg: { schema?: string; name: string }) => {
+  return singleQuote(concatSchemaAndName(arg));
+};
+
+export const concatSchemaAndName = ({
   schema,
   name,
 }: {
   schema?: string;
   name: string;
 }) => {
-  return singleQuote(schema ? `${schema}.${name}` : name);
+  return schema ? `${schema}.${name}` : name;
 };
 
 export const makePopulateEnumQuery = (
@@ -110,7 +114,6 @@ export const makePopulateEnumQuery = (
 // SQL to start a transaction
 const begin = {
   text: 'BEGIN',
-  values: emptyArray,
 };
 
 export const transaction = <T>(

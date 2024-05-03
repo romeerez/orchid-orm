@@ -1,23 +1,25 @@
-import { generatorsTestUtils } from './generators.test-utils';
-import { colors } from '../../colors';
+import { useGeneratorsTestUtils } from './generators.test-utils';
+import { colors } from '../../../colors';
 
-jest.mock('../../commands/migrateOrRollback');
-jest.mock('../dbStructure');
+jest.mock('../../../commands/migrateOrRollback');
+jest.mock('../../../prompt');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),
   writeFile: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('../../prompt');
 
-const { arrange, act, assert, BaseTable, makeStructure } = generatorsTestUtils;
 const { green, red, yellow } = colors;
 
 describe('schemas', () => {
-  beforeEach(jest.clearAllMocks);
+  const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
 
   it('should create db schemas and set tables schemas', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('one', { noPrimaryKey: true });
+        await db.createTable('two', { noPrimaryKey: true });
+      },
       tables: [
         class One extends BaseTable {
           schema = 'one';
@@ -28,18 +30,6 @@ describe('schemas', () => {
           table = 'two';
         },
       ],
-      structure: makeStructure({
-        tables: [
-          {
-            schemaName: 'public',
-            name: 'one',
-          },
-          {
-            schemaName: 'public',
-            name: 'two',
-          },
-        ],
-      }),
     });
 
     await act();
@@ -68,22 +58,19 @@ change(async (db) => {
   });
 
   it('should drop a db schema, do not drop the public schema', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('one');
+        await db.createSchema('two');
+
+        await db.createTable('one.one', { noPrimaryKey: true });
+      },
       tables: [
         class One extends BaseTable {
           schema = 'one';
           table = 'one';
         },
       ],
-      structure: makeStructure({
-        schemas: ['public', 'one', 'two'],
-        tables: [
-          {
-            schemaName: 'one',
-            name: 'one',
-          },
-        ],
-      }),
     });
 
     await act();
@@ -99,22 +86,18 @@ change(async (db) => {
   });
 
   it('should create new schema and drop the old one when selecting `create schema` option', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('from');
+
+        await db.createTable('from.one', { noPrimaryKey: true });
+      },
       tables: [
         class One extends BaseTable {
           schema = 'to';
           table = 'one';
         },
       ],
-      structure: makeStructure({
-        schemas: ['public', 'from'],
-        tables: [
-          {
-            schemaName: 'to',
-            name: 'one',
-          },
-        ],
-      }),
       selects: [0],
     });
 
@@ -124,7 +107,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createSchema('to');
+});
 
+change(async (db) => {
+  await db.changeTableSchema('one', 'from', 'to');
+});
+
+change(async (db) => {
   await db.dropSchema('from');
 });
 `);
@@ -132,21 +121,23 @@ change(async (db) => {
     assert.report(
       `${green('+ create schema')} to`,
       `${red('- drop schema')} from`,
+      `${yellow('~ change schema of table')} from.one ${yellow('=>')} to.one`,
     );
   });
 
   it('should rename schema when selecting `rename schema` option', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('from');
+
+        await db.createTable('from.one', { noPrimaryKey: true });
+      },
       tables: [
         class One extends BaseTable {
           schema = 'to';
           table = 'one';
         },
       ],
-      structure: makeStructure({
-        schemas: ['public', 'from'],
-        tables: [{ schemaName: 'from', name: 'one' }],
-      }),
       selects: [1],
     });
 
@@ -163,22 +154,19 @@ change(async (db) => {
   });
 
   it('should rename schema and drop other schema', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('drop');
+        await db.createSchema('from');
+
+        await db.createTable('from.one', { noPrimaryKey: true });
+      },
       tables: [
         class One extends BaseTable {
           schema = 'to';
           table = 'one';
         },
       ],
-      structure: makeStructure({
-        schemas: ['public', 'drop', 'from'],
-        tables: [
-          {
-            schemaName: 'from',
-            name: 'one',
-          },
-        ],
-      }),
       selects: [2],
     });
 
@@ -200,7 +188,14 @@ change(async (db) => {
   });
 
   it('should change table schema when both schemas exist', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('from');
+        await db.createSchema('to');
+
+        await db.createTable('from.one', { noPrimaryKey: true });
+        await db.createTable('to.two', { noPrimaryKey: true });
+      },
       tables: [
         class One extends BaseTable {
           schema = 'to';
@@ -211,19 +206,6 @@ change(async (db) => {
           table = 'two';
         },
       ],
-      structure: makeStructure({
-        schemas: ['public', 'from', 'to'],
-        tables: [
-          {
-            schemaName: 'from',
-            name: 'one',
-          },
-          {
-            schemaName: 'to',
-            name: 'two',
-          },
-        ],
-      }),
     });
 
     await act();

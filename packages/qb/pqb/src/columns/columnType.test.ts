@@ -44,8 +44,8 @@ describe('column type', () => {
 
   describe('.primaryKey', () => {
     it('should mark column as a primary key', () => {
-      expect(column.data.isPrimaryKey).toBe(undefined);
-      expect(column.primaryKey().data.isPrimaryKey).toBe(true);
+      expect(column.data.primaryKey).toBe(undefined);
+      expect(column.primaryKey().data.primaryKey).toBe(true);
     });
 
     it('should have toCode', () => {

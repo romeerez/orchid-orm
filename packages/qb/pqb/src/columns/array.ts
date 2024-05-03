@@ -64,6 +64,7 @@ export class ArrayColumn<
   ) {
     super(schema, inputType, outputType, queryType);
     this.data.item = item;
+    this.data.name = item.data.name;
   }
 
   toSQL(): string {

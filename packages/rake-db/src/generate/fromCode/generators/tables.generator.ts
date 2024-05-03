@@ -6,7 +6,7 @@ import {
   TableData,
   VirtualColumn,
 } from 'pqb';
-import { DbStructure, IntrospectedStructure } from '../dbStructure';
+import { DbStructure, IntrospectedStructure } from '../../dbStructure';
 import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
 import {
   DbStructureDomainsMap,
@@ -14,7 +14,7 @@ import {
   StructureToAstCtx,
   StructureToAstTableData,
   tableToAst,
-} from '../structureToAst';
+} from '../../structureToAst';
 import {
   CompareExpression,
   compareSqlExpressions,
@@ -23,7 +23,11 @@ import {
 } from './generators.utils';
 import { processPrimaryKey } from './primaryKey.generator';
 import { processIndexes } from './indexes.generator';
-import { getColumnDbType, processColumns } from './columns.generator';
+import {
+  getColumnDbType,
+  processColumns,
+  TypeCastsCache,
+} from './columns.generator';
 import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
 
@@ -61,6 +65,7 @@ export const processTables = async (
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   config: AnyRakeDbConfig,
+  verifying: boolean | undefined,
 ): Promise<void> => {
   const createTables: QueryWithTable[] = collectCreateTables(
     tables,
@@ -80,6 +85,7 @@ export const processTables = async (
   applyChangeTableSchemas(changeTableSchemas, currentSchema, ast);
 
   await applyChangeTables(
+    adapter,
     changeTables,
     structureToAstCtx,
     dbStructure,
@@ -89,6 +95,7 @@ export const processTables = async (
     config,
     compareSql,
     tableExpressions,
+    verifying,
   );
 
   processForeignKeys(ast, changeTables, currentSchema, tableShapes);
@@ -96,7 +103,13 @@ export const processTables = async (
   await Promise.all([
     applyCompareSql(compareSql, adapter),
     compareSqlExpressions(tableExpressions, adapter),
-    applyCreateOrRenameTables(createTables, dropTables, currentSchema, ast),
+    applyCreateOrRenameTables(
+      createTables,
+      dropTables,
+      currentSchema,
+      ast,
+      verifying,
+    ),
   ]);
 
   for (const dbTable of dropTables) {
@@ -206,6 +219,7 @@ const applyChangeTableSchemas = (
 };
 
 const applyChangeTables = async (
+  adapter: Adapter,
   changeTables: ChangeTableData[],
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
@@ -215,12 +229,16 @@ const applyChangeTables = async (
   config: AnyRakeDbConfig,
   compareSql: CompareSql,
   tableExpressions: TableExpression[],
+  verifying: boolean | undefined,
 ): Promise<void> => {
   const compareExpressions: CompareExpression[] = [];
+  const typeCastsCache: TypeCastsCache = {};
+
   for (const changeTableData of changeTables) {
     compareExpressions.length = 0;
 
     await processTableChange(
+      adapter,
       structureToAstCtx,
       dbStructure,
       domainsMap,
@@ -230,6 +248,8 @@ const applyChangeTables = async (
       changeTableData,
       compareSql,
       compareExpressions,
+      typeCastsCache,
+      verifying,
     );
 
     if (compareExpressions.length) {
@@ -239,6 +259,9 @@ const applyChangeTables = async (
 
       for (const key in codeTable.shape) {
         const column = codeTable.shape[key] as ColumnType;
+        // skip virtual columns
+        if (!column.dataType) continue;
+
         const name = column.data.name ?? key;
         names.push(name);
         types.push(getColumnDbType(column, currentSchema));
@@ -284,6 +307,7 @@ const applyCreateOrRenameTables = async (
   dropTables: DbStructure.Table[],
   currentSchema: string,
   ast: RakeDbAst[],
+  verifying: boolean | undefined,
 ) => {
   for (const codeTable of createTables) {
     if (dropTables.length) {
@@ -291,6 +315,7 @@ const applyCreateOrRenameTables = async (
         'table',
         codeTable.table,
         dropTables.map((x) => x.name),
+        verifying,
       );
       if (index) {
         const drop = dropTables[index - 1];
@@ -341,6 +366,7 @@ const makeTableShape = (table: QueryWithTable): ColumnsShape => {
 };
 
 const processTableChange = async (
+  adapter: Adapter,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
@@ -350,8 +376,11 @@ const processTableChange = async (
   changeTableData: ChangeTableData,
   compareSql: CompareSql,
   compareExpressions: CompareExpression[],
+  typeCastsCache: TypeCastsCache,
+  verifying: boolean | undefined,
 ) => {
   await processColumns(
+    adapter,
     structureToAstCtx,
     dbStructure,
     domainsMap,
@@ -359,6 +388,8 @@ const processTableChange = async (
     ast,
     currentSchema,
     compareSql,
+    typeCastsCache,
+    verifying,
   );
 
   const delayedAst: RakeDbAst[] = [];

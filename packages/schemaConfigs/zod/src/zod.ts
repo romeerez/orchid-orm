@@ -854,7 +854,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
 
     const { columns } = this.prototype;
     for (const key in columns) {
-      if (columns[key].data.isPrimaryKey) {
+      if (columns[key].data.primaryKey) {
         pkeys[key] = true;
       }
     }
@@ -993,7 +993,7 @@ type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
   {
-    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['isPrimaryKey'] extends true
+    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends true
       ? K
       : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
   },

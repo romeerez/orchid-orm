@@ -12,7 +12,7 @@ import {
   TableData,
 } from 'pqb';
 import { exhaustive, getSchemaAndTableFromName } from '../common';
-import { ColumnTypeSchemaArg } from 'orchid-core';
+import { ColumnTypeSchemaArg, toArray } from 'orchid-core';
 
 export interface GenerateItem {
   ast: RakeDbAst;
@@ -90,14 +90,16 @@ export const astToGenerateItem = (
         const columns: TableColumn[] = [];
 
         for (const name in ast.shape) {
-          const item = ast.shape[name];
-          if (item.type === 'add') {
-            columns.push([add, name, { column: item.item }]);
-          } else if (item.type === 'drop') {
-            columns.push([drop, name, { column: item.item }]);
-          } else if (item.type === 'change') {
-            columns.push([add, name, item.to]);
-            columns.push([drop, name, item.from]);
+          const arr = toArray(ast.shape[name]);
+          for (const item of arr) {
+            if (item.type === 'add') {
+              columns.push([add, name, { column: item.item }]);
+            } else if (item.type === 'drop') {
+              columns.push([drop, name, { column: item.item }]);
+            } else if (item.type === 'change') {
+              columns.push([add, name, item.to]);
+              columns.push([drop, name, item.from]);
+            }
           }
         }
 
@@ -130,9 +132,9 @@ export const astToGenerateItem = (
       add.push(ast.to);
       break;
     }
-    case 'extension':
     case 'enum':
-    case 'collation': {
+    case 'collation':
+    case 'extension': {
       const schema = ast.schema ?? currentSchema;
       (ast.action === 'create' ? add : drop).push(`${schema}.${ast.name}`);
       deps.push(schema);
@@ -220,7 +222,7 @@ const analyzeTableColumns = (
     const collate = change.column?.data.collate ?? change.collate;
     if (collate) deps.push(collate);
 
-    const primaryKey = change.primaryKey || change.column?.data.isPrimaryKey;
+    const primaryKey = change.primaryKey || change.column?.data.primaryKey;
     if (primaryKey) {
       keys.push(`${table}_pkey`);
     }

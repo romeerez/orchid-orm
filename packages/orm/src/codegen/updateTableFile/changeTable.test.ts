@@ -307,7 +307,7 @@ describe('updateTableFile', () => {
             from: { type: 'integer', identity: {} },
             to: {
               type: 'integer',
-              identity: { always: true, startWith: 5 },
+              identity: { always: true, start: 5 },
               column: t.identity(),
             },
           }),
@@ -337,7 +337,7 @@ describe('updateTableFile', () => {
         addIdentity: t.identity(),
         changeIdentity: t.identity({
       always: true,
-      startWith: 5,
+      start: 5,
     }),
         dropIdentity: t.integer(),
 `),
@@ -834,13 +834,13 @@ describe('updateTableFile', () => {
                 type: 'change',
                 from: {},
                 to: {
-                  check: raw({ raw: 'add check' }),
+                  check: { sql: raw({ raw: 'add check' }) },
                 },
               },
               remove: {
                 type: 'change',
                 from: {
-                  check: raw({ raw: 'remove check' }),
+                  check: { sql: raw({ raw: 'remove check' }) },
                 },
                 to: {},
               },

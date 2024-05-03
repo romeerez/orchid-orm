@@ -1,7 +1,9 @@
-import { promptSelect } from '../../prompt';
-import { colors } from '../../colors';
+import { promptSelect } from '../../../prompt';
+import { colors } from '../../../colors';
 import { RawSQLBase } from 'orchid-core';
 import { Adapter } from 'pqb';
+import { RakeDbAst } from 'rake-db';
+import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
   compare: {
@@ -86,7 +88,10 @@ export const promptCreateOrRename = (
   kind: string,
   name: string,
   drop: string[],
+  verifying: boolean | undefined,
 ): Promise<number> => {
+  if (verifying) throw new AbortSignal();
+
   let max = 0;
   const add = name.length + 3;
   for (const name of drop) {
@@ -115,4 +120,12 @@ export const promptCreateOrRename = (
       ),
     ],
   });
+};
+
+export const checkForColumnChange = (
+  shape: RakeDbAst.ChangeTableShape,
+  key: string,
+) => {
+  const item = shape[key];
+  return item && (Array.isArray(item) || item.type !== 'rename');
 };

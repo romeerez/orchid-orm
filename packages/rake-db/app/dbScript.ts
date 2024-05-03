@@ -16,9 +16,12 @@ if (!databaseURL) {
 
 options.push({ databaseURL, connectRetry: true });
 
-const databaseURLTest = process.env.PG_URL_TEST;
-if (databaseURLTest) {
-  options.push({ databaseURL: databaseURLTest, connectRetry: true });
+const command = process.argv[2];
+if (['create', 'drop'].includes(command)) {
+  const databaseURLGenerate = process.env.PG_GENERATE_URL;
+  if (databaseURLGenerate) {
+    options.push({ databaseURL: databaseURLGenerate, connectRetry: true });
+  }
 }
 
 export const change = rakeDb(options, {

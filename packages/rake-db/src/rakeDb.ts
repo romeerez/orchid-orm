@@ -22,7 +22,7 @@ import {
 import { changeIds } from './commands/changeIds';
 import { RakeDbColumnTypes } from './migration/migration';
 import { rebase } from './commands/rebase';
-import { generate } from './generate/generate';
+import { generate } from './generate/fromCode/generate';
 
 /**
  * Type of {@link rakeDb} function

@@ -25,6 +25,7 @@ import { JSONTextColumn } from './json';
 import {
   ColumnNameOfTable,
   ColumnSchemaConfig,
+  ConstraintOptions,
   EmptyObject,
   emptyObject,
   ForeignKeyTable,
@@ -91,8 +92,8 @@ export namespace TableData {
   }
 
   interface SequenceBaseOptions {
-    incrementBy?: number;
-    startWith?: number;
+    increment?: number;
+    start?: number;
     min?: number;
     max?: number;
     cache?: number;
@@ -259,7 +260,7 @@ export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
     options?: ForeignKeyOptions & { name?: string; dropMode?: DropMode },
   ): EmptyObject;
 
-  check(check: RawSQLBase): EmptyObject;
+  check(check: RawSQLBase, options?: ConstraintOptions): EmptyObject;
 }
 
 export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
@@ -417,7 +418,7 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
      * See {@link ColumnType.searchIndex}
      */
     searchIndex(columns, options) {
-      return this.index(columns, { ...options, tsVector: true });
+      return this.index(columns, { using: 'gin', ...options, tsVector: true });
     },
 
     constraint({ name, references, check, dropMode }) {
@@ -451,8 +452,9 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       return emptyObject;
     },
 
-    check(check) {
+    check(check, options) {
       (tableData.constraints ??= []).push({
+        ...options,
         check,
       });
       return emptyObject;

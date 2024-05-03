@@ -1,38 +1,35 @@
-import { generatorsTestUtils } from './generators.test-utils';
-import { dbStructureMockFactory } from '../dbStructure.mockFactory';
-import { colors } from '../../colors';
+import { useGeneratorsTestUtils } from './generators.test-utils';
+import { colors } from '../../../colors';
 
-jest.mock('../../commands/migrateOrRollback');
-jest.mock('../dbStructure');
+jest.mock('../../../commands/migrateOrRollback');
+jest.mock('../../../prompt');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),
   writeFile: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('../../prompt');
 
-const { arrange, act, assert, makeStructure } = generatorsTestUtils;
 const { green, red, yellow } = colors;
 
 describe('domains', () => {
-  beforeEach(jest.clearAllMocks);
+  const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
   it('should create a domain', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+      },
       dbOptions: {
         domains: {
           'schema.domain': (t) =>
             t
-              .integer()
+              .text(1, 2)
               .nullable()
               .collate('C')
-              .default(t.sql`2 + 2`)
-              .check(t.sql`value = 42`),
+              .default(t.sql`'default'`)
+              .check(t.sql`value = 'x'`),
         },
       },
-      structure: makeStructure({
-        schemas: ['schema'],
-      }),
     });
 
     await act();
@@ -40,7 +37,7 @@ describe('domains', () => {
     assert.migration(`import { change } from '../src/dbScript';
 
 change(async (db) => {
-  await db.createDomain('schema.domain', (t) => t.integer().nullable().default(t.sql\`2 + 2\`).check(t.sql\`value = 42\`).collate('C'));
+  await db.createDomain('schema.domain', (t) => t.text(1, 2).nullable().default(t.sql\`'default'\`).check(t.sql\`value = 'x'\`).collate('C'));
 });
 `);
 
@@ -48,19 +45,22 @@ change(async (db) => {
   });
 
   it('should drop a domain', async () => {
-    arrange({
-      structure: makeStructure({
-        domains: [
-          dbStructureMockFactory.domain({
-            schemaName: 'schema',
-            type: 'text',
-            isNullable: true,
-            collate: 'C',
-            default: `('a'::text || 'b'::text)`,
-            check: `(VALUE = 'ab'::text)`,
-          }),
-        ],
-      }),
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createTable('schema.table', { noPrimaryKey: true });
+
+        await db.createDomain('schema.domain', (t) =>
+          t
+            .text(1, 2)
+            .nullable()
+            .collate('C')
+            .default(t.sql`('a'::text || 'b'::text)`)
+            .check(t.sql`(VALUE = 'ab'::text)`),
+        );
+      },
+      tables: [table(undefined, { schema: 'schema' })],
     });
 
     await act();
@@ -76,7 +76,19 @@ change(async (db) => {
   });
 
   it('should not recreate a domain when it is not changed', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createDomain('schema.domain', (t) =>
+          t
+            .text(1, 2)
+            .nullable()
+            .collate('C')
+            .default(t.sql`'a'||'b'`)
+            .check(t.sql`value = 'ab'`),
+        );
+      },
       dbOptions: {
         domains: {
           'schema.domain': (t) =>
@@ -88,19 +100,6 @@ change(async (db) => {
               .check(t.sql`value = 'ab'`),
         },
       },
-      structure: makeStructure({
-        schemas: ['schema'],
-        domains: [
-          dbStructureMockFactory.domain({
-            schemaName: 'schema',
-            type: 'text',
-            isNullable: true,
-            collate: 'C',
-            default: `('a'::text || 'b'::text)`,
-            check: `(VALUE = 'ab'::text)`,
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -109,23 +108,19 @@ change(async (db) => {
   });
 
   it('should recreate a domain when value was changed', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createDomain('schema.domain', (t) =>
+          t.text(1, 2).nullable().collate('C'),
+        );
+      },
       dbOptions: {
         domains: {
           'schema.domain': (t) => t.text(1, 2).collate('C'),
         },
       },
-      structure: makeStructure({
-        schemas: ['schema'],
-        domains: [
-          dbStructureMockFactory.domain({
-            schemaName: 'schema',
-            type: 'text',
-            isNullable: true,
-            collate: 'C',
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -146,7 +141,19 @@ ${green('+ create domain')} schema.domain`);
   });
 
   it('should recreate a domain when sql value was changed', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createDomain('schema.domain', (t) =>
+          t
+            .text(1, 2)
+            .nullable()
+            .collate('C')
+            .default(t.sql`'a'||'b'`)
+            .check(t.sql`value = 'ab'`),
+        );
+      },
       dbOptions: {
         domains: {
           'schema.domain': (t) =>
@@ -158,19 +165,6 @@ ${green('+ create domain')} schema.domain`);
               .check(t.sql`value = 'ab'`),
         },
       },
-      structure: makeStructure({
-        schemas: ['schema'],
-        domains: [
-          dbStructureMockFactory.domain({
-            schemaName: 'schema',
-            type: 'text',
-            isNullable: true,
-            collate: 'C',
-            default: `('a'::text || 'b'::text)`,
-            check: `(VALUE = 'ab'::text)`,
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -191,24 +185,19 @@ ${green('+ create domain')} schema.domain`);
   });
 
   it('should rename a domain when only name is changed', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createDomain('schema.from', (t) =>
+          t.text(1, 2).nullable().collate('C'),
+        );
+      },
       dbOptions: {
         domains: {
           'schema.to': (t) => t.text(1, 2).nullable().collate('C'),
         },
       },
-      structure: makeStructure({
-        schemas: ['schema'],
-        domains: [
-          dbStructureMockFactory.domain({
-            name: 'from',
-            schemaName: 'schema',
-            type: 'text',
-            isNullable: true,
-            collate: 'C',
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -225,24 +214,19 @@ change(async (db) => {
   });
 
   it('should change domain schema', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('newSchema');
+
+        await db.createDomain('domain', (t) =>
+          t.text(1, 2).nullable().collate('C'),
+        );
+      },
       dbOptions: {
         domains: {
           'newSchema.domain': (t) => t.text(1, 2).nullable().collate('C'),
         },
       },
-      structure: makeStructure({
-        schemas: ['newSchema'],
-        domains: [
-          dbStructureMockFactory.domain({
-            schemaName: 'oldSchema',
-            name: 'domain',
-            type: 'text',
-            isNullable: true,
-            collate: 'C',
-          }),
-        ],
-      }),
     });
 
     await act();
@@ -250,34 +234,29 @@ change(async (db) => {
     assert.migration(`import { change } from '../src/dbScript';
 
 change(async (db) => {
-  await db.changeTypeSchema('domain', 'oldSchema', 'newSchema');
+  await db.changeTypeSchema('domain', 'public', 'newSchema');
 });
 `);
 
     assert.report(
-      `${yellow('~ change schema of domain')} oldSchema.domain ${yellow(
+      `${yellow('~ change schema of domain')} domain ${yellow(
         '=>',
       )} newSchema.domain`,
     );
   });
 
   it('should not change domain schema when renaming a schema', async () => {
-    arrange({
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('oldSchema');
+
+        await db.createDomain('oldSchema.domain', (t) => t.integer());
+      },
       dbOptions: {
         domains: {
           'newSchema.domain': (t) => t.integer(),
         },
       },
-      structure: makeStructure({
-        schemas: ['oldSchema'],
-        domains: [
-          dbStructureMockFactory.domain({
-            schemaName: 'oldSchema',
-            name: 'domain',
-            type: 'int4',
-          }),
-        ],
-      }),
       selects: [1],
     });
 
