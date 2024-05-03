@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.24.7
+
+### Patch Changes
+
+- 05590044: Fix bug in nested `whereExists` when relation uses alias
+- Updated dependencies [05590044]
+- Updated dependencies [c94339ad]
+  - pqb@0.27.6
+
 ## 1.24.6
 
 ### Patch Changes

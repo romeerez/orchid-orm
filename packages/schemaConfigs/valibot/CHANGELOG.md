@@ -1,5 +1,14 @@
 # orchid-orm-valibot
 
+## 0.0.15
+
+### Patch Changes
+
+- 555b4f6c: Fix `min` and `max` methods for date columns
+- Updated dependencies [05590044]
+- Updated dependencies [c94339ad]
+  - pqb@0.27.6
+
 ## 0.0.14
 
 ### Patch Changes

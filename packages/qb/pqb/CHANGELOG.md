@@ -1,5 +1,12 @@
 # pqb
 
+## 0.27.6
+
+### Patch Changes
+
+- 05590044: Fix bug in nested `whereExists` when relation uses alias
+- c94339ad: Support empty array arg in createMany and insertMany (#260)
+
 ## 0.27.5
 
 ### Patch Changes

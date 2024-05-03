@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.6.18
+
+### Patch Changes
+
+- 555b4f6c: Fix `min` and `max` methods for date columns
+- Updated dependencies [05590044]
+- Updated dependencies [c94339ad]
+  - pqb@0.27.6
+
 ## 0.6.17
 
 ### Patch Changes
