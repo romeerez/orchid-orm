@@ -144,8 +144,9 @@ const makeJoinQueryBuilder = (
   joinTo: QueryDataJoinTo,
 ): JoinQueryBuilder<Query, Query> => {
   const q = joinedQuery.baseQuery.clone();
-  q.q.joinedShapes = joinedShapes;
   q.baseQuery = q as unknown as Query;
+  q.q.as = joinedQuery.q.as;
+  q.q.joinedShapes = joinedShapes;
   q.q.joinTo = joinTo;
   return q as never;
 };

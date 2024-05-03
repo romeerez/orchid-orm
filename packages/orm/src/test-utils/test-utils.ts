@@ -163,7 +163,7 @@ export class MessageTable extends BaseTable {
   }));
 
   relations = {
-    user: this.belongsTo(() => UserTable, {
+    sender: this.belongsTo(() => UserTable, {
       columns: ['AuthorId', 'MessageKey'],
       references: ['Id', 'UserKey'],
     }),
@@ -175,13 +175,13 @@ export class MessageTable extends BaseTable {
 
     profile: this.hasOne(() => ProfileTable, {
       required: true,
-      through: 'user',
+      through: 'sender',
       source: 'profile',
     }),
 
     profiles: this.hasMany(() => ProfileTable, {
       required: true,
-      through: 'user',
+      through: 'sender',
       source: 'profile',
     }),
   };

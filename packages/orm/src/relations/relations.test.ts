@@ -92,7 +92,7 @@ describe('relations', () => {
       chat: {
         create: chatData,
       },
-      user: {
+      sender: {
         create: {
           ...userData,
           profile: {
@@ -104,7 +104,7 @@ describe('relations', () => {
 
     const q = db.message.select('createdAt', {
       chatUser: (q) =>
-        q.user.select('createdAt', {
+        q.sender.select('createdAt', {
           userProfile: (q) =>
             q.profile.as('p').where({ Bio: 'bio' }).select('createdAt'),
         }),
@@ -119,19 +119,19 @@ describe('relations', () => {
         FROM "message"
         LEFT JOIN LATERAL (
           SELECT
-            "user"."createdAt",
+            "sender"."createdAt",
             row_to_json("userProfile".*) "userProfile"
-          FROM "user"
+          FROM "user" AS "sender"
           LEFT JOIN LATERAL (
             SELECT
               "p"."createdAt"
             FROM "profile" AS "p"
             WHERE "p"."bio" = $1
-              AND "p"."userId" = "user"."id"
-              AND "p"."profileKey" = "user"."userKey"
+              AND "p"."userId" = "sender"."id"
+              AND "p"."profileKey" = "sender"."userKey"
           ) "userProfile" ON true
-          WHERE "user"."id" = "message"."authorId"
-            AND "user"."userKey" = "message"."messageKey"
+          WHERE "sender"."id" = "message"."authorId"
+            AND "sender"."userKey" = "message"."messageKey"
         ) "chatUser" ON true
       `,
       ['bio'],

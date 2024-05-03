@@ -189,13 +189,13 @@ describe('belongsTo', () => {
       const sql = `
         SELECT ${messageSelectAll} FROM "message" AS "m"
         WHERE EXISTS (
-          SELECT 1 FROM "user"
-          WHERE "user"."id" = "m"."authorId"
-            AND "user"."userKey" = "m"."messageKey"
+          SELECT 1 FROM "user" AS "sender"
+          WHERE "sender"."id" = "m"."authorId"
+            AND "sender"."userKey" = "m"."messageKey"
             AND EXISTS (
             SELECT 1 FROM "profile"
-            WHERE "profile"."userId" = "user"."id"
-              AND "profile"."profileKey" = "user"."userKey"
+            WHERE "profile"."userId" = "sender"."id"
+              AND "profile"."profileKey" = "sender"."userKey"
               AND "profile"."bio" = $1
           )
         )
@@ -204,9 +204,9 @@ describe('belongsTo', () => {
       expectSql(
         db.message
           .as('m')
-          .whereExists('user', (q) =>
-            q.whereExists('profile', (q) => q.where({ Bio: 'bio' })),
-          )
+          .whereExists('sender', (q) => {
+            return q.whereExists('profile', (q) => q.where({ Bio: 'bio' }));
+          })
           .toSQL(),
         sql,
         ['bio'],
@@ -215,7 +215,7 @@ describe('belongsTo', () => {
       expectSql(
         db.message
           .as('m')
-          .whereExists('user', (q) =>
+          .whereExists('sender', (q) =>
             q.whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' })),
           )
           .toSQL(),
@@ -482,9 +482,6 @@ describe('belongsTo', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
-        db.message.relations.chat;
-        db.message.relations.user;
-
         const {
           Id: messageId,
           ChatId,
@@ -529,7 +526,7 @@ describe('belongsTo', () => {
                 Title: 'chat 1',
               },
             },
-            user: {
+            sender: {
               create: {
                 ...userData,
                 Name: 'user 1',
@@ -546,7 +543,7 @@ describe('belongsTo', () => {
                 Title: 'chat 2',
               },
             },
-            user: {
+            sender: {
               create: {
                 ...userData,
                 Name: 'user 2',
@@ -839,7 +836,7 @@ describe('belongsTo', () => {
                   create: { ...chatData, Title: 'chat 1' },
                 },
               },
-              user: {
+              sender: {
                 connectOrCreate: {
                   where: { Name: 'user 1' },
                   create: { ...userData, Name: 'user 1' },
@@ -856,7 +853,7 @@ describe('belongsTo', () => {
                   create: { ...chatData, Title: 'chat 2' },
                 },
               },
-              user: {
+              sender: {
                 connectOrCreate: {
                   where: { Name: 'user 2' },
                   create: { ...userData, Name: 'user 2' },

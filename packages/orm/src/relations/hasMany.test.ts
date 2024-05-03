@@ -518,11 +518,11 @@ describe('hasMany', () => {
     });
 
     it('should support recurring select', () => {
-      const q = db.user.select({
+      const q = db.user.as('sender').select({
         messages: (q) =>
           q.messages.select({
-            user: (q) =>
-              q.user.select({
+            sender: (q) =>
+              q.sender.select({
                 messages: (q) => q.messages,
               }),
           }),
@@ -532,29 +532,29 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT COALESCE("messages".r, '[]') "messages"
-          FROM "user"
+          FROM "user" AS "sender"
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json("t".*)) r
             FROM (
-              SELECT row_to_json("user2".*) "user"
+              SELECT row_to_json("sender2".*) "sender"
               FROM "message" AS "messages"
               LEFT JOIN LATERAL (
                 SELECT COALESCE("messages2".r, '[]') "messages"
-                FROM "user"
+                FROM "user" AS "sender"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(row_to_json("t".*)) r
                   FROM (
                     SELECT ${messageSelectAll}
                     FROM "message" AS "messages"
-                    WHERE "messages"."authorId" = "user"."id"
-                      AND "messages"."messageKey" = "user"."userKey"
+                    WHERE "messages"."authorId" = "sender"."id"
+                      AND "messages"."messageKey" = "sender"."userKey"
                   ) AS "t"
                 ) "messages2" ON true
-                WHERE "user"."id" = "messages"."authorId"
-                  AND "user"."userKey" = "messages"."messageKey"
-              ) "user2" ON true
-              WHERE "messages"."authorId" = "user"."id"
-                AND "messages"."messageKey" = "user"."userKey"
+                WHERE "sender"."id" = "messages"."authorId"
+                  AND "sender"."userKey" = "messages"."messageKey"
+              ) "sender2" ON true
+              WHERE "messages"."authorId" = "sender"."id"
+                AND "messages"."messageKey" = "sender"."userKey"
             ) AS "t"
           ) "messages" ON true
         `,
@@ -2232,11 +2232,11 @@ describe('hasMany through', () => {
                 WHERE "message"."text" = $1
                   AND EXISTS (
                     SELECT 1
-                    FROM "user"
-                    WHERE "profiles"."userId" = "user"."id"
-                      AND "profiles"."profileKey" = "user"."userKey"
-                      AND "user"."id" = "message"."authorId"
-                      AND "user"."userKey" = "message"."messageKey"
+                    FROM "user" AS "sender"
+                    WHERE "profiles"."userId" = "sender"."id"
+                      AND "profiles"."profileKey" = "sender"."userKey"
+                      AND "sender"."id" = "message"."authorId"
+                      AND "sender"."userKey" = "message"."messageKey"
                   )
               )
               AND "profiles"."bio" = $2
@@ -3110,11 +3110,11 @@ describe('hasMany through', () => {
               WHERE EXISTS (
                 SELECT 1 FROM "profile" AS "profiles"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE "profiles"."userId" = "user"."id"
-                    AND "profiles"."profileKey" = "user"."userKey"
-                    AND "user"."id" = "message"."authorId"
-                    AND "user"."userKey" = "message"."messageKey"
+                  SELECT 1 FROM "user" AS "sender"
+                  WHERE "profiles"."userId" = "sender"."id"
+                    AND "profiles"."profileKey" = "sender"."userKey"
+                    AND "sender"."id" = "message"."authorId"
+                    AND "sender"."userKey" = "message"."messageKey"
                 ) AND EXISTS (
                   SELECT 1 FROM "user"
                   WHERE "posts"."userId" = "user"."id"
