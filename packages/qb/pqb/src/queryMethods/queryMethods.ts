@@ -817,7 +817,9 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   none<T>(this: T): T {
-    return extendQuery(this as Query, noneMethods) as T;
+    return (this as Query).then === noneMethods.then
+      ? this
+      : (extendQuery(this as Query, noneMethods) as T);
   }
 
   /**

@@ -559,12 +559,14 @@ export const _queryInsertMany = <T extends CreateSelf>(
   data: CreateData<T>[],
 ) => {
   const ctx = createCtx();
-  return insert(
+  let result = insert(
     q,
     handleManyData(q, data, ctx),
     'object',
     true,
   ) as InsertManyResult<T>;
+  if (!data.length) result = (result as Query).none() as InsertManyResult<T>;
+  return result;
 };
 
 export const _queryCreateRaw = <T extends CreateSelf>(

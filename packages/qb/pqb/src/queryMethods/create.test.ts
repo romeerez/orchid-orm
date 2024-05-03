@@ -503,6 +503,10 @@ describe('create functions', () => {
   });
 
   describe('createMany', () => {
+    it('should do nothing and return empty array when empty array is given', async () => {
+      expect(await User.createMany([])).toEqual([]);
+    });
+
     it('should create many records with raw SQL for a column value', () => {
       const q = User.createMany([
         {
@@ -714,6 +718,10 @@ describe('create functions', () => {
   });
 
   describe('insertMany', () => {
+    it('should do nothing and return 0 when empty array is given', async () => {
+      expect(await User.insertMany([])).toBe(0);
+    });
+
     it('should return row count by default', async () => {
       const q = User.insertMany([userData, userData]);
 
