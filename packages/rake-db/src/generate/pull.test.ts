@@ -10,8 +10,7 @@ import {
 } from 'pqb';
 import { asMock } from 'test-utils';
 import { ColumnSchemaConfig } from 'orchid-core';
-import { RakeDbConfig } from 'rake-db';
-import { processRakeDbConfig } from '../config';
+import { processRakeDbConfig, RakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 
 jest.mock('./dbStructure');

@@ -1,5 +1,4 @@
-import { DbStructure, IntrospectedStructure } from '../../dbStructure';
-import { RakeDbAst } from '../../../index';
+import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
 
 export interface EnumItem {

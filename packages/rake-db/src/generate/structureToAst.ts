@@ -32,7 +32,7 @@ import {
   toSnakeCase,
 } from 'orchid-core';
 import { getConstraintName, getIndexName } from '../migration/migrationUtils';
-import { AnyRakeDbConfig } from 'rake-db';
+import { AnyRakeDbConfig } from '../config';
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
   s: undefined,

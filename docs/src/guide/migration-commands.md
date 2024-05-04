@@ -1,6 +1,6 @@
 # Migration commands
 
-After the migration tool, `rake-db`, was [set and configured](/guide/migration-setup-and-overview#setup), you can use it from a command line.
+Once migrations are [configured](/guide/migration-setup-and-overview#setup), you can use it from a command line.
 
 ## create and drop a database
 
@@ -32,8 +32,6 @@ npm run db pull
 ```
 
 This will create a single migration file with all the tables and columns.
-
-If `appCodeUpdater` is configured in `rake-db` config file, it will also generate project files.
 
 Currently, it supports generating code to create:
 
@@ -336,20 +334,20 @@ pnpm db change-ids serial
 pnpm db change-ids timestamp
 ```
 
-After running the command, change `migrationId` to the desired prefix kind in the rake-db config.
+After running the command, change `migrationId` to the desired prefix kind in the migrations' config.
 
 This will create a special file in migrations: `.rename-to-serial.json`.
 
 After deploying to a remote server which is going to run migrations,
-`rake-db` will notice that applied migrations have timestamp prefix, but migration files have serial,
+it will be detected that the previously applied migrations have a timestamp prefix, but migration files have serial,
 and it will use the `.rename-to-serial.json` file to apply the renaming on a remote server.
 
 ## custom commands
 
-`rakeDb` allows to specify your own functions for a custom commands:
+You can configure custom commands in such way:
 
 ```ts
-import { rakeDb } from 'rake-db';
+import { rakeDb } from 'orchid-orm/migrations'; // import from 'rake-db' when not using Orchid ORM
 import { createDb } from 'pqb';
 import { config } from './config';
 

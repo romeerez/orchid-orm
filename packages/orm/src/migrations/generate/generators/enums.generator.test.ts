@@ -1,10 +1,12 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { DbMigration } from 'rake-db';
+import { DbMigration, colors } from 'rake-db';
 import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
-import { colors } from '../../../colors';
 
-jest.mock('../../../commands/migrateOrRollback');
-jest.mock('../../../prompt');
+jest.mock('rake-db', () => ({
+  ...jest.requireActual('rake-db'),
+  migrate: jest.fn(),
+  promptSelect: jest.fn(),
+}));
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),

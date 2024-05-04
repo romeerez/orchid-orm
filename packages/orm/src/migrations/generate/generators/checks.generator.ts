@@ -1,8 +1,7 @@
-import { ChangeTableData } from './tables.generator';
-import { ColumnType, RawSQL, TableData } from 'pqb';
 import { ColumnDataCheckBase, TemplateLiteralArgs } from 'orchid-core';
-import { DbStructure } from '../../dbStructure';
-import { RakeDbAst } from 'rake-db';
+import { ColumnType, RawSQL, TableData } from 'pqb';
+import { DbStructure, RakeDbAst } from 'rake-db';
+import { ChangeTableData } from './tables.generator';
 import { checkForColumnChange, CompareExpression } from './generators.utils';
 
 export const processChecks = (

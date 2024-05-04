@@ -1,5 +1,5 @@
 import { Query } from 'pqb';
-import { AnyRakeDbConfig } from 'rake-db';
+import { AnyRakeDbConfig } from '../config';
 
 export interface DbInstance {
   $queryBuilder: Query;

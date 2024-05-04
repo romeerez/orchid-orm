@@ -1,4 +1,3 @@
-import { AppCodeUpdater } from 'rake-db';
 import * as path from 'path';
 import { updateMainFile } from './updateMainFile';
 import {
@@ -9,6 +8,12 @@ import { createBaseTableFile } from './createBaseTableFile';
 import { Db, QueryLogOptions } from 'pqb';
 import { OrchidORM } from '../orm';
 import { updateRelations } from './updateTableFile/updateRelations';
+
+// TODO: remove appCodeUpdater
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AppCodeUpdater = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AppCodeUpdaterParams = any;
 
 export class AppCodeUpdaterError extends Error {}
 
@@ -113,6 +118,7 @@ export const appCodeUpdater = ({
   ormPath,
   ormExportedAs = 'db',
 }: AppCodeUpdaterConfig): AppCodeUpdater => ({
+  // @ts-expect-error TODO: this will be removed
   async process({ ast, options, basePath, logger, baseTable, ...config }) {
     const params: AppCodeUpdaterConfig = {
       tablePath(name: string) {
@@ -176,6 +182,7 @@ export const appCodeUpdater = ({
     await Promise.all(delayed.map((fn) => fn()));
   },
 
+  // @ts-expect-error TODO: this will be removed
   async afterAll({ cache, logger }) {
     const { relations } = cache as {
       relations?: AppCodeUpdaterRelations;

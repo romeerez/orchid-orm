@@ -2,7 +2,9 @@ import { AdapterOptions, DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 import {
   ColumnSchemaConfig,
   MaybeArray,
+  MaybePromise,
   RecordOptionalString,
+  RecordString,
   toArray,
 } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
@@ -22,7 +24,6 @@ import {
 import { changeIds } from './commands/changeIds';
 import { RakeDbColumnTypes } from './migration/migration';
 import { rebase } from './commands/rebase';
-import { generate } from './generate/fromCode/generate';
 
 /**
  * Type of {@link rakeDb} function
@@ -157,38 +158,78 @@ const runCommand = async <
 
   const options = toArray(opts);
 
-  if (arg === 'create') {
-    await createDb(options, config);
-  } else if (arg === 'drop') {
-    await dropDb(options, config);
-  } else if (arg === 'reset') {
-    await resetDb(options, config);
-  } else if (arg === 'up') {
-    await migrate({}, options, config, args.slice(1));
-  } else if (arg === 'down') {
-    await rollback({}, options, config, args.slice(1));
-  } else if (arg === 'redo') {
-    await redo({}, options, config, args.slice(1));
-  } else if (arg === 'g' || arg === 'generate') {
-    await generate(toArray(options), config, args.slice(1));
-  } else if (arg === 'new') {
-    await newMigration(config, args.slice(1));
-  } else if (arg === 'pull') {
-    await pullDbStructure(options[0], config);
-  } else if (arg === 'status') {
-    await listMigrationsStatuses(options, config, args.slice(1));
-  } else if (arg === 'rebase') {
-    await rebase(options, config);
-  } else if (arg === 'change-ids') {
-    await changeIds(options, config, args.slice(1));
-  } else if (config.commands[arg]) {
-    await config.commands[arg](options, config, args.slice(1));
-  } else if (arg !== 'recurrent') {
-    config.logger?.log(help);
-  }
+  args.shift();
 
-  if (arg === 'up' || arg === 'recurrent' || arg === 'redo') {
-    await runRecurrentMigrations(options, config);
+  const command = rakeDbCommands[arg]?.run ?? config.commands[arg];
+  if (command) {
+    await command(options, config, args);
+  } else if (config.logger) {
+    type HelpBlock = [key: string, help: string, helpArguments?: RecordString];
+
+    const commandsHelp: HelpBlock[] = [];
+
+    let max = 0;
+    let maxArgs = 0;
+
+    const addedCommands = new Map<RakeDbCommand, HelpBlock>();
+    for (let key in rakeDbCommands) {
+      const command = rakeDbCommands[key];
+      const added = addedCommands.get(command);
+      if (added) key = added[0] += `, ${key}`;
+
+      if (key.length > max) max = key.length;
+
+      if (added) continue;
+
+      if (command.helpArguments) {
+        maxArgs = Math.max(
+          maxArgs,
+          ...Object.keys(command.helpArguments).map((key) => key.length + 5),
+        );
+      }
+
+      const helpBlock: HelpBlock = [key, command.help, command.helpArguments];
+      addedCommands.set(command, helpBlock);
+
+      if (command.helpAfter) {
+        const i = commandsHelp.findIndex(([key]) => key === command.helpAfter);
+        if (i === -1) {
+          throw new Error(
+            `${command.helpAfter} command is required for ${key} but is not found`,
+          );
+        }
+        commandsHelp.splice(i + 1, 0, helpBlock);
+      } else {
+        commandsHelp.push(helpBlock);
+      }
+    }
+
+    config.logger.log(`Usage: rake-db [command] [arguments]
+
+See documentation at:
+https://orchid-orm.netlify.app/guide/migration-commands.html
+
+Commands:
+
+${commandsHelp
+  .map(([key, help, helpArguments]) => {
+    let result = `${key}  ${help.padStart(max - key.length + help.length)}`;
+
+    if (helpArguments) {
+      result += `\n  arguments:\n${Object.entries(helpArguments)
+        .map(
+          ([arg, help]) =>
+            `    ${arg} ${`  ${help}`.padStart(
+              maxArgs - arg.length - 5 + help.length + 2,
+            )}`,
+        )
+        .join('\n')}`;
+    }
+
+    return result;
+  })
+  .join('\n\n')}
+`);
   }
 
   return {
@@ -198,44 +239,105 @@ const runCommand = async <
   };
 };
 
-const help = `Usage: rake-db [command] [arguments]
+interface RakeDbCommand {
+  run(
+    options: AdapterOptions[],
+    config: AnyRakeDbConfig,
+    args: string[],
+  ): MaybePromise<unknown>;
+  help: string;
+  helpArguments?: RecordString;
+  helpAfter?: string;
+}
 
-See documentation at:
-https://orchid-orm.netlify.app/guide/migration-commands.html
+interface RakeDbCommands {
+  [K: string]: RakeDbCommand;
+}
 
-Commands:
-  create                  create databases
-  drop                    drop databases
-  reset                   drop, create and migrate databases
+const upCommand: RakeDbCommand = {
+  run: (options, config, args) =>
+    migrate({}, options, config, args).then(() =>
+      runRecurrentMigrations(options, config),
+    ),
+  help: 'migrate pending migrations',
+  helpArguments: {
+    'no arguments': 'migrate all pending',
+    'a number': 'run a specific number of pending migrations',
+    force: 'enforce migrating a pending file in the middle',
+  },
+};
 
-  g, generate             gen migration from OrchidORM tables
-    arguments:
-      no arguments            "generated" is a default file name
-      migration-name          set migration file name
-      up                      auto-apply migration
-      g migration-name up     with a custom name and apply it
+const downCommand: RakeDbCommand = {
+  run: (options, config, args) => rollback({}, options, config, args),
+  help: 'rollback migrated migrations',
+  helpArguments: {
+    'no arguments': 'rollback one last migration',
+    'a number': 'rollback a specified number',
+    all: 'rollback all migrations',
+  },
+};
 
-  up, migrate             migrate pending migrations
-    arguments:
-      no arguments            migrate all pending
-      a number                run a specific number of pending migrations
-      force                   enforce migrating a pending file in the middle
+const statusCommand: RakeDbCommand = {
+  run: listMigrationsStatuses,
+  help: 'list migrations statuses',
+  helpArguments: {
+    'no arguments': `does not print file paths`,
+    'p, path': 'also print file paths',
+  },
+};
 
-  down, rollback          rollback the last migrated
-    arguments:
-      no arguments            migrate all pending
-      a number                run a specific number of pending migrations
-      all                     rollback all migrations
+const recurrentCommand: RakeDbCommand = {
+  run: runRecurrentMigrations,
+  help: 'run recurrent migrations',
+};
 
-  pull                    generate a combined migration for an existing database
-  new                     create new migration file
-  redo                    rollback and migrate, run recurrent
-  s, status               list migrations statuses
-  s p, status path        list migrations statuses and paths to files
-  rec, recurrent          run recurrent migrations
-  rebase                  move local migrations below the new ones from upstream
-  change-ids serial       change migrations ids to 4 digit serial
-  change-ids serial 69    change migrations ids to serial of custom length
-  change-ids timestamp    change migrations ids to timestamps
-  no or unknown command   prints help
-`;
+export const rakeDbCommands: RakeDbCommands = {
+  create: {
+    run: createDb,
+    help: 'create databases',
+  },
+  drop: {
+    run: dropDb,
+    help: 'drop databases',
+  },
+  reset: {
+    run: resetDb,
+    help: 'drop, create and migrate databases',
+  },
+  up: upCommand,
+  migrate: upCommand,
+  down: downCommand,
+  rollback: downCommand,
+  redo: {
+    run: (options, config, args) =>
+      redo({}, options, config, args).then(() =>
+        runRecurrentMigrations(options, config),
+      ),
+    help: 'rollback and migrate, run recurrent',
+  },
+  pull: {
+    run: ([options], config) => pullDbStructure(options, config),
+    help: 'generate a combined migration for an existing database',
+  },
+  new: {
+    run: (_, config, args) => newMigration(config, args),
+    help: 'create new migration file',
+  },
+  s: statusCommand,
+  status: statusCommand,
+  rec: recurrentCommand,
+  recurrent: recurrentCommand,
+  rebase: {
+    run: rebase,
+    help: 'move local migrations below the new ones from upstream',
+  },
+  'change-ids': {
+    run: changeIds,
+    help: 'change migrations ids format',
+    helpArguments: {
+      serial: 'change ids to 4 digit serial',
+      'serial *number*': 'change ids to serial number of custom length',
+      'change-ids timestamp': 'change ids to timestamps',
+    },
+  },
+};

@@ -1,23 +1,22 @@
 import {
+  RakeDbAst,
   dbColumnToAst,
   DbStructureDomainsMap,
   getDbTableColumnsChecks,
   instantiateDbColumn,
   StructureToAstCtx,
-} from '../../structureToAst';
-import { Adapter, ColumnType, DomainColumn, EnumColumn } from 'pqb';
-import { DbStructure, IntrospectedStructure } from '../../dbStructure';
-import { RakeDbAst } from 'rake-db';
-import { promptCreateOrRename } from './generators.utils';
-import { ColumnTypeBase, deepCompare, RecordUnknown } from 'orchid-core';
-import { encodeColumnDefault } from '../../../migration/migrationUtils';
-import {
+  DbStructure,
+  IntrospectedStructure,
+  encodeColumnDefault,
   concatSchemaAndName,
   getSchemaAndTableFromName,
-} from '../../../common';
+  promptSelect,
+  colors,
+} from 'rake-db';
+import { Adapter, ColumnType, DomainColumn, EnumColumn } from 'pqb';
+import { promptCreateOrRename } from './generators.utils';
+import { ColumnTypeBase, deepCompare, RecordUnknown } from 'orchid-core';
 import { ChangeTableData, CompareSql } from './tables.generator';
-import { promptSelect } from '../../../prompt';
-import { colors } from '../../../colors';
 import { AbortSignal } from '../generate';
 
 export interface TypeCastsCache {

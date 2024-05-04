@@ -16,7 +16,7 @@ import {
   quoteTable,
   quoteWithSchema,
 } from '../common';
-import { AnyRakeDbConfig } from 'rake-db';
+import { AnyRakeDbConfig } from '../config';
 
 export const versionToString = (config: AnyRakeDbConfig, version: number) =>
   config.migrationId === 'serial'

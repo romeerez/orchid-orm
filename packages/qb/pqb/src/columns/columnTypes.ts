@@ -122,7 +122,7 @@ export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
   nowSQL: string | undefined,
   language: string | undefined,
   data: TableData = newTableData(),
-) => {
+): Shape => {
   if (nowSQL) setDefaultNowFn(nowSQL);
   if (language) setDefaultLanguage(language);
 

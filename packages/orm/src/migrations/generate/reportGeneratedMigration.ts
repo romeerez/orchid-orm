@@ -1,7 +1,12 @@
-import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
+import {
+  AnyRakeDbConfig,
+  RakeDbAst,
+  colors,
+  exhaustive,
+  getSchemaAndTableFromName,
+  pluralize,
+} from 'rake-db';
 import { addCode, Code, codeToString, toArray } from 'orchid-core';
-import { colors } from '../../colors';
-import { exhaustive, getSchemaAndTableFromName, pluralize } from '../../common';
 import { getColumnDbType } from './generators/columns.generator';
 import { fnOrTableToString } from './generators/foreignKeys.generator';
 

@@ -6,7 +6,7 @@ import { getMigrations, MigrationItem } from '../migration/migrationsSet';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { RakeDbCtx } from '../common';
 import { RecordOptionalString } from 'orchid-core';
-import { redo } from 'rake-db';
+import { redo } from './migrateOrRollback';
 import { promptSelect } from '../prompt';
 import { colors } from '../colors';
 

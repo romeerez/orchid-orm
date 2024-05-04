@@ -4,7 +4,7 @@ import { astToMigration } from './astToMigration';
 import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import { ColumnSchemaConfig } from 'orchid-core';
-import { RakeDbConfig } from 'rake-db';
+import { RakeDbConfig } from '../config';
 
 export const pullDbStructure = async <
   SchemaConfig extends ColumnSchemaConfig,

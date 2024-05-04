@@ -1,36 +1,59 @@
+import { ColumnSchemaConfig, ColumnsShapeBase, noop } from 'orchid-core';
 import {
   Adapter,
   AdapterOptions,
   DbSharedOptions,
   DefaultColumnTypes,
+  defaultSchemaConfig,
   DefaultSchemaConfig,
+  makeColumnTypes,
+  QueryLogger,
 } from 'pqb';
+import { orchidORM } from '../../../orm';
 import {
-  ColumnSchemaConfig,
-  ColumnsShapeBase,
-  createBaseTable,
-  noop,
-  orchidORM,
-} from 'orchid-orm';
-import { testConfig } from '../../../rake-db.test-utils';
-import { AnyRakeDbConfig, createMigrationInterface, migrate } from 'rake-db';
+  ChangeCallback,
+  migrationConfigDefaults,
+  promptSelect,
+  RakeDbConfig,
+  AnyRakeDbConfig,
+  createMigrationInterface,
+  migrate,
+} from 'rake-db';
 import { asMock } from 'test-utils';
-import { promptSelect } from '../../../prompt';
 import { generate } from '../generate';
 import fs from 'fs/promises';
-import { ChangeCallback } from '../../../migration/change';
+import { join } from 'path';
+import { BaseTable } from '../../../test-utils/test-utils';
+import path from 'node:path';
+
+export const testMigrationsPath = 'migrations-path';
+
+export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
+  logger: QueryLogger;
+  migrationsPath: string;
+} = {
+  ...migrationConfigDefaults,
+  basePath: path.join(__dirname, '..', '..', '..'),
+  dbScript: 'dbScript.ts',
+  columnTypes: makeColumnTypes(defaultSchemaConfig),
+  log: false,
+  logger: {
+    log: jest.fn(),
+    error: noop,
+    warn: noop,
+  },
+  migrationsPath: testMigrationsPath,
+  recurrentPath: join(testMigrationsPath, 'recurrent'),
+  migrationsTable: 'schemaMigrations',
+  snakeCase: false,
+  import: require,
+  commands: {},
+};
 
 const defaultOptions: AdapterOptions[] = [
   { databaseURL: process.env.PG_GENERATE_URL },
 ];
 let options = defaultOptions;
-
-const BaseTable = createBaseTable({
-  columnTypes: (t) => ({
-    ...t,
-    text: (min = 0, max = Infinity) => t.text(min, max),
-  }),
-});
 
 const defaultConfig = {
   ...testConfig,

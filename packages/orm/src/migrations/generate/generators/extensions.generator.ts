@@ -1,7 +1,9 @@
-import { RakeDbAst } from 'rake-db';
-import { IntrospectedStructure } from '../../dbStructure';
+import {
+  RakeDbAst,
+  IntrospectedStructure,
+  getSchemaAndTableFromName,
+} from 'rake-db';
 import { DbExtension } from 'pqb';
-import { getSchemaAndTableFromName } from '../../../common';
 
 interface Extension {
   schema?: string;

@@ -11,22 +11,25 @@ import {
   QueryWithTable,
   UnknownColumn,
 } from 'pqb';
-import { AnyRakeDbConfig } from '../../config';
 import {
+  AnyRakeDbConfig,
   makeFileVersion,
   writeMigrationFile,
-} from '../../commands/newMigration';
-import { migrate } from '../../commands/migrateOrRollback';
-import { RakeDbAst } from '../../ast';
-import { introspectDbSchema, IntrospectedStructure } from '../dbStructure';
-import { concatSchemaAndName, getSchemaAndTableFromName } from '../../common';
+  migrate,
+  RakeDbAst,
+  introspectDbSchema,
+  IntrospectedStructure,
+  concatSchemaAndName,
+  getSchemaAndTableFromName,
+  makeStructureToAstCtx,
+  DbInstance,
+  getDbFromConfig,
+} from 'rake-db';
 import { EnumItem } from './generators/enums.generator';
 import { CodeDomain } from './generators/domains.generator';
-import { makeStructureToAstCtx } from '../structureToAst';
 import { composeMigration, ComposeMigrationParams } from './composeMigration';
 import { verifyMigration } from './verifyMigration';
 import { report } from './reportGeneratedMigration';
-import { DbInstance, getDbFromConfig } from '../generate.utils';
 
 export interface CodeItems {
   schemas: Set<string>;

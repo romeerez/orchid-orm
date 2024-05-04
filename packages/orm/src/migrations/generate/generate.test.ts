@@ -1,20 +1,19 @@
+import { introspectDbSchema } from 'rake-db';
 import { useGeneratorsTestUtils } from './generators/generators.test-utils';
 import { asMock } from 'test-utils';
-import { introspectDbSchema } from '../dbStructure';
 import { verifyMigration } from './verifyMigration';
 
-jest.mock('../../commands/migrateOrRollback');
-jest.mock('../../generate/dbStructure', () => {
-  const { introspectDbSchema } = jest.requireActual(
-    '../../generate/dbStructure',
-  );
+jest.mock('rake-db', () => {
+  const actual = jest.requireActual('rake-db');
   return {
+    ...actual,
+    migrate: jest.fn(),
+    promptSelect: jest.fn(),
     introspectDbSchema: jest.fn((...args: unknown[]) =>
-      introspectDbSchema(...args),
+      actual.introspectDbSchema(...args),
     ),
   };
 });
-jest.mock('../../prompt');
 jest.mock('./verifyMigration');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),

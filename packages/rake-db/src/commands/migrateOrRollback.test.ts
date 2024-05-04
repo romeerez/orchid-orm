@@ -15,7 +15,7 @@ import { noop, pathToLog, Sql } from 'orchid-core';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
-import { RakeDbColumnTypes } from 'rake-db';
+import { RakeDbColumnTypes } from '../migration/migration';
 import { AnyRakeDbConfig } from '../config';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import { getMigrations } from '../migration/migrationsSet';

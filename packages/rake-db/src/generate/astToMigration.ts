@@ -25,7 +25,7 @@ import {
   toArray,
 } from 'orchid-core';
 import { exhaustive, quoteSchemaTable } from '../common';
-import { AnyRakeDbConfig } from 'rake-db';
+import { AnyRakeDbConfig } from '../config';
 import { astToGenerateItems } from './astToGenerateItems';
 
 export const astToMigration = (

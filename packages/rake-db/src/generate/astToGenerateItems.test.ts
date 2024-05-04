@@ -1,4 +1,4 @@
-import { RakeDbAst } from 'rake-db';
+import { RakeDbAst } from '../ast';
 import { astToGenerateItem, GenerateItem } from './astToGenerateItems';
 import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 

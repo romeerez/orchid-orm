@@ -107,7 +107,7 @@ export const BaseTable = createBaseTable({
   }),
 
   // export name of the base table, by default it is BaseTable
-  // this is needed for a code generation, when you're using `appCodeUpdater` in `rakeDb`
+  // this is needed for a code generation
   exportAs: 'BaseTable',
 });
 ```

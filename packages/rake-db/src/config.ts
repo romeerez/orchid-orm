@@ -14,6 +14,12 @@ import { fileURLToPath } from 'node:url';
 import { RakeDbColumnTypes } from './migration/migration';
 import { MigrationItem } from './migration/migrationsSet';
 
+export type CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> = (
+  options: AdapterOptions[],
+  config: RakeDbConfig<SchemaConfig, CT>,
+  args: string[],
+) => void | Promise<void>;
+
 export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
   CT = DefaultColumnTypes<DefaultSchemaConfig>,
@@ -29,14 +35,7 @@ export interface RakeDbConfig<
   migrationsTable: string;
   snakeCase: boolean;
   language?: string;
-  commands: Record<
-    string,
-    (
-      options: AdapterOptions[],
-      config: RakeDbConfig<SchemaConfig, CT>,
-      args: string[],
-    ) => void | Promise<void>
-  >;
+  commands: Record<string, CommandFn<SchemaConfig, CT>>;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: RakeDbBaseTable<CT>;
   dbPath?: string;

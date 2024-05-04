@@ -1,5 +1,5 @@
+import { RakeDbAst } from 'rake-db';
 import { ColumnType } from 'pqb';
-import { RakeDbAst } from '../../../ast';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnChange } from './generators.utils';
 

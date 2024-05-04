@@ -31,7 +31,7 @@ import { uuidv7 } from 'uuidv7';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    // uuidv7 is a function, it is ignored by `rake-db`,
+    // uuidv7 is a function, it is ignored in migrations,
     // column won't have a `DEFAULT` on a database level:
     id: t.uuid().primaryKey().default(uuidv7),
   }));
@@ -621,7 +621,7 @@ change(async (db) => {
 
 ## constraint
 
-`rake-db` supports placing a database check and a foreign key on a single constraint:
+You can place a database check and a foreign key on a single constraint:
 
 ```ts
 import { change } from '../dbScript';

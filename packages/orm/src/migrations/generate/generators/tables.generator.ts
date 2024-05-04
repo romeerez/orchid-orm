@@ -6,15 +6,17 @@ import {
   TableData,
   VirtualColumn,
 } from 'pqb';
-import { DbStructure, IntrospectedStructure } from '../../dbStructure';
-import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
 import {
+  DbStructure,
+  IntrospectedStructure,
+  AnyRakeDbConfig,
+  RakeDbAst,
   DbStructureDomainsMap,
   getDbStructureTableData,
   StructureToAstCtx,
   StructureToAstTableData,
   tableToAst,
-} from '../../structureToAst';
+} from 'rake-db';
 import {
   CompareExpression,
   compareSqlExpressions,

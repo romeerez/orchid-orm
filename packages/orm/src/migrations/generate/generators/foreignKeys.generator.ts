@@ -1,13 +1,13 @@
-import { ColumnType, ForeignKeyAction, ForeignKeyMatch, TableData } from 'pqb';
-import { DbStructure } from '../../dbStructure';
 import {
+  RakeDbAst,
+  DbStructure,
   concatSchemaAndName,
   getSchemaAndTableFromName,
-} from '../../../common';
+  getConstraintName,
+} from 'rake-db';
+import { ColumnType, ForeignKeyAction, ForeignKeyMatch, TableData } from 'pqb';
 import { ChangeTableData, TableShapes } from './tables.generator';
-import { RakeDbAst } from 'rake-db';
 import { deepCompare } from 'orchid-core';
-import { getConstraintName } from '../../../migration/migrationUtils';
 import { checkForColumnChange } from './generators.utils';
 
 interface CodeForeignKey {

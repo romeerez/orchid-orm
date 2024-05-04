@@ -90,8 +90,6 @@ After running the script, take a look at the package.json file, and install depe
     "orchid-orm-schema-to-zod": "^0.2.18"
   },
   "devDependencies": {
-    // rake-db is a toolkit for migrations
-    "rake-db": "^2.3.17",
     // for generating mock objects in tests
     "orchid-orm-test-factory": "^0.2.24",
     // for the fastest typescript compilation

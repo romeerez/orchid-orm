@@ -15,10 +15,7 @@ let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;
 
 export const testMigrationsPath = 'migrations-path';
 
-export const testConfig: RakeDbConfig<
-  ColumnSchemaConfig,
-  DefaultColumnTypes<DefaultSchemaConfig>
-> & {
+export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
   logger: QueryLogger;
   migrationsPath: string;
 } = {

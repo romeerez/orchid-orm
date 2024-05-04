@@ -72,7 +72,7 @@ export const createTable = async <
   );
   types[snakeCaseKey] = snakeCase;
 
-  let shape;
+  let shape: Shape;
   let tableData;
   if (fn) {
     shape = getColumnTypes(
@@ -83,7 +83,7 @@ export const createTable = async <
     );
     tableData = getTableData();
   } else {
-    shape = tableData = emptyObject;
+    shape = (tableData = emptyObject) as Shape;
   }
 
   const ast = makeAst(

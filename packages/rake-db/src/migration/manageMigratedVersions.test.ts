@@ -3,8 +3,8 @@ import {
   getMigratedVersionsMap,
   NoMigrationsTableError,
   saveMigratedVersion,
-  SilentQueries,
-} from 'rake-db';
+} from './manageMigratedVersions';
+import { SilentQueries } from './migration';
 import { testConfig } from '../rake-db.test-utils';
 import { Adapter } from 'pqb';
 import { RakeDbCtx } from '../common';

@@ -1,10 +1,7 @@
+import { AnyRakeDbConfig, RakeDbAst, getIndexName, DbStructure } from 'rake-db';
 import { ColumnType, IndexOptions, SearchWeight, TableData } from 'pqb';
 import { deepCompare, RecordUnknown, toArray } from 'orchid-core';
-import { AnyRakeDbConfig } from '../../../config';
-import { RakeDbAst } from '../../../ast';
-import { getIndexName } from '../../../migration/migrationUtils';
 import { ChangeTableData } from './tables.generator';
-import { DbStructure } from '../../dbStructure';
 import { checkForColumnChange, CompareExpression } from './generators.utils';
 
 export const processIndexes = (

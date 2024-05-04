@@ -1,5 +1,4 @@
-import { IntrospectedStructure } from '../../dbStructure';
-import { RakeDbAst } from 'rake-db';
+import { RakeDbAst, IntrospectedStructure } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
 
 export const processSchemas = async (

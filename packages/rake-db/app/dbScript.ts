@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { rakeDb } from '../src';
+import { rakeDb } from 'orchid-orm/migrations';
 import { AdapterOptions } from 'pqb';
 import { BaseTable } from './baseTable';
 

@@ -1,12 +1,13 @@
 import { Adapter, ArrayColumn, ColumnType, RawSQL } from 'pqb';
-import { RakeDbAst } from 'rake-db';
-import { getSchemaAndTableFromName } from '../../../common';
-import { DbStructure, IntrospectedStructure } from '../../dbStructure';
 import {
+  RakeDbAst,
+  getSchemaAndTableFromName,
+  DbStructure,
+  IntrospectedStructure,
   DbStructureDomainsMap,
   instantiateDbColumn,
   StructureToAstCtx,
-} from '../../structureToAst';
+} from 'rake-db';
 import {
   ColumnDataCheckBase,
   deepCompare,

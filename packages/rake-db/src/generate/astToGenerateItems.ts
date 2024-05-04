@@ -1,4 +1,4 @@
-import { RakeDbAst } from 'rake-db';
+import { RakeDbAst } from '../ast';
 import {
   getConstraintName,
   getForeignKeyTable,

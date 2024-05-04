@@ -1,11 +1,14 @@
-import { appCodeUpdater, AppCodeUpdaterConfig } from './appCodeUpdater';
+import {
+  appCodeUpdater,
+  AppCodeUpdaterConfig,
+  AppCodeUpdaterParams,
+} from './appCodeUpdater';
 import { asMock, ast } from './testUtils';
 import { updateMainFile } from './updateMainFile';
 import path from 'path';
 import { updateTableFile } from './updateTableFile/updateTableFile';
 import { createBaseTableFile } from './createBaseTableFile';
 import { updateRelations } from './updateTableFile/updateRelations';
-import { AppCodeUpdaterParams } from 'rake-db';
 
 jest.mock('./updateMainFile', () => ({
   updateMainFile: jest.fn(),
@@ -41,7 +44,7 @@ const args: AppCodeUpdaterParams = {
   cache: {},
   logger: console,
   baseTable,
-  import: (path) => import(path),
+  import: (path: string) => import(path),
 };
 
 describe('appCodeUpdater', () => {

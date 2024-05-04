@@ -1,13 +1,17 @@
 import { Adapter, QueryInternal } from 'pqb';
-import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
-import { IntrospectedStructure } from '../dbStructure';
-import { makeDomainsMap, StructureToAstCtx } from '../structureToAst';
+import {
+  AnyRakeDbConfig,
+  RakeDbAst,
+  IntrospectedStructure,
+  makeDomainsMap,
+  StructureToAstCtx,
+  astToMigration,
+} from 'rake-db';
 import { processSchemas } from './generators/schemas.generator';
 import { processExtensions } from './generators/extensions.generator';
 import { processDomains } from './generators/domains.generator';
 import { processEnums } from './generators/enums.generator';
 import { processTables } from './generators/tables.generator';
-import { astToMigration } from '../astToMigration';
 import { CodeItems } from './generate';
 
 export interface ComposeMigrationParams {

@@ -1,8 +1,11 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { colors } from '../../../colors';
+import { colors } from 'rake-db';
 
-jest.mock('../../../commands/migrateOrRollback');
-jest.mock('../../../prompt');
+jest.mock('rake-db', () => ({
+  ...jest.requireActual('rake-db'),
+  migrate: jest.fn(),
+  promptSelect: jest.fn(),
+}));
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),

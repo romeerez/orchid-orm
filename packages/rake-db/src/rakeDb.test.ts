@@ -11,7 +11,11 @@ import { clearChanges, getCurrentChanges } from './migration/change';
 import { processRakeDbConfig } from './config';
 
 jest.mock('./commands/createOrDrop');
-jest.mock('./commands/migrateOrRollback');
+jest.mock('./commands/migrateOrRollback', () => ({
+  migrate: jest.fn(() => Promise.resolve()),
+  rollback: jest.fn(() => Promise.resolve()),
+  redo: jest.fn(() => Promise.resolve()),
+}));
 jest.mock('./commands/newMigration');
 jest.mock('./commands/recurrent');
 jest.mock('./generate/pull');
@@ -39,19 +43,19 @@ describe('rakeDb', () => {
   it('should support create command', async () => {
     await rakeDb(options, config, ['create']).promise;
 
-    expect(createDb).toBeCalledWith(options, processedConfig);
+    expect(createDb).toBeCalledWith(options, processedConfig, []);
   });
 
   it('should support drop command', async () => {
     await rakeDb(options, config, ['drop']).promise;
 
-    expect(dropDb).toBeCalledWith(options, processedConfig);
+    expect(dropDb).toBeCalledWith(options, processedConfig, []);
   });
 
   it('should support reset command', async () => {
     await rakeDb(options, config, ['reset']).promise;
 
-    expect(resetDb).toBeCalledWith(options, processedConfig);
+    expect(resetDb).toBeCalledWith(options, processedConfig, []);
   });
 
   it('should run migrations and recurrent on `up` command', async () => {
@@ -102,8 +106,8 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['recurrent']).promise;
 
     expect(asMock(runRecurrentMigrations).mock.calls).toEqual([
-      [options, processedConfig],
-      [options, processedConfig],
+      [options, processedConfig, []],
+      [options, processedConfig, []],
     ]);
   });
 

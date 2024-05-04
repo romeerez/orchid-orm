@@ -16,6 +16,11 @@
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
     },
+    "./migrations": {
+      "require": "./dist/migrations.js",
+      "import": "./dist/migrations.mjs",
+      "types": "./dist/migrations.d.ts"
+    },
     "./codegen": {
       "require": "./codegen/index.js",
       "import": "./codegen/index.mjs",
@@ -57,15 +62,15 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "inflection": "*",
     "orchid-core": "workspace:*",
     "pqb": "workspace:*",
+    "rake-db": "workspace:*",
+    "inflection": "*",
     "prompts": "^2.4.2"
   },
   "devDependencies": {
     "@types/prompts": "^2.4.2",
     "orchid-orm-schema-to-zod": "workspace:*",
-    "rake-db": "workspace:*",
     "test-utils": "workspace:*",
     "zod": "^3.22.4"
   },

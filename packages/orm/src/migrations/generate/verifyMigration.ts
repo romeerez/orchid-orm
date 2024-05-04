@@ -1,13 +1,13 @@
+import { ColumnSchemaConfig } from 'orchid-core';
 import { Adapter } from 'pqb';
 import {
   AnyRakeDbConfig,
   createMigrationInterface,
   RakeDbColumnTypes,
+  ChangeCallback,
+  introspectDbSchema,
 } from 'rake-db';
 import { composeMigration, ComposeMigrationParams } from './composeMigration';
-import { ChangeCallback } from '../../migration/change';
-import { ColumnSchemaConfig } from 'orchid-core';
-import { introspectDbSchema } from '../dbStructure';
 import { AbortSignal } from './generate';
 
 export const verifyMigration = async (
