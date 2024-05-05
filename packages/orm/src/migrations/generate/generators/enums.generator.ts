@@ -30,52 +30,16 @@ export const processEnums = async (
   for (const dbEnum of dbStructure.enums) {
     const codeEnum = enums.get(`${dbEnum.schemaName}.${dbEnum.name}`);
     if (codeEnum) {
-      const { values: dbValues } = dbEnum;
-      const { values: codeValues } = codeEnum;
-
-      if (dbValues.length < codeValues.length) {
-        if (!dbValues.some((value, i) => value !== codeValues[i])) {
-          ast.push({
-            type: 'enumValues',
-            action: 'add',
-            schema: dbEnum.schemaName,
-            name: dbEnum.name,
-            values: codeValues.slice(-(codeValues.length - dbValues.length)),
-          });
-          continue;
-        }
-      } else if (dbValues.length > codeValues.length) {
-        if (!codeValues.some((value, i) => value !== dbValues[i])) {
-          ast.push({
-            type: 'enumValues',
-            action: 'drop',
-            schema: dbEnum.schemaName,
-            name: dbEnum.name,
-            values: dbValues.slice(-(dbValues.length - codeValues.length)),
-          });
-          continue;
-        }
-      } else if (!dbValues.some((value, i) => value !== codeValues[i])) {
-        continue;
-      }
-
-      ast.push({
-        type: 'changeEnumValues',
-        schema: dbEnum.schemaName,
-        name: dbEnum.name,
-        fromValues: dbValues,
-        toValues: codeValues,
-      });
-
+      changeEnum(ast, dbEnum, codeEnum);
       continue;
     }
 
     const i = createEnums.findIndex((x) => x.name === dbEnum.name);
     if (i !== -1) {
-      const item = createEnums[i];
+      const codeEnum = createEnums[i];
       createEnums.splice(i, 1);
       const fromSchema = dbEnum.schemaName;
-      const toSchema = item.schema ?? currentSchema;
+      const toSchema = codeEnum.schema ?? currentSchema;
 
       renameColumnsTypeSchema(dbStructure, fromSchema, toSchema);
 
@@ -87,6 +51,9 @@ export const processEnums = async (
         toSchema,
         to: dbEnum.name,
       });
+
+      changeEnum(ast, dbEnum, codeEnum);
+
       continue;
     }
 
@@ -102,11 +69,11 @@ export const processEnums = async (
         verifying,
       );
       if (index) {
-        const drop = dropEnums[index - 1];
+        const dbEnum = dropEnums[index - 1];
         dropEnums.splice(index - 1, 1);
 
-        const fromSchema = drop.schemaName;
-        const from = drop.name;
+        const fromSchema = dbEnum.schemaName;
+        const from = dbEnum.name;
         const toSchema = codeEnum.schema ?? currentSchema;
         const to = codeEnum.name;
 
@@ -131,6 +98,8 @@ export const processEnums = async (
           to,
         });
 
+        changeEnum(ast, dbEnum, codeEnum);
+
         continue;
       }
     }
@@ -151,6 +120,49 @@ export const processEnums = async (
       values: dbEnum.values,
     });
   }
+};
+
+const changeEnum = (
+  ast: RakeDbAst[],
+  dbEnum: DbStructure.Enum,
+  codeEnum: EnumItem,
+) => {
+  const { values: dbValues } = dbEnum;
+  const { values: codeValues, schema, name } = codeEnum;
+
+  if (dbValues.length < codeValues.length) {
+    if (!dbValues.some((value, i) => value !== codeValues[i])) {
+      ast.push({
+        type: 'enumValues',
+        action: 'add',
+        schema,
+        name,
+        values: codeValues.slice(-(codeValues.length - dbValues.length)),
+      });
+      return;
+    }
+  } else if (dbValues.length > codeValues.length) {
+    if (!codeValues.some((value, i) => value !== dbValues[i])) {
+      ast.push({
+        type: 'enumValues',
+        action: 'drop',
+        schema,
+        name,
+        values: dbValues.slice(-(dbValues.length - codeValues.length)),
+      });
+      return;
+    }
+  } else if (!dbValues.some((value, i) => value !== codeValues[i])) {
+    return;
+  }
+
+  ast.push({
+    type: 'changeEnumValues',
+    schema,
+    name,
+    fromValues: dbValues,
+    toValues: codeValues,
+  });
 };
 
 const renameColumnsTypeSchema = (

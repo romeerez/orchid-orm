@@ -15,7 +15,7 @@ export const verifyMigration = async (
   config: AnyRakeDbConfig,
   migrationCode: string,
   generateMigrationParams: ComposeMigrationParams,
-): Promise<boolean> => {
+): Promise<string | false | undefined> => {
   const migrationFn = new Function('change', migrationCode);
 
   return adapter.transaction(
@@ -42,7 +42,7 @@ export const verifyMigration = async (
 
       const dbStructure = await introspectDbSchema(trx);
       generateMigrationParams.verifying = true;
-      let code;
+      let code: string | undefined;
       try {
         code = await composeMigration(
           adapter,
@@ -58,7 +58,7 @@ export const verifyMigration = async (
         throw err;
       }
 
-      return !code;
+      return code;
     },
     { text: 'ROLLBACK' },
   );

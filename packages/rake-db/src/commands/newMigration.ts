@@ -15,7 +15,7 @@ export const writeMigrationFile = async (
   version: string,
   name: string,
   migrationCode: string,
-) => {
+): Promise<void> => {
   await mkdir(config.migrationsPath, { recursive: true });
 
   const filePath = path.resolve(config.migrationsPath, `${version}_${name}.ts`);
@@ -28,6 +28,7 @@ export const writeMigrationFile = async (
     filePath,
     `import { change } from '${importPath}';\n${migrationCode}`,
   );
+
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 

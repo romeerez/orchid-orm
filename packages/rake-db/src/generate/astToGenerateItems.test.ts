@@ -853,11 +853,12 @@ describe('astToGenerateItem', () => {
         arrange({
           type,
           schema: 'schema',
+          name: 'name',
         } as RakeDbAst);
 
         act();
 
-        assertDeps(['schema']);
+        assertDeps(['schema', 'schema.name']);
       });
     },
   );

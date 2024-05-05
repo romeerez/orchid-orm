@@ -226,7 +226,7 @@ const tableChangeMethods = {
   ): Change {
     return {
       type: 'change',
-      name: (this as { [nameKey]?: string })[nameKey],
+      name: consumeColumnName(),
       from: columnTypeToColumnChange(from),
       to: columnTypeToColumnChange(to),
       using,
@@ -451,6 +451,7 @@ const astToQueries = (
   }
 
   const alterTable: string[] = [];
+  const renameItems: string[] = [];
   const values: unknown[] = [];
   const addIndexes = mapIndexesForSnakeCase(ast.add.indexes, snakeCase);
 
@@ -477,6 +478,7 @@ const astToQueries = (
           it,
           ast,
           alterTable,
+          renameItems,
           values,
           addPrimaryKeys,
           addIndexes,
@@ -493,6 +495,7 @@ const astToQueries = (
         item,
         ast,
         alterTable,
+        renameItems,
         values,
         addPrimaryKeys,
         addIndexes,
@@ -549,13 +552,13 @@ const astToQueries = (
     ),
   );
 
+  const tableName = quoteWithSchema(ast);
+  if (renameItems.length) {
+    queries.push(alterTableSql(tableName, renameItems, values));
+  }
+
   if (alterTable.length) {
-    queries.push({
-      text:
-        `ALTER TABLE ${quoteWithSchema(ast)}` +
-        `\n  ${alterTable.join(',\n  ')}`,
-      values,
-    });
+    queries.push(alterTableSql(tableName, alterTable, values));
   }
 
   queries.push(...indexesToQuery(false, ast, dropIndexes, language));
@@ -564,6 +567,16 @@ const astToQueries = (
 
   return queries;
 };
+
+const alterTableSql = (
+  tableName: string,
+  lines: string[],
+  values: unknown[],
+) => ({
+  text: `ALTER TABLE ${tableName}
+  ${lines.join(',\n  ')}`,
+  values,
+});
 
 const handlePrerequisitesForTableItem = (
   key: string,
@@ -626,6 +639,7 @@ const handleTableItemChange = (
   item: RakeDbAst.ChangeTableItem,
   ast: RakeDbAst.ChangeTable,
   alterTable: string[],
+  renameItems: string[],
   values: unknown[],
   addPrimaryKeys: PrimaryKeys,
   addIndexes: TableData.Index[],
@@ -658,7 +672,12 @@ const handleTableItemChange = (
     );
   } else if (item.type === 'change') {
     const { from, to } = item;
-    const name = getChangeColumnName(item, key, snakeCase);
+    const name = getChangeColumnName('to', item, key, snakeCase);
+    const fromName = getChangeColumnName('from', item, key, snakeCase);
+
+    if (fromName !== name) {
+      renameItems.push(renameColumnSql(fromName, name, snakeCase));
+    }
 
     let changeType = false;
     if (to.type && (from.type !== to.type || from.collate !== to.collate)) {
@@ -845,27 +864,31 @@ const handleTableItemChange = (
       comments.push({ column: name, comment: to.comment || null });
     }
   } else if (item.type === 'rename') {
-    alterTable.push(
-      `RENAME COLUMN "${snakeCase ? toSnakeCase(key) : key}" TO "${
-        snakeCase ? toSnakeCase(item.name) : item.name
-      }"`,
-    );
+    renameItems.push(renameColumnSql(key, item.name, snakeCase));
   }
 };
 
 const getChangeColumnName = (
+  what: 'from' | 'to',
   change: RakeDbAst.ChangeTableItem.Change,
   key: string,
   snakeCase?: boolean,
 ) => {
   return (
     change.name ||
-    (change.to.column
-      ? getColumnName(change.to.column, key, snakeCase)
+    (change[what].column
+      ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        getColumnName(change[what].column!, key, snakeCase)
       : snakeCase
       ? toSnakeCase(key)
       : key)
   );
+};
+
+const renameColumnSql = (from: string, to: string, snakeCase?: boolean) => {
+  return `RENAME COLUMN "${snakeCase ? toSnakeCase(from) : from}" TO "${
+    snakeCase ? toSnakeCase(to) : to
+  }"`;
 };
 
 const mapIndexesForSnakeCase = (

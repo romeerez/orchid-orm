@@ -4,7 +4,7 @@ import { asMock } from 'test-utils';
 import { verifyMigration } from './verifyMigration';
 
 jest.mock('rake-db', () => {
-  const actual = jest.requireActual('rake-db');
+  const actual = jest.requireActual('../../../../rake-db/src');
   return {
     ...actual,
     migrate: jest.fn(),

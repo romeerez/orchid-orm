@@ -3,7 +3,7 @@ import { DbMigration, colors } from 'rake-db';
 import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 
 jest.mock('rake-db', () => ({
-  ...jest.requireActual('rake-db'),
+  ...jest.requireActual('../../../../../rake-db/src'),
   migrate: jest.fn(),
   promptSelect: jest.fn(),
 }));
@@ -188,6 +188,42 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ rename type')} from ${yellow('=>')} to`);
+  });
+
+  it('should rename and change enum', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('from', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          column: t.enum('from'),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          column: t.enum('to', ['one', 'two', 'three', 'four']),
+        })),
+      ],
+      selects: [1],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.renameType('from', 'to');
+});
+
+change(async (db) => {
+  await db.addEnumValues('public.to', ['four']);
+});
+`);
+
+    assert.report(
+      `${yellow('~ rename type')} from ${yellow('=>')} to`,
+      `${green('+ add values to enum')} to: four`,
+    );
   });
 
   it('should rename schema without touching enum', async () => {

@@ -48,6 +48,15 @@ export const processColumns = async (
     changeTableData,
   );
 
+  await addOrRenameColumns(
+    dbStructure,
+    changeTableData,
+    columnsToAdd,
+    columnsToDrop,
+    columnsToChange,
+    verifying,
+  );
+
   await changeColumns(
     adapter,
     structureToAstCtx,
@@ -60,14 +69,6 @@ export const processColumns = async (
     compareSql,
     changeTableData,
     typeCastsCache,
-    verifying,
-  );
-
-  await addOrRenameColumns(
-    dbStructure,
-    changeTableData,
-    columnsToAdd,
-    columnsToDrop,
     verifying,
   );
 
@@ -140,6 +141,7 @@ const addOrRenameColumns = async (
   }: ChangeTableData,
   columnsToAdd: KeyAndColumn[],
   columnsToDrop: KeyAndColumn[],
+  columnsToChange: Map<string, ColumnType>,
   verifying: boolean | undefined,
 ) => {
   for (const { key, column } of columnsToAdd) {
@@ -155,10 +157,7 @@ const addOrRenameColumns = async (
         columnsToDrop.splice(index - 1, 1);
 
         const from = drop.key;
-        shape[from] = {
-          type: 'rename',
-          name: key,
-        };
+        columnsToChange.set(from, column.name(key));
 
         if (dbTableData.primaryKey) {
           renameColumn(dbTableData.primaryKey.columns, from, key);
@@ -430,7 +429,18 @@ JOIN pg_type AS t ON t.oid = casttarget`);
       }
     }
 
-    if (changed) changeColumn(shape, name, dbColumn, codeColumn);
+    if (changed) {
+      changeColumn(shape, name, dbColumn, codeColumn);
+    } else {
+      const from = dbColumn.data.name ?? name;
+      const to = codeColumn.data.name ?? name;
+      if (from !== to) {
+        shape[from] = {
+          type: 'rename',
+          name: to,
+        };
+      }
+    }
   }
 };
 

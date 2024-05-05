@@ -38,6 +38,7 @@ export interface CodeItems {
 
 interface AfterPull {
   adapter: Adapter;
+  version: string;
 }
 
 export interface DbInstance {
@@ -51,7 +52,7 @@ export const generate = async (
   config: AnyRakeDbConfig,
   args: string[],
   afterPull?: AfterPull,
-) => {
+): Promise<void> => {
   let { dbPath } = config;
   if (!dbPath || !config.baseTable) throw invalidConfig(config);
   if (!options.length) throw new Error(`Database options must not be empty`);
@@ -115,30 +116,32 @@ export const generate = async (
   }
 
   if (migrationCode && !afterPull) {
-    const ok = await verifyMigration(
+    const result = await verifyMigration(
       adapter,
       config,
       migrationCode,
       generateMigrationParams,
     );
 
-    if (!ok) {
+    if (result !== undefined) {
       throw new Error(
-        `Failed to verify generated migration: some of database changes were not applied properly. This is a bug, please open an issue, attach the following migration code:\n${migrationCode}`,
+        `Failed to verify generated migration: some of database changes were not applied properly. This is a bug, please open an issue, attach the following migration code:\n${migrationCode}${
+          result === false ? '' : `\nAfter applying:\n${result}`
+        }`,
       );
     }
   }
 
   const { logger } = config;
 
+  if ((!up || !migrationCode) && !afterPull) await closeAdapters(adapters);
+
   if (!migrationCode) {
     logger?.log('No changes were detected');
     return;
   }
 
-  if (!up) await closeAdapters(adapters);
-
-  const version = await makeFileVersion({}, config);
+  const version = afterPull?.version ?? (await makeFileVersion({}, config));
 
   const delayLog: string[] = [];
   await writeMigrationFile(
@@ -161,6 +164,8 @@ export const generate = async (
 
   if (up) {
     await migrate({}, options, config, undefined, adapters);
+  } else if (!afterPull) {
+    await closeAdapters(adapters);
   }
 };
 

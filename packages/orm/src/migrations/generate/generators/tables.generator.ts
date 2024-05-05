@@ -86,6 +86,17 @@ export const processTables = async (
 
   applyChangeTableSchemas(changeTableSchemas, currentSchema, ast);
 
+  await applyCreateOrRenameTables(
+    dbStructure,
+    createTables,
+    dropTables,
+    changeTables,
+    tableShapes,
+    currentSchema,
+    ast,
+    verifying,
+  );
+
   await applyChangeTables(
     adapter,
     changeTables,
@@ -105,13 +116,6 @@ export const processTables = async (
   await Promise.all([
     applyCompareSql(compareSql, adapter),
     compareSqlExpressions(tableExpressions, adapter),
-    applyCreateOrRenameTables(
-      createTables,
-      dropTables,
-      currentSchema,
-      ast,
-      verifying,
-    ),
   ]);
 
   for (const dbTable of dropTables) {
@@ -163,26 +167,14 @@ const collectChangeAndDropTables = (
         (t.q.schema ?? currentSchema) === dbTable.schemaName,
     );
     if (codeTable) {
-      const shape = {};
-      const schema = codeTable.q.schema ?? currentSchema;
-
-      changeTables.push({
-        codeTable,
+      addChangeTable(
+        dbStructure,
+        changeTables,
+        tableShapes,
+        currentSchema,
         dbTable,
-        dbTableData: getDbStructureTableData(dbStructure, dbTable),
-        schema,
-        changeTableAst: {
-          type: 'changeTable',
-          schema,
-          name: codeTable.table,
-          shape: shape,
-          add: {},
-          drop: {},
-        },
-        pushedAst: false,
-      });
-
-      tableShapes[`${schema}.${codeTable.table}`] = shape;
+        codeTable,
+      );
       continue;
     }
 
@@ -305,8 +297,11 @@ const applyCompareSql = async (compareSql: CompareSql, adapter: Adapter) => {
 };
 
 const applyCreateOrRenameTables = async (
+  dbStructure: IntrospectedStructure,
   createTables: QueryWithTable[],
   dropTables: DbStructure.Table[],
+  changeTables: ChangeTableData[],
+  tableShapes: TableShapes,
   currentSchema: string,
   ast: RakeDbAst[],
   verifying: boolean | undefined,
@@ -320,17 +315,26 @@ const applyCreateOrRenameTables = async (
         verifying,
       );
       if (index) {
-        const drop = dropTables[index - 1];
+        const dbTable = dropTables[index - 1];
         dropTables.splice(index - 1, 1);
 
         ast.push({
           type: 'renameType',
           kind: 'TABLE',
-          fromSchema: drop.schemaName,
-          from: drop.name,
+          fromSchema: dbTable.schemaName,
+          from: dbTable.name,
           toSchema: codeTable.q.schema ?? currentSchema,
           to: codeTable.table,
         });
+
+        addChangeTable(
+          dbStructure,
+          changeTables,
+          tableShapes,
+          currentSchema,
+          dbTable,
+          codeTable,
+        );
 
         continue;
       }
@@ -338,6 +342,36 @@ const applyCreateOrRenameTables = async (
 
     ast.push(createTableAst(currentSchema, codeTable));
   }
+};
+
+const addChangeTable = (
+  dbStructure: IntrospectedStructure,
+  changeTables: ChangeTableData[],
+  tableShapes: TableShapes,
+  currentSchema: string,
+  dbTable: DbStructure.Table,
+  codeTable: QueryWithTable,
+) => {
+  const shape = {};
+  const schema = codeTable.q.schema ?? currentSchema;
+
+  changeTables.push({
+    codeTable,
+    dbTable,
+    dbTableData: getDbStructureTableData(dbStructure, dbTable),
+    schema,
+    changeTableAst: {
+      type: 'changeTable',
+      schema,
+      name: codeTable.table,
+      shape: shape,
+      add: {},
+      drop: {},
+    },
+    pushedAst: false,
+  });
+
+  tableShapes[`${schema}.${codeTable.table}`] = shape;
 };
 
 const createTableAst = (

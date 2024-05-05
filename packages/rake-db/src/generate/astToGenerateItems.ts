@@ -143,7 +143,8 @@ export const astToGenerateItem = (
     case 'enumValues':
     case 'renameEnumValues':
     case 'changeEnumValues': {
-      deps.push(ast.schema ?? currentSchema);
+      const schema = ast.schema ?? currentSchema;
+      deps.push(schema, `${schema}.${ast.name}`);
       break;
     }
     case 'domain': {

@@ -3,7 +3,7 @@ import { IndexColumnOptionsForColumn, IndexOptions } from 'pqb';
 import { colors } from 'rake-db';
 
 jest.mock('rake-db', () => ({
-  ...jest.requireActual('rake-db'),
+  ...jest.requireActual('../../../../../rake-db/src'),
   migrate: jest.fn(),
   promptSelect: jest.fn(),
 }));

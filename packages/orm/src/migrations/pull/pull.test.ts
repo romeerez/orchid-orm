@@ -16,6 +16,7 @@ jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
   writeFile: jest.fn(() => Promise.resolve()),
   mkdir: jest.fn(),
+  readdir: jest.fn(() => Promise.resolve([])),
 }));
 jest.mock('../generate/generate');
 

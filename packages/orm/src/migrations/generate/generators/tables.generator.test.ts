@@ -8,7 +8,7 @@ import {
 import { DbMigration, colors } from 'rake-db';
 
 jest.mock('rake-db', () => ({
-  ...jest.requireActual('rake-db'),
+  ...jest.requireActual('../../../../../rake-db/src'),
   migrate: jest.fn(),
   promptSelect: jest.fn(),
 }));
@@ -332,6 +332,47 @@ change(async (db) => {
         '=>',
       )} to.three`,
       `${red('- drop table')} from.two (1 column)`,
+    );
+  });
+
+  it('should rename and change a table', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('from', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+      },
+      tables: [
+        class Table extends BaseTable {
+          table = 'to';
+          columns = this.setColumns((t) => ({
+            id: t.integer().primaryKey(),
+            name: t.text(),
+          }));
+        },
+      ],
+      selects: [1],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.renameTable('from', 'to');
+});
+
+change(async (db) => {
+  await db.changeTable('to', (t) => ({
+    name: t.add(t.text()),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ rename table')} from ${yellow('=>')} to`,
+      `${yellow('~ change table')} to:`,
+      `  ${green('+ add column')} name text`,
     );
   });
 

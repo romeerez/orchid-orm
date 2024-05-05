@@ -1365,7 +1365,7 @@ describe('changeTable', () => {
         await testUpAndDown(
           () =>
             db.changeTable('table', (t) => ({
-              changeType: t.name('name').change(t.integer(), t.text()),
+              name: t.name('name').change(t.integer(), t.text()),
             })),
           () =>
             expectSql(`
@@ -1798,7 +1798,7 @@ describe('changeTable', () => {
       await testUpAndDown(
         () =>
           db.changeTable('table', (t) => ({
-            changeCompression: t
+            name: t
               .name('name')
               .change(t.text(), t.text().compression('value')),
           })),
@@ -1836,6 +1836,37 @@ describe('changeTable', () => {
             ALTER TABLE "table"
               ALTER COLUMN "change_compression" SET COMPRESSION DEFAULT
           `),
+      );
+    });
+
+    it('should rename column and change it`s type', async () => {
+      await testUpAndDown(
+        () =>
+          db.changeTable('table', (t) => ({
+            from: t.change(t.string(), t.name('to').text()),
+          })),
+        () =>
+          expectSql([
+            `
+              ALTER TABLE "table"
+              RENAME COLUMN "from" TO "to"
+            `,
+            `
+              ALTER TABLE "table"
+              ALTER COLUMN "to" TYPE text
+            `,
+          ]),
+        () =>
+          expectSql([
+            `
+              ALTER TABLE "table"
+              RENAME COLUMN "to" TO "from"
+            `,
+            `
+              ALTER TABLE "table"
+              ALTER COLUMN "from" TYPE varchar(255)
+            `,
+          ]),
       );
     });
 

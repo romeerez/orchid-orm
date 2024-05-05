@@ -541,7 +541,10 @@ export const columnCode = (
 
   if (data.as) addCode(code, `.as(${data.as.toCode(t)})`);
 
-  if (data.default !== undefined) {
+  if (
+    data.default !== undefined &&
+    (!migration || typeof data.default !== 'function')
+  ) {
     addCode(code, `.default(${columnDefaultArgumentToCode(t, data.default)})`);
   }
 

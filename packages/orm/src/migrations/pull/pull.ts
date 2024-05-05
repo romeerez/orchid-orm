@@ -1,8 +1,11 @@
 import { Adapter, AdapterOptions, DbExtension } from 'pqb';
 import {
   AnyRakeDbConfig,
+  makeFileVersion,
   makeStructureToAstCtx,
   RakeDbAst,
+  saveMigratedVersion,
+  SilentQueries,
   structureToAst,
 } from 'rake-db';
 import { pathToLog } from 'orchid-core';
@@ -113,5 +116,12 @@ export const pull = async (
     ),
   );
 
-  await generate(options, config, ['pull'], { adapter });
+  const version = await makeFileVersion({}, config);
+  await generate(options, config, ['pull'], { adapter, version });
+
+  const silentAdapter = adapter as unknown as SilentQueries;
+  silentAdapter.silentArrays = adapter.arrays;
+  await saveMigratedVersion(silentAdapter, version, 'pull.ts', config);
+
+  await adapter.close();
 };

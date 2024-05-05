@@ -2,11 +2,13 @@ import { useGeneratorsTestUtils } from './generators.test-utils';
 import { DbMigration, colors } from 'rake-db';
 import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 
-jest.mock('rake-db', () => ({
-  ...jest.requireActual('rake-db'),
-  migrate: jest.fn(),
-  promptSelect: jest.fn(),
-}));
+jest.mock('rake-db', () => {
+  return {
+    ...jest.requireActual('../../../../../rake-db/src'),
+    migrate: jest.fn(),
+    promptSelect: jest.fn(),
+  };
+});
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),
@@ -544,5 +546,37 @@ change(async (db) => {
       assert.report(`${yellow('~ change table')} table:
   ${yellow('~ rename column')} from ${yellow('=>')} to`);
     });
+  });
+
+  it('should rename and change a column', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          from: t.text(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          to: t.string(),
+        })),
+      ],
+      selects: [1],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    from: t.change(t.text(), t.name('to').string()),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} from:
+    ${yellow('from')}: t.text()
+      ${yellow('to')}: t.name('to').string()`);
   });
 });
