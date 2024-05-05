@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.25.3
+
+### Patch Changes
+
+- dd816f9: Downgrade tsx dep in create-orm script because 4.9.1 is broken
+
 ## 1.25.2
 
 ### Patch Changes
