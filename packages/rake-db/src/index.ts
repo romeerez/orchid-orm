@@ -3,7 +3,6 @@ export * from './commands/newMigration';
 export * from './commands/migrateOrRollback';
 export * from './generate/dbStructure';
 export * from './generate/structureToAst';
-export * from './generate/generate.utils';
 export * from './generate/astToMigration';
 export * from './migration/migration';
 export * from './migration/change';

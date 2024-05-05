@@ -4,17 +4,12 @@ import {
   AdapterOptions,
   DbSharedOptions,
   DefaultColumnTypes,
-  defaultSchemaConfig,
   DefaultSchemaConfig,
-  makeColumnTypes,
-  QueryLogger,
 } from 'pqb';
 import { orchidORM } from '../../../orm';
 import {
   ChangeCallback,
-  migrationConfigDefaults,
   promptSelect,
-  RakeDbConfig,
   AnyRakeDbConfig,
   createMigrationInterface,
   migrate,
@@ -22,44 +17,15 @@ import {
 import { asMock } from 'test-utils';
 import { generate } from '../generate';
 import fs from 'fs/promises';
-import { join } from 'path';
 import { BaseTable } from '../../../test-utils/test-utils';
-import path from 'node:path';
-
-export const testMigrationsPath = 'migrations-path';
-
-export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
-  logger: QueryLogger;
-  migrationsPath: string;
-} = {
-  ...migrationConfigDefaults,
-  basePath: path.join(__dirname, '..', '..', '..'),
-  dbScript: 'dbScript.ts',
-  columnTypes: makeColumnTypes(defaultSchemaConfig),
-  log: false,
-  logger: {
-    log: jest.fn(),
-    error: noop,
-    warn: noop,
-  },
-  migrationsPath: testMigrationsPath,
-  recurrentPath: join(testMigrationsPath, 'recurrent'),
-  migrationsTable: 'schemaMigrations',
-  snakeCase: false,
-  import: require,
-  commands: {},
-};
+import { testConfig } from '../../migrations.test-utils';
 
 const defaultOptions: AdapterOptions[] = [
   { databaseURL: process.env.PG_GENERATE_URL },
 ];
 let options = defaultOptions;
 
-const defaultConfig = {
-  ...testConfig,
-  baseTable: BaseTable as unknown as AnyRakeDbConfig['baseTable'],
-};
-let config: AnyRakeDbConfig = defaultConfig;
+let config: AnyRakeDbConfig = testConfig;
 
 let prepareDbTransactionPromise: Promise<void> | undefined;
 let resolvePrepareDbTransaction: (() => void) | undefined;
@@ -75,7 +41,7 @@ const arrange = async (arg: {
 }) => {
   config = {
     dbPath: './db',
-    ...(arg.config ?? defaultConfig),
+    ...(arg.config ?? testConfig),
     import: () =>
       Promise.resolve({
         db: orchidORM(
@@ -168,7 +134,7 @@ export const useGeneratorsTestUtils = () => {
     arrange,
     act,
     assert,
-    defaultConfig,
+    defaultConfig: testConfig,
     BaseTable,
     table,
   };

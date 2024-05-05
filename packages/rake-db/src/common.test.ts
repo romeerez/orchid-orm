@@ -31,7 +31,6 @@ describe('common', () => {
       expect(result).toEqual({
         basePath: __dirname,
         dbScript: 'dbScript.ts',
-        dbExportedAs: 'db',
         columnTypes: makeColumnTypes,
         migrationId: 'serial',
         migrationsPath,

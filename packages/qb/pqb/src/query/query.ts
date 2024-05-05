@@ -36,9 +36,11 @@ export interface DbExtension {
 
 export type DbDomainArg<ColumnTypes> = (columnTypes: ColumnTypes) => ColumnType;
 
+export type DbDomainArgRecord = { [K: string]: DbDomainArg<any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
+
 export interface QueryInternal extends QueryInternalBase, TableData {
   extensions?: DbExtension[];
-  domains?: { [K: string]: DbDomainArg<any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  domains?: DbDomainArgRecord;
 }
 
 export type SelectableFromShape<

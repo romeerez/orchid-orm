@@ -9,9 +9,9 @@ import { orchidORM } from './orm';
 import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
 import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
 import path from 'path';
-import { asMock } from './codegen/testUtils';
 import { getCallerFilePath } from 'orchid-core';
 import {
+  asMock,
   assertType,
   expectSql,
   testAdapter,

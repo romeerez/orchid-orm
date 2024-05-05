@@ -38,8 +38,6 @@ export interface RakeDbConfig<
   commands: Record<string, CommandFn<SchemaConfig, CT>>;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: RakeDbBaseTable<CT>;
-  dbPath?: string;
-  dbExportedAs: string;
   // throw if a migration doesn't have a default export
   forceDefaultExports?: boolean;
   import(path: string): Promise<unknown>;
@@ -56,8 +54,6 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   extends QueryLogOptions {
   columnTypes?: CT | ((t: DefaultColumnTypes<DefaultSchemaConfig>) => CT);
   baseTable?: RakeDbBaseTable<CT>;
-  dbPath?: string;
-  dbExportedAs?: string;
   schemaConfig?: SchemaConfig;
   basePath?: string;
   dbScript?: string;
@@ -202,7 +198,6 @@ export const migrationConfigDefaults = {
   },
   log: true,
   logger: console,
-  dbExportedAs: 'db',
 } satisfies Omit<
   RakeDbConfig<ColumnSchemaConfig>,
   'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'

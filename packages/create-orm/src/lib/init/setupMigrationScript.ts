@@ -13,7 +13,6 @@ export async function setupMigrationScript(config: InitConfig): Promise<void> {
   await fs.writeFile(
     filePath,
     `import { rakeDb } from 'orchid-orm/migrations';
-import { appCodeUpdater } from 'orchid-orm/codegen';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 

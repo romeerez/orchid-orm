@@ -122,7 +122,7 @@ export const change = rakeDb(config.database, {
   // (when using it with ORM) column type overrides and snakeCase option will be taken from the BaseTable:
   baseTable: BaseTable,
   // (when using it for ORM) path to ORM `db` instance, this is needed to automatically generate migrations.
-  db: './db',
+  dbPath: './db',
 
   // custom commands can be defined as follows:
   commands: {

@@ -37,7 +37,7 @@ describe('domains', () => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createDomain('schema.domain', (t) => t.text(1, 2).nullable().default(t.sql\`'default'\`).check(t.sql\`value = 'x'\`).collate('C'));
@@ -68,7 +68,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropDomain('schema.domain', (t) => t.text().nullable().default(t.sql\`('a'::text || 'b'::text)\`).check(t.sql\`(VALUE = 'ab'::text)\`).collate('C'));
@@ -128,7 +128,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropDomain('schema.domain', (t) => t.text().nullable().collate('C'));
@@ -172,7 +172,7 @@ ${green('+ create domain')} schema.domain`);
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropDomain('schema.domain', (t) => t.text().nullable().default(t.sql\`('a'::text || 'b'::text)\`).check(t.sql\`(VALUE = 'ab'::text)\`).collate('C'));
@@ -205,7 +205,7 @@ ${green('+ create domain')} schema.domain`);
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameType('schema.from', 'schema.to');
@@ -234,7 +234,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTypeSchema('domain', 'public', 'newSchema');
@@ -265,7 +265,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameSchema('oldSchema', 'newSchema');

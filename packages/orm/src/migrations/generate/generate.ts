@@ -13,17 +13,15 @@ import {
 } from 'pqb';
 import {
   AnyRakeDbConfig,
-  makeFileVersion,
-  writeMigrationFile,
-  migrate,
-  RakeDbAst,
-  introspectDbSchema,
-  IntrospectedStructure,
   concatSchemaAndName,
   getSchemaAndTableFromName,
+  introspectDbSchema,
+  IntrospectedStructure,
+  makeFileVersion,
   makeStructureToAstCtx,
-  DbInstance,
-  getDbFromConfig,
+  migrate,
+  RakeDbAst,
+  writeMigrationFile,
 } from 'rake-db';
 import { EnumItem } from './generators/enums.generator';
 import { CodeDomain } from './generators/domains.generator';
@@ -38,16 +36,27 @@ export interface CodeItems {
   domains: CodeDomain[];
 }
 
+interface AfterPull {
+  adapter: Adapter;
+}
+
+export interface DbInstance {
+  $queryBuilder: Query;
+}
+
 export class AbortSignal extends Error {}
 
 export const generate = async (
   options: AdapterOptions[],
   config: AnyRakeDbConfig,
   args: string[],
+  afterPull?: AfterPull,
 ) => {
-  const { dbPath } = config;
+  let { dbPath } = config;
   if (!dbPath || !config.baseTable) throw invalidConfig(config);
   if (!options.length) throw new Error(`Database options must not be empty`);
+
+  if (!dbPath.endsWith('.ts')) dbPath += '.ts';
 
   let migrationName = args[0] ?? 'generated';
   let up: boolean;
@@ -61,6 +70,7 @@ export const generate = async (
   const { dbStructure, adapters } = await migrateAndPullStructures(
     options,
     config,
+    afterPull,
   );
 
   const [adapter] = adapters;
@@ -104,7 +114,7 @@ export const generate = async (
     throw err;
   }
 
-  if (migrationCode) {
+  if (migrationCode && !afterPull) {
     const ok = await verifyMigration(
       adapter,
       config,
@@ -158,13 +168,50 @@ const invalidConfig = (config: AnyRakeDbConfig) =>
   new Error(
     `\`${
       config.dbPath ? 'baseTable' : 'dbPath'
-    }\` setting must be set in the rake-db config for the generator to work`,
+    }\` setting must be set in the migrations config for the generator to work`,
   );
+
+const getDbFromConfig = async (
+  config: AnyRakeDbConfig,
+  dbPath: string,
+): Promise<DbInstance> => {
+  const module = await config.import(dbPath);
+  const db = (module as { [K: string]: DbInstance })[
+    config.dbExportedAs ?? 'db'
+  ];
+  if (!db?.$queryBuilder) {
+    throw new Error(
+      `Unable to import OrchidORM instance as ${
+        config.dbExportedAs ?? 'db'
+      } from ${config.dbPath}`,
+    );
+  }
+  return db;
+};
 
 const migrateAndPullStructures = async (
   options: AdapterOptions[],
   config: AnyRakeDbConfig,
+  afterPull?: AfterPull,
 ): Promise<{ dbStructure: IntrospectedStructure; adapters: Adapter[] }> => {
+  if (afterPull) {
+    return {
+      dbStructure: {
+        schemas: [],
+        tables: [],
+        views: [],
+        indexes: [],
+        constraints: [],
+        triggers: [],
+        extensions: [],
+        enums: [],
+        domains: [],
+        collations: [],
+      },
+      adapters: [afterPull.adapter],
+    };
+  }
+
   const adapters = await migrate(
     {},
     options,

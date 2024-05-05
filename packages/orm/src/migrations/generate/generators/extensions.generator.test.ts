@@ -26,7 +26,7 @@ describe('extensions', () => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createSchema('schema');
@@ -57,7 +57,7 @@ ${green('+ create extension')} schema.cube ${pale('1.5')}`);
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropExtension('schema.cube', {
@@ -103,7 +103,7 @@ ${red('- drop extension')} schema.cube ${pale('1.5')}`);
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropExtension('cube', {

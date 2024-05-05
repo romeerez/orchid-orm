@@ -33,7 +33,7 @@ describe('enums', () => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createEnum('public.numbers', ['one', 'two', 'three']);
@@ -65,7 +65,7 @@ ${green('+ create table')} table (2 columns)`);
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -103,7 +103,7 @@ ${yellow('~ change table')} table:
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTypeSchema('numbers', 'public', 'schema');
@@ -136,7 +136,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createEnum('public.to', ['one', 'two', 'three']);
@@ -180,7 +180,7 @@ ${yellow('~ change table')} table:
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameType('from', 'to');
@@ -211,7 +211,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameSchema('from', 'to');
@@ -249,7 +249,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createSchema('toSchema');
@@ -292,7 +292,7 @@ ${yellow('~ change table')} table:
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createSchema('toSchema');
@@ -322,7 +322,7 @@ ${yellow('~ change schema and rename type')} fromSchema.fromEnum ${yellow(
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameSchema('fromSchema', 'toSchema');
@@ -362,7 +362,7 @@ ${yellow('~ change table')} table:
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameSchema('fromSchema', 'toSchema');
@@ -404,7 +404,7 @@ ${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.addEnumValues('public.numbers', ['two', 'three']);
@@ -422,7 +422,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropEnumValues('public.numbers', ['two', 'three']);
@@ -440,7 +440,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeEnumValues('public.numbers', ['one', 'two'], ['three', 'four']);

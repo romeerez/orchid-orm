@@ -33,7 +33,7 @@ describe('checks', () => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -64,7 +64,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -114,7 +114,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -150,7 +150,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -179,7 +179,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -204,7 +204,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -233,7 +233,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -265,7 +265,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({

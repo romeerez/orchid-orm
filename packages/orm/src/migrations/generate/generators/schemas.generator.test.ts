@@ -37,7 +37,7 @@ describe('schemas', () => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createSchema('one');
@@ -78,7 +78,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropSchema('two');
@@ -106,7 +106,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createSchema('to');
@@ -146,7 +146,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameSchema('from', 'to');
@@ -175,7 +175,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameSchema('from', 'to');
@@ -213,7 +213,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTableSchema('one', 'from', 'to');

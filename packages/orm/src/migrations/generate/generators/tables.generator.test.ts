@@ -74,7 +74,7 @@ describe('tables', () => {
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createTable(
@@ -122,7 +122,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropTable(
@@ -167,7 +167,7 @@ ${red('- drop table')} schema.one (4 columns, 1 index, 1 check)`);
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createTable(
@@ -218,7 +218,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createTable(
@@ -265,7 +265,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameTable('one', 'three');
@@ -316,7 +316,7 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/dbScript';
+    assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.renameTable('from.one', 'to.three');
@@ -382,7 +382,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createTable('joinTable', (t) => ({
@@ -442,7 +442,7 @@ change(async (db) => {
 
       await act();
 
-      assert.migration(`import { change } from '../src/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createTable('joinTable', (t) => ({

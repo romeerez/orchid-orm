@@ -31,7 +31,7 @@ describe('generate', () => {
     });
 
     await expect(act()).rejects.toThrow(
-      '`dbPath` setting must be set in the rake-db config for the generator to work',
+      '`dbPath` setting must be set in the migrations config for the generator to work',
     );
   });
 
