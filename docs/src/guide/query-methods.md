@@ -648,9 +648,9 @@ db.comment
 Order by raw SQL expression.
 
 ```ts
-db.table.order`raw sql`;
+db.table.orderSql`raw sql`;
 // or
-db.table.order(db.table.sql`raw sql`);
+db.table.orderSql(db.table.sql`raw sql`);
 ```
 
 ## having
