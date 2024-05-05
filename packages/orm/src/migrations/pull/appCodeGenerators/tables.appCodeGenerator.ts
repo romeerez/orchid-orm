@@ -15,6 +15,7 @@ interface TableInfo {
   key: string;
   dbTableName: string;
   name: string;
+  className: string;
   path: string;
 }
 
@@ -50,13 +51,14 @@ export const getTableInfosAndFKeys = (
       let tablePath = path.resolve(config.basePath, generateTableTo(tableKey));
       if (!tablePath.endsWith('.ts')) tablePath += '.ts';
 
-      const className = `${toPascalCase(ast.name)}Table`;
+      const name = toPascalCase(ast.name);
 
       const info: TableInfo = {
         dbTableName,
         key: tableKey,
         path: tablePath,
-        name: className,
+        name,
+        className: `${name}Table`,
       };
 
       tableInfos[dbTableName] = info;
@@ -88,6 +90,7 @@ export const appCodeGenTable = (
     tableInfos[ast.schema ? `${ast.schema}.${ast.name}` : ast.name];
 
   const imports: RecordString = {
+    'orchid-orm': 'Selectable, Insertable, Updatable',
     [getImportPath(tableInfo.path, baseTablePath)]: baseTableExportedAs,
   };
 
@@ -119,10 +122,10 @@ export const appCodeGenTable = (
   const belongsTo = fkeys[fullTableName];
   if (belongsTo) {
     for (const { table, references } of belongsTo) {
-      imports[getImportPath(tableInfo.path, table.path)] = table.name;
+      imports[getImportPath(tableInfo.path, table.path)] = table.className;
 
       relations.push(
-        `${table.key}: this.belongsTo(() => ${table.name}, {`,
+        `${table.key}: this.belongsTo(() => ${table.className}, {`,
         [
           `columns: [${references.foreignColumns
             .map(singleQuote)
@@ -139,10 +142,10 @@ export const appCodeGenTable = (
       if (!references) continue;
 
       const table = tableInfos[references.fnOrTable as string];
-      imports[getImportPath(tableInfo.path, table.path)] = table.name;
+      imports[getImportPath(tableInfo.path, table.path)] = table.className;
 
       relations.push(
-        `${table.key}: this.hasMany(() => ${table.name}, {`,
+        `${table.key}: this.hasMany(() => ${table.className}, {`,
         [
           `columns: [${references.columns.map(singleQuote).join(', ')}],`,
           `references: [${references.foreignColumns
@@ -159,8 +162,14 @@ export const appCodeGenTable = (
   }
 
   const importsCode = importsToCode(imports);
+
+  const { name, className } = tableInfo;
   const code: Code[] = [
-    `export class ${tableInfo.name} extends ${baseTableExportedAs} {`,
+    `export type ${name} = Selectable<${className}>;
+export type ${name}New = Insertable<${className}>;
+export type ${name}Update = Updatable<${className}>;
+
+export class ${className} extends ${baseTableExportedAs} {`,
     props,
     '}\n',
   ];

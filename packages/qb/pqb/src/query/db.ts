@@ -538,7 +538,7 @@ export interface DbResult<ColumnTypes>
 }
 
 /**
- * For the case of using the query builder as a standalone tool, use `createDb`.
+ * If you'd like to use the query builder of OrchidORM as a standalone tool, install `pqb` package and use `createDb` to initialize it.
  *
  * As `Orchid ORM` focuses on ORM usage, docs examples mostly demonstrates how to work with ORM-defined tables,
  * but everything that's not related to table relations should also work with `pqb` query builder on its own.

@@ -6,13 +6,14 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 on:
   push:
     branches:
-    - '*'
-    - '!badges'
+      - main
+      - dev
   pull_request:
     types: [opened, synchronize]
 
 env:
   PG_URL: postgres://postgres:password@localhost:5432/orchid-orm
+  PG_GENERATE_URL: postgres://postgres:password@localhost:5432/orchid-orm-generate
   MYSQL_URL: mysql://root:password@localhost:3306/mysql
   PNPM_CACHE_FOLDER: .pnpm-store
 
@@ -79,11 +80,11 @@ jobs:
 
       - name: Create database
         working-directory: packages/rake-db
-        run: pnpm run db create
+        run: pnpm db create
 
       - name: Run migrations
         working-directory: packages/rake-db
-        run: pnpm run db migrate
+        run: pnpm db migrate
 
       - name: Run tests
         run: pnpm test:ci

@@ -25,27 +25,32 @@ npm run db reset
 
 ## pull
 
-Generate migration file from an existing database using `pull` command:
+This is to produce files by introspecting your existing database.
+
+When using the migration tool together with OrchidORM, the `pull` command generates both table classes files for your project and a migration.
+
+When using as a standalone tool, it only produces a migration file.
 
 ```sh
 npm run db pull
+# or
+pnpm db pull
 ```
-
-This will create a single migration file with all the tables and columns.
 
 Currently, it supports generating code to create:
 
 - schemas
 - tables
-- enums
 - columns with all possible column options
+- enums
 - primary keys
 - foreign keys
 - indexes
-- defines `belongsTo` and `hasOne` relations by analyzing foreign keys
+- database `CHECK` constraints
 - domain types
-- views
-- the defaults `current_timestamp`, `transaction_timestamp()` are simplified to the equivalent `now()`
+- views (only in migration)
+- timestamp defaults `current_timestamp`, `transaction_timestamp()` are simplified to the equivalent `now()`
+- (for ORM) defines `belongsTo` and `hasOne` relations by analyzing foreign keys
 
 ### How `updatedAt` and `createdAt` timestamps are handled
 
@@ -138,7 +143,7 @@ export class Table extends BaseTable {
 }
 ```
 
-## generate migration
+## new blank migration
 
 Generate a new migration file by using `new` command:
 

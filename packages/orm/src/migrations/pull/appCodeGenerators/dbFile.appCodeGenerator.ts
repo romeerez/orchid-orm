@@ -155,14 +155,14 @@ const makeTablesListChanges = (
 
   const tablesArr = Object.values(tables);
   for (let i = 0; i < tablesArr.length; i++) {
-    const { path, name, key } = tablesArr[i];
+    const { path, className, key } = tablesArr[i];
     const importPath = getImportPath(dbPath, path);
 
-    imports += `\nimport { ${name} } from '${importPath}';`;
+    imports += `\nimport { ${className} } from '${importPath}';`;
 
     tablesList += `${
       i === 0 && prependComma ? ',' : ''
-    }\n${spaces}  ${key}: ${name},`;
+    }\n${spaces}  ${key}: ${className},`;
 
     if (i === tablesArr.length - 1 && !tablesListNewLine) {
       tablesList += `\n${spaces}`;

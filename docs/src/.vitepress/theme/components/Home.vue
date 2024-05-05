@@ -15,17 +15,17 @@ import VPButton from 'vitepress/dist/client/theme-default/components/VPButton.vu
       <li>🚀️ productive way to work with models and relations</li>
       <li>🧐️ full control over the database with powerful query builder</li>
       <li>
-        😎️ tables can be converted to
-        <a href="https://github.com/colinhacks/zod" target="_blank" class="link"
+        😎️ <a href="https://github.com/colinhacks/zod" target="_blank" class="link"
           >Zod</a
         >
         or
         <a href="https://valibot.dev/" target="_blank" class="link"
         >Valibot</a
         >
-        for validations
+        validation schemas can be derived from your tables
       </li>
-      <li>🛳️ migration tools</li>
+      <li>⚡ generate table files from an existing database</li>
+      <li>🛳️ generate migrations from the code changes</li>
       <li>
         💯 100% TypeScript, define a schema and everything else will be inferred
       </li>

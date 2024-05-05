@@ -185,7 +185,7 @@ change(async (db) => {
       async prepareDb(db) {
         try {
           await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-            column: t.varchar(10).collate('es_ES').compression('pglz'),
+            column: t.varchar(10).collate('C').compression('pglz'),
           }));
         } catch (err) {
           console.log(err);
@@ -193,7 +193,7 @@ change(async (db) => {
       },
       tables: [
         table((t) => ({
-          column: t.varchar(20).collate('fr_FR').compression('lz4'),
+          column: t.varchar(20).collate('POSIX').compression('lz4'),
         })),
       ],
     });
@@ -204,15 +204,15 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.varchar(10).compression('pglz').collate('es_ES'), t.varchar(20).compression('lz4').collate('fr_FR')),
+    column: t.change(t.varchar(10).compression('pglz').collate('C'), t.varchar(20).compression('lz4').collate('POSIX')),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${yellow('~ change column')} column:
-    ${yellow('from')}: t.varchar(10).compression('pglz').collate('es_ES')
-      ${yellow('to')}: t.varchar(20).compression('lz4').collate('fr_FR')`);
+    ${yellow('from')}: t.varchar(10).compression('pglz').collate('C')
+      ${yellow('to')}: t.varchar(20).compression('lz4').collate('POSIX')`);
   });
 
   it('change number data type properties', async () => {

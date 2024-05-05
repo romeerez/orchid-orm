@@ -3,7 +3,7 @@ import {
   Insertable,
   Queryable,
   Selectable,
-  Updateable,
+  Updatable,
 } from './baseTable';
 import { orchidORM } from './orm';
 import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
@@ -472,7 +472,7 @@ describe('baseTable', () => {
     });
   });
 
-  describe('Updateable', () => {
+  describe('Updatable', () => {
     it('should be a partial Insertable', () => {
       class SomeTable extends BaseTable {
         columns = this.setColumns((t) => ({
@@ -483,7 +483,7 @@ describe('baseTable', () => {
       }
 
       assertType<
-        Updateable<SomeTable>,
+        Updatable<SomeTable>,
         { id?: number; optional?: string; required?: boolean }
       >();
     });

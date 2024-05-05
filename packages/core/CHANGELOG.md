@@ -175,7 +175,7 @@
 
 ### Patch Changes
 
-- 435ec9c1: Add Selectable, Insertable, Updateable, Queryable utility types. Remove TableType.
+- 435ec9c1: Add Selectable, Insertable, Updatable, Queryable utility types. Remove TableType.
 
 ## 0.10.0
 

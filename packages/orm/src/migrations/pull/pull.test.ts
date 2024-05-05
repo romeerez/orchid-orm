@@ -146,7 +146,12 @@ describe('pull', () => {
       assert.tableFile([
         [
           'tables/one.table.ts',
-          `import { BaseTable } from '../migrations.test-utils';
+          `import { Selectable, Insertable, Updatable } from 'orchid-orm';
+import { BaseTable } from '../migrations.test-utils';
+
+export type One = Selectable<OneTable>;
+export type OneNew = Insertable<OneTable>;
+export type OneUpdate = Updatable<OneTable>;
 
 export class OneTable extends BaseTable {
   schema = 'schema';
@@ -188,7 +193,12 @@ export class OneTable extends BaseTable {
       assert.tableFile([
         [
           'tables/one.table.ts',
-          `import { BaseTable } from '../migrations.test-utils';
+          `import { Selectable, Insertable, Updatable } from 'orchid-orm';
+import { BaseTable } from '../migrations.test-utils';
+
+export type One = Selectable<OneTable>;
+export type OneNew = Insertable<OneTable>;
+export type OneUpdate = Updatable<OneTable>;
 
 export class OneTable extends BaseTable {
   readonly table = 'one';
@@ -226,8 +236,13 @@ export class OneTable extends BaseTable {
       assert.tableFile([
         [
           'tables/one.table.ts',
-          `import { BaseTable } from '../migrations.test-utils';
+          `import { Selectable, Insertable, Updatable } from 'orchid-orm';
+import { BaseTable } from '../migrations.test-utils';
 import { TwoTable } from './two.table';
+
+export type One = Selectable<OneTable>;
+export type OneNew = Insertable<OneTable>;
+export type OneUpdate = Updatable<OneTable>;
 
 export class OneTable extends BaseTable {
   readonly table = 'one';
@@ -248,8 +263,13 @@ export class OneTable extends BaseTable {
         ],
         [
           'tables/two.table.ts',
-          `import { BaseTable } from '../migrations.test-utils';
+          `import { Selectable, Insertable, Updatable } from 'orchid-orm';
+import { BaseTable } from '../migrations.test-utils';
 import { OneTable } from './one.table';
+
+export type Two = Selectable<TwoTable>;
+export type TwoNew = Insertable<TwoTable>;
+export type TwoUpdate = Updatable<TwoTable>;
 
 export class TwoTable extends BaseTable {
   readonly table = 'two';

@@ -130,7 +130,7 @@ export type Selectable<T extends Table> = ColumnShapeOutput<T['columns']>;
 export type Insertable<T extends Table> = ColumnShapeInput<T['columns']>;
 
 // Object type that conforms `update` method of the table.
-export type Updateable<T extends Table> = ColumnShapeInputPartial<T['columns']>;
+export type Updatable<T extends Table> = ColumnShapeInputPartial<T['columns']>;
 
 // type of before hook function for the table
 type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
