@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.13.4
+
+### Patch Changes
+
+- 907b2b8: Synchronize libraries by publishing them
+
 ## 0.13.3
 
 ### Patch Changes

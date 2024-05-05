@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.18.1
+
+### Patch Changes
+
+- 907b2b8: Synchronize libraries by publishing them
+- Updated dependencies [907b2b8]
+  - pqb@0.27.7
+  - orchid-core@0.13.4
+
 ## 2.18.0
 
 ### Minor Changes

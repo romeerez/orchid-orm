@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.2.3
+
+### Patch Changes
+
+- 907b2b8: Synchronize libraries by publishing them
+
 ## 0.2.2
 
 ### Patch Changes

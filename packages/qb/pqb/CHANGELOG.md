@@ -1,5 +1,13 @@
 # pqb
 
+## 0.27.7
+
+### Patch Changes
+
+- 907b2b8: Synchronize libraries by publishing them
+- Updated dependencies [907b2b8]
+  - orchid-core@0.13.4
+
 ## 0.27.6
 
 ### Patch Changes
