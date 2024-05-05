@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.25.2
+
+### Patch Changes
+
+- 42f5248: Fix generated dbScript for tsx, fix `db pull` for test database
+
 ## 1.25.1
 
 ### Patch Changes
