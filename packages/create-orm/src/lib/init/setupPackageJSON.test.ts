@@ -37,7 +37,7 @@ const tsxScripts = `"db": "NODE_ENV=development tsx src/db/dbScript.ts",
     "build:migrations": "rimraf dist/db && node esbuild.migrations.mjs",
     "db:compiled": "NODE_ENV=production node dist/db/dbScript.mjs"`;
 
-const tsxDeps = `"tsx": "^1.2.3",
+const tsxDeps = `"tsx": "4.9.0",
     "esbuild": "^1.2.3",
     "rimraf": "^1.2.3"`;
 

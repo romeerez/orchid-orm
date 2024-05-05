@@ -1,5 +1,9 @@
 import { InitConfig } from '../../lib';
-import { getLatestPackageVersion, readFileSafe } from '../utils';
+import {
+  DependencyKind,
+  getLatestPackageVersion,
+  readFileSafe,
+} from '../utils';
 import { join } from 'path';
 import fs from 'fs/promises';
 
@@ -21,7 +25,16 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
     config.runner === 'vite-node' &&
       getLatestPackageVersion('vite', 'devDependencies'),
     config.runner !== 'bun' &&
-      getLatestPackageVersion(config.runner, 'devDependencies'),
+      (config.runner === 'tsx'
+        ? ([
+            'tsx',
+            {
+              // 4.9.1 is broken in tsx: https://github.com/privatenumber/tsx/issues/543
+              version: '4.9.0',
+              kind: 'devDependencies',
+            },
+          ] as [string, { version: string; kind: DependencyKind }])
+        : getLatestPackageVersion(config.runner, 'devDependencies')),
     config.runner === 'vite-node' &&
       getLatestPackageVersion(
         'rollup-plugin-node-externals',

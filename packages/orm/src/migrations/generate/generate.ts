@@ -28,6 +28,7 @@ import { CodeDomain } from './generators/domains.generator';
 import { composeMigration, ComposeMigrationParams } from './composeMigration';
 import { verifyMigration } from './verifyMigration';
 import { report } from './reportGeneratedMigration';
+import path from 'node:path';
 
 export interface CodeItems {
   schemas: Set<string>;
@@ -180,7 +181,7 @@ const getDbFromConfig = async (
   config: AnyRakeDbConfig,
   dbPath: string,
 ): Promise<DbInstance> => {
-  const module = await config.import(dbPath);
+  const module = await config.import(path.resolve(config.basePath, dbPath));
   const db = (module as { [K: string]: DbInstance })[
     config.dbExportedAs ?? 'db'
   ];

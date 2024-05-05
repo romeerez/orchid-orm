@@ -30,6 +30,7 @@ export const change = rakeDb(config.database, {
       await seed();
     },
   },
+  import: (path) => import(path),
 });
 `);
   });
@@ -57,6 +58,7 @@ export const change = rakeDb(config.allDatabases, {
       await seed();
     },
   },
+  import: (path) => import(path),
 });
 `);
   });
