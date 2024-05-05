@@ -1,8 +1,8 @@
 import { rakeDb } from './rakeDb';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
-import { generate } from './commands/generate';
-import { pullDbStructure } from './pull/pull';
+import { newMigration } from './commands/newMigration';
+import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock } from 'test-utils';
@@ -10,29 +10,15 @@ import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
 import { processRakeDbConfig } from './config';
 
-jest.mock('./commands/createOrDrop', () => ({
-  createDb: jest.fn(),
-  dropDb: jest.fn(),
-  resetDb: jest.fn(),
-}));
-
+jest.mock('./commands/createOrDrop');
 jest.mock('./commands/migrateOrRollback', () => ({
-  migrate: jest.fn(),
-  rollback: jest.fn(),
-  redo: jest.fn(),
+  migrate: jest.fn(() => Promise.resolve()),
+  rollback: jest.fn(() => Promise.resolve()),
+  redo: jest.fn(() => Promise.resolve()),
 }));
-
-jest.mock('./commands/generate', () => ({
-  generate: jest.fn(),
-}));
-
-jest.mock('./commands/recurrent', () => ({
-  runRecurrentMigrations: jest.fn(),
-}));
-
-jest.mock('./pull/pull', () => ({
-  pullDbStructure: jest.fn(),
-}));
+jest.mock('./commands/newMigration');
+jest.mock('./commands/recurrent');
+jest.mock('./generate/pull');
 
 const options = [
   {
@@ -57,19 +43,19 @@ describe('rakeDb', () => {
   it('should support create command', async () => {
     await rakeDb(options, config, ['create']).promise;
 
-    expect(createDb).toBeCalledWith(options, processedConfig);
+    expect(createDb).toBeCalledWith(options, processedConfig, []);
   });
 
   it('should support drop command', async () => {
     await rakeDb(options, config, ['drop']).promise;
 
-    expect(dropDb).toBeCalledWith(options, processedConfig);
+    expect(dropDb).toBeCalledWith(options, processedConfig, []);
   });
 
   it('should support reset command', async () => {
     await rakeDb(options, config, ['reset']).promise;
 
-    expect(resetDb).toBeCalledWith(options, processedConfig);
+    expect(resetDb).toBeCalledWith(options, processedConfig, []);
   });
 
   it('should run migrations and recurrent on `up` command', async () => {
@@ -106,7 +92,7 @@ describe('rakeDb', () => {
   it('should support new command', async () => {
     await rakeDb(options, config, ['new', 'arg']).promise;
 
-    expect(generate).toBeCalledWith(processedConfig, ['arg']);
+    expect(newMigration).toBeCalledWith(processedConfig, ['arg']);
   });
 
   it('should support pull command', async () => {
@@ -120,8 +106,8 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['recurrent']).promise;
 
     expect(asMock(runRecurrentMigrations).mock.calls).toEqual([
-      [options, processedConfig],
-      [options, processedConfig],
+      [options, processedConfig, []],
+      [options, processedConfig, []],
     ]);
   });
 

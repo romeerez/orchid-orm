@@ -5,6 +5,7 @@ import {
   ColumnsShapeBase,
   ColumnTypeBase,
   ColumnTypeSchemaArg,
+  ConstraintOptions,
   emptyObject,
   ForeignKeyTable,
   MaybeArray,
@@ -63,7 +64,11 @@ export type ForeignKeyAction =
 // Foreign key type contains a foreign table (by function or a name), columns of this table, and foreign key options.
 export type ForeignKey<Table extends string, Columns extends string[]> = (
   | {
-      fn(): new () => { table: Table; columns: ColumnsShapeBase };
+      fn(): new () => {
+        schema?: string;
+        table: Table;
+        columns: ColumnsShapeBase;
+      };
     }
   | {
       table: Table;
@@ -84,7 +89,7 @@ export interface ForeignKeyOptions {
   dropMode?: DropMode;
 }
 
-interface IndexColumnOptionsForColumn {
+export interface IndexColumnOptionsForColumn {
   collate?: string;
   opclass?: string;
   order?: string;
@@ -108,7 +113,7 @@ export interface IndexOptions {
   where?: string;
   dropMode?: 'CASCADE' | 'RESTRICT';
   // set the language for the tsVector, 'english' is a default
-  language?: string | RawSQLBase;
+  language?: string;
   // set the column with language for the tsVector
   languageColumn?: string;
   // create a tsVector index
@@ -129,6 +134,8 @@ export interface ColumnFromDbParams {
   numericPrecision?: number;
   numericScale?: number;
   dateTimePrecision?: number;
+  compression?: string;
+  collate?: string;
 }
 
 export interface PickColumnData {
@@ -177,9 +184,14 @@ export abstract class ColumnType<
    * // primary key can be used by `find` later:
    * db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
    * ```
+   *
+   * @param options - to specify a constraint name
    */
-  primaryKey<T extends PickColumnBaseData>(this: T): PrimaryKeyColumn<T> {
-    return setColumnData(this, 'isPrimaryKey', true) as never;
+  primaryKey<T extends PickColumnBaseData>(
+    this: T,
+    options?: ConstraintOptions,
+  ): PrimaryKeyColumn<T> {
+    return setColumnData(this, 'primaryKey', options?.name ?? true) as never;
   }
 
   /**
@@ -311,9 +323,9 @@ export abstract class ColumnType<
   }
 
   /**
-   * `searchIndex` is designed for full text search.
+   * `searchIndex` is designed for [full text search](/guide/text-search).
    *
-   * It can accept the same options as a regular `index`, but it is `USING GIN` by default, and it is concatenating columns into a `tsvector`.
+   * It can accept the same options as a regular `index`, but it is `USING GIN` by default, and it is concatenating columns into a `tsvector` database type.
    *
    * ```ts
    * import { change } from '../dbScript';
@@ -321,8 +333,8 @@ export abstract class ColumnType<
    * change(async (db) => {
    *   await db.createTable('table', (t) => ({
    *     id: t.identity().primaryKey(),
-   *     title: t.string(),
-   *     body: t.string(),
+   *     title: t.text(),
+   *     body: t.text(),
    *     ...t.searchIndex(['title', 'body']),
    *   }));
    * });
@@ -331,10 +343,10 @@ export abstract class ColumnType<
    * Produces the following index ('english' is a default language, see [full text search](/guide/text-search.html#language) for changing it):
    *
    * ```sql
-   * CREATE INDEX "table_title_body_idx" ON "table" USING GIN (to_tsvector('english', concat_ws(' ', "title", "body")))
+   * CREATE INDEX "table_title_body_idx" ON "table" USING GIN (to_tsvector('english', "title" || ' ' || "body"))
    * ```
    *
-   * Also, it works well with a generated `tsvector` column:
+   * You can set different search weights (`A` to `D`) on different columns inside the index:
    *
    * ```ts
    * import { change } from '../dbScript';
@@ -342,8 +354,63 @@ export abstract class ColumnType<
    * change(async (db) => {
    *   await db.createTable('table', (t) => ({
    *     id: t.identity().primaryKey(),
-   *     title: t.string(),
-   *     body: t.string(),
+   *     title: t.text(),
+   *     body: t.text(),
+   *     ...t.searchIndex([
+   *       { column: 'title', weight: 'A' },
+   *       { column: 'body', weight: 'B' },
+   *     ]),
+   *   }));
+   * });
+   * ```
+   *
+   * When the table has localized columns,
+   * you can define different indexes for different languages by setting the `language` parameter:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     id: t.identity().primaryKey(),
+   *     titleEn: t.text(),
+   *     bodyEn: t.text(),
+   *     titleFr: t.text(),
+   *     bodyFr: t.text(),
+   *     ...t.searchIndex(['titleEn', 'bodyEn'], { language: 'english' }),
+   *     ...t.searchIndex(['titleFr', 'bodyFr'], { language: 'french' }),
+   *   }));
+   * });
+   * ```
+   *
+   * Alternatively, different table records may correspond to a single language,
+   * then you can define a search index that relies on a language column by using `languageColumn` parameter:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     id: t.identity().primaryKey(),
+   *     lang: t.type('regconfig'),
+   *     title: t.text(),
+   *     body: t.text(),
+   *     ...t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
+   *   }));
+   * });
+   * ```
+   *
+   * It can be more efficient to use a [generated](/guide/migration-column-methods.html#generated-column) column instead of indexing text column in the way described above,
+   * and to set a `searchIndex` on it:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     id: t.identity().primaryKey(),
+   *     title: t.text(),
+   *     body: t.text(),
    *     generatedTsVector: t.tsvector().generated(['title', 'body']).searchIndex(),
    *   }));
    * });
@@ -359,7 +426,7 @@ export abstract class ColumnType<
    */
   searchIndex<T extends Pick<ColumnType, 'data' | 'dataType'>>(
     this: T,
-    options?: Omit<SingleColumnIndexOptions, 'tsVector'>,
+    options?: Omit<IndexOptions, 'tsVector'>,
   ): T {
     return pushColumnData(this, 'indexes', {
       ...options,

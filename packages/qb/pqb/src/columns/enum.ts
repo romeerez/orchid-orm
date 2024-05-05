@@ -22,11 +22,11 @@ export class EnumColumn<
     this.inputSchema = this.outputSchema = this.querySchema = schemaType;
   }
 
-  toCode(t: string, migration?: boolean): Code {
-    const options = migration
+  toCode(t: string, m?: boolean): Code {
+    const options = m
       ? ''
       : `, [${this.options.map((option) => `'${option}'`).join(', ')}]`;
-    return columnCode(this, t, `enum('${this.enumName}'${options})`);
+    return columnCode(this, t, `enum('${this.enumName}'${options})`, m);
   }
 
   toSQL() {

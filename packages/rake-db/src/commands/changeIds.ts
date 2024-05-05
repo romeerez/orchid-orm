@@ -1,7 +1,7 @@
 import { AnyRakeDbConfig } from '../config';
 import path from 'path';
 import fs from 'fs/promises';
-import { generateTimeStamp } from './generate';
+import { generateTimeStamp } from './newMigration';
 import { Adapter, AdapterOptions } from 'pqb';
 import { getMigrationsFromFiles } from '../migration/migrationsSet';
 

@@ -28,11 +28,11 @@ export const testColumnTypes = {
   text(min = 0, max = Infinity) {
     return columnTypes.text(min, max);
   },
-  timestamp() {
-    return columnTypes.timestamp().parse((input) => new Date(input));
+  timestamp(precision?: number) {
+    return columnTypes.timestamp(precision).asDate();
   },
-  timestampNoTZ() {
-    return columnTypes.timestampNoTZ().parse((input) => new Date(input));
+  timestampNoTZ(precision?: number) {
+    return columnTypes.timestampNoTZ(precision).asDate();
   },
 };
 
@@ -66,7 +66,7 @@ export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
 
 export const expectSql = (
-  sql: MaybeArray<{ text: string; values: unknown[] }>,
+  sql: MaybeArray<{ text: string; values?: unknown[] }>,
   text: string,
   values: unknown[] = [],
 ) => {

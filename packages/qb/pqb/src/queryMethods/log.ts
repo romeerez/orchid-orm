@@ -44,7 +44,7 @@ const makeMessage = (
   sqlColor: (message: string) => string,
   sql: string,
   valuesColor: (message: string) => string,
-  values: unknown[],
+  values?: unknown[],
 ): string => {
   const elapsed = process.hrtime(time);
   const formattedTime = `(${elapsed[0] ? `${elapsed[0]}s ` : ''}${(
@@ -55,7 +55,7 @@ const makeMessage = (
     colors ? sqlColor(sql) : sql
   }`;
 
-  if (!values.length) {
+  if (!values?.length) {
     return result;
   }
 

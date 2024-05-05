@@ -30,8 +30,7 @@ const writeFile = mockFn(fs, 'writeFile');
 const dependencies = `"dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3"`;
 
-const devDependencies = `"rake-db": "^1.2.3",
-    "@types/node": "^1.2.3",
+const devDependencies = `"@types/node": "^1.2.3",
     "typescript": "^1.2.3"`;
 
 const tsxScripts = `"db": "NODE_ENV=development tsx src/db/dbScript.ts",
@@ -60,7 +59,6 @@ describe('setupPackageJSON', () => {
     ${dependencies}
   },
   "devDependencies": {
-    "rake-db": "^1.2.3",
     "@types/node": "^1.2.3",
     "typescript": "^1.2.3",
     ${tsxDeps}
@@ -106,7 +104,6 @@ describe('setupPackageJSON', () => {
     }
   },
   "devDependencies": {
-    "rake-db": "^1.2.3",
     "orchid-orm-test-factory": "^1.2.3",
     "@types/node": "^1.2.3",
     "typescript": "^1.2.3",
@@ -161,7 +158,6 @@ describe('setupPackageJSON', () => {
   },
   "devDependencies": {
     "ko": "ko",
-    "rake-db": "^1.2.3",
     "orchid-orm-test-factory": "^1.2.3",
     "@types/node": "^1.2.3",
     "typescript": "^1.2.3",

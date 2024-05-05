@@ -14,8 +14,6 @@ export const createView = async <CT extends RakeDbColumnTypes>(
   const query = astToQuery(ast);
 
   await migration.adapter.query(query);
-
-  migration.migratedAsts.push(ast);
 };
 
 const makeAst = (
@@ -35,6 +33,7 @@ const makeAst = (
     shape: {},
     sql,
     options,
+    deps: [],
   };
 };
 

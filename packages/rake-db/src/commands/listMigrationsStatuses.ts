@@ -5,6 +5,7 @@ import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { pathToFileURL } from 'node:url';
 import { AnyRakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrationsSet';
+import { colors } from '../colors';
 
 export const listMigrationsStatuses = async (
   options: AdapterOptions[],
@@ -83,37 +84,34 @@ export const listMigrationsStatuses = async (
 
   const showUrl = args.includes('p') || args.includes('path');
 
-  const colors =
-    typeof config.log === 'object' ? config.log.colors ?? true : true;
+  const asIs = (s: string) => s;
 
-  const yellow = colors
-    ? (s: string) => `\x1b[33m${s}\x1b[0m`
-    : (s: string) => s;
-
-  const green = colors
-    ? (s: string) => `\x1b[32m${s}\x1b[0m`
-    : (s: string) => s;
-
-  const red = colors ? (s: string) => `\x1b[31m${s}\x1b[0m` : (s: string) => s;
-
-  const blue = colors ? (s: string) => `\x1b[34m${s}\x1b[0m` : (s: string) => s;
+  const c =
+    typeof config.log === 'object' && config.log.colors === false
+      ? {
+          yellow: asIs,
+          green: asIs,
+          red: asIs,
+          blue: asIs,
+        }
+      : colors;
 
   const log = Object.values(map)
     .map(({ databases, migrations }) => {
-      let log = ` ${yellow('Database:')} ${databases.join(', ')}`;
+      let log = ` ${c.yellow('Database:')} ${databases.join(', ')}`;
 
       if (migrations.length === 0) {
         return log + `\n\nNo migrations available`;
       }
 
-      const lineSeparator = yellow(
+      const lineSeparator = c.yellow(
         makeChars(14 + maxVersionLength + maxNameLength, '-'),
       );
-      const columnSeparator = yellow('|');
+      const columnSeparator = c.yellow('|');
 
       log +=
         '\n\n ' +
-        yellow(
+        c.yellow(
           `Status | Migration ID${makeChars(
             maxVersionLength - 12,
             ' ',
@@ -122,8 +120,8 @@ export const listMigrationsStatuses = async (
 
       for (const migration of migrations) {
         log += `\n  ${
-          migration.up ? ` ${green('Up')} ` : red('Down')
-        }  ${columnSeparator} ${blue(migration.version)}${makeChars(
+          migration.up ? ` ${c.green('Up')} ` : c.red('Down')
+        }  ${columnSeparator} ${c.blue(migration.version)}${makeChars(
           maxVersionLength - migration.version.length,
           ' ',
         )} ${columnSeparator} ${migration.name}`;

@@ -20,13 +20,28 @@ import {
   QueryCatch,
   QueryColumn,
   QueryColumns,
-  QueryInternal,
+  QueryInternalBase,
   QueryReturnType,
   QueryThen,
   RecordUnknown,
   Spread,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
+import { ColumnType, TableData } from '../columns';
+
+export interface DbExtension {
+  name: string;
+  version?: string;
+}
+
+export type DbDomainArg<ColumnTypes> = (columnTypes: ColumnTypes) => ColumnType;
+
+export type DbDomainArgRecord = { [K: string]: DbDomainArg<any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+export interface QueryInternal extends QueryInternalBase, TableData {
+  extensions?: DbExtension[];
+  domains?: DbDomainArgRecord;
+}
 
 export type SelectableFromShape<
   Shape extends QueryColumns,

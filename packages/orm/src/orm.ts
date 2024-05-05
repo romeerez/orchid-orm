@@ -2,7 +2,6 @@ import {
   Adapter,
   AdapterOptions,
   addComputedColumns,
-  anyShape,
   makeColumnTypes,
   ComputedColumnsBase,
   Db,
@@ -16,6 +15,8 @@ import {
   QueryLogOptions,
   defaultSchemaConfig,
   FromArgOptions,
+  DbSharedOptions,
+  _initQueryBuilder,
 } from 'pqb';
 import { DbTable, Table, TableClasses } from './baseTable';
 import { applyRelations } from './relations/relations';
@@ -101,10 +102,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
 type OrchidOrmArg = true | null extends true
   ? 'Set strict: true to tsconfig'
   : ({ db: Query } | { adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
-      QueryLogOptions & {
-        autoPreparedStatements?: boolean;
-        noPrimaryKey?: NoPrimaryKeyOption;
-      };
+      DbSharedOptions;
 
 export const orchidORM = <T extends TableClasses>(
   {
@@ -116,7 +114,10 @@ export const orchidORM = <T extends TableClasses>(
   }: OrchidOrmArg,
   tables: T,
 ): OrchidORM<T> => {
-  const commonOptions = {
+  const commonOptions: QueryLogOptions & {
+    autoPreparedStatements?: boolean;
+    noPrimaryKey?: NoPrimaryKeyOption;
+  } = {
     log,
     logger,
     autoPreparedStatements,
@@ -135,16 +136,13 @@ export const orchidORM = <T extends TableClasses>(
 
     transactionStorage = new AsyncLocalStorage<TransactionState>();
 
-    qb = new Db(
+    qb = _initQueryBuilder(
       adapter,
-      undefined as unknown as Db,
-      undefined,
-      anyShape,
       makeColumnTypes(defaultSchemaConfig),
       transactionStorage,
       commonOptions,
-    ) as unknown as Db;
-    qb.queryBuilder = qb as unknown as Db;
+      options,
+    );
   }
 
   const result = {
@@ -175,9 +173,9 @@ export const orchidORM = <T extends TableClasses>(
       scopes: table.scopes as DbTableOptionScopes<string, ColumnsShapeBase>,
       softDelete: table.softDelete,
       snakeCase: (table as { snakeCase?: boolean }).snakeCase,
+      comment: table.comment,
+      noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
     };
-
-    if (table.noPrimaryKey) options.noPrimaryKey = 'ignore';
 
     const dbTable = new Db(
       adapter,
@@ -188,6 +186,7 @@ export const orchidORM = <T extends TableClasses>(
       table.types,
       transactionStorage,
       options,
+      table.constructor.prototype.tableData ?? {},
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;

@@ -31,7 +31,7 @@ import { uuidv7 } from 'uuidv7';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    // uuidv7 is a function, it is ignored by `rake-db`,
+    // uuidv7 is a function, it is ignored in migrations,
     // column won't have a `DEFAULT` on a database level:
     id: t.uuid().primaryKey().default(uuidv7),
   }));
@@ -298,9 +298,9 @@ type IndexOptions = {
 
 [//]: # 'has JSDoc'
 
-`searchIndex` is designed for full text search.
+`searchIndex` is designed for [full text search](/guide/text-search).
 
-It can accept the same options as a regular `index`, but it is `USING GIN` by default, and it is concatenating columns into a `tsvector`.
+It can accept the same options as a regular `index`, but it is `USING GIN` by default, and it is concatenating columns into a `tsvector` database type.
 
 ```ts
 import { change } from '../dbScript';
@@ -318,10 +318,67 @@ change(async (db) => {
 Produces the following index ('english' is a default language, see [full text search](/guide/text-search.html#language) for changing it):
 
 ```sql
-CREATE INDEX "table_title_body_idx" ON "table" USING GIN (to_tsvector('english', concat_ws(' ', "title", "body")))
+CREATE INDEX "table_title_body_idx" ON "table" USING GIN (
+  to_tsvector('english', "title" || ' ' || "body")
+)
 ```
 
-Also, it works well with a generated `tsvector` column:
+You can set different search weights (`A` to `D`) on different columns inside the index:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.identity().primaryKey(),
+    title: t.text(),
+    body: t.text(),
+    ...t.searchIndex([
+      { column: 'title', weight: 'A' },
+      { column: 'body', weight: 'B' },
+    ]),
+  }));
+});
+```
+
+When the table has localized columns,
+you can define different indexes for different languages by setting the `language` parameter:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.identity().primaryKey(),
+    titleEn: t.text(),
+    bodyEn: t.text(),
+    titleFr: t.text(),
+    bodyFr: t.text(),
+    ...t.searchIndex(['titleEn', 'bodyEn'], { language: 'english' }),
+    ...t.searchIndex(['titleFr', 'bodyFr'], { language: 'french' }),
+  }));
+});
+```
+
+Alternatively, different table records may correspond to a single language,
+then you can define a search index that relies on a language column by using `languageColumn` parameter:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.identity().primaryKey(),
+    lang: t.type('regconfig'),
+    title: t.text(),
+    body: t.text(),
+    ...t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
+  }));
+});
+```
+
+It can be more efficient to use a [generated](/guide/migration-column-methods.html#generated-column) column instead of indexing text column in the way described above,
+and to set a `searchIndex` on it:
 
 ```ts
 import { change } from '../dbScript';
@@ -564,7 +621,7 @@ change(async (db) => {
 
 ## constraint
 
-`rake-db` supports placing a database check and a foreign key on a single constraint:
+You can place a database check and a foreign key on a single constraint:
 
 ```ts
 import { change } from '../dbScript';

@@ -50,6 +50,9 @@ for (const key in types.builtins) {
 
 const returnArg = (arg: unknown) => arg;
 
+const rollbackSql = { text: 'ROLLBACK' };
+const commitSql: Sql = { text: 'COMMIT' };
+
 export interface AdapterConfig
   extends AdapterConfigBase,
     Omit<PoolConfig, 'types' | 'connectionString'> {
@@ -126,6 +129,7 @@ export class Adapter implements AdapterBase {
   async transaction<Result>(
     begin: Sql,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
+    end: Sql = commitSql,
   ): Promise<Result> {
     const client = await this.connect();
     try {
@@ -135,10 +139,10 @@ export class Adapter implements AdapterBase {
       try {
         result = await cb(new TransactionAdapter(this, client, this.types));
       } catch (err) {
-        await performQueryOnClient(client, { text: 'ROLLBACK' }, this.types);
+        await performQueryOnClient(client, rollbackSql, this.types);
         throw err;
       }
-      await performQueryOnClient(client, { text: 'COMMIT' }, this.types);
+      await performQueryOnClient(client, end, this.types);
       return result;
     } finally {
       client.release();

@@ -6,7 +6,6 @@ import {
   QueryColumnsInit,
   SinglePrimaryKey,
 } from './columns/columnType';
-import { QueryInternal } from './query';
 import { RawSQLBase, TemplateLiteralArgs } from './raw';
 
 // Argument for `query` and `queryArrays`, it can be a SQL template literal, or a raw SQL object.
@@ -27,7 +26,6 @@ export type DbBase<
   singlePrimaryKey: SinglePrimaryKey<Shape>;
   outputType: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
-  internal: QueryInternal;
   query(...args: SQLQueryArgs): Promise<unknown>;
   queryArrays(...args: SQLQueryArgs): Promise<unknown>;
 };

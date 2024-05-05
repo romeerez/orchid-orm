@@ -92,17 +92,23 @@ export const columnMethodsToCode = <T extends ColumnDataBase>(
   skip?: RecordKeyTrue,
   aliases?: RecordString,
 ) => {
-  return (data: T, skipLocal?: RecordKeyTrue) => {
-    return methodNames
-      .map((key) =>
-        (skipLocal || skip)?.[key as string] ||
-        (key === 'min' &&
-          (data as { nonEmpty?: boolean }).nonEmpty &&
-          (data as { min?: number }).min === 1)
-          ? ''
-          : columnMethodToCode(data, key, aliases?.[key as string]),
-      )
-      .join('');
+  return (
+    data: T,
+    migration: boolean | undefined,
+    skipLocal?: RecordKeyTrue,
+  ) => {
+    return migration
+      ? ''
+      : methodNames
+          .map((key) =>
+            (skipLocal || skip)?.[key as string] ||
+            (key === 'min' &&
+              (data as { nonEmpty?: boolean }).nonEmpty &&
+              (data as { min?: number }).min === 1)
+              ? ''
+              : columnMethodToCode(data, key, aliases?.[key as string]),
+          )
+          .join('');
   };
 };
 

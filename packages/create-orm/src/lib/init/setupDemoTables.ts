@@ -10,7 +10,7 @@ export async function setupDemoTables(config: InitConfig): Promise<void> {
 
   await fs.writeFile(
     join(tablesDir, 'post.table.ts'),
-    `import { Selectable, Updateable, Insertable, Queryable } from 'orchid-orm';
+    `import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
 import { BaseTable } from '../baseTable';
 import { CommentTable } from './comment.table';
 
@@ -19,7 +19,7 @@ export type Post = Selectable<PostTable>;
 // Post type for insertion.
 export type PostNew = Insertable<PostTable>;
 // Post type for updates.
-export type PostUpdate = Updateable<PostTable>;
+export type PostUpdate = Updatable<PostTable>;
 // Post type used by query methods such as \`where\`.
 export type PostForQuery = Queryable<PostTable>;
 
@@ -44,7 +44,7 @@ export class PostTable extends BaseTable {
 
   await fs.writeFile(
     join(tablesDir, 'comment.table.ts'),
-    `import { Selectable, Updateable, Insertable, Queryable } from 'orchid-orm';
+    `import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
 import { BaseTable } from '../baseTable';
 import { PostTable } from './post.table';
 
@@ -53,7 +53,7 @@ export type Comment = Selectable<CommentTable>;
 // Comment type for insertion.
 export type CommentNew = Insertable<CommentTable>;
 // Comment type for updates.
-export type CommentUpdate = Updateable<CommentTable>;
+export type CommentUpdate = Updatable<CommentTable>;
 // Comment type used by query methods such as \`where\`.
 export type CommentForQuery = Queryable<CommentTable>;
 

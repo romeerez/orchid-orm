@@ -10,10 +10,15 @@ import {
 } from 'pqb';
 import { ColumnSchemaConfig, getStackTrace } from 'orchid-core';
 import path from 'path';
-import { RakeDbAst } from './ast';
 import { fileURLToPath } from 'node:url';
 import { RakeDbColumnTypes } from './migration/migration';
 import { MigrationItem } from './migration/migrationsSet';
+
+export type CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> = (
+  options: AdapterOptions[],
+  config: RakeDbConfig<SchemaConfig, CT>,
+  args: string[],
+) => void | Promise<void>;
 
 export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
@@ -30,18 +35,9 @@ export interface RakeDbConfig<
   migrationsTable: string;
   snakeCase: boolean;
   language?: string;
-  commands: Record<
-    string,
-    (
-      options: AdapterOptions[],
-      config: RakeDbConfig<SchemaConfig, CT>,
-      args: string[],
-    ) => void | Promise<void>
-  >;
+  commands: Record<string, CommandFn<SchemaConfig, CT>>;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: RakeDbBaseTable<CT>;
-  appCodeUpdater?: AppCodeUpdater;
-  useCodeUpdater?: boolean;
   // throw if a migration doesn't have a default export
   forceDefaultExports?: boolean;
   import(path: string): Promise<unknown>;
@@ -80,8 +76,6 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
     ) => void | Promise<void>
   >;
   noPrimaryKey?: NoPrimaryKeyOption;
-  appCodeUpdater?: AppCodeUpdater;
-  useCodeUpdater?: boolean;
   forceDefaultExports?: boolean;
   import?(path: string): Promise<unknown>;
   /**
@@ -186,22 +180,6 @@ export interface ModuleExportsRecord {
 
 export type RakeDbMigrationId = 'serial' | 'timestamp';
 
-export interface AppCodeUpdaterParams {
-  options: AdapterOptions;
-  basePath: string;
-  cache: object;
-  logger: QueryLogOptions['logger'];
-  baseTable: { getFilePath(): string; exportAs: string };
-
-  import(path: string): Promise<unknown>;
-}
-
-export interface AppCodeUpdater {
-  process(params: AppCodeUpdaterParams & { ast: RakeDbAst }): Promise<void>;
-
-  afterAll(params: AppCodeUpdaterParams): Promise<void>;
-}
-
 export const migrationConfigDefaults = {
   schemaConfig: defaultSchemaConfig,
   migrationsPath: path.join('src', 'db', 'migrations'),
@@ -220,7 +198,6 @@ export const migrationConfigDefaults = {
   },
   log: true,
   logger: console,
-  useCodeUpdater: true,
 } satisfies Omit<
   RakeDbConfig<ColumnSchemaConfig>,
   'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
@@ -238,15 +215,6 @@ export const processRakeDbConfig = <
   >;
   if (!result.recurrentPath) {
     result.recurrentPath = path.join(result.migrationsPath, 'recurrent');
-  }
-
-  if (
-    config.appCodeUpdater &&
-    (!('baseTable' in config) || !config.baseTable)
-  ) {
-    throw new Error(
-      '`baseTable` option is required in `rakeDb` for `appCodeUpdater`',
-    );
   }
 
   if (!result.log) {

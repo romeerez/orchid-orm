@@ -90,8 +90,6 @@ After running the script, take a look at the package.json file, and install depe
     "orchid-orm-schema-to-zod": "^0.2.18"
   },
   "devDependencies": {
-    // rake-db is a toolkit for migrations
-    "rake-db": "^2.3.17",
     // for generating mock objects in tests
     "orchid-orm-test-factory": "^0.2.24",
     // for the fastest typescript compilation
@@ -143,7 +141,7 @@ Notice `"type": "module"` at the top: all compiled files will be treated as ES m
 In case your project relies on commonjs modules, remove the `"type": "module"`, compiled migrations would still work as expected.
 :::
 
-Orchid ORM's scaffolding script does not make assumptions on how you start and compile your app,
+OrchidORM's scaffolding script does not make assumptions on how you start and compile your app,
 it adds separate scripts for building and compiling migrations that you can use for CI/CD.
 
 In some scenarios it may not make a difference if the original TS migration files are executed to migrate production db.
@@ -253,7 +251,7 @@ If you chose to create demo tables, there are migrations files in `src/db/migrat
 
 ```sh
 # command to run migrations (create tables):
-npm run db migrate
+npm run db up
 ```
 
 Run the seeds for demo tables:
@@ -264,82 +262,11 @@ npm run db seed
 
 The setup is completely ready at this point. For the next steps, create your tables and write queries.
 
-Generate a new migration by running a command:
+To create new database tables, you can:
 
-```sh
-npm run db new createSample
-```
-
-The file with such content will appear in the `src/db/migrations` directory:
-
-```ts
-// src/db/migrations/*timestamp*_createSample.ts
-import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.createTable('sample', (t) => ({}));
-});
-```
-
-Add columns to the table:
-
-```ts
-// src/migrations/*timestamp*_createTable.ts
-import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.createTable('sample', (t) => ({
-    id: t.identity().primaryKey(),
-    text: t.text(),
-    ...t.timestamps(),
-  }));
-});
-```
-
-Apply migration by running:
-
-```sh
-npm run db migrate
-```
-
-## defining tables
-
-`src/db/tables/sample.table.ts` was created after running a migration.
-
-TypeScript should highlight `t.text()` because it doesn't have `min` and `max` specified,
-this is needed to prevent unpleasant situations when empty or huge texts are submitted.
-
-```ts
-// src/sb/tables/sample.table.ts
-import { BaseTable } from './baseTable';
-
-export class SampleTable extends BaseTable {
-  readonly table = 'sample';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    // specify min and max length
-    text: t.text(1, 10000),
-    ...t.timestamps(),
-  }));
-}
-```
-
-`src/db/db.ts` is the main file for the ORM, it connects all tables into one `db` object.
-
-```ts
-// src/db/db.ts
-import { orchidORM } from 'orchid-orm';
-import { config } from './config';
-import { PostTable } from './tables/post.table';
-import { CommentTable } from './tables/comment.table';
-import { SampleTable } from './tables/sample.table';
-
-export const db = orchidORM(config.database, {
-  post: PostTable,
-  comment: CommentTable,
-  sample: SampleTable,
-});
-```
+- if you have an existing database with tables, generate for the tables with [db pull](/guide/migration-commands.html#pull).
+- [define new tables](/guide/orm-and-query-builder.html#define-a-table-class) in the code and [generate migrations](/guide/orm-and-query-builder.html#generate-migrations) for them.
+- you can also make a [new migration](/guide/migration-commands.html#new-blank-migration) file and write it manually.
 
 ## example usage
 

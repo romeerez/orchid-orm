@@ -7,13 +7,19 @@ import {
   TableData,
 } from 'pqb';
 import { DropMode } from './migration/migration';
-import { ColumnTypeBase, RawSQLBase, RecordString } from 'orchid-core';
+import {
+  ColumnDataCheckBase,
+  MaybeArray,
+  RawSQLBase,
+  RecordString,
+} from 'orchid-core';
 
 export type RakeDbAst =
   | RakeDbAst.Table
   | RakeDbAst.ChangeTable
   | RakeDbAst.RenameType
   | RakeDbAst.Schema
+  | RakeDbAst.RenameSchema
   | RakeDbAst.Extension
   | RakeDbAst.Enum
   | RakeDbAst.EnumValues
@@ -22,6 +28,7 @@ export type RakeDbAst =
   | RakeDbAst.Domain
   | RakeDbAst.Collation
   | RakeDbAst.Constraint
+  | RakeDbAst.RenameTableItem
   | RakeDbAst.View;
 
 export namespace RakeDbAst {
@@ -42,11 +49,14 @@ export namespace RakeDbAst {
     type: 'changeTable';
     schema?: string;
     name: string;
-    comment?: string | null;
-    shape: Record<string, ChangeTableItem>;
+    comment?: string | [string, string] | null;
+    shape: ChangeTableShape;
     add: TableData;
     drop: TableData;
   }
+
+  // it can be an array to allow adding and dropping the same column in a single `changeTable`
+  export type ChangeTableShape = Record<string, MaybeArray<ChangeTableItem>>;
 
   export type ChangeTableItem =
     | ChangeTableItem.Column
@@ -65,7 +75,12 @@ export namespace RakeDbAst {
       name?: string;
       from: ColumnChange;
       to: ColumnChange;
-      using?: RawSQLBase;
+      using?: ChangeUsing;
+    }
+
+    export interface ChangeUsing {
+      usingUp?: RawSQLBase;
+      usingDown?: RawSQLBase;
     }
 
     export interface Rename {
@@ -83,7 +98,7 @@ export namespace RakeDbAst {
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
-    check?: RawSQLBase;
+    check?: ColumnDataCheckBase;
     foreignKeys?: ({
       table: string;
       columns: string[];
@@ -94,7 +109,7 @@ export namespace RakeDbAst {
 
   export interface RenameType {
     type: 'renameType';
-    table: boolean;
+    kind: 'TABLE' | 'TYPE' | 'DOMAIN';
     fromSchema?: string;
     from: string;
     toSchema?: string;
@@ -107,15 +122,24 @@ export namespace RakeDbAst {
     name: string;
   }
 
-  export interface Extension {
-    type: 'extension';
-    action: 'create' | 'drop';
-    name: string;
-    schema?: string;
+  export interface RenameSchema {
+    type: 'renameSchema';
+    from: string;
+    to: string;
+  }
+
+  export interface ExtensionArg {
     version?: string;
     cascade?: boolean;
     createIfNotExists?: boolean;
     dropIfExists?: boolean;
+  }
+
+  export interface Extension extends ExtensionArg {
+    type: 'extension';
+    action: 'create' | 'drop';
+    schema?: string;
+    name: string;
   }
 
   export interface Enum {
@@ -159,12 +183,7 @@ export namespace RakeDbAst {
     action: 'create' | 'drop';
     schema?: string;
     name: string;
-    baseType: ColumnTypeBase;
-    notNull?: boolean;
-    collation?: string;
-    default?: RawSQLBase;
-    check?: RawSQLBase;
-    cascade?: boolean;
+    baseType: ColumnType;
   }
 
   // Database collation.
@@ -213,9 +232,18 @@ export namespace RakeDbAst {
 
   export interface Constraint extends TableData.Constraint {
     type: 'constraint';
-    action: 'create';
+    action: 'create' | 'drop';
     tableSchema?: string;
     tableName: string;
+  }
+
+  export interface RenameTableItem {
+    type: 'renameTableItem';
+    kind: 'INDEX' | 'CONSTRAINT';
+    tableSchema?: string;
+    tableName: string;
+    from: string;
+    to: string;
   }
 
   export interface View {
@@ -226,6 +254,7 @@ export namespace RakeDbAst {
     shape: ColumnsShape;
     sql: RawSQLBase;
     options: ViewOptions;
+    deps: { schemaName: string; name: string }[];
   }
 
   export interface ViewOptions {

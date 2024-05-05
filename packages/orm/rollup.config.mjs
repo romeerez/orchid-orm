@@ -3,5 +3,5 @@ import { rollupExportFile } from '../../rollup.utils.mjs';
 
 export default [
   ...config,
-  ...rollupExportFile('src/codegen/index', 'codegen/index'),
+  ...rollupExportFile('src/migrations/index', 'dist/migrations'),
 ];

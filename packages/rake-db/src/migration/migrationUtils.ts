@@ -16,7 +16,7 @@ import {
   quoteTable,
   quoteWithSchema,
 } from '../common';
-import { AnyRakeDbConfig } from 'rake-db';
+import { AnyRakeDbConfig } from '../config';
 
 export const versionToString = (config: AnyRakeDbConfig, version: number) =>
   config.migrationId === 'serial'
@@ -24,7 +24,9 @@ export const versionToString = (config: AnyRakeDbConfig, version: number) =>
     : `${version}`;
 
 export const columnTypeToSql = (item: ColumnTypeBase) => {
-  return item.data.isOfCustomType ? `"${item.toSQL()}"` : item.toSQL();
+  return item.data.isOfCustomType
+    ? quoteNameFromString(item.toSQL())
+    : item.toSQL();
 };
 
 export const getColumnName = (
@@ -60,14 +62,17 @@ export const columnToSql = (
     );
   }
 
-  if (item.data.isPrimaryKey && !hasMultiplePrimaryKeys) {
+  if (item.data.primaryKey && !hasMultiplePrimaryKeys) {
+    if (item.data.primaryKey !== true) {
+      line.push(`CONSTRAINT "${item.data.primaryKey}"`);
+    }
     line.push('PRIMARY KEY');
   } else if (!item.data.isNullable) {
     line.push('NOT NULL');
   }
 
   if (item.data.check) {
-    line.push(checkToSql(item.data.check, values));
+    line.push(checkToSql(item.data.check.sql, values));
   }
 
   const def = encodeColumnDefault(item.data.default, values, item);
@@ -101,7 +106,7 @@ export const encodeColumnDefault = (
   def: unknown,
   values: unknown[],
   column?: ColumnTypeBase,
-) => {
+): string | null => {
   if (def !== undefined && def !== null && typeof def !== 'function') {
     if (isRawSQL(def)) {
       return def.toSQL({ values });
@@ -123,11 +128,10 @@ export const identityToSql = (identity: TableData.Identity) => {
 const sequenceOptionsToSql = (item: TableData.SequenceOptions) => {
   const line: string[] = [];
   if (item.dataType) line.push(`AS ${item.dataType}`);
-  if (item.incrementBy !== undefined)
-    line.push(`INCREMENT BY ${item.incrementBy}`);
+  if (item.increment !== undefined) line.push(`INCREMENT BY ${item.increment}`);
   if (item.min !== undefined) line.push(`MINVALUE ${item.min}`);
   if (item.max !== undefined) line.push(`MAXVALUE ${item.max}`);
-  if (item.startWith !== undefined) line.push(`START WITH ${item.startWith}`);
+  if (item.start !== undefined) line.push(`START WITH ${item.start}`);
   if (item.cache !== undefined) line.push(`CACHE ${item.cache}`);
   if (item.cycle) line.push(`CYCLE`);
   if (item.ownedBy) {
@@ -175,11 +179,16 @@ export const getForeignKeyTable = (
 
 export const getConstraintName = (
   table: string,
-  constraint: TableData.Constraint,
+  constraint: {
+    references?: { columns: string[] };
+    check?: unknown;
+    identity?: unknown;
+  },
 ) => {
   if (constraint.references)
     return `${table}_${constraint.references.columns.join('_')}_fkey`;
   if (constraint.check) return `${table}_check`;
+  if (constraint.identity) return `${table}_identity`;
   return `${table}_constraint`;
 };
 
@@ -253,14 +262,10 @@ export const referencesToSql = (
 
 export const getIndexName = (
   table: string,
-  columns: TableData.Index['columns'],
+  columns: ({ column?: string } | { expression: string })[],
 ) => {
   return `${table}_${columns
-    .map((it) =>
-      'column' in it
-        ? it.column
-        : it.expression.match(/\w+/g)?.join('_') || 'expression',
-    )
+    .map((it) => ('column' in it ? it.column : 'expression'))
     .join('_')}_idx`;
 };
 
@@ -292,9 +297,9 @@ export const indexesToQuery = (
 
     sql.push(`INDEX "${indexName}" ON ${quoteTable(schema, name)}`);
 
-    const using = options.using || (options.tsVector && 'GIN');
-    if (using) {
-      sql.push(`USING ${using}`);
+    const u = options.using || (options.tsVector && 'GIN');
+    if (u) {
+      sql.push(`USING ${u}`);
     }
 
     const columnsSql: string[] = [];
@@ -303,9 +308,7 @@ export const indexesToQuery = (
       options.tsVector && options.languageColumn
         ? `"${options.languageColumn}"`
         : options.language
-        ? typeof options.language === 'string'
-          ? `'${options.language}'`
-          : options.language.toSQL({ values })
+        ? `'${options.language}'`
         : `'${language || 'english'}'`;
 
     let hasWeight =
@@ -342,11 +345,13 @@ export const indexesToQuery = (
       columnsSql.push(sql);
     }
 
-    let columnList = columnsSql.join(hasWeight ? ' || ' : ', ');
-
-    if (!hasWeight && options.tsVector) {
-      if (columnsSql.length > 1) columnList = `concat_ws(' ', ${columnList})`;
-      columnList = `to_tsvector(${lang}, ${columnList})`;
+    let columnList;
+    if (hasWeight) {
+      columnList = `(${columnsSql.join(' || ')})`;
+    } else if (options.tsVector) {
+      columnList = `to_tsvector(${lang}, ${columnsSql.join(" || ' ' || ")})`;
+    } else {
+      columnList = columnsSql.join(', ');
     }
 
     sql.push(`(${columnList})`);

@@ -1,11 +1,11 @@
-import prompts from 'prompts';
+import { promptConfirm, promptText } from '../prompt';
 import {
   setAdapterOptions,
   setAdminCredentialsToOptions,
 } from './createOrDrop.utils';
 import { asMock } from 'test-utils';
 
-jest.mock('prompts', () => jest.fn());
+jest.mock('../prompt');
 
 describe('createOrDrop.utils', () => {
   describe('setAdapterOptions', () => {
@@ -51,14 +51,9 @@ describe('createOrDrop.utils', () => {
 
   describe('setAdminCredentialsToOptions', () => {
     beforeEach(() => {
-      asMock(prompts).mockResolvedValueOnce({
-        confirm: true,
-      });
-
-      asMock(prompts).mockResolvedValueOnce({
-        user: 'admin-user',
-        password: 'admin-password',
-      });
+      asMock(promptConfirm).mockResolvedValueOnce(true);
+      asMock(promptText).mockResolvedValueOnce('admin-user');
+      asMock(promptText).mockResolvedValueOnce('admin-password');
     });
 
     it('should set admin credentials to databaseURL', async () => {

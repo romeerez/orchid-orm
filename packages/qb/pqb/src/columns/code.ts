@@ -1,4 +1,4 @@
-import { ColumnData, ColumnType, ForeignKey } from './columnType';
+import { ColumnData, ColumnType, ForeignKey, IndexOptions } from './columnType';
 import { TableData } from './columnTypes';
 import {
   addCode,
@@ -13,6 +13,7 @@ import {
   singleQuoteArray,
   toArray,
   RawSQLBase,
+  ColumnDataCheckBase,
 } from 'orchid-core';
 import { getConstraintKind } from './columnType.utils';
 
@@ -50,6 +51,7 @@ export const columnsShapeToCode = (
   shape: ColumnsShapeBase,
   tableData: TableData,
   t: string,
+  m?: boolean,
 ): Code[] => {
   const hasTimestamps =
     'createdAt' in shape &&
@@ -88,7 +90,7 @@ export const columnsShapeToCode = (
 
   if (constraints) {
     for (const item of constraints) {
-      code.push(...constraintToCode(item, t));
+      code.push(...constraintToCode(item, t, m));
     }
   }
 
@@ -99,17 +101,42 @@ export const primaryKeyToCode = (
   primaryKey: TableData.PrimaryKey,
   t: string,
 ): string => {
+  return `...${primaryKeyInnerToCode(primaryKey, t)},`;
+};
+
+export const primaryKeyInnerToCode = (
+  primaryKey: TableData.PrimaryKey,
+  t: string,
+): string => {
   const name = primaryKey.options?.name;
 
-  return `...${t}.primaryKey([${primaryKey.columns
-    .map(singleQuote)
-    .join(', ')}]${name ? `, { name: ${singleQuote(name)} }` : ''}),`;
+  return `${t}.primaryKey([${primaryKey.columns.map(singleQuote).join(', ')}]${
+    name ? `, { name: ${singleQuote(name)} }` : ''
+  })`;
 };
 
 export const indexToCode = (index: TableData.Index, t: string): Code[] => {
+  const code = indexInnerToCode(index, t);
+  code[0] = `...${code[0]}`;
+  const last = code[code.length - 1];
+  if (typeof last === 'string' && !last.endsWith(',')) addCode(code, ',');
+  return code;
+};
+
+export const indexInnerToCode = (index: TableData.Index, t: string): Code[] => {
   const code: Code[] = [];
 
-  code.push(`...${t}.index(`);
+  code.push(
+    `${t}.${
+      index.options.tsVector
+        ? 'searchIndex'
+        : index.options.unique
+        ? 'unique'
+        : 'index'
+    }(`,
+  );
+
+  const columnOptions = ['collate', 'opclass', 'order', 'weight'] as const;
 
   const columnsMultiline = index.columns.some((column) => {
     for (const key in column) {
@@ -118,6 +145,7 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     }
     return false;
   });
+
   if (columnsMultiline) {
     const objects: Code[] = [];
 
@@ -126,7 +154,7 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
 
       let hasOptions = false;
       for (const key in column) {
-        if (key !== 'column' && key !== 'expression') {
+        if (key !== 'column') {
           hasOptions = true;
         }
       }
@@ -139,14 +167,11 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
             expr,
           )},`,
         ];
-        if (column.collate !== undefined) {
-          props.push(`collate: ${singleQuote(column.collate)},`);
-        }
-        if (column.opclass !== undefined) {
-          props.push(`opclass: ${singleQuote(column.opclass)},`);
-        }
-        if (column.order !== undefined) {
-          props.push(`order: ${singleQuote(column.order)},`);
+        for (const key of columnOptions) {
+          const value = column[key];
+          if (value !== undefined) {
+            props.push(`${key}: ${singleQuote(value)},`);
+          }
         }
 
         objects.push('{', props, '},');
@@ -163,8 +188,23 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     );
   }
 
-  const hasOptions = objectHasValues(index.options);
-  if (hasOptions) {
+  const indexOptionsKeys: (keyof Omit<IndexOptions, 'unique'>)[] = [
+    'name',
+    'using',
+    'nullsNotDistinct',
+    'include',
+    'with',
+    'tablespace',
+    'where',
+    'language',
+    'languageColumn',
+    'dropMode',
+  ];
+  if (index.options.tsVector && index.options.unique) {
+    (indexOptionsKeys as (keyof IndexOptions)[]).unshift('unique');
+  }
+
+  if (indexOptionsKeys.some((key) => index.options[key])) {
     if (columnsMultiline) {
       const columns = code[code.length - 1] as string[];
       columns[columns.length - 1] += ',';
@@ -174,8 +214,8 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     }
 
     const options: string[] = [];
-    for (const key in index.options) {
-      const value = index.options[key as keyof typeof index.options];
+    for (const key of indexOptionsKeys) {
+      const value = index.options[key];
       if (value === null || value === undefined) continue;
 
       options.push(
@@ -200,7 +240,7 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
   if (columnsMultiline) {
     code.push('),');
   } else {
-    addCode(code, '),');
+    addCode(code, ')');
   }
 
   return code;
@@ -209,25 +249,44 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
 export const constraintToCode = (
   item: TableData.Constraint,
   t: string,
-): Code => {
+  m?: boolean,
+): Code[] => {
+  const code = constraintInnerToCode(item, t, m);
+  code[0] = `...${code[0]}`;
+  const last = code[code.length - 1];
+  if (typeof last === 'string' && !last.endsWith(','))
+    code[code.length - 1] += ',';
+  return code;
+};
+
+export const constraintInnerToCode = (
+  item: TableData.Constraint,
+  t: string,
+  m?: boolean,
+): Code[] => {
   const kind = getConstraintKind(item);
 
   if (kind === 'foreignKey' && item.references) {
     return [
-      `...${t}.foreignKey(`,
-      referencesArgsToCode(item.references, item.name),
+      `${t}.foreignKey(`,
+      referencesArgsToCode(item.references, item.name, m),
       '),',
     ];
   } else if (kind === 'check' && item.check) {
-    return [`...${t}.check(${item.check.toCode(t)}),`];
+    return [
+      `${t}.check(${item.check.toCode(t)}${
+        item.name ? `, { name: '${item.name}' }` : ''
+      })`,
+    ];
   } else {
-    return [`...${t}.constraint({`, constraintPropsToCode(t, item), '}),'];
+    return [`${t}.constraint({`, constraintPropsToCode(t, item, m), '}),'];
   }
 };
 
 export const constraintPropsToCode = (
   t: string,
   item: TableData.Constraint,
+  m?: boolean,
 ): Code[] => {
   const props: Code[] = [];
 
@@ -238,7 +297,7 @@ export const constraintPropsToCode = (
   if (item.references) {
     props.push(
       `references: [`,
-      referencesArgsToCode(item.references, false),
+      referencesArgsToCode(item.references, false, m),
       '],',
     );
   }
@@ -258,10 +317,16 @@ export const referencesArgsToCode = (
     options,
   }: Exclude<TableData.Constraint['references'], undefined>,
   name: string | false = options?.name || false,
+  m?: boolean,
 ): Code[] => {
   const args: Code[] = [];
 
   args.push(`${singleQuoteArray(columns)},`);
+
+  if (m && typeof fnOrTable !== 'string') {
+    const { schema, table } = new (fnOrTable())();
+    fnOrTable = schema ? `${schema}.${table}` : table;
+  }
 
   args.push(
     `${
@@ -289,11 +354,12 @@ export const referencesArgsToCode = (
 
 export const columnForeignKeysToCode = (
   foreignKeys: ForeignKey<string, string[]>[],
+  migration: boolean | undefined,
 ): Code[] => {
   const code: Code[] = [];
   for (const foreignKey of foreignKeys) {
     addCode(code, `.foreignKey(`);
-    for (const part of foreignKeyArgumentToCode(foreignKey)) {
+    for (const part of foreignKeyArgumentToCode(foreignKey, migration)) {
       addCode(code, part);
     }
     addCode(code, ')');
@@ -303,14 +369,22 @@ export const columnForeignKeysToCode = (
 
 export const foreignKeyArgumentToCode = (
   foreignKey: ForeignKey<string, string[]>,
+  migration: boolean | undefined,
 ): Code[] => {
   const code: Code = [];
 
-  if ('fn' in foreignKey) {
-    code.push(foreignKey.fn.toString());
-  } else {
-    code.push(singleQuote(foreignKey.table));
+  let fnOrTable = 'fn' in foreignKey ? foreignKey.fn : foreignKey.table;
+  if (migration && typeof fnOrTable !== 'string') {
+    const { schema, table } = new (fnOrTable())();
+    fnOrTable = schema ? `${schema}.${table}` : table;
   }
+
+  code.push(
+    typeof fnOrTable === 'string'
+      ? singleQuote(fnOrTable)
+      : fnOrTable.toString(),
+  );
+
   addCode(code, `, ${singleQuote(foreignKey.columns[0])}`);
 
   const hasOptions =
@@ -376,8 +450,13 @@ export const columnIndexesToCode = (
   return code;
 };
 
-export const columnCheckToCode = (t: string, check: RawSQLBase): string => {
-  return `.check(${check.toCode(t)})`;
+export const columnCheckToCode = (
+  t: string,
+  { sql, options }: ColumnDataCheckBase,
+): string => {
+  return `.check(${sql.toCode(t)}${
+    options?.name ? `, { name: '${options.name}' }` : ''
+  })`;
 };
 
 export const identityToCode = (
@@ -394,11 +473,15 @@ export const identityToCode = (
 
   const props: string[] = [];
   if (identity.always) props.push(`always: true,`);
-  if (identity.incrementBy) props.push(`incrementBy: ${identity.incrementBy},`);
-  if (identity.startWith) props.push(`startWith: ${identity.startWith},`);
+  if (identity.increment && identity.increment !== 1)
+    props.push(`increment: ${identity.increment},`);
+  if (identity.start && identity.start !== 1)
+    props.push(`start: ${identity.start},`);
   if (identity.min) props.push(`min: ${identity.min},`);
   if (identity.max) props.push(`max: ${identity.max},`);
-  if (identity.cache) props.push(`cache: ${identity.cache},`);
+  if (identity.cache && identity.cache !== 1)
+    props.push(`cache: ${identity.cache},`);
+  if (identity.cycle) props.push(`cycle: true,`);
 
   if (props.length) {
     addCode(code, '{');
@@ -414,6 +497,7 @@ export const columnCode = (
   type: ColumnType,
   t: string,
   code: Code,
+  migration: boolean | undefined,
   data = type.data,
   skip?: { encodeFn: unknown },
 ): Code => {
@@ -430,10 +514,17 @@ export const columnCode = (
     code[0].unshift(prepend);
   }
 
-  if (data.isPrimaryKey) addCode(code, '.primaryKey()');
+  if (data.primaryKey) {
+    addCode(
+      code,
+      `.primaryKey(${
+        data.primaryKey === true ? '' : `{ name: '${data.primaryKey}' }`
+      })`,
+    );
+  }
 
   if (data.foreignKeys) {
-    for (const part of columnForeignKeysToCode(data.foreignKeys)) {
+    for (const part of columnForeignKeysToCode(data.foreignKeys, migration)) {
       addCode(code, part);
     }
   }
@@ -450,7 +541,10 @@ export const columnCode = (
 
   if (data.as) addCode(code, `.as(${data.as.toCode(t)})`);
 
-  if (data.default !== undefined) {
+  if (
+    data.default !== undefined &&
+    (!migration || typeof data.default !== 'function')
+  ) {
     addCode(code, `.default(${columnDefaultArgumentToCode(t, data.default)})`);
   }
 

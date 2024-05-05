@@ -18,12 +18,6 @@ describe('migration', () => {
   });
 
   describe('renameTable', () => {
-    it('should call appCodeUpdater', async () => {
-      await db.renameTable('from', 'to');
-
-      expect(db.migratedAsts.length).toBe(1);
-    });
-
     const testRenameTable = makeTestUpAndDown('renameTable');
 
     it('should rename a table', async () => {
@@ -194,6 +188,24 @@ describe('migration', () => {
     });
   });
 
+  describe('renameIndex', () => {
+    const test = makeTestUpAndDown('renameIndex');
+
+    it('should rename an index', async () => {
+      await test(
+        (action) => db[action]('schema.table', 'from', 'to'),
+        () =>
+          expectSql(`
+            ALTER INDEX "schema"."from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER INDEX "schema"."to" RENAME TO "from"
+          `),
+      );
+    });
+  });
+
   describe('addForeignKey and dropForeignKey', () => {
     const testUpAndDown = makeTestUpAndDown('addForeignKey', 'dropForeignKey');
 
@@ -323,6 +335,24 @@ describe('migration', () => {
     });
   });
 
+  describe('renameConstraint', () => {
+    const testUpAndDown = makeTestUpAndDown('renameConstraint');
+
+    it('should rename a constraint', async () => {
+      await testUpAndDown(
+        (action) => db[action]('schema.table', 'from', 'to'),
+        () =>
+          expectSql(
+            `ALTER TABLE "schema"."table" RENAME CONSTRAINT "from" TO "to"`,
+          ),
+        () =>
+          expectSql(
+            `ALTER TABLE "schema"."table" RENAME CONSTRAINT "to" TO "from"`,
+          ),
+      );
+    });
+  });
+
   describe('addPrimaryKey and dropPrimaryKey', () => {
     const testUpAndDown = makeTestUpAndDown('addPrimaryKey', 'dropPrimaryKey');
 
@@ -421,14 +451,6 @@ describe('migration', () => {
   describe('createSchema and dropSchema', () => {
     const testUpAndDown = makeTestUpAndDown('createSchema', 'dropSchema');
 
-    it('should call appCodeUpdater', async () => {
-      await testUpAndDown(
-        (action) => db[action]('schemaName'),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
-
     it(`should add and drop a schema`, async () => {
       await testUpAndDown(
         (action) => db[action]('schemaName'),
@@ -444,24 +466,31 @@ describe('migration', () => {
     });
   });
 
-  describe('createExtension and dropExtension', () => {
-    const testUpAndDown = makeTestUpAndDown('createExtension', 'dropExtension');
-
-    it('should call appCodeUpdater', async () => {
-      await testUpAndDown(
-        (action) => db[action]('extensionName'),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
+  describe('renameSchema', () => {
+    it('should rename a schema', async () => {
+      await makeTestUpAndDown('renameSchema')(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER SCHEMA "from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER SCHEMA "to" RENAME TO "from"
+          `),
       );
     });
+  });
+
+  describe('createExtension and dropExtension', () => {
+    const testUpAndDown = makeTestUpAndDown('createExtension', 'dropExtension');
 
     it(`should add and drop an extension`, async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('extensionName', {
+          db[action]('schemaName.extensionName', {
             dropIfExists: true,
             createIfNotExists: true,
-            schema: 'schemaName',
             version: '123',
             cascade: true,
           }),
@@ -479,14 +508,6 @@ describe('migration', () => {
 
   describe('createEnum and dropEnum', () => {
     const testUpAndDown = makeTestUpAndDown('createEnum', 'dropEnum');
-
-    it('should push ast', async () => {
-      await testUpAndDown(
-        (action) => db[action]('enumName', ['one']),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
 
     it(`should add and drop an enum`, async () => {
       await testUpAndDown(
@@ -508,12 +529,6 @@ describe('migration', () => {
   });
 
   describe('renameType', () => {
-    it('should call appCodeUpdater', async () => {
-      await db.renameType('from', 'to');
-
-      expect(db.migratedAsts.length).toBe(1);
-    });
-
     const testRenameType = makeTestUpAndDown('renameType');
 
     it('should rename a type', async () => {
@@ -701,49 +716,111 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
   describe('createDomain and dropDomain', () => {
     const testUpAndDown = makeTestUpAndDown('createDomain', 'dropDomain');
 
-    it('should push ast', async () => {
-      await testUpAndDown(
-        (action) => db[action]('domain', (t) => t.integer()),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
-
     it(`should create and drop domain`, async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('schema.domain', (t) => t.integer(), {
-            collation: 'C',
-            notNull: true,
-            default: db.sql`123`,
-            check: db.sql`VALUE = 42`,
-            cascade: true,
-          }),
+          db[action]('schema.domain', (t) =>
+            t
+              .integer()
+              .collate('C')
+              .default(123)
+              .check(t.sql`VALUE = 42`),
+          ),
         () =>
           expectSql(`
-            CREATE DOMAIN "schema"."domain" AS integer
-            COLLATION 'C'
+            CREATE DOMAIN "schema"."domain" AS int4
+            COLLATE "C"
             DEFAULT 123
-            NOT NULL CHECK VALUE = 42
+            NOT NULL CHECK (VALUE = 42)
           `),
         () =>
           expectSql(`
-            DROP DOMAIN "schema"."domain" CASCADE
+            DROP DOMAIN "schema"."domain"
           `),
+      );
+    });
+
+    it(`should create and drop nullable domain`, async () => {
+      await testUpAndDown(
+        (action) => db[action]('schema.domain', (t) => t.integer().nullable()),
+        () =>
+          expectSql(`
+            CREATE DOMAIN "schema"."domain" AS int4
+          `),
+        () =>
+          expectSql(`
+            DROP DOMAIN "schema"."domain"
+          `),
+      );
+    });
+  });
+
+  describe('renameDomain', () => {
+    const testRenameType = makeTestUpAndDown('renameDomain');
+
+    it('should rename a domain', async () => {
+      await testRenameType(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "to" RENAME TO "from"
+          `),
+      );
+    });
+
+    it('should rename a domain and change schema', async () => {
+      await testRenameType(
+        (action) => db[action]('a.from', 'b.to'),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "a"."from" RENAME TO "to"`,
+            `ALTER DOMAIN "a"."to" SET SCHEMA "b"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "b"."to" RENAME TO "from"`,
+            `ALTER DOMAIN "b"."from" SET SCHEMA "a"`,
+          ]),
+      );
+    });
+
+    it('should only change schema', async () => {
+      await testRenameType(
+        (action) => db[action]('a.t', 'b.t'),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "a"."t" SET SCHEMA "b"
+          `),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "b"."t" SET SCHEMA "a"
+          `),
+      );
+    });
+
+    it('should set default schema when it is not set', async () => {
+      await testRenameType(
+        (action) => db[action]('a.from', 'to'),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "a"."from" RENAME TO "to"`,
+            `ALTER DOMAIN "a"."to" SET SCHEMA "public"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER DOMAIN "to" RENAME TO "from"`,
+            `ALTER DOMAIN "from" SET SCHEMA "a"`,
+          ]),
       );
     });
   });
 
   describe('createCollation and dropCollation', () => {
     const testUpAndDown = makeTestUpAndDown('createCollation', 'dropCollation');
-
-    it('should push ast', async () => {
-      await testUpAndDown(
-        (action) => db[action]('name', { locale: 'locale' }),
-        () => expect(db.migratedAsts.length).toBe(1),
-        () => expect(db.migratedAsts.length).toBe(1),
-      );
-    });
 
     it(`should create and drop collation with options`, async () => {
       await testUpAndDown(

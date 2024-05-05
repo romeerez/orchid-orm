@@ -4,6 +4,8 @@ import path from 'node:path';
 // It may be a value or an array of such values.
 export type MaybeArray<T> = T | T[];
 
+export type MaybePromise<T> = T | Promise<T>;
+
 // Converts union to overloaded function.
 type OptionalPropertyNames<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -284,11 +286,13 @@ export const deepCompare = (a: unknown, b: unknown): boolean => {
     }
 
     for (const key in b as RecordUnknown) {
-      if (!(key in a)) return false;
+      if (!(key in a) && (b as RecordUnknown)[key] !== undefined) return false;
     }
+
+    return true;
   }
 
-  return true;
+  return a === b;
 };
 
 /**

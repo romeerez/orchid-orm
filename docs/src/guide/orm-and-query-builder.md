@@ -1,6 +1,6 @@
 # ORM and query builder
 
-`Orchid ORM` consists of a query builder (such as [Knex](https://knexjs.org/) or [Kysely](https://www.kysely.dev/docs/intro)) + layer on top of it for defining, querying and utilizing relations (as in [Prisma](https://www.prisma.io/docs/concepts/components/prisma-schema/relations)).
+`OrchidORM` consists of a query builder (such as [Knex](https://knexjs.org/) or [Kysely](https://www.kysely.dev/docs/intro)) + layer on top of it for defining, querying and utilizing relations (as in [Prisma](https://www.prisma.io/docs/concepts/components/prisma-schema/relations)).
 
 The query builder is for building and executing SQL queries, such as `select`, `create`, `update`, and `delete`.
 
@@ -11,9 +11,9 @@ ORM allows defining `belongsTo`, `hasMany` and [other relations](/guide/relation
 Install by running:
 
 ```sh
-npm i orchid-orm pqb
+npm i orchid-orm
 # or
-pnpm i orchid-orm pqb
+pnpm i orchid-orm
 ```
 
 `orchidORM` is an entry function of the ORM.
@@ -37,7 +37,7 @@ export const db = orchidORM(
     // details for databaseURL are below
     databaseURL: process.env.DATABASE_URL,
 
-    // ssl and schema can be set here or as a databaseURL parameters:
+    // ssl and schema can be set here or as databaseURL parameters:
     ssl: true,
     schema: 'my_schema',
 
@@ -74,9 +74,9 @@ export const db = orchidORM(
 );
 ```
 
-## defining a base table
+## define a base table
 
-First, need to create a base table class to extend from, this code should be separated from the `db` file:
+Define a base table class to extend from, this code should be separated from the `db` file:
 
 ```ts
 import { createBaseTable } from 'orchid-orm';
@@ -102,13 +102,12 @@ export const BaseTable = createBaseTable({
   schemaConfig: valibotSchemaConfig,
 
   columnTypes: (t) => ({
-    // by default timestamp is returned as a string, override to a number
-    timestamp: () => t.timestamp().asNumber(),
-  }),
+    // by default timestamp is returned as a string, override to a Data
+    timestamp: () => t.timestamp().asDate(),
 
-  // export name of the base table, by default it is BaseTable
-  // this is needed for a code generation, when you're using `appCodeUpdater` in `rakeDb`
-  exportAs: 'BaseTable',
+    // define custom types in one place inside BaseTable to use them later in tables
+    myEnum: () => t.enum('myEnum', ['one', 'two', 'three']),
+  }),
 });
 ```
 
@@ -121,13 +120,13 @@ Tables are defined as classes `table` and `columns` required properties:
 Note that the `table` property is marked as `readonly`, this is needed for TypeScript to check the usage of the table in queries.
 
 ```ts
-import { Selectable, Insertable, Updateable } from 'orchid-orm';
+import { Selectable, Insertable, Updatable } from 'orchid-orm';
 // import BaseTable from a file from the previous step:
 import { BaseTable } from './baseTable';
 
 // export types of User for various use-cases:
 export type User = Selectable<UserTable>;
-export type NewUser = Insertable<UserTable>;
+export type UserNew = Insertable<UserTable>;
 export type UserUpdate = Updateable<UserTable>;
 
 export class UserTable extends BaseTable {
@@ -187,6 +186,173 @@ export class SnakeCaseTable extends BaseTable {
 }
 ```
 
+## define a table class
+
+Table classes are similar to Models or Entities in other ORMs.
+The key difference is that Model/Entity is meant to also contain business logic,
+while a table in OrchidORM is only meant for configuring a database table columns, relations, allows to define [softDelete](/guide/orm-and-query-builder.html#softdelete),
+query [hooks](/guide/hooks.html#lifecycle-hooks) (aka callbacks), so to define the database table and querying specifics, but not for app's logic.
+
+```ts
+import { BaseTable } from './baseTable';
+import { PostTable } from './post.table';
+
+export class UserTable extends BaseTable {
+  schema = 'customSchema';
+  readonly table = 'user';
+
+  // The comment will be persisted to database's table metadata.
+  comment = 'this is a table for storing users';
+
+  // If you don't define a primary key, OrchidORM will remind you about it with an error,
+  // Set `noPrimaryKey = true` if you really want a table without a primary key.
+  noPrimaryKey = true;
+
+  // You can set `snakeCase` for all tables in the `BaseTable`,
+  // or you can enable it for an individual table.
+  snakeCase = true;
+
+  // For full text search: 'english' is the default, you can set it to other langauge
+  language = 'spanish';
+
+  // For "soft delete" functionality
+  readonly softDelete = true; // or a string with a column name
+
+  columns = this.setColumns((t) => ({
+    id: t.uuid().primaryKey(),
+    firstName: t.string(),
+    lastName: t.string(),
+    username: t.string().unique(),
+    email: t.string().email().unique(),
+    active: t.boolean().default(true),
+    hidden: t.boolean().default(false),
+    deletedAt: t.timestamp().nullable(),
+    ...t.timestamps(),
+  }));
+
+  // To define "virtual" columns that will be computed on a database side with a custom SQL
+  computed = this.setComputed({
+    fullName: (q) =>
+      q.sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
+        (t) => t.string(),
+      ),
+  });
+
+  // The `defaut` scope will be applied to all queries,
+  // you can define additional scopes to use them when building queries.
+  scopes = this.setScopes({
+    default: (q) => q.where({ hidden: false }),
+    active: (q) => q.where({ active: true }),
+  });
+
+  relations = {
+    posts: this.hasMany(() => PostTable, {
+      columns: ['id'],
+      references: ['authorId'],
+    }),
+  };
+}
+```
+
+- `table` and `softDelete` must be readonly for TS to recognize them properly, other properties don't have to be readonly.
+- for configuring columns see [Columns schema overview](/guide/columns-overview.html).
+- for defining table's relations see [Modeling relations](/guide/relations.html).
+- check out [soft delete](/guide/orm-and-query-builder.html#softdelete)
+- for `computed` see [Computed columns](/guide/orm-and-query-builder.html#computed-columns).
+- for `scopes` see [Scopes](/guide/orm-and-query-builder.html#scopes).
+
+All table files must be linked into `orchidORM` instance, as was shown above in the [setup](#setup) section.
+
+When trying OrchidORM on an existing project that already has a database with tables,
+you can run a command to generate code for tables and a migration for it by running [db pull](/guide/migration-commands.html#pull).
+
+## generate migrations
+
+After defining, modifying, or deleting tables or columns in the app code,
+run `db g` command to generate corresponding migration:
+
+```shell
+npm run db g
+# or
+pnpm db g
+```
+
+Optionally, provide a migration file name:
+
+```shell
+pnpm db g create-some-tables
+```
+
+Pass `up` argument if you'd like to apply the migration right away:
+
+```shell
+pnpm db g create-some-tables up
+
+# or, with a default "generated" file name
+pnpm db g up
+```
+
+:::warning
+Use this approach **only** if is the database can be fully managed by your application.
+
+This tool will drop all database entities (schemas, tables, etc.) that aren't referenced by your application's code.
+:::
+
+This tool will automatically write a migration to create, drop, change, rename database items.
+
+When you're renaming a table, column, enum, or a schema in the code, it will interactively ask via the terminal whether you want to create a new item or to rename the old one.
+Such as when renaming a column, you may choose to drop the old one and create a new (data will be lost), or to rename the existing (data is preserved).
+
+If you don't set a custom constraint name for indexes, primary keys, foreign keys, they have a default name such as `table_pkey`, `table_column_idx`, `table_someId_fkey`.
+When renaming a table, the table primary key will be also renamed. When renaming a column, its index or foreign key will be renamed as well.
+
+To enable Postgres extension, add `extensions` to the database config:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    extensions: [
+      // just the extension name for a recent version
+      'postgis',
+
+      // you can specify a certain version
+      { name: 'postgis', version: '1.2.3' },
+
+      // define extension only for specific schema:
+      'mySchema.postgis',
+    ],
+  },
+  { ...tables },
+);
+```
+
+For [domain](/guide/migration-column-methods.html#domain) types:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    domains: {
+      domainName: (t) =>
+        t
+          .integer()
+          .nullable()
+          .check(t.sql`VALUE = 69`),
+
+      // domain residing in a certain schema:
+      'mySchema.domainName': (t) => t.integer().default(123),
+    },
+  },
+  { ...tables },
+);
+```
+
+The tool handles migration generation for
+tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, extensions, domain types.
+
+Please let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
+
 ## table utility types
 
 Utility types available for tables:
@@ -195,24 +361,32 @@ Utility types available for tables:
   For instance, when using `asDate` for a [timestamp](/guide/columns-types.html#date-and-time) column, `Selectable` will have `Date` type for this column.
 - `Insertable`: type of object you can create a new record with.
   Column type may be changed by [encode](/guide/common-column-methods.html#encode) function. `Insertable` type for timestamp column is a union `string | number | Date`.
-- `Updateable`: the same as `Insertable` but all fields are optional.
+- `Updatable`: the same as `Insertable` but all fields are optional.
 - `Queryable`: disregarding if [parse](/guide/common-column-methods.html#parse) or [encode](/guide/common-column-methods.html#encode) functions are specified for the column,
   types that are accepted by `where` and other query methods remains the same. Use this type to accept data to query the table with.
 
 ```ts
-import { Selectable, Insertable, Updateable, Queryable } from 'orchid-orm';
+import { Selectable, Insertable, Updatable, Queryable } from 'orchid-orm';
+import { BaseTable } from './baseTable';
 
 export type User = Selectable<UserTable>;
-export type NewUser = Insertable<UserTable>;
-export type UserUpdate = Updateable<UserTable>;
+export type UserNew = Insertable<UserTable>;
+export type UserUpdate = Updatable<UserTable>;
 export type UserQueryable = Queryable<UserTable>;
+
+export class UserTable extends BaseTable {
+  readonly table = 'user';
+  columns = this.setColumns((t) => ({
+    ...userColumns,
+  }));
+}
 ```
 
 ## createDb
 
 [//]: # 'has JSDoc'
 
-For the case of using the query builder as a standalone tool, use `createDb`.
+If you'd like to use the query builder of OrchidORM as a standalone tool, install `pqb` package and use `createDb` to initialize it.
 
 As `Orchid ORM` focuses on ORM usage, docs examples mostly demonstrates how to work with ORM-defined tables,
 but everything that's not related to table relations should also work with `pqb` query builder on its own.

@@ -14,6 +14,8 @@ import {
   QueryData,
   QueryHooks,
   RelationQueryBase,
+  TableData,
+  getTableData,
 } from 'pqb';
 import {
   applyMixins,
@@ -112,6 +114,8 @@ export interface Table {
   scopes?: CoreQueryScopes;
   // enable soft delete, true for `deletedAt` column, string for column name
   readonly softDelete?: true | string;
+  // database table comment
+  comment?: string;
 }
 
 // Object type that's allowed in `where` and similar methods of the table.
@@ -126,7 +130,7 @@ export type Selectable<T extends Table> = ColumnShapeOutput<T['columns']>;
 export type Insertable<T extends Table> = ColumnShapeInput<T['columns']>;
 
 // Object type that conforms `update` method of the table.
-export type Updateable<T extends Table> = ColumnShapeInputPartial<T['columns']>;
+export type Updatable<T extends Table> = ColumnShapeInputPartial<T['columns']>;
 
 // type of before hook function for the table
 type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
@@ -474,6 +478,7 @@ export function createBaseTable<
 
     table!: string;
     columns!: ColumnsShapeBase;
+    tableData!: TableData;
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
@@ -505,6 +510,7 @@ export function createBaseTable<
         this.snakeCase;
 
       const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
+      this.constructor.prototype.tableData = getTableData();
 
       if (this.snakeCase) {
         for (const key in shape) {

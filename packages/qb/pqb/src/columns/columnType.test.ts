@@ -36,16 +36,16 @@ describe('column type', () => {
       super(schema, schema.unknown);
     }
 
-    toCode(t: string): Code {
-      return columnCode(this, t, 'column()');
+    toCode(t: string, m?: boolean): Code {
+      return columnCode(this, t, 'column()', m);
     }
   }
   const column = new Column(testSchemaConfig);
 
   describe('.primaryKey', () => {
     it('should mark column as a primary key', () => {
-      expect(column.data.isPrimaryKey).toBe(undefined);
-      expect(column.primaryKey().data.isPrimaryKey).toBe(true);
+      expect(column.data.primaryKey).toBe(undefined);
+      expect(column.primaryKey().data.primaryKey).toBe(true);
     });
 
     it('should have toCode', () => {

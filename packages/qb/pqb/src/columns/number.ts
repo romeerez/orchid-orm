@@ -73,7 +73,7 @@ export class DecimalColumn<
 > {
   declare data: DecimalColumnData;
   operators = Operators.number;
-  dataType = 'decimal' as const;
+  dataType = 'numeric' as const;
 
   constructor(
     schema: Schema,
@@ -83,9 +83,10 @@ export class DecimalColumn<
     super(schema, schema.stringSchema() as never);
     this.data.numericPrecision = numericPrecision;
     this.data.numericScale = numericScale;
+    this.data.alias = 'decimal';
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     const { numericPrecision, numericScale } = this.data;
     return columnCode(
       this,
@@ -93,6 +94,7 @@ export class DecimalColumn<
       `decimal(${numericPrecision || ''}${
         numericScale ? `, ${numericScale}` : ''
       })`,
+      m,
     );
   }
 
@@ -112,18 +114,23 @@ export class DecimalColumn<
 
 const skipNumberMethods = { int: true } as const;
 
-const intToCode = (column: ColumnType, t: string): Code => {
+const intToCode = (
+  column: ColumnType,
+  t: string,
+  alias: string,
+  m: boolean | undefined,
+): Code => {
   let code: Code[];
 
   if (column.data.identity) {
-    code = identityToCode(column.data.identity, column.dataType);
+    code = identityToCode(column.data.identity, alias);
   } else {
-    code = [`${column.dataType}()`];
+    code = [`${alias}()`];
   }
 
-  addCode(code, numberDataToCode(column.data, skipNumberMethods));
+  addCode(code, numberDataToCode(column.data, m, skipNumberMethods));
 
-  return columnCode(column, t, code);
+  return columnCode(column, t, code, m);
 };
 
 export type IdentityColumn<T extends PickColumnBaseData> = ColumnWithDefault<
@@ -135,10 +142,16 @@ export type IdentityColumn<T extends PickColumnBaseData> = ColumnWithDefault<
 export class SmallIntColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
-  dataType = 'smallint' as const;
+  dataType = 'int2' as const;
+
+  constructor(schema: Schema) {
+    super(schema);
+    this.data.alias = 'smallint';
+  }
+
   parseItem = parseInt;
-  toCode(t: string): Code {
-    return intToCode(this, t);
+  toCode(t: string, m?: boolean): Code {
+    return intToCode(this, t, 'smallint', m);
   }
 
   identity<T extends ColumnType>(
@@ -153,10 +166,16 @@ export class SmallIntColumn<
 export class IntegerColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
-  dataType = 'integer' as const;
+  dataType = 'int4' as const;
+
+  constructor(schema: Schema) {
+    super(schema);
+    this.data.alias = 'integer';
+  }
+
   parseItem = parseInt;
-  toCode(t: string): Code {
-    return intToCode(this, t);
+  toCode(t: string, m?: boolean): Code {
+    return intToCode(this, t, 'integer', m);
   }
 
   identity<T extends ColumnType>(
@@ -171,9 +190,15 @@ export class IntegerColumn<
 export class BigIntColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberAsStringBaseColumn<Schema> {
-  dataType = 'bigint' as const;
-  toCode(t: string): Code {
-    return intToCode(this, t);
+  dataType = 'int8' as const;
+
+  constructor(schema: Schema) {
+    super(schema);
+    this.data.alias = 'bigint';
+  }
+
+  toCode(t: string, m?: boolean): Code {
+    return intToCode(this, t, 'bigint', m);
   }
 
   identity<T extends ColumnType>(
@@ -188,15 +213,16 @@ export class BigIntColumn<
 export class RealColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberBaseColumn<Schema, ReturnType<Schema['number']>> {
-  dataType = 'real' as const;
+  dataType = 'float4' as const;
   parseItem = parseFloat;
 
   constructor(schema: Schema) {
     super(schema, schema.number() as never);
+    this.data.alias = 'real';
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `real()${numberDataToCode(this.data)}`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `real()${numberDataToCode(this.data, m)}`, m);
   }
 }
 
@@ -204,9 +230,15 @@ export class RealColumn<
 export class DoublePrecisionColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberAsStringBaseColumn<Schema> {
-  dataType = 'double precision' as const;
-  toCode(t: string): Code {
-    return columnCode(this, t, `doublePrecision()`);
+  dataType = 'float8' as const;
+
+  constructor(schema: Schema) {
+    super(schema);
+    this.data.alias = 'doublePrecision';
+  }
+
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `doublePrecision()`, m);
   }
 }
 
@@ -214,24 +246,26 @@ export class DoublePrecisionColumn<
 export class SmallSerialColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
-  dataType = 'smallint' as const;
+  dataType = 'int2' as const;
   parseItem = parseInt;
   declare data: SerialColumnData;
 
   constructor(schema: Schema) {
     super(schema);
     this.data.int = true;
+    this.data.alias = 'smallSerial';
   }
 
   toSQL() {
     return 'smallserial';
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     return columnCode(
       this,
       t,
-      `smallSerial()${numberDataToCode(this.data, skipNumberMethods)}`,
+      `smallSerial()${numberDataToCode(this.data, m, skipNumberMethods)}`,
+      m,
     );
   }
 }
@@ -240,24 +274,26 @@ export class SmallSerialColumn<
 export class SerialColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
-  dataType = 'integer' as const;
+  dataType = 'int4' as const;
   parseItem = parseInt;
   declare data: SerialColumnData;
 
   constructor(schema: Schema) {
     super(schema);
     this.data.int = true;
+    this.data.alias = 'serial';
   }
 
   toSQL() {
     return 'serial';
   }
 
-  toCode(t: string): Code {
+  toCode(t: string, m?: boolean): Code {
     return columnCode(
       this,
       t,
-      `serial()${numberDataToCode(this.data, skipNumberMethods)}`,
+      `serial()${numberDataToCode(this.data, m, skipNumberMethods)}`,
+      m,
     );
   }
 }
@@ -266,14 +302,19 @@ export class SerialColumn<
 export class BigSerialColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberAsStringBaseColumn<Schema> {
-  dataType = 'bigint' as const;
+  dataType = 'int8' as const;
   declare data: SerialColumnData;
+
+  constructor(schema: Schema) {
+    super(schema);
+    this.data.alias = 'bigint';
+  }
 
   toSQL() {
     return 'bigserial';
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `bigSerial()`);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `bigSerial()`, m);
   }
 }

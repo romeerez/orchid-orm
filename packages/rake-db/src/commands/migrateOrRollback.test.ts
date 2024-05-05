@@ -12,11 +12,10 @@ import {
   DefaultSchemaConfig,
 } from 'pqb';
 import { noop, pathToLog, Sql } from 'orchid-core';
-import { RakeDbAst } from '../ast';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
-import { AppCodeUpdater, RakeDbColumnTypes } from 'rake-db';
+import { RakeDbColumnTypes } from '../migration/migration';
 import { AnyRakeDbConfig } from '../config';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import { getMigrations } from '../migration/migrationsSet';
@@ -44,6 +43,7 @@ Adapter.prototype.transaction = (_, cb) => {
   return cb({
     query: transactionQueryMock,
     arrays: transactionQueryMock,
+    config: { database: 'db' },
   } as unknown as TransactionAdapter);
 };
 
@@ -75,14 +75,6 @@ const change = (
   pushChange(fn as unknown as ChangeCallback<RakeDbColumnTypes>);
 };
 
-const createTableCallback = () => {
-  change(async (db) => {
-    await db.createTable('table', (t) => ({
-      id: t.identity().primaryKey(),
-    }));
-  });
-};
-
 let migrationFiles: { path: string; version: string; load(): void }[] = [];
 asMock(getMigrations).mockImplementation((_ctx, _config, up) => ({
   migrations: up ? migrationFiles : [...migrationFiles].reverse(),
@@ -109,11 +101,6 @@ const act = (
   fn: typeof migrate | typeof rollback | typeof redo,
   args?: string[],
 ) => fn({}, options, currentConfig, args ?? []);
-
-const appCodeUpdater: AppCodeUpdater = {
-  process: jest.fn(),
-  afterAll: jest.fn(),
-};
 
 const sql = (text: string, values: unknown[]) => ({
   text,
@@ -158,15 +145,31 @@ const assert = {
     ]),
 
   logs: (
+    startMessage: 'migrating' | 'rolling back' | 'reapplying' | undefined,
     args: ({ migrated: { path: string } } | { rolledBack: { path: string } })[],
-  ) =>
-    expect(asMock(config.logger?.log).mock.calls).toEqual(
-      args.map((arg) =>
+  ) => {
+    const expected: [string][] = [];
+
+    if (startMessage) {
+      expected.push([
+        startMessage === 'migrating'
+          ? 'Migrating database db\n'
+          : startMessage === 'rolling back'
+          ? 'Rolling back database db\n'
+          : 'Reapplying migrations for database db\n',
+      ]);
+    }
+
+    for (const arg of args) {
+      expected.push(
         'migrated' in arg
-          ? [`Migrated ${pathToLog(arg.migrated.path)}`]
-          : [`Rolled back ${pathToLog(arg.rolledBack.path)}`],
-      ),
-    ),
+          ? [`Migrated ${pathToLog(arg.migrated.path)}\n`]
+          : [`Rolled back ${pathToLog(arg.rolledBack.path)}\n`],
+      );
+    }
+
+    expect(asMock(config.logger?.log).mock.calls).toEqual(expected);
+  },
 };
 
 describe('migrateOrRollback', () => {
@@ -214,7 +217,10 @@ describe('migrateOrRollback', () => {
 
       assert.queries([insertMigration(files[1]), insertMigration(files[2])]);
 
-      assert.logs([{ migrated: files[1] }, { migrated: files[2] }]);
+      assert.logs('migrating', [
+        { migrated: files[1] },
+        { migrated: files[2] },
+      ]);
     });
 
     it('should create migrations table if it not exist', async () => {
@@ -236,83 +242,7 @@ describe('migrateOrRollback', () => {
       }
 
       expect(queries).toHaveLength(1);
-      assert.logs([]);
-    });
-
-    it('should call appCodeUpdater only for the first db options', async () => {
-      arrange({
-        files: [files[0]],
-        versions: [],
-        config: {
-          ...config,
-          appCodeUpdater,
-          useCodeUpdater: true,
-        },
-      });
-
-      files[0].load.mockImplementationOnce(createTableCallback);
-
-      await act(migrate);
-
-      expect(appCodeUpdater.process).toBeCalledTimes(1);
-      expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
-    });
-
-    it('should not call appCodeUpdater when useCodeUpdater is set to false in config', async () => {
-      arrange({
-        files: [files[0]],
-        versions: [],
-        config: {
-          ...config,
-          appCodeUpdater,
-          useCodeUpdater: false,
-        },
-      });
-
-      files[0].load.mockImplementation(createTableCallback);
-
-      await act(migrate);
-
-      expect(appCodeUpdater.process).not.toBeCalled();
-      expect(appCodeUpdater.afterAll).not.toBeCalled();
-    });
-
-    it('should not call appCodeUpdater when having argument --code false', async () => {
-      arrange({
-        files: [files[0]],
-        versions: [],
-        config: {
-          ...config,
-          appCodeUpdater,
-          useCodeUpdater: true,
-        },
-      });
-
-      files[0].load.mockImplementation(createTableCallback);
-
-      await act(migrate, ['--code', 'false']);
-
-      expect(appCodeUpdater.process).not.toBeCalled();
-      expect(appCodeUpdater.afterAll).not.toBeCalled();
-    });
-
-    it('should call appCodeUpdater when having argument --code', async () => {
-      arrange({
-        files: [files[0]],
-        versions: [],
-        config: {
-          ...config,
-          appCodeUpdater,
-          useCodeUpdater: false,
-        },
-      });
-
-      files[0].load.mockImplementation(createTableCallback);
-
-      await act(migrate, ['--code']);
-
-      expect(appCodeUpdater.process).toBeCalled();
-      expect(appCodeUpdater.afterAll).toBeCalled();
+      assert.logs(undefined, []);
     });
 
     it('should call multiple change callbacks from top to bottom', async () => {
@@ -509,7 +439,7 @@ describe('migrateOrRollback', () => {
 
       assert.queries([deleteMigration(files[1])]);
 
-      assert.logs([{ rolledBack: files[1] }]);
+      assert.logs('rolling back', [{ rolledBack: files[1] }]);
     });
 
     it('should create migrations table if it not exist', async () => {
@@ -531,7 +461,7 @@ describe('migrateOrRollback', () => {
       }
 
       assert.queries([]);
-      assert.logs([]);
+      assert.logs(undefined, []);
     });
 
     it('should call multiple change callbacks from top to bottom', async () => {
@@ -565,7 +495,6 @@ describe('migrateOrRollback', () => {
         versions: files.slice(0, 3).map((file) => file.version),
         config: {
           ...config,
-          appCodeUpdater,
           basePath: __dirname,
           beforeChange: async () => {
             callbackCalls.push('beforeChange');
@@ -595,9 +524,8 @@ describe('migrateOrRollback', () => {
       const ranMigrations: [string, boolean][] = [];
       for (const file of files) {
         file.load.mockImplementationOnce(() => {
-          change(async (db, up) => {
+          change(async (_, up) => {
             ranMigrations.push([file.path, up]);
-            db.migratedAsts.push(true as unknown as RakeDbAst);
           });
         });
       }
@@ -646,15 +574,12 @@ describe('migrateOrRollback', () => {
         ]),
       ]);
 
-      assert.logs([
+      assert.logs('reapplying', [
         { rolledBack: files[2] },
         { rolledBack: files[1] },
         { migrated: files[1] },
         { migrated: files[2] },
       ]);
-
-      expect(appCodeUpdater.process).toBeCalledTimes(4);
-      expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
     });
 
     it('should migrate just one if number argument is not provided', async () => {
@@ -674,7 +599,10 @@ describe('migrateOrRollback', () => {
 
       await act(redo);
 
-      assert.logs([{ rolledBack: files[3] }, { migrated: files[3] }]);
+      assert.logs('reapplying', [
+        { rolledBack: files[3] },
+        { migrated: files[3] },
+      ]);
     });
 
     it('should rollback migration changes bottom to top, then migrate them top to bottom', async () => {

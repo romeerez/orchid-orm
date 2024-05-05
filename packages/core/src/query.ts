@@ -9,7 +9,7 @@ export interface Sql {
   // SQL string
   text: string;
   // bind values passed along with SQL string
-  values: unknown[];
+  values?: unknown[];
   // additional columns to select for `after` hooks
   hookSelect?: string[];
 }
@@ -37,18 +37,18 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
-export interface QueryInternal {
+export interface QueryInternalBase {
   columnsForSelectAll?: string[];
   runtimeDefaultColumns?: string[];
-  indexes?: {
-    columns: ({ column: string } | { expression: string })[];
-    options: { unique?: boolean };
-  }[];
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.
   scopes?: CoreQueryScopes;
   // `camelCase` by default, set to true to map column names to and from `snake_case`
   snakeCase?: boolean;
+  // true means ignore, for migration generator
+  noPrimaryKey: boolean;
+  // table comment, for migration generator
+  comment?: string;
 }
 
 // Scopes data stored in table instance. Doesn't change after defining a table.
@@ -126,7 +126,7 @@ export interface IsQuery {
 export interface QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue>
   extends IsQuery {
   meta: QueryMetaBase<Scopes>;
-  internal: QueryInternal;
+  internal: QueryInternalBase;
 }
 
 export interface SelectableBase {

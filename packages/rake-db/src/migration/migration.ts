@@ -3,6 +3,7 @@ import {
   ColumnsShape,
   ColumnType,
   createDb,
+  DbDomainArg,
   DbResult,
   EnumColumn,
   ForeignKeyOptions,
@@ -36,7 +37,7 @@ import {
   quoteWithSchema,
 } from '../common';
 import { RakeDbAst } from '../ast';
-import { columnTypeToSql } from './migrationUtils';
+import { columnTypeToSql, encodeColumnDefault } from './migrationUtils';
 import { createView } from './createView';
 import { RakeDbConfig } from '../config';
 
@@ -67,9 +68,8 @@ type TextColumnCreator = (
 ) => TextColumn<ColumnSchemaConfig>;
 
 // Overridden column types to simplify and adapt some column types for a migration.
-export type MigrationColumnTypes<CT> = Omit<CT, 'text' | 'string' | 'enum'> & {
+export type MigrationColumnTypes<CT> = Omit<CT, 'text' | 'citext' | 'enum'> & {
   text: TextColumnCreator;
-  string: TextColumnCreator;
   citext: TextColumnCreator;
   enum: (name: string) => EnumColumn<ColumnSchemaConfig, unknown>;
 };
@@ -152,7 +152,6 @@ export type DbMigration<CT extends RakeDbColumnTypes> = DbResult<CT> &
  * @param tx - database adapter that executes inside a transaction
  * @param up - migrate or rollback
  * @param config - config of `rakeDb`
- * @param asts - array of migration ASTs to collect changes into
  */
 export const createMigrationInterface = <
   SchemaConfig extends ColumnSchemaConfig,
@@ -161,7 +160,6 @@ export const createMigrationInterface = <
   tx: TransactionAdapter,
   up: boolean,
   config: RakeDbConfig<SchemaConfig, CT>,
-  asts: RakeDbAst[],
 ): DbMigration<CT> => {
   const adapter = new TransactionAdapter(
     tx,
@@ -193,8 +191,6 @@ export const createMigrationInterface = <
     (db as unknown as RecordUnknown)[key] = proto[key as keyof typeof proto];
   }
 
-  db.migratedAsts = asts;
-
   return Object.assign(db, {
     adapter,
     log,
@@ -217,8 +213,6 @@ export class Migration<CT extends RakeDbColumnTypes> {
   public up!: boolean;
   // `rakeDb` config.
   public options!: RakeDbConfig<ColumnSchemaConfig>;
-  // Collect objects that represents what was changed by a migration to pass it later to the `appCodeUpdater`.
-  public migratedAsts!: RakeDbAst[];
   // Available column types that may be customized by a user.
   // They are pulled from a `baseTable` or a `columnTypes` option of the `rakeDb` config.
   public columnTypes!: CT;
@@ -440,7 +434,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param to - rename the table to
    */
   renameTable(from: string, to: string): Promise<void> {
-    return renameType(this, from, to, true);
+    return renameType(this, from, to, 'TABLE');
   }
 
   /**
@@ -550,6 +544,26 @@ export class Migration<CT extends RakeDbColumnTypes> {
     options?: IndexOptions,
   ): Promise<void> {
     return addIndex(this, !this.up, tableName, columns, options);
+  }
+
+  /**
+   * Rename index:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   // tableName can be prefixed with a schema
+   *   await db.renameIndex('tableName', 'oldIndexName', 'newIndexName');
+   * });
+   * ```
+   *
+   * @param tableName - table which this index belongs to
+   * @param from - rename the index from
+   * @param to - rename the index to
+   */
+  renameIndex(tableName: string, from: string, to: string): Promise<void> {
+    return renameTableItem(this, tableName, from, to, 'INDEX');
   }
 
   /**
@@ -748,6 +762,29 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
+   * Rename a table constraint, such as primary key, or check.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameConstraint(
+   *     'tableName', // may include schema: 'schema.table'
+   *     'oldConstraintName',
+   *     'newConstraintName',
+   *   );
+   * });
+   * ```
+   *
+   * @param tableName - name of the table containing the constraint, may include schema name, may include schema name
+   * @param from - current name of the constraint
+   * @param to - desired name
+   */
+  renameConstraint(tableName: string, from: string, to: string): Promise<void> {
+    return renameTableItem(this, tableName, from, to, 'CONSTRAINT');
+  }
+
+  /**
    * Rename a column:
    *
    * ```ts
@@ -788,6 +825,28 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
+   * Renames a database schema, renames it backwards on roll back.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameSchema('from', 'to');
+   * });
+   * ```
+   *
+   * @param from - existing schema to rename
+   * @param to - desired schema name
+   */
+  async renameSchema(from: string, to: string): Promise<void> {
+    await this.adapter.query(
+      `ALTER SCHEMA "${this.up ? from : to}" RENAME TO "${
+        this.up ? to : from
+      }"`,
+    );
+  }
+
+  /**
    * Drop the schema, create it on rollback. See {@link createSchema}.
    *
    * @param schemaName - name of the schema
@@ -814,7 +873,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    */
   createExtension(
     name: string,
-    options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'> = {},
+    options?: RakeDbAst.ExtensionArg,
   ): Promise<void> {
     return createExtension(this, this.up, name, options);
   }
@@ -825,13 +884,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param name - name of the extension
    * @param options - extension options
    */
-  dropExtension(
-    name: string,
-    options: Omit<
-      RakeDbAst.Extension,
-      'type' | 'action' | 'name' | 'values'
-    > = {},
-  ): Promise<void> {
+  dropExtension(name: string, options?: RakeDbAst.ExtensionArg): Promise<void> {
     return createExtension(this, !this.up, name, options);
   }
 
@@ -1053,7 +1106,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param to - rename the type to
    */
   renameType(from: string, to: string): Promise<void> {
-    return renameType(this, from, to, false);
+    return renameType(this, from, to, 'TYPE');
   }
 
   /**
@@ -1076,63 +1129,69 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
-   * Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+   * Domain is a custom database type that is based on other type and can include `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
    *
-   * `createDomain` and `dropDomain` take a domain name as first argument, callback returning inner column type as a second, and optional object with parameters as third.
+   * Construct a column type in the function as the second argument.
+   *
+   * Specifiers [nullable](/guide/common-column-methods.html#nullable), [default](/guide/common-column-methods.html#default), [check](/guide/migration-column-methods.html#check), [collate](/guide/migration-column-methods.html#collate)
+   * will be saved to the domain type on database level.
    *
    * ```ts
    * import { change } from '../dbScript';
    *
    * change(async (db) => {
-   *   await db.createDomain('domainName', (t) => t.integer(), {
-   *     check: db.sql`value = 42`,
-   *   });
+   *   await db.createDomain('domainName', (t) =>
+   *     t.integer().check(db.sql`value = 42`),
+   *   );
    *
    *   // use `schemaName.domainName` format to specify a schema
-   *   await db.createDomain('schemaName.domainName', (t) => t.text(), {
-   *     // unlike columns, domain is nullable by default, use notNull when needed:
-   *     notNull: true,
-   *     collation: 'C',
-   *     default: db.sql`'default text'`,
-   *     check: db.sql`length(value) > 10`,
-   *
-   *     // cascade is used when dropping domain
-   *     cascade: true,
-   *   });
+   *   await db.createDomain('schemaName.domainName', (t) =>
+   *     t
+   *       .text()
+   *       .nullable()
+   *       .collate('C')
+   *       .default('default text')
+   *       .check(db.sql`length(value) > 10`),
+   *   );
    * });
    * ```
    *
    * @param name - name of the domain
-   * @param fn - function returning a column type for the domain
-   * @param options - domain options
+   * @param fn - function returning a column type. Options `nullable`, `collate`, `default`, `check` will be applied to domain
    */
-  createDomain(
-    name: string,
-    fn: (t: CT) => ColumnType,
-    options?: Omit<
-      RakeDbAst.Domain,
-      'type' | 'action' | 'schema' | 'name' | 'baseType'
-    >,
-  ): Promise<void> {
-    return createDomain(this, this.up, name, fn, options);
+  createDomain(name: string, fn: DbDomainArg<CT>): Promise<void> {
+    return createDomain(this, this.up, name, fn);
   }
 
   /**
    * Drop the domain, create it on rollback. See {@link dropDomain}.
    *
    * @param name - name of the domain
-   * @param fn - function returning a column type for the domain
-   * @param options - domain options
+   * @param fn - function returning a column type. Options `nullable`, `collate`, `default`, `check` will be applied to domain
    */
-  dropDomain(
-    name: string,
-    fn: (t: CT) => ColumnType,
-    options?: Omit<
-      RakeDbAst.Domain,
-      'type' | 'action' | 'schema' | 'name' | 'baseType'
-    >,
-  ): Promise<void> {
-    return createDomain(this, !this.up, name, fn, options);
+  dropDomain(name: string, fn: DbDomainArg<CT>): Promise<void> {
+    return createDomain(this, !this.up, name, fn);
+  }
+
+  /**
+   * To rename a domain:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.renameDomain('oldName', 'newName');
+   *
+   *   // to move domain to a different schema
+   *   await db.renameDomain('oldSchema.domain', 'newSchema.domain');
+   * });
+   * ```
+   *
+   * @param from - old domain name (can include schema)
+   * @param to - new domain name (can include schema)
+   */
+  renameDomain(from: string, to: string): Promise<void> {
+    return renameType(this, from, to, 'DOMAIN');
   }
 
   /**
@@ -1549,8 +1608,6 @@ const createSchema = async (
   await migration.adapter.query(
     `${ast.action === 'create' ? 'CREATE' : 'DROP'} SCHEMA "${name}"`,
   );
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1559,12 +1616,15 @@ const createSchema = async (
 const createExtension = async (
   migration: Migration<RakeDbColumnTypes>,
   up: boolean,
-  name: string,
-  options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'>,
+  fullName: string,
+  options?: RakeDbAst.ExtensionArg,
 ): Promise<void> => {
+  const [schema, name] = getSchemaAndTableFromName(fullName);
+
   const ast: RakeDbAst.Extension = {
     type: 'extension',
     action: up ? 'create' : 'drop',
+    schema,
     name,
     ...options,
   };
@@ -1583,8 +1643,6 @@ const createExtension = async (
   }
 
   await migration.adapter.query(query);
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1624,8 +1682,6 @@ const createEnum = async (
   }
 
   await migration.adapter.query(query);
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1635,11 +1691,7 @@ const createDomain = async <CT extends RakeDbColumnTypes>(
   migration: Migration<CT>,
   up: boolean,
   name: string,
-  fn: (t: CT) => ColumnType,
-  options?: Omit<
-    RakeDbAst.Domain,
-    'type' | 'action' | 'schema' | 'name' | 'baseType'
-  >,
+  fn: DbDomainArg<CT>,
 ): Promise<void> => {
   const [schema, domainName] = getSchemaAndTableFromName(name);
 
@@ -1649,39 +1701,37 @@ const createDomain = async <CT extends RakeDbColumnTypes>(
     schema,
     name: domainName,
     baseType: fn(migration.columnTypes),
-    ...options,
   };
 
   let query;
   const values: unknown[] = [];
   const quotedName = quoteWithSchema(ast);
   if (ast.action === 'create') {
-    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(ast.baseType)}${
-      ast.collation
+    const column = ast.baseType;
+    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(column)}${
+      column.data.collate
         ? `
-COLLATION ${singleQuote(ast.collation)}`
+COLLATE "${column.data.collate}"`
         : ''
     }${
-      ast.default
+      column.data.default !== undefined
         ? `
-DEFAULT ${ast.default.toSQL({ values })}`
+DEFAULT ${encodeColumnDefault(column.data.default, values)}`
         : ''
-    }${ast.notNull || ast.check ? '\n' : ''}${[
-      ast.notNull && 'NOT NULL',
-      ast.check && `CHECK ${ast.check.toSQL({ values })}`,
+    }${!column.data.isNullable || column.data.check ? '\n' : ''}${[
+      !column.data.isNullable && 'NOT NULL',
+      column.data.check && `CHECK (${column.data.check.sql.toSQL({ values })})`,
     ]
       .filter(Boolean)
       .join(' ')}`;
   } else {
-    query = `DROP DOMAIN ${quotedName}${ast.cascade ? ' CASCADE' : ''}`;
+    query = `DROP DOMAIN ${quotedName}`;
   }
 
   await migration.adapter.query({
     text: query,
     values,
   });
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1733,8 +1783,6 @@ const createCollation = async (
   await migration.adapter.query({
     text: query,
   });
-
-  migration.migratedAsts.push(ast);
 };
 
 /**
@@ -1754,23 +1802,22 @@ export const renameType = async (
   migration: Migration<RakeDbColumnTypes>,
   from: string,
   to: string,
-  table: boolean,
+  kind: RakeDbAst.RenameType['kind'],
 ): Promise<void> => {
   const [fromSchema, f] = getSchemaAndTableFromName(migration.up ? from : to);
   const [toSchema, t] = getSchemaAndTableFromName(migration.up ? to : from);
   const ast: RakeDbAst.RenameType = {
     type: 'renameType',
-    table,
+    kind,
     fromSchema,
     from: f,
     toSchema,
     to: t,
   };
 
-  const sqlKind = ast.table ? 'TABLE' : 'TYPE';
   if (ast.from !== ast.to) {
     await migration.adapter.query(
-      `ALTER ${sqlKind} ${quoteTable(ast.fromSchema, ast.from)} RENAME TO "${
+      `ALTER ${ast.kind} ${quoteTable(ast.fromSchema, ast.from)} RENAME TO "${
         ast.to
       }"`,
     );
@@ -1778,13 +1825,30 @@ export const renameType = async (
 
   if (ast.fromSchema !== ast.toSchema) {
     await migration.adapter.query(
-      `ALTER ${sqlKind} ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
+      `ALTER ${ast.kind} ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
         ast.toSchema ?? migration.adapter.schema
       }"`,
     );
   }
+};
 
-  migration.migratedAsts.push(ast);
+const renameTableItem = async (
+  migration: Migration<RakeDbColumnTypes>,
+  tableName: string,
+  from: string,
+  to: string,
+  kind: RakeDbAst.RenameTableItem['kind'],
+) => {
+  const [schema, table] = getSchemaAndTableFromName(tableName);
+  const [f, t] = migration.up ? [from, to] : [to, from];
+  await migration.adapter.query(
+    kind === 'INDEX'
+      ? `ALTER INDEX ${quoteTable(schema, f)} RENAME TO "${t}"`
+      : `ALTER TABLE ${quoteTable(
+          schema,
+          table,
+        )} RENAME CONSTRAINT "${f}" TO "${t}"`,
+  );
 };
 
 interface AddEnumValueOptions {

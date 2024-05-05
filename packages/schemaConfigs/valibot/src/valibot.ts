@@ -117,8 +117,8 @@ class ValibotJSONColumn<Schema extends BaseSchema> extends ColumnType<
     super(valibotSchemaConfig, schema);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, [`json()`], this.data, toCodeSkip);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, [`json()`], m, this.data, toCodeSkip);
   }
 }
 
@@ -1032,7 +1032,7 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
 
     const { columns } = this.prototype;
     for (const key in columns) {
-      if (columns[key].data.isPrimaryKey) {
+      if (columns[key].data.primaryKey) {
         keys.push(key);
       }
     }
@@ -1087,7 +1087,7 @@ type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
 }>;
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['isPrimaryKey'] extends true
+  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends true
     ? K
     : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
 }>;

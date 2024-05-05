@@ -2,47 +2,56 @@
 
 Migrations allow you to evolve your database schema over time. This migration toolkit has several benefits over writing raw SQL migrations or using other tools:
 
-- write migrations in TypeScript, that enables performing insert queries and having any logic
-- write only code to create or add something, and it will be automatically possible to undo the migration
-- it shares the same column types library as the ORM, which allows you to write a `createTable` migration and copy-paste columns to your table class
-- optionally, automatically updating table files of ORM after running a migration, instead of copy-pasting
+- migrations are written in TypeScript, so they can have any logic and database queries made with a query builder.
+- changes will be reverted automatically when rolling back a migration, no need to write `down` section manually (in most cases).
+- when plugging it to an existing project, it can generate initial migration automatically based on existing db structure.
+- Orchid ORM can generate migrations automatically from the app code.
+
+If you're using OrchidORM, the migration toolkit is already bundled in, import it from `orchid-orm/migrations`, no need to install it separately.
+
+You can also use it as a standalone tool, install and use the `rake-db` package.
 
 ## how it works
 
-`rake-db` automatically creates a table `schemaMigrations` where it saves all the migrated files prefixes and names.
+Special table `schemaMigrations` is automatically created to keep track of all the migrated files' prefixes and names.
 It's allowed to have two migrations with the same name, but all the migrations must have different numeric prefixes.
 
 All changes are wrapped into a single transaction. If you have 3 pending migrations, and the last one throws an error,
 none of them will be applied.
 
-The transaction beings with setting a [pg_advisory_xact_lock](https://www.postgresql.org/docs/current/functions-admin.html).
-If you're deploying a cluster of node.js applications, and each application starts with running migrations,
-the first of them will set a lock and apply the migrations, the rest will wait for a lock,
+The transaction beings with setting a lock ([pg_advisory_xact_lock](https://www.postgresql.org/docs/current/functions-admin.html)).
+If you're deploying a cluster of node.js applications, and each application tries to apply migrations at the same time,
+the first one will set a lock and apply the migrations, the rest will wait for a lock,
 and after the lock is released all migrations are already applied.
 
 Locally, migrations are compiled from TS to JS on the fly before running.
-When developing to remote server, it may be preferable to precompile them first.
-If you're using `rake-db` as a standalone tool, try [ORM initializer script](/guide/quickstart.html) to use configs from it,
-the script allows to choose between `tsx`, `vite`, and `ts-node` and generates configs accordingly,
-package.json has `build:migrations` and `db:compiled` scripts.
+When deploying to a remote server, you may want to precompile migrations first to make migration process a bit faster on the server side.
+
+If you want to use `rake-db` together with OrchidORM, [ORM initializer script](/guide/quickstart) can generate configurations.
+When using it as a standalone tool, you can still use the same script and copy just the rake-db from it (config is in `dbScript.ts` file).
+Generated script allows to choose between `tsx`, `vite`, and `ts-node` to run migrations, and generates different configs based on the chosen tool.
+Generated package.json will have `build:migrations` and `db:compiled` scripts for pre-compiling and running migrations in production.
 
 ## setup
 
-It is already set up if you ran `npx orchid-orm@latest` command from a [quickstart](/guide/quickstart).
+It is already set up if you ran the initializer script from [quickstart](/guide/quickstart).
 
-Install this migration tool by running:
+To use it as a standalone tool, install this package:
 
 ```sh
 npm i -D rake-db
+# or
+pnpm i -D rake-db
 ```
 
 ::: info
-`rake-db` is named after a command in Ruby on Rails because took some inspiration from it.
+`rake-db` is named after a command in Ruby on Rails because it was initially inspired by it.
 :::
 
-Since the configuration is done in a regular TypeScript, it's possible to perform any logic and use any configuration tools to specify database connection options.
+Since the configuration is done in TypeScript, it's highly customizable.
 
-We suggest to keep database configuration options exported from a separate file, so it can be used both by migration tool and by `db` instance in a project.
+It's better to have database configuration options exported from a separate file,
+so the same db config can be used by both migration tool and when initializing ORM.
 
 Example structure (it's created automatically if you follow [quickstart](/guide/quickstart)):
 
@@ -52,8 +61,8 @@ src/
     ├── migrations/ - contains migrations files that can be migrated or rolled back.
     │   ├── recurrent/ - optional: sql files for triggers and functions
     │   │   └── my-function.sql - sql file containing CREATE OR REPLACE
-    │   ├── timestamp_createPost.ts
-    │   └── timestamp_createComment.ts
+    │   ├── 0001_createPost.ts
+    │   └── 0002_createComment.ts
     ├── baseTable.ts - for defining column type overrides.
     ├── config.ts - database credentials are exported from here.
     ├── db.ts - main file for the ORM, connects all tables into one `db` object.
@@ -86,13 +95,14 @@ export const config = {
 };
 ```
 
-Configure a `db` script:
+Configuring migrations in `db/dbScript.ts`:
 
 ```ts
 // db/dbScript.ts
 
-import { rakeDb } from 'rake-db';
-import { appCodeUpdater } from 'orchid-orm/codegen';
+import { rakeDb } from 'orchid-orm/migrations'; // when using Orchid ORM
+import { rakeDb } from 'rake-db'; // when using a standalone rake-db
+
 import { config } from './config';
 import { BaseTable } from './baseTable';
 
@@ -109,24 +119,15 @@ export const change = rakeDb(config.database, {
   // Read more about serial vs timestamp below.
   migrationId: 'serial',
 
-  // column type overrides and snakeCase option will be taken from the BaseTable:
+  // (when using it with ORM) column type overrides and snakeCase option will be taken from the BaseTable:
   baseTable: BaseTable,
-
-  // optionally, for automatic code updating after running migrations:
-  // baseTable is required when setting appCodeUpdater
-  appCodeUpdater: appCodeUpdater({
-    // paths are relative to the current file
-    tablePath: (tableName) => `./tables/${tableName}.table.ts`,
-    ormPath: './db.ts',
-  }),
-
-  // true by default, whether to use code updater by default
-  useCodeUpdater: false,
+  // (when using it for ORM) path to ORM `db` instance, this is needed to automatically generate migrations.
+  dbPath: './db',
 
   // custom commands can be defined as follows:
   commands: {
     // dbOptions is an array of database configs
-    // config is the config of `rakeDb` (that contains migrationPath, appCodeUpdater, etc)
+    // config is the config of `rakeDb` defined above
     // args of type string[] is an array of command line arguments startring after the command name
     async seed(dbOptions, config, args) {
       const { seed } = await import('./seed');
@@ -141,7 +142,7 @@ Add the `db` script to your `package.json`:
 ```json
 {
   "scripts": {
-    "db": "ts-node src/db/dbScript.ts"
+    "db": "tsx|vite-node|ts-node|bun src/db/dbScript.ts"
   }
 }
 ```
@@ -149,9 +150,9 @@ Add the `db` script to your `package.json`:
 And now it's possible to use it from a command line:
 
 ```sh
-npm run db new createSomeTable
-pnpm db new createSomeTable
-yarn db new createSomeTable
+npm run db new create-a-table
+pnpm db new create-a-table
+yarn db new create-a-table
 ```
 
 ## serial vs timestamp
@@ -281,8 +282,13 @@ The second optional argument of type `MigrationConfig`, all properties are optio
 
 ```ts
 type MigrationConfig = {
-  // columnTypes and snakeCase can be applied form ORM's BaseTable
+  // (for Orchid ORM) columnTypes and snakeCase can be applied form ORM's BaseTable
   baseTable?: BaseTable;
+  // (for Orchid ORM) import path to Orchid ORM `db` instance, used for auto-generating migrations.
+  dbPath?: string;
+  // (for Orchid ORM) change this if ORM instance is exported under a different name than `db`.
+  dbExportedAs?: string; // 'db' is the default
+
   // or it can be set manually:
   columnTypes?: (t) => {
     // the same columnTypes config as in BaseTable definition
@@ -323,25 +329,6 @@ type MigrationConfig = {
     error(message: string): void;
   };
 
-  appCodeUpdater?(params: {
-    // abstract syntax tree of changes
-    ast: RakeDbAst;
-    // connection options
-    options: AdapterOptions;
-    // to resolve relative paths
-    basePath: string;
-    // the same object is passed between various appCodeUpdater calls
-    cache: object;
-    // the logger object from the above config
-    // if log: false in the above config, logger is undefined
-    logger?: {
-      log(message: string): void;
-      error(message: string): void;
-    };
-  }): Promise<void>;
-
-  useCodeUpdater?: boolean;
-
   // throw if a migration doesn't have a default export
   forceDefaultExports?: boolean;
 
@@ -367,7 +354,6 @@ Defaults are:
 - `noPrimaryKey` is `error`, it'll bite if you accidentally forgot to add a primary key to a new table
 - `log` is on
 - `logger` is a standard `console`
-- `useCodeUpdater` is `true`, but it won't run anything if you don't specify `appCodeUpdater` config
 
 The third optional argument of `rakeDb` is an array of strings from the command line, by default it will use `process.argv` to get the arguments, but you can override it by passing arguments manually.
 
@@ -378,36 +364,6 @@ By default, this option is `false` and camelCase is expected in a database, chan
 When `snakeCase` is `true`, all column names in migrations will be translated into snake_case automatically.
 
 It changes behavior of `db pull` command at handling column names and timestamps, see [db pull](/guide/migration-commands#pull) for details.
-
-## appCodeUpdater
-
-`appCodeUpdater` is a module that will add new and update existing project files when running migrations.
-
-To prevent running when not needed, append `--code false` flag to cli command:
-
-```sh
-npm run db migrate --code false
-```
-
-If you don't want to run it on every migration, set `useCodeUpdater` to false and run migration with `--code` flag to run code updater when needed:
-
-```sh
-npm run db migrate --code
-```
-
-What `appCodeUpdater` does:
-
-- creates base table file if it doesn't exist
-- creates main `db` file if it doesn't exist
-- creates a new table file when creating a table
-- adds table entry to `db` file when creating a table
-- adds new columns, indexes, and foreign keys to the table file when they are added in a migration
-- changes columns, indexes, and foreign keys in the table file when they are changed in a migration
-- changes `table` and `schema` property in the table file when renaming a table
-- removes table entry from `db` file when dropping a table
-
-`appCodeUpdater` does **not** delete or rename existing files, because it is better to be done manually.
-A modern editor will update all file usage in imports across the project when renaming a file or an exported class.
 
 ## seeds
 

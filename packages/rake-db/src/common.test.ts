@@ -9,11 +9,7 @@ import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { getCallerFilePath, getStackTrace } from 'orchid-core';
-import {
-  AppCodeUpdater,
-  getDatabaseAndUserFromOptions,
-  processRakeDbConfig,
-} from './config';
+import { getDatabaseAndUserFromOptions, processRakeDbConfig } from './config';
 
 jest.mock('orchid-core', () => ({
   ...jest.requireActual('../../core/src'),
@@ -45,19 +41,8 @@ describe('common', () => {
         import: expect.any(Function),
         log: true,
         logger: console,
-        useCodeUpdater: true,
         commands: {},
       });
-    });
-
-    it('should throw if appCodeUpdater is provided but baseTable is not', () => {
-      expect(() =>
-        processRakeDbConfig({
-          appCodeUpdater: {} as unknown as AppCodeUpdater,
-        }),
-      ).toThrow(
-        '`baseTable` option is required in `rakeDb` for `appCodeUpdater`',
-      );
     });
 
     it(`should throw when no basePath and can't get it automatically`, () => {

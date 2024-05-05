@@ -35,7 +35,7 @@ describe('queryMethods', () => {
     it('generates sql', () => {
       const sql = User.toSQL();
 
-      assertType<typeof sql, { text: string; values: unknown[] }>();
+      assertType<typeof sql, { text: string; values?: unknown[] }>();
 
       expectSql(sql, `SELECT * FROM "user"`);
     });

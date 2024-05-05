@@ -1,8 +1,7 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { rakeDb } from '../src';
+import { rakeDb } from 'orchid-orm/migrations';
 import { AdapterOptions } from 'pqb';
-import { appCodeUpdater } from 'orchid-orm/codegen';
 import { BaseTable } from './baseTable';
 
 config({ path: path.resolve('..', '..', '.env') });
@@ -16,17 +15,16 @@ if (!databaseURL) {
 
 options.push({ databaseURL, connectRetry: true });
 
-const databaseURLTest = process.env.PG_URL_TEST;
-if (databaseURLTest) {
-  options.push({ databaseURL: databaseURLTest, connectRetry: true });
+const command = process.argv[2];
+if (['create', 'drop'].includes(command)) {
+  const databaseURLGenerate = process.env.PG_GENERATE_URL;
+  if (databaseURLGenerate) {
+    options.push({ databaseURL: databaseURLGenerate, connectRetry: true });
+  }
 }
 
 export const change = rakeDb(options, {
   baseTable: BaseTable,
   migrationsPath: 'migrations',
-  appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => `tables/${tableName}.ts`,
-    ormPath: 'db.ts',
-  }),
-  useCodeUpdater: false,
+  // tablePath: (tableName) => `tables/${tableName}.ts`,
 });

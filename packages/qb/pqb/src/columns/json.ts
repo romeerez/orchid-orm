@@ -13,8 +13,8 @@ export class JSONColumn<
 > extends ColumnType<Schema, T, Schema['type'], OperatorsJson> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
-  toCode(t: string): Code {
-    return columnCode(this, t, `json()`, this.data, toCodeSkip);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `json()`, m, this.data, toCodeSkip);
   }
 }
 
@@ -37,7 +37,7 @@ export class JSONTextColumn<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string): Code {
-    return columnCode(this, t, `jsonText()`, this.data, toCodeSkip);
+  toCode(t: string, m?: boolean): Code {
+    return columnCode(this, t, `jsonText()`, m, this.data, toCodeSkip);
   }
 }
