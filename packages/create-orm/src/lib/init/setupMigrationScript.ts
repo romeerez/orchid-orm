@@ -27,8 +27,13 @@ export const change = rakeDb(${
       const { seed } = await import('./seed');
       await seed();
     },
-  },
-  import: (path) => import(path),
+  },${
+    config.runner === 'vite-node'
+      ? // required by vite-node, but would fail for tsx
+        `
+  import: (path) => import(path),`
+      : ''
+  }
 });
 `,
   );

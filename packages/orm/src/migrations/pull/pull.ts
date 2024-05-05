@@ -35,7 +35,8 @@ export const pull = async (
   const baseTablePath = config.baseTable.getFilePath();
   const baseTableExportedAs = config.baseTable.exportAs;
 
-  const adapter = new Adapter(options[0]);
+  const adapters = options.map((opts) => new Adapter(opts));
+  const [adapter] = adapters;
   const currentSchema = adapter.schema || 'public';
 
   const ctx = makeStructureToAstCtx(config, currentSchema);
@@ -119,9 +120,13 @@ export const pull = async (
   const version = await makeFileVersion({}, config);
   await generate(options, config, ['pull'], { adapter, version });
 
-  const silentAdapter = adapter as unknown as SilentQueries;
-  silentAdapter.silentArrays = adapter.arrays;
-  await saveMigratedVersion(silentAdapter, version, 'pull.ts', config);
-
-  await adapter.close();
+  // save migrated version into all configured databases
+  await Promise.all(
+    adapters.map(async (adapter) => {
+      const silentAdapter = adapter as unknown as SilentQueries;
+      silentAdapter.silentArrays = adapter.arrays;
+      await saveMigratedVersion(silentAdapter, version, 'pull.ts', config);
+      await adapter.close();
+    }),
+  );
 };
