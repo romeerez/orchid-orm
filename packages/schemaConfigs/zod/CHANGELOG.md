@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.6.19
+
+### Patch Changes
+
+- 929f49b: Minor fixes
+
 ## 0.6.18
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # orchid-orm-valibot
 
+## 0.0.16
+
+### Patch Changes
+
+- 929f49b: Minor fixes
+
 ## 0.0.15
 
 ### Patch Changes

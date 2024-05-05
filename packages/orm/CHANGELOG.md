@@ -1,5 +1,21 @@
 # orchid-orm
 
+## 1.25.0
+
+### Minor Changes
+
+- 929f49b: Generate migrations from table files, see [generate migrations](https://orchid-orm.netlify.app/guide/orm-and-query-builder.html#generate-migrations) docs.
+
+  Rename utility type `Updateable` to `Updatable`.
+
+  Include `rake-db` migration toolkit to the `orchid-orm` package.
+  If you're using `orchid-orm`, remove `rake-db` from dependencies and import `rakeDb` from `orchd-orm/migrations` instead.
+
+### Patch Changes
+
+- Updated dependencies [929f49b]
+  - rake-db@2.18.0
+
 ## 1.24.7
 
 ### Patch Changes
