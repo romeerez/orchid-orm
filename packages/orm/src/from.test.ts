@@ -5,7 +5,7 @@ import {
   messageData,
   userData,
   useTestORM,
-} from './test-utils/test-utils';
+} from './test-utils/orm.test-utils';
 
 describe('orm', () => {
   useTestORM();

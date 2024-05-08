@@ -428,8 +428,10 @@ const processHasAndBelongsToManyColumn = (
     shape[key] = column;
   }
   joinTable.shape = shape;
-  joinTable.internal.primaryKey = {
-    columns: Object.keys(shape),
+  joinTable.internal.tableData = {
+    primaryKey: {
+      columns: Object.keys(shape),
+    },
   };
   joinTable.internal.noPrimaryKey = false;
 

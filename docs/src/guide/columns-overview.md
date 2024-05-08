@@ -19,14 +19,14 @@ For example, `timestamp` will be returned as a string by default (this may be ov
 
 ```ts
 // get createdAt field from the first table record
-const createdAt: string = await db.table.get('createdAt');
+const createdAt: string = await db.someTable.get('createdAt');
 
-await db.table.create({
+await db.someTable.create({
   // Date is fine
   createdAt: new Date(),
 });
 
-await db.table.create({
+await db.someTable.create({
   // string in ISO format is fine as well
   createdAt: new Date().toISOString(),
 });

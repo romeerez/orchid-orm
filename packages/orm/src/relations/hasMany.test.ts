@@ -19,7 +19,7 @@ import {
   postTagSelectAll,
   Post,
   postSelectAll,
-} from '../test-utils/test-utils';
+} from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 
@@ -2027,11 +2027,13 @@ describe('hasMany through', () => {
 
     class PostTag extends BaseTable {
       table = 'postTag';
-      columns = this.setColumns((t) => ({
-        postId: t.integer().foreignKey(() => Post, 'Id'),
-        tagId: t.integer().foreignKey(() => Tag, 'Id'),
-        ...t.primaryKey(['postId', 'tagId']),
-      }));
+      columns = this.setColumns(
+        (t) => ({
+          postId: t.integer().foreignKey(() => Post, 'Id'),
+          tagId: t.integer().foreignKey(() => Tag, 'Id'),
+        }),
+        (t) => t.primaryKey(['postId', 'tagId']),
+      );
 
       relations = {
         post: this.belongsTo(() => Post, {
@@ -2129,11 +2131,13 @@ describe('hasMany through', () => {
 
     class PostTag extends BaseTable {
       table = 'postTag';
-      columns = this.setColumns((t) => ({
-        postId: t.integer().foreignKey(() => Post, 'Id'),
-        tagId: t.integer().foreignKey(() => Tag, 'Id'),
-        ...t.primaryKey(['postId', 'tagId']),
-      }));
+      columns = this.setColumns(
+        (t) => ({
+          postId: t.integer().foreignKey(() => Post, 'Id'),
+          tagId: t.integer().foreignKey(() => Tag, 'Id'),
+        }),
+        (t) => t.primaryKey(['postId', 'tagId']),
+      );
     }
 
     expect(() => {

@@ -131,7 +131,7 @@ export type RelationScopeOrTable<Relation extends RelationThunkBase> =
     : DbTable<InstanceType<ReturnType<Relation['fn']>>>;
 
 export interface RelationConfigSelf {
-  columns: ColumnsShapeBase;
+  columns: { shape: ColumnsShapeBase };
   relations: RelationThunks;
 }
 
@@ -169,10 +169,7 @@ export type MapRelation<
     : never
 >;
 
-export type MapRelations<T> = T extends {
-  columns: ColumnsShapeBase;
-  relations: RelationThunks;
-}
+export type MapRelations<T> = T extends RelationConfigSelf
   ? {
       [K in keyof T['relations'] & string]: MapRelation<T, K>;
     }

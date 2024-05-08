@@ -202,18 +202,6 @@ describe('pull', () => {
             onDelete: 'c',
           },
         }),
-        dbStructureMockFactory.foreignKey('table2', 'table1', {
-          ...dbStructureMockFactory.check(),
-          name: 'refAndCheck',
-          references: {
-            columns: ['id', 'text'],
-            foreignSchema: 'schema',
-            foreignColumns: ['id', 'name'],
-            match: 'f',
-            onUpdate: 'c',
-            onDelete: 'c',
-          },
-        }),
       ]),
     ];
 
@@ -248,37 +236,28 @@ change(async (db) => {
 });
 
 change(async (db) => {
-  await db.createTable('table2', (t) => ({
-    id: t.identity().primaryKey(),
-    text: t.text().check(t.sql\`length(text) > 5\`),
-    ...t.timestampsSnakeCase(),
-    ...t.check(t.sql({ raw: 'table check' }), { name: 'table_column_check' }),
-    ...t.foreignKey(
-      ['id', 'text'],
-      'schema.table1',
-      ['id', 'name'],
-      {
-        name: 'fkey',
-        match: 'FULL',
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-      },
-    ),
-    ...t.constraint({
-      name: 'refAndCheck',
-      references: [
+  await db.createTable(
+    'table2',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      text: t.text().check(t.sql\`length(text) > 5\`),
+      ...t.timestampsSnakeCase(),
+    }),
+    (t) => [
+      t.check(t.sql({ raw: 'table check' }), 'table_column_check'),
+      t.foreignKey(
         ['id', 'text'],
         'schema.table1',
         ['id', 'name'],
         {
+          name: 'fkey',
           match: 'FULL',
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         },
-      ],
-      check: t.sql({ raw: 'column > 10' }),
-    }),
-  }));
+      ),
+    ],
+  );
 });
 `,
     );

@@ -10,10 +10,11 @@ import {
   ColumnWithDefault,
   ColumnSchemaConfig,
   PickColumnBaseData,
+  Codes,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
-import type { TableData } from './columnTypes';
 import { Operators, OperatorsNumber } from './operators';
+import { TableData } from '../tableData';
 
 export interface NumberColumnData extends BaseNumberData {
   identity: TableData.Identity;
@@ -120,7 +121,7 @@ const intToCode = (
   alias: string,
   m: boolean | undefined,
 ): Code => {
-  let code: Code[];
+  let code: Codes;
 
   if (column.data.identity) {
     code = identityToCode(column.data.identity, alias);

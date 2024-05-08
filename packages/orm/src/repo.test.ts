@@ -1,6 +1,6 @@
 import { orchidORM } from './orm';
 import { createRepo } from './repo';
-import { BaseTable } from './test-utils/test-utils';
+import { BaseTable } from './test-utils/orm.test-utils';
 import { assertType, expectSql, testDbOptions } from 'test-utils';
 import { QueryReturnType } from 'orchid-core';
 

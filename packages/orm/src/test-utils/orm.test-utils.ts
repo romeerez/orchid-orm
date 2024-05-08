@@ -76,6 +76,7 @@ export class ProfileTable extends BaseTable {
       .name('userId')
       .integer()
       .nullable()
+      .unique()
       .foreignKey(() => UserTable, 'Id'),
     Bio: t.name('bio').text().nullable(),
     ...t.timestamps(),
@@ -227,17 +228,19 @@ export class PostTable extends BaseTable {
 export type PostTag = Selectable<PostTagTable>;
 export class PostTagTable extends BaseTable {
   readonly table = 'postTag';
-  columns = this.setColumns((t) => ({
-    PostId: t
-      .name('postId')
-      .integer()
-      .foreignKey(() => PostTable, 'Id'),
-    Tag: t
-      .name('tag')
-      .text()
-      .foreignKey(() => TagTable, 'Tag'),
-    ...t.primaryKey(['postId', 'tag']),
-  }));
+  columns = this.setColumns(
+    (t) => ({
+      PostId: t
+        .name('postId')
+        .integer()
+        .foreignKey(() => PostTable, 'Id'),
+      Tag: t
+        .name('tag')
+        .text()
+        .foreignKey(() => TagTable, 'Tag'),
+    }),
+    (t) => t.primaryKey(['PostId', 'Tag']),
+  );
 
   relations = {
     post: this.belongsTo(() => PostTable, {

@@ -61,7 +61,7 @@ export type FnExpressionArgs<Q extends PickQueryMeta> = (
 )[];
 
 export interface FnExpressionArgsPairs<Q extends PickQueryMeta> {
-  pairs: Record<string, SelectableOrExpression<Q>>;
+  pairs: { [K: string]: SelectableOrExpression<Q> };
 }
 
 export interface FnExpressionArgsValue {

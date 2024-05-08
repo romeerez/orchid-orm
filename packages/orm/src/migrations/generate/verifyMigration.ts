@@ -3,7 +3,6 @@ import { Adapter } from 'pqb';
 import {
   AnyRakeDbConfig,
   createMigrationInterface,
-  RakeDbColumnTypes,
   ChangeCallback,
   introspectDbSchema,
 } from 'rake-db';
@@ -21,18 +20,19 @@ export const verifyMigration = async (
   return adapter.transaction(
     { text: 'BEGIN' },
     async (trx) => {
-      const changeFns: ChangeCallback<RakeDbColumnTypes>[] = [];
-      migrationFn((changeCb: ChangeCallback<RakeDbColumnTypes>) => {
+      const changeFns: ChangeCallback<unknown>[] = [];
+      migrationFn((changeCb: ChangeCallback<unknown>) => {
         changeFns.push(changeCb);
       });
 
       const { log } = config;
       config.log = false;
 
-      const db = createMigrationInterface<
-        ColumnSchemaConfig,
-        RakeDbColumnTypes
-      >(trx, true, config);
+      const db = createMigrationInterface<ColumnSchemaConfig, unknown>(
+        trx,
+        true,
+        config,
+      );
 
       config.log = log;
 

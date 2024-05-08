@@ -143,7 +143,7 @@ describe('create and drop table', () => {
     await testUpAndDown(
       (action) =>
         db[action]('name', (t) => ({
-          id: t.identity().primaryKey({ name: 'custom' }),
+          id: t.identity().primaryKey('custom'),
         })),
       () =>
         expectSql(`
@@ -395,9 +395,7 @@ describe('create and drop table', () => {
         (action) =>
           db[action]('table', (t) => ({
             id: t.identity().primaryKey(),
-            withIndex: t.text().index({
-              name: 'indexName',
-              unique: true,
+            withIndex: t.text().unique('indexName', {
               nullsNotDistinct: true,
               using: 'gin',
               collate: 'schema.collation',
@@ -618,12 +616,15 @@ describe('create and drop table', () => {
     it('should support composite primary key defined on table', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            id: t.integer(),
-            name: t.text(),
-            active: t.boolean(),
-            ...t.primaryKey(['id', 'name', 'active']),
-          })),
+          db[action](
+            'table',
+            (t) => ({
+              id: t.integer(),
+              name: t.text(),
+              active: t.boolean(),
+            }),
+            (t) => t.primaryKey(['id', 'name', 'active']),
+          ),
         () =>
           expectSql(`
           CREATE TABLE "table" (
@@ -639,14 +640,15 @@ describe('create and drop table', () => {
     it('should support composite primary key with constraint name', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            id: t.integer(),
-            name: t.text(),
-            active: t.boolean(),
-            ...t.primaryKey(['id', 'name', 'active'], {
-              name: 'primaryKeyName',
+          db[action](
+            'table',
+            (t) => ({
+              id: t.integer(),
+              name: t.text(),
+              active: t.boolean(),
             }),
-          })),
+            (t) => t.primaryKey(['id', 'name', 'active'], 'primaryKeyName'),
+          ),
         () =>
           expectSql(`
           CREATE TABLE "table" (
@@ -662,14 +664,17 @@ describe('create and drop table', () => {
     it('should support composite primary key defined on table and multiple columns', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            id: t.integer().primaryKey(),
-            name: t.text().primaryKey(),
-            active: t.boolean().primaryKey(),
-            another: t.date(),
-            one: t.decimal(),
-            ...t.primaryKey(['another', 'one']),
-          })),
+          db[action](
+            'table',
+            (t) => ({
+              id: t.integer().primaryKey(),
+              name: t.text().primaryKey(),
+              active: t.boolean().primaryKey(),
+              another: t.date(),
+              one: t.decimal(),
+            }),
+            (t) => t.primaryKey(['another', 'one']),
+          ),
         () =>
           expectSql(`
             CREATE TABLE "table" (
@@ -689,14 +694,17 @@ describe('create and drop table', () => {
 
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            idColumn: t.integer().primaryKey(),
-            nameColumn: t.text().primaryKey(),
-            activeColumn: t.boolean().primaryKey(),
-            anotherColumn: t.date(),
-            oneColumn: t.decimal(),
-            ...t.primaryKey(['anotherColumn', 'oneColumn']),
-          })),
+          db[action](
+            'table',
+            (t) => ({
+              idColumn: t.integer().primaryKey(),
+              nameColumn: t.text().primaryKey(),
+              activeColumn: t.boolean().primaryKey(),
+              anotherColumn: t.date(),
+              oneColumn: t.decimal(),
+            }),
+            (t) => t.primaryKey(['anotherColumn', 'oneColumn']),
+          ),
         () =>
           expectSql(`
             CREATE TABLE "table" (
@@ -716,14 +724,21 @@ describe('create and drop table', () => {
     it('should support composite index', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            id: t.identity().primaryKey(),
-            name: t.text(),
-            ...t.index(['id', { column: 'name', order: 'DESC' }], {
-              name: 'compositeIndexOnTable',
-              nullsNotDistinct: true,
+          db[action](
+            'table',
+            (t) => ({
+              id: t.identity().primaryKey(),
+              name: t.text(),
             }),
-          })),
+            (t) =>
+              t.index(
+                ['id', { column: 'name', order: 'DESC' }],
+                'compositeIndexOnTable',
+                {
+                  nullsNotDistinct: true,
+                },
+              ),
+          ),
         () =>
           expectSql([
             `
@@ -742,14 +757,21 @@ describe('create and drop table', () => {
     it('should support composite unique index', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            id: t.identity().primaryKey(),
-            name: t.text(),
-            ...t.unique(['id', { column: 'name', order: 'DESC' }], {
-              name: 'compositeIndexOnTable',
-              nullsNotDistinct: true,
+          db[action](
+            'table',
+            (t) => ({
+              id: t.identity().primaryKey(),
+              name: t.text(),
             }),
-          })),
+            (t) =>
+              t.unique(
+                ['id', { column: 'name', order: 'DESC' }],
+                'compositeIndexOnTable',
+                {
+                  nullsNotDistinct: true,
+                },
+              ),
+          ),
         () =>
           expectSql([
             `
@@ -770,12 +792,17 @@ describe('create and drop table', () => {
 
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            idColumn: t.identity().primaryKey(),
-            nameColumn: t.text(),
-            ...t.index(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
-            ...t.unique(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
-          })),
+          db[action](
+            'table',
+            (t) => ({
+              idColumn: t.identity().primaryKey(),
+              nameColumn: t.text(),
+            }),
+            (t) => [
+              t.index(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
+              t.unique(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
+            ],
+          ),
         () =>
           expectSql([
             `
@@ -819,10 +846,11 @@ describe('create and drop table', () => {
     it('should add a search index for a single column', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            ...columns,
-            ...t.searchIndex('text'),
-          })),
+          db[action](
+            'table',
+            () => columns,
+            (t) => t.searchIndex(['text']),
+          ),
         () =>
           expectSql([
             tableSQL,
@@ -836,10 +864,11 @@ describe('create and drop table', () => {
     it('should support an index for search with english by default', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            ...columns,
-            ...t.searchIndex(['title', 'text']),
-          })),
+          db[action](
+            'table',
+            () => columns,
+            (t) => t.searchIndex(['title', 'text']),
+          ),
         () =>
           expectSql([
             tableSQL,
@@ -855,10 +884,11 @@ describe('create and drop table', () => {
 
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            ...columns,
-            ...t.searchIndex(['title', 'text']),
-          })),
+          db[action](
+            'table',
+            () => columns,
+            (t) => t.searchIndex(['title', 'text']),
+          ),
         () =>
           expectSql([
             tableSQL,
@@ -872,10 +902,12 @@ describe('create and drop table', () => {
     it('should support an index for search with a custom default language set in the table options', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', { language: 'Ukrainian' }, (t) => ({
-            ...columns,
-            ...t.searchIndex(['title', 'text']),
-          })),
+          db[action](
+            'table',
+            { language: 'Ukrainian' },
+            () => columns,
+            (t) => t.searchIndex(['title', 'text']),
+          ),
         () =>
           expectSql([
             tableSQL,
@@ -889,12 +921,14 @@ describe('create and drop table', () => {
     it('should support an index for search with a custom default language set in the index options', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            ...columns,
-            ...t.searchIndex(['title', 'text'], {
-              language: 'Ukrainian',
-            }),
-          })),
+          db[action](
+            'table',
+            () => columns,
+            (t) =>
+              t.searchIndex(['title', 'text'], {
+                language: 'Ukrainian',
+              }),
+          ),
         () =>
           expectSql([
             tableSQL,
@@ -908,12 +942,14 @@ describe('create and drop table', () => {
     it('should use a language from a column', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            ...columns,
-            ...t.searchIndex(['title', 'text'], {
-              languageColumn: 'lang',
-            }),
-          })),
+          db[action](
+            'table',
+            () => columns,
+            (t) =>
+              t.searchIndex(['title', 'text'], {
+                languageColumn: 'lang',
+              }),
+          ),
         () =>
           expectSql([
             tableSQL,
@@ -927,13 +963,15 @@ describe('create and drop table', () => {
     it('should set weights on columns', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            ...columns,
-            ...t.searchIndex([
-              { column: 'title', weight: 'A' },
-              { column: 'text', weight: 'B' },
-            ]),
-          })),
+          db[action](
+            'table',
+            () => columns,
+            (t) =>
+              t.searchIndex([
+                { column: 'title', weight: 'A' },
+                { column: 'text', weight: 'B' },
+              ]),
+          ),
         () =>
           expectSql([
             tableSQL,
@@ -1100,21 +1138,25 @@ describe('create and drop table', () => {
     it('should support composite foreign key', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            id: t.identity().primaryKey(),
-            name: t.text(),
-            ...t.foreignKey(
-              ['id', 'name'],
-              'otherTable',
-              ['foreignId', 'foreignName'],
-              {
-                name: 'constraintName',
-                match: 'FULL',
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE',
-              },
-            ),
-          })),
+          db[action](
+            'table',
+            (t) => ({
+              id: t.identity().primaryKey(),
+              name: t.text(),
+            }),
+            (t) =>
+              t.foreignKey(
+                ['id', 'name'],
+                'otherTable',
+                ['foreignId', 'foreignName'],
+                {
+                  name: 'constraintName',
+                  match: 'FULL',
+                  onUpdate: 'CASCADE',
+                  onDelete: 'CASCADE',
+                },
+              ),
+          ),
         () => {
           expectSql(`
             CREATE TABLE "table" (
@@ -1139,14 +1181,18 @@ describe('create and drop table', () => {
 
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            idColumn: t.identity().primaryKey(),
-            nameColumn: t.text(),
-            ...t.foreignKey(['idColumn', 'nameColumn'], 'otherTable', [
-              'foreignId',
-              'foreignName',
-            ]),
-          })),
+          db[action](
+            'table',
+            (t) => ({
+              idColumn: t.identity().primaryKey(),
+              nameColumn: t.text(),
+            }),
+            (t) =>
+              t.foreignKey(['idColumn', 'nameColumn'], 'otherTable', [
+                'foreignId',
+                'foreignName',
+              ]),
+          ),
         () => {
           expectSql(`
             CREATE TABLE "table" (
@@ -1187,10 +1233,13 @@ describe('create and drop table', () => {
     it('should support database check on the table', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', (t) => ({
-            id: t.identity().primaryKey(),
-            ...t.check(t.sql('sql')),
-          })),
+          db[action](
+            'table',
+            (t) => ({
+              id: t.identity().primaryKey(),
+            }),
+            (t) => t.check(t.sql('sql')),
+          ),
         () =>
           expectSql(`
             CREATE TABLE "table" (
@@ -1198,42 +1247,6 @@ describe('create and drop table', () => {
               CONSTRAINT "table_check" CHECK (sql)
             )
           `),
-      );
-    });
-  });
-
-  describe('constraint', () => {
-    it('should support constraint', async () => {
-      await testUpAndDown(
-        (action) =>
-          db[action]('table', (t) => ({
-            id: t.identity().primaryKey(),
-            ...t.constraint({
-              name: 'constraintName',
-              check: t.sql('sql'),
-              references: [
-                ['id'],
-                'otherTable',
-                ['otherId'],
-                {
-                  match: 'FULL',
-                  onUpdate: 'CASCADE',
-                  onDelete: 'CASCADE',
-                },
-              ],
-            }),
-          })),
-        () =>
-          expectSql(
-            `
-            CREATE TABLE "table" (
-              "id" int4 GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-              CONSTRAINT "constraintName" ` +
-              `FOREIGN KEY ("id") REFERENCES "otherTable"("otherId") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE ` +
-              `CHECK (sql)
-            )
-          `,
-          ),
       );
     });
   });

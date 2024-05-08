@@ -3,7 +3,6 @@ import {
   ColumnsShape,
   ColumnType,
   QueryWithTable,
-  TableData,
   VirtualColumn,
 } from 'pqb';
 import {
@@ -385,8 +384,8 @@ const createTableAst = (
     comment: table.internal.comment,
     name: table.table,
     shape: makeTableShape(table),
-    ...(table.internal as TableData),
     noPrimaryKey: table.internal.noPrimaryKey ? 'ignore' : 'error',
+    ...table.internal.tableData,
   };
 };
 

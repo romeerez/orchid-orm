@@ -56,7 +56,7 @@ export const _join = <
 
   if (typeof first === 'function') {
     first = (
-      first as unknown as (q: Record<string, Query>) => JoinFirstArg<Query>
+      first as unknown as (q: { [K: string]: Query }) => JoinFirstArg<Query>
     )(q.relations);
     (
       first as unknown as { joinQueryAfterCallback: unknown }

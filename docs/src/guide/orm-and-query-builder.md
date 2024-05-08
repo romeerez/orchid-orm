@@ -196,6 +196,7 @@ query [hooks](/guide/hooks.html#lifecycle-hooks) (aka callbacks), so to define t
 ```ts
 import { BaseTable } from './baseTable';
 import { PostTable } from './post.table';
+import { SubscriptionTable } from './subscription.table';
 
 export class UserTable extends BaseTable {
   schema = 'customSchema';
@@ -218,17 +219,37 @@ export class UserTable extends BaseTable {
   // For "soft delete" functionality
   readonly softDelete = true; // or a string with a column name
 
-  columns = this.setColumns((t) => ({
-    id: t.uuid().primaryKey(),
-    firstName: t.string(),
-    lastName: t.string(),
-    username: t.string().unique(),
-    email: t.string().email().unique(),
-    active: t.boolean().default(true),
-    hidden: t.boolean().default(false),
-    deletedAt: t.timestamp().nullable(),
-    ...t.timestamps(),
-  }));
+  columns = this.setColumns(
+    (t) => ({
+      id: t.uuid().primaryKey(),
+      firstName: t.string(),
+      lastName: t.string(),
+      username: t.string().unique(),
+      email: t.string().email().unique(),
+      deletedAt: t.timestamp().nullable(),
+      subscriptionProvider: t.enum('paymentProvider', ['stripe', 'paypal']),
+      subscriptionId: t.uuid(),
+      ...t.timestamps(),
+    }),
+    // The second function is optional, it is for composite primary keys, indexes, etc.
+    // For a single thing no need to wrap it in array:
+    // (t) => t.index(['role', 'deletedAt']),
+    // For multiple things, return array:
+    (t) => [
+      // composite primary key
+      t.primaryKey(['firstName', 'lastName']),
+      // composite unique index
+      t.unique(['subscriptionProvider', 'subscriptionId']),
+      // composite foreign key
+      t.foreignKey(
+        ['subscriptionProvider', 'subscriptionId'],
+        () => SubscriptionTable,
+        ['provider', 'id'],
+      ),
+      // database-level check
+      t.check(t.sql`username != email`),
+    ],
+  );
 
   // To define "virtual" columns that will be computed on a database side with a custom SQL
   computed = this.setComputed({
@@ -256,6 +277,7 @@ export class UserTable extends BaseTable {
 
 - `table` and `softDelete` must be readonly for TS to recognize them properly, other properties don't have to be readonly.
 - for configuring columns see [Columns schema overview](/guide/columns-overview.html).
+- documentation for composite primary keys, indexes, foreign keys, is residing in [migration column methods](http://localhost:5173/guide/migration-column-methods.html)
 - for defining table's relations see [Modeling relations](/guide/relations.html).
 - check out [soft delete](/guide/orm-and-query-builder.html#softdelete)
 - for `computed` see [Computed columns](/guide/orm-and-query-builder.html#computed-columns).

@@ -456,7 +456,7 @@ describe('structureToAst', () => {
       expect(ast.shape.id.data.primaryKey).toBe(undefined);
       expect(ast.primaryKey).toEqual({
         columns: ['id', 'name'],
-        options: { name: 'pkey' },
+        name: 'pkey',
       });
     });
 
@@ -487,9 +487,10 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
       expect(ast.shape.name.data.indexes).toEqual([
         {
+          options: {
+            nullsNotDistinct: true,
+          },
           name: 'index',
-          unique: undefined,
-          nullsNotDistinct: true,
         },
       ]);
       expect(ast.indexes).toHaveLength(0);
@@ -506,6 +507,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
       expect(ast.shape.name.data.indexes).toEqual([
         {
+          options: {},
           unique: undefined,
         },
       ]);
@@ -537,17 +539,19 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, adapter)) as [RakeDbAst.Table];
       expect(ast.shape.name.data.indexes).toEqual([
         {
+          options: {
+            using: 'gist',
+            unique: true,
+            collate: 'en_US',
+            opclass: 'varchar_ops',
+            order: 'DESC',
+            include: ['id'],
+            nullsNotDistinct: true,
+            with: 'fillfactor=80',
+            tablespace: 'tablespace',
+            where: 'condition',
+          },
           name: 'index',
-          using: 'gist',
-          unique: true,
-          collate: 'en_US',
-          opclass: 'varchar_ops',
-          order: 'DESC',
-          include: ['id'],
-          nullsNotDistinct: true,
-          with: 'fillfactor=80',
-          tablespace: 'tablespace',
-          where: 'condition',
         },
       ]);
       expect(ast.indexes).toHaveLength(0);
@@ -571,11 +575,13 @@ describe('structureToAst', () => {
       expect(ast.indexes).toEqual([
         {
           columns: [{ column: 'id' }, { column: 'name' }],
-          options: { name: 'index', unique: undefined },
+          options: {},
+          name: 'index',
         },
         {
           columns: [{ column: 'id' }, { column: 'name' }],
-          options: { name: 'index', unique: true, nullsNotDistinct: true },
+          options: { unique: true, nullsNotDistinct: true },
+          name: 'index',
         },
       ]);
     });
@@ -636,7 +642,6 @@ describe('structureToAst', () => {
             },
           ],
           options: {
-            name: 'index',
             using: 'gist',
             unique: true,
             nullsNotDistinct: true,
@@ -645,6 +650,7 @@ describe('structureToAst', () => {
             tablespace: 'tablespace',
             where: 'condition',
           },
+          name: 'index',
         },
       ]);
     });
@@ -669,9 +675,11 @@ describe('structureToAst', () => {
 
       expect(ast.shape.otherId.data.foreignKeys).toEqual([
         {
-          columns: ['id'],
-          name: 'fkey',
-          table: 'public.table1',
+          foreignColumns: ['id'],
+          fnOrTable: 'public.table1',
+          options: {
+            name: 'fkey',
+          },
         },
       ]);
       expect(ast.constraints).toHaveLength(0);
@@ -699,8 +707,9 @@ describe('structureToAst', () => {
 
       expect(ast.shape.otherId.data.foreignKeys).toEqual([
         {
-          columns: ['id'],
-          table: 'public.table1',
+          foreignColumns: ['id'],
+          fnOrTable: 'public.table1',
+          options: {},
         },
       ]);
       expect(ast.constraints).toHaveLength(0);
@@ -829,9 +838,11 @@ describe('structureToAst', () => {
       expect(table2.name).toBe('table2');
       expect(table2.shape.column.data.foreignKeys).toEqual([
         {
-          table: 'public.table1',
-          columns: ['id'],
-          name: 'fkey',
+          fnOrTable: 'public.table1',
+          foreignColumns: ['id'],
+          options: {
+            name: 'fkey',
+          },
         },
       ]);
 

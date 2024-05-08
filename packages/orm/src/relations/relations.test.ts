@@ -9,7 +9,7 @@ import {
   profileSelectAll,
   userData,
   useTestORM,
-} from '../test-utils/test-utils';
+} from '../test-utils/orm.test-utils';
 
 describe('relations', () => {
   useTestORM();

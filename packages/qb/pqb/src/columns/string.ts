@@ -15,7 +15,7 @@ import {
 } from 'orchid-core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
-import { SearchWeight } from '../sql';
+import { SearchWeightRecord } from '../sql';
 import { Operators, OperatorsText } from './operators';
 
 export type TextColumnData = StringTypeData;
@@ -499,7 +499,7 @@ export class BitVaryingColumn<
   }
 }
 
-type TsVectorGeneratedColumns = string[] | Record<string, SearchWeight>;
+type TsVectorGeneratedColumns = string[] | SearchWeightRecord;
 
 // A tsvector value is a sorted list of distinct lexemes
 export class TsVectorColumn<
@@ -628,15 +628,17 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
     super(schema, schema.uuid() as never);
   }
 
-  primaryKey<T extends PickColumnBaseData>(
+  /**
+   * see {@link ColumnType.primaryKey}
+   */
+  primaryKey<T extends PickColumnBaseData, Name extends string>(
     this: T,
+    name?: Name,
   ): // using & bc otherwise the return type doesn't match `primaryKey` in ColumnType and TS complains
-  PrimaryKeyColumn<T> & { data: { default: RawSQLBase } } {
-    const column = super.primaryKey();
+  PrimaryKeyColumn<T, Name> & { data: { default: RawSQLBase } } {
+    const column = super.primaryKey(name);
     if (!column.data.default) column.data.default = uuidDefault;
-    return column as unknown as PrimaryKeyColumn<T> & {
-      data: { default: RawSQLBase };
-    };
+    return column as never;
   }
 
   toCode(t: string, m?: boolean): Code {

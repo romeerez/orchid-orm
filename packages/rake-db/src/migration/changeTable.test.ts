@@ -510,9 +510,7 @@ describe('changeTable', () => {
           (action) =>
             db.changeTable('table', (t) => ({
               withIndex: t[action](
-                t.text().index({
-                  name: 'indexName',
-                  unique: true,
+                t.text().unique('indexName', {
                   nullsNotDistinct: true,
                   using: 'gin',
                   collate: 'schema.collation',
@@ -768,9 +766,7 @@ describe('changeTable', () => {
         await testUpAndDown(
           (action) =>
             db.changeTable('table', (t) => ({
-              ...t[action](
-                t.primaryKey(['id', 'name'], { name: 'primaryKeyName' }),
-              ),
+              ...t[action](t.primaryKey(['id', 'name'], 'primaryKeyName')),
             })),
           () =>
             expectSql(`
@@ -828,10 +824,13 @@ describe('changeTable', () => {
           (action) =>
             db.changeTable('table', (t) => ({
               ...t[action](
-                t.index(['id', { column: 'name', order: 'DESC' }], {
-                  name: 'compositeIndexOnTable',
-                  dropMode: 'CASCADE',
-                }),
+                t.index(
+                  ['id', { column: 'name', order: 'DESC' }],
+                  'compositeIndexOnTable',
+                  {
+                    dropMode: 'CASCADE',
+                  },
+                ),
               ),
             })),
           () =>
@@ -850,11 +849,14 @@ describe('changeTable', () => {
           (action) =>
             db.changeTable('table', (t) => ({
               ...t[action](
-                t.unique(['id', { column: 'name', order: 'DESC' }], {
-                  name: 'compositeIndexOnTable',
-                  nullsNotDistinct: true,
-                  dropMode: 'CASCADE',
-                }),
+                t.unique(
+                  ['id', { column: 'name', order: 'DESC' }],
+                  'compositeIndexOnTable',
+                  {
+                    nullsNotDistinct: true,
+                    dropMode: 'CASCADE',
+                  },
+                ),
               ),
             })),
           () =>
@@ -927,7 +929,7 @@ describe('changeTable', () => {
         await testUpAndDown(
           (action) =>
             db.changeTable('table', (t) => ({
-              ...t[action](t.searchIndex('text')),
+              ...t[action](t.searchIndex(['text'])),
             })),
           () =>
             expectSql(`
@@ -1283,51 +1285,6 @@ describe('changeTable', () => {
             expectSql(`
               ALTER TABLE "table"
                 DROP CONSTRAINT "table_check"
-            `),
-        );
-      });
-    });
-
-    describe('constraint', () => {
-      it('should handle constraint', async () => {
-        await testUpAndDown(
-          (action) =>
-            db.changeTable('table', (t) => ({
-              ...t[action](
-                t.constraint({
-                  name: 'constraintName',
-                  dropMode: 'CASCADE',
-                  references: [
-                    ['id'],
-                    'otherTable',
-                    ['otherId'],
-                    {
-                      match: 'FULL',
-                      onUpdate: 'CASCADE',
-                      onDelete: 'CASCADE',
-                    },
-                  ],
-                  check: t.sql('check'),
-                }),
-              ),
-            })),
-          () =>
-            expectSql(`
-              ALTER TABLE "table"
-              ${toLine(`
-                ADD CONSTRAINT "constraintName"
-                  FOREIGN KEY ("id")
-                  REFERENCES "otherTable"("otherId")
-                  MATCH FULL
-                  ON DELETE CASCADE
-                  ON UPDATE CASCADE
-                  CHECK (check)
-              `)}
-            `),
-          () =>
-            expectSql(`
-              ALTER TABLE "table"
-                DROP CONSTRAINT "constraintName" CASCADE
             `),
         );
       });
@@ -2194,11 +2151,10 @@ describe('changeTable', () => {
               addIndex: t.change(t.integer(), t.integer().index()),
               addIndexWithOptions: t.change(
                 t.integer(),
-                t.integer().index({
+                t.integer().unique({
                   collate: 'schema.collation',
                   opclass: 'opclass',
                   order: 'order',
-                  unique: true,
                   nullsNotDistinct: true,
                   using: 'using',
                   include: ['a', 'b'],
@@ -2253,11 +2209,10 @@ describe('changeTable', () => {
             db.changeTable('table', (t) => ({
               removeIndex: t.change(t.integer().index(), t.integer()),
               removeIndexWithOptions: t.change(
-                t.integer().index({
+                t.integer().unique({
                   collate: 'schema.collation',
                   opclass: 'opclass',
                   order: 'order',
-                  unique: true,
                   nullsNotDistinct: true,
                   using: 'using',
                   include: ['a', 'b'],
@@ -2312,12 +2267,10 @@ describe('changeTable', () => {
           () =>
             db.changeTable('table', (t) => ({
               changeIndex: t.change(
-                t.integer().index({
-                  name: 'from',
+                t.integer().index('from', {
                   collate: 'schema.from',
                   opclass: 'from',
                   order: 'from',
-                  unique: false,
                   nullsNotDistinct: false,
                   using: 'from',
                   include: ['a', 'b'],
@@ -2326,12 +2279,10 @@ describe('changeTable', () => {
                   where: 'from',
                   dropMode: 'CASCADE',
                 }),
-                t.integer().index({
-                  name: 'to',
+                t.integer().unique('to', {
                   collate: 'schema.to',
                   opclass: 'to',
                   order: 'to',
-                  unique: true,
                   nullsNotDistinct: true,
                   using: 'to',
                   include: ['c', 'd'],
@@ -2378,14 +2329,7 @@ describe('changeTable', () => {
         await testUpAndDown(
           () =>
             db.changeTable('table', (t) => ({
-              changeIndex: t.change(
-                t.integer().index({
-                  unique: false,
-                }),
-                t.integer().index({
-                  unique: true,
-                }),
-              ),
+              changeIndex: t.change(t.integer().index(), t.integer().unique()),
             })),
           () =>
             expectSql([

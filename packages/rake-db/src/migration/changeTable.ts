@@ -1,17 +1,18 @@
 import {
   ColumnType,
   EnumColumn,
-  getTableData,
+  parseTableDataInput,
   quote,
-  resetTableData,
   TableData,
+  TableDataMethods,
+  tableDataMethods,
   UnknownColumn,
 } from 'pqb';
 import {
+  ColumnTypeBase,
   consumeColumnName,
   deepCompare,
   EmptyObject,
-  emptyObject,
   RawSQLBase,
   RecordKeyTrue,
   setCurrentColumnName,
@@ -27,7 +28,6 @@ import {
   DropMode,
   Migration,
   MigrationColumnTypes,
-  RakeDbColumnTypes,
 } from './migration';
 import { RakeDbAst } from '../ast';
 import {
@@ -67,25 +67,13 @@ const resetChangeTableData = () => {
   changeTableData = newChangeTableData();
 };
 
-const mergeTableData = (a: TableData, b: TableData) => {
-  if (b.primaryKey) {
-    if (!a.primaryKey) {
-      a.primaryKey = b.primaryKey;
-    } else {
-      a.primaryKey = {
-        columns: [...a.primaryKey.columns, ...b.primaryKey.columns],
-        options: { ...a.primaryKey.options, ...b.primaryKey.options },
-      };
-    }
-  }
-  a.indexes = [...(a.indexes || []), ...(b.indexes || [])];
-  a.constraints = [...(a.constraints || []), ...(b.constraints || [])];
-};
-
 const addOrDropChanges: RakeDbAst.ChangeTableItem.Column[] = [];
 
+// add column
 function add(item: ColumnType, options?: { dropMode?: DropMode }): number;
+// add primary key, index, etc
 function add(emptyObject: EmptyObject): EmptyObject;
+// add timestamps
 function add(
   items: Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
@@ -99,22 +87,30 @@ function add(
     if (result.type === 'change') return result;
     addOrDropChanges.push(result);
     return addOrDropChanges.length - 1;
-  } else if (item === emptyObject) {
-    mergeTableData(changeTableData.add, getTableData());
-    resetTableData();
-    return emptyObject;
-  } else {
-    // ...t.timestamps() case
-    const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
-    for (const key in item) {
-      result[key] = {
-        type: 'add',
-        item: (item as Record<string, ColumnType>)[key],
-        dropMode: options?.dropMode,
-      };
-    }
-    return result;
   }
+
+  for (const key in item) {
+    // ...t.timestamps() case
+    if (
+      (item as Record<string, RakeDbAst.ChangeTableItem.Column>)[key] instanceof
+      ColumnTypeBase
+    ) {
+      const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
+      for (const key in item) {
+        result[key] = {
+          type: 'add',
+          item: (item as Record<string, ColumnType>)[key],
+          dropMode: options?.dropMode,
+        };
+      }
+      return result;
+    }
+
+    parseTableDataInput(changeTableData.add, item);
+    break;
+  }
+
+  return undefined as never;
 }
 
 const drop = function (item, options) {
@@ -123,22 +119,31 @@ const drop = function (item, options) {
     if (result.type === 'change') return result;
     addOrDropChanges.push(result);
     return addOrDropChanges.length - 1;
-  } else if (item === emptyObject) {
-    mergeTableData(changeTableData.drop, getTableData());
-    resetTableData();
-    return emptyObject;
-  } else {
-    // ...t.timestamps() case
-    const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
-    for (const key in item as any) {
-      result[key] = {
-        type: 'drop',
-        item: (item as Record<string, ColumnType>)[key],
-        dropMode: options?.dropMode,
-      };
-    }
-    return result;
   }
+
+  for (const key in item) {
+    // ...t.timestamps() case
+    if (
+      (item as unknown as Record<string, RakeDbAst.ChangeTableItem.Column>)[
+        key
+      ] instanceof ColumnTypeBase
+    ) {
+      const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
+      for (const key in item as any) {
+        result[key] = {
+          type: 'drop',
+          item: (item as Record<string, ColumnType>)[key],
+          dropMode: options?.dropMode,
+        };
+      }
+      return result;
+    }
+
+    parseTableDataInput(changeTableData.drop, item);
+    break;
+  }
+
+  return undefined as never;
 } as typeof add;
 
 const addOrDrop = (
@@ -211,7 +216,8 @@ const nameKey = Symbol('name');
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
   ...tableMethods,
-  name(this: RakeDbColumnTypes, name: string) {
+  ...(tableDataMethods as TableDataMethods<string>),
+  name(name: string) {
     setCurrentColumnName(name);
     const types = Object.create(this);
     types[nameKey] = name;
@@ -267,7 +273,7 @@ export type TableChangeData = Record<
   | EmptyObject
 >;
 
-export const changeTable = async <CT extends RakeDbColumnTypes>(
+export const changeTable = async <CT>(
   migration: Migration<CT>,
   up: boolean,
   tableName: string,
@@ -280,7 +286,6 @@ export const changeTable = async <CT extends RakeDbColumnTypes>(
     'language' in options ? options.language : migration.options.language;
 
   setDefaultLanguage(language);
-  resetTableData();
   resetChangeTableData();
 
   const tableChanger = Object.create(
@@ -388,10 +393,8 @@ const makeAst = (
   };
 };
 
-interface PrimaryKeys {
-  columns: string[];
+interface PrimaryKey extends TableData.PrimaryKey {
   change?: true;
-  options?: { name?: string };
 }
 
 const astToQueries = (
@@ -407,11 +410,11 @@ const astToQueries = (
     });
   }
 
-  const addPrimaryKeys: PrimaryKeys = {
+  const addPrimaryKeys: PrimaryKey = {
     columns: [],
   };
 
-  const dropPrimaryKeys: PrimaryKeys = {
+  const dropPrimaryKeys: PrimaryKey = {
     columns: [],
   };
 
@@ -441,12 +444,12 @@ const astToQueries = (
   }
 
   if (ast.add.primaryKey) {
-    addPrimaryKeys.options = ast.add.primaryKey.options;
+    addPrimaryKeys.name = ast.add.primaryKey.name;
     addPrimaryKeys.columns.push(...ast.add.primaryKey.columns);
   }
 
   if (ast.drop.primaryKey) {
-    dropPrimaryKeys.options = ast.drop.primaryKey.options;
+    dropPrimaryKeys.name = ast.drop.primaryKey.name;
     dropPrimaryKeys.columns.push(...ast.drop.primaryKey.columns);
   }
 
@@ -515,7 +518,7 @@ const astToQueries = (
     dropPrimaryKeys.change ||
     dropPrimaryKeys.columns.length > 1
   ) {
-    const name = dropPrimaryKeys.options?.name || `${ast.name}_pkey`;
+    const name = dropPrimaryKeys.name || `${ast.name}_pkey`;
     prependAlterTable.push(`DROP CONSTRAINT "${name}"`);
   }
 
@@ -537,7 +540,7 @@ const astToQueries = (
       `ADD ${primaryKeyToSql(
         snakeCase
           ? {
-              options: addPrimaryKeys.options,
+              name: addPrimaryKeys.name,
               columns: addPrimaryKeys.columns.map(toSnakeCase),
             }
           : addPrimaryKeys,
@@ -582,8 +585,8 @@ const handlePrerequisitesForTableItem = (
   key: string,
   item: RakeDbAst.ChangeTableItem,
   queries: TableQuery[],
-  addPrimaryKeys: PrimaryKeys,
-  dropPrimaryKeys: PrimaryKeys,
+  addPrimaryKeys: PrimaryKey,
+  dropPrimaryKeys: PrimaryKey,
   snakeCase?: boolean,
 ) => {
   if ('item' in item) {
@@ -641,7 +644,7 @@ const handleTableItemChange = (
   alterTable: string[],
   renameItems: string[],
   values: unknown[],
-  addPrimaryKeys: PrimaryKeys,
+  addPrimaryKeys: PrimaryKey,
   addIndexes: TableData.Index[],
   dropIndexes: TableData.Index[],
   addConstraints: TableData.Constraint[],
@@ -767,40 +770,37 @@ const handleTableItemChange = (
         (fromFkey || toFkey) &&
         (!fromFkey ||
           !toFkey ||
-          fromFkey.name !== toFkey.name ||
-          fromFkey.match !== toFkey.match ||
-          fromFkey.onUpdate !== toFkey.onUpdate ||
-          fromFkey.onDelete !== toFkey.onDelete ||
-          fromFkey.dropMode !== toFkey.dropMode ||
-          fromFkey.table !== toFkey.table ||
-          fromFkey.columns.join(',') !== toFkey.columns.join(','))
+          fromFkey.options?.name !== toFkey.options?.name ||
+          fromFkey.options?.match !== toFkey.options?.match ||
+          fromFkey.options?.onUpdate !== toFkey.options?.onUpdate ||
+          fromFkey.options?.onDelete !== toFkey.options?.onDelete ||
+          fromFkey.options?.dropMode !== toFkey.options?.dropMode ||
+          (fromFkey.fnOrTable as string) !== (toFkey.fnOrTable as string))
       ) {
         if (fromFkey) {
           dropConstraints.push({
-            name: fromFkey.name,
-            dropMode: fromFkey.dropMode,
+            name: fromFkey.options?.name,
+            dropMode: fromFkey.options?.dropMode,
             references: {
               columns: [name],
-              fnOrTable: fromFkey.table,
+              ...fromFkey,
               foreignColumns: snakeCase
-                ? fromFkey.columns.map(toSnakeCase)
-                : fromFkey.columns,
-              options: fromFkey,
+                ? fromFkey.foreignColumns.map(toSnakeCase)
+                : fromFkey.foreignColumns,
             },
           });
         }
 
         if (toFkey) {
           addConstraints.push({
-            name: toFkey.name,
-            dropMode: toFkey.dropMode,
+            name: toFkey.options?.name,
+            dropMode: toFkey.options?.dropMode,
             references: {
               columns: [name],
-              fnOrTable: toFkey.table,
+              ...toFkey,
               foreignColumns: snakeCase
-                ? toFkey.columns.map(toSnakeCase)
-                : toFkey.columns,
-              options: toFkey,
+                ? toFkey.foreignColumns.map(toSnakeCase)
+                : toFkey.foreignColumns,
             },
           });
         }
@@ -819,42 +819,43 @@ const handleTableItemChange = (
         (fromIndex || toIndex) &&
         (!fromIndex ||
           !toIndex ||
-          fromIndex.collate !== toIndex.collate ||
-          fromIndex.opclass !== toIndex.opclass ||
-          fromIndex.order !== toIndex.order ||
+          fromIndex.options.collate !== toIndex.options.collate ||
+          fromIndex.options.opclass !== toIndex.options.opclass ||
+          fromIndex.options.order !== toIndex.options.order ||
           fromIndex.name !== toIndex.name ||
-          fromIndex.unique !== toIndex.unique ||
-          fromIndex.using !== toIndex.using ||
-          fromIndex.include !== toIndex.include ||
-          (Array.isArray(fromIndex.include) &&
-            Array.isArray(toIndex.include) &&
-            fromIndex.include.join(',') !== toIndex.include.join(',')) ||
-          fromIndex.with !== toIndex.with ||
-          fromIndex.tablespace !== toIndex.tablespace ||
-          fromIndex.where !== toIndex.where ||
-          fromIndex.dropMode !== toIndex.dropMode)
+          fromIndex.options.unique !== toIndex.options.unique ||
+          fromIndex.options.using !== toIndex.options.using ||
+          fromIndex.options.include !== toIndex.options.include ||
+          (Array.isArray(fromIndex.options.include) &&
+            Array.isArray(toIndex.options.include) &&
+            fromIndex.options.include.join(',') !==
+              toIndex.options.include.join(',')) ||
+          fromIndex.options.with !== toIndex.options.with ||
+          fromIndex.options.tablespace !== toIndex.options.tablespace ||
+          fromIndex.options.where !== toIndex.options.where ||
+          fromIndex.options.dropMode !== toIndex.options.dropMode)
       ) {
         if (fromIndex) {
           dropIndexes.push({
+            ...fromIndex,
             columns: [
               {
                 column: name,
-                ...fromIndex,
+                ...fromIndex.options,
               },
             ],
-            options: fromIndex,
           });
         }
 
         if (toIndex) {
           addIndexes.push({
+            ...toIndex,
             columns: [
               {
                 column: name,
-                ...toIndex,
+                ...toIndex.options,
               },
             ],
-            options: toIndex,
           });
         }
       }
@@ -897,7 +898,7 @@ const mapIndexesForSnakeCase = (
 ): TableData.Index[] => {
   return (
     indexes?.map((index) => ({
-      options: index.options,
+      ...index,
       columns: snakeCase
         ? index.columns.map((item) =>
             'column' in item

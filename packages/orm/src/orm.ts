@@ -24,6 +24,7 @@ import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   ColumnsShapeBase,
+  emptyObject,
   RecordUnknown,
   SQLQueryArgs,
   TransactionState,
@@ -182,11 +183,11 @@ export const orchidORM = <T extends TableClasses>(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       qb as any,
       table.table,
-      table.columns,
+      table.columns.shape,
       table.types,
       transactionStorage,
       options,
-      table.constructor.prototype.tableData ?? {},
+      table.constructor.prototype.tableData ?? emptyObject,
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;

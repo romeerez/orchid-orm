@@ -45,7 +45,11 @@ describe('generate', () => {
 
   it('should throw if table`s table is not set', async () => {
     await arrange({
-      tables: [class One extends BaseTable {}],
+      tables: [
+        class One extends BaseTable {
+          noPrimaryKey = true;
+        },
+      ],
     });
 
     await expect(act()).rejects.toThrow(`Table One is missing table property`);

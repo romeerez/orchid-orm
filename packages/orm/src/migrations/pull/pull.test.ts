@@ -124,20 +124,24 @@ describe('pull', () => {
 
           await db.createDomain('domain', (t) => t.integer().nullable());
 
-          await db.createTable('schema.one', (t) => ({
-            one: t.integer(),
-            two: t.text(),
-            snake_case: t.boolean(),
-            numbers: t.enum('numbers'),
-            domain: t.domain('domain'),
-            ...t.unique(['one', 'two'], {
-              name: 'uniqueIdx',
-              nullsNotDistinct: true,
+          await db.createTable(
+            'schema.one',
+            (t) => ({
+              one: t.integer(),
+              two: t.text(),
+              snake_case: t.boolean(),
+              numbers: t.enum('numbers'),
+              domain: t.domain('domain'),
             }),
-            ...t.primaryKey(['one', 'two'], { name: 'onePkey' }),
-            ...t.check(t.sql`one = 69`),
-            ...t.check(t.sql`one::text != two`, { name: 'tableCheck' }),
-          }));
+            (t) => [
+              t.unique(['one', 'two'], 'uniqueIdx', {
+                nullsNotDistinct: true,
+              }),
+              t.primaryKey(['one', 'two'], 'onePkey'),
+              t.check(t.sql`one = 69`),
+              t.check(t.sql`one::text != two`, 'tableCheck'),
+            ],
+          );
         },
       });
 
@@ -156,19 +160,22 @@ export type OneUpdate = Updatable<OneTable>;
 export class OneTable extends BaseTable {
   schema = 'schema';
   readonly table = 'one';
-  columns = this.setColumns((t) => ({
-    one: t.integer().check(t.sql\`(one = 69)\`),
-    two: t.text(),
-    snakeCase: t.name('snake_case').boolean(),
-    numbers: t.enum('public.numbers', ['one', 'two']),
-    domain: t.domain('public.domain').as(t.integer().nullable()),
-    ...t.primaryKey(['one', 'two'], { name: 'onePkey' }),
-    ...t.unique(['one', 'two'], {
-      name: 'uniqueIdx',
-      nullsNotDistinct: true,
+  columns = this.setColumns(
+    (t) => ({
+      one: t.integer().check(t.sql\`(one = 69)\`),
+      two: t.text(),
+      snakeCase: t.name('snake_case').boolean(),
+      numbers: t.enum('public.numbers', ['one', 'two']),
+      domain: t.domain('public.domain').as(t.integer().nullable()),
     }),
-    ...t.check(t.sql({ raw: '((one)::text <> two)' }), { name: 'tableCheck' }),
-  }));
+    (t) => [
+      t.primaryKey(['one', 'two'], 'onePkey'),
+      t.unique(['one', 'two'], 'uniqueIdx', {
+        nullsNotDistinct: true,
+      }),
+      t.check(t.sql({ raw: '((one)::text <> two)' }), 'tableCheck'),
+    ],
+  );
 }
 `,
         ],
@@ -221,13 +228,17 @@ export class OneTable extends BaseTable {
             two: t.text().primaryKey(),
           }));
 
-          await db.createTable('two', (t) => ({
-            three: t.integer().primaryKey(),
-            four: t.text().primaryKey(),
-            ...t.foreignKey(['three', 'four'], 'one', ['one', 'two'], {
-              name: 'fkeyName',
+          await db.createTable(
+            'two',
+            (t) => ({
+              three: t.integer().primaryKey(),
+              four: t.text().primaryKey(),
             }),
-          }));
+            (t) =>
+              t.foreignKey(['three', 'four'], 'one', ['one', 'two'], {
+                name: 'fkeyName',
+              }),
+          );
         },
       });
 
@@ -246,11 +257,13 @@ export type OneUpdate = Updatable<OneTable>;
 
 export class OneTable extends BaseTable {
   readonly table = 'one';
-  columns = this.setColumns((t) => ({
-    one: t.integer(),
-    two: t.text(),
-    ...t.primaryKey(['one', 'two']),
-  }));
+  columns = this.setColumns(
+    (t) => ({
+      one: t.integer(),
+      two: t.text(),
+    }),
+    (t) => t.primaryKey(['one', 'two']),
+  );
   
   relations = {
     two: this.belongsTo(() => TwoTable, {
@@ -273,19 +286,23 @@ export type TwoUpdate = Updatable<TwoTable>;
 
 export class TwoTable extends BaseTable {
   readonly table = 'two';
-  columns = this.setColumns((t) => ({
-    three: t.integer(),
-    four: t.text(),
-    ...t.primaryKey(['three', 'four']),
-    ...t.foreignKey(
-      ['three', 'four'],
-      'one',
-      ['one', 'two'],
-      {
-        name: 'fkeyName',
-      },
-    ),
-  }));
+  columns = this.setColumns(
+    (t) => ({
+      three: t.integer(),
+      four: t.text(),
+    }),
+    (t) => [
+      t.primaryKey(['three', 'four']),
+      t.foreignKey(
+        ['three', 'four'],
+        'one',
+        ['one', 'two'],
+        {
+          name: 'fkeyName',
+        },
+      ),
+    ],
+  );
   
   relations = {
     one: this.hasMany(() => OneTable, {

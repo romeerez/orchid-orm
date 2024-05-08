@@ -12,16 +12,13 @@ import {
   CustomTypeColumn,
   DomainColumn,
   EnumColumn,
-  ForeignKeyAction,
-  ForeignKeyMatch,
-  ForeignKeyOptions,
   instantiateColumn,
   raw,
-  TableData,
   ColumnsByType,
   Adapter,
   makeColumnsByType,
   RawSQL,
+  TableData,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -34,13 +31,13 @@ import {
 import { getConstraintName, getIndexName } from '../migration/migrationUtils';
 import { AnyRakeDbConfig } from '../config';
 
-const matchMap: Record<string, undefined | ForeignKeyMatch> = {
+const matchMap: Record<string, undefined | TableData.References.Match> = {
   s: undefined,
   f: 'FULL',
   p: 'PARTIAL',
 };
 
-const fkeyActionMap: Record<string, undefined | ForeignKeyAction> = {
+const fkeyActionMap: Record<string, undefined | TableData.References.Action> = {
   a: undefined, // default
   r: 'RESTRICT',
   c: 'CASCADE',
@@ -330,6 +327,7 @@ export const tableToAst = (
         index.columns.length > 1 ||
         index.columns.some((it) => 'expression' in it)
       ) {
+        const { name, ...options } = makeIndexOptions(tableName, index);
         acc.push({
           columns: index.columns.map((it) => ({
             ...('column' in it
@@ -339,7 +337,8 @@ export const tableToAst = (
             opclass: it.opclass,
             order: it.order,
           })),
-          options: makeIndexOptions(tableName, index),
+          options,
+          name,
         });
       }
       return acc;
@@ -374,10 +373,8 @@ export const getDbStructureTableData = (
     primaryKey: primaryKey?.primaryKey
       ? {
           columns: primaryKey.primaryKey,
-          options:
-            primaryKey.name === `${name}_pkey`
-              ? undefined
-              : { name: primaryKey.name },
+          name:
+            primaryKey.name === `${name}_pkey` ? undefined : primaryKey.name,
         }
       : undefined,
     indexes: data.indexes.filter(
@@ -396,7 +393,7 @@ const constraintToAst = (
   const { references, check } = item;
 
   if (references) {
-    const options: ForeignKeyOptions = {};
+    const options: TableData.References.Options = {};
     result.references = {
       columns: references.columns,
       fnOrTable: getReferencesTable(ctx, references),
@@ -545,12 +542,16 @@ export const dbColumnToAst = (
         it.columns[0].column === item.name,
     );
     for (const index of columnIndexes) {
-      const options = index.columns[0];
-      column = column.index({
-        collate: options.collate,
-        opclass: options.opclass,
-        order: options.order,
-        ...makeIndexOptions(tableName, index),
+      const columnOptions = index.columns[0];
+      const { name, ...indexOptions } = makeIndexOptions(tableName, index);
+      (column.data.indexes ??= []).push({
+        options: {
+          collate: columnOptions.collate,
+          opclass: columnOptions.opclass,
+          order: columnOptions.order,
+          ...indexOptions,
+        },
+        name,
       });
     }
   }

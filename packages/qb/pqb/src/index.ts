@@ -17,3 +17,4 @@ export * from './testTransaction';
 export * from './modules/computed';
 export * from './modules/getColumnInfo';
 export * from './modules/copyTableData';
+export * from './tableData';

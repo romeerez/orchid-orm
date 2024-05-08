@@ -1,8 +1,8 @@
-import { DbMigration, RakeDbColumnTypes } from './migration';
+import { DbMigration } from './migration';
 
-let currentChanges: ChangeCallback<RakeDbColumnTypes>[] = [];
+let currentChanges: ChangeCallback<unknown>[] = [];
 
-export type ChangeCallback<CT extends RakeDbColumnTypes> = (
+export type ChangeCallback<CT> = (
   db: DbMigration<CT>,
   up: boolean,
 ) => Promise<void>;
@@ -12,5 +12,5 @@ export const clearChanges = () => {
 };
 
 export const getCurrentChanges = () => currentChanges;
-export const pushChange = (fn: ChangeCallback<RakeDbColumnTypes>) =>
+export const pushChange = (fn: ChangeCallback<unknown>) =>
   currentChanges.push(fn);

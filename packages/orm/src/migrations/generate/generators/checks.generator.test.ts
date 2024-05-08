@@ -69,7 +69,7 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
-      t.check(t.sql\`("column" = 42)\`, { name: 'table_column_check' })
+      t.check(t.sql\`("column" = 42)\`, 'table_column_check')
     ),
   }));
 });
@@ -119,7 +119,7 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
-      t.check(t.sql\`(id = 123)\`, { name: 'table_id_check' })
+      t.check(t.sql\`(id = 123)\`, 'table_id_check')
     ),
     ...t.add(
       t.check(t.sql\`id != 123\`)
@@ -141,10 +141,12 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
-          id: t.integer(),
-          ...t.check(t.sql`"id" = 42`),
-        })),
+        table(
+          (t) => ({
+            id: t.integer(),
+          }),
+          (t) => t.check(t.sql`"id" = 42`),
+        ),
       ],
     });
 

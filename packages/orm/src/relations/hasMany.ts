@@ -79,12 +79,12 @@ export type HasManyParams<
   Relation extends RelationThunkBase,
 > = Relation['options'] extends RelationRefsOptions
   ? {
-      [Name in Relation['options']['columns'][number]]: T['columns'][Name]['type'];
+      [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
     }
   : Relation['options'] extends RelationKeysOptions
   ? Record<
       Relation['options']['primaryKey'],
-      T['columns'][Relation['options']['primaryKey']]['type']
+      T['columns']['shape'][Relation['options']['primaryKey']]['type']
     >
   : Relation['options'] extends RelationThroughOptions
   ? RelationConfigParams<T, T['relations'][Relation['options']['through']]>
@@ -288,15 +288,17 @@ export const makeHasManyMethod = (
     };
   }
 
-  const primaryKeys =
+  const primaryKeys = (
     'columns' in relation.options
       ? relation.options.columns
-      : [relation.options.primaryKey];
+      : [relation.options.primaryKey]
+  ) as string[];
 
-  const foreignKeys =
+  const foreignKeys = (
     'columns' in relation.options
       ? relation.options.references
-      : [relation.options.foreignKey];
+      : [relation.options.foreignKey]
+  ) as string[];
 
   const state: State = { query, primaryKeys, foreignKeys };
   const len = primaryKeys.length;

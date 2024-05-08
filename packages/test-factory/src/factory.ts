@@ -8,8 +8,10 @@ import {
   ZodTypeAny,
 } from 'zod';
 import {
+  ColumnType,
   CreateData,
   DateBaseColumn,
+  getPrimaryKeys,
   IntegerBaseColumn,
   NumberBaseColumn,
   Query,
@@ -272,13 +274,13 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     pick[key] = true;
   }
 
-  factory.table.primaryKeys.forEach((key) => {
+  for (const key of getPrimaryKeys(factory.table)) {
     const item = factory.table.shape[key] as ColumnTypeBase;
 
     if ('identity' in item.data || item.dataType.includes('serial')) {
       delete pick[key];
     }
-  });
+  }
 
   const shared: RecordUnknown = {};
 
@@ -532,7 +534,7 @@ export const tableFactory = <T extends Query>(
   const uniqueFields: UniqueField[] = [];
 
   for (const key in table.shape) {
-    const column = table.shape[key] as ColumnTypeBase;
+    const column = table.shape[key] as ColumnType;
     if (column instanceof DateBaseColumn) {
       if (column.data.as instanceof IntegerBaseColumn) {
         data[key] = (sequence: number) => now + sequence;
@@ -577,7 +579,9 @@ export const tableFactory = <T extends Query>(
       }
     }
 
-    if (column.data.indexes?.some((index) => index.unique)) {
+    if (
+      (column as ColumnType).data.indexes?.some((index) => index.options.unique)
+    ) {
       if (column instanceof TextBaseColumn) {
         uniqueFields.push({
           key,

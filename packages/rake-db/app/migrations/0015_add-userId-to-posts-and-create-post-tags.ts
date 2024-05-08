@@ -13,9 +13,12 @@ change(async (db) => {
 });
 
 change(async (db) => {
-  await db.createTable('postTag', (t) => ({
-    postId: t.integer().foreignKey('post', 'id'),
-    tag: t.text().foreignKey('tag', 'tag'),
-    ...t.primaryKey(['postId', 'tag']),
-  }));
+  await db.createTable(
+    'postTag',
+    (t) => ({
+      postId: t.integer().foreignKey('post', 'id'),
+      tag: t.text().foreignKey('tag', 'tag'),
+    }),
+    (t) => t.primaryKey(['postId', 'tag']),
+  );
 });

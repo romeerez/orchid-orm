@@ -852,9 +852,11 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
     const pkeys: Record<string, true> = {};
 
-    const { columns } = this.prototype;
-    for (const key in columns) {
-      if (columns[key].data.primaryKey) {
+    const {
+      columns: { shape },
+    } = this.prototype;
+    for (const key in shape) {
+      if (shape[key].data.primaryKey) {
         pkeys[key] = true;
       }
     }
@@ -993,7 +995,7 @@ type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
   {
-    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends true
+    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
       ? K
       : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
   },
@@ -1005,7 +1007,7 @@ function mapSchema<
   Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
 >(klass: T, schemaKey: Key): MapSchema<T, Key> {
   const shape: ZodRawShape = {};
-  const columns = klass.prototype.columns;
+  const { shape: columns } = klass.prototype.columns;
 
   for (const key in columns) {
     shape[key] = columns[key][schemaKey];

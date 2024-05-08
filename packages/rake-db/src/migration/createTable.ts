@@ -3,18 +3,19 @@ import {
   Db,
   EnumColumn,
   getColumnTypes,
-  getTableData,
   NoPrimaryKeyOption,
+  parseTableData,
   QueryArraysResult,
   quote,
   TableData,
+  TableDataFn,
+  TableDataItem,
 } from 'pqb';
 import {
   ColumnComment,
   ColumnsShapeCallback,
   DbMigration,
   Migration,
-  RakeDbColumnTypes,
   TableOptions,
 } from './migration';
 import {
@@ -35,7 +36,12 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
-import { emptyObject, snakeCaseKey } from 'orchid-core';
+import {
+  emptyObject,
+  MaybeArray,
+  RecordUnknown,
+  snakeCaseKey,
+} from 'orchid-core';
 
 export interface TableQuery {
   text: string;
@@ -51,16 +57,32 @@ export interface CreateTableResult<
 }
 
 export const createTable = async <
-  CT extends RakeDbColumnTypes,
+  CT,
   Table extends string,
   Shape extends ColumnsShape,
 >(
   migration: Migration<CT>,
   up: boolean,
   tableName: Table,
-  options: TableOptions,
-  fn?: ColumnsShapeCallback<CT, Shape>,
+  first?: TableOptions | ColumnsShapeCallback<CT, Shape>,
+  second?:
+    | ColumnsShapeCallback<CT, Shape>
+    | TableDataFn<RecordUnknown, MaybeArray<TableDataItem>>,
+  third?: TableDataFn<RecordUnknown, MaybeArray<TableDataItem>>,
 ): Promise<CreateTableResult<Table, Shape>> => {
+  let options: TableOptions;
+  let fn: ColumnsShapeCallback<CT, Shape> | undefined;
+  let dataFn: TableDataFn<RecordUnknown, MaybeArray<TableDataItem>> | undefined;
+  if (typeof first === 'object') {
+    options = first;
+    fn = second as ColumnsShapeCallback<CT, Shape>;
+    dataFn = third as TableDataFn<RecordUnknown, MaybeArray<TableDataItem>>;
+  } else {
+    options = emptyObject;
+    fn = first;
+    dataFn = second as TableDataFn<RecordUnknown, MaybeArray<TableDataItem>>;
+  }
+
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
   const language =
@@ -81,7 +103,7 @@ export const createTable = async <
       migration.options.baseTable?.nowSQL,
       language,
     );
-    tableData = getTableData();
+    tableData = parseTableData(dataFn);
   } else {
     shape = (tableData = emptyObject) as Shape;
   }
@@ -107,12 +129,15 @@ export const createTable = async <
 
   return {
     get table(): Db<Table, Shape> {
-      return (table ??= (
-        migration as unknown as DbMigration<RakeDbColumnTypes>
-      )(tableName, shape, {
-        noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
-        snakeCase: options.snakeCase,
-      }) as unknown as Db<Table, Shape>);
+      return (table ??= (migration as unknown as DbMigration<unknown>)(
+        tableName,
+        shape,
+        undefined,
+        {
+          noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
+          snakeCase: options.snakeCase,
+        },
+      ) as unknown as Db<Table, Shape>);
     },
   };
 };
@@ -221,7 +246,7 @@ const astToQueries = (
   if (ast.primaryKey) {
     lines.push(
       `\n  ${primaryKeyToSql({
-        options: ast.primaryKey.options,
+        name: ast.primaryKey.name,
         columns: ast.primaryKey.columns.map((key) =>
           getColumnName(shape[key], key, snakeCase),
         ),

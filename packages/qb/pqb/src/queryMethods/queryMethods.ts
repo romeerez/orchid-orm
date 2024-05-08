@@ -1,5 +1,4 @@
 import {
-  PickQueryMetaResultRelations,
   PickQueryMetaResultReturnTypeWithDataWindowsTable,
   PickQueryQ,
   PickQueryShapeResultSinglePrimaryKey,
@@ -70,6 +69,7 @@ import {
   PickQueryMetaResult,
   PickQueryMetaShape,
   PickQueryResult,
+  PickQueryResultUniqueColumns,
   PickQueryShape,
   PickQueryTableMetaResult,
   QueryColumn,
@@ -106,7 +106,7 @@ export interface WindowArgDeclaration<T extends OrderArgSelf = OrderArgSelf> {
 
 // add new windows to a query
 type WindowResult<T, W extends RecordUnknown> = T & {
-  windows: Record<keyof W, true>;
+  windows: { [K in keyof W]: true };
 };
 
 export type OrderArgSelf = PickQueryMetaResult;
@@ -150,7 +150,7 @@ export type GroupArg<T extends PickQueryResult> =
   | Expression;
 
 type FindArg<T extends PickQueryShapeSinglePrimaryKey> =
-  | T['shape'][T['singlePrimaryKey']]['queryType']
+  | T['internal']['singlePrimaryKey']
   | Expression;
 
 type QueryHelper<
@@ -421,20 +421,11 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * The `find` method is available only for tables which has exactly one primary key.
-   * And also it can accept raw SQL template literal, then the primary key is not required.
-   *
-   * Finds a record by id, throws {@link NotFoundError} if not found:
+   * Finds a single record by the primary key (id), throws [NotFoundError](/guide/error-handling.html) if not found.
+   * Not available if the table has no or multiple primary keys.
    *
    * ```ts
-   * await db.table.find(1);
-   * ```
-   *
-   * ```ts
-   * await db.user.find`
-   *   age = ${age} AND
-   *   name = ${name}
-   * `;
+   * const result: TableType = await db.table.find(1);
    * ```
    *
    * @param value - primary key value to find by
@@ -455,7 +446,7 @@ export class QueryMethods<ColumnTypes> {
     return _queryTake(
       _queryWhere(q, [
         {
-          [q.singlePrimaryKey]: value,
+          [q.internal.singlePrimaryKey]: value,
         } as never,
       ]),
     ) as never;
@@ -473,7 +464,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - SQL expression
    */
-  findBySql<T extends PickQueryShapeResultSinglePrimaryKey>(
+  findBySql<T extends PickQueryResult>(
     this: T,
     ...args: SQLQueryArgs
   ): SetQueryReturnsOne<WhereResult<T>> {
@@ -482,8 +473,8 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * Find a single record by the primary key (id), adds `LIMIT 1`.
-   * Returns `undefined` when not found.
+   * Finds a single record by the primary key (id), returns `undefined` when not found.
+   * Not available if the table has no or multiple primary keys.
    *
    * ```ts
    * const result: TableType | undefined = await db.table.find(123);
@@ -511,7 +502,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - SQL expression
    */
-  findBySqlOptional<T extends PickQueryShapeResultSinglePrimaryKey>(
+  findBySqlOptional<T extends PickQueryResult>(
     this: T,
     ...args: SQLQueryArgs
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
@@ -521,47 +512,47 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * The same as `where(conditions).take()`, takes the same arguments as {@link Where.where}, it will filter records and add a `LIMIT 1`.
-   * Throws `NotFoundError` if not found.
+   * Finds a single unique record, throws [NotFoundError](/guide/error-handling.html) if not found.
+   * It accepts values of primary keys or unique indexes defined on the table.
+   * `findBy`'s argument type is a union of all possible sets of unique conditions.
+   *
+   * You can use `where(...).take()` for non-unique conditions.
    *
    * ```ts
-   * const result: TableType = await db.table.findBy({ key: 'value' });
-   * // is equivalent to:
-   * db.table.where({ key: 'value' }).take()
+   * await db.table.findBy({ key: 'value' });
    * ```
    *
-   * @param args - `where` conditions
+   * @param uniqueColumnValues - is derived from primary keys and unique indexes in the table
    */
-  findBy<T extends PickQueryMetaResultRelations>(
+  findBy<T extends PickQueryResultUniqueColumns>(
     this: T,
-    ...args: WhereArg<T>[]
+    uniqueColumnValues: T['internal']['uniqueColumns'],
   ): SetQueryReturnsOne<WhereResult<T>> {
-    return _queryFindBy(
-      (this as unknown as Query).clone(),
-      args as never,
-    ) as never;
+    return _queryFindBy((this as unknown as Query).clone(), [
+      uniqueColumnValues,
+    ] as never) as never;
   }
 
   /**
-   * The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
-   * Returns `undefined` when not found.
+   * Finds a single unique record, returns `undefined` if not found.
+   * It accepts values of primary keys or unique indexes defined on the table.
+   * `findBy`'s argument type is a union of all possible sets of unique conditions.
+   *
+   * You can use `where(...).takeOptional()` for non-unique conditions.
    *
    * ```ts
-   * const result: TableType | undefined = await db.table.findByOptional({
-   *   key: 'value',
-   * });
+   * await db.table.findByOptional({ key: 'value' });
    * ```
    *
-   * @param args - `where` conditions
+   * @param uniqueColumnValues - is derived from primary keys and unique indexes in the table
    */
-  findByOptional<T extends PickQueryMetaResultRelations>(
+  findByOptional<T extends PickQueryResultUniqueColumns>(
     this: T,
-    ...args: WhereArg<T>[]
+    uniqueColumnValues: T['internal']['uniqueColumns'],
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return _queryFindByOptional(
-      (this as unknown as Query).clone(),
-      args as never,
-    ) as never;
+    return _queryFindByOptional((this as unknown as Query).clone(), [
+      uniqueColumnValues,
+    ] as never) as never;
   }
 
   /**
@@ -954,7 +945,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     name: K,
   ): ColumnRefExpression<T['shape'][K]> {
-    const column = (this.shape as Record<PropertyKey, ColumnTypeBase>)[name];
+    const column = (this.shape as { [K: PropertyKey]: ColumnTypeBase })[name];
     return new ColumnRefExpression(column as T['shape'][K], name as string);
   }
 }

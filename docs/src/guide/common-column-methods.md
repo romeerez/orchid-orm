@@ -18,6 +18,8 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.uuid().primaryKey(),
+    // optionally, specify a database-level constraint name:
+    id: t.uuid().primaryKey('primary_key_name'),
   }));
 }
 
@@ -390,7 +392,9 @@ export class SomeTable extends BaseTable {
 
 ## methods for migration
 
-Column methods such as `foreignKey`, `index`, `unique`, `comment` and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
+Column methods such as [foreignKey](/guide/migration-column-methods.html#foreignkey), [index](/guide/migration-column-methods.html#index), [unique](/guide/migration-column-methods.html#unique), [comment](/guide/migration-column-methods.html#comment) and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
+
+Though `unique` is used for deriving types for [findBy](/guide/query-methods.html#findBy) and [onConflict](/guide/create-update-delete.html#onconflict).
 
 ## hidden
 

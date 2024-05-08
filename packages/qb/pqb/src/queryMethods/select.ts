@@ -25,7 +25,6 @@ import {
   getValueKey,
   isExpression,
   PickQueryMeta,
-  QueryCatch,
   QueryColumn,
   QueryColumns,
   QueryMetaBase,
@@ -92,31 +91,13 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
             [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
           }) &
         (T['meta']['hasSelect'] extends true
-          ? Omit<T['result'], Columns[number]>
+          ? Omit<T['result'], Columns[number]> // Omit is optimal
           : unknown)
     : K extends 'then'
     ? QueryThen<
         GetQueryResult<
           T,
           // result is copy-pasted to save on TS instantiations
-          ('*' extends Columns[number]
-            ? {
-                [K in
-                  | Columns[number]
-                  | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-              }
-            : {
-                [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-              }) &
-            (T['meta']['hasSelect'] extends true
-              ? Omit<T['result'], Columns[number]>
-              : unknown)
-        >
-      >
-    : K extends 'catch'
-    ? QueryCatch<
-        GetQueryResult<
-          T,
           ('*' extends Columns[number]
             ? {
                 [K in
@@ -171,23 +152,6 @@ type SelectResultObj<T extends SelectSelf, Obj> = {
           }
         >
       >
-    : K extends 'catch'
-    ? QueryCatch<
-        GetQueryResult<
-          T,
-          {
-            [K in
-              | keyof Obj
-              | (T['meta']['hasSelect'] extends true
-                  ? keyof T['result']
-                  : never)]: K extends keyof Obj
-              ? SelectAsValueResult<T, Obj[K]>
-              : K extends keyof T['result']
-              ? T['result'][K]
-              : never;
-          }
-        >
-      >
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -224,27 +188,6 @@ type SelectResultColumnsAndObj<
         GetQueryResult<
           T,
           // result is copy-pasted to save on TS instantiations
-          {
-            [K in
-              | ('*' extends Columns[number]
-                  ? Exclude<Columns[number], '*'> | keyof T['shape']
-                  : Columns[number])
-              | keyof Obj as K extends keyof T['meta']['selectable']
-              ? T['meta']['selectable'][K]['as']
-              : K]: K extends keyof T['meta']['selectable']
-              ? T['meta']['selectable'][K]['column']
-              : K extends keyof Obj
-              ? SelectAsValueResult<T, Obj[K]>
-              : never;
-          } & (T['meta']['hasSelect'] extends true
-            ? Omit<T['result'], Columns[number]>
-            : unknown)
-        >
-      >
-    : K extends 'catch'
-    ? QueryCatch<
-        GetQueryResult<
-          T,
           {
             [K in
               | ('*' extends Columns[number]
@@ -395,7 +338,7 @@ export const processSelectArg = <T extends SelectSelf>(
     return setParserForSelectedString(q as unknown as Query, arg, as, columnAs);
   }
 
-  const selectAs: Record<string, string | Query | Expression> = {};
+  const selectAs: { [K: string]: string | Query | Expression } = {};
 
   for (const key in arg as unknown as SelectAsArg<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

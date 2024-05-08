@@ -169,7 +169,7 @@ export const hasRelationHandleUpdate = (
 
   q.q.wrapInTransaction = true;
 
-  _queryHookAfterUpdate(q, q.primaryKeys, (rows, q) => {
+  _queryHookAfterUpdate(q, primaryKeys, (rows, q) => {
     return (nestedUpdate as HasOneNestedUpdate)(
       q,
       rows,

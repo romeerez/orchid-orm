@@ -7,7 +7,11 @@ import { Query } from '../query/query';
 // or a raw SQL
 export type UnionArg<T extends PickQueryResult> =
   | {
-      result: { [K in keyof T['result']]: Pick<T['result'][K], 'dataType'> };
+      result: {
+        [K in keyof T['result']]: {
+          dataType: T['result'][K]['dataType'];
+        };
+      };
     }
   | Expression;
 

@@ -41,9 +41,9 @@ const oneRecord = await db.table.create({
   password: '1234',
 });
 
-// When using `.onConflict().ignore()`,
+// When using `.onConflictIgnore()`,
 // the record may be not created and the `createdCount` will be 0.
-const createdCount = await db.table.insert(data).onConflict().ignore();
+const createdCount = await db.table.insert(data).onConflictIgnore();
 
 await db.table.create({
   // raw SQL
@@ -202,32 +202,44 @@ const user = await User.selectAll()
 
 [//]: # 'has JSDoc'
 
-A modifier for creating queries that specify alternative behavior in the case of a conflict.
-A conflict occurs when a table has a `PRIMARY KEY` or a `UNIQUE` index on a column
-(or a composite index on a set of columns) and a row being created has the same value as a row
-that already exists in the table in this column(s).
-The default behavior in case of conflict is to raise an error and abort the query.
+By default, violating unique constraint will cause the creative query to throw,
+you can define what to do on a conflict: to ignore it, or to merge the existing record with a new data.
 
-Use `onConflict` to either ignore the error by using `.onConflict().ignore()`,
-or to update the existing row with new data (perform an "UPSERT") by using `.onConflict().merge()`.
+A conflict occurs when a table has a primary key or a unique index on a column,
+or a composite primary key unique index on a set of columns,
+and a row being created has the same value as a row that already exists in the table in this column(s).
+
+Use `onConflictIgnore()` to suppress the error and continue without updating the record,
+or `onConflict(['uniqueColumn']).merge()` to update the record with a new data.
+
+`onConflict` only accepts column names that are defined in `primaryKey` or `unique` in the table definition.
+To specify a constraint, its name also must be explicitly set in `primaryKey` or `unique` in the table code.
+
+Postgres has a limitation that a single `INSERT` query can have only a single `ON CONFLICT` clause that can target only a single unique constraint
+for updating the record.
+
+If your table has multiple potential reasons for unique constraint violation, such as username and email columns in a user table,
+consider using [upsert](#upsert) instead.
 
 ```ts
 // leave `onConflict` without argument to ignore or merge on any conflict
-db.table.create(data).onConflict().ignore();
+db.table.create(data).onConflictIgnore();
 
 // single column:
-db.table.create(data).onConfict('email');
+db.table.create(data).onConfict('email').merge();
 
 // array of columns:
-db.table.create(data).onConfict(['email', 'name']);
+db.table.create(data).onConfict(['email', 'name']).merge();
+
+// constraint name
+db.table.create(data).onConfict({ constraint: 'unique_index_name' }).merge();
 
 // raw SQL expression:
-db.table.create(data).onConfict(db.table.sql`(email) where condition`);
+db.table
+  .create(data)
+  .onConfict(db.table.sql`(email) where condition`)
+  .merge();
 ```
-
-::: info
-The column(s) given to the `onConflict` must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
-When specifying multiple columns, they must be a composite PRIMARY KEY or have a composite UNIQUE index.
 
 You can use the db.table.sql function in onConflict.
 It can be useful to specify a condition when you have a partial index:
@@ -244,21 +256,15 @@ db.table
   .ignore();
 ```
 
-:::
-
-See the documentation on the .ignore() and .merge() methods for more details.
-
-## ignore
+## onConflictIgnore
 
 [//]: # 'has JSDoc'
 
-Available only after `onConflict`.
+Use `onConflictIgnore` to suppress unique constraint violation error when creating a record.
 
-`ignore` modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
+Adds `ON CONFLICT (columns) DO NOTHING` clause to the insert statement, columns are optional.
 
-Adds the `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
-
-It produces `ON CONFLICT DO NOTHING` when no `onConflict` argument provided.
+Can also accept a constraint name.
 
 ```ts
 db.table
@@ -266,46 +272,41 @@ db.table
     email: 'ignore@example.com',
     name: 'John Doe',
   })
-  .onConflict('email')
-  .ignore();
+  // on any conflict:
+  .onConflictIgnore()
+  // or, for a specific column:
+  .onConflictIgnore('email')
+  // or, for a specific constraint:
+  .onConflictIgnore({ constraint: 'unique_index_name' });
 ```
 
-When there is a conflict, nothing can be returned from the database, that's why `ignore` has to add `| undefined` part to the response type.
-
-`create` returns a full record by default, it becomes `RecordType | undefined` after applying `ignore`.
+When there is a conflict, nothing can be returned from the database, so `onConflictIgnore` adds `| undefined` part to the response type.
 
 ```ts
 const maybeRecord: RecordType | undefined = await db.table
   .create(data)
-  .onConflict()
-  .ignore();
+  .onConflictIgnore();
 
 const maybeId: number | undefined = await db.table
   .get('id')
   .create(data)
-  .onConflict()
-  .ignore();
+  .onConflictIgnore();
 ```
 
-When creating many records, only the created records will be returned. If no records were created, array will be empty:
+When creating multiple records, only created records will be returned. If no records were created, array will be empty:
 
 ```ts
 // array can be empty
-const arr = await db.table.createMany([data, data, data]).onConflict().ignore();
+const arr = await db.table.createMany([data, data, data]).onConflictIgnore();
 ```
 
 ## merge
 
 [//]: # 'has JSDoc'
 
-Available only after `onConflict`.
-
-Modifies a create query, to turn it into an 'upsert' operation.
+Available only after [onConflict](#onconflict).
 
 Adds an `ON CONFLICT (columns) DO UPDATE` clause to the insert statement.
-
-When no `onConflict` argument provided,
-it will automatically collect all table columns that have unique index and use them as a conflict target.
 
 ```ts
 db.table
@@ -313,7 +314,10 @@ db.table
     email: 'ignore@example.com',
     name: 'John Doe',
   })
+  // for a specific column:
   .onConflict('email')
+  // or, for a specific constraint:
+  .onConflict({ constraint: 'unique_constraint_name' })
   .merge();
 ```
 
@@ -344,15 +348,15 @@ db.table
     updatedAt: timestamp,
   })
   .onConflict('email')
-  // string argument for a single column:
+  // update only a single column
   .merge('email')
-  // array of strings for multiple columns:
+  // or, update multiple columns
   .merge(['email', 'name', 'updatedAt']);
 ```
 
-It is also possible to specify data to update separately from the data to create.
+It's possible to specify data to update separately from the data to create.
 This is useful if you want to make an update with different data than in creating.
-For example, you may want to change a value if the row already exists:
+For example, changing a value if the row already exists:
 
 ```ts
 const timestamp = Date.now();
@@ -370,7 +374,7 @@ db.table
   });
 ```
 
-It is also possible to add a WHERE clause to conditionally update only the matching rows:
+You can use `where` to update only the matching rows:
 
 ```ts
 const timestamp = Date.now();
@@ -390,7 +394,7 @@ db.table
   .where({ updatedAt: { lt: timestamp } });
 ```
 
-`merge` also accepts raw SQL expression:
+`merge` can take a raw SQL expression:
 
 ```ts
 db.table

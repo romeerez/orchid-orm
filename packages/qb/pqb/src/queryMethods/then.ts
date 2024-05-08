@@ -22,10 +22,9 @@ import {
   TransactionState,
 } from 'orchid-core';
 
-export const queryMethodByReturnType: Record<
-  QueryReturnType,
-  'query' | 'arrays'
-> = {
+export const queryMethodByReturnType: {
+  [K in QueryReturnType]: 'query' | 'arrays';
+} = {
   all: 'query',
   rows: 'arrays',
   pluck: 'arrays',

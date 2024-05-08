@@ -1,9 +1,9 @@
-import { Migration, RakeDbColumnTypes } from './migration';
+import { Migration } from './migration';
 import { RawSQLBase, singleQuote, Sql } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { raw } from 'pqb';
 
-export const createView = async <CT extends RakeDbColumnTypes>(
+export const createView = async <CT>(
   migration: Migration<CT>,
   up: boolean,
   name: string,

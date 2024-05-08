@@ -160,6 +160,15 @@ See [generated](/guide/migration-column-methods.html#enum) migration method.
 t.tsvector().generated(['title', 'body']).searchIndex();
 ```
 
+## tsquery
+
+For full text search to store queries.
+
+```ts
+// A tsquery value stores lexemes that are to be searched for
+t.tsquery(); // -> string
+```
+
 ## binary
 
 The bytea data type allows storage of binary strings, it is returned as a node.js Buffer object.
@@ -485,16 +494,6 @@ t.bit(); // -> string
 
 // bit varying(n), where n is a positive integer
 t.bitVarying(); // -> string
-```
-
-## full text search
-
-```ts
-// A tsvector value is a sorted list of distinct lexemes
-t.tsvector(); // -> string
-
-// A tsquery value stores lexemes that are to be searched for
-t.tsquery(); // -> string
 ```
 
 ## array

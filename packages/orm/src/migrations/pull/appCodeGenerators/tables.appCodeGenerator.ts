@@ -1,4 +1,4 @@
-import { columnsShapeToCode, TableData } from 'pqb';
+import { columnsShapeToCode, pushTableDataCode, TableData } from 'pqb';
 import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
 import {
   Code,
@@ -110,11 +110,21 @@ export const appCodeGenTable = (
     props.push('noPrimaryKey = true;');
   }
 
-  props.push(
-    'columns = this.setColumns((t) => ({',
-    columnsShapeToCode(ast.shape, ast, 't'),
-    '}));',
+  const hasTableData = Boolean(
+    ast.primaryKey || ast.indexes?.length || ast.constraints?.length,
   );
+
+  const shapeCode = columnsShapeToCode(ast.shape, 't');
+
+  props.push(
+    `columns = this.setColumns(${hasTableData ? '\n    ' : ''}(t) => ({`,
+    hasTableData ? [shapeCode] : shapeCode,
+    hasTableData ? '  }),' : '}));',
+  );
+
+  if (hasTableData) {
+    props.push(pushTableDataCode([], ast), ');');
+  }
 
   const relations: Code[] = [];
 

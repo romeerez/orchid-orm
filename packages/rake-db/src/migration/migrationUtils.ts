@@ -63,7 +63,7 @@ export const columnToSql = (
   }
 
   if (item.data.primaryKey && !hasMultiplePrimaryKeys) {
-    if (item.data.primaryKey !== true) {
+    if (item.data.primaryKey !== (true as never)) {
       line.push(`CONSTRAINT "${item.data.primaryKey}"`);
     }
     line.push('PRIMARY KEY');
@@ -81,17 +81,15 @@ export const columnToSql = (
   const { foreignKeys } = item.data;
   if (foreignKeys) {
     for (const foreignKey of foreignKeys) {
-      if (foreignKey.name) {
-        line.push(`CONSTRAINT "${foreignKey.name}"`);
+      if (foreignKey.options?.name) {
+        line.push(`CONSTRAINT "${foreignKey.options?.name}"`);
       }
 
       line.push(
         referencesToSql(
           {
-            columns: foreignKey.columns,
-            fnOrTable: 'fn' in foreignKey ? foreignKey.fn : foreignKey.table,
-            foreignColumns: foreignKey.columns,
-            options: foreignKey,
+            columns: [name],
+            ...foreignKey,
           },
           snakeCase,
         ),
@@ -149,8 +147,8 @@ export const addColumnIndex = (
   if (item.data.indexes) {
     indexes.push(
       ...item.data.indexes.map((index) => ({
-        columns: [{ ...index, column: name }],
-        options: index,
+        columns: [{ ...index.options, column: name }],
+        ...index,
       })),
     );
   }
@@ -271,12 +269,12 @@ export const getIndexName = (
 
 export const indexesToQuery = (
   up: boolean,
-  { schema, name }: { schema?: string; name: string },
+  { schema, name: tableName }: { schema?: string; name: string },
   indexes: TableData.Index[],
   language?: string,
 ): Sql[] => {
-  return indexes.map(({ columns, options }) => {
-    const indexName = options.name || getIndexName(name, columns);
+  return indexes.map(({ columns, options, name }) => {
+    const indexName = name || getIndexName(tableName, columns);
 
     if (!up) {
       return {
@@ -295,7 +293,7 @@ export const indexesToQuery = (
       sql.push('UNIQUE');
     }
 
-    sql.push(`INDEX "${indexName}" ON ${quoteTable(schema, name)}`);
+    sql.push(`INDEX "${indexName}" ON ${quoteTable(schema, tableName)}`);
 
     const u = options.using || (options.tsVector && 'GIN');
     if (u) {
@@ -405,8 +403,7 @@ export const commentsToQuery = (
 export const primaryKeyToSql = (
   primaryKey: Exclude<TableData['primaryKey'], undefined>,
 ) => {
-  const name = primaryKey.options?.name;
-  return `${name ? `CONSTRAINT "${name}" ` : ''}PRIMARY KEY (${joinColumns(
-    primaryKey.columns,
-  )})`;
+  return `${
+    primaryKey.name ? `CONSTRAINT "${primaryKey.name}" ` : ''
+  }PRIMARY KEY (${joinColumns(primaryKey.columns)})`;
 };

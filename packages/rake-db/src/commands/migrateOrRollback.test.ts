@@ -15,7 +15,6 @@ import { noop, pathToLog, Sql } from 'orchid-core';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
-import { RakeDbColumnTypes } from '../migration/migration';
 import { AnyRakeDbConfig } from '../config';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import { getMigrations } from '../migration/migrationsSet';
@@ -72,7 +71,7 @@ const config = testConfig;
 const change = (
   fn: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>,
 ) => {
-  pushChange(fn as unknown as ChangeCallback<RakeDbColumnTypes>);
+  pushChange(fn as unknown as ChangeCallback<unknown>);
 };
 
 let migrationFiles: { path: string; version: string; load(): void }[] = [];

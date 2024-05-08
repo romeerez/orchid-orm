@@ -11,7 +11,7 @@ import {
   useRelationCallback,
   userSelectAll,
   useTestORM,
-} from '../test-utils/test-utils';
+} from '../test-utils/orm.test-utils';
 import { Sql } from 'orchid-core';
 import { assertType, expectSql, now } from 'test-utils';
 import { createBaseTable } from '../baseTable';

@@ -31,16 +31,16 @@ import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
 import { resolveSubQueryCallback } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
 
-export type UpdateSelf = Pick<
-  Query,
-  | 'meta'
-  | 'inputType'
-  | 'relations'
-  | 'shape'
-  | 'result'
-  | 'returnType'
-  | keyof JsonModifiers
->;
+export type UpdateSelf = {
+  [K in
+    | 'meta'
+    | 'inputType'
+    | 'relations'
+    | 'shape'
+    | 'result'
+    | 'returnType'
+    | keyof JsonModifiers]: Query[K];
+};
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -134,10 +134,15 @@ type ChangeCountArg<T extends PickQueryShape> =
 
 // Context object for `update` logic used internally.
 // It's being used by relations logic in the ORM.
-export type UpdateCtx = {
+export interface UpdateCtx {
   queries?: ((queryResult: QueryResult) => Promise<void>)[];
-  updateData?: RecordUnknown;
-};
+  collect?: UpdateCtxCollect;
+}
+
+export interface UpdateCtxCollect {
+  keys: string[];
+  data: RecordUnknown;
+}
 
 // apply `increment` or a `decrement`,
 // mutates the `queryData` of a query.
@@ -156,7 +161,7 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
     q.returnType = 'rowCount';
   }
 
-  let map: Record<string, { op: string; arg: number }>;
+  let map: { [K: string]: { op: string; arg: number } };
   if (typeof data === 'object') {
     map = {};
     for (const key in data) {
@@ -256,9 +261,9 @@ export const _queryUpdate = <T extends UpdateSelf>(
     q.patchResult = async (_, queryResult) => {
       await Promise.all(queries.map(callWithThis, queryResult));
 
-      if (ctx.updateData) {
+      if (ctx.collect) {
         const t = (query as unknown as Query).baseQuery.clone();
-        const keys = (query as unknown as Query).primaryKeys;
+        const { keys } = ctx.collect;
 
         (
           _queryWhereIn as unknown as (
@@ -274,11 +279,11 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
         _queryUpdate(
           t as WhereResult<Query>,
-          ctx.updateData as UpdateData<WhereResult<Query>>,
+          ctx.collect.data as UpdateData<WhereResult<Query>>,
         );
 
         for (const row of queryResult.rows) {
-          Object.assign(row, ctx.updateData);
+          Object.assign(row, ctx.collect.data);
         }
       }
     };

@@ -52,7 +52,7 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity().primaryKey({ name: 'custom' }),
+          id: t.identity().primaryKey('custom'),
         }));
       },
       tables: [
@@ -68,7 +68,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.drop(t.primaryKey(['id'], { name: 'custom' })),
+    ...t.drop(t.primaryKey(['id'], 'custom')),
   }));
 });
 `);
@@ -123,11 +123,13 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
-          id: t.identity(),
-          key: t.text(),
-          ...t.primaryKey(['id', 'key'], { name: 'custom' }),
-        })),
+        table(
+          (t) => ({
+            id: t.identity(),
+            key: t.text(),
+          }),
+          (t) => t.primaryKey(['id', 'key'], 'custom'),
+        ),
       ],
     });
 
@@ -137,7 +139,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.add(t.primaryKey(['id', 'key'], { name: 'custom' })),
+    ...t.add(t.primaryKey(['id', 'key'], 'custom')),
   }));
 });
 `);
@@ -184,11 +186,15 @@ change(async (db) => {
   it('should drop a composite primary key', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity(),
-          key: t.text(),
-          ...t.primaryKey(['id', 'key']),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            id: t.identity(),
+            key: t.text(),
+          }),
+          (t) => t.primaryKey(['id', 'key']),
+        );
       },
       tables: [
         table((t) => ({
@@ -218,20 +224,26 @@ change(async (db) => {
   it('should change a composite primary key', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          a: t.identity(),
-          b: t.text(),
-          c: t.integer(),
-          ...t.primaryKey(['a', 'b']),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            a: t.identity(),
+            b: t.text(),
+            c: t.integer(),
+          }),
+          (t) => t.primaryKey(['a', 'b']),
+        );
       },
       tables: [
-        table((t) => ({
-          a: t.identity(),
-          b: t.text(),
-          c: t.integer(),
-          ...t.primaryKey(['b', 'c']),
-        })),
+        table(
+          (t) => ({
+            a: t.identity(),
+            b: t.text(),
+            c: t.integer(),
+          }),
+          (t) => t.primaryKey(['b', 'c']),
+        ),
       ],
     });
 
@@ -257,12 +269,16 @@ change(async (db) => {
   it('should change a composite primary key defined on columns', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          a: t.identity(),
-          b: t.text(),
-          c: t.integer(),
-          ...t.primaryKey(['a', 'b']),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            a: t.identity(),
+            b: t.text(),
+            c: t.integer(),
+          }),
+          (t) => t.primaryKey(['a', 'b']),
+        );
       },
       tables: [
         table((t) => ({
@@ -295,18 +311,24 @@ change(async (db) => {
   it('should rename primary key', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          a: t.identity(),
-          b: t.text(),
-          ...t.primaryKey(['a', 'b'], { name: 'from' }),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            a: t.identity(),
+            b: t.text(),
+          }),
+          (t) => t.primaryKey(['a', 'b'], 'from'),
+        );
       },
       tables: [
-        table((t) => ({
-          a: t.identity(),
-          b: t.text(),
-          ...t.primaryKey(['a', 'b'], { name: 'to' }),
-        })),
+        table(
+          (t) => ({
+            a: t.identity(),
+            b: t.text(),
+          }),
+          (t) => t.primaryKey(['a', 'b'], 'to'),
+        ),
       ],
     });
 
@@ -336,6 +358,7 @@ change(async (db) => {
           (t) => ({
             id: t.identity().primaryKey(),
           }),
+          undefined,
           { noPrimaryKey: false },
         ),
       ],

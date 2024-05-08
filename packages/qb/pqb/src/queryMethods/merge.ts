@@ -8,9 +8,9 @@ import {
   getValueKey,
   MergeObjects,
   PickQueryMetaResult,
-  QueryCatch,
   QueryReturnType,
   QueryThen,
+  RecordBoolean,
   RecordUnknown,
 } from 'orchid-core';
 
@@ -39,13 +39,6 @@ export type MergeQuery<
           MergeQueryResult<T, Q>
         >
       >
-    : K extends 'catch'
-    ? QueryCatch<
-        GetQueryResult<
-          QueryReturnType extends Q['returnType'] ? T : Q,
-          MergeQueryResult<T, Q>
-        >
-      >
     : K extends 'windows'
     ? MergeObjects<T['windows'], Q['windows']>
     : K extends 'withData'
@@ -68,7 +61,7 @@ type MergeQueryResult<
     : T['result']
   : Q['result'];
 
-const mergableObjects: Record<string, boolean> = {
+const mergableObjects: RecordBoolean = {
   shape: true,
   withShapes: true,
   parsers: true,

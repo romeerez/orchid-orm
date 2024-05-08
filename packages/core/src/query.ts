@@ -52,10 +52,9 @@ export interface QueryInternalBase {
 }
 
 // Scopes data stored in table instance. Doesn't change after defining a table.
-export type CoreQueryScopes<Keys extends string = string> = Record<
-  Keys,
-  unknown
->;
+export type CoreQueryScopes<Keys extends string = string> = {
+  [K in Keys]: unknown;
+};
 
 export type QueryReturnType =
   | 'all'
@@ -91,6 +90,20 @@ export interface PickQueryReturnType {
 export interface PickQueryMetaShape extends PickQueryMeta, PickQueryShape {}
 
 export interface PickQueryMetaResult extends PickQueryMeta, PickQueryResult {}
+
+export interface PickQueryResultUniqueColumns extends PickQueryResult {
+  internal: {
+    uniqueColumns: unknown;
+  };
+}
+
+export interface PickQueryUniqueProperties {
+  internal: {
+    uniqueColumnNames: unknown;
+    uniqueColumnTuples: unknown;
+    uniqueConstraints: unknown;
+  };
+}
 
 export interface PickQueryMetaResultWindows extends PickQueryMetaResult {
   windows: EmptyObject;

@@ -1030,9 +1030,11 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
     const keys: string[] = [];
 
-    const { columns } = this.prototype;
-    for (const key in columns) {
-      if (columns[key].data.primaryKey) {
+    const {
+      columns: { shape },
+    } = this.prototype;
+    for (const key in shape) {
+      if (shape[key].data.primaryKey) {
         keys.push(key);
       }
     }
@@ -1087,7 +1089,7 @@ type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
 }>;
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends true
+  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
     ? K
     : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
 }>;
@@ -1097,7 +1099,7 @@ function mapSchema<
   Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
 >(klass: T, schemaKey: Key): MapSchema<T, Key> {
   const shape: ObjectEntries = {};
-  const columns = klass.prototype.columns;
+  const { shape: columns } = klass.prototype.columns;
 
   for (const key in columns) {
     shape[key] = columns[key][schemaKey];

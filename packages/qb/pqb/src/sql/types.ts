@@ -143,7 +143,7 @@ export type QuerySourceItem = {
         text: string | Expression;
       }
     | {
-        in: MaybeArray<string> | Record<string, SearchWeight>;
+        in: MaybeArray<string> | SearchWeightRecord;
       }
     | {
         vector: string;
@@ -167,7 +167,7 @@ export type QuerySourceItem = {
 export type JoinItem = SimpleJoinItem | JoinLateralItem;
 
 export type SimpleJoinItemNonSubQueryArgs =
-  | [Record<string, string | Expression> | Expression | true]
+  | [{ [K: string]: string | Expression } | Expression | true]
   | [leftColumn: string | Expression, rightColumn: string | Expression]
   | [
       leftColumn: string | Expression,
@@ -232,7 +232,7 @@ export type WhereItem =
   | {
       [K: string]:
         | unknown
-        | Record<string, unknown | Query | Expression>
+        | { [K: string]: unknown | Query | Expression }
         | Expression;
 
       NOT?: MaybeArray<WhereItem>;
@@ -271,6 +271,8 @@ export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
 
 export type SearchWeight = 'A' | 'B' | 'C' | 'D';
 
+export type SearchWeightRecord = { [K: string]: SearchWeight };
+
 export interface WhereSearchItem {
   as: string;
   vectorSQL: string;
@@ -278,7 +280,7 @@ export interface WhereSearchItem {
 
 export type SortDir = 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
 
-export type OrderItem = string | Record<string, SortDir> | Expression;
+export type OrderItem = string | { [K: string]: SortDir } | Expression;
 
 export type ColumnOperators<
   S extends SelectableBase,
@@ -290,7 +292,7 @@ export type ColumnOperators<
 
 export type HavingItem = TemplateLiteralArgs | Expression[];
 
-export type WindowItem = Record<string, WindowDeclaration | Expression>;
+export type WindowItem = { [K: string]: WindowDeclaration | Expression };
 
 export interface WindowDeclaration {
   partitionBy?: SelectableOrExpression | SelectableOrExpression[];
@@ -307,7 +309,11 @@ export type UnionKind =
   | 'EXCEPT'
   | 'EXCEPT ALL';
 
-export type OnConflictItem = string | string[] | Expression;
+export type OnConflictItem =
+  | string
+  | string[]
+  | Expression
+  | { constraint: string };
 
 export type OnConflictMergeUpdate =
   | string

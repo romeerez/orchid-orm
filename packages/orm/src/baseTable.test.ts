@@ -7,7 +7,12 @@ import {
 } from './baseTable';
 import { orchidORM } from './orm';
 import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
-import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
+import {
+  BaseTable,
+  db,
+  userData,
+  useTestORM,
+} from './test-utils/orm.test-utils';
 import path from 'path';
 import { getCallerFilePath } from 'orchid-core';
 import {
@@ -90,7 +95,7 @@ describe('baseTable', () => {
         columns = this.setColumns(() => shape);
       }
 
-      expect(SomeTable.instance().columns).toEqual(shape);
+      expect(SomeTable.instance().columns.shape).toEqual(shape);
     });
   });
 

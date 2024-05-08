@@ -25,6 +25,7 @@ import {
   QueryThen,
   ColumnSchemaConfig,
   RecordUnknown,
+  PickQueryUniqueProperties,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { QueryBase } from '../query/queryBase';
@@ -180,7 +181,7 @@ type InsertManyResult<T extends CreateSelf> =
       : SetQueryKind<T, 'create'>
     : SetQueryReturnsRowCount<T, 'create'>;
 
-// `onConflict().ignore()` method output type:
+// `onConflictIgnore()` method output type:
 // overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',
 // because `ignore` won't return any data in case of a conflict.
 type IgnoreResult<T extends CreateSelf> = T['returnType'] extends 'oneOrThrow'
@@ -227,13 +228,14 @@ type CreateRawArgs<
     ];
 
 // Argument of `onConflict`, can be:
-// - a column name
-// - an array of column names
+// - a unique column name
+// - an array of unique column names
 // - raw or other kind of Expression
-type OnConflictArg<T extends CreateSelf> =
-  | keyof T['shape']
-  | (keyof T['shape'])[]
-  | Expression;
+type OnConflictArg<T extends PickQueryUniqueProperties> =
+  | T['internal']['uniqueColumnNames']
+  | T['internal']['uniqueColumnTuples']
+  | Expression
+  | { constraint: T['internal']['uniqueConstraints'] };
 
 export type AddQueryDefaults<T extends CreateSelf, Defaults> = {
   [K in keyof T]: K extends 'meta'
@@ -257,6 +259,8 @@ export interface CreateCtx {
 
 // Type of `encodeFn` of columns.
 type Encoder = (input: unknown) => unknown;
+
+type RecordEncoder = { [K: string]: Encoder };
 
 // Function called by all `create` methods to override query select.
 // Clears select if query returning nothing or a count.
@@ -286,7 +290,7 @@ const processCreateItem = (
   item: RecordUnknown,
   rowIndex: number,
   ctx: CreateCtx,
-  encoders: Record<string, Encoder>,
+  encoders: RecordEncoder,
 ) => {
   const { shape } = q.q;
   for (const key in item) {
@@ -317,7 +321,7 @@ const createCtx = (): CreateCtx => ({
 // Encode values when the column has an encoder.
 const mapColumnValues = (
   columns: string[],
-  encoders: Record<string, Encoder>,
+  encoders: RecordEncoder,
   data: RecordUnknown,
 ): unknown[] => {
   return columns.map((key) =>
@@ -339,7 +343,7 @@ const handleOneData = (
   data: RecordUnknown,
   ctx: CreateCtx,
 ): { columns: string[]; values: unknown[][] } => {
-  const encoders: Record<string, Encoder> = {};
+  const encoders: RecordEncoder = {};
   const defaults = q.q.defaults;
 
   if (defaults) {
@@ -368,7 +372,7 @@ const handleManyData = (
   data: RecordUnknown[],
   ctx: CreateCtx,
 ): { columns: string[]; values: unknown[][] } => {
-  const encoders: Record<string, Encoder> = {};
+  const encoders: RecordEncoder = {};
   const defaults = q.q.defaults;
 
   if (defaults) {
@@ -523,7 +527,7 @@ export const _queryCreate = <T extends CreateSelf>(
   data: CreateData<T>,
 ): CreateResult<T> => {
   createSelect(q);
-  return _queryInsert(q, data) as unknown as CreateResult<T>;
+  return _queryInsert(q, data) as never;
 };
 
 export const _queryInsert = <T extends CreateSelf>(
@@ -543,7 +547,7 @@ export const _queryInsert = <T extends CreateSelf>(
     obj.values = values;
   }
 
-  return insert(q, obj, 'object') as InsertResult<T>;
+  return insert(q, obj, 'object') as never;
 };
 
 export const _queryCreateMany = <T extends CreateSelf>(
@@ -551,7 +555,7 @@ export const _queryCreateMany = <T extends CreateSelf>(
   data: CreateData<T>[],
 ): CreateManyResult<T> => {
   createSelect(q);
-  return _queryInsertMany(q, data) as unknown as CreateManyResult<T>;
+  return _queryInsertMany(q, data) as never;
 };
 
 export const _queryInsertMany = <T extends CreateSelf>(
@@ -578,7 +582,7 @@ export const _queryCreateRaw = <T extends CreateSelf>(
     q,
     args[0] as { columns: string[]; values: Expression },
     'raw',
-  ) as CreateResult<T>;
+  ) as never;
 };
 
 export const _queryInsertRaw = <T extends CreateSelf>(
@@ -589,7 +593,7 @@ export const _queryInsertRaw = <T extends CreateSelf>(
     q,
     args[0] as { columns: string[]; values: Expression },
     'raw',
-  ) as InsertResult<T>;
+  ) as never;
 };
 
 export const _queryCreateManyRaw = <T extends CreateSelf>(
@@ -597,7 +601,7 @@ export const _queryCreateManyRaw = <T extends CreateSelf>(
   args: CreateRawArgs<T, CreateManyRawData<T>>,
 ): CreateManyResult<T> => {
   createSelect(q);
-  return _queryInsertManyRaw(q, args) as CreateManyResult<T>;
+  return _queryInsertManyRaw(q, args) as never;
 };
 
 export const _queryInsertManyRaw = <T extends CreateSelf>(
@@ -609,7 +613,7 @@ export const _queryInsertManyRaw = <T extends CreateSelf>(
     args[0] as { columns: string[]; values: Expression[] },
     'raw',
     true,
-  ) as InsertManyResult<T>;
+  ) as never;
 };
 
 export const _queryCreateFrom = <
@@ -621,7 +625,7 @@ export const _queryCreateFrom = <
   data?: Omit<CreateData<T>, keyof Q['result']>,
 ): CreateResult<T> => {
   createSelect(q);
-  return insertFromQuery(q, query, false, data) as CreateResult<T>;
+  return insertFromQuery(q, query, false, data) as never;
 };
 
 export const _queryInsertFrom = <
@@ -632,7 +636,7 @@ export const _queryInsertFrom = <
   query: Q,
   data?: Omit<CreateData<T>, keyof Q['result']>,
 ): InsertResult<T> => {
-  return insertFromQuery(q, query, false, data) as InsertResult<T>;
+  return insertFromQuery(q, query, false, data) as never;
 };
 
 export const _queryCreateManyFrom = <T extends CreateSelf>(
@@ -640,14 +644,14 @@ export const _queryCreateManyFrom = <T extends CreateSelf>(
   query: Query,
 ): CreateManyResult<T> => {
   createSelect(q);
-  return insertFromQuery(q, query, true) as CreateManyResult<T>;
+  return insertFromQuery(q, query, true) as never;
 };
 
 export const _queryInsertManyFrom = <T extends CreateSelf>(
   q: T,
   query: Query,
 ): InsertManyResult<T> => {
-  return insertFromQuery(q, query, true) as InsertManyResult<T>;
+  return insertFromQuery(q, query, true) as never;
 };
 
 export const _queryDefaults = <
@@ -656,9 +660,9 @@ export const _queryDefaults = <
 >(
   q: T,
   data: Data,
-): AddQueryDefaults<T, Record<keyof Data, true>> => {
+): AddQueryDefaults<T, { [K in keyof Data]: true }> => {
   q.q.defaults = data;
-  return q as AddQueryDefaults<T, Record<keyof Data, true>>;
+  return q as never;
 };
 
 /**
@@ -690,9 +694,9 @@ export class Create {
    *   password: '1234',
    * });
    *
-   * // When using `.onConflict().ignore()`,
+   * // When using `.onConflictIgnore()`,
    * // the record may be not created and the `createdCount` will be 0.
-   * const createdCount = await db.table.insert(data).onConflict().ignore();
+   * const createdCount = await db.table.insert(data).onConflictIgnore();
    *
    * await db.table.create({
    *   // raw SQL
@@ -955,37 +959,49 @@ export class Create {
   defaults<T extends CreateSelf, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
-  ): AddQueryDefaults<T, Record<keyof Data, true>> {
+  ): AddQueryDefaults<T, { [K in keyof Data]: true }> {
     return _queryDefaults(this.clone(), data);
   }
 
   /**
-   * A modifier for creating queries that specify alternative behavior in the case of a conflict.
-   * A conflict occurs when a table has a `PRIMARY KEY` or a `UNIQUE` index on a column
-   * (or a composite index on a set of columns) and a row being created has the same value as a row
-   * that already exists in the table in this column(s).
-   * The default behavior in case of conflict is to raise an error and abort the query.
+   * By default, violating unique constraint will cause the creative query to throw,
+   * you can define what to do on a conflict: to ignore it, or to merge the existing record with a new data.
    *
-   * Use `onConflict` to either ignore the error by using `.onConflict().ignore()`,
-   * or to update the existing row with new data (perform an "UPSERT") by using `.onConflict().merge()`.
+   * A conflict occurs when a table has a primary key or a unique index on a column,
+   * or a composite primary key unique index on a set of columns,
+   * and a row being created has the same value as a row that already exists in the table in this column(s).
+   *
+   * Use `onConflictIgnore()` to suppress the error and continue without updating the record,
+   * or `onConflict(['uniqueColumn']).merge()` to update the record with a new data.
+   *
+   * `onConflict` only accepts column names that are defined in `primaryKey` or `unique` in the table definition.
+   * To specify a constraint, its name also must be explicitly set in `primaryKey` or `unique` in the table code.
+   *
+   * Postgres has a limitation that a single `INSERT` query can have only a single `ON CONFLICT` clause that can target only a single unique constraint
+   * for updating the record.
+   *
+   * If your table has multiple potential reasons for unique constraint violation, such as username and email columns in a user table,
+   * consider using [upsert](#upsert) instead.
    *
    * ```ts
    * // leave `onConflict` without argument to ignore or merge on any conflict
-   * db.table.create(data).onConflict().ignore();
+   * db.table.create(data).onConflictIgnore();
    *
    * // single column:
-   * db.table.create(data).onConfict('email');
+   * db.table.create(data).onConfict('email').merge();
    *
    * // array of columns:
-   * db.table.create(data).onConfict(['email', 'name']);
+   * db.table.create(data).onConfict(['email', 'name']).merge();
    *
-   * // raw expression:
-   * db.table.create(data).onConfict(db.table.sql`(email) where condition`);
+   * // constraint name
+   * db.table.create(data).onConfict({ constraint: 'unique_index_name' }).merge();
+   *
+   * // raw SQL expression:
+   * db.table
+   *   .create(data)
+   *   .onConfict(db.table.sql`(email) where condition`)
+   *   .merge();
    * ```
-   *
-   * ::: info
-   * The column(s) given to the `onConflict` must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
-   * When specifying multiple columns, they must be a composite PRIMARY KEY or have a composite UNIQUE index.
    *
    * You can use the db.table.sql function in onConflict.
    * It can be useful to specify a condition when you have a partial index:
@@ -1002,17 +1018,73 @@ export class Create {
    *   .ignore();
    * ```
    *
-   * :::
-   *
-   * See the documentation on the .ignore() and .merge() methods for more details.
-   *
    * @param arg - optionally provide an array of columns
    */
   onConflict<T extends CreateSelf, Arg extends OnConflictArg<T>>(
     this: T,
-    arg?: Arg,
+    arg: Arg,
   ): OnConflictQueryBuilder<T, Arg> {
     return new OnConflictQueryBuilder(this, arg as Arg);
+  }
+
+  /**
+   * Use `onConflictIgnore` to suppress unique constraint violation error when creating a record.
+   *
+   * Adds `ON CONFLICT (columns) DO NOTHING` clause to the insert statement, columns are optional.
+   *
+   * Can also accept a constraint name.
+   *
+   * ```ts
+   * db.table
+   *   .create({
+   *     email: 'ignore@example.com',
+   *     name: 'John Doe',
+   *   })
+   *   // on any conflict:
+   *   .onConflictIgnore()
+   *   // or, for a specific column:
+   *   .onConflictIgnore('email')
+   *   // or, for a specific constraint:
+   *   .onConflictIgnore({ constraint: 'unique_index_name' });
+   * ```
+   *
+   * When there is a conflict, nothing can be returned from the database, so `onConflictIgnore` adds `| undefined` part to the response type.
+   *
+   * ```ts
+   * const maybeRecord: RecordType | undefined = await db.table
+   *   .create(data)
+   *   .onConflictIgnore();
+   *
+   * const maybeId: number | undefined = await db.table
+   *   .get('id')
+   *   .create(data)
+   *   .onConflictIgnore();
+   * ```
+   *
+   * When creating multiple records, only created records will be returned. If no records were created, array will be empty:
+   *
+   * ```ts
+   * // array can be empty
+   * const arr = await db.table.createMany([data, data, data]).onConflictIgnore();
+   * ```
+   */
+  onConflictIgnore<T extends CreateSelf, Arg extends OnConflictArg<T>>(
+    this: T,
+    arg?: Arg,
+  ): IgnoreResult<T> {
+    const q = this.clone();
+    (q.q as InsertQueryData).onConflict = {
+      type: 'ignore',
+      expr: arg as OnConflictItem,
+    };
+
+    if (q.q.returnType === 'oneOrThrow') {
+      q.q.returnType = 'one';
+    } else if (q.q.returnType === 'valueOrThrow') {
+      q.q.returnType = 'value';
+    }
+
+    return q as never;
   }
 }
 
@@ -1023,82 +1095,20 @@ export class OnConflictQueryBuilder<
   constructor(private query: T, private onConflict: Arg) {}
 
   /**
-   * Available only after `onConflict`.
-   *
-   * `ignore` modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
-   *
-   * Adds the `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
-   *
-   * It produces `ON CONFLICT DO NOTHING` when no `onConflict` argument provided.
-   *
-   * ```ts
-   * db.table
-   *   .create({
-   *     email: 'ignore@example.com',
-   *     name: 'John Doe',
-   *   })
-   *   .onConflict('email')
-   *   .ignore();
-   * ```
-   *
-   *
-   * When there is a conflict, nothing can be returned from the database, that's why `ignore` has to add `| undefined` part to the response type.
-   *
-   * `create` returns a full record by default, it becomes `RecordType | undefined` after applying `ignore`.
-   *
-   * ```ts
-   * const maybeRecord: RecordType | undefined = await db.table
-   *   .create(data)
-   *   .onConflict()
-   *   .ignore();
-   *
-   * const maybeId: number | undefined = await db.table
-   *   .get('id')
-   *   .create(data)
-   *   .onConflict()
-   *   .ignore();
-   * ```
-   *
-   * When creating many records, only the created records will be returned. If no records were created, array will be empty:
-   *
-   * ```ts
-   * // array can be empty
-   * const arr = await db.table.createMany([data, data, data]).onConflict().ignore();
-   * ```
-   */
-  ignore(): IgnoreResult<T> {
-    const q = this.query;
-    (q.q as InsertQueryData).onConflict = {
-      type: 'ignore',
-      expr: this.onConflict as OnConflictItem,
-    };
-
-    if (q.q.returnType === 'oneOrThrow') {
-      q.q.returnType = 'one';
-    } else if (q.q.returnType === 'valueOrThrow') {
-      q.q.returnType = 'value';
-    }
-
-    return q as IgnoreResult<T>;
-  }
-
-  /**
-   * Available only after `onConflict`.
-   *
-   * Modifies a create query, to turn it into an 'upsert' operation.
+   * Available only after [onConflict](#onconflict).
    *
    * Adds an `ON CONFLICT (columns) DO UPDATE` clause to the insert statement.
    *
-   * When no `onConflict` argument provided,
-   * it will automatically collect all table columns that have unique index and use them as a conflict target.
-   *
    * ```ts
    * db.table
    *   .create({
    *     email: 'ignore@example.com',
    *     name: 'John Doe',
    *   })
+   *   // for a specific column:
    *   .onConflict('email')
+   *   // or, for a specific constraint:
+   *   .onConflict({ constraint: 'unique_constraint_name' })
    *   .merge();
    * ```
    *
@@ -1129,15 +1139,15 @@ export class OnConflictQueryBuilder<
    *     updatedAt: timestamp,
    *   })
    *   .onConflict('email')
-   *   // string argument for a single column:
+   *   // update only a single column
    *   .merge('email')
-   *   // array of strings for multiple columns:
+   *   // or, update multiple columns
    *   .merge(['email', 'name', 'updatedAt']);
    * ```
    *
-   * It is also possible to specify data to update separately from the data to create.
+   * It's possible to specify data to update separately from the data to create.
    * This is useful if you want to make an update with different data than in creating.
-   * For example, you may want to change a value if the row already exists:
+   * For example, changing a value if the row already exists:
    *
    * ```ts
    * const timestamp = Date.now();
@@ -1155,7 +1165,7 @@ export class OnConflictQueryBuilder<
    *   });
    * ```
    *
-   * It is also possible to add a WHERE clause to conditionally update only the matching rows:
+   * You can use `where` to update only the matching rows:
    *
    * ```ts
    * const timestamp = Date.now();
@@ -1175,7 +1185,7 @@ export class OnConflictQueryBuilder<
    *   .where({ updatedAt: { lt: timestamp } });
    * ```
    *
-   * `merge` also accepts raw expression:
+   * `merge` can take a raw SQL expression:
    *
    * ```ts
    * db.table

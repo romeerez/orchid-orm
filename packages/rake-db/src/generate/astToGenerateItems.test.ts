@@ -86,7 +86,7 @@ const assertDeps = (deps: string[]) => {
 class SomeTable {
   table = 'some';
   columns = {
-    id: t.integer(),
+    shape: { id: t.integer() },
   };
 }
 
@@ -141,9 +141,7 @@ describe('astToGenerateItem', () => {
         arrangeTable({
           primaryKey: {
             columns: [],
-            options: {
-              name: 'pkeyName',
-            },
+            name: 'pkeyName',
           },
         });
 
@@ -167,7 +165,7 @@ describe('astToGenerateItem', () => {
       it('should have a custom column index key', () => {
         arrangeTable({
           shape: {
-            name: t.string().index({ name: 'indexName' }),
+            name: t.string().index('indexName'),
           },
         });
 
@@ -196,7 +194,8 @@ describe('astToGenerateItem', () => {
           indexes: [
             {
               columns: [],
-              options: { name: 'indexName' },
+              options: {},
+              name: 'indexName',
             },
           ],
         });
@@ -572,7 +571,7 @@ describe('astToGenerateItem', () => {
                   type === 'object' ? { indexes: [] } : { column: t.integer() },
                 to:
                   type === 'object'
-                    ? { indexes: [{}] }
+                    ? { indexes: [{ options: {} }] }
                     : { column: t.integer().index() },
               },
             },
@@ -596,7 +595,11 @@ describe('astToGenerateItem', () => {
                     : { column: t.integer() },
                 to:
                   type === 'object'
-                    ? { foreignKeys: [{ table: 'some', columns: ['id'] }] }
+                    ? {
+                        foreignKeys: [
+                          { fnOrTable: 'some', foreignColumns: ['id'] },
+                        ],
+                      }
                     : { column: t.integer().foreignKey('some', 'id') },
               },
             },
@@ -696,7 +699,9 @@ describe('astToGenerateItem', () => {
                   type === 'object'
                     ? {
                         type: 'varchar',
-                        foreignKeys: [{ table: 'some', columns: [] }],
+                        foreignKeys: [
+                          { fnOrTable: 'some', foreignColumns: [] },
+                        ],
                       }
                     : { column: t.string().foreignKey('some', 'id') },
               },

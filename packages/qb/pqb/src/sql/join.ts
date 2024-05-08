@@ -12,6 +12,7 @@ import {
   Expression,
   isExpression,
   QueryColumns,
+  RecordBoolean,
   RecordUnknown,
 } from 'orchid-core';
 import { RawSQL } from './rawSql';
@@ -235,7 +236,7 @@ const getConditionsFor3Or4LengthItem = (
 const getObjectOrRawConditions = (
   ctx: ToSQLCtx,
   query: PickQueryDataShapeAndJoinedShapes,
-  data: Record<string, string | Expression> | Expression | true,
+  data: { [K: string]: string | Expression } | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
   joinShape: QueryColumns,
@@ -310,7 +311,7 @@ export const pushJoinSql = (
   }
 };
 
-const skipQueryKeysForSubQuery: Record<string, boolean> = {
+const skipQueryKeysForSubQuery: RecordBoolean = {
   adapter: true,
   updateData: true,
   parsers: true,

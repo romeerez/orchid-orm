@@ -16,7 +16,7 @@ change(async (db, up) => {
 });
 ```
 
-A single migration file can have multiple `change`'s.
+A single migration file can have multiple `change`s.
 
 It's useful when creating a database schema or enum, and then creating a table that depends on it.
 
@@ -621,7 +621,7 @@ change(async (db) => {
 
 [//]: # 'has JSDoc'
 
-Rename a table constraint, such as primary key, or check.
+Rename a table constraint such as a primary key or a database check
 
 ```ts
 import { change } from '../dbScript';

@@ -40,22 +40,21 @@ type ToSqlOptionsInternal = ToSQLOptions & {
   aliasValue?: true;
 };
 
-export type ToSQLQuery = Pick<
-  Query,
-  | '__isQuery'
-  | 'q'
-  | 'queryBuilder'
-  | 'table'
-  | 'internal'
-  | 'relations'
-  | 'withData'
-  | 'clone'
-  | 'baseQuery'
-  | 'meta'
-  | 'returnType'
-  | 'result'
-  | 'shape'
->;
+export type ToSQLQuery = {
+  __isQuery: Query['__isQuery'];
+  q: Query['q'];
+  queryBuilder: Query['queryBuilder'];
+  table?: Query['table'];
+  internal: Query['internal'];
+  relations: Query['relations'];
+  withData: Query['withData'];
+  clone: Query['clone'];
+  baseQuery: Query['baseQuery'];
+  meta: Query['meta'];
+  returnType: Query['returnType'];
+  result: Query['result'];
+  shape: Query['shape'];
+};
 
 export const toSQL = (table: ToSQLQuery, options?: ToSQLOptions): Sql => {
   return (

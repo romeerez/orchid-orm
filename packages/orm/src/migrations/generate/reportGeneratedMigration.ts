@@ -114,8 +114,8 @@ export const report = (
                     ? ` references ${foreignKeys
                         .map((fk) => {
                           return `${fnOrTableToString(
-                            'fn' in fk ? fk.fn : fk.table,
-                          )}(${fk.columns.join(', ')})`;
+                            fk.fnOrTable,
+                          )}(${fk.foreignColumns.join(', ')})`;
                         })
                         .join(', ')}`
                     : ''
