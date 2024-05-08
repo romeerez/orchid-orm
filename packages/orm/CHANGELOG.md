@@ -1,5 +1,23 @@
 # orchid-orm
 
+## 1.26.0
+
+### Minor Changes
+
+- e254c22: - Rework composite indexes, primary and foreign keys.
+
+  - Change `findBy` to filter only by unique columns.
+  - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
+
+  See the BREAKING_CHANGE.md at orchid-orm 1.26 at the repository root for details.
+
+### Patch Changes
+
+- Updated dependencies [e254c22]
+  - rake-db@2.19.0
+  - pqb@0.28.0
+  - orchid-core@0.14.0
+
 ## 1.25.3
 
 ### Patch Changes
