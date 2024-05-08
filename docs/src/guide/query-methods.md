@@ -64,21 +64,19 @@ const takenOptional: TableType | undefined = await db.table
 
 [//]: # 'has JSDoc'
 
-The `find` method is available only for tables which has exactly one primary key.
-And also it can accept raw SQL template literal, then the primary key is not required.
-
-Finds a record by id, throws [NotFoundError](/guide/error-handling.html) if not found:
+Finds a single record by the primary key (id), throws [NotFoundError](/guide/error-handling.html) if not found.
+Not available if the table has no or multiple primary keys.
 
 ```ts
-await db.table.find(1);
+const result: TableType = await db.table.find(1);
 ```
 
 ## findOptional
 
 [//]: # 'has JSDoc'
 
-Find a single record by the primary key (id), adds `LIMIT 1`.
-Returns `undefined` when not found.
+Finds a single record by the primary key (id), returns `undefined` when not found.
+Not available if the table has no or multiple primary keys.
 
 ```ts
 const result: TableType | undefined = await db.table.find(123);
@@ -88,29 +86,31 @@ const result: TableType | undefined = await db.table.find(123);
 
 [//]: # 'has JSDoc'
 
-The same as `where(conditions).take()`, takes the same arguments as [where](/guide/where), it will filter records and add a `LIMIT 1`.
-Throws `NotFoundError` if not found.
+Finds a single unique record, throws [NotFoundError](/guide/error-handling.html) if not found.
+It accepts values of primary keys or unique indexes defined on the table.
+`findBy`'s argument type is a union of all possible sets of unique conditions.
+
+You can use `where(...).take()` for non-unique conditions.
 
 ```ts
-const result: TableType = await db.table.findBy({ key: 'value' });
-// is equivalent to:
-db.table.where({ key: 'value' }).take();
+await db.table.findBy({ key: 'value' });
 ```
 
 ## findByOptional
 
 [//]: # 'has JSDoc'
 
-The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
-Returns `undefined` when not found.
+Finds a single unique record, returns `undefined` if not found.
+It accepts values of primary keys or unique indexes defined on the table.
+`findBy`'s argument type is a union of all possible sets of unique conditions.
+
+You can use `where(...).takeOptional()` for non-unique conditions.
 
 ```ts
-const result: TableType | undefined = await db.table.findByOptional({
-  key: 'value',
-});
+await db.table.findByOptional({ key: 'value' });
 ```
 
-# findBySql
+## findBySql
 
 [//]: # 'has JSDoc'
 

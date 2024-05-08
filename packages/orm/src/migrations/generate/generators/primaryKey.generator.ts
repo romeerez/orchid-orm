@@ -29,7 +29,7 @@ const changePrimaryKey = (
     changeTableAst: { shape, add, drop },
   }: ChangeTableData,
 ) => {
-  const tablePrimaryKey = codeTable.internal.primaryKey;
+  const tablePrimaryKey = codeTable.internal.tableData.primaryKey;
   const primaryKey = [
     ...new Set([...columnsPrimaryKey, ...(tablePrimaryKey?.columns ?? [])]),
   ];
@@ -43,14 +43,14 @@ const changePrimaryKey = (
       (key) => !checkForColumnChange(shape, key),
     );
     if (toDrop?.length) {
-      drop.primaryKey = { columns: toDrop, options: dbPrimaryKey?.options };
+      drop.primaryKey = { columns: toDrop, name: dbPrimaryKey?.name };
     }
 
     const toAdd = primaryKey.filter((key) => !checkForColumnChange(shape, key));
     if (toAdd.length) {
       add.primaryKey = {
         columns: toAdd,
-        options: tablePrimaryKey?.options,
+        name: tablePrimaryKey?.name,
       };
     }
   }
@@ -64,19 +64,19 @@ const renamePrimaryKey = (
     schema,
   }: ChangeTableData,
 ) => {
-  const tablePrimaryKey = codeTable.internal.primaryKey;
+  const tablePrimaryKey = codeTable.internal.tableData.primaryKey;
   if (
     dbPrimaryKey &&
     tablePrimaryKey &&
-    dbPrimaryKey?.options?.name !== tablePrimaryKey?.options?.name
+    dbPrimaryKey?.name !== tablePrimaryKey?.name
   ) {
     ast.push({
       type: 'renameTableItem',
       kind: 'CONSTRAINT',
       tableSchema: schema,
       tableName: codeTable.table,
-      from: dbPrimaryKey.options?.name ?? `${codeTable.table}_pkey`,
-      to: tablePrimaryKey.options?.name ?? `${codeTable}_pkey`,
+      from: dbPrimaryKey.name ?? `${codeTable.table}_pkey`,
+      to: tablePrimaryKey.name ?? `${codeTable}_pkey`,
     });
   }
 };

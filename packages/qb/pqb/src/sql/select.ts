@@ -80,7 +80,7 @@ export const jsonToSql = (
 export const pushSelectSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<SelectQueryData, 'select' | 'join'>,
+  query: { select?: SelectQueryData['select']; join?: SelectQueryData['join'] },
   quotedAs?: string,
 ) => {
   ctx.sql.push(selectToSql(ctx, table, query, quotedAs));
@@ -89,7 +89,7 @@ export const pushSelectSql = (
 export const selectToSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<SelectQueryData, 'select' | 'join'>,
+  query: { select?: SelectQueryData['select']; join?: SelectQueryData['join'] },
   quotedAs?: string,
 ): string => {
   if (query.select) {
@@ -98,10 +98,9 @@ export const selectToSql = (
       if (typeof item === 'string') {
         list.push(selectedStringToSQL(ctx, table, query, quotedAs, item));
       } else if ('selectAs' in item) {
-        const obj = item.selectAs as Record<
-          string,
-          SelectableOrExpression | ToSQLQuery
-        >;
+        const obj = item.selectAs as {
+          [K: string]: SelectableOrExpression | ToSQLQuery;
+        };
         for (const as in obj) {
           const value = obj[as];
           if (typeof value === 'object' || typeof value === 'function') {
@@ -136,7 +135,7 @@ export const selectToSql = (
 export const selectedStringToSQL = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<SelectQueryData, 'select' | 'join'>,
+  query: { select?: SelectQueryData['select']; join?: SelectQueryData['join'] },
   quotedAs: string | undefined,
   item: string,
 ) =>
@@ -162,7 +161,7 @@ export function selectedObjectToSQL(
 
 export const selectAllSql = (
   table: ToSQLQuery,
-  query: Pick<SelectQueryData, 'join'>,
+  query: { join?: SelectQueryData['join'] },
   quotedAs?: string,
 ) => {
   return query.join?.length

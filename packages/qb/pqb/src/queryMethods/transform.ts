@@ -1,5 +1,5 @@
 import { Query } from '../query/query';
-import { QueryCatch, QueryColumn, QueryThen } from 'orchid-core';
+import { QueryColumn, QueryThen } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
 import { QueryBase } from '../query/queryBase';
 
@@ -7,7 +7,7 @@ import { QueryBase } from '../query/queryBase';
 // `input` type is inferred from a query `catch` method,
 // it is a result of the query before transform.
 export type QueryTransformFn<T extends Query> = (
-  input: T['catch'] extends QueryCatch<infer Data> ? Data : never,
+  input: T['then'] extends QueryThen<infer Data> ? Data : never,
 ) => unknown;
 
 // Type of query after applying a `transform`.
@@ -21,8 +21,6 @@ export type QueryTransform<T extends QueryBase, Data> = {
     ? { value: QueryColumn<Data> }
     : K extends 'then'
     ? QueryThen<Data>
-    : K extends 'catch'
-    ? QueryCatch<Data>
     : T[K];
 };
 

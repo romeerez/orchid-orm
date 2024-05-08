@@ -26,6 +26,7 @@ import {
   SetQueryReturnsOneOptional,
   UpdateArg,
   UpdateCtx,
+  UpdateCtxCollect,
   UpdateData,
   VirtualColumn,
   WhereArg,
@@ -73,8 +74,8 @@ export type BelongsToOptions<
 > = RelationCommonOptions<Related, Scope> &
   RelationRefsOrKeysOptions<
     keyof Columns,
-    keyof InstanceType<Related>['columns'],
-    keyof InstanceType<Related>['columns'],
+    keyof InstanceType<Related>['columns']['shape'],
+    keyof InstanceType<Related>['columns']['shape'],
     keyof Columns
   >;
 
@@ -89,7 +90,7 @@ export type BelongsToParams<
   T extends RelationConfigSelf,
   Relation extends RelationThunkBase,
 > = {
-  [Name in BelongsToFKey<Relation>]: T['columns'][Name]['type'];
+  [Name in BelongsToFKey<Relation>]: T['columns']['shape'][Name]['type'];
 };
 
 export interface BelongsToInfo<
@@ -121,7 +122,7 @@ export interface BelongsToInfo<
   one: true;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
-    columns: { [L in FK]: T['columns'][L]['inputType'] };
+    columns: { [L in FK]: T['columns']['shape'][L]['inputType'] };
     nested: Required extends true
       ? {
           [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;
@@ -175,7 +176,7 @@ type BelongsToNestedUpdate = (
   params: NestedUpdateOneItem,
   state: {
     queries?: ((queryResult: QueryResult) => Promise<void>)[];
-    updateData?: RecordUnknown;
+    collect?: UpdateCtxCollect;
   },
 ) => void;
 
@@ -259,15 +260,17 @@ export const makeBelongsToMethod = (
   relationName: string,
   query: Query,
 ): RelationData => {
-  const primaryKeys =
+  const primaryKeys = (
     'columns' in relation.options
       ? relation.options.references
-      : [relation.options.primaryKey];
+      : [relation.options.primaryKey]
+  ) as string[];
 
-  const foreignKeys =
+  const foreignKeys = (
     'columns' in relation.options
       ? relation.options.columns
-      : [relation.options.foreignKey];
+      : [relation.options.foreignKey]
+  ) as string[];
 
   const len = primaryKeys.length;
   const state: State = { query, primaryKeys, foreignKeys, len };
@@ -488,8 +491,14 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
               : upsert.create;
           const result = await _queryCreate(query.select(...primaryKeys), data);
 
+          const collectData: RecordUnknown = {};
+          state.collect = {
+            keys: primaryKeys,
+            data: collectData,
+          };
+
           for (let i = 0; i < len; i++) {
-            (state.updateData ??= {})[foreignKeys[i]] = result[primaryKeys[i]];
+            collectData[foreignKeys[i]] = result[primaryKeys[i]];
           }
         }
       });

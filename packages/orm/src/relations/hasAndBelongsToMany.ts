@@ -75,7 +75,7 @@ export type HasAndBelongsToManyOptions<
         through: {
           table: string;
           columns: string[];
-          references: (keyof InstanceType<Related>['columns'])[];
+          references: (keyof InstanceType<Related>['columns']['shape'])[];
         };
       }
     | {
@@ -83,7 +83,7 @@ export type HasAndBelongsToManyOptions<
         foreignKey: string;
         joinTable: string;
         associationPrimaryKey: string;
-        associationForeignKey: keyof InstanceType<Related>['columns'];
+        associationForeignKey: keyof InstanceType<Related>['columns']['shape'];
       }
   );
 
@@ -92,12 +92,12 @@ export type HasAndBelongsToManyParams<
   Relation extends RelationThunkBase,
 > = Relation['options'] extends { columns: string[] }
   ? {
-      [Name in Relation['options']['columns'][number]]: T['columns'][Name]['type'];
+      [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
     }
   : Relation['options'] extends { primaryKey: string }
   ? Record<
       Relation['options']['primaryKey'],
-      T['columns'][Relation['options']['primaryKey']]['type']
+      T['columns']['shape'][Relation['options']['primaryKey']]['type']
     >
   : never;
 
@@ -223,16 +223,16 @@ export const makeHasAndBelongsToManyMethod = (
 
   const { options } = relation;
   if ('columns' in options) {
-    primaryKeys = options.columns;
+    primaryKeys = options.columns as string[];
     foreignKeys = options.references;
     joinTable = options.through.table;
     throughForeignKeys = options.through.columns;
-    throughPrimaryKeys = options.through.references;
+    throughPrimaryKeys = options.through.references as string[];
   } else {
-    primaryKeys = [options.primaryKey];
+    primaryKeys = [options.primaryKey] as string[];
     foreignKeys = [options.foreignKey];
     joinTable = options.joinTable;
-    throughForeignKeys = [options.associationForeignKey];
+    throughForeignKeys = [options.associationForeignKey] as string[];
     throughPrimaryKeys = [options.associationPrimaryKey];
   }
 

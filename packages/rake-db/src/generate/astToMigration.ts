@@ -2,16 +2,13 @@ import { RakeDbAst } from '../ast';
 import {
   ColumnType,
   referencesArgsToCode,
-  constraintToCode,
-  indexToCode,
-  primaryKeyToCode,
-  getConstraintKind,
-  constraintPropsToCode,
   TimestampTZColumn,
   TimestampColumn,
   primaryKeyInnerToCode,
   indexInnerToCode,
   constraintInnerToCode,
+  TableData,
+  pushTableDataCode,
 } from 'pqb';
 import {
   addCode,
@@ -196,19 +193,28 @@ const astEncoders: {
     const result = code;
 
     const hasOptions = Boolean(ast.comment || ast.noPrimaryKey === 'ignore');
+    const hasTableData = Boolean(
+      ast.primaryKey || ast.indexes?.length || ast.constraints?.length,
+    );
+    const isShifted = hasOptions || hasTableData;
 
-    if (hasOptions) {
+    if (isShifted) {
       addCode(code, `await db.${ast.action}Table(`);
 
       const inner: Code[] = [`${quoteSchemaTable(ast)},`];
       code.push(inner);
       code = inner;
 
-      const options: string[] = [];
-      if (ast.comment) options.push(`comment: ${JSON.stringify(ast.comment)},`);
-      if (ast.noPrimaryKey === 'ignore') options.push(`noPrimaryKey: true,`);
+      if (hasOptions) {
+        const options: string[] = [];
+        if (ast.comment)
+          options.push(`comment: ${JSON.stringify(ast.comment)},`);
+        if (ast.noPrimaryKey === 'ignore') options.push(`noPrimaryKey: true,`);
 
-      code.push('{', options, '},', '(t) => ({');
+        code.push('{', options, '},');
+      }
+
+      code.push('(t) => ({');
     } else {
       addCode(
         code,
@@ -241,24 +247,11 @@ const astEncoders: {
       code.push([`...${timestampsToCode(config, timestamps)},`]);
     }
 
-    if (ast.primaryKey) {
-      code.push([primaryKeyToCode(ast.primaryKey, 't')]);
-    }
-
-    if (ast.indexes) {
-      for (const index of ast.indexes) {
-        code.push(indexToCode(index, 't'));
-      }
-    }
-
-    if (ast.constraints) {
-      for (const constraint of ast.constraints) {
-        code.push(constraintToCode(constraint, 't', true));
-      }
-    }
-
-    if (hasOptions) {
+    if (isShifted) {
       addCode(code, '}),');
+
+      if (hasTableData) pushTableDataCode(code, ast);
+
       addCode(result, ');');
     } else {
       addCode(result, '}));');
@@ -507,13 +500,12 @@ const astEncoders: {
     ];
   },
   constraint(ast) {
-    const kind = getConstraintKind(ast);
     const table = quoteSchemaTable({
       schema: ast.tableSchema,
       name: ast.tableName,
     });
 
-    if (kind === 'foreignKey' && ast.references) {
+    if (ast.references) {
       return [
         `await db.addForeignKey(`,
         [`${table},`, ...referencesArgsToCode(ast.references, ast.name, true)],
@@ -521,14 +513,12 @@ const astEncoders: {
       ];
     }
 
-    if (kind === 'check' && ast.check) {
-      return [`await db.addCheck(${table}, ${ast.check.toCode('t')});`];
-    }
+    const check = ast.check as TableData.Check;
 
     return [
-      `await db.addConstraint(${table}, {`,
-      constraintPropsToCode('t', ast, true),
-      '});',
+      `await db.addCheck(${table}, ${check.toCode('t')}${
+        ast.name ? `, ${singleQuote(ast.name)}` : ''
+      });`,
     ];
   },
   renameTableItem(ast) {

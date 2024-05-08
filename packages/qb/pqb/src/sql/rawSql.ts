@@ -7,6 +7,7 @@ import {
   QueryColumn,
   RawSQLBase,
   RawSQLValues,
+  RecordUnknown,
   SQLArgs,
   SQLQueryArgs,
   StaticSQLArgs,
@@ -171,3 +172,35 @@ export function sqlQueryArgsToExpression(
     ? new RawSQL(args as TemplateLiteralArgs)
     : (args[0] as never);
 }
+
+export type SqlFn = <
+  T,
+  Args extends
+    | [sql: TemplateStringsArray, ...values: unknown[]]
+    | [sql: string]
+    | [values: RecordUnknown, sql?: string],
+>(
+  this: T,
+  ...args: Args
+) => Args extends [RecordUnknown]
+  ? (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>
+  : RawSQLBase<QueryColumn, T>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const sqlFn: SqlFn = (...args: any[]): any => {
+  const arg = args[0];
+  if (Array.isArray(arg)) {
+    return new RawSQL(args as TemplateLiteralArgs);
+  }
+
+  if (typeof args[0] === 'string') {
+    return new RawSQL(args[0]);
+  }
+
+  if (args[1] !== undefined) {
+    return new RawSQL(args[1], arg);
+  }
+
+  return (...args: TemplateLiteralArgs) =>
+    new RawSQL(args, arg as RecordUnknown);
+};

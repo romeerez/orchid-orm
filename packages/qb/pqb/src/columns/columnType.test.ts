@@ -57,7 +57,7 @@ describe('column type', () => {
     it('should have toCode', () => {
       class Table {
         readonly table = 'table';
-        columns = { column: td.integer() };
+        columns = { shape: { column: td.integer() } };
       }
 
       expect(column.foreignKey(() => Table, 'column').toCode('t')).toBe(
@@ -172,8 +172,8 @@ describe('column type', () => {
 
     it('should not override the type to search records with', () => {
       const table = testDb('table', (t) => ({
-        id: t.serial().primaryKey(),
-        column: t.text().parse(parseInt),
+        id: t.serial(),
+        column: t.text().parse(parseInt).primaryKey(),
       }));
 
       const q = table.findBy({ column: 'text' });
@@ -520,11 +520,10 @@ describe('column type', () => {
     it('should have toCode', () => {
       expect(
         column
-          .index({
+          .index('name', {
             collate: 'collate',
             opclass: 'opclass',
             order: 'order',
-            name: 'name',
             using: 'using',
             include: 'include',
             with: 'with',
@@ -558,11 +557,10 @@ describe('column type', () => {
     it('should handle options', () => {
       expect(
         column
-          .unique({
+          .unique('name', {
             collate: 'collate',
             opclass: 'opclass',
             order: 'order',
-            name: 'name',
             using: 'using',
             include: 'include',
             with: 'with',

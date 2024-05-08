@@ -1,12 +1,15 @@
 import {
   AfterHook,
-  makeColumnTypes,
   ComputedColumnsBase,
   Db,
   DbTableOptionScopes,
   DefaultColumnTypes,
+  defaultSchemaConfig,
+  DefaultSchemaConfig,
   getColumnTypes,
+  makeColumnTypes,
   MapTableScopesOption,
+  parseTableData,
   Query,
   QueryAfterHook,
   QueryBase,
@@ -14,23 +17,33 @@ import {
   QueryData,
   QueryHooks,
   RelationQueryBase,
+  ShapeColumnPrimaryKeys,
+  ShapeUniqueColumns,
   TableData,
-  getTableData,
+  TableDataFn,
+  TableDataItem,
+  TableDataItemsUniqueColumns,
+  TableDataItemsUniqueColumnTuples,
+  TableDataItemsUniqueConstraints,
+  UniqueConstraints,
 } from 'pqb';
 import {
   applyMixins,
+  ColumnSchemaConfig,
   ColumnShapeInput,
+  ColumnShapeInputPartial,
   ColumnShapeOutput,
   ColumnsShapeBase,
+  CoreQueryScopes,
+  emptyArray,
+  emptyObject,
   EmptyObject,
   getCallerFilePath,
   getStackTrace,
-  CoreQueryScopes,
+  MaybeArray,
+  RecordUnknown,
   snakeCaseKey,
   toSnakeCase,
-  ColumnSchemaConfig,
-  RecordUnknown,
-  ColumnShapeInputPartial,
 } from 'orchid-core';
 import { MapRelations } from './relations/relations';
 import { OrchidORM } from './orm';
@@ -38,7 +51,6 @@ import { BelongsToOptions } from './relations/belongsTo';
 import { HasOneOptions } from './relations/hasOne';
 import { HasManyOptions } from './relations/hasMany';
 import { HasAndBelongsToManyOptions } from './relations/hasAndBelongsToMany';
-import { defaultSchemaConfig, DefaultSchemaConfig } from 'pqb';
 
 // type of table class itself
 export interface TableClass<T extends Table = Table> {
@@ -63,14 +75,25 @@ export interface TableToDb<
   RelationQueries extends RelationQueriesBase,
 > extends Db<
     T['table'],
-    T['columns'],
+    T['columns']['shape'],
+    keyof ShapeColumnPrimaryKeys<T['columns']['shape']> extends never
+      ? never
+      : ShapeColumnPrimaryKeys<T['columns']['shape']>,
+    | ShapeUniqueColumns<T['columns']['shape']>
+    | TableDataItemsUniqueColumns<T['columns']['shape'], T['columns']['data']>,
+    TableDataItemsUniqueColumnTuples<
+      T['columns']['shape'],
+      T['columns']['data']
+    >,
+    | UniqueConstraints<T['columns']['shape']>
+    | TableDataItemsUniqueConstraints<T['columns']['data']>,
     RelationQueries,
     T['types'],
     T['computed'] extends RecordUnknown
-      ? T['columns'] & {
+      ? T['columns']['shape'] & {
           [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
         }
-      : T['columns'],
+      : T['columns']['shape'],
     MapTableScopesOption<T['scopes'], T['softDelete']>
   > {
   definedAs: string;
@@ -95,7 +118,7 @@ export interface Table {
   // table name
   table: string;
   // columns shape and the record type
-  columns: ColumnsShapeBase;
+  columns: { shape: ColumnsShapeBase; data: MaybeArray<TableDataItem> };
   // database schema containing this table
   schema?: string;
   // column types defined in base table to use in `setColumns`
@@ -120,17 +143,23 @@ export interface Table {
 
 // Object type that's allowed in `where` and similar methods of the table.
 export type Queryable<T extends Table> = {
-  [K in keyof T['columns']]?: T['columns'][K]['queryType'];
+  [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['queryType'];
 };
 
 // Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends Table> = ColumnShapeOutput<T['columns']>;
+export type Selectable<T extends Table> = ColumnShapeOutput<
+  T['columns']['shape']
+>;
 
 // Object type that conforms `create` method of the table.
-export type Insertable<T extends Table> = ColumnShapeInput<T['columns']>;
+export type Insertable<T extends Table> = ColumnShapeInput<
+  T['columns']['shape']
+>;
 
 // Object type that conforms `update` method of the table.
-export type Updatable<T extends Table> = ColumnShapeInputPartial<T['columns']>;
+export type Updatable<T extends Table> = ColumnShapeInputPartial<
+  T['columns']['shape']
+>;
 
 // type of before hook function for the table
 type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
@@ -141,16 +170,24 @@ type AfterHookMethod = <T extends Table>(cb: QueryAfterHook) => T;
 // type of after hook function that allows selecting columns for the table
 type AfterSelectableHookMethod = <
   T extends Table,
-  S extends (keyof T['columns'])[],
+  S extends (keyof T['columns']['shape'])[],
 >(
   this: T,
   select: S,
-  cb: AfterHook<S, T['columns']>,
+  cb: AfterHook<S, T['columns']['shape']>,
 ) => T;
+
+export interface SetColumnsResult<
+  Shape extends ColumnsShapeBase,
+  Data extends MaybeArray<MaybeArray<TableDataItem>>,
+> {
+  shape: Shape;
+  data: Data extends unknown[] ? Data : [Data];
+}
 
 export interface BaseTableInstance<ColumnTypes> {
   table: string;
-  columns: ColumnsShapeBase;
+  columns: { shape: ColumnsShapeBase; data: MaybeArray<TableDataItem> };
   schema?: string;
   noPrimaryKey?: boolean;
   snakeCase?: boolean;
@@ -161,7 +198,13 @@ export interface BaseTableInstance<ColumnTypes> {
   result: ColumnsShapeBase;
   clone<T extends QueryBase>(this: T): T;
   getFilePath(): string;
-  setColumns<T extends ColumnsShapeBase>(fn: (t: ColumnTypes) => T): T;
+  setColumns<
+    Shape extends ColumnsShapeBase,
+    Data extends MaybeArray<TableDataItem>,
+  >(
+    fn: (t: ColumnTypes) => Shape,
+    tableData?: TableDataFn<Shape, Data>,
+  ): SetColumnsResult<Shape, Data>;
 
   /**
    * You can add a generated column in the migration (see [generated](/guide/migration-column-methods.html#generated-column)),
@@ -257,7 +300,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Table extends string,
     Shape extends ColumnsShapeBase,
     Computed extends ComputedColumnsBase<
-      Db<Table, Shape, EmptyObject, ColumnTypes>
+      Db<Table, Shape, never, never, never, never, EmptyObject, ColumnTypes>
     >,
   >(
     computed: Computed,
@@ -271,7 +314,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Columns extends ColumnsShapeBase,
     Keys extends string,
   >(
-    this: { table: Table; columns: Columns },
+    this: { table: Table; columns: { shape: Columns } },
     scopes: DbTableOptionScopes<Table, Columns, Keys>,
   ): CoreQueryScopes<Keys>;
 
@@ -281,7 +324,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Scope extends Query,
     Options extends BelongsToOptions<Columns, Related, Scope>,
   >(
-    this: { columns: Columns },
+    this: { columns: { shape: Columns } },
     fn: () => Related,
     options: Options,
   ): {
@@ -298,7 +341,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Source extends string,
     Options extends HasOneOptions<Columns, Related, Scope, Through, Source>,
   >(
-    this: { columns: Columns },
+    this: { columns: { shape: Columns } },
     fn: () => Related,
     options: Options,
   ): {
@@ -315,7 +358,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Source extends string,
     Options extends HasManyOptions<Columns, Related, Scope, Through, Source>,
   >(
-    this: { columns: Columns },
+    this: { columns: { shape: Columns } },
     fn: () => Related,
     options: Options,
   ): {
@@ -330,7 +373,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Scope extends Query,
     Options extends HasAndBelongsToManyOptions<Columns, Related, Scope>,
   >(
-    this: { columns: Columns },
+    this: { columns: { shape: Columns } },
     fn: () => Related,
     options: Options,
   ): {
@@ -408,13 +451,21 @@ export function createBaseTable<
       ? (
           columnTypesArg as (t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes
         )(makeColumnTypes(schemaConfig))
-      : columnTypesArg || makeColumnTypes(defaultSchemaConfig)
+      : columnTypesArg || makeColumnTypes(schemaConfig)
   ) as ColumnTypes;
 
   // stack is needed only if filePath wasn't given
   const filePathOrStack = filePathArg || getStackTrace();
 
   let filePath: string | undefined;
+
+  const defaultColumns: {
+    shape: ColumnsShapeBase;
+    data: MaybeArray<TableDataItem>;
+  } = {
+    shape: emptyObject,
+    data: emptyArray,
+  };
 
   const base = class BaseTable {
     static nowSQL = nowSQL;
@@ -423,6 +474,7 @@ export function createBaseTable<
 
     private static _inputSchema: unknown;
     static inputSchema() {
+      this.instance();
       // Nullish coalescing assignment (??=), for some reason, compiles to != null and miss undefined
       return this._inputSchema === undefined
         ? (this._inputSchema = schemaConfig.inputSchema.call(this))
@@ -431,6 +483,7 @@ export function createBaseTable<
 
     private static _outputSchema: unknown;
     static outputSchema() {
+      this.instance();
       return this._outputSchema === undefined
         ? (this._outputSchema = schemaConfig.outputSchema.call(this))
         : this._outputSchema;
@@ -438,6 +491,7 @@ export function createBaseTable<
 
     private static _querySchema: unknown;
     static querySchema() {
+      this.instance();
       return this._querySchema === undefined
         ? (this._querySchema = schemaConfig.querySchema.call(this))
         : this._querySchema;
@@ -445,6 +499,7 @@ export function createBaseTable<
 
     private static _updateSchema: unknown;
     static updateSchema() {
+      this.instance();
       return this._updateSchema === undefined
         ? (this._updateSchema = schemaConfig.updateSchema.call(this))
         : this._updateSchema;
@@ -452,6 +507,7 @@ export function createBaseTable<
 
     private static _pkeySchema: unknown;
     static pkeySchema() {
+      this.instance();
       return this._pkeySchema === undefined
         ? (this._pkeySchema = schemaConfig.pkeySchema.call(this))
         : this._pkeySchema;
@@ -477,7 +533,7 @@ export function createBaseTable<
     }
 
     table!: string;
-    columns!: ColumnsShapeBase;
+    columns = defaultColumns;
     tableData!: TableData;
     schema?: string;
     noPrimaryKey?: boolean;
@@ -505,12 +561,19 @@ export function createBaseTable<
       );
     }
 
-    setColumns<T extends ColumnsShapeBase>(fn: (t: ColumnTypes) => T): T {
+    setColumns<
+      Shape extends ColumnsShapeBase,
+      Data extends MaybeArray<TableDataItem>,
+    >(
+      fn: (t: ColumnTypes) => Shape,
+      dataFn?: TableDataFn<Shape, Data>,
+    ): SetColumnsResult<Shape, Data> {
       (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
         this.snakeCase;
 
       const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
-      this.constructor.prototype.tableData = getTableData();
+      const tableData = (this.constructor.prototype.tableData =
+        parseTableData(dataFn));
 
       if (this.snakeCase) {
         for (const key in shape) {
@@ -525,14 +588,18 @@ export function createBaseTable<
       }
 
       // save columns to prototype to make them available in static methods (inputSchema, outputSchema)
-      return (this.constructor.prototype.columns = shape);
+      return (this.constructor.prototype.columns = {
+        shape,
+        data: tableData as never,
+      });
     }
 
     setComputed<
       Table extends string,
       Shape extends ColumnsShapeBase,
+      Data extends MaybeArray<TableDataItem>,
       Computed extends ComputedColumnsBase<
-        Db<Table, Shape, EmptyObject, ColumnTypes>
+        Db<Table, Shape, Data, EmptyObject, ColumnTypes>
       >,
     >(computed: Computed): Computed {
       return computed;

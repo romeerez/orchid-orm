@@ -1,6 +1,6 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { IndexColumnOptionsForColumn, IndexOptions } from 'pqb';
 import { colors } from 'rake-db';
+import { TableData } from 'pqb';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -18,7 +18,7 @@ const { green, red, yellow } = colors;
 describe('primaryKey', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
-  const columnOptions: IndexColumnOptionsForColumn = {
+  const columnOptions: TableData.Index.ColumnOptions = {
     collate: 'C',
     opclass: 'varchar_ops',
     order: 'DESC',
@@ -29,14 +29,12 @@ describe('primaryKey', () => {
             order: 'DESC',`;
 
   const indexOptions = {
-    name: 'name',
     unique: true,
     nullsNotDistinct: true,
     include: ['name'],
-  } satisfies IndexOptions;
+  } satisfies TableData.Index.Options;
 
   const indexOptionsSql = `{
-        name: 'name',
         nullsNotDistinct: true,
         include: ['name'],
       }`;
@@ -120,12 +118,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.text().index({ name: 'from' }),
+          name: t.text().index('from'),
         }));
       },
       tables: [
         table((t) => ({
-          name: t.text().index({ name: 'to' }),
+          name: t.text().index('to'),
         })),
       ],
     });
@@ -147,10 +145,14 @@ change(async (db) => {
   it('should not be recreated when column index is identical', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.text(),
-          ...t.index([{ column: 'name', ...columnOptions }], indexOptions),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            name: t.text(),
+          }),
+          (t) => t.index([{ column: 'name', ...columnOptions }], indexOptions),
+        );
       },
       tables: [
         table((t) => ({
@@ -211,20 +213,23 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.unique(
-            [
-              'id',
-              {
-                column: 'name',
-                ...columnOptions,
-              },
-            ],
-            indexOptions,
-          ),
-        })),
+        table(
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+          }),
+          (t) =>
+            t.unique(
+              [
+                'id',
+                {
+                  column: 'name',
+                  ...columnOptions,
+                },
+              ],
+              indexOptions,
+            ),
+        ),
       ],
     });
 
@@ -257,14 +262,19 @@ change(async (db) => {
   it('should drop a composite index', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.index(
-            [{ column: 'id' }, { column: 'name', ...columnOptions }],
-            indexOptions,
-          ),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+          }),
+          (t) =>
+            t.index(
+              [{ column: 'id' }, { column: 'name', ...columnOptions }],
+              indexOptions,
+            ),
+        );
       },
       tables: [
         table((t) => ({
@@ -303,30 +313,38 @@ change(async (db) => {
   it('should not recreate composite index when it is identical', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.unique(
-            [{ column: 'id' }, { column: 'name', ...columnOptions }],
-            indexOptions,
-          ),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+          }),
+          (t) =>
+            t.unique(
+              [{ column: 'id' }, { column: 'name', ...columnOptions }],
+              indexOptions,
+            ),
+        );
       },
       tables: [
-        table((t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.unique(
-            [
-              'id',
-              {
-                column: 'name',
-                ...columnOptions,
-              },
-            ],
-            indexOptions,
-          ),
-        })),
+        table(
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+          }),
+          (t) =>
+            t.unique(
+              [
+                'id',
+                {
+                  column: 'name',
+                  ...columnOptions,
+                },
+              ],
+              indexOptions,
+            ),
+        ),
       ],
     });
 
@@ -338,30 +356,38 @@ change(async (db) => {
   it('should recreate composite index', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.index([{ column: 'id' }, { column: 'name', ...columnOptions }], {
-            ...indexOptions,
-            unique: false,
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
           }),
-        }));
+          (t) =>
+            t.index([{ column: 'id' }, { column: 'name', ...columnOptions }], {
+              ...indexOptions,
+              unique: false,
+            }),
+        );
       },
       tables: [
-        table((t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.unique(
-            [
-              'id',
-              {
-                column: 'name',
-                ...columnOptions,
-              },
-            ],
-            indexOptions,
-          ),
-        })),
+        table(
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+          }),
+          (t) =>
+            t.unique(
+              [
+                'id',
+                {
+                  column: 'name',
+                  ...columnOptions,
+                },
+              ],
+              indexOptions,
+            ),
+        ),
       ],
     });
 
@@ -407,30 +433,40 @@ change(async (db) => {
   it('should rename a composite index', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.index([{ column: 'id' }, { column: 'name', ...columnOptions }], {
-            ...indexOptions,
-            name: 'from',
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
           }),
-        }));
+          (t) =>
+            t.index(
+              [{ column: 'id' }, { column: 'name', ...columnOptions }],
+              'from',
+              indexOptions,
+            ),
+        );
       },
       tables: [
-        table((t) => ({
-          id: t.integer(),
-          name: t.text(),
-          ...t.unique(
-            [
-              'id',
-              {
-                column: 'name',
-                ...columnOptions,
-              },
-            ],
-            { ...indexOptions, name: 'to' },
-          ),
-        })),
+        table(
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+          }),
+          (t) =>
+            t.unique(
+              [
+                'id',
+                {
+                  column: 'name',
+                  ...columnOptions,
+                },
+              ],
+              'to',
+              indexOptions,
+            ),
+        ),
       ],
     });
 
@@ -577,54 +613,72 @@ ${yellow('~ rename index')} on table table: table_from_idx ${yellow(
   it('should recognize sql expressions by calling db', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
-          name: t.text(),
-          active: t.boolean(),
-          ...t.index(
-            {
-              expression: `'first' || id || name || active`,
-            },
-            {
-              name: 'first',
-              where: `name = 'first'`,
-            },
-          ),
-          ...t.index(
-            {
-              expression: `'second' || id || name || active`,
-            },
-            {
-              name: 'second',
-              where: `name = 'second'`,
-            },
-          ),
-        }));
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+            active: t.boolean(),
+          }),
+          (t) => [
+            t.index(
+              [
+                {
+                  expression: `'first' || id || name || active`,
+                },
+              ],
+              'first',
+              {
+                where: `name = 'first'`,
+              },
+            ),
+            t.index(
+              [
+                {
+                  expression: `'second' || id || name || active`,
+                },
+              ],
+              'second',
+              {
+                where: `name = 'second'`,
+              },
+            ),
+          ],
+        );
       },
       tables: [
-        table((t) => ({
-          id: t.integer(),
-          name: t.text(),
-          active: t.boolean(),
-          ...t.index(
-            {
-              expression: `'first'||id||name||active`,
-            },
-            {
-              name: 'first',
-              where: `name='first'`,
-            },
-          ),
-          ...t.index(
-            {
-              expression: `'second'||id||name||active`,
-            },
-            {
-              name: 'second',
-              where: `name='second'`,
-            },
-          ),
-        })),
+        table(
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+            active: t.boolean(),
+          }),
+          (t) => [
+            t.index(
+              [
+                {
+                  expression: `'first'||id||name||active`,
+                },
+              ],
+              'first',
+              {
+                where: `name='first'`,
+              },
+            ),
+            t.index(
+              [
+                {
+                  expression: `'second'||id||name||active`,
+                },
+              ],
+              'second',
+              {
+                where: `name='second'`,
+              },
+            ),
+          ],
+        ),
       ],
     });
 
@@ -636,38 +690,42 @@ ${yellow('~ rename index')} on table table: table_from_idx ${yellow(
   it('should detect sql expression difference by calling db', async () => {
     await arrange({
       async prepareDb(db) {
-        try {
-          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
             a: t.text(),
             b: t.text(),
             c: t.text(),
-            ...t.index(
-              {
-                expression: `(a || b) || c`,
-              },
-              {
-                name: 'idx',
-              },
+          }),
+          (t) =>
+            t.index(
+              [
+                {
+                  expression: `(a || b) || c`,
+                },
+              ],
+              'idx',
             ),
-          }));
-        } catch (err) {
-          console.log(err);
-        }
+        );
       },
       tables: [
-        table((t) => ({
-          a: t.text(),
-          b: t.text(),
-          c: t.text(),
-          ...t.index(
-            {
-              expression: `a||c||b`,
-            },
-            {
-              name: 'idx',
-            },
-          ),
-        })),
+        table(
+          (t) => ({
+            a: t.text(),
+            b: t.text(),
+            c: t.text(),
+          }),
+          (t) =>
+            t.index(
+              [
+                {
+                  expression: `a||c||b`,
+                },
+              ],
+              'idx',
+            ),
+        ),
       ],
     });
 
@@ -684,9 +742,7 @@ change(async (db) => {
             expression: '(((a || b) || c))',
           },
         ],
-        {
-          name: 'idx',
-        },
+        'idx',
       ),
     ),
     ...t.add(
@@ -696,9 +752,7 @@ change(async (db) => {
             expression: 'a||c||b',
           },
         ],
-        {
-          name: 'idx',
-        },
+        'idx',
       ),
     ),
   }));
@@ -714,18 +768,24 @@ change(async (db) => {
     it('should recognize a search index', async () => {
       await arrange({
         async prepareDb(db) {
-          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-            title: t.text(),
-            body: t.text(),
-            ...t.searchIndex(['title', 'body']),
-          }));
+          await db.createTable(
+            'table',
+            { noPrimaryKey: true },
+            (t) => ({
+              title: t.text(),
+              body: t.text(),
+            }),
+            (t) => t.searchIndex(['title', 'body']),
+          );
         },
         tables: [
-          table((t) => ({
-            title: t.text(),
-            body: t.text(),
-            ...t.searchIndex(['title', 'body']),
-          })),
+          table(
+            (t) => ({
+              title: t.text(),
+              body: t.text(),
+            }),
+            (t) => t.searchIndex(['title', 'body']),
+          ),
         ],
       });
 
@@ -737,24 +797,32 @@ change(async (db) => {
     it('should recognize a search index with weights', async () => {
       await arrange({
         async prepareDb(db) {
-          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-            title: t.text(),
-            body: t.text(),
-            ...t.searchIndex([
-              { column: 'title', weight: 'A' },
-              { column: 'body', weight: 'B' },
-            ]),
-          }));
+          await db.createTable(
+            'table',
+            { noPrimaryKey: true },
+            (t) => ({
+              title: t.text(),
+              body: t.text(),
+            }),
+            (t) =>
+              t.searchIndex([
+                { column: 'title', weight: 'A' },
+                { column: 'body', weight: 'B' },
+              ]),
+          );
         },
         tables: [
-          table((t) => ({
-            title: t.text(),
-            body: t.text(),
-            ...t.searchIndex([
-              { column: 'title', weight: 'A' },
-              { column: 'body', weight: 'B' },
-            ]),
-          })),
+          table(
+            (t) => ({
+              title: t.text(),
+              body: t.text(),
+            }),
+            (t) =>
+              t.searchIndex([
+                { column: 'title', weight: 'A' },
+                { column: 'body', weight: 'B' },
+              ]),
+          ),
         ],
       });
 
@@ -766,20 +834,26 @@ change(async (db) => {
     it('should recognize a search index with a language column', async () => {
       await arrange({
         async prepareDb(db) {
-          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-            title: t.text(),
-            body: t.text(),
-            lang: t.type('regconfig'),
-            ...t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
-          }));
+          await db.createTable(
+            'table',
+            { noPrimaryKey: true },
+            (t) => ({
+              title: t.text(),
+              body: t.text(),
+              lang: t.type('regconfig'),
+            }),
+            (t) => t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
+          );
         },
         tables: [
-          table((t) => ({
-            title: t.text(),
-            body: t.text(),
-            lang: t.type('regconfig'),
-            ...t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
-          })),
+          table(
+            (t) => ({
+              title: t.text(),
+              body: t.text(),
+              lang: t.type('regconfig'),
+            }),
+            (t) => t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
+          ),
         ],
       });
 

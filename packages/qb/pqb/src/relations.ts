@@ -1,8 +1,6 @@
 import { Query } from './query/query';
 import { RecordUnknown } from 'orchid-core';
 
-export type RelationsChain = (Query | RelationQuery)[];
-
 export type RelationJoinQuery = (
   joiningQuery: Query,
   baseQuery: Query,

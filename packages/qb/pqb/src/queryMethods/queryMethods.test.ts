@@ -267,6 +267,25 @@ describe('queryMethods', () => {
   });
 
   describe('find', () => {
+    it('should be disabled when no primary key', () => {
+      const table = testDb('table', () => ({}), undefined, {
+        noPrimaryKey: 'ignore',
+      });
+
+      // @ts-expect-error no primary key
+      table.find(1);
+    });
+
+    it('should be disabled when multiple primary keys', () => {
+      const table = testDb('table', (t) => ({
+        a: t.integer().primaryKey(),
+        b: t.integer().primaryKey(),
+      }));
+
+      // @ts-expect-error composite primary key
+      table.find(1);
+    });
+
     it('should find one by primary key', () => {
       const q = User.all();
       const query = q.find(1);
@@ -398,8 +417,12 @@ describe('queryMethods', () => {
     it('should be like where but with take', () => {
       const q = User.all();
 
+      const query = q.findBy({ name: 's' });
+
+      assertType<Awaited<typeof query>, UserRecord>();
+
       expectSql(
-        q.findBy({ name: 's' }).toSQL(),
+        query.toSQL(),
         `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT 1`,
         ['s'],
       );
@@ -410,8 +433,12 @@ describe('queryMethods', () => {
     it('should accept raw', () => {
       const q = User.all();
 
+      const query = q.findBy({ name: testDb.sql<string>`'string'` });
+
+      assertType<Awaited<typeof query>, UserRecord>();
+
       expectSql(
-        q.findBy({ name: testDb.sql`'string'` }).toSQL(),
+        query.toSQL(),
         `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
       );
 
@@ -420,30 +447,32 @@ describe('queryMethods', () => {
   });
 
   describe('findByOptional', () => {
-    it('like where but with take', () => {
+    it('should be an optional `findBy`', () => {
       const q = User.all();
-      const query = q.findByOptional({ name: 's' });
+      const query = q.findByOptional({ id: 1 });
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
       expectSql(
         query.toSQL(),
-        `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT 1`,
-        ['s'],
+        `SELECT * FROM "user" WHERE "user"."id" = $1 LIMIT 1`,
+        [1],
       );
+
       expectQueryNotMutated(q);
     });
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.findByOptional({ name: testDb.sql`'string'` });
+      const query = q.findByOptional({ id: testDb.sql<number>`1` });
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
       expectSql(
         query.toSQL(),
-        `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
+        `SELECT * FROM "user" WHERE "user"."id" = 1 LIMIT 1`,
       );
+
       expectQueryNotMutated(q);
     });
   });
@@ -493,6 +522,7 @@ describe('queryMethods', () => {
           id: t.serial().primaryKey(),
           name: t.text(),
         }),
+        undefined,
         {
           schema: 'geo',
         },

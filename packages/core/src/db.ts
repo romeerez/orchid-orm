@@ -4,7 +4,6 @@ import {
   ColumnShapeOutput,
   QueryColumns,
   QueryColumnsInit,
-  SinglePrimaryKey,
 } from './columns/columnType';
 import { RawSQLBase, TemplateLiteralArgs } from './raw';
 
@@ -23,7 +22,6 @@ export type DbBase<
   columns: (keyof Shape)[];
   columnTypes: CT;
   shape: ShapeWithComputed;
-  singlePrimaryKey: SinglePrimaryKey<Shape>;
   outputType: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
   query(...args: SQLQueryArgs): Promise<unknown>;

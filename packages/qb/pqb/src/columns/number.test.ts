@@ -126,6 +126,7 @@ describe('number columns', () => {
           two: t.identity(),
           three: t.bigint().identity(),
         }),
+        undefined,
         {
           noPrimaryKey: 'ignore',
         },

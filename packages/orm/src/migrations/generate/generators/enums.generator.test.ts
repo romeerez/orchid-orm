@@ -26,6 +26,7 @@ describe('enums', () => {
             id: t.identity().primaryKey(),
             numbers: t.enum('numbers', ['one', 'two', 'three']),
           }),
+          undefined,
           { noPrimaryKey: false },
         ),
       ],

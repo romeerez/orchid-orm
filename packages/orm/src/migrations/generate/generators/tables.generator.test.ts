@@ -29,10 +29,12 @@ describe('tables', () => {
         class One extends BaseTable {
           schema = 'schema';
           table = 'table';
+          noPrimaryKey = true;
         },
         class Two extends BaseTable {
           schema = 'schema';
           table = 'table';
+          noPrimaryKey = true;
         },
       ],
     });
@@ -56,18 +58,19 @@ describe('tables', () => {
             table = 'one';
             comment = 'table comment';
             noPrimaryKey = true;
-            columns = this.setColumns((t) => ({
-              name: t.string(),
-              int: t.integer(),
-              virtual: new UnknownColumn(defaultSchemaConfig),
-              ...t.timestamps(),
-              ...t.primaryKey(['name', 'int']),
-              ...t.index(['name', 'int']),
-              ...t.constraint({
-                name: 'constraintName',
-                check: t.sql`int > 5`,
+            columns = this.setColumns(
+              (t) => ({
+                name: t.string(),
+                int: t.integer(),
+                virtual: new UnknownColumn(defaultSchemaConfig),
+                ...t.timestamps(),
               }),
-            }));
+              (t) => [
+                t.primaryKey(['name', 'int']),
+                t.index(['name', 'int']),
+                t.check(t.sql`int > 5`, 'constraintName'),
+              ],
+            );
           },
         ],
       });
@@ -87,10 +90,12 @@ change(async (db) => {
       name: t.string(),
       int: t.integer(),
       ...t.timestamps(),
-      ...t.primaryKey(['name', 'int']),
-      ...t.index(['name', 'int']),
-      ...t.check(t.sql\`int > 5\`, { name: 'constraintName' }),
     }),
+    (t) => [
+      t.primaryKey(['name', 'int']),
+      t.index(['name', 'int']),
+      t.check(t.sql\`int > 5\`, 'constraintName'),
+    ],
   );
 });
 `);
@@ -113,9 +118,8 @@ change(async (db) => {
             name: t.varchar(255),
             int: t.integer().check(t.sql`("int" > 5)`),
             ...t.timestamps(),
-            ...t.primaryKey(['name', 'int']),
-            ...t.index(['name', 'int']),
           }),
+          (t) => [t.primaryKey(['name', 'int']), t.index(['name', 'int'])],
         );
       },
     });
@@ -134,9 +138,11 @@ change(async (db) => {
       name: t.varchar(255),
       int: t.integer().check(t.sql\`("int" > 5)\`),
       ...t.timestamps(),
-      ...t.primaryKey(['name', 'int']),
-      ...t.index(['name', 'int']),
     }),
+    (t) => [
+      t.primaryKey(['name', 'int']),
+      t.index(['name', 'int']),
+    ],
   );
 });
 
@@ -211,6 +217,7 @@ change(async (db) => {
         class Unchanged extends BaseTable {
           schema = 'from';
           table = 'unchanged';
+          noPrimaryKey = true;
         },
       ],
       selects: [0],
@@ -257,6 +264,7 @@ change(async (db) => {
           (t) => ({
             id: t.integer().primaryKey(),
           }),
+          undefined,
           { name: 'three' },
         ),
       ],
@@ -309,6 +317,7 @@ change(async (db) => {
         class Unchanged extends BaseTable {
           schema = 'from';
           table = 'unchanged';
+          noPrimaryKey = true;
         },
       ],
       selects: [1],
@@ -426,11 +435,14 @@ change(async (db) => {
       assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.createTable('joinTable', (t) => ({
-    oneId: t.integer(),
-    twoId: t.integer(),
-    ...t.primaryKey(['oneId', 'twoId']),
-  }));
+  await db.createTable(
+    'joinTable',
+    (t) => ({
+      oneId: t.integer(),
+      twoId: t.integer(),
+    }),
+    (t) => t.primaryKey(['oneId', 'twoId']),
+  );
 });
 `);
 
@@ -486,11 +498,14 @@ change(async (db) => {
       assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.createTable('joinTable', (t) => ({
-    oneId: t.integer(),
-    twoId: t.integer(),
-    ...t.primaryKey(['oneId', 'twoId']),
-  }));
+  await db.createTable(
+    'joinTable',
+    (t) => ({
+      oneId: t.integer(),
+      twoId: t.integer(),
+    }),
+    (t) => t.primaryKey(['oneId', 'twoId']),
+  );
 });
 `);
 

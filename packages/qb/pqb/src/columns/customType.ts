@@ -1,5 +1,6 @@
 import {
   Code,
+  ColumnDataBase,
   ColumnSchemaConfig,
   ColumnTypeBase,
   setColumnData,
@@ -35,9 +36,12 @@ export class CustomTypeColumn<
   }
 
   as<
-    T extends Pick<ColumnTypeBase, 'inputType' | 'outputType' | 'data'>,
-    C extends Omit<ColumnTypeBase, 'inputType' | 'outputType'> &
-      Pick<T, 'inputType' | 'outputType'>,
+    T extends { inputType: unknown; outputType: unknown; data: ColumnDataBase },
+    // Omit is optimal
+    C extends Omit<ColumnTypeBase, 'inputType' | 'outputType'> & {
+      inputType: T['inputType'];
+      outputType: T['outputType'];
+    },
   >(this: T, column: C): C {
     const c = setColumnData(
       this,

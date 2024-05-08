@@ -10,7 +10,6 @@ import {
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../common/utils';
 import {
-  QueryCatch,
   QueryThen,
   ColumnsShapeBase,
   PickQueryTableMetaResult,
@@ -77,8 +76,6 @@ export type FromResult<
         ? Arg['result']
         : K extends 'then'
         ? QueryThen<GetQueryResult<T, Arg['result']>>
-        : K extends 'catch'
-        ? QueryCatch<GetQueryResult<T, Arg['result']>>
         : T[K];
     }
   : T;

@@ -23,6 +23,7 @@ import {
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
+  CommonQueryData,
   JoinedShapes,
   PickQueryDataShapeAndJoinedShapes,
   QueryData,
@@ -36,10 +37,21 @@ import {
 } from 'orchid-core';
 import { BaseOperators, Operator } from '../columns/operators';
 
+interface QueryDataForWhere {
+  and?: CommonQueryData['and'];
+  or?: CommonQueryData['or'];
+  shape: CommonQueryData['shape'];
+  joinedShapes?: CommonQueryData['joinedShapes'];
+}
+
+interface QueryDataWithLanguage extends QueryDataForWhere {
+  language?: CommonQueryData['language'];
+}
+
 export const pushWhereStatementSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
+  query: QueryDataForWhere,
   quotedAs?: string,
 ) => {
   const res = whereToSql(ctx, table, query, quotedAs);
@@ -52,7 +64,7 @@ export const pushWhereToSql = (
   sql: string[],
   ctx: ToSQLCtx,
   table: Query,
-  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
+  query: QueryDataForWhere,
   quotedAs?: string,
   parens?: boolean,
 ) => {
@@ -65,7 +77,7 @@ export const pushWhereToSql = (
 export const whereToSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
+  query: QueryDataForWhere,
   quotedAs?: string,
   parens?: boolean,
 ): string | undefined => {
@@ -88,7 +100,7 @@ const processAnds = (
   and: WhereItem[],
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
+  query: QueryDataForWhere,
   quotedAs?: string,
   parens?: boolean,
 ): string => {
@@ -104,7 +116,7 @@ const processWhere = (
   ands: string[],
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes' | 'language'>,
+  query: QueryDataWithLanguage,
   data: WhereItem,
   quotedAs?: string,
 ) => {

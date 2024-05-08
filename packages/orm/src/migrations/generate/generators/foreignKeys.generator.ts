@@ -5,7 +5,7 @@ import {
   getSchemaAndTableFromName,
   getConstraintName,
 } from 'rake-db';
-import { ColumnType, ForeignKeyAction, ForeignKeyMatch, TableData } from 'pqb';
+import { ColumnType, TableData } from 'pqb';
 import { ChangeTableData, TableShapes } from './tables.generator';
 import { deepCompare } from 'orchid-core';
 import { checkForColumnChange } from './generators.utils';
@@ -19,37 +19,44 @@ interface ReferencesWithStringTable extends TableData.References {
   fnOrTable: string;
 }
 
-const mapMatchToDb: { [K in ForeignKeyMatch]: DbStructure.ForeignKeyMatch } = {
+const mapMatchToDb: {
+  [K in TableData.References.Match]: DbStructure.ForeignKeyMatch;
+} = {
   FULL: 'f',
   PARTIAL: 'p',
   SIMPLE: 's',
 };
 
 const mapMatchToCode = {} as {
-  [K in DbStructure.ForeignKeyMatch]: ForeignKeyMatch;
+  [K in DbStructure.ForeignKeyMatch]: TableData.References.Match;
 };
 for (const key in mapMatchToDb) {
   mapMatchToCode[
-    mapMatchToDb[key as ForeignKeyMatch] as DbStructure.ForeignKeyMatch
-  ] = key as ForeignKeyMatch;
+    mapMatchToDb[
+      key as TableData.References.Match
+    ] as DbStructure.ForeignKeyMatch
+  ] = key as TableData.References.Match;
 }
 
-const mapActionToDb: { [K in ForeignKeyAction]: DbStructure.ForeignKeyAction } =
-  {
-    'NO ACTION': 'a',
-    RESTRICT: 'r',
-    CASCADE: 'c',
-    'SET NULL': 'n',
-    'SET DEFAULT': 'd',
-  };
+const mapActionToDb: {
+  [K in TableData.References.Action]: DbStructure.ForeignKeyAction;
+} = {
+  'NO ACTION': 'a',
+  RESTRICT: 'r',
+  CASCADE: 'c',
+  'SET NULL': 'n',
+  'SET DEFAULT': 'd',
+};
 
 const mapActionToCode = {} as {
-  [K in DbStructure.ForeignKeyAction]: ForeignKeyAction;
+  [K in DbStructure.ForeignKeyAction]: TableData.References.Action;
 };
 for (const key in mapActionToDb) {
   mapActionToCode[
-    mapActionToDb[key as ForeignKeyAction] as DbStructure.ForeignKeyAction
-  ] = key as ForeignKeyAction;
+    mapActionToDb[
+      key as TableData.References.Action
+    ] as DbStructure.ForeignKeyAction
+  ] = key as TableData.References.Action;
 }
 
 export const processForeignKeys = (
@@ -152,19 +159,14 @@ const collectCodeFkeys = (
 
         const references: ReferencesWithStringTable = {
           columns,
-          fnOrTable: fnOrTableToString('fn' in x ? x.fn : x.table),
-          foreignColumns: x.columns,
-          options: {
-            name: x.name,
-            match: x.match,
-            onUpdate: x.onUpdate,
-            onDelete: x.onDelete,
-          },
+          fnOrTable: fnOrTableToString(x.fnOrTable),
+          foreignColumns: x.foreignColumns,
+          options: x.options,
         };
 
         return parseForeignKey(
           {
-            name: x.name,
+            name: x.options?.name,
             references,
           },
           references,
@@ -174,8 +176,8 @@ const collectCodeFkeys = (
     );
   }
 
-  if (codeTable.internal.constraints) {
-    for (const constraint of codeTable.internal.constraints) {
+  if (codeTable.internal.tableData.constraints) {
+    for (const constraint of codeTable.internal.tableData.constraints) {
       const { references } = constraint;
       if (!references) continue;
 

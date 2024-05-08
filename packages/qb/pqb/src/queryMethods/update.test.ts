@@ -876,9 +876,9 @@ describe('update', () => {
     });
 
     it('should select one record for return type selecting one record', async () => {
-      const q = User.select('name').findBy().update({});
+      const q = User.select('name').where().take().update({});
 
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user" LIMIT 1`);
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user"  LIMIT 1`);
 
       const res = await q;
 
@@ -888,7 +888,7 @@ describe('update', () => {
     });
 
     it('should get a single value', async () => {
-      const q = User.findBy().get('name').update({});
+      const q = User.where().take().get('name').update({});
 
       expectSql(q.toSQL(), `SELECT "user"."name" FROM "user" LIMIT 1`);
 

@@ -1,11 +1,6 @@
 import { Query, SetQueryKind } from '../query/query';
 import { ColumnInfoQueryData } from '../sql';
-import {
-  PickQueryMetaShape,
-  QueryCatch,
-  QueryColumn,
-  QueryThen,
-} from 'orchid-core';
+import { PickQueryMetaShape, QueryColumn, QueryThen } from 'orchid-core';
 
 /**
  * Result type for `columnInfo` method.
@@ -17,17 +12,13 @@ export type SetQueryReturnsColumnInfo<
   Column extends keyof T['shape'] | undefined,
   Result = Column extends keyof T['shape']
     ? GetColumnInfo
-    : Record<keyof T['shape'], GetColumnInfo>,
+    : { [K in keyof T['shape']]: GetColumnInfo },
 > =
   // Omit is optimal
-  Omit<
-    SetQueryKind<T, 'columnInfo'>,
-    'result' | 'returnType' | 'then' | 'catch'
-  > & {
+  Omit<SetQueryKind<T, 'columnInfo'>, 'result' | 'returnType' | 'then'> & {
     result: { value: QueryColumn<Result> };
     returnType: 'value';
     then: QueryThen<Result>;
-    catch: QueryCatch<Result>;
   };
 
 // column info pulled from a database
@@ -97,7 +88,7 @@ export function getColumnInfo<
     if (column) {
       return rowToColumnInfo(result.rows[0]);
     } else {
-      const info: Record<string, GetColumnInfo> = {};
+      const info: { [K: string]: GetColumnInfo } = {};
       result.rows.forEach((row) => {
         info[(row as { column_name: string }).column_name] =
           rowToColumnInfo(row);

@@ -89,8 +89,10 @@ function testTypeMethod(
 describe('valibot schema config', () => {
   it('should create schemas for a table', () => {
     const columns = {
-      id: t.identity().primaryKey(),
-      name: t.string(),
+      shape: {
+        id: t.identity().primaryKey(),
+        name: t.string(),
+      },
     };
 
     const klass = {
@@ -121,8 +123,10 @@ describe('valibot schema config', () => {
   describe('updateSchema', () => {
     it('should be a partial inputSchema', () => {
       const columns = {
-        id: t.identity().primaryKey(),
-        name: t.string(),
+        shape: {
+          id: t.identity().primaryKey(),
+          name: t.string(),
+        },
       };
 
       const klass = {
@@ -149,9 +153,11 @@ describe('valibot schema config', () => {
   describe('pkeySchema', () => {
     it('should validate primary keys', () => {
       const columns = {
-        id: t.identity().primaryKey(),
-        name: t.string().primaryKey(),
-        age: t.integer(),
+        shape: {
+          id: t.identity().primaryKey(),
+          name: t.string().primaryKey(),
+          age: t.integer(),
+        },
       };
 
       const klass = {

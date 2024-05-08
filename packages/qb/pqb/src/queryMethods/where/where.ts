@@ -231,9 +231,9 @@ export const _queryWhereIn = <T>(
       item = { [arg as string]: { in: values } };
     }
   } else {
-    item = {} as Record<string, { in: unknown[] }>;
-    for (const key in arg as Record<string, unknown[]>) {
-      item[key] = { in: (arg as Record<string, unknown[]>)[key] };
+    item = {} as { [K: string]: { in: unknown[] } };
+    for (const key in arg as { [K: string]: unknown[] }) {
+      item[key] = { in: (arg as { [K: string]: unknown[] })[key] };
     }
   }
 

@@ -1,11 +1,4 @@
-import {
-  ColumnsShape,
-  ColumnType,
-  ForeignKeyOptions,
-  NoPrimaryKeyOption,
-  SingleColumnIndexOptions,
-  TableData,
-} from 'pqb';
+import { ColumnsShape, ColumnType, NoPrimaryKeyOption, TableData } from 'pqb';
 import { DropMode } from './migration/migration';
 import {
   ColumnDataCheckBase,
@@ -99,11 +92,8 @@ export namespace RakeDbAst {
     compression?: string;
     primaryKey?: boolean;
     check?: ColumnDataCheckBase;
-    foreignKeys?: ({
-      table: string;
-      columns: string[];
-    } & ForeignKeyOptions)[];
-    indexes?: Omit<SingleColumnIndexOptions, 'column' | 'expression'>[];
+    foreignKeys?: TableData.ColumnReferences[];
+    indexes?: TableData.ColumnIndex[];
     identity?: TableData.Identity;
   }
 

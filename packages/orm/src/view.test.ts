@@ -1,4 +1,9 @@
-import { db, profileData, userData, useTestORM } from './test-utils/test-utils';
+import {
+  db,
+  profileData,
+  userData,
+  useTestORM,
+} from './test-utils/orm.test-utils';
 
 describe('view', () => {
   useTestORM();

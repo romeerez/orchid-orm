@@ -7,6 +7,7 @@ import {
   ColumnSchemaConfig,
   ColumnTypeSchemaArg,
   ColumnDataBase,
+  Codes,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { Operators, OperatorsArray } from './operators';
@@ -82,7 +83,7 @@ export class ArrayColumn<
     t: string,
     m?: boolean,
   ): Code {
-    const code: Code[] = ['array('];
+    const code: Codes = ['array('];
     addCode(code, this.data.item.toCode(t));
     addCode(code, `)${arrayDataToCode(this.data, m)}`);
     return columnCode(this, t, code, m);

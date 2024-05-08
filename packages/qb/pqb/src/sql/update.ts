@@ -70,7 +70,7 @@ const processData = (
   quotedAs?: string,
 ) => {
   let append: UpdateQueryDataItem[] | undefined;
-  const QueryClass = ctx.queryBuilder.constructor as Db;
+  const QueryClass = ctx.queryBuilder.constructor as unknown as Db;
 
   for (const item of data) {
     if (typeof item === 'function') {
@@ -114,7 +114,7 @@ const processValue = (
       return jsonToSql(ctx, table, value as JsonItem, ctx.values, quotedAs);
     } else if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
-    } else if (value instanceof QueryClass) {
+    } else if (value instanceof (QueryClass as never)) {
       return `(${joinSubQuery(table, value as ToSQLQuery).toSQL(ctx).text})`;
     } else if ('op' in value && 'arg' in value) {
       return `"${table.q.shape[key].data.name || key}" ${

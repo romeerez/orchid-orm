@@ -127,6 +127,8 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.createTable('table', (t) => ({
     id: t.identity().primaryKey(),
+    // optionally, specify a database-level constraint name:
+    id: t.identity().primaryKey('primary_key_name'),
   }));
 });
 ```
@@ -149,22 +151,33 @@ change(async (db) => {
 });
 ```
 
-Alternatively, use `t.primaryKey([column1, column2, ...columns])` to specify the primary key consisting of multiple columns:
+Alternatively, use `t.primaryKey([column1, column2, ...columns])` to specify the primary key consisting of multiple columns.
 
-By default, Postgres will name an underlying constraint as `${table name}_pkey`, and override the name by passing a second argument `{ name: 'customName' }`.
+By default, Postgres will name an underlying constraint as `${table name}_pkey`. You can pass the second argument for a custom name.
 
-Note how `name` column has `different_name` name: `primaryKey` is accepting a column key and will use an underlying name.
+In `createTable`, pass the composite primary key into a second function. Unlike `changeTable` that takes only a single function for all.
 
 ```ts
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.integer(),
-    name: t.name('different_name').text(),
-    active: t.boolean(),
-    ...t.primaryKey(['id', 'name', 'active'], { name: 'tablePkeyName' }),
-  }));
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.integer(),
+      name: t.text(),
+      active: t.boolean(),
+    }),
+    () => t.primaryKey(['id', 'name', 'active'], { name: 'tablePkeyName' }),
+  );
+
+  await db.changeTable(
+    'otherTable',
+    (t) => ({
+      newColumn: t.add(t.integer()),
+      ...t.change(t.primaryKey(['id'], ['id', 'newColumn']),
+    }),
+  );
 });
 ```
 
@@ -172,9 +185,9 @@ change(async (db) => {
 
 [//]: # 'has JSDoc'
 
-Set the foreignKey for the column.
+Defines a reference between different tables to enforce data integrity.
 
-In `snakeCase` mode, columns of both tables are translated to a snake_case.
+In [snakeCase](/guide/orm-and-query-builder.html#snakecase-option) mode, columns of both tables are translated to a snake_case.
 
 ```ts
 import { change } from '../dbScript';
@@ -186,20 +199,13 @@ change(async (db) => {
 });
 ```
 
-In the ORM specify a function returning a table class instead of a name:
+In the migration it's different from OrchidORM table code where a callback with a table is expected:
 
 ```ts
 export class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
     otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
-  }));
-}
-
-export class OtherTable extends BaseTable {
-  readonly table = 'otherTable';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
   }));
 }
 ```
@@ -230,25 +236,26 @@ Options are the same as in a single-column foreign key.
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.integer(),
-    name: t.string(), // string is varchar(255)
-    ...t.foreignKey(
-      ['id', 'name'],
-      'otherTable',
-      ['foreignId', 'foreignName'],
-      {
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.integer(),
+      name: t.string(), // string is varchar(255)
+    }),
+    (t) =>
+      t.foreignKey(['id', 'name'], 'otherTable', ['foreignId', 'foreignName'], {
         name: 'constraintName',
         match: 'FULL',
         onUpdate: 'RESTRICT',
         onDelete: 'CASCADE',
-      },
-    ),
-  }));
+      }),
+  );
 });
 ```
 
 ## index
+
+[//]: # 'has JSDoc'
 
 Add an index to the column.
 
@@ -259,18 +266,20 @@ change(async (db) => {
   await db.createTable('table', (t) => ({
     // add an index to the name column with default settings:
     name: t.text().index(),
+    // options are described below:
+    name: t.text().index({ ...options }),
+    // with a database-level name:
+    name: t.text().index('custom_index_name'),
+    // with name and options:
+    name: t.text().index('custom_index_name', { ...options }),
   }));
 });
 ```
 
-Optionally you can pass a single argument with options:
+Possible options are:
 
 ```ts
 type IndexOptions = {
-  // name of the index
-  name?: string;
-  // is it a unique index
-  unique?: boolean;
   // NULLS NOT DISTINCT: availabe in Postgres 15+, makes sense only for unique index
   nullsNotDistinct?: true;
   // index algorithm to use such as GIST, GIN
@@ -294,6 +303,96 @@ type IndexOptions = {
 };
 ```
 
+## composite index
+
+To defines an index for multiple columns.
+
+The first argument is an array of columns, where the column can be a simple string or an object with such options:
+
+```ts
+type IndexColumnOptions = {
+  // column name OR expression is required
+  column: string;
+  // SQL expression, like 'lower(name)'
+  expression: string;
+
+  collate?: string;
+  opclass?: string; // for example, varchar_ops
+  order?: string; // ASC, DESC, ASC NULLS FIRST, DESC NULLS LAST
+};
+```
+
+The second argument is an optional object with index options:
+
+```ts
+type IndexOptions = {
+  // see the comments above for these options
+  using?: string;
+  include?: MaybeArray<string>;
+  nullsNotDistinct?: true;
+  with?: string;
+  tablespace?: string;
+  where?: string;
+  mode?: 'CASCADE' | 'RESTRICT';
+};
+```
+
+Example:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+    }),
+    (t) => [
+      t.index(['id', { column: 'name', order: 'ASC' }], { ...options }),
+      // index name can be set before the options:
+      t.index(['id', { column: 'name', order: 'ASC' }], 'index_name', {
+        ...options,
+      }),
+    ],
+  );
+});
+```
+
+## unique
+
+Accepts the same parameters as [index](#index).
+
+Columns marked with `unique` becomes available for filtering with [findBy](/guide/query-methods#findby), and in [onConflict(['column'])](/guide/create-update-delete.html#onconflict).
+
+## composite unique index
+
+For unique indexes on multiple columns, accepts the same parameters as [composite index](#composite-index).
+
+As well as [unique](#unique) defined for a single column, it is recognized by [findBy](/guide/query-methods#findby) and [onConflict(['column'])](/guide/create-update-delete.html#onconflict).
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+    }),
+    (t) => [
+      t.unique(['id', 'name']),
+      // with a name
+      t.unique(['id', 'name'], 'unique_index_name'),
+      // with name and options
+      t.unique(['id', 'name'], 'unique_index_name', { ...options }),
+    ],
+  );
+});
+```
+
 ## searchIndex
 
 [//]: # 'has JSDoc'
@@ -306,12 +405,15 @@ It can accept the same options as a regular `index`, but it is `USING GIN` by de
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.identity().primaryKey(),
-    title: t.text(),
-    body: t.text(),
-    ...t.searchIndex(['title', 'body']),
-  }));
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      title: t.text(),
+      body: t.text(),
+    }),
+    (t) => t.searchIndex(['title', 'body']),
+  );
 });
 ```
 
@@ -329,15 +431,20 @@ You can set different search weights (`A` to `D`) on different columns inside th
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.identity().primaryKey(),
-    title: t.text(),
-    body: t.text(),
-    ...t.searchIndex([
-      { column: 'title', weight: 'A' },
-      { column: 'body', weight: 'B' },
-    ]),
-  }));
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      title: t.text(),
+      body: t.text(),
+    }),
+    (t) => [
+      ...t.searchIndex([
+        { column: 'title', weight: 'A' },
+        { column: 'body', weight: 'B' },
+      ]),
+    ],
+  );
 });
 ```
 
@@ -348,15 +455,20 @@ you can define different indexes for different languages by setting the `languag
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.identity().primaryKey(),
-    titleEn: t.text(),
-    bodyEn: t.text(),
-    titleFr: t.text(),
-    bodyFr: t.text(),
-    ...t.searchIndex(['titleEn', 'bodyEn'], { language: 'english' }),
-    ...t.searchIndex(['titleFr', 'bodyFr'], { language: 'french' }),
-  }));
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      titleEn: t.text(),
+      bodyEn: t.text(),
+      titleFr: t.text(),
+      bodyFr: t.text(),
+    }),
+    (t) => [
+      t.searchIndex(['titleEn', 'bodyEn'], { language: 'english' }),
+      t.searchIndex(['titleFr', 'bodyFr'], { language: 'french' }),
+    ],
+  );
 });
 ```
 
@@ -367,13 +479,16 @@ then you can define a search index that relies on a language column by using `la
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.identity().primaryKey(),
-    lang: t.type('regconfig'),
-    title: t.text(),
-    body: t.text(),
-    ...t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
-  }));
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      lang: t.type('regconfig'),
+      title: t.text(),
+      body: t.text(),
+    }),
+    (t) => t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
+  );
 });
 ```
 
@@ -397,78 +512,6 @@ Produces the following index:
 
 ```sql
 CREATE INDEX "table_generatedTsVector_idx" ON "table" USING GIN ("generatedTsVector")
-```
-
-## unique
-
-Shortcut for `.index({ unique: true })`.
-
-## composite index
-
-Add index for multiple columns.
-
-The first argument is an array of columns, where the column can be a simple string or an object with such options:
-
-```ts
-type IndexColumnOptions = {
-  // column name OR expression is required
-  column: string;
-  // SQL expression, like 'lower(name)'
-  expression: string;
-
-  collate?: string;
-  opclass?: string; // for example, varchar_ops
-  order?: string; // ASC, DESC, ASC NULLS FIRST, DESC NULLS LAST
-};
-```
-
-The second argument is an optional object with index options:
-
-```ts
-type IndexOptions = {
-  // see the comments above for these options
-  name?: string;
-  unique?: boolean;
-  using?: string;
-  include?: MaybeArray<string>;
-  nullsNotDistinct?: true;
-  with?: string;
-  tablespace?: string;
-  where?: string;
-  mode?: 'CASCADE' | 'RESTRICT';
-};
-```
-
-Example:
-
-Note how `name` column has a `different_name` name, but it's been referenced by a key name in the index.
-
-```ts
-import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.identity().primaryKey(),
-    name: t.name('different_name').text(),
-    ...t.index(['id', { column: 'name', order: 'ASC' }], { name: 'indexName' }),
-  }));
-});
-```
-
-## composite unique index
-
-Shortcut for `t.index([...columns], { ...options, unique: true })`
-
-```ts
-import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.createTable('table', (t) => ({
-    id: t.identity().primaryKey(),
-    name: t.text(),
-    ...t.unique(['id', 'name']),
-  }));
-});
 ```
 
 ## timestamps
@@ -521,6 +564,8 @@ change(async (db) => {
   await db.createTable('table', (t) => ({
     // validate rank to be from 1 to 10
     rank: t.integer().check(t.sql`1 >= "rank" AND "rank" <= 10`),
+    // constraint name can be passed as a second argument
+    column: t.integer().check(t.sql`...`, 'check_name'),
   }));
 });
 ```
@@ -533,11 +578,18 @@ Define a check for multiple column by using a spread syntax:
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
-    a: t.integer(),
-    b: t.integer(),
-    ...t.check(t.sql`a < b`),
-  }));
+  await db.createTable(
+    'table',
+    (t) => ({
+      a: t.integer(),
+      b: t.integer(),
+    }),
+    (t) => [
+      t.check(t.sql`a < b`),
+      // constraint name can be passed as a second argument
+      t.integer().check(t.sql`...`, 'check_name'),
+    ],
+  );
 });
 ```
 
@@ -615,34 +667,6 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.createTable('table', (t) => ({
     name: t.domain('domainName'),
-  }));
-});
-```
-
-## constraint
-
-You can place a database check and a foreign key on a single constraint:
-
-```ts
-import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.createTable('table', (t) => ({
-    one: t.integer(),
-    two: t.text(),
-    ...t.constraint({
-      name: 'constraintName',
-      check: t.sql`one > 5`,
-      references: [
-        ['one', 'two'], // this table columns
-        'otherTable', // foreign table name
-        ['otherOne', 'otherTwo'], // foreign columns
-        {
-          // see foreignKey above for options
-          match: 'FULL',
-        },
-      ],
-    }),
   }));
 });
 ```

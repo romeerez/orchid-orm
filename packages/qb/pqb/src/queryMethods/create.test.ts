@@ -1009,13 +1009,9 @@ describe('create functions', () => {
       const q = User.all();
 
       const originalQuery = q.insert(userData);
-      const onConflictQuery = q.onConflict();
+      const onConflictQuery = q.onConflict('name');
       expect(originalQuery instanceof OnConflictQueryBuilder).not.toBe(true);
       expect(onConflictQuery instanceof OnConflictQueryBuilder).toBe(true);
-      expect(onConflictQuery instanceof OnConflictQueryBuilder).toBe(true);
-      expect(
-        onConflictQuery.ignore() instanceof OnConflictQueryBuilder,
-      ).not.toBe(true);
       expect(
         onConflictQuery.merge() instanceof OnConflictQueryBuilder,
       ).not.toBe(true);
@@ -1029,8 +1025,7 @@ describe('create functions', () => {
       const query = q
         .select('id')
         .create(userData)
-        .onConflict('name')
-        .ignore()
+        .onConflictIgnore('name')
         .where({ name: 'where name' });
 
       expectSql(
@@ -1048,11 +1043,35 @@ describe('create functions', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should accept unique constraint name', () => {
+      const table = testDb(
+        'table',
+        (t) => ({
+          id: t.identity(),
+          name: t.text(),
+          password: t.text(),
+        }),
+        (t) => t.primaryKey(['id', 'name'], 'pkey'),
+      );
+
+      const q = table.insert(userData).onConflictIgnore({ constraint: 'pkey' });
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "table"("name", "password")
+          VALUES ($1, $2)
+          ON CONFLICT ON CONSTRAINT "pkey" DO NOTHING
+        `,
+        ['name', 'password'],
+      );
+    });
+
     describe('ignore', () => {
       it('should perform `ON CONFLICT` without a target', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict().ignore();
+        const query = q.insert(userData).onConflictIgnore();
         expectSql(
           query.toSQL(),
           `
@@ -1069,7 +1088,7 @@ describe('create functions', () => {
       it('should accept single column', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict('id').ignore();
+        const query = q.insert(userData).onConflictIgnore('id');
         expectSql(
           query.toSQL(),
           `
@@ -1086,8 +1105,7 @@ describe('create functions', () => {
       it('should accept single named column', () => {
         const query = Snake.count()
           .create(snakeData)
-          .onConflict('snakeName')
-          .ignore();
+          .onConflictIgnore('snakeName');
 
         expectSql(
           query.toSQL(),
@@ -1101,35 +1119,49 @@ describe('create functions', () => {
       });
 
       it('should accept multiple columns', () => {
-        const q = User.all();
+        const table = testDb(
+          'table',
+          (t) => ({
+            id: t.identity(),
+            name: t.text(),
+            password: t.text(),
+          }),
+          (t) => t.primaryKey(['id', 'name']),
+        );
 
-        const query = q
+        const q = table
           .count()
           .create(userData)
-          .onConflict(['id', 'name'])
-          .ignore();
+          .onConflictIgnore(['id', 'name']);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
-            INSERT INTO "user"("name", "password")
+            INSERT INTO "table"("name", "password")
             VALUES ($1, $2)
             ON CONFLICT ("id", "name") DO NOTHING
           `,
           ['name', 'password'],
         );
-
-        expectQueryNotMutated(q);
       });
 
       it('should accept multiple named columns', () => {
-        const query = Snake.count()
+        const table = testDb(
+          'snake',
+          (t) => ({
+            snakeName: t.name('snake_name').text(),
+            tailLength: t.name('tail_length').integer(),
+          }),
+          (t) => t.primaryKey(['snakeName', 'tailLength']),
+        );
+
+        const q = table
+          .count()
           .create(snakeData)
-          .onConflict(['snakeName', 'tailLength'])
-          .ignore();
+          .onConflictIgnore(['snakeName', 'tailLength']);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
             VALUES ($1, $2)
@@ -1145,8 +1177,8 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(raw`raw query`)
-          .ignore();
+          .onConflictIgnore(raw`raw query`);
+
         expectSql(
           query.toSQL(),
           `
@@ -1163,10 +1195,7 @@ describe('create functions', () => {
       it('should override query return type from oneOrThrow to one', async () => {
         await UniqueTable.create(uniqueTableData);
 
-        const q = UniqueTable.take()
-          .create(uniqueTableData)
-          .onConflict()
-          .ignore();
+        const q = UniqueTable.take().create(uniqueTableData).onConflictIgnore();
 
         const result = await q;
 
@@ -1180,8 +1209,7 @@ describe('create functions', () => {
 
         const q = UniqueTable.get('id')
           .create(uniqueTableData)
-          .onConflict()
-          .ignore();
+          .onConflictIgnore();
 
         const result = await q;
 
@@ -1192,39 +1220,6 @@ describe('create functions', () => {
     });
 
     describe('merge', () => {
-      it('should automatically list all unique columns when calling without arguments', () => {
-        const User = testDb('user', (t) => ({
-          id: t.serial().primaryKey(),
-          name: t.text().unique(),
-          password: t.text(),
-          age: t.integer().nullable(),
-          ...t.unique(['password']),
-        }));
-
-        const q = User.all();
-
-        const query = q
-          .count()
-          .create({ ...userData, age: 20 })
-          .onConflict()
-          .merge();
-        expectSql(
-          query.toSQL(),
-          `
-            INSERT INTO "user"("name", "password", "age")
-            VALUES ($1, $2, $3)
-            ON CONFLICT ("name", "password")
-            DO UPDATE SET
-              "name" = excluded."name",
-              "password" = excluded."password",
-              "age" = excluded."age"
-          `,
-          ['name', 'password', 20],
-        );
-
-        expectQueryNotMutated(q);
-      });
-
       it('should accept single column', () => {
         const q = User.all();
 
@@ -1266,38 +1261,54 @@ describe('create functions', () => {
       });
 
       it('should accept multiple columns', () => {
-        const q = User.all();
+        const table = testDb(
+          'table',
+          (t) => ({
+            id: t.identity(),
+            name: t.text(),
+            password: t.text(),
+          }),
+          (t) => t.primaryKey(['id', 'name']),
+        );
 
-        const query = q
+        const q = table
           .count()
           .create(userData)
-          .onConflict(['name', 'password'])
+          .onConflict(['id', 'name'])
           .merge(['name', 'password']);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
-            INSERT INTO "user"("name", "password")
+            INSERT INTO "table"("name", "password")
             VALUES ($1, $2)
-            ON CONFLICT ("name", "password")
+            ON CONFLICT ("id", "name")
             DO UPDATE SET
               "name" = excluded."name",
               "password" = excluded."password"
           `,
           ['name', 'password'],
         );
-
-        expectQueryNotMutated(q);
       });
 
       it('should accept multiple named columns', () => {
-        const query = Snake.count()
+        const table = testDb(
+          'snake',
+          (t) => ({
+            snakeName: t.name('snake_name').text(),
+            tailLength: t.name('tail_length').integer(),
+          }),
+          (t) => t.primaryKey(['snakeName', 'tailLength']),
+        );
+
+        const q = table
+          .count()
           .create(snakeData)
           .onConflict(['snakeName', 'tailLength'])
           .merge(['snakeName', 'tailLength']);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
             VALUES ($1, $2)

@@ -245,16 +245,14 @@ const analyzeTableColumns = (
     if (foreignKeys) {
       for (const fkey of foreignKeys) {
         keys.push(
-          fkey.name
-            ? `${schema}.${fkey.name}`
+          fkey.options?.name
+            ? `${schema}.${fkey.options.name}`
             : getConstraintName(table, {
                 references: { columns: [change.column?.data.name ?? name] },
               }),
         );
 
-        const [s = currentSchema, t] = getForeignKeyTable(
-          'table' in fkey ? fkey.table : fkey.fn,
-        );
+        const [s = currentSchema, t] = getForeignKeyTable(fkey.fnOrTable);
         deps.push(`${s}.${t}`);
       }
     }
@@ -270,15 +268,16 @@ const analyzeTableData = (
   data: TableData,
 ) => {
   if (data.primaryKey) {
-    const name = data.primaryKey.options?.name;
+    const name = data.primaryKey.name;
     keys.push(name ? `${schema}.${name}` : `${table}_pkey`);
   }
 
   if (data.indexes) {
     for (const index of data.indexes) {
-      const name = index.options?.name;
       keys.push(
-        name ? `${schema}.${name}` : getIndexName(table, index.columns),
+        index.name
+          ? `${schema}.${index.name}`
+          : getIndexName(table, index.columns),
       );
     }
   }

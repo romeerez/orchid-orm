@@ -27,10 +27,12 @@ describe('schemas', () => {
         class One extends BaseTable {
           schema = 'one';
           table = 'one';
+          noPrimaryKey = true;
         },
         class Two extends BaseTable {
           schema = 'two';
           table = 'two';
+          noPrimaryKey = true;
         },
       ],
     });
@@ -72,6 +74,7 @@ change(async (db) => {
         class One extends BaseTable {
           schema = 'one';
           table = 'one';
+          noPrimaryKey = true;
         },
       ],
     });
@@ -99,6 +102,7 @@ change(async (db) => {
         class One extends BaseTable {
           schema = 'to';
           table = 'one';
+          noPrimaryKey = true;
         },
       ],
       selects: [0],
@@ -139,6 +143,7 @@ change(async (db) => {
         class One extends BaseTable {
           schema = 'to';
           table = 'one';
+          noPrimaryKey = true;
         },
       ],
       selects: [1],
@@ -168,6 +173,7 @@ change(async (db) => {
         class One extends BaseTable {
           schema = 'to';
           table = 'one';
+          noPrimaryKey = true;
         },
       ],
       selects: [2],
@@ -203,10 +209,12 @@ change(async (db) => {
         class One extends BaseTable {
           schema = 'to';
           table = 'one';
+          noPrimaryKey = true;
         },
         class Two extends BaseTable {
           schema = 'from';
           table = 'two';
+          noPrimaryKey = true;
         },
       ],
     });

@@ -23,110 +23,27 @@ import { IntervalColumn, TimeColumn } from './dateTime';
 import { BooleanColumn } from './boolean';
 import { JSONTextColumn } from './json';
 import {
-  ColumnNameOfTable,
   ColumnSchemaConfig,
-  ConstraintOptions,
-  EmptyObject,
-  emptyObject,
-  ForeignKeyTable,
   makeTimestampsHelpers,
-  MaybeArray,
-  QueryColumn,
   QueryColumnsInit,
-  RawSQLBase,
-  RecordUnknown,
   setCurrentColumnName,
   setDefaultLanguage,
   setDefaultNowFn,
-  TemplateLiteralArgs,
   TimestampHelpers,
-  toArray,
 } from 'orchid-core';
-import {
-  ColumnType,
-  DropMode,
-  ForeignKeyOptions,
-  IndexColumnOptions,
-  IndexOptions,
-} from './columnType';
 import { makeRegexToFindInSql } from '../common/utils';
 import { CustomTypeColumn, DomainColumn } from './customType';
-import { RawSQL } from '../sql/rawSql';
-
-export interface TableData {
-  primaryKey?: TableData.PrimaryKey;
-  indexes?: TableData.Index[];
-  constraints?: TableData.Constraint[];
-}
-
-export namespace TableData {
-  export interface PrimaryKey {
-    columns: string[];
-    options?: { name?: string };
-  }
-
-  export interface Index {
-    columns: IndexColumnOptions[];
-    options: IndexOptions;
-  }
-
-  export interface Constraint {
-    name?: string;
-    check?: Check;
-    identity?: Identity;
-    references?: References;
-    dropMode?: DropMode;
-  }
-
-  export type Check = RawSQLBase;
-
-  export interface References {
-    columns: string[];
-    fnOrTable: (() => ForeignKeyTable) | string;
-    foreignColumns: string[];
-    options?: ForeignKeyOptions;
-  }
-
-  export interface Identity extends SequenceBaseOptions {
-    always?: boolean;
-  }
-
-  interface SequenceBaseOptions {
-    increment?: number;
-    start?: number;
-    min?: number;
-    max?: number;
-    cache?: number;
-    cycle?: boolean;
-  }
-
-  export interface SequenceOptions extends SequenceBaseOptions {
-    dataType?: 'smallint' | 'integer' | 'bigint';
-    ownedBy?: string;
-  }
-}
-
-export const newTableData = (): TableData => ({});
-
-let tableData: TableData = newTableData();
-
-export const getTableData = () => tableData;
-
-export const resetTableData = (data: TableData = newTableData()) => {
-  tableData = data;
-};
+import { RawSQL, sqlFn, SqlFn } from '../sql/rawSql';
+import { TableData } from '../tableData';
 
 export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
   types: ColumnTypes,
   fn: (t: ColumnTypes) => Shape,
   nowSQL: string | undefined,
   language: string | undefined,
-  data: TableData = newTableData(),
 ): Shape => {
   if (nowSQL) setDefaultNowFn(nowSQL);
   if (language) setDefaultLanguage(language);
-
-  resetTableData(data);
   return fn(types);
 };
 
@@ -138,18 +55,7 @@ export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
 
   name<T>(this: T, name: string): T;
 
-  sql<
-    T,
-    Args extends
-      | [sql: TemplateStringsArray, ...values: unknown[]]
-      | [sql: string]
-      | [values: RecordUnknown, sql?: string],
-  >(
-    this: T,
-    ...args: Args
-  ): Args extends [RecordUnknown]
-    ? (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>
-    : RawSQLBase<QueryColumn, T>;
+  sql: SqlFn;
 
   smallint: SchemaConfig['smallint'];
   integer: SchemaConfig['integer'];
@@ -199,68 +105,6 @@ export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
   jsonText(): JSONTextColumn<SchemaConfig>;
   type(dataType: string): CustomTypeColumn<SchemaConfig>;
   domain(dataType: string): DomainColumn<SchemaConfig>;
-
-  primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
-
-  index(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
-  ): EmptyObject;
-
-  unique(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
-  ): EmptyObject;
-
-  /**
-   * See {@link ColumnType.searchIndex}
-   */
-  searchIndex(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
-  ): EmptyObject;
-
-  constraint<
-    Table extends (() => ForeignKeyTable) | string,
-    Columns extends Table extends () => ForeignKeyTable
-      ? [
-          ColumnNameOfTable<ReturnType<Table>>,
-          ...ColumnNameOfTable<ReturnType<Table>>[],
-        ]
-      : [string, ...string[]],
-  >({
-    name,
-    references,
-    check,
-    dropMode,
-  }: {
-    name?: string;
-    references?: [
-      columns: string[],
-      fnOrTable: Table,
-      foreignColumns: Columns,
-      options?: ForeignKeyOptions,
-    ];
-    check?: RawSQLBase;
-    dropMode?: DropMode;
-  }): EmptyObject;
-
-  foreignKey<
-    Table extends (() => ForeignKeyTable) | string,
-    Columns extends Table extends () => ForeignKeyTable
-      ? [
-          ColumnNameOfTable<ReturnType<Table>>,
-          ...ColumnNameOfTable<ReturnType<Table>>[],
-        ]
-      : [string, ...string[]],
-  >(
-    columns: string[],
-    fnOrTable: Table,
-    foreignColumns: Columns,
-    options?: ForeignKeyOptions & { name?: string; dropMode?: DropMode },
-  ): EmptyObject;
-
-  check(check: RawSQLBase, options?: ConstraintOptions): EmptyObject;
 }
 
 export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
@@ -276,24 +120,7 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       return this;
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    sql(...args: any[]): any {
-      const arg = args[0];
-      if (Array.isArray(arg)) {
-        return new RawSQL(args as TemplateLiteralArgs);
-      }
-
-      if (typeof args[0] === 'string') {
-        return new RawSQL(args[0]);
-      }
-
-      if (args[1] !== undefined) {
-        return new RawSQL(args[1], arg);
-      }
-
-      return (...args: TemplateLiteralArgs) =>
-        new RawSQL(args, arg as RecordUnknown);
-    },
+    sql: sqlFn,
 
     smallint: schema.smallint,
     integer: schema.integer,
@@ -391,73 +218,6 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
     },
     domain(dataType) {
       return new DomainColumn<SchemaConfig>(schema, dataType);
-    },
-
-    primaryKey(columns, options) {
-      tableData.primaryKey = { columns, options };
-      return emptyObject;
-    },
-
-    index(columns, options = {}) {
-      const index = {
-        columns: toArray(columns).map((column) =>
-          typeof column === 'string' ? { column } : column,
-        ),
-        options,
-      };
-
-      (tableData.indexes ??= []).push(index);
-      return emptyObject;
-    },
-
-    unique(columns, options) {
-      return this.index(columns, { ...options, unique: true });
-    },
-
-    /**
-     * See {@link ColumnType.searchIndex}
-     */
-    searchIndex(columns, options) {
-      return this.index(columns, { using: 'gin', ...options, tsVector: true });
-    },
-
-    constraint({ name, references, check, dropMode }) {
-      (tableData.constraints ??= []).push({
-        name,
-        references: references
-          ? {
-              columns: references[0],
-              fnOrTable: references[1],
-              foreignColumns: references[2],
-              options: references[3],
-            }
-          : undefined,
-        check,
-        dropMode,
-      });
-      return emptyObject;
-    },
-
-    foreignKey(columns, fnOrTable, foreignColumns, options) {
-      (tableData.constraints ??= []).push({
-        name: options?.name,
-        references: {
-          columns,
-          fnOrTable,
-          foreignColumns,
-          options,
-        },
-        dropMode: options?.dropMode,
-      });
-      return emptyObject;
-    },
-
-    check(check, options) {
-      (tableData.constraints ??= []).push({
-        ...options,
-        check,
-      });
-      return emptyObject;
     },
 
     ...makeTimestampsHelpers(makeRegexToFindInSql),

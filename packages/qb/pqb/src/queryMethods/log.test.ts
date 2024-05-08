@@ -38,7 +38,7 @@ describe('query log', () => {
 
   it('should set `log` query object for a table', () => {
     const db = createDb(testDbOptions);
-    const table = db('user', undefined, { log: true });
+    const table = db('user', undefined, undefined, { log: true });
 
     expect(table.q.log).toBeTruthy();
   });

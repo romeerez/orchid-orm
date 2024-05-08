@@ -41,7 +41,10 @@ export function simpleExistingColumnToSQL(
 
 export const columnToSql = (
   ctx: ToSQLCtx,
-  data: Pick<QueryData, 'joinedShapes' | 'joinOverrides'>,
+  data: {
+    joinedShapes?: QueryData['joinedShapes'];
+    joinOverrides?: QueryData['joinOverrides'];
+  },
   shape: QueryColumns,
   column: string,
   quotedAs?: string,

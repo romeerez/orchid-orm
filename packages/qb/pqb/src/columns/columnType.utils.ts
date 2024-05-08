@@ -1,6 +1,5 @@
 import { RawSQL } from '../sql/rawSql';
 import { ColumnFromDbParams } from './columnType';
-import { TableData } from './columnTypes';
 import { ColumnTypeBase, RecordString, TemplateLiteralArgs } from 'orchid-core';
 
 const knownDefaults: RecordString = {
@@ -37,19 +36,4 @@ export const instantiateColumn = (
   });
 
   return column as unknown as ColumnTypeBase;
-};
-
-export const getConstraintKind = (
-  it: TableData.Constraint,
-): 'constraint' | 'foreignKey' | 'check' => {
-  let num = 0;
-  for (const key in it) {
-    if (
-      (key === 'references' || key === 'check') &&
-      it[key as keyof typeof it] !== undefined
-    ) {
-      num++;
-    }
-  }
-  return num === 1 ? (it.references ? 'foreignKey' : 'check') : 'constraint';
 };

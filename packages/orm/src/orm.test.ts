@@ -1,5 +1,5 @@
 import { orchidORM } from './orm';
-import { BaseTable, db, useTestORM } from './test-utils/test-utils';
+import { BaseTable, db, useTestORM } from './test-utils/orm.test-utils';
 import { assertType, expectSql } from 'test-utils';
 import { Selectable } from './baseTable';
 import { raw } from 'pqb';
@@ -31,16 +31,17 @@ describe('orm', () => {
 
     class Table extends BaseTable {
       readonly table = 'table';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        name: t.string(),
-        ...t.primaryKey(['id', 'name']),
-        ...t.index(['id', 'name']),
-        ...t.constraint({
-          name: 'constraintName',
-          check: checkSql,
+      columns = this.setColumns(
+        (t) => ({
+          id: t.identity().primaryKey(),
+          name: t.string(),
         }),
-      }));
+        (t) => [
+          t.primaryKey(['id', 'name']),
+          t.index(['id', 'name']),
+          t.check(checkSql, 'constraintName'),
+        ],
+      );
     }
 
     const local = orchidORM(
@@ -50,7 +51,7 @@ describe('orm', () => {
       },
     );
 
-    expect(local.table.internal).toMatchObject({
+    expect(local.table.internal.tableData).toMatchObject({
       primaryKey: { columns: ['id', 'name'] },
       indexes: [
         { columns: [{ column: 'id' }, { column: 'name' }], options: {} },

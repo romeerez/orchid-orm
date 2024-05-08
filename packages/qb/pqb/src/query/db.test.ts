@@ -71,30 +71,13 @@ describe('db', () => {
     );
   });
 
-  describe('primaryKeys', () => {
-    it('should collect primary keys from schema', () => {
-      const table = testDb('table', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text().primaryKey(),
-      }));
-      expect(table.primaryKeys).toEqual(['id', 'name']);
-    });
-
-    it('should set primary keys from primaryKey in schema', () => {
-      const table = testDb('table', (t) => ({
-        ...t.primaryKey(['id', 'name']),
-      }));
-      expect(table.primaryKeys).toEqual(['id', 'name']);
-    });
-  });
-
   describe('overriding column types', () => {
     it('should return date as string by default', async () => {
       await User.create(userData);
 
       const db = createDb({ adapter: testAdapter });
       const table = db('user', (t) => ({
-        id: t.serial().primaryKey(),
+        id: t.identity().primaryKey(),
         createdAt: t.timestampNoTZ(),
       }));
 
@@ -110,7 +93,7 @@ describe('db', () => {
       const db = createDb({
         adapter: testAdapter,
         columnTypes: (t) => ({
-          serial: t.serial,
+          identity: t.identity,
           timestamp() {
             return t.timestamp().parse((input) => new Date(input));
           },
@@ -118,7 +101,7 @@ describe('db', () => {
       });
 
       const table = db('user', (t) => ({
-        id: t.serial().primaryKey(),
+        id: t.identity().primaryKey(),
         createdAt: t.timestamp(),
       }));
 
@@ -218,7 +201,7 @@ describe('db', () => {
       });
 
       const table = db('table', (t) => ({
-        id: t.serial().primaryKey(),
+        id: t.identity().primaryKey(),
         camelCase: t.name('camelCase').integer(),
         snakeCase: t.integer(),
         ...t.timestamps(),
@@ -250,11 +233,12 @@ describe('db', () => {
       const table = db(
         'table',
         (t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           camelCase: t.name('camelCase').integer(),
           snakeCase: t.integer(),
           ...t.timestamps(),
         }),
+        () => [],
         {
           snakeCase: true,
         },

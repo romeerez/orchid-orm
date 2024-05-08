@@ -1,5 +1,5 @@
 import { astToMigration } from './astToMigration';
-import { makeColumnTypes, raw, TableData, defaultSchemaConfig } from 'pqb';
+import { makeColumnTypes, raw, defaultSchemaConfig, TableData } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../config';
 
@@ -277,7 +277,7 @@ change(async (db) => {
           shape: {
             someId: t
               .integer()
-              .unique({ name: 'indexName', nullsNotDistinct: true })
+              .unique('indexName', { nullsNotDistinct: true })
               .foreignKey('otherTable', 'otherId', {
                 name: 'fkey',
                 match: 'FULL',
@@ -316,11 +316,12 @@ change(async (db) => {
           shape: {
             id: t.identity().primaryKey(),
           },
-          primaryKey: { columns: ['id', 'name'], options: { name: 'pkey' } },
+          primaryKey: { columns: ['id', 'name'], name: 'pkey' },
           indexes: [
             {
               columns: [{ column: 'id' }, { column: 'name' }],
-              options: { name: 'index', unique: true, nullsNotDistinct: true },
+              options: { unique: true, nullsNotDistinct: true },
+              name: 'index',
             },
           ],
           constraints: [
@@ -343,25 +344,29 @@ change(async (db) => {
 
       expectResult(
         result,
-        template(`  await db.createTable('schema.table', (t) => ({
-    id: t.identity().primaryKey(),
-    ...t.primaryKey(['id', 'name'], { name: 'pkey' }),
-    ...t.unique(['id', 'name'], {
-      name: 'index',
-      nullsNotDistinct: true,
+        template(`  await db.createTable(
+    'schema.table',
+    (t) => ({
+      id: t.identity().primaryKey(),
     }),
-    ...t.foreignKey(
-      ['id', 'name'],
-      'otherTable',
-      ['otherId', 'otherName'],
-      {
-        name: 'fkey',
-        match: 'FULL',
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-      },
-    ),
-  }));`),
+    (t) => [
+      t.primaryKey(['id', 'name'], 'pkey'),
+      t.unique(['id', 'name'], 'index', {
+        nullsNotDistinct: true,
+      }),
+      t.foreignKey(
+        ['id', 'name'],
+        'otherTable',
+        ['otherId', 'otherName'],
+        {
+          name: 'fkey',
+          match: 'FULL',
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        },
+      ),
+    ],
+  );`),
       );
     });
 
@@ -513,7 +518,7 @@ change(async (db) => {
     it('should add and drop primary key', () => {
       const primaryKey: TableData.PrimaryKey = {
         columns: ['one', 'two'],
-        options: { name: 'pkey' },
+        name: 'pkey',
       };
 
       const result = act([
@@ -537,8 +542,8 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('schema.table', (t) => ({
-    ...t.drop(t.primaryKey(['one', 'two'], { name: 'pkey' })),
-    ...t.add(t.primaryKey(['one', 'two'], { name: 'pkey' })),
+    ...t.drop(t.primaryKey(['one', 'two'], 'pkey')),
+    ...t.add(t.primaryKey(['one', 'two'], 'pkey')),
   }));
 });
 `,
@@ -558,7 +563,6 @@ change(async (db) => {
           { expression: 'expression' },
         ],
         options: {
-          name: 'idx',
           unique: true,
           using: 'using',
           nullsNotDistinct: true,
@@ -571,6 +575,7 @@ change(async (db) => {
           tsVector: true,
           dropMode: 'CASCADE',
         },
+        name: 'idx',
       };
 
       const result = act([
@@ -608,9 +613,9 @@ change(async (db) => {
             expression: 'expression',
           },
         ],
+        'idx',
         {
           unique: true,
-          name: 'idx',
           using: 'using',
           nullsNotDistinct: true,
           include: ['include'],
@@ -637,9 +642,9 @@ change(async (db) => {
             expression: 'expression',
           },
         ],
+        'idx',
         {
           unique: true,
-          name: 'idx',
           using: 'using',
           nullsNotDistinct: true,
           include: ['include'],
@@ -651,85 +656,6 @@ change(async (db) => {
           dropMode: 'CASCADE',
         },
       ),
-    ),
-  }));
-});
-`,
-      );
-    });
-
-    it('should add and drop constraint', () => {
-      const constraint: TableData.Constraint = {
-        name: 'constraintName',
-        check: raw({ raw: 'sql' }),
-        identity: {
-          always: true,
-        },
-        references: {
-          columns: ['one', 'two'],
-          fnOrTable: 'otherTable',
-          foreignColumns: ['three', 'four'],
-          options: {
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
-          },
-        },
-        dropMode: 'CASCADE',
-      };
-
-      const result = act([
-        {
-          type: 'changeTable',
-          schema: 'schema',
-          name: 'table',
-          shape: {},
-          add: {
-            constraints: [constraint],
-          },
-          drop: {
-            constraints: [constraint],
-          },
-        },
-      ]);
-
-      expectResult(
-        result,
-        `import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.changeTable('schema.table', (t) => ({
-    ...t.drop(
-      t.constraint({
-        name: 'constraintName',
-        references: [
-          ['one', 'two'],
-          'otherTable',
-          ['three', 'four'],
-          {
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
-          },
-        ],
-        check: t.sql({ raw: 'sql' }),
-      }),
-    ),
-    ...t.add(
-      t.constraint({
-        name: 'constraintName',
-        references: [
-          ['one', 'two'],
-          'otherTable',
-          ['three', 'four'],
-          {
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
-          },
-        ],
-        check: t.sql({ raw: 'sql' }),
-      }),
     ),
   }));
 });
@@ -844,10 +770,13 @@ change(async (db) => {
         `import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('schema.table', (t) => ({
-    id: t.identity().primaryKey(),
-    ...t.check(t.sql({ raw: 'sql' })),
-  }));
+  await db.createTable(
+    'schema.table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+    }),
+    (t) => t.check(t.sql({ raw: 'sql' })),
+  );
 });
 `,
       );
@@ -859,45 +788,6 @@ change(async (db) => {
       expectResult(
         result,
         template(`  await db.addCheck('table', t.sql({ raw: 'sql' }));`),
-      );
-    });
-  });
-
-  describe('constraint', () => {
-    it('should add table constraint', () => {
-      const result = act([
-        {
-          ...foreignKey,
-          tableSchema: 'custom',
-          name: 'constraint',
-          check: raw({ raw: 'sql' }),
-          references: {
-            ...foreignKey.references,
-            options: {
-              match: 'FULL',
-              onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
-            },
-          },
-        },
-      ]);
-
-      expectResult(
-        result,
-        template(`  await db.addConstraint('custom.table', {
-    name: 'constraint',
-    references: [
-      ['otherId'],
-      'otherTable',
-      ['id'],
-      {
-        match: 'FULL',
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-      },
-    ],
-    check: t.sql({ raw: 'sql' }),
-  });`),
       );
     });
   });

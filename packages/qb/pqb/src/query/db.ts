@@ -6,53 +6,51 @@ import {
   SelectableFromShape,
 } from './query';
 import {
-  QueryMethods,
   handleResult,
   logParamToLogObject,
   QueryLogOptions,
+  QueryMethods,
 } from '../queryMethods';
 import { QueryData, QueryScopes, SelectQueryData, ToSQLOptions } from '../sql';
 import {
-  AdapterOptions,
   Adapter,
-  QueryResult,
+  AdapterOptions,
   QueryArraysResult,
+  QueryResult,
 } from '../adapter';
 import {
-  getColumnTypes,
-  getTableData,
   DefaultColumnTypes,
+  getColumnTypes,
   makeColumnTypes,
-  TableData,
 } from '../columns';
 import { QueryError, QueryErrorName } from '../errors';
 import {
+  applyMixins,
+  ColumnSchemaConfig,
+  ColumnShapeOutput,
+  ColumnsParsers,
+  ColumnTypeBase,
+  CoreQueryScopes,
   DbBase,
   DefaultSelectColumns,
-  applyMixins,
-  pushOrNewArray,
-  ColumnShapeOutput,
-  SinglePrimaryKey,
-  snakeCaseKey,
-  toSnakeCase,
-  Sql,
-  QueryThen,
-  QueryCatch,
-  ColumnsParsers,
-  TransactionState,
-  QueryResultRow,
-  TemplateLiteralArgs,
-  SQLQueryArgs,
-  isRawSQL,
   EmptyObject,
-  ColumnTypeBase,
   emptyObject,
-  CoreQueryScopes,
-  ColumnSchemaConfig,
+  isRawSQL,
+  MaybeArray,
+  pushOrNewArray,
+  QueryCatch,
   QueryColumns,
   QueryColumnsInit,
-  RecordUnknown,
+  QueryResultRow,
+  QueryThen,
   RecordString,
+  RecordUnknown,
+  snakeCaseKey,
+  Sql,
+  SQLQueryArgs,
+  TemplateLiteralArgs,
+  toSnakeCase,
+  TransactionState,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -65,6 +63,45 @@ import {
   DefaultSchemaConfig,
 } from '../columns/defaultSchemaConfig';
 import { enableSoftDelete, SoftDeleteOption } from '../queryMethods/softDelete';
+import {
+  parseTableData,
+  TableData,
+  TableDataFn,
+  TableDataItem,
+  TableDataItemsUniqueColumnTuples,
+  TableDataItemsUniqueColumns,
+  TableDataItemsUniqueConstraints,
+  UniqueQueryTypeOrExpression,
+} from '../tableData';
+
+export type ShapeColumnPrimaryKeys<Shape extends QueryColumnsInit> = {
+  [K in {
+    [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
+      ? K
+      : never;
+  }[keyof Shape]]: UniqueQueryTypeOrExpression<Shape[K]['queryType']>;
+};
+
+export type ShapeUniqueColumns<Shape extends QueryColumnsInit> = {
+  [K in keyof Shape]: Shape[K]['data']['unique'] extends string
+    ? {
+        [C in K]: UniqueQueryTypeOrExpression<Shape[K]['queryType']>;
+      }
+    : never;
+}[keyof Shape];
+
+export type UniqueConstraints<Shape extends QueryColumnsInit> =
+  | {
+      [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
+        ? string extends Shape[K]['data']['primaryKey']
+          ? never
+          : Shape[K]['data']['primaryKey']
+        : Shape[K]['data']['unique'] extends string
+        ? string extends Shape[K]['data']['unique']
+          ? never
+          : Shape[K]['data']['unique']
+        : never;
+    }[keyof Shape];
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -127,18 +164,24 @@ export type DbTableOptionScopes<
   Table extends string | undefined,
   Shape extends QueryColumns,
   Keys extends string = string,
-> = Record<Keys, (q: ScopeArgumentQuery<Table, Shape>) => QueryBase>;
+> = { [K in Keys]: (q: ScopeArgumentQuery<Table, Shape>) => QueryBase };
 
 // Type of data returned from the table query by default, doesn't include computed columns.
 // `const user: User[] = await db.user;`
-export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = Pick<
-  ColumnShapeOutput<Shape>,
-  DefaultSelectColumns<Shape>[number]
->[];
+export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = {
+  [K in DefaultSelectColumns<Shape>[number]]: Shape[K]['outputType'];
+}[];
 
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends QueryColumnsInit = QueryColumnsInit,
+  PrimaryKeys = never,
+  // union of records { column name: query input type }
+  UniqueColumns = never,
+  // union of tuples of column names
+  UniqueColumnTuples = never,
+  // union of primary keys and unique index names
+  UniqueConstraints = never,
   Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
   ShapeWithComputed extends QueryColumnsInit = Shape,
@@ -146,19 +189,10 @@ export interface Db<
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
     QueryMethods<ColumnTypes>,
     QueryBase {
-  new (
-    adapter: Adapter,
-    queryBuilder: Db<Table, Shape, Relations, ColumnTypes>,
-    table?: Table,
-    shape?: Shape,
-    options?: DbTableOptions<Table, ShapeWithComputed>,
-  ): this;
-  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
+  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>; // Pick is optimal
   queryBuilder: Db;
-  primaryKeys: Query['primaryKeys'];
   returnType: Query['returnType'];
   then: QueryThen<QueryDefaultReturnData<Shape>>;
-  catch: QueryCatch<QueryDefaultReturnData<Shape>>;
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: Relations;
@@ -175,9 +209,28 @@ export interface Db<
         ? never
         : K]: true;
     };
-    scopes: Record<keyof Scopes, true>;
+    scopes: { [K in keyof Scopes]: true };
     selectable: SelectableFromShape<ShapeWithComputed, Table>;
   };
+  internal: QueryInternal<
+    {
+      [K in keyof PrimaryKeys]: (
+        keyof PrimaryKeys extends K ? never : keyof PrimaryKeys
+      ) extends never
+        ? PrimaryKeys[K]
+        : never;
+    }[keyof PrimaryKeys],
+    PrimaryKeys | UniqueColumns,
+    | {
+        [K in keyof Shape]: Shape[K]['data']['unique'] extends string
+          ? K
+          : never;
+      }[keyof Shape]
+    | keyof PrimaryKeys,
+    UniqueColumnTuples,
+    UniqueConstraints
+  >;
+  catch: QueryCatch;
 }
 
 export const anyShape = {} as QueryColumnsInit;
@@ -185,6 +238,10 @@ export const anyShape = {} as QueryColumnsInit;
 export class Db<
   Table extends string | undefined = undefined,
   Shape extends QueryColumnsInit = QueryColumnsInit,
+  PrimaryKeys = never,
+  UniqueColumns = never,
+  UniqueColumnTuples = never,
+  UniqueConstraints = never,
   Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
   ShapeWithComputed extends QueryColumnsInit = Shape,
@@ -198,7 +255,7 @@ export class Db<
     public columnTypes: ColumnTypes,
     transactionStorage: AsyncLocalStorage<TransactionState>,
     options: DbTableOptions<Table, ShapeWithComputed>,
-    public tableData: TableData = getTableData(),
+    tableData: TableData = emptyObject,
   ) {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
@@ -209,13 +266,13 @@ export class Db<
     ) as QueryScopes;
 
     this.internal = {
-      ...tableData,
       transactionStorage,
       scopes,
       snakeCase: options.snakeCase,
       noPrimaryKey: options.noPrimaryKey === 'ignore',
       comment: options.comment,
-    };
+      tableData,
+    } as QueryInternal;
 
     this.baseQuery = this as Query;
 
@@ -288,23 +345,26 @@ export class Db<
       autoPreparedStatements: options.autoPreparedStatements ?? false,
       parsers: hasParsers ? parsers : undefined,
       language: options.language,
+      schema: options?.schema,
     } as QueryData;
 
-    if (options?.schema) {
-      this.q.schema = options.schema;
+    let shapeHasPrimaryKey: boolean | undefined;
+    for (const key in shape) {
+      if (shape[key].data.primaryKey) {
+        shapeHasPrimaryKey = true;
+
+        if (this.internal.singlePrimaryKey) {
+          this.internal.singlePrimaryKey = undefined as never;
+          break;
+        }
+
+        this.internal.singlePrimaryKey = key as never;
+      }
     }
 
-    this.primaryKeys = Object.keys(shape).filter(
-      (key) => shape[key].data.primaryKey,
-    );
-    const primaryKeysFromData = getTableData().primaryKey?.columns;
-    if (primaryKeysFromData) this.primaryKeys.push(...primaryKeysFromData);
-
-    if (this.primaryKeys.length === 1) {
-      this.singlePrimaryKey = this
-        .primaryKeys[0] as unknown as SinglePrimaryKey<Shape>;
-    } else if (
-      this.primaryKeys.length === 0 &&
+    if (
+      !shapeHasPrimaryKey &&
+      !tableData.primaryKey &&
       shape !== anyShape &&
       options.noPrimaryKey !== 'ignore'
     ) {
@@ -505,14 +565,22 @@ Db.prototype.constructor = Db;
 export type DbTableConstructor<ColumnTypes> = <
   Table extends string,
   Shape extends QueryColumnsInit,
+  Data extends MaybeArray<TableDataItem>,
   Options extends DbTableOptions<Table, Shape>,
 >(
   table: Table,
   shape?: ((t: ColumnTypes) => Shape) | Shape,
+  tableData?: TableDataFn<Shape, Data>,
   options?: Options,
 ) => Db<
   Table,
   Shape,
+  keyof ShapeColumnPrimaryKeys<Shape> extends never
+    ? never
+    : ShapeColumnPrimaryKeys<Shape>,
+  ShapeUniqueColumns<Shape> | TableDataItemsUniqueColumns<Shape, Data>,
+  TableDataItemsUniqueColumnTuples<Shape, Data>,
+  UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
   EmptyObject,
   ColumnTypes,
   Shape,
@@ -529,7 +597,16 @@ export type MapTableScopesOption<
 };
 
 export interface DbResult<ColumnTypes>
-  extends Db<string, Record<string, never>, EmptyObject, ColumnTypes>,
+  extends Db<
+      string,
+      never,
+      never,
+      never,
+      never,
+      never,
+      EmptyObject,
+      ColumnTypes
+    >,
     DbTableConstructor<ColumnTypes> {
   adapter: Adapter;
   close: Adapter['close'];
@@ -660,6 +737,7 @@ export const createDb = <
   const tableConstructor: DbTableConstructor<ColumnTypes> = (
     table,
     shape,
+    dataFn,
     options,
   ) =>
     new Db(
@@ -672,6 +750,7 @@ export const createDb = <
       ct,
       transactionStorage,
       { ...commonOptions, ...options },
+      parseTableData(dataFn),
     ) as never;
 
   const db = Object.assign(tableConstructor, qb, {
@@ -703,7 +782,6 @@ export const _initQueryBuilder = (
     columnTypes,
     transactionStorage,
     commonOptions,
-    emptyObject,
   );
 
   if (options.extensions) {

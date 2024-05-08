@@ -6,19 +6,18 @@ import {
   DbDomainArg,
   DbResult,
   EnumColumn,
-  ForeignKeyOptions,
-  IndexColumnOptions,
-  IndexOptions,
   logParamToLogObject,
   QueryLogObject,
   quote,
   raw,
+  TableData,
+  TableDataFn,
+  TableDataItem,
   TextColumn,
   TransactionAdapter,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
-  EmptyObject,
   emptyObject,
   MaybeArray,
   QueryInput,
@@ -101,45 +100,8 @@ export type SilentQueries = {
   silentArrays: Adapter['arrays'];
 };
 
-export interface RakeDbColumnTypes {
-  index(
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
-  ): EmptyObject;
-
-  foreignKey(
-    columns: [string, ...string[]],
-    foreignTable: string,
-    foreignColumns: [string, ...string[]],
-    options?: ForeignKeyOptions,
-  ): EmptyObject;
-
-  primaryKey(columns: string[], options?: { name?: string }): EmptyObject;
-
-  check(check: RawSQLBase): EmptyObject;
-
-  constraint(arg: ConstraintArg): EmptyObject;
-}
-
-// Constraint config, it can be a foreign key or a check
-export interface ConstraintArg {
-  // Name of the constraint
-  name?: string;
-  // Foreign key options
-  references?: [
-    columns: [string, ...string[]],
-    table: string,
-    foreignColumn: [string, ...string[]],
-    options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
-  ];
-  // Database check raw SQL
-  check?: RawSQLBase;
-  // Drop mode to use when dropping the constraint
-  dropMode?: DropMode;
-}
-
 // Combined queryable database instance and a migration interface
-export type DbMigration<CT extends RakeDbColumnTypes> = DbResult<CT> &
+export type DbMigration<CT> = DbResult<CT> &
   Migration<CT> & {
     // Add `SilentQueries` to an existing `adapter` type in the `DbResult`
     adapter: SilentQueries;
@@ -155,7 +117,7 @@ export type DbMigration<CT extends RakeDbColumnTypes> = DbResult<CT> &
  */
 export const createMigrationInterface = <
   SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
+  CT,
 >(
   tx: TransactionAdapter,
   up: boolean,
@@ -204,7 +166,7 @@ export interface MigrationAdapter extends TransactionAdapter {
 }
 
 // Migration interface to use inside the `change` callback.
-export class Migration<CT extends RakeDbColumnTypes> {
+export class Migration<CT> {
   // Database adapter to perform queries with.
   public adapter!: MigrationAdapter;
   // The logger config.
@@ -291,10 +253,12 @@ export class Migration<CT extends RakeDbColumnTypes> {
    *
    * @param tableName - name of the table to create
    * @param fn - create table callback
+   * @param dataFn - callback for creating composite indexes, primary keys, foreign keys
    */
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     fn?: ColumnsShapeCallback<CT, Shape>,
+    dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
   ): Promise<CreateTableResult<Table, Shape>>;
   /**
    * See {@link createTable}
@@ -302,25 +266,25 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param tableName - name of the table to create
    * @param options - {@link TableOptions}
    * @param fn - create table callback
+   * @param dataFn - callback for creating composite indexes, primary keys, foreign keys
    */
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
     fn?: ColumnsShapeCallback<CT, Shape>,
+    dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
   ): Promise<CreateTableResult<Table, Shape>>;
-  createTable<Table extends string, Shape extends ColumnsShape>(
-    tableName: Table,
-    cbOrOptions?: ColumnsShapeCallback<CT, Shape> | TableOptions,
-    cb?: ColumnsShapeCallback<CT, Shape>,
+  createTable(
+    tableName: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    first?: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    second?: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    third?: any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    const options =
-      !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
-    const fn = (
-      typeof cbOrOptions === 'function' ? cbOrOptions : cb
-    ) as ColumnsShapeCallback<CT, Shape>;
-
-    return createTable(this, this.up, tableName, options, fn);
+    return createTable(this, this.up, tableName, first, second, third);
   }
 
   /**
@@ -328,10 +292,12 @@ export class Migration<CT extends RakeDbColumnTypes> {
    *
    * @param tableName - name of the table to drop
    * @param fn - create table callback
+   * @param dataFn - callback for creating composite indexes, primary keys, foreign keys
    */
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     fn?: ColumnsShapeCallback<CT, Shape>,
+    dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
   ): Promise<CreateTableResult<Table, Shape>>;
   /**
    * Drop the table, create it on rollback. See {@link createTable}.
@@ -339,25 +305,25 @@ export class Migration<CT extends RakeDbColumnTypes> {
    * @param tableName - name of the table to drop
    * @param options - {@link TableOptions}
    * @param fn - create table callback
+   * @param dataFn - callback for creating composite indexes, primary keys, foreign keys
    */
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
     fn?: ColumnsShapeCallback<CT, Shape>,
+    dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
   ): Promise<CreateTableResult<Table, Shape>>;
-  dropTable<Table extends string, Shape extends ColumnsShape>(
-    tableName: Table,
-    cbOrOptions?: ColumnsShapeCallback<CT, Shape> | TableOptions,
-    cb?: ColumnsShapeCallback<CT, Shape>,
+  dropTable(
+    tableName: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    first?: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    second?: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    third?: any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    const options =
-      !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
-    const fn = (
-      typeof cbOrOptions === 'function' ? cbOrOptions : cb
-    ) as ColumnsShapeCallback<CT, Shape>;
-
-    return createTable(this, !this.up, tableName, options, fn);
+    return createTable(this, !this.up, tableName, first, second, third);
   }
 
   /**
@@ -484,7 +450,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
-   * Drop the schema, create it on rollback. See {@link addIndex}.
+   * Drop the schema, create it on rollback. See {@link addColumn}.
    *
    * @param tableName - name of the table to add the column to
    * @param columnName - name of the column to add
@@ -521,14 +487,16 @@ export class Migration<CT extends RakeDbColumnTypes> {
    *
    * @param tableName - name of the table to add the index for
    * @param columns - indexed columns
-   * @param options - index options
+   * @param args - index options, or an index name and then options
    */
   addIndex(
     tableName: string,
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
+    columns: (string | TableData.Index.ColumnOrExpressionOptions<string>)[],
+    ...args:
+      | [options?: TableData.Index.OptionsArg]
+      | [name?: string, options?: TableData.Index.OptionsArg]
   ): Promise<void> {
-    return addIndex(this, this.up, tableName, columns, options);
+    return addIndex(this, this.up, tableName, columns, args);
   }
 
   /**
@@ -536,14 +504,16 @@ export class Migration<CT extends RakeDbColumnTypes> {
    *
    * @param tableName - name of the table to add the index for
    * @param columns - indexed columns
-   * @param options - index options
+   * @param args - index options, or an index name and then options
    */
   dropIndex(
     tableName: string,
-    columns: MaybeArray<string | IndexColumnOptions>,
-    options?: IndexOptions,
+    columns: (string | TableData.Index.ColumnOrExpressionOptions<string>)[],
+    ...args:
+      | [options?: TableData.Index.OptionsArg]
+      | [name?: string, options?: TableData.Index.OptionsArg]
   ): Promise<void> {
-    return addIndex(this, !this.up, tableName, columns, options);
+    return addIndex(this, !this.up, tableName, columns, args);
   }
 
   /**
@@ -614,7 +584,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
     columns: [string, ...string[]],
     foreignTable: string,
     foreignColumns: [string, ...string[]],
-    options?: ForeignKeyOptions,
+    options?: TableData.References.Options,
   ): Promise<void> {
     return addForeignKey(
       this,
@@ -641,7 +611,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
     columns: [string, ...string[]],
     foreignTable: string,
     foreignColumns: [string, ...string[]],
-    options?: ForeignKeyOptions,
+    options?: TableData.References.Options,
   ): Promise<void> {
     return addForeignKey(
       this,
@@ -674,14 +644,14 @@ export class Migration<CT extends RakeDbColumnTypes> {
    *
    * @param tableName - name of the table
    * @param columns - array of the columns
-   * @param options - object with a constraint name
+   * @param name - optionally, set a primary key constraint name
    */
   addPrimaryKey(
     tableName: string,
-    columns: string[],
-    options?: { name?: string },
+    columns: [string, ...string[]],
+    name?: string,
   ): Promise<void> {
-    return addPrimaryKey(this, this.up, tableName, columns, options);
+    return addPrimaryKey(this, this.up, tableName, columns, name);
   }
 
   /**
@@ -689,14 +659,14 @@ export class Migration<CT extends RakeDbColumnTypes> {
    *
    * @param tableName - name of the table
    * @param columns - array of the columns
-   * @param options - object with a constraint name
+   * @param name - optionally, set a primary key constraint name
    */
   dropPrimaryKey(
     tableName: string,
-    columns: string[],
-    options?: { name?: string },
+    columns: [string, ...string[]],
+    name?: string,
   ): Promise<void> {
-    return addPrimaryKey(this, !this.up, tableName, columns, options);
+    return addPrimaryKey(this, !this.up, tableName, columns, name);
   }
 
   /**
@@ -718,7 +688,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
-   * Drop the schema, create it on rollback. See {@link addConstraint}.
+   * Drop the schema, create it on rollback. See {@link addCheck}.
    *
    * @param tableName - name of the table to add the check into
    * @param check - raw SQL for the check
@@ -728,41 +698,7 @@ export class Migration<CT extends RakeDbColumnTypes> {
   }
 
   /**
-   * Add or drop a constraint with check and a foreign key references.
-   *
-   * See foreign key details in [foreign key](/guide/migration-column-methods.html#composite-foreign-key).
-   *
-   * ```ts
-   * import { change } from '../dbScript';
-   *
-   * change(async (db) => {
-   *   await db.addConstraint('tableName', {
-   *     name: 'constraintName',
-   *     check: db.sql`column > 123`,
-   *     references: [['id', 'name'], 'otherTable', ['otherId', 'otherName']],
-   *   });
-   * });
-   * ```
-   *
-   * @param tableName - name of the table to add the constraint to
-   * @param constraint - constraint config object
-   */
-  addConstraint(tableName: string, constraint: ConstraintArg): Promise<void> {
-    return addConstraint(this, this.up, tableName, constraint);
-  }
-
-  /**
-   * Drop the schema, create it on rollback. See {@link addConstraint}.
-   *
-   * @param tableName - name of the table to add the constraint to
-   * @param constraint - constraint config object
-   */
-  dropConstraint(tableName: string, constraint: ConstraintArg): Promise<void> {
-    return addConstraint(this, !this.up, tableName, constraint);
-  }
-
-  /**
-   * Rename a table constraint, such as primary key, or check.
+   * Rename a table constraint such as a primary key or a database check.
    *
    * ```ts
    * import { change } from '../dbScript';
@@ -1504,7 +1440,7 @@ const wrapWithLog = async <Result>(
 /**
  * See {@link Migration.addColumn}
  */
-const addColumn = <CT extends RakeDbColumnTypes>(
+const addColumn = <CT>(
   migration: Migration<CT>,
   up: boolean,
   tableName: string,
@@ -1520,14 +1456,16 @@ const addColumn = <CT extends RakeDbColumnTypes>(
  * See {@link Migration.addIndex}
  */
 const addIndex = (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   tableName: string,
-  columns: MaybeArray<string | IndexColumnOptions>,
-  options?: IndexOptions,
+  columns: (string | TableData.Index.ColumnOrExpressionOptions<string>)[],
+  args:
+    | [options?: TableData.Index.OptionsArg]
+    | [name?: string, options?: TableData.Index.OptionsArg],
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
-    ...t.add(t.index(columns, options)),
+    ...t.add(t.index(columns, ...args)),
   }));
 };
 
@@ -1535,13 +1473,13 @@ const addIndex = (
  * See {@link Migration.addForeignKey}
  */
 const addForeignKey = (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
   foreignTable: string,
   foreignColumns: [string, ...string[]],
-  options?: ForeignKeyOptions,
+  options?: TableData.References.Options,
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.foreignKey(columns, foreignTable, foreignColumns, options)),
@@ -1552,14 +1490,14 @@ const addForeignKey = (
  * See {@link Migration.addPrimaryKey}
  */
 const addPrimaryKey = (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   tableName: string,
-  columns: string[],
-  options?: { name?: string },
+  columns: [string, ...string[]],
+  name?: string,
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
-    ...t.add(t.primaryKey(columns, options)),
+    ...t.add(t.primaryKey(columns, name)),
   }));
 };
 
@@ -1567,7 +1505,7 @@ const addPrimaryKey = (
  * See {@link Migration.addCheck}
  */
 const addCheck = (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   tableName: string,
   check: RawSQLBase,
@@ -1578,24 +1516,10 @@ const addCheck = (
 };
 
 /**
- * See {@link Migration.addConstraint}
- */
-const addConstraint = (
-  migration: Migration<RakeDbColumnTypes>,
-  up: boolean,
-  tableName: string,
-  constraint: ConstraintArg,
-): Promise<void> => {
-  return changeTable(migration, up, tableName, {}, (t) => ({
-    ...t.add(t.constraint(constraint)),
-  }));
-};
-
-/**
  * See {@link Migration.createSchema}
  */
 const createSchema = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   name: string,
 ): Promise<void> => {
@@ -1614,7 +1538,7 @@ const createSchema = async (
  * See {@link Migration.createExtension}
  */
 const createExtension = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   fullName: string,
   options?: RakeDbAst.ExtensionArg,
@@ -1649,7 +1573,7 @@ const createExtension = async (
  * See {@link Migration.createEnum}
  */
 const createEnum = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   name: string,
   values: [string, ...string[]],
@@ -1687,7 +1611,7 @@ const createEnum = async (
 /**
  * See {@link Migration.createDomain}
  */
-const createDomain = async <CT extends RakeDbColumnTypes>(
+const createDomain = async <CT>(
   migration: Migration<CT>,
   up: boolean,
   name: string,
@@ -1738,7 +1662,7 @@ DEFAULT ${encodeColumnDefault(column.data.default, values)}`
  * See {@link Migration.createCollation}
  */
 const createCollation = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Collation, 'type' | 'action' | 'schema' | 'name'>,
@@ -1792,14 +1716,14 @@ const createCollation = async (
  * @param sql - raw SQL object to execute
  */
 const queryExists = (
-  db: Migration<RakeDbColumnTypes>,
+  db: Migration<unknown>,
   sql: { text: string; values: unknown[] },
 ): Promise<boolean> => {
   return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);
 };
 
 export const renameType = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   from: string,
   to: string,
   kind: RakeDbAst.RenameType['kind'],
@@ -1833,7 +1757,7 @@ export const renameType = async (
 };
 
 const renameTableItem = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   tableName: string,
   from: string,
   to: string,
@@ -1861,7 +1785,7 @@ interface AddEnumValueOptions {
 }
 
 export const addOrDropEnumValues = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   up: boolean,
   enumName: string,
   values: string[],
@@ -1918,7 +1842,7 @@ export const addOrDropEnumValues = async (
 };
 
 export const changeEnumValues = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   enumName: string,
   fromValues: string[],
   toValues: string[],
@@ -1955,7 +1879,7 @@ export const changeEnumValues = async (
 };
 
 const recreateEnum = async (
-  migration: Migration<RakeDbColumnTypes>,
+  migration: Migration<unknown>,
   { schema, name }: { schema?: string; name: string },
   values: string[],
   errorMessage: (quotedName: string, table: string, column: string) => string,

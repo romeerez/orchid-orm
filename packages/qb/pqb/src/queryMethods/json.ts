@@ -41,6 +41,7 @@ type JsonSetResult<
 > &
   AddQuerySelect<
     T,
+    // converting to { [K in As]: ... } doesn't help
     Record<
       As,
       Column extends keyof T['shape']
@@ -125,10 +126,7 @@ export abstract class JsonModifiers {
       ],
     };
 
-    return Object.assign(
-      pushQueryValue(q, 'select', json),
-      json,
-    ) as unknown as JsonSetResult<T, Column, As>;
+    return Object.assign(pushQueryValue(q, 'select', json), json) as never;
   }
 
   /**
@@ -195,10 +193,7 @@ export abstract class JsonModifiers {
       ],
     };
 
-    return Object.assign(
-      pushQueryValue(q, 'select', json),
-      json,
-    ) as unknown as JsonSetResult<T, Column, As>;
+    return Object.assign(pushQueryValue(q, 'select', json), json) as never;
   }
 
   /**
@@ -252,10 +247,7 @@ export abstract class JsonModifiers {
       ],
     };
 
-    return Object.assign(
-      pushQueryValue(q, 'select', json),
-      json,
-    ) as unknown as JsonSetResult<T, Column, As>;
+    return Object.assign(pushQueryValue(q, 'select', json), json) as never;
   }
 
   /**
@@ -318,10 +310,7 @@ export abstract class JsonModifiers {
       __json: ['pathQuery', as, type, column, path, options],
     };
 
-    return Object.assign(
-      pushQueryValue(q, 'select', json),
-      json,
-    ) as unknown as JsonPathQueryResult<T, As, Type>;
+    return Object.assign(pushQueryValue(q, 'select', json), json) as never;
   }
 }
 
@@ -342,9 +331,6 @@ export abstract class JsonMethods {
     this: T,
     coalesce?: boolean,
   ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
-    return queryJson(
-      (this as unknown as Query).clone(),
-      coalesce,
-    ) as SetQueryReturnsColumnOptional<T, QueryColumn<string>>;
+    return queryJson((this as unknown as Query).clone(), coalesce) as never;
   }
 }

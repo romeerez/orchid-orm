@@ -16,7 +16,7 @@ import {
   postTagSelectAll,
   Post,
   postSelectAll,
-} from '../test-utils/test-utils';
+} from '../test-utils/orm.test-utils';
 import { Db } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
@@ -522,7 +522,7 @@ describe('hasOne', () => {
 
       describe('nested create', () => {
         it('should support create', async () => {
-          const query = db.user.create({
+          const q = db.user.create({
             ...userData,
             Name: 'user',
             profile: {
@@ -533,7 +533,7 @@ describe('hasOne', () => {
             },
           });
 
-          const user = await query;
+          const user = await q;
           const profile = await db.profile.findBy({ UserId: user.Id });
 
           checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
@@ -1637,17 +1637,19 @@ describe('hasOne through', () => {
 
     class PostTag extends BaseTable {
       table = 'postTag';
-      columns = this.setColumns((t) => ({
-        PostId: t
-          .name('postId')
-          .integer()
-          .foreignKey(() => Post, 'Id'),
-        TagId: t
-          .name('tagId')
-          .integer()
-          .foreignKey(() => Tag, 'Id'),
-        ...t.primaryKey(['PostId', 'TagId']),
-      }));
+      columns = this.setColumns(
+        (t) => ({
+          PostId: t
+            .name('postId')
+            .integer()
+            .foreignKey(() => Post, 'Id'),
+          TagId: t
+            .name('tagId')
+            .integer()
+            .foreignKey(() => Tag, 'Id'),
+        }),
+        (t) => t.primaryKey(['PostId', 'TagId']),
+      );
 
       relations = {
         post: this.belongsTo(() => Post, {
@@ -1745,17 +1747,19 @@ describe('hasOne through', () => {
 
     class PostTag extends BaseTable {
       table = 'postTag';
-      columns = this.setColumns((t) => ({
-        PostId: t
-          .name('postId')
-          .integer()
-          .foreignKey(() => Post, 'Id'),
-        TagId: t
-          .name('tagId')
-          .integer()
-          .foreignKey(() => Tag, 'Id'),
-        ...t.primaryKey(['PostId', 'TagId']),
-      }));
+      columns = this.setColumns(
+        (t) => ({
+          PostId: t
+            .name('postId')
+            .integer()
+            .foreignKey(() => Post, 'Id'),
+          TagId: t
+            .name('tagId')
+            .integer()
+            .foreignKey(() => Tag, 'Id'),
+        }),
+        (t) => t.primaryKey(['PostId', 'TagId']),
+      );
     }
 
     expect(() => {

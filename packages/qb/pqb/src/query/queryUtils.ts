@@ -41,7 +41,7 @@ export const pushQueryValue = <T extends PickQueryQ>(
   value: unknown,
 ): T => {
   pushOrNewArrayToObject(
-    q.q as unknown as Record<string, unknown[]>,
+    q.q as unknown as { [K: string]: unknown[] },
     key,
     value,
   );
@@ -63,10 +63,10 @@ export const setQueryObjectValue = <T extends { q: QueryData }>(
   value: unknown,
 ): T => {
   if (!q.q[object as keyof typeof q.q])
-    (q.q as unknown as Record<string, RecordUnknown>)[object] = {
+    (q.q as unknown as { [K: string]: RecordUnknown })[object] = {
       [key]: value,
     };
-  else (q.q as unknown as Record<string, RecordUnknown>)[object][key] = value;
+  else (q.q as unknown as { [K: string]: RecordUnknown })[object][key] = value;
   return q as unknown as T;
 };
 
@@ -128,4 +128,24 @@ export const extendQuery = <
   cloned.q = getClonedQueryData(q.q);
 
   return cloned as T & Methods;
+};
+
+export const getPrimaryKeys = (q: Query) => {
+  return (q.internal.primaryKeys ??= collectPrimaryKeys(q));
+};
+
+const collectPrimaryKeys = (q: Query): string[] => {
+  const primaryKeys = [];
+  const { shape } = q.q;
+  for (const key in shape) {
+    if (shape[key].data.primaryKey) {
+      primaryKeys.push(key);
+    }
+  }
+
+  if (q.internal.primaryKeys) {
+    primaryKeys.push(...q.internal.primaryKeys);
+  }
+
+  return primaryKeys;
 };

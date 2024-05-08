@@ -9,6 +9,7 @@ const User = testDb(
     active: t.boolean().nullable(),
     deletedAt: t.timestamp().nullable(),
   }),
+  undefined,
   {
     scopes: {
       default: (q) => q.where({ deletedAt: null }).orWhere({ active: true }),

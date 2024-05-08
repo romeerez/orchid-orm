@@ -7,7 +7,7 @@ import {
   profileSelectAll,
   userData,
   userSelectAll,
-} from './test-utils/test-utils';
+} from './test-utils/orm.test-utils';
 
 describe('transaction', () => {
   afterAll(db.$close);

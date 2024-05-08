@@ -22,16 +22,12 @@ import {
   RakeDbConfig,
 } from './config';
 import { changeIds } from './commands/changeIds';
-import { RakeDbColumnTypes } from './migration/migration';
 import { rebase } from './commands/rebase';
 
 /**
  * Type of {@link rakeDb} function
  */
-export type RakeDbFn = (<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes | undefined = undefined,
->(
+export type RakeDbFn = (<SchemaConfig extends ColumnSchemaConfig, CT>(
   options: MaybeArray<AdapterOptions>,
   partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
   args?: string[],
@@ -47,12 +43,11 @@ export type RakeDbFn = (<
   lazy: RakeDbLazyFn;
 };
 
-export type RakeDbFnReturns<CT extends RakeDbColumnTypes | undefined> =
-  RakeDbChangeFn<
-    CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
-  > & {
-    promise: Promise<RakeDbResult>;
-  };
+export type RakeDbFnReturns<CT> = RakeDbChangeFn<
+  CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
+> & {
+  promise: Promise<RakeDbResult>;
+};
 
 export interface RakeDbResult {
   // database connection options
@@ -66,10 +61,7 @@ export interface RakeDbResult {
 /**
  * Type of {@link rakeDb.lazy} function
  */
-export type RakeDbLazyFn = <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
+export type RakeDbLazyFn = <SchemaConfig extends ColumnSchemaConfig, CT>(
   options: MaybeArray<AdapterOptions>,
   partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
 ) => {
@@ -85,9 +77,7 @@ export type RakeDbLazyFn = <
  * Saves the given callback to an internal queue,
  * and also returns the callback in case you want to export it from migration.
  */
-export type RakeDbChangeFn<CT extends RakeDbColumnTypes> = (
-  fn: ChangeCallback<CT>,
-) => ChangeCallback<CT>;
+export type RakeDbChangeFn<CT> = (fn: ChangeCallback<CT>) => ChangeCallback<CT>;
 
 /**
  * Function to configure and run `rakeDb`.
@@ -104,7 +94,7 @@ export const rakeDb: RakeDbFn = ((
   const config = processRakeDbConfig(partialConfig);
   const promise = runCommand(
     options,
-    config as unknown as RakeDbConfig<ColumnSchemaConfig, RakeDbColumnTypes>,
+    config as unknown as RakeDbConfig<ColumnSchemaConfig>,
     args,
   ).catch((err) => {
     if (err instanceof RakeDbError) {
@@ -130,7 +120,7 @@ rakeDb.lazy = ((options, partialConfig = {}) => {
   };
 }) as RakeDbLazyFn;
 
-function change(fn: ChangeCallback<RakeDbColumnTypes>) {
+function change(fn: ChangeCallback<unknown>) {
   pushChange(fn);
   return fn;
 }
@@ -142,10 +132,7 @@ export const rakeDbAliases: RecordOptionalString = {
   rec: 'recurrent',
 };
 
-const runCommand = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
+const runCommand = async <SchemaConfig extends ColumnSchemaConfig, CT>(
   opts: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<SchemaConfig, CT>,
   args: string[] = process.argv.slice(2),

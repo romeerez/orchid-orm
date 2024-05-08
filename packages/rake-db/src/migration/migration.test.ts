@@ -141,11 +141,15 @@ describe('migration', () => {
     it('should use changeTable to add and drop an index', async () => {
       await testUpAndDown(
         (action) =>
-          db[action]('table', ['id', { column: 'name', order: 'DESC' }], {
-            name: 'indexName',
-            unique: true,
-            nullsNotDistinct: true,
-          }),
+          db[action](
+            'table',
+            ['id', { column: 'name', order: 'DESC' }],
+            'indexName',
+            {
+              unique: true,
+              nullsNotDistinct: true,
+            },
+          ),
         () =>
           expectSql(`
             CREATE UNIQUE INDEX "indexName" ON "table" ("id", "name" DESC) NULLS NOT DISTINCT
@@ -292,49 +296,6 @@ describe('migration', () => {
     });
   });
 
-  describe('addConstraint and dropConstraint', () => {
-    const testUpAndDown = makeTestUpAndDown('addConstraint', 'dropConstraint');
-
-    it('should use changeTable to add and drop a foreignKey', async () => {
-      await testUpAndDown(
-        (action) =>
-          db[action]('table', {
-            name: 'constraint',
-            references: [
-              ['id', 'name'],
-              'otherTable',
-              ['foreignId', 'foreignName'],
-              {
-                match: 'FULL',
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE',
-              },
-            ],
-            check: raw({ raw: 'check' }),
-            dropMode: 'CASCADE',
-          }),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            ${toLine(`
-              ADD CONSTRAINT "constraint"
-                FOREIGN KEY ("id", "name")
-                REFERENCES "otherTable"("foreignId", "foreignName")
-                MATCH FULL
-                ON DELETE CASCADE
-                ON UPDATE CASCADE
-                CHECK (check)
-            `)}
-          `),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            DROP CONSTRAINT "constraint" CASCADE
-          `),
-      );
-    });
-  });
-
   describe('renameConstraint', () => {
     const testUpAndDown = makeTestUpAndDown('renameConstraint');
 
@@ -374,10 +335,7 @@ describe('migration', () => {
 
     it('should use changeTable to add and drop primary key with constraint name', async () => {
       await testUpAndDown(
-        (action) =>
-          db[action]('table', ['id', 'name'], {
-            name: 'primaryKeyName',
-          }),
+        (action) => db[action]('table', ['id', 'name'], 'primaryKeyName'),
         () =>
           expectSql(`
             ALTER TABLE "table"

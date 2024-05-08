@@ -27,7 +27,8 @@ import {
   Spread,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
-import { ColumnType, TableData } from '../columns';
+import { ColumnType } from '../columns';
+import { TableData } from '../tableData';
 
 export interface DbExtension {
   name: string;
@@ -38,9 +39,28 @@ export type DbDomainArg<ColumnTypes> = (columnTypes: ColumnTypes) => ColumnType;
 
 export type DbDomainArgRecord = { [K: string]: DbDomainArg<any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-export interface QueryInternal extends QueryInternalBase, TableData {
+export interface QueryInternal<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  SinglePrimaryKey = any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  UniqueColumns = any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  UniqueColumnNames = any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  UniqueColumnTuples = any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  UniqueConstraints = any,
+> extends QueryInternalBase {
+  singlePrimaryKey: SinglePrimaryKey;
+  uniqueColumns: UniqueColumns;
+  uniqueColumnNames: UniqueColumnNames;
+  uniqueColumnTuples: UniqueColumnTuples;
+  uniqueConstraints: UniqueConstraints;
   extensions?: DbExtension[];
   domains?: DbDomainArgRecord;
+  tableData: TableData;
+  // access with `getPrimaryKeys` utility
+  primaryKeys?: string[];
 }
 
 export type SelectableFromShape<
@@ -68,12 +88,10 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
   queryBuilder: Db;
   columnTypes: unknown;
   shape: QueryColumns;
-  singlePrimaryKey: string;
-  primaryKeys: string[];
   inputType: RecordUnknown;
   q: QueryData;
   then: QueryThen<unknown>;
-  catch: QueryCatch<unknown>;
+  catch: QueryCatch;
   windows: EmptyObject;
   defaultSelectColumns: string[];
   relations: RelationsBase;
@@ -182,7 +200,9 @@ export interface PickQueryQAndBaseQuery
     PickQueryBaseQuery {}
 
 export interface PickQuerySinglePrimaryKey {
-  singlePrimaryKey: string;
+  internal: {
+    singlePrimaryKey: unknown;
+  };
 }
 
 export interface PickQueryShapeSinglePrimaryKey
@@ -213,7 +233,7 @@ export const queryTypeWithLimitOne = {
   oneOrThrow: true,
   value: true,
   valueOrThrow: true,
-} as Record<QueryReturnType, true | undefined>;
+} as { [K in QueryReturnType]: true | undefined };
 
 export const isQueryReturnsAll = (q: Query) =>
   !q.q.returnType || q.q.returnType === 'all';
@@ -263,8 +283,6 @@ export type AddQuerySelect<
       }
     : K extends 'then'
     ? QueryThen<GetQueryResult<T, Result>>
-    : K extends 'catch'
-    ? QueryCatch<GetQueryResult<T, Result>>
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -282,8 +300,6 @@ export type SetQueryReturnsAll<T extends PickQueryResult> = {
     ? 'all'
     : K extends 'then'
     ? QueryThen<ColumnShapeOutput<T['result']>[]>
-    : K extends 'catch'
-    ? QueryCatch<ColumnShapeOutput<T['result']>[]>
     : T[K];
 } & QueryMetaHasWhere;
 
@@ -299,8 +315,6 @@ export type SetQueryReturnsAllKind<
     ? 'all'
     : K extends 'then'
     ? QueryThen<ColumnShapeOutput<T['result']>[]>
-    : K extends 'catch'
-    ? QueryCatch<ColumnShapeOutput<T['result']>[]>
     : T[K];
 } & QueryMetaHasWhere;
 
@@ -309,8 +323,6 @@ export type SetQueryReturnsOneOptional<T extends PickQueryResult> = {
     ? 'one'
     : K extends 'then'
     ? QueryThen<ColumnShapeOutput<T['result']> | undefined>
-    : K extends 'catch'
-    ? QueryCatch<ColumnShapeOutput<T['result']> | undefined>
     : T[K];
 };
 
@@ -319,8 +331,6 @@ export type SetQueryReturnsOne<T extends PickQueryResult> = {
     ? 'oneOrThrow'
     : K extends 'then'
     ? QueryThen<ColumnShapeOutput<T['result']>>
-    : K extends 'catch'
-    ? QueryCatch<ColumnShapeOutput<T['result']>>
     : T[K];
 };
 
@@ -336,8 +346,6 @@ export type SetQueryReturnsOneKind<
     ? 'oneOrThrow'
     : K extends 'then'
     ? QueryThen<ColumnShapeOutput<T['result']>>
-    : K extends 'catch'
-    ? QueryCatch<ColumnShapeOutput<T['result']>>
     : T[K];
 };
 
@@ -346,8 +354,6 @@ export type SetQueryReturnsRows<T extends PickQueryResult> = {
     ? 'rows'
     : K extends 'then'
     ? QueryThen<ColumnShapeOutput<T['result']>[keyof T['result']][][]>
-    : K extends 'catch'
-    ? QueryCatch<ColumnShapeOutput<T['result']>[keyof T['result']][][]>
     : T[K];
 };
 
@@ -370,8 +376,6 @@ export type SetQueryReturnsPluckColumn<T, C extends QueryColumn> = {
     ? 'pluck'
     : K extends 'then'
     ? QueryThen<C['outputType'][]>
-    : K extends 'catch'
-    ? QueryCatch<C['outputType'][]>
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -389,8 +393,6 @@ export type SetQueryReturnsPluckColumnKind<
     ? 'pluck'
     : K extends 'then'
     ? QueryThen<T['result']['value']['outputType'][]>
-    : K extends 'catch'
-    ? QueryCatch<T['result']['value']['outputType'][]>
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -413,8 +415,6 @@ export type SetQueryReturnsColumnOrThrow<T, Column extends PickOutputType> = {
     ? 'valueOrThrow'
     : K extends 'then'
     ? QueryThen<Column['outputType']>
-    : K extends 'catch'
-    ? QueryCatch<Column['outputType']>
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -425,8 +425,6 @@ export type SetQueryReturnsColumnOptional<T, Column extends PickOutputType> = {
     ? 'value'
     : K extends 'then'
     ? QueryThen<Column['outputType'] | undefined>
-    : K extends 'catch'
-    ? QueryCatch<Column['outputType'] | undefined>
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -444,8 +442,6 @@ export type SetQueryReturnsColumnKind<
     ? 'valueOrThrow'
     : K extends 'then'
     ? QueryThen<T['result']['pluck']['outputType']>
-    : K extends 'catch'
-    ? QueryCatch<T['result']['pluck']['outputType']>
     : T[K];
 } & QueryMetaHasSelect;
 
@@ -461,8 +457,6 @@ export type SetQueryReturnsRowCount<
     ? 'rowCount'
     : K extends 'then'
     ? QueryThen<number>
-    : K extends 'catch'
-    ? QueryCatch<number>
     : T[K];
 };
 
@@ -471,8 +465,6 @@ export type SetQueryReturnsVoid<T> = {
     ? 'void'
     : K extends 'then'
     ? QueryThen<void>
-    : K extends 'catch'
-    ? QueryCatch<void>
     : T[K];
 };
 
@@ -488,8 +480,6 @@ export type SetQueryReturnsVoidKind<
     ? 'void'
     : K extends 'then'
     ? QueryThen<void>
-    : K extends 'catch'
-    ? QueryCatch<void>
     : T[K];
 };
 

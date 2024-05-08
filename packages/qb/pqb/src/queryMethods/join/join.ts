@@ -21,7 +21,6 @@ import {
   PickQueryTable,
   PickQueryTableMetaResult,
   PickQueryTableMetaResultShape,
-  QueryCatch,
   QueryColumns,
   QueryColumnToNullable,
   QueryMetaBase,
@@ -303,8 +302,6 @@ type JoinOptionalMain<
     ? NullableResult<T>
     : K extends 'then'
     ? QueryThen<GetQueryResult<T, NullableResult<T>>>
-    : K extends 'catch'
-    ? QueryCatch<GetQueryResult<T, NullableResult<T>>>
     : T[K];
 };
 

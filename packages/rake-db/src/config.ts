@@ -11,7 +11,6 @@ import {
 import { ColumnSchemaConfig, getStackTrace } from 'orchid-core';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
-import { RakeDbColumnTypes } from './migration/migration';
 import { MigrationItem } from './migration/migrationsSet';
 
 export type CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> = (
@@ -158,7 +157,7 @@ type MigrationCallback = (arg: {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyRakeDbConfig = RakeDbConfig<any, any>;
 
-type Db = DbResult<RakeDbColumnTypes>;
+type Db = DbResult<unknown>;
 
 export interface RakeDbBaseTable<CT> {
   exportAs: string;

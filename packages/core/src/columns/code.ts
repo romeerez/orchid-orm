@@ -13,7 +13,8 @@ import {
 import { isRawSQL } from '../raw';
 
 // Type for composing code pieces for the code generation
-export type Code = string | Code[];
+export type Code = string | Codes;
+export type Codes = Code[];
 
 /**
  * Push code: this will append a code string to the last code array element when possible.

@@ -31,12 +31,19 @@ import {
   PickQueryTable,
 } from 'orchid-core';
 import { BaseOperators } from '../columns/operators';
-import { RelationsChain } from '../relations';
+import { RelationQuery } from '../relations';
+
+export interface RecordOfColumnsShapeBase {
+  [K: string]: ColumnsShapeBase;
+}
 
 // Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
-export type JoinedShapes = Record<string, ColumnsShapeBase>;
+export type JoinedShapes = RecordOfColumnsShapeBase;
+
 // Column parsers of joined tables. Used to parse the columns when selecting the column of joined tables.
-export type JoinedParsers = Record<string, ColumnsParsers>;
+export interface JoinedParsers {
+  [K: string]: ColumnsParsers;
+}
 // Keep track of joined table names.
 // When joining the same table second time, this allows to add a numeric suffix to avoid name collisions.
 export type JoinOverrides = RecordString;
@@ -48,7 +55,9 @@ export type QueryAfterHook<Data = unknown> = (
 ) => void | Promise<void>;
 export type QueryHookSelect = string[];
 
-export type QueryScopes = Record<string, QueryScopeData>;
+export interface QueryScopes {
+  [K: string]: QueryScopeData;
+}
 
 // Query data stored for a specific scope to be applied to the query.
 export type QueryScopeData = {
@@ -72,7 +81,7 @@ export type CommonQueryData = {
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItem[];
-  withShapes?: Record<string, ColumnsShapeBase>;
+  withShapes?: RecordOfColumnsShapeBase;
   joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
@@ -85,7 +94,7 @@ export type CommonQueryData = {
   expr?: Expression;
   as?: string;
   from?: string | Query | Expression;
-  sources?: Record<string, QuerySourceItem>;
+  sources?: { [K: string]: QuerySourceItem };
   and?: WhereItem[];
   or?: WhereItem[][];
   coalesceValue?: unknown | Expression;
@@ -137,7 +146,7 @@ export type CommonQueryData = {
   // the join will be applied after callback is resolved.
   isSubQuery?: true;
   // Chained relations, such as `db.user.messages.chat` are stored into array.
-  relChain?: RelationsChain;
+  relChain?: (Query | RelationQuery)[];
   /**
    * Stores current operator functions available for the query.
    * Is needed to remove these operators from query object when changing the query type, see {@link setQueryOperators}.
@@ -148,7 +157,7 @@ export type CommonQueryData = {
    */
   originalQuery?: Query;
   // Track the applied scopes, this is used when removing the scope from the query.
-  scopes: Record<string, QueryScopeData>;
+  scopes: { [K: string]: QueryScopeData };
   // to allow updating or deleting all records
   all?: true;
 };
@@ -202,10 +211,9 @@ export type InsertQueryData = CommonQueryData & {
       };
 };
 
-export type UpdateQueryDataObject = Record<
-  string,
-  Expression | { op: string; arg: unknown } | unknown
->;
+export interface UpdateQueryDataObject {
+  [K: string]: Expression | { op: string; arg: unknown } | unknown;
+}
 
 export type UpdatedAtDataInjector = (
   data: UpdateQueryDataItem[],

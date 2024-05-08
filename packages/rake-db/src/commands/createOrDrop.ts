@@ -6,7 +6,6 @@ import {
   setAdapterOptions,
   setAdminCredentialsToOptions,
 } from './createOrDrop.utils';
-import { RakeDbColumnTypes } from '../migration/migration';
 import { createMigrationsTable } from '../migration/migrationsTable';
 
 const execute = async (
@@ -147,10 +146,7 @@ export const dropDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
   }
 };
 
-export const resetDb = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
+export const resetDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
   options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {

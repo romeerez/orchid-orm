@@ -17,10 +17,7 @@ import {
   clearChanges,
   getCurrentChanges,
 } from '../migration/change';
-import {
-  createMigrationInterface,
-  RakeDbColumnTypes,
-} from '../migration/migration';
+import { createMigrationInterface } from '../migration/migration';
 import {
   getMigratedVersionsMap,
   NoMigrationsTableError,
@@ -41,10 +38,7 @@ import { versionToString } from '../migration/migrationUtils';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 
-type MigrateFn = <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
+type MigrateFn = <SchemaConfig extends ColumnSchemaConfig, CT>(
   ctx: RakeDbCtx,
   options: AdapterOptions[],
   config: RakeDbConfig<SchemaConfig, CT>,
@@ -53,10 +47,7 @@ type MigrateFn = <
   dontClose?: boolean,
 ) => Promise<Adapter[]>;
 
-function makeMigrateFn<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
+function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
   defaultCount: number,
   up: boolean,
   fn: (
@@ -204,12 +195,11 @@ export const redo: MigrateFn = makeMigrateFn(
   },
 );
 
-const getDb = (adapter: Adapter) =>
-  createDb<ColumnSchemaConfig, RakeDbColumnTypes>({ adapter });
+const getDb = (adapter: Adapter) => createDb<ColumnSchemaConfig>({ adapter });
 
 export const migrateOrRollback = async (
   trx: TransactionAdapter,
-  config: RakeDbConfig<ColumnSchemaConfig, RakeDbColumnTypes>,
+  config: RakeDbConfig<ColumnSchemaConfig, unknown>,
   set: MigrationsSet,
   versions: RakeDbAppliedVersions,
   count: number,
@@ -251,7 +241,7 @@ export const migrateOrRollback = async (
 
   if (!skipLock) await queryLock(trx);
 
-  let db: DbResult<RakeDbColumnTypes> | undefined;
+  let db: DbResult<unknown> | undefined;
 
   const beforeMigrate = config[up ? 'beforeMigrate' : 'beforeRollback'];
   if (beforeMigrate || config.beforeChange) {
@@ -343,7 +333,7 @@ const checkMigrationOrder = (
 // When migrating two or more databases, files are loaded just once due to this cache.
 export const changeCache: Record<
   string,
-  ChangeCallback<RakeDbColumnTypes>[] | undefined
+  ChangeCallback<unknown>[] | undefined
 > = {};
 
 /**
@@ -351,10 +341,7 @@ export const changeCache: Record<
  * It performs a db transaction, loads `change` functions from a file, executes them in order specified by `up` parameter.
  * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
  */
-const runMigration = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT extends RakeDbColumnTypes,
->(
+const runMigration = async <SchemaConfig extends ColumnSchemaConfig, CT>(
   trx: TransactionAdapter,
   up: boolean,
   file: MigrationItem,
@@ -366,7 +353,7 @@ const runMigration = async <
   if (!changes) {
     const module = (await file.load()) as
       | {
-          default?: MaybeArray<ChangeCallback<RakeDbColumnTypes>>;
+          default?: MaybeArray<ChangeCallback<unknown>>;
         }
       | undefined;
 

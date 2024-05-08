@@ -19,10 +19,7 @@ export const processChecks = (
   if (!hasDbChecks) {
     if (codeChecks.length) {
       (add.constraints ??= []).push(
-        ...codeChecks.map((check) => ({
-          name: check.options?.name,
-          check: check.sql,
-        })),
+        ...codeChecks.map((check) => ({ check: check.sql, name: check.name })),
       );
     }
     return;
@@ -60,7 +57,7 @@ export const processChecks = (
               ...codeChecks
                 .filter((_, i) => !foundCodeChecks.has(i))
                 .map((check) => ({
-                  name: check.options?.name,
+                  name: check.name,
                   check: check.sql,
                 })),
             );
@@ -90,11 +87,11 @@ const collectCodeChecks = ({
     codeChecks.push(column.data.check);
   }
 
-  if (codeTable.internal.constraints) {
-    for (const constraint of codeTable.internal.constraints) {
+  if (codeTable.internal.tableData.constraints) {
+    for (const constraint of codeTable.internal.tableData.constraints) {
       const { check } = constraint;
       if (check) {
-        codeChecks.push({ sql: check, options: { name: constraint.name } });
+        codeChecks.push({ sql: check, name: constraint.name });
       }
     }
   }

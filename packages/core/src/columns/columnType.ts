@@ -37,12 +37,20 @@ export type ColumnShapeQueryType<Shape extends QueryColumns> = {
 };
 
 // base type of object with columns
-export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
+export interface ColumnsShapeBase {
+  [K: string]: ColumnTypeBase;
+}
 
 // marks the column as a primary
-export type PrimaryKeyColumn<T> = T & {
+export type PrimaryKeyColumn<T, Name extends string> = T & {
   data: {
-    primaryKey: true;
+    primaryKey: Name;
+  };
+};
+
+export type UniqueColumn<T, Name extends string> = T & {
+  data: {
+    unique: Name;
   };
 };
 
@@ -150,23 +158,7 @@ export type HiddenColumn<T extends PickColumnBaseData> = T & {
   data: { hidden: true };
 };
 
-export type ColumnTypesBase = Record<string, ColumnTypeBase>;
-
-// resolves in string literal of single primary key
-// if table has two or more primary keys it will resolve in never
-export type SinglePrimaryKey<Shape extends QueryColumnsInit> = {
-  [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends true
-    ? {
-        [S in keyof Shape]: Shape[S]['data']['primaryKey'] extends true
-          ? S extends K
-            ? null
-            : S
-          : null;
-      }[keyof Shape] extends null
-      ? K
-      : never
-    : never;
-}[keyof Shape & string];
+export type ColumnTypesBase = { [K in string]: ColumnTypeBase }; // converting to interface doesn't help
 
 // type of columns selected by default, `hidden` columns are omitted
 export type DefaultSelectColumns<S extends QueryColumnsInit> = {
@@ -178,17 +170,13 @@ export interface ForeignKeyTable {
   new (): {
     schema?: string;
     table: string;
-    columns: QueryColumns;
+    columns: { shape: QueryColumns };
   };
-}
-
-export interface ConstraintOptions {
-  name?: string;
 }
 
 // string union of available column names of the table
 export type ColumnNameOfTable<Table extends ForeignKeyTable> =
-  keyof InstanceType<Table>['columns'] & string;
+  keyof InstanceType<Table>['columns']['shape'] & string;
 
 // clone column type and set data to it
 export const setColumnData = <
@@ -288,7 +276,7 @@ export interface ColumnDataBase {
   isNullable?: true;
 
   // true for primary key, string for primary key with a custom name
-  primaryKey?: true | string;
+  primaryKey?: string;
 
   // if column has a default value, then it can be omitted in `create` method
   default: unknown;
@@ -302,8 +290,7 @@ export interface ColumnDataBase {
   // parse and encode a column to use it `as` another column
   as?: ColumnTypeBase;
 
-  // array of indexes info
-  indexes?: { unique?: boolean }[];
+  unique?: string;
 
   // hook for modifying base query object of the table
   // used for automatic updating of `updatedAt`
@@ -327,7 +314,7 @@ export interface ColumnDataBase {
 
 export interface ColumnDataCheckBase {
   sql: RawSQLBase;
-  options?: ConstraintOptions;
+  name?: string;
 }
 
 // current name of the column, set by `name` method
@@ -414,19 +401,21 @@ export interface QueryColumn<T = unknown, Op = CoreBaseOperators> {
 
 export type QueryColumnBooleanOrNull = QueryColumn<boolean | null>;
 
-export type QueryColumns = Record<string, QueryColumn>;
+export type QueryColumns = { [K: string]: QueryColumn };
 
 export interface QueryColumnInit extends QueryColumn {
   inputType: unknown;
   data: {
     isHidden?: true;
-    primaryKey?: true | string;
+    primaryKey?: string;
+    unique?: string;
     isNullable?: true;
     default?: unknown;
+    name?: string;
   };
 }
 
-export type QueryColumnsInit = Record<string, QueryColumnInit>;
+export type QueryColumnsInit = { [K: string]: QueryColumnInit };
 
 export type QueryColumnToNullable<C extends QueryColumn> = {
   [K in keyof C]: K extends 'outputType'
@@ -568,19 +557,21 @@ export abstract class ColumnTypeBase<
    *   await db.createTable('table', (t) => ({
    *     // validate rank to be from 1 to 10
    *     rank: t.integer().check(t.sql`1 >= "rank" AND "rank" <= 10`),
+   *     // constraint name can be passed as a second argument
+   *     column: t.integer().check(t.sql`...`, 'check_name'),
    *   }));
    * });
    * ```
    *
    * @param sql - raw SQL expression
-   * @param options - to specify a constraint name
+   * @param name - to specify a constraint name
    */
   check<T extends PickColumnBaseData>(
     this: T,
     sql: RawSQLBase,
-    options?: ConstraintOptions,
+    name?: string,
   ): T {
-    return setColumnData(this, 'check', { sql, options });
+    return setColumnData(this, 'check', { sql, name });
   }
 
   /**

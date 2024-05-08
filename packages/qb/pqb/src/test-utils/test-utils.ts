@@ -8,7 +8,7 @@ export type UserRecord = typeof User.outputType;
 export type UserInsert = typeof User.inputType;
 export const User = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
-  name: t.text(),
+  name: t.text().unique(),
   password: t.text(),
   picture: t.text().nullable(),
   data: t.json<{ name: string; tags: string[] }>().nullable(),
@@ -43,6 +43,7 @@ export const UserSoftDelete = testDb(
     active: t.boolean().nullable(),
     deletedAt: t.timestamp().nullable(),
   }),
+  undefined,
   {
     softDelete: true,
   },
@@ -63,14 +64,17 @@ export const Chat = testDb('chat', (t) => ({
 }));
 
 export type UniqueTableRecord = typeof UniqueTable.outputType;
-export const UniqueTable = testDb('uniqueTable', (t) => ({
-  id: t.identity().primaryKey(),
-  one: t.text().unique().primaryKey(),
-  two: t.integer().unique(),
-  thirdColumn: t.text(),
-  fourthColumn: t.integer(),
-  ...t.unique(['thirdColumn', 'fourthColumn']),
-}));
+export const UniqueTable = testDb(
+  'uniqueTable',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    one: t.text().unique().primaryKey(),
+    two: t.integer().unique(),
+    thirdColumn: t.text(),
+    fourthColumn: t.integer(),
+  }),
+  (t) => t.unique(['thirdColumn', 'fourthColumn']),
+);
 
 export type MessageRecord = typeof Message.outputType;
 export const Message = testDb('message', (t) => ({
@@ -85,7 +89,7 @@ export const Message = testDb('message', (t) => ({
 export type SnakeRecord = typeof Snake.outputType;
 export const Snake = testDb('snake', (t) => ({
   snakeId: t.name('snake_id').identity().primaryKey(),
-  snakeName: t.name('snake_name').text(),
+  snakeName: t.name('snake_name').text().unique(),
   tailLength: t.name('tail_length').integer(),
   snakeData: t.name('snake_data').json().nullable(),
   ...t.timestampsSnakeCase(),

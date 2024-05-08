@@ -1,10 +1,17 @@
-import { ColumnSchemaConfig, ColumnsShapeBase, noop } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  ColumnsShapeBase,
+  MaybeArray,
+  noop,
+} from 'orchid-core';
 import {
   Adapter,
   AdapterOptions,
   DbSharedOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
+  TableDataFn,
+  TableDataItem,
 } from 'pqb';
 import { orchidORM } from '../../../orm';
 import {
@@ -17,7 +24,7 @@ import {
 import { asMock } from 'test-utils';
 import { generate } from '../generate';
 import fs from 'fs/promises';
-import { BaseTable } from '../../../test-utils/test-utils';
+import { BaseTable } from '../../../test-utils/orm.test-utils';
 import { testConfig } from '../../migrations.test-utils';
 
 const defaultOptions: AdapterOptions[] = [
@@ -107,15 +114,18 @@ const assert = {
   },
 };
 
-const table = (
-  columns?: (t: typeof BaseTable.columnTypes) => ColumnsShapeBase,
+const table = <Shape extends ColumnsShapeBase>(
+  columns?: (t: typeof BaseTable.columnTypes) => Shape,
+  dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
   options?: { noPrimaryKey?: boolean; name?: string; schema?: string },
 ) => {
   return class Table extends BaseTable {
     schema = options?.schema;
     table = options?.name ?? 'table';
     noPrimaryKey = options?.noPrimaryKey ?? true;
-    columns = columns ? this.setColumns(columns) : {};
+    columns = columns
+      ? this.setColumns(columns, dataFn)
+      : { shape: {}, data: [] };
   };
 };
 

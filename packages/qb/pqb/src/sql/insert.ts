@@ -11,7 +11,6 @@ import {
   Expression,
   isExpression,
 } from 'orchid-core';
-import { ColumnData } from '../columns';
 import { joinSubQuery, resolveSubQueryCallback } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
@@ -58,7 +57,7 @@ export const pushInsertSql = (
 
   ctx.sql.push(`INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`);
 
-  const QueryClass = ctx.queryBuilder.constructor as Db;
+  const QueryClass = ctx.queryBuilder.constructor as unknown as Db;
 
   if (query.kind === 'object') {
     let sql = '';
@@ -140,33 +139,11 @@ export const pushInsertSql = (
             '',
           )})`,
         );
-      } else {
+      } else if ('toSQL' in expr) {
         ctx.sql.push(expr.toSQL(ctx, quotedAs));
+      } else {
+        ctx.sql.push(`ON CONSTRAINT "${expr.constraint}"`);
       }
-    } else if (type === 'merge') {
-      // TODO: optimize, unique columns could be stored in Query.internal
-      // consider saving a cache of columns for this case into Query.internal
-
-      const { indexes } = q.internal;
-
-      const quotedUniques = columns.reduce((arr: string[], key, i) => {
-        const unique =
-          // check column index
-          (shape[key]?.data as ColumnData).indexes?.some(
-            (index) => index.unique,
-          ) ||
-          // check table composite indexes
-          indexes?.some((index) =>
-            index.columns.some(
-              (item) => 'column' in item && item.column === key,
-            ),
-          );
-
-        if (unique) arr.push(quotedColumns[i]);
-        return arr;
-      }, []);
-
-      ctx.sql.push(`(${quotedUniques.join(', ')})`);
     }
 
     if (type === 'ignore') {
@@ -231,7 +208,7 @@ const encodeRow = (
     if (value && typeof value === 'object') {
       if (value instanceof Expression) {
         return value.toSQL(ctx, quotedAs);
-      } else if (value instanceof QueryClass) {
+      } else if (value instanceof (QueryClass as never)) {
         return `(${joinSubQuery(q, value as Query).toSQL(ctx).text})`;
       }
     }

@@ -12,7 +12,7 @@ import {
   useRelationCallback,
   userSelectAll,
   useTestORM,
-} from '../test-utils/test-utils';
+} from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 
@@ -1167,7 +1167,7 @@ describe('belongsTo', () => {
             },
           });
 
-        const user = await db.user.findBy({ Id: UserId });
+        const user = await db.user.findBy({ Id: UserId as number });
         expect(user.Name).toBe('new name');
       });
 

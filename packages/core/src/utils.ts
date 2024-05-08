@@ -68,6 +68,10 @@ export interface RecordUnknown {
   [K: string]: unknown;
 }
 
+export interface RecordBoolean {
+  [K: string]: boolean;
+}
+
 // Use a default string if the first argument string is undefined.
 export type CoalesceString<
   Left extends string | undefined,
@@ -318,7 +322,7 @@ export const getImportPath = (from: string, to: string) => {
 export const getStackTrace = (): NodeJS.CallSite[] | undefined => {
   let stack: NodeJS.CallSite[] | undefined;
   const original = Error.prepareStackTrace;
-  Error.prepareStackTrace = (_, s) => (stack = s);
+  Error.prepareStackTrace = (_, s) => (stack = s as NodeJS.CallSite[]);
   new Error().stack;
   Error.prepareStackTrace = original;
   return stack;

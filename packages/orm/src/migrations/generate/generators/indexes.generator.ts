@@ -1,5 +1,5 @@
 import { AnyRakeDbConfig, RakeDbAst, getIndexName, DbStructure } from 'rake-db';
-import { ColumnType, IndexOptions, SearchWeight, TableData } from 'pqb';
+import { ColumnType, SearchWeight, TableData } from 'pqb';
 import { deepCompare, RecordUnknown, toArray } from 'orchid-core';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnChange, CompareExpression } from './generators.utils';
@@ -144,16 +144,20 @@ const collectCodeIndexes = ({
 
     codeIndexes.push(
       ...column.data.indexes.map(
-        ({ collate, opclass, order, weight, ...options }) => ({
+        ({
+          options: { collate, opclass, order, weight, ...options },
+          ...index
+        }) => ({
           columns: [{ collate, opclass, order, weight, column: name }],
           options,
+          ...index,
         }),
       ),
     );
   }
 
-  if (codeTable.internal.indexes) {
-    codeIndexes.push(...codeTable.internal.indexes);
+  if (codeTable.internal.tableData.indexes) {
+    codeIndexes.push(...codeTable.internal.tableData.indexes);
   }
 
   return codeIndexes;
@@ -171,15 +175,18 @@ const collectCodeComparableIndexes = (
           ? undefined
           : toArray(codeIndex.options.include),
       columns: codeIndex.columns,
+      name: codeIndex.name,
     });
   });
 };
 
-const normalizeIndex = (
-  index: Pick<IndexOptions, 'using' | 'unique' | 'nullsNotDistinct'>,
-) => {
+const normalizeIndex = (index: {
+  using?: string;
+  unique?: boolean;
+  nullsNotDistinct?: boolean;
+}) => {
   if (index.using === 'btree') index.using = undefined;
-  if (index.unique === false) index.unique = undefined;
+  if (!index.unique) index.unique = undefined;
   if (index.nullsNotDistinct === false) index.nullsNotDistinct = undefined;
 };
 
@@ -207,10 +214,10 @@ interface ComparableIndex {
 }
 
 const indexToComparable = (
-  index: Omit<
-    IndexOptions & { columns: DbStructure.Index['columns'] },
-    'hasWith' | 'hasWhere' | 'hasExpression'
-  >,
+  index: TableData.Index.Options & {
+    columns: DbStructure.Index['columns'];
+    name?: string;
+  },
 ) => {
   let hasExpression = false;
   const columns = index.columns.map((column) => {
@@ -308,6 +315,10 @@ const handleIndexChange = (
     (changeTableAst.drop.indexes ??= []).push({
       columns: dbColumns,
       options: dbIndex,
+      name:
+        dbIndex.name === getIndexName(changeTableAst.name, dbColumns)
+          ? undefined
+          : dbIndex.name,
     });
   } else if (rename) {
     ast.push({
