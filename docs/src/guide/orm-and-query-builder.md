@@ -277,7 +277,7 @@ export class UserTable extends BaseTable {
 
 - `table` and `softDelete` must be readonly for TS to recognize them properly, other properties don't have to be readonly.
 - for configuring columns see [Columns schema overview](/guide/columns-overview.html).
-- documentation for composite primary keys, indexes, foreign keys, is residing in [migration column methods](http://localhost:5173/guide/migration-column-methods.html)
+- documentation for composite primary keys, indexes, foreign keys, is residing in [migration column methods](/guide/migration-column-methods.html)
 - for defining table's relations see [Modeling relations](/guide/relations.html).
 - check out [soft delete](/guide/orm-and-query-builder.html#softdelete)
 - for `computed` see [Computed columns](/guide/orm-and-query-builder.html#computed-columns).
