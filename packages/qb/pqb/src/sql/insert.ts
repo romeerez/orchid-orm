@@ -10,6 +10,7 @@ import {
   emptyArray,
   Expression,
   isExpression,
+  toArray,
 } from 'orchid-core';
 import { joinSubQuery, resolveSubQueryCallback } from '../common/utils';
 import { Db } from '../query/db';
@@ -127,66 +128,87 @@ export const pushInsertSql = (
   if (query.onConflict) {
     ctx.sql.push('ON CONFLICT');
 
-    const { expr, type } = query.onConflict;
-    if (expr) {
-      if (typeof expr === 'string') {
-        ctx.sql.push(`("${shape[expr]?.data.name || expr}")`);
-      } else if (Array.isArray(expr)) {
+    const { target } = query.onConflict;
+    if (target) {
+      if (typeof target === 'string') {
+        ctx.sql.push(`("${shape[target]?.data.name || target}")`);
+      } else if (Array.isArray(target)) {
         ctx.sql.push(
-          `(${expr.reduce(
+          `(${target.reduce(
             (sql, item, i) =>
               sql + (i ? ', ' : '') + `"${shape[item]?.data.name || item}"`,
             '',
           )})`,
         );
-      } else if ('toSQL' in expr) {
-        ctx.sql.push(expr.toSQL(ctx, quotedAs));
+      } else if ('toSQL' in target) {
+        ctx.sql.push(target.toSQL(ctx, quotedAs));
       } else {
-        ctx.sql.push(`ON CONSTRAINT "${expr.constraint}"`);
+        ctx.sql.push(`ON CONSTRAINT "${target.constraint}"`);
       }
     }
 
-    if (type === 'ignore') {
-      ctx.sql.push('DO NOTHING');
-    } else if (type === 'merge') {
-      let set: string;
+    // merge: undefined should also be handled by this `if`
+    if ('merge' in query.onConflict) {
+      let sql: string;
 
-      const { update } = query.onConflict;
-      if (update) {
-        if (typeof update === 'string') {
-          const name = shape[update]?.data.name || update;
-          set = `"${name}" = excluded."${name}"`;
-        } else if (Array.isArray(update)) {
-          set = update.reduce((sql, item, i) => {
+      const { merge } = query.onConflict;
+      if (merge) {
+        if (typeof merge === 'string') {
+          const name = shape[merge]?.data.name || merge;
+          sql = `"${name}" = excluded."${name}"`;
+        } else if ('except' in merge) {
+          const notExcluded: string[] = [];
+          const except = toArray(merge.except);
+          for (let i = 0; i < columns.length; i++) {
+            if (!except.includes(columns[i])) {
+              notExcluded.push(quotedColumns[i]);
+            }
+          }
+          sql = mergeColumnsSql(notExcluded);
+        } else {
+          sql = merge.reduce((sql, item, i) => {
             const name = shape[item]?.data.name || item;
             return sql + (i ? ', ' : '') + `"${name}" = excluded."${name}"`;
           }, '');
-        } else if (isExpression(update)) {
-          set = update.toSQL(ctx, quotedAs);
-        } else {
-          const arr: string[] = [];
-          for (const key in update) {
-            arr.push(
-              `"${shape[key]?.data.name || key}" = ${addValue(
-                ctx.values,
-                update[key],
-              )}`,
-            );
-          }
-          set = arr.join(', ');
         }
       } else {
-        set = quotedColumns
-          .map((column) => `${column} = excluded.${column}`)
-          .join(', ');
+        sql = mergeColumnsSql(quotedColumns);
       }
 
-      ctx.sql.push('DO UPDATE SET', set);
+      ctx.sql.push('DO UPDATE SET', sql);
+    } else if (query.onConflict.set) {
+      let sql: string;
+
+      const { set } = query.onConflict;
+      if (isExpression(set)) {
+        sql = set.toSQL(ctx, quotedAs);
+      } else {
+        const arr: string[] = [];
+        for (const key in set) {
+          arr.push(
+            `"${shape[key]?.data.name || key}" = ${addValue(
+              ctx.values,
+              set[key],
+            )}`,
+          );
+        }
+        sql = arr.join(', ');
+      }
+
+      ctx.sql.push('DO UPDATE SET', sql);
+    } else {
+      ctx.sql.push('DO NOTHING');
     }
   }
 
   pushWhereStatementSql(ctx, q, query, quotedAs);
   return pushReturningSql(ctx, q, query, quotedAs, query.afterCreateSelect);
+};
+
+const mergeColumnsSql = (quotedColumns: string[]): string => {
+  return quotedColumns
+    .map((column) => `${column} = excluded.${column}`)
+    .join(', ');
 };
 
 const encodeRow = (

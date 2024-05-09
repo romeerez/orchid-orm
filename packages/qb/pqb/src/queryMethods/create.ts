@@ -12,12 +12,7 @@ import {
   SetQueryReturnsRowCount,
 } from '../query/query';
 import { RelationConfigDataForCreate, RelationsBase } from '../relations';
-import {
-  CreateKind,
-  InsertQueryData,
-  OnConflictItem,
-  OnConflictMergeUpdate,
-} from '../sql';
+import { CreateKind, InsertQueryData, OnConflictMerge } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../query/db';
 import {
@@ -181,7 +176,7 @@ type InsertManyResult<T extends CreateSelf> =
       : SetQueryKind<T, 'create'>
     : SetQueryReturnsRowCount<T, 'create'>;
 
-// `onConflictIgnore()` method output type:
+// `onConflictDoNothing()` method output type:
 // overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',
 // because `ignore` won't return any data in case of a conflict.
 type IgnoreResult<T extends CreateSelf> = T['returnType'] extends 'oneOrThrow'
@@ -694,9 +689,9 @@ export class Create {
    *   password: '1234',
    * });
    *
-   * // When using `.onConflictIgnore()`,
+   * // When using `.onConflictDoNothing()`,
    * // the record may be not created and the `createdCount` will be 0.
-   * const createdCount = await db.table.insert(data).onConflictIgnore();
+   * const createdCount = await db.table.insert(data).onConflictDoNothing();
    *
    * await db.table.create({
    *   // raw SQL
@@ -939,7 +934,7 @@ export class Create {
    *
    * Columns provided in `defaults` are marked as optional in the following `create`.
    *
-   * Default data is the same as in [create](#create) and [createMany](#createMany),
+   * Default data is the same as in {@link create} and {@link createMany},
    * so you can provide a raw SQL, or a query with a query.
    *
    * ```ts
@@ -971,8 +966,9 @@ export class Create {
    * or a composite primary key unique index on a set of columns,
    * and a row being created has the same value as a row that already exists in the table in this column(s).
    *
-   * Use `onConflictIgnore()` to suppress the error and continue without updating the record,
-   * or `onConflict(['uniqueColumn']).merge()` to update the record with a new data.
+   * Use {@link onConflictDoNothing} to suppress the error and continue without updating the record,
+   * or the `merge` to update the record with new values automatically,
+   * or the `set` to specify own values for the update.
    *
    * `onConflict` only accepts column names that are defined in `primaryKey` or `unique` in the table definition.
    * To specify a constraint, its name also must be explicitly set in `primaryKey` or `unique` in the table code.
@@ -981,11 +977,11 @@ export class Create {
    * for updating the record.
    *
    * If your table has multiple potential reasons for unique constraint violation, such as username and email columns in a user table,
-   * consider using [upsert](#upsert) instead.
+   * consider using `upsert` instead.
    *
    * ```ts
    * // leave `onConflict` without argument to ignore or merge on any conflict
-   * db.table.create(data).onConflictIgnore();
+   * db.table.create(data).onConflictDoNothing();
    *
    * // single column:
    * db.table.create(data).onConfict('email').merge();
@@ -1018,6 +1014,21 @@ export class Create {
    *   .ignore();
    * ```
    *
+   * For `merge` and `set`, you can append `where` to update data only for the matching rows:
+   *
+   * ```ts
+   * const timestamp = Date.now();
+   *
+   * db.table
+   *   .create(data)
+   *   .onConflict('email')
+   *   .set({
+   *     name: 'John Doe',
+   *     updatedAt: timestamp,
+   *   })
+   *   .where({ updatedAt: { lt: timestamp } });
+   * ```
+   *
    * @param arg - optionally provide an array of columns
    */
   onConflict<T extends CreateSelf, Arg extends OnConflictArg<T>>(
@@ -1028,7 +1039,7 @@ export class Create {
   }
 
   /**
-   * Use `onConflictIgnore` to suppress unique constraint violation error when creating a record.
+   * Use `onConflictDoNothing` to suppress unique constraint violation error when creating a record.
    *
    * Adds `ON CONFLICT (columns) DO NOTHING` clause to the insert statement, columns are optional.
    *
@@ -1041,41 +1052,40 @@ export class Create {
    *     name: 'John Doe',
    *   })
    *   // on any conflict:
-   *   .onConflictIgnore()
+   *   .onConflictDoNothing()
    *   // or, for a specific column:
-   *   .onConflictIgnore('email')
+   *   .onConflictDoNothing('email')
    *   // or, for a specific constraint:
-   *   .onConflictIgnore({ constraint: 'unique_index_name' });
+   *   .onConflictDoNothing({ constraint: 'unique_index_name' });
    * ```
    *
-   * When there is a conflict, nothing can be returned from the database, so `onConflictIgnore` adds `| undefined` part to the response type.
+   * When there is a conflict, nothing can be returned from the database, so `onConflictDoNothing` adds `| undefined` part to the response type.
    *
    * ```ts
    * const maybeRecord: RecordType | undefined = await db.table
    *   .create(data)
-   *   .onConflictIgnore();
+   *   .onConflictDoNothing();
    *
    * const maybeId: number | undefined = await db.table
    *   .get('id')
    *   .create(data)
-   *   .onConflictIgnore();
+   *   .onConflictDoNothing();
    * ```
    *
    * When creating multiple records, only created records will be returned. If no records were created, array will be empty:
    *
    * ```ts
    * // array can be empty
-   * const arr = await db.table.createMany([data, data, data]).onConflictIgnore();
+   * const arr = await db.table.createMany([data, data, data]).onConflictDoNothing();
    * ```
    */
-  onConflictIgnore<T extends CreateSelf, Arg extends OnConflictArg<T>>(
+  onConflictDoNothing<T extends CreateSelf, Arg extends OnConflictArg<T>>(
     this: T,
     arg?: Arg,
   ): IgnoreResult<T> {
     const q = this.clone();
     (q.q as InsertQueryData).onConflict = {
-      type: 'ignore',
-      expr: arg as OnConflictItem,
+      target: arg,
     };
 
     if (q.q.returnType === 'oneOrThrow') {
@@ -1095,118 +1105,89 @@ export class OnConflictQueryBuilder<
   constructor(private query: T, private onConflict: Arg) {}
 
   /**
-   * Available only after [onConflict](#onconflict).
+   * Available only after `onConflict`.
    *
-   * Adds an `ON CONFLICT (columns) DO UPDATE` clause to the insert statement.
-   *
-   * ```ts
-   * db.table
-   *   .create({
-   *     email: 'ignore@example.com',
-   *     name: 'John Doe',
-   *   })
-   *   // for a specific column:
-   *   .onConflict('email')
-   *   // or, for a specific constraint:
-   *   .onConflict({ constraint: 'unique_constraint_name' })
-   *   .merge();
-   * ```
-   *
-   * This also works with batch creates:
+   * Updates the record with a given data when conflict occurs.
    *
    * ```ts
-   * db.table
-   *   .createMany([
-   *     { email: 'john@example.com', name: 'John Doe' },
-   *     { email: 'jane@example.com', name: 'Jane Doe' },
-   *     { email: 'alex@example.com', name: 'Alex Doe' },
-   *   ])
-   *   .onConflict('email')
-   *   .merge();
+   * db.table.create(data).onConflict('column').set({
+   *   description: 'setting different data on conflict',
+   * });
    * ```
    *
-   * It is also possible to specify a subset of the columns to merge when a conflict occurs.
-   * For example, you may want to set a `createdAt` column when creating but would prefer not to update it if the row already exists:
-   *
-   * ```ts
-   * const timestamp = Date.now();
-   *
-   * db.table
-   *   .create({
-   *     email: 'ignore@example.com',
-   *     name: 'John Doe',
-   *     createdAt: timestamp,
-   *     updatedAt: timestamp,
-   *   })
-   *   .onConflict('email')
-   *   // update only a single column
-   *   .merge('email')
-   *   // or, update multiple columns
-   *   .merge(['email', 'name', 'updatedAt']);
-   * ```
-   *
-   * It's possible to specify data to update separately from the data to create.
-   * This is useful if you want to make an update with different data than in creating.
-   * For example, changing a value if the row already exists:
-   *
-   * ```ts
-   * const timestamp = Date.now();
-   *
-   * db.table
-   *   .create({
-   *     email: 'ignore@example.com',
-   *     name: 'John Doe',
-   *     createdAt: timestamp,
-   *     updatedAt: timestamp,
-   *   })
-   *   .onConflict('email')
-   *   .merge({
-   *     name: 'John Doe The Second',
-   *   });
-   * ```
-   *
-   * You can use `where` to update only the matching rows:
-   *
-   * ```ts
-   * const timestamp = Date.now();
-   *
-   * db.table
-   *   .create({
-   *     email: 'ignore@example.com',
-   *     name: 'John Doe',
-   *     createdAt: timestamp,
-   *     updatedAt: timestamp,
-   *   })
-   *   .onConflict('email')
-   *   .merge({
-   *     name: 'John Doe',
-   *     updatedAt: timestamp,
-   *   })
-   *   .where({ updatedAt: { lt: timestamp } });
-   * ```
-   *
-   * `merge` can take a raw SQL expression:
+   * The `set` can take a raw SQL expression:
    *
    * ```ts
    * db.table
    *   .create(data)
    *   .onConflict()
-   *   .merge(db.table.sql`raw SQL expression`);
+   *   .set(db.table.sql`raw SQL expression`);
+   *
+   * // update records only on certain conditions
+   * db.table
+   *   .create(data)
+   *   .onConflict('email')
+   *   .set({ key: 'value' })
+   *   .where({ ...certainConditions });
    * ```
    *
-   * @param update - column, or array of columns, or object for new column values, or raw SQL
+   * @param set - object containing new column values, or raw SQL
+   */
+  set(set: Partial<T['inputType']> | Expression): T {
+    (this.query.q as InsertQueryData).onConflict = {
+      target: this.onConflict,
+      set,
+    };
+    return this.query;
+  }
+
+  /**
+   * Available only after `onConflict`.
+   *
+   * Use this method to merge all the data you have passed into `create` to update the existing record on conflict.
+   *
+   * If the table has columns with **dynamic** default values, such values will be applied as well.
+   *
+   * You can exclude certain columns from being merged by passing the `exclude` option.
+   *
+   * ```ts
+   * // merge the full data
+   * db.table.create(data).onConflict('email').merge();
+   *
+   * // merge only a single column
+   * db.table.create(data).onConflict('email').merge('name');
+   *
+   * // merge multiple columns
+   * db.table.create(data).onConflict('email').merge(['name', 'quantity']);
+   *
+   * // merge all columns except some
+   * db.table
+   *   .create(data)
+   *   .onConflict('email')
+   *   .merge({ except: ['name', 'quantity'] });
+   *
+   * // merge can be applied also for batch creates
+   * db.table.createMany([data1, data2, data2]).onConflict('email').merge();
+   *
+   * // update records only on certain conditions
+   * db.table
+   *   .create(data)
+   *   .onConflict('email')
+   *   .merge()
+   *   .where({ ...certainConditions });
+   * ```
+   *
+   * @param merge - no argument will merge all data, or provide a column(s) to merge, or provide `except` to update all except some.
    */
   merge(
-    update?:
+    merge?:
       | keyof T['shape']
       | (keyof T['shape'])[]
-      | Partial<T['inputType']>
-      | Expression,
+      | { except: keyof T['shape'] | (keyof T['shape'])[] },
   ): T {
     (this.query.q as InsertQueryData).onConflict = {
-      type: 'merge',
-      expr: this.onConflict as OnConflictItem,
-      update: update as OnConflictMergeUpdate,
+      target: this.onConflict,
+      merge: merge as OnConflictMerge,
     };
     return this.query;
   }

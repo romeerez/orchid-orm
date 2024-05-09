@@ -309,14 +309,12 @@ export type UnionKind =
   | 'EXCEPT'
   | 'EXCEPT ALL';
 
-export type OnConflictItem =
+export type OnConflictTarget =
   | string
   | string[]
   | Expression
   | { constraint: string };
 
-export type OnConflictMergeUpdate =
-  | string
-  | string[]
-  | RecordUnknown
-  | Expression;
+export type OnConflictSet = RecordUnknown | Expression;
+
+export type OnConflictMerge = string | string[] | { except: string | string[] };

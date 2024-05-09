@@ -5,8 +5,8 @@ import { toSQLCacheKey } from './toSQL';
 import {
   HavingItem,
   JoinItem,
-  OnConflictItem,
-  OnConflictMergeUpdate,
+  OnConflictTarget,
+  OnConflictSet,
   OrderItem,
   QuerySourceItem,
   SelectItem,
@@ -15,6 +15,7 @@ import {
   WhereItem,
   WindowItem,
   WithItem,
+  OnConflictMerge,
 } from './types';
 import { SelectableOrExpression } from '../common/utils';
 import {
@@ -199,16 +200,11 @@ export type InsertQueryData = CommonQueryData & {
       };
   using?: JoinItem[];
   join?: JoinItem[];
-  onConflict?:
-    | {
-        type: 'ignore';
-        expr?: OnConflictItem;
-      }
-    | {
-        type: 'merge';
-        expr?: OnConflictItem;
-        update?: OnConflictMergeUpdate;
-      };
+  onConflict?: {
+    target?: OnConflictTarget;
+    set?: OnConflictSet;
+    merge?: OnConflictMerge;
+  };
 };
 
 export interface UpdateQueryDataObject {

@@ -1,10 +1,13 @@
 # Breaking changes
 
-- pkey, index, fkey, checks are now in a separate function
-- index signature changes
-- `find` changes
-- `findBy` changes
-- rake-db: removed `*Constraint` methods
+## orchid-orm 1.27
+
+`onConflict` changes:
+
+- `onConflictIgnore` is renamed to `onConflictDoNothing` (was closer to Knex, becomes closer to SQL).
+- `onConflict(...).merge` no longer accepts a set for update, only columns for merging.
+- New `onConflict(...).set`: use `set` for setting specific values instead of `merge` as it was previously.
+- `onConflict(...).merge` now can also accept `{ except: string | string[] }` to merge all values except for specified.
 
 ## orchid-orm 1.26
 

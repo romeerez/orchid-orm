@@ -14,7 +14,7 @@
 
 [Read the docs](https://orchid-orm.netlify.app/guide/).
 
-If something is broken after updater, see [BREAKING CHANGES](./BREAKING_CHANGES.md) (if it's not in there, new issues are very welcome!).
+If something is broken after an update, see [BREAKING CHANGES](./BREAKING_CHANGES.md) (if it's not in there, new issues are very welcome!).
 
 ## Packages
 

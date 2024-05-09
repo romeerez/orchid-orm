@@ -209,8 +209,9 @@ A conflict occurs when a table has a primary key or a unique index on a column,
 or a composite primary key unique index on a set of columns,
 and a row being created has the same value as a row that already exists in the table in this column(s).
 
-Use `onConflictIgnore()` to suppress the error and continue without updating the record,
-or `onConflict(['uniqueColumn']).merge()` to update the record with a new data.
+Use [onConflictIgnore](#onconflictignore) to suppress the error and continue without updating the record,
+or the [merge](#onconflict-merge) to update the record with new values automatically,
+or the [set](#onconflict-set) to specify own values for the update.
 
 `onConflict` only accepts column names that are defined in `primaryKey` or `unique` in the table definition.
 To specify a constraint, its name also must be explicitly set in `primaryKey` or `unique` in the table code.
@@ -254,6 +255,21 @@ db.table
   // ignore only when having conflicting email and when active is true.
   .onConflict(db.table.sql`(email) where active`)
   .ignore();
+```
+
+For `merge` and `set`, you can append [where](/guide/where.html) to update data only for the matching rows:
+
+```ts
+const timestamp = Date.now();
+
+db.table
+  .create(data)
+  .onConflict('email')
+  .set({
+    name: 'John Doe',
+    updatedAt: timestamp,
+  })
+  .where({ updatedAt: { lt: timestamp } });
 ```
 
 ## onConflictIgnore
@@ -300,107 +316,73 @@ When creating multiple records, only created records will be returned. If no rec
 const arr = await db.table.createMany([data, data, data]).onConflictIgnore();
 ```
 
-## merge
+## onConflict merge
 
 [//]: # 'has JSDoc'
 
 Available only after [onConflict](#onconflict).
 
-Adds an `ON CONFLICT (columns) DO UPDATE` clause to the insert statement.
+Use this method to merge all the data you have passed into [create](#create-insert) to update the existing record on conflict.
+
+If the table has columns with **dynamic** default values, such values will be applied as well.
+
+You can exclude certain columns from being merged by passing the `exclude` option.
 
 ```ts
+// merge the full data
+db.table.create(data).onConflict('email').merge();
+
+// merge only a single column
+db.table.create(data).onConflict('email').merge('name');
+
+// merge multiple columns
+db.table.create(data).onConflict('email').merge(['name', 'quantity']);
+
+// merge all columns except some
 db.table
-  .create({
-    email: 'ignore@example.com',
-    name: 'John Doe',
-  })
-  // for a specific column:
+  .create(data)
   .onConflict('email')
-  // or, for a specific constraint:
-  .onConflict({ constraint: 'unique_constraint_name' })
-  .merge();
+  .merge({ except: ['name', 'quantity'] });
+
+// merge can be applied also for batch creates
+db.table.createMany([data1, data2, data2]).onConflict('email').merge();
+
+// update records only on certain conditions
+db.table
+  .create(data)
+  .onConflict('email')
+  .merge()
+  .where({ ...certainConditions });
 ```
 
-This also works with batch creates:
+## onConflict set
+
+[//]: # 'has JSDoc'
+
+Available only after [onConflict](#onconflict).
+
+Updates the record with a given data when conflict occurs.
 
 ```ts
-db.table
-  .createMany([
-    { email: 'john@example.com', name: 'John Doe' },
-    { email: 'jane@example.com', name: 'Jane Doe' },
-    { email: 'alex@example.com', name: 'Alex Doe' },
-  ])
-  .onConflict('email')
-  .merge();
+db.table.create(data).onConflict('column').set({
+  description: 'setting different data on conflict',
+});
 ```
 
-It is also possible to specify a subset of the columns to merge when a conflict occurs.
-For example, you may want to set a `createdAt` column when creating but would prefer not to update it if the row already exists:
-
-```ts
-const timestamp = Date.now();
-
-db.table
-  .create({
-    email: 'ignore@example.com',
-    name: 'John Doe',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  })
-  .onConflict('email')
-  // update only a single column
-  .merge('email')
-  // or, update multiple columns
-  .merge(['email', 'name', 'updatedAt']);
-```
-
-It's possible to specify data to update separately from the data to create.
-This is useful if you want to make an update with different data than in creating.
-For example, changing a value if the row already exists:
-
-```ts
-const timestamp = Date.now();
-
-db.table
-  .create({
-    email: 'ignore@example.com',
-    name: 'John Doe',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  })
-  .onConflict('email')
-  .merge({
-    name: 'John Doe The Second',
-  });
-```
-
-You can use `where` to update only the matching rows:
-
-```ts
-const timestamp = Date.now();
-
-db.table
-  .create({
-    email: 'ignore@example.com',
-    name: 'John Doe',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  })
-  .onConflict('email')
-  .merge({
-    name: 'John Doe',
-    updatedAt: timestamp,
-  })
-  .where({ updatedAt: { lt: timestamp } });
-```
-
-`merge` can take a raw SQL expression:
+The `set` can take a raw SQL expression:
 
 ```ts
 db.table
   .create(data)
   .onConflict()
-  .merge(db.table.sql`raw SQL expression`);
+  .set(db.table.sql`raw SQL expression`);
+
+// update records only on certain conditions
+db.table
+  .create(data)
+  .onConflict('email')
+  .set({ key: 'value' })
+  .where({ ...certainConditions });
 ```
 
 ## defaults
