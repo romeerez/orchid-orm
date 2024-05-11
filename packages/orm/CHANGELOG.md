@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.26.2
+
+### Patch Changes
+
+- 8ba2483: Fix importing db file on Windows
+
 ## 1.26.1
 
 ### Patch Changes
