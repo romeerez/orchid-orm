@@ -29,6 +29,7 @@ import { composeMigration, ComposeMigrationParams } from './composeMigration';
 import { verifyMigration } from './verifyMigration';
 import { report } from './reportGeneratedMigration';
 import path from 'node:path';
+import { pathToFileURL } from 'url';
 
 export interface CodeItems {
   schemas: Set<string>;
@@ -181,7 +182,9 @@ const getDbFromConfig = async (
   config: AnyRakeDbConfig,
   dbPath: string,
 ): Promise<DbInstance> => {
-  const module = await config.import(path.resolve(config.basePath, dbPath));
+  const module = await config.import(
+    pathToFileURL(path.resolve(config.basePath, dbPath)).toString(),
+  );
   const db = (module as { [K: string]: DbInstance })[
     config.dbExportedAs ?? 'db'
   ];
