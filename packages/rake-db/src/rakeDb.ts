@@ -29,7 +29,7 @@ import { rebase } from './commands/rebase';
  */
 export type RakeDbFn = (<SchemaConfig extends ColumnSchemaConfig, CT>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
+  partialConfig: InputRakeDbConfig<SchemaConfig, CT>,
   args?: string[],
 ) => RakeDbFnReturns<CT>) & {
   /**
@@ -63,7 +63,7 @@ export interface RakeDbResult {
  */
 export type RakeDbLazyFn = <SchemaConfig extends ColumnSchemaConfig, CT>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig?: InputRakeDbConfig<SchemaConfig, CT>,
+  partialConfig: InputRakeDbConfig<SchemaConfig, CT>,
 ) => {
   change: RakeDbChangeFn<CT>;
   run(
@@ -88,7 +88,7 @@ export type RakeDbChangeFn<CT> = (fn: ChangeCallback<CT>) => ChangeCallback<CT>;
  */
 export const rakeDb: RakeDbFn = ((
   options,
-  partialConfig = {},
+  partialConfig,
   args = process.argv.slice(2),
 ) => {
   const config = processRakeDbConfig(partialConfig);
@@ -109,7 +109,7 @@ export const rakeDb: RakeDbFn = ((
   });
 }) as RakeDbFn;
 
-rakeDb.lazy = ((options, partialConfig = {}) => {
+rakeDb.lazy = ((options, partialConfig) => {
   const config = processRakeDbConfig(partialConfig);
 
   return {

@@ -1,6 +1,17 @@
 # Breaking changes
 
-## orchid-orm 1.27
+## orchid-orm 1.27.0, rake-db 2.20.0
+
+The `import` config was optional, because on some setups it can work without it.
+Now it's required, because it is confusing when it does not work for your setup, so it is better to require it for all.
+
+```ts
+rakeDb(dbOptions, {
+  import: (path) => import(path),
+});
+```
+
+## orchid-orm 1.26.1
 
 `onConflict` changes:
 
@@ -9,7 +20,7 @@
 - New `onConflict(...).set`: use `set` for setting specific values instead of `merge` as it was previously.
 - `onConflict(...).merge` now can also accept `{ except: string | string[] }` to merge all values except for specified.
 
-## orchid-orm 1.26
+## orchid-orm 1.26.0
 
 Rework of table primary keys, indexes, foreign keys, and checks.
 

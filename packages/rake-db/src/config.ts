@@ -76,7 +76,10 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   >;
   noPrimaryKey?: NoPrimaryKeyOption;
   forceDefaultExports?: boolean;
-  import?(path: string): Promise<unknown>;
+  /**
+   * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
+   */
+  import(path: string): Promise<unknown>;
   /**
    * Is called once per db before migrating or rolling back a set of migrations.
    *
@@ -186,20 +189,11 @@ export const migrationConfigDefaults = {
   migrationsTable: 'schemaMigrations',
   snakeCase: false,
   commands: {},
-  import: (path: string) => {
-    return import(path).catch((err) => {
-      if (err.code === 'ERR_UNKNOWN_FILE_EXTENSION') {
-        require(path);
-      } else {
-        throw err;
-      }
-    });
-  },
   log: true,
   logger: console,
 } satisfies Omit<
   RakeDbConfig<ColumnSchemaConfig>,
-  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
+  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath' | 'import'
 >;
 
 export const processRakeDbConfig = <

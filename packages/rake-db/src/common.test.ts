@@ -24,6 +24,7 @@ describe('common', () => {
         basePath: __dirname,
         dbScript: 'dbScript.ts',
         migrationsPath: 'custom-path',
+        import: (path) => import(path),
       });
 
       const migrationsPath = path.resolve(__dirname, 'custom-path');
@@ -48,7 +49,11 @@ describe('common', () => {
     it(`should throw when no basePath and can't get it automatically`, () => {
       asMock(getCallerFilePath).mockReturnValueOnce(undefined);
 
-      expect(() => processRakeDbConfig({})).toThrow(
+      expect(() =>
+        processRakeDbConfig({
+          import: (path) => import(path),
+        }),
+      ).toThrow(
         'Failed to determine path to db script. Please set basePath option of rakeDb',
       );
     });
@@ -62,9 +67,11 @@ describe('common', () => {
         { getFileName: () => 'some-path' },
       ]);
 
-      expect(() => processRakeDbConfig({})).toThrow(
-        'Add a .ts suffix to the "some-path" when calling it',
-      );
+      expect(() =>
+        processRakeDbConfig({
+          import: (path) => import(path),
+        }),
+      ).toThrow('Add a .ts suffix to the "some-path" when calling it');
     });
   });
 

@@ -11,6 +11,7 @@ const t = {
 
 const config = processRakeDbConfig({
   migrationsPath: 'migrations',
+  import: (path) => import(path),
 });
 
 const act = (ast: RakeDbAst[]) => astToMigration('public', config, ast);

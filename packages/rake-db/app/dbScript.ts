@@ -26,5 +26,5 @@ if (['create', 'drop'].includes(command)) {
 export const change = rakeDb(options, {
   baseTable: BaseTable,
   migrationsPath: 'migrations',
-  // tablePath: (tableName) => `tables/${tableName}.ts`,
+  import: (path) => import(path),
 });

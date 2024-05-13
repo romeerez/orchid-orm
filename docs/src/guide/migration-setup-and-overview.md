@@ -134,6 +134,9 @@ export const change = rakeDb(config.database, {
       await seed();
     },
   },
+
+  // This is for compatibility with `tsx` and other TS runners, no need to change.
+  import: (path) => import(path),
 });
 ```
 
@@ -245,21 +248,6 @@ result.args;
 `run` is a function to execute a command,
 it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)),
 optionally takes config overrides, returns a `Promise<void>`.
-
-## ReferenceError: require is not defined
-
-If you encounter the error `ReferenceError: require is not defined`,
-it means you're running on ESM and your node.js runner could not import `ts` migration.
-
-This may happen with `ts-node/esm`, `vite`.
-
-To resolve it, simply add the `import` function to the `rakeDb` config:
-
-```ts
-export const change = rakeDb(config.database, {
-  import: (path) => import(path),
-});
-```
 
 ## rakeDb
 

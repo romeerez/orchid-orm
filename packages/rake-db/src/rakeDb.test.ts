@@ -33,6 +33,7 @@ const config = {
   basePath: '/rake-db',
   dbScript: '/rake-db/script.ts',
   commands: {},
+  import: (path: string) => import(path),
 };
 
 const processedConfig = processRakeDbConfig(config);

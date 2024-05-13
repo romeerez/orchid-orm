@@ -62,6 +62,7 @@ const makeConfig = (config: Partial<RakeDbConfig<ColumnSchemaConfig>> = {}) =>
       warn,
       log,
     },
+    import: (path) => import(path),
     ...config,
   });
 
