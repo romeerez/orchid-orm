@@ -58,6 +58,7 @@ import {
   RelationThroughOptions,
 } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
+import { TableWithQueryMethod } from './hasMany';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -250,11 +251,6 @@ export const makeHasOneMethod = (
 ): RelationData => {
   if ('through' in relation.options) {
     const { through, source } = relation.options;
-
-    type TableWithQueryMethod = Record<
-      string,
-      (params: RecordUnknown) => Query
-    >;
 
     const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);

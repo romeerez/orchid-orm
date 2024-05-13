@@ -5,33 +5,38 @@ import {
   SetQueryReturnsVoid,
 } from '../query/query';
 import { _queryUpdate, UpdateData } from './update';
-import { CreateData } from './create';
+import { CreateBelongsToData, CreateData } from './create';
 import { WhereResult } from './where/where';
 import { MoreThanOneRowError } from '../errors';
-import { isObjectEmpty, PickQueryMetaResult, RecordUnknown } from 'orchid-core';
+import {
+  FnUnknownToUnknown,
+  isObjectEmpty,
+  PickQueryMetaResult,
+  RecordUnknown,
+} from 'orchid-core';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
-export type OrCreateArg<T extends Query> =
-  | CreateData<T>
-  | (() => CreateData<T>);
+export type OrCreateArg<T extends Query, BT> =
+  | CreateData<T, BT>
+  | (() => CreateData<T, BT>);
 
 // `upsert` arg type.
 // `create` callback arg is of exact `update` type.
-export type UpsertArg<T extends Query, Data> =
+export type UpsertArg<T extends Query, Data, BT> =
   | {
       update: Data;
-      create: CreateData<T> | ((update: Data) => CreateData<T>);
+      create: CreateData<T, BT> | ((update: Data) => CreateData<T, BT>);
     }
-  | UpsertArgWithData<T, Data>;
+  | UpsertArgWithData<T, Data, BT>;
 
 // `data` and `create` upsert arg.
 // `create` callback arg is of exact `data` type.
-type UpsertArgWithData<T extends Query, Data> = {
+type UpsertArgWithData<T extends Query, Data, BT> = {
   data: Data;
   create:
-    | UpsertCreate<keyof Data, CreateData<T>>
-    | ((update: Data) => UpsertCreate<keyof Data, CreateData<T>>);
+    | UpsertCreate<keyof Data, CreateData<T, BT>>
+    | ((update: Data) => UpsertCreate<keyof Data, CreateData<T, BT>>);
 };
 
 type UpsertCreate<DataKey extends PropertyKey, CD> = {
@@ -56,7 +61,7 @@ export type UpsertThis = WhereResult<Query> & {
 // `updateData` and `mergeData` args are passed only by `upsert`.
 function orCreate<T extends Query>(
   q: T,
-  data: unknown | ((updateData: unknown) => unknown),
+  data: unknown | FnUnknownToUnknown,
   updateData?: unknown,
   mergeData?: unknown,
 ): UpsertResult<T> {
@@ -78,7 +83,7 @@ function orCreate<T extends Query>(
 
       if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
 
-      const inner = q.create(data as CreateData<Query>);
+      const inner = q.create(data as CreateData<Query, never>);
       const { handleResult } = inner.q;
       inner.q.handleResult = (q, t, r, s) => {
         queryResult = r;
@@ -192,10 +197,11 @@ export class QueryUpsertOrCreate {
    *
    * @param data - `update` property for the data to update, `create` property for the data to create
    */
-  upsert<T extends UpsertThis, Update extends UpdateData<T>>(
-    this: T,
-    data: UpsertArg<T, Update>,
-  ): UpsertResult<T> {
+  upsert<
+    T extends UpsertThis,
+    Update extends UpdateData<T>,
+    BT extends CreateBelongsToData<T>,
+  >(this: T, data: UpsertArg<T, Update, BT>): UpsertResult<T> {
     const q = this.clone();
 
     let updateData;
@@ -244,9 +250,9 @@ export class QueryUpsertOrCreate {
    *
    * @param data - the same data as for `create`, it may be returned from a callback
    */
-  orCreate<T extends UpsertThis>(
+  orCreate<T extends UpsertThis, BT extends CreateBelongsToData<T>>(
     this: T,
-    data: OrCreateArg<T>,
+    data: OrCreateArg<T, BT>,
   ): UpsertResult<T> {
     return orCreate(this.clone(), data);
   }

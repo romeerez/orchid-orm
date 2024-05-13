@@ -229,6 +229,10 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   }
 }
 
+export interface TableWithQueryMethod {
+  [K: string]: (params: RecordUnknown) => Query;
+}
+
 export const makeHasManyMethod = (
   table: Query,
   relation: HasMany,
@@ -237,11 +241,6 @@ export const makeHasManyMethod = (
 ): RelationData => {
   if ('through' in relation.options) {
     const { through, source } = relation.options;
-
-    type TableWithQueryMethod = Record<
-      string,
-      (params: RecordUnknown) => Query
-    >;
 
     const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);

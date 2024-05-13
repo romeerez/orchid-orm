@@ -6,39 +6,6 @@ export type MaybeArray<T> = T | T[];
 
 export type MaybePromise<T> = T | Promise<T>;
 
-// Converts union to overloaded function.
-type OptionalPropertyNames<T> = {
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  [K in keyof T]-?: {} extends { [P in K]: T[K] } ? K : never;
-}[keyof T];
-
-// Spread properties of two objects, if only one of properties is optional it becomes required.
-type SpreadProperties<L, R, K extends keyof L & keyof R> = {
-  [P in K]: L[P] | Exclude<R[P], undefined>;
-};
-
-// Copied from type-fest, not clear what it does.
-type Id<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
-
-// Combine two object into a single.
-type SpreadTwo<L, R> = Id<
-  Pick<L, Exclude<keyof L, keyof R>> &
-    Pick<R, Exclude<keyof R, OptionalPropertyNames<R>>> &
-    Pick<R, Exclude<OptionalPropertyNames<R>, keyof L>> &
-    SpreadProperties<L, R, OptionalPropertyNames<R> & keyof L>
->;
-
-/**
- * Merge an array of object types into a single combined object.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Spread<A extends readonly [...any]> = A extends [
-  infer L,
-  ...infer R,
-]
-  ? SpreadTwo<L, Spread<R>>
-  : unknown;
-
 // Simple merge two objects.
 // When they have common keys, the value of the second object will be used.
 export type MergeObjects<A extends RecordUnknown, B extends RecordUnknown> = {
@@ -48,6 +15,8 @@ export type MergeObjects<A extends RecordUnknown, B extends RecordUnknown> = {
     ? A[K]
     : never;
 };
+
+export type FnUnknownToUnknown = (a: unknown) => unknown;
 
 // Utility type to store info to know which keys are available.
 // Use it for cases where you'd want to pick a string union,
@@ -71,12 +40,6 @@ export interface RecordUnknown {
 export interface RecordBoolean {
   [K: string]: boolean;
 }
-
-// Use a default string if the first argument string is undefined.
-export type CoalesceString<
-  Left extends string | undefined,
-  Right extends string,
-> = Left extends undefined ? Right : Left;
 
 /**
  * Merge methods from multiple class into another class.

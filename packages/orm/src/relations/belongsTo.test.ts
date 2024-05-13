@@ -1167,7 +1167,7 @@ describe('belongsTo', () => {
             },
           });
 
-        const user = await db.user.findBy({ Id: UserId as number });
+        const user = await db.user.findBy({ Id: UserId });
         expect(user.Name).toBe('new name');
       });
 
@@ -1188,7 +1188,7 @@ describe('belongsTo', () => {
           });
 
         const updatedNames = await db.user.pluck('Name').where({
-          Id: { in: profiles.map((profile) => profile.UserId as number) },
+          Id: { in: profiles.map((profile) => profile.UserId) },
         });
         expect(updatedNames).toEqual(['new name', 'new name']);
       });

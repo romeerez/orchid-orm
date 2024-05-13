@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
-import { EmptyObject, RecordKeyTrue } from './utils';
+import { EmptyObject, FnUnknownToUnknown, RecordKeyTrue } from './utils';
 import { QueryColumn, QueryColumns } from './columns';
 
 // Output type of the `toSQL` method of query objects.
@@ -121,6 +121,10 @@ export interface PickQueryTableMetaResultShape
   extends PickQueryTableMetaResult,
     PickQueryMetaShape {}
 
+export interface PickQueryMetaReturnType
+  extends PickQueryMeta,
+    PickQueryReturnType {}
+
 export interface PickQueryMetaResultReturnType
   extends PickQueryMetaResult,
     PickQueryReturnType {}
@@ -155,7 +159,7 @@ export type getValueKey = typeof getValueKey;
 export const getValueKey = Symbol('get');
 
 // function to parse a single column after loading the data
-export type ColumnParser = (input: unknown) => unknown;
+export type ColumnParser = FnUnknownToUnknown;
 
 // functions to parse columns after loading the data
 // key is a name of a selected column,
@@ -206,7 +210,7 @@ export const overrideParserInQuery = (
  * @param result - query result to transform
  */
 export const applyTransforms = (
-  fns: ((input: unknown) => unknown)[] | undefined,
+  fns: FnUnknownToUnknown[] | undefined,
   result: unknown,
 ): unknown => {
   if (fns) {

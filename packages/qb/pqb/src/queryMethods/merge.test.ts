@@ -379,8 +379,11 @@ describe('merge queries', () => {
       i2.using = [{ type: 'b', args: { w: 'b', a: [emptyObject] } }];
       i1.join = [{ type: 'a', args: { w: 'a', a: [emptyObject] } }];
       i2.join = [{ type: 'b', args: { w: 'b', a: [emptyObject] } }];
-      i1.onConflict = { type: 'ignore' };
-      i2.onConflict = { type: 'merge' };
+      i1.onConflict = {};
+      i2.onConflict = {
+        target: 'target',
+        merge: 'merge',
+      };
       i1.beforeCreate = [() => {}];
       i2.beforeCreate = [() => {}];
       i1.afterCreate = [() => {}];

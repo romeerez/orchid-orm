@@ -30,6 +30,7 @@ import {
   RecordUnknown,
   QueryReturnType,
   PickQueryTable,
+  FnUnknownToUnknown,
 } from 'orchid-core';
 import { BaseOperators } from '../columns/operators';
 import { RelationQuery } from '../relations';
@@ -139,7 +140,7 @@ export type CommonQueryData = {
   // cache `toSQL` output
   [toSQLCacheKey]?: Sql;
   // functions to transform query result after loading data
-  transform?: ((input: unknown) => unknown)[];
+  transform?: FnUnknownToUnknown[];
   // default language for the full text search
   language?: string;
   // Is true for query arg inside `select`, `where`, and others callbacks.

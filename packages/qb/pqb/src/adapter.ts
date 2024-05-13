@@ -3,6 +3,7 @@ import {
   AdapterBase,
   AdapterConfigBase,
   emptyObject,
+  FnUnknownToUnknown,
   QueryInput,
   QueryResultRow,
   setAdapterConnectRetry,
@@ -48,7 +49,7 @@ for (const key in types.builtins) {
   delete defaultTypeParsers[id];
 });
 
-const returnArg = (arg: unknown) => arg;
+const returnArg: FnUnknownToUnknown = (arg) => arg;
 
 const rollbackSql = { text: 'ROLLBACK' };
 const commitSql: Sql = { text: 'COMMIT' };

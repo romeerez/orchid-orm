@@ -12,6 +12,7 @@ import {
   PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaResultReturnType,
+  PickQueryMetaReturnType,
   PickQueryResult,
   PickQueryReturnType,
   PickQueryShape,
@@ -24,7 +25,6 @@ import {
   QueryReturnType,
   QueryThen,
   RecordUnknown,
-  Spread,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
 import { ColumnType } from '../columns';
@@ -318,6 +318,24 @@ export type SetQueryReturnsAllKind<
     : T[K];
 } & QueryMetaHasWhere;
 
+export type SetQueryReturnsAllKindResult<
+  T extends PickQueryMetaResult,
+  Kind extends string,
+  Result extends QueryColumns,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? 'all'
+    : K extends 'result'
+    ? Result
+    : K extends 'then'
+    ? QueryThen<ColumnShapeOutput<T['result']>[]>
+    : T[K];
+} & QueryMetaHasWhere;
+
 export type SetQueryReturnsOneOptional<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'one'
@@ -346,6 +364,24 @@ export type SetQueryReturnsOneKind<
     ? 'oneOrThrow'
     : K extends 'then'
     ? QueryThen<ColumnShapeOutput<T['result']>>
+    : T[K];
+};
+
+export type SetQueryReturnsOneKindResult<
+  T extends PickQueryMetaResult,
+  Kind extends string,
+  Result extends QueryColumns,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? 'oneOrThrow'
+    : K extends 'result'
+    ? Result
+    : K extends 'then'
+    ? QueryThen<ColumnShapeOutput<Result>>
     : T[K];
 };
 
@@ -391,6 +427,26 @@ export type SetQueryReturnsPluckColumnKind<
     ? { pluck: T['result']['value'] }
     : K extends 'returnType'
     ? 'pluck'
+    : K extends 'then'
+    ? QueryThen<T['result']['value']['outputType'][]>
+    : T[K];
+} & QueryMetaHasSelect;
+
+export type SetQueryReturnsPluckColumnKindResult<
+  T extends PickQueryMetaResult,
+  Kind extends string,
+  Result extends QueryColumns,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'result'
+    ? { pluck: T['result']['value'] }
+    : K extends 'returnType'
+    ? 'pluck'
+    : K extends 'result'
+    ? Result
     : K extends 'then'
     ? QueryThen<T['result']['value']['outputType'][]>
     : T[K];
@@ -445,6 +501,26 @@ export type SetQueryReturnsColumnKind<
     : T[K];
 } & QueryMetaHasSelect;
 
+export type SetQueryReturnsColumnKindResult<
+  T extends PickQueryMetaResult,
+  Kind extends string,
+  Result extends QueryColumns,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'result'
+    ? { value: T['result']['pluck'] }
+    : K extends 'returnType'
+    ? 'valueOrThrow'
+    : K extends 'result'
+    ? Result
+    : K extends 'then'
+    ? QueryThen<Result['pluck']['outputType']>
+    : T[K];
+} & QueryMetaHasSelect;
+
 export type SetQueryReturnsRowCount<
   T extends PickQueryMetaResult,
   Kind extends string,
@@ -493,6 +569,22 @@ export type SetQueryKind<T extends PickQueryMeta, Kind extends string> = {
     : T[K];
 };
 
+export type SetQueryKindResult<
+  T extends PickQueryMetaReturnType,
+  Kind extends string,
+  Result extends QueryColumns,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'result'
+    ? Result
+    : K extends 'then'
+    ? QueryThen<GetQueryResult<T, Result>>
+    : T[K];
+};
+
 export type SetQueryTableAlias<
   T extends PickQueryMetaTableShape,
   As extends string,
@@ -516,11 +608,20 @@ export type SetQueryTableAlias<
     : T[K];
 };
 
-export type SetQueryWith<T, WithData extends WithDataItems> = {
+export type SetQueryWith<T, WithData> = {
   [K in keyof T]: K extends 'withData' ? WithData : T[K];
 };
 
 export type AddQueryWith<
   T extends PickQueryWithData,
   With extends WithDataItem,
-> = SetQueryWith<T, Spread<[T['withData'], { [K in With['table']]: With }]>>;
+> = SetQueryWith<
+  T,
+  {
+    [K in keyof T['withData'] | With['table']]: K extends With['table']
+      ? With
+      : K extends keyof T['withData']
+      ? T['withData'][K]
+      : never;
+  }
+>;

@@ -119,11 +119,11 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
 }
 
 // parse a date string to number, with respect to null
-const parseDateToNumber = (value: unknown) =>
+const parseDateToNumber = (value: unknown): number =>
   (value ? Date.parse(value as string) : value) as number;
 
 // parse a date string to date object, with respect to null
-const parseDateToDate = (value: unknown) =>
+const parseDateToDate = (value: unknown): Date =>
   (value ? new Date(value as string) : value) as Date;
 
 (parseDateToNumber as unknown as { hideFromCode: boolean }).hideFromCode = (
