@@ -41,7 +41,7 @@ export const pull = async (
 
   const ctx = makeStructureToAstCtx(config, currentSchema);
 
-  const asts = await structureToAst(ctx, adapter);
+  const asts = await structureToAst(ctx, adapter, config);
 
   const { tableInfos, fkeys } = getTableInfosAndFKeys(asts, config);
 

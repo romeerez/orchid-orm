@@ -45,7 +45,7 @@ describe('tables', () => {
   });
 
   it(
-    'should create table, ignore virtual column, add table comment, add noPrimaryKey option, ' +
+    'should create table with customly named timestamps, ignore virtual column, add table comment, add noPrimaryKey option, ' +
       'add composite primary key, index, constraint',
     async () => {
       await arrange({
@@ -63,7 +63,8 @@ describe('tables', () => {
                 name: t.string(),
                 int: t.integer(),
                 virtual: new UnknownColumn(defaultSchemaConfig),
-                ...t.timestamps(),
+                created: t.timestamps().createdAt,
+                updated: t.timestamps().updatedAt,
               }),
               (t) => [
                 t.primaryKey(['name', 'int']),
@@ -77,7 +78,8 @@ describe('tables', () => {
 
       await act();
 
-      assert.migration(`import { change } from '../src/migrations/dbScript';
+      assert.migration(
+        `import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.createTable(
@@ -89,7 +91,10 @@ change(async (db) => {
     (t) => ({
       name: t.string(),
       int: t.integer(),
-      ...t.timestamps(),
+      ` +
+          // when creating, logic can see that `createdAt` and `updatedAt` are indeed coming from `timestamps` and can rely on this fact.
+          `created: t.timestamps().createdAt,
+      updated: t.timestamps().updatedAt,
     }),
     (t) => [
       t.primaryKey(['name', 'int']),
@@ -98,7 +103,8 @@ change(async (db) => {
     ],
   );
 });
-`);
+`,
+      );
 
       assert.report(
         `${green('+ create table')} schema.one (4 columns, 1 index, 1 check)`,
@@ -117,7 +123,8 @@ change(async (db) => {
           (t) => ({
             name: t.varchar(255),
             int: t.integer().check(t.sql`("int" > 5)`),
-            ...t.timestamps(),
+            created: t.timestamps().createdAt,
+            updated: t.timestamps().updatedAt,
           }),
           (t) => [t.primaryKey(['name', 'int']), t.index(['name', 'int'])],
         );
@@ -126,7 +133,8 @@ change(async (db) => {
 
     await act();
 
-    assert.migration(`import { change } from '../src/migrations/dbScript';
+    assert.migration(
+      `import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.dropTable(
@@ -137,7 +145,10 @@ change(async (db) => {
     (t) => ({
       name: t.varchar(255),
       int: t.integer().check(t.sql\`("int" > 5)\`),
-      ...t.timestamps(),
+      ` +
+        // when dropping, the logic cannot know if it's from `timestamps` or if it's just an arbitrary timestamp.
+        `created: t.timestamp().default(t.sql\`now()\`),
+      updated: t.timestamp().default(t.sql\`now()\`),
     }),
     (t) => [
       t.primaryKey(['name', 'int']),
@@ -149,7 +160,8 @@ change(async (db) => {
 change(async (db) => {
   await db.dropSchema('schema');
 });
-`);
+`,
+    );
 
     assert.report(`${red('- drop schema')} schema
 ${red('- drop table')} schema.one (4 columns, 1 index, 1 check)`);

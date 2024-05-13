@@ -77,6 +77,7 @@ export const processTables = async (
   const tableExpressions: TableExpression[] = [];
   const { changeTables, changeTableSchemas, dropTables, tableShapes } =
     collectChangeAndDropTables(
+      config,
       tables,
       dbStructure,
       currentSchema,
@@ -142,6 +143,7 @@ const collectCreateTables = (
 };
 
 const collectChangeAndDropTables = (
+  config: AnyRakeDbConfig,
   tables: QueryWithTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
@@ -158,7 +160,7 @@ const collectChangeAndDropTables = (
   const tableShapes: TableShapes = {};
 
   for (const dbTable of dbStructure.tables) {
-    if (dbTable.name === 'schemaMigrations') continue;
+    if (dbTable.name === config.migrationsTable) continue;
 
     const codeTable = tables.find(
       (t) =>
