@@ -1,5 +1,29 @@
 # pqb
 
+## 0.29.1
+
+### Patch Changes
+
+- bdef5b0: Override certain column types to be non-nullable after creating a _belongs to_ record that defines such columns.
+
+  ```ts
+  // let's say a tree optionally belongs to a forest,
+  // a tree has a `forestId: number | null`
+
+  const tree = db.tree.create({
+    name: 'Willow',
+    forest: {
+      name: 'Eerie forest',
+    },
+  });
+
+  // ok, the `forestId` is not nullable
+  const num: number = tree.forestId;
+  ```
+
+- Updated dependencies [bdef5b0]
+  - orchid-core@0.14.1
+
 ## 0.29.0
 
 ### Minor Changes

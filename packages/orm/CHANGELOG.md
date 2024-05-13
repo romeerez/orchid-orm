@@ -1,5 +1,34 @@
 # orchid-orm
 
+## 1.26.3
+
+### Patch Changes
+
+- 9c086a9: Fix: un-hardcode schema migrations table name in generation scripts
+- bdef5b0: Override certain column types to be non-nullable after creating a _belongs to_ record that defines such columns.
+
+  ```ts
+  // let's say a tree optionally belongs to a forest,
+  // a tree has a `forestId: number | null`
+
+  const tree = db.tree.create({
+    name: 'Willow',
+    forest: {
+      name: 'Eerie forest',
+    },
+  });
+
+  // ok, the `forestId` is not nullable
+  const num: number = tree.forestId;
+  ```
+
+- Updated dependencies [c7790c4]
+- Updated dependencies [9c086a9]
+- Updated dependencies [bdef5b0]
+  - rake-db@2.20.0
+  - pqb@0.29.1
+  - orchid-core@0.14.1
+
 ## 1.26.2
 
 ### Patch Changes
