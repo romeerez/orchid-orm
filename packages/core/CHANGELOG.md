@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.15.0
+
+### Minor Changes
+
+- e92cebd: In snake_case mode, make `timestamps()` helper to snakerize a column key instead of default `created_at` and `updated_at`
+
 ## 0.14.1
 
 ### Patch Changes

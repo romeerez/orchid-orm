@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.27.0
+
+### Minor Changes
+
+- e92cebd: In snake_case mode, make `timestamps()` helper to snakerize a column key instead of default `created_at` and `updated_at`
+
+### Patch Changes
+
+- Updated dependencies [e92cebd]
+  - pqb@0.30.0
+  - orchid-core@0.15.0
+  - rake-db@2.20.1
+
 ## 1.26.3
 
 ### Patch Changes
