@@ -121,10 +121,15 @@ describe('timestamps methods', () => {
       snakeCase: true,
     });
 
-    const table = db('snake', (t) => ({
-      id: t.serial().primaryKey(),
-      ...t.timestampsSnakeCase(),
-    }));
+    const table = db(
+      'snake',
+      (t) => ({
+        id: t.serial().primaryKey(),
+        ...t.timestamps(),
+      }),
+      undefined,
+      { snakeCase: true },
+    );
 
     const q = table.where().update({ updatedAt: now });
 

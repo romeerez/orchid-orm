@@ -4,7 +4,6 @@ import {
   getDefaultNowFn,
 } from './columnType';
 import { pushOrNewArrayToObject, RecordUnknown } from '../utils';
-import { snakeCaseKey } from './types';
 import { isRawSQL, RawSQLBase } from '../raw';
 
 // Column types returned by `...t.timestamps()` and variations.
@@ -33,34 +32,12 @@ export interface TimestampHelpers {
   /**
    * Add `createdAt` and `updatedAt timestamps. Both have `now()` as a default, `updatedAt` is automatically updated during update.
    */
-  timestamps<T extends ColumnTypeBase>(this: {
-    name(name: string): { timestamp(): T };
-    timestamp(): T;
-    timestampsSnakeCase(): Timestamps<T>;
-  }): Timestamps<T>;
-
-  /**
-   * The same as {@link timestamps}, but for `created_at` and `updated_at` database columns.
-   */
-  timestampsSnakeCase<T extends ColumnTypeBase>(this: {
-    name(name: string): { timestamp(): T };
-    timestamp(): T;
-  }): Timestamps<T>;
+  timestamps<T extends ColumnTypeBase>(this: { timestamp(): T }): Timestamps<T>;
 
   /**
    * The same as {@link timestamps}, for the timestamp without time zone time.
    */
   timestampsNoTZ<T extends ColumnTypeBase>(this: {
-    name(name: string): { timestampNoTZ(): T };
-    timestampNoTZ(): T;
-    timestampsNoTZSnakeCase(): Timestamps<T>;
-  }): Timestamps<T>;
-
-  /**
-   * The same as {@link timestamps}, for the timestamp without time zone time and with snake cased names.
-   */
-  timestampsNoTZSnakeCase<T extends ColumnTypeBase>(this: {
-    name(name: string): { timestampNoTZ(): T };
     timestampNoTZ(): T;
   }): Timestamps<T>;
 }
@@ -127,44 +104,15 @@ export const makeTimestampsHelpers = (
 
   return {
     timestamps<T extends ColumnTypeBase>(this: {
-      name(name: string): { timestamp(): T };
       timestamp(): T;
-      timestampsSnakeCase(): Timestamps<T>;
     }): Timestamps<T> {
-      return (this as { [snakeCaseKey]?: boolean })[snakeCaseKey]
-        ? this.timestampsSnakeCase()
-        : makeTimestamps(this.timestamp);
-    },
-
-    timestampsSnakeCase<T extends ColumnTypeBase>(this: {
-      name(name: string): { timestamp(): T };
-      timestamp(): T;
-      timestamps(): Timestamps<T>;
-    }): Timestamps<T> {
-      const columns = makeTimestamps(this.timestamp);
-      columns.createdAt.data.name = 'created_at';
-      columns.updatedAt.data.name = 'updated_at';
-      return columns;
+      return makeTimestamps(this.timestamp);
     },
 
     timestampsNoTZ<T extends ColumnTypeBase>(this: {
-      name(name: string): { timestampNoTZ(): T };
-      timestampNoTZ(): T;
-      timestampsNoTZSnakeCase(): Timestamps<T>;
-    }): Timestamps<T> {
-      return (this as { [snakeCaseKey]?: boolean })[snakeCaseKey]
-        ? this.timestampsNoTZSnakeCase()
-        : makeTimestamps(this.timestampNoTZ);
-    },
-
-    timestampsNoTZSnakeCase<T extends ColumnTypeBase>(this: {
-      name(name: string): { timestampNoTZ(): T };
       timestampNoTZ(): T;
     }): Timestamps<T> {
-      const columns = makeTimestamps(this.timestampNoTZ);
-      columns.createdAt.data.name = 'created_at';
-      columns.updatedAt.data.name = 'updated_at';
-      return columns;
+      return makeTimestamps(this.timestampNoTZ);
     },
   };
 };

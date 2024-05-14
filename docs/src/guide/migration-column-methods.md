@@ -532,25 +532,6 @@ change(async (db) => {
 
 The same as `timestamps`, but without a time zone.
 
-## timestampsSnakeCase
-
-This method is for the case when `snakeCase` is not set or `false`, but for some reason you need timestamps named as `updated_at` and `created_at`.
-
-```ts
-import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.createTable('table', (t) => ({
-    // adds updated_at and created_at
-    ...t.timestampsSnakeCase(),
-  }));
-});
-```
-
-## timestampsNoTZSnakeCase
-
-The same as `timestampsSnakeCase`, but without a time zone.
-
 ## check
 
 [//]: # 'has JSDoc'

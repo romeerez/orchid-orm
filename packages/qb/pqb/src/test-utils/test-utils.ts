@@ -87,13 +87,18 @@ export const Message = testDb('message', (t) => ({
 }));
 
 export type SnakeRecord = typeof Snake.outputType;
-export const Snake = testDb('snake', (t) => ({
-  snakeId: t.name('snake_id').identity().primaryKey(),
-  snakeName: t.name('snake_name').text().unique(),
-  tailLength: t.name('tail_length').integer(),
-  snakeData: t.name('snake_data').json().nullable(),
-  ...t.timestampsSnakeCase(),
-}));
+export const Snake = testDb(
+  'snake',
+  (t) => ({
+    snakeId: t.identity().primaryKey(),
+    snakeName: t.text().unique(),
+    tailLength: t.integer(),
+    snakeData: t.json().nullable(),
+    ...t.timestamps(),
+  }),
+  undefined,
+  { snakeCase: true },
+);
 
 const snakeAllColumns = [
   '"snake_id" AS "snakeId"',

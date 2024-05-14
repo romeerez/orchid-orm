@@ -87,7 +87,8 @@ change(async (db) => {
   await db.createTable('snake', (t) => ({
     id: t.identity().primaryKey(),
     snakeCaseColumn: t.name('snake_case_column').text(),
-    ...t.timestampsSnakeCase(),
+    updated_at: t.timestamps().updatedAt,
+    created_at: t.timestamps().createdAt,
   }));
 });
 ```
@@ -119,7 +120,7 @@ change(async (db) => {
 });
 ```
 
-If timestamps in your database don't have a time zone, all the above works as well, but will use `timestampNoTZ` and `timestampNoTZSnakeCase` instead.
+If timestamps in your database don't have a time zone, use `timestampNoTZ` instead.
 
 ### custom and unknown columns
 

@@ -292,11 +292,6 @@ export class Db<
         parsers[key] = column.parseFn;
       }
 
-      const { modifyQuery: mq } = column.data;
-      if (mq) {
-        modifyQuery = pushOrNewArray(modifyQuery, (q: Query) => mq(q, column));
-      }
-
       if (column.data.name) {
         hasCustomName = true;
       } else if (snakeCase) {
@@ -305,6 +300,11 @@ export class Db<
           hasCustomName = true;
           column.data.name = snakeName;
         }
+      }
+
+      const { modifyQuery: mq } = column.data;
+      if (mq) {
+        modifyQuery = pushOrNewArray(modifyQuery, (q: Query) => mq(q, column));
       }
 
       if (typeof column.data.default === 'function') {

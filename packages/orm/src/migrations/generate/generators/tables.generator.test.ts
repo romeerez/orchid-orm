@@ -58,6 +58,7 @@ describe('tables', () => {
             table = 'one';
             comment = 'table comment';
             noPrimaryKey = true;
+            snakeCase = true;
             columns = this.setColumns(
               (t) => ({
                 name: t.string(),

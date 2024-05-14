@@ -1,6 +1,25 @@
 # Breaking changes
 
-## orchid-orm 1.27.0, rake-db 2.20.0
+## orchid-orm 1.27.0
+
+In snake case mode, `timestamps()`'s helper columns had hardcoded names `updated_at` and `created_at`.
+Now, if you apply timestamp columns separately as shown below, they will use and snakerize a column name from the key:
+
+```ts
+class Table extends BaseTable {
+  snakeCase = true;
+  columns = this.setColumns((t) => ({
+    // will be `custom_created` in db
+    customCreated: t.timestamps().createdAt,
+    // will be `custom_updated` in db
+    customUpdated: t.timestamps().updatedAt,
+  }));
+}
+```
+
+`timestampsSnakeCase` and `timestampsNoTzSnakeCase` helpers were removed in favor of manually naming timestamps as shown above.
+
+## orchid-orm 1.26.3, rake-db 2.20.0
 
 The `import` config was optional, because on some setups it can work without it.
 Now it's required, because it is confusing when it does not work for your setup, so it is better to require it for all.

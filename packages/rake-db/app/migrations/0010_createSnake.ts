@@ -6,6 +6,7 @@ change(async (db) => {
     snake_name: t.text(),
     tailLength: t.name('tail_length').integer(),
     snakeData: t.name('snake_data').json().nullable(),
-    ...t.timestampsSnakeCase(),
+    updated_at: t.timestamps().updatedAt,
+    created_at: t.timestamps().createdAt,
   }));
 });
