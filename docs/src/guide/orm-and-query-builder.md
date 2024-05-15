@@ -1002,7 +1002,7 @@ const result = await db
   .limit(10);
 ```
 
-For a standalone query builder, the method is `from`.
+It is the same [from](/guide/query-methods.html#from) method as available in the query builder, it also can accept multiple sources.
 
 ## $close
 

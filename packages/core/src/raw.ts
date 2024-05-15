@@ -2,21 +2,28 @@ import { ColumnTypeBase, QueryColumn } from './columns/columnType';
 import { OperatorToSQL } from './columns';
 import { RecordUnknown } from './utils';
 
+// The chain array is used to store a sequence of operators and their arguments, one be one.
+// For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
+export type ExpressionChain = (OperatorToSQL<unknown, unknown> | unknown)[];
+
+export type ExpressionData = {
+  chain?: ExpressionChain;
+  expr?: Expression;
+};
+
 // Base class for the raw SQL and other classes that can produce SQL
 export abstract class Expression<T extends QueryColumn = QueryColumn> {
-  // `_type` contains an instance of a column type.
+  // `result` contains an instance of a column type.
   // Starts with underscore to allow having `type` method
-  abstract _type: T;
+  abstract result: { value: T };
 
-  // The chain array is used to store a sequence of operators and their arguments, one be one.
-  // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
-  _chain?: (OperatorToSQL<unknown, unknown> | unknown)[];
+  abstract q: ExpressionData;
 
-  // Produce SQL string by calling `makeSQL` and applying operators from the `_chain`, push query variables into given `values` array.
+  // Produce SQL string by calling `makeSQL` and applying operators from the `q.chain`, push query variables into given `values` array.
   toSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
     let sql = this.makeSQL(ctx, quotedAs);
-    if (this._chain) {
-      const { _chain: chain } = this;
+    if (this.q.chain) {
+      const { chain: chain } = this.q;
       for (let i = 0, len = chain.length; i < len; i += 2) {
         sql = (chain[i] as OperatorToSQL<unknown, unknown>)(
           sql,
@@ -76,9 +83,11 @@ export abstract class ExpressionTypeMethod {
   type<Self extends RawSQLBase, C extends QueryColumn>(
     this: Self,
     fn: (types: Self['columnTypes']) => C,
-  ): Omit<Self, '_type'> & { _type: C } {
-    this._type = fn(this.columnTypes) as unknown as ColumnTypeBase;
-    return this as unknown as Omit<Self, '_type'> & { _type: C };
+  ): // Omit is optimal
+  Omit<Self, 'result'> & { result: { value: C } } {
+    this.result.value = fn(this.columnTypes) as unknown as ColumnTypeBase;
+    Object.assign(this, this.result.value.operators);
+    return this as never;
   }
 }
 
@@ -95,7 +104,8 @@ export abstract class RawSQLBase<
   ColumnTypes = unknown,
 > extends Expression<T> {
   // Column type instance, it is assigned directly to the prototype of RawSQL class.
-  declare _type: T;
+  declare result: { value: T };
+  q: ExpressionData = {};
 
   // Column types are stored to be passed to the `type` callback.
   abstract columnTypes: ColumnTypes;

@@ -42,7 +42,7 @@ db.table.with('alias', db.table.all());
 
 // accepts a callback for a query builder:
 db.table.with('alias', (qb) =>
-  qb.select({ one: db.table.sql((t) => t.integer())`1` }),
+  qb.select({ one: db.table.sql`1`.type((t) => t.integer()) }),
 );
 
 // All mentioned forms can accept options as a second argument:

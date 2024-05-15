@@ -46,7 +46,7 @@ export class Clear {
           });
         }
       } else {
-        delete (q.q as RecordUnknown)[clear];
+        delete (q.q as never as RecordUnknown)[clear];
       }
     });
     return q;

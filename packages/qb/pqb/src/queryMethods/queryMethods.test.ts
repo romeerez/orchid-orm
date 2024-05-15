@@ -6,6 +6,7 @@ import {
   UserRecord,
   Snake,
   snakeSelectAll,
+  Post,
 } from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
 import {
@@ -979,6 +980,71 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `SELECT "user"."name" || ' ' || "user"."password" FROM "user" LIMIT 1`,
+      );
+    });
+
+    it('should support column operators', () => {
+      const q = User.select({
+        alias: (q) =>
+          q.column('id').equals(1).or(q.column('name').equals('name')),
+      });
+
+      assertType<Awaited<typeof q>, { alias: boolean }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "user"
+        `,
+        [1, 'name'],
+      );
+    });
+  });
+
+  describe('ref', () => {
+    it('should reference selectable columns', () => {
+      const q = User.join(Post, 'post.title', 'user.id').select({
+        alias: (q) =>
+          User.as('u')
+            .where({
+              id: q.ref('user.id'),
+              name: q.ref('post.title'),
+            })
+            .take(),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT (
+            SELECT row_to_json("t".*)
+            FROM (
+              SELECT *
+              FROM "user" AS "u"
+              WHERE "u"."id" = "user"."id"
+                AND "u"."name" = "post"."title"
+              LIMIT 1
+            ) AS "t"
+          ) "alias"
+          FROM "user"
+          JOIN "post" ON "post"."title" = "user"."id"
+        `,
+      );
+    });
+
+    it('should support column operators', () => {
+      const q = User.select({
+        alias: (q) => q.ref('id').equals(1).or(q.ref('name').equals('name')),
+      });
+
+      assertType<Awaited<typeof q>, { alias: boolean }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "user"
+        `,
+        [1, 'name'],
       );
     });
   });

@@ -342,8 +342,8 @@ describe('merge queries', () => {
       const s2 = q2.q as unknown as SelectQueryData;
       s1.distinct = ['id'];
       s2.distinct = ['name'];
-      s1.fromOnly = false;
-      s2.fromOnly = true;
+      s1.only = false;
+      s2.only = true;
       s1.joinedShapes = { a: q1.q.shape };
       s2.joinedShapes = { b: q2.q.shape };
       s1.joinedParsers = { a: q1.q.parsers };
@@ -454,7 +454,7 @@ describe('merge queries', () => {
 
       const s = q as SelectQueryData;
       expect(s.distinct).toEqual([...s1.distinct, ...s2.distinct]);
-      expect(s.fromOnly).toEqual(s2.fromOnly);
+      expect(s.only).toEqual(s2.only);
       expect(s.joinedShapes).toEqual({
         ...s1.joinedShapes,
         ...s2.joinedShapes,

@@ -23,7 +23,7 @@ export type ExpressionOutput<
 > = Expr extends keyof T['meta']['selectable']
   ? T['meta']['selectable'][Expr]['column']
   : Expr extends Expression
-  ? Expr['_type']
+  ? Expr['result']['value']
   : never;
 
 export const getClonedQueryData = (query: QueryData): QueryData => {

@@ -2,7 +2,7 @@ import { User } from '../test-utils/test-utils';
 import { BooleanColumn, ColumnType } from '../columns';
 import { expectSql, testAdapter, testDb } from 'test-utils';
 import { createDb } from '../query/db';
-import { ColumnTypeBase, Expression } from 'orchid-core';
+import { ColumnTypeBase, emptyObject, Expression } from 'orchid-core';
 import { ToSQLCtx } from '../sql';
 
 describe('raw sql', () => {
@@ -17,13 +17,13 @@ describe('raw sql', () => {
 
     const sql = db.sql`sql`.type((t) => t.type());
 
-    expect(sql._type).toBe(type);
+    expect(sql.result.value).toBe(type);
   });
 
   it('should handle a simple string', () => {
     const sql = User.sql<boolean>({ raw: 'simple sql' });
 
-    expect(sql).toEqual({
+    expect(sql).toMatchObject({
       _sql: 'simple sql',
       columnTypes: User.columnTypes,
     });
@@ -42,7 +42,7 @@ describe('raw sql', () => {
       VaLuE123: 'value',
     });
 
-    expect(sql).toEqual({
+    expect(sql).toMatchObject({
       _sql: '$$_CoLuMn = $VaLuE123',
       _values: {
         _CoLuMn: 'name',
@@ -61,7 +61,7 @@ describe('raw sql', () => {
   it('should handle raw sql and values in single parameter', () => {
     const sql = User.sql({ raw: 'column = $value', values: { value: 'foo' } });
 
-    expect(sql).toEqual({
+    expect(sql).toMatchObject({
       _sql: 'column = $value',
       _values: { value: 'foo' },
       columnTypes: User.columnTypes,
@@ -71,7 +71,7 @@ describe('raw sql', () => {
   it('should handle values and a template string', () => {
     const sql = User.sql`value = $value`.values({ value: 'value' });
 
-    expect(sql).toEqual({
+    expect(sql).toMatchObject({
       _sql: [['value = $value']],
       _values: {
         value: 'value',
@@ -83,8 +83,8 @@ describe('raw sql', () => {
   it('should handle a column and a simple string', () => {
     const sql = User.sql({ raw: 'simple sql' }).type((t) => t.boolean());
 
-    expect(sql).toEqual({
-      _type: expect.any(BooleanColumn),
+    expect(sql).toMatchObject({
+      result: { value: expect.any(BooleanColumn) },
       _sql: 'simple sql',
       columnTypes: User.columnTypes,
     });
@@ -102,8 +102,8 @@ describe('raw sql', () => {
       .type((t) => t.boolean())
       .values({ column: 'name', value: 'value' });
 
-    expect(sql).toEqual({
-      _type: expect.any(BooleanColumn),
+    expect(sql).toMatchObject({
+      result: { value: expect.any(BooleanColumn) },
       _sql: '$$column = $value',
       _values: {
         column: 'name',
@@ -122,7 +122,7 @@ describe('raw sql', () => {
   it('should handle a template literal', () => {
     const sql = User.sql<boolean>`one ${1} two ${true} three ${'string'} four`;
 
-    expect(sql).toEqual({
+    expect(sql).toMatchObject({
       _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
       columnTypes: User.columnTypes,
     });
@@ -139,8 +139,8 @@ describe('raw sql', () => {
       (t) => t.boolean(),
     );
 
-    expect(sql).toEqual({
-      _type: expect.any(BooleanColumn),
+    expect(sql).toMatchObject({
+      result: { value: expect.any(BooleanColumn) },
       _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
       columnTypes: User.columnTypes,
     });
@@ -157,8 +157,8 @@ describe('raw sql', () => {
       .type((t) => t.boolean())
       .values({ 1: 'value' });
 
-    expect(sql).toEqual({
-      _type: expect.any(BooleanColumn),
+    expect(sql).toMatchObject({
+      result: { value: expect.any(BooleanColumn) },
       _sql: [['value = $1 AND ', ''], true],
       _values: {
         1: 'value',
@@ -178,7 +178,7 @@ describe('raw sql', () => {
       column: 'user.name',
     });
 
-    expect(sql).toEqual({
+    expect(sql).toMatchObject({
       _sql: '$$column',
       _values: {
         column: 'user.name',
@@ -241,7 +241,8 @@ describe('raw sql', () => {
 
   it('should interpolate expressions', () => {
     class CustomExpression extends Expression {
-      declare _type: ColumnTypeBase;
+      declare result: { value: ColumnTypeBase };
+      q = emptyObject;
       makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
         ctx.values.push('value');
         return `hello, ${quotedAs}!`;

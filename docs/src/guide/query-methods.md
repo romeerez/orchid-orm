@@ -501,20 +501,30 @@ db.table.join(Profile.as('p'), 'p.userId', 'user.id');
 
 Set the `FROM` value, by default the table name is used.
 
+`from` determines a set of available tables and columns withing the query,
+and thus it must not follow `select`, use `select` only after `from`.
+
 ```ts
 // accepts sub-query:
-db.table.from(Otherdb.table.select('foo', 'bar'));
+db.table.from(db.otherTable.select('foo', 'bar'));
 
 // accepts alias of `WITH` expression:
-q.with('foo', Otherdb.table.select('id', 'name')).from('foo');
+q.with('withTable', db.table.select('id', 'name'))
+  .from('withTable')
+  // `select` is after `from`
+  .select('id', 'name');
 ```
 
-Optionally takes a second argument of type `{ only?: boolean }`, (see `FROM ONLY` in Postgres docs, this is related to table inheritance).
+`from` can accept multiple sources:
 
 ```ts
-db.table.from(Otherdb.table.select('foo', 'bar'), {
-  only: true,
-});
+db.table
+  // add a `WITH` statement called `withTable
+  .with('withTable', db.table.select('one'))
+  // select from `withTable` and from `otherTable`
+  .from('withTable', db.otherTable.select('two'))
+  // source names and column names are properly typed when selecting
+  .select('withTable.one', 'otherTable.two');
 ```
 
 ## fromSql
@@ -525,8 +535,23 @@ Set the `FROM` value with custom SQL:
 
 ```ts
 const value = 123;
-db.table.from`value = ${value}`;
-db.table.from(db.table.sql`value = ${value}`);
+db.table.fromSql`value = ${value}`;
+db.table.fromSql(db.table.sql`value = ${value}`);
+```
+
+## only
+
+[//]: # 'has JSDoc'
+
+Adds `ONLY` SQL keyword to the `FROM`.
+When selecting from a parent table that has a table inheritance,
+setting `only` will make it to select rows only from the parent table.
+
+```ts
+db.table.only();
+
+// disabling `only` after being enabled
+db.table.only().only(false);
 ```
 
 ## offset
@@ -764,6 +789,50 @@ const postsWithComments: Result = await db.post
         .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id })),
   })
   .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id }));
+```
+
+## column
+
+[//]: # 'has JSDoc'
+
+`column` references a table column, this can be used in raw SQL or when building a column expression.
+Only for referencing a column in the query's table. For referencing joined table's columns, see [ref](#ref).
+
+```ts
+await db.table.select({
+  // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
+  // returns a boolean
+  one: (q) =>
+    q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
+
+  // selects the same as above, but by building a query
+  two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
+});
+```
+
+## ref
+
+[//]: # 'has JSDoc'
+
+`ref` is similar to [column](#column), but it also allows to reference a column of joined table,
+and other dynamically defined columns.
+
+```ts
+await db.table.join('otherTable').select({
+  // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
+  // returns a boolean
+  one: (q) =>
+    q.sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
+      'otherTable.name',
+    )} = ${'name'}`,
+
+  // selects the same as above, but by building a query
+  two: (q) =>
+    q
+      .ref('otherTable.id')
+      .equals(1)
+      .or(q.ref('otherTable.name').equals('name')),
+});
 ```
 
 ## log

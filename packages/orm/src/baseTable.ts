@@ -91,7 +91,9 @@ export interface TableToDb<
     T['types'],
     T['computed'] extends RecordUnknown
       ? T['columns']['shape'] & {
-          [K in keyof T['computed']]: ReturnType<T['computed'][K]>['_type'];
+          [K in keyof T['computed']]: ReturnType<
+            T['computed'][K]
+          >['result']['value'];
         }
       : T['columns']['shape'],
     MapTableScopesOption<T['scopes'], T['softDelete']>

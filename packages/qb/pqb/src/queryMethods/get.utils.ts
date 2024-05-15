@@ -7,8 +7,6 @@ import {
   SetQueryReturnsValueOrThrow,
 } from '../query/query';
 import {
-  ColumnTypeBase,
-  emptyObject,
   Expression,
   getValueKey,
   PickQueryMeta,
@@ -42,7 +40,7 @@ export type GetResult<
 > = Arg extends string
   ? SetQueryReturnsValueOrThrow<T, Arg>
   : Arg extends Expression
-  ? SetQueryReturnsColumnOrThrow<T, Arg['_type']>
+  ? SetQueryReturnsColumnOrThrow<T, Arg['result']['value']>
   : never;
 
 export type GetResultOptional<
@@ -51,7 +49,7 @@ export type GetResultOptional<
 > = Arg extends string
   ? SetQueryReturnsValueOptional<T, Arg>
   : Arg extends Expression
-  ? SetQueryReturnsColumnOptional<T, Arg['_type']>
+  ? SetQueryReturnsColumnOptional<T, Arg['result']['value']>
   : never;
 
 // mutate the query to get a single value
@@ -93,13 +91,9 @@ const _get = <
       getValueKey,
     );
 
-    q.expr = new SelectItemExpression(
-      query as unknown as Query,
-      arg,
-      type || (emptyObject as ColumnTypeBase),
-    );
+    q.expr = new SelectItemExpression(query as unknown as Query, arg, type);
   } else {
-    type = arg._type;
+    type = arg.result.value;
     (q as SelectQueryData)[getValueKey] = type;
     addParserForRawExpression(query as unknown as Query, getValueKey, arg);
     q.expr = arg;

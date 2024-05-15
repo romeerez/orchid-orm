@@ -20,7 +20,6 @@ import {
   applyTransforms,
   ColumnTypeBase,
   emptyArray,
-  emptyObject,
   Expression,
   getValueKey,
   isExpression,
@@ -230,15 +229,15 @@ type SelectAsValueResult<
 > = Arg extends keyof T['meta']['selectable']
   ? T['meta']['selectable'][Arg]['column']
   : Arg extends Expression
-  ? Arg['_type']
+  ? Arg['result']['value']
   : Arg extends (q: never) => QueryBase
   ? SelectSubQueryResult<ReturnType<Arg>>
   : Arg extends (q: never) => Expression
-  ? ReturnType<Arg>['_type']
+  ? ReturnType<Arg>['result']['value']
   : Arg extends (q: never) => QueryBase | Expression
   ?
       | SelectSubQueryResult<Exclude<ReturnType<Arg>, Expression>>
-      | Exclude<ReturnType<Arg>, QueryBase>['_type']
+      | Exclude<ReturnType<Arg>, QueryBase>['result']['value']
   : never;
 
 // map a sub query result into a column
@@ -265,8 +264,8 @@ export const addParserForRawExpression = (
   key: string | getValueKey,
   raw: Expression,
 ) => {
-  const type = raw._type as unknown as ColumnTypeBase;
-  if (type.parseFn) setParserToQuery(q.q, key, type.parseFn);
+  const type = raw.result.value as unknown as ColumnTypeBase;
+  if (type?.parseFn) setParserToQuery(q.q, key, type.parseFn);
 };
 
 // these are used as a wrapper to pass sub query result to `parseRecord`
@@ -495,7 +494,7 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
               key,
             );
           } else if (isExpression(it)) {
-            result[key] = it._type as unknown as ColumnTypeBase;
+            result[key] = it.result.value as unknown as ColumnTypeBase;
           } else {
             const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
@@ -524,11 +523,6 @@ const addColumnToShapeFromSelect = (
   isSubQuery?: boolean,
   key?: string,
 ) => {
-  if (q.relations[arg] as unknown as boolean) {
-    result[key || arg] = emptyObject as QueryColumn;
-    return;
-  }
-
   const index = arg.indexOf('.');
   if (index !== -1) {
     const table = arg.slice(0, index);

@@ -73,8 +73,8 @@ const mergableObjects: RecordBoolean = {
 export class MergeQueryMethods {
   merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
     const query = this.clone();
-    const a = query.q as RecordUnknown;
-    const b = q.q as RecordUnknown;
+    const a = query.q as never as RecordUnknown;
+    const b = q.q as never as RecordUnknown;
 
     for (const key in b) {
       const value = b[key];
@@ -98,7 +98,9 @@ export class MergeQueryMethods {
       }
     }
 
-    (a as SelectQueryData)[getValueKey] = (b as SelectQueryData)[getValueKey];
+    (a as never as SelectQueryData)[getValueKey] = (
+      b as never as SelectQueryData
+    )[getValueKey];
 
     if (b.returnType) a.returnType = b.returnType;
 

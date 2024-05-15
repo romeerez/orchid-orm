@@ -18,7 +18,7 @@ class UnknownColumn extends ColumnTypeBase {
 
 class RawSQL extends RawSQLBase {
   columnTypes!: EmptyObject;
-  _type = UnknownColumn as unknown as ColumnTypeBase;
+  result = { value: UnknownColumn as unknown as ColumnTypeBase };
 
   makeSQL(): string {
     return 'mock sql';

@@ -12,4 +12,4 @@ export class UnknownColumn<
   }
 }
 
-RawSQL.prototype._type = new UnknownColumn(defaultSchemaConfig);
+RawSQL.prototype.result = { value: new UnknownColumn(defaultSchemaConfig) };

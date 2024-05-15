@@ -16,7 +16,9 @@ import {
 } from '../query/query';
 import { AliasOrTable, SelectableOrExpression } from '../common/utils';
 import {
+  JoinedShapes,
   OrderTsQueryConfig,
+  QueryData,
   SelectItem,
   SelectQueryData,
   SortDir,
@@ -65,6 +67,7 @@ import {
   ColumnTypeBase,
   EmptyObject,
   Expression,
+  ExpressionData,
   PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaShape,
@@ -86,7 +89,7 @@ import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { noneMethods } from './none';
-import { simpleExistingColumnToSQL } from '../sql/common';
+import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import { ScopeMethods } from './scope';
 import { SoftDeleteMethods } from './softDelete';
 import { queryWrap } from './queryMethods.utils';
@@ -186,12 +189,38 @@ export type QueryHelperResult<
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
-  constructor(public _type: T, public name: string) {
+  result: { value: T };
+  q: ExpressionData;
+
+  constructor(value: T, public name: string) {
     super();
+    this.result = { value };
+    this.q = { expr: this };
+    Object.assign(this, value.operators);
   }
 
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    return simpleExistingColumnToSQL(ctx, this.name, this._type, quotedAs);
+    return simpleExistingColumnToSQL(
+      ctx,
+      this.name,
+      this.result.value,
+      quotedAs,
+    );
+  }
+}
+
+export class RefExpression<T extends QueryColumn> extends Expression<T> {
+  result: { value: T };
+
+  constructor(value: T, public q: QueryData, public ref: string) {
+    super();
+    this.result = { value };
+    q.expr = this;
+    Object.assign(this, value.operators);
+  }
+
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
+    return columnToSql(ctx, this.q, this.q.shape, this.ref, quotedAs);
   }
 }
 
@@ -932,21 +961,85 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * Use `column` method to interpolate column names inside SQL templates.
-   * The column will be prefixed with the correct table name taken from the context of the query.
+   * `column` references a table column, this can be used in raw SQL or when building a column expression.
+   * Only for referencing a column in the query's table. For referencing joined table's columns, see [ref](#ref).
    *
    * ```ts
-   * db.table.sql`${db.table.column('id')} = 1`;
+   * await db.table.select({
+   *   // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
+   *   // returns a boolean
+   *   one: (q) =>
+   *     q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
+   *
+   *   // selects the same as above, but by building a query
+   *   two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
+   * });
    * ```
    *
-   * @param name
+   * @param name - column name
    */
   column<T extends PickQueryShape, K extends keyof T['shape']>(
     this: T,
     name: K,
-  ): ColumnRefExpression<T['shape'][K]> {
+  ): ColumnRefExpression<T['shape'][K]> & T['shape'][K]['operators'] {
     const column = (this.shape as { [K: PropertyKey]: ColumnTypeBase })[name];
-    return new ColumnRefExpression(column as T['shape'][K], name as string);
+    return new ColumnRefExpression(
+      column as T['shape'][K],
+      name as string,
+    ) as never;
+  }
+
+  /**
+   * `ref` is similar to [column](#column), but it also allows to reference a column of joined table,
+   * and other dynamically defined columns.
+   *
+   * ```ts
+   * await db.table.join('otherTable').select({
+   *   // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
+   *   // returns a boolean
+   *   one: (q) =>
+   *     q.sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
+   *       'otherTable.name',
+   *     )} = ${'name'}`,
+   *
+   *   // selects the same as above, but by building a query
+   *   two: (q) =>
+   *     q
+   *       .ref('otherTable.id')
+   *       .equals(1)
+   *       .or(q.ref('otherTable.name').equals('name')),
+   * });
+   * ```
+   *
+   * @param arg - any available column name, such as of a joined table
+   */
+  ref<
+    T extends PickQueryMeta,
+    K extends keyof T['meta']['selectable'] & string,
+  >(
+    this: T,
+    arg: K,
+  ): RefExpression<T['meta']['selectable'][K]['column']> &
+    T['meta']['selectable'][K]['column']['operators'] {
+    const q = (this as unknown as Query).clone();
+
+    const { shape } = q.q;
+    let column: QueryColumn;
+
+    const index = arg.indexOf('.');
+    if (index !== -1) {
+      const table = arg.slice(0, index);
+      const col = arg.slice(index + 1);
+      if (table === (q.q.as || q.table)) {
+        column = shape[col];
+      } else {
+        column = (q.q.joinedShapes as JoinedShapes)[table][col];
+      }
+    } else {
+      column = shape[arg];
+    }
+
+    return new RefExpression(column, q.q, arg) as never;
   }
 }
 

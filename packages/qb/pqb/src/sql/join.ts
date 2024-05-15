@@ -331,7 +331,8 @@ export const getIsJoinSubQuery = (query: PickQueryQAndBaseQuery) => {
   for (const key in q) {
     if (
       !skipQueryKeysForSubQuery[key] &&
-      (q as RecordUnknown)[key] !== (baseQ as RecordUnknown)[key]
+      (q as never as RecordUnknown)[key] !==
+        (baseQ as never as RecordUnknown)[key]
     ) {
       return true;
     }

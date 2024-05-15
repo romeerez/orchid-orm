@@ -32,7 +32,7 @@ const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
   'from',
   'select',
   'distinct',
-  'fromOnly',
+  'only',
   'join',
   'group',
   'having',

@@ -22,7 +22,8 @@ export const pushQueryArray = <T extends { q: QueryData }>(
   key: string,
   value: unknown,
 ): T => {
-  if (!q.q[key as keyof typeof q.q]) (q.q as RecordUnknown)[key] = value;
+  if (!q.q[key as keyof typeof q.q])
+    (q.q as never as RecordUnknown)[key] = value;
   else
     (q.q[key as keyof typeof q.q] as unknown[]).push(...(value as unknown[]));
   return q as T;

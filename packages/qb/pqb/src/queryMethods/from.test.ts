@@ -1,5 +1,6 @@
 import {
   expectQueryNotMutated,
+  Profile,
   User,
   userData,
 } from '../test-utils/test-utils';
@@ -7,29 +8,19 @@ import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { raw } from '../sql/rawSql';
 
 describe('from', () => {
-  it('should accept query parameter', () => {
-    const q = User.all();
+  it('should accept a query', () => {
+    const q = User.from(User.select('name')).select('name');
+
     expectSql(
-      q.select('name').from(User.select('name')).toSQL(),
+      q.toSQL(),
       'SELECT "user"."name" FROM (SELECT "user"."name" FROM "user") AS "user"',
     );
-    expectQueryNotMutated(q);
   });
 
   it('should not insert sub query and alias if provided query is simple', () => {
-    const q = User.all();
-    expectSql(
-      User.select('name').from(User).toSQL(),
-      'SELECT "user"."name" FROM "user"',
-    );
-    expectQueryNotMutated(q);
-  });
+    const q = User.from(User).select('name');
 
-  it('should add ONLY keyword when `only` parameter is provided', () => {
-    expectSql(
-      User.select('id').from(User, { only: true }).toSQL(),
-      'SELECT "user"."id" FROM ONLY "user"',
-    );
+    expectSql(q.toSQL(), 'SELECT "user"."name" FROM "user"');
   });
 
   describe('inner query', () => {
@@ -75,6 +66,41 @@ describe('from', () => {
   });
 });
 
+describe('from multiple', () => {
+  it('should support multiple sources', () => {
+    const q = User.queryBuilder
+      .with('with1', (qb) =>
+        qb.select({ one: User.sql`1`.type((t) => t.integer()) }),
+      )
+      .with('with2', (qb) =>
+        qb.select({ two: User.sql`1`.type((t) => t.integer()) }),
+      )
+      .from(['with1', 'with2', User, Profile])
+      .select('with1.one', 'with2.two', 'user.active', 'profile.bio');
+
+    assertType<
+      Awaited<typeof q>,
+      {
+        one: number;
+        two: number;
+        active: boolean | null;
+        bio: string | null;
+      }[]
+    >();
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH
+          "with1" AS (SELECT 1 "one"),
+          "with2" AS (SELECT 1 "two")
+        SELECT "with1"."one", "with2"."two", "user"."active", "profile"."bio"
+        FROM "with1", "with2", "user", "profile"
+      `,
+    );
+  });
+});
+
 describe('fromSql', () => {
   it('should accept sql', () => {
     const q = User.all();
@@ -99,5 +125,13 @@ describe('fromSql', () => {
     );
 
     expectQueryNotMutated(q);
+  });
+});
+
+describe('only', () => {
+  it('should add `ONLY` keyword to `FROM`', () => {
+    const q = User.only();
+
+    expectSql(q.toSQL(), `SELECT * FROM ONLY "user"`);
   });
 });

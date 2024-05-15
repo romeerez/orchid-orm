@@ -23,6 +23,7 @@ import {
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
 import { addValue, columnToSql } from '../sql/common';
+import { Operators } from '../columns/operators';
 
 // `headline` first argument is a name of the search.
 type HeadlineSearchArg<T extends PickQueryMeta> = Exclude<
@@ -181,7 +182,7 @@ export type WhereSearchResult<T, As extends string> = T & {
 };
 
 class Headline extends Expression<QueryColumn<string>> {
-  _type = emptyObject as QueryColumn<string>;
+  result = emptyObject as { value: QueryColumn<string> };
 
   constructor(
     public q: QueryData,
@@ -189,6 +190,7 @@ class Headline extends Expression<QueryColumn<string>> {
     public params?: HeadlineParams<Query>,
   ) {
     super();
+    q.expr = this;
   }
 
   makeSQL(ctx: ToSQLCtx, quotedAs: string | undefined): string {
@@ -212,6 +214,8 @@ class Headline extends Expression<QueryColumn<string>> {
     return `ts_headline(${lang}, ${text}, "${source.as}"${options})`;
   }
 }
+
+Object.assign(Headline, Operators.text);
 
 AggregateMethods.prototype.headline = function (
   this: PickQueryMeta,

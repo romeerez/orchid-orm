@@ -1,6 +1,5 @@
 import {
   PickQueryMetaResultRelationsWindows,
-  PickQueryQ,
   Query,
   SetQueryReturnsColumnOrThrow,
 } from '../query/query';
@@ -17,13 +16,19 @@ import {
   toArray,
 } from 'orchid-core';
 import { SelectableOrExpression } from './utils';
-import { OrderItem, SelectQueryData, ToSQLCtx, WhereItem } from '../sql';
+import {
+  OrderItem,
+  QueryData,
+  SelectQueryData,
+  ToSQLCtx,
+  WhereItem,
+} from '../sql';
 import { addValue, columnToSql, rawOrColumnToSql } from '../sql/common';
 import { pushOrderBySql } from '../sql/orderBy';
 import { whereToSql } from '../sql/where';
 import { windowToSql } from '../sql/window';
 import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
-import { BaseOperators, setQueryOperators } from '../columns/operators';
+import { BaseOperators } from '../columns/operators';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
@@ -73,21 +78,38 @@ export class FnExpression<
   Q extends Query = Query,
   T extends QueryColumn = QueryColumn,
 > extends Expression<T> {
+  result: { value: T };
+  q: QueryData;
+
   /**
-   * @param q - query object.
+   * @param query - query object.
    * @param fn - SQL function name.
    * @param args - arguments of the function.
    * @param options - aggregate options.
-   * @param _type - column type of the function result.
+   * @param value - column type of the function result.
    */
   constructor(
-    public q: Q,
+    public query: Q,
     public fn: string,
     public args: FnExpressionArgs<Q>,
     public options: AggregateOptions<Q> = emptyObject,
-    public _type: T,
+    value: T,
   ) {
     super();
+    this.result = { value };
+    (this.q = query.q).expr = this;
+    Object.assign(query, value.operators);
+
+    // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
+    query.q.returnType = 'valueOrThrow';
+    (query.q as SelectQueryData).returnsOne = true;
+    (query.q as SelectQueryData)[getValueKey] = value;
+    query.q.select = [this];
+
+    const { parseFn } = value as never as ColumnTypeBase;
+    if (parseFn) {
+      setParserToQuery(query.q, getValueKey, parseFn);
+    }
   }
 
   // Builds function SQL.
@@ -105,7 +127,7 @@ export class FnExpression<
           if (typeof arg === 'string') {
             return arg === '*'
               ? '*'
-              : columnToSql(ctx, this.q.q, this.q.q.shape, arg, quotedAs, true);
+              : columnToSql(ctx, this.q, this.q.shape, arg, quotedAs, true);
           } else if (arg instanceof Expression) {
             return arg.toSQL(ctx, quotedAs);
           } else if ('pairs' in (arg as FnExpressionArgsPairs<Query>)) {
@@ -116,7 +138,7 @@ export class FnExpression<
                 // ::text is needed to bypass "could not determine data type of parameter" postgres error
                 `${addValue(values, key)}::text, ${rawOrColumnToSql(
                   ctx,
-                  this.q.q,
+                  this.q,
                   pairs[key as keyof typeof pairs] as never,
                   quotedAs,
                 )}`,
@@ -136,7 +158,7 @@ export class FnExpression<
     if (options.order) {
       pushOrderBySql(
         { ...ctx, sql },
-        this.q.q,
+        this.q,
         quotedAs,
         toArray(options.order) as OrderItem[],
       );
@@ -147,12 +169,12 @@ export class FnExpression<
     if (options.filter || options.filterOr) {
       const whereSql = whereToSql(
         ctx,
-        this.q,
+        this.query,
         {
           and: options.filter ? ([options.filter] as WhereItem[]) : undefined,
           or: options.filterOr?.map((item) => [item]) as WhereItem[][],
-          shape: this.q.q.shape,
-          joinedShapes: this.q.q.joinedShapes,
+          shape: this.q.shape,
+          joinedShapes: this.q.joinedShapes,
         },
         quotedAs,
       );
@@ -163,7 +185,7 @@ export class FnExpression<
 
     if (options.over) {
       sql.push(
-        ` OVER ${windowToSql(ctx, this.q.q, options.over as string, quotedAs)}`,
+        ` OVER ${windowToSql(ctx, this.q, options.over as string, quotedAs)}`,
       );
     }
 
@@ -181,29 +203,6 @@ export type ColumnExpression<
   ) => ColumnExpression<QueryColumnBooleanOrNull>;
 };
 
-// Applies Expression to the query.
-// The query returns a column of Expression type, and has column operators of this type.
-export const makeExpression = <T extends Query, C extends ColumnTypeBase>(
-  self: T,
-  expr: Expression,
-): SetQueryReturnsColumnOrThrow<T, C> & C['operators'] => {
-  const type = expr._type as ColumnTypeBase;
-  const q = setQueryOperators(self, type.operators) as unknown as PickQueryQ;
-
-  // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
-  q.q.returnType = 'valueOrThrow';
-  (q.q as SelectQueryData).returnsOne = true;
-  (q.q as SelectQueryData)[getValueKey] = type;
-  q.q.expr = expr;
-  q.q.select = [expr];
-
-  if (type.parseFn) {
-    setParserToQuery(q.q, getValueKey, type.parseFn);
-  }
-
-  return q as never;
-};
-
 // Applies a function expression to the query.
 export function makeFnExpression<
   T extends PickQueryMetaResultRelationsWindows,
@@ -215,14 +214,15 @@ export function makeFnExpression<
   args: FnExpressionArgs<Query>,
   options?: AggregateOptions<T>,
 ): SetQueryReturnsColumnOrThrow<T, C> & C['operators'] {
-  return makeExpression(
-    (self as unknown as Query).clone(),
-    new FnExpression<Query, QueryColumn>(
-      self as unknown as Query,
-      fn,
-      args,
-      options as AggregateOptions<Query> | undefined,
-      type,
-    ),
-  ) as never;
+  const q = (self as unknown as Query).clone();
+
+  new FnExpression<Query, QueryColumn>(
+    q,
+    fn,
+    args,
+    options as AggregateOptions<Query> | undefined,
+    type,
+  );
+
+  return q as never;
 }

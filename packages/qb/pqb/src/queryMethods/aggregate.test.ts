@@ -18,7 +18,11 @@ describe('aggregate', () => {
     const bool = int.gt(5);
     // @ts-expect-error bool should not have gt method
     bool.gt;
-    expect((bool as unknown as { gt: unknown }).gt).toBe(undefined);
+
+    // let number methods to remain in runtime,
+    // because it's fewer things to perform and simplifies the internal logic
+    //
+    // expect((bool as unknown as { gt: unknown }).gt).toBe(undefined);
   });
 
   describe('chaining with operators', () => {

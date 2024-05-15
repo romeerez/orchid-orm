@@ -18,7 +18,7 @@ export type QueryWithComputed<
   T extends PickQueryTableMetaShape,
   Computed extends ComputedColumnsBase<T>,
   Shape extends QueryColumns = {
-    [K in keyof Computed]: ReturnType<Computed[K]>['_type'];
+    [K in keyof Computed]: ReturnType<Computed[K]>['result']['value'];
   },
 > = {
   [K in keyof T]: K extends 'shape'
@@ -45,8 +45,8 @@ export function addComputedColumns<
   const { shape } = q as unknown as Query;
   for (const key in computed) {
     const expr = computed[key](q);
-    (shape as QueryColumns)[key] = expr._type;
-    (expr._type as ColumnTypeBase).data.computed = expr;
+    (shape as QueryColumns)[key] = expr.result.value as never;
+    (expr.result.value as ColumnTypeBase).data.computed = expr;
   }
 
   return q as never;

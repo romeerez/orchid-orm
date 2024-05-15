@@ -31,6 +31,7 @@ import {
   QueryReturnType,
   PickQueryTable,
   FnUnknownToUnknown,
+  ExpressionChain,
 } from 'orchid-core';
 import { BaseOperators } from '../columns/operators';
 import { RelationQuery } from '../relations';
@@ -62,14 +63,16 @@ export interface QueryScopes {
 }
 
 // Query data stored for a specific scope to be applied to the query.
-export type QueryScopeData = {
+export interface QueryScopeData {
   and?: WhereItem[];
   or?: WhereItem[][];
-};
+}
+
+export type QueryDataFromItem = string | Query | Expression;
 
 export interface QueryDataJoinTo extends PickQueryTable, PickQueryQ {}
 
-export type CommonQueryData = {
+export interface CommonQueryData {
   adapter: Adapter;
   shape: ColumnsShapeBase;
   patchResult?(q: Query, queryResult: QueryResult): Promise<void>;
@@ -95,7 +98,7 @@ export type CommonQueryData = {
   // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
   as?: string;
-  from?: string | Query | Expression;
+  from?: MaybeArray<QueryDataFromItem>;
   sources?: { [K: string]: QuerySourceItem };
   and?: WhereItem[];
   or?: WhereItem[][];
@@ -154,20 +157,18 @@ export type CommonQueryData = {
    * Is needed to remove these operators from query object when changing the query type, see {@link setQueryOperators}.
    */
   operators?: BaseOperators;
-  /**
-   * Used by {@link setQueryOperators} to store the original `baseQuery` before extending it with operators.
-   */
-  originalQuery?: Query;
   // Track the applied scopes, this is used when removing the scope from the query.
   scopes: { [K: string]: QueryScopeData };
   // to allow updating or deleting all records
   all?: true;
-};
 
-export type SelectQueryData = CommonQueryData & {
+  chain?: ExpressionChain;
+}
+
+export interface SelectQueryData extends CommonQueryData {
   type: undefined;
   distinct?: SelectableOrExpression[];
-  fromOnly?: boolean;
+  only?: boolean;
   join?: JoinItem[];
   group?: (string | Expression)[];
   having?: HavingItem[];
@@ -184,11 +185,11 @@ export type SelectQueryData = CommonQueryData & {
   };
   // column type for query with 'value' or 'valueOrThrow' return type
   [getValueKey]?: QueryColumn;
-};
+}
 
 export type CreateKind = 'object' | 'raw' | 'from';
 
-export type InsertQueryData = CommonQueryData & {
+export interface InsertQueryData extends CommonQueryData {
   type: 'insert';
   kind: CreateKind;
   columns: string[];
@@ -206,7 +207,7 @@ export type InsertQueryData = CommonQueryData & {
     set?: OnConflictSet;
     merge?: OnConflictMerge;
   };
-};
+}
 
 export interface UpdateQueryDataObject {
   [K: string]: Expression | { op: string; arg: unknown } | unknown;
@@ -221,31 +222,31 @@ export type UpdateQueryDataItem =
   | Expression
   | UpdatedAtDataInjector;
 
-export type UpdateQueryData = CommonQueryData & {
+export interface UpdateQueryData extends CommonQueryData {
   type: 'update';
   updateData: UpdateQueryDataItem[];
-};
+}
 
-export type DeleteQueryData = CommonQueryData & {
+export interface DeleteQueryData extends CommonQueryData {
   type: 'delete';
   join?: JoinItem[];
-};
+}
 
-export type TruncateQueryData = CommonQueryData & {
+export interface TruncateQueryData extends CommonQueryData {
   type: 'truncate';
   restartIdentity?: boolean;
   cascade?: boolean;
-};
+}
 
-export type ColumnInfoQueryData = CommonQueryData & {
+export interface ColumnInfoQueryData extends CommonQueryData {
   type: 'columnInfo';
   column?: string;
-};
+}
 
-export type CopyQueryData = CommonQueryData & {
+export interface CopyQueryData extends CommonQueryData {
   type: 'copy';
   copy: CopyOptions;
-};
+}
 
 export type CopyOptions<Column = string> = {
   columns?: Column[];

@@ -1,7 +1,9 @@
 import {
   ColumnSchemaConfig,
   DynamicSQLArg,
+  emptyObject,
   Expression,
+  ExpressionChain,
   ExpressionTypeMethod,
   isTemplateLiteralArgs,
   QueryColumn,
@@ -59,7 +61,10 @@ export class RawSQL<
     type?: T,
   ) {
     super(sql, values);
-    if (type) this._type = type;
+    if (type) {
+      this.result = { value: type };
+      Object.assign(this, type.operators);
+    }
   }
 
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
@@ -133,8 +138,9 @@ export class DynamicRawSQL<
   T extends QueryColumn,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
 > extends Expression<T> {
-  declare _type: T;
   declare columnTypes: ColumnTypes;
+  result: { value: T } = emptyObject as { value: T };
+  q: { chain?: ExpressionChain } = {};
 
   constructor(public fn: DynamicSQLArg) {
     super();

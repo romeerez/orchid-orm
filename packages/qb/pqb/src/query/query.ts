@@ -401,7 +401,7 @@ export type SetQueryReturnsPluck<
   S extends keyof T['meta']['selectable']
     ? T['meta']['selectable'][S]['column']
     : S extends Expression
-    ? S['_type']
+    ? S['result']['value']
     : never
 >;
 

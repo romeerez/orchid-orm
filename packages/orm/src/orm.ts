@@ -14,7 +14,6 @@ import {
   QueryData,
   QueryLogOptions,
   defaultSchemaConfig,
-  FromArgOptions,
   DbSharedOptions,
   _initQueryBuilder,
 } from 'pqb';
@@ -25,6 +24,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   ColumnsShapeBase,
   emptyObject,
+  MaybeArray,
   RecordUnknown,
   SQLQueryArgs,
   TransactionState,
@@ -93,9 +93,8 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
    */
   $queryArrays: Db['queryArrays'];
-  $from<Arg extends FromArg<Query>>(
+  $from<Arg extends MaybeArray<FromArg<Query>>>(
     arg: Arg,
-    options?: FromArgOptions,
   ): FromResult<Query, Arg>;
   $close(): Promise<void>;
 };
@@ -152,8 +151,9 @@ export const orchidORM = <T extends TableClasses>(
     $queryBuilder: qb,
     $query: (...args: SQLQueryArgs) => qb.query(...args),
     $queryArrays: (...args: SQLQueryArgs) => qb.queryArrays(...args),
-    $from: (arg: FromArg<Query>, options?: FromArgOptions) =>
-      qb.from(arg, options),
+    $from: <Arg extends MaybeArray<FromArg<Query>>>(
+      arg: Arg,
+    ): FromResult<Query, Arg> => qb.from(arg),
     $close: () => adapter.close(),
   } as unknown as OrchidORM;
 

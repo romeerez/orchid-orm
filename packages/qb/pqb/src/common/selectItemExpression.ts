@@ -1,5 +1,6 @@
 import { Expression, QueryColumn } from 'orchid-core';
 import {
+  QueryData,
   SelectAs,
   SelectItem,
   SelectQueryData,
@@ -16,12 +17,18 @@ import { columnToSql, columnToSqlWithAs } from '../sql/common';
 export class SelectItemExpression<
   T extends QueryColumn = QueryColumn,
 > extends Expression<T> {
+  result: { value: T };
+  q: QueryData;
+
   constructor(
-    public q: ToSQLQuery,
+    public query: ToSQLQuery,
     public item: Exclude<SelectItem, SelectAs>,
-    public _type: T,
+    value?: T,
   ) {
     super();
+    this.result = { value: value as T };
+    this.q = query.q;
+    if (value) Object.assign(this, value.operators);
   }
 
   // `makeSQL` acts similarly to how select args are handled,
@@ -30,10 +37,10 @@ export class SelectItemExpression<
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     return typeof this.item === 'string'
       ? this.item === '*'
-        ? selectAllSql(this.q, this.q.q as SelectQueryData, quotedAs)
+        ? selectAllSql(this.query, this.q as SelectQueryData, quotedAs)
         : ctx.aliasValue
-        ? columnToSql(ctx, this.q.q, this.q.q.shape, this.item, quotedAs, true)
-        : columnToSqlWithAs(ctx, this.q.q, this.item, quotedAs, true)
-      : selectedObjectToSQL(ctx, this.q, quotedAs, this.item);
+        ? columnToSql(ctx, this.q, this.q.shape, this.item, quotedAs, true)
+        : columnToSqlWithAs(ctx, this.q, this.item, quotedAs, true)
+      : selectedObjectToSQL(ctx, this.query, quotedAs, this.item);
   }
 }

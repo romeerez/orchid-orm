@@ -14,7 +14,6 @@ import {
   PickOutputTypeAndOperators,
   PickQueryResult,
 } from 'orchid-core';
-import { extendQuery } from '../query/queryUtils';
 import { BooleanQueryColumn } from '../queryMethods';
 
 // Operator function type.
@@ -25,16 +24,17 @@ export interface Operator<
   Value,
   Column extends PickOutputTypeAndOperators = PickOutputTypeAndOperators,
 > {
-  <T extends PickQueryResult>(this: T, arg: Value): Omit<
-    SetQueryReturnsColumnOrThrow<T, Column>,
-    keyof T['result']['value']['operators']
-  > &
-    Column['operators'];
+  <T extends PickQueryResult>(this: T, arg: Value):
+    | Omit<
+        SetQueryReturnsColumnOrThrow<T, Column>,
+        keyof T['result']['value']['operators']
+      > &
+        Column['operators'];
   // argument type of the function
   _opType: Value;
   // function to turn the operator expression into SQL
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   // unknown fails tests in rake-db when applying nullable
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _op: OperatorToSQL<any, ToSQLCtx>;
 }
 
@@ -45,23 +45,19 @@ export interface BaseOperators {
 
 // Extend query object with given operator methods, so that user can call `gt` after calling `count`.
 // If query already has the same operators, nothing is changed.
-// Previously defined operators, if any, are dropped form the query.
-// Adds new operators, saves `Query.baseQuery` into `QueryData.originalQuery`, saves operators to `QueryData.operators`.
+// Previously defined operators, if any, are **not** dropped from the query.
 export function setQueryOperators(
   query: PickQueryBaseQuery,
   operators: BaseOperators,
 ) {
   const q = (query as unknown as PickQueryQ).q;
-  if (q.operators) {
-    if (q.operators === operators) return query;
 
-    query.baseQuery = q.originalQuery as Query;
-  } else {
-    q.originalQuery = query.baseQuery;
+  if (q.operators !== operators) {
+    q.operators = operators;
+    Object.assign(query, operators);
   }
 
-  q.operators = operators;
-  return extendQuery(query as never, operators);
+  return query;
 }
 
 /**
@@ -77,8 +73,7 @@ const make = (
   return Object.assign(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (this: Query, value: any) {
-      const expr = this.q.expr as Expression;
-      (expr._chain ??= []).push(_op, value);
+      (this.q.chain ??= []).push(_op, value);
 
       // parser might be set by a previous type, but is not needed for boolean
       if (this.q.parsers?.[getValueKey]) {

@@ -1,7 +1,7 @@
 import { addValue, columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
 import { makeSQL, ToSQLCtx } from './toSQL';
-import { QueryData, SelectQueryData } from './data';
+import { QueryData, QueryDataFromItem, SelectQueryData } from './data';
 import { QueryBase } from '../query/queryBase';
 import { isExpression, isRawSQL, MaybeArray } from 'orchid-core';
 
@@ -12,7 +12,6 @@ export const pushFromAndAs = (
   quotedAs?: string,
 ) => {
   let sql = 'FROM ';
-  if (data.fromOnly) sql += 'ONLY ';
 
   const from = getFrom(ctx, table, data, quotedAs);
   sql += from;
@@ -60,34 +59,54 @@ export const pushFromAndAs = (
 const getFrom = (
   ctx: ToSQLCtx,
   table: QueryBase,
-  query: SelectQueryData,
+  data: SelectQueryData,
   quotedAs?: string,
 ) => {
-  if (query.from) {
-    const { from } = query;
-    if (typeof from === 'object') {
-      if (isExpression(from)) {
-        return from.toSQL(ctx, quotedAs);
-      }
-
-      if (!from.table) {
-        const sql = makeSQL(from, ctx);
-        return `(${sql.text})`;
-      }
-
-      // if query contains more than just schema return (SELECT ...)
-      if (!checkIfASimpleQuery(from)) {
-        const sql = makeSQL(from, ctx);
-        return `(${sql.text})`;
-      }
-
-      return quoteSchemaAndTable(from.q.schema, from.table);
+  if (data.from) {
+    const { from } = data;
+    if (Array.isArray(from)) {
+      return from
+        .map((item) => fromToSql(ctx, data, item, quotedAs))
+        .join(', ');
     }
 
-    return quoteSchemaAndTable(query.schema, from);
+    return fromToSql(ctx, data, from, quotedAs);
   }
 
-  return quoteSchemaAndTable(query.schema, table.table as string);
+  let sql = quoteSchemaAndTable(data.schema, table.table as string);
+  if (data.only) sql = `ONLY ${sql}`;
+  return sql;
+};
+
+const fromToSql = (
+  ctx: ToSQLCtx,
+  data: SelectQueryData,
+  from: QueryDataFromItem,
+  quotedAs?: string,
+) => {
+  let only: boolean | undefined;
+  let sql;
+  if (typeof from === 'object') {
+    if (isExpression(from)) {
+      sql = from.toSQL(ctx, quotedAs);
+    } else {
+      only = (from.q as SelectQueryData).only;
+
+      if (!from.table) {
+        sql = `(${makeSQL(from, ctx).text})`;
+      }
+      // if query contains more than just schema return (SELECT ...)
+      else if (!checkIfASimpleQuery(from)) {
+        sql = `(${makeSQL(from, ctx).text})`;
+      } else {
+        sql = quoteSchemaAndTable(from.q.schema, from.table);
+      }
+    }
+  } else {
+    sql = quoteSchemaAndTable(data.schema, from);
+  }
+
+  return (only === undefined ? data.only : only) ? `ONLY ${sql}` : sql;
 };
 
 export const getSearchLang = (

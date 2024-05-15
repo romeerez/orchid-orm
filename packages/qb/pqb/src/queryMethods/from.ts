@@ -7,7 +7,7 @@ import {
   PickQueryMetaTableShapeReturnTypeWithData,
   GetQueryResult,
 } from '../query/query';
-import { SelectQueryData } from '../sql';
+import { RecordOfColumnsShapeBase, SelectQueryData } from '../sql';
 import { AliasOrTable } from '../common/utils';
 import {
   QueryThen,
@@ -16,6 +16,7 @@ import {
   SQLQueryArgs,
   isExpression,
   Expression,
+  MaybeArray,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { QueryBase } from '../query/queryBase';
@@ -28,36 +29,34 @@ export type FromArg<T extends FromQuerySelf> =
   | Expression
   | Exclude<keyof T['withData'], symbol | number>;
 
-export interface FromArgOptions {
-  only?: boolean;
-}
+type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
+  x: infer I,
+) => void
+  ? I
+  : never;
 
 export type FromResult<
   T extends FromQuerySelf,
-  Arg extends FromArg<T>,
+  Arg extends MaybeArray<FromArg<T>>,
 > = Arg extends string
   ? T['withData'] extends WithDataItems
-    ? Arg extends keyof T['withData']
-      ? {
-          [K in keyof T]: K extends 'meta'
-            ? {
-                [K in keyof T['meta']]: K extends 'as'
-                  ? string | undefined
-                  : K extends 'selectable'
-                  ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
-                  : T['meta'][K];
-              }
-            : T[K];
-        }
-      : SetQueryTableAlias<T, Arg>
+    ? {
+        [K in keyof T]: K extends 'meta'
+          ? {
+              [K in keyof T['meta']]: K extends 'as'
+                ? string | undefined
+                : K extends 'selectable'
+                ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
+                : T['meta'][K];
+            }
+          : T[K];
+      }
     : SetQueryTableAlias<T, Arg>
   : Arg extends PickQueryTableMetaResult
   ? {
       [K in keyof T]: K extends 'meta'
         ? {
-            [K in keyof T['meta']]: K extends 'hasSelect'
-              ? undefined
-              : K extends 'as'
+            [K in keyof T['meta']]: K extends 'as'
               ? AliasOrTable<Arg>
               : K extends 'selectable'
               ? {
@@ -78,27 +77,73 @@ export type FromResult<
         ? QueryThen<GetQueryResult<T, Arg['result']>>
         : T[K];
     }
+  : Arg extends (infer A)[]
+  ? {
+      [K in keyof T]: K extends 'meta'
+        ? {
+            [K in keyof T['meta']]: K extends 'selectable'
+              ? UnionToIntersection<
+                  A extends string
+                    ? T['withData'] extends WithDataItems
+                      ? {
+                          [K in keyof T['withData'][A]['shape'] &
+                            string as `${A}.${K}`]: {
+                            as: K;
+                            column: T['withData'][A]['shape'][K];
+                          };
+                        }
+                      : never
+                    : A extends PickQueryTableMetaResult
+                    ? {
+                        [K in keyof A['result'] &
+                          string as `${AliasOrTable<A>}.${K}`]: K extends string
+                          ? {
+                              as: K;
+                              column: A['result'][K];
+                            }
+                          : never;
+                      }
+                    : never
+                >
+              : T['meta'][K];
+          }
+        : T[K];
+    }
   : T;
 
-export function queryFrom<T extends FromQuerySelf, Arg extends FromArg<T>>(
-  self: T,
-  arg: Arg,
-  options?: FromArgOptions,
-): FromResult<T, Arg> {
+export function queryFrom<
+  T extends FromQuerySelf,
+  Arg extends MaybeArray<FromArg<T>>,
+>(self: T, arg: Arg): FromResult<T, Arg> {
   const data = (self as unknown as PickQueryQ).q;
   if (typeof arg === 'string') {
     data.as ||= arg;
-  } else if (!isExpression(arg)) {
+  } else if (isExpression(arg)) {
+    data.as ||= 't';
+  } else if (Array.isArray(arg)) {
+    const { shape } = data;
+    const parsers = (data.parsers ??= {});
+    for (const item of arg) {
+      if (typeof item === 'string') {
+        const withShape = (data.withShapes as RecordOfColumnsShapeBase)[item];
+
+        Object.assign(shape, withShape);
+
+        for (const key in withShape) {
+          if (withShape[key].parseFn) {
+            parsers[key] = withShape[key].parseFn;
+          }
+        }
+      } else if (!isExpression(item)) {
+        Object.assign(shape, getShapeFromSelect(item as QueryBase, true));
+        Object.assign(parsers, item.q.parsers);
+      }
+    }
+  } else {
     const q = arg as Query;
     data.as ||= q.q.as || q.table || 't';
     data.shape = getShapeFromSelect(arg as QueryBase, true) as ColumnsShapeBase;
     data.parsers = q.q.parsers;
-  } else {
-    data.as ||= 't';
-  }
-
-  if (options?.only) {
-    (data as SelectQueryData).fromOnly = options.only;
   }
 
   data.from = arg as Query;
@@ -120,35 +165,41 @@ export class From {
   /**
    * Set the `FROM` value, by default the table name is used.
    *
+   * `from` determines a set of available tables and columns withing the query,
+   * and thus it must not follow `select`, use `select` only after `from`.
+   *
    * ```ts
    * // accepts sub-query:
-   * db.table.from(Otherdb.table.select('foo', 'bar'));
+   * db.table.from(db.otherTable.select('foo', 'bar'));
    *
    * // accepts alias of `WITH` expression:
-   * q.with('foo', Otherdb.table.select('id', 'name')).from('foo');
+   * q.with('withTable', db.table.select('id', 'name'))
+   *   .from('withTable')
+   *   // `select` is after `from`
+   *   .select('id', 'name');
    * ```
    *
-   * Optionally takes a second argument of type `{ only?: boolean }`, (see `FROM ONLY` in Postgres docs, this is related to table inheritance).
+   * `from` can accept multiple sources:
    *
    * ```ts
-   * db.table.from(Otherdb.table.select('foo', 'bar'), {
-   *   only: true,
-   * });
+   * db.table
+   *   // add a `WITH` statement called `withTable
+   *   .with('withTable', db.table.select('one'))
+   *   // select from `withTable` and from `otherTable`
+   *   .from('withTable', db.otherTable.select('two'))
+   *   // source names and column names are properly typed when selecting
+   *   .select('withTable.one', 'otherTable.two');
    * ```
    *
    * @param arg - query or name of CTE table
-   * @param options - { only: true } for SQL `ONLY` keyword
    */
-  from<T extends FromQuerySelf, Arg extends FromArg<T>>(
+  from<T extends FromQuerySelf, Arg extends MaybeArray<FromArg<T>>>(
     this: T,
-    arg: Arg,
-    options?: FromArgOptions,
+    arg: T['meta']['hasSelect'] extends true
+      ? '`select` must be places after `from`'
+      : Arg,
   ): FromResult<T, Arg> {
-    return queryFrom(
-      (this as unknown as Query).clone(),
-      arg as never,
-      options,
-    ) as never;
+    return queryFrom((this as unknown as Query).clone(), arg as never) as never;
   }
 
   /**
@@ -156,19 +207,36 @@ export class From {
    *
    * ```ts
    * const value = 123;
-   * db.table.from`value = ${value}`;
-   * db.table.from(db.table.sql`value = ${value}`);
+   * db.table.fromSql`value = ${value}`;
+   * db.table.fromSql(db.table.sql`value = ${value}`);
    * ```
    *
    * @param args - SQL expression
    */
-  fromSql<T extends FromQuerySelf, Arg extends FromArg<T>>(
-    this: T,
-    ...args: SQLQueryArgs
-  ): FromResult<T, Arg> {
+  fromSql<T extends FromQuerySelf>(this: T, ...args: SQLQueryArgs): T {
     return queryFromSql(
       (this as unknown as Query).clone(),
       args as never,
     ) as never;
+  }
+
+  /**
+   * Adds `ONLY` SQL keyword to the `FROM`.
+   * When selecting from a parent table that has a table inheritance,
+   * setting `only` will make it to select rows only from the parent table.
+   *
+   * ```ts
+   * db.table.only();
+   *
+   * // disabling `only` after being enabled
+   * db.table.only().only(false);
+   * ```
+   *
+   * @param only - can be disabled by passing `false` if was enabled previously.
+   */
+  only<T>(this: T, only = true): T {
+    const q = (this as unknown as Query).clone();
+    (q.q as SelectQueryData).only = only;
+    return q as T;
   }
 }
