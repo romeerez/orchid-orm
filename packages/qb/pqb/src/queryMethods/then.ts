@@ -42,8 +42,6 @@ type Resolve = (result: any) => any;
 type Reject = (error: any) => any;
 
 export class Then {
-  then!: (this: Query, resolve?: Resolve, reject?: Reject) => Promise<unknown>;
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   catch(this: Query, fn: (reason: any) => unknown) {
     return this.then(undefined, fn);
@@ -55,7 +53,9 @@ export class Then {
 let queryError: Error = undefined as unknown as Error;
 
 // `query.then` getter: it must be a getter to store the error with stacktrace prior to executing `await`.
-let getThen: (this: Query) => typeof Then.prototype.then;
+let getThen: (
+  this: Query,
+) => (this: Query, resolve?: Resolve, reject?: Reject) => Promise<unknown>;
 
 // workaround for the bun issue: https://github.com/romeerez/orchid-orm/issues/198
 if (process.versions.bun) {

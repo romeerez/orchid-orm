@@ -238,11 +238,8 @@ export const queryTypeWithLimitOne = {
 export const isQueryReturnsAll = (q: Query) =>
   !q.q.returnType || q.q.returnType === 'all';
 
-export type QueryReturnsAll<T extends QueryReturnType> = (
-  QueryReturnType extends T ? 'all' : T
-) extends 'all'
-  ? true
-  : false;
+export type QueryReturnsAll<T extends QueryReturnType> =
+  QueryReturnType extends T ? true : T extends 'all' ? true : false;
 
 export type GetQueryResult<
   T extends PickQueryReturnType,
@@ -263,9 +260,7 @@ export type GetQueryResult<
   ? Result['pluck']['outputType'][]
   : T['returnType'] extends 'rowCount'
   ? number
-  : T['returnType'] extends 'void'
-  ? void
-  : never;
+  : void;
 
 export type AddQuerySelect<
   T extends PickQueryMetaResultReturnType,

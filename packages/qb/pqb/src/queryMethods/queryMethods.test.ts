@@ -1048,4 +1048,14 @@ describe('queryMethods', () => {
       );
     });
   });
+
+  describe('narrowType', () => {
+    it('should narrow a result type', () => {
+      const q = User.select('id').where({ id: 123 }).narrowType()<{
+        id: 123;
+      }>();
+
+      assertType<Awaited<typeof q>, { id: 123 }[]>();
+    });
+  });
 });

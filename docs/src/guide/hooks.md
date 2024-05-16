@@ -31,6 +31,12 @@ class SomeTable extends BaseTable {
     this.beforeUpdate((q) => console.log('before update'));
     this.beforeSave((q) => console.log('before create or update'));
     this.beforeDelete((q) => console.log('before delete'));
+
+    // the `orm` argument is to be used for making queries in the query callbacks
+    this.beforeUpdate(async () => {
+      const data = await orm.someTable.where(...).select(...)
+      // ...performing logic with the data
+    })
   }
 }
 ```

@@ -835,6 +835,34 @@ await db.table.join('otherTable').select({
 });
 ```
 
+## narrowType
+
+[//]: # 'has JSDoc'
+
+Narrows a part of the query output type.
+Use with caution, type-safety isn't guaranteed with it.
+This is similar so using `as` keyword from TypeScript, except that it applies only to a part of the result.
+
+The syntax `()<{ ... }>()` is enforced by internal limitations.
+
+```ts
+const rows = db.table
+  // filter out records where the `nullableColumn` is null
+  .where({ nullableColumn: { not: null } });
+  // narrows only a specified column, the rest of result is unchanged
+  .narrowType()<{ nullableColumn: string }>()
+
+// the column had type `string | null`, now it is `string`
+rows[0].nullableColumn
+
+// imagine that table has a enum column kind with variants 'first' | 'second'
+// and a boolean `approved`
+db.table
+  .where({ kind: 'first', approved: true })
+  // after applying such `where`, it's safe to narrow the type to receive the literal values
+  .narrowType()<{ kind: 'first', approved: true }>();
+```
+
 ## log
 
 Override the `log` option, which can also be set in `createDb` or when creating a table instance:
