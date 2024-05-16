@@ -348,4 +348,29 @@ describe('relations', () => {
       ['text'],
     );
   });
+
+  it('should select related records count and use it in `where`', () => {
+    const q = db.user
+      .select({
+        postsCount: (q) => q.posts.count(),
+      })
+      .where({ postsCount: { gt: 10 } })
+      .order({ postsCount: 'DESC' });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "postsCount".r "postsCount"
+        FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT count(*) r
+          FROM "post" AS "posts"
+          WHERE "posts"."userId" = "user"."id" AND "posts"."title" = "user"."userKey"
+        ) "postsCount" ON true
+        WHERE "postsCount".r > $1
+        ORDER BY "postsCount".r DESC
+      `,
+      [10],
+    );
+  });
 });

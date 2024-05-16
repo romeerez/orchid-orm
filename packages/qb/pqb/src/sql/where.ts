@@ -29,6 +29,7 @@ import {
   QueryData,
 } from './data';
 import {
+  ColumnTypeBase,
   Expression,
   isExpression,
   MaybeArray,
@@ -288,7 +289,7 @@ const processWhere = (
           )} = ${value.toSQL(ctx, quotedAs)}`,
         );
       } else {
-        let column = query.shape[key];
+        let column: ColumnTypeBase | undefined = query.shape[key];
         let quotedColumn: string | undefined;
         if (column) {
           quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
@@ -307,7 +308,8 @@ const processWhere = (
 
             quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
           } else {
-            quotedColumn = undefined;
+            column = query.joinedShapes?.[key]?.value;
+            quotedColumn = `"${key}".r`;
           }
 
           if (!column || !quotedColumn) {

@@ -415,15 +415,14 @@ export class Join {
    *   profile: (q) => q.profile,
    * });
    *
-   * // select posts with counts of comments, order by comments count
+   * // select posts with counts of comments, filter and order by comments count
    * // result type is Array<Post & { commentsCount: number }>
    * await db.post
    *   .select('*', {
    *     commentsCount: (q) => q.comments.count(),
    *   })
-   *   .order({
-   *     commentsCount: 'DESC',
-   *   });
+   *   .where({ commentsCount: { gt: 10 } })
+   *   .order({ commentsCount: 'DESC' });
    *
    * // select authors with array of their book titles
    * // result type is Array<Author & { books: string[] }>

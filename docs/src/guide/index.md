@@ -29,7 +29,6 @@ await db.post.update(post, { title: 'new title' });
 
 This approach allows to select relations in a nested way, perform customized sub-queries, and keep everything type-safe:
 
-<!-- prettier-ignore-start -->
 ```ts
 // post type is completely inferred
 const post = await db.post
@@ -43,9 +42,11 @@ const post = await db.post
         .select('body', {
           author: (q) => q.author.select('avatar', 'username'),
         }),
-  });
+  })
+  // can filter and order by the selected count of likes
+  .where({ likesCount: { gt: 100 } })
+  .order({ likesCount: 'DESC' });
 ```
-<!-- prettier-ignore-end -->
 
 The query builder functionality is aimed to be as flexible as possible, allowing to chain queries with relations and conditions.
 

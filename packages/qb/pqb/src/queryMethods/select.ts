@@ -209,14 +209,24 @@ type SelectResultColumnsAndObj<
 
 // Add new 'selectable' types based on the select object argument.
 type SelectAsSelectable<Arg> = {
-  [K in keyof Arg]: Arg[keyof Arg] extends (q: never) => {
+  [K in keyof Arg]: Arg[K] extends (q: never) => {
+    returnType: 'value' | 'valueOrThrow';
     result: QueryColumns;
   }
     ? {
-        [C in keyof ReturnType<Arg[keyof Arg]>['result'] & string as `${K &
+        [P in K]: {
+          as: K;
+          column: ReturnType<Arg[K]>['result']['value'];
+        };
+      }
+    : Arg[K] extends (q: never) => {
+        result: QueryColumns;
+      }
+    ? {
+        [C in keyof ReturnType<Arg[K]>['result'] & string as `${K &
           string}.${C}`]: {
           as: C;
-          column: ReturnType<Arg[keyof Arg]>['result'][C];
+          column: ReturnType<Arg[K]>['result'][C];
         };
       }
     : never;
@@ -505,6 +515,8 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
             }
           }
         }
+      } else if (isExpression(item)) {
+        result.value = item.result.value;
       }
     }
   }

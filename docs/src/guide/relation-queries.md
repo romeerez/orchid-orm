@@ -187,7 +187,8 @@ const result: Result = await db.post.select('id', {
 });
 ```
 
-For `hasMany` and `hasAndBelongsToMany` the select can handle aggregation queries such as `count`, `min`, `max`, `sum`, and `avg`:
+For `hasMany` and `hasAndBelongsToMany` the select can handle aggregation queries such as `count`, `min`, `max`, `sum`, and `avg`.
+You can use the aggregated selected values in `where` and in `order`.
 
 ```ts
 type Result = {
@@ -201,6 +202,8 @@ const result: Result = await db.post
     tagsCount: (q) => q.tags.count(),
     tagsCommaSeparated: (q) => q.tags.stringAgg('name', ', '),
   })
+  .where({ tagsCount: { gt: 5 } })
+  .order({ tagsCount: 'DESC' })
   .take();
 ```
 
