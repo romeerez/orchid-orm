@@ -1,5 +1,24 @@
 # orchid-orm
 
+## 1.27.2
+
+### Patch Changes
+
+- 8ef6411: Support using selected aggregated value of relation in `where`
+
+  ```ts
+  await db.post
+    .select({ commentsCount: (q) => q.comments.count() })
+    // using `commentsCount` in the `where` wasn't supported previously:
+    .where({ commentsCount: { gt: 5 } })
+    .order({ commentsCount: 'DESC' });
+  ```
+
+- Updated dependencies [8ef6411]
+- Updated dependencies [6ee467f]
+  - pqb@0.30.2
+  - rake-db@2.20.3
+
 ## 1.27.1
 
 ### Patch Changes

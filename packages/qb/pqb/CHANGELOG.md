@@ -1,5 +1,21 @@
 # pqb
 
+## 0.30.2
+
+### Patch Changes
+
+- 8ef6411: Support using selected aggregated value of relation in `where`
+
+  ```ts
+  await db.post
+    .select({ commentsCount: (q) => q.comments.count() })
+    // using `commentsCount` in the `where` wasn't supported previously:
+    .where({ commentsCount: { gt: 5 } })
+    .order({ commentsCount: 'DESC' });
+  ```
+
+- 6ee467f: Add `narrowType` query helper
+
 ## 0.30.1
 
 ### Patch Changes
