@@ -1,6 +1,6 @@
 import { ColumnTypeBase, QueryColumn } from './columns/columnType';
 import { OperatorToSQL } from './columns';
-import { RecordUnknown } from './utils';
+import { addValue, EmptyObject, RecordUnknown } from './utils';
 
 // The chain array is used to store a sequence of operators and their arguments, one be one.
 // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
@@ -80,13 +80,23 @@ export type RawSQLValues = RecordUnknown;
 // `type` method to be used in both static and dynamic variants of SQL expressions.
 export abstract class ExpressionTypeMethod {
   // Define the resulting column type for the raw SQL.
-  type<Self extends RawSQLBase, C extends QueryColumn>(
-    this: Self,
-    fn: (types: Self['columnTypes']) => C,
+  type<
+    T extends {
+      q: { expr?: Expression };
+      columnTypes: unknown;
+    },
+    C extends QueryColumn,
+  >(
+    this: T,
+    fn: (types: T['columnTypes']) => C,
   ): // Omit is optimal
-  Omit<Self, 'result'> & { result: { value: C } } {
-    this.result.value = fn(this.columnTypes) as unknown as ColumnTypeBase;
-    Object.assign(this, this.result.value.operators);
+  Omit<T, 'result'> & { result: { value: C } } {
+    const column = fn(this.columnTypes) as unknown as ColumnTypeBase;
+    (this.q.expr as Expression).result.value = column;
+    Object.assign(
+      'baseQuery' in this ? (this.baseQuery as EmptyObject) : this,
+      column.operators,
+    );
     return this as never;
   }
 }
@@ -105,7 +115,7 @@ export abstract class RawSQLBase<
 > extends Expression<T> {
   // Column type instance, it is assigned directly to the prototype of RawSQL class.
   declare result: { value: T };
-  q: ExpressionData = {};
+  q: ExpressionData;
 
   // Column types are stored to be passed to the `type` callback.
   abstract columnTypes: ColumnTypes;
@@ -118,6 +128,7 @@ export abstract class RawSQLBase<
     public _values?: RawSQLValues,
   ) {
     super();
+    this.q = { expr: this };
   }
 
   // Attach query variables to the raw SQL.
@@ -159,3 +170,17 @@ RawSQLBase.prototype.type = ExpressionTypeMethod.prototype.type;
 // Check if something is a raw SQL.
 export const isRawSQL = (arg: unknown): arg is RawSQLBase =>
   arg instanceof RawSQLBase;
+
+export class ValExpression extends Expression {
+  declare result: { value: QueryColumn };
+  q: ExpressionData;
+
+  constructor(public value: unknown) {
+    super();
+    this.q = { expr: this };
+  }
+
+  makeSQL(ctx: { values: unknown[] }): string {
+    return addValue(ctx.values, this.value);
+  }
+}

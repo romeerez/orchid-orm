@@ -21,7 +21,8 @@ db.table.where({
   },
 
   // where column equals to raw SQL
-  column: db.table.sql`sql expression`,
+  // import `sql` from your `BaseTable`
+  column: sql`sql expression`,
 });
 ```
 
@@ -70,12 +71,7 @@ db.table.where({ id: 1 }, otherQuery);
 `where` supports raw SQL:
 
 ```ts
-db.table.where(db.table.sql`a = b`);
-
-// or
-import { raw } from 'orchid-orm';
-
-db.table.where(raw`a = b`);
+db.table.where(sql`a = b`);
 ```
 
 `where` can accept a callback with a specific query builder containing all "where" methods such as `where`, `orWhere`, `whereNot`, `whereIn`, `whereExists`:
@@ -93,11 +89,7 @@ db.table.where((q) =>
 `where` can accept multiple arguments, conditions are joined with `AND`:
 
 ```ts
-db.table.where(
-  { id: 1 },
-  db.table.where({ name: 'John' }),
-  db.table.sql`a = b`,
-);
+db.table.where({ id: 1 }, db.table.where({ name: 'John' }), sql`a = b`);
 ```
 
 ## where sub query
@@ -215,8 +207,6 @@ Different types of columns support different sets of operators.
 All column operators can take a value of the same type as the column, a sub-query, or a raw SQL expression:
 
 ```ts
-import { sql } from 'orchid-orm';
-
 db.table.where({
   numericColumn: {
     // lower than 5
@@ -267,7 +257,7 @@ db.table.where({
     // WHERE "column" IN (SELECT "column" FROM "otherTable")
     in: OtherTable.select('column'),
 
-    in: db.table.sql`('a', 'b')`,
+    in: sql`('a', 'b')`,
   },
 });
 ```
@@ -314,7 +304,7 @@ db.table.where({
     between: [1, 10],
 
     // sub-query and raw SQL expression
-    between: [OtherTable.select('column').take(), db.table.sql`2 + 2`],
+    between: [OtherTable.select('column').take(), sql`2 + 2`],
   },
 });
 ```
@@ -399,15 +389,7 @@ db.table.where({
 Use a custom SQL expression in `WHERE` statement:
 
 ```ts
-db.table.where`a = b`;
-
-// or
-db.table.where(db.table.sql`a = b`);
-
-// or
-import { raw } from 'orchid-orm';
-
-db.table.where(raw`a = b`);
+db.table.whereSql`a = b`;
 ```
 
 ## orWhere
@@ -454,10 +436,10 @@ db.table.whereNot({ one: 1, two: 2 });
 
 [//]: # 'has JSDoc'
 
-`whereNot` version accepting SQL expression:
+`whereNotSql` is a version of `whereNot` accepting SQL expression:
 
 ```ts
-db.table.whereNot`sql expression`;
+db.table.whereNotSql`sql expression`;
 ```
 
 ## orWhereNot
@@ -501,7 +483,7 @@ db.table.whereIn(['id', 'name'], OtherTable.select('id', 'name'));
 It supports raw SQL expression:
 
 ```ts
-db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
+db.table.whereIn(['id', 'name'], sql`((1, 'one'), (2, 'two'))`);
 ```
 
 ## orWhereIn

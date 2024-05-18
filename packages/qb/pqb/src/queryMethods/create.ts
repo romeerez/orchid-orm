@@ -788,7 +788,7 @@ export class Create {
    *
    * await db.table.create({
    *   // raw SQL
-   *   column1: db.table.sql`'John' | 'Doe'`,
+   *   column1: sql`'John' || ' ' || 'Doe'`,
    *
    *   // query that returns a single value
    *   // returning multiple values will result in Postgres error
@@ -867,7 +867,7 @@ export class Create {
    * ```ts
    * const oneRecord = await db.table.createRaw({
    *   columns: ['name', 'amount'],
-   *   values: db.table.sql`'name', random()`,
+   *   values: sql`'name', random()`,
    * });
    * ```
    *
@@ -904,7 +904,7 @@ export class Create {
    * ```ts
    * const manyRecords = await db.table.createManyRaw({
    *   columns: ['name', 'amount'],
-   *   values: [db.table.sql`'one', 2`, db.table.sql`'three', 4`],
+   *   values: [sql`'one', 2`, sql`'three', 4`],
    * });
    * ```
    *
@@ -1094,11 +1094,11 @@ export class Create {
    * // raw SQL expression:
    * db.table
    *   .create(data)
-   *   .onConfict(db.table.sql`(email) where condition`)
+   *   .onConfict(sql`(email) where condition`)
    *   .merge();
    * ```
    *
-   * You can use the db.table.sql function in onConflict.
+   * You can use the `sql` function exported from your `BaseTable` file in onConflict.
    * It can be useful to specify a condition when you have a partial index:
    *
    * ```ts
@@ -1109,7 +1109,7 @@ export class Create {
    *     active: true,
    *   })
    *   // ignore only when having conflicting email and when active is true.
-   *   .onConflict(db.table.sql`(email) where active`)
+   *   .onConflict(sql`(email) where active`)
    *   .ignore();
    * ```
    *
@@ -1220,7 +1220,7 @@ export class OnConflictQueryBuilder<
    * db.table
    *   .create(data)
    *   .onConflict()
-   *   .set(db.table.sql`raw SQL expression`);
+   *   .set(sql`raw SQL expression`);
    *
    * // update records only on certain conditions
    * db.table

@@ -379,3 +379,8 @@ export const omit = <T, Keys extends keyof T>(
   }
   return res;
 };
+
+export const addValue = (values: unknown[], value: unknown) => {
+  values.push(value);
+  return `$${values.length}`;
+};

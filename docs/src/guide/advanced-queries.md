@@ -34,7 +34,7 @@ db.table.with(
     id: columnTypes.integer(),
     name: columnTypes.text(3, 100),
   },
-  db.table.sql`SELECT id, name FROM "someTable"`,
+  sql`SELECT id, name FROM "someTable"`,
 );
 
 // accepts query:
@@ -42,7 +42,7 @@ db.table.with('alias', db.table.all());
 
 // accepts a callback for a query builder:
 db.table.with('alias', (qb) =>
-  qb.select({ one: db.table.sql`1`.type((t) => t.integer()) }),
+  qb.select({ one: sql`1`.type((t) => t.integer()) }),
 );
 
 // All mentioned forms can accept options as a second argument:
@@ -95,10 +95,7 @@ If the `wrap` parameter is true, the queries will be individually wrapped in par
 
 ```ts
 SomeTable.select('id', 'name').union(
-  [
-    OtherTable.select('id', 'name'),
-    SomeTable.sql`SELECT id, name FROM "thirdTable"`,
-  ],
+  [OtherTable.select('id', 'name'), sql`SELECT id, name FROM "thirdTable"`],
   true, // optional wrap parameter
 );
 ```

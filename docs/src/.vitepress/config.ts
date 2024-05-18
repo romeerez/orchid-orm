@@ -64,6 +64,10 @@ export default {
             link: '/guide/transactions',
           },
           {
+            text: 'SQL expressions',
+            link: '/guide/sql-expressions',
+          },
+          {
             text: 'Aggregate functions',
             link: '/guide/aggregate',
           },

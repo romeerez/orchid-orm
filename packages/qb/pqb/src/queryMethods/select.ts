@@ -614,14 +614,19 @@ export class Select {
    *   subQueryResult: Otherdb.table.select('column').take(),
    * });
    *
-   * // select raw SQL value, the first argument of `raw` is a column type, it is used for return type of the query
+   * // select raw SQL value, specify the returning type via <generic> syntax:
    * db.table.select({
-   *   raw: db.table.sql((t) => t.integer())`1 + 2`,
+   *   raw: sql<number>`1 + 2`,
+   * });
+   *
+   * // select raw SQL value, the resulting type can be set by providing a column type in such way:
+   * db.table.select({
+   *   raw: sql`1 + 2`.type((t) => t.integer()),
    * });
    *
    * // same raw SQL query as above, but raw value is returned from a callback
    * db.table.select({
-   *   raw: (q) => q.sql((t) => t.integer())`1 + 2`,
+   *   raw: (q) => q.sql`1 + 2`.type((t) => t.integer()),
    * });
    * ```
    *

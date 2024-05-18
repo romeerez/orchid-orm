@@ -2,6 +2,7 @@ import { Query, SelectableOrExpressionOfType } from '../query/query';
 import { ColumnExpression } from '../common/fn';
 import { AggregateMethods } from './aggregate';
 import {
+  addValue,
   emptyObject,
   Expression,
   MaybeArray,
@@ -22,7 +23,7 @@ import {
 } from '../query/queryUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
-import { addValue, columnToSql } from '../sql/common';
+import { columnToSql } from '../sql/common';
 import { Operators } from '../columns/operators';
 
 // `headline` first argument is a name of the search.

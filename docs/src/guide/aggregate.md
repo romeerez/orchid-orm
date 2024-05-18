@@ -77,36 +77,6 @@ const { theSameBool } = await db.table.select({
 });
 ```
 
-## fn
-
-`fn` allows to call an arbitrary SQL function.
-
-For example, calling `sqrt` function to get a square root from some numeric column:
-
-```ts
-const q = await User.select({
-  sqrt: (q) => q.fn<number>('sqrt', ['numericColumn']),
-}).take();
-
-q.sqrt; // has type `number` just as provided
-```
-
-If this is an aggregate function, you can specify aggregation options via third parameter.
-
-Forth parameter is for runtime column type. When specified, allows to chain the function with the column operators:
-
-```ts
-const q = await User.select({
-  // chain `sqrt("numericColumn")` with the "greater than 5"
-  sqrtIsGreaterThan5: (q) =>
-    q.fn('sqrt', ['numericColumn'], {}, (t) => t.float()).gt(5),
-}).take();
-
-// Return type is boolean | null
-// todo: it should be just boolean if the column is not nullable, but for now it's always nullable
-q.sqrtIsGreaterThan5;
-```
-
 ## count
 
 [//]: # 'has JSDoc'
@@ -334,7 +304,7 @@ const object = await db.table.jsonObjectAgg(
     // select a column with alias
     nameAlias: 'name',
     // select raw SQL with alias
-    foo: db.table.sql<string>`"bar" || "baz"`,
+    foo: sql<string>`"bar" || "baz"`,
   },
   aggregateOptions,
 );
@@ -344,7 +314,7 @@ db.table.select('id', {
   object: (q) =>
     q.jsonObjectAgg({
       nameAlias: 'name',
-      foo: db.table.sql<string>`"bar" || "baz"`,
+      foo: sql<string>`"bar" || "baz"`,
     }),
 });
 ```

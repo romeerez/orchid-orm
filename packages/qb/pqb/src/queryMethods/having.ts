@@ -74,7 +74,7 @@ export class Having {
    * Provide SQL expression for the `HAVING` SQL statement:
    *
    * ```ts
-   * db.table.having`count(*) >= ${10}`;
+   * db.table.havingSql`count(*) >= ${10}`;
    * ```
    *
    * @param args - SQL expression

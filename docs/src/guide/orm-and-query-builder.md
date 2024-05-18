@@ -82,7 +82,11 @@ Define a base table class to extend from, this code should be separated from the
 import { createBaseTable } from 'orchid-orm';
 
 export const BaseTable = createBaseTable();
+
+export const { sql } = BaseTable;
 ```
+
+`sql` is exported here because this way it can be linked with custom columns defined in the `BaseTable`.
 
 Optionally, you can customize column types behavior here for all future tables:
 
@@ -109,6 +113,8 @@ export const BaseTable = createBaseTable({
     myEnum: () => t.enum('myEnum', ['one', 'two', 'three']),
   }),
 });
+
+export const { sql } = BaseTable;
 ```
 
 See [override column types](/guide/columns-overview.html#override-column-types) for details of customizing columns.
@@ -954,14 +960,14 @@ await db.$transaction(async () => {
 });
 ```
 
-Alternatively, provide a raw SQL object created with [raw](/guide/query-methods.html#raw-sql) function:
+Alternatively, provide a raw SQL object created with the `sql` function:
 
 ```ts
-import { raw } from 'orchid-orm';
+import { sql } from './baseTable';
 
 // it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
 const result = await db.$query<{ one: number }>(
-  raw({
+  sql({
     raw: 'SELECT $value AS one',
     values: {
       value: 123,

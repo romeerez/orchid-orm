@@ -19,6 +19,7 @@ import {
   RelationQueryBase,
   ShapeColumnPrimaryKeys,
   ShapeUniqueColumns,
+  SqlMethod,
   TableData,
   TableDataFn,
   TableDataItem,
@@ -403,7 +404,7 @@ export interface BaseTableInstance<ColumnTypes> {
 export interface BaseTableClass<
   SchemaConfig extends ColumnSchemaConfig,
   ColumnTypes,
-> {
+> extends SqlMethod<ColumnTypes> {
   nowSQL: string | undefined;
   exportAs: string;
   columnTypes: ColumnTypes;
@@ -473,6 +474,7 @@ export function createBaseTable<
     static nowSQL = nowSQL;
     static exportAs = exportAs;
     static columnTypes = columnTypes;
+    static sql = SqlMethod.prototype.sql;
 
     private static _inputSchema: unknown;
     static inputSchema() {

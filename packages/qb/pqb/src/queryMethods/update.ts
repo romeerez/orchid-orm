@@ -365,7 +365,7 @@ export class Update {
    *   column1: 123,
    *
    *   // use raw SQL to update the column
-   *   column2: db.table.sql`2 + 2`,
+   *   column2: sql`2 + 2`,
    *
    *   // use query that returns a single value
    *   // returning multiple values will result in Postgres error
@@ -494,7 +494,7 @@ export class Update {
    * const updatedCount = await db.table.find(1).updateRaw`name = ${value}`;
    *
    * // or update with `sql` function:
-   * await db.table.find(1).updateRaw(db.table.sql`name = ${value}`);
+   * await db.table.find(1).updateRaw(sql`name = ${value}`);
    * ```
    * @param args - raw SQL via a template string or by using a `sql` method
    */

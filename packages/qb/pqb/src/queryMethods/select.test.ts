@@ -14,14 +14,12 @@ import {
 } from '../test-utils/test-utils';
 import { DateColumn, IntegerColumn, JSONTextColumn } from '../columns';
 import { getShapeFromSelect } from './select';
-import { UnknownColumn } from '../columns/unknown';
 import {
   assertType,
   expectSql,
   testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
-import { raw } from '../sql/rawSql';
 import { z } from 'zod';
 
 const insertUserAndProfile = async () => {
@@ -673,7 +671,7 @@ describe('select', () => {
     it('should support conditional query or raw expression', async () => {
       const condition = true;
       const q = User.select({
-        key: () => (condition ? User.exists() : raw<boolean>`false`),
+        key: (q) => (condition ? User.exists() : q.sql<boolean>`false`),
       });
 
       assertType<Awaited<typeof q>, { key: boolean }[]>();
@@ -773,13 +771,9 @@ describe('select', () => {
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.select({ one: raw`1` });
+      const query = q.select({ one: q.sql`1` });
 
       assertType<Awaited<typeof query>, { one: unknown }[]>();
-
-      expect(getShapeFromSelect(query)).toEqual({
-        one: expect.any(UnknownColumn),
-      });
 
       expectSql(
         query.toSQL(),
@@ -933,7 +927,7 @@ describe('select', () => {
 
     it('should parse raw column', async () => {
       const q = User.select({
-        date: raw`"createdAt"`.type(() =>
+        date: User.sql`"createdAt"`.type(() =>
           t.date().parse(z.date(), (input) => new Date(input)),
         ),
       });

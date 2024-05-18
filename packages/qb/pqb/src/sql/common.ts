@@ -180,8 +180,3 @@ export const quoteSchemaAndTable = (
 ) => {
   return schema ? `"${schema}"."${table}"` : `"${table}"`;
 };
-
-export const addValue = (values: unknown[], value: unknown) => {
-  values.push(value);
-  return `$${values.length}`;
-};

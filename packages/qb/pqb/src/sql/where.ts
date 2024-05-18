@@ -9,7 +9,6 @@ import {
   WhereSearchItem,
 } from './types';
 import {
-  addValue,
   columnToSql,
   simpleColumnToSQL,
   simpleExistingColumnToSQL,
@@ -29,6 +28,7 @@ import {
   QueryData,
 } from './data';
 import {
+  addValue,
   ColumnTypeBase,
   Expression,
   isExpression,

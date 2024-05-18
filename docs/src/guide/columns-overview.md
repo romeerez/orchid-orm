@@ -39,7 +39,7 @@ but the query type stays the same and cannot be changed.
 
 All column types support the following operators in `where` conditions:
 
-value can be of the same type as the column, a sub-query, or a raw SQL (using `sql` or `raw` function):
+value can be of the same type as the column, a sub-query, or a raw SQL (using `sql` function):
 
 ```ts
 db.someTable.where({

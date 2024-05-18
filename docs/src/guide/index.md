@@ -74,9 +74,11 @@ Inserted values are properly handled to not allow SQL injections.
 <!-- prettier-ignore-start -->
 
 ```ts
+import { sql } from './baseTable';
+
 const posts = await db.customer
   .select({
-    upper: Post.sql<string>`upper(title)`,
+    upper: sql<string>`upper(title)`,
   })
   .whereSql`reverse(title) = ${reversedTitle}`
   .orderSql`reverse(title)`

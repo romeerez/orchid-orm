@@ -315,7 +315,8 @@ export class Where {
    *   },
    *
    *   // where column equals to raw SQL
-   *   column: db.table.sql`sql expression`,
+   *   // import `sql` from your `BaseTable`
+   *   column: sql`sql expression`,
    * });
    * ```
    *
@@ -364,12 +365,7 @@ export class Where {
    * `where` supports raw SQL:
    *
    * ```ts
-   * db.table.where(db.table.sql`a = b`);
-   *
-   * // or
-   * import { raw } from 'orchid-orm';
-   *
-   * db.table.where(raw`a = b`);
+   * db.table.where(sql`a = b`);
    * ```
    *
    * `where` can accept a callback with a specific query builder containing all "where" methods such as `where`, `orWhere`, `whereNot`, `whereIn`, `whereExists`:
@@ -390,7 +386,7 @@ export class Where {
    * db.table.where(
    *   { id: 1 },
    *   db.table.where({ name: 'John' }),
-   *   db.table.sql`a = b`,
+   *   sql`a = b`,
    * );
    * ```
    *
@@ -503,8 +499,6 @@ export class Where {
    * All column operators can take a value of the same type as the column, a sub-query, or a raw SQL expression:
    *
    * ```ts
-   * import { sql } from 'orchid-orm';
-   *
    * db.table.where({
    *   numericColumn: {
    *     // lower than 5
@@ -553,7 +547,7 @@ export class Where {
    *     // WHERE "column" IN (SELECT "column" FROM "otherTable")
    *     in: OtherTable.select('column'),
    *
-   *     in: db.table.sql`('a', 'b')`,
+   *     in: sql`('a', 'b')`,
    *   },
    * });
    * ```
@@ -600,7 +594,7 @@ export class Where {
    *     between: [1, 10],
    *
    *     // sub-query and raw SQL expression
-   *     between: [OtherTable.select('column').take(), db.table.sql`2 + 2`],
+   *     between: [OtherTable.select('column').take(), sql`2 + 2`],
    *   },
    * });
    * ```
@@ -696,15 +690,7 @@ export class Where {
    * Use a custom SQL expression in `WHERE` statement:
    *
    * ```ts
-   * db.table.where`a = b`;
-   *
-   * // or
-   * db.table.where(db.table.sql`a = b`);
-   *
-   * // or
-   * import { raw } from 'orchid-orm';
-   *
-   * db.table.where(raw`a = b`);
+   * db.table.whereSql`a = b`;
    * ```
    *
    * @param args - SQL expression
@@ -742,10 +728,10 @@ export class Where {
   }
 
   /**
-   * `whereNot` version accepting SQL expression:
+   * `whereNotSql` is a version of `whereNot` accepting SQL expression:
    *
    * ```ts
-   * db.table.whereNot`sql expression`
+   * db.table.whereNotSql`sql expression`
    * ```
    *
    * @param args - SQL expression
@@ -831,7 +817,7 @@ export class Where {
    * It supports raw SQL expression:
    *
    * ```ts
-   * db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
+   * db.table.whereIn(['id', 'name'], sql`((1, 'one'), (2, 'two'))`);
    * ```
    */
   whereIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(

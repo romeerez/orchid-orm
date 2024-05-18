@@ -6,7 +6,13 @@ import {
   Updatable,
 } from './baseTable';
 import { orchidORM } from './orm';
-import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
+import {
+  ColumnType,
+  makeColumnTypes,
+  Operators,
+  SqlMethod,
+  TextColumn,
+} from 'pqb';
 import {
   BaseTable,
   db,
@@ -43,6 +49,10 @@ describe('baseTable', () => {
 
   it('should have `exportAs`', () => {
     expect(BaseTable.exportAs).toBe('BaseTable');
+  });
+
+  it('should have `sql`', () => {
+    expect(BaseTable.sql).toBe(SqlMethod.prototype.sql);
   });
 
   it('should allow to customize a name', () => {

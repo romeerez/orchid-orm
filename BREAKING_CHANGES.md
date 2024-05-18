@@ -1,5 +1,20 @@
 # Breaking changes
 
+## orchid-orm 1.27.2
+
+`fn` query builder used to accept a column type as a parameter, now the column type is set by using the `type` method instead:
+
+```ts
+db.table.select({
+  // BEFORE
+  value: (q) => (q) =>
+    q.fn<number>('sqrt', ['numericColumn'], {}, (t) => t.integer()),
+  // AFTER
+  value: (q) => (q) =>
+    q.fn<number>('sqrt', ['numericColumn']).type((t) => t.integer()),
+});
+```
+
 ## orchid-orm 1.27.0
 
 In snake case mode, `timestamps()`'s helper columns had hardcoded names `updated_at` and `created_at`.

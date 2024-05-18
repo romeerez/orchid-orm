@@ -597,26 +597,6 @@ change(async (db) => {
 });
 ```
 
-## addConstraint, dropConstraint
-
-[//]: # 'has JSDoc'
-
-Add or drop a constraint with check and a foreign key references.
-
-See foreign key details in [foreign key](/guide/migration-column-methods.html#composite-foreign-key).
-
-```ts
-import { change } from '../dbScript';
-
-change(async (db) => {
-  await db.addConstraint('tableName', {
-    name: 'constraintName',
-    check: db.sql`column > 123`,
-    references: [['id', 'name'], 'otherTable', ['otherId', 'otherName']],
-  });
-});
-```
-
 ## renameConstraint
 
 [//]: # 'has JSDoc'
@@ -854,7 +834,7 @@ import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createDomain('domainName', (t) =>
-    t.integer().check(db.sql`value = 42`),
+    t.integer().check(t.sql`value = 42`),
   );
 
   // use `schemaName.domainName` format to specify a schema
@@ -864,7 +844,7 @@ change(async (db) => {
       .nullable()
       .collate('C')
       .default('default text')
-      .check(db.sql`length(value) > 10`),
+      .check(t.sql`length(value) > 10`),
   );
 });
 ```
@@ -956,7 +936,7 @@ change(async (db) => {
 
 Create and drop database views.
 
-Provide SQL as a string or via `db.sql` that can accept variables.
+Provide SQL as a string or via `t.sql` that can accept variables.
 
 ```ts
 import { change } from '../dbScript';
@@ -971,11 +951,11 @@ change(async (db) => {
   `,
   );
 
-  // view can accept db.sql with variables in such way:
+  // view can accept t.sql with variables in such way:
   const value = 'some value';
   await db.createView(
     'viewWithVariables',
-    db.sql`
+    t.sql`
       SELECT * FROM a WHERE key = ${value}
     `,
   );

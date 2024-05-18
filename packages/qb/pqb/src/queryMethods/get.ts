@@ -10,16 +10,20 @@ import {
 
 export class QueryGet {
   /**
-   * `.get` returns a single value, it will add `LIMIT 1` to the query, and accepts a column name or a raw expression.
-   * It will throw `NotFoundError` when not found.
+   * `.get` returns a single value, adds `LIMIT 1` to the query, and accepts a column name or a raw SQL expression.
+   *
+   * `get` throws a `NotFoundError` when not found, and `getOptional` returns `undefined`.
    *
    * ```ts
    * import { NumberColumn } from 'orchid-orm';
+   * import { sql } from './baseTable';
    *
    * const firstName: string = await db.table.get('name');
    *
-   * const rawResult: number = await db.table.get(
-   *   db.table.sql((t) => t.integer())`1 + 1`,
+   * const rawResult: number = await db.table.get(sql((t) => t.integer())`1 + 1`);
+   *
+   * const firstNameOptional: string | undefined = await db.table.getOptional(
+   *   'name',
    * );
    * ```
    *

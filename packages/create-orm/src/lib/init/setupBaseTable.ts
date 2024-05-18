@@ -48,6 +48,8 @@ export const BaseTable = createBaseTable({
   content += `
   }),
 });
+
+export const { sql } = BaseTable;
 `;
 
   await fs.writeFile(filePath, content);

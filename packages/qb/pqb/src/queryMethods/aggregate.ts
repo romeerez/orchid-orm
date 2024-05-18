@@ -1,6 +1,5 @@
 import {
   PickQueryMetaResultRelationsWindows,
-  PickQueryMetaResultRelationsWindowsColumnTypes,
   PickQueryQ,
   Query,
   SelectableOrExpressionOfType,
@@ -138,60 +137,6 @@ type NullableStringReturn<T> = SetQueryReturnsColumnOrThrow<T, StringNullable> &
 
 // Query methods to get a single value for an aggregate function
 export class AggregateMethods {
-  /**
-   * `fn` allows to call an arbitrary SQL function.
-   *
-   * For example, calling `sqrt` function to get a square root from some numeric column:
-   *
-   * ```ts
-   * const q = await User.select({
-   *   // todo: use type callback instead of generic type
-   *   sqrt: (q) => q.fn<number>('sqrt', ['numericColumn']),
-   * }).take();
-   *
-   * q.sqrt; // has type `number` just as provided
-   * ```
-   *
-   * If this is an aggregate function, you can specify aggregation options via third parameter.
-   *
-   * Forth parameter is for runtime column type. When specified, allows to chain the function with the column operators:
-   *
-   * ```ts
-   * const q = await User.select({
-   *   // chain `sqrt("numericColumn")` with the "greater than 5"
-   *   sqrtIsGreaterThan5: (q) => q.fn('sqrt', ['numericColumn'], {}, (t) => t.float()).gt(5),
-   * }).take();
-   *
-   * // Return type is boolean | null
-   * // todo: it should be just boolean if the column is not nullable, but for now it's always nullable
-   * q.sqrtIsGreaterThan5
-   * ```
-   *
-   * @param fn
-   * @param args
-   * @param options
-   * @param type
-   */
-  fn<
-    T extends PickQueryMetaResultRelationsWindowsColumnTypes,
-    Type = unknown,
-    C extends QueryColumn = QueryColumn<Type>,
-  >(
-    this: T,
-    fn: string,
-    args: SelectableOrExpression<T>[],
-    options?: AggregateOptions<T>,
-    type?: (t: T['columnTypes']) => C,
-  ): SetQueryReturnsColumnOrThrow<T, C> & C['operators'] {
-    return makeFnExpression(
-      this,
-      (type?.(this.columnTypes) || emptyObject) as C,
-      fn,
-      args,
-      options,
-    );
-  }
-
   /**
    * Use `exists()` to check if there is at least one record-matching condition.
    *
@@ -605,7 +550,7 @@ export class AggregateMethods {
    *     // select a column with alias
    *     nameAlias: 'name',
    *     // select raw SQL with alias
-   *     foo: db.table.sql<string>`"bar" || "baz"`,
+   *     foo: sql<string>`"bar" || "baz"`,
    *   },
    *   aggregateOptions,
    * );
@@ -615,7 +560,7 @@ export class AggregateMethods {
    *   object: (q) =>
    *     q.jsonObjectAgg({
    *       nameAlias: 'name',
-   *       foo: db.table.sql<string>`"bar" || "baz"`,
+   *       foo: sql<string>`"bar" || "baz"`,
    *     }),
    * });
    * ```

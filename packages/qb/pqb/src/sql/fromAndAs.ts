@@ -1,9 +1,9 @@
-import { addValue, columnToSql, quoteSchemaAndTable } from './common';
+import { columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { QueryData, QueryDataFromItem, SelectQueryData } from './data';
 import { QueryBase } from '../query/queryBase';
-import { isExpression, isRawSQL, MaybeArray } from 'orchid-core';
+import { addValue, isExpression, isRawSQL, MaybeArray } from 'orchid-core';
 
 export const pushFromAndAs = (
   ctx: ToSQLCtx,

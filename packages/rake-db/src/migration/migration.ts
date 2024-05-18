@@ -1077,7 +1077,7 @@ export class Migration<CT> {
    *
    * change(async (db) => {
    *   await db.createDomain('domainName', (t) =>
-   *     t.integer().check(db.sql`value = 42`),
+   *     t.integer().check(t.sql`value = 42`),
    *   );
    *
    *   // use `schemaName.domainName` format to specify a schema
@@ -1087,7 +1087,7 @@ export class Migration<CT> {
    *       .nullable()
    *       .collate('C')
    *       .default('default text')
-   *       .check(db.sql`length(value) > 10`),
+   *       .check(t.sql`length(value) > 10`),
    *   );
    * });
    * ```
@@ -1217,7 +1217,7 @@ export class Migration<CT> {
   /**
    * Create and drop database views.
    *
-   * Provide SQL as a string or via `db.sql` that can accept variables.
+   * Provide SQL as a string or via `t.sql` that can accept variables.
    *
    * ```ts
    * import { change } from '../dbScript';
@@ -1232,11 +1232,11 @@ export class Migration<CT> {
    *   `,
    *   );
    *
-   *   // view can accept db.sql with variables in such way:
+   *   // view can accept t.sql with variables in such way:
    *   const value = 'some value';
    *   await db.createView(
    *     'viewWithVariables',
-   *     db.sql`
+   *     t.sql`
    *       SELECT * FROM a WHERE key = ${value}
    *     `,
    *   );

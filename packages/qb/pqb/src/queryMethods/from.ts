@@ -208,7 +208,6 @@ export class From {
    * ```ts
    * const value = 123;
    * db.table.fromSql`value = ${value}`;
-   * db.table.fromSql(db.table.sql`value = ${value}`);
    * ```
    *
    * @param args - SQL expression

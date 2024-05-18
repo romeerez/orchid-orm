@@ -1,11 +1,11 @@
-import { User } from '../test-utils/test-utils';
+import { assertType, expectSql, testAdapter, testDb } from 'test-utils';
 import { BooleanColumn, ColumnType } from '../columns';
-import { expectSql, testAdapter, testDb } from 'test-utils';
 import { createDb } from '../query/db';
 import { ColumnTypeBase, emptyObject, Expression } from 'orchid-core';
 import { ToSQLCtx } from '../sql';
+import { User } from '../test-utils/test-utils';
 
-describe('raw sql', () => {
+describe('sql', () => {
   it('should use column types in callback from a db instance', () => {
     const type = {} as unknown as ColumnType;
     const db = createDb({
@@ -59,7 +59,10 @@ describe('raw sql', () => {
   });
 
   it('should handle raw sql and values in single parameter', () => {
-    const sql = User.sql({ raw: 'column = $value', values: { value: 'foo' } });
+    const sql = User.sql({
+      raw: 'column = $value',
+      values: { value: 'foo' },
+    });
 
     expect(sql).toMatchObject({
       _sql: 'column = $value',
@@ -223,6 +226,23 @@ describe('raw sql', () => {
     );
 
     expect(() => q.toSQL()).toThrow('Query variable `b` is unused');
+  });
+
+  it('should handle column and ref expressions', () => {
+    const q = User.select({
+      value: (q) =>
+        q.sql<string>`${q.column('name')} || ' ' || ${q.ref('user.password')}`,
+    });
+
+    assertType<Awaited<typeof q>, { value: string }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+          SELECT "user"."name" || ' ' || "user"."password" "value"
+          FROM "user"
+        `,
+    );
   });
 
   describe('dynamic raw sql', () => {

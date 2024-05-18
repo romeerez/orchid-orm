@@ -245,6 +245,9 @@ export const BaseTable = createBaseTable({
   snakeCase: true,
   // ...snip
 });
+
+// to use later for custom raw SQL expressions
+export const { sql } = BaseTable;
 ```
 
 If you chose to create demo tables, there are migrations files in `src/db/migrations`. Run migrations:

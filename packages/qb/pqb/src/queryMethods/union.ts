@@ -24,7 +24,7 @@ export class Union {
    * SomeTable.select('id', 'name').union(
    *   [
    *     OtherTable.select('id', 'name'),
-   *     SomeTable.sql`SELECT id, name FROM "thirdTable"`,
+   *     sql`SELECT id, name FROM "thirdTable"`,
    *   ],
    *   true, // optional wrap parameter
    * );

@@ -41,42 +41,6 @@ describe('aggregate', () => {
     });
   });
 
-  describe('agg', () => {
-    it('should select aggregating function', () => {
-      const q = User.select({
-        count: (q) => q.fn('count', ['*'], {}, (t) => t.integer()).gt(5),
-      }).take();
-
-      assertType<Awaited<typeof q>, { count: boolean }>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT count(*) > $1 "count" FROM "user" LIMIT 1
-        `,
-        [5],
-      );
-    });
-
-    it('should accept raw SQL', () => {
-      const q = User.select({
-        count: (q) =>
-          q
-            .fn('count', [q.sql`coalesce(one, two)`], {}, (t) => t.integer())
-            .gt(q.sql`2 + 2`),
-      }).take();
-
-      assertType<Awaited<typeof q>, { count: boolean }>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT count(coalesce(one, two)) > 2 + 2 "count" FROM "user" LIMIT 1
-        `,
-      );
-    });
-  });
-
   describe('aggregate options', () => {
     it('should work without options', async () => {
       expectSql(User.count('*').toSQL(), 'SELECT count(*) FROM "user"');

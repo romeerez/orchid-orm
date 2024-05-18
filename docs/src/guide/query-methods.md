@@ -147,12 +147,11 @@ await db.user.find`
 
 ```ts
 import { NumberColumn } from 'orchid-orm';
+import { sql } from './baseTable';
 
 const firstName: string = await db.table.get('name');
 
-const rawResult: number = await db.table.get(
-  db.table.sql((t) => t.integer())`1 + 1`,
-);
+const rawResult: number = await db.table.get(sql((t) => t.integer())`1 + 1`);
 
 const firstNameOptional: string | undefined = await db.table.getOptional(
   'name',
@@ -233,155 +232,6 @@ await db.table.all().update(data).none(); // -> 0
 await db.table.all().delete().none(); // -> 0
 ```
 
-## raw sql
-
-[//]: # 'has JSDoc'
-
-When there is a need to use a piece of raw SQL, use the `sql` method from tables, or a `raw` function imported from `orchid-orm`.
-
-When selecting a raw SQL, specify a resulting type with `<generic>` syntax:
-
-```ts
-const result: { num: number }[] = await db.table.select({
-  num: db.table.sql<number>`
-    random() * 100
-  `,
-});
-```
-
-In a situation when you want the result to be parsed, such as when returning a timestamp that you want to be parsed into a `Date` object, provide a column type in such a way:
-
-This example assumes that the `timestamp` column was overridden with `asDate` as shown in [Override column types](/guide/columns-overview#override-column-types).
-
-```ts
-const result: { timestamp: Date }[] = await db.table.select({
-  timestamp: db.table.sql`now()`.type((t) => t.timestamp()),
-});
-```
-
-Instead of `sql` method, you can use `raw` function from `orchid-orm` (or `pqb`) to do the same.
-The only difference, `raw` function don't have access to the overridden column types.
-
-```ts
-import { raw } from 'orchid-orm';
-
-const result: { timestamp: Date }[] = await db.table.select({
-  // if you have overridden timestamp with `asDate` or `asNumber` it won't be parsed properly:
-  timestamp: raw`now()`.type((t) => t.timestamp()),
-});
-```
-
-In some cases such as when using [from](/guide/orm-and-query-builder.html#from), setting column type via callback allows for special `where` operations:
-
-```ts
-const subQuery = db.someTable.select({
-  sum: (q) => q.sql`$a + $b`.type((t) => t.decimal()).values({ a: 1, b: 2 }),
-});
-
-// `gt`, `gte`, `min`, `lt`, `lte`, `max` in `where`
-// are allowed only for numeric columns:
-const result = await db.$from(subQuery).where({ sum: { gte: 5 } });
-```
-
-`where` and other methods don't need the return type, so it can be omitted.
-You can pass SQL template directly to the `where`:
-
-```ts
-await db.table.where`"someValue" = random() * 100`;
-```
-
-Interpolating values in template literals is completely safe:
-
-```ts
-// get value from user-provided params
-const { value } = req.params;
-
-// SQL injection is prevented by a library, this is safe:
-await db.table.where`column = ${value}`;
-```
-
-In the example above, TS cannot check if the table has `column` column, or if there are joined tables that have such column which will lead to error.
-Instead, use the `column` method to reference a column:
-
-```ts
-import { raw } from 'orchid-orm';
-
-// ids will be prefixed with proper table names, no ambiguity:
-db.table.join(db.otherTable, 'id', 'otherId').where`
-  ${db.table.column('id')} = 1 AND
-  ${db.otherTable.column('id')} = 2
-`;
-```
-
-SQL can be passed with a simple string, it's important to note that this is not safe to interpolate values in it.
-
-```ts
-import { raw } from 'orchid-orm';
-
-// no interpolation is okay
-await db.table.where(raw({ raw: 'column = random() * 100' }));
-
-// get value from user-provided params
-const { value } = req.params;
-
-// this is NOT safe, SQL injection is possible:
-await db.table.where(raw({ raw: `column = random() * ${value}` }));
-```
-
-To inject values into `raw` SQL strings, denote it with `$` in the string and provide `values` object.
-
-Use `$$` to provide column or/and table name (`column` method is more preferable). Column names will be quoted so don't quote them manually.
-
-```ts
-// get value from user-provided params
-const { value } = req.params;
-
-// this is SAFE, SQL injection are prevented:
-await db.table.where(
-  db.table.sql<boolean>({
-    raw: '$$column = random() * $value',
-    values: {
-      column: 'someTable.someColumn', // or simply 'column'
-      one: value,
-      two: 123,
-    },
-  }),
-);
-```
-
-Summarizing:
-
-```ts
-// simplest form:
-db.table.sql`key = ${value}`;
-
-// with resulting type:
-db.table.sql<boolean>`key = ${value}`;
-
-// with column type for select:
-db.table.sql`key = ${value}`.type((t) => t.boolean());
-
-// with column name via `column` method:
-db.table.sql`${db.table.column('column')} = ${value}`;
-
-// raw SQL string, not allowed to interpolate values:
-db.table.sql({ raw: 'random()' });
-
-// with resulting type and `raw` string:
-db.table.sql<number>({ raw: 'random()' });
-
-// with column name and a value in a `raw` string:
-db.table.sql({
-  raw: `$$column = $value`,
-  values: { column: 'columnName', value: 123 },
-});
-
-// combine template literal, column type, and values:
-db.table.sql`($one + $two) / $one`
-  .type((t) => t.numeric())
-  .values({ one: 1, two: 2 });
-```
-
 ## select
 
 [//]: # 'has JSDoc'
@@ -410,12 +260,12 @@ db.table.select({
 
 // select raw SQL value, specify the returning type via <generic> syntax:
 db.table.select({
-  raw: db.table.sql<number>`1 + 2`,
+  raw: sql<number>`1 + 2`,
 });
 
 // select raw SQL value, the resulting type can be set by providing a column type in such way:
 db.table.select({
-  raw: db.table.sql`1 + 2`.type((t) => t.integer()),
+  raw: sql`1 + 2`.type((t) => t.integer()),
 });
 
 // same raw SQL query as above, but raw value is returned from a callback
@@ -478,8 +328,10 @@ db.table.distinct().select('name');
 Can accept column names or raw SQL expressions to place it to `DISTINCT ON (...)`:
 
 ```ts
+import { sql } from './baseTable';
+
 // Distinct on the name and raw SQL
-db.table.distinct('name', db.table.sql`raw sql`).select('id', 'name');
+db.table.distinct('name', sql`raw sql`).select('id', 'name');
 ```
 
 ## as
@@ -536,7 +388,6 @@ Set the `FROM` value with custom SQL:
 ```ts
 const value = 123;
 db.table.fromSql`value = ${value}`;
-db.table.fromSql(db.table.sql`value = ${value}`);
 ```
 
 ## only
@@ -618,9 +469,11 @@ const results = db.product
 Also, it's possible to group by a selected value:
 
 ```ts
+import { sql } from './baseTable';
+
 const results = db.product
   .select({
-    month: db.product.sql`extract(month from "createdAt")`.type((t) =>
+    month: sql`extract(month from "createdAt")`.type((t) =>
       // month is returned as string, parse it to int
       t.string().parse(parseInt),
     ),
@@ -674,8 +527,6 @@ Order by raw SQL expression.
 
 ```ts
 db.table.orderSql`raw sql`;
-// or
-db.table.orderSql(db.table.sql`raw sql`);
 ```
 
 ## having
@@ -736,7 +587,7 @@ db.table.having((q) => q.count(q.sql('coalesce(one, two)')).gte(q.sql`2 + 2`));
 Provide SQL expression for the `HAVING` SQL statement:
 
 ```ts
-db.table.having`count(*) >= ${10}`;
+db.table.havingSql`count(*) >= ${10}`;
 ```
 
 ## transform
@@ -789,50 +640,6 @@ const postsWithComments: Result = await db.post
         .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id })),
   })
   .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id }));
-```
-
-## column
-
-[//]: # 'has JSDoc'
-
-`column` references a table column, this can be used in raw SQL or when building a column expression.
-Only for referencing a column in the query's table. For referencing joined table's columns, see [ref](#ref).
-
-```ts
-await db.table.select({
-  // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
-  // returns a boolean
-  one: (q) =>
-    q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
-
-  // selects the same as above, but by building a query
-  two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
-});
-```
-
-## ref
-
-[//]: # 'has JSDoc'
-
-`ref` is similar to [column](#column), but it also allows to reference a column of joined table,
-and other dynamically defined columns.
-
-```ts
-await db.table.join('otherTable').select({
-  // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
-  // returns a boolean
-  one: (q) =>
-    q.sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
-      'otherTable.name',
-    )} = ${'name'}`,
-
-  // selects the same as above, but by building a query
-  two: (q) =>
-    q
-      .ref('otherTable.id')
-      .equals(1)
-      .or(q.ref('otherTable.name').equals('name')),
-});
 ```
 
 ## narrowType

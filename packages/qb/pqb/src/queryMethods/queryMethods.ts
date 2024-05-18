@@ -17,14 +17,11 @@ import {
 } from '../query/query';
 import { AliasOrTable, SelectableOrExpression } from '../common/utils';
 import {
-  JoinedShapes,
   OrderTsQueryConfig,
-  QueryData,
   SelectItem,
   SelectQueryData,
   SortDir,
   toSQL,
-  ToSQLCtx,
   ToSQLOptions,
   ToSQLQuery,
   TruncateQueryData,
@@ -62,22 +59,18 @@ import { QueryHooks } from './hooks';
 import { QueryUpsertOrCreate } from './upsertOrCreate';
 import { QueryGet } from './get';
 import { MergeQuery, MergeQueryMethods } from './merge';
-import { RawSqlMethods } from './rawSql';
+import { SqlMethod } from './sql';
 import {
   applyMixins,
-  ColumnTypeBase,
   EmptyObject,
   Expression,
-  ExpressionData,
   PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaResultReturnType,
   PickQueryMetaShape,
   PickQueryResult,
   PickQueryResultUniqueColumns,
-  PickQueryShape,
   PickQueryTableMetaResult,
-  QueryColumn,
   QueryColumns,
   QueryMetaBase,
   QueryReturnType,
@@ -92,10 +85,10 @@ import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { noneMethods } from './none';
-import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import { ScopeMethods } from './scope';
 import { SoftDeleteMethods } from './softDelete';
 import { queryWrap } from './queryMethods.utils';
+import { ExpressionMethods } from './expressions';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -203,43 +196,6 @@ type NarrowTypeResult<T extends PickQueryMetaResultReturnType, Narrow> = {
     : T['result'][K];
 };
 
-// Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
-export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
-  result: { value: T };
-  q: ExpressionData;
-
-  constructor(value: T, public name: string) {
-    super();
-    this.result = { value };
-    this.q = { expr: this };
-    Object.assign(this, value.operators);
-  }
-
-  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    return simpleExistingColumnToSQL(
-      ctx,
-      this.name,
-      this.result.value,
-      quotedAs,
-    );
-  }
-}
-
-export class RefExpression<T extends QueryColumn> extends Expression<T> {
-  result: { value: T };
-
-  constructor(value: T, public q: QueryData, public ref: string) {
-    super();
-    this.result = { value };
-    q.expr = this;
-    Object.assign(this, value.operators);
-  }
-
-  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    return columnToSql(ctx, this.q, this.q.shape, this.ref, quotedAs);
-  }
-}
-
 export interface QueryMethods<ColumnTypes>
   extends AsMethods,
     AggregateMethods,
@@ -264,10 +220,11 @@ export interface QueryMethods<ColumnTypes>
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,
-    RawSqlMethods<ColumnTypes>,
+    SqlMethod<ColumnTypes>,
     TransformMethods,
     ScopeMethods,
-    SoftDeleteMethods {}
+    SoftDeleteMethods,
+    ExpressionMethods {}
 
 export type WrapQueryArg = FromQuerySelf;
 
@@ -444,11 +401,13 @@ export class QueryMethods<ColumnTypes> {
    * db.table.distinct().select('name');
    * ```
    *
-   * Can accept column names or raw expressions to place it to `DISTINCT ON (...)`:
+   * Can accept column names or raw SQL expressions to place it to `DISTINCT ON (...)`:
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * // Distinct on the name and raw SQL
-   * db.table.distinct('name', db.table.sql`raw sql`).select('id', 'name');
+   * db.table.distinct('name', sql`raw sql`).select('id', 'name');
    * ```
    *
    * @param columns - column names or a raw SQL
@@ -639,9 +598,11 @@ export class QueryMethods<ColumnTypes> {
    * Also, it's possible to group by a selected value:
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * const results = db.product
    *   .select({
-   *     month: db.product.sql`extract(month from "createdAt")`.type((t) =>
+   *     month: sql`extract(month from "createdAt")`.type((t) =>
    *       // month is returned as string, parse it to int
    *       t.string().parse(parseInt),
    *     ),
@@ -756,8 +717,6 @@ export class QueryMethods<ColumnTypes> {
    *
    * ```ts
    * db.table.orderSql`raw sql`;
-   * // or
-   * db.table.orderSql(db.table.sql`raw sql`);
    * ```
    *
    * @param args - SQL expression
@@ -976,88 +935,6 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * `column` references a table column, this can be used in raw SQL or when building a column expression.
-   * Only for referencing a column in the query's table. For referencing joined table's columns, see [ref](#ref).
-   *
-   * ```ts
-   * await db.table.select({
-   *   // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
-   *   // returns a boolean
-   *   one: (q) =>
-   *     q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
-   *
-   *   // selects the same as above, but by building a query
-   *   two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
-   * });
-   * ```
-   *
-   * @param name - column name
-   */
-  column<T extends PickQueryShape, K extends keyof T['shape']>(
-    this: T,
-    name: K,
-  ): ColumnRefExpression<T['shape'][K]> & T['shape'][K]['operators'] {
-    const column = (this.shape as { [K: PropertyKey]: ColumnTypeBase })[name];
-    return new ColumnRefExpression(
-      column as T['shape'][K],
-      name as string,
-    ) as never;
-  }
-
-  /**
-   * `ref` is similar to [column](#column), but it also allows to reference a column of joined table,
-   * and other dynamically defined columns.
-   *
-   * ```ts
-   * await db.table.join('otherTable').select({
-   *   // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
-   *   // returns a boolean
-   *   one: (q) =>
-   *     q.sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
-   *       'otherTable.name',
-   *     )} = ${'name'}`,
-   *
-   *   // selects the same as above, but by building a query
-   *   two: (q) =>
-   *     q
-   *       .ref('otherTable.id')
-   *       .equals(1)
-   *       .or(q.ref('otherTable.name').equals('name')),
-   * });
-   * ```
-   *
-   * @param arg - any available column name, such as of a joined table
-   */
-  ref<
-    T extends PickQueryMeta,
-    K extends keyof T['meta']['selectable'] & string,
-  >(
-    this: T,
-    arg: K,
-  ): RefExpression<T['meta']['selectable'][K]['column']> &
-    T['meta']['selectable'][K]['column']['operators'] {
-    const q = (this as unknown as Query).clone();
-
-    const { shape } = q.q;
-    let column: QueryColumn;
-
-    const index = arg.indexOf('.');
-    if (index !== -1) {
-      const table = arg.slice(0, index);
-      const col = arg.slice(index + 1);
-      if (table === (q.q.as || q.table)) {
-        column = shape[col];
-      } else {
-        column = (q.q.joinedShapes as JoinedShapes)[table][col];
-      }
-    } else {
-      column = shape[arg];
-    }
-
-    return new RefExpression(column, q.q, arg) as never;
-  }
-
-  /**
    * Narrows a part of the query output type.
    * Use with caution, type-safety isn't guaranteed with it.
    * This is similar so using `as` keyword from TypeScript, except that it applies only to a part of the result.
@@ -1122,8 +999,9 @@ applyMixins(QueryMethods, [
   QueryUpsertOrCreate,
   QueryGet,
   MergeQueryMethods,
-  RawSqlMethods,
+  SqlMethod,
   TransformMethods,
   ScopeMethods,
   SoftDeleteMethods,
+  ExpressionMethods,
 ]);

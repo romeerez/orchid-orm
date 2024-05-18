@@ -1,11 +1,11 @@
 import { JsonItem, SelectItem } from './types';
 import { RawSQL } from './rawSql';
-import { addValue, columnToSql, columnToSqlWithAs } from './common';
+import { columnToSql, columnToSqlWithAs } from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
-import { Expression, isExpression } from 'orchid-core';
+import { addValue, Expression, isExpression } from 'orchid-core';
 import { Query } from '../query/query';
 import { _queryGetOptional } from '../queryMethods/get.utils';
 import { queryJson } from '../queryMethods/json.utils';

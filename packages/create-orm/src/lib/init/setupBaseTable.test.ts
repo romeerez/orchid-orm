@@ -34,6 +34,8 @@ export const BaseTable = createBaseTable({
     ...t,
   }),
 });
+
+export const { sql } = BaseTable;
 `);
   });
 
@@ -55,6 +57,8 @@ export const BaseTable = createBaseTable({
     text: (min = 0, max = Infinity) => t.text(min, max),
   }),
 });
+
+export const { sql } = BaseTable;
 `);
   });
 
@@ -79,6 +83,8 @@ export const BaseTable = createBaseTable({
     text: (min = 0, max = Infinity) => t.text(min, max),
   }),
 });
+
+export const { sql } = BaseTable;
 `);
   });
 
@@ -101,6 +107,8 @@ export const BaseTable = createBaseTable({
     timestamp: (precision?: number) => t.timestamp(precision).asDate(),
   }),
 });
+
+export const { sql } = BaseTable;
 `);
   });
 
@@ -123,6 +131,8 @@ export const BaseTable = createBaseTable({
     timestamp: (precision?: number) => t.timestamp(precision).asNumber(),
   }),
 });
+
+export const { sql } = BaseTable;
 `);
   });
 });

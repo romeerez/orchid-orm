@@ -4,9 +4,11 @@ import {
   SetQueryReturnsColumnOrThrow,
 } from '../query/query';
 import {
+  addValue,
   ColumnTypeBase,
   emptyObject,
   Expression,
+  ExpressionTypeMethod,
   getValueKey,
   PickQueryMeta,
   PickQueryMetaResultWindows,
@@ -23,12 +25,13 @@ import {
   ToSQLCtx,
   WhereItem,
 } from '../sql';
-import { addValue, columnToSql, rawOrColumnToSql } from '../sql/common';
+import { columnToSql, rawOrColumnToSql } from '../sql/common';
 import { pushOrderBySql } from '../sql/orderBy';
 import { whereToSql } from '../sql/where';
 import { windowToSql } from '../sql/window';
 import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
 import { BaseOperators } from '../columns/operators';
+import { extendQuery } from '../query/queryUtils';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
@@ -214,7 +217,9 @@ export function makeFnExpression<
   args: FnExpressionArgs<Query>,
   options?: AggregateOptions<T>,
 ): SetQueryReturnsColumnOrThrow<T, C> & C['operators'] {
-  const q = (self as unknown as Query).clone();
+  const q = extendQuery(self as unknown as Query, type.operators);
+  (q.baseQuery as unknown as ExpressionTypeMethod).type =
+    ExpressionTypeMethod.prototype.type;
 
   new FnExpression<Query, QueryColumn>(
     q,

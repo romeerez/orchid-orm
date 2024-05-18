@@ -1,4 +1,4 @@
-import { addValue, ownColumnToSql } from './common';
+import { ownColumnToSql } from './common';
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query/query';
 import { selectToSql } from './select';
@@ -6,6 +6,7 @@ import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { pushQueryValue } from '../query/queryUtils';
 import { InsertQueryData, QueryData, QueryHookSelect } from './data';
 import {
+  addValue,
   ColumnTypeBase,
   emptyArray,
   Expression,

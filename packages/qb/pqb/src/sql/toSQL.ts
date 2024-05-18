@@ -1,5 +1,5 @@
 import { Query, queryTypeWithLimitOne } from '../query/query';
-import { addValue, columnToSql } from './common';
+import { columnToSql } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -17,7 +17,7 @@ import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
 import { QueryData, SelectQueryData } from './data';
 import { pushCopySql } from './copy';
-import { isExpression, Sql } from 'orchid-core';
+import { addValue, isExpression, Sql } from 'orchid-core';
 import { Db } from '../query/db';
 
 export type ToSQLCtx = {

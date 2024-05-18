@@ -1,4 +1,4 @@
-import { addValue, quoteSchemaAndTable } from './common';
+import { quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { pushLimitSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
@@ -9,7 +9,7 @@ import {
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from './data';
-import { isExpression, pushOrNewArray } from 'orchid-core';
+import { addValue, isExpression, pushOrNewArray } from 'orchid-core';
 import { Db } from '../query/db';
 import { joinSubQuery } from '../common/utils';
 import { JsonItem } from './types';

@@ -97,7 +97,7 @@ export class With {
    *     id: columnTypes.integer(),
    *     name: columnTypes.text(3, 100),
    *   },
-   *   db.table.sql`SELECT id, name FROM "someTable"`,
+   *   sql`SELECT id, name FROM "someTable"`,
    * );
    *
    * // accepts query:
@@ -105,7 +105,7 @@ export class With {
    *
    * // accepts a callback for a query builder:
    * db.table.with('alias', (qb) =>
-   *   qb.select({ one: db.table.sql`1`.type((t) => t.integer()) }),
+   *   qb.select({ one: sql`1`.type((t) => t.integer()) }),
    * );
    *
    * // All mentioned forms can accept options as a second argument:

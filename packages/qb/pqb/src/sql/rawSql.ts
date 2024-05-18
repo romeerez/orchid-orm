@@ -61,8 +61,8 @@ export class RawSQL<
     type?: T,
   ) {
     super(sql, values);
+    this.result = { value: type as T };
     if (type) {
-      this.result = { value: type };
       Object.assign(this, type.operators);
     }
   }

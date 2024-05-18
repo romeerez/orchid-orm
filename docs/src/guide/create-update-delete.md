@@ -23,7 +23,7 @@ const objects: { id: number }[] = await db.table
 // returns an array of objects as well for raw SQL values:
 const objects2: { id: number }[] = await db.table.select('id').createRaw({
   columns: ['name', 'password'],
-  values: db.table.sql`'Joe', 'asdfqwer'`,
+  values: sql`custom sql`,
 });
 ```
 
@@ -47,7 +47,7 @@ const createdCount = await db.table.insert(data).onConflictIgnore();
 
 await db.table.create({
   // raw SQL
-  column1: db.table.sql`'John' | 'Doe'`,
+  column1: sql`'John' || ' ' || 'Doe'`,
 
   // query that returns a single value
   // returning multiple values will result in Postgres error
@@ -90,7 +90,7 @@ If the table has a column with runtime defaults (defined with callbacks), the va
 ```ts
 const oneRecord = await db.table.createRaw({
   columns: ['name', 'amount'],
-  values: db.table.sql`'name', random()`,
+  values: sql`'name', random()`,
 });
 ```
 
@@ -109,7 +109,7 @@ If the table has a column with runtime defaults (defined with callbacks), functi
 ```ts
 const manyRecords = await db.table.createManyRaw({
   columns: ['name', 'amount'],
-  values: [db.table.sql`'one', 2`, db.table.sql`'three', 4`],
+  values: [sql`'one', 2`, sql`'three', 4`],
 });
 ```
 
@@ -238,11 +238,11 @@ db.table.create(data).onConfict({ constraint: 'unique_index_name' }).merge();
 // raw SQL expression:
 db.table
   .create(data)
-  .onConfict(db.table.sql`(email) where condition`)
+  .onConfict(sql`(email) where condition`)
   .merge();
 ```
 
-You can use the db.table.sql function in onConflict.
+You can use the `sql` function exported from your `BaseTable` file in onConflict.
 It can be useful to specify a condition when you have a partial index:
 
 ```ts
@@ -253,7 +253,7 @@ db.table
     active: true,
   })
   // ignore only when having conflicting email and when active is true.
-  .onConflict(db.table.sql`(email) where active`)
+  .onConflict(sql`(email) where active`)
   .ignore();
 ```
 
@@ -375,7 +375,7 @@ The `set` can take a raw SQL expression:
 db.table
   .create(data)
   .onConflict()
-  .set(db.table.sql`raw SQL expression`);
+  .set(sql`raw SQL expression`);
 
 // update records only on certain conditions
 db.table
@@ -463,8 +463,8 @@ await db.table.where({ ...conditions }).update({
   // set the column to a specific value
   column1: 123,
 
-  // use raw SQL to update the column
-  column2: db.table.sql`2 + 2`,
+  // use custom SQL to update the column
+  column2: sql`2 + 2`,
 
   // use query that returns a single value
   // returning multiple values will result in Postgres error
@@ -587,7 +587,7 @@ const value = 'new name';
 const updatedCount = await db.table.find(1).updateRaw`name = ${value}`;
 
 // or update with `sql` function:
-await db.table.find(1).updateRaw(db.table.sql`name = ${value}`);
+await db.table.find(1).updateRaw(sql`name = ${value}`);
 ```
 
 ## updateOrThrow

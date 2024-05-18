@@ -5,8 +5,8 @@ import {
   SetQueryReturnsColumnOrThrow,
 } from '../query/query';
 import { ToSQLCtx } from '../sql';
-import { addValue } from '../sql/common';
 import {
+  addValue,
   Expression,
   getValueKey,
   isExpression,

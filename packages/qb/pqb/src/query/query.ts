@@ -139,10 +139,13 @@ export interface PickQueryMetaResultRelationsWindows
   extends PickQueryMetaResultRelations,
     PickQueryWindows {}
 
-export interface PickQueryMetaResultRelationsWindowsColumnTypes
-  extends PickQueryMetaResultRelationsWindows {
+export interface PickQueryColumnTypes {
   columnTypes: unknown;
 }
+
+export interface PickQueryMetaResultRelationsWindowsColumnTypes
+  extends PickQueryMetaResultRelationsWindows,
+    PickQueryColumnTypes {}
 
 export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
 
