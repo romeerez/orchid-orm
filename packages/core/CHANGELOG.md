@@ -1,5 +1,23 @@
 # orchid-core
 
+## 0.15.2
+
+### Patch Changes
+
+- 98ad6a6: Change `fn`, export `sql` from the `BaseTable`
+
+  The `fn` query builder accepted a column type via parameter, now it accepts the type via `type` method, see [docs](https://orchid-orm.netlify.app/guide/sql-expressions#fn).
+
+  Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
+
+  ```ts
+  import { createBaseTable } from 'orchid-orm';
+
+  export const BaseTable = createBaseTable();
+
+  export const { sql } = BaseTable;
+  ```
+
 ## 0.15.1
 
 ### Patch Changes
