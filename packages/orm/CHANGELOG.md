@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.27.4
+
+### Patch Changes
+
+- 15d8796: Make `import` setting optional in rake-db when the `migration` setting is set
+- Updated dependencies [15d8796]
+  - rake-db@2.20.5
+
 ## 1.27.3
 
 ### Patch Changes

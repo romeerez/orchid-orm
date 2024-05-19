@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.20.5
+
+### Patch Changes
+
+- 15d8796: Make `import` setting optional in rake-db when the `migration` setting is set
+
 ## 2.20.4
 
 ### Patch Changes
