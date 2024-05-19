@@ -1,5 +1,17 @@
 # pqb
 
+## 0.30.4
+
+### Patch Changes
+
+- 8095627: Support query builder in `where` column callback:
+
+  ```ts
+  db.user.where({
+    firstName: (q) => q.ref('lastName'),
+  });
+  ```
+
 ## 0.30.3
 
 ### Patch Changes
