@@ -30,7 +30,7 @@ declare module 'rake-db' {
     generateTableTo?(tableName: string): string;
   }
 
-  export interface InputRakeDbConfig<
+  export interface InputRakeDbConfigBase<
     SchemaConfig extends ColumnSchemaConfig,
     CT,
   > {

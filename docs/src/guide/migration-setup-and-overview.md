@@ -136,6 +136,7 @@ export const change = rakeDb(config.database, {
   },
 
   // This is for compatibility with `tsx` and other TS runners, no need to change.
+  // Is optional when `migrations` setting is set, is required otherwise.
   import: (path) => import(path),
 });
 ```

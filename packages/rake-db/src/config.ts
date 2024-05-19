@@ -49,8 +49,10 @@ export interface RakeDbConfig<
   afterRollback?: MigrationCallback;
 }
 
-export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
-  extends QueryLogOptions {
+export interface InputRakeDbConfigBase<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+> extends QueryLogOptions {
   columnTypes?: CT | ((t: DefaultColumnTypes<DefaultSchemaConfig>) => CT);
   baseTable?: RakeDbBaseTable<CT>;
   schemaConfig?: SchemaConfig;
@@ -58,7 +60,6 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   dbScript?: string;
   migrationsPath?: string;
   migrationId?: RakeDbMigrationId;
-  migrations?: ModuleExportsRecord;
   recurrentPath?: string;
   migrationsTable?: string;
   snakeCase?: boolean;
@@ -76,10 +77,6 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   >;
   noPrimaryKey?: NoPrimaryKeyOption;
   forceDefaultExports?: boolean;
-  /**
-   * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
-   */
-  import(path: string): Promise<unknown>;
   /**
    * Is called once per db before migrating or rolling back a set of migrations.
    *
@@ -139,6 +136,29 @@ export interface InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT>
   afterRollback?: MigrationCallback;
 }
 
+export type InputRakeDbConfig<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+> = InputRakeDbConfigBase<SchemaConfig, CT> &
+  // make `import` required only when not using `migrations`
+  (| {
+        /**
+         * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
+         */
+        import(path: string): Promise<unknown>;
+      }
+    | {
+        /**
+         * To specify array of migrations explicitly, without loading them from files.
+         */
+        migrations: ModuleExportsRecord;
+        /**
+         * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
+         */
+        import?(path: string): Promise<unknown>;
+      }
+  );
+
 type ChangeCallback = (arg: {
   db: Db;
   up: boolean;
@@ -191,9 +211,12 @@ export const migrationConfigDefaults = {
   commands: {},
   log: true,
   logger: console,
+  import() {
+    throw new Error('Please define the `import` setting in `rakeDb` config');
+  },
 } satisfies Omit<
   RakeDbConfig<ColumnSchemaConfig>,
-  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath' | 'import'
+  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
 >;
 
 export const processRakeDbConfig = <
