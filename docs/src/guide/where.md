@@ -23,6 +23,11 @@ db.table.where({
   // where column equals to raw SQL
   // import `sql` from your `BaseTable`
   column: sql`sql expression`,
+  // or use `(q) => q.sql` for the same
+  column2: (q) => q.sql`sql expression`,
+
+  // reference other columns in such a way:
+  firstName: (q) => q.ref('lastName'),
 });
 ```
 

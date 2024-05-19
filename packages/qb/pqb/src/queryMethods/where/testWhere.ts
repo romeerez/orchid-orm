@@ -63,14 +63,12 @@ export const testWhere = (
       expectSql(
         [
           buildSql((q) =>
-            q.where(
-              { [pkey]: 1 },
+            q.where({ [pkey]: 1 }, (q) =>
               q.where({ OR: [{ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }] }),
             ),
           ),
           buildSql((q) =>
-            q.where(
-              { [pkey]: 1 },
+            q.where({ [pkey]: 1 }, (q) =>
               q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
             ),
           ),
@@ -296,9 +294,8 @@ export const testWhere = (
             }),
           ),
           buildSql((q) =>
-            q.orWhere(
-              { [pkey]: 1 },
-              columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }),
+            q.orWhere({ [pkey]: 1 }, (q) =>
+              q.where({ [pkey]: 2 }).where({ [text]: 'n' }),
             ),
           ),
         ],
@@ -371,7 +368,7 @@ export const testWhere = (
               {
                 [pkey]: 1,
               },
-              columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }),
+              (q) => q.where({ [pkey]: 2 }).where({ [text]: 'n' }),
             ),
           ),
         ],

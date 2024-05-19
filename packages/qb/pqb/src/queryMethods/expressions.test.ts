@@ -124,4 +124,25 @@ describe('expressions', () => {
       );
     });
   });
+
+  describe('or', () => {
+    it('should support query and expression', () => {
+      const q = User.where((q) =>
+        q.or(User.find(1).get('active'), q.ref('age').gt(123)).equals(false),
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT * FROM "user"
+          WHERE ((
+            (SELECT "user"."active" FROM "user" WHERE "user"."id" = $1 LIMIT 1)
+            OR
+            "user"."age" > $2
+          ) = $3)
+        `,
+        [1, 123, false],
+      );
+    });
+  });
 });

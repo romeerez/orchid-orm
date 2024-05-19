@@ -16,6 +16,20 @@ describe('where', () => {
     expectSql(q.toSQL(), `SELECT * FROM "user"`);
   });
 
+  it('should allow expression for a column', () => {
+    const q = User.where({
+      name: (q) => q.ref('password'),
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT * FROM "user"
+        WHERE "user"."name" = "user"."password"
+      `,
+    );
+  });
+
   it('should allow filtering by a sub query', () => {
     const q = User.where({ id: User.get('id') });
 

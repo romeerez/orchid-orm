@@ -623,3 +623,11 @@ export type AddQueryWith<
       : never;
   }
 >;
+
+export interface QueryOrExpression<T> {
+  result: { value: QueryColumn<T> };
+}
+
+export type QueryOrExpressionBooleanOrNullResult = QueryOrExpression<
+  boolean | null
+>;

@@ -3,6 +3,7 @@ import {
   emptyObject,
   Expression,
   ExpressionData,
+  isExpression,
   PickOutputType,
   PickQueryMeta,
   PickQueryShape,
@@ -17,9 +18,12 @@ import {
   PickQueryMetaResultRelationsWindowsColumnTypes,
   Query,
   QueryMetaHasSelect,
+  QueryOrExpressionBooleanOrNullResult,
 } from '../query/query';
 import { SelectableOrExpression } from '../common/utils';
 import { AggregateOptions, makeFnExpression } from '../common/fn';
+import { BooleanQueryColumn } from './aggregate';
+import { Operators, OperatorsBoolean } from '../columns/operators';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
@@ -57,6 +61,40 @@ export class RefExpression<T extends QueryColumn> extends Expression<T> {
     return columnToSql(ctx, this.q, this.q.shape, this.ref, quotedAs);
   }
 }
+
+export interface OrExpression
+  extends Expression<BooleanQueryColumn>,
+    OperatorsBoolean {}
+
+type OrExpressionArg = QueryOrExpressionBooleanOrNullResult | undefined;
+
+export class OrExpression extends Expression<BooleanQueryColumn> {
+  declare result: { value: BooleanQueryColumn };
+  q: ExpressionData;
+
+  constructor(public args: [OrExpressionArg, ...OrExpressionArg[]]) {
+    super();
+    this.q = { expr: this };
+  }
+
+  makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
+    const res: string[] = [];
+    for (const arg of this.args) {
+      if (arg) {
+        if (isExpression(arg)) {
+          const sql = arg.toSQL(ctx, quotedAs);
+          if (sql) res.push(sql);
+        } else {
+          res.push(`(${(arg as unknown as Query).toSQL(ctx).text})`);
+        }
+      }
+    }
+
+    return `(${res.join(' OR ')})`;
+  }
+}
+
+Object.assign(OrExpression.prototype, Operators.boolean);
 
 interface QueryReturnsFnAdd<T extends PickQueryColumnTypes>
   extends QueryMetaHasSelect {
@@ -220,5 +258,9 @@ export class ExpressionMethods {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsFn<T, C> {
     return makeFnExpression(this, emptyObject as C, fn, args, options) as never;
+  }
+
+  or(...args: [OrExpressionArg, ...OrExpressionArg[]]): OrExpression {
+    return new OrExpression(args);
   }
 }

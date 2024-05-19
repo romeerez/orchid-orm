@@ -128,15 +128,24 @@ const processWhere = (
     qb.q.isSubQuery = true;
 
     const res = resolveSubQueryCallback(qb, data as never);
-    const expr = res instanceof Expression ? res : res.q.expr;
-    if (!(res instanceof Expression) && res.q.expr) {
-      const q = joinSubQuery(table, res as Query);
-      q.q.select = [expr as Expression];
-      ands.push(`(${makeSQL(q as Query, ctx).text})`);
+    if (isExpression(res)) {
+      ands.push(`(${res.toSQL(ctx, quotedAs)})`);
     } else {
-      pushWhereToSql(ands, ctx, res as Query, (res as Query).q, quotedAs, true);
+      if (res.q.expr) {
+        const q = joinSubQuery(table, res as Query);
+        q.q.select = [res.q.expr as Expression];
+        ands.push(`(${makeSQL(q as Query, ctx).text})`);
+      } else {
+        pushWhereToSql(
+          ands,
+          ctx,
+          res as Query,
+          (res as Query).q,
+          quotedAs,
+          true,
+        );
+      }
     }
-
     return;
   }
 
@@ -342,11 +351,17 @@ const processWhere = (
         }
       }
     } else {
-      ands.push(
-        `${columnToSql(ctx, query, query.shape, key, quotedAs)} ${
-          value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
-        }`,
-      );
+      const column = columnToSql(ctx, query, query.shape, key, quotedAs);
+      if (typeof value === 'function') {
+        const expr = value(table);
+        ands.push(`${column} = ${expr.toSQL(ctx, quotedAs)}`);
+      } else {
+        ands.push(
+          `${column} ${
+            value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
+          }`,
+        );
+      }
     }
   }
 };

@@ -181,8 +181,8 @@ export const makeSQL = (
   }
 
   if (query.union) {
-    query.union.forEach((item) => {
-      let itemSql: string;
+    for (const item of query.union) {
+      let itemSql: string | undefined;
       if (isExpression(item.arg)) {
         itemSql = item.arg.toSQL(ctx, quotedAs);
       } else {
@@ -190,7 +190,7 @@ export const makeSQL = (
         itemSql = argSql.text;
       }
       sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);
-    });
+    }
   }
 
   if (query.order) {

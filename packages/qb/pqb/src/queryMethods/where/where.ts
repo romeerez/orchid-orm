@@ -3,6 +3,8 @@ import {
   PickQueryMetaShapeRelationsWithData,
   PickQueryRelations,
   Query,
+  QueryOrExpression,
+  QueryOrExpressionBooleanOrNullResult,
 } from '../../query/query';
 import { ColumnOperators } from '../../sql';
 import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
@@ -12,15 +14,15 @@ import {
   Expression,
   MaybeArray,
   PickQueryMeta,
-  QueryColumnBooleanOrNull,
   SQLQueryArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
-import { QueryBase, QueryBaseThen } from '../../query/queryBase';
+import { QueryBase } from '../../query/queryBase';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
 import { RelationsBase } from '../../relations';
 import { processJoinArgs } from '../join/processJoinArgs';
+import { ExpressionMethods } from '../expressions';
 
 /*
 Argument of `where`:
@@ -54,17 +56,19 @@ export type WhereArg<T extends PickQueryMetaRelations> =
             | T['meta']['selectable'][K]['column']['queryType']
             | null
             | ColumnOperators<T['meta']['selectable'], K>
-            | Expression
-            | QueryBase;
+            | QueryOrExpression<
+                T['meta']['selectable'][K]['column']['queryType'] | null
+              >
+            | ((
+                q: T,
+              ) => QueryOrExpression<
+                T['meta']['selectable'][K]['column']['queryType'] | null
+              >);
     }
-  | QueryBase
-  | Expression<QueryColumnBooleanOrNull>
+  | QueryOrExpressionBooleanOrNullResult
   | ((
       q: WhereQueryBuilder<T>,
-    ) =>
-      | QueryColumnBooleanOrNull
-      | QueryBaseThen<boolean | null>
-      | WhereQueryBuilder<T>);
+    ) => QueryOrExpressionBooleanOrNullResult | WhereQueryBuilder<T>);
 
 /**
  * Callback argument of `where`.
@@ -77,12 +81,24 @@ export type WhereArg<T extends PickQueryMetaRelations> =
 export type WhereQueryBuilder<T extends PickQueryRelations> =
   RelationsBase extends T['relations']
     ? {
-        [K in keyof T]: K extends keyof QueryBase | keyof Where ? T[K] : never;
+        [K in keyof T]: K extends
+          | keyof QueryBase
+          | keyof Where
+          | keyof ExpressionMethods
+          | 'sql'
+          ? T[K]
+          : never;
       }
     : {
         [K in keyof T]: K extends keyof T['relations']
           ? T['relations'][K]
-          : T[K];
+          : K extends
+              | keyof QueryBase
+              | keyof Where
+              | keyof ExpressionMethods
+              | 'sql'
+          ? T[K]
+          : never;
       };
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
@@ -317,6 +333,11 @@ export class Where {
    *   // where column equals to raw SQL
    *   // import `sql` from your `BaseTable`
    *   column: sql`sql expression`,
+   *   // or use `(q) => q.sql` for the same
+   *   column2: (q) => q.sql`sql expression`,
+   *
+   *   // reference other columns in such a way:
+   *   firstName: (q) => q.ref('lastName'),
    * });
    * ```
    *
