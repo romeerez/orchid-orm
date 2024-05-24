@@ -1083,6 +1083,7 @@ export class Create {
    * db.table.create(data).onConflictDoNothing();
    *
    * // single column:
+   * // (this requires a composite primary key or unique index, see below)
    * db.table.create(data).onConfict('email').merge();
    *
    * // array of columns:
@@ -1097,6 +1098,34 @@ export class Create {
    *   .onConfict(sql`(email) where condition`)
    *   .merge();
    * ```
+   *
+   * :::info
+   * A primary key or a unique index for a **single** column can be fined on a column:
+   *
+   * ```ts
+   * export class MyTable extends BaseTable {
+   *   columns = this.setColumns((t) => ({
+   *     pkey: t.uuid().primaryKey(),
+   *     unique: t.string().unique(),
+   *   }));
+   * }
+   * ```
+   *
+   * But for composite primary keys or indexes (having multiple columns), define it in a separate function:
+   *
+   * ```ts
+   * export class MyTable extends BaseTable {
+   *   columns = this.setColumns(
+   *     (t) => ({
+   *       one: t.integer(),
+   *       two: t.string(),
+   *       three: t.boolean(),
+   *     }),
+   *     (t) => [t.primaryKey(['one', 'two']), t.unique(['two', 'three'])],
+   *   );
+   * }
+   * ```
+   * :::
    *
    * You can use the `sql` function exported from your `BaseTable` file in onConflict.
    * It can be useful to specify a condition when you have a partial index:

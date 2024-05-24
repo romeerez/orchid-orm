@@ -13,6 +13,12 @@ Use the `Table.inputSchema()` when validating incoming parameters.
 
 [Zod](https://github.com/colinhacks/zod) and [Valibot](https://valibot.dev/) are supported.
 
+:::warning
+This approach isn't suitable for sharing schemas with frontend in monorepo setup.
+
+Designed to be used on backend only.
+:::
+
 Install a package:
 
 ```sh
