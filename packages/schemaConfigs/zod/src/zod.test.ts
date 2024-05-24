@@ -580,7 +580,8 @@ describe('zod schema config', () => {
 
   describe('enum', () => {
     it('should validate and parse enum', () => {
-      const type = t.enum('name', ['a', 'b', 'c']);
+      const values = ['a', 'b', 'c'] as const;
+      const type = t.enum('name', values);
 
       assertAllTypes<typeof type, ZodEnum<['a', 'b', 'c']>>();
 

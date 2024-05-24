@@ -660,10 +660,18 @@ export interface ZodSchemaConfig {
     this: T,
   ): ParseColumn<T, ZodDate, Date>;
 
-  enum<U extends string, T extends [U, ...U[]]>(
+  enum<U extends string, T extends readonly [U, ...U[]]>(
     dataType: string,
     type: T,
-  ): EnumColumn<ZodSchemaConfig, ZodEnum<T>, U, T>;
+  ): EnumColumn<
+    ZodSchemaConfig,
+    // remove readonly flag for Zod
+    ZodEnum<{
+      -readonly [P in keyof T]: T[P];
+    }>,
+    U,
+    T
+  >;
 
   array<Item extends ArrayColumnValue>(item: Item): ZodArrayColumn<Item>;
 
