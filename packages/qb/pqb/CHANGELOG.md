@@ -1,5 +1,11 @@
 # pqb
 
+## 0.30.5
+
+### Patch Changes
+
+- 859c4cd: Accept readonly arrays in enum type (#269)
+
 ## 0.30.4
 
 ### Patch Changes
