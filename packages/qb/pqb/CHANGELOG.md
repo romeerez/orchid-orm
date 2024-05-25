@@ -1,5 +1,15 @@
 # pqb
 
+## 0.30.7
+
+### Patch Changes
+
+- 5a21099: Accept building expressions in create and update column callbacks
+- 5a21099: Support joining relation with alias
+- Updated dependencies [5a21099]
+- Updated dependencies [5a21099]
+  - orchid-core@0.15.4
+
 ## 0.30.6
 
 ### Patch Changes

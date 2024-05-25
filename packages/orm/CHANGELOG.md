@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.27.10
+
+### Patch Changes
+
+- 5a21099: Accept building expressions in create and update column callbacks
+- 5a21099: Support joining relation with alias
+- Updated dependencies [5a21099]
+- Updated dependencies [5a21099]
+  - pqb@0.30.7
+  - orchid-core@0.15.4
+  - rake-db@2.20.11
+
 ## 1.27.9
 
 ### Patch Changes

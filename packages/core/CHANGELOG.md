@@ -1,5 +1,12 @@
 # orchid-core
 
+## 0.15.4
+
+### Patch Changes
+
+- 5a21099: Accept building expressions in create and update column callbacks
+- 5a21099: Support joining relation with alias
+
 ## 0.15.3
 
 ### Patch Changes
