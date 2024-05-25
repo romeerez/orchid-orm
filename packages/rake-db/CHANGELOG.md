@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.20.9
+
+### Patch Changes
+
+- 56f5fb8: Fix: pass only migrated migrations to rake-db callbacks (#267)
+
 ## 2.20.8
 
 ### Patch Changes
