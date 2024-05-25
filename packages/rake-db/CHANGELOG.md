@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.20.8
+
+### Patch Changes
+
+- 2d0da7b: Support renaming migrations when `migrations` option is set
+
 ## 2.20.7
 
 ### Patch Changes
