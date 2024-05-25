@@ -1,5 +1,6 @@
 import {
   Query,
+  QueryOrExpression,
   QueryReturnsAll,
   queryTypeWithLimitOne,
   SetQueryKind,
@@ -22,7 +23,6 @@ import { VirtualColumn } from '../columns';
 import { anyShape } from '../query/db';
 import {
   Expression,
-  QueryThen,
   ColumnSchemaConfig,
   RecordUnknown,
   PickQueryUniqueProperties,
@@ -61,11 +61,9 @@ type CreateDataWithDefaults<
 > = {
   [K in keyof T['inputType'] as K extends Defaults
     ? never
-    : K]: K extends Defaults ? never : CreateColumn<T['inputType'], K>;
+    : K]: K extends Defaults ? never : CreateColumn<T, K>;
 } & {
-  [K in Defaults]?: K extends keyof T['inputType']
-    ? CreateColumn<T['inputType'], K>
-    : never;
+  [K in Defaults]?: K extends keyof T['inputType'] ? CreateColumn<T, K> : never;
 };
 
 type CreateDataWithDefaultsForRelations<
@@ -75,24 +73,19 @@ type CreateDataWithDefaultsForRelations<
 > = {
   [K in keyof T['inputType'] as K extends Defaults | OmitFKeys
     ? never
-    : K]: K extends Defaults | OmitFKeys
-    ? never
-    : CreateColumn<T['inputType'], K>;
+    : K]: K extends Defaults | OmitFKeys ? never : CreateColumn<T, K>;
 } & {
-  [K in Defaults as K extends OmitFKeys ? never : K]?: CreateColumn<
-    T['inputType'],
-    K
-  >;
+  [K in Defaults as K extends OmitFKeys ? never : K]?: CreateColumn<T, K>;
 };
 
 // Type of available variants to provide for a specific column when creating
-export type CreateColumn<InputType, Key extends keyof InputType> =
-  | Expression
-  | InputType[Key]
-  | {
-      __isQuery: true;
-      then: QueryThen<InputType[Key]>;
-    };
+export type CreateColumn<
+  T extends CreateSelf,
+  K extends keyof T['inputType'],
+> =
+  | T['inputType'][K]
+  | QueryOrExpression<T['inputType'][K]>
+  | ((q: T) => QueryOrExpression<T['inputType'][K]>);
 
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
@@ -788,7 +781,7 @@ export class Create {
    *
    * await db.table.create({
    *   // raw SQL
-   *   column1: sql`'John' || ' ' || 'Doe'`,
+   *   column1: (q) => q.sql`'John' || ' ' || 'Doe'`,
    *
    *   // query that returns a single value
    *   // returning multiple values will result in Postgres error

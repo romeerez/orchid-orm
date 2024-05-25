@@ -837,10 +837,7 @@ export class QueryMethods<ColumnTypes> {
    *   pets: (q) => q.pets.join().none(),
    * });
    *
-   * await db.user.join(
-   *   (q) => q.pets.none(),
-   *   (q) => q,
-   * );
+   * await db.user.join((q) => q.pets.none());
    *
    * await db.user.join('pets', (q) => q.none());
    * ```

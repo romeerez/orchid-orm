@@ -47,7 +47,7 @@ const createdCount = await db.table.insert(data).onConflictIgnore();
 
 await db.table.create({
   // raw SQL
-  column1: sql`'John' || ' ' || 'Doe'`,
+  column1: (q) => q.sql`'John' || ' ' || 'Doe'`,
 
   // query that returns a single value
   // returning multiple values will result in Postgres error
@@ -496,7 +496,7 @@ await db.table.where({ ...conditions }).update({
   column1: 123,
 
   // use custom SQL to update the column
-  column2: sql`2 + 2`,
+  column2: (q) => q.sql`2 + 2`,
 
   // use query that returns a single value
   // returning multiple values will result in Postgres error
@@ -601,11 +601,11 @@ const name = await db.table.find(1).get('name').update(data);
 
 If the table has `updatedAt` [timestamp](/guide/common-column-methods.html#timestamps), it will be updated even for an empty data.
 
-## updateRaw
+## updateSql
 
 [//]: # 'has JSDoc'
 
-`updateRaw` is for updating records with raw SQL expression.
+`updateSql` is for updating records with raw SQL expression.
 
 The behavior is the same as a regular `update` method has:
 `find` or `where` must precede calling this method,
@@ -616,10 +616,10 @@ you can customize returning data by using `select`.
 const value = 'new name';
 
 // update with SQL template string
-const updatedCount = await db.table.find(1).updateRaw`name = ${value}`;
+const updatedCount = await db.table.find(1).updateSql`name = ${value}`;
 
 // or update with `sql` function:
-await db.table.find(1).updateRaw(sql`name = ${value}`);
+await db.table.find(1).updateSql(sql`name = ${value}`);
 ```
 
 ## updateOrThrow

@@ -1,5 +1,9 @@
 # Breaking changes
 
+## orchid-orm 1.28.0
+
+`updateRaw` renamed to `updateSql` (for consistency)
+
 ## orchid-orm 1.27.2
 
 `fn` query builder used to accept a column type as a parameter, now the column type is set by using the `type` method instead:

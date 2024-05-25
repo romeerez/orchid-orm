@@ -229,7 +229,7 @@ describe('create functions', () => {
     it('should create one record with raw SQL for a column value', async () => {
       const q = User.create({
         name: userData.name,
-        password: raw`'password'`,
+        password: (q) => q.sql<string>`'password'`,
       });
 
       assertType<Awaited<typeof q>, UserRecord>();
@@ -242,6 +242,41 @@ describe('create functions', () => {
           RETURNING *
         `,
         [userData.name],
+      );
+    });
+
+    it('should support a query builder for a column', async () => {
+      const q = User.create({
+        name: userData.name,
+        // it's expected to fail on db side, cannot reference table
+        password: (q) => q.ref('name'),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, "user"."name")
+          RETURNING *
+        `,
+        [userData.name],
+      );
+    });
+
+    it('should use a sub query value', async () => {
+      const q = User.create({
+        ...userData,
+        age: User.avg('age'),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "user"("name", "password", "age")
+          VALUES ($1, $2, (SELECT avg("user"."age") FROM "user"))
+          RETURNING *
+        `,
+        [userData.name, userData.password],
       );
     });
 
@@ -510,10 +545,10 @@ describe('create functions', () => {
       const q = User.createMany([
         {
           name: userData.name,
-          password: raw`'password'`,
+          password: (q) => q.sql<string>`'password'`,
         },
         {
-          name: raw`'name'`,
+          name: (q) => q.sql<string>`'name'`,
           password: userData.password,
         },
       ]);

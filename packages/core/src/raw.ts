@@ -19,6 +19,9 @@ export abstract class Expression<T extends QueryColumn = QueryColumn> {
 
   abstract q: ExpressionData;
 
+  // used in update to prevent non-select sub-queries
+  declare meta: { kind: 'select' };
+
   // Produce SQL string by calling `makeSQL` and applying operators from the `q.chain`, push query variables into given `values` array.
   toSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
     let sql = this.makeSQL(ctx, quotedAs);

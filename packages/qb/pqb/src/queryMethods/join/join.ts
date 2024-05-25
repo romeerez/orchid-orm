@@ -8,6 +8,7 @@ import {
   PickQueryRelationsWithData,
   PickQueryWithData,
   Query,
+  SelectableFromShape,
   WithDataItem,
 } from '../../query/query';
 import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
@@ -64,7 +65,7 @@ export type JoinArgs<
   T extends PickQueryMetaShapeRelationsWithData,
   Arg extends JoinFirstArg<T>,
 > =
-  | [JoinCallback<T, Arg>]
+  | [on?: JoinCallback<T, Arg>]
   | (Arg extends PickQueryTableMetaResult
       ? JoinQueryArgs<T, Arg>
       : Arg extends keyof T['relations']
@@ -1204,7 +1205,7 @@ export type JoinQueryBuilder<
   [K in keyof J]: K extends 'meta'
     ? {
         [K in keyof J['meta']]: K extends 'selectable'
-          ? J['meta']['selectable'] &
+          ? SelectableFromShape<J['result'], AliasOrTable<J>> &
               Omit<T['meta']['selectable'], keyof T['shape']>
           : J['meta'][K];
       }

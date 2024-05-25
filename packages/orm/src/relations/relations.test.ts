@@ -375,6 +375,21 @@ describe('relations', () => {
     );
   });
 
+  it('should support joining aliased relation', () => {
+    const q = db.user.select('Id').join((q) => q.profile.as('p'));
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" "Id"
+        FROM "user"
+        JOIN "profile" AS "p"
+          ON "p"."userId" = "user"."id"
+         AND "p"."profileKey" = "user"."userKey"
+      `,
+    );
+  });
+
   describe('sub-select `none` queries', () => {
     it('should handle empty, undefined, null results', async () => {
       await db.user.create({ ...userData, posts: { create: [postData] } });
