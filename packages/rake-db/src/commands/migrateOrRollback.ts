@@ -7,6 +7,7 @@ import {
 } from 'pqb';
 import {
   ColumnSchemaConfig,
+  emptyArray,
   MaybeArray,
   pathToLog,
   toArray,
@@ -57,7 +58,7 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
     versions: RakeDbAppliedVersions,
     count: number,
     force: boolean,
-  ) => Promise<void>,
+  ) => Promise<MigrationItem[]>,
 ): MigrateFn {
   return async (
     ctx: RakeDbCtx,
@@ -86,6 +87,7 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
       const opts = options[i];
       const adapter = adapters[i];
 
+      let migrations: MigrationItem[] | undefined;
       try {
         await transaction(adapter, async (trx) => {
           const versions = await getMigratedVersionsMap(
@@ -95,7 +97,7 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
             set.renameTo,
           );
 
-          await fn(
+          migrations = await fn(
             trx,
             conf as unknown as RakeDbConfig<SchemaConfig, CT>,
             set,
@@ -118,7 +120,14 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
               set.renameTo,
             );
 
-            await fn(trx, config, set, versions, count ?? defaultCount, force);
+            migrations = await fn(
+              trx,
+              config,
+              set,
+              versions,
+              count ?? defaultCount,
+              force,
+            );
           });
         } else {
           throw err;
@@ -130,7 +139,7 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
       config.afterChangeCommit?.({
         options: opts,
         up,
-        migrations: set.migrations,
+        migrations: migrations as MigrationItem[],
       });
     }
 
@@ -181,7 +190,7 @@ export const redo: MigrateFn = makeMigrateFn(
 
     set.migrations.reverse();
 
-    await migrateOrRollback(
+    return migrateOrRollback(
       trx,
       config,
       set,
@@ -207,7 +216,7 @@ export const migrateOrRollback = async (
   redo: boolean,
   force?: boolean,
   skipLock?: boolean,
-): Promise<void> => {
+): Promise<MigrationItem[]> => {
   const { sequence, map: versionsMap } = versions;
 
   if (up) {
@@ -253,6 +262,8 @@ export const migrateOrRollback = async (
 
   let loggedAboutStarting = false;
 
+  let migrations: MigrationItem[] | undefined;
+
   for (const file of set.migrations) {
     if (
       (up && versionsMap[file.version]) ||
@@ -277,6 +288,7 @@ export const migrateOrRollback = async (
     }
 
     await runMigration(trx, up, file, config);
+    (migrations ??= []).push(file);
 
     if (up) {
       const name = path.basename(file.path);
@@ -292,13 +304,16 @@ export const migrateOrRollback = async (
     );
   }
 
+  migrations ??= emptyArray;
+
   const afterMigrate = config[up ? 'afterMigrate' : 'afterRollback'];
   if (config.afterChange || afterMigrate) {
     db ??= getDb(trx);
-    const { migrations } = set;
     await config.afterChange?.({ db, up, redo, migrations });
     await afterMigrate?.({ db, migrations });
   }
+
+  return migrations;
 };
 
 const checkMigrationOrder = (
