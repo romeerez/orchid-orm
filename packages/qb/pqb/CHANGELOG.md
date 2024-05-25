@@ -1,5 +1,13 @@
 # pqb
 
+## 0.30.6
+
+### Patch Changes
+
+- 147091d: Resolve empty whereIn into a none query, handle none query in various selecting and joining cases (#266)
+- Updated dependencies [147091d]
+  - orchid-core@0.15.3
+
 ## 0.30.5
 
 ### Patch Changes

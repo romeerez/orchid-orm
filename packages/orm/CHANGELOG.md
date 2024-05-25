@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.27.9
+
+### Patch Changes
+
+- 147091d: Resolve empty whereIn into a none query, handle none query in various selecting and joining cases (#266)
+- Updated dependencies [147091d]
+  - pqb@0.30.6
+  - orchid-core@0.15.3
+  - rake-db@2.20.10
+
 ## 1.27.8
 
 ### Patch Changes

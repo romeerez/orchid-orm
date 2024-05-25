@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.15.3
+
+### Patch Changes
+
+- 147091d: Resolve empty whereIn into a none query, handle none query in various selecting and joining cases (#266)
+
 ## 0.15.2
 
 ### Patch Changes
