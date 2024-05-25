@@ -7,7 +7,11 @@ import {
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
-import { AnyRakeDbConfig, RakeDbConfig, RakeDbMigrationId } from '../config';
+import {
+  AnyRakeDbConfig,
+  RakeDbConfig,
+  RakeDbRenameMigrations,
+} from '../config';
 import path from 'path';
 import {
   getDigitsPrefix,
@@ -15,12 +19,9 @@ import {
   getMigrationVersion,
 } from './migrationsSet';
 import {
-  fileNamesToChangeMigrationId,
   renameMigrationVersionsInDb,
   RenameMigrationVersionsValue,
 } from '../commands/changeIds';
-import fs from 'fs/promises';
-import { pathToFileURL } from 'node:url';
 
 export const saveMigratedVersion = async <
   SchemaConfig extends ColumnSchemaConfig,
@@ -70,7 +71,7 @@ export const getMigratedVersionsMap = async <
   ctx: RakeDbCtx,
   adapter: Adapter | TransactionAdapter,
   config: RakeDbConfig<SchemaConfig, CT>,
-  renameTo?: RakeDbMigrationId,
+  renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
   try {
     const table = `"${config.migrationsTable}"`;
@@ -136,7 +137,7 @@ async function renameMigrations(
   config: AnyRakeDbConfig,
   trx: Adapter | TransactionAdapter,
   versions: RecordString,
-  renameTo: RakeDbMigrationId,
+  renameTo: RakeDbRenameMigrations,
 ) {
   let first: string | undefined;
   for (const version in versions) {
@@ -146,38 +147,24 @@ async function renameMigrations(
 
   if (!first || getMigrationVersion(config, first)) return versions;
 
-  const fileName = fileNamesToChangeMigrationId[renameTo];
-  const filePath = path.join(config.migrationsPath, fileName);
-
-  const json = await fs.readFile(filePath, 'utf-8');
-
-  let data: RecordString;
-  try {
-    data = JSON.parse(json);
-    if (typeof data !== 'object')
-      throw new Error('Config for renaming is not an object');
-  } catch (err) {
-    throw new Error(`Failed to read ${pathToFileURL(filePath)}`, {
-      cause: err,
-    });
-  }
-
   const values: RenameMigrationVersionsValue[] = [];
 
   const updatedVersions: RecordString = {};
 
+  const data = await renameTo.map();
+
   for (const version in versions) {
     const name = versions[version];
     const key = `${version}_${name}`;
-    let newVersion = data[key];
+    let newVersion = data[key] as string | number;
     if (!newVersion) {
       throw new Error(
-        `Failed to find an entry for the migrated ${key} in the ${fileName} config`,
+        `Failed to find an entry for the migrated ${key} in the renaming config`,
       );
     }
 
-    if (renameTo === 'serial') {
-      newVersion = String(newVersion).padStart(4, '0');
+    if (typeof renameTo.to === 'object') {
+      newVersion = String(newVersion).padStart(renameTo.to.serial, '0');
     }
 
     updatedVersions[newVersion] = name;

@@ -324,7 +324,7 @@ export const rakeDbCommands: RakeDbCommands = {
     helpArguments: {
       serial: 'change ids to 4 digit serial',
       'serial *number*': 'change ids to serial number of custom length',
-      'change-ids timestamp': 'change ids to timestamps',
+      timestamp: 'change ids to timestamps',
     },
   },
 };

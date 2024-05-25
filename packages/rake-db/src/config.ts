@@ -8,7 +8,7 @@ import {
   NoPrimaryKeyOption,
   QueryLogOptions,
 } from 'pqb';
-import { ColumnSchemaConfig, getStackTrace } from 'orchid-core';
+import { ColumnSchemaConfig, getStackTrace, MaybePromise } from 'orchid-core';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrationsSet';
@@ -30,6 +30,7 @@ export interface RakeDbConfig<
   migrationsPath: string;
   migrationId: RakeDbMigrationId;
   migrations?: ModuleExportsRecord;
+  renameMigrations?: RakeDbRenameMigrationsInput;
   recurrentPath: string;
   migrationsTable: string;
   snakeCase: boolean;
@@ -59,7 +60,7 @@ export interface InputRakeDbConfigBase<
   basePath?: string;
   dbScript?: string;
   migrationsPath?: string;
-  migrationId?: RakeDbMigrationId;
+  migrationId?: 'serial' | RakeDbMigrationId;
   recurrentPath?: string;
   migrationsTable?: string;
   snakeCase?: boolean;
@@ -152,6 +153,7 @@ export type InputRakeDbConfig<
          * To specify array of migrations explicitly, without loading them from files.
          */
         migrations: ModuleExportsRecord;
+        renameMigrations?: RakeDbRenameMigrationsInput;
         /**
          * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
          */
@@ -200,12 +202,26 @@ export interface ModuleExportsRecord {
   [K: string]: () => Promise<unknown>;
 }
 
-export type RakeDbMigrationId = 'serial' | 'timestamp';
+export type RakeDbMigrationId = 'timestamp' | { serial: number };
+
+export interface RakeDbRenameMigrationsMap {
+  [K: string]: number;
+}
+
+export interface RakeDbRenameMigrations {
+  to: RakeDbMigrationId;
+  map(): MaybePromise<RakeDbRenameMigrationsMap>;
+}
+
+export interface RakeDbRenameMigrationsInput {
+  to: RakeDbMigrationId;
+  map: RakeDbRenameMigrationsMap;
+}
 
 export const migrationConfigDefaults = {
   schemaConfig: defaultSchemaConfig,
   migrationsPath: path.join('src', 'db', 'migrations'),
-  migrationId: 'serial',
+  migrationId: { serial: 4 },
   migrationsTable: 'schemaMigrations',
   snakeCase: false,
   commands: {},
@@ -285,6 +301,10 @@ export const processRakeDbConfig = <
           defaultColumnTypes(defaultSchemaConfig),
         )
       : ct) || defaultColumnTypes) as CT;
+  }
+
+  if (config.migrationId === 'serial') {
+    result.migrationId = { serial: 4 };
   }
 
   return result as RakeDbConfig<SchemaConfig, CT>;

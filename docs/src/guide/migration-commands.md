@@ -340,13 +340,32 @@ pnpm db change-ids serial
 pnpm db change-ids timestamp
 ```
 
+Serial prefixes have 4 digits by default, you can use a custom digits amount by specifying a second argument:
+
+```sh
+pnpm db change-ids 5
+```
+
 After running the command, change `migrationId` to the desired prefix kind in the migrations' config.
 
-This will create a special file in migrations: `.rename-to-serial.json`.
+When `rake-db` loads migrations directly from files (`migrationsPath` config is set):
+
+- The command will create a special file in migrations: `.rename-to-serial.json`,
+  it will be used to rename migrations in database after deploying to a remote server.
+- Migration files and database entries are renamed automatically.
+
+Alternatively, when `rake-db` accepts an array of migrations (`migrations` config is set):
+
+- The command will generate a setting `renameMigrations` that you should copy-paste into `rake-db` config.
+- It will output a series of `mv` commands to rename files (if migrations are stored in files),
+  then you should navigate to the migrations directory and apply these commands.
+- If migrations aren't stored in files, you'll have to rename migration object keys manually.
 
 After deploying to a remote server which is going to run migrations,
-it will be detected that the previously applied migrations have a timestamp prefix, but migration files have serial,
-and it will use the `.rename-to-serial.json` file to apply the renaming on a remote server.
+it will detect a prefix mismatch and will look for a file in the first case from above, or for a `renameMigrations` in the second case,
+and it will rename entries of already applied migrations in the database.
+
+Don't remove the `.rename-to-serial.json` or `renameMigrations` until the app is deployed to all destinations.
 
 ## custom commands
 

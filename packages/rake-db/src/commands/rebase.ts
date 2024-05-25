@@ -23,9 +23,9 @@ export const rebase = async (
     throw new Error('Cannot rebase migrations defined in the config');
   }
 
-  if (config.migrationId !== 'serial') {
+  if (config.migrationId === 'timestamp') {
     throw new Error(
-      `Cannot rebase when the 'migrationId' is set to '${config.migrationId}' in the config`,
+      `Cannot rebase when the 'migrationId' is set to 'timestamp' in the config`,
     );
   }
 
