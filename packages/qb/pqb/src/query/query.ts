@@ -8,6 +8,7 @@ import {
   ColumnShapeOutput,
   EmptyObject,
   Expression,
+  OperatorsNullable,
   PickOutputType,
   PickQueryMeta,
   PickQueryMetaResult,
@@ -459,8 +460,16 @@ export type SetQueryReturnsValueOrThrow<
 export type SetQueryReturnsValueOptional<
   T extends PickQueryMeta,
   Arg extends GetStringArg<T>,
-> = SetQueryReturnsColumnOptional<T, T['meta']['selectable'][Arg]['column']> &
-  T['meta']['selectable'][Arg]['column']['operators'];
+> = SetQueryReturnsColumnOptional<
+  T,
+  {
+    [K in keyof T['meta']['selectable'][Arg]['column']]: K extends 'outputType'
+      ? T['meta']['selectable'][Arg]['column'][K] | undefined
+      : T['meta']['selectable'][Arg]['column'][K];
+  }
+> &
+  Omit<T['meta']['selectable'][Arg]['column']['operators'], 'equals' | 'not'> &
+  OperatorsNullable<T['meta']['selectable'][Arg]['column']>;
 
 export type SetQueryReturnsColumnOrThrow<T, Column extends PickOutputType> = {
   [K in keyof T]: K extends 'result'

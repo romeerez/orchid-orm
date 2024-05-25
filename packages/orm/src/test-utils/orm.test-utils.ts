@@ -339,6 +339,11 @@ export const messageData = {
   createdAt: now,
 };
 
+export const postData = {
+  Body: 'body',
+  Title: 'title',
+};
+
 export const useRelationCallback = <T extends Query>(
   rel: { relationConfig: { query: T } },
   select: (keyof T['shape'])[],

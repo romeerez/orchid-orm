@@ -24,6 +24,7 @@ import {
 } from './join';
 import { getQueryAs, resolveSubQueryCallback } from '../../common/utils';
 import { processJoinArgs } from './processJoinArgs';
+import { _queryNone, isQueryNone } from '../none';
 
 /**
  * Generic function to construct all JOIN queries.
@@ -43,7 +44,7 @@ export const _join = <
   RequireJoined extends boolean,
   RequireMain extends boolean,
 >(
-  q: T,
+  query: T,
   require: RequireJoined,
   type: string,
   first: JoinFirstArg<never>,
@@ -57,7 +58,7 @@ export const _join = <
   if (typeof first === 'function') {
     first = (
       first as unknown as (q: { [K: string]: Query }) => JoinFirstArg<Query>
-    )(q.relations);
+    )(query.relations);
     (
       first as unknown as { joinQueryAfterCallback: unknown }
     ).joinQueryAfterCallback = (
@@ -66,6 +67,10 @@ export const _join = <
   }
 
   if (typeof first === 'object') {
+    if (require && isQueryNone(first)) {
+      return _queryNone(query) as JoinResult<T, R, RequireJoined, RequireMain>;
+    }
+
     const q = first as Query;
     joinSubQuery = getIsJoinSubQuery(q);
 
@@ -82,12 +87,12 @@ export const _join = <
   } else {
     joinKey = first as string;
 
-    const relation = q.relations[joinKey];
+    const relation = query.relations[joinKey];
     if (relation) {
       shape = getShapeFromSelect(relation.relationConfig.query);
       parsers = relation.relationConfig.query.q.parsers;
     } else {
-      shape = (q as unknown as PickQueryQ).q.withShapes?.[joinKey];
+      shape = (query as unknown as PickQueryQ).q.withShapes?.[joinKey];
       if (shape) {
         // clone the shape to mutate it below, in other cases the shape is newly created
         if (!require) shape = { ...shape };
@@ -105,13 +110,13 @@ export const _join = <
 
   if (joinKey) {
     setQueryObjectValue(
-      q as unknown as PickQueryQ,
+      query as unknown as PickQueryQ,
       'joinedShapes',
       joinKey,
       shape,
     );
     setQueryObjectValue(
-      q as unknown as PickQueryQ,
+      query as unknown as PickQueryQ,
       'joinedParsers',
       joinKey,
       parsers,
@@ -119,7 +124,7 @@ export const _join = <
   }
 
   const joinArgs = processJoinArgs(
-    q as unknown as Query,
+    query as unknown as Query,
     first,
     args,
     joinSubQuery,
@@ -136,21 +141,23 @@ export const _join = <
     if (j.q.select || !j.internal.columnsForSelectAll) {
       const shape = getShapeFromSelect(j, true);
       setQueryObjectValue(
-        q as unknown as PickQueryQ,
+        query as unknown as PickQueryQ,
         'joinedShapes',
         joinKey,
         shape,
       );
       setQueryObjectValue(
-        q as unknown as PickQueryQ,
+        query as unknown as PickQueryQ,
         'joinedParsers',
         joinKey,
         j.q.parsers,
       );
     }
+  } else if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
+    return _queryNone(query) as JoinResult<T, R, RequireJoined, RequireMain>;
   }
 
-  return pushQueryValue(q as unknown as PickQueryQ, 'join', {
+  return pushQueryValue(query as unknown as PickQueryQ, 'join', {
     type,
     args: joinArgs,
   }) as never;

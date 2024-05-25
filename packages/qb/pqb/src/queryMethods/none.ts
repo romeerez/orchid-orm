@@ -1,6 +1,8 @@
 import { Query } from '../query/query';
 import { noop } from 'orchid-core';
 import { NotFoundError } from '../errors';
+import { extendQuery, pushQueryValue } from '../query/queryUtils';
+import { RawSQL } from '../sql/rawSql';
 
 /**
  * Methods added to the query prototype when calling {@link QueryMethods.none}.
@@ -23,3 +25,14 @@ export const noneMethods = {
   // `catch` returns a Promise, so it is chainable with then/catch.
   catch: () => new Promise(noop),
 };
+
+export const _queryNone = <T>(q: T): T => {
+  if (isQueryNone(q)) return q;
+
+  q = extendQuery(q as Query, noneMethods) as T;
+  pushQueryValue(q as Query, 'and', new RawSQL('false'));
+  return q;
+};
+
+export const isQueryNone = (q: unknown) =>
+  (q as Query).then === noneMethods.then;

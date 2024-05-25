@@ -87,7 +87,7 @@ type DataNullable = {
   isNullable: true;
 };
 
-type OperatorsNullable<T> = {
+export type OperatorsNullable<T> = {
   // allow `null` in .where({ column: { equals: null } }) and the same for `not`
   equals: OperatorBase<T | null, any>;
   not: OperatorBase<T | null, any>;

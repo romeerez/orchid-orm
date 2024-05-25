@@ -170,3 +170,26 @@ describe('where sub query', () => {
     );
   });
 });
+
+describe('empty whereIn', () => {
+  it('should resolve to none for a single column', async () => {
+    const res = await User.whereIn('id', []);
+
+    expect(res).toEqual([]);
+  });
+
+  it('should resolve to none for multiple columns', async () => {
+    const res = await User.whereIn(['id', 'name'], []);
+
+    expect(res).toEqual([]);
+  });
+
+  it('should resolve to none for object argument', async () => {
+    const res = await User.whereIn({
+      id: [],
+      name: [],
+    });
+
+    expect(res).toEqual([]);
+  });
+});
