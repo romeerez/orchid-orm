@@ -132,64 +132,62 @@ export const makeSQL = (
 
   const quotedAs = (query.as || table.table) && `"${query.as || table.table}"`;
 
-  sql.push('SELECT');
-
-  if (query.distinct) {
-    pushDistinctSql(ctx, table, query.distinct, quotedAs);
-  }
-
-  pushSelectSql(ctx, table, query, quotedAs);
-
-  if (table.table || query.from) {
-    pushFromAndAs(ctx, table, query, quotedAs);
-  }
-
-  if (query.join) {
-    pushJoinSql(
-      ctx,
-      table,
-      query as QueryData & { join: JoinItem[] },
-      quotedAs,
-    );
-  }
-
-  if (query.and || query.or) {
-    pushWhereStatementSql(ctx, table, query, quotedAs);
-  }
-
-  if (query.group) {
-    const group = query.group.map((item) =>
-      isExpression(item)
-        ? item.toSQL(ctx, quotedAs)
-        : columnToSql(ctx, table.q, table.q.shape, item as string, quotedAs),
-    );
-    sql.push(`GROUP BY ${group.join(', ')}`);
-  }
-
-  if (query.having) pushHavingSql(ctx, query, quotedAs);
-
-  if (query.window) {
-    const window: string[] = [];
-    query.window.forEach((item) => {
-      for (const key in item) {
-        window.push(
-          `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
-        );
-      }
-    });
-    sql.push(`WINDOW ${window.join(', ')}`);
-  }
-
   if (query.union) {
-    for (const item of query.union) {
-      let itemSql: string | undefined;
-      if (isExpression(item.arg)) {
-        itemSql = item.arg.toSQL(ctx, quotedAs);
-      } else {
-        const argSql = makeSQL(item.arg, { values });
-        itemSql = argSql.text;
-      }
-      sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);
+    sql.push(`(${makeSQL(query.union.b, { values }).text})`);
+
+    for (const u of query.union.u) {
+      const itemSql = isExpression(u.a)
+        ? u.a.toSQL(ctx, quotedAs)
+        : makeSQL(u.a, { values }).text;
+      sql.push(`${u.k} (${itemSql})`);
+    }
+  } else {
+    sql.push('SELECT');
+
+    if (query.distinct) {
+      pushDistinctSql(ctx, table, query.distinct, quotedAs);
+    }
+
+    pushSelectSql(ctx, table, query, quotedAs);
+
+    if (table.table || query.from) {
+      pushFromAndAs(ctx, table, query, quotedAs);
+    }
+
+    if (query.join) {
+      pushJoinSql(
+        ctx,
+        table,
+        query as QueryData & { join: JoinItem[] },
+        quotedAs,
+      );
+    }
+
+    if (query.and || query.or) {
+      pushWhereStatementSql(ctx, table, query, quotedAs);
+    }
+
+    if (query.group) {
+      const group = query.group.map((item) =>
+        isExpression(item)
+          ? item.toSQL(ctx, quotedAs)
+          : columnToSql(ctx, table.q, table.q.shape, item as string, quotedAs),
+      );
+      sql.push(`GROUP BY ${group.join(', ')}`);
+    }
+
+    if (query.having) pushHavingSql(ctx, query, quotedAs);
+
+    if (query.window) {
+      const window: string[] = [];
+      query.window.forEach((item) => {
+        for (const key in item) {
+          window.push(
+            `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
+          );
+        }
+      });
+      sql.push(`WINDOW ${window.join(', ')}`);
     }
   }
 

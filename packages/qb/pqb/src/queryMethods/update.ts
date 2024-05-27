@@ -20,7 +20,6 @@ import {
   Expression,
   QueryThen,
   callWithThis,
-  emptyObject,
   RecordUnknown,
   PickQueryShape,
   SQLQueryArgs,
@@ -232,11 +231,10 @@ export const _queryUpdate = <T extends UpdateSelf>(
               'q',
               'withShapes',
             );
-            pushQueryValue(query as unknown as Query, 'with', [
-              as,
-              emptyObject,
-              value,
-            ]);
+            pushQueryValue(query as unknown as Query, 'with', {
+              n: as,
+              q: value,
+            });
 
             set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
           }

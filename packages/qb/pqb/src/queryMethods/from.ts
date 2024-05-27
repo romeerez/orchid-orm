@@ -49,6 +49,10 @@ export type FromResult<
                 ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
                 : T['meta'][K];
             }
+          : K extends 'result'
+          ? T['withData'][Arg]['shape']
+          : K extends 'then'
+          ? QueryThen<GetQueryResult<T, T['withData'][Arg]['shape']>>
           : T[K];
       }
     : SetQueryTableAlias<T, Arg>
@@ -59,14 +63,7 @@ export type FromResult<
             [K in keyof T['meta']]: K extends 'as'
               ? AliasOrTable<Arg>
               : K extends 'selectable'
-              ? {
-                  [K in keyof Arg['result']]: K extends string
-                    ? {
-                        as: K;
-                        column: Arg['result'][K];
-                      }
-                    : never;
-                }
+              ? SelectableFromShape<Arg['result'], AliasOrTable<Arg>>
               : T['meta'][K];
           }
         : K extends 'result'
@@ -118,6 +115,7 @@ export function queryFrom<
   const data = (self as unknown as PickQueryQ).q;
   if (typeof arg === 'string') {
     data.as ||= arg;
+    data.shape = data.withShapes?.[arg] as ColumnsShapeBase;
   } else if (isExpression(arg)) {
     data.as ||= 't';
   } else if (Array.isArray(arg)) {
@@ -161,7 +159,7 @@ export function queryFromSql<T extends FromQuerySelf>(
   return self;
 }
 
-export class From {
+export class FromMethods {
   /**
    * Set the `FROM` value, by default the table name is used.
    *

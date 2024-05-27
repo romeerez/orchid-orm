@@ -26,7 +26,6 @@ import {
   emptyObject,
   MaybeArray,
   RecordUnknown,
-  SQLQueryArgs,
   TransactionState,
 } from 'orchid-core';
 
@@ -36,6 +35,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
   $transaction: typeof transaction;
   $adapter: Adapter;
   $queryBuilder: Db;
+
   /**
    * Use `$query` to perform raw SQL queries.
    *
@@ -77,6 +77,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
    */
   $query: Db['query'];
+
   /**
    * The same as the {@link $query}, but returns an array of arrays instead of objects:
    *
@@ -93,9 +94,14 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
    */
   $queryArrays: Db['queryArrays'];
+
+  /**
+   * See {@link FromMethods.from}
+   */
   $from<Arg extends MaybeArray<FromArg<Query>>>(
     arg: Arg,
   ): FromResult<Query, Arg>;
+
   $close(): Promise<void>;
 };
 
@@ -149,12 +155,14 @@ export const orchidORM = <T extends TableClasses>(
     $transaction: transaction,
     $adapter: adapter,
     $queryBuilder: qb,
-    $query: (...args: SQLQueryArgs) => qb.query(...args),
-    $queryArrays: (...args: SQLQueryArgs) => qb.queryArrays(...args),
-    $from: <Arg extends MaybeArray<FromArg<Query>>>(
-      arg: Arg,
-    ): FromResult<Query, Arg> => qb.from(arg),
-    $close: () => adapter.close(),
+    $query: ((...args) => qb.query(...args)) as typeof qb.query,
+    $queryArrays: ((...args) =>
+      qb.queryArrays(...args)) as typeof qb.queryArrays,
+    $with: qb.with.bind(qb),
+    $withRecursive: qb.withRecursive.bind(qb),
+    $withSql: qb.withSql.bind(qb),
+    $from: qb.from.bind(qb),
+    $close: adapter.close.bind(adapter),
   } as unknown as OrchidORM;
 
   const tableInstances: Record<string, Table> = {};

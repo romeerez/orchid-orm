@@ -11,14 +11,40 @@ describe('from', () => {
   it('should accept a query', () => {
     const q = User.from(User.select('name')).select('name');
 
+    assertType<Awaited<typeof q>, { name: string }[]>();
+
     expectSql(
       q.toSQL(),
       'SELECT "user"."name" FROM (SELECT "user"."name" FROM "user") AS "user"',
     );
   });
 
+  it('should play nicely with `with` and `join`', () => {
+    const q = User.with('w', Profile.select('userId'))
+      .from(User)
+      .join('w', 'w.userId', 'user.id')
+      .select('w.userId', 'user.id');
+
+    assertType<Awaited<typeof q>, { userId: number; id: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "w" AS (
+          SELECT "profile"."userId"
+          FROM "profile"
+        )
+        SELECT "w"."userId", "user"."id"
+        FROM "user"
+        JOIN "w" ON "w"."userId" = "user"."id"
+      `,
+    );
+  });
+
   it('should not insert sub query and alias if provided query is simple', () => {
     const q = User.from(User).select('name');
+
+    assertType<Awaited<typeof q>, { name: string }[]>();
 
     expectSql(q.toSQL(), 'SELECT "user"."name" FROM "user"');
   });

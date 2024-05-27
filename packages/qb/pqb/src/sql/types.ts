@@ -44,11 +44,16 @@ const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
   'for',
 ];
 
-export type WithItem = [
-  as: string,
-  options: WithOptions,
-  query: Query | Expression,
-];
+export type WithItem = {
+  // name
+  n: string;
+  // options
+  o?: WithOptions;
+  // query
+  q?: Query;
+  // sql
+  s?: Expression;
+};
 
 export interface WithOptions {
   columns?: string[];
@@ -299,7 +304,15 @@ export interface WindowDeclaration {
   order?: OrderItem;
 }
 
-export type UnionItem = Query | Expression;
+export interface UnionItem {
+  a: Query | Expression;
+  k: UnionKind;
+}
+
+export interface UnionSet {
+  b: Query;
+  u: UnionItem[];
+}
 
 export type UnionKind =
   | 'UNION'

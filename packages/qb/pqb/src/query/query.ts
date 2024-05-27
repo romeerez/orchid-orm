@@ -148,6 +148,10 @@ export interface PickQueryMetaResultRelationsWindowsColumnTypes
   extends PickQueryMetaResultRelationsWindows,
     PickQueryColumnTypes {}
 
+export interface PickQueryWithDataColumnTypes
+  extends PickQueryWithData,
+    PickQueryColumnTypes {}
+
 export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
 
 export interface PickQueryMetaTableShape
@@ -614,24 +618,6 @@ export type SetQueryTableAlias<
       }
     : T[K];
 };
-
-export type SetQueryWith<T, WithData> = {
-  [K in keyof T]: K extends 'withData' ? WithData : T[K];
-};
-
-export type AddQueryWith<
-  T extends PickQueryWithData,
-  With extends WithDataItem,
-> = SetQueryWith<
-  T,
-  {
-    [K in keyof T['withData'] | With['table']]: K extends With['table']
-      ? With
-      : K extends keyof T['withData']
-      ? T['withData'][K]
-      : never;
-  }
->;
 
 export interface QueryOrExpression<T> {
   result: { value: QueryColumn<T> };

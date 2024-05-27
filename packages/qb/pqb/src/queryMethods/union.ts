@@ -1,6 +1,6 @@
-import { pushQueryArray } from '../query/queryUtils';
 import { Expression, PickQueryResult } from 'orchid-core';
 import { Query } from '../query/query';
+import { SelectQueryData, UnionItem, UnionKind } from '../sql';
 
 // argument of `union`-like query methods.
 // it supports query objects with the same result as in the previous query,
@@ -9,129 +9,168 @@ export type UnionArg<T extends PickQueryResult> =
   | {
       result: {
         [K in keyof T['result']]: {
-          dataType: T['result'][K]['dataType'];
+          queryType: T['result'][K]['queryType'];
         };
       };
     }
-  | Expression;
+  | ((q: T) => Expression);
+
+export const _queryUnion = <T extends Query>(
+  base: T,
+  args: UnionArg<T>[],
+  k: UnionKind,
+): T => {
+  const q = base.baseQuery.clone();
+
+  const u = args.map(
+    (a) =>
+      ({
+        a: typeof a === 'function' ? a(q as never) : a,
+        k,
+      } as UnionItem),
+  );
+
+  const union = ((q.q as SelectQueryData).union = (
+    base.q as SelectQueryData
+  ).union);
+
+  if (union) {
+    union.u.push(...u);
+  } else {
+    (q.q as SelectQueryData).union = {
+      b: base,
+      u,
+    };
+  }
+
+  return q as never;
+};
 
 export class Union {
   /**
-   * Creates a union query, taking an array or a list of callbacks, builders, or raw statements to build the union statement, with optional boolean `wrap`.
-   * If the `wrap` parameter is true, the queries will be individually wrapped in parentheses.
+   * Creates a union query, takes one or more queries or SQL expressions.
    *
    * ```ts
-   * SomeTable.select('id', 'name').union(
-   *   [
-   *     OtherTable.select('id', 'name'),
-   *     sql`SELECT id, name FROM "thirdTable"`,
-   *   ],
-   *   true, // optional wrap parameter
-   * );
+   * // The first query of the union
+   * db.one
+   *   .select('id', 'name')
+   *   // add two more queries to the union
+   *   .union(
+   *     db.two.select('id', 'name'),
+   *     (q = q.sql`SELECT id, name FROM "thirdTable"`),
+   *   )
+   *   // sub-sequent `union` is equivalent to passing multiple queries into a single `union`
+   *   .union(db.three.select('id', 'name'));
    * ```
    *
-   * @param args - array of queries or raw SQLs
-   * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
+   * `order`, `limit`, `offset` are special, it matters if you place them **before** or **after** the `union`, it also have a meaning to place them before and after.
+   *
+   * ```ts
+   * // order, limit, offset are applied ONLY to 'one'
+   * db.one
+   *   .order('x')
+   *   .limit(1)
+   *   .offset(1)
+   *   // 'two' also has order, limit, and offset
+   *   .unionAll(db.two.order('y').limit(2).offset(2))
+   *   // sets order, limit, offset for all records
+   *   .order('z')
+   *   .limit(3)
+   *   .offset(3);
+   * ```
+   *
+   * Equivalent SQL:
+   *
+   * ```sql
+   * -- both union parts have their own order, limit, offset
+   * ( SELECT * FROM one ORDER x ASC LIMIT 1 OFFSET 1 )
+   * UNION ALL
+   * ( SELECT * FROM two ORDER y ASC LIMIT 2 OFFSET 2 )
+   * -- order, limit, offset of the whole query
+   * ORDER BY z ASC LIMIT 3 OFFSET 3
+   * ```
+   *
+   * All the listed methods have the same signature, they are only different by SQL keyword:
+   *
+   * - `union` - union of all queries, performs deduplication
+   * - `unionAll` - `union` that allows duplicated rows
+   * - `intersect` - get only rows that are present in all queries
+   * - `intersectAll` - `intersect` that allows duplicated rows
+   * - `except` - get only rows that are in the first query but not in the second
+   * - `exceptAll` - `except` that allows duplicated rows
+   *
+   * @param args - array of queries or SQL expressions
    */
-  union<T extends PickQueryResult>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
-    return pushQueryArray(
+  union<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+    return _queryUnion(
       (this as unknown as Query).clone(),
-      'union',
-      args.map((arg) => ({ arg, kind: 'UNION' as const, wrap })),
+      args as UnionArg<Query>[],
+      'UNION',
     ) as never;
   }
 
   /**
-   * Same as `union`, but allows duplicated rows.
+   * Same as {@link union}, but allows duplicated rows.
    *
-   * @param args - array of queries or raw SQLs
-   * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
+   * @param args - array of queries or SQL expressions
    */
-  unionAll<T extends PickQueryResult>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
-    return pushQueryArray(
+  unionAll<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+    return _queryUnion(
       (this as unknown as Query).clone(),
-      'union',
-      args.map((arg) => ({ arg, kind: 'UNION ALL' as const, wrap })),
+      args as UnionArg<Query>[],
+      'UNION ALL',
     ) as never;
   }
 
   /**
-   * Same as `union`, but uses a `INTERSECT` SQL keyword instead
+   * Same as {@link union}, but uses a `INTERSECT` SQL keyword instead
    *
-   * @param args - array of queries or raw SQLs
-   * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
+   * @param args - array of queries or SQL expressions
    */
-  intersect<T extends PickQueryResult>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
-    return pushQueryArray(
+  intersect<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+    return _queryUnion(
       (this as unknown as Query).clone(),
-      'union',
-      args.map((arg) => ({ arg, kind: 'INTERSECT' as const, wrap })),
+      args as UnionArg<Query>[],
+      'INTERSECT',
     ) as never;
   }
 
   /**
-   * Same as `intersect`, but allows duplicated rows.
+   * Same as {@link intersect}, but allows duplicated rows.
    *
-   * @param args - array of queries or raw SQLs
-   * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
+   * @param args - array of queries or SQL expressions
    */
-  intersectAll<T extends PickQueryResult>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
-    return pushQueryArray(
+  intersectAll<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+    return _queryUnion(
       (this as unknown as Query).clone(),
-      'union',
-      args.map((arg) => ({ arg, kind: 'INTERSECT ALL' as const, wrap })),
+      args as UnionArg<Query>[],
+      'INTERSECT ALL',
     ) as never;
   }
 
   /**
-   * Same as `union`, but uses an `EXCEPT` SQL keyword instead
+   * Same as {@link union}, but uses an `EXCEPT` SQL keyword instead
    *
-   * @param args - array of queries or raw SQLs
-   * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
+   * @param args - array of queries or SQL expressions
    */
-  except<T extends PickQueryResult>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
-    return pushQueryArray(
+  except<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+    return _queryUnion(
       (this as unknown as Query).clone(),
-      'union',
-      args.map((arg) => ({ arg, kind: 'EXCEPT' as const, wrap })),
+      args as UnionArg<Query>[],
+      'EXCEPT',
     ) as never;
   }
 
   /**
-   * Same as `except`, but allows duplicated rows.
+   * Same as {@link except}, but allows duplicated rows.
    *
-   * @param args - array of queries or raw SQLs
-   * @param wrap - provide `true` if you want the queries to be wrapped into parentheses
+   * @param args - array of queries or SQL expressions
    */
-  exceptAll<T extends PickQueryResult>(
-    this: T,
-    args: UnionArg<T>[],
-    wrap?: boolean,
-  ): T {
-    return pushQueryArray(
+  exceptAll<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+    return _queryUnion(
       (this as unknown as Query).clone(),
-      'union',
-      args.map((arg) => ({ arg, kind: 'EXCEPT ALL' as const, wrap })),
+      args as UnionArg<Query>[],
+      'EXCEPT ALL',
     ) as never;
   }
 }

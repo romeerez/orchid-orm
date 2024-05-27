@@ -9,7 +9,7 @@ describe('clear', () => {
       .with('withAlias', User.all())
       .where({ id: 1 })
       .orWhere({ id: 2 })
-      .union([inner])
+      .union(inner)
       .join(Message, 'authorId', 'id')
       .group('id')
       .order('id')

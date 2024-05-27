@@ -30,9 +30,9 @@ import { pushQueryArray, pushQueryValue } from '../query/queryUtils';
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
-import { From, FromQuerySelf } from './from';
+import { FromMethods, FromQuerySelf } from './from';
 import { Join, OnMethods } from './join/join';
-import { With } from './with';
+import { WithMethods } from './with';
 import { Union } from './union';
 import { JsonMethods, JsonModifiers } from './json';
 import { Create } from './create';
@@ -196,9 +196,9 @@ export interface QueryMethods<ColumnTypes>
   extends AsMethods,
     AggregateMethods,
     Select,
-    From,
+    FromMethods,
     Join,
-    With,
+    WithMethods,
     Union,
     JsonModifiers,
     JsonMethods,
@@ -1017,10 +1017,10 @@ applyMixins(QueryMethods, [
   AsMethods,
   AggregateMethods,
   Select,
-  From,
+  FromMethods,
   Join,
   OnMethods,
-  With,
+  WithMethods,
   Union,
   JsonModifiers,
   JsonMethods,
