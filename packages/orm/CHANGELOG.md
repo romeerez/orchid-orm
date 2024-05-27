@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.28.0
+
+### Minor Changes
+
+- f27f8c4: Change `union` and `with`, add `withRecursive` and `withSql`.
+
+  See updated docs for [union](https://orchid-orm.netlify.app/guide/advanced-queries#union-unionall-intersect-intersectall-except-exceptall)
+  and [with](https://orchid-orm.netlify.app/guide/advanced-queries.html#with).
+
+### Patch Changes
+
+- Updated dependencies [f27f8c4]
+  - pqb@0.31.0
+  - rake-db@2.20.12
+
 ## 1.27.10
 
 ### Patch Changes
