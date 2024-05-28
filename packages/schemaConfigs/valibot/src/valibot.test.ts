@@ -573,9 +573,10 @@ describe('valibot schema config', () => {
 
   describe('enum', () => {
     it('should validate and parse enum', () => {
-      const type = t.enum('name', ['a', 'b', 'c']);
+      const values = ['a', 'b', 'c'] as const;
+      const type = t.enum('name', values);
 
-      assertAllTypes<typeof type, PicklistSchema<['a', 'b', 'c']>>();
+      assertAllTypes<typeof type, PicklistSchema<readonly ['a', 'b', 'c']>>();
 
       expectAllParse(type, 'a', 'a');
 

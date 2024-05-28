@@ -17,6 +17,7 @@ import {
   isExpression,
   Expression,
   MaybeArray,
+  PickQueryTableMetaResultInputType,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { QueryBase } from '../query/queryBase';
@@ -47,32 +48,35 @@ export type FromResult<
                 ? string | undefined
                 : K extends 'selectable'
                 ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
+                : K extends 'kind'
+                ? 'select'
                 : T['meta'][K];
             }
+          : K extends 'result'
+          ? T['withData'][Arg]['shape']
+          : K extends 'then'
+          ? QueryThen<GetQueryResult<T, T['withData'][Arg]['shape']>>
           : T[K];
       }
     : SetQueryTableAlias<T, Arg>
-  : Arg extends PickQueryTableMetaResult
+  : Arg extends PickQueryTableMetaResultInputType
   ? {
       [K in keyof T]: K extends 'meta'
         ? {
             [K in keyof T['meta']]: K extends 'as'
               ? AliasOrTable<Arg>
               : K extends 'selectable'
-              ? {
-                  [K in keyof Arg['result']]: K extends string
-                    ? {
-                        as: K;
-                        column: Arg['result'][K];
-                      }
-                    : never;
-                }
+              ? SelectableFromShape<Arg['result'], AliasOrTable<Arg>>
+              : K extends 'kind'
+              ? 'select'
               : T['meta'][K];
           }
         : K extends 'result'
         ? Arg['result']
         : K extends 'shape'
         ? Arg['result']
+        : K extends 'inputType'
+        ? Arg['inputType']
         : K extends 'then'
         ? QueryThen<GetQueryResult<T, Arg['result']>>
         : T[K];
@@ -118,6 +122,7 @@ export function queryFrom<
   const data = (self as unknown as PickQueryQ).q;
   if (typeof arg === 'string') {
     data.as ||= arg;
+    data.shape = data.withShapes?.[arg] as ColumnsShapeBase;
   } else if (isExpression(arg)) {
     data.as ||= 't';
   } else if (Array.isArray(arg)) {
@@ -161,7 +166,7 @@ export function queryFromSql<T extends FromQuerySelf>(
   return self;
 }
 
-export class From {
+export class FromMethods {
   /**
    * Set the `FROM` value, by default the table name is used.
    *
@@ -196,7 +201,7 @@ export class From {
   from<T extends FromQuerySelf, Arg extends MaybeArray<FromArg<T>>>(
     this: T,
     arg: T['meta']['hasSelect'] extends true
-      ? '`select` must be places after `from`'
+      ? '`select` must be placed after `from`'
       : Arg,
   ): FromResult<T, Arg> {
     return queryFrom((this as unknown as Query).clone(), arg as never) as never;

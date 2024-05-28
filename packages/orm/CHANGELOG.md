@@ -1,5 +1,73 @@
 # orchid-orm
 
+## 1.28.1
+
+### Patch Changes
+
+- Updated dependencies [6a0d06d]
+  - pqb@0.31.1
+  - orchid-core@0.15.5
+  - rake-db@2.20.13
+
+## 1.28.0
+
+### Minor Changes
+
+- f27f8c4: Change `union` and `with`, add `withRecursive` and `withSql`.
+
+  See updated docs for [union](https://orchid-orm.netlify.app/guide/advanced-queries#union-unionall-intersect-intersectall-except-exceptall)
+  and [with](https://orchid-orm.netlify.app/guide/advanced-queries.html#with).
+
+### Patch Changes
+
+- Updated dependencies [f27f8c4]
+  - pqb@0.31.0
+  - rake-db@2.20.12
+
+## 1.27.10
+
+### Patch Changes
+
+- 5a21099: Accept building expressions in create and update column callbacks
+- 5a21099: Support joining relation with alias
+- Updated dependencies [5a21099]
+- Updated dependencies [5a21099]
+  - pqb@0.30.7
+  - orchid-core@0.15.4
+  - rake-db@2.20.11
+
+## 1.27.9
+
+### Patch Changes
+
+- 147091d: Resolve empty whereIn into a none query, handle none query in various selecting and joining cases (#266)
+- Updated dependencies [147091d]
+  - pqb@0.30.6
+  - orchid-core@0.15.3
+  - rake-db@2.20.10
+
+## 1.27.8
+
+### Patch Changes
+
+- Updated dependencies [56f5fb8]
+  - rake-db@2.20.9
+
+## 1.27.7
+
+### Patch Changes
+
+- Updated dependencies [2d0da7b]
+  - rake-db@2.20.8
+
+## 1.27.6
+
+### Patch Changes
+
+- Updated dependencies [859c4cd]
+  - pqb@0.30.5
+  - rake-db@2.20.7
+
 ## 1.27.5
 
 ### Patch Changes

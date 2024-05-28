@@ -1,5 +1,27 @@
 # Breaking changes
 
+## orchid-orm 1.28.0
+
+#### with
+
+See the updated [with](https://orchid-orm.netlify.app/guide/advanced-queries.html#with) docs.
+
+Previously, the same `with` method could accept `recursive` parameter, and it could accept custom SQL expressions.
+
+Now the `with` is focused on queries, added new `withRecursive` method for recursive `WITH`, and `withSql` for SQL expressions.
+
+#### union and similar methods
+
+(similar methods are `unionAll`, `intersect`, `intersectAll`, `except`, `exceptAll`)
+
+- previously they accepted optional boolean argument two wrap queries wrap parens, now they are always wrapped;
+- they accepted array, now accepting variadic `...args` (one or more arguments);
+- `order`, `limit`, `offset` now are gracefully handled for such queries, see [docs](https://orchid-orm.netlify.app/guide/advanced-queries#union-unionall-intersect-intersectall-except-exceptall).
+
+## orchid-orm 1.27.10
+
+`updateRaw` renamed to `updateSql` (for consistency)
+
 ## orchid-orm 1.27.2
 
 `fn` query builder used to accept a column type as a parameter, now the column type is set by using the `type` method instead:

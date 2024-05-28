@@ -10,6 +10,8 @@ import { Query } from '../query/query';
 import { _queryGetOptional } from '../queryMethods/get.utils';
 import { queryJson } from '../queryMethods/json.utils';
 import { queryWrap } from '../queryMethods/queryMethods.utils';
+import { isQueryNone } from '../queryMethods/none';
+import { IntegerBaseColumn } from '../columns';
 
 const jsonColumnOrMethodToSql = (
   ctx: ToSQLCtx,
@@ -179,6 +181,36 @@ const pushSubQuerySql = (
   quotedAs?: string,
 ) => {
   const { returnType = 'all' } = query.q;
+
+  if (isQueryNone(query)) {
+    let sql: string;
+    switch (returnType) {
+      case 'one':
+      case 'oneOrThrow':
+      case 'void':
+        return;
+      case 'value':
+      case 'valueOrThrow':
+        if (query.q.expr?.result.value instanceof IntegerBaseColumn) {
+          sql = '0';
+        } else {
+          return;
+        }
+        break;
+      case 'all':
+      case 'pluck':
+      case 'rows':
+        sql = `'[]'::json`;
+        break;
+      case 'rowCount':
+        sql = '0';
+        break;
+      default:
+        throw new UnhandledTypeError(query as Query, returnType);
+    }
+    list.push(`${sql} "${as}"`);
+    return;
+  }
 
   if (query.q.joinedForSelect) {
     let sql;

@@ -1,36 +1,47 @@
-import { expectQueryNotMutated, Snake, User } from '../test-utils/test-utils';
-import { expectSql, testDb } from 'test-utils';
+import { User } from '../test-utils/test-utils';
+import { expectSql } from 'test-utils';
 
-['union', 'intersect', 'except'].forEach((what) => {
-  const upper = what.toUpperCase();
-  describe(what, () => {
-    it(`should add ${what}`, () => {
-      const q = User.all();
-      let query = q.select('id');
-      const snake = Snake.select({ id: 'tailLength' });
-      query = query[what as 'union']([snake, testDb.sql`SELECT 1`]);
-      query = query[
-        (what + 'All') as 'unionAll' | 'intersectAll' | 'exceptAll'
-      ]([testDb.sql`SELECT 2`], true);
+describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
+  it('should handle limit, offset, order differently when placed before or after union', () => {
+    const unionAll = `${union}All` as `unionAll`;
 
-      const wrapped = query.wrap(User.select('id'));
+    const q = User.order('id')
+      .limit(1)
+      .offset(1)
+      [union](User.order('name').limit(2).offset(2), (q) => q.sql`custom sql 1`)
+      [unionAll](
+        User.order('age').limit(3).offset(3),
+        (q) => q.sql`custom sql 2`,
+      )
+      .order('active')
+      .limit(4)
+      .offset(4);
 
-      expectSql(
-        wrapped.toSQL(),
-        `
-          SELECT "t"."id" FROM (
-            SELECT "user"."id" FROM "user"
-            ${upper}
-            SELECT "snake"."tail_length" "id" FROM "snake"
-            ${upper}
-            SELECT 1
-            ${upper} ALL
-            (SELECT 2)
-          ) AS "t"
-        `,
-      );
+    const UNION = union.toUpperCase();
 
-      expectQueryNotMutated(q);
-    });
+    expectSql(
+      q.toSQL(),
+      `
+      (
+        SELECT * FROM "user" ORDER BY "user"."id" ASC LIMIT $1 OFFSET $2
+      )
+      ${UNION}
+      (
+        SELECT * FROM "user" ORDER BY "user"."name" ASC LIMIT $3 OFFSET $4
+      )
+      ${UNION} (
+        custom sql 1
+      )
+      ${UNION} ALL
+      (
+        SELECT * FROM "user" ORDER BY "user"."age" ASC LIMIT $5 OFFSET $6
+      )
+      ${UNION} ALL (
+        custom sql 2
+      )
+      ORDER BY "user"."active" ASC LIMIT $7 OFFSET $8
+    `,
+      [1, 1, 2, 2, 3, 3, 4, 4],
+    );
   });
 });

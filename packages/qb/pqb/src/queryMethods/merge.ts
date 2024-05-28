@@ -3,7 +3,7 @@ import {
   GetQueryResult,
   PickQueryMetaResultReturnTypeWithDataWindows,
 } from '../query/query';
-import { SelectQueryData } from '../sql';
+import { SelectQueryData, UnionSet } from '../sql';
 import {
   getValueKey,
   MergeObjects,
@@ -90,6 +90,13 @@ export class MergeQueryMethods {
           } else if (mergableObjects[key]) {
             a[key] = a[key]
               ? { ...(a[key] as RecordUnknown), ...value }
+              : value;
+          } else if (key === 'union') {
+            a[key] = a[key]
+              ? {
+                  b: (a[key] as UnionSet).b,
+                  u: [...(a[key] as UnionSet).u, ...(value as UnionSet).u],
+                }
               : value;
           } else {
             a[key] = value;

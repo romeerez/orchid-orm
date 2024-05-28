@@ -1,5 +1,56 @@
 # rake-db
 
+## 2.20.13
+
+### Patch Changes
+
+- Updated dependencies [6a0d06d]
+  - pqb@0.31.1
+  - orchid-core@0.15.5
+
+## 2.20.12
+
+### Patch Changes
+
+- Updated dependencies [f27f8c4]
+  - pqb@0.31.0
+
+## 2.20.11
+
+### Patch Changes
+
+- Updated dependencies [5a21099]
+- Updated dependencies [5a21099]
+  - pqb@0.30.7
+  - orchid-core@0.15.4
+
+## 2.20.10
+
+### Patch Changes
+
+- Updated dependencies [147091d]
+  - pqb@0.30.6
+  - orchid-core@0.15.3
+
+## 2.20.9
+
+### Patch Changes
+
+- 56f5fb8: Fix: pass only migrated migrations to rake-db callbacks (#267)
+
+## 2.20.8
+
+### Patch Changes
+
+- 2d0da7b: Support renaming migrations when `migrations` option is set
+
+## 2.20.7
+
+### Patch Changes
+
+- Updated dependencies [859c4cd]
+  - pqb@0.30.5
+
 ## 2.20.6
 
 ### Patch Changes

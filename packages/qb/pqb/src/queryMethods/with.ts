@@ -1,71 +1,91 @@
 import { WithOptions } from '../sql';
-import { AddQueryWith, PickQueryWithData, Query } from '../query/query';
-import { Db } from '../query/db';
+import {
+  PickQueryMetaWithDataColumnTypes,
+  PickQueryWithDataColumnTypes,
+  Query,
+} from '../query/query';
 import { pushQueryValue, setQueryObjectValue } from '../query/queryUtils';
 import {
-  isExpression,
   Expression,
-  emptyObject,
   ColumnsShapeBase,
-  QueryColumns,
-  ColumnSchemaConfig,
+  EmptyObject,
+  PickQueryResult,
 } from 'orchid-core';
-import { DefaultColumnTypes } from '../columns';
+import { SqlMethod } from './sql';
+import { getShapeFromSelect } from './select';
+import { _queryUnion } from './union';
 
 // `with` method options
 // - `columns`: true to get all columns from the query, or array of column names
-// - `recursive`, `materialized`, `notMaterialized`: adds corresponding SQL keyword
-type WithArgsOptions = {
-  [K in keyof WithOptions]: K extends 'columns'
-    ? boolean | string[]
-    : WithOptions[K];
+// - `materialized`, `notMaterialized`: adds corresponding SQL keyword
+export interface WithArgsOptions {
+  columns?: string[] | boolean;
+  materialized?: true;
+  notMaterialized?: true;
+}
+
+export interface WithRecursiveOptions extends WithArgsOptions {
+  union?:
+    | 'UNION'
+    | 'UNION ALL'
+    | 'INTERSECT'
+    | 'INTERSECT ALL'
+    | 'EXCEPT'
+    | 'EXCEPT ALL';
+}
+
+export type WithQueryBuilder<T extends PickQueryWithDataColumnTypes> = {
+  [K in keyof Query]: K extends 'sql'
+    ? SqlMethod<T['columnTypes']>['sql']
+    : K extends 'relations'
+    ? EmptyObject
+    : K extends 'withData'
+    ? T['withData']
+    : Query[K];
 };
 
-// `with` method arguments.
-// First argument is an alias for the CTE query,
-// other arguments may be a column shape, query object, or a raw SQL.
-type WithArgs =
-  | [string, ColumnsShapeBase, Expression]
-  | [string, WithArgsOptions, ColumnsShapeBase, Expression]
-  | [string, Query | ((qb: Db) => Query)]
-  | [string, WithArgsOptions, Query | ((qb: Db) => Query)];
-
-// Get the columns shape based on `with` arguments.
-// It can get the shape from explicitly provided column schema or from a query object.
-type WithShape<Args extends WithArgs> = Args[1] extends Query
-  ? Args[1]['result']
-  : Args[1] extends (qb: Db) => Query
-  ? ReturnType<Args[1]>['result']
-  : Args[2] extends Query
-  ? Args[2]['result']
-  : Args[2] extends (qb: Db) => Query
-  ? ReturnType<Args[2]>['result']
-  : Args[1] extends ColumnsShapeBase
-  ? Args[1]
-  : Args[2] extends ColumnsShapeBase
-  ? Args[2]
-  : Args[2] extends (
-      t: DefaultColumnTypes<ColumnSchemaConfig>,
-    ) => ColumnsShapeBase
-  ? ReturnType<Args[2]> extends ColumnsShapeBase
-    ? ReturnType<Args[2]>
-    : never
-  : never;
-
 // Adds a `withData` entry to a query
-type WithResult<
-  T extends PickQueryWithData,
-  Args extends WithArgs,
-  Shape extends QueryColumns,
-> = AddQueryWith<
-  T,
-  {
-    table: Args[0];
-    shape: Shape;
-  }
->;
+export type WithResult<
+  T extends PickQueryMetaWithDataColumnTypes,
+  Name extends string,
+  Q extends PickQueryResult,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? { [K in keyof T['meta']]: K extends 'kind' ? 'select' : T['meta'][K] }
+    : K extends 'withData'
+    ? {
+        [K in keyof T['withData'] | Name]: K extends Name
+          ? {
+              table: Name;
+              shape: Q['result'];
+            }
+          : K extends keyof T['withData']
+          ? T['withData'][K]
+          : never;
+      }
+    : T[K];
+};
 
-export class With {
+export type WithSqlResult<
+  T extends PickQueryWithDataColumnTypes,
+  Name extends string,
+  Shape extends ColumnsShapeBase,
+> = {
+  [K in keyof T]: K extends 'withData'
+    ? {
+        [K in Name | keyof T['withData']]: K extends Name
+          ? {
+              table: Name;
+              shape: Shape;
+            }
+          : K extends keyof T['withData']
+          ? T['withData'][K]
+          : never;
+      }
+    : T[K];
+};
+
+export class WithMethods {
   /**
    * Add Common Table Expression (CTE) to the query.
    *
@@ -129,44 +149,165 @@ export class With {
    *   .join('alias', 'alias.id', 'user.id')
    *   .select('alias.id');
    * ```
-   *
-   * @param args - first argument is an alias for this CTE, other arguments can be column shape, query object, or raw SQL.
    */
+  with<T extends PickQueryMetaWithDataColumnTypes, Name extends string, Q>(
+    this: T,
+    name: Name,
+    query: Q | ((q: WithQueryBuilder<T>) => Q),
+  ): WithResult<T, Name, Q extends Query ? Q : never>;
   with<
-    T extends PickQueryWithData,
-    Args extends WithArgs,
-    Shape extends QueryColumns = WithShape<Args>,
-  >(this: T, ...args: Args): WithResult<T, Args, Shape> {
+    T extends PickQueryMetaWithDataColumnTypes,
+    Name extends string,
+    Q extends Query,
+  >(
+    this: T,
+    name: Name,
+    options: WithArgsOptions,
+    query: Q | ((qb: WithQueryBuilder<T>) => Q),
+  ): WithResult<T, Name, Q>;
+  with(
+    name: string,
+    second:
+      | WithArgsOptions
+      | Query
+      | ((qb: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
+    third?:
+      | Query
+      | ((qb: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
+  ) {
     const q = (this as unknown as Query).clone();
 
-    let options =
-      (args.length === 3 && !isExpression(args[2])) || args.length === 4
-        ? (args[1] as WithArgsOptions | WithOptions)
-        : undefined;
+    // eslint-disable-next-line prefer-const
+    let [options, queryArg] = third
+      ? [second as WithArgsOptions, third]
+      : [undefined, second];
 
-    const last = args[args.length - 1] as
-      | Query
-      | ((qb: Db) => Query)
-      | Expression;
-
-    const query = typeof last === 'function' ? last(q.queryBuilder) : last;
-
-    const shape =
-      args.length === 4
-        ? (args[2] as ColumnsShapeBase)
-        : isExpression(query)
-        ? args[1]
-        : query.q.shape;
+    let query: Query;
+    if (typeof queryArg === 'function') {
+      const arg = q.queryBuilder.clone();
+      arg.q.withShapes = q.q.withShapes;
+      query = queryArg(arg);
+    } else {
+      query = queryArg as Query;
+    }
 
     if (options?.columns === true) {
+      options = {
+        ...options,
+        columns: Object.keys(query.shape),
+      };
+    }
+
+    pushQueryValue(q, 'with', { n: name, o: options, q: query });
+
+    const shape = getShapeFromSelect(query, true);
+
+    return setQueryObjectValue(q, 'withShapes', name, shape);
+  }
+
+  withRecursive<
+    T extends PickQueryMetaWithDataColumnTypes,
+    Name extends string,
+    Q extends Query,
+    Result = WithResult<T, Name, Q>,
+  >(
+    this: T,
+    name: Name,
+    base: Q | ((qb: WithQueryBuilder<T>) => Q),
+    recursive: (qb: {
+      [K in keyof Result]: K extends 'result' ? Q['result'] : Result[K];
+    }) => Query,
+  ): Result;
+  withRecursive<
+    T extends PickQueryMetaWithDataColumnTypes,
+    Name extends string,
+    Q extends Query,
+    Result = WithResult<T, Name, Q>,
+  >(
+    this: T,
+    name: Name,
+    options: WithRecursiveOptions,
+    base: Q | ((qb: WithQueryBuilder<T>) => Q),
+    recursive: (qb: {
+      [K in keyof Result]: K extends 'result' ? Q['result'] : Result[K];
+    }) => Query,
+  ): Result;
+  withRecursive(name: string, ...args: unknown[]) {
+    const q = (this as unknown as Query).clone();
+
+    // eslint-disable-next-line prefer-const
+    let [options, baseFn, recursiveFn] = (
+      args.length === 2 ? [{}, args[0], args[1]] : args
+    ) as [
+      options: WithRecursiveOptions,
+      base: Query | ((q: unknown) => Query),
+      recursive: (q: unknown) => Query,
+    ];
+
+    const arg = q.queryBuilder.clone();
+    arg.q.withShapes = q.q.withShapes;
+    let query = typeof baseFn === 'function' ? baseFn(arg) : baseFn;
+    const shape = ((arg.q.withShapes ??= {})[name] = getShapeFromSelect(
+      query,
+      true,
+    ) as ColumnsShapeBase);
+    const recursive = recursiveFn(arg);
+
+    query = _queryUnion(query, [recursive], options.union ?? 'UNION ALL');
+
+    (options as WithOptions).recursive = true;
+
+    if (options.columns === true) {
       options = {
         ...options,
         columns: Object.keys(shape),
       };
     }
 
-    pushQueryValue(q, 'with', [args[0], options || emptyObject, query]);
+    pushQueryValue(q, 'with', { n: name, o: options, q: query });
 
-    return setQueryObjectValue(q, 'withShapes', args[0], shape) as never;
+    return setQueryObjectValue(q, 'withShapes', name, shape);
+  }
+
+  withSql<
+    T extends PickQueryWithDataColumnTypes,
+    Name extends string,
+    Shape extends ColumnsShapeBase,
+  >(
+    this: T,
+    name: Name,
+    options: WithOptions,
+    shape: (t: T['columnTypes']) => Shape,
+    expr: (q: T) => Expression,
+  ): WithSqlResult<T, Name, Shape>;
+  withSql<
+    T extends PickQueryWithDataColumnTypes,
+    Name extends string,
+    Shape extends ColumnsShapeBase,
+  >(
+    this: T,
+    name: Name,
+    shape: (t: T['columnTypes']) => Shape,
+    expr: (q: T) => Expression,
+  ): WithSqlResult<T, Name, Shape>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  withSql(this: PickQueryWithDataColumnTypes, name: string, ...args: any[]) {
+    const q = (this as unknown as Query).clone();
+
+    const [options, shape, sql] =
+      args.length === 2 ? [undefined, args[0], args[1]] : args;
+
+    pushQueryValue(q, 'with', {
+      n: name,
+      o: options,
+      s: sql(q),
+    });
+
+    return setQueryObjectValue(
+      q,
+      'withShapes',
+      name,
+      shape(this.columnTypes),
+    ) as never;
   }
 }

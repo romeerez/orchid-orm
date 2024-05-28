@@ -1,5 +1,24 @@
 # orchid-core
 
+## 0.15.5
+
+### Patch Changes
+
+- 6a0d06d: Support accessing WITH table value in create, update, delete
+
+## 0.15.4
+
+### Patch Changes
+
+- 5a21099: Accept building expressions in create and update column callbacks
+- 5a21099: Support joining relation with alias
+
+## 0.15.3
+
+### Patch Changes
+
+- 147091d: Resolve empty whereIn into a none query, handle none query in various selecting and joining cases (#266)
+
 ## 0.15.2
 
 ### Patch Changes

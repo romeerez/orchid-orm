@@ -77,6 +77,19 @@ export class Delete {
    * // delete all users who have corresponding profile records:
    * db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
    * ```
+   *
+   * `delete` can be used in {@link WithMethods.with} expressions:
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   // delete a record in one table
+   *   .with('a', db.table.find(1).select('id').delete())
+   *   // delete a record in other table using the first table record id
+   *   .with('b', (q) =>
+   *     db.otherTable.select('id').whereIn('aId', q.from('a').pluck('id')).delete(),
+   *   )
+   *   .from('b');
+   * ```
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   delete<T extends PickQueryMetaResult>(

@@ -23,6 +23,7 @@ import { sqlQueryArgsToExpression } from '../../sql/rawSql';
 import { RelationsBase } from '../../relations';
 import { processJoinArgs } from '../join/processJoinArgs';
 import { ExpressionMethods } from '../expressions';
+import { _queryNone } from '../none';
 
 /*
 Argument of `where`:
@@ -236,6 +237,10 @@ export const _queryWhereIn = <T>(
 ): WhereResult<T> => {
   let item;
   if (values) {
+    if ('length' in values && !values.length) {
+      return _queryNone(q) as WhereResult<T>;
+    }
+
     if (Array.isArray(arg)) {
       item = {
         IN: {
@@ -249,7 +254,12 @@ export const _queryWhereIn = <T>(
   } else {
     item = {} as { [K: string]: { in: unknown[] } };
     for (const key in arg as { [K: string]: unknown[] }) {
-      item[key] = { in: (arg as { [K: string]: unknown[] })[key] };
+      const values = (arg as { [K: string]: unknown[] })[key];
+      if ('length' in values && !values.length) {
+        return _queryNone(q) as WhereResult<T>;
+      }
+
+      item[key] = { in: values };
     }
   }
 
@@ -839,6 +849,15 @@ export class Where {
    *
    * ```ts
    * db.table.whereIn(['id', 'name'], sql`((1, 'one'), (2, 'two'))`);
+   * ```
+   *
+   * When empty set of values is given, `whereIn` will resolve into a {@link QueryMethods.none} query that has a special behavior.
+   *
+   * ```ts
+   * // following queries resolves into `none`:
+   * db.table.where('id', [])
+   * db.table.where(['id', 'name'], [])
+   * db.table.where({ id: [] })
    * ```
    */
   whereIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(

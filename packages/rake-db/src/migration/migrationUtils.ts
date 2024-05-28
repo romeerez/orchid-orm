@@ -19,9 +19,9 @@ import {
 import { AnyRakeDbConfig } from '../config';
 
 export const versionToString = (config: AnyRakeDbConfig, version: number) =>
-  config.migrationId === 'serial'
-    ? `${version}`.padStart(4, '0')
-    : `${version}`;
+  config.migrationId === 'timestamp'
+    ? `${version}`
+    : `${version}`.padStart(config.migrationId.serial, '0');
 
 export const columnTypeToSql = (item: ColumnTypeBase) => {
   return item.data.isOfCustomType

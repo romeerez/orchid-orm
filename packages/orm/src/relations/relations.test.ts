@@ -4,6 +4,7 @@ import {
   db,
   messageData,
   messageSelectAll,
+  postData,
   Profile,
   profileData,
   profileSelectAll,
@@ -372,5 +373,84 @@ describe('relations', () => {
       `,
       [10],
     );
+  });
+
+  it('should support joining aliased relation', () => {
+    const q = db.user.select('Id').join((q) => q.profile.as('p'));
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" "Id"
+        FROM "user"
+        JOIN "profile" AS "p"
+          ON "p"."userId" = "user"."id"
+         AND "p"."profileKey" = "user"."userKey"
+      `,
+    );
+  });
+
+  describe('sub-select `none` queries', () => {
+    it('should handle empty, undefined, null results', async () => {
+      await db.user.create({ ...userData, posts: { create: [postData] } });
+
+      const q = db.user.select({
+        posts: (q) => q.posts.whereIn('Id', []).select('Id'),
+        postsCount: (q) => q.posts.whereIn('Id', []).count(),
+        firstPost: (q) => q.posts.whereIn('Id', []).select('Id').takeOptional(),
+        firstPostTitle: (q) => q.posts.whereIn('Id', []).getOptional('Title'),
+        pluckPostTitles: (q) => q.posts.whereIn('Id', []).pluck('Title'),
+      });
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        {
+          posts: { Id: number }[];
+          postsCount: number;
+          firstPost: { Id: number } | undefined;
+          firstPostTitle: string | undefined;
+          pluckPostTitles: string[];
+        }[]
+      >();
+
+      expect(res).toEqual([
+        {
+          posts: [],
+          postsCount: 0,
+          firstPost: undefined,
+          firstPostTitle: undefined,
+          pluckPostTitles: [],
+        },
+      ]);
+    });
+
+    it('should throw when sub-query result is required', async () => {
+      await db.user.create({ ...userData, posts: { create: [postData] } });
+
+      const one = db.user.select({
+        firstPost: (q) => q.posts.whereIn('Id', []).select('Id').take(),
+      });
+
+      await expect(one).rejects.toThrow('Record is not found');
+
+      const get = db.user.select({
+        firstPostTitle: (q) => q.posts.whereIn('Id', []).get('Title'),
+      });
+
+      await expect(get).rejects.toThrow('Record is not found');
+    });
+
+    it('should return no records when sub-select is joined', async () => {
+      await db.user.create({ ...userData, posts: { create: [postData] } });
+
+      const q = db.user.select({
+        firstPost: (q) => q.posts.join().whereIn('Id', []).select('Id').take(),
+      });
+
+      const res = await q;
+      expect(res).toEqual([]);
+    });
   });
 });

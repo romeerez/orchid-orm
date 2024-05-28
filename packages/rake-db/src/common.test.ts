@@ -33,7 +33,7 @@ describe('common', () => {
         basePath: __dirname,
         dbScript: 'dbScript.ts',
         columnTypes: makeColumnTypes,
-        migrationId: 'serial',
+        migrationId: { serial: 4 },
         migrationsPath,
         recurrentPath: path.join(migrationsPath, 'recurrent'),
         migrationsTable: 'schemaMigrations',

@@ -333,7 +333,11 @@ describe('merge queries', () => {
       q2.q.before = [() => {}];
       q1.q.log = logParamToLogObject(console, true);
       q2.q.log = logParamToLogObject(console, true);
-      q1.q.logger = { log() {}, error() {}, warn() {} };
+      q1.q.logger = {
+        log() {},
+        error() {},
+        warn() {},
+      };
       q2.q.logger = console;
       q1.q.type = 'update';
       q2.q.type = 'insert';
@@ -356,8 +360,8 @@ describe('merge queries', () => {
       s1.having = [sum];
       s2.having = [avg];
 
-      s1.union = [{ arg: testDb.sql`a`, kind: 'UNION' }];
-      s2.union = [{ arg: testDb.sql`b`, kind: 'EXCEPT' }];
+      s1.union = { b: User, u: [{ a: testDb.sql`a`, k: 'UNION' }] };
+      s2.union = { b: User, u: [{ a: testDb.sql`b`, k: 'EXCEPT' }] };
       s1.order = [{ id: 'ASC' }];
       s2.order = [{ name: 'DESC' }];
       s1.limit = 1;
@@ -465,7 +469,7 @@ describe('merge queries', () => {
       });
       expect(s.group).toEqual([...s1.group, ...s2.group]);
       expect(s.having).toEqual([sum, avg]);
-      expect(s.union).toEqual([...s1.union, ...s2.union]);
+      expect(s.union).toEqual({ b: User, u: [...s1.union.u, ...s2.union.u] });
       expect(s.order).toEqual([...s1.order, ...s2.order]);
       expect(s.limit).toEqual(s2.limit);
       expect(s.offset).toEqual(s2.offset);

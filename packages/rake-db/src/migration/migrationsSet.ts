@@ -1,11 +1,16 @@
 import path from 'path';
-import { AnyRakeDbConfig, RakeDbMigrationId } from '../config';
+import {
+  AnyRakeDbConfig,
+  RakeDbRenameMigrations,
+  RakeDbRenameMigrationsMap,
+} from '../config';
 import { RecordString } from 'orchid-core';
 import { pathToFileURL } from 'node:url';
 import { Dirent } from 'node:fs';
 import { readdir } from 'fs/promises';
 import { RakeDbCtx } from '../common';
 import { fileNamesToChangeMigrationIdMap } from '../commands/changeIds';
+import fs from 'fs/promises';
 
 export interface MigrationItem {
   path: string;
@@ -20,7 +25,7 @@ export interface MigrationItem {
 }
 
 export interface MigrationsSet {
-  renameTo?: RakeDbMigrationId;
+  renameTo?: RakeDbRenameMigrations;
   migrations: MigrationItem[];
 }
 
@@ -33,13 +38,22 @@ export const getMigrations = async (
   config: AnyRakeDbConfig,
   up: boolean,
   allowDuplicates?: boolean,
+  getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> => {
   return (ctx.migrationsPromise ??= config.migrations
-    ? getMigrationsFromConfig({ ...config, migrations: config.migrations })
-    : getMigrationsFromFiles(config, allowDuplicates)).then((data) =>
-    up
-      ? data
-      : { renameTo: data.renameTo, migrations: [...data.migrations].reverse() },
+    ? getMigrationsFromConfig(
+        { ...config, migrations: config.migrations },
+        allowDuplicates,
+        getVersion,
+      )
+    : getMigrationsFromFiles(config, allowDuplicates, getVersion)).then(
+    (data) =>
+      up
+        ? data
+        : {
+            renameTo: data.renameTo,
+            migrations: [...data.migrations].reverse(),
+          },
   );
 };
 
@@ -47,13 +61,14 @@ export const getMigrations = async (
 function getMigrationsFromConfig(
   config: AnyRakeDbConfig,
   allowDuplicates?: boolean,
+  getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
   const result: MigrationItem[] = [];
   const versions: RecordString = {};
 
   const { migrations, basePath } = config;
   for (const key in migrations) {
-    const version = getMigrationVersionOrThrow(config, path.basename(key));
+    const version = getVersion(config, path.basename(key));
     if (versions[version] && !allowDuplicates) {
       throw new Error(
         `Migration ${key} has the same version as ${versions[version]}`,
@@ -69,8 +84,12 @@ function getMigrationsFromConfig(
     });
   }
 
+  const { renameMigrations } = config;
   return Promise.resolve({
     migrations: result,
+    renameTo: renameMigrations
+      ? { to: renameMigrations.to, map: () => renameMigrations.map }
+      : undefined,
   });
 }
 
@@ -85,7 +104,7 @@ export async function getMigrationsFromFiles(
   config: AnyRakeDbConfig,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
-): Promise<{ renameTo?: RakeDbMigrationId; migrations: MigrationItem[] }> {
+): Promise<MigrationsSet> {
   const { migrationsPath, import: imp } = config;
 
   const entries = await readdir(migrationsPath, { withFileTypes: true }).catch(
@@ -105,8 +124,25 @@ export async function getMigrationsFromFiles(
           );
         }
 
-        data.renameTo =
-          file.name === '.rename-to-serial.json' ? 'serial' : 'timestamp';
+        const isSerialFile = file.name === '.rename-to-serial.json';
+        const isSerialConfig = config.migrationId !== 'timestamp';
+        if (
+          (isSerialFile && !isSerialConfig) ||
+          (!isSerialFile && isSerialConfig)
+        ) {
+          throw new Error(
+            `File ${
+              file.name
+            } to rename migrations does not match \`migrationId\` ${JSON.stringify(
+              config.migrationId,
+            )} set in config`,
+          );
+        }
+
+        data.renameTo = {
+          to: config.migrationId,
+          map: () => renameMigrationsMap(config, file.name),
+        };
 
         return data;
       } else {
@@ -157,6 +193,28 @@ export async function getMigrationsFromFiles(
 
   return result;
 }
+
+const renameMigrationsMap = async (
+  config: AnyRakeDbConfig,
+  fileName: string,
+): Promise<RakeDbRenameMigrationsMap> => {
+  const filePath = path.join(config.migrationsPath, fileName);
+
+  const json = await fs.readFile(filePath, 'utf-8');
+
+  let data: RakeDbRenameMigrationsMap;
+  try {
+    data = JSON.parse(json);
+    if (typeof data !== 'object')
+      throw new Error('Config for renaming is not an object');
+  } catch (err) {
+    throw new Error(`Failed to read ${pathToFileURL(filePath)}`, {
+      cause: err,
+    });
+  }
+
+  return data;
+};
 
 // Restrict supported file extensions to `.ts`, `.js`, and `.mjs`.
 function checkExt(filePath: string): void {

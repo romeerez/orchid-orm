@@ -17,7 +17,7 @@ export interface ColumnsShapeToObject<Shape extends QueryColumns> {
 export interface ColumnsShapeToNullableObject<Shape extends QueryColumns> {
   dataType: 'object';
   type: ObjectType<Shape>;
-  outputType: ObjectOutput<Shape> | null;
+  outputType: ObjectOutput<Shape> | undefined;
   queryType: ObjectQuery<Shape> | null;
   operators: OperatorsAny;
 }

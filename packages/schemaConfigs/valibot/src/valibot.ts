@@ -833,7 +833,7 @@ export interface ValibotSchemaConfig {
     this: T,
   ): ParseColumn<T, DateSchema, Date>;
 
-  enum<U extends string, T extends [U, ...U[]]>(
+  enum<U extends string, T extends readonly [U, ...U[]]>(
     dataType: string,
     type: T,
   ): EnumColumn<ValibotSchemaConfig, PicklistSchema<T>, U, T>;

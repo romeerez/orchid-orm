@@ -1,5 +1,6 @@
 import {
   Query,
+  QueryOrExpression,
   QueryReturnsAll,
   SetQueryKind,
   SetQueryReturnsRowCount,
@@ -9,7 +10,7 @@ import {
   saveSearchAlias,
   throwIfNoWhere,
 } from '../query/queryUtils';
-import { RelationConfigBase, RelationQueryBase } from '../relations';
+import { RelationConfigBase } from '../relations';
 import { _queryWhereIn, WhereResult } from './where/where';
 import { JsonItem, ToSQLQuery } from '../sql';
 import { VirtualColumn } from '../columns';
@@ -19,9 +20,7 @@ import {
   Expression,
   QueryThen,
   callWithThis,
-  emptyObject,
   RecordUnknown,
-  QueryMetaBase,
   PickQueryShape,
   SQLQueryArgs,
 } from 'orchid-core';
@@ -30,16 +29,10 @@ import { JsonModifiers } from './json';
 import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
 import { resolveSubQueryCallback } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
+import { ExpressionMethods } from './expressions';
 
 export type UpdateSelf = {
-  [K in
-    | 'meta'
-    | 'inputType'
-    | 'relations'
-    | 'shape'
-    | 'result'
-    | 'returnType'
-    | keyof JsonModifiers]: Query[K];
+  [K in 'inputType' | 'relations' | UpdateColumnArgKeys]: Query[K];
 };
 
 // Type of argument for `update` and `updateOrThrow`
@@ -61,19 +54,18 @@ export type UpdateData<T extends UpdateSelf> = {
 
 type UpdateColumnArgKeys =
   | keyof JsonModifiers
+  | keyof ExpressionMethods
+  | 'sql'
   | 'meta'
   | 'shape'
   | 'result'
-  | 'returnType';
+  | 'returnType'
+  | 'columnTypes';
 
-type UpdateColumnCallbackResult = JsonItem | ResultRelationQueryBase;
-
-interface ResultRelationQueryBaseMeta extends QueryMetaBase {
-  kind: 'select';
-}
-
-interface ResultRelationQueryBase extends RelationQueryBase {
-  meta: ResultRelationQueryBaseMeta;
+interface UpdateQueryOrExpression<T> extends QueryOrExpression<T> {
+  meta: {
+    kind: 'select';
+  };
 }
 
 // Type of available variants to provide for a specific column when updating.
@@ -82,7 +74,7 @@ interface ResultRelationQueryBase extends RelationQueryBase {
 // or a callback with JSON methods.
 type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | T['inputType'][Key]
-  | Expression
+  | QueryOrExpression<T['inputType'][Key]>
   | {
       [K in keyof Query]: K extends 'then'
         ? QueryThen<T['inputType'][Key]>
@@ -96,7 +88,7 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
         : K extends UpdateColumnArgKeys
         ? T[K]
         : never;
-    }) => UpdateColumnCallbackResult);
+    }) => JsonItem | UpdateQueryOrExpression<T['inputType'][Key]>);
 
 // Add relation operations to the update argument.
 type UpdateRelationData<
@@ -114,7 +106,7 @@ export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
   : never;
 
-// Type of argument for `updateRaw`.
+// Type of argument for `updateSql`.
 // not available when there are no conditions on the query.
 type UpdateRawArgs<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
   ? SQLQueryArgs
@@ -239,11 +231,10 @@ export const _queryUpdate = <T extends UpdateSelf>(
               'q',
               'withShapes',
             );
-            pushQueryValue(query as unknown as Query, 'with', [
-              as,
-              emptyObject,
-              value,
-            ]);
+            pushQueryValue(query as unknown as Query, 'with', {
+              n: as,
+              q: value,
+            });
 
             set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
           }
@@ -365,7 +356,7 @@ export class Update {
    *   column1: 123,
    *
    *   // use raw SQL to update the column
-   *   column2: sql`2 + 2`,
+   *   column2: (q) => q.sql`2 + 2`,
    *
    *   // use query that returns a single value
    *   // returning multiple values will result in Postgres error
@@ -434,7 +425,24 @@ export class Update {
    * })
    * ```
    *
-   * It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
+   * `update` can be used in {@link WithMethods.with} expressions:
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   // update record in one table
+   *   .with('a', db.table.find(1).select('id').update(data))
+   *   // update record in other table using the first table record id
+   *   .with('b', (q) =>
+   *     db.otherTable
+   *       .find(1)
+   *       .select('id')
+   *       .update({
+   *         ...otherData,
+   *         aId: () => q.from('a').get('id'),
+   *       }),
+   *   )
+   *   .from('b');
+   * ```
    *
    * ### null, undefined, unknown columns
    *
@@ -480,7 +488,7 @@ export class Update {
   }
 
   /**
-   * `updateRaw` is for updating records with raw expression.
+   * `updateSql` is for updating records with raw expression.
    *
    * The behavior is the same as a regular `update` method has:
    * `find` or `where` must precede calling this method,
@@ -491,14 +499,14 @@ export class Update {
    * const value = 'new name';
    *
    * // update with SQL template string
-   * const updatedCount = await db.table.find(1).updateRaw`name = ${value}`;
+   * const updatedCount = await db.table.find(1).updateSql`name = ${value}`;
    *
    * // or update with `sql` function:
-   * await db.table.find(1).updateRaw(sql`name = ${value}`);
+   * await db.table.find(1).updateSql(sql`name = ${value}`);
    * ```
    * @param args - raw SQL via a template string or by using a `sql` method
    */
-  updateRaw<T extends UpdateSelf>(
+  updateSql<T extends UpdateSelf>(
     this: T,
     ...args: UpdateRawArgs<T>
   ): UpdateResult<T> {

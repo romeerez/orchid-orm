@@ -26,17 +26,13 @@ import {
   ToSQLQuery,
   TruncateQueryData,
 } from '../sql';
-import {
-  extendQuery,
-  pushQueryArray,
-  pushQueryValue,
-} from '../query/queryUtils';
+import { pushQueryArray, pushQueryValue } from '../query/queryUtils';
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
-import { From, FromQuerySelf } from './from';
+import { FromMethods, FromQuerySelf } from './from';
 import { Join, OnMethods } from './join/join';
-import { With } from './with';
+import { WithMethods } from './with';
 import { Union } from './union';
 import { JsonMethods, JsonModifiers } from './json';
 import { Create } from './create';
@@ -84,11 +80,11 @@ import { QueryBase } from '../query/queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
-import { noneMethods } from './none';
 import { ScopeMethods } from './scope';
 import { SoftDeleteMethods } from './softDelete';
 import { queryWrap } from './queryMethods.utils';
 import { ExpressionMethods } from './expressions';
+import { _queryNone } from './none';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -200,9 +196,9 @@ export interface QueryMethods<ColumnTypes>
   extends AsMethods,
     AggregateMethods,
     Select,
-    From,
+    FromMethods,
     Join,
-    With,
+    WithMethods,
     Union,
     JsonModifiers,
     JsonMethods,
@@ -809,11 +805,55 @@ export class QueryMethods<ColumnTypes> {
    * await db.table.all().update(data); // -> 0
    * await db.table.all().delete(); // -> 0
    * ```
+   *
+   * When it's being used in sub-selects, it will return empty arrays, `undefined`'s, or `0` for count,
+   * or it will throw if the sub-query require a result:
+   *
+   * ```ts
+   * await db.user.select({
+   *   // returns empty array
+   *   pets: (q) => q.pets.none(),
+   *   // returns `undefined`
+   *   firstPet: (q) => q.pets.none().takeOptional(),
+   *   // throws NotFound error
+   *   requriedFirstPet: (q) => q.pets.none().take(),
+   *   // returns `undefined`
+   *   firstPetName: (q) => q.pets.none().getOptional('name'),
+   *   // throws NotFound error
+   *   requiredFirstPetName: (q) => q.pets.none().get('name'),
+   *   // returns empty array
+   *   petsNames: (q) => q.pets.none().pluck('name'),
+   *   // returns 0
+   *   petsCount: (q) => q.pets.none().count(),
+   * });
+   * ```
+   *
+   * When the `none` query is being used for joins that require match, the host query will return an empty result:
+   *
+   * ```ts
+   * // all the following queries will resolve into empty arrays
+   *
+   * await db.user.select({
+   *   pets: (q) => q.pets.join().none(),
+   * });
+   *
+   * await db.user.join((q) => q.pets.none());
+   *
+   * await db.user.join('pets', (q) => q.none());
+   * ```
+   *
+   * When it's being used in `leftJoin` or `fullJoin`, it implicitly adds `ON false` into the join's SQL.
+   *
+   * ```ts
+   * // this query can return user records
+   * await db.user.leftJoin('pets', (q) => q.none());
+   *
+   * // this query won't return user records, because of the added where condition
+   * await db.user.leftJoin('pets', (q) => q.none()).where({ 'pets.name': 'Kitty' });
+   * ```
    */
   none<T>(this: T): T {
-    return (this as Query).then === noneMethods.then
-      ? this
-      : (extendQuery(this as Query, noneMethods) as T);
+    return _queryNone(this);
   }
 
   /**
@@ -977,10 +1017,10 @@ applyMixins(QueryMethods, [
   AsMethods,
   AggregateMethods,
   Select,
-  From,
+  FromMethods,
   Join,
   OnMethods,
-  With,
+  WithMethods,
   Union,
   JsonModifiers,
   JsonMethods,

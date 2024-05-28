@@ -13,7 +13,7 @@ import {
   isExpression,
   toArray,
 } from 'orchid-core';
-import { joinSubQuery, resolveSubQueryCallback } from '../common/utils';
+import { joinSubQuery } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
 
@@ -221,13 +221,6 @@ const encodeRow = (
   quotedAs?: string,
 ) => {
   const arr = row.map((value) => {
-    if (typeof value === 'function') {
-      value = resolveSubQueryCallback(
-        q,
-        value as (q: ToSQLQuery) => ToSQLQuery,
-      );
-    }
-
     if (value && typeof value === 'object') {
       if (value instanceof Expression) {
         return value.toSQL(ctx, quotedAs);

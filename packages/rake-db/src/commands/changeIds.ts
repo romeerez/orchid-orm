@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './newMigration';
 import { Adapter, AdapterOptions } from 'pqb';
-import { getMigrationsFromFiles } from '../migration/migrationsSet';
+import { getMigrations } from '../migration/migrationsSet';
 
 export const fileNamesToChangeMigrationId = {
   serial: '.rename-to-serial.json',
@@ -17,7 +17,7 @@ export const fileNamesToChangeMigrationIdMap = Object.fromEntries(
 export const changeIds = async (
   options: AdapterOptions[],
   config: AnyRakeDbConfig,
-  [arg]: string[],
+  [arg, digitsArg]: string[],
 ) => {
   if (arg !== 'serial' && arg !== 'timestamp') {
     throw new Error(
@@ -25,13 +25,10 @@ export const changeIds = async (
     );
   }
 
-  if (config.migrations) {
-    throw new Error(
-      `Cannot change migrations ids when migrations set is defined in the config`,
-    );
-  }
+  let digits = digitsArg && parseInt(digitsArg);
+  if (!digits || isNaN(digits)) digits = 4;
 
-  const data = await getMigrationsFromFiles(config, false, (_, filePath) => {
+  const data = await getMigrations({}, config, true, false, (_, filePath) => {
     const fileName = path.basename(filePath);
     const match = fileName.match(/^(\d+)\D/);
     if (!match) {
@@ -44,17 +41,30 @@ export const changeIds = async (
   });
 
   if (data.renameTo) {
-    if (data.renameTo === arg) {
-      config.logger?.log(`${fileNamesToChangeMigrationId[arg]} already exists`);
+    if (
+      (arg === 'serial' &&
+        typeof data.renameTo.to === 'object' &&
+        digits === data.renameTo.to.serial) ||
+      (arg === 'timestamp' && data.renameTo.to === 'timestamp')
+    ) {
+      config.logger?.log(
+        config.migrations
+          ? '`renameMigrations` setting is already set'
+          : `${fileNamesToChangeMigrationId[arg]} already exists`,
+      );
       return;
     }
 
-    await fs.unlink(
-      path.join(
-        config.migrationsPath,
-        fileNamesToChangeMigrationId[data.renameTo],
-      ),
-    );
+    if (!config.migrations) {
+      await fs.unlink(
+        path.join(
+          config.migrationsPath,
+          fileNamesToChangeMigrationId[
+            data.renameTo.to === 'timestamp' ? 'timestamp' : 'serial'
+          ],
+        ),
+      );
+    }
   }
 
   const version = arg === 'timestamp' ? parseInt(generateTimeStamp()) : 1;
@@ -63,31 +73,60 @@ export const changeIds = async (
     data.migrations.map((item, i) => [path.basename(item.path), version + i]),
   );
 
-  await fs.writeFile(
-    path.join(config.migrationsPath, fileNamesToChangeMigrationId[arg]),
-    JSON.stringify(rename, null, 2),
-  );
+  if (config.migrations) {
+    const to = arg === 'timestamp' ? `'${arg}'` : `{ serial: ${digits} }`;
+    config.logger?.log(
+      `Save the following settings into your rake-db config under the \`migrations\` setting, it will instruct rake-db to rename migration entries during the next deploy:\n${
+        arg !== 'serial' || digits !== 4 ? `\nmigrationId: ${to},` : ''
+      }\nrenameMigrations: {\n  to: ${to},\n  map: {\n    ` +
+        Object.entries(rename)
+          .map(([key, value]) => `"${key}": ${value},`)
+          .join('\n    ') +
+        '\n  },\n},\n\n',
+    );
+  } else {
+    await fs.writeFile(
+      path.join(config.migrationsPath, fileNamesToChangeMigrationId[arg]),
+      JSON.stringify(rename, null, 2),
+    );
+  }
 
-  const values: RenameMigrationVersionsValue[] = [];
-
-  await Promise.all(
-    data.migrations.map(async (item, i) => {
+  const values: RenameMigrationVersionsValue[] = data.migrations.map(
+    (item, i) => {
       let newVersion = String(version + i);
 
-      if (arg === 'serial') newVersion = newVersion.padStart(4, '0');
+      if (arg === 'serial') newVersion = newVersion.padStart(digits, '0');
 
       const name = path.basename(item.path).slice(item.version.length + 1);
 
+      return [item.version, name, newVersion];
+    },
+  );
+  if (!values.length) return;
+
+  if (config.migrations) {
+    config.logger?.log(
+      `If your migrations are stored in files, navigate to migrations directory and run the following commands to rename them:\n\n${values
+        .map(
+          ([version, name, newVersion]) =>
+            `mv "${version}_${name}" "${newVersion}_${name}"`,
+        )
+        .join(
+          '\n',
+        )}\n\nAfter setting \`renameMigrations\` (see above) and renaming the files, run the db up command to rename migration entries in your database`,
+    );
+    return;
+  }
+
+  await Promise.all(
+    data.migrations.map(async (item, i) => {
+      const [, name, newVersion] = values[i];
       await fs.rename(
         item.path,
         path.join(path.dirname(item.path), `${newVersion}_${name}`),
       );
-
-      values.push([item.version, name, newVersion]);
     }),
   );
-
-  if (!values.length) return;
 
   await options.map((opts) => {
     const adapter = new Adapter(opts);
@@ -95,12 +134,24 @@ export const changeIds = async (
       adapter.close(),
     );
   });
+
+  config.logger?.log(
+    `Migration files were renamed, a config file ${
+      fileNamesToChangeMigrationId[arg]
+    } for renaming migrations after deploy was created, and migrations in local db were renamed successfully.\n\n${
+      arg === 'timestamp' || digits !== 4
+        ? `Set \`migrationId\`: ${
+            arg === 'timestamp' ? `'timestamp'` : `{ serial: ${digits} }`
+          }`
+        : `Remove \`migrationId\``
+    } setting in the rake-db config`,
+  );
 };
 
 export type RenameMigrationVersionsValue = [
   oldVersion: string,
   name: string,
-  newVersion: string,
+  newVersion: string | number,
 ];
 
 export const renameMigrationVersionsInDb = async (

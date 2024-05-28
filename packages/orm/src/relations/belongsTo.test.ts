@@ -315,7 +315,7 @@ describe('belongsTo', () => {
 
         assertType<
           Awaited<typeof query>,
-          { Id: number; user: { Id: number; Name: string } | null }[]
+          { Id: number; user: { Id: number; Name: string } | undefined }[]
         >();
 
         expectSql(

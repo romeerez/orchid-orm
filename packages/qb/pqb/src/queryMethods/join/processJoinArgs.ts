@@ -11,6 +11,7 @@ import { RelationJoinQuery } from '../../relations';
 import { pushQueryArray } from '../../query/queryUtils';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { QueryBase } from '../../query/queryBase';
+import { returnArg } from 'orchid-core';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.
@@ -82,7 +83,10 @@ export const processJoinArgs = (
 
       return { w: first, r, s: joinSubQuery || getIsJoinSubQuery(r) };
     }
-  } else if (typeof args[0] === 'function') {
+  }
+
+  const args0 = args.length ? args[0] : returnArg;
+  if (typeof args0 === 'function') {
     const q = first as QueryWithTable & {
       joinQueryAfterCallback?: RelationJoinQuery;
     };
@@ -107,7 +111,7 @@ export const processJoinArgs = (
       [(joinTo.q.as || joinTo.table) as string]: joinTo.shape,
     } as JoinedShapes;
 
-    const r = args[0](
+    const r = args0(
       makeJoinQueryBuilder(
         q,
         q.q.joinedShapes

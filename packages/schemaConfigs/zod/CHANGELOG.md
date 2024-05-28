@@ -1,5 +1,45 @@
 # orchid-orm-schema-to-zod
 
+## 0.7.12
+
+### Patch Changes
+
+- Updated dependencies [6a0d06d]
+  - pqb@0.31.1
+  - orchid-core@0.15.5
+
+## 0.7.11
+
+### Patch Changes
+
+- Updated dependencies [f27f8c4]
+  - pqb@0.31.0
+
+## 0.7.10
+
+### Patch Changes
+
+- Updated dependencies [5a21099]
+- Updated dependencies [5a21099]
+  - pqb@0.30.7
+  - orchid-core@0.15.4
+
+## 0.7.9
+
+### Patch Changes
+
+- Updated dependencies [147091d]
+  - pqb@0.30.6
+  - orchid-core@0.15.3
+
+## 0.7.8
+
+### Patch Changes
+
+- 859c4cd: Accept readonly arrays in enum type (#269)
+- Updated dependencies [859c4cd]
+  - pqb@0.30.5
+
 ## 0.7.7
 
 ### Patch Changes

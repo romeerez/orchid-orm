@@ -1,7 +1,7 @@
 import { changeIds, fileNamesToChangeMigrationId } from './changeIds';
 import { testConfig } from '../rake-db.test-utils';
 import { AnyRakeDbConfig, RakeDbMigrationId } from '../config';
-import { getMigrationsFromFiles } from '../migration/migrationsSet';
+import { getMigrations } from '../migration/migrationsSet';
 import { asMock } from 'test-utils';
 import { Adapter, QueryLogger } from 'pqb';
 import fs from 'fs/promises';
@@ -28,14 +28,16 @@ const arrange = (arg: {
 
   const files = arg.files ?? [];
 
-  asMock(getMigrationsFromFiles).mockImplementation(
+  asMock(getMigrations).mockImplementation(
     (
+      _ctx,
       _config,
+      _up,
       _allowDuplicates,
       fn: (_: AnyRakeDbConfig, name: string) => string,
     ) => {
       return {
-        renameTo: arg.renameTo,
+        renameTo: { to: arg.renameTo },
         migrations: files.map((file) => ({
           path: file,
           version: fn(config, file),
@@ -62,18 +64,6 @@ describe('changeIds', () => {
     );
   });
 
-  it('should throw if config has migrations', async () => {
-    arrange({
-      config: {
-        migrations: {},
-      },
-    });
-
-    await expect(act('serial')).rejects.toThrow(
-      `Cannot change migrations ids when migrations set is defined in the config`,
-    );
-  });
-
   it('should throw when file has no digits prefix', async () => {
     arrange({
       files: ['file'],
@@ -94,7 +84,7 @@ describe('changeIds', () => {
       config: {
         logger,
       },
-      renameTo: 'serial',
+      renameTo: { serial: 4 },
     });
 
     await act('serial');

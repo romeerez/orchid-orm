@@ -15,10 +15,10 @@ describe('enum column', () => {
   type MoodUnion = 'sad' | 'ok' | 'happy';
 
   it('should output proper union', async () => {
+    const mood = ['sad', 'ok', 'happy'] as const;
+
     const result = await testDb.get(
-      testDb.sql`'happy'::mood`.type((t) =>
-        t.enum('mood', ['sad', 'ok', 'happy']),
-      ),
+      testDb.sql`'happy'::mood`.type((t) => t.enum('mood', mood)),
     );
     expect(result).toBe('happy');
 

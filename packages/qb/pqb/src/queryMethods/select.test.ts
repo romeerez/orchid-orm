@@ -47,7 +47,7 @@ describe('select', () => {
         }).takeOptional(),
     });
 
-    assertType<typeof res, { author: { count: number } | null }[]>();
+    assertType<typeof res, { author: { count: number } | undefined }[]>();
   });
 
   it('should combine multiple selects and give proper types', async () => {
@@ -390,7 +390,7 @@ describe('select', () => {
         'p.*',
       );
 
-      assertType<Awaited<typeof q>, { p: ProfileRecord | null }[]>();
+      assertType<Awaited<typeof q>, { p: ProfileRecord | undefined }[]>();
 
       expectSql(
         q.toSQL(),
@@ -423,7 +423,7 @@ describe('select', () => {
         profile: 'p.*',
       });
 
-      assertType<Awaited<typeof q>, { profile: ProfileRecord | null }[]>();
+      assertType<Awaited<typeof q>, { profile: ProfileRecord | undefined }[]>();
 
       expectSql(
         q.toSQL(),
@@ -499,7 +499,7 @@ describe('select', () => {
 
       assertType<
         Awaited<typeof q>,
-        { name: string | null; p: ProfileRecord | null }[]
+        { name: string | null; p: ProfileRecord | undefined }[]
       >();
 
       expectSql(
@@ -520,7 +520,7 @@ describe('select', () => {
 
       assertType<
         Awaited<typeof q>,
-        { name: string | null; profile: ProfileRecord | null }[]
+        { name: string | null; profile: ProfileRecord | undefined }[]
       >();
 
       expectSql(
@@ -967,7 +967,7 @@ describe('select', () => {
           user: () => User.takeOptional(),
         });
 
-        assertType<Awaited<typeof q>, { user: UserRecord | null }[]>();
+        assertType<Awaited<typeof q>, { user: UserRecord | undefined }[]>();
 
         expect(getShapeFromSelect(q)).toEqual({
           user: expect.any(JSONTextColumn),

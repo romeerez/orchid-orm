@@ -11,6 +11,7 @@ import { _join } from './_join';
 import { testWhere, testWhereExists } from '../where/testWhere';
 import { testJoin } from './testJoin';
 import { asMock, assertType, expectSql } from 'test-utils';
+import { isQueryNone } from '../none';
 
 jest.mock('./_join', () => {
   const { _join } = jest.requireActual('./_join');
@@ -550,6 +551,53 @@ describe('join callback with query builder', () => {
     User.join(Message, (q) => {
       assertType<typeof q.table, 'message'>();
       return q;
+    });
+  });
+
+  describe('join `none` sub-query', () => {
+    it('should handle `none` sub-query', () => {
+      const q = User.join(Message.none(), (q) => q);
+
+      expect(isQueryNone(q)).toBe(true);
+    });
+
+    it('should handle 1st callback `none`', () => {
+      const q = User.join(
+        () => Message.none(),
+        (q) => q,
+      );
+
+      expect(isQueryNone(q)).toBe(true);
+    });
+
+    it('should handle 2nd callback `none`', () => {
+      const q = User.join(Message, (q) => q.none());
+
+      expect(isQueryNone(q)).toBe(true);
+    });
+  });
+
+  describe('left join `none` sub-query', () => {
+    it('should join with `where false`', () => {
+      const q = User.leftJoin(Message.none(), (q) => q);
+
+      expect(isQueryNone(q)).toBe(false);
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "user".* FROM "user" LEFT JOIN "message" ON (false)`,
+      );
+    });
+
+    it('should join with `where false` for 2nd callback `none`', () => {
+      const q = User.leftJoin(Message, (q) => q.none());
+
+      expect(isQueryNone(q)).toBe(false);
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "user".* FROM "user" LEFT JOIN "message" ON (false)`,
+      );
     });
   });
 });

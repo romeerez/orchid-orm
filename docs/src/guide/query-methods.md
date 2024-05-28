@@ -232,6 +232,52 @@ await db.table.all().update(data).none(); // -> 0
 await db.table.all().delete().none(); // -> 0
 ```
 
+When it's being used in sub-selects, it will return empty arrays, `undefined`'s, or `0` for count,
+or it will throw if the sub-query require a result:
+
+```ts
+await db.user.select({
+  // returns empty array
+  pets: (q) => q.pets.none(),
+  // returns `undefined`
+  firstPet: (q) => q.pets.none().takeOptional(),
+  // throws NotFound error
+  requriedFirstPet: (q) => q.pets.none().take(),
+  // returns `undefined`
+  firstPetName: (q) => q.pets.none().getOptional('name'),
+  // throws NotFound error
+  requiredFirstPetName: (q) => q.pets.none().get('name'),
+  // returns empty array
+  petsNames: (q) => q.pets.none().pluck('name'),
+  // returns 0
+  petsCount: (q) => q.pets.none().count(),
+});
+```
+
+When the `none` query is being used for joins that require match, the host query will return an empty result:
+
+```ts
+// all the following queries will resolve into empty arrays
+
+await db.user.select({
+  pets: (q) => q.pets.join().none(),
+});
+
+await db.user.join((q) => q.pets.none());
+
+await db.user.join('pets', (q) => q.none());
+```
+
+When it's being used in `leftJoin` or `fullJoin`, it implicitly adds `ON false` into the join's SQL.
+
+```ts
+// this query can return user records
+await db.user.leftJoin('pets', (q) => q.none());
+
+// this query won't return user records, because of the added where condition
+await db.user.leftJoin('pets', (q) => q.none()).where({ 'pets.name': 'Kitty' });
+```
+
 ## select
 
 [//]: # 'has JSDoc'

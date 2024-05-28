@@ -143,7 +143,10 @@ describe('joinLateral', () => {
       'm.*',
     );
 
-    assertType<Awaited<typeof q>, { id: number; m: MessageRecord | null }[]>();
+    assertType<
+      Awaited<typeof q>,
+      { id: number; m: MessageRecord | undefined }[]
+    >();
 
     expectSql(
       q.toSQL(),

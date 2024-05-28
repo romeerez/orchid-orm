@@ -13,7 +13,6 @@ import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { RelationConfigBase, RelationQuery } from '../relations';
 import { addQueryOn } from './join/join';
 import { Query } from '../query/query';
-import { raw } from '../sql/rawSql';
 
 describe('update', () => {
   useTestDatabase();
@@ -30,7 +29,9 @@ describe('update', () => {
 
   it('should not mutate query', () => {
     const q = User.all();
+
     q.where({ name: 'name' }).update(update);
+
     expectQueryNotMutated(q);
   });
 
@@ -51,7 +52,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').createMany([userData, userData]);
 
-    const query = User.orWhere(...users).updateRaw(raw`name = 'name'`);
+    const query = User.orWhere(...users).updateSql(User.sql`name = 'name'`);
     expectSql(
       query.toSQL(),
       `
@@ -68,8 +69,8 @@ describe('update', () => {
     expect(result).toBe(count);
   });
 
-  it('should accept template string for `updateRaw`', () => {
-    const q = User.all().updateRaw`name = ${'name'}`;
+  it('should accept template string for `updateSql`', () => {
+    const q = User.all().updateSql`name = ${'name'}`;
     expectSql(
       q.toSQL(),
       `
@@ -425,7 +426,7 @@ describe('update', () => {
 
   it('should support raw sql as a value', () => {
     const query = User.where({ id: 1 }).update({
-      name: raw`'raw sql'`,
+      name: (q) => q.sql<string>`'raw sql'`,
     });
 
     expectSql(
@@ -439,6 +440,43 @@ describe('update', () => {
     );
 
     assertType<Awaited<typeof query>, number>();
+  });
+
+  it('should support a `WITH` table value in other `WITH` clause', () => {
+    const q = User.with('a', User.find(1).select('name').update(userData))
+      .with('b', (q) =>
+        User.find(2)
+          .select('id')
+          .update({
+            name: () => q.from('a').get('name'),
+          }),
+      )
+      .from('b');
+
+    assertType<Awaited<typeof q>, { id: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "a" AS (
+          UPDATE "user"
+          SET "name" = $1, "password" = $2, "updatedAt" = now()
+          WHERE "user"."id" = $3
+          RETURNING "user"."name"
+        ), "b" AS (
+          UPDATE "user"
+          SET
+            "name" = (
+              SELECT "a"."name" FROM "a" LIMIT 1
+            ),
+            "updatedAt" = now()
+          WHERE "user"."id" = $4
+          RETURNING "user"."id"
+        )
+        SELECT * FROM "b"
+      `,
+      ['name', 'password', 1, 2],
+    );
   });
 
   it('should return one record when searching for one to update', async () => {

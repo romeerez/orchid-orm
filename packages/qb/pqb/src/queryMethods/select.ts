@@ -13,7 +13,7 @@ import {
   ColumnsShapeToPluck,
 } from '../columns';
 import { JSONTextColumn } from '../columns/json';
-import { pushQueryArray } from '../query/queryUtils';
+import { pushQueryArray, pushQueryValue } from '../query/queryUtils';
 import { SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
 import { QueryResult } from '../adapter';
 import {
@@ -23,12 +23,14 @@ import {
   Expression,
   getValueKey,
   isExpression,
+  MaybeArray,
   PickQueryMeta,
   QueryColumn,
   QueryColumns,
   QueryMetaBase,
   QueryReturnType,
   QueryThen,
+  RecordUnknown,
   setColumnData,
   setParserToQuery,
 } from 'orchid-core';
@@ -42,6 +44,8 @@ import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 import { RelationsBase } from '../relations';
 import { parseRecord } from './then';
+import { _queryNone, isQueryNone } from './none';
+import { NotFoundError } from '../errors';
 
 interface SelectSelf {
   shape: QueryColumns;
@@ -259,7 +263,7 @@ export type SelectSubQueryResult<Arg extends SelectSelf> = QueryReturnsAll<
   Arg['returnType']
 > extends true
   ? ColumnsShapeToObjectArray<Arg['result']>
-  : Arg['returnType'] extends 'valueOrThrow'
+  : Arg['returnType'] extends 'value' | 'valueOrThrow'
   ? Arg['result']['value']
   : Arg['returnType'] extends 'pluck'
   ? ColumnsShapeToPluck<Arg['result']>
@@ -313,6 +317,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
       if (query.parsers || query.transform) {
         setParserToQuery((q as unknown as Query).q, key, (item) => {
           const t = query.returnType || 'all';
+
           subQueryResult.rows =
             t === 'value' || t === 'valueOrThrow'
               ? [[item]]
@@ -325,6 +330,30 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             query.handleResult(arg, t, subQueryResult, true),
           );
         });
+      }
+
+      if (
+        query.returnType === 'valueOrThrow' ||
+        query.returnType === 'oneOrThrow'
+      ) {
+        pushQueryValue(
+          q as unknown as PickQueryQ,
+          'transform',
+          (data: MaybeArray<RecordUnknown>) => {
+            if (Array.isArray(data)) {
+              for (const item of data) {
+                if (item[key as string] === undefined) {
+                  throw new NotFoundError(q as unknown as Query);
+                }
+              }
+            } else {
+              if (data[key as string] === undefined) {
+                throw new NotFoundError(q as unknown as Query);
+              }
+            }
+            return data;
+          },
+        );
       }
     }
     return arg;
@@ -342,7 +371,7 @@ export const processSelectArg = <T extends SelectSelf>(
   as: string | undefined,
   arg: SelectArg<T>,
   columnAs?: string | getValueKey,
-): SelectItem => {
+): SelectItem | undefined => {
   if (typeof arg === 'string') {
     return setParserForSelectedString(q as unknown as Query, arg, as, columnAs);
   }
@@ -356,7 +385,11 @@ export const processSelectArg = <T extends SelectSelf>(
     if (typeof value === 'function') {
       value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
 
-      if (!isExpression(value) && value.joinQuery) {
+      if (isQueryNone(value)) {
+        if (value.q.innerJoinLateral) {
+          return;
+        }
+      } else if (!isExpression(value) && value.joinQuery) {
         value = value.joinQuery(value, q);
 
         let query;
@@ -580,12 +613,19 @@ export function _querySelect<
 ): SelectResultColumnsAndObj<T, Columns, Obj>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function _querySelect(q: Query, args: any[]): any {
-  if (!args.length) {
+  const len = args.length;
+  if (!len) {
     return q;
   }
 
   const as = q.q.as || q.table;
-  const selectArgs = args.map((item) => processSelectArg(q, as, item));
+  const selectArgs = new Array(len) as (SelectItem | undefined)[];
+  for (let i = 0; i < len; i++) {
+    selectArgs[i] = processSelectArg(q, as, args[i]);
+    if (!selectArgs[i]) {
+      return _queryNone(q);
+    }
+  }
 
   return pushQueryArray(q, 'select', selectArgs);
 }

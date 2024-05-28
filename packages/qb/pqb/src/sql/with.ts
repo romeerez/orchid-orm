@@ -1,34 +1,28 @@
 import { makeSQL, ToSQLCtx } from './toSQL';
-import { QueryData } from './data';
-import { isExpression } from 'orchid-core';
+import { WithItem, WithOptions } from './types';
+import { emptyObject, Expression } from 'orchid-core';
 
-export const pushWithSql = (
-  ctx: ToSQLCtx,
-  withData: Exclude<QueryData['with'], undefined>,
-) => {
-  if (!withData.length) return;
+export const pushWithSql = (ctx: ToSQLCtx, items: WithItem[]) => {
+  if (!items.length) return;
 
   ctx.sql.push(
     'WITH',
-    withData
-      .map((withItem) => {
-        const [name, options, query] = withItem;
-
+    items
+      .map((item) => {
         let inner: string;
-        if (isExpression(query)) {
-          inner = query.toSQL(ctx, `"${name}"`);
+        if (item.q) {
+          inner = makeSQL(item.q, ctx).text;
         } else {
-          inner = makeSQL(query, ctx).text;
+          inner = (item.s as Expression).toSQL(ctx, `"${item.n}"`);
         }
 
-        return `${options.recursive ? 'RECURSIVE ' : ''}"${name}"${
-          options.columns
-            ? `(${options.columns.map((x) => `"${x}"`).join(', ')})`
-            : ''
+        const o = item.o ?? (emptyObject as WithOptions);
+        return `${o.recursive ? 'RECURSIVE ' : ''}"${item.n}"${
+          o.columns ? `(${o.columns.map((x) => `"${x}"`).join(', ')})` : ''
         } AS ${
-          options.materialized
+          o.materialized
             ? 'MATERIALIZED '
-            : options.notMaterialized
+            : o.notMaterialized
             ? 'NOT MATERIALIZED '
             : ''
         }(${inner})`;

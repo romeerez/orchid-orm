@@ -11,7 +11,6 @@ import {
   QuerySourceItem,
   SelectItem,
   UnionItem,
-  UnionKind,
   WhereItem,
   WindowItem,
   WithItem,
@@ -173,7 +172,7 @@ export interface SelectQueryData extends CommonQueryData {
   group?: (string | Expression)[];
   having?: HavingItem[];
   window?: WindowItem[];
-  union?: { arg: UnionItem; kind: UnionKind; wrap?: boolean }[];
+  union?: { b: Query; u: UnionItem[] };
   order?: OrderItem[];
   returnsOne?: true;
   limit?: number;
@@ -307,7 +306,7 @@ export const cloneQuery = (q: QueryData) => {
     if (q.group) q.group = q.group.slice(0);
     if (q.having) q.having = q.having.slice(0);
     if (q.window) q.window = q.window.slice(0);
-    if (q.union) q.union = q.union.slice(0);
+    if (q.union) q.union = { b: q.union.b, u: q.union.u.slice(0) };
     if (q.order) q.order = q.order.slice(0);
   } else if (q.type === 'insert') {
     q.columns = q.columns.slice(0);

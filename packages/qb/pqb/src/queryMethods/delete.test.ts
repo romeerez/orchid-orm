@@ -154,6 +154,31 @@ describe('delete', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should be supported in `WITH` expressions', () => {
+    const q = User.with('a', User.find(1).select('name').delete())
+      .with('b', (q) =>
+        User.select('id').whereIn('name', q.from('a').pluck('name')).delete(),
+      )
+      .from('b');
+
+    assertType<Awaited<typeof q>, { id: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "a" AS (
+          DELETE FROM "user" WHERE "user"."id" = $1 RETURNING "user"."name"
+        ), "b" AS (
+          DELETE FROM "user"
+          WHERE "user"."name" IN (SELECT "a"."name" FROM "a")
+          RETURNING "user"."id"
+        )
+        SELECT * FROM "b"
+      `,
+      [1],
+    );
+  });
+
   it('should support implicit lateral join', () => {
     const q = User.selectAll()
       .where({ id: 1 })

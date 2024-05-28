@@ -491,6 +491,15 @@ It supports raw SQL expression:
 db.table.whereIn(['id', 'name'], sql`((1, 'one'), (2, 'two'))`);
 ```
 
+When empty set of values is given, `whereIn` will resolve into a [none](/guide/query-methods#none) query that has a special behavior.
+
+```ts
+// following queries resolves into `none`:
+db.table.where('id', []);
+db.table.where(['id', 'name'], []);
+db.table.where({ id: [] });
+```
+
 ## orWhereIn
 
 [//]: # 'has JSDoc'

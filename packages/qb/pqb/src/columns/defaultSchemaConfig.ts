@@ -76,7 +76,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
 
   dateAsDate(): ParseColumn<DateBaseColumn<DefaultSchemaConfig>, unknown, Date>;
 
-  enum<U extends string, T extends [U, ...U[]]>(
+  enum<U extends string, T extends readonly [U, ...U[]]>(
     dataType: string,
     type: T,
   ): EnumColumn<DefaultSchemaConfig, unknown, U, T>;
@@ -151,7 +151,7 @@ export const defaultSchemaConfig = {
   dateAsDate(this: { parse(fn: unknown): unknown }) {
     return this.parse(parseDateToDate);
   },
-  enum<T extends [string, ...string[]]>(dataType: string, type: T) {
+  enum<T extends readonly [string, ...string[]]>(dataType: string, type: T) {
     return new EnumColumn(defaultSchemaConfig, dataType, type, undefined);
   },
   array<Item extends ArrayColumnValue>(item: Item) {

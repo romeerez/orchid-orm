@@ -47,12 +47,28 @@ const createdCount = await db.table.insert(data).onConflictIgnore();
 
 await db.table.create({
   // raw SQL
-  column1: sql`'John' || ' ' || 'Doe'`,
+  column1: (q) => q.sql`'John' || ' ' || 'Doe'`,
 
   // query that returns a single value
   // returning multiple values will result in Postgres error
   column2: db.otherTable.get('someColumn'),
 });
+```
+
+`create` and `insert` can be used in [with](/guide/advanced-queries.html#with) expressions:
+
+```ts
+db.$queryBuilder
+  // create a record in one table
+  .with('a', db.table.select('id').create(data))
+  // create a record in other table using the first table record id
+  .with('b', (q) =>
+    db.otherTable.select('id').create({
+      ...otherData,
+      aId: () => q.from('a').get('id'),
+    }),
+  )
+  .from('b');
 ```
 
 ## createMany, insertMany
@@ -230,6 +246,7 @@ db.table.create(data).onConflictIgnore();
 db.table.create(data).onConflict('email').merge();
 
 // array of columns:
+// (this requires a composite primary key or unique index, see below)
 db.table.create(data).onConflict(['email', 'name']).merge();
 
 // constraint name
@@ -241,6 +258,35 @@ db.table
   .onConflict(sql`(email) where condition`)
   .merge();
 ```
+
+:::info
+A primary key or a unique index for a **single** column can be fined on a column:
+
+```ts
+export class MyTable extends BaseTable {
+  columns = this.setColumns((t) => ({
+    pkey: t.uuid().primaryKey(),
+    unique: t.string().unique(),
+  }));
+}
+```
+
+But for composite primary keys or indexes (having multiple columns), define it in a separate function:
+
+```ts
+export class MyTable extends BaseTable {
+  columns = this.setColumns(
+    (t) => ({
+      one: t.integer(),
+      two: t.string(),
+      three: t.boolean(),
+    }),
+    (t) => [t.primaryKey(['one', 'two']), t.unique(['two', 'three'])],
+  );
+}
+```
+
+:::
 
 You can use the `sql` function exported from your `BaseTable` file in onConflict.
 It can be useful to specify a condition when you have a partial index:
@@ -256,6 +302,8 @@ db.table
   .onConflict(sql`(email) where active`)
   .ignore();
 ```
+
+If you define an inlined primary key on two columns instead, it won't be accepted by `onConflict`.
 
 For `merge` and `set`, you can append [where](/guide/where.html) to update data only for the matching rows:
 
@@ -464,7 +512,7 @@ await db.table.where({ ...conditions }).update({
   column1: 123,
 
   // use custom SQL to update the column
-  column2: sql`2 + 2`,
+  column2: (q) => q.sql`2 + 2`,
 
   // use query that returns a single value
   // returning multiple values will result in Postgres error
@@ -526,6 +574,8 @@ await db.table.find(1).update({
 
 It is **not** supported to use `create`, `update`, or `delete` kinds of sub-query on related tables:
 
+[//]: # 'TODO: can be supported using WITH shenanigans'
+
 ```ts
 await db.table.find(1).update({
   // TS error, this is not allowed:
@@ -533,7 +583,24 @@ await db.table.find(1).update({
 });
 ```
 
-It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
+`update` can be used in [with](/guide/advanced-queries.html#with) expressions:
+
+```ts
+db.$queryBuilder
+  // update record in one table
+  .with('a', db.table.find(1).select('id').update(data))
+  // update record in other table using the first table record id
+  .with('b', (q) =>
+    db.otherTable
+      .find(1)
+      .select('id')
+      .update({
+        ...otherData,
+        aId: () => q.from('a').get('id'),
+      }),
+  )
+  .from('b');
+```
 
 ### null, undefined, unknown columns
 
@@ -569,11 +636,11 @@ const name = await db.table.find(1).get('name').update(data);
 
 If the table has `updatedAt` [timestamp](/guide/common-column-methods.html#timestamps), it will be updated even for an empty data.
 
-## updateRaw
+## updateSql
 
 [//]: # 'has JSDoc'
 
-`updateRaw` is for updating records with raw SQL expression.
+`updateSql` is for updating records with raw SQL expression.
 
 The behavior is the same as a regular `update` method has:
 `find` or `where` must precede calling this method,
@@ -584,10 +651,10 @@ you can customize returning data by using `select`.
 const value = 'new name';
 
 // update with SQL template string
-const updatedCount = await db.table.find(1).updateRaw`name = ${value}`;
+const updatedCount = await db.table.find(1).updateSql`name = ${value}`;
 
 // or update with `sql` function:
-await db.table.find(1).updateRaw(sql`name = ${value}`);
+await db.table.find(1).updateSql(sql`name = ${value}`);
 ```
 
 ## updateOrThrow
@@ -836,4 +903,17 @@ const deletedUsersFull = await db.table
 ```ts
 // delete all users who have corresponding profile records:
 db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
+```
+
+`delete` can be used in [with](/guide/advanced-queries.html#with) expressions:
+
+```ts
+db.$queryBuilder
+  // delete a record in one table
+  .with('a', db.table.find(1).select('id').delete())
+  // delete a record in other table using the first table record id
+  .with('b', (q) =>
+    db.otherTable.select('id').whereIn('aId', q.from('a').pluck('id')).delete(),
+  )
+  .from('b');
 ```

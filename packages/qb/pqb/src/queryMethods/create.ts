@@ -1,5 +1,6 @@
 import {
   Query,
+  QueryOrExpression,
   QueryReturnsAll,
   queryTypeWithLimitOne,
   SetQueryKind,
@@ -17,12 +18,16 @@ import {
   SetQueryReturnsRowCount,
 } from '../query/query';
 import { RelationConfigDataForCreate, RelationsBase } from '../relations';
-import { CreateKind, InsertQueryData, OnConflictMerge } from '../sql';
+import {
+  CreateKind,
+  InsertQueryData,
+  OnConflictMerge,
+  ToSQLQuery,
+} from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../query/db';
 import {
   Expression,
-  QueryThen,
   ColumnSchemaConfig,
   RecordUnknown,
   PickQueryUniqueProperties,
@@ -31,6 +36,7 @@ import {
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { QueryBase } from '../query/queryBase';
+import { resolveSubQueryCallback } from '../common/utils';
 
 export interface CreateSelf extends QueryBase {
   inputType: RecordUnknown;
@@ -61,11 +67,9 @@ type CreateDataWithDefaults<
 > = {
   [K in keyof T['inputType'] as K extends Defaults
     ? never
-    : K]: K extends Defaults ? never : CreateColumn<T['inputType'], K>;
+    : K]: K extends Defaults ? never : CreateColumn<T, K>;
 } & {
-  [K in Defaults]?: K extends keyof T['inputType']
-    ? CreateColumn<T['inputType'], K>
-    : never;
+  [K in Defaults]?: K extends keyof T['inputType'] ? CreateColumn<T, K> : never;
 };
 
 type CreateDataWithDefaultsForRelations<
@@ -75,24 +79,19 @@ type CreateDataWithDefaultsForRelations<
 > = {
   [K in keyof T['inputType'] as K extends Defaults | OmitFKeys
     ? never
-    : K]: K extends Defaults | OmitFKeys
-    ? never
-    : CreateColumn<T['inputType'], K>;
+    : K]: K extends Defaults | OmitFKeys ? never : CreateColumn<T, K>;
 } & {
-  [K in Defaults as K extends OmitFKeys ? never : K]?: CreateColumn<
-    T['inputType'],
-    K
-  >;
+  [K in Defaults as K extends OmitFKeys ? never : K]?: CreateColumn<T, K>;
 };
 
 // Type of available variants to provide for a specific column when creating
-export type CreateColumn<InputType, Key extends keyof InputType> =
-  | Expression
-  | InputType[Key]
-  | {
-      __isQuery: true;
-      then: QueryThen<InputType[Key]>;
-    };
+export type CreateColumn<
+  T extends CreateSelf,
+  K extends keyof T['inputType'],
+> =
+  | T['inputType'][K]
+  | QueryOrExpression<T['inputType'][K]>
+  | ((q: T) => QueryOrExpression<T['inputType'][K]>);
 
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
@@ -376,12 +375,21 @@ const processCreateItem = (
         item,
         rowIndex,
       );
-    } else if (
-      !ctx.columns.has(key) &&
-      ((shape[key] && !shape[key].data.computed) || shape === anyShape)
-    ) {
-      ctx.columns.set(key, ctx.columns.size);
-      encoders[key] = shape[key]?.encodeFn as FnUnknownToUnknown;
+    } else {
+      if (typeof item[key] === 'function') {
+        item[key] = resolveSubQueryCallback(
+          q as unknown as ToSQLQuery,
+          item[key] as (q: ToSQLQuery) => ToSQLQuery,
+        );
+      }
+
+      if (
+        !ctx.columns.has(key) &&
+        ((shape[key] && !shape[key].data.computed) || shape === anyShape)
+      ) {
+        ctx.columns.set(key, ctx.columns.size);
+        encoders[key] = shape[key]?.encodeFn as FnUnknownToUnknown;
+      }
     }
   }
 };
@@ -788,12 +796,28 @@ export class Create {
    *
    * await db.table.create({
    *   // raw SQL
-   *   column1: sql`'John' || ' ' || 'Doe'`,
+   *   column1: (q) => q.sql`'John' || ' ' || 'Doe'`,
    *
    *   // query that returns a single value
    *   // returning multiple values will result in Postgres error
    *   column2: db.otherTable.get('someColumn'),
    * });
+   * ```
+   *
+   * `create` and `insert` can be used in {@link WithMethods.with} expressions:
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   // create a record in one table
+   *   .with('a', db.table.select('id').create(data))
+   *   // create a record in other table using the first table record id
+   *   .with('b', (q) =>
+   *     db.otherTable.select('id').create({
+   *       ...otherData,
+   *       aId: () => q.from('a').get('id'),
+   *     }),
+   *   )
+   *   .from('b');
    * ```
    *
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.
@@ -1083,6 +1107,7 @@ export class Create {
    * db.table.create(data).onConflictDoNothing();
    *
    * // single column:
+   * // (this requires a composite primary key or unique index, see below)
    * db.table.create(data).onConflict('email').merge();
    *
    * // array of columns:
@@ -1097,6 +1122,34 @@ export class Create {
    *   .onConflict(sql`(email) where condition`)
    *   .merge();
    * ```
+   *
+   * :::info
+   * A primary key or a unique index for a **single** column can be fined on a column:
+   *
+   * ```ts
+   * export class MyTable extends BaseTable {
+   *   columns = this.setColumns((t) => ({
+   *     pkey: t.uuid().primaryKey(),
+   *     unique: t.string().unique(),
+   *   }));
+   * }
+   * ```
+   *
+   * But for composite primary keys or indexes (having multiple columns), define it in a separate function:
+   *
+   * ```ts
+   * export class MyTable extends BaseTable {
+   *   columns = this.setColumns(
+   *     (t) => ({
+   *       one: t.integer(),
+   *       two: t.string(),
+   *       three: t.boolean(),
+   *     }),
+   *     (t) => [t.primaryKey(['one', 'two']), t.unique(['two', 'three'])],
+   *   );
+   * }
+   * ```
+   * :::
    *
    * You can use the `sql` function exported from your `BaseTable` file in onConflict.
    * It can be useful to specify a condition when you have a partial index:

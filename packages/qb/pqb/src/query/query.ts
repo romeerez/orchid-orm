@@ -8,6 +8,7 @@ import {
   ColumnShapeOutput,
   EmptyObject,
   Expression,
+  OperatorsNullable,
   PickOutputType,
   PickQueryMeta,
   PickQueryMetaResult,
@@ -145,6 +146,15 @@ export interface PickQueryColumnTypes {
 
 export interface PickQueryMetaResultRelationsWindowsColumnTypes
   extends PickQueryMetaResultRelationsWindows,
+    PickQueryColumnTypes {}
+
+export interface PickQueryWithDataColumnTypes
+  extends PickQueryWithData,
+    PickQueryColumnTypes {}
+
+export interface PickQueryMetaWithDataColumnTypes
+  extends PickQueryMeta,
+    PickQueryWithData,
     PickQueryColumnTypes {}
 
 export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
@@ -459,8 +469,16 @@ export type SetQueryReturnsValueOrThrow<
 export type SetQueryReturnsValueOptional<
   T extends PickQueryMeta,
   Arg extends GetStringArg<T>,
-> = SetQueryReturnsColumnOptional<T, T['meta']['selectable'][Arg]['column']> &
-  T['meta']['selectable'][Arg]['column']['operators'];
+> = SetQueryReturnsColumnOptional<
+  T,
+  {
+    [K in keyof T['meta']['selectable'][Arg]['column']]: K extends 'outputType'
+      ? T['meta']['selectable'][Arg]['column'][K] | undefined
+      : T['meta']['selectable'][Arg]['column'][K];
+  }
+> &
+  Omit<T['meta']['selectable'][Arg]['column']['operators'], 'equals' | 'not'> &
+  OperatorsNullable<T['meta']['selectable'][Arg]['column']>;
 
 export type SetQueryReturnsColumnOrThrow<T, Column extends PickOutputType> = {
   [K in keyof T]: K extends 'result'
@@ -605,24 +623,6 @@ export type SetQueryTableAlias<
       }
     : T[K];
 };
-
-export type SetQueryWith<T, WithData> = {
-  [K in keyof T]: K extends 'withData' ? WithData : T[K];
-};
-
-export type AddQueryWith<
-  T extends PickQueryWithData,
-  With extends WithDataItem,
-> = SetQueryWith<
-  T,
-  {
-    [K in keyof T['withData'] | With['table']]: K extends With['table']
-      ? With
-      : K extends keyof T['withData']
-      ? T['withData'][K]
-      : never;
-  }
->;
 
 export interface QueryOrExpression<T> {
   result: { value: QueryColumn<T> };

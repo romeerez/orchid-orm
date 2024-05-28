@@ -1,5 +1,46 @@
 # pqb
 
+## 0.31.1
+
+### Patch Changes
+
+- 6a0d06d: Support accessing WITH table value in create, update, delete
+- Updated dependencies [6a0d06d]
+  - orchid-core@0.15.5
+
+## 0.31.0
+
+### Minor Changes
+
+- f27f8c4: Change `union` and `with`, add `withRecursive` and `withSql`.
+
+  See updated docs for [union](https://orchid-orm.netlify.app/guide/advanced-queries#union-unionall-intersect-intersectall-except-exceptall)
+  and [with](https://orchid-orm.netlify.app/guide/advanced-queries.html#with).
+
+## 0.30.7
+
+### Patch Changes
+
+- 5a21099: Accept building expressions in create and update column callbacks
+- 5a21099: Support joining relation with alias
+- Updated dependencies [5a21099]
+- Updated dependencies [5a21099]
+  - orchid-core@0.15.4
+
+## 0.30.6
+
+### Patch Changes
+
+- 147091d: Resolve empty whereIn into a none query, handle none query in various selecting and joining cases (#266)
+- Updated dependencies [147091d]
+  - orchid-core@0.15.3
+
+## 0.30.5
+
+### Patch Changes
+
+- 859c4cd: Accept readonly arrays in enum type (#269)
+
 ## 0.30.4
 
 ### Patch Changes

@@ -82,27 +82,24 @@ export const makeSQL = (
   }
 
   if (query.type) {
-    if (query.type === 'truncate') {
-      if (!table.table) throw new Error('Table is missing for truncate');
+    const tableName = table.table ?? query.as;
+    if (!tableName) throw new Error(`Table is missing for ${query.type}`);
 
-      pushTruncateSql(ctx, table.table, query);
+    if (query.type === 'truncate') {
+      pushTruncateSql(ctx, tableName, query);
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'columnInfo') {
-      if (!table.table) throw new Error('Table is missing for truncate');
-
       pushColumnInfoSql(ctx, table, query);
       return { text: sql.join(' '), values };
     }
 
-    if (!table.table) throw new Error(`Table is missing for ${query.type}`);
-
-    const quotedAs = `"${query.as || table.table}"`;
+    const quotedAs = `"${query.as || tableName}"`;
 
     if (query.type === 'insert') {
       return {
-        hookSelect: pushInsertSql(ctx, table, query, `"${table.table}"`),
+        hookSelect: pushInsertSql(ctx, table, query, `"${tableName}"`),
         text: sql.join(' '),
         values,
       };
@@ -132,64 +129,62 @@ export const makeSQL = (
 
   const quotedAs = (query.as || table.table) && `"${query.as || table.table}"`;
 
-  sql.push('SELECT');
-
-  if (query.distinct) {
-    pushDistinctSql(ctx, table, query.distinct, quotedAs);
-  }
-
-  pushSelectSql(ctx, table, query, quotedAs);
-
-  if (table.table || query.from) {
-    pushFromAndAs(ctx, table, query, quotedAs);
-  }
-
-  if (query.join) {
-    pushJoinSql(
-      ctx,
-      table,
-      query as QueryData & { join: JoinItem[] },
-      quotedAs,
-    );
-  }
-
-  if (query.and || query.or) {
-    pushWhereStatementSql(ctx, table, query, quotedAs);
-  }
-
-  if (query.group) {
-    const group = query.group.map((item) =>
-      isExpression(item)
-        ? item.toSQL(ctx, quotedAs)
-        : columnToSql(ctx, table.q, table.q.shape, item as string, quotedAs),
-    );
-    sql.push(`GROUP BY ${group.join(', ')}`);
-  }
-
-  if (query.having) pushHavingSql(ctx, query, quotedAs);
-
-  if (query.window) {
-    const window: string[] = [];
-    query.window.forEach((item) => {
-      for (const key in item) {
-        window.push(
-          `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
-        );
-      }
-    });
-    sql.push(`WINDOW ${window.join(', ')}`);
-  }
-
   if (query.union) {
-    for (const item of query.union) {
-      let itemSql: string | undefined;
-      if (isExpression(item.arg)) {
-        itemSql = item.arg.toSQL(ctx, quotedAs);
-      } else {
-        const argSql = makeSQL(item.arg, { values });
-        itemSql = argSql.text;
-      }
-      sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);
+    sql.push(`(${makeSQL(query.union.b, { values }).text})`);
+
+    for (const u of query.union.u) {
+      const itemSql = isExpression(u.a)
+        ? u.a.toSQL(ctx, quotedAs)
+        : makeSQL(u.a, { values }).text;
+      sql.push(`${u.k} (${itemSql})`);
+    }
+  } else {
+    sql.push('SELECT');
+
+    if (query.distinct) {
+      pushDistinctSql(ctx, table, query.distinct, quotedAs);
+    }
+
+    pushSelectSql(ctx, table, query, quotedAs);
+
+    if (table.table || query.from) {
+      pushFromAndAs(ctx, table, query, quotedAs);
+    }
+
+    if (query.join) {
+      pushJoinSql(
+        ctx,
+        table,
+        query as QueryData & { join: JoinItem[] },
+        quotedAs,
+      );
+    }
+
+    if (query.and || query.or) {
+      pushWhereStatementSql(ctx, table, query, quotedAs);
+    }
+
+    if (query.group) {
+      const group = query.group.map((item) =>
+        isExpression(item)
+          ? item.toSQL(ctx, quotedAs)
+          : columnToSql(ctx, table.q, table.q.shape, item as string, quotedAs),
+      );
+      sql.push(`GROUP BY ${group.join(', ')}`);
+    }
+
+    if (query.having) pushHavingSql(ctx, query, quotedAs);
+
+    if (query.window) {
+      const window: string[] = [];
+      query.window.forEach((item) => {
+        for (const key in item) {
+          window.push(
+            `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
+          );
+        }
+      });
+      sql.push(`WINDOW ${window.join(', ')}`);
     }
   }
 
