@@ -82,27 +82,24 @@ export const makeSQL = (
   }
 
   if (query.type) {
-    if (query.type === 'truncate') {
-      if (!table.table) throw new Error('Table is missing for truncate');
+    const tableName = table.table ?? query.as;
+    if (!tableName) throw new Error(`Table is missing for ${query.type}`);
 
-      pushTruncateSql(ctx, table.table, query);
+    if (query.type === 'truncate') {
+      pushTruncateSql(ctx, tableName, query);
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'columnInfo') {
-      if (!table.table) throw new Error('Table is missing for truncate');
-
       pushColumnInfoSql(ctx, table, query);
       return { text: sql.join(' '), values };
     }
 
-    if (!table.table) throw new Error(`Table is missing for ${query.type}`);
-
-    const quotedAs = `"${query.as || table.table}"`;
+    const quotedAs = `"${query.as || tableName}"`;
 
     if (query.type === 'insert') {
       return {
-        hookSelect: pushInsertSql(ctx, table, query, `"${table.table}"`),
+        hookSelect: pushInsertSql(ctx, table, query, `"${tableName}"`),
         text: sql.join(' '),
         values,
       };

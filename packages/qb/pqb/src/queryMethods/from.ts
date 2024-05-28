@@ -17,6 +17,7 @@ import {
   isExpression,
   Expression,
   MaybeArray,
+  PickQueryTableMetaResultInputType,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { QueryBase } from '../query/queryBase';
@@ -47,6 +48,8 @@ export type FromResult<
                 ? string | undefined
                 : K extends 'selectable'
                 ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
+                : K extends 'kind'
+                ? 'select'
                 : T['meta'][K];
             }
           : K extends 'result'
@@ -56,7 +59,7 @@ export type FromResult<
           : T[K];
       }
     : SetQueryTableAlias<T, Arg>
-  : Arg extends PickQueryTableMetaResult
+  : Arg extends PickQueryTableMetaResultInputType
   ? {
       [K in keyof T]: K extends 'meta'
         ? {
@@ -64,12 +67,16 @@ export type FromResult<
               ? AliasOrTable<Arg>
               : K extends 'selectable'
               ? SelectableFromShape<Arg['result'], AliasOrTable<Arg>>
+              : K extends 'kind'
+              ? 'select'
               : T['meta'][K];
           }
         : K extends 'result'
         ? Arg['result']
         : K extends 'shape'
         ? Arg['result']
+        : K extends 'inputType'
+        ? Arg['inputType']
         : K extends 'then'
         ? QueryThen<GetQueryResult<T, Arg['result']>>
         : T[K];
@@ -194,7 +201,7 @@ export class FromMethods {
   from<T extends FromQuerySelf, Arg extends MaybeArray<FromArg<T>>>(
     this: T,
     arg: T['meta']['hasSelect'] extends true
-      ? '`select` must be places after `from`'
+      ? '`select` must be placed after `from`'
       : Arg,
   ): FromResult<T, Arg> {
     return queryFrom((this as unknown as Query).clone(), arg as never) as never;

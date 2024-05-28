@@ -18,7 +18,12 @@ import {
   SetQueryReturnsRowCount,
 } from '../query/query';
 import { RelationConfigDataForCreate, RelationsBase } from '../relations';
-import { CreateKind, InsertQueryData, OnConflictMerge } from '../sql';
+import {
+  CreateKind,
+  InsertQueryData,
+  OnConflictMerge,
+  ToSQLQuery,
+} from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../query/db';
 import {
@@ -31,6 +36,7 @@ import {
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { QueryBase } from '../query/queryBase';
+import { resolveSubQueryCallback } from '../common/utils';
 
 export interface CreateSelf extends QueryBase {
   inputType: RecordUnknown;
@@ -369,12 +375,21 @@ const processCreateItem = (
         item,
         rowIndex,
       );
-    } else if (
-      !ctx.columns.has(key) &&
-      ((shape[key] && !shape[key].data.computed) || shape === anyShape)
-    ) {
-      ctx.columns.set(key, ctx.columns.size);
-      encoders[key] = shape[key]?.encodeFn as FnUnknownToUnknown;
+    } else {
+      if (typeof item[key] === 'function') {
+        item[key] = resolveSubQueryCallback(
+          q as unknown as ToSQLQuery,
+          item[key] as (q: ToSQLQuery) => ToSQLQuery,
+        );
+      }
+
+      if (
+        !ctx.columns.has(key) &&
+        ((shape[key] && !shape[key].data.computed) || shape === anyShape)
+      ) {
+        ctx.columns.set(key, ctx.columns.size);
+        encoders[key] = shape[key]?.encodeFn as FnUnknownToUnknown;
+      }
     }
   }
 };
@@ -787,6 +802,22 @@ export class Create {
    *   // returning multiple values will result in Postgres error
    *   column2: db.otherTable.get('someColumn'),
    * });
+   * ```
+   *
+   * `create` and `insert` can be used in {@link WithMethods.with} expressions:
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   // create a record in one table
+   *   .with('a', db.table.select('id').create(data))
+   *   // create a record in other table using the first table record id
+   *   .with('b', (q) =>
+   *     db.otherTable.select('id').create({
+   *       ...otherData,
+   *       aId: () => q.from('a').get('id'),
+   *     }),
+   *   )
+   *   .from('b');
    * ```
    *
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.

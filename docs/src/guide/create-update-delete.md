@@ -55,6 +55,22 @@ await db.table.create({
 });
 ```
 
+`create` and `insert` can be used in [with](/guide/advanced-queries.html#with) expressions:
+
+```ts
+db.$queryBuilder
+  // create a record in one table
+  .with('a', db.table.select('id').create(data))
+  // create a record in other table using the first table record id
+  .with('b', (q) =>
+    db.otherTable.select('id').create({
+      ...otherData,
+      aId: () => q.from('a').get('id'),
+    }),
+  )
+  .from('b');
+```
+
 ## createMany, insertMany
 
 [//]: # 'has JSDoc'
@@ -558,6 +574,8 @@ await db.table.find(1).update({
 
 It is **not** supported to use `create`, `update`, or `delete` kinds of sub-query on related tables:
 
+[//]: # 'TODO: can be supported using WITH shenanigans'
+
 ```ts
 await db.table.find(1).update({
   // TS error, this is not allowed:
@@ -565,7 +583,24 @@ await db.table.find(1).update({
 });
 ```
 
-It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
+`update` can be used in [with](/guide/advanced-queries.html#with) expressions:
+
+```ts
+db.$queryBuilder
+  // update record in one table
+  .with('a', db.table.find(1).select('id').update(data))
+  // update record in other table using the first table record id
+  .with('b', (q) =>
+    db.otherTable
+      .find(1)
+      .select('id')
+      .update({
+        ...otherData,
+        aId: () => q.from('a').get('id'),
+      }),
+  )
+  .from('b');
+```
 
 ### null, undefined, unknown columns
 
@@ -868,4 +903,17 @@ const deletedUsersFull = await db.table
 ```ts
 // delete all users who have corresponding profile records:
 db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
+```
+
+`delete` can be used in [with](/guide/advanced-queries.html#with) expressions:
+
+```ts
+db.$queryBuilder
+  // delete a record in one table
+  .with('a', db.table.find(1).select('id').delete())
+  // delete a record in other table using the first table record id
+  .with('b', (q) =>
+    db.otherTable.select('id').whereIn('aId', q.from('a').pluck('id')).delete(),
+  )
+  .from('b');
 ```

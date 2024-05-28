@@ -425,7 +425,24 @@ export class Update {
    * })
    * ```
    *
-   * It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
+   * `update` can be used in {@link WithMethods.with} expressions:
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   // update record in one table
+   *   .with('a', db.table.find(1).select('id').update(data))
+   *   // update record in other table using the first table record id
+   *   .with('b', (q) =>
+   *     db.otherTable
+   *       .find(1)
+   *       .select('id')
+   *       .update({
+   *         ...otherData,
+   *         aId: () => q.from('a').get('id'),
+   *       }),
+   *   )
+   *   .from('b');
+   * ```
    *
    * ### null, undefined, unknown columns
    *

@@ -152,6 +152,11 @@ export interface PickQueryWithDataColumnTypes
   extends PickQueryWithData,
     PickQueryColumnTypes {}
 
+export interface PickQueryMetaWithDataColumnTypes
+  extends PickQueryMeta,
+    PickQueryWithData,
+    PickQueryColumnTypes {}
+
 export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
 
 export interface PickQueryMetaTableShape

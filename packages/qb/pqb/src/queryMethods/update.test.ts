@@ -442,6 +442,43 @@ describe('update', () => {
     assertType<Awaited<typeof query>, number>();
   });
 
+  it('should support a `WITH` table value in other `WITH` clause', () => {
+    const q = User.with('a', User.find(1).select('name').update(userData))
+      .with('b', (q) =>
+        User.find(2)
+          .select('id')
+          .update({
+            name: () => q.from('a').get('name'),
+          }),
+      )
+      .from('b');
+
+    assertType<Awaited<typeof q>, { id: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "a" AS (
+          UPDATE "user"
+          SET "name" = $1, "password" = $2, "updatedAt" = now()
+          WHERE "user"."id" = $3
+          RETURNING "user"."name"
+        ), "b" AS (
+          UPDATE "user"
+          SET
+            "name" = (
+              SELECT "a"."name" FROM "a" LIMIT 1
+            ),
+            "updatedAt" = now()
+          WHERE "user"."id" = $4
+          RETURNING "user"."id"
+        )
+        SELECT * FROM "b"
+      `,
+      ['name', 'password', 1, 2],
+    );
+  });
+
   it('should return one record when searching for one to update', async () => {
     const { id } = await User.select('id').create(userData);
 

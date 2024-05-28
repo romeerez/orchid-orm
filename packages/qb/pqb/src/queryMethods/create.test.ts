@@ -280,6 +280,37 @@ describe('create functions', () => {
       );
     });
 
+    it('should support a `WITH` table value in other `WITH` clause', () => {
+      const q = User.with('a', User.select('name').create(userData))
+        .with('b', (q) =>
+          User.select('id').create({
+            name: () => q.from('a').get('name'),
+            password: 'password',
+          }),
+        )
+        .from('b');
+
+      assertType<Awaited<typeof q>, { id: number }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "a" AS (
+            INSERT INTO "user"("name", "password") VALUES ($1, $2)
+            RETURNING "user"."name"
+          ), "b" AS (
+            INSERT INTO "user"("name", "password") VALUES (
+              (SELECT "a"."name" FROM "a" LIMIT 1),
+              $3
+            )
+            RETURNING "user"."id"
+          )
+          SELECT * FROM "b"
+        `,
+        ['name', 'password', 'password'],
+      );
+    });
+
     it('should create one record, returning record', async () => {
       const q = User.all();
 

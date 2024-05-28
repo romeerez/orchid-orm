@@ -1,5 +1,9 @@
 import { WithOptions } from '../sql';
-import { PickQueryWithDataColumnTypes, Query } from '../query/query';
+import {
+  PickQueryMetaWithDataColumnTypes,
+  PickQueryWithDataColumnTypes,
+  Query,
+} from '../query/query';
 import { pushQueryValue, setQueryObjectValue } from '../query/queryUtils';
 import {
   Expression,
@@ -42,11 +46,13 @@ export type WithQueryBuilder<T extends PickQueryWithDataColumnTypes> = {
 
 // Adds a `withData` entry to a query
 export type WithResult<
-  T extends PickQueryWithDataColumnTypes,
+  T extends PickQueryMetaWithDataColumnTypes,
   Name extends string,
   Q extends PickQueryResult,
 > = {
-  [K in keyof T]: K extends 'withData'
+  [K in keyof T]: K extends 'meta'
+    ? { [K in keyof T['meta']]: K extends 'kind' ? 'select' : T['meta'][K] }
+    : K extends 'withData'
     ? {
         [K in keyof T['withData'] | Name]: K extends Name
           ? {
@@ -144,13 +150,13 @@ export class WithMethods {
    *   .select('alias.id');
    * ```
    */
-  with<T extends PickQueryWithDataColumnTypes, Name extends string, Q>(
+  with<T extends PickQueryMetaWithDataColumnTypes, Name extends string, Q>(
     this: T,
     name: Name,
     query: Q | ((q: WithQueryBuilder<T>) => Q),
   ): WithResult<T, Name, Q extends Query ? Q : never>;
   with<
-    T extends PickQueryWithDataColumnTypes,
+    T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
     Q extends Query,
   >(
@@ -200,7 +206,7 @@ export class WithMethods {
   }
 
   withRecursive<
-    T extends PickQueryWithDataColumnTypes,
+    T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
     Q extends Query,
     Result = WithResult<T, Name, Q>,
@@ -213,7 +219,7 @@ export class WithMethods {
     }) => Query,
   ): Result;
   withRecursive<
-    T extends PickQueryWithDataColumnTypes,
+    T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
     Q extends Query,
     Result = WithResult<T, Name, Q>,
