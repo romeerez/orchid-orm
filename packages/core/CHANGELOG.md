@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.15.5
+
+### Patch Changes
+
+- 6a0d06d: Support accessing WITH table value in create, update, delete
+
 ## 0.15.4
 
 ### Patch Changes

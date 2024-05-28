@@ -1,5 +1,13 @@
 # pqb
 
+## 0.31.1
+
+### Patch Changes
+
+- 6a0d06d: Support accessing WITH table value in create, update, delete
+- Updated dependencies [6a0d06d]
+  - orchid-core@0.15.5
+
 ## 0.31.0
 
 ### Minor Changes
