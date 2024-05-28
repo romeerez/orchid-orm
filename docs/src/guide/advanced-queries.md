@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Advanced query methods
 
 ## with
@@ -78,7 +82,7 @@ db.firstTable
   .select('firstTable.column', 'secondTable.column');
 ```
 
-## withRecursive
+### withRecursive
 
 [//]: # 'has JSDoc'
 
@@ -162,7 +166,7 @@ db.$queryBuilder
   .where({ n: { gt: 10 } });
 ```
 
-## withSql
+### withSql
 
 [//]: # 'has JSDoc'
 
@@ -233,7 +237,7 @@ Resulting SQL:
 SELECT "user"."id" FROM "customSchema"."user"
 ```
 
-## union unionAll intersect intersectAll except exceptAll
+## union, unionAll, intersect, intersectAll, except, exceptAll
 
 [//]: # 'has JSDoc'
 
@@ -301,7 +305,7 @@ It may be better for performance in some cases.
 const json = await db.table.select('id', 'name').json();
 ```
 
-## jsonPathQuery
+### jsonPathQuery
 
 [//]: # 'has JSDoc'
 
@@ -337,14 +341,14 @@ db.table.jsonPathQuery(
 );
 ```
 
-## jsonSet
+### jsonSet
 
 [//]: # 'has JSDoc'
 
 Return a JSON value/object/array where a given value is set at the given path.
 The path is an array of keys to access the value.
 
-Can be used in [update](/guide/create-update-delete.html#update) callback.
+Can be used in [update](/guide/create-update-delete#update) callback.
 
 ```ts
 const result = await db.table.jsonSet('data', ['name'], 'new value').take();
@@ -361,13 +365,13 @@ await db.table.jsonSet('data', ['name'], 'new value', {
 });
 ```
 
-## jsonInsert
+### jsonInsert
 
 [//]: # 'has JSDoc'
 
 Return a JSON value/object/array where a given value is inserted at the given JSON path. Value can be a single value or JSON object. If a value exists at the given path, the value is not replaced.
 
-Can be used in [update](/guide/create-update-delete.html#update) callback.
+Can be used in [update](/guide/create-update-delete#update) callback.
 
 ```ts
 // imagine user has data = { tags: ['two'] }
@@ -392,13 +396,13 @@ const result = await db.table
 expect(result.alias).toEqual({ tags: ['one', 'two'] });
 ```
 
-## jsonRemove
+### jsonRemove
 
 [//]: # 'has JSDoc'
 
 Return a JSON value/object/array where a given value is removed at the given JSON path.
 
-Can be used in [update](/guide/create-update-delete.html#update) callback.
+Can be used in [update](/guide/create-update-delete#update) callback.
 
 ```ts
 // imagine a user has data = { tags: ['one', 'two'] }

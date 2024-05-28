@@ -1,5 +1,5 @@
 <template>
-  <Bar :chart-options="chartOptions" :chart-data="chartData" :height="250" />
+  <Bar :data="chartData" :options="chartOptions" :height="250" />
 </template>
 
 <script>
@@ -12,7 +12,7 @@ import {
   BarElement,
   CategoryScale,
   LinearScale,
-} from 'chart.js/dist/chart.mjs';
+} from 'chart.js';
 
 ChartJS.register(
   Title,

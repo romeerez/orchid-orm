@@ -1,6 +1,6 @@
 # Join
 
-## Select relation
+## select relation
 
 [//]: # 'has JSDoc'
 
@@ -435,7 +435,7 @@ First argument is the other table you want to join, or a name of relation, or a 
 
 Second argument is a callback where you can reference other tables using `on` and `orOn`, select columns, do `where` conditions, and use any other query methods to build a sub-query.
 
-Note that the regular `join` will also generate `JOIN LATERAL` SQL expression when the query returned from callback is complex enough (see [implicit join lateral](/guide/join.html#implicit-join-lateral)).
+Note that the regular `join` will also generate `JOIN LATERAL` SQL expression when the query returned from callback is complex enough (see [implicit join lateral](/guide/join#implicit-join-lateral)).
 
 ```ts
 // joinLateral a Message table, alias it as `m`

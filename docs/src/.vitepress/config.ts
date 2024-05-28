@@ -15,6 +15,9 @@ export default {
   },
   themeConfig: {
     nav: [{ text: 'Guide', link: '/guide/', activeMatch: '^/guide/' }],
+    search: {
+      provider: 'local',
+    },
     sidebar: [
       {
         items: [

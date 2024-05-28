@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Query methods
 
 Each query method does **not** mutate the query chain, so calling it conditionally won't have an effect:
@@ -40,7 +44,7 @@ Mutating methods started with `_` are used internally, however, their use is not
 When we search for a single record, and it is not found, it can either throw an error, or return `undefined`.
 
 Unlike other database libraries, `Orchid ORM` decided to throw errors by default when using methods `take`, `find`, `findBy`, `get` and the record is not found.
-It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/errorhandling/centralizedhandling.md) to catch common errors in a centralized place (see [global error handling](/guide/error-handling.html#global-error-handling)), and this allows for a more concise code.
+It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/errorhandling/centralizedhandling.md) to catch common errors in a centralized place (see [global error handling](/guide/error-handling#global-error-handling)), and this allows for a more concise code.
 
 If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
 
@@ -64,14 +68,14 @@ const takenOptional: TableType | undefined = await db.table
 
 [//]: # 'has JSDoc'
 
-Finds a single record by the primary key (id), throws [NotFoundError](/guide/error-handling.html) if not found.
+Finds a single record by the primary key (id), throws [NotFoundError](/guide/error-handling) if not found.
 Not available if the table has no or multiple primary keys.
 
 ```ts
 const result: TableType = await db.table.find(1);
 ```
 
-## findOptional
+### findOptional
 
 [//]: # 'has JSDoc'
 
@@ -82,11 +86,11 @@ Not available if the table has no or multiple primary keys.
 const result: TableType | undefined = await db.table.find(123);
 ```
 
-## findBy
+### findBy
 
 [//]: # 'has JSDoc'
 
-Finds a single unique record, throws [NotFoundError](/guide/error-handling.html) if not found.
+Finds a single unique record, throws [NotFoundError](/guide/error-handling) if not found.
 It accepts values of primary keys or unique indexes defined on the table.
 `findBy`'s argument type is a union of all possible sets of unique conditions.
 
@@ -96,7 +100,7 @@ You can use `where(...).take()` for non-unique conditions.
 await db.table.findBy({ key: 'value' });
 ```
 
-## findByOptional
+### findByOptional
 
 [//]: # 'has JSDoc'
 
@@ -110,11 +114,11 @@ You can use `where(...).takeOptional()` for non-unique conditions.
 await db.table.findByOptional({ key: 'value' });
 ```
 
-## findBySql
+### findBySql
 
 [//]: # 'has JSDoc'
 
-Finds a single record with a given SQL, throws [NotFoundError](/guide/error-handling.html) if not found:
+Finds a single record with a given SQL, throws [NotFoundError](/guide/error-handling) if not found:
 
 ```ts
 await db.user.find`
@@ -123,7 +127,7 @@ await db.user.find`
 `;
 ```
 
-## findBySqlOptional
+### findBySqlOptional
 
 [//]: # 'has JSDoc'
 
@@ -222,7 +226,7 @@ await db.table.findOptional(123).none(); // -> undefined
 await db.table.find(123).none(); // throws NotFoundError
 ```
 
-[insert](/guide/create-update-delete.html#create-insert), [update](/guide/create-update-delete.html#update), and [delete](/guide/create-update-delete.html#del-delete) are returning a count of affected records.
+[insert](/guide/create-update-delete#create-insert), [update](/guide/create-update-delete#update), and [delete](/guide/create-update-delete#del-delete) are returning a count of affected records.
 
 When they are called with `none`, query does not execute and 0 is returned.
 
@@ -342,7 +346,7 @@ await db.books
   .where({ 'author.isPopular': true });
 ```
 
-## selectAll
+### selectAll
 
 [//]: # 'has JSDoc'
 
@@ -361,7 +365,7 @@ const updatedFull = await db.table.selectAll().where(conditions).update(data);
 const deletedFull = await db.table.selectAll().where(conditions).delete();
 ```
 
-## distinct
+### distinct
 
 [//]: # 'has JSDoc'
 
@@ -425,7 +429,7 @@ db.table
   .select('withTable.one', 'otherTable.two');
 ```
 
-## fromSql
+### fromSql
 
 [//]: # 'has JSDoc'
 
@@ -436,7 +440,7 @@ const value = 123;
 db.table.fromSql`value = ${value}`;
 ```
 
-## only
+### only
 
 [//]: # 'has JSDoc'
 
@@ -565,7 +569,7 @@ db.comment
   });
 ```
 
-## orderSql
+### orderSql
 
 [//]: # 'has JSDoc'
 
@@ -581,7 +585,7 @@ db.table.orderSql`raw sql`;
 
 Build a `HAVING` clause to the query to filter records by results of [aggregate functions](#aggregate-functions).
 
-The argument of `having` is a function where you call the aggregate function and compare it with some value by using [column operators](/guide/where.html#column-operators).
+The argument of `having` is a function where you call the aggregate function and compare it with some value by using [column operators](/guide/where#column-operators).
 
 ```ts
 db.table.having((q) => q.count().gte(10));
@@ -626,7 +630,7 @@ Arguments of the aggregate function and of the comparison can be raw SQL:
 db.table.having((q) => q.count(q.sql('coalesce(one, two)')).gte(q.sql`2 + 2`));
 ```
 
-## havingSql
+### havingSql
 
 [//]: # 'has JSDoc'
 
@@ -644,7 +648,7 @@ Transform the result of the query right after loading it.
 
 `transform` method should be called in the last order, other methods can't be chained after calling it.
 
-The [hooks](/guide/hooks.html) that are going to run after the query will receive the query result **before** transformation.
+The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
 
 Consider the following example of a cursor-based pagination by `id`:
 

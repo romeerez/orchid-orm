@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Writing a migration
 
 All column names will be translated to snake_case if `snakeCase` option is set to true in `rakeDb` options.
@@ -209,7 +213,7 @@ type ChangeTableOptions = {
 
 The callback of the `changeTable` is different from `createTable` in the way that it expects columns to be wrapped in change methods such as `add`, `drop`, and `change`.
 
-## add, drop
+### add, drop
 
 `add` will add a column (or a check) on migrating, and remove it on rollback.
 
@@ -281,7 +285,7 @@ change(async (db) => {
 });
 ```
 
-## change
+### change
 
 Takes an array of two columns (or checks).
 When migrating, it will change the column to the second element,
@@ -289,9 +293,9 @@ and when doing rollback will change the column to the first element.
 
 Dropping or creating a primary key on multiple columns is allowed.
 
-Index options are listed [here](/guide/migration-column-methods.html#index).
+Index options are listed [here](/guide/migration-column-methods#index).
 
-Foreign key options are listed [here](/guide/migration-column-methods.html#foreignkey).
+Foreign key options are listed [here](/guide/migration-column-methods#foreignkey).
 
 ```ts
 import { change } from '../dbScript';
@@ -413,7 +417,7 @@ change(async (db) => {
 });
 ```
 
-## rename
+### rename
 
 Rename a column:
 
@@ -701,7 +705,7 @@ change(async (db) => {
 
 Drops the enum and re-creates it with a new set of values.
 Before dropping, changes all related column types to text, and after creating changes types back to the enum,
-in the same way as [dropEnumValues](/guide/migration-writing.html#addenumvalues,-dropenumvalues) works.
+in the same way as [dropEnumValues](/guide/migration-writing#addenumvalues,-dropenumvalues) works.
 
 ```ts
 import { change } from '../dbScript';
@@ -826,7 +830,7 @@ Domain is a custom database type that is based on other type and can include `NO
 
 Construct a column type in the function as the second argument.
 
-Specifiers [nullable](/guide/common-column-methods.html#nullable), [default](/guide/common-column-methods.html#default), [check](/guide/migration-column-methods.html#check), [collate](/guide/migration-column-methods.html#collate)
+Specifiers [nullable](/guide/common-column-methods#nullable), [default](/guide/common-column-methods#default), [check](/guide/migration-column-methods#check), [collate](/guide/migration-column-methods#collate)
 will be saved to the domain type on database level.
 
 ```ts

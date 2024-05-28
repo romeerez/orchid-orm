@@ -7,9 +7,9 @@ All the following methods are available in any kind of column.
 [//]: # 'has JSDoc'
 
 Mark the column as a primary key.
-This column type becomes an argument of the [find](/guide/query-methods.html#find-and-findoptional) method.
-So if the primary key is of `integer` type (`identity` or `serial`), [find](/guide/query-methods.html#find-and-findoptional) will accept the number,
-or if the primary key is of `UUID` type, [find](/guide/query-methods.html#find-and-findoptional) will expect a string.
+This column type becomes an argument of the [find](/guide/query-methods#find-and-findoptional) method.
+So if the primary key is of `integer` type (`identity` or `serial`), [find](/guide/query-methods#find-and-findoptional) will accept the number,
+or if the primary key is of `UUID` type, [find](/guide/query-methods#find-and-findoptional) will expect a string.
 
 Using `primaryKey` on a `uuid` column will automatically add a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
 
@@ -154,7 +154,7 @@ Set a custom function to process value for the column when creating or updating 
 
 The type of `input` argument will be used as the type of the column when creating and updating.
 
-If you have a validation library [installed and configured](/guide/columns-validation-methods.html),
+If you have a validation library [installed and configured](/guide/columns-validation-methods),
 first argument is a schema to validate the input.
 
 ```ts
@@ -190,7 +190,7 @@ Set a custom function to process value after loading it from a database.
 
 The type of input is the type of column before `.parse`, the resulting type will replace the type of column.
 
-If you have a validation library [installed and configured](/guide/columns-validation-methods.html),
+If you have a validation library [installed and configured](/guide/columns-validation-methods),
 first argument is a schema for validating the output.
 
 ```ts
@@ -263,7 +263,7 @@ const column = t
 Mark the column as to have specific Typescript type.
 This can be used to narrow generic column types, such as narrow `string` to a string literal union.
 
-If you don't specify `schemaConfig` option for a [validation library](/guide/columns-validation-methods.html), the syntax as follows:
+If you don't specify `schemaConfig` option for a [validation library](/guide/columns-validation-methods), the syntax as follows:
 
 ```ts
 export class Table extends BaseTable {
@@ -290,7 +290,7 @@ const column = t
 - `OutputType` is for the data that is loaded from a database and parsed if the column has `parse`.
 - `QueryType` is used in `where` and other query methods, it should be compatible with the actual database column type.
 
-If when using a [validation library](/guide/columns-validation-methods.html), also provide validation schemas:
+If when using a [validation library](/guide/columns-validation-methods), also provide validation schemas:
 
 ```ts
 export class Table extends BaseTable {
@@ -383,9 +383,9 @@ export class SomeTable extends BaseTable {
 
 ## methods for migration
 
-Column methods such as [foreignKey](/guide/migration-column-methods.html#foreignkey), [index](/guide/migration-column-methods.html#index), [unique](/guide/migration-column-methods.html#unique), [comment](/guide/migration-column-methods.html#comment) and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
+Column methods such as [foreignKey](/guide/migration-column-methods#foreignkey), [index](/guide/migration-column-methods#index), [unique](/guide/migration-column-methods#unique), [comment](/guide/migration-column-methods#comment) and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
 
-Though `unique` is used for deriving types for [findBy](/guide/query-methods.html#findBy) and [onConflict](/guide/create-update-delete.html#onconflict).
+Though `unique` is used for deriving types for [findBy](/guide/query-methods#findBy) and [onConflict](/guide/create-update-delete#onconflict).
 
 ## hidden
 

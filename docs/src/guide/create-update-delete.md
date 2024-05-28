@@ -1,8 +1,12 @@
+---
+outline: deep
+---
+
 # Create, update, and delete records
 
 We have `create` methods that returns a full record by default, and `insert` methods that by default will return only a count of inserted rows.
 
-To perform custom actions before or after creating records, see `beforeCreate`, `afterCreate`, `afterCreateCommit` [lifecycle hooks](/guide/hooks.html).
+To perform custom actions before or after creating records, see `beforeCreate`, `afterCreate`, `afterCreateCommit` [lifecycle hooks](/guide/hooks).
 
 `create*` and `insert*` methods require columns that are not nullable and don't have a default.
 
@@ -55,7 +59,7 @@ await db.table.create({
 });
 ```
 
-`create` and `insert` can be used in [with](/guide/advanced-queries.html#with) expressions:
+`create` and `insert` can be used in [with](/guide/advanced-queries#with) expressions:
 
 ```ts
 db.$queryBuilder
@@ -71,7 +75,7 @@ db.$queryBuilder
   .from('b');
 ```
 
-## createMany, insertMany
+### createMany, insertMany
 
 [//]: # 'has JSDoc'
 
@@ -91,7 +95,7 @@ const manyRecords = await db.table.createMany([
 const createdCount = await db.table.insertMany([data, data, data]);
 ```
 
-## createRaw, insertRaw
+### createRaw, insertRaw
 
 [//]: # 'has JSDoc'
 
@@ -110,7 +114,7 @@ const oneRecord = await db.table.createRaw({
 });
 ```
 
-## createManyRaw, insertManyRaw
+### createManyRaw, insertManyRaw
 
 [//]: # 'has JSDoc'
 
@@ -129,7 +133,7 @@ const manyRecords = await db.table.createManyRaw({
 });
 ```
 
-## createFrom, insertFrom
+### createFrom, insertFrom
 
 [//]: # 'has JSDoc'
 
@@ -168,7 +172,7 @@ LIMIT 1
 RETURNING *
 ```
 
-## createManyFrom, insertManyFrom
+### createManyFrom, insertManyFrom
 
 [//]: # 'has JSDoc'
 
@@ -182,7 +186,7 @@ const manyRecords = await db.table.createManyFrom(
 );
 ```
 
-## orCreate
+### orCreate
 
 [//]: # 'has JSDoc'
 
@@ -214,7 +218,7 @@ const user = await User.selectAll()
   }));
 ```
 
-## onConflict
+### onConflict
 
 [//]: # 'has JSDoc'
 
@@ -305,7 +309,7 @@ db.table
 
 If you define an inlined primary key on two columns instead, it won't be accepted by `onConflict`.
 
-For `merge` and `set`, you can append [where](/guide/where.html) to update data only for the matching rows:
+For `merge` and `set`, you can append [where](/guide/where) to update data only for the matching rows:
 
 ```ts
 const timestamp = Date.now();
@@ -320,7 +324,7 @@ db.table
   .where({ updatedAt: { lt: timestamp } });
 ```
 
-## onConflictIgnore
+### onConflictIgnore
 
 [//]: # 'has JSDoc'
 
@@ -364,7 +368,7 @@ When creating multiple records, only created records will be returned. If no rec
 const arr = await db.table.createMany([data, data, data]).onConflictIgnore();
 ```
 
-## onConflict merge
+### onConflict merge
 
 [//]: # 'has JSDoc'
 
@@ -403,7 +407,7 @@ db.table
   .where({ ...certainConditions });
 ```
 
-## onConflict set
+### onConflict set
 
 [//]: # 'has JSDoc'
 
@@ -433,7 +437,7 @@ db.table
   .where({ ...certainConditions });
 ```
 
-## defaults
+### defaults
 
 [//]: # 'has JSDoc'
 
@@ -482,9 +486,9 @@ If `select` and `take`, `find`, or similar were specified before the update it w
 For a column value you can provide a specific value, raw SQL, a query object that returns a single value, or a callback with a sub-query.
 
 The callback is allowed to select a single value from a relation (see `fromRelation` column below),
-or to use a [jsonSet](/guide/advanced-queries.html#jsonset),
-[jsonInsert](/guide/advanced-queries.html#jsoninsert),
-and [jsonRemove](/guide/advanced-queries.html#jsonremove) for a JSON column (see `jsonColumn` below).
+or to use a [jsonSet](/guide/advanced-queries#jsonset),
+[jsonInsert](/guide/advanced-queries#jsoninsert),
+and [jsonRemove](/guide/advanced-queries#jsonremove) for a JSON column (see `jsonColumn` below).
 
 ```ts
 // returns number of updated records by default
@@ -583,7 +587,7 @@ await db.table.find(1).update({
 });
 ```
 
-`update` can be used in [with](/guide/advanced-queries.html#with) expressions:
+`update` can be used in [with](/guide/advanced-queries#with) expressions:
 
 ```ts
 db.$queryBuilder
@@ -634,9 +638,9 @@ const record = await db.table.find(1).selectAll().update(data);
 const name = await db.table.find(1).get('name').update(data);
 ```
 
-If the table has `updatedAt` [timestamp](/guide/common-column-methods.html#timestamps), it will be updated even for an empty data.
+If the table has `updatedAt` [timestamp](/guide/common-column-methods#timestamps), it will be updated even for an empty data.
 
-## updateSql
+### updateSql
 
 [//]: # 'has JSDoc'
 
@@ -657,7 +661,7 @@ const updatedCount = await db.table.find(1).updateSql`name = ${value}`;
 await db.table.find(1).updateSql(sql`name = ${value}`);
 ```
 
-## updateOrThrow
+### updateOrThrow
 
 [//]: # 'has JSDoc'
 
@@ -905,7 +909,7 @@ const deletedUsersFull = await db.table
 db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
 ```
 
-`delete` can be used in [with](/guide/advanced-queries.html#with) expressions:
+`delete` can be used in [with](/guide/advanced-queries#with) expressions:
 
 ```ts
 db.$queryBuilder

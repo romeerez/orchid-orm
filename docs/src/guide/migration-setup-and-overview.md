@@ -74,7 +74,7 @@ Export database options:
 
 In this example, `dotenv` is used and configured to first get env variables from `.env.local` and then to get them from the `.env` file.
 
-`DATABASE_URL` contains db credentials, also you can specify a db schema and ssl mode in it, see [database setup](/guide/quickstart.html#database-setup).
+`DATABASE_URL` contains db credentials, also you can specify a db schema and ssl mode in it, see [database setup](/guide/quickstart#database-setup).
 
 ```ts
 // db/config.ts
@@ -473,7 +473,7 @@ export const change = rakeDb(options, {
 ```
 
 `beforeChange` and `afterChange` receive two additional arguments: boolean `up` to check whether it's migrate or rollback,
-and boolean `redo` to check whether it's migrating down then up for [redo](/guide/migration-commands.html#redo) command.
+and boolean `redo` to check whether it's migrating down then up for [redo](/guide/migration-commands#redo) command.
 
 Example for how to run your code after migrating or rolling back, but not in the middle of `redo`:
 

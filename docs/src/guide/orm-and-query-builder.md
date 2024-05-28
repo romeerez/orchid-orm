@@ -4,7 +4,7 @@
 
 The query builder is for building and executing SQL queries, such as `select`, `create`, `update`, and `delete`.
 
-ORM allows defining `belongsTo`, `hasMany` and [other relations](/guide/relations.html), select and join them, create/update/delete records together with their related records and [more](/guide/relation-queries.html).
+ORM allows defining `belongsTo`, `hasMany` and [other relations](/guide/relations), select and join them, create/update/delete records together with their related records and [more](/guide/relation-queries).
 
 ## setup
 
@@ -117,7 +117,7 @@ export const BaseTable = createBaseTable({
 export const { sql } = BaseTable;
 ```
 
-See [override column types](/guide/columns-overview.html#override-column-types) for details of customizing columns.
+See [override column types](/guide/columns-overview#override-column-types) for details of customizing columns.
 
 Tables are defined as classes `table` and `columns` required properties:
 
@@ -196,8 +196,8 @@ export class SnakeCaseTable extends BaseTable {
 
 Table classes are similar to Models or Entities in other ORMs.
 The key difference is that Model/Entity is meant to also contain business logic,
-while a table in OrchidORM is only meant for configuring a database table columns, relations, allows to define [softDelete](/guide/orm-and-query-builder.html#softdelete),
-query [hooks](/guide/hooks.html#lifecycle-hooks) (aka callbacks), so to define the database table and querying specifics, but not for app's logic.
+while a table in OrchidORM is only meant for configuring a database table columns, relations, allows to define [softDelete](/guide/orm-and-query-builder#softdelete),
+query [hooks](/guide/hooks#lifecycle-hooks) (aka callbacks), so to define the database table and querying specifics, but not for app's logic.
 
 ```ts
 import { BaseTable } from './baseTable';
@@ -282,17 +282,17 @@ export class UserTable extends BaseTable {
 ```
 
 - `table` and `softDelete` must be readonly for TS to recognize them properly, other properties don't have to be readonly.
-- for configuring columns see [Columns schema overview](/guide/columns-overview.html).
-- documentation for composite primary keys, indexes, foreign keys, is residing in [migration column methods](/guide/migration-column-methods.html)
-- for defining table's relations see [Modeling relations](/guide/relations.html).
-- check out [soft delete](/guide/orm-and-query-builder.html#softdelete)
-- for `computed` see [Computed columns](/guide/orm-and-query-builder.html#computed-columns).
-- for `scopes` see [Scopes](/guide/orm-and-query-builder.html#scopes).
+- for configuring columns see [Columns schema overview](/guide/columns-overview).
+- documentation for composite primary keys, indexes, foreign keys, is residing in [migration column methods](/guide/migration-column-methods)
+- for defining table's relations see [Modeling relations](/guide/relations).
+- check out [soft delete](/guide/orm-and-query-builder#softdelete)
+- for `computed` see [Computed columns](/guide/orm-and-query-builder#computed-columns).
+- for `scopes` see [Scopes](/guide/orm-and-query-builder#scopes).
 
 All table files must be linked into `orchidORM` instance, as was shown above in the [setup](#setup) section.
 
 When trying OrchidORM on an existing project that already has a database with tables,
-you can run a command to generate code for tables and a migration for it by running [db pull](/guide/migration-commands.html#pull).
+you can run a command to generate code for tables and a migration for it by running [db pull](/guide/migration-commands#pull).
 
 ## generate migrations
 
@@ -355,7 +355,7 @@ export const db = orchidORM(
 );
 ```
 
-For [domain](/guide/migration-column-methods.html#domain) types:
+For [domain](/guide/migration-column-methods#domain) types:
 
 ```ts
 export const db = orchidORM(
@@ -385,12 +385,12 @@ Please let me know by opening an issue if you'd like to have a support for addit
 
 Utility types available for tables:
 
-- `Selectable`: record type returned from a database and parsed with [column parsers](/guide/common-column-methods.html#parse).
-  For instance, when using `asDate` for a [timestamp](/guide/columns-types.html#date-and-time) column, `Selectable` will have `Date` type for this column.
+- `Selectable`: record type returned from a database and parsed with [column parsers](/guide/common-column-methods#parse).
+  For instance, when using `asDate` for a [timestamp](/guide/columns-types#date-and-time) column, `Selectable` will have `Date` type for this column.
 - `Insertable`: type of object you can create a new record with.
-  Column type may be changed by [encode](/guide/common-column-methods.html#encode) function. `Insertable` type for timestamp column is a union `string | number | Date`.
+  Column type may be changed by [encode](/guide/common-column-methods#encode) function. `Insertable` type for timestamp column is a union `string | number | Date`.
 - `Updatable`: the same as `Insertable` but all fields are optional.
-- `Queryable`: disregarding if [parse](/guide/common-column-methods.html#parse) or [encode](/guide/common-column-methods.html#encode) functions are specified for the column,
+- `Queryable`: disregarding if [parse](/guide/common-column-methods#parse) or [encode](/guide/common-column-methods#encode) functions are specified for the column,
   types that are accepted by `where` and other query methods remains the same. Use this type to accept data to query the table with.
 
 ```ts
@@ -793,7 +793,7 @@ await db.someTable.find(1).hardDelete();
 [//]: # 'has JSDoc'
 
 This feature allows defining a set of query modifiers to use it later.
-Only [where conditions](/guide/where.html) can be set in a scope.
+Only [where conditions](/guide/where) can be set in a scope.
 If you define a scope with name `default`, it will be applied for all table queries by default.
 
 ```ts
@@ -850,7 +850,7 @@ await db.some.unscope('default');
 
 [//]: # 'has JSDoc'
 
-You can add a generated column in the migration (see [generated](/guide/migration-column-methods.html#generated-column)),
+You can add a generated column in the migration (see [generated](/guide/migration-column-methods#generated-column)),
 such column will persist in the database, it can be indexed.
 
 Or you can add a computed column on the ORM level, without adding it to the database, in such a way:
@@ -1008,7 +1008,7 @@ const result = await db
   .limit(10);
 ```
 
-It is the same [from](/guide/query-methods.html#from) method as available in the query builder, it also can accept multiple sources.
+It is the same [from](/guide/query-methods#from) method as available in the query builder, it also can accept multiple sources.
 
 ## $close
 

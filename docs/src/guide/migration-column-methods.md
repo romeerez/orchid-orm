@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # migration column methods
 
 All the methods described in [columns methods](/guide/common-column-methods) still applies in migrations,
@@ -38,7 +42,7 @@ change(async (db) => {
 });
 ```
 
-[uuid().primaryKey()](/guide/columns-types.html#uuid) has a default `gen_random_uuid()` by default, and if you'd like to drop it use `default(null)`:
+[uuid().primaryKey()](/guide/columns-types#uuid) has a default `gen_random_uuid()` by default, and if you'd like to drop it use `default(null)`:
 
 ```ts
 id: t.uuid().primaryKey().default(null),
@@ -133,7 +137,7 @@ change(async (db) => {
 });
 ```
 
-## composite primary key
+### composite primary key
 
 Specify `primaryKey` on multiple columns to have a composite primary key. `.find` works only with single primary key.
 
@@ -187,7 +191,7 @@ change(async (db) => {
 
 Defines a reference between different tables to enforce data integrity.
 
-In [snakeCase](/guide/orm-and-query-builder.html#snakecase-option) mode, columns of both tables are translated to a snake_case.
+In [snakeCase](/guide/orm-and-query-builder#snakecase-option) mode, columns of both tables are translated to a snake_case.
 
 ```ts
 import { change } from '../dbScript';
@@ -224,7 +228,7 @@ type ForeignKeyOptions = {
 };
 ```
 
-## composite foreign key
+### composite foreign key
 
 Set foreign key from multiple columns in the current table to corresponding columns in the other table.
 
@@ -303,7 +307,7 @@ type IndexOptions = {
 };
 ```
 
-## composite index
+### composite index
 
 To defines an index for multiple columns.
 
@@ -364,13 +368,13 @@ change(async (db) => {
 
 Accepts the same parameters as [index](#index).
 
-Columns marked with `unique` becomes available for filtering with [findBy](/guide/query-methods#findby), and in [onConflict(['column'])](/guide/create-update-delete.html#onconflict).
+Columns marked with `unique` becomes available for filtering with [findBy](/guide/query-methods#findby), and in [onConflict(['column'])](/guide/create-update-delete#onconflict).
 
-## composite unique index
+### composite unique index
 
 For unique indexes on multiple columns, accepts the same parameters as [composite index](#composite-index).
 
-As well as [unique](#unique) defined for a single column, it is recognized by [findBy](/guide/query-methods#findby) and [onConflict(['column'])](/guide/create-update-delete.html#onconflict).
+As well as [unique](#unique) defined for a single column, it is recognized by [findBy](/guide/query-methods#findby) and [onConflict(['column'])](/guide/create-update-delete#onconflict).
 
 ```ts
 import { change } from '../dbScript';
@@ -417,7 +421,7 @@ change(async (db) => {
 });
 ```
 
-Produces the following index ('english' is a default language, see [full text search](/guide/text-search.html#language) for changing it):
+Produces the following index ('english' is a default language, see [full text search](/guide/text-search#language) for changing it):
 
 ```sql
 CREATE INDEX "table_title_body_idx" ON "table" USING GIN (
@@ -492,7 +496,7 @@ change(async (db) => {
 });
 ```
 
-It can be more efficient to use a [generated](/guide/migration-column-methods.html#generated-column) column instead of indexing text column in the way described above,
+It can be more efficient to use a [generated](/guide/migration-column-methods#generated-column) column instead of indexing text column in the way described above,
 and to set a `searchIndex` on it:
 
 ```ts
@@ -528,7 +532,7 @@ change(async (db) => {
 });
 ```
 
-## timestampsNoTZ
+### timestampsNoTZ
 
 The same as `timestamps`, but without a time zone.
 
@@ -551,7 +555,7 @@ change(async (db) => {
 });
 ```
 
-## multi-column check
+### multi-column check
 
 Define a check for multiple column by using a spread syntax:
 
@@ -638,7 +642,7 @@ change(async (db) => {
 
 Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
-Before adding a domain column, create the domain type itself, see [create domain](/guide/migration-writing.html#createdomain-dropdomain).
+Before adding a domain column, create the domain type itself, see [create domain](/guide/migration-writing#createdomain-dropdomain).
 
 `as` works exactly like as when using `type`, it has no effect in the migration.
 

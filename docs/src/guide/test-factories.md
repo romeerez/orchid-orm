@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Test factories
 
 `Orchid ORM` ecosystem offers a library for setting up JavaScript objects, to use these objects in tests.
@@ -218,7 +222,7 @@ const user = factory.user.build({
 });
 ```
 
-## buildMany
+### buildMany
 
 Build multiple records with `buildMany`. It is accepting the same parameters as `build`, but can accept multiple arguments.
 
@@ -237,7 +241,7 @@ const [user1, user2, user3] = factory.user.buildMany(
 );
 ```
 
-## buildList
+### buildList
 
 Build an array of objects, and provide a number for how many objects are needed:
 
@@ -293,7 +297,7 @@ const customizedUser = await factory.user.create({
 });
 ```
 
-## createMany
+### createMany
 
 Create multiple records at once with `createMany`, it executes a single `INSERT` statement.
 
@@ -312,7 +316,7 @@ const [user1, user2, user3] = await factory.user.createMany(
 );
 ```
 
-## createList
+### createList
 
 Create an array of records, and provide a number for how many objects are needed:
 

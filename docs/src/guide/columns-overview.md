@@ -4,7 +4,7 @@ Columns schema stores information about table columns to make querying type-safe
 
 Note that all columns are **non-nullable** by default, use `.nullable()` to mark them as nullable.
 
-## Column types
+## column types
 
 Each column type has a specific database type, input type, output type, and query type:
 
@@ -76,7 +76,7 @@ db.someTable.where({
 });
 ```
 
-## Add custom columns
+## add custom columns
 
 It's possible to define custom columns, they can have a special behavior or a meaning, or to simply serve as an alias.
 
@@ -124,7 +124,7 @@ export class Table extends BaseTable {
 }
 ```
 
-## Override column parsing/encoding
+## override parsing/encoding
 
 It is possible to override the parsing of columns returned from the database.
 
@@ -196,10 +196,10 @@ export const BaseTable = createBaseTable({
 });
 ```
 
-## Override column default validation
+## override default validation
 
 ORM doesn't validate inputs by itself,
-use `Table.inputSchema()` (see [Validation methods](/guide/columns-validation-methods.html)) in your request handlers,
+use `Table.inputSchema()` (see [Validation methods](/guide/columns-validation-methods)) in your request handlers,
 and then it's guaranteed that user won't be able to submit empty or a million chars long username and other text data.
 
 Type of `text` method forces you to provide the `min` and `max` each time when calling it. To simplify this, define common defaults for all text columns:

@@ -106,7 +106,7 @@ export const userRepo = createRepo(db.user, {
 });
 ```
 
-## Kinds of methods
+## kinds of methods
 
 Different scopes of methods are available:
 

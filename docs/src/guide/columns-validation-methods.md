@@ -173,7 +173,7 @@ class SomeTable extends BaseTable {
 }
 ```
 
-## Numeric columns
+## numeric columns
 
 Numeric columns `smallint`, `integer`, `numeric`, `decimal`, `real`, `smallSerial`, and `serial` have such validation methods:
 
@@ -200,7 +200,7 @@ class SomeTable extends BaseTable {
 }
 ```
 
-## Text columns
+## text columns
 
 Text columns `varchar`, `char`, and `text` have such validation methods:
 
@@ -236,7 +236,7 @@ class SomeTable extends BaseTable {
 }
 ```
 
-## Array columns
+## array columns
 
 Array columns have such validation methods:
 

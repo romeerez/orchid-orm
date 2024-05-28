@@ -44,13 +44,13 @@ const result: { count: number; avg: number | null }[] = await db.table.select({
 });
 ```
 
-They can be used in [having](/guide/query-methods.html#having):
+They can be used in [having](/guide/query-methods#having):
 
 ```ts
 db.table.having((q) => q.count().gte(10));
 ```
 
-Functions can be chained with [column operators](/guide/where.html#column-operators).
+Functions can be chained with [column operators](/guide/where#column-operators).
 Strictly according to the return type of the function, `count` can be chained with `gt` but not with `contains`.
 
 ```ts

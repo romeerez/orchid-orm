@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Where conditions
 
 ## where
@@ -97,7 +101,7 @@ db.table.where((q) =>
 db.table.where({ id: 1 }, db.table.where({ name: 'John' }), sql`a = b`);
 ```
 
-## where sub query
+### where sub query
 
 [//]: # 'has JSDoc'
 
@@ -135,11 +139,11 @@ WHERE (
 )
 ```
 
-In the example above we use `count()`, you can also use any other [aggregate method](/guide/aggregate.htm) instead, such as [min](/guide/aggregate.html#min), [max](/guide/aggregate.html#max), [avg](/guide/aggregate.html#avg).
+In the example above we use `count()`, you can also use any other [aggregate method](/guide/aggregate) instead, such as [min](/guide/aggregate#min), [max](/guide/aggregate#max), [avg](/guide/aggregate#avg).
 
 The `count()` is chained with `equals` to check for a strict equality, any other [operation](#column-operators) is also allowed, such as `not`, `lt`, `gt`.
 
-## where special keys
+### where special keys
 
 [//]: # 'has JSDoc'
 
@@ -201,195 +205,7 @@ db.table.where({
 });
 ```
 
-## column operators
-
-[//]: # 'has JSDoc'
-
-`where` argument can take an object where the key is the name of the operator and the value is its argument.
-
-Different types of columns support different sets of operators.
-
-All column operators can take a value of the same type as the column, a sub-query, or a raw SQL expression:
-
-```ts
-db.table.where({
-  numericColumn: {
-    // lower than 5
-    lt: 5,
-
-    // lower than the value returned by sub-query
-    lt: OtherTable.select('someNumber').take(),
-
-    // raw SQL expression produces WHERE "numericColumn" < "otherColumn" + 10
-    lt: sql`"otherColumn" + 10`,
-  },
-});
-```
-
-These operators are also available as functions that can be chained to queries, see [Aggregate functions](/guide/aggregate.html).
-
-## any operators
-
-`equals` is a simple `=` operator, it may be useful for comparing column value with JSON object:
-
-```ts
-db.table.where({
-  // when searching for an exact same JSON value, this won't work:
-  jsonColumn: someObject,
-
-  // use `{ equals: ... }` instead:
-  jsonColumn: { equals: someObject },
-});
-```
-
-`not` is `!=` (aka `<>`) not equal operator:
-
-```ts
-db.table.where({
-  anyColumn: { not: value },
-});
-```
-
-`in` is for the `IN` operator to check if the column value is included in a list of values.
-
-Takes an array of the same type as a column, a sub-query that returns a list of values, or a raw SQL expression that returns a list.
-
-```ts
-db.table.where({
-  column: {
-    in: ['a', 'b', 'c'],
-
-    // WHERE "column" IN (SELECT "column" FROM "otherTable")
-    in: OtherTable.select('column'),
-
-    in: sql`('a', 'b')`,
-  },
-});
-```
-
-`notIn` is for the `NOT IN` operator, and takes the same arguments as `in`
-
-## numeric and date operators
-
-To compare numbers and dates.
-
-`lt` is for `<` (lower than)
-
-`lte` is for `<=` (lower than or equal)
-
-`gt` is for `>` (greater than)
-
-`gte` is for `>=` (greater than or equal)
-
-Numeric types (int, decimal, double precision, etc.) are comparable with numbers,
-date types (date, timestamp) are comparable with `Date` object or `Data.toISOString()` formatted strings.
-
-```ts
-db.table.where({
-  numericColumn: {
-    gt: 5,
-    lt: 10,
-  },
-
-  date: {
-    lte: new Date(),
-    gte: new Date().toISOString(),
-  },
-});
-```
-
-`between` also works with numeric, dates, and time columns, it takes an array of two elements.
-
-Both elements can be of the same type as a column, a sub-query, or a raw SQL expression.
-
-```ts
-db.table.where({
-  column: {
-    // simple values
-    between: [1, 10],
-
-    // sub-query and raw SQL expression
-    between: [OtherTable.select('column').take(), sql`2 + 2`],
-  },
-});
-```
-
-## text operators
-
-For `text`, `char`, `varchar`, and `json` columns.
-
-`json` is stored as text, so it has text operators. Use the `jsonb` type for JSON operators.
-
-Takes a string, or sub-query returning string, or raw SQL expression as well as other operators.
-
-```ts
-db.table.where({
-  textColumn: {
-    // WHERE "textColumn" LIKE '%string%'
-    contains: 'string',
-    // WHERE "textColumn" ILIKE '%string%'
-    containsInsensitive: 'string',
-    // WHERE "textColumn" LIKE 'string%'
-    startsWith: 'string',
-    // WHERE "textColumn" ILIKE 'string%'
-    startsWithInsensitive: 'string',
-    // WHERE "textColumn" LIKE '%string'
-    endsWith: 'string',
-    // WHERE "textColumn" ILIKE '%string'
-    endsWithInsensitive: 'string',
-  },
-});
-```
-
-## JSONB column operators
-
-For the `jsonb` column, note that the `json` type has text operators instead.
-
-`jsonPath` operator: compare a column value under a given JSON path with the provided value.
-
-Value can be of any type to compare with JSON value, or it can be a sub-query or a raw SQL expression.
-
-```ts
-db.table.where({
-  jsonbColumn: {
-    jsonPath: [
-      '$.name', // first element is JSON path
-      '=', // second argument is comparison operator
-      'value', // third argument is a value to compare with
-    ],
-  },
-});
-```
-
-`jsonSupersetOf`: check if the column value is a superset of provided value.
-
-For instance, it is true if the column has JSON `{ "a": 1, "b": 2 }` and provided value is `{ "a": 1 }`.
-
-Takes the value of any type, or sub query which returns a single value, or a raw SQL expression.
-
-```ts
-db.table.where({
-  jsonbColumn: {
-    jsonSupersetOf: { a: 1 },
-  },
-});
-```
-
-`jsonSubsetOf`: check if the column value is a subset of provided value.
-
-For instance, it is true if the column has JSON `{ "a": 1 }` and provided value is `{ "a": 1, "b": 2 }`.
-
-Takes the value of any type, or sub query which returns a single value, or a raw SQL expression.
-
-```ts
-db.table.where({
-  jsonbColumn: {
-    jsonSupersetOf: { a: 1 },
-  },
-});
-```
-
-## whereSql
+### whereSql
 
 Use a custom SQL expression in `WHERE` statement:
 
@@ -397,7 +213,7 @@ Use a custom SQL expression in `WHERE` statement:
 db.table.whereSql`a = b`;
 ```
 
-## orWhere
+### orWhere
 
 [//]: # 'has JSDoc'
 
@@ -421,7 +237,7 @@ WHERE id = 1 AND color = 'red'
    OR id = 2 AND color = 'blue'
 ```
 
-## whereNot
+### whereNot
 
 [//]: # 'has JSDoc'
 
@@ -437,7 +253,7 @@ db.table.whereNot({ one: 1, two: 2 });
 // WHERE NOT (one = 1 AND two = 2)
 ```
 
-## whereNotSql
+#### whereNotSql
 
 [//]: # 'has JSDoc'
 
@@ -447,13 +263,13 @@ db.table.whereNot({ one: 1, two: 2 });
 db.table.whereNotSql`sql expression`;
 ```
 
-## orWhereNot
+#### orWhereNot
 
 [//]: # 'has JSDoc'
 
 `orWhereNot` takes the same arguments as `orWhere`, and prepends each condition with `NOT` just as `whereNot` does.
 
-## whereIn
+### whereIn
 
 [//]: # 'has JSDoc'
 
@@ -500,7 +316,7 @@ db.table.where(['id', 'name'], []);
 db.table.where({ id: [] });
 ```
 
-## orWhereIn
+#### orWhereIn
 
 [//]: # 'has JSDoc'
 
@@ -511,7 +327,7 @@ Add a `WHERE IN` condition prefixed with `OR` to the query:
 db.table.whereIn('a', [1, 2, 3]).orWhereIn('b', ['one', 'two']);
 ```
 
-## whereNotIn
+#### whereNotIn
 
 [//]: # 'has JSDoc'
 
@@ -521,7 +337,7 @@ Acts as `whereIn`, but negates the condition with `NOT`:
 db.table.whereNotIn('color', ['red', 'green', 'blue']);
 ```
 
-## orWhereNotIn
+#### orWhereNotIn
 
 [//]: # 'has JSDoc'
 
@@ -531,7 +347,7 @@ Acts as `whereIn`, but prepends `OR` to the condition and negates it with `NOT`:
 db.table.whereNotIn('a', [1, 2, 3]).orWhereNoIn('b', ['one', 'two']);
 ```
 
-## whereExists
+### whereExists
 
 [//]: # 'has JSDoc'
 
@@ -551,7 +367,7 @@ db.user.whereExists(db.account, 'account.id', 'user.id');
 db.user.whereExists(db.account, (q) => q.on('account.id', '=', 'user.id'));
 ```
 
-## orWhereExists
+#### orWhereExists
 
 [//]: # 'has JSDoc'
 
@@ -563,7 +379,7 @@ Acts as `whereExists`, but prepends the condition with `OR`:
 db.user.whereExist('account').orWhereExists('profile');
 ```
 
-## whereNotExists
+#### whereNotExists
 
 [//]: # 'has JSDoc'
 
@@ -575,7 +391,7 @@ Acts as `whereExists`, but negates the condition with `NOT`:
 db.user.whereNotExist('account');
 ```
 
-## orWhereNotExists
+#### orWhereNotExists
 
 [//]: # 'has JSDoc'
 
@@ -585,6 +401,194 @@ Acts as `whereExists`, but prepends the condition with `OR` and negates it with 
 // find users who don't have an account OR who don't have a profile
 // imagine that the user has both `account` and `profile` relations defined.
 db.user.whereNotExists('account').orWhereNotExists('profile');
+```
+
+## column operators
+
+[//]: # 'has JSDoc'
+
+`where` argument can take an object where the key is the name of the operator and the value is its argument.
+
+Different types of columns support different sets of operators.
+
+All column operators can take a value of the same type as the column, a sub-query, or a raw SQL expression:
+
+```ts
+db.table.where({
+  numericColumn: {
+    // lower than 5
+    lt: 5,
+
+    // lower than the value returned by sub-query
+    lt: OtherTable.select('someNumber').take(),
+
+    // raw SQL expression produces WHERE "numericColumn" < "otherColumn" + 10
+    lt: sql`"otherColumn" + 10`,
+  },
+});
+```
+
+These operators are also available as functions that can be chained to queries, see [Aggregate functions](/guide/aggregate).
+
+### any operators
+
+`equals` is a simple `=` operator, it may be useful for comparing column value with JSON object:
+
+```ts
+db.table.where({
+  // when searching for an exact same JSON value, this won't work:
+  jsonColumn: someObject,
+
+  // use `{ equals: ... }` instead:
+  jsonColumn: { equals: someObject },
+});
+```
+
+`not` is `!=` (aka `<>`) not equal operator:
+
+```ts
+db.table.where({
+  anyColumn: { not: value },
+});
+```
+
+`in` is for the `IN` operator to check if the column value is included in a list of values.
+
+Takes an array of the same type as a column, a sub-query that returns a list of values, or a raw SQL expression that returns a list.
+
+```ts
+db.table.where({
+  column: {
+    in: ['a', 'b', 'c'],
+
+    // WHERE "column" IN (SELECT "column" FROM "otherTable")
+    in: OtherTable.select('column'),
+
+    in: sql`('a', 'b')`,
+  },
+});
+```
+
+`notIn` is for the `NOT IN` operator, and takes the same arguments as `in`
+
+### numeric and date operators
+
+To compare numbers and dates.
+
+`lt` is for `<` (lower than)
+
+`lte` is for `<=` (lower than or equal)
+
+`gt` is for `>` (greater than)
+
+`gte` is for `>=` (greater than or equal)
+
+Numeric types (int, decimal, double precision, etc.) are comparable with numbers,
+date types (date, timestamp) are comparable with `Date` object or `Data.toISOString()` formatted strings.
+
+```ts
+db.table.where({
+  numericColumn: {
+    gt: 5,
+    lt: 10,
+  },
+
+  date: {
+    lte: new Date(),
+    gte: new Date().toISOString(),
+  },
+});
+```
+
+`between` also works with numeric, dates, and time columns, it takes an array of two elements.
+
+Both elements can be of the same type as a column, a sub-query, or a raw SQL expression.
+
+```ts
+db.table.where({
+  column: {
+    // simple values
+    between: [1, 10],
+
+    // sub-query and raw SQL expression
+    between: [OtherTable.select('column').take(), sql`2 + 2`],
+  },
+});
+```
+
+### text operators
+
+For `text`, `char`, `varchar`, and `json` columns.
+
+`json` is stored as text, so it has text operators. Use the `jsonb` type for JSON operators.
+
+Takes a string, or sub-query returning string, or raw SQL expression as well as other operators.
+
+```ts
+db.table.where({
+  textColumn: {
+    // WHERE "textColumn" LIKE '%string%'
+    contains: 'string',
+    // WHERE "textColumn" ILIKE '%string%'
+    containsInsensitive: 'string',
+    // WHERE "textColumn" LIKE 'string%'
+    startsWith: 'string',
+    // WHERE "textColumn" ILIKE 'string%'
+    startsWithInsensitive: 'string',
+    // WHERE "textColumn" LIKE '%string'
+    endsWith: 'string',
+    // WHERE "textColumn" ILIKE '%string'
+    endsWithInsensitive: 'string',
+  },
+});
+```
+
+### JSONB column operators
+
+For the `jsonb` column, note that the `json` type has text operators instead.
+
+`jsonPath` operator: compare a column value under a given JSON path with the provided value.
+
+Value can be of any type to compare with JSON value, or it can be a sub-query or a raw SQL expression.
+
+```ts
+db.table.where({
+  jsonbColumn: {
+    jsonPath: [
+      '$.name', // first element is JSON path
+      '=', // second argument is comparison operator
+      'value', // third argument is a value to compare with
+    ],
+  },
+});
+```
+
+`jsonSupersetOf`: check if the column value is a superset of provided value.
+
+For instance, it is true if the column has JSON `{ "a": 1, "b": 2 }` and provided value is `{ "a": 1 }`.
+
+Takes the value of any type, or sub query which returns a single value, or a raw SQL expression.
+
+```ts
+db.table.where({
+  jsonbColumn: {
+    jsonSupersetOf: { a: 1 },
+  },
+});
+```
+
+`jsonSubsetOf`: check if the column value is a subset of provided value.
+
+For instance, it is true if the column has JSON `{ "a": 1 }` and provided value is `{ "a": 1, "b": 2 }`.
+
+Takes the value of any type, or sub query which returns a single value, or a raw SQL expression.
+
+```ts
+db.table.where({
+  jsonbColumn: {
+    jsonSupersetOf: { a: 1 },
+  },
+});
 ```
 
 ## exists

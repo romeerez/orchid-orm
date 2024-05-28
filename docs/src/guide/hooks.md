@@ -3,9 +3,9 @@
 You can specify functions that will be called before or after a certain type of query executes for the table.
 
 The hook functions are called when records are created, updated, or deleted for a specific table, and they are also called when performing nested
-[updates](/guide/relation-queries.html#nested-update),
-[creates](/guide/relation-queries.html#nested-create),
-and [deletes](/guide/relation-queries.html#delete-related-records).
+[updates](/guide/relation-queries#nested-update),
+[creates](/guide/relation-queries#nested-create),
+and [deletes](/guide/relation-queries#delete-related-records).
 
 ## before hooks
 
@@ -181,7 +181,7 @@ class SomeTable extends BaseTable {
 }
 ```
 
-## Setting hooks on a query
+## setting hooks on a query
 
 The lifecycle hooks can also be added to a query chain, and they will run only for this specific query:
 

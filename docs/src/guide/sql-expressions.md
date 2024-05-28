@@ -28,7 +28,7 @@ const result: { timestamp: Date }[] = await db.table.select({
 });
 ```
 
-In some cases such as when using [from](/guide/orm-and-query-builder.html#from), setting column type via callback allows for special `where` operations:
+In some cases such as when using [from](/guide/orm-and-query-builder#from), setting column type via callback allows for special `where` operations:
 
 ```ts
 const subQuery = db.someTable.select({
@@ -199,7 +199,7 @@ const q = await User.select({
 q.sqrt; // has type `number` just as provided
 ```
 
-If this is an aggregate function, you can specify aggregation options (see [Aggregate](/guide/aggregate.html)) via third parameter.
+If this is an aggregate function, you can specify aggregation options (see [Aggregate](/guide/aggregate)) via third parameter.
 
 Use `type` method to specify a column type so that its operators such as `lt` and `gt` become available:
 

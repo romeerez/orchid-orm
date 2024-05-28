@@ -3,25 +3,36 @@
     Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans',
     'Helvetica Neue', sans-serif;
   --vp-c-brand: #9d69d1;
-  --vp-c-brand-dark: #b469ff;
+  --vp-c-brand-1: #9d69d1;
+  --vp-c-brand-2: #b469ff;
   --vp-button-brand-bg: #b469ff;
   --vp-button-brand-border: #9a5ef4;
   --vp-button-brand-hover-bg: #a55af1;
   --vp-button-brand-hover-border: #8f53ea;
   --vp-button-brand-active-border: #5345da;
-  --vp-layout-max-width: 1540px;
-  --vp-c-text-code: var(--vp-c-indigo-light);
+  --vp-layout-max-width: min(calc(100% - var(--vp-sidebar-width)), 1540px);
 }
 
 html:not(.dark) {
-  --vp-c-bg: #f6f8fa;
+  --vp-c-bg: #f0f2f4;
+  --vp-sidebar-bg-color: #ebedef;
   --vp-c-bg-alt: #eaedef;
   --vp-c-text-code: #5f2caa;
   --vp-c-bg-mute: #efefef;
+  --vp-code-bg: rgba(142, 150, 170, 0.08);
+  --vp-code-color: #5345da;
+}
+
+html:not(.dark) .vp-code code {
+  filter: invert(1) hue-rotate(180deg);
 }
 
 html.dark {
   --vp-c-text-1: rgba(199, 195, 205, 0.87);
+  --vp-c-bg: #242424;
+  --vp-c-gutter: rgba(84, 84, 84, .48);
+  --vp-sidebar-bg-color: #1a1a1a;
+  --vp-code-color: #aac8e4;
 }
 
 html .content-container {
@@ -30,6 +41,10 @@ html .content-container {
 
 .VPHome {
   padding-bottom: 24px !important;
+}
+
+.vp-doc .VPButton {
+  text-decoration: none;
 }
 
 /* hide INFO title in ::: info blocks */
@@ -42,7 +57,7 @@ html .content-container {
   padding: 0 16px 0 12px;
   background: var(--vp-c-bg-alt);
   border-radius: 8px;
-  border: 1px solid var(--vp-c-divider-light);
+  border: 1px solid var(--vp-c-gutter);
   position: relative;
   overflow: hidden;
   font-size: 14px;
@@ -100,9 +115,9 @@ html .content-container {
 
 .VPNavBarSearch {
   background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider-light);
   border-radius: 12px;
   padding-left: 0;
+  flex-grow: 0;
 }
 
 .VPNavBarSearch .DocSearch-Button {
@@ -120,7 +135,6 @@ html .content-container {
 @media (min-width: 530px) {
   .stand-with-ukraine {
     font-size: 16px;
-    margin-right: 24px;
     padding-right: 62px;
     padding-top: 8px;
     padding-bottom: 8px;

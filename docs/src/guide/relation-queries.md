@@ -209,7 +209,7 @@ const result: Result = await db.post
 
 ### select relation with a strict join
 
-As described in [join: select relation](/guide/join.html#select-relation),
+As described in [join: select relation](/guide/join#select-relation),
 you can set empty `.join` on the relation
 if you want to filter out main table records that don't have a matching relation:
 

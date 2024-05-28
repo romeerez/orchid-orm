@@ -2,7 +2,7 @@
 
 `Orchid ORM` supports all the main capabilities of Postgres for the [full text search](https://www.postgresql.org/docs/current/textsearch.html).
 
-To keep it performant, define a [generated](/guide/migration-column-methods.html#generated) `tsvector` column, and create a special [search index](/guide/migration-column-methods.html#searchindex).
+To keep it performant, define a [generated](/guide/migration-column-methods#generated) `tsvector` column, and create a special [search index](/guide/migration-column-methods#searchindex).
 
 ## language
 
@@ -92,7 +92,7 @@ db.table.search({
 });
 ```
 
-For better performance, define a [generated](/guide/migration-column-methods.html#generated) column of `tsvector` type, and use it in the search with `vector` keyword:
+For better performance, define a [generated](/guide/migration-column-methods#generated) column of `tsvector` type, and use it in the search with `vector` keyword:
 
 ```ts
 db.table.search({

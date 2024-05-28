@@ -1,4 +1,4 @@
-## Window functions
+# Window functions
 
 Various window functions are supported, and it's possible to call a custom one.
 

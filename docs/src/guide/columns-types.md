@@ -142,7 +142,7 @@ npm run db migrate
 
 And now `citext` is available and can be used just as a `text` type.
 
-It requires `min` and `max`, but can be [overridden](/guide/columns-overview.html#override-column-types) in the same way as the `text`.
+It requires `min` and `max`, but can be [overridden](/guide/columns-overview#override-column-types) in the same way as the `text`.
 
 ```ts
 // text variable unlimited length
@@ -153,7 +153,7 @@ t.citext(min: number, max: number) // -> string
 
 For full text search: define a generated column for a text vector.
 
-See [generated](/guide/migration-column-methods.html#enum) migration method.
+See [generated](/guide/migration-column-methods#enum) migration method.
 
 ```ts
 // generate a `ts_vector` from other text columns

@@ -48,19 +48,19 @@ This can be changed later, and this can be overridden for a specific table.
 
 Hit `y` if you're going to run tests over a real database.
 
-Orchid ORM has special utilities (see [testTransaction](/guide/transactions.html#testtransaction))
-and [record factories](/guide/test-factories.html)
+Orchid ORM has special utilities (see [testTransaction](/guide/transactions#testtransaction))
+and [record factories](/guide/test-factories)
 to make writing tests easy and fun.
 
 > Integrate with a validation library?
 
-Optionally, add integration with Zod or Valibot, read more about this in [validation methods](/guide/columns-validation-methods.html) section.
+Optionally, add integration with Zod or Valibot, read more about this in [validation methods](/guide/columns-validation-methods) section.
 
 Orchid ORM does not validate data on its own.
 
 > Add object factories for writing tests?
 
-Hit `y` for [record factories](/guide/test-factories.html) (generating mock objects from tables).
+Hit `y` for [record factories](/guide/test-factories) (generating mock objects from tables).
 
 > Add demo tables?
 
@@ -267,9 +267,9 @@ The setup is completely ready at this point. For the next steps, create your tab
 
 To create new database tables, you can:
 
-- if you have an existing database with tables, generate for the tables with [db pull](/guide/migration-commands.html#pull).
-- [define new tables](/guide/orm-and-query-builder.html#define-a-table-class) in the code and [generate migrations](/guide/orm-and-query-builder.html#generate-migrations) for them.
-- you can also make a [new migration](/guide/migration-commands.html#new-blank-migration) file and write it manually.
+- if you have an existing database with tables, generate for the tables with [db pull](/guide/migration-commands#pull).
+- [define new tables](/guide/orm-and-query-builder#define-a-table-class) in the code and [generate migrations](/guide/orm-and-query-builder#generate-migrations) for them.
+- you can also make a [new migration](/guide/migration-commands#new-blank-migration) file and write it manually.
 
 ## example usage
 
