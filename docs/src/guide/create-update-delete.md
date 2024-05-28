@@ -243,19 +243,19 @@ consider using [upsert](#upsert) instead.
 db.table.create(data).onConflictIgnore();
 
 // single column:
-db.table.create(data).onConfict('email').merge();
+db.table.create(data).onConflict('email').merge();
 
 // array of columns:
 // (this requires a composite primary key or unique index, see below)
-db.table.create(data).onConfict(['email', 'name']).merge();
+db.table.create(data).onConflict(['email', 'name']).merge();
 
 // constraint name
-db.table.create(data).onConfict({ constraint: 'unique_index_name' }).merge();
+db.table.create(data).onConflict({ constraint: 'unique_index_name' }).merge();
 
 // raw SQL expression:
 db.table
   .create(data)
-  .onConfict(sql`(email) where condition`)
+  .onConflict(sql`(email) where condition`)
   .merge();
 ```
 
