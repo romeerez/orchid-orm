@@ -1,5 +1,11 @@
 # pqb
 
+## 0.31.2
+
+### Patch Changes
+
+- f0b1e0e: Make `then` configurable to make mocking possible
+
 ## 0.31.1
 
 ### Patch Changes
