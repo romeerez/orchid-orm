@@ -85,6 +85,7 @@ if (process.versions.bun) {
 }
 
 Object.defineProperty(Then.prototype, 'then', {
+  configurable: true,
   get: getThen,
   set(value) {
     Object.defineProperty(this, 'then', {
