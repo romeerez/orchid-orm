@@ -1,15 +1,18 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "pipeline": {
-    "check": {},
+    "check": {
+      "env": ["ADAPTER"]
+    },
+    "check:coverage": {
+      "env": ["ADAPTER"],
+      "outputs": ["coverage/**"]
+    },
     "types": {},
     "build": {},
     "lint": {},
     "lint:check": {},
     "fmt": {},
-    "fmt:check": {},
-    "test:ci": {
-      "outputs": ["coverage/**"]
-    }
+    "fmt:check": {}
   }
 }

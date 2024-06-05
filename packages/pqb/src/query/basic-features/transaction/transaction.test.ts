@@ -50,7 +50,7 @@ describe('transaction', () => {
 
     expect(result).toBe(3);
 
-    expect(transactionSpy).toBeCalledTimes(1);
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
     expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
       'SELECT 1 AS a',
       'SELECT 2 AS b',
@@ -71,7 +71,7 @@ describe('transaction', () => {
 
     expect(error?.message).toBe('error');
 
-    expect(transactionSpy).toBeCalledTimes(1);
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
     expect(querySpy.mock.calls).toEqual([]);
   });
 
@@ -143,7 +143,7 @@ describe('transaction', () => {
 
       expect(result).toBe(3);
 
-      expect(transactionSpy).toBeCalledTimes(1);
+      expect(transactionSpy).toHaveBeenCalledTimes(1);
       expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
         'SELECT 1 AS a',
         'SELECT 2 AS b',
@@ -247,8 +247,8 @@ describe('transaction', () => {
 
       await new Promise(queueMicrotask as never);
 
-      expect(catcher1).toBeCalledTimes(1);
-      expect(catcher2).toBeCalledTimes(1);
+      expect(catcher1).toHaveBeenCalledTimes(1);
+      expect(catcher2).toHaveBeenCalledTimes(1);
 
       const err = (catcher1.mock.calls[0] as unknown as [unknown])[0];
       expect(err).toBeInstanceOf(AfterCommitError);
@@ -359,8 +359,8 @@ describe('hooks with no test transaction', () => {
 
     await new Promise(queueMicrotask as never);
 
-    expect(catcher1).toBeCalledTimes(1);
-    expect(catcher2).toBeCalledTimes(1);
+    expect(catcher1).toHaveBeenCalledTimes(1);
+    expect(catcher2).toHaveBeenCalledTimes(1);
 
     const err = (catcher1.mock.calls[0] as unknown as [unknown])[0];
     expect(err).toBeInstanceOf(AfterCommitError);

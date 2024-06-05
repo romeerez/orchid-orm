@@ -37,8 +37,8 @@
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
+    "check:coverage": "jest --coverage --coverageReporters json-summary",
     "types": "tsc",
-    "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rolldown -c ../../../rolldown.config.mjs",
     "lint": "oxlint --fix",
     "lint:check": "oxlint",

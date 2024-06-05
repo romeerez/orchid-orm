@@ -16,7 +16,7 @@ describe('setupDemoTables', () => {
   it('should do nothing if demoTables is not specified', async () => {
     await initSteps.setupBaseTable(testInitConfig);
 
-    expect(mkdir).not.toBeCalled();
+    expect(mkdir).not.toHaveBeenCalled();
   });
 
   it('should create tables dir', async () => {
@@ -25,7 +25,7 @@ describe('setupDemoTables', () => {
       demoTables: true,
     });
 
-    expect(mkdir).toBeCalledWith(tablesDir, { recursive: true });
+    expect(mkdir).toHaveBeenCalledWith(tablesDir, { recursive: true });
   });
 
   it('should create post table', async () => {

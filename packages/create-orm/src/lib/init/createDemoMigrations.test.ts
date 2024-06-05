@@ -14,7 +14,7 @@ describe('createDemoMigrations', () => {
   it('should create migrations directory', async () => {
     await initSteps.createDemoMigrations(testInitConfig);
 
-    expect(mkdir).toBeCalledWith(migrationsPath, { recursive: true });
+    expect(mkdir).toHaveBeenCalledWith(migrationsPath, { recursive: true });
   });
 
   it('should create migrations if demoTables specified', async () => {

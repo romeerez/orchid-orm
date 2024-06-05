@@ -91,7 +91,7 @@ describe('get', () => {
     });
 
     it('should throw if not found', async () => {
-      await expect(() => User.get('id')).rejects.toThrowError(NotFoundError);
+      await expect(() => User.get('id')).rejects.toThrow(NotFoundError);
     });
   });
 

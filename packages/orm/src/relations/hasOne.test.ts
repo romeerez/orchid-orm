@@ -1031,7 +1031,7 @@ describe('hasOne', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [{ Id: expect.any(Number) }, { Id: expect.any(Number) }],
             expect.any(Db),
           );
@@ -1229,7 +1229,7 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             [{ Id: profileId }],
             expect.any(Db),
           );
@@ -1544,7 +1544,7 @@ describe('hasOne', () => {
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
-        expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
+        expect(afterUpdate).toHaveBeenCalledWith([{ Id }], expect.any(Db));
       });
 
       it('should invoke callbacks when creating', async () => {
@@ -1568,7 +1568,7 @@ describe('hasOne', () => {
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
-        expect(afterCreate).toBeCalledWith([{ Id }], expect.any(Db));
+        expect(afterCreate).toHaveBeenCalledWith([{ Id }], expect.any(Db));
       });
 
       it('should invoke callbacks in a batch create', async () => {
@@ -1605,11 +1605,17 @@ describe('hasOne', () => {
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
-        expect(afterUpdate).toBeCalledWith([{ Id: ids[0] }], expect.any(Db));
+        expect(afterUpdate).toHaveBeenCalledWith(
+          [{ Id: ids[0] }],
+          expect.any(Db),
+        );
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
-        expect(afterCreate).toBeCalledWith([{ Id: ids[1] }], expect.any(Db));
+        expect(afterCreate).toHaveBeenCalledWith(
+          [{ Id: ids[1] }],
+          expect.any(Db),
+        );
       });
     });
   });
@@ -1752,7 +1758,10 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ Id: Id }], expect.any(Db));
+          expect(afterUpdate).toHaveBeenCalledWith(
+            [{ Id: Id }],
+            expect.any(Db),
+          );
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -1785,7 +1794,7 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             [{ Id: ids[0] }, { Id: ids[1] }],
             expect.any(Db),
           );
@@ -1882,7 +1891,7 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             [{ Id: profileId }],
             expect.any(Db),
           );
@@ -1904,7 +1913,7 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             [{ Id: prevId }, { Id: newId }],
             expect.any(Db),
           );
@@ -2031,7 +2040,7 @@ describe('hasOne', () => {
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
-          expect(afterDelete).toBeCalledWith([{ Id }], expect.any(Db));
+          expect(afterDelete).toHaveBeenCalledWith([{ Id }], expect.any(Db));
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -2058,7 +2067,7 @@ describe('hasOne', () => {
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
-          expect(afterDelete).toBeCalledWith(
+          expect(afterDelete).toHaveBeenCalledWith(
             [{ Id: data[0].Id }, { Id: data[1].Id }],
             expect.any(Db),
           );
@@ -2194,7 +2203,7 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
+          expect(afterUpdate).toHaveBeenCalledWith([{ Id }], expect.any(Db));
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -2223,7 +2232,7 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             [{ Id: data[0].Id }, { Id: data[1].Id }],
             expect.any(Db),
           );
@@ -2395,7 +2404,7 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
+          expect(afterUpdate).toHaveBeenCalledWith([{ Id }], expect.any(Db));
         });
 
         it('should invoke callbacks when creating', async () => {

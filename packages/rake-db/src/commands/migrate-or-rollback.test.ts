@@ -96,10 +96,18 @@ describe('migrate-or-rollback', () => {
 
   const assert = {
     getMigrationsUp: (conf: RakeDbConfig) =>
-      expect(getMigrations).toBeCalledWith(expect.any(Object), conf, true),
+      expect(getMigrations).toHaveBeenCalledWith(
+        expect.any(Object),
+        conf,
+        true,
+      ),
 
     getMigrationsDown: (conf: RakeDbConfig) =>
-      expect(getMigrations).toBeCalledWith(expect.any(Object), conf, false),
+      expect(getMigrations).toHaveBeenCalledWith(
+        expect.any(Object),
+        conf,
+        false,
+      ),
 
     savedMigrationVersions: (files: { version: string; name: string }[]) =>
       expect(
@@ -438,21 +446,21 @@ describe('migrate-or-rollback', () => {
 
         await act(migrate);
 
-        expect(transactionSpy).toBeCalledTimes(1);
+        expect(transactionSpy).toHaveBeenCalledTimes(1);
 
         assert.getMigrationsUp(env.config);
 
-        expect(env.config.beforeChange).toBeCalled();
-        expect(env.config.afterChange).toBeCalled();
-        expect(env.config.afterChangeCommit).toBeCalled();
-        expect(env.config.beforeMigrate).toBeCalled();
-        expect(env.config.afterMigrate).toBeCalled();
+        expect(env.config.beforeChange).toHaveBeenCalled();
+        expect(env.config.afterChange).toHaveBeenCalled();
+        expect(env.config.afterChangeCommit).toHaveBeenCalled();
+        expect(env.config.beforeMigrate).toHaveBeenCalled();
+        expect(env.config.afterMigrate).toHaveBeenCalled();
 
         files.forEach((file, i) => {
           if (i === 1 || i === 2) {
-            expect(file.load).toBeCalled();
+            expect(file.load).toHaveBeenCalled();
           } else {
-            expect(file.load).not.toBeCalled();
+            expect(file.load).not.toHaveBeenCalled();
           }
         });
 
@@ -482,7 +490,7 @@ describe('migrate-or-rollback', () => {
         expect(createMigrationsSchemaAndTable).toHaveBeenCalled();
 
         for (const file of files) {
-          expect(file.load).not.toBeCalled();
+          expect(file.load).not.toHaveBeenCalled();
         }
 
         assert.savedMigrationVersions([]);
@@ -536,8 +544,8 @@ describe('migrate-or-rollback', () => {
 
         await act(migrate);
 
-        expect(changes1.fn).toBeCalled();
-        expect(changes2.fn).toBeCalled();
+        expect(changes1.fn).toHaveBeenCalled();
+        expect(changes2.fn).toHaveBeenCalled();
       });
 
       it('should migrate array of changes returned in `default` from `load`', async () => {
@@ -558,8 +566,8 @@ describe('migrate-or-rollback', () => {
 
         await act(migrate);
 
-        expect(changes1.fn).toBeCalled();
-        expect(changes2.fn).toBeCalled();
+        expect(changes1.fn).toHaveBeenCalled();
+        expect(changes2.fn).toHaveBeenCalled();
       });
 
       it('should throw when `forceDefaultExports` is true and migration has no default export', async () => {
@@ -648,13 +656,13 @@ describe('migrate-or-rollback', () => {
 
         await act(migrate, { force: true });
 
-        expect(env.config.beforeChange).toBeCalled();
-        expect(env.config.afterChange).toBeCalled();
-        expect(env.config.afterChangeCommit).toBeCalled();
-        expect(env.config.beforeRollback).toBeCalled();
-        expect(env.config.afterRollback).toBeCalled();
-        expect(env.config.beforeMigrate).toBeCalled();
-        expect(env.config.afterMigrate).toBeCalled();
+        expect(env.config.beforeChange).toHaveBeenCalled();
+        expect(env.config.afterChange).toHaveBeenCalled();
+        expect(env.config.afterChangeCommit).toHaveBeenCalled();
+        expect(env.config.beforeRollback).toHaveBeenCalled();
+        expect(env.config.afterRollback).toHaveBeenCalled();
+        expect(env.config.beforeMigrate).toHaveBeenCalled();
+        expect(env.config.afterMigrate).toHaveBeenCalled();
 
         assert.getMigrationsUp(env.config);
 
@@ -686,19 +694,19 @@ describe('migrate-or-rollback', () => {
 
         await act(rollback);
 
-        expect(env.config.beforeChange).toBeCalled();
-        expect(env.config.afterChange).toBeCalled();
-        expect(env.config.afterChangeCommit).toBeCalled();
-        expect(env.config.beforeRollback).toBeCalled();
-        expect(env.config.afterRollback).toBeCalled();
+        expect(env.config.beforeChange).toHaveBeenCalled();
+        expect(env.config.afterChange).toHaveBeenCalled();
+        expect(env.config.afterChangeCommit).toHaveBeenCalled();
+        expect(env.config.beforeRollback).toHaveBeenCalled();
+        expect(env.config.afterRollback).toHaveBeenCalled();
 
         assert.getMigrationsDown(env.config);
 
         files.forEach((file, i) => {
           if (i === 1) {
-            expect(file.load).toBeCalled();
+            expect(file.load).toHaveBeenCalled();
           } else {
-            expect(file.load).not.toBeCalled();
+            expect(file.load).not.toHaveBeenCalled();
           }
         });
 
@@ -722,10 +730,10 @@ describe('migrate-or-rollback', () => {
         await act(rollback);
 
         assert.getMigrationsDown(config);
-        expect(createMigrationsSchemaAndTable).toBeCalled();
+        expect(createMigrationsSchemaAndTable).toHaveBeenCalled();
 
         for (const file of files) {
-          expect(file.load).not.toBeCalled();
+          expect(file.load).not.toHaveBeenCalled();
         }
 
         assert.deletedMigratedVersions([]);
@@ -944,15 +952,15 @@ describe('migrate-or-rollback', () => {
 
         await act(migrate);
 
-        expect(transactionSpy).toBeCalledTimes(2);
+        expect(transactionSpy).toHaveBeenCalledTimes(2);
 
         assert.getMigrationsUp(env.config);
 
         files.forEach((file, i) => {
           if (i === 1 || i === 2) {
-            expect(file.load).toBeCalled();
+            expect(file.load).toHaveBeenCalled();
           } else {
-            expect(file.load).not.toBeCalled();
+            expect(file.load).not.toHaveBeenCalled();
           }
         });
 

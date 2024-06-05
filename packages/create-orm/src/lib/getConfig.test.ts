@@ -34,7 +34,7 @@ describe('getConfig', () => {
 
     const result = await getConfig({ log });
 
-    expect(log).toBeCalledWith(expect.stringContaining('Welcome'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('Welcome'));
     expect(result).toEqual({
       ...userConfig,
       path: resolve(userConfig.path),
@@ -70,7 +70,7 @@ describe('getConfig', () => {
 
     const res = await getConfig({ log });
 
-    expect(prompts).toBeCalledTimes(1);
+    expect(prompts).toHaveBeenCalledTimes(1);
     expect(res).toBe(undefined);
   });
 });

@@ -5,6 +5,7 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
   rootDir: path.resolve('src'),
+  reporters: ['agent'],
   coverageDirectory: path.resolve('coverage'),
   setupFiles: [path.join(rootDir, 'jest-load-env.cjs')],
   globalSetup: path.join(rootDir, 'jest-global-setup.ts'),

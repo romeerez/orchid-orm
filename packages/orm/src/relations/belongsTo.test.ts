@@ -1045,7 +1045,7 @@ describe('belongsTo', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [{ IdOfChat: expect.any(Number), ChatKey: 'key' }],
             expect.any(Db),
           );
@@ -1060,7 +1060,7 @@ describe('belongsTo', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [
               { IdOfChat: expect.any(Number), ChatKey: 'key' },
               { IdOfChat: expect.any(Number), ChatKey: 'key' },
@@ -1396,7 +1396,7 @@ describe('belongsTo', () => {
           expect(getQueriesCount()).toEqual(1);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [{ IdOfChat: expect.any(Number), ChatKey: 'key' }],
             expect.any(Db),
           );
@@ -1410,7 +1410,7 @@ describe('belongsTo', () => {
           expect(getQueriesCount()).toEqual(1);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [
               { IdOfChat: expect.any(Number), ChatKey: 'key' },
               { IdOfChat: expect.any(Number), ChatKey: 'key' },
@@ -1807,7 +1807,7 @@ describe('belongsTo', () => {
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
-          expect(afterDelete).toBeCalledWith(
+          expect(afterDelete).toHaveBeenCalledWith(
             [{ Id: expect.any(Number) }],
             expect.any(Db),
           );
@@ -1828,7 +1828,7 @@ describe('belongsTo', () => {
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
-          expect(afterDelete).toBeCalledWith(
+          expect(afterDelete).toHaveBeenCalledWith(
             profiles.map((p) => ({ Id: p.UserId })),
             expect.any(Db),
           );
@@ -1987,7 +1987,10 @@ describe('belongsTo', () => {
           expect(count).toBe(1);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ Id: UserId }], expect.any(Db));
+          expect(afterUpdate).toHaveBeenCalledWith(
+            [{ Id: UserId }],
+            expect.any(Db),
+          );
         });
 
         it('should invoke callbacks in a batch create', async () => {
@@ -2007,7 +2010,7 @@ describe('belongsTo', () => {
           expect(count).toBe(2);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             profiles.map((p) => ({ Id: p.UserId })),
             expect.any(Db),
           );
@@ -2192,12 +2195,12 @@ describe('belongsTo', () => {
           expect(count).toBe(1);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             [{ Id: UserId, UserKey: ProfileKey }],
             expect.any(Db),
           );
           expect(beforeCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).not.toBeCalled();
+          expect(afterCreate).not.toHaveBeenCalled();
         });
 
         it('should invoke create callbacks when creating', async () => {
@@ -2212,10 +2215,10 @@ describe('belongsTo', () => {
 
           expect(count).toBe(1);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).not.toBeCalled();
+          expect(afterUpdate).not.toHaveBeenCalled();
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [{ Id: expect.any(Number), UserKey: 'key' }],
             expect.any(Db),
           );
@@ -2342,7 +2345,7 @@ describe('belongsTo', () => {
           expect(count).toBe(1);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [{ Id: expect.any(Number), UserKey: 'key' }],
             expect.any(Db),
           );
@@ -2366,7 +2369,7 @@ describe('belongsTo', () => {
           expect(count).toBe(2);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
+          expect(afterCreate).toHaveBeenCalledWith(
             [{ Id: expect.any(Number), UserKey: 'key' }],
             expect.any(Db),
           );

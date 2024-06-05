@@ -388,7 +388,7 @@ describe('orm', () => {
 
       await db.$query`SELECT 1`;
 
-      expect(spy).toBeCalledWith`SELECT 1`;
+      expect(spy).toHaveBeenCalledWith`SELECT 1`;
     });
 
     it('should query arrays with the $queryArrays method', async () => {
@@ -396,7 +396,7 @@ describe('orm', () => {
 
       await db.$queryArrays`SELECT 1`;
 
-      expect(spy).toBeCalledWith`SELECT 1`;
+      expect(spy).toHaveBeenCalledWith`SELECT 1`;
     });
   });
 
