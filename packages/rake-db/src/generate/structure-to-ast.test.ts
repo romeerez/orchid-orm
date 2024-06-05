@@ -101,7 +101,7 @@ describe('structureToAst', () => {
 
       await structureToAst(ctx, adapter, config);
 
-      expect(introspectDbSchema).toBeCalledWith(adapter, { rls: true });
+      expect(introspectDbSchema).toHaveBeenCalledWith(adapter, { rls: true });
     });
 
     it('should add table', async () => {
