@@ -29,7 +29,7 @@ describe('create and drop view', () => {
     await db.createView('name', `1 + ${2}`);
 
     expectSql(`
-      CREATE VIEW "name" AS (1 + 2)
+      CREATE VIEW "name" WITH ( security_invoker = true ) AS (1 + 2)
     `);
   });
 
@@ -38,7 +38,7 @@ describe('create and drop view', () => {
       (action) => db[action]('name', 'sql'),
       () =>
         expectSql(`
-          CREATE VIEW "name" AS (sql)
+          CREATE VIEW "name" WITH ( security_invoker = true ) AS (sql)
         `),
       () =>
         expectSql(`
@@ -54,7 +54,7 @@ describe('create and drop view', () => {
       (action) => db[action]('schema.name', 'sql'),
       () =>
         expectSql(`
-          CREATE VIEW "schema"."name" AS (sql)
+          CREATE VIEW "schema"."name" WITH ( security_invoker = true ) AS (sql)
         `),
       () =>
         expectSql(`
@@ -70,7 +70,7 @@ describe('create and drop view', () => {
       (action) => db[action]('schema.name', 'sql'),
       () =>
         expectSql(`
-          CREATE VIEW "schema"."name" AS (sql)
+          CREATE VIEW "schema"."name" WITH ( security_invoker = true ) AS (sql)
         `),
       () =>
         expectSql(`
@@ -115,6 +115,92 @@ describe('create and drop view', () => {
       () =>
         expectSql(`
           DROP VIEW IF EXISTS "name" CASCADE
+        `),
+    );
+  });
+
+  it('should default view options to security invoker when with options are omitted', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action](
+          'name',
+          {
+            createOrReplace: true,
+            dropIfExists: true,
+            dropMode: 'CASCADE',
+            temporary: true,
+            recursive: true,
+            columns: ['one', 'two'],
+          },
+          'sql',
+        ),
+      () =>
+        expectSql(
+          toLine(`
+            CREATE OR REPLACE TEMPORARY RECURSIVE VIEW "name"
+            ("one", "two")
+            WITH ( security_invoker = true )
+            AS (sql)
+          `),
+        ),
+      () =>
+        expectSql(`
+          DROP VIEW IF EXISTS "name" CASCADE
+        `),
+    );
+  });
+
+  it('should allow opting out from security invoker views', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action](
+          'name',
+          {
+            with: {
+              securityInvoker: false,
+            },
+          },
+          'sql',
+        ),
+      () =>
+        expectSql(`
+          CREATE VIEW "name" AS (sql)
+        `),
+      () =>
+        expectSql(`
+          DROP VIEW "name"
+        `),
+    );
+  });
+
+  it('should not add security invoker when it is explicitly disabled with other with options', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action](
+          'name',
+          {
+            with: {
+              checkOption: 'LOCAL',
+              securityBarrier: true,
+              securityInvoker: false,
+            },
+          },
+          'sql',
+        ),
+      () =>
+        expectSql(
+          toLine(`
+            CREATE VIEW "name"
+            WITH (
+              check_option = 'LOCAL',
+              security_barrier = true
+            )
+            AS (sql)
+          `),
+        ),
+      () =>
+        expectSql(`
+          DROP VIEW "name"
         `),
     );
   });

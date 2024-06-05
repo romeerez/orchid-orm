@@ -240,6 +240,14 @@ The caveat is that the request keeps a transaction open for all work inside the 
 Use query-scoped [`$withOptions({ role, setConfig }, cb)`](/guide/orm-methods.html#role-and-setconfig-sql-session) when each DB call should remain independent.
 The caveat is extra DB calls around each query to set the request context and then clear it, but no request-wide transaction is held open.
 
+## RLS on many-to-many join tables
+
+`hasAndBelongsToMany` is for simple many-to-many relations where the join table exists in the database but does not need its own table class in Orchid.
+Because the relation defines that join table implicitly, it is not the right place to declare RLS flags or policies for the join table.
+
+When the join table also needs RLS, define it as a regular table class with its own `rls = defineRls(...)` declaration.
+Then model the many-to-many relation with `hasMany` and `through` so the join table stays explicit in application code and migration generation can manage its RLS state.
+
 ## Request-scoped RLS context
 
 When a request's database work should be atomic, wrap that work in `$transaction` and pass the RLS role and settings in the transaction options:
@@ -353,6 +361,6 @@ Cons: highest operational overhead for provisioning, routing, connections, and r
 - RLS does not replace ordinary privileges. Roles still need `GRANT` (to be supported) or [default privileges](/guide/generate-migrations.html#default-privileges) for table access.
 - PostgreSQL lets table owners bypass RLS by default. Orchid treats omitted table declaration `force` as `true`; set `force: false` only when owner bypass is intentional.
 - Superusers and roles with `BYPASSRLS` bypass RLS policies.
-- By default, when a view reads an RLS table, PostgreSQL checks underlying table permissions and RLS policies as the view owner. In PostgreSQL 15 and newer, create the view with `WITH (security_invoker = true)` when the caller's permissions and RLS policies should be used instead.
+- By default, when a view reads an RLS table, PostgreSQL checks underlying table permissions and RLS policies as the view owner. In PostgreSQL 15 and newer, Orchid's `createView` uses `securityInvoker: true` by default so the caller's permissions and RLS policies are used instead; set `securityInvoker: false` only when owner-checked behavior is intentional.
 - `TRUNCATE`, `REFERENCES`, and internal constraint checks are not governed by row policies in the same way as `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
 - Use `current_setting('app.some_setting', true)` in policies when missing request context should evaluate to `NULL` rather than fail the query.
