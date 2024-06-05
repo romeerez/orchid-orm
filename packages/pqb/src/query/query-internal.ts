@@ -11,6 +11,7 @@ import {
 import { Rls } from './extra-features/rls/rls.db';
 import { AsyncState } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
+import { Grant } from './extra-features/grants/grants.db';
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
@@ -50,6 +51,10 @@ export interface QueryInternal<
   rls?: Rls.Options;
   tableRls?: Rls.TableConfig;
   managedRolesSql?: string;
+  // Default grantor role for grant metadata.
+  defaultGrantedBy?: string;
+  // Normalized grant metadata.
+  grants?: Grant.InternalPrivilege[];
   // primary keys, indexes, checks and constraints of the table
   tableData: TableData;
   // For customizing `now()` sql

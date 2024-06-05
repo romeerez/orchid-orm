@@ -321,6 +321,9 @@ export {
 // Default privileges
 export { getSupportedDefaultPrivileges, type DefaultPrivileges } from './index';
 
+// Grants
+export { Grant } from './query/extra-features/grants/grants.db';
+
 // Computed columns
 export {
   type ComputedColumnsFromOptions,

@@ -223,6 +223,61 @@ describe('orm', () => {
     expect(local.user.q.autoPreparedStatements).toBe(true);
   });
 
+  describe('grants', () => {
+    it('should pass grants through ORM setup to the query builder', () => {
+      const local = orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          defaultGrantedBy: 'owner',
+          grants: [
+            {
+              to: ['app_user', 'readonly'],
+              grantedBy: 'admin',
+              allTablesIn: ['public'],
+              privileges: ['SELECT'],
+            },
+          ],
+        },
+        {
+          user: UserTable,
+        },
+      );
+
+      const internalGrants = local.$qb.internal.grants;
+      expect(internalGrants).toEqual([
+        {
+          to: ['app_user', 'readonly'],
+          grantedBy: 'admin',
+          allTablesIn: ['public'],
+          privileges: ['SELECT'],
+        },
+      ]);
+      expect(local.$qb.internal.defaultGrantedBy).toBe('owner');
+    });
+
+    it('should not expose generatorIgnore to SQL or break ORM bounds yet', () => {
+      const local = orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          generatorIgnore: {
+            grants: {
+              roles: ['external'],
+            },
+          },
+        },
+        {
+          user: UserTable,
+        },
+      );
+
+      expect(local.$qb.internal.generatorIgnore).toEqual({
+        grants: {
+          roles: ['external'],
+        },
+      });
+    });
+  });
+
   describe('bundleOrchidORMTables', () => {
     class BundleUserTable extends BaseTable {
       schema: QuerySchema = 'schema';
