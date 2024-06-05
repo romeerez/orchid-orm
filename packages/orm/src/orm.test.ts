@@ -295,6 +295,21 @@ describe('orm', () => {
           WHERE ("user"."deleted_at" IS NULL)
         `,
       );
+
+      const query = local.user.find(1).modify(helper);
+      assertType<Awaited<typeof query>, { id: number }>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "user"."id"
+          FROM "schema"."user"
+          WHERE ("user"."id" = $1)
+            AND ("user"."deleted_at" IS NULL)
+          LIMIT 1
+        `,
+        [1],
+      );
     });
   });
 

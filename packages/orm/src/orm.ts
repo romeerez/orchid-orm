@@ -13,6 +13,7 @@ import {
   _initQueryBuilder,
   makeColumnTypes,
   MaybeArray,
+  MergeQuery,
   NoPrimaryKeyOption,
   QueryData,
   ColumnSchemaConfig,
@@ -43,7 +44,10 @@ interface OrchidORMQueryHelper<
   Args extends unknown[],
   Result,
 > {
-  <T extends Q>(q: T, ...args: Args): Result;
+  <T extends Query>(
+    q: T & { table: Q['table'] },
+    ...args: Args
+  ): Result extends Query ? MergeQuery<T, Result> : Result;
   isQueryHelper: true;
   table: Q['table'];
   args: Args;
