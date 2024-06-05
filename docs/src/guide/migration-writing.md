@@ -1027,6 +1027,8 @@ change(async (db) => {
 Create and drop database views.
 
 Provide SQL as a string or via `t.sql` that can accept variables.
+Orchid creates views with `securityInvoker: true` by default, which is safer for views over RLS-managed tables because PostgreSQL checks the caller's permissions and RLS policies.
+Set `securityInvoker: false` explicitly when the view should use PostgreSQL's ordinary owner-checked behavior.
 
 ```ts
 import { change } from '../db-script';
@@ -1069,6 +1071,7 @@ change(async (db) => {
       with: {
         checkOption: 'LOCAL', // or 'CASCADED'
         securityBarrier: true,
+        // securityInvoker defaults to true; set it to false to opt out.
         securityInvoker: true,
       },
     },

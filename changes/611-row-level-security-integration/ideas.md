@@ -75,12 +75,13 @@
 
 - A `project_users` join table follows the same tenant rules as `project` and `user`, or Orchid requires the application to model that join table explicitly instead of creating an insecure implicit table.
 
-### 6. Explain the Postgres edge cases Orchid will not hide
+### 6. Default manually created views to security invoker
 
-- Why: Views, uniqueness checks, foreign keys, and expensive policy predicates can still surprise users even with first-class ORM support.
-- Adds: Guidance users can apply when policies look correct but behavior, security expectations, or performance still go wrong.
+- Why: Views over RLS-managed tables are usually expected to use the caller's permissions and RLS policies, but PostgreSQL's ordinary view behavior checks the underlying tables as the view owner unless `security_invoker` is enabled.
+- Adds: A safer default for the existing `rake-db` `createView` option, plus docs that explain the default and the explicit opt-out.
 - How:
-  - Explain when `securityInvoker` matters for views built on top of RLS-managed tables.
-  - Warn that hidden rows can still leak through unique and foreign-key checks.
-  - Show the practical guardrails: index policy columns, scope policies to roles, and handle missing auth context explicitly.
+  - Treat omitted `with.securityInvoker` as `true` when manual migrations create views with `createView`.
+  - Keep `with.securityInvoker: false` as the opt-out for migrations that intentionally want PostgreSQL's owner-checked view behavior.
+  - Document that `securityInvoker: true` is Orchid's default for manual view creation because it is safer around RLS-managed tables.
+  - Do not add generated-migration support for views; ORM generated migrations do not currently support view declarations from application code.
 - Depends on: Declare RLS where tables are defined.
