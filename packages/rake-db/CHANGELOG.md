@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.20.16
+
+### Patch Changes
+
+- 77f0c75: rake-db: fix auto schema migration when migrating; fix default column validation schema
+- Updated dependencies [77f0c75]
+  - pqb@0.31.3
+
 ## 2.20.15
 
 ### Patch Changes

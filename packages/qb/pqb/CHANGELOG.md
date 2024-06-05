@@ -1,5 +1,11 @@
 # pqb
 
+## 0.31.3
+
+### Patch Changes
+
+- 77f0c75: rake-db: fix auto schema migration when migrating; fix default column validation schema
+
 ## 0.31.2
 
 ### Patch Changes
