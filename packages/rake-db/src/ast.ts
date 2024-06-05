@@ -6,6 +6,7 @@ import {
   RawSqlBase,
   TableData,
   type Column as QbColumn,
+  type RlsPolicy,
 } from 'pqb/internal';
 import { DropMode } from './migration/migration';
 import { DbStructure } from './generate/db-structure';
@@ -322,8 +323,8 @@ export namespace RakeDbAst {
   }
 
   export interface PolicyDefinition {
-    as: DbStructure.RlsPolicyMode;
-    for?: DbStructure.RlsPolicyCommand;
+    as: RlsPolicy.PolicyMode;
+    for?: RlsPolicy.PolicyCommand;
     to?: string[];
     using?: string;
     withCheck?: string;
@@ -332,8 +333,8 @@ export namespace RakeDbAst {
   export interface PolicyChangeDefinition {
     table?: string;
     name?: string;
-    as?: DbStructure.RlsPolicyMode;
-    for?: DbStructure.RlsPolicyCommand;
+    as?: RlsPolicy.PolicyMode;
+    for?: RlsPolicy.PolicyCommand;
     to?: string[];
     using?: string;
     withCheck?: string;

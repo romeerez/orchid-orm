@@ -69,7 +69,7 @@
 
 ## 6. orm
 
-- [ ] 6.1 ORM table policy config and migration generation
+- [x] 6.1 ORM table policy config and migration generation
   - 6.1.1 Expand `defineRls` to the final table policy shape with required `permit`, optional `restrict`, raw SQL expressions, role targets, and command-specific TypeScript rules.
   - 6.1.2 Normalize declared policies, compare them to introspected policies for tables with `rls`, and generate rake-db policy methods in the ordering required by RLS enablement and default-deny behavior.
   - 6.1.3 Add RLS-specific generator ignore support for managed tables or named policies without changing ordinary table diffing behavior.

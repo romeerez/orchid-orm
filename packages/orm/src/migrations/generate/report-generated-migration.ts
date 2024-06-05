@@ -536,6 +536,39 @@ export const report = (
         code.push(message);
         break;
       }
+      case 'policy': {
+        const table = dbItemName(
+          { schema: a.schema, name: a.table },
+          currentSchema,
+        );
+        const summary = formatPolicySummary(a, table);
+        const message =
+          a.action === 'create'
+            ? `${green('+ create policy')} ${a.name}: ${summary}`
+            : `${red('- drop policy')} ${a.name}: ${summary}`;
+        code.push(message);
+        break;
+      }
+      case 'changePolicy': {
+        const table = dbItemName(
+          { schema: a.schema, name: a.table },
+          currentSchema,
+        );
+        const fromName = a.from.name ?? a.name;
+        const toName = a.to.name ?? a.name;
+        const message =
+          fromName === toName
+            ? `${yellow('~ change policy')} ${a.name} on ${table}:`
+            : `${yellow('~ rename policy')} ${fromName} ${yellow('=>')} ${toName} on ${table}:`;
+
+        const inner: string[] = [
+          `${yellow('from')}: ${formatPolicyChangeDefinition(a.from)}`,
+          `${yellow('to')}: ${formatPolicyChangeDefinition(a.to)}`,
+        ];
+        code.push(message);
+        code.push(inner);
+        break;
+      }
       default:
         exhaustive(a);
     }
@@ -550,4 +583,75 @@ const dbItemName = (
   currentSchema: string,
 ) => {
   return schema && schema !== currentSchema ? `${schema}.${name}` : name;
+};
+
+const formatPolicyRoles = (roles: string[] | undefined): string => {
+  return roles?.length ? roles.join(', ') : 'public';
+};
+
+const formatPolicyCommand = (
+  command: RakeDbAst.PolicyDefinition['for'] | undefined,
+): string => {
+  return (command ?? 'ALL').toLowerCase();
+};
+
+const formatPolicyMode = (mode: RakeDbAst.PolicyDefinition['as']): string => {
+  return mode === 'PERMISSIVE' ? 'permit' : 'restrict';
+};
+
+const formatPolicySummary = (
+  policy: RakeDbAst.PolicyDefinition,
+  table: string,
+): string => {
+  const parts: string[] = [
+    `${formatPolicyMode(policy.as)} access on ${table}`,
+    `to ${formatPolicyRoles(policy.to)}`,
+    `for ${formatPolicyCommand(policy.for)}`,
+  ];
+
+  if (policy.using) {
+    parts.push(`using (${policy.using})`);
+  }
+
+  if (policy.withCheck) {
+    parts.push(`with check (${policy.withCheck})`);
+  }
+
+  return parts.join(', ');
+};
+
+const formatPolicyChangeDefinition = (
+  policy: RakeDbAst.PolicyChangeDefinition,
+): string => {
+  const parts: string[] = [];
+
+  if (policy.name) {
+    parts.push(`name ${policy.name}`);
+  }
+
+  if (policy.table) {
+    parts.push(`table ${policy.table}`);
+  }
+
+  if (policy.as) {
+    parts.push(`as ${policy.as.toLowerCase()}`);
+  }
+
+  if (policy.for) {
+    parts.push(`for ${policy.for.toLowerCase()}`);
+  }
+
+  if ('to' in policy) {
+    parts.push(`to ${formatPolicyRoles(policy.to)}`);
+  }
+
+  if ('using' in policy && policy.using) {
+    parts.push(`using (${policy.using})`);
+  }
+
+  if ('withCheck' in policy && policy.withCheck) {
+    parts.push(`with check (${policy.withCheck})`);
+  }
+
+  return parts.join(', ');
 };

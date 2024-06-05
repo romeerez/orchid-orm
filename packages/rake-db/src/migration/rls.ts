@@ -1,7 +1,6 @@
 import { getSchemaAndTableFromName, quoteTable } from '../common';
-import { quoteIdentifier, RawSqlBase } from 'pqb/internal';
+import { quoteIdentifier, RawSqlBase, type RlsPolicy } from 'pqb/internal';
 import { Migration } from './migration';
-import { DbStructure } from 'rake-db';
 
 const actionToSql = {
   enable: 'ENABLE ROW LEVEL SECURITY',
@@ -36,7 +35,7 @@ type RlsPolicyExpressions =
   | RlsPolicyForAllOrUpdate;
 
 export type RlsPolicyDefinition = RlsPolicyExpressions & {
-  as: DbStructure.RlsPolicyMode;
+  as: RlsPolicy.PolicyMode;
   to?: string | string[];
 };
 

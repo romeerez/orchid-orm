@@ -139,7 +139,14 @@ export const processTables = async (
     compareSqlExpressions(tableExpressions, adapter),
   ]);
 
-  processTableRls(ast, dbStructure, tables, currentSchema);
+  await processTableRls(
+    adapter,
+    ast,
+    dbStructure,
+    tables,
+    currentSchema,
+    generatorIgnore,
+  );
 
   for (const dbTable of dropTables) {
     ast.push(
