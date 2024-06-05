@@ -52,9 +52,9 @@ tables, columns, schemas, enums, primary keys, foreign keys, indexes, database c
 
 Let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
 
-## row level security flags
+## row level security
 
-Migration generation supports table-level RLS flags declared in code (`enable` and `force`).
+Migration generation supports table-level RLS flags and policies declared in code with `defineRls`.
 Project-wide defaults are configured in `orchidORM`:
 
 ```ts
@@ -72,7 +72,12 @@ export const db = orchidORM(
 );
 ```
 
-See [Row Level Security](/guide/row-level-security#table-rls-declaration-and-defaults) for setup and behavior details, including how defaults are applied.
+For tables with `rls` declarations, generated migrations compare:
+
+- table flags: `enable` and `force`
+- policies from `permit` and `restrict`
+
+See [Row Level Security](/guide/row-level-security#table-rls-declaration-and-defaults) for setup and behavior details, including policy declaration and how defaults are applied.
 
 ## roles
 
@@ -234,8 +239,23 @@ export const db = orchidORM(
       enums: [],
       domains: [],
       extensions: [],
+      // keep table RLS state managed outside Orchid while still diffing the table itself.
+      rls: {
+        tables: ['externally_managed_table'],
+        policies: [
+          {
+            table: 'project',
+            names: ['project_external_policy'],
+          },
+        ],
+      },
     },
   },
   { ...tables },
 );
 ```
+
+Top-level `generatorIgnore.tables` ignores the whole table, including its RLS flags and policies.
+`generatorIgnore.rls.tables` ignores only RLS flags and policies for the listed tables without disabling ordinary table diffing.
+`generatorIgnore.rls.policies` ignores only the listed policy names for a table; policy names are matched exactly.
+Schema-qualified table names use the same `schema.table` string format as other ignore settings.

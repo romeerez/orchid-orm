@@ -1145,7 +1145,79 @@ change(async (db) => {
 });
 ```
 
-For ORM-side declaration and migration generation of table RLS flags, see [Row Level Security](/guide/row-level-security#table-rls-declaration-and-defaults) and [Generate Migrations](/guide/generate-migrations#row-level-security-flags).
+For ORM-side declaration and migration generation of table RLS flags, see [Row Level Security](/guide/row-level-security#table-rls-declaration-and-defaults) and [Generate Migrations](/guide/generate-migrations#row-level-security).
+
+## createPolicy, dropPolicy, changePolicy
+
+Create, drop, and change Row Level Security policies in migrations.
+
+`createPolicy` and `dropPolicy` accept a table name, policy name, and policy definition.
+Use `'schemaName.tableName'` for schema-qualified tables.
+`dropPolicy` takes the full policy definition so rollback can recreate the policy.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.createPolicy('project', 'project_select_same_tenant', {
+    as: 'PERMISSIVE',
+    for: 'SELECT',
+    to: ['app_user', 'app_admin'],
+    using: db.sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+  });
+
+  await db.createPolicy('project', 'project_insert_same_tenant', {
+    as: 'PERMISSIVE',
+    for: 'INSERT',
+    to: 'app_user',
+    withCheck: db.sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+  });
+
+  await db.createPolicy('project', 'project_not_archived', {
+    as: 'RESTRICTIVE',
+    for: 'UPDATE',
+    to: 'app_user',
+    using: db.sql`archived_at IS NULL`,
+    withCheck: db.sql`archived_at IS NULL`,
+  });
+});
+```
+
+Policy options:
+
+- `as`: `'PERMISSIVE'` or `'RESTRICTIVE'`
+- `for`: `'ALL'`, `'SELECT'`, `'INSERT'`, `'UPDATE'`, or `'DELETE'`; omitted means `ALL`
+- `to`: one role or an array of roles; use `to: 'public'` to make the policy apply to public access by any role; omitted means PostgreSQL `PUBLIC`
+- `using`: raw SQL expression for row visibility and existing-row checks
+- `withCheck`: raw SQL expression for inserted or updated rows
+
+Expression rules:
+
+- `SELECT` and `DELETE` require `using` and do not accept `withCheck`.
+- `INSERT` requires `withCheck` and does not accept `using`.
+- `UPDATE`, `ALL`, and omitted `for` require both `using` and `withCheck`.
+
+`changePolicy` uses `ALTER POLICY` for rename, role, `USING`, and `WITH CHECK` changes:
+
+```ts
+change(async (db) => {
+  await db.changePolicy('project', 'project_select_same_tenant', {
+    from: {
+      name: 'project_select_same_tenant',
+      to: ['app_user'],
+      using: db.sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+    },
+    to: {
+      name: 'project_select_same_tenant_v2',
+      to: ['app_user', 'app_admin'],
+      using: db.sql`tenant_id = current_setting('app.tenant_id', true)::uuid AND archived_at IS NULL`,
+    },
+  });
+});
+```
+
+Changing the policy table, mode, or command recreates the policy because PostgreSQL cannot alter those fields in place.
+For ORM-side declaration and migration generation of policies, see [Row Level Security](/guide/row-level-security#rls-policies).
 
 ## renameRole
 
