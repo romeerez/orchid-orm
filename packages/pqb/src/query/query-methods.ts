@@ -134,20 +134,20 @@ interface QueryHelperQuery<
   then: unknown;
 }
 
-interface IsQueryHelper {
+export interface IsQueryHelper {
   isQueryHelper: true;
   table: string | undefined;
-  args: unknown[];
-  result: unknown;
+  __args: unknown[];
+  __result: unknown;
 }
 
-interface IsQueryHelperForTable<
+export interface IsQueryHelperForTable<
   Table extends string | undefined,
 > extends IsQueryHelper {
   table: Table;
 }
 
-interface QueryHelper<
+export interface QueryHelper<
   T extends PickQueryTableMetaShapeTableAs,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Args extends any[],
@@ -160,8 +160,8 @@ interface QueryHelper<
 
   __as: T['__as'];
   table: T['table'];
-  args: Args;
-  result: Result;
+  __args: Args;
+  __result: Result;
 }
 
 // Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
@@ -169,7 +169,7 @@ export type QueryHelperResult<
   // Keep this constraint broad so it supports both bound query helpers
   // and unbound helpers created from bundled ORM tables.
   T extends IsQueryHelper,
-> = T['result'];
+> = T['__result'];
 
 interface NarrowTypeSelf extends PickQueryResultReturnType {
   returnType:
@@ -792,7 +792,7 @@ export class QueryMethods<ColumnTypes> {
       (this as unknown as Query).q.as ||
       ((this as unknown as Query).table as string);
 
-    return ((query: T, ...args: Args) => {
+    const helper = ((query: T, ...args: Args) => {
       const q = _clone(query);
 
       // alias the original table name inside the makeHelper with dynamic table name from the invoking code
@@ -803,6 +803,10 @@ export class QueryMethods<ColumnTypes> {
 
       return fn(q as never, ...args);
     }) as never;
+
+    (helper as IsQueryHelper).table = (this as unknown as Query).table;
+
+    return helper;
   }
 
   /**
@@ -868,10 +872,10 @@ export class QueryMethods<ColumnTypes> {
   >(
     this: T,
     fn: Fn,
-    ...args: Fn['args']
-  ): Fn['result'] extends MergeQueryArg
-    ? MergeQuery<T, Fn['result']>
-    : Fn['result'] {
+    ...args: Fn['__args']
+  ): Fn['__result'] extends MergeQueryArg
+    ? MergeQuery<T, Fn['__result']>
+    : Fn['__result'] {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (fn as any)(this as never, ...args);
   }

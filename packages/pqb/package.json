@@ -64,7 +64,7 @@
     }
   },
   "scripts": {
-    "test": "jest --watch --verbose false",
+    "test": "jest --watch --reporters default --verbose false",
     "check": "jest",
     "check:coverage": "jest --coverage --coverageReporters json-summary",
     "types": "tsc",
