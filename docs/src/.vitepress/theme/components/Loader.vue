@@ -9,9 +9,7 @@
         <div class="loader-shadow" />
         <div class="loader-shadow" />
       </div>
-      <div class="loader-text">
-        Compiling SQL...
-      </div>
+      <div class="loader-text">Compiling SQL...</div>
     </div>
   </div>
 </template>
@@ -50,7 +48,7 @@
   background-color: var(--vp-c-brand-1);
   left: 15%;
   transform-origin: 50%;
-  animation: loader-animation .5s alternate infinite ease;
+  animation: loader-animation 0.5s alternate infinite ease;
 }
 
 @keyframes loader-animation {
@@ -74,27 +72,27 @@
 
 .loader-ball:nth-child(2) {
   left: 45%;
-  animation-delay: .2s;
+  animation-delay: 0.2s;
 }
 
 .loader-ball:nth-child(3) {
   left: auto;
   right: 15%;
-  animation-delay: .3s;
+  animation-delay: 0.3s;
 }
 
 .loader-shadow {
   width: 10px;
   height: 2px;
   border-radius: 50%;
-  background-color: rgba(0,0,0,0.9);
+  background-color: rgba(0, 0, 0, 0.9);
   position: absolute;
   top: 31px;
   transform-origin: 50%;
   z-index: -1;
   left: 15%;
   filter: blur(1px);
-  animation: loader-shadow-animation .5s alternate infinite ease;
+  animation: loader-shadow-animation 0.5s alternate infinite ease;
 }
 
 @keyframes loader-shadow-animation {
@@ -104,23 +102,23 @@
 
   40% {
     transform: scaleX(1);
-    opacity: .7;
+    opacity: 0.7;
   }
 
   100% {
-    transform: scaleX(.2);
-    opacity: .4;
+    transform: scaleX(0.2);
+    opacity: 0.4;
   }
 }
 
 .loader-shadow:nth-child(4) {
   left: 45%;
-  animation-delay: .2s
+  animation-delay: 0.2s;
 }
 
 .loader-shadow:nth-child(5) {
   left: auto;
   right: 15%;
-  animation-delay: .3s;
+  animation-delay: 0.3s;
 }
 </style>

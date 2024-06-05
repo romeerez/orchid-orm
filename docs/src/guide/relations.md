@@ -11,7 +11,6 @@ Available relations are:
 
 - [hasOne](#hasOne): is similar to "belongs to," but the referencing column is on the other side.<br />
   **Example**: an order has one payment, the `order_id` column is on the payment side.
-
   - **through**: when many tables are connected using `belongsTo` or `hasOne`,
     the first of them can connect to the last by using `hasOne: though`.<br />
     **Example**: a user has one profile, an order belongs to a user, an order can have one profile through a user.<br />
@@ -19,7 +18,6 @@ Available relations are:
 
 - [hasMany](#hasMany): a one has many others, the others include a column referencing the one.<br />
   Example: a user has many orders and payments.
-
   - **through**: when many tables are connected, and at least one of the connection is `hasMany` or `hasAndBelongsToMany`,<br />
     the first of them can connect to the last by using `hasMany: though`.<br />
     **Example**: an order has many products, a user has many orders, a user can have multiple ordered products though orders.<br />
@@ -28,7 +26,6 @@ Available relations are:
 - [hasAndBelongsToMany](#hasAndBelongsToMany): a many-to-many relation,
   it is maintained by having an additional table where a single row is pointing to both parties.<br />
   **Examples**: movies and actors, products and categories.
-
   - vs. `hasMany: though`: we can say `hasAndBelongsToMany` is a simple case of `hasMany: though`,
     where the join table is managed automatically, you don't have to store any additional info in it.
     You can use `hasAndBelongsToMany` between products and categories,

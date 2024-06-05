@@ -1,6 +1,6 @@
 <template>
   <div class="tabs">
-    <h4>{{name}}</h4>
+    <h4>{{ name }}</h4>
     <button
       v-for="(file, index) in files"
       :key="index"
@@ -21,23 +21,26 @@
 </template>
 
 <script setup>
-import Loader from './Loader.vue' ;
+import Loader from './Loader.vue';
 import { languages, editor as monacoEditor, Uri, KeyCode } from 'monaco-editor';
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { codeToHtml } from 'shiki'
+import { codeToHtml } from 'shiki';
 import { esmToCommonjs, execFile, mockAdapter } from './editor.utils';
 import { formatDialect, postgresql } from 'sql-formatter';
 
-const getWorker = () => import("monaco-editor/esm/vs/language/typescript/ts.worker?worker").then((m) => new m.default())
+const getWorker = () =>
+  import('monaco-editor/esm/vs/language/typescript/ts.worker?worker').then(
+    (m) => new m.default(),
+  );
 
 window.MonacoEnvironment = {
   getWorker,
 };
 
 const getTsWorker = async () => {
-  await getWorker()
+  await getWorker();
   return languages.typescript.getTypeScriptWorker();
-}
+};
 
 languages.typescript.typescriptDefaults.setCompilerOptions({
   strict: true,
@@ -58,38 +61,34 @@ const props = defineProps([
   'vimMode',
 ]);
 
-let {
-  dir,
-  query,
-  tables,
-  libsPromise,
-  collectSQLsTemplateJS,
-} = props;
+let { dir, query, tables, libsPromise, collectSQLsTemplateJS } = props;
 
-if (!query.endsWith('\n')) query += '\n'
-if (!tables.endsWith('\n')) tables += '\n'
+if (!query.endsWith('\n')) query += '\n';
+if (!tables.endsWith('\n')) tables += '\n';
 
 const files = ref([
   { name: 'Query', code: query, file: `/${dir}/query.ts` },
   { name: 'Tables', code: tables, file: `/${dir}/tables.ts` },
-])
+]);
 const currentFileIndex = ref(0);
-const models = files.value.map(({ code, file }) => monacoEditor.createModel(code, 'typescript', Uri.file(file)));
+const models = files.value.map(({ code, file }) =>
+  monacoEditor.createModel(code, 'typescript', Uri.file(file)),
+);
 
 const monacoContainer = ref(null);
 const sqlHtml = ref();
-let editor
+let editor;
 
-setupEditor()
-handlePropsContentChange()
-setupVim()
+setupEditor();
+handlePropsContentChange();
+setupVim();
 
 const updateEditorContent = () => {
-  editor.setModel(models[currentFileIndex.value])
+  editor.setModel(models[currentFileIndex.value]);
 };
 
 const selectFile = (index) => {
-  currentFileIndex.value = index
+  currentFileIndex.value = index;
   if (editor) {
     updateEditorContent();
   }
@@ -97,7 +96,7 @@ const selectFile = (index) => {
 
 function setupEditor() {
   onMounted(async () => {
-    const container = monacoContainer.value
+    const container = monacoContainer.value;
 
     editor = monacoEditor.create(container, {
       model: models[0],
@@ -107,7 +106,7 @@ function setupEditor() {
       lineNumbersMinChars: 3,
       automaticLayout: true,
       glyphMargin: false,
-      showFoldingControls: "never",
+      showFoldingControls: 'never',
       overviewRulerLanes: 0,
       padding: { top: 12, bottom: 12 },
       contextmenu: false,
@@ -120,120 +119,137 @@ function setupEditor() {
       scrollBeyondLastLine: false,
     });
 
-    editor.container = container
+    editor.container = container;
 
     // disable F1/F2
     editor.addCommand(KeyCode.F1, () => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "F1" }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1' }));
     });
     editor.addCommand(KeyCode.F2, () => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "F2" }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2' }));
     });
 
-    let filesJS
-    const queriesExports = {}
+    let filesJS;
+    const queriesExports = {};
     const updateSql = async () => {
-      await libsPromise
+      await libsPromise;
 
-      execFile('./tables', filesJS[1])
+      execFile('./tables', filesJS[1]);
 
-      mockAdapter.queries.length = 0
-      execFile('./queries', collectSQLsTemplateJS(filesJS[0]), queriesExports)
+      mockAdapter.queries.length = 0;
+      execFile('./queries', collectSQLsTemplateJS(filesJS[0]), queriesExports);
 
       await queriesExports.__promise;
 
       const html = await codeToHtml(
-        mockAdapter.queries.map(({ sql, values }) => {
-          let code = formatDialect(sql, { dialect: postgresql })
-          if (!code.endsWith(';')) code += ';'
+        mockAdapter.queries
+          .map(({ sql, values }) => {
+            let code = formatDialect(sql, { dialect: postgresql });
+            if (!code.endsWith(';')) code += ';';
 
-          if (values?.length) {
-            code += `\n-- Parameters:\n${values.map((value, i) => `-- $${i + 1}: ${JSON.stringify(value)}`).join('\n')}\n`;
-          }
+            if (values?.length) {
+              code += `\n-- Parameters:\n${values.map((value, i) => `-- $${i + 1}: ${JSON.stringify(value)}`).join('\n')}\n`;
+            }
 
-          return code
-        }).join('\n\n'),
+            return code;
+          })
+          .join('\n\n'),
         {
           lang: 'sql',
-          theme: 'one-dark-pro'
-        }
-      )
+          theme: 'one-dark-pro',
+        },
+      );
 
-      sqlHtml.value = `<span class="lang">sql</span>${html}`
-    }
+      sqlHtml.value = `<span class="lang">sql</span>${html}`;
+    };
 
     editor.onDidChangeModelContent(async () => {
       if (!filesJS) return;
 
-      const worker = await getTsWorker()
-      const index = currentFileIndex.value
-      const { uri } = models[index]
-      const tsFile = await worker(uri)
-      const out = await tsFile.getEmitOutput(uri.toString())
-      filesJS[index] = esmToCommonjs(out.outputFiles[0].text)
-      await updateSql()
+      const worker = await getTsWorker();
+      const index = currentFileIndex.value;
+      const { uri } = models[index];
+      const tsFile = await worker(uri);
+      const out = await tsFile.getEmitOutput(uri.toString());
+      filesJS[index] = esmToCommonjs(out.outputFiles[0].text);
+      await updateSql();
     });
 
     const updateHeight = () => {
       const contentHeight = Math.min(666, editor.getContentHeight());
       container.style.height = `${contentHeight}px`;
-      editor.layout()
+      editor.layout();
     };
     editor.onDidContentSizeChange(updateHeight);
     updateHeight();
 
     const worker = await getTsWorker();
 
-    filesJS = await Promise.all(models.map(async ({ uri }) => {
-      const tsFile = await worker(uri)
-      const out = await tsFile.getEmitOutput(uri.toString())
-      return esmToCommonjs(out.outputFiles[0].text)
-    }));
+    filesJS = await Promise.all(
+      models.map(async ({ uri }) => {
+        const tsFile = await worker(uri);
+        const out = await tsFile.getEmitOutput(uri.toString());
+        return esmToCommonjs(out.outputFiles[0].text);
+      }),
+    );
 
-    await updateSql()
-  })
+    await updateSql();
+  });
 
   onBeforeUnmount(() => {
     if (editor) {
-      editor.dispose()
+      editor.dispose();
     }
 
     for (const model of monacoEditor.getModels()) {
-      model.dispose()
+      model.dispose();
     }
-  })
+  });
 }
 
 function handlePropsContentChange() {
-  watch(() => props.query, () => {
-    const query = props.query.endsWith('\n') ? props.query : `${props.query}\n`
-    const tables = props.tables.endsWith('\n') ? props.tables : `${props.tables}\n`
+  watch(
+    () => props.query,
+    () => {
+      const query = props.query.endsWith('\n')
+        ? props.query
+        : `${props.query}\n`;
+      const tables = props.tables.endsWith('\n')
+        ? props.tables
+        : `${props.tables}\n`;
 
-    files.value[0].code = query
-    files.value[1].code = tables
-    currentFileIndex.value = 0
+      files.value[0].code = query;
+      files.value[1].code = tables;
+      currentFileIndex.value = 0;
 
-    for (const model of monacoEditor.getModels()) {
-      if (model.uri.path === `/${dir}/query.ts`) {
-        model.setValue(query)
-      } else if (model.uri.path === `/${dir}/tables.ts`) {
-        model.setValue(tables)
+      for (const model of monacoEditor.getModels()) {
+        if (model.uri.path === `/${dir}/query.ts`) {
+          model.setValue(query);
+        } else if (model.uri.path === `/${dir}/tables.ts`) {
+          model.setValue(tables);
+        }
       }
-    }
-  })
+    },
+  );
 }
 
 function setupVim() {
   if (props.vimMode) startVim();
 
-  watch(() => props.vimMode, () => (props.vimMode ? startVim : stopVim)());
+  watch(
+    () => props.vimMode,
+    () => (props.vimMode ? startVim : stopVim)(),
+  );
 
   let vimInstance;
 
   async function startVim() {
     const { initVimMode } = await import('monaco-vim');
     if (props.vimMode) {
-      vimInstance = initVimMode(editor, editor.container.parentNode.querySelector('.vim-status'));
+      vimInstance = initVimMode(
+        editor,
+        editor.container.parentNode.querySelector('.vim-status'),
+      );
     }
   }
 

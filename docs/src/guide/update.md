@@ -104,6 +104,29 @@ db.$qb
   .from('b');
 ```
 
+## select relations for update
+
+You can load related data in `update` methods by chaining `.select()` with relation queries.
+
+The ORM loads relation data in a follow-up query after updating records.
+Both queries are wrapped in a transaction to keep the operation atomic and ensure consistent results.
+
+```ts
+// updating order, creating a new order item,
+// selecting both the order and all its items.
+db.order
+  .find(orderId)
+  .update({
+    column: 'value',
+    orderItems: {
+      create: [{ ...orderItemData }],
+    },
+  })
+  .select('*', {
+    orderItems: (q) => q.orderItems,
+  });
+```
+
 ### empty set
 
 When trying to query update with an empty object, it will be transformed seamlessly to a `SELECT` query:

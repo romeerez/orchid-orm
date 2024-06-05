@@ -1,70 +1,71 @@
 <script setup>
-  import OrchidORMEditor from './OrchidORMEditor.vue';
-  import KyselyEditor from './KyselyEditor.vue';
-  import {
-    compareWithKyselyCodeExamples,
-    tables,
-  } from './compare-with-kysely-code-examples';
-  import { ref, watch, onMounted, onUnmounted } from 'vue';
+import OrchidORMEditor from './OrchidORMEditor.vue';
+import KyselyEditor from './KyselyEditor.vue';
+import {
+  compareWithKyselyCodeExamples,
+  tables,
+} from './compare-with-kysely-code-examples';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 
-  const orms = ['orchid', 'kysely'];
+const orms = ['orchid', 'kysely'];
 
+for (const key in compareWithKyselyCodeExamples) {
+  for (const example of compareWithKyselyCodeExamples[key]) {
+    example.id = `${key.toLocaleLowerCase()}-${example.name.toLowerCase().replaceAll(' ', '-')}`;
+
+    for (const orm of orms) {
+      if (typeof example[orm] === 'string') {
+        example[orm] = { query: example[orm] };
+      }
+
+      example[orm].tables ??= tables[orm];
+    }
+  }
+}
+
+const anchor = ref(null);
+const example = ref(null);
+
+const findExample = () => {
   for (const key in compareWithKyselyCodeExamples) {
     for (const example of compareWithKyselyCodeExamples[key]) {
-      example.id = `${key.toLocaleLowerCase()}-${example.name.toLowerCase().replaceAll(' ', '-')}`
-
-      for (const orm of orms) {
-        if (typeof example[orm] === 'string') {
-          example[orm] = { query: example[orm] };
-        }
-
-        example[orm].tables ??= tables[orm];
+      if (example.id === anchor.value) {
+        return example;
       }
     }
   }
+};
 
-  const anchor = ref(null);
-  const example = ref(null);
+const updateAnchor = () => {
+  anchor.value =
+    window.location.hash.slice(1) || compareWithKyselyCodeExamples.Select[0].id;
+  example.value = findExample();
 
-  const findExample = () => {
-    for (const key in compareWithKyselyCodeExamples) {
-      for (const example of compareWithKyselyCodeExamples[key]) {
-        if (example.id === anchor.value) {
-          return example;
-        }
-      }
+  const arr = orms.map((orm) => ({
+    orm,
+    lines: example.value[orm].query.split('\n'),
+  }));
+
+  const max = Math.max(...arr.map((x) => x.lines.length));
+  for (const x of arr) {
+    if (x.lines.length < max) {
+      x.lines.push(...Array.from({ length: max - x.lines.length }).fill(''));
+      example.value[x.orm].query = x.lines.join('\n');
     }
   }
+};
+updateAnchor();
 
-  const updateAnchor = () => {
-    anchor.value = window.location.hash.slice(1) || compareWithKyselyCodeExamples.Select[0].id
-    example.value = findExample()
+// for applying global styles only for this page
+let styleElement;
 
-    const arr = orms.map((orm) => ({
-      orm,
-      lines: example.value[orm].query.split('\n'),
-    }))
-
-    const max = Math.max(...arr.map((x) => x.lines.length))
-    for (const x of arr) {
-      if (x.lines.length < max) {
-        x.lines.push(...Array.from({ length: max - x.lines.length }).fill(''))
-        example.value[x.orm].query = x.lines.join('\n');
-      }
-    }
-  };
+onMounted(() => {
+  window.addEventListener('hashchange', updateAnchor);
   updateAnchor();
 
-  // for applying global styles only for this page
-  let styleElement;
-
-  onMounted(() => {
-    window.addEventListener('hashchange', updateAnchor);
-    updateAnchor();
-
-    styleElement = document.createElement("style");
-    styleElement.type = "text/css";
-    styleElement.innerText = `
+  styleElement = document.createElement('style');
+  styleElement.type = 'text/css';
+  styleElement.innerText = `
 .main {
   max-width: 1150px;
 }
@@ -111,49 +112,66 @@ html .content-container {
   }
 }
 `;
-    document.head.appendChild(styleElement);
-  });
+  document.head.appendChild(styleElement);
+});
 
-  onUnmounted(() => {
-    window.removeEventListener('hashchange', updateAnchor);
+onUnmounted(() => {
+  window.removeEventListener('hashchange', updateAnchor);
 
-    if (styleElement) {
-      document.head.removeChild(styleElement);
-    }
-  });
+  if (styleElement) {
+    document.head.removeChild(styleElement);
+  }
+});
 
-  const vimMode = ref(localStorage.getItem('vimMode') === 'true');
+const vimMode = ref(localStorage.getItem('vimMode') === 'true');
 
-  watch(vimMode, (value) => {
-    localStorage.setItem('vimMode', String(value));
-  });
+watch(vimMode, (value) => {
+  localStorage.setItem('vimMode', String(value));
+});
 </script>
 
 <template>
-<div class="all-examples">
-  <div v-for="(examples, key) in compareWithKyselyCodeExamples" class="examples-set">
-    <h3 class="examples-title">{{key}}</h3>
-    <span v-for="example in examples" :class="{ 'example-link': true, active: example.id === anchor }">
-      <a :href="`#${example.id}`">{{example.name}}</a>
-    </span>
+  <div class="all-examples">
+    <div
+      v-for="(examples, key) in compareWithKyselyCodeExamples"
+      class="examples-set"
+    >
+      <h3 class="examples-title">{{ key }}</h3>
+      <span
+        v-for="example in examples"
+        :class="{ 'example-link': true, active: example.id === anchor }"
+      >
+        <a :href="`#${example.id}`">{{ example.name }}</a>
+      </span>
+    </div>
   </div>
-</div>
 
-<div class="example-text" v-html="example.text?.trim().replace(/\n\s*\n/g, '<br/><br/>')"></div>
+  <div
+    class="example-text"
+    v-html="example.text?.trim().replace(/\n\s*\n/g, '<br/><br/>')"
+  ></div>
 
-<div class="editors">
-  <div class="editor">
-    <OrchidORMEditor :query='example.orchid.query' :tables="example.orchid.tables" :vimMode="vimMode" />
+  <div class="editors">
+    <div class="editor">
+      <OrchidORMEditor
+        :query="example.orchid.query"
+        :tables="example.orchid.tables"
+        :vimMode="vimMode"
+      />
+    </div>
+    <div class="editor">
+      <KyselyEditor
+        :query="example.kysely.query"
+        :tables="example.kysely.tables"
+        :vimMode="vimMode"
+      />
+    </div>
   </div>
-  <div class="editor">
-    <KyselyEditor :query='example.kysely.query' :tables="example.kysely.tables" :vimMode="vimMode" />
-  </div>
-</div>
 
-<div style="display: flex; justify-content: flex-end">
-  <div id="vimStatus"></div>
-  <label><input type="checkbox" v-model="vimMode" /> VIM mode</label>
-</div>
+  <div style="display: flex; justify-content: flex-end">
+    <div id="vimStatus"></div>
+    <label><input type="checkbox" v-model="vimMode" /> VIM mode</label>
+  </div>
 </template>
 
 <style>
@@ -184,7 +202,7 @@ html .content-container {
 }
 
 .examples-set h3 {
-  margin-bottom: 12px
+  margin-bottom: 12px;
 }
 
 .example-link {
@@ -205,7 +223,7 @@ html .content-container {
 }
 
 .example-link.active a {
-  color: var(--vp-c-brand)
+  color: var(--vp-c-brand);
 }
 
 @media (max-width: 780px) {

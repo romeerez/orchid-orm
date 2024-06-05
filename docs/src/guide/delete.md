@@ -74,3 +74,21 @@ db.$qb
   )
   .from('b');
 ```
+
+## select relations for delete
+
+You can load related data in `delete` methods by chaining `.select()` with relation queries.
+
+Relation data is loaded in a CTE (Common Table Expression) **before** the table record(s) are deleted.
+This allows returning relation data even after the source row is gone.
+
+```ts
+// deleting a post,
+// selecting both the post and its author.
+db.post
+  .find(postId)
+  .delete()
+  .select('id', 'text', {
+    author: (q) => q.author.select('id', 'name'),
+  });
+```

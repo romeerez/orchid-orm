@@ -90,15 +90,14 @@ db.book.update({
 });
 ```
 
-## selecting relations
+## selecting relations for create
 
-You can load related data in `create`, `update`, and `delete` methods by chaining `.select()` with relation queries.
+You can load related data in `create` methods by chaining `.select()` with relation queries.
 
 This is not yet supported for `upsert` and `orCreate`.
 
-For **create** and **update**, the ORM loads relation data in a follow-up query after the main mutation. Both queries are wrapped in a transaction to keep the operation atomic and ensure consistent results.
-
-For **delete**, the approach is different: relation data is loaded in a CTE (Common Table Expression) **before** the table record(s) are deleted. This allows returning relation data even after the source row is gone.
+The ORM loads relation data in a follow-up query after creating records.
+Both queries are wrapped in a transaction to keep the operation atomic and ensure consistent results.
 
 ```ts
 // example: creating multiple orders with their order items,
@@ -114,20 +113,6 @@ db.order
       orderItems: [{ ...orderItemData }],
     },
   ])
-  .select('*', {
-    orderItems: (q) => q.orderItems,
-  });
-
-// updating order, creating a new order item,
-// selecting both the order and all its items.
-db.order
-  .find(orderId)
-  .update({
-    column: 'value',
-    orderItems: {
-      create: [{ ...orderItemData }],
-    },
-  })
   .select('*', {
     orderItems: (q) => q.orderItems,
   });

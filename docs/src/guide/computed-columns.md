@@ -41,7 +41,7 @@ export class UserTable extends BaseTable {
 }
 ```
 
-`randomizedName` in the example is defined with `` sql(() => sql`...`) `` syntax that makes it dynamic,
+`randomizedName` in the example is defined with ``sql(() => sql`...`)`` syntax that makes it dynamic,
 so that a new random value will be selected for every query.
 
 Such can be column can be selected, can be used for filtering and ordering, available in nested sub-queries.
