@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.20.17
+
+### Patch Changes
+
+- 6b484a9: rake-db: fix type of default columns
+
 ## 2.20.16
 
 ### Patch Changes
