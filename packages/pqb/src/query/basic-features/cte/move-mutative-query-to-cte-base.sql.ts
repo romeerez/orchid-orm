@@ -25,7 +25,6 @@ export const moveQueryToCte = (
     returnType === 'valueOrThrow' ||
     returnType === 'pluck'
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const first = query.q.select![0];
     if (
       first instanceof SelectItemExpression &&
@@ -35,7 +34,6 @@ export const moveQueryToCte = (
     } else {
       query = _clone(query) as unknown as SubQueryForSql;
       query.q.returnType = 'one';
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       query.q.select = [{ selectAs: { value: query.q.select![0] as never } }];
       valueAs = 'value';
     }

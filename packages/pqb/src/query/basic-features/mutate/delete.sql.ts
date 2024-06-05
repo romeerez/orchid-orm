@@ -44,7 +44,6 @@ export const pushDeleteSql = (
     ctx,
     query,
     relationSelectState,
-    returning,
   );
 
   let join = q.join;

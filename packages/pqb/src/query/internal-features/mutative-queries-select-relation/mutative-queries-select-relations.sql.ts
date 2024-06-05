@@ -60,7 +60,6 @@ export const handleDeleteSelectRelationsSqlState = (
   ctx: ToSQLCtx,
   query: ToSQLQuery,
   relationSelectState: MutativeQueriesSelectRelationsSqlState | undefined,
-  returning: string | undefined,
 ):
   | {
       join: JoinItem;
@@ -89,8 +88,6 @@ export const handleDeleteSelectRelationsSqlState = (
   );
 
   const relKeys = Object.keys(selectRelations);
-
-  ctx.selectedCount = (returning ? ctx.selectedCount : 0) + relKeys.length;
 
   const hookSelect = selectPrimaryKeysQuery.q.hookSelect as HookSelect;
 
