@@ -29,6 +29,7 @@ import {
 } from './then/then';
 import { Order as OrderNamespace } from './basic-features/order/order';
 export type { Rls, RlsPolicy } from './extra-features/rls/rls.db';
+import { Grant } from './extra-features/grants/grants.db';
 
 export interface DbExtension {
   name: string;
@@ -41,6 +42,7 @@ export interface GeneratorIgnore {
   domains?: string[];
   extensions?: string[];
   tables?: string[];
+  grants?: Grant.Ignore;
 }
 
 export interface DbDomainArg<ColumnTypes> {

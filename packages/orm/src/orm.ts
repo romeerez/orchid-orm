@@ -18,6 +18,7 @@ import {
   QueryData,
   ColumnSchemaConfig,
   Rls,
+  Grant,
 } from 'pqb/internal';
 import {
   ORMTableInput,
@@ -79,6 +80,13 @@ export type OrchidORM<T extends TableClasses = TableClasses> =
  * Identity helper for table row-level security configuration.
  */
 export const defineRls = <T extends Rls.TableConfig>(rls: T): T => rls;
+
+/**
+ * Identity helper for table-local grant configuration.
+ */
+export const setGrants = <const T extends readonly Grant.TableClassGrant[]>(
+  grants: T,
+): T => grants;
 
 interface OrchidORMMethods {
   /**
@@ -318,6 +326,7 @@ const assignTablesToOrm = <T extends TableClasses>(
     (dbTable as unknown as { filePath: string }).filePath = table.filePath;
     (dbTable as unknown as { name: string }).name = table.constructor.name;
     dbTable.internal.tableRls = table.rls;
+    dbTable.internal.tableGrants = table.grants;
 
     result[key] = dbTable as OrchidORMDbTables<T>[Extract<keyof T, string>];
   }

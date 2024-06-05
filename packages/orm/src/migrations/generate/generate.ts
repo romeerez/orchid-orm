@@ -12,6 +12,8 @@ import {
   UnknownColumn,
   getQuerySchema,
   emptyObject,
+  Grant,
+  toArray,
 } from 'pqb/internal';
 import { Query } from 'pqb';
 import {
@@ -90,6 +92,14 @@ export const generate = async (
 
   const db = await getDbFromConfig(config, dbPath);
   const { columnTypes, internal } = db.$qb;
+  const loadDefaultPrivileges =
+    internal.roles?.some((role) => role.defaultPrivileges !== undefined) ??
+    false;
+
+  const structureParams = {
+    loadDefaultPrivileges,
+    loadGrants: !!internal.grants || hasCodeTablesWithGrants(db),
+  };
 
   const rolesDbStructureParam = internal.roles
     ? internal.managedRolesSql
@@ -102,7 +112,7 @@ export const generate = async (
     config,
     db,
     rolesDbStructureParam,
-    internal.roles ? { loadDefaultPrivileges: true } : undefined,
+    structureParams,
     afterPull,
   );
 
@@ -118,6 +128,7 @@ export const generate = async (
     internal,
     columnTypes,
   );
+  const effectiveGrants = getEffectiveGrants(internal.grants, codeItems);
 
   const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
 
@@ -125,7 +136,10 @@ export const generate = async (
     structureToAstCtx,
     codeItems,
     currentSchema,
-    internal,
+    internal: {
+      ...internal,
+      grants: effectiveGrants,
+    },
   };
 
   const ast: RakeDbAst[] = [];
@@ -154,7 +168,7 @@ export const generate = async (
       migrationCode,
       generateMigrationParams,
       rolesDbStructureParam,
-      internal.roles ? { loadDefaultPrivileges: true } : undefined,
+      structureParams,
     );
 
     if (result !== undefined) {
@@ -237,7 +251,10 @@ const migrateAndPullStructures = async (
   config: RakeDbConfig,
   db: DbInstance,
   roles?: { whereSql?: string },
-  defaultPrivileges?: { loadDefaultPrivileges?: boolean },
+  structureParams?: {
+    loadDefaultPrivileges?: boolean;
+    loadGrants?: boolean;
+  },
   afterPull?: AfterPull,
 ): Promise<{
   dbStructure: IntrospectedStructure;
@@ -272,7 +289,8 @@ const migrateAndPullStructures = async (
       introspectDbSchema(adapter, {
         rls: hasCodeTablesWithRls(db),
         roles,
-        loadDefaultPrivileges: defaultPrivileges?.loadDefaultPrivileges,
+        loadDefaultPrivileges: structureParams?.loadDefaultPrivileges,
+        loadGrants: structureParams?.loadGrants,
       }),
     ),
   );
@@ -294,6 +312,45 @@ const hasCodeTablesWithRls = (db: DbInstance): boolean => {
   }
 
   return false;
+};
+
+const hasCodeTablesWithGrants = (db: DbInstance): boolean => {
+  for (const key in db) {
+    if (key[0] === '$') continue;
+
+    const table = db[key as keyof typeof db] as Query;
+    if (table.internal.tableGrants?.length) return true;
+  }
+
+  return false;
+};
+
+const getEffectiveGrants = (
+  grants: QueryInternal['grants'],
+  codeItems: CodeItems,
+): QueryInternal['grants'] => {
+  const effectiveGrants = grants ? [...grants] : [];
+
+  for (const table of codeItems.tables) {
+    const tableGrants = table.internal.tableGrants;
+    if (!tableGrants?.length) continue;
+
+    const tableTarget = table.q.schema
+      ? `${table.q.schema}.${table.table}`
+      : table.table;
+
+    for (const grant of tableGrants) {
+      const internalGrant: Grant.InternalPrivilege = {
+        ...grant,
+        to: toArray(grant.to),
+        tables: [tableTarget],
+      };
+
+      effectiveGrants.push(internalGrant);
+    }
+  }
+
+  return effectiveGrants.length ? effectiveGrants : undefined;
 };
 
 const compareDbStructures = (
@@ -468,7 +525,39 @@ const getActualItems = async (
     }
   }
 
+  if (internal.grants) {
+    for (const grant of internal.grants) {
+      addGrantSchemas(codeItems.schemas, currentSchema, grant);
+    }
+  }
+
   return codeItems;
+};
+
+const addGrantSchemas = (
+  schemas: Set<string>,
+  currentSchema: string,
+  grant: NonNullable<QueryInternal['grants']>[number],
+) => {
+  for (const schema of [
+    ...(grant.schemas ?? []),
+    ...(grant.allTablesIn ?? []),
+    ...(grant.allSequencesIn ?? []),
+    ...(grant.allRoutinesIn ?? []),
+  ]) {
+    schemas.add(schema);
+  }
+
+  for (const target of [
+    ...(grant.tables ?? []),
+    ...(grant.sequences ?? []),
+    ...(grant.routines ?? []),
+    ...(grant.types ?? []),
+    ...(grant.domains ?? []),
+  ]) {
+    const [schema] = getSchemaAndTableFromName(currentSchema, target);
+    if (schema) schemas.add(schema);
+  }
 };
 
 const processEnumColumn = (

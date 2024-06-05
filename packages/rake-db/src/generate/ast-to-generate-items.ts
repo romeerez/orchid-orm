@@ -276,6 +276,10 @@ export const astToGenerateItem = (
 
       break;
     }
+    case 'grant': {
+      pushGrantDeps(currentSchema, deps, ast);
+      break;
+    }
     default:
       exhaustive(ast);
   }
@@ -448,4 +452,54 @@ const pushPolicyRoleDeps = (deps: string[], roles: string[] | undefined) => {
   if (!roles) return;
 
   deps.push(...roles.map((role) => `role:${role}`));
+};
+
+const grantConcreteTargetKeys = [
+  'tables',
+  'sequences',
+  'routines',
+  'types',
+  'domains',
+] as const;
+
+const grantSchemaWideTargetKeys = [
+  'allTablesIn',
+  'allSequencesIn',
+  'allRoutinesIn',
+] as const;
+
+const pushGrantDeps = (
+  currentSchema: string,
+  deps: string[],
+  ast: RakeDbAst.Grant,
+) => {
+  deps.push(...ast.to.map((role) => `role:${role}`));
+
+  if (ast.grantedBy) {
+    deps.push(`role:${ast.grantedBy}`);
+  }
+
+  if (ast.schemas) {
+    deps.push(...ast.schemas);
+  }
+
+  for (const key of grantSchemaWideTargetKeys) {
+    const schemas = ast[key];
+    if (schemas) {
+      deps.push(...schemas);
+    }
+  }
+
+  for (const key of grantConcreteTargetKeys) {
+    const targets = ast[key];
+    if (!targets) continue;
+
+    for (const target of targets) {
+      const [schema = currentSchema, name] = getSchemaAndTableFromName(
+        currentSchema,
+        target,
+      );
+      deps.push(schema, `${schema}.${name}`);
+    }
+  }
 };

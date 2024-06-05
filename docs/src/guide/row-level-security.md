@@ -228,7 +228,7 @@ It can be excessive for simple single-tenant systems, or for apps where keeping 
    table owners bypass RLS by default, and superusers or roles with `BYPASSRLS` bypass it as well.
 2. Grant required privileges to that role.
    RLS does not replace normal `GRANT` privileges, it adds row filtering on top.
-   Prefer [default privileges](/guide/generate-migrations#default-privileges) so new objects stay consistent.
+   Use [grants](/guide/generate-migrations#grants) for existing objects, and prefer [default privileges](/guide/generate-migrations#default-privileges) so new objects stay consistent.
 3. Enable RLS and define table policies.
    Once RLS is enabled, if no applicable permissive policy exists, PostgreSQL falls back to default deny.
 4. Set per-request context (such as user id) in SQL session for every incoming request.
@@ -348,8 +348,10 @@ Cons: highest operational overhead for provisioning, routing, connections, and r
 ## Supported features for RLS
 
 - Manage roles in migration generation: [roles](/guide/generate-migrations#roles)
+- Manage grants in migration generation: [grants](/guide/generate-migrations#grants)
 - Manage default privileges in migration generation: [default privileges](/guide/generate-migrations#default-privileges)
 - Declare table RLS flags and policies with `defineRls`, and generate migrations for them.
+- Write manual grant and revoke migrations with `rake-db` methods.
 - Write manual table RLS and policy migrations with `rake-db` methods.
 - Automatically set SQL session `role` and/or `setConfig` for a transaction with `$transaction`.
   See details and examples in [SQL session context in transactions](/guide/transactions.html#sql-session-context-in-transactions).
@@ -358,7 +360,7 @@ Cons: highest operational overhead for provisioning, routing, connections, and r
 
 ## PostgreSQL RLS gotchas
 
-- RLS does not replace ordinary privileges. Roles still need `GRANT` (to be supported) or [default privileges](/guide/generate-migrations.html#default-privileges) for table access.
+- RLS does not replace ordinary privileges. Roles still need [grants](/guide/generate-migrations#grants) or [default privileges](/guide/generate-migrations#default-privileges) for table access.
 - PostgreSQL lets table owners bypass RLS by default. Orchid treats omitted table declaration `force` as `true`; set `force: false` only when owner bypass is intentional.
 - Superusers and roles with `BYPASSRLS` bypass RLS policies.
 - By default, when a view reads an RLS table, PostgreSQL checks underlying table permissions and RLS policies as the view owner. In PostgreSQL 15 and newer, Orchid's `createView` uses `securityInvoker: true` by default so the caller's permissions and RLS policies are used instead; set `securityInvoker: false` only when owner-checked behavior is intentional.

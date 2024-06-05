@@ -1612,6 +1612,127 @@ change(async (db) => {
     });
   });
 
+  describe('grant', () => {
+    it('should generate grant with target keys, roles, privileges, and grantor', () => {
+      const result = act([
+        {
+          type: 'grant',
+          action: 'grant',
+          to: ['app_user', 'readonly'],
+          tables: ['public.project', 'public.task'],
+          privileges: ['SELECT'],
+          grantablePrivileges: ['REFERENCES'],
+          grantedBy: 'app_owner',
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.grant({
+    to: ['app_user', 'readonly'],
+    tables: ['public.project', 'public.task'],
+    privileges: ['SELECT'],
+    grantablePrivileges: ['REFERENCES'],
+    grantedBy: 'app_owner',
+  });
+});
+`,
+      );
+    });
+
+    it('should generate revoke with grant option and revoke mode', () => {
+      const result = act([
+        {
+          type: 'grant',
+          action: 'revoke',
+          to: ['readonly'],
+          schemas: ['public'],
+          grantablePrivileges: ['USAGE'],
+          revokeMode: 'CASCADE',
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.revoke({
+    to: ['readonly'],
+    schemas: ['public'],
+    grantablePrivileges: ['USAGE'],
+    revokeMode: 'CASCADE',
+  });
+});
+`,
+      );
+    });
+
+    it('should order grants after target creation and before target drops', () => {
+      const result = act([
+        {
+          type: 'grant',
+          action: 'revoke',
+          to: ['readonly'],
+          tables: ['app.project'],
+          privileges: ['SELECT'],
+        },
+        {
+          ...table,
+          action: 'drop',
+          schema: 'app',
+          name: 'project',
+        },
+        {
+          type: 'grant',
+          action: 'grant',
+          to: ['app_user'],
+          tables: ['app.task'],
+          privileges: ['SELECT'],
+        },
+        {
+          ...table,
+          action: 'create',
+          schema: 'app',
+          name: 'task',
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.revoke({
+    to: ['readonly'],
+    tables: ['app.project'],
+    privileges: ['SELECT'],
+  });
+
+  await db.createTable('app.task', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
+});
+
+change(async (db) => {
+  await db.dropTable('app.project', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
+
+  await db.grant({
+    to: ['app_user'],
+    tables: ['app.task'],
+    privileges: ['SELECT'],
+  });
+});
+`,
+      );
+    });
+  });
+
   describe('tableRls', () => {
     it('should generate enableRls for current schema table', () => {
       const result = act([

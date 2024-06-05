@@ -45,6 +45,7 @@ import {
   ColumnsShape,
   QuerySchema,
   Rls,
+  Grant,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -191,6 +192,10 @@ export interface ORMTableInput {
   comment?: string;
   // row-level security table flags
   rls?: Rls.TableConfig;
+  /**
+   * Table-local grants used by migration generation.
+   */
+  grants?: readonly Grant.TableClassGrant[];
   // automatically create foreign keys for relations
   autoForeignKeys?: TableData.References.BaseOptions | boolean;
 }

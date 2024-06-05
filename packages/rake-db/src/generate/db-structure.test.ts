@@ -1,4 +1,5 @@
 import {
+  DbStructure,
   introspectDbSchema,
   IntrospectedStructure,
   RawDbStructure,
@@ -16,6 +17,19 @@ const defaultPrivilege = (
   object: 'relation',
   privileges: ['SELECT', 'INSERT'],
   isGrantables: [false, true],
+  ...data,
+});
+
+const grant = (
+  data: Partial<RawDbStructure.Grant> = {},
+): RawDbStructure.Grant => ({
+  grantor: 'postgres',
+  grantee: 'app_user',
+  schema: 'public',
+  name: 'table',
+  target: 'tables',
+  privileges: ['INSERT', 'SELECT'],
+  isGrantables: [true, false],
   ...data,
 });
 
@@ -38,8 +52,27 @@ const adapter = new AdapterClass({
   config: { databaseURL: process.env.PG_URL },
 });
 
+const sortGrants = (grants: DbStructure.Grant[]) =>
+  [...grants].sort((a, b) =>
+    getGrantTarget(a).localeCompare(getGrantTarget(b)),
+  );
+
+const getGrantTarget = (grant: DbStructure.Grant) => {
+  if (grant.databases) return `databases:${grant.databases[0]}`;
+  if (grant.domains) return `domains:${grant.domains[0]}`;
+  if (grant.routines) return `routines:${grant.routines[0]}`;
+  if (grant.schemas) return `schemas:${grant.schemas[0]}`;
+  if (grant.sequences) return `sequences:${grant.sequences[0]}`;
+  if (grant.tables) return `tables:${grant.tables[0]}`;
+  if (grant.types) return `types:${grant.types[0]}`;
+
+  return '';
+};
+
 const mockQueryResult = (
-  data: Partial<IntrospectedStructure> & {
+  data: Partial<Omit<IntrospectedStructure, 'defaultPrivileges' | 'grants'>> & {
+    defaultPrivileges?: RawDbStructure.DefaultPrivilege[];
+    grants?: RawDbStructure.Grant[];
     policies?: RawDbStructure.RlsPolicy[];
   },
 ) => {
@@ -422,6 +455,273 @@ describe('dbStructure', () => {
       const { defaultPrivileges } = await introspectDbSchema(adapter, {});
 
       expect(defaultPrivileges).toBeUndefined();
+    });
+  });
+
+  describe('grants', () => {
+    it('should load direct grants for concrete supported targets when loadGrants is true', async () => {
+      mockQueryResult({
+        grants: [
+          grant({
+            grantor: 'postgres',
+            grantee: 'introspect_grants_user',
+            schema: undefined,
+            name: 'orchid_orm_test',
+            target: 'databases',
+            privileges: ['CONNECT', 'TEMPORARY'],
+            isGrantables: [false, true],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'introspect_grants_user',
+            schema: 'introspect_grants',
+            name: 'email',
+            target: 'domains',
+            privileges: ['USAGE'],
+            isGrantables: [false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'introspect_grants_user',
+            schema: 'introspect_grants',
+            name: 'answer',
+            target: 'routines',
+            privileges: ['EXECUTE'],
+            isGrantables: [true],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'introspect_grants_user',
+            schema: undefined,
+            name: 'introspect_grants',
+            target: 'schemas',
+            privileges: ['CREATE', 'USAGE'],
+            isGrantables: [true, false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'introspect_grants_user',
+            schema: 'introspect_grants',
+            name: 'item_id_seq',
+            target: 'sequences',
+            privileges: ['SELECT', 'USAGE'],
+            isGrantables: [true, false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'introspect_grants_user',
+            schema: 'introspect_grants',
+            name: 'item',
+            target: 'tables',
+            privileges: ['INSERT', 'SELECT', 'UPDATE'],
+            isGrantables: [true, false, false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'introspect_grants_user',
+            schema: 'introspect_grants',
+            name: 'schema_wide_item',
+            target: 'tables',
+            privileges: ['UPDATE'],
+            isGrantables: [false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'introspect_grants_user',
+            schema: 'introspect_grants',
+            name: 'mood',
+            target: 'types',
+            privileges: ['USAGE'],
+            isGrantables: [false],
+          }),
+        ],
+      });
+
+      const { grants } = await introspectDbSchema(adapter, {
+        loadGrants: true,
+      });
+
+      expect(
+        sortGrants(
+          (grants ?? []).filter(
+            (grant) => grant.to[0] === 'introspect_grants_user',
+          ),
+        ),
+      ).toEqual([
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'postgres',
+          databases: ['orchid_orm_test'],
+          privileges: ['CONNECT'],
+          grantablePrivileges: ['TEMPORARY'],
+        },
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'introspect_grants_grantor',
+          domains: ['introspect_grants.email'],
+          privileges: ['USAGE'],
+        },
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'introspect_grants_grantor',
+          routines: ['introspect_grants.answer'],
+          grantablePrivileges: ['EXECUTE'],
+        },
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'introspect_grants_grantor',
+          schemas: ['introspect_grants'],
+          privileges: ['USAGE'],
+          grantablePrivileges: ['CREATE'],
+        },
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'introspect_grants_grantor',
+          sequences: ['introspect_grants.item_id_seq'],
+          privileges: ['USAGE'],
+          grantablePrivileges: ['SELECT'],
+        },
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'introspect_grants_grantor',
+          tables: ['introspect_grants.item'],
+          privileges: ['SELECT', 'UPDATE'],
+          grantablePrivileges: ['INSERT'],
+        },
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'introspect_grants_grantor',
+          tables: ['introspect_grants.schema_wide_item'],
+          privileges: ['UPDATE'],
+        },
+        {
+          to: ['introspect_grants_user'],
+          grantedBy: 'introspect_grants_grantor',
+          types: ['introspect_grants.mood'],
+          privileges: ['USAGE'],
+        },
+      ]);
+    });
+
+    it('should load supported PUBLIC default grants from null ACLs', async () => {
+      mockQueryResult({
+        grants: [
+          grant({
+            grantee: 'PUBLIC',
+            schema: undefined,
+            name: 'orchid_orm_test',
+            target: 'databases',
+            privileges: ['CONNECT', 'TEMPORARY'],
+            isGrantables: [false, false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'PUBLIC',
+            schema: 'introspect_grants',
+            name: 'default_email',
+            target: 'domains',
+            privileges: ['USAGE'],
+            isGrantables: [false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'PUBLIC',
+            schema: 'introspect_grants',
+            name: 'default_answer',
+            target: 'routines',
+            privileges: ['EXECUTE'],
+            isGrantables: [false],
+          }),
+          grant({
+            grantor: 'introspect_grants_grantor',
+            grantee: 'PUBLIC',
+            schema: 'introspect_grants',
+            name: 'default_mood',
+            target: 'types',
+            privileges: ['USAGE'],
+            isGrantables: [false],
+          }),
+        ],
+      });
+
+      const { grants } = await introspectDbSchema(adapter, {
+        loadGrants: true,
+      });
+
+      expect(
+        sortGrants(
+          (grants ?? []).filter((grant) => {
+            const target = getGrantTarget(grant);
+
+            return (
+              grant.to[0] === 'PUBLIC' &&
+              (target === 'databases:orchid_orm_test' ||
+                target === 'domains:introspect_grants.default_email' ||
+                target === 'routines:introspect_grants.default_answer' ||
+                target === 'types:introspect_grants.default_mood')
+            );
+          }),
+        ),
+      ).toEqual([
+        {
+          to: ['PUBLIC'],
+          grantedBy: 'postgres',
+          databases: ['orchid_orm_test'],
+          privileges: ['CONNECT', 'TEMPORARY'],
+        },
+        {
+          to: ['PUBLIC'],
+          grantedBy: 'introspect_grants_grantor',
+          domains: ['introspect_grants.default_email'],
+          privileges: ['USAGE'],
+        },
+        {
+          to: ['PUBLIC'],
+          grantedBy: 'introspect_grants_grantor',
+          routines: ['introspect_grants.default_answer'],
+          privileges: ['EXECUTE'],
+        },
+        {
+          to: ['PUBLIC'],
+          grantedBy: 'introspect_grants_grantor',
+          types: ['introspect_grants.default_mood'],
+          privileges: ['USAGE'],
+        },
+      ]);
+    });
+
+    it('should not load schema-wide grant declarations as stored ACL grants', async () => {
+      mockQueryResult({
+        grants: [
+          grant({
+            target: 'tables',
+            name: 'schema_wide_item',
+            privileges: ['UPDATE'],
+            isGrantables: [false],
+          }),
+        ],
+      });
+
+      const { grants } = await introspectDbSchema(adapter, {
+        loadGrants: true,
+      });
+
+      expect(
+        (grants ?? []).some(
+          (grant) =>
+            !!grant.allTablesIn ||
+            !!grant.allSequencesIn ||
+            !!grant.allRoutinesIn,
+        ),
+      ).toBe(false);
+    });
+
+    it('should not load grants when loadGrants is not set', async () => {
+      mockQueryResult({});
+
+      const { grants } = await introspectDbSchema(adapter, {});
+
+      expect(grants).toBeUndefined();
     });
   });
 

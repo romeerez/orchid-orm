@@ -14,9 +14,9 @@ Each selected checkbox task includes its nested plain subtask list; those nested
 
 Examples:
 
-- `/task row level security 2 1.1`
-- `/task row level security 2 "from 1 till 2"`
-- `/task row level security 2 "all from 1"`
+- `do task 123 2 1.1`
+- `do task 123 2 "from 1 till 2"`
+- `do task abc 2 "all from 1"`
 
 **Selectors**
 
@@ -32,15 +32,16 @@ Section `0` is mandatory preflight, not part of the selector. Section headers ar
 
 **Workflow**
 
-1. Resolve `changes/<feature-name>/<NUMBER-idea-name>`.
+1. Resolve `changes/<feature-name>/<id-idea-name>`.
    Match feature by exact or clearly intended folder name.
-   Match idea by exact number or clearly intended title suffix.
+   The id can be a number, such as an issue number, or an abbreviation, such as `abc`.
+   Match idea by finding a folder in the feature folder that starts with that id, or by clearly intended title suffix.
    If ambiguous, ask one focused question. Do not guess.
    If no matching feature or idea exists, stop.
 
 2. Require these files:
-   - `changes/<feature-name>/<NUMBER-idea-name>/tasks.md`
-   - `changes/<feature-name>/<NUMBER-idea-name>/spec.md`
+   - `changes/<feature-name>/<id-idea-name>/tasks.md`
+   - `changes/<feature-name>/<id-idea-name>/spec.md`
      If either is missing, stop. Do not create files in this command.
 
 3. Read `tasks.md` fully before starting.

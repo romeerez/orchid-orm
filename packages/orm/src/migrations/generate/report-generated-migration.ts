@@ -520,6 +520,41 @@ export const report = (
         }
         break;
       }
+      case 'grant': {
+        const parts: string[] = [];
+        const target = grantTargetToReport(a, currentSchema);
+
+        if (a.privileges?.length) {
+          parts.push(
+            `${
+              a.action === 'grant'
+                ? green('+ grant privileges')
+                : red('- revoke privileges')
+            } ${a.privileges.map(mapGrantPrivilege).join(', ')} on ${target} ${
+              a.action === 'grant' ? 'to' : 'from'
+            } ${a.to.join(', ')}`,
+          );
+        }
+
+        if (a.grantablePrivileges?.length) {
+          parts.push(
+            `${
+              a.action === 'grant'
+                ? green('+ grant privileges')
+                : red('- revoke privileges')
+            } ${a.grantablePrivileges
+              .map(mapGrantPrivilege)
+              .join(', ')} on ${target} with grant option ${
+              a.action === 'grant' ? 'to' : 'from'
+            } ${a.to.join(', ')}`,
+          );
+        }
+
+        if (parts.length) {
+          code.push(parts.join('\n'));
+        }
+        break;
+      }
       case 'tableRls': {
         const table = dbItemName(
           { schema: a.schema, name: a.table },
@@ -583,6 +618,47 @@ const dbItemName = (
   currentSchema: string,
 ) => {
   return schema && schema !== currentSchema ? `${schema}.${name}` : name;
+};
+
+const grantTargetKeys = [
+  'schemas',
+  'tables',
+  'sequences',
+  'routines',
+  'types',
+  'domains',
+  'databases',
+] as const;
+
+const mapGrantPrivilege = (privilege: string): string => {
+  return privilege === 'ALL' ? 'ALL PRIVILEGES' : privilege;
+};
+
+const grantTargetToReport = (
+  grant: RakeDbAst.Grant,
+  currentSchema: string,
+): string => {
+  for (const key of grantTargetKeys) {
+    const targets = grant[key];
+    if (!targets?.length) continue;
+
+    return `${key} ${targets
+      .map((target) => formatGrantTarget(key, target, currentSchema))
+      .join(', ')}`;
+  }
+
+  return 'unknown target';
+};
+
+const formatGrantTarget = (
+  key: (typeof grantTargetKeys)[number],
+  target: string,
+  currentSchema: string,
+): string => {
+  if (key === 'schemas' || key === 'databases') return target;
+
+  const [schema, name] = getSchemaAndTableFromName(currentSchema, target);
+  return dbItemName({ schema, name }, currentSchema);
 };
 
 const formatPolicyRoles = (roles: string[] | undefined): string => {

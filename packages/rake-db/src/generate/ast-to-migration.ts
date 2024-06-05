@@ -801,7 +801,56 @@ const astEncoders: {
       '});',
     ];
   },
+  grant(ast) {
+    const props: string[] = [];
+
+    props.push(`to: [${ast.to.map(singleQuote).join(', ')}],`);
+
+    for (const key of grantTargetKeys) {
+      const values = ast[key];
+      if (values?.length) {
+        props.push(`${key}: [${values.map(singleQuote).join(', ')}],`);
+      }
+    }
+
+    if (ast.privileges?.length) {
+      props.push(
+        `privileges: [${ast.privileges.map(singleQuote).join(', ')}],`,
+      );
+    }
+
+    if (ast.grantablePrivileges?.length) {
+      props.push(
+        `grantablePrivileges: [${ast.grantablePrivileges
+          .map(singleQuote)
+          .join(', ')}],`,
+      );
+    }
+
+    if (ast.grantedBy) {
+      props.push(`grantedBy: ${singleQuote(ast.grantedBy)},`);
+    }
+
+    if (ast.revokeMode) {
+      props.push(`revokeMode: ${singleQuote(ast.revokeMode)},`);
+    }
+
+    return [`await db.${ast.action}({`, props, '});'];
+  },
 };
+
+const grantTargetKeys = [
+  'schemas',
+  'tables',
+  'sequences',
+  'routines',
+  'types',
+  'domains',
+  'databases',
+  'allTablesIn',
+  'allSequencesIn',
+  'allRoutinesIn',
+] as const;
 
 const policyDefinitionToCode = (policy: RakeDbAst.PolicyDefinition): Code[] => {
   const code: Code[] = [`as: ${singleQuote(policy.as)},`];

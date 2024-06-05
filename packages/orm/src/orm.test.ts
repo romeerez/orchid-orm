@@ -2,6 +2,7 @@ import {
   bundleOrchidORMTables,
   makeOrchidOrmDbWithAdapter,
   orchidORMWithAdapter,
+  setGrants,
 } from './orm';
 import { useTestORM } from './test-utils/orm.test-utils';
 import {
@@ -221,6 +222,113 @@ describe('orm', () => {
     );
 
     expect(local.user.q.autoPreparedStatements).toBe(true);
+  });
+
+  describe('grants', () => {
+    class GrantsTable extends BaseTable {
+      readonly table = 'grants';
+      filePath = 'orm.test.ts';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+      }));
+      grants = setGrants([
+        {
+          to: 'app_user',
+          grantedBy: 'owner',
+          privileges: ['SELECT'],
+          grantablePrivileges: ['UPDATE'],
+        },
+      ]);
+    }
+
+    it('should pass grants through ORM setup to the query builder', () => {
+      const local = orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          defaultGrantedBy: 'owner',
+          grants: [
+            {
+              to: ['app_user', 'readonly'],
+              grantedBy: 'admin',
+              allTablesIn: ['public'],
+              privileges: ['SELECT'],
+            },
+          ],
+        },
+        {
+          user: UserTable,
+        },
+      );
+
+      const internalGrants = local.$qb.internal.grants;
+      expect(internalGrants).toEqual([
+        {
+          to: ['app_user', 'readonly'],
+          grantedBy: 'admin',
+          allTablesIn: ['public'],
+          privileges: ['SELECT'],
+        },
+      ]);
+      expect(local.$qb.internal.defaultGrantedBy).toBe('owner');
+    });
+
+    it('should not expose generatorIgnore to SQL or break ORM bounds yet', () => {
+      const local = orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          generatorIgnore: {
+            grants: {
+              roles: ['external'],
+            },
+          },
+        },
+        {
+          user: UserTable,
+        },
+      );
+
+      expect(local.$qb.internal.generatorIgnore).toEqual({
+        grants: {
+          roles: ['external'],
+        },
+      });
+    });
+
+    it('should preserve table grants on db-bound table internals', () => {
+      const grants = setGrants([
+        {
+          to: 'reporting_user',
+          privileges: ['SELECT'],
+        },
+      ]);
+
+      const local = orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+        },
+        {
+          grants: GrantsTable,
+        },
+      );
+
+      expect(grants).toEqual([
+        {
+          to: 'reporting_user',
+          privileges: ['SELECT'],
+        },
+      ]);
+      expect(local.grants.internal.tableGrants).toEqual([
+        {
+          to: 'app_user',
+          grantedBy: 'owner',
+          privileges: ['SELECT'],
+          grantablePrivileges: ['UPDATE'],
+        },
+      ]);
+      expect(
+        (local.grants as unknown as { setGrants?: unknown }).setGrants,
+      ).toBe(undefined);
+    });
   });
 
   describe('bundleOrchidORMTables', () => {

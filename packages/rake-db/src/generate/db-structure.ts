@@ -3,6 +3,7 @@ import {
   EmptyObject,
   RecordUnknown,
   DefaultPrivileges,
+  Grant as PqbGrant,
   type RlsPolicy,
   type RecordOptionalString,
   type SearchWeight,
@@ -221,6 +222,8 @@ export namespace DbStructure {
     schema?: string;
     objectConfigs: DefaultPrivilegeObjectConfig[];
   }
+
+  export type Grant = PqbGrant.InternalPrivilege;
 }
 
 export namespace RawDbStructure {
@@ -246,6 +249,23 @@ export namespace RawDbStructure {
       | 'type'
       | 'schema'
       | 'large_object';
+    privileges: string[];
+    isGrantables: boolean[];
+  }
+
+  export interface Grant {
+    grantor: string;
+    grantee: string;
+    schema?: string;
+    name: string;
+    target:
+      | 'schemas'
+      | 'tables'
+      | 'sequences'
+      | 'routines'
+      | 'types'
+      | 'domains'
+      | 'databases';
     privileges: string[];
     isGrantables: boolean[];
   }
@@ -701,6 +721,127 @@ const defaultPrivilegesSql = `SELECT COALESCE(json_agg(t.*), '[]') FROM (
   GROUP BY "grantor", "grantee", "schema", "object"
 ) t`;
 
+const grantsSql = `SELECT COALESCE(json_agg(t.* ORDER BY t."target", t."schema", t."name", t."grantee", t."grantor"), '[]') FROM (
+  SELECT
+    (ae.grantor)::regrole "grantor",
+    CASE
+      WHEN ae.grantee = 0 THEN 'PUBLIC'
+      ELSE (ae.grantee)::regrole::text
+    END "grantee",
+    n.nspname "schema",
+    c.relname "name",
+    'tables' "target",
+    array_agg(ae.privilege_type ORDER BY ae.privilege_type) "privileges",
+    array_agg(ae.is_grantable ORDER BY ae.privilege_type) "isGrantables"
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN LATERAL aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) ae ON true
+  WHERE c.relkind IN ('r', 'p')
+    AND ${filterSchema('n.nspname')}
+    AND ae.grantee <> c.relowner
+  GROUP BY "grantor", "grantee", "schema", "name", "target"
+
+  UNION ALL
+
+  SELECT
+    (ae.grantor)::regrole "grantor",
+    CASE
+      WHEN ae.grantee = 0 THEN 'PUBLIC'
+      ELSE (ae.grantee)::regrole::text
+    END "grantee",
+    n.nspname "schema",
+    c.relname "name",
+    'sequences' "target",
+    array_agg(ae.privilege_type ORDER BY ae.privilege_type) "privileges",
+    array_agg(ae.is_grantable ORDER BY ae.privilege_type) "isGrantables"
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN LATERAL aclexplode(coalesce(c.relacl, acldefault('S', c.relowner))) ae ON true
+  WHERE c.relkind = 'S'
+    AND ${filterSchema('n.nspname')}
+    AND ae.grantee <> c.relowner
+  GROUP BY "grantor", "grantee", "schema", "name", "target"
+
+  UNION ALL
+
+  SELECT
+    (ae.grantor)::regrole "grantor",
+    CASE
+      WHEN ae.grantee = 0 THEN 'PUBLIC'
+      ELSE (ae.grantee)::regrole::text
+    END "grantee",
+    n.nspname "schema",
+    p.proname "name",
+    'routines' "target",
+    array_agg(ae.privilege_type ORDER BY ae.privilege_type) "privileges",
+    array_agg(ae.is_grantable ORDER BY ae.privilege_type) "isGrantables"
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) ae ON true
+  WHERE ${filterSchema('n.nspname')}
+    AND ae.grantee <> p.proowner
+  GROUP BY "grantor", "grantee", "schema", "name", "target"
+
+  UNION ALL
+
+  SELECT
+    (ae.grantor)::regrole "grantor",
+    CASE
+      WHEN ae.grantee = 0 THEN 'PUBLIC'
+      ELSE (ae.grantee)::regrole::text
+    END "grantee",
+    n.nspname "schema",
+    t.typname "name",
+    CASE WHEN t.typtype = 'd' THEN 'domains' ELSE 'types' END "target",
+    array_agg(ae.privilege_type ORDER BY ae.privilege_type) "privileges",
+    array_agg(ae.is_grantable ORDER BY ae.privilege_type) "isGrantables"
+  FROM pg_type t
+  JOIN pg_namespace n ON n.oid = t.typnamespace
+  JOIN LATERAL aclexplode(coalesce(t.typacl, acldefault('T', t.typowner))) ae ON true
+  WHERE t.typtype IN ('c', 'd', 'e', 'm', 'r')
+    AND ${filterSchema('n.nspname')}
+    AND ae.grantee <> t.typowner
+  GROUP BY "grantor", "grantee", "schema", "name", "target"
+
+  UNION ALL
+
+  SELECT
+    (ae.grantor)::regrole "grantor",
+    CASE
+      WHEN ae.grantee = 0 THEN 'PUBLIC'
+      ELSE (ae.grantee)::regrole::text
+    END "grantee",
+    NULL "schema",
+    n.nspname "name",
+    'schemas' "target",
+    array_agg(ae.privilege_type ORDER BY ae.privilege_type) "privileges",
+    array_agg(ae.is_grantable ORDER BY ae.privilege_type) "isGrantables"
+  FROM pg_namespace n
+  JOIN LATERAL aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) ae ON true
+  WHERE ${filterSchema('n.nspname')}
+    AND ae.grantee <> n.nspowner
+  GROUP BY "grantor", "grantee", "schema", "name", "target"
+
+  UNION ALL
+
+  SELECT
+    (ae.grantor)::regrole "grantor",
+    CASE
+      WHEN ae.grantee = 0 THEN 'PUBLIC'
+      ELSE (ae.grantee)::regrole::text
+    END "grantee",
+    NULL "schema",
+    d.datname "name",
+    'databases' "target",
+    array_agg(ae.privilege_type ORDER BY ae.privilege_type) "privileges",
+    array_agg(ae.is_grantable ORDER BY ae.privilege_type) "isGrantables"
+  FROM pg_database d
+  JOIN LATERAL aclexplode(coalesce(d.datacl, acldefault('d', d.datdba))) ae ON true
+  WHERE NOT d.datistemplate
+    AND ae.grantee <> d.datdba
+  GROUP BY "grantor", "grantee", "schema", "name", "target"
+) t`;
+
 const policiesSql = `SELECT
   n.nspname AS "schemaName",
   c.relname AS "tableName",
@@ -775,7 +916,9 @@ const sql = (version: number, params?: IntrospectDbStructureParams) =>
     params?.loadDefaultPrivileges
       ? `, (${defaultPrivilegesSql}) AS "defaultPrivileges"`
       : ''
-  }${params?.rls ? `, ${jsonAgg(policiesSql, 'policies')}` : ''}`;
+  }${params?.loadGrants ? `, (${grantsSql}) AS "grants"` : ''}${
+    params?.rls ? `, ${jsonAgg(policiesSql, 'policies')}` : ''
+  }`;
 
 export interface IntrospectedStructure {
   version: number;
@@ -792,6 +935,7 @@ export interface IntrospectedStructure {
   collations: DbStructure.Collation[];
   roles?: DbStructure.Role[];
   defaultPrivileges?: DbStructure.DefaultPrivilege[];
+  grants?: DbStructure.Grant[];
   managedRolesSql?: string;
 }
 
@@ -809,6 +953,7 @@ interface RawIntrospectedStructure {
   collations: DbStructure.Collation[];
   roles?: DbStructure.Role[];
   defaultPrivileges?: RawDbStructure.DefaultPrivilege[];
+  grants?: RawDbStructure.Grant[];
   policies?: RawDbStructure.RlsPolicy[];
   managedRolesSql?: string;
 }
@@ -819,6 +964,7 @@ interface IntrospectDbStructureParams {
     whereSql?: string;
   };
   loadDefaultPrivileges?: boolean;
+  loadGrants?: boolean;
 }
 
 export async function getDbVersion(db: Adapter): Promise<number> {
@@ -1006,11 +1152,18 @@ export async function introspectDbSchema(
     }
   }
 
-  const { policies: _policies, ...structureWithoutPolicies } = raw;
+  const grants = raw.grants?.map(mapRawGrant);
+
+  const {
+    policies: _policies,
+    grants: _grants,
+    ...structureWithoutPolicies
+  } = raw;
 
   return {
     version,
     ...structureWithoutPolicies,
+    grants,
     defaultPrivileges: raw.defaultPrivileges && [
       ...raw.defaultPrivileges
         .reduce((acc, privilege) => {
@@ -1065,6 +1218,34 @@ export async function introspectDbSchema(
     ],
   };
 }
+
+const mapRawGrant = (raw: RawDbStructure.Grant): DbStructure.Grant => {
+  nullsToUndefined(raw);
+
+  const privileges: string[] = [];
+  const grantablePrivileges: string[] = [];
+
+  for (let i = 0; i < raw.privileges.length; i++) {
+    const list = raw.isGrantables[i] ? grantablePrivileges : privileges;
+    list.push(raw.privileges[i]);
+  }
+
+  const grant: DbStructure.Grant = {
+    to: [raw.grantee],
+    grantedBy: raw.grantor,
+    [raw.target]: raw.schema ? [`${raw.schema}.${raw.name}`] : [raw.name],
+  } as DbStructure.Grant;
+
+  if (privileges.length) {
+    grant.privileges = privileges;
+  }
+
+  if (grantablePrivileges.length) {
+    grant.grantablePrivileges = grantablePrivileges;
+  }
+
+  return grant;
+};
 
 const nullsToUndefined = (obj: EmptyObject) => {
   for (const key in obj) {
