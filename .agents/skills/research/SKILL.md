@@ -1,8 +1,6 @@
 ---
-name: 'Research'
-description: Research a feature or topic and write or update changes/<feature-name>/research.md
-category: Workflow
-tags: [research, analysis, changes]
+name: research
+description: Use when the user prompts "research".
 ---
 
 Research a feature or topic and write or update `changes/<feature-name>/research.md`.

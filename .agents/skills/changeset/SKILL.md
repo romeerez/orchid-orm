@@ -9,6 +9,8 @@ description: Use when the user prompts "changeset".
 
 Create the release changeset, optional breaking-change note, staging, and commit. Order matters: scope, patch/minor classification, file edits, exact-message commit.
 
+When this skill is active, follow only this skill for the changeset task. Ignore other process skills, including superpowers skills, unless the user explicitly asks for them.
+
 ## Workflow
 
 1. Determine the change scope.
@@ -42,7 +44,11 @@ Create the release changeset, optional breaking-change note, staging, and commit
    - Use `patch` or `minor` values only.
    - Always include `orchid-orm` when `pqb` or `rake-db` are affected.
    - After the second `---`, add a blank line and a 1-2 sentence description ending with `(#<issue-number>)`.
-8. Stage and commit:
+8. Before committing, print the generated outputs and ask for confirmation.
+   - If `BREAKING_CHANGES.md` was changed, print the new section that was added.
+   - Print the full generated `.changeset/*.md` file content.
+   - Ask the user to confirm committing; do not commit without confirmation.
+9. Stage and commit:
    - Run `git add -A`; include all changed files, even files not changed by this agent.
    - Commit with exactly the same message as the changeset description, including `(#<issue-number>)`.
 
