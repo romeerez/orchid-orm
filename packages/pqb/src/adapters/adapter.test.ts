@@ -863,6 +863,7 @@ describe('adapter runtime abstractions', () => {
           code: '23505',
           detail: `Key (id)=(${duplicateId}) already exists.`,
           severity: 'ERROR',
+          constraint: 'user_pkey',
         });
       });
     });
