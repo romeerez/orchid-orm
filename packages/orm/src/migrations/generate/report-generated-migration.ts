@@ -569,6 +569,8 @@ export const report = (
         code.push(inner);
         break;
       }
+      case 'grant':
+        break;
       default:
         exhaustive(a);
     }
