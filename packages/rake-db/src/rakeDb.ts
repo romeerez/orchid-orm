@@ -27,7 +27,10 @@ import { rebase } from './commands/rebase';
 /**
  * Type of {@link rakeDb} function
  */
-export type RakeDbFn = (<SchemaConfig extends ColumnSchemaConfig, CT>(
+export type RakeDbFn = (<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT = undefined,
+>(
   options: MaybeArray<AdapterOptions>,
   partialConfig: InputRakeDbConfig<SchemaConfig, CT>,
   args?: string[],
