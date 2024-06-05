@@ -51,7 +51,7 @@
 
 ## 5. rake-db
 
-- [ ] 5.1 DB structure introspection for RLS policies
+- [x] 5.1 DB structure introspection for RLS policies
   - 5.1.1 Expand `introspectDbSchema(adapter, { rls: true })` to load policy metadata from Postgres, including table identity, policy name, mode, command, roles, `USING`, and `WITH CHECK`.
   - 5.1.2 Preserve the no-policy behavior from table-flag introspection when `rls` is omitted or false.
   - 5.1.3 verify if the implementation conforms to guidelines
