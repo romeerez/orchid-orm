@@ -416,7 +416,7 @@ const addStates = (
           ? normalizeTarget(targetKey, value, currentSchema)
           : value.target;
 
-      states.push({
+      addOrMergeState(states, {
         targetKey,
         target,
         outputTarget:
@@ -434,6 +434,32 @@ const addStates = (
         ),
       });
     }
+  }
+};
+
+const addOrMergeState = (states: GrantState[], state: GrantState) => {
+  const existing = states.find((item) => isSameExactGrantTarget(item, state));
+  if (!existing) {
+    removeGrantableFromOrdinary(state);
+    states.push(state);
+    return;
+  }
+
+  for (const privilege of state.privileges) {
+    if (!existing.grantablePrivileges.has(privilege)) {
+      existing.privileges.add(privilege);
+    }
+  }
+
+  for (const privilege of state.grantablePrivileges) {
+    existing.grantablePrivileges.add(privilege);
+    existing.privileges.delete(privilege);
+  }
+};
+
+const removeGrantableFromOrdinary = (state: GrantState) => {
+  for (const privilege of state.grantablePrivileges) {
+    state.privileges.delete(privilege);
   }
 };
 
@@ -536,6 +562,15 @@ const isSameGrantTarget = (a: GrantState, b: GrantState): boolean => {
     a.target === b.target &&
     a.to === b.to &&
     (!a.grantedBy || !b.grantedBy || a.grantedBy === b.grantedBy)
+  );
+};
+
+const isSameExactGrantTarget = (a: GrantState, b: GrantState): boolean => {
+  return (
+    a.targetKey === b.targetKey &&
+    a.target === b.target &&
+    a.to === b.to &&
+    a.grantedBy === b.grantedBy
   );
 };
 

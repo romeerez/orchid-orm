@@ -1,6 +1,7 @@
 import { colors, type Grant } from 'pqb/internal';
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import * as verifyMigrationModule from '../verify-migration';
+import { setGrants } from '../../../orm';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -75,6 +76,24 @@ describe('grants', () => {
     { name: grantByTable, schema: grantBySchema, noPrimaryKey: false },
   );
   class GrantByTable extends GrantByTableBase {}
+
+  class TableLocalGrantByTable extends GrantByTableBase {
+    grants = setGrants([
+      {
+        to: grantee,
+        privileges: ['SELECT'],
+      },
+    ]);
+  }
+
+  class TableLocalGrantableGrantByTable extends GrantByTableBase {
+    grants = setGrants([
+      {
+        to: grantee,
+        grantablePrivileges: ['SELECT'],
+      },
+    ]);
+  }
 
   const grantTables = [GrantTable, GrantAllTable];
   const grantByTableName = `${grantBySchema}.${grantByTable}`;
@@ -793,6 +812,90 @@ change(async (db) => {
     assert.report(
       grantReport('SELECT', 'tables grant_by_schema.grant_by_table', grantee),
       revokeReport('INSERT', 'tables grant_by_schema.grant_by_table', grantee),
+    );
+  });
+
+  it('should generate grants from table-local table metadata', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await prepareGrantByTable(db);
+      },
+      tables: [TableLocalGrantByTable],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.grant({
+    to: ['app-user'],
+    tables: ['grant_by_schema.grant_by_table'],
+    privileges: ['SELECT'],
+  });
+});
+`);
+
+    assert.report(
+      grantReport('SELECT', 'tables grant_by_schema.grant_by_table', grantee),
+    );
+  });
+
+  it('should merge table-local grants with top-level grant metadata', async () => {
+    const verifyMigrationMock =
+      verifyMigrationModule.verifyMigration as jest.MockedFunction<
+        typeof verifyMigrationModule.verifyMigration
+      >;
+    verifyMigrationMock.mockResolvedValueOnce(undefined);
+
+    await arrange({
+      async prepareDb(db) {
+        await prepareGrantByTable(db);
+        await db.createRole(grantor);
+      },
+      tables: [TableLocalGrantableGrantByTable],
+      dbOptions: {
+        roles: [{ name: grantor }],
+        defaultGrantedBy: grantor,
+        grants: [
+          {
+            to: grantee,
+            tables: [grantByTableName],
+            privileges: ['UPDATE'],
+          },
+        ],
+      },
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.grant({
+    to: ['app-user'],
+    tables: ['grant_by_schema.grant_by_table'],
+    grantablePrivileges: ['SELECT'],
+    grantedBy: 'grant_items_grantor',
+  });
+
+  await db.grant({
+    to: ['app-user'],
+    tables: ['grant_by_schema.grant_by_table'],
+    privileges: ['UPDATE'],
+    grantedBy: 'grant_items_grantor',
+  });
+});
+`);
+
+    assert.report(
+      grantReport(
+        'SELECT',
+        'tables grant_by_schema.grant_by_table',
+        grantee,
+        true,
+      ),
+      grantReport('UPDATE', 'tables grant_by_schema.grant_by_table', grantee),
     );
   });
 

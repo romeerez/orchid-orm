@@ -2,6 +2,7 @@ import {
   bundleOrchidORMTables,
   makeOrchidOrmDbWithAdapter,
   orchidORMWithAdapter,
+  setGrants,
 } from './orm';
 import { useTestORM } from './test-utils/orm.test-utils';
 import {
@@ -224,6 +225,22 @@ describe('orm', () => {
   });
 
   describe('grants', () => {
+    class GrantsTable extends BaseTable {
+      readonly table = 'grants';
+      filePath = 'orm.test.ts';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+      }));
+      grants = setGrants([
+        {
+          to: 'app_user',
+          grantedBy: 'owner',
+          privileges: ['SELECT'],
+          grantablePrivileges: ['UPDATE'],
+        },
+      ]);
+    }
+
     it('should pass grants through ORM setup to the query builder', () => {
       const local = orchidORMWithAdapter(
         {
@@ -275,6 +292,42 @@ describe('orm', () => {
           roles: ['external'],
         },
       });
+    });
+
+    it('should preserve table grants on db-bound table internals', () => {
+      const grants = setGrants([
+        {
+          to: 'reporting_user',
+          privileges: ['SELECT'],
+        },
+      ]);
+
+      const local = orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+        },
+        {
+          grants: GrantsTable,
+        },
+      );
+
+      expect(grants).toEqual([
+        {
+          to: 'reporting_user',
+          privileges: ['SELECT'],
+        },
+      ]);
+      expect(local.grants.internal.tableGrants).toEqual([
+        {
+          to: 'app_user',
+          grantedBy: 'owner',
+          privileges: ['SELECT'],
+          grantablePrivileges: ['UPDATE'],
+        },
+      ]);
+      expect(
+        (local.grants as unknown as { setGrants?: unknown }).setGrants,
+      ).toBe(undefined);
     });
   });
 
