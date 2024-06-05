@@ -172,7 +172,10 @@ const makeAst = (
       shapePKeys.length <= 1
         ? primaryKey
         : primaryKey
-        ? { ...primaryKey, columns: [...shapePKeys, ...primaryKey.columns] }
+        ? {
+            ...primaryKey,
+            columns: [...new Set([...shapePKeys, ...primaryKey.columns])],
+          }
         : { columns: shapePKeys },
     ...options,
     noPrimaryKey: options.noPrimaryKey ? 'ignore' : noPrimaryKey || 'error',

@@ -536,6 +536,8 @@ const astToQueries = (
     addPrimaryKeys.change ||
     addPrimaryKeys.columns.length > 1
   ) {
+    addPrimaryKeys.columns = [...new Set(addPrimaryKeys.columns)];
+
     alterTable.push(
       `ADD ${primaryKeyToSql(
         snakeCase

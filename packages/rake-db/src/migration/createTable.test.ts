@@ -718,6 +718,28 @@ describe('create and drop table', () => {
           `),
       );
     });
+
+    it('should should strip duplicated primary key columns', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action](
+            'table',
+            (t) => ({
+              a: t.integer().primaryKey(),
+              b: t.text().primaryKey(),
+            }),
+            (t) => t.primaryKey(['a', 'b']),
+          ),
+        () =>
+          expectSql(`
+            CREATE TABLE "table" (
+              "a" int4 NOT NULL,
+              "b" text NOT NULL,
+              PRIMARY KEY ("a", "b")
+            )
+          `),
+      );
+    });
   });
 
   describe('composite index', () => {

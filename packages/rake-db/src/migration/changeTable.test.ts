@@ -816,6 +816,31 @@ describe('changeTable', () => {
             `),
         );
       });
+
+      it('should should strip duplicated primary key columns', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              a: t[action](t.integer().primaryKey()),
+              b: t[action](t.text().primaryKey()),
+              ...t[action](t.primaryKey(['a', 'b'])),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ADD COLUMN "a" int4 NOT NULL,
+              ADD COLUMN "b" text NOT NULL,
+              ADD PRIMARY KEY ("a", "b")
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              DROP CONSTRAINT "table_pkey",
+              DROP COLUMN "a",
+              DROP COLUMN "b"
+            `),
+        );
+      });
     });
 
     describe('index', () => {
