@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.20.15
+
+### Patch Changes
+
+- 5557bf5: rake-db: strip duplicated primary keys from composite pkey SQL
+
 ## 2.20.14
 
 ### Patch Changes

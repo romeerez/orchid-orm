@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.28.3
+
+### Patch Changes
+
+- 5557bf5: rake-db: strip duplicated primary keys from composite pkey SQL
+- c7dc1ef: Fix code gen for multiple has and belongs to many relations
+- Updated dependencies [5557bf5]
+  - rake-db@2.20.15
+
 ## 1.28.2
 
 ### Patch Changes
