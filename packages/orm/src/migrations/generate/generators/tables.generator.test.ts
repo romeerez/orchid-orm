@@ -569,5 +569,124 @@ change(async (db) => {
 
       await expect(act()).rejects.toThrow('does not match');
     });
+
+    it('should handle multiple has and belongs to many', async () => {
+      class StaffTable extends BaseTable {
+        readonly table = 'user_staff';
+
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+
+        relations = {
+          roles: this.hasAndBelongsToMany(() => RoleTable, {
+            columns: ['id'],
+            references: ['staffId'],
+            through: {
+              table: 'user_staff_to_role',
+              columns: ['roleId'],
+              references: ['id'],
+            },
+          }),
+        };
+      }
+
+      class RoleTable extends BaseTable {
+        readonly table = 'user_staff_role';
+
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+
+        relations = {
+          staffs: this.hasAndBelongsToMany(() => StaffTable, {
+            columns: ['id'],
+            references: ['roleId'],
+            through: {
+              table: 'user_staff_to_role',
+              columns: ['staffId'],
+              references: ['id'],
+            },
+          }),
+
+          permissions: this.hasAndBelongsToMany(() => PermissionTable, {
+            columns: ['id'],
+            references: ['roleId'],
+            through: {
+              table: 'user_role_to_perm',
+              columns: ['permId'],
+              references: ['id'],
+            },
+          }),
+        };
+      }
+
+      class PermissionTable extends BaseTable {
+        readonly table = 'user_staff_perm';
+
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+
+        relations = {
+          roles: this.hasAndBelongsToMany(() => RoleTable, {
+            columns: ['id'],
+            references: ['permId'],
+            through: {
+              table: 'user_role_to_perm',
+              columns: ['roleId'],
+              references: ['id'],
+            },
+          }),
+        };
+      }
+
+      await arrange({
+        tables: [StaffTable, RoleTable, PermissionTable],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable('user_staff', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
+
+  await db.createTable(
+    'user_staff_to_role',
+    (t) => ({
+      staffId: t.integer(),
+      roleId: t.integer(),
+    }),
+    (t) => t.primaryKey(['staffId', 'roleId']),
+  );
+
+  await db.createTable('user_staff_role', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
+
+  await db.createTable(
+    'user_role_to_perm',
+    (t) => ({
+      roleId: t.integer(),
+      permId: t.integer(),
+    }),
+    (t) => t.primaryKey(['roleId', 'permId']),
+  );
+
+  await db.createTable('user_staff_perm', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
+});
+`);
+
+      assert.report(`${green('+ create table')} user_staff (1 column)
+${green('+ create table')} user_staff_to_role (2 columns)
+${green('+ create table')} user_staff_role (1 column)
+${green('+ create table')} user_role_to_perm (2 columns)
+${green('+ create table')} user_staff_perm (1 column)`);
+    });
   });
 });

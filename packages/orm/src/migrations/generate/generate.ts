@@ -425,18 +425,21 @@ const processHasAndBelongsToManyColumn = (
     column.data = {
       ...column.data,
       identity: undefined,
-      isPrimaryKey: undefined,
+      primaryKey: undefined,
       default: undefined,
     };
     shape[key] = column;
   }
   joinTable.shape = shape;
-  joinTable.internal.tableData = {
-    primaryKey: {
-      columns: Object.keys(shape),
+  joinTable.internal = {
+    ...joinTable.internal,
+    tableData: {
+      primaryKey: {
+        columns: Object.keys(shape),
+      },
     },
+    noPrimaryKey: false,
   };
-  joinTable.internal.noPrimaryKey = false;
 
   codeItems.tables.push(joinTable);
 
