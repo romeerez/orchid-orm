@@ -2,7 +2,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "author": "Roman K",
+  "author": "Roman Kushyn",
   "scripts": {
     "ai-sync": "tsx scripts/ai-sync.ts",
     "prepare": "lefthook install",

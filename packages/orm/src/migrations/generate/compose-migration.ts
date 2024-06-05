@@ -15,6 +15,7 @@ import { CodeItems } from './generate';
 import { RakeDbConfig } from 'rake-db';
 import { processRoles } from './generators/roles.generator';
 import { processDefaultPrivileges } from './generators/default-privilege.generator';
+import { processGrants } from './generators/grants.generator';
 
 export interface ComposeMigrationParams {
   structureToAstCtx: StructureToAstCtx;
@@ -49,6 +50,7 @@ export const composeMigration = async (
   await processRoles(ast, dbStructure, params);
 
   processDefaultPrivileges(ast, dbStructure, params);
+  processGrants(ast, dbStructure, params);
 
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 

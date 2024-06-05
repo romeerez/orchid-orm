@@ -34,6 +34,7 @@ export namespace Grant {
 
   export interface TableGrant {
     to: Role;
+    grantedBy?: string;
     tables: string[];
     privileges?: TablePrivilege[];
     grantablePrivileges?: TablePrivilege[];
@@ -41,6 +42,7 @@ export namespace Grant {
 
   export interface AllTablesInGrant {
     to: Role;
+    grantedBy?: string;
     allTablesIn: string[];
     privileges?: TablePrivilege[];
     grantablePrivileges?: TablePrivilege[];
@@ -48,6 +50,7 @@ export namespace Grant {
 
   export interface SequenceGrant {
     to: Role;
+    grantedBy?: string;
     sequences: string[];
     privileges?: SequencePrivilege[];
     grantablePrivileges?: SequencePrivilege[];
@@ -55,6 +58,7 @@ export namespace Grant {
 
   export interface AllSequencesInGrant {
     to: Role;
+    grantedBy?: string;
     allSequencesIn: string[];
     privileges?: SequencePrivilege[];
     grantablePrivileges?: SequencePrivilege[];
@@ -62,6 +66,7 @@ export namespace Grant {
 
   export interface RoutineGrant {
     to: Role;
+    grantedBy?: string;
     routines: string[];
     privileges?: RoutinePrivilege[];
     grantablePrivileges?: RoutinePrivilege[];
@@ -69,6 +74,7 @@ export namespace Grant {
 
   export interface AllRoutinesInGrant {
     to: Role;
+    grantedBy?: string;
     allRoutinesIn: string[];
     privileges?: RoutinePrivilege[];
     grantablePrivileges?: RoutinePrivilege[];
@@ -76,6 +82,7 @@ export namespace Grant {
 
   export interface TypeGrant {
     to: Role;
+    grantedBy?: string;
     types: string[];
     privileges?: TypePrivilege[];
     grantablePrivileges?: TypePrivilege[];
@@ -83,6 +90,7 @@ export namespace Grant {
 
   export interface DomainGrant {
     to: Role;
+    grantedBy?: string;
     domains: string[];
     privileges?: DomainPrivilege[];
     grantablePrivileges?: DomainPrivilege[];
@@ -90,6 +98,7 @@ export namespace Grant {
 
   export interface DatabaseGrant {
     to: Role;
+    grantedBy?: string;
     databases: string[];
     privileges?: DatabasePrivilege[];
     grantablePrivileges?: DatabasePrivilege[];

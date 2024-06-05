@@ -1,5 +1,5 @@
 import { changeGrant, GrantMigrationArg } from './grant';
-import { queryMock } from '../rake-db.test-utils';
+import { makeDb, queryMock } from '../rake-db.test-utils';
 
 const callGrant = async (up: boolean, params: GrantMigrationArg) => {
   const db = {
@@ -147,6 +147,18 @@ describe('changeGrant', () => {
       );
     });
 
+    it('should grant to PUBLIC without quoting it as a role', async () => {
+      await callGrant(true, {
+        to: 'PUBLIC',
+        tables: ['users'],
+        privileges: ['SELECT'],
+      });
+
+      expect(queryMock).toHaveBeenCalledWith(
+        'GRANT SELECT ON TABLE "users" TO PUBLIC',
+      );
+    });
+
     it('should grant with grantedBy', async () => {
       await callGrant(true, {
         to: 'app_user',
@@ -211,6 +223,33 @@ describe('changeGrant', () => {
   });
 
   describe('revoke', () => {
+    it('should revoke grantable privileges in up and grant them with grant option in down', async () => {
+      const db = makeDb();
+
+      db.up = true;
+      await db.revoke({
+        to: 'app_user',
+        tables: ['users'],
+        grantablePrivileges: ['SELECT'],
+      });
+
+      expect(queryMock).toHaveBeenCalledWith(
+        'REVOKE SELECT ON TABLE "users" FROM "app_user"',
+      );
+
+      queryMock.mockClear();
+      db.up = false;
+      await db.revoke({
+        to: 'app_user',
+        tables: ['users'],
+        grantablePrivileges: ['SELECT'],
+      });
+
+      expect(queryMock).toHaveBeenCalledWith(
+        'GRANT SELECT ON TABLE "users" TO "app_user" WITH GRANT OPTION',
+      );
+    });
+
     it('should revoke privileges on schemas', async () => {
       await callGrant(false, {
         to: 'app_user',
@@ -232,7 +271,7 @@ describe('changeGrant', () => {
       });
 
       expect(queryMock).toHaveBeenCalledWith(
-        'REVOKE EXECUTE ON ROUTINE "public"."reset_password(text)" FROM "PUBLIC" CASCADE',
+        'REVOKE EXECUTE ON ROUTINE "public"."reset_password(text)" FROM PUBLIC CASCADE',
       );
     });
 
@@ -245,11 +284,11 @@ describe('changeGrant', () => {
       });
 
       expect(queryMock).toHaveBeenCalledWith(
-        'REVOKE GRANT OPTION FOR UPDATE ON TABLE "project" FROM "readonly" RESTRICT',
+        'REVOKE UPDATE ON TABLE "project" FROM "readonly" RESTRICT',
       );
     });
 
-    it('should revoke grant option only', async () => {
+    it('should revoke grantable privileges', async () => {
       await callGrant(false, {
         to: 'app_user',
         tables: ['users'],
@@ -257,7 +296,7 @@ describe('changeGrant', () => {
       });
 
       expect(queryMock).toHaveBeenCalledWith(
-        'REVOKE GRANT OPTION FOR SELECT ON TABLE "users" FROM "app_user"',
+        'REVOKE SELECT ON TABLE "users" FROM "app_user"',
       );
     });
 
@@ -271,7 +310,7 @@ describe('changeGrant', () => {
 
       expect(queryMock).toHaveBeenCalledWith(
         `REVOKE SELECT, INSERT ON TABLE "users" FROM "app_user";
-REVOKE GRANT OPTION FOR UPDATE ON TABLE "users" FROM "app_user"`,
+REVOKE UPDATE ON TABLE "users" FROM "app_user"`,
       );
     });
   });
