@@ -276,6 +276,10 @@ export const astToGenerateItem = (
 
       break;
     }
+    case 'grant': {
+      // Grant AST is for manual migrations, not generated migrations
+      break;
+    }
     default:
       exhaustive(ast);
   }

@@ -801,6 +801,10 @@ const astEncoders: {
       '});',
     ];
   },
+  grant() {
+    // Grant AST is for manual migrations, not generated migrations
+    return 'throw new Error("Grant AST should not be generated in auto-migrations")';
+  },
 };
 
 const policyDefinitionToCode = (policy: RakeDbAst.PolicyDefinition): Code[] => {
