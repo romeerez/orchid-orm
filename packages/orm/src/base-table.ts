@@ -44,7 +44,7 @@ import {
   toSnakeCase,
   ColumnsShape,
   QuerySchema,
-  TableRlsConfig,
+  Rls,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -190,7 +190,7 @@ export interface ORMTableInput {
   // database table comment
   comment?: string;
   // row-level security table flags
-  rls?: TableRlsConfig;
+  rls?: Rls.TableConfig;
   // automatically create foreign keys for relations
   autoForeignKeys?: TableData.References.BaseOptions | boolean;
 }

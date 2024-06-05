@@ -17,7 +17,7 @@ import {
   NoPrimaryKeyOption,
   QueryData,
   ColumnSchemaConfig,
-  TableRlsConfig,
+  Rls,
 } from 'pqb/internal';
 import {
   ORMTableInput,
@@ -78,7 +78,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> =
 /**
  * Identity helper for table row-level security configuration.
  */
-export const defineRls = <T extends TableRlsConfig>(rls: T): T => rls;
+export const defineRls = <T extends Rls.TableConfig>(rls: T): T => rls;
 
 interface OrchidORMMethods {
   /**
