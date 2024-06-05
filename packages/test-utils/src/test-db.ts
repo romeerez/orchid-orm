@@ -587,12 +587,10 @@ export const TagData = {
 };
 
 const selectAllAs = (as: string, table: PickQueryQ) =>
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   `"${as}".${table.q.selectAllColumns!.join(`, "${as}".`)}`;
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export const UserSelectAll = db.user.q.selectAllColumns!.join(', ');
 export const UserSelectAllWithTable = selectAllAs('user', db.user);
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
 export const ProfileSelectAll = db.profile.q.selectAllColumns!.join(', ');
 export const ProfileSelectAllWithTable = selectAllAs('profile', db.profile);
