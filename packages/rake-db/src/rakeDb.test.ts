@@ -30,6 +30,7 @@ const options = [
 ];
 
 const config = {
+  columnTypes: {},
   basePath: '/rake-db',
   dbScript: '/rake-db/script.ts',
   commands: {},

@@ -216,6 +216,7 @@ const performQueryOnClient = (
 export class TransactionAdapter implements Adapter {
   pool: Pool;
   config: PoolConfig;
+  schema?: string;
 
   constructor(
     public adapter: Adapter,
@@ -224,6 +225,7 @@ export class TransactionAdapter implements Adapter {
   ) {
     this.pool = adapter.pool;
     this.config = adapter.config;
+    this.schema = adapter.schema;
   }
 
   connect(): Promise<PoolClient> {

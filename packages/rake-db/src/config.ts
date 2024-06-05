@@ -300,7 +300,7 @@ export const processRakeDbConfig = <
       ? (ct as (t: DefaultColumnTypes<ColumnSchemaConfig>) => CT)(
           defaultColumnTypes(defaultSchemaConfig),
         )
-      : ct) || defaultColumnTypes) as CT;
+      : ct) || defaultColumnTypes(defaultSchemaConfig)) as CT;
   }
 
   if (config.migrationId === 'serial') {

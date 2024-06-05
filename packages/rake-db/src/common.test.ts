@@ -5,7 +5,7 @@ import {
   joinWords,
   quoteWithSchema,
 } from './common';
-import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
+import { defaultSchemaConfig } from 'pqb';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { getCallerFilePath, getStackTrace } from 'orchid-core';
@@ -21,6 +21,7 @@ describe('common', () => {
   describe('processRakeDbConfig', () => {
     it('should return config with defaults', () => {
       const result = processRakeDbConfig({
+        columnTypes: {},
         basePath: __dirname,
         dbScript: 'dbScript.ts',
         migrationsPath: 'custom-path',
@@ -32,7 +33,7 @@ describe('common', () => {
       expect(result).toEqual({
         basePath: __dirname,
         dbScript: 'dbScript.ts',
-        columnTypes: makeColumnTypes,
+        columnTypes: {},
         migrationId: { serial: 4 },
         migrationsPath,
         recurrentPath: path.join(migrationsPath, 'recurrent'),
