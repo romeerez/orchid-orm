@@ -149,4 +149,31 @@ describe('rls', () => {
       ],
     });
   });
+
+  it('should require at least one permissive policy', () => {
+    // @ts-expect-error permit is required
+    defineRls({});
+
+    // @ts-expect-error permit is required
+    defineRls({
+      enable: true,
+    });
+
+    defineRls({
+      // @ts-expect-error permit must not be empty
+      permit: [],
+    });
+
+    // @ts-expect-error permit is required
+    defineRls({
+      restrict: [
+        {
+          name: 'user_select_restrict',
+          for: 'SELECT',
+          to: 'public',
+          using: BaseTable.sql`id > 0`,
+        },
+      ],
+    });
+  });
 });

@@ -10,7 +10,7 @@ import {
   GeneratorIgnore,
   RlsPolicy,
   RawSqlBase,
-  TableRlsConfig,
+  Rls,
 } from 'pqb/internal';
 import { CodeTable } from '../generate';
 import { TableExpression, compareSqlExpressions } from './generators.utils';
@@ -45,7 +45,7 @@ interface GeneratorIgnoreWithRls extends GeneratorIgnore {
 
 const defaultRlsState: TableRlsState = {
   enable: false,
-  force: false,
+  force: true,
 };
 
 const normalizeRlsFlag = (value: unknown, defaultValue: boolean): boolean => {
@@ -74,7 +74,7 @@ export const processTableRls = async (
   );
 
   for (const table of tables) {
-    const tableRls = table.internal.tableRls as TableRlsConfig | undefined;
+    const tableRls = table.internal.tableRls as Rls.TableConfig | undefined;
     if (!tableRls) continue;
 
     const schemaName = table.q.schema ?? currentSchema;
@@ -100,7 +100,7 @@ export const processTableRls = async (
     };
     const dbRls: TableRlsState = {
       enable: normalizeRlsFlag(dbTable?.rls?.enable, defaultRlsState.enable),
-      force: normalizeRlsFlag(dbTable?.rls?.force, defaultRlsState.force),
+      force: normalizeRlsFlag(dbTable?.rls?.force, false),
     };
     const policyExpressionComparisons: TableExpression[] = [];
     const policyChanges = collectPolicyChanges(
@@ -191,7 +191,7 @@ const toIgnoredPolicyMap = (
 };
 
 const normalizeCodePolicies = (
-  tableRls: TableRlsConfig,
+  tableRls: Rls.TableConfig,
   ignoredPolicyNames: Set<string> | undefined,
 ): NormalizedPolicy[] => {
   const result: NormalizedPolicy[] = [];

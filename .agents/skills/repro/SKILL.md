@@ -1,5 +1,6 @@
 ---
-description: Reproduce a reported issue by creating a failing test
+name: repro
+description: Use when the user prompts "repro".
 ---
 
 # Reproduce Issue Command

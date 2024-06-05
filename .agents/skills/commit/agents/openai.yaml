@@ -1,0 +1,3 @@
+interface:
+  display_name: "Commit"
+  short_description: "Commit archived Orchid ORM OpenSpec changes"

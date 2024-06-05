@@ -1,8 +1,6 @@
 ---
-name: 'Select Variant'
-description: Select a specific variant from changes/<feature-name>/<NUMBER-idea-name>/variants.md, write selected-variant.md, and optionally refine it in place
-category: Workflow
-tags: [variant, selection, refine, changes]
+name: select-variant
+description: Use when the user prompts "select variant".
 ---
 
 Read a specific idea's `variants.md`, choose exactly one variant, write `changes/<feature-name>/<NUMBER-idea-name>/selected-variant.md`, and optionally refine that saved file in place.
