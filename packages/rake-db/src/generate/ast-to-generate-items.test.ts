@@ -1273,4 +1273,77 @@ describe('astToGenerateItem', () => {
     assertKeys([]);
     assertDeps(['mySchema', 'mySchema.myTable']);
   });
+
+  it('should handle create policy', () => {
+    arrange({
+      type: 'policy',
+      action: 'create',
+      schema: 'mySchema',
+      table: 'myTable',
+      name: 'policyName',
+      as: 'PERMISSIVE',
+      for: 'SELECT',
+      to: ['app_user', 'app_admin'],
+      using: "tenant_id = current_setting('app.tenant_id', true)::uuid",
+    });
+
+    result = astToGenerateItem(config, item, 'public');
+
+    assertChange({ add: ['policy:policyName'] });
+    assertDeps([
+      'mySchema',
+      'mySchema.myTable',
+      'role:app_user',
+      'role:app_admin',
+    ]);
+  });
+
+  it('should handle drop policy', () => {
+    arrange({
+      type: 'policy',
+      action: 'drop',
+      schema: 'mySchema',
+      table: 'myTable',
+      name: 'policyName',
+      as: 'RESTRICTIVE',
+      for: 'INSERT',
+      to: ['app_user'],
+      withCheck: "tenant_id = current_setting('app.tenant_id', true)::uuid",
+    });
+
+    result = astToGenerateItem(config, item, 'public');
+
+    assertChange({ drop: ['policy:policyName'] });
+    assertDeps(['mySchema', 'mySchema.myTable', 'role:app_user']);
+  });
+
+  it('should handle policy rename in change action', () => {
+    arrange({
+      type: 'changePolicy',
+      schema: 'mySchema',
+      table: 'myTable',
+      name: 'policyName',
+      from: {
+        name: 'policyName',
+        to: ['app_user'],
+      },
+      to: {
+        name: 'policyNameV2',
+        to: ['app_admin'],
+      },
+    });
+
+    result = astToGenerateItem(config, item, 'public');
+
+    assertChange({
+      add: ['policy:policyNameV2'],
+      drop: ['policy:policyName'],
+    });
+    assertDeps([
+      'mySchema',
+      'mySchema.myTable',
+      'role:app_user',
+      'role:app_admin',
+    ]);
+  });
 });
