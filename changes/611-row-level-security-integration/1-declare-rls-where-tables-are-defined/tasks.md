@@ -80,7 +80,7 @@
 
 ## 7. docs
 
-- [ ] 7.1 Document RLS policies
+- [x] 7.1 Document RLS policies
   - 7.1.1 Add policy docs that show `permit` and `restrict`, raw SQL expressions, policy command rules, role targets, migration generation, and manual rake-db policy methods.
   - 7.1.2 Warn that users must define at least one applicable `permit` policy to allow access; restrictive policies alone still result in Postgres deny-all behavior.
   - 7.1.3 Keep roles and grants documented as separate requirements, and call out owner, superuser, `BYPASSRLS`, view, constraint-check, and `current_setting(..., true)` gotchas.
