@@ -289,11 +289,11 @@ export const processRakeDbConfig = <
     result.recurrentPath = path.resolve(result.basePath, result.recurrentPath);
   }
 
-  if ('baseTable' in config) {
-    const proto = config.baseTable?.prototype;
-    result.columnTypes = proto.types || defaultColumnTypes(defaultSchemaConfig);
-    if (proto.snakeCase) result.snakeCase = true;
-    if (proto.language) result.language = proto.language;
+  if ('baseTable' in config && config.baseTable) {
+    const { types, snakeCase, language } = config.baseTable.prototype;
+    result.columnTypes = types || defaultColumnTypes(defaultSchemaConfig);
+    if (snakeCase) result.snakeCase = true;
+    if (language) result.language = language;
   } else {
     const ct = 'columnTypes' in config && config.columnTypes;
     result.columnTypes = ((typeof ct === 'function'

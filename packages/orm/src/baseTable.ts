@@ -649,6 +649,7 @@ export function createBaseTable<
   applyMixins(base, [QueryHooks]);
 
   base.prototype.types = columnTypes as typeof base.prototype.types;
+  base.prototype.snakeCase = snakeCase;
 
   return base as unknown as BaseTableClass<SchemaConfig, ColumnTypes>;
 }

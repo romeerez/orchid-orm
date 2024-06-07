@@ -224,6 +224,14 @@ describe('baseTable', () => {
   });
 
   describe('snake case', () => {
+    it('should set snakeCase to BaseTable`s prototype', () => {
+      const BaseTable = createBaseTable({
+        snakeCase: true,
+      });
+
+      expect(BaseTable.prototype.snakeCase).toBe(true);
+    });
+
     it('should translate columns to snake case, use snake case timestamps, with respect to existing names', () => {
       const BaseTable = createBaseTable({
         snakeCase: true,
