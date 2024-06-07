@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.20.19
+
+### Patch Changes
+
+- b8589cd: rake-db: fix `snakeCase` in a table returned by `createTable` (#280)
+
 ## 2.20.18
 
 ### Patch Changes
