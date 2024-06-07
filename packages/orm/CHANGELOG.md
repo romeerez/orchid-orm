@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.28.8
+
+### Patch Changes
+
+- 16cbe41: `orWhere` fixes (#278)
+- Updated dependencies [16cbe41]
+  - pqb@0.31.4
+  - rake-db@2.20.20
+
 ## 1.28.7
 
 ### Patch Changes

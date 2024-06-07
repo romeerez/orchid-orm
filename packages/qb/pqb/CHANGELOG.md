@@ -1,5 +1,11 @@
 # pqb
 
+## 0.31.4
+
+### Patch Changes
+
+- 16cbe41: `orWhere` fixes (#278)
+
 ## 0.31.3
 
 ### Patch Changes
