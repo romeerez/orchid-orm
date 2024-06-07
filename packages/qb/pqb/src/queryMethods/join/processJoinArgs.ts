@@ -104,6 +104,9 @@ export const processJoinArgs = (
       if (query.or) {
         pushQueryArray(q, 'or', query.or);
       }
+      if (query.scopes) {
+        q.q.scopes = { ...q.q.scopes, ...query.scopes };
+      }
     }
 
     const joinedShapes = {

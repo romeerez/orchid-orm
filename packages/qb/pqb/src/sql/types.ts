@@ -18,7 +18,8 @@ export const checkIfASimpleQuery = (q: Query) => {
     (q.q.returnType && q.q.returnType !== 'all') ||
     q.internal.columnsForSelectAll ||
     q.q.and?.length ||
-    q.q.or?.length
+    q.q.or?.length ||
+    q.q.scopes
   )
     return false;
 

@@ -24,6 +24,10 @@ import { RelationsBase } from '../../relations';
 import { processJoinArgs } from '../join/processJoinArgs';
 import { ExpressionMethods } from '../expressions';
 import { _queryNone } from '../none';
+import {
+  getClonedQueryData,
+  resolveSubQueryCallback,
+} from '../../common/utils';
 
 /*
 Argument of `where`:
@@ -151,6 +155,23 @@ export interface QueryMetaHasWhere {
   };
 }
 
+const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
+  q: T,
+  args: WhereArgs<T>,
+) => {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (typeof arg === 'function') {
+      const qb = Object.create(q);
+      qb.q = getClonedQueryData((q as unknown as Query).q);
+      qb.q.and = qb.q.or = qb.q.scopes = undefined;
+      qb.q.isSubQuery = true;
+
+      args[i] = resolveSubQueryCallback(qb, arg as never) as never;
+    }
+  }
+};
+
 /**
  * Mutative {@link Where.where}
  */
@@ -158,6 +179,8 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
+  resolveCallbacksInArgs(q, args);
+
   return pushQueryArray(
     q as unknown as Query,
     'and',
@@ -183,6 +206,8 @@ export const _queryWhereNot = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereNotArgs<T>,
 ): WhereResult<T> => {
+  resolveCallbacksInArgs(q, args);
+
   return pushQueryValue(q as unknown as Query, 'and', {
     NOT: args,
   }) as never;
@@ -204,6 +229,8 @@ export const _queryOr = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
+  resolveCallbacksInArgs(q, args);
+
   return pushQueryArray(
     q as unknown as Query,
     'or',
@@ -218,10 +245,14 @@ export const _queryOrNot = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
+  resolveCallbacksInArgs(q, args);
+
   return pushQueryArray(
     q as unknown as Query,
     'or',
-    args.map((item) => [{ NOT: item }]),
+    args.map((item) => {
+      return [{ NOT: item }];
+    }),
   ) as unknown as WhereResult<T>;
 };
 

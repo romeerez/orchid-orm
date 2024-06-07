@@ -27,8 +27,9 @@ describe('ScopeMethods', () => {
         q.toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" = $1
-             OR "user"."name" = $2
+          WHERE (
+             "user"."name" = $1 OR "user"."name" = $2
+          )
         `,
         ['a', 'b'],
       );
@@ -56,10 +57,28 @@ describe('ScopeMethods', () => {
         User.toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."deletedAt" IS NULL
-             OR "user"."active" = $1
+          WHERE (
+            "user"."deletedAt" IS NULL OR "user"."active" = $1
+          )
         `,
         [true],
+      );
+    });
+
+    it('should be applied to the query correctly when the query uses `orWhere`', () => {
+      const q = User.where({ id: 1 }).orWhere({ id: 2 });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT * FROM "user"
+          WHERE (
+            "user"."id" = $1 OR "user"."id" = $2
+          ) AND (
+            "user"."deletedAt" IS NULL OR "user"."active" = $3
+          )
+        `,
+        [1, 2, true],
       );
     });
   });
@@ -77,14 +96,17 @@ describe('ScopeMethods', () => {
         q.toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."deletedAt" IS NULL
-            AND "user"."id" = $1
+          WHERE (
+            "user"."id" = $1
             AND "user"."id" = $2
-             OR "user"."active" = $3
-             OR "user"."id" = $4
-             OR "user"."id" = $5
+            OR "user"."id" = $3
+            OR "user"."id" = $4
+          ) AND (
+            "user"."deletedAt" IS NULL
+            OR "user"."active" = $5
+          )
         `,
-        [1, 3, true, 2, 4],
+        [1, 3, 2, 4, true],
       );
     });
 
@@ -100,7 +122,7 @@ describe('ScopeMethods', () => {
     it('should not mutate query data', () => {
       const q = User.all();
       q.unscope('default').scope('someScope');
-      expect(Object.keys(q.q.scopes)).toEqual(['default']);
+      expect(q.q.scopes && Object.keys(q.q.scopes)).toEqual(['default']);
     });
   });
 });

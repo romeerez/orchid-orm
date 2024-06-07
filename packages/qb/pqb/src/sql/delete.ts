@@ -59,7 +59,7 @@ export const pushDeleteSql = (
   pushWhereStatementSql(ctx, table, query, quotedAs);
 
   if (conditions) {
-    if (query.and?.length || query.or?.length) {
+    if (query.and?.length || query.or?.length || query.scopes) {
       ctx.sql.push('AND', conditions);
     } else {
       ctx.sql.push('WHERE', conditions);

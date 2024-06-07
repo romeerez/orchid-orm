@@ -586,8 +586,8 @@ describe('baseTable', () => {
         q.toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."active" = $1
-            AND "user"."id" > $2
+          WHERE ("user"."active" = $1)
+            AND ("user"."id" > $2)
         `,
         [true, 0],
       );
@@ -611,7 +611,7 @@ describe('baseTable', () => {
       expectSql(
         local.user.toSQL(),
         `
-          SELECT * FROM "user" WHERE "user"."deletedAt" IS NULL
+          SELECT * FROM "user" WHERE ("user"."deletedAt" IS NULL)
         `,
       );
 

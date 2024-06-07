@@ -53,31 +53,38 @@ export const testWhere = (
       expectSql(
         buildSql((q) => q.where({ [pkey]: 1, [nullable]: null })),
         `
-            ${startSql} ${pkeySql} = $1 AND ${nullableSql} IS NULL
-          `,
+          ${startSql} ${pkeySql} = $1 AND ${nullableSql} IS NULL
+        `,
         [1],
       );
     });
 
     it('should accept sub query', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }, (q) =>
-              q.where({ OR: [{ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }] }),
-            ),
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }, (q) =>
+            q.where({ OR: [{ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }] }),
           ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }, (q) =>
-              q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
-            ),
-          ),
-        ],
+        ),
         `
-              ${startSql} ${pkeySql} = $1 AND (
-                ${pkeySql} = $2 OR ${pkeySql} = $3 AND ${textSql} = $4
-              )
-            `,
+          ${startSql} ${pkeySql} = $1 AND ((
+            ${pkeySql} = $2 OR ${pkeySql} = $3 AND ${textSql} = $4
+          ))
+        `,
+        [1, 2, 3, 'n'],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }, (q) =>
+            q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
+          ),
+        ),
+        `
+          ${startSql} ${pkeySql} = $1 AND (
+            ${pkeySql} = $2 OR ${pkeySql} = $3 AND ${textSql} = $4
+          )
+        `,
         [1, 2, 3, 'n'],
       );
     });
@@ -86,8 +93,8 @@ export const testWhere = (
       expectSql(
         buildSql((q) => q.where({ [pkey]: { gt: 20 } })),
         `
-              ${startSql} ${pkeySql} > $1
-            `,
+          ${startSql} ${pkeySql} > $1
+        `,
         [20],
       );
     });
@@ -96,9 +103,9 @@ export const testWhere = (
       expectSql(
         buildSql((q) => q.where({ [pkey]: { in: columnsOf.select(pkey) } })),
         `
-              ${startSql}
-              ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-            `,
+          ${startSql}
+          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+        `,
       );
     });
 
@@ -106,9 +113,9 @@ export const testWhere = (
       expectSql(
         buildSql((q) => q.where({ [pkey]: { in: testDb.sql`(1, 2, 3)` } })),
         `
-              ${startSql}
-              ${pkeySql} IN (1, 2, 3)
-            `,
+          ${startSql}
+          ${pkeySql} IN (1, 2, 3)
+        `,
       );
     });
 
@@ -116,8 +123,8 @@ export const testWhere = (
       expectSql(
         buildSql((q) => q.where({ [pkey]: testDb.sql`1 + 2` })),
         `
-              ${startSql} ${pkeySql} = 1 + 2
-            `,
+          ${startSql} ${pkeySql} = 1 + 2
+        `,
       );
     });
 
@@ -125,8 +132,8 @@ export const testWhere = (
       expectSql(
         buildSql((q) => q.whereSql`column = ${123}`),
         `
-              ${startSql} (column = $1)
-            `,
+          ${startSql} (column = $1)
+        `,
         [123],
       );
     });
@@ -140,40 +147,48 @@ export const testWhere = (
           buildSql((q) => q.whereNot({ [pkey]: 1, [nullable]: null })),
         ],
         `
-            ${startSql}
-            NOT (${pkeySql} = $1 AND ${nullableSql} IS NULL)
-          `,
+          ${startSql}
+          NOT (${pkeySql} = $1 AND ${nullableSql} IS NULL)
+        `,
         [1],
       );
     });
 
     it('should accept sub query', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              NOT: [
-                { [pkey]: 1 },
-                q.where({ OR: [{ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }] }),
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.whereNot((q) =>
-              q
-                .where({ [pkey]: 1 })
-                .where((q) =>
-                  q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
-                ),
-            ),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            NOT: [
+              { [pkey]: 1 },
+              q.where({ OR: [{ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }] }),
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            NOT (${pkeySql} = $1 AND (
-              ${pkeySql} = $2 OR ${pkeySql} = $3 AND ${textSql} = $4
-            ))
-          `,
+          ${startSql}
+          NOT (${pkeySql} = $1 AND ((
+            ${pkeySql} = $2 OR ${pkeySql} = $3 AND ${textSql} = $4
+          )))
+        `,
+        [1, 2, 3, 'n'],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.whereNot((q) =>
+            q
+              .where({ [pkey]: 1 })
+              .where((q) =>
+                q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
+              ),
+          ),
+        ),
+        `
+          ${startSql}
+          NOT (${pkeySql} = $1 AND (
+            ${pkeySql} = $2 OR ${pkeySql} = $3 AND ${textSql} = $4
+          ))
+        `,
         [1, 2, 3, 'n'],
       );
     });
@@ -203,9 +218,9 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+        `,
       );
     });
 
@@ -220,9 +235,9 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            NOT ${pkeySql} IN (1, 2, 3)
-          `,
+          ${startSql}
+          NOT ${pkeySql} IN (1, 2, 3)
+        `,
       );
     });
 
@@ -233,8 +248,8 @@ export const testWhere = (
           buildSql((q) => q.whereNot({ [pkey]: testDb.sql`1 + 2` })),
         ],
         `
-            ${startSql} NOT ${pkeySql} = 1 + 2
-          `,
+          ${startSql} NOT ${pkeySql} = 1 + 2
+        `,
       );
     });
 
@@ -260,8 +275,8 @@ export const testWhere = (
       expectSql(
         buildSql((q) => q.whereNotSql`column = ${123}`),
         `
-              ${startSql} NOT (column = $1)
-            `,
+          ${startSql} NOT (column = $1)
+        `,
         [123],
       );
     });
@@ -270,65 +285,79 @@ export const testWhere = (
   describe('or', () => {
     it('should join conditions with or', () => {
       expectSql(
-        [
-          buildSql((q) => q.where({ OR: [{ [pkey]: 1 }, { [text]: 'ko' }] })),
-          buildSql((q) => q.orWhere({ [pkey]: 1 }, { [text]: 'ko' })),
-        ],
+        buildSql((q) => q.where({ OR: [{ [pkey]: 1 }, { [text]: 'ko' }] })),
         `
-            ${startSql}
-            ${pkeySql} = $1 OR ${textSql} = $2
-          `,
+          ${startSql}
+          (${pkeySql} = $1 OR ${textSql} = $2)
+        `,
+        [1, 'ko'],
+      );
+
+      expectSql(
+        buildSql((q) => q.orWhere({ [pkey]: 1 }, { [text]: 'ko' })),
+        `
+          ${startSql}
+          ${pkeySql} = $1 OR ${textSql} = $2
+        `,
         [1, 'ko'],
       );
     });
 
     it('should handle sub queries', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }),
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.orWhere({ [pkey]: 1 }, (q) =>
-              q.where({ [pkey]: 2 }).where({ [text]: 'n' }),
-            ),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }),
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1 OR (${pkeySql} = $2 AND ${textSql} = $3)
-          `,
+          ${startSql}
+          (${pkeySql} = $1 OR (${pkeySql} = $2 AND ${textSql} = $3))
+        `,
+        [1, 2, 'n'],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.orWhere({ [pkey]: 1 }, (q) =>
+            q.where({ [pkey]: 2 }).where({ [text]: 'n' }),
+          ),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1 OR (${pkeySql} = $2 AND ${textSql} = $3)
+        `,
         [1, 2, 'n'],
       );
     });
 
     it('should accept raw sql', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: testDb.sql`1 + 2` },
-                { [text]: testDb.sql`2 + 3` },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.orWhere(
-              { [pkey]: testDb.sql`1 + 2` },
-              { [text]: testDb.sql`2 + 3` },
-            ),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [{ [pkey]: testDb.sql`1 + 2` }, { [text]: testDb.sql`2 + 3` }],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = 1 + 2 OR ${textSql} = 2 + 3
-          `,
+          ${startSql}
+          (${pkeySql} = 1 + 2 OR ${textSql} = 2 + 3)
+        `,
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.orWhere(
+            { [pkey]: testDb.sql`1 + 2` },
+            { [text]: testDb.sql`2 + 3` },
+          ),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = 1 + 2 OR ${textSql} = 2 + 3
+        `,
       );
     });
   });
@@ -336,72 +365,89 @@ export const testWhere = (
   describe('orWhereNot', () => {
     it('should join conditions with or', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [{ NOT: { [pkey]: 1 } }, { NOT: { [text]: 'ko' } }],
-            }),
-          ),
-          buildSql((q) => q.orWhereNot({ [pkey]: 1 }, { [text]: 'ko' })),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [{ NOT: { [pkey]: 1 } }, { NOT: { [text]: 'ko' } }],
+          }),
+        ),
         `
-            ${startSql}
-            NOT ${pkeySql} = $1 OR NOT ${textSql} = $2
-          `,
+          ${startSql}
+          (NOT ${pkeySql} = $1 OR NOT ${textSql} = $2)
+        `,
+        [1, 'ko'],
+      );
+
+      expectSql(
+        buildSql((q) => q.orWhereNot({ [pkey]: 1 }, { [text]: 'ko' })),
+        `
+          ${startSql}
+          NOT ${pkeySql} = $1 OR NOT ${textSql} = $2
+        `,
         [1, 'ko'],
       );
     });
 
     it('should handle sub queries', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { NOT: { [pkey]: 1 } },
-                { NOT: columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }) },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.orWhereNot(
-              {
-                [pkey]: 1,
-              },
-              (q) => q.where({ [pkey]: 2 }).where({ [text]: 'n' }),
-            ),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { NOT: { [pkey]: 1 } },
+              { NOT: columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }) },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            NOT ${pkeySql} = $1 OR NOT (${pkeySql} = $2 AND ${textSql} = $3)
-          `,
+          ${startSql}
+          (NOT ${pkeySql} = $1 OR NOT (${pkeySql} = $2 AND ${textSql} = $3))
+        `,
+        [1, 2, 'n'],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.orWhereNot(
+            {
+              [pkey]: 1,
+            },
+            (q) => q.where({ [pkey]: 2 }).where({ [text]: 'n' }),
+          ),
+        ),
+        `
+          ${startSql}
+          NOT ${pkeySql} = $1 OR NOT (${pkeySql} = $2 AND ${textSql} = $3)
+        `,
         [1, 2, 'n'],
       );
     });
 
     it('should accept raw sql', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { NOT: { [pkey]: testDb.sql`1 + 2` } },
-                { NOT: { [text]: testDb.sql`2 + 3` } },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.orWhereNot(
-              { [pkey]: testDb.sql`1 + 2` },
-              { [text]: testDb.sql`2 + 3` },
-            ),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { NOT: { [pkey]: testDb.sql`1 + 2` } },
+              { NOT: { [text]: testDb.sql`2 + 3` } },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            NOT ${pkeySql} = 1 + 2 OR NOT ${textSql} = 2 + 3
-          `,
+          ${startSql}
+          (NOT ${pkeySql} = 1 + 2 OR NOT ${textSql} = 2 + 3)
+        `,
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.orWhereNot(
+            { [pkey]: testDb.sql`1 + 2` },
+            { [text]: testDb.sql`2 + 3` },
+          ),
+        ),
+        `
+          ${startSql}
+          NOT ${pkeySql} = 1 + 2 OR NOT ${textSql} = 2 + 3
+        `,
       );
     });
   });
@@ -416,9 +462,9 @@ export const testWhere = (
           buildSql((q) => q.whereIn(pkey, [1, 2, 3])),
         ],
         `
-            ${startSql}
-            ${pkeySql} IN ($1, $2, $3)
-          `,
+          ${startSql}
+          ${pkeySql} IN ($1, $2, $3)
+        `,
         [1, 2, 3],
       );
     });
@@ -442,10 +488,10 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            ${pkeySql} IN ($1, $2, $3)
-              AND ${textSql} IN ($4, $5, $6)
-          `,
+          ${startSql}
+          ${pkeySql} IN ($1, $2, $3)
+            AND ${textSql} IN ($4, $5, $6)
+        `,
         [1, 2, 3, 'a', 'b', 'c'],
       );
     });
@@ -461,9 +507,9 @@ export const testWhere = (
           buildSql((q) => q.whereIn(pkey, testDb.sql`(1, 2, 3)`)),
         ],
         `
-            ${startSql}
-            ${pkeySql} IN (1, 2, 3)
-          `,
+          ${startSql}
+          ${pkeySql} IN (1, 2, 3)
+        `,
       );
 
       expectSql(
@@ -484,10 +530,10 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            ${pkeySql} IN (1, 2, 3)
-              AND ${textSql} IN ('a', 'b', 'c')
-          `,
+          ${startSql}
+          ${pkeySql} IN (1, 2, 3)
+            AND ${textSql} IN ('a', 'b', 'c')
+        `,
       );
     });
 
@@ -502,9 +548,9 @@ export const testWhere = (
           buildSql((q) => q.whereIn(pkey, columnsOf.select(pkey))),
         ],
         `
-            ${startSql}
-            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+        `,
       );
 
       expectSql(
@@ -525,10 +571,10 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-              AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
+        `,
       );
     });
 
@@ -547,9 +593,9 @@ export const testWhere = (
             buildSql((q) => q.whereIn([pkey], [[1], [2]])),
           ],
           `
-              ${startSql}
-              ${pkeySql} IN ($1, $2)
-            `,
+            ${startSql}
+            ${pkeySql} IN ($1, $2)
+          `,
           [1, 2],
         );
       });
@@ -579,9 +625,9 @@ export const testWhere = (
             ),
           ],
           `
-              ${startSql}
-              (${pkeySql}, ${textSql}) IN (($1, $2), ($3, $4))
-            `,
+            ${startSql}
+            (${pkeySql}, ${textSql}) IN (($1, $2), ($3, $4))
+          `,
           [1, 'a', 2, 'b'],
         );
       });
@@ -602,9 +648,9 @@ export const testWhere = (
             ),
           ],
           `
-              ${startSql}
-              (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b'))
-            `,
+            ${startSql}
+            (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b'))
+          `,
         );
       });
 
@@ -624,10 +670,10 @@ export const testWhere = (
             ),
           ],
           `
-              ${startSql}
-              (${pkeySql}, ${textSql})
-                 IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}")
-            `,
+            ${startSql}
+            (${pkeySql}, ${textSql})
+               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}")
+          `,
         );
       });
     });
@@ -636,76 +682,95 @@ export const testWhere = (
   describe('orWhereIn', () => {
     it('should handle (column, array)', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                { IN: { columns: [pkey], values: [[1, 2, 3]] } },
-              ],
-            }),
-          ),
-          buildSql((q) => q.where({ [pkey]: 1 }).orWhereIn(pkey, [1, 2, 3])),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              { IN: { columns: [pkey], values: [[1, 2, 3]] } },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1 OR ${pkeySql} IN ($2, $3, $4)
-          `,
+          ${startSql}
+          (${pkeySql} = $1 OR ${pkeySql} IN ($2, $3, $4))
+        `,
+        [1, 1, 2, 3],
+      );
+
+      expectSql(
+        buildSql((q) => q.where({ [pkey]: 1 }).orWhereIn(pkey, [1, 2, 3])),
+        `
+          ${startSql}
+          ${pkeySql} = $1 OR ${pkeySql} IN ($2, $3, $4)
+        `,
         [1, 1, 2, 3],
       );
     });
 
     it('should handle object of columns and arrays', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                {
-                  IN: [
-                    { columns: [pkey], values: [[1, 2, 3]] },
-                    { columns: [text], values: [['a', 'b', 'c']] },
-                  ],
-                },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereIn({
-              [pkey]: [1, 2, 3],
-              [text]: ['a', 'b', 'c'],
-            }),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              {
+                IN: [
+                  { columns: [pkey], values: [[1, 2, 3]] },
+                  { columns: [text], values: [['a', 'b', 'c']] },
+                ],
+              },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1
-              OR ${pkeySql} IN ($2, $3, $4) AND ${textSql} IN ($5, $6, $7)
-          `,
+          ${startSql}
+          (${pkeySql} = $1
+            OR ${pkeySql} IN ($2, $3, $4) AND ${textSql} IN ($5, $6, $7))
+        `,
+        [1, 1, 2, 3, 'a', 'b', 'c'],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereIn({
+            [pkey]: [1, 2, 3],
+            [text]: ['a', 'b', 'c'],
+          }),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1
+            OR ${pkeySql} IN ($2, $3, $4) AND ${textSql} IN ($5, $6, $7)
+        `,
         [1, 1, 2, 3, 'a', 'b', 'c'],
       );
     });
 
     it('should handle raw query', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                { IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` } },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereIn({ [pkey]: testDb.sql`(1, 2, 3)` }),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              { IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` } },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1 OR ${pkeySql} IN (1, 2, 3)
-          `,
+          ${startSql}
+          (${pkeySql} = $1 OR ${pkeySql} IN (1, 2, 3))
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereIn({ [pkey]: testDb.sql`(1, 2, 3)` }),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1 OR ${pkeySql} IN (1, 2, 3)
+        `,
         [1],
       );
 
@@ -724,76 +789,99 @@ export const testWhere = (
               ],
             }),
           ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereIn({
-              [pkey]: testDb.sql`(1, 2, 3)`,
-              [text]: testDb.sql`('a', 'b', 'c')`,
-            }),
-          ),
         ],
         `
-            ${startSql}
-            ${pkeySql} = $1
-               OR ${pkeySql} IN (1, 2, 3)
-              AND ${textSql} IN ('a', 'b', 'c')
-          `,
+          ${startSql}
+          (${pkeySql} = $1
+             OR ${pkeySql} IN (1, 2, 3)
+            AND ${textSql} IN ('a', 'b', 'c'))
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereIn({
+            [pkey]: testDb.sql`(1, 2, 3)`,
+            [text]: testDb.sql`('a', 'b', 'c')`,
+          }),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1
+             OR ${pkeySql} IN (1, 2, 3)
+            AND ${textSql} IN ('a', 'b', 'c')
+        `,
         [1],
       );
     });
 
     it('should handle sub query', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                { IN: { columns: [pkey], values: columnsOf.select(pkey) } },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q
-              .where({ [pkey]: 1 })
-              .orWhereIn({ [pkey]: columnsOf.select(pkey) }),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              { IN: { columns: [pkey], values: columnsOf.select(pkey) } },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1
-               OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          (${pkeySql} = $1
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}"))
+        `,
         [1],
       );
 
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                {
-                  IN: [
-                    { columns: [pkey], values: columnsOf.select(pkey) },
-                    { columns: [text], values: columnsOf.select(text) },
-                  ],
-                },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereIn({
-              [pkey]: columnsOf.select(pkey),
-              [text]: columnsOf.select(text),
-            }),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereIn({ [pkey]: columnsOf.select(pkey) }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1
-               OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-              AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          ${pkeySql} = $1
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              {
+                IN: [
+                  { columns: [pkey], values: columnsOf.select(pkey) },
+                  { columns: [text], values: columnsOf.select(text) },
+                ],
+              },
+            ],
+          }),
+        ),
+        `
+          ${startSql}
+          (${pkeySql} = $1
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}"))
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereIn({
+            [pkey]: columnsOf.select(pkey),
+            [text]: columnsOf.select(text),
+          }),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}")
+        `,
         [1],
       );
     });
@@ -801,101 +889,123 @@ export const testWhere = (
     describe('tuple', () => {
       it('should handle values', () => {
         expectSql(
-          [
-            buildSql((q) =>
-              q.where({
-                OR: [
-                  { [pkey]: 1 },
-                  {
-                    IN: {
-                      columns: [pkey, text],
-                      values: [
-                        [1, 'a'],
-                        [2, 'b'],
-                      ],
-                    },
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { [pkey]: 1 },
+                {
+                  IN: {
+                    columns: [pkey, text],
+                    values: [
+                      [1, 'a'],
+                      [2, 'b'],
+                    ],
                   },
-                ],
-              }),
-            ),
-            buildSql((q) =>
-              q.where({ [pkey]: 1 }).orWhereIn(
-                [pkey, text],
-                [
-                  [1, 'a'],
-                  [2, 'b'],
-                ],
-              ),
-            ),
-          ],
+                },
+              ],
+            }),
+          ),
           `
-              ${startSql}
-              ${pkeySql} = $1
-                 OR (${pkeySql}, ${textSql}) IN (($2, $3), ($4, $5))
-            `,
+            ${startSql}
+            (${pkeySql} = $1
+               OR (${pkeySql}, ${textSql}) IN (($2, $3), ($4, $5)))
+          `,
+          [1, 1, 'a', 2, 'b'],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.where({ [pkey]: 1 }).orWhereIn(
+              [pkey, text],
+              [
+                [1, 'a'],
+                [2, 'b'],
+              ],
+            ),
+          ),
+          `
+            ${startSql}
+            ${pkeySql} = $1
+               OR (${pkeySql}, ${textSql}) IN (($2, $3), ($4, $5))
+          `,
           [1, 1, 'a', 2, 'b'],
         );
       });
 
       it('should handle raw query', () => {
         expectSql(
-          [
-            buildSql((q) =>
-              q.where({
-                OR: [
-                  { [pkey]: 1 },
-                  {
-                    IN: {
-                      columns: [pkey, text],
-                      values: testDb.sql`((1, 'a'), (2, 'b'))`,
-                    },
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { [pkey]: 1 },
+                {
+                  IN: {
+                    columns: [pkey, text],
+                    values: testDb.sql`((1, 'a'), (2, 'b'))`,
                   },
-                ],
-              }),
-            ),
-            buildSql((q) =>
-              q
-                .where({ [pkey]: 1 })
-                .orWhereIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
-            ),
-          ],
+                },
+              ],
+            }),
+          ),
           `
-              ${startSql}
-              ${pkeySql} = $1
-                 OR (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b'))
-            `,
+            ${startSql}
+            (${pkeySql} = $1
+               OR (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b')))
+          `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q
+              .where({ [pkey]: 1 })
+              .orWhereIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
+          ),
+          `
+            ${startSql}
+            ${pkeySql} = $1
+               OR (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b'))
+          `,
           [1],
         );
       });
 
       it('should handle sub query', () => {
         expectSql(
-          [
-            buildSql((q) =>
-              q.where({
-                OR: [
-                  { [pkey]: 1 },
-                  {
-                    IN: {
-                      columns: [pkey, text],
-                      values: columnsOf.select(pkey, text),
-                    },
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { [pkey]: 1 },
+                {
+                  IN: {
+                    columns: [pkey, text],
+                    values: columnsOf.select(pkey, text),
                   },
-                ],
-              }),
-            ),
-            buildSql((q) =>
-              q
-                .where({ [pkey]: 1 })
-                .orWhereIn([pkey, text], columnsOf.select(pkey, text)),
-            ),
-          ],
+                },
+              ],
+            }),
+          ),
           `
-              ${startSql}
-              ${pkeySql} = $1
-                 OR (${pkeySql}, ${textSql})
-                 IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}")
-            `,
+            ${startSql}
+            (${pkeySql} = $1
+               OR (${pkeySql}, ${textSql})
+               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}"))
+          `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q
+              .where({ [pkey]: 1 })
+              .orWhereIn([pkey, text], columnsOf.select(pkey, text)),
+          ),
+          `
+            ${startSql}
+            ${pkeySql} = $1
+               OR (${pkeySql}, ${textSql})
+               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}")
+          `,
           [1],
         );
       });
@@ -964,9 +1074,9 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            NOT ${pkeySql} IN (1, 2, 3)
-          `,
+          ${startSql}
+          NOT ${pkeySql} IN (1, 2, 3)
+        `,
       );
 
       expectSql(
@@ -989,9 +1099,9 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            NOT (${pkeySql} IN (1, 2, 3) AND ${textSql} IN ('a', 'b', 'c'))
-          `,
+          ${startSql}
+          NOT (${pkeySql} IN (1, 2, 3) AND ${textSql} IN ('a', 'b', 'c'))
+        `,
       );
     });
 
@@ -1010,9 +1120,9 @@ export const testWhere = (
           ),
         ],
         `
-            ${startSql}
-            NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+        `,
       );
 
       expectSql(
@@ -1072,9 +1182,9 @@ export const testWhere = (
             ),
           ],
           `
-              ${startSql}
-              NOT (${pkeySql}, ${textSql}) IN (($1, $2), ($3, $4))
-            `,
+            ${startSql}
+            NOT (${pkeySql}, ${textSql}) IN (($1, $2), ($3, $4))
+          `,
           [1, 'a', 2, 'b'],
         );
       });
@@ -1133,54 +1243,69 @@ export const testWhere = (
   describe('orWhereNotIn', () => {
     it('should handle (column, array)', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                { NOT: { IN: { columns: [pkey], values: [[1, 2, 3]] } } },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: [1, 2, 3],
-            }),
-          ),
-        ],
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              { NOT: { IN: { columns: [pkey], values: [[1, 2, 3]] } } },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1 OR NOT ${pkeySql} IN ($2, $3, $4)
-          `,
+          ${startSql}
+          (${pkeySql} = $1 OR NOT ${pkeySql} IN ($2, $3, $4))
+        `,
+        [1, 1, 2, 3],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereNotIn({
+            [pkey]: [1, 2, 3],
+          }),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1 OR NOT ${pkeySql} IN ($2, $3, $4)
+        `,
         [1, 1, 2, 3],
       );
     });
 
     it('should handle object of columns and arrays', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                {
-                  NOT: {
-                    IN: [
-                      { columns: [pkey], values: [[1, 2, 3]] },
-                      { columns: [text], values: [['a', 'b', 'c']] },
-                    ],
-                  },
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              {
+                NOT: {
+                  IN: [
+                    { columns: [pkey], values: [[1, 2, 3]] },
+                    { columns: [text], values: [['a', 'b', 'c']] },
+                  ],
                 },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: [1, 2, 3],
-              [text]: ['a', 'b', 'c'],
-            }),
-          ),
-        ],
+              },
+            ],
+          }),
+        ),
+        `
+          ${startSql}
+          (${pkeySql} = $1 OR NOT (
+            ${pkeySql} IN ($2, $3, $4)
+            AND ${textSql} IN ($5, $6, $7)
+          ))
+        `,
+        [1, 1, 2, 3, 'a', 'b', 'c'],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereNotIn({
+            [pkey]: [1, 2, 3],
+            [text]: ['a', 'b', 'c'],
+          }),
+        ),
         `
           ${startSql}
           ${pkeySql} = $1 OR NOT (
@@ -1194,59 +1319,74 @@ export const testWhere = (
 
     it('should handle raw query', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                {
-                  NOT: {
-                    IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
-                  },
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              {
+                NOT: {
+                  IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
                 },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: testDb.sql`(1, 2, 3)`,
-            }),
-          ),
-        ],
+              },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1 OR NOT ${pkeySql} IN (1, 2, 3)
-          `,
+          ${startSql}
+          (${pkeySql} = $1 OR NOT ${pkeySql} IN (1, 2, 3))
+        `,
         [1],
       );
 
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                {
-                  NOT: {
-                    IN: [
-                      { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
-                      {
-                        columns: [text],
-                        values: testDb.sql`('a', 'b', 'c')`,
-                      },
-                    ],
-                  },
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereNotIn({
+            [pkey]: testDb.sql`(1, 2, 3)`,
+          }),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1 OR NOT ${pkeySql} IN (1, 2, 3)
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              {
+                NOT: {
+                  IN: [
+                    { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
+                    {
+                      columns: [text],
+                      values: testDb.sql`('a', 'b', 'c')`,
+                    },
+                  ],
                 },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: testDb.sql`(1, 2, 3)`,
-              [text]: testDb.sql`('a', 'b', 'c')`,
-            }),
-          ),
-        ],
+              },
+            ],
+          }),
+        ),
+        `
+          ${startSql}
+          (${pkeySql} = $1 OR NOT (
+            ${pkeySql} IN (1, 2, 3)
+            AND ${textSql} IN ('a', 'b', 'c')
+          ))
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereNotIn({
+            [pkey]: testDb.sql`(1, 2, 3)`,
+            [text]: testDb.sql`('a', 'b', 'c')`,
+          }),
+        ),
         `
           ${startSql}
           ${pkeySql} = $1 OR NOT (
@@ -1260,57 +1400,73 @@ export const testWhere = (
 
     it('should handle sub query', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                {
-                  NOT: {
-                    IN: { columns: [pkey], values: columnsOf.select(pkey) },
-                  },
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              {
+                NOT: {
+                  IN: { columns: [pkey], values: columnsOf.select(pkey) },
                 },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: columnsOf.select(pkey),
-            }),
-          ),
-        ],
+              },
+            ],
+          }),
+        ),
         `
-            ${startSql}
-            ${pkeySql} = $1
-               OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
-          `,
+          ${startSql}
+          (${pkeySql} = $1
+             OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}"))
+        `,
         [1],
       );
 
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { [pkey]: 1 },
-                {
-                  NOT: {
-                    IN: [
-                      { columns: [pkey], values: columnsOf.select(pkey) },
-                      { columns: [text], values: columnsOf.select(text) },
-                    ],
-                  },
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereNotIn({
+            [pkey]: columnsOf.select(pkey),
+          }),
+        ),
+        `
+          ${startSql}
+          ${pkeySql} = $1
+             OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({
+            OR: [
+              { [pkey]: 1 },
+              {
+                NOT: {
+                  IN: [
+                    { columns: [pkey], values: columnsOf.select(pkey) },
+                    { columns: [text], values: columnsOf.select(text) },
+                  ],
                 },
-              ],
-            }),
-          ),
-          buildSql((q) =>
-            q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: columnsOf.select(pkey),
-              [text]: columnsOf.select(text),
-            }),
-          ),
-        ],
+              },
+            ],
+          }),
+        ),
+        `
+          ${startSql}
+          (${pkeySql} = $1 OR NOT (
+            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM "${columnsOf.table}")
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM "${columnsOf.table}"))
+          )
+        `,
+        [1],
+      );
+
+      expectSql(
+        buildSql((q) =>
+          q.where({ [pkey]: 1 }).orWhereNotIn({
+            [pkey]: columnsOf.select(pkey),
+            [text]: columnsOf.select(text),
+          }),
+        ),
         `
           ${startSql}
           ${pkeySql} = $1 OR NOT (
@@ -1325,107 +1481,129 @@ export const testWhere = (
     describe('tuple', () => {
       it('should handle values', () => {
         expectSql(
-          [
-            buildSql((q) =>
-              q.where({
-                OR: [
-                  { [pkey]: 1 },
-                  {
-                    NOT: {
-                      IN: {
-                        columns: [pkey, text],
-                        values: [
-                          [1, 'a'],
-                          [2, 'b'],
-                        ],
-                      },
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { [pkey]: 1 },
+                {
+                  NOT: {
+                    IN: {
+                      columns: [pkey, text],
+                      values: [
+                        [1, 'a'],
+                        [2, 'b'],
+                      ],
                     },
                   },
-                ],
-              }),
-            ),
-            buildSql((q) =>
-              q.where({ [pkey]: 1 }).orWhereNotIn(
-                [pkey, text],
-                [
-                  [1, 'a'],
-                  [2, 'b'],
-                ],
-              ),
-            ),
-          ],
+                },
+              ],
+            }),
+          ),
           `
-              ${startSql}
-              ${pkeySql} = $1
-                 OR NOT (${pkeySql}, ${textSql}) IN (($2, $3), ($4, $5))
-            `,
+            ${startSql}
+            (${pkeySql} = $1
+               OR NOT (${pkeySql}, ${textSql}) IN (($2, $3), ($4, $5)))
+          `,
+          [1, 1, 'a', 2, 'b'],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.where({ [pkey]: 1 }).orWhereNotIn(
+              [pkey, text],
+              [
+                [1, 'a'],
+                [2, 'b'],
+              ],
+            ),
+          ),
+          `
+            ${startSql}
+            ${pkeySql} = $1
+               OR NOT (${pkeySql}, ${textSql}) IN (($2, $3), ($4, $5))
+          `,
           [1, 1, 'a', 2, 'b'],
         );
       });
 
       it('should handle raw query', () => {
         expectSql(
-          [
-            buildSql((q) =>
-              q.where({
-                OR: [
-                  { [pkey]: 1 },
-                  {
-                    NOT: {
-                      IN: {
-                        columns: [pkey, text],
-                        values: testDb.sql`((1, 'a'), (2, 'b'))`,
-                      },
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { [pkey]: 1 },
+                {
+                  NOT: {
+                    IN: {
+                      columns: [pkey, text],
+                      values: testDb.sql`((1, 'a'), (2, 'b'))`,
                     },
                   },
-                ],
-              }),
-            ),
-            buildSql((q) =>
-              q
-                .where({ [pkey]: 1 })
-                .orWhereNotIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
-            ),
-          ],
+                },
+              ],
+            }),
+          ),
           `
-              ${startSql}
-              ${pkeySql} = $1
-                 OR NOT (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b'))
-            `,
+            ${startSql}
+            (${pkeySql} = $1
+               OR NOT (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b')))
+          `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q
+              .where({ [pkey]: 1 })
+              .orWhereNotIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
+          ),
+          `
+            ${startSql}
+            ${pkeySql} = $1
+               OR NOT (${pkeySql}, ${textSql}) IN ((1, 'a'), (2, 'b'))
+          `,
           [1],
         );
       });
 
       it('should handle sub query', () => {
         expectSql(
-          [
-            buildSql((q) =>
-              q.where({
-                OR: [
-                  { [pkey]: 1 },
-                  {
-                    NOT: {
-                      IN: {
-                        columns: [pkey, text],
-                        values: columnsOf.select(pkey, text),
-                      },
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { [pkey]: 1 },
+                {
+                  NOT: {
+                    IN: {
+                      columns: [pkey, text],
+                      values: columnsOf.select(pkey, text),
                     },
                   },
-                ],
-              }),
-            ),
-            buildSql((q) =>
-              q
-                .where({ [pkey]: 1 })
-                .orWhereNotIn([pkey, text], columnsOf.select(pkey, text)),
-            ),
-          ],
+                },
+              ],
+            }),
+          ),
           `
               ${startSql}
-              ${pkeySql} = $1
+              (${pkeySql} = $1
                  OR NOT (${pkeySql}, ${textSql})
-                   IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}")
+                   IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}"))
             `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q
+              .where({ [pkey]: 1 })
+              .orWhereNotIn([pkey, text], columnsOf.select(pkey, text)),
+          ),
+          `
+            ${startSql}
+            ${pkeySql} = $1
+               OR NOT (${pkeySql}, ${textSql})
+                 IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM "${columnsOf.table}")
+          `,
           [1],
         );
       });

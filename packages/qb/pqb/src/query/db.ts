@@ -416,15 +416,13 @@ export class Db<
       for (const key in options.scopes) {
         const q = options.scopes[key](this).q as SelectQueryData;
 
-        const s: Partial<SelectQueryData> = {};
-        if (q.and) s.and = q.and;
-        if (q.or) s.or = q.or;
-
-        (scopes as RecordUnknown)[key] = s;
+        (scopes as RecordUnknown)[key] = {
+          and: q.and,
+          or: q.or,
+        };
       }
 
       if (scopes.default) {
-        Object.assign(this.q, scopes.default);
         this.q.scopes = { default: scopes.default };
       }
     }

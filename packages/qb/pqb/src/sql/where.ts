@@ -13,19 +13,14 @@ import {
   simpleColumnToSQL,
   simpleExistingColumnToSQL,
 } from './common';
-import {
-  getClonedQueryData,
-  getQueryAs,
-  joinSubQuery,
-  resolveSubQueryCallback,
-} from '../common/utils';
+import { getQueryAs, joinSubQuery } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
   CommonQueryData,
   JoinedShapes,
   PickQueryDataShapeAndJoinedShapes,
-  QueryData,
+  QueryScopeData,
 } from './data';
 import {
   addValue,
@@ -43,6 +38,7 @@ interface QueryDataForWhere {
   or?: CommonQueryData['or'];
   shape: CommonQueryData['shape'];
   joinedShapes?: CommonQueryData['joinedShapes'];
+  scopes?: { [K: string]: QueryScopeData };
 }
 
 interface QueryDataWithLanguage extends QueryDataForWhere {
@@ -76,6 +72,31 @@ export const pushWhereToSql = (
 };
 
 export const whereToSql = (
+  ctx: ToSQLCtx,
+  table: ToSQLQuery,
+  query: QueryDataForWhere,
+  quotedAs?: string,
+  parens?: boolean,
+): string | undefined => {
+  if (query.scopes) {
+    let sql = andOrToSql(ctx, table, query, quotedAs, true);
+
+    const data = Object.create(query);
+    for (const key in query.scopes) {
+      const scope = query.scopes[key];
+      data.and = scope.and;
+      data.or = scope.or;
+      const scopeSql = andOrToSql(ctx, table, data, quotedAs, true);
+      if (scopeSql) sql = sql ? sql + ' AND ' + scopeSql : scopeSql;
+    }
+
+    return sql;
+  }
+
+  return andOrToSql(ctx, table, query, quotedAs, parens);
+};
+
+const andOrToSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: QueryDataForWhere,
@@ -121,44 +142,21 @@ const processWhere = (
   data: WhereItem,
   quotedAs?: string,
 ) => {
-  if (typeof data === 'function') {
-    const qb = Object.create(table);
-    qb.q = getClonedQueryData(query as QueryData);
-    qb.q.and = qb.q.or = undefined;
-    qb.q.isSubQuery = true;
-
-    const res = resolveSubQueryCallback(qb, data as never);
-    if (isExpression(res)) {
-      ands.push(`(${res.toSQL(ctx, quotedAs)})`);
-    } else {
-      if (res.q.expr) {
-        const q = joinSubQuery(table, res as Query);
-        q.q.select = [res.q.expr as Expression];
-        ands.push(`(${makeSQL(q as Query, ctx).text})`);
-      } else {
-        pushWhereToSql(
-          ands,
-          ctx,
-          res as Query,
-          (res as Query).q,
-          quotedAs,
-          true,
-        );
-      }
-    }
-    return;
-  }
-
   if ('prototype' in data || 'baseQuery' in data) {
     const query = data as Query;
-    const sql = whereToSql(
-      ctx,
-      query,
-      query.q,
-      query.table && `"${query.table}"`,
-    );
-    if (sql) {
-      ands.push(`(${sql})`);
+    if (query.q.expr) {
+      const q = joinSubQuery(table, query);
+      q.q.select = [query.q.expr];
+      ands.push(`(${makeSQL(q as Query, ctx).text})`);
+    } else {
+      pushWhereToSql(
+        ands,
+        ctx,
+        query,
+        query.q,
+        query.table && `"${query.table}"`,
+        true,
+      );
     }
     return;
   }
@@ -178,9 +176,9 @@ const processWhere = (
     } else if (key === 'OR') {
       const arr = (value as MaybeArray<WhereItem>[]).map(toArray);
       ands.push(
-        arr
+        `(${arr
           .map((and) => processAnds(and, ctx, table, query, quotedAs))
-          .join(' OR '),
+          .join(' OR ')})`,
       );
     } else if (key === 'NOT') {
       const arr = toArray(value as MaybeArray<WhereItem>);

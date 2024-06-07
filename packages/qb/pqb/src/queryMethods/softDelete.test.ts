@@ -7,7 +7,7 @@ describe('softDelete', () => {
       UserSoftDelete.toSQL(),
       `
           SELECT * FROM "user"
-          WHERE "user"."deletedAt" IS NULL
+          WHERE ("user"."deletedAt" IS NULL)
         `,
     );
   });
@@ -28,7 +28,7 @@ describe('softDelete', () => {
       `
         UPDATE "user"
            SET "deletedAt" = now()
-         WHERE "user"."deletedAt" IS NULL
+         WHERE ("user"."deletedAt" IS NULL)
       `,
     );
   });

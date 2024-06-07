@@ -169,6 +169,22 @@ describe('where sub query', () => {
       [10, 'a', 'b', 'c'],
     );
   });
+
+  it('should handle sub-query when using `get`', async () => {
+    // previously the where callback was resolved in SQL composing phase, and the `q` had an expression metadata,
+    // which was turning the sub-where into a sub-query
+    const q = User.where((q) => q.where({ id: 1 })).get('id');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" FROM "user"
+        WHERE ("user"."id" = $1)
+        LIMIT 1
+      `,
+      [1],
+    );
+  });
 });
 
 describe('empty whereIn', () => {
@@ -191,5 +207,68 @@ describe('empty whereIn', () => {
     });
 
     expect(res).toEqual([]);
+  });
+});
+
+describe('orWhere', () => {
+  it('should accept multiple args and it is equivalent to multiple calls', () => {
+    const q = User.where({
+      name: 'name',
+      age: 10,
+    }).orWhere({ id: 1, age: 20 }, { id: 2, age: 30 });
+
+    const q2 = User.where({
+      name: 'name',
+      age: 10,
+    })
+      .orWhere({ id: 1, age: 20 })
+      .orWhere({ id: 2, age: 30 });
+
+    const sql = q.toSQL();
+    expect(sql).toEqual(q2.toSQL());
+
+    expectSql(
+      sql,
+      `
+        SELECT * FROM "user"
+        WHERE "user"."name" = $1 AND "user"."age" = $2
+           OR "user"."id" = $3 AND "user"."age" = $4
+           OR "user"."id" = $5 AND "user"."age" = $6
+      `,
+      ['name', 10, 1, 20, 2, 30],
+    );
+  });
+
+  it('should wrap sub-wheres with parens', () => {
+    const q = User.where((q) => q.orWhere({ age: 20 }, { age: 30 }), {
+      name: 'name',
+      age: 10,
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT * FROM "user"
+        WHERE ("user"."age" = $1 OR "user"."age" = $2)
+          AND "user"."name" = $3 AND "user"."age" = $4
+      `,
+      [20, 30, 'name', 10],
+    );
+  });
+
+  it('should wrap `OR` keyword conditions with parens', () => {
+    const q = User.where({
+      OR: [{ id: 1 }, { id: 2 }],
+      age: 10,
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT * FROM "user"
+        WHERE ("user"."id" = $1 OR "user"."id" = $2) AND "user"."age" = $3
+      `,
+      [1, 2, 10],
+    );
   });
 });

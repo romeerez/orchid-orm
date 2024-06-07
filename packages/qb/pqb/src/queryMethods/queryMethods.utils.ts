@@ -2,7 +2,7 @@ import { Query, SetQueryTableAlias } from '../query/query';
 import { _queryAs } from './as';
 import { queryFrom } from './from';
 import { WrapQueryArg } from './queryMethods';
-import { emptyObject, PickQueryTableMetaResult } from 'orchid-core';
+import { PickQueryTableMetaResult } from 'orchid-core';
 
 export function queryWrap<
   T extends PickQueryTableMetaResult,
@@ -20,7 +20,6 @@ export function queryWrap<
  */
 export function cloneQueryBaseUnscoped(query: Query) {
   const q = query.baseQuery.clone();
-  q.q.or = q.q.and = undefined;
-  q.q.scopes = emptyObject;
+  q.q.or = q.q.and = q.q.scopes = undefined;
   return q;
 }

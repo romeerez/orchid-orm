@@ -157,7 +157,7 @@ export interface CommonQueryData {
    */
   operators?: BaseOperators;
   // Track the applied scopes, this is used when removing the scope from the query.
-  scopes: { [K: string]: QueryScopeData };
+  scopes?: { [K: string]: QueryScopeData };
   // to allow updating or deleting all records
   all?: true;
 

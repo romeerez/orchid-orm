@@ -1,7 +1,7 @@
 import { QueryBase } from '../query/queryBase';
 import { PickQueryMeta, QueryColumns, QueryMetaBase } from 'orchid-core';
-import { QueryScopes, SelectQueryData, WhereItem } from '../sql';
-import { pushQueryArray, setQueryObjectValue } from '../query/queryUtils';
+import { QueryScopes } from '../sql';
+import { setQueryObjectValue } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
 import { Query, SelectableFromShape } from '../query/query';
 
@@ -77,8 +77,7 @@ export class ScopeMethods {
     if (!q.q.scopes?.[scope as string]) {
       const s = (q.internal.scopes as QueryScopes)[scope as string];
 
-      if (s.and) pushQueryArray(q, 'and', s.and);
-      if (s.or) pushQueryArray(q, 'or', s.or);
+      if (!s) throw new Error(`Scope ${scope as string} is not defined`);
 
       setQueryObjectValue(q, 'scopes', scope as string, s);
     }
@@ -103,22 +102,13 @@ export class ScopeMethods {
     scope: keyof T['meta']['scopes'],
   ): T {
     const q = (this as unknown as Query).clone();
-    const data = q.q as SelectQueryData;
 
-    const s = q.q.scopes?.[scope as string];
-    if (s) {
-      const { and, or } = s;
-      if (and) {
-        data.and = (data.and as WhereItem[]).filter((x) => !and.includes(x));
-        if (!data.and.length) delete data.and;
+    if (q.q.scopes) {
+      delete q.q.scopes[scope as string];
+      for (const _ in q.q.scopes) {
+        return q as never;
       }
-
-      if (or) {
-        data.or = (data.or as WhereItem[][]).filter((x) => !or.includes(x));
-        if (!data.or.length) delete data.or;
-      }
-
-      delete (q.q.scopes as QueryScopes)[scope as string];
+      delete q.q.scopes;
     }
 
     return q as never;

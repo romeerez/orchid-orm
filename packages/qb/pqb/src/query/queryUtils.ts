@@ -78,7 +78,7 @@ export const setQueryObjectValue = <T extends { q: QueryData }>(
  * @param method - 'update' or 'delete'
  */
 export const throwIfNoWhere = (q: PickQueryQ, method: string): void => {
-  if (!q.q.or && !q.q.and && !q.q.all) {
+  if (!q.q.or && !q.q.and && !q.q.scopes && !q.q.all) {
     throw new OrchidOrmInternalError(
       q as Query,
       `Dangerous ${method} without conditions`,

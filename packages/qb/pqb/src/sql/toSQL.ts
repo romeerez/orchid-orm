@@ -160,7 +160,7 @@ export const makeSQL = (
       );
     }
 
-    if (query.and || query.or) {
+    if (query.and || query.or || query.scopes) {
       pushWhereStatementSql(ctx, table, query, quotedAs);
     }
 

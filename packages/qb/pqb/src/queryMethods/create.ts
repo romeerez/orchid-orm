@@ -505,6 +505,7 @@ const insert = (
 
   delete q.and;
   delete q.or;
+  delete q.scopes;
 
   q.type = 'insert';
   q.columns = columns;

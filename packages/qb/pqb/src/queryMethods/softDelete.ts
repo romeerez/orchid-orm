@@ -5,7 +5,6 @@ import {
   QueryMetaBase,
   RecordUnknown,
 } from 'orchid-core';
-import { pushQueryValue } from '../query/queryUtils';
 import { QueryScopes } from '../sql';
 import { Query } from '../query/query';
 import { RawSQL } from '../sql/rawSql';
@@ -41,7 +40,6 @@ export function enableSoftDelete(
   };
 
   (scopes as RecordUnknown).deleted = scope;
-  pushQueryValue(q, 'and', scope.and[0]);
   (q.q.scopes ??= {}).nonDeleted = scope;
 
   const _del = _softDelete(column);
