@@ -135,7 +135,7 @@ export const createTable = async <
         undefined,
         {
           noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
-          snakeCase: options.snakeCase,
+          snakeCase,
         },
       ) as unknown as Db<Table, Shape>);
     },
