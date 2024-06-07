@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.28.6
+
+### Patch Changes
+
+- 76a0838: Fix getting `snakeCase` from BaseTable in rake-db (#279)
+- Updated dependencies [76a0838]
+  - rake-db@2.20.18
+
 ## 1.28.5
 
 ### Patch Changes

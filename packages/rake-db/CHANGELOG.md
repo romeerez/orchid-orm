@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.20.18
+
+### Patch Changes
+
+- 76a0838: Fix getting `snakeCase` from BaseTable in rake-db (#279)
+
 ## 2.20.17
 
 ### Patch Changes
