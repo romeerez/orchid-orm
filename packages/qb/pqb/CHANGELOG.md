@@ -1,5 +1,11 @@
 # pqb
 
+## 0.31.7
+
+### Patch Changes
+
+- 9e3f1c9: Make `DO NOTHING` for `merge` when all columns are excluded (#282)
+
 ## 0.31.6
 
 ### Patch Changes
