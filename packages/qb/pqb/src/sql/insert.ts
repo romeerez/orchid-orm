@@ -157,20 +157,20 @@ export const pushInsertSql = (
       if (merge) {
         if (typeof merge === 'string') {
           const name = shape[merge]?.data.name || merge;
-          sql = `"${name}" = excluded."${name}"`;
+          sql = `DO UPDATE SET "${name}" = excluded."${name}"`;
         } else if ('except' in merge) {
           sql = mergeColumnsSql(columns, quotedColumns, target, merge.except);
         } else {
-          sql = merge.reduce((sql, item, i) => {
+          sql = `DO UPDATE SET ${merge.reduce((sql, item, i) => {
             const name = shape[item]?.data.name || item;
             return sql + (i ? ', ' : '') + `"${name}" = excluded."${name}"`;
-          }, '');
+          }, '')}`;
         }
       } else {
         sql = mergeColumnsSql(columns, quotedColumns, target);
       }
 
-      ctx.sql.push('DO UPDATE SET', sql);
+      ctx.sql.push(sql);
     } else if (query.onConflict.set) {
       let sql: string;
 
@@ -229,9 +229,11 @@ const mergeColumnsSql = (
     }
   }
 
-  return notExcluded
-    .map((column) => `${column} = excluded.${column}`)
-    .join(', ');
+  return notExcluded.length
+    ? `DO UPDATE SET ${notExcluded
+        .map((column) => `${column} = excluded.${column}`)
+        .join(', ')}`
+    : 'DO NOTHING';
 };
 
 const encodeRow = (

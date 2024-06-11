@@ -1384,6 +1384,23 @@ describe('create functions', () => {
         );
       });
 
+      it('should DO NOTHING if all columns are excluded', () => {
+        const q = User.insert({ name: 'name' } as never)
+          .onConflict('name')
+          .merge();
+
+        expectSql(
+          q.toSQL(),
+          `
+            INSERT INTO "user"("name")
+            VALUES ($1)
+            ON CONFLICT ("name")
+            DO NOTHING
+          `,
+          ['name'],
+        );
+      });
+
       it('should accept single column', () => {
         const q = User.all();
 
