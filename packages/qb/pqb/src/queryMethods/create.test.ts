@@ -1341,6 +1341,49 @@ describe('create functions', () => {
     });
 
     describe('merge', () => {
+      it(`should merge all columns except onConflict's column`, () => {
+        const q = User.insert(userData).onConflict('name').merge();
+
+        expectSql(
+          q.toSQL(),
+          `
+            INSERT INTO "user"("name", "password")
+            VALUES ($1, $2)
+            ON CONFLICT ("name")
+            DO UPDATE SET "password" = excluded."password"
+          `,
+          ['name', 'password'],
+        );
+      });
+
+      it(`should merge all columns except onConflict's multiple columns`, () => {
+        const table = testDb(
+          'table',
+          (t) => ({
+            id: t.identity(),
+            name: t.text(),
+            password: t.text(),
+          }),
+          (t) => t.primaryKey(['id', 'name']),
+        );
+
+        const q = table
+          .insert({ id: 1, name: 'name', password: 'password' })
+          .onConflict(['id', 'name'])
+          .merge();
+
+        expectSql(
+          q.toSQL(),
+          `
+            INSERT INTO "table"("id", "name", "password")
+            VALUES ($1, $2, $3)
+            ON CONFLICT ("id", "name")
+            DO UPDATE SET "password" = excluded."password"
+          `,
+          [1, 'name', 'password'],
+        );
+      });
+
       it('should accept single column', () => {
         const q = User.all();
 
@@ -1443,7 +1486,7 @@ describe('create functions', () => {
         );
       });
 
-      it('should merge all except specified, it is useful when the column has a runtime default', () => {
+      it('should merge all except specified and target, it is useful when the column has a runtime default', () => {
         const table = testDb(
           'table',
           (t) => ({
@@ -1467,9 +1510,7 @@ describe('create functions', () => {
             INSERT INTO "table"("name", "password", "hasDefault")
             VALUES ($1, $2, $3)
             ON CONFLICT ("id", "name")
-            DO UPDATE SET
-              "name" = excluded."name",
-              "password" = excluded."password"
+            DO UPDATE SET "password" = excluded."password"
           `,
           ['name', 'password', 'default'],
         );

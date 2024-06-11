@@ -11,11 +11,12 @@ import {
   emptyArray,
   Expression,
   isExpression,
-  toArray,
+  MaybeArray,
 } from 'orchid-core';
 import { joinSubQuery } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
+import { OnConflictTarget } from './types';
 
 // reuse array for the columns list
 const quotedColumns: string[] = [];
@@ -158,14 +159,7 @@ export const pushInsertSql = (
           const name = shape[merge]?.data.name || merge;
           sql = `"${name}" = excluded."${name}"`;
         } else if ('except' in merge) {
-          const notExcluded: string[] = [];
-          const except = toArray(merge.except);
-          for (let i = 0; i < columns.length; i++) {
-            if (!except.includes(columns[i])) {
-              notExcluded.push(quotedColumns[i]);
-            }
-          }
-          sql = mergeColumnsSql(notExcluded);
+          sql = mergeColumnsSql(columns, quotedColumns, target, merge.except);
         } else {
           sql = merge.reduce((sql, item, i) => {
             const name = shape[item]?.data.name || item;
@@ -173,7 +167,7 @@ export const pushInsertSql = (
           }, '');
         }
       } else {
-        sql = mergeColumnsSql(quotedColumns);
+        sql = mergeColumnsSql(columns, quotedColumns, target);
       }
 
       ctx.sql.push('DO UPDATE SET', sql);
@@ -206,8 +200,36 @@ export const pushInsertSql = (
   return pushReturningSql(ctx, q, query, quotedAs, query.afterCreateSelect);
 };
 
-const mergeColumnsSql = (quotedColumns: string[]): string => {
-  return quotedColumns
+const mergeColumnsSql = (
+  columns: string[],
+  quotedColumns: string[],
+  target: OnConflictTarget | undefined,
+  except?: MaybeArray<string>,
+): string => {
+  const notExcluded: string[] = [];
+
+  const exclude =
+    typeof target === 'string'
+      ? [target]
+      : Array.isArray(target)
+      ? [...target]
+      : [];
+
+  if (except) {
+    if (typeof except === 'string') {
+      exclude.push(except);
+    } else {
+      exclude.push(...except);
+    }
+  }
+
+  for (let i = 0; i < columns.length; i++) {
+    if (!exclude.includes(columns[i])) {
+      notExcluded.push(quotedColumns[i]);
+    }
+  }
+
+  return notExcluded
     .map((column) => `${column} = excluded.${column}`)
     .join(', ');
 };
