@@ -1,5 +1,11 @@
 # pqb
 
+## 0.31.5
+
+### Patch Changes
+
+- d5390af: Update order and group to not prefix column with table when the column was selected with an expression (#283)
+
 ## 0.31.4
 
 ### Patch Changes

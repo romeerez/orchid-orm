@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.20.21
+
+### Patch Changes
+
+- Updated dependencies [d5390af]
+  - pqb@0.31.5
+
 ## 2.20.20
 
 ### Patch Changes
