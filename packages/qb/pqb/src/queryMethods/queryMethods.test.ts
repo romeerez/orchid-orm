@@ -645,6 +645,18 @@ describe('queryMethods', () => {
         `,
       );
     });
+
+    it('should not prefix the column when it is customly selected', () => {
+      const q = User.select({ id: 'id' }).group('id');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id" "id" FROM "user"
+          GROUP BY "id"
+        `,
+      );
+    });
   });
 
   describe('window', () => {
@@ -830,6 +842,18 @@ describe('queryMethods', () => {
         arr: () => User.all(),
         // @ts-expect-error should disallow ordering by array
       }).order('arr');
+    });
+
+    it('should not prefix the column when it is customly selected', () => {
+      const q = User.select({ id: 'id' }).order('id');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id" "id" FROM "user"
+          ORDER BY "id" ASC
+        `,
+      );
     });
   });
 

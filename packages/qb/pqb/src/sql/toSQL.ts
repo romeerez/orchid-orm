@@ -1,5 +1,5 @@
 import { Query, queryTypeWithLimitOne } from '../query/query';
-import { columnToSql } from './common';
+import { maybeSelectedColumnToSql } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -168,7 +168,7 @@ export const makeSQL = (
       const group = query.group.map((item) =>
         isExpression(item)
           ? item.toSQL(ctx, quotedAs)
-          : columnToSql(ctx, table.q, table.q.shape, item as string, quotedAs),
+          : maybeSelectedColumnToSql(ctx, table.q, item as string, quotedAs),
       );
       sql.push(`GROUP BY ${group.join(', ')}`);
     }

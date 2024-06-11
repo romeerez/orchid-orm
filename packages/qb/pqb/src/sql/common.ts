@@ -52,35 +52,15 @@ export const columnToSql = (
 ) => {
   const index = column.indexOf('.');
   if (index !== -1) {
-    const table = column.slice(0, index);
-    const key = column.slice(index + 1);
-    if (key === '*') {
-      if (data.joinedShapes?.[table]) {
-        return select ? `row_to_json("${table}".*)` : `"${table}".r`;
-      }
-      return column;
-    }
-
-    const tableName = data.joinOverrides?.[table] || table;
-    const quoted = `"${table}"`;
-
-    const col = (
-      quoted === quotedAs ? shape[key] : data.joinedShapes?.[tableName]?.[key]
-    ) as ColumnTypeBase | undefined;
-
-    if (col) {
-      if (col.data.name) {
-        return `"${tableName}"."${col.data.name}"`;
-      }
-
-      if (col.data.computed) {
-        return `${col.data.computed.toSQL(ctx, quoted)}`;
-      }
-
-      return `"${tableName}"."${key}"`;
-    }
-
-    return `"${tableName}"."${key}"`;
+    return columnWithDotToSql(
+      ctx,
+      data,
+      shape,
+      column,
+      index,
+      quotedAs,
+      select,
+    );
   }
 
   if (!select && data.joinedShapes?.[column]) {
@@ -88,6 +68,84 @@ export const columnToSql = (
   }
 
   return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
+};
+
+/**
+ * in a case when ordering or grouping by a column which was selected as expression:
+ * ```ts
+ * table.select({ x: (q) => q.sum('x') }).group('x').order('x')
+ * ```
+ * the column must not be prefixed with a table name.
+ */
+export const maybeSelectedColumnToSql = (
+  ctx: ToSQLCtx,
+  data: QueryData,
+  column: string,
+  quotedAs?: string,
+) => {
+  const index = column.indexOf('.');
+  if (index !== -1) {
+    return columnWithDotToSql(ctx, data, data.shape, column, index, quotedAs);
+  } else {
+    if (data.joinedShapes?.[column]) {
+      return `"${column}".r`;
+    }
+
+    if (data.select) {
+      for (const s of data.select) {
+        if (typeof s === 'object' && 'selectAs' in s) {
+          if (column in s.selectAs) {
+            return simpleColumnToSQL(ctx, column, data.shape[column]);
+          }
+        }
+      }
+    }
+
+    return simpleColumnToSQL(ctx, column, data.shape[column], quotedAs);
+  }
+};
+
+const columnWithDotToSql = (
+  ctx: ToSQLCtx,
+  data: {
+    joinedShapes?: QueryData['joinedShapes'];
+    joinOverrides?: QueryData['joinOverrides'];
+  },
+  shape: QueryColumns,
+  column: string,
+  index: number,
+  quotedAs?: string,
+  select?: true,
+) => {
+  const table = column.slice(0, index);
+  const key = column.slice(index + 1);
+  if (key === '*') {
+    if (data.joinedShapes?.[table]) {
+      return select ? `row_to_json("${table}".*)` : `"${table}".r`;
+    }
+    return column;
+  }
+
+  const tableName = data.joinOverrides?.[table] || table;
+  const quoted = `"${table}"`;
+
+  const col = (
+    quoted === quotedAs ? shape[key] : data.joinedShapes?.[tableName]?.[key]
+  ) as ColumnTypeBase | undefined;
+
+  if (col) {
+    if (col.data.name) {
+      return `"${tableName}"."${col.data.name}"`;
+    }
+
+    if (col.data.computed) {
+      return `${col.data.computed.toSQL(ctx, quoted)}`;
+    }
+
+    return `"${tableName}"."${key}"`;
+  }
+
+  return `"${tableName}"."${key}"`;
 };
 
 export const columnToSqlWithAs = (

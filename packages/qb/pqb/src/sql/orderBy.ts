@@ -1,5 +1,5 @@
 import { OrderItem, OrderTsQueryConfig, SortDir } from './types';
-import { columnToSql } from './common';
+import { maybeSelectedColumnToSql } from './common';
 import { ToSQLCtx } from './toSQL';
 import { QueryData, SelectQueryData } from './data';
 import { addValue, emptyObject } from 'orchid-core';
@@ -62,7 +62,7 @@ const addOrder = (
     }) ${order.dir || 'DESC'}`;
   }
 
-  return `${columnToSql(ctx, data, data.shape, column, quotedAs)} ${
+  return `${maybeSelectedColumnToSql(ctx, data, column, quotedAs)} ${
     dir || 'ASC'
   }`;
 };
