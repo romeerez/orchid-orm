@@ -1,5 +1,11 @@
 # pqb
 
+## 0.31.6
+
+### Patch Changes
+
+- 8f06156: Exclude ON CONFLICT target from merge's UPDATE SET (#282)
+
 ## 0.31.5
 
 ### Patch Changes
