@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.15.6
+
+### Patch Changes
+
+- 61215ad: Auto-batch inserts when exceeding max binding params limit (#288)
+
 ## 0.15.5
 
 ### Patch Changes

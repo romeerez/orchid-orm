@@ -1,5 +1,13 @@
 # pqb
 
+## 0.31.8
+
+### Patch Changes
+
+- 61215ad: Auto-batch inserts when exceeding max binding params limit (#288)
+- Updated dependencies [61215ad]
+  - orchid-core@0.15.6
+
 ## 0.31.7
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.20.24
+
+### Patch Changes
+
+- 61215ad: Auto-batch inserts when exceeding max binding params limit (#288)
+- Updated dependencies [61215ad]
+  - pqb@0.31.8
+  - orchid-core@0.15.6
+
 ## 2.20.23
 
 ### Patch Changes
