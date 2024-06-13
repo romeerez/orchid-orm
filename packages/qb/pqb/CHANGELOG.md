@@ -1,5 +1,11 @@
 # pqb
 
+## 0.31.9
+
+### Patch Changes
+
+- d42bdb3: Fix inserting record with a raw SQL for a json column (#291)
+
 ## 0.31.8
 
 ### Patch Changes
