@@ -154,10 +154,8 @@ export class DynamicRawSQL<
 
 DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
 
-export function raw<T = unknown>(
-  ...args: StaticSQLArgs
-): RawSQL<QueryColumn<T>>;
-export function raw<T = unknown>(
+export function raw<T = never>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>>;
+export function raw<T = never>(
   ...args: [DynamicSQLArg]
 ): DynamicRawSQL<QueryColumn<T>>;
 export function raw(...args: SQLArgs) {

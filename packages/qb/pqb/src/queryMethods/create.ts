@@ -33,6 +33,7 @@ import {
   PickQueryUniqueProperties,
   QueryColumn,
   FnUnknownToUnknown,
+  isExpression,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { QueryBase } from '../query/queryBase';
@@ -408,7 +409,9 @@ const mapColumnValues = (
   data: RecordUnknown,
 ): unknown[] => {
   return columns.map((key) =>
-    encoders[key] ? encoders[key](data[key]) : data[key],
+    encoders[key] && !isExpression(data[key])
+      ? encoders[key](data[key])
+      : data[key],
   );
 };
 

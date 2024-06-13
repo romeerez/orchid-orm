@@ -570,6 +570,20 @@ describe('create functions', () => {
 
       expect(result).toBe(userData.name);
     });
+
+    it('should not encode value when it is an expression', () => {
+      // json column has an encoder, and it shouldn't run for a raw expression
+      const q = User.insert({ ...userData, data: raw`'{"key":"value"}'` });
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "user"("name", "password", "data")
+          VALUES ($1, $2, '{"key":"value"}')
+        `,
+        ['name', 'password'],
+      );
+    });
   });
 
   describe('createMany', () => {
