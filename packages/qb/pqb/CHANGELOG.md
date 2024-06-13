@@ -1,5 +1,11 @@
 # pqb
 
+## 0.32.0
+
+### Minor Changes
+
+- fb7fdf6: Don't JSON.stringify null values for JSON columns (#290)
+
 ## 0.31.9
 
 ### Patch Changes
