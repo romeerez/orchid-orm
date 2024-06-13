@@ -584,6 +584,19 @@ describe('create functions', () => {
         ['name', 'password'],
       );
     });
+
+    it('should treat null as a database NULL even for JSON column', () => {
+      const q = User.insert({ ...userData, data: null });
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "user"("name", "password", "data")
+          VALUES ($1, $2, $3)
+        `,
+        ['name', 'password', null],
+      );
+    });
   });
 
   describe('createMany', () => {

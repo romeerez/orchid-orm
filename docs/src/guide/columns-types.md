@@ -438,6 +438,21 @@ db.someTable.where({
 });
 ```
 
+When inserting or updating, the json column will use `JSON.stringify` to serialize data, except for when `null` is passed.
+
+```ts
+// `data` will be set to a database null, not JSON null:
+await db.post.create({ data: null });
+await db.post.find(1).update({ data: null });
+```
+
+To insert or update JSON null, provide SQL for this:
+
+```ts
+// 'null' is in single quotes
+await db.post.create({ data: (q) => q.sql`'null'` });
+```
+
 ## geometry
 
 Geometric types are not parsed and returned as strings as the database returns them.

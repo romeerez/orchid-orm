@@ -3,8 +3,10 @@ import { columnCode } from './code';
 import { Operators, OperatorsJson, OperatorsText } from './operators';
 import { Code, ColumnSchemaConfig, ColumnTypeSchemaArg } from 'orchid-core';
 
+const encodeFn = (x: unknown) => (x === null ? x : JSON.stringify(x));
+
 // skip adding the default `encode` function to code
-const toCodeSkip = { encodeFn: JSON.stringify };
+const toCodeSkip = { encodeFn };
 
 // Type of JSON column (jsonb).
 export class JSONColumn<
@@ -19,7 +21,7 @@ export class JSONColumn<
 }
 
 // Encode data of both types with JSON.stringify
-JSONColumn.prototype.encodeFn = JSON.stringify;
+JSONColumn.prototype.encodeFn = encodeFn;
 
 // JSON non-binary type, stored as a text in the database, so it doesn't have rich functionality.
 export class JSONTextColumn<

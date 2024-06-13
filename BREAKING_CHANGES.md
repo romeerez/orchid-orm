@@ -1,5 +1,9 @@
 # Breaking changes
 
+## orchid-orm 1.28.14
+
+`null` values for JSON columns are saved as is. Prior to now, nulls for JSON columns were stringified.
+
 ## orchid-orm 1.28.0
 
 #### with
