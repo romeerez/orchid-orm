@@ -12,6 +12,7 @@ import { queryJson } from '../queryMethods/json.utils';
 import { queryWrap } from '../queryMethods/queryMethods.utils';
 import { isQueryNone } from '../queryMethods/none';
 import { IntegerBaseColumn } from '../columns';
+import { getSqlText } from './utils';
 
 const jsonColumnOrMethodToSql = (
   ctx: ToSQLCtx,
@@ -272,7 +273,7 @@ const pushSubQuerySql = (
     `${coalesce(
       ctx,
       query,
-      `(${makeSQL(query, ctx).text})`,
+      `(${getSqlText(makeSQL(query, ctx))})`,
       quotedAs,
     )} "${as}"`,
   );

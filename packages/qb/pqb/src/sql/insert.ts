@@ -12,21 +12,26 @@ import {
   Expression,
   isExpression,
   MaybeArray,
+  pushOrNewArray,
+  SingleSqlItem,
+  Sql,
 } from 'orchid-core';
 import { joinSubQuery } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
 import { OnConflictTarget } from './types';
+import { getSqlText } from './utils';
+import { MAX_BINDING_PARAMS } from './constants';
 
 // reuse array for the columns list
 const quotedColumns: string[] = [];
 
-export const pushInsertSql = (
+export const makeInsertSql = (
   ctx: ToSQLCtx,
   q: ToSQLQuery,
   query: InsertQueryData,
   quotedAs: string,
-): QueryHookSelect | undefined => {
+): Sql => {
   const { columns, shape } = query;
   quotedColumns.length = columns.length;
   for (let i = 0, len = columns.length; i < len; i++) {
@@ -58,74 +63,12 @@ export const pushInsertSql = (
     }
   }
 
-  ctx.sql.push(`INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`);
+  ctx.sql.push(
+    `INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`,
+    null as never,
+  );
 
   const QueryClass = ctx.queryBuilder.constructor as unknown as Db;
-
-  if (query.kind === 'object') {
-    let sql = '';
-    for (let i = 0; i < (values as unknown[][]).length; i++) {
-      if (i) sql += ', ';
-      sql += `(${encodeRow(
-        ctx,
-        q,
-        QueryClass,
-        (values as unknown[][])[i],
-        runtimeDefaults,
-        quotedAs,
-      )})`;
-    }
-
-    ctx.sql.push(`VALUES ${sql}`);
-  } else if (query.kind === 'raw') {
-    if (isExpression(values)) {
-      let valuesSql = values.toSQL(ctx, quotedAs);
-
-      if (runtimeDefaults) {
-        valuesSql += `, ${runtimeDefaults
-          .map((fn) => addValue(ctx.values, fn()))
-          .join(', ')}`;
-      }
-
-      ctx.sql.push(`VALUES (${valuesSql})`);
-    } else {
-      let sql;
-
-      if (runtimeDefaults) {
-        const { values: v } = ctx;
-        sql = (values as Expression[])
-          .map(
-            (raw) =>
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              `(${raw.toSQL(ctx, quotedAs)}, ${runtimeDefaults!
-                .map((fn) => addValue(v, fn()))
-                .join(', ')})`,
-          )
-          .join(', ');
-      } else {
-        sql = (values as Expression[])
-          .map((raw) => `(${raw.toSQL(ctx, quotedAs)})`)
-          .join(', ');
-      }
-
-      ctx.sql.push(`VALUES ${sql}`);
-    }
-  } else {
-    const { from, values: v } = values as { from: Query; values?: unknown[][] };
-    const q = from.clone();
-
-    if (v) {
-      pushQueryValue(
-        q,
-        'select',
-        new RawSQL(
-          encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults, quotedAs),
-        ),
-      );
-    }
-
-    ctx.sql.push(makeSQL(q, { values: ctx.values }).text);
-  }
 
   if (query.onConflict) {
     ctx.sql.push('ON CONFLICT');
@@ -197,7 +140,135 @@ export const pushInsertSql = (
   }
 
   pushWhereStatementSql(ctx, q, query, quotedAs);
-  return pushReturningSql(ctx, q, query, quotedAs, query.afterCreateSelect);
+
+  const hookSelect = pushReturningSql(
+    ctx,
+    q,
+    query,
+    quotedAs,
+    query.afterCreateSelect,
+  );
+
+  if (query.kind === 'object') {
+    const valuesSql: string[] = [];
+    let ctxValues = ctx.values;
+    const restValuesLen = ctxValues.length;
+    let currentValuesLen = restValuesLen;
+    let batch: SingleSqlItem[] | undefined;
+
+    for (let i = 0; i < (values as unknown[][]).length; i++) {
+      const encodedRow = `(${encodeRow(
+        ctx,
+        ctxValues,
+        q,
+        QueryClass,
+        (values as unknown[][])[i],
+        runtimeDefaults,
+        quotedAs,
+      )})`;
+
+      if (ctxValues.length > MAX_BINDING_PARAMS) {
+        if (ctxValues.length - currentValuesLen > MAX_BINDING_PARAMS) {
+          throw new Error(
+            `Too many parameters for a single insert row, max is ${MAX_BINDING_PARAMS}`,
+          );
+        }
+
+        // save current batch
+        ctx.sql[1] = `VALUES ${valuesSql.join(',')}`;
+        ctxValues.length = currentValuesLen;
+        batch = pushOrNewArray(batch, {
+          text: ctx.sql.join(' '),
+          values: ctxValues,
+        });
+
+        // reset sql and values for the next batch, repeat the last cycle
+        ctxValues = ctx.values = [];
+        valuesSql.length = 0;
+        i--;
+      } else {
+        currentValuesLen = ctxValues.length;
+        valuesSql.push(encodedRow);
+      }
+    }
+
+    if (batch) {
+      ctx.sql[1] = `VALUES ${valuesSql.join(',')}`;
+      batch.push({
+        text: ctx.sql.join(' '),
+        values: ctxValues,
+      });
+
+      return {
+        hookSelect,
+        batch,
+      };
+    } else {
+      ctx.sql[1] = `VALUES ${valuesSql.join(', ')}`;
+    }
+  } else if (query.kind === 'raw') {
+    if (isExpression(values)) {
+      let valuesSql = values.toSQL(ctx, quotedAs);
+
+      if (runtimeDefaults) {
+        valuesSql += `, ${runtimeDefaults
+          .map((fn) => addValue(ctx.values, fn()))
+          .join(', ')}`;
+      }
+
+      ctx.sql[1] = `VALUES (${valuesSql})`;
+    } else {
+      let sql;
+
+      if (runtimeDefaults) {
+        const { values: v } = ctx;
+        sql = (values as Expression[])
+          .map(
+            (raw) =>
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              `(${raw.toSQL(ctx, quotedAs)}, ${runtimeDefaults!
+                .map((fn) => addValue(v, fn()))
+                .join(', ')})`,
+          )
+          .join(', ');
+      } else {
+        sql = (values as Expression[])
+          .map((raw) => `(${raw.toSQL(ctx, quotedAs)})`)
+          .join(', ');
+      }
+
+      ctx.sql[1] = `VALUES ${sql}`;
+    }
+  } else {
+    const { from, values: v } = values as { from: Query; values?: unknown[][] };
+    const q = from.clone();
+
+    if (v) {
+      pushQueryValue(
+        q,
+        'select',
+        new RawSQL(
+          encodeRow(
+            ctx,
+            ctx.values,
+            q,
+            QueryClass,
+            v[0],
+            runtimeDefaults,
+            quotedAs,
+          ),
+        ),
+      );
+    }
+
+    ctx.sql[1] = getSqlText(makeSQL(q, { values: ctx.values }));
+  }
+
+  return {
+    hookSelect,
+    text: ctx.sql.join(' '),
+    values: ctx.values,
+  };
 };
 
 const mergeColumnsSql = (
@@ -238,6 +309,7 @@ const mergeColumnsSql = (
 
 const encodeRow = (
   ctx: ToSQLCtx,
+  values: unknown[],
   q: ToSQLQuery,
   QueryClass: Db,
   row: unknown[],
@@ -249,16 +321,16 @@ const encodeRow = (
       if (value instanceof Expression) {
         return value.toSQL(ctx, quotedAs);
       } else if (value instanceof (QueryClass as never)) {
-        return `(${joinSubQuery(q, value as Query).toSQL(ctx).text})`;
+        return `(${getSqlText(joinSubQuery(q, value as Query).toSQL(ctx))})`;
       }
     }
 
-    return value === undefined ? 'DEFAULT' : addValue(ctx.values, value);
+    return value === undefined ? 'DEFAULT' : addValue(values, value);
   });
 
   if (runtimeDefaults) {
     for (const fn of runtimeDefaults) {
-      arr.push(addValue(ctx.values, fn()));
+      arr.push(addValue(values, fn()));
     }
   }
 

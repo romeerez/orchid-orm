@@ -1,12 +1,12 @@
 import { Query } from '../query/query';
 import { quote } from '../quote';
-import { Sql } from 'orchid-core';
+import { SingleSql } from 'orchid-core';
 
 export interface QueryLogObject {
   colors: boolean;
-  beforeQuery(sql: Sql): unknown;
-  afterQuery(sql: Sql, logData: unknown): void;
-  onError(error: Error, sql: Sql, logData: unknown): void;
+  beforeQuery(sql: SingleSql): unknown;
+  afterQuery(sql: SingleSql, logData: unknown): void;
+  onError(error: Error, sql: SingleSql, logData: unknown): void;
 }
 
 export interface QueryLogger {

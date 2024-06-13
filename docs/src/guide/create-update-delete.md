@@ -95,6 +95,19 @@ const manyRecords = await db.table.createMany([
 const createdCount = await db.table.insertMany([data, data, data]);
 ```
 
+Because of a limitation of Postgres protocol, queries having more than **65536** are going to fail in runtime.
+To solve this seamlessly, OrchidORM will automatically batch such queries, and wrap them into a transaction, unless they are already in a transaction.
+
+```ts
+// OK: executes 2 inserts wrapped into a transaction
+await db.table.createMany(
+  Array.from({ length: 65536 }, () => ({ text: 'text' })),
+);
+```
+
+However, this only works in the case shown above. This **won't** work if you're using the `createMany` in `with` statement,
+or if the insert is used as a sub-query in other query part.
+
 ### createRaw, insertRaw
 
 [//]: # 'has JSDoc'

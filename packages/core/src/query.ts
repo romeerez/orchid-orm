@@ -3,16 +3,28 @@ import { TransactionState } from './adapter';
 import { EmptyObject, FnUnknownToUnknown, RecordKeyTrue } from './utils';
 import { QueryColumn, QueryColumns } from './columns';
 
-// Output type of the `toSQL` method of query objects.
-// This will be passed to database adapter to perform query.
-export interface Sql {
+export interface SqlCommonOptions {
+  // additional columns to select for `after` hooks
+  hookSelect?: string[];
+}
+
+export interface SingleSqlItem {
   // SQL string
   text: string;
   // bind values passed along with SQL string
   values?: unknown[];
-  // additional columns to select for `after` hooks
-  hookSelect?: string[];
 }
+
+export interface SingleSql extends SingleSqlItem, SqlCommonOptions {}
+
+export interface BatchSql extends SqlCommonOptions {
+  // batch of sql queries, is used when there is too many binding params for insert
+  batch: SingleSql[];
+}
+
+// Output type of the `toSQL` method of query objects.
+// This will be passed to database adapter to perform query.
+export type Sql = SingleSql | BatchSql;
 
 // query metadata that is stored only on TS side, not available in runtime
 export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {

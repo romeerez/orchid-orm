@@ -7,6 +7,7 @@ import {
   QueryInput,
   QueryResultRow,
   setAdapterConnectRetry,
+  SingleSqlItem,
   Sql,
 } from 'orchid-core';
 
@@ -52,7 +53,7 @@ for (const key in types.builtins) {
 const returnArg: FnUnknownToUnknown = (arg) => arg;
 
 const rollbackSql = { text: 'ROLLBACK' };
-const commitSql: Sql = { text: 'COMMIT' };
+const commitSql: SingleSqlItem = { text: 'COMMIT' };
 
 export interface AdapterConfig
   extends AdapterConfigBase,
@@ -128,9 +129,9 @@ export class Adapter implements AdapterBase {
   }
 
   async transaction<Result>(
-    begin: Sql,
+    begin: SingleSqlItem,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
-    end: Sql = commitSql,
+    end: SingleSqlItem = commitSql,
   ): Promise<Result> {
     const client = await this.connect();
     try {

@@ -8,6 +8,7 @@ import {
   snakeData,
   SnakeRecord,
   snakeSelectAll,
+  Tag,
   UniqueTable,
   uniqueTableData,
   UniqueTableRecord,
@@ -18,6 +19,10 @@ import {
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { raw } from '../sql/rawSql';
+
+jest.mock('../sql/constants', () => ({
+  MAX_BINDING_PARAMS: 5,
+}));
 
 const RuntimeDefaultTable = testDb('user', (t) => ({
   id: t.serial().primaryKey(),
@@ -780,6 +785,51 @@ describe('create functions', () => {
 
       assertType<Awaited<typeof q>, string[]>();
     });
+
+    describe('auto-batching lots of value groups', () => {
+      it('should split large insert into batches', () => {
+        const q = Tag.insertMany(
+          Array.from({ length: 12 }, (_, i) => ({
+            tag: `${i}`,
+          })),
+        );
+
+        const sql = q.toSQL();
+        expect(sql).toEqual({
+          batch: [
+            {
+              text: `INSERT INTO "tag"("tag") VALUES ($1),($2),($3),($4),($5)`,
+              values: ['0', '1', '2', '3', '4'],
+            },
+            {
+              text: `INSERT INTO "tag"("tag") VALUES ($1),($2),($3),($4),($5)`,
+              values: ['5', '6', '7', '8', '9'],
+            },
+            {
+              text: `INSERT INTO "tag"("tag") VALUES ($1),($2)`,
+              values: ['10', '11'],
+            },
+          ],
+        });
+      });
+
+      it('should throw when too many values for single insert group', () => {
+        const q = User.insertMany([
+          {
+            id: 1,
+            name: 'name',
+            password: 'password',
+            picture: 'picture',
+            data: null,
+            age: 25,
+          },
+        ]);
+
+        expect(() => q.toSQL()).toThrow(
+          'Too many parameters for a single insert row',
+        );
+      });
+    });
   });
 
   describe('insertMany', () => {
@@ -1083,12 +1133,12 @@ describe('create functions', () => {
         query.toSQL(),
         `
             INSERT INTO "user"("name", "password")
-            VALUES ($1, $2)
+            VALUES ($2, $3)
             ON CONFLICT ("name") DO NOTHING
-            WHERE "user"."name" = $3
+            WHERE "user"."name" = $1
             RETURNING "user"."id"
           `,
-        ['name', 'password', 'where name'],
+        ['where name', 'name', 'password'],
       );
 
       expectQueryNotMutated(q);
@@ -1288,11 +1338,11 @@ describe('create functions', () => {
           query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
-            VALUES ($1, $2)
+            VALUES ($2, $3)
             ON CONFLICT ("name")
-            DO UPDATE SET "name" = $3
+            DO UPDATE SET "name" = $1
           `,
-          ['name', 'password', 'new name'],
+          ['new name', 'name', 'password'],
         );
 
         expectQueryNotMutated(q);
@@ -1308,11 +1358,11 @@ describe('create functions', () => {
           query.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
-            VALUES ($1, $2)
+            VALUES ($2, $3)
             ON CONFLICT ("snake_name")
-            DO UPDATE SET "snake_name" = $3
+            DO UPDATE SET "snake_name" = $1
           `,
-          [snakeData.snakeName, snakeData.tailLength, 'new name'],
+          ['new name', snakeData.snakeName, snakeData.tailLength],
         );
       });
 

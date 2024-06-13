@@ -1,0 +1,1 @@
+export const MAX_BINDING_PARAMS = 65536;

@@ -2,6 +2,7 @@ import { expect, test, afterAll } from 'bun:test';
 import { testDb } from 'test-utils';
 import { User } from './src/test-utils/test-utils';
 import { noop } from 'orchid-core';
+import { getSqlText } from './src';
 
 afterAll(() => testDb.close());
 
@@ -11,7 +12,7 @@ test('should handle nested transactions', async () => {
 
   const queries: string[] = [];
   db.q.log = table.q.log = {
-    afterQuery: (sql) => queries.push(sql.text),
+    afterQuery: (sql) => queries.push(getSqlText(sql)),
     colors: false,
     beforeQuery: noop,
     onError: noop,

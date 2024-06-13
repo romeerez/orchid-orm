@@ -25,7 +25,7 @@ import {
   RecordString,
   RecordUnknown,
   singleQuote,
-  Sql,
+  SingleSql,
 } from 'orchid-core';
 import { createTable, CreateTableResult } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -1422,7 +1422,7 @@ const wrapWithLog = async <Result>(
         : query.values
         ? query
         : { ...query, values: [] }
-    ) as Sql;
+    ) as SingleSql;
 
     const logData = log.beforeQuery(sql);
 

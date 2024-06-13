@@ -16,6 +16,7 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
+import { Sql } from 'orchid-core';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -35,7 +36,7 @@ describe('queryMethods', () => {
     it('generates sql', () => {
       const sql = User.toSQL();
 
-      assertType<typeof sql, { text: string; values?: unknown[] }>();
+      assertType<typeof sql, Sql>();
 
       expectSql(sql, `SELECT * FROM "user"`);
     });

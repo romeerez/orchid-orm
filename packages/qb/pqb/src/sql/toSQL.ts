@@ -9,7 +9,7 @@ import { pushWhereStatementSql } from './where';
 import { pushHavingSql } from './having';
 import { pushWithSql } from './with';
 import { pushFromAndAs } from './fromAndAs';
-import { pushInsertSql } from './insert';
+import { makeInsertSql } from './insert';
 import { pushUpdateSql } from './update';
 import { pushDeleteSql } from './delete';
 import { pushTruncateSql } from './truncate';
@@ -19,6 +19,7 @@ import { QueryData, SelectQueryData } from './data';
 import { pushCopySql } from './copy';
 import { addValue, isExpression, Sql } from 'orchid-core';
 import { Db } from '../query/db';
+import { getSqlText } from './utils';
 
 export type ToSQLCtx = {
   queryBuilder: Db;
@@ -98,11 +99,7 @@ export const makeSQL = (
     const quotedAs = `"${query.as || tableName}"`;
 
     if (query.type === 'insert') {
-      return {
-        hookSelect: pushInsertSql(ctx, table, query, `"${tableName}"`),
-        text: sql.join(' '),
-        values,
-      };
+      return makeInsertSql(ctx, table, query, `"${tableName}"`);
     }
 
     if (query.type === 'update') {
@@ -130,12 +127,12 @@ export const makeSQL = (
   const quotedAs = (query.as || table.table) && `"${query.as || table.table}"`;
 
   if (query.union) {
-    sql.push(`(${makeSQL(query.union.b, { values }).text})`);
+    sql.push(`(${getSqlText(makeSQL(query.union.b, { values }))})`);
 
     for (const u of query.union.u) {
       const itemSql = isExpression(u.a)
         ? u.a.toSQL(ctx, quotedAs)
-        : makeSQL(u.a, { values }).text;
+        : getSqlText(makeSQL(u.a, { values }));
       sql.push(`${u.k} (${itemSql})`);
     }
   } else {

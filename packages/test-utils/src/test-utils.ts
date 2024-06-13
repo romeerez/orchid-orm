@@ -5,7 +5,7 @@ import {
   testTransaction,
   defaultSchemaConfig,
 } from '../../qb/pqb/src';
-import { MaybeArray, toArray } from 'orchid-core';
+import { MaybeArray, SingleSqlItem, Sql, toArray } from 'orchid-core';
 import { zodSchemaConfig, ZodSchemaConfig } from 'schema-to-zod';
 // is needed to get rid of TS portability error in zod column types
 import 'zod';
@@ -66,13 +66,13 @@ export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
 
 export const expectSql = (
-  sql: MaybeArray<{ text: string; values?: unknown[] }>,
+  sql: MaybeArray<Sql>,
   text: string,
   values: unknown[] = [],
 ) => {
   toArray(sql).forEach((item) => {
-    expect(item.text).toBe(line(text));
-    expect(item.values).toEqual(values);
+    expect((item as SingleSqlItem).text).toBe(line(text));
+    expect((item as SingleSqlItem).values).toEqual(values);
   });
 };
 

@@ -1,6 +1,7 @@
 import { Query } from '../../query/query';
 import { columnSqlForTest } from '../where/testWhere';
 import { expectSql, testDb } from 'test-utils';
+import { getSqlText } from '../../sql';
 
 export const testJoin = ({
   method,
@@ -30,7 +31,7 @@ export const testJoin = ({
   values?: unknown[];
 }) => {
   const join = method as unknown as 'join';
-  const initialSql = joinTo.toSQL().text;
+  const initialSql = getSqlText(joinTo.toSQL());
 
   const table = joinTo.table as string;
   const [pkeySql] = columnSqlForTest(joinTo, pkey);
@@ -85,7 +86,7 @@ export const testJoin = ({
       values,
     );
 
-    expect(joinTo.toSQL().text).toBe(initialSql);
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
   });
 
   it('should accept left column, op and right column', () => {
@@ -101,7 +102,7 @@ export const testJoin = ({
       values,
     );
 
-    expect(joinTo.toSQL().text).toBe(initialSql);
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
   });
 
   it('should accept raw and raw', () => {
@@ -125,7 +126,7 @@ export const testJoin = ({
       values,
     );
 
-    expect(joinTo.toSQL().text).toBe(initialSql);
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
   });
 
   it('should accept raw, op and raw', () => {
@@ -151,7 +152,7 @@ export const testJoin = ({
       values,
     );
 
-    expect(joinTo.toSQL().text).toBe(initialSql);
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
   });
 
   it('should accept object of columns', () => {
@@ -167,7 +168,7 @@ export const testJoin = ({
       values,
     );
 
-    expect(joinTo.toSQL().text).toBe(initialSql);
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
   });
 
   it('should accept object of columns with raw value', () => {
@@ -187,7 +188,7 @@ export const testJoin = ({
       values,
     );
 
-    expect(joinTo.toSQL().text).toBe(initialSql);
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
   });
 
   it('should accept raw sql', () => {
@@ -209,7 +210,7 @@ export const testJoin = ({
       values,
     );
 
-    expect(joinTo.toSQL().text).toBe(initialSql);
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
   });
 
   it('should use conditions from provided query', () => {

@@ -3,6 +3,7 @@ import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { DeleteQueryData, QueryHookSelect } from './data';
+import { getSqlText } from './utils';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
@@ -32,7 +33,9 @@ export const pushDeleteSql = (
 
         const as = item[2];
         targets.push(
-          `LATERAL (${q.toSQL(ctx).text}) "${query.joinOverrides?.[as] || as}"`,
+          `LATERAL (${getSqlText(q.toSQL(ctx))}) "${
+            query.joinOverrides?.[as] || as
+          }"`,
         );
 
         ctx.aliasValue = aliasValue;

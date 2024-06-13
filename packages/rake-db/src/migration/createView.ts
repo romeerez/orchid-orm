@@ -1,5 +1,5 @@
 import { Migration } from './migration';
-import { RawSQLBase, singleQuote, Sql } from 'orchid-core';
+import { RawSQLBase, singleQuote, SingleSql } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { raw } from 'pqb';
 
@@ -37,7 +37,7 @@ const makeAst = (
   };
 };
 
-const astToQuery = (ast: RakeDbAst.View): Sql => {
+const astToQuery = (ast: RakeDbAst.View): SingleSql => {
   const values: unknown[] = [];
   const sql: string[] = [];
   const { options } = ast;

@@ -4,7 +4,7 @@ import {
   ForeignKeyTable,
   isRawSQL,
   RawSQLBase,
-  Sql,
+  SingleSql,
   toArray,
   toSnakeCase,
 } from 'orchid-core';
@@ -272,7 +272,7 @@ export const indexesToQuery = (
   { schema, name: tableName }: { schema?: string; name: string },
   indexes: TableData.Index[],
   language?: string,
-): Sql[] => {
+): SingleSql[] => {
   return indexes.map(({ columns, options, name }) => {
     const indexName = name || getIndexName(tableName, columns);
 
@@ -391,7 +391,7 @@ export const indexesToQuery = (
 export const commentsToQuery = (
   schemaTable: { schema?: string; name: string },
   comments: ColumnComment[],
-): Sql[] => {
+): SingleSql[] => {
   return comments.map(({ column, comment }) => ({
     text: `COMMENT ON COLUMN ${quoteWithSchema(
       schemaTable,

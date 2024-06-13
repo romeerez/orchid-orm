@@ -16,6 +16,7 @@ import {
   RecordUnknown,
 } from 'orchid-core';
 import { RawSQL } from './rawSql';
+import { getSqlText } from './utils';
 
 type ItemOf2Or3Length =
   | [leftColumn: string | Expression, rightColumn: string | Expression]
@@ -175,11 +176,11 @@ const subJoinToSql = (
     jq.q.select = [new RawSQL(`${innerAs}.*`)];
   }
 
-  return `(${
+  return `(${getSqlText(
     jq.toSQL({
       values: ctx.values,
-    }).text
-  }) ${outerAs || innerAs}`;
+    }),
+  )}) ${outerAs || innerAs}`;
 };
 
 const processArgs = (
@@ -276,7 +277,7 @@ export const pushJoinSql = (
       ctx.aliasValue = true;
 
       const as = item[2];
-      sql = `${item[0]} LATERAL (${q.toSQL(ctx).text}) "${
+      sql = `${item[0]} LATERAL (${getSqlText(q.toSQL(ctx))}) "${
         query.joinOverrides?.[as] || as
       }" ON true`;
 

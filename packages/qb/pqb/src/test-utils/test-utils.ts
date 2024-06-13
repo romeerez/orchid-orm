@@ -121,6 +121,10 @@ export const Post = testDb('post', (t) => ({
   ...t.timestamps(),
 }));
 
+export const Tag = testDb('tag', (t) => ({
+  tag: t.text().primaryKey(),
+}));
+
 export const expectQueryNotMutated = (q: Query) => {
   expectSql(q.toSQL(), `SELECT * FROM "${q.table}"`);
 };

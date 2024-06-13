@@ -11,7 +11,7 @@ import {
   QueryThen,
   ValExpression,
 } from 'orchid-core';
-import { JoinedShapes, QueryData, ToSQLCtx } from '../sql';
+import { getSqlText, JoinedShapes, QueryData, ToSQLCtx } from '../sql';
 import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import {
   PickQueryColumnTypes,
@@ -85,7 +85,7 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
           const sql = arg.toSQL(ctx, quotedAs);
           if (sql) res.push(sql);
         } else {
-          res.push(`(${(arg as unknown as Query).toSQL(ctx).text})`);
+          res.push(`(${getSqlText((arg as unknown as Query).toSQL(ctx))})`);
         }
       }
     }

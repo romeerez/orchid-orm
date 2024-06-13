@@ -15,6 +15,7 @@ import { joinSubQuery } from '../common/utils';
 import { JsonItem } from './types';
 import { jsonToSql } from './select';
 import { countSelect } from './rawSql';
+import { getSqlText } from './utils';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -115,7 +116,9 @@ const processValue = (
     } else if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof (QueryClass as never)) {
-      return `(${joinSubQuery(table, value as ToSQLQuery).toSQL(ctx).text})`;
+      return `(${getSqlText(
+        joinSubQuery(table, value as ToSQLQuery).toSQL(ctx),
+      )})`;
     } else if ('op' in value && 'arg' in value) {
       return `"${table.q.shape[key].data.name || key}" ${
         (value as { op: string }).op

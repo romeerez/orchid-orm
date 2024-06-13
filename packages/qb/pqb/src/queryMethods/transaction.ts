@@ -3,20 +3,18 @@ import {
   AfterCommitHook,
   emptyArray,
   emptyObject,
-  Sql,
+  SingleSqlItem,
   TransactionAdapterBase,
   TransactionState,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 
-const commitSql = {
+export const commitSql: SingleSqlItem = {
   text: 'COMMIT',
-  values: emptyArray,
 };
 
-const rollbackSql = {
+export const rollbackSql: SingleSqlItem = {
   text: 'ROLLBACK',
-  values: emptyArray,
 };
 
 export type IsolationLevel =
@@ -59,7 +57,7 @@ export class Transaction {
 
     const sql = {
       values: emptyArray,
-    } as unknown as Sql;
+    } as unknown as SingleSqlItem;
 
     const log = this.q.log;
     let logData: unknown | undefined;

@@ -5,6 +5,7 @@ import {
   SetQueryReturnsColumnOrThrow,
 } from '../query/query';
 import { ToSQLCtx } from '../sql';
+import { getSqlText } from '../sql/utils';
 import {
   addValue,
   Expression,
@@ -107,7 +108,7 @@ const quoteValue = (
     }
 
     if ('toSQL' in arg) {
-      return `(${(arg as Query).toSQL({ values: ctx.values }).text})`;
+      return `(${getSqlText((arg as Query).toSQL({ values: ctx.values }))})`;
     }
   }
 

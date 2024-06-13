@@ -4,6 +4,7 @@ import { makeSQL, ToSQLCtx } from './toSQL';
 import { QueryData, QueryDataFromItem, SelectQueryData } from './data';
 import { QueryBase } from '../query/queryBase';
 import { addValue, isExpression, isRawSQL, MaybeArray } from 'orchid-core';
+import { getSqlText } from './utils';
 
 export const pushFromAndAs = (
   ctx: ToSQLCtx,
@@ -93,11 +94,11 @@ const fromToSql = (
       only = (from.q as SelectQueryData).only;
 
       if (!from.table) {
-        sql = `(${makeSQL(from, ctx).text})`;
+        sql = `(${getSqlText(makeSQL(from, ctx))})`;
       }
       // if query contains more than just schema return (SELECT ...)
       else if (!checkIfASimpleQuery(from)) {
-        sql = `(${makeSQL(from, ctx).text})`;
+        sql = `(${getSqlText(makeSQL(from, ctx))})`;
       } else {
         sql = quoteSchemaAndTable(from.q.schema, from.table);
       }

@@ -18,9 +18,11 @@ import {
   QueryReturnType,
   RecordString,
   RecordUnknown,
+  SingleSqlItem,
   Sql,
   TransactionState,
 } from 'orchid-core';
+import { commitSql } from './transaction';
 
 export const queryMethodByReturnType: {
   [K in QueryReturnType]: 'query' | 'arrays';
@@ -172,6 +174,8 @@ const callAfterHook = function (
   return cb(this[0], this[1]);
 };
 
+const beginSql: SingleSqlItem = { text: 'BEGIN' };
+
 const then = async (
   q: Query,
   adapter: AdapterBase,
@@ -204,38 +208,92 @@ const then = async (
 
     sql = q.toSQL();
     const { hookSelect } = sql;
-
-    if (query.autoPreparedStatements) {
-      sql.name =
-        queriesNames[sql.text] ||
-        (queriesNames[sql.text] = (nameI++).toString(36));
-    }
-
-    if (query.log) {
-      logData = query.log.beforeQuery(sql);
-    }
-
     const { returnType = 'all' } = query;
     const returns = hookSelect ? 'all' : returnType;
 
-    const queryResult = (await adapter[
-      hookSelect ? 'query' : (queryMethodByReturnType[returnType] as 'query')
-    ](sql)) as QueryResult;
+    let result;
+    let queryResult;
 
-    if (query.patchResult) {
-      await query.patchResult(q, queryResult);
+    if ('text' in sql) {
+      if (query.autoPreparedStatements) {
+        sql.name =
+          queriesNames[sql.text] ||
+          (queriesNames[sql.text] = (nameI++).toString(36));
+      }
+
+      if (query.log) {
+        logData = query.log.beforeQuery(sql);
+      }
+
+      queryResult = (await adapter[
+        hookSelect ? 'query' : (queryMethodByReturnType[returnType] as 'query')
+      ](sql)) as QueryResult;
+
+      if (query.patchResult) {
+        await query.patchResult(q, queryResult);
+      }
+
+      if (query.log) {
+        query.log.afterQuery(sql, logData);
+        // set sql to be undefined to prevent logging on error in case if afterHooks throws
+        sql = undefined;
+      }
+
+      result = query.handleResult(q, returns, queryResult);
+    } else {
+      // autoPreparedStatements in batch doesn't seem to make sense
+
+      const queryMethod = hookSelect
+        ? 'query'
+        : (queryMethodByReturnType[returnType] as 'query');
+
+      if (!trx) {
+        if (query.log) logData = query.log.beforeQuery(beginSql);
+        await adapter.arrays(beginSql);
+        if (query.log) query.log.afterQuery(beginSql, logData);
+      }
+
+      for (const item of sql.batch) {
+        sql = item;
+
+        if (query.log) {
+          logData = query.log.beforeQuery(sql);
+        }
+
+        const result = (await adapter[queryMethod](sql)) as QueryResult;
+
+        if (queryResult) {
+          queryResult.rowCount += result.rowCount;
+          queryResult.rows.push(...result.rows);
+        } else {
+          queryResult = result;
+        }
+
+        if (query.log) {
+          query.log.afterQuery(sql, logData);
+          // set sql to be undefined to prevent logging on error in case if afterHooks throws
+          sql = undefined;
+        }
+      }
+
+      if (!trx) {
+        if (query.log) logData = query.log.beforeQuery(commitSql);
+        await adapter.arrays(commitSql);
+        if (query.log) query.log.afterQuery(commitSql, logData);
+      }
+
+      if (query.patchResult) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        await query.patchResult(q, queryResult!);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      result = query.handleResult(q, returns, queryResult!);
     }
-
-    if (query.log) {
-      query.log.afterQuery(sql, logData);
-      // set sql to be undefined to prevent logging on error in case if afterHooks throws
-      sql = undefined;
-    }
-
-    let result = query.handleResult(q, returns, queryResult);
 
     if (afterHooks || afterCommitHooks || query.after) {
-      if (queryResult.rowCount) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      if (queryResult!.rowCount) {
         if (afterHooks || query.after) {
           const args = [result, q];
           await Promise.all(
@@ -264,7 +322,8 @@ const then = async (
       }
 
       if (hookSelect)
-        result = filterResult(q, returnType, queryResult, hookSelect, result);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        result = filterResult(q, returnType, queryResult!, hookSelect, result);
     }
 
     if (query.transform) {
@@ -288,7 +347,7 @@ const then = async (
     }
 
     if (query.log && sql) {
-      query.log.onError(error as Error, sql, logData);
+      query.log.onError(error as Error, sql as SingleSqlItem, logData);
     }
     return reject?.(error);
   }

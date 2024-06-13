@@ -32,6 +32,7 @@ import {
   toArray,
 } from 'orchid-core';
 import { BaseOperators, Operator } from '../columns/operators';
+import { getSqlText } from './utils';
 
 interface QueryDataForWhere {
   and?: CommonQueryData['and'];
@@ -147,7 +148,7 @@ const processWhere = (
     if (query.q.expr) {
       const q = joinSubQuery(table, query);
       q.q.select = [query.q.expr];
-      ands.push(`(${makeSQL(q as Query, ctx).text})`);
+      ands.push(`(${getSqlText(makeSQL(q as Query, ctx))})`);
     } else {
       pushWhereToSql(
         ands,
@@ -326,7 +327,9 @@ const processWhere = (
         }
 
         if (value instanceof ctx.queryBuilder.constructor) {
-          ands.push(`${quotedColumn} = (${(value as Query).toSQL(ctx).text})`);
+          ands.push(
+            `${quotedColumn} = (${getSqlText((value as Query).toSQL(ctx))})`,
+          );
         } else {
           for (const op in value) {
             const operator = (column.operators as BaseOperators)[op];
@@ -399,8 +402,7 @@ const pushIn = (
   } else if (isExpression(arg.values)) {
     value = arg.values.toSQL(ctx, quotedAs);
   } else {
-    const sql = makeSQL(arg.values, ctx);
-    value = `(${sql.text})`;
+    value = `(${getSqlText(makeSQL(arg.values, ctx))})`;
   }
 
   const columnsSql = arg.columns
