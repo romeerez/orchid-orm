@@ -13,7 +13,6 @@ import {
   PickQueryMeta,
   PickQueryMetaResultWindows,
   QueryColumn,
-  QueryColumnBooleanOrNull,
   setParserToQuery,
   toArray,
 } from 'orchid-core';
@@ -30,7 +29,6 @@ import { pushOrderBySql } from '../sql/orderBy';
 import { whereToSql } from '../sql/where';
 import { windowToSql } from '../sql/window';
 import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
-import { BaseOperators } from '../columns/operators';
 import { extendQuery } from '../query/queryUtils';
 
 // Additional SQL options that can be accepted by any aggregate function.
@@ -195,16 +193,6 @@ export class FnExpression<
     return sql.join('');
   }
 }
-
-// Adds column operator functions to the expression.
-export type ColumnExpression<
-  C extends QueryColumn,
-  Ops extends BaseOperators = C['operators'],
-> = Expression<C> & {
-  [K in keyof Ops]: (
-    arg: Ops[K]['_opType'],
-  ) => ColumnExpression<QueryColumnBooleanOrNull>;
-};
 
 // Applies a function expression to the query.
 export function makeFnExpression<

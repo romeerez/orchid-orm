@@ -862,7 +862,7 @@ export class Create {
    * const createdCount = await db.table.insertMany([data, data, data]);
    * ```
    *
-   * Because of a limitation of Postgres protocol, queries having more than **65536** are going to fail in runtime.
+   * Because of a limitation of Postgres protocol, queries having more than **65535** of values are going to fail in runtime.
    * To solve this seamlessly, OrchidORM will automatically batch such queries, and wrap them into a transaction, unless they are already in a transaction.
    *
    * ```ts

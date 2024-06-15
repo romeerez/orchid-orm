@@ -3,7 +3,6 @@ import { RelationQuery } from '../relations';
 import { SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from './data';
 import {
-  QueryColumn,
   Expression,
   MaybeArray,
   TemplateLiteralArgs,
@@ -63,54 +62,7 @@ export interface WithOptions {
   notMaterialized?: true;
 }
 
-export interface JsonItem<
-  As extends string = string,
-  Type extends QueryColumn = QueryColumn,
-> {
-  __json:
-    | [
-        kind: 'set',
-        as: As,
-        type: Type,
-        column: string | JsonItem,
-        path: Array<string | number>,
-        value: unknown,
-        options?: {
-          createIfMissing?: boolean;
-        },
-      ]
-    | [
-        kind: 'insert',
-        as: As,
-        type: Type,
-        column: string | JsonItem,
-        path: Array<string | number>,
-        value: unknown,
-        options?: {
-          insertAfter?: boolean;
-        },
-      ]
-    | [
-        kind: 'remove',
-        as: As,
-        type: Type,
-        column: string | JsonItem,
-        path: Array<string | number>,
-      ]
-    | [
-        kind: 'pathQuery',
-        as: As,
-        type: Type,
-        column: string | JsonItem,
-        path: string,
-        options?: {
-          vars?: string;
-          silent?: boolean;
-        },
-      ];
-}
-
-export type SelectItem = string | SelectAs | JsonItem | Expression;
+export type SelectItem = string | SelectAs | Expression;
 
 export interface SelectAs {
   selectAs: SelectAsValue;

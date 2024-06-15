@@ -7,7 +7,6 @@ import {
 } from '../query/query';
 import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
 import {
-  CoreBaseOperators,
   emptyArray,
   emptyObject,
   PickQueryMeta,
@@ -55,11 +54,11 @@ const nullableFloat = new RealColumn(defaultSchemaConfig);
 nullableFloat.parseItem = nullableFloat.parseFn = (input): number =>
   (input === null ? null : parseFloat(input as never)) as number;
 
-type QueryReturnsAgg<
+type QueryReturnsAgg<T, C, Op> = SetQueryReturnsColumnOrThrow<
   T,
-  C,
-  Op extends CoreBaseOperators,
-> = SetQueryReturnsColumnOrThrow<T, QueryColumn<C, Op>> & Op;
+  QueryColumn<C, Op>
+> &
+  Op;
 
 type CountReturn<T> = QueryReturnsAgg<T, number, OperatorsNumber> & {
   isCount: true;

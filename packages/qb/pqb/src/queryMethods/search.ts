@@ -1,5 +1,8 @@
-import { Query, SelectableOrExpressionOfType } from '../query/query';
-import { ColumnExpression } from '../common/fn';
+import {
+  Query,
+  SelectableOrExpressionOfType,
+  SetQueryReturnsColumnOrThrow,
+} from '../query/query';
 import { AggregateMethods } from './aggregate';
 import {
   addValue,
@@ -117,7 +120,7 @@ declare module './aggregate' {
       this: T,
       search: HeadlineSearchArg<T>,
       options?: HeadlineParams<T>,
-    ): ColumnExpression<QueryColumn<string>>;
+    ): SetQueryReturnsColumnOrThrow<T, QueryColumn<string>>;
   }
 }
 
@@ -232,7 +235,7 @@ AggregateMethods.prototype.headline = function (
     q.q,
     source,
     params as HeadlineParams<Query> | undefined,
-  ) as unknown as ColumnExpression<QueryColumn<string>>;
+  ) as never;
 };
 
 export class SearchMethods {

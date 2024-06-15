@@ -408,9 +408,9 @@ const makeRelationQuery = (
       const toTable = q.clone();
 
       let query: Query;
-      if (this.q.isSubQuery) {
+      if (this.q.subQuery) {
         query = toTable;
-        query.q.isSubQuery = true;
+        query.q.subQuery = 2;
       } else {
         // Relation query returns a single record in case of belongsTo or hasOne,
         // but when called as a query chain like `q.user.profile` it should return many.

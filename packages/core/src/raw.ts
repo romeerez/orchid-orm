@@ -30,7 +30,7 @@ export abstract class Expression<T extends QueryColumn = QueryColumn> {
       for (let i = 0, len = chain.length; i < len; i += 2) {
         sql = (chain[i] as OperatorToSQL<unknown, unknown>)(
           sql,
-          chain[i + 1],
+          chain[i + 1] as never,
           ctx,
           quotedAs,
         );

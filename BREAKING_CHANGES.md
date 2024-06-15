@@ -1,5 +1,74 @@
 # Breaking changes
 
+## orchid-orm 1.29.0
+
+`json*` methods rework: now all json methods such as `jsonSet` can be used in all contexts on a single JSON value,
+and they can be chained one after another:
+
+```ts
+db.table.update({
+  data: (q) =>
+    q.get('data').jsonSet('foo', 1).jsonSet('bar', 2).jsonRemove('baz'),
+});
+```
+
+`jsonPathQuery` -> `jsonPathQueryFirst`:
+
+```ts
+// before
+db.table.jsonPathQuery(columnTypes.text(), 'data', '$.name', 'name', {
+  vars: 'vars',
+  silent: true,
+});
+
+// after
+db.table.get('data').jsonPathQueryFirst('$.name', {
+  type: (t) => t.text(),
+  vars: 'vars',
+  silent: true,
+});
+```
+
+`jsonSet`:
+
+```ts
+// before
+db.table.jsonSet('data', ['name'], 'new value');
+
+// after
+db.table.get('data').jsonSet('name', 'new value');
+```
+
+`jsonSet` with `createIfMissing: false` becomes `jsonReplace`:
+
+```ts
+// before
+db.table.jsonSet('data', ['name'], 'new value', { createIfMissing: false });
+
+// after
+db.table.get('data').jsonReplace('name', 'new value');
+```
+
+`jsonInsert`:
+
+```ts
+// before
+db.table.jsonInsert('data', ['tags', 0], 'tag', { insertAfter: true });
+
+// after
+db.table.get('data').jsonInsert(['tags', 0], 'tag', { after: true });
+```
+
+`jsonRemove`:
+
+```ts
+// before
+db.table.jsonRemove('data', ['tags', 0]);
+
+// after
+db.table.get('data').jsonRemove(['tags', 0]);
+```
+
 ## orchid-orm 1.28.14
 
 `null` values for JSON columns are saved as is. Prior to now, nulls for JSON columns were stringified.

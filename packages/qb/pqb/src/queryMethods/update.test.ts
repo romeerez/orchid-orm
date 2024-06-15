@@ -639,7 +639,7 @@ describe('update', () => {
       expect(() =>
         profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          bio: (q) => q.user.get('name').find(1).update({ name: 'new name' }),
+          bio: (q) => q.find(1).update({ name: 'new name' }),
         }),
       ).toThrow();
     });
@@ -648,7 +648,7 @@ describe('update', () => {
       expect(() =>
         profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          bio: (q) => q.user.get('name').create(userData),
+          bio: (q) => q.create(userData),
         }),
       ).toThrow();
     });
@@ -657,7 +657,7 @@ describe('update', () => {
       expect(() =>
         profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          bio: (q) => q.user.get('name').find(1).delete(),
+          bio: (q) => q.find(1).delete(),
         }),
       ).toThrow();
     });
@@ -861,7 +861,7 @@ describe('update', () => {
         .update({ password: 'password' })
         .decrement('age')
         .update({
-          data: (q) => q.jsonInsert('data', [0], 'data'),
+          data: (q) => q.get('data').jsonInsert([0], 'data'),
         });
 
       expectSql(
@@ -872,12 +872,12 @@ describe('update', () => {
               "id" = "id" + $2,
               "password" = $3,
               "age" = "age" - $4,
-              "data" = jsonb_insert("user"."data", '{0}', $5),
+              "data" = jsonb_insert("user"."data", $5, $6),
               "updatedAt" = now()
-          WHERE "user"."id" = $6
+          WHERE "user"."id" = $7
           RETURNING "user"."id"
         `,
-        ['name', 1, 'password', 1, '"data"', 1],
+        ['name', 1, 'password', 1, '{0}', '"data"', 1],
       );
     });
   });

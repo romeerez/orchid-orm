@@ -12,10 +12,10 @@ import {
 import { addValue, isExpression, pushOrNewArray } from 'orchid-core';
 import { Db } from '../query/db';
 import { joinSubQuery } from '../common/utils';
-import { JsonItem } from './types';
-import { jsonToSql } from './select';
+import { selectToSql } from './select';
 import { countSelect } from './rawSql';
 import { getSqlText } from './utils';
+import { Query } from '../query/query';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -111,11 +111,13 @@ const processValue = (
   quotedAs?: string,
 ) => {
   if (value && typeof value === 'object') {
-    if ((value as JsonItem).__json) {
-      return jsonToSql(ctx, table, value as JsonItem, ctx.values, quotedAs);
-    } else if (isExpression(value)) {
+    if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof (QueryClass as never)) {
+      if ((value as Query).q.subQuery === 1) {
+        return selectToSql(ctx, table, (value as Query).q, quotedAs);
+      }
+
       return `(${getSqlText(
         joinSubQuery(table, value as ToSQLQuery).toSQL(ctx),
       )})`;

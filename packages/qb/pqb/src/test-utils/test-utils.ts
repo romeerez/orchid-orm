@@ -6,12 +6,13 @@ import { RecordUnknown } from 'orchid-core';
 
 export type UserRecord = typeof User.outputType;
 export type UserInsert = typeof User.inputType;
+export type UserData = { name: string; tags: string[] };
 export const User = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
   name: t.text().unique(),
   password: t.text(),
   picture: t.text().nullable(),
-  data: t.json<{ name: string; tags: string[] }>().nullable(),
+  data: t.json<UserData>().nullable(),
   age: t.integer().nullable(),
   active: t.boolean().nullable(),
   ...t.timestamps(),

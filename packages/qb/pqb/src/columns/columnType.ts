@@ -16,7 +16,6 @@ import {
   UniqueColumn,
 } from 'orchid-core';
 import { raw } from '../sql/rawSql';
-import { BaseOperators } from './operators';
 import { TableData } from '../tableData';
 
 // type of data for ColumnType
@@ -56,7 +55,8 @@ export abstract class ColumnType<
   Type = unknown,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   InputSchema = any,
-  Ops extends BaseOperators = BaseOperators,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Ops = any,
   InputType = Type,
   OutputType = Type,
   OutputSchema = InputSchema,

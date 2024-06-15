@@ -152,6 +152,10 @@ export interface PickQueryWithDataColumnTypes
   extends PickQueryWithData,
     PickQueryColumnTypes {}
 
+export interface PickQueryResultColumnTypes
+  extends PickQueryResult,
+    PickQueryColumnTypes {}
+
 export interface PickQueryMetaWithDataColumnTypes
   extends PickQueryMeta,
     PickQueryWithData,
@@ -462,7 +466,7 @@ export type SetQueryReturnsPluckColumnKindResult<
 
 export type SetQueryReturnsValueOrThrow<
   T extends PickQueryMeta,
-  Arg extends GetStringArg<T>,
+  Arg extends keyof T['meta']['selectable'],
 > = SetQueryReturnsColumnOrThrow<T, T['meta']['selectable'][Arg]['column']> &
   T['meta']['selectable'][Arg]['column']['operators'];
 

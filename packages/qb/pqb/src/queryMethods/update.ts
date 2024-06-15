@@ -1,4 +1,5 @@
 import {
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
   Query,
   QueryOrExpression,
   QueryReturnsAll,
@@ -12,7 +13,7 @@ import {
 } from '../query/queryUtils';
 import { RelationConfigBase } from '../relations';
 import { _queryWhereIn, WhereResult } from './where/where';
-import { JsonItem, ToSQLQuery } from '../sql';
+import { ToSQLQuery } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape, Db } from '../query/db';
 import {
@@ -25,15 +26,14 @@ import {
   SQLQueryArgs,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
-import { JsonModifiers } from './json';
 import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
 import { resolveSubQueryCallback } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
-import { ExpressionMethods } from './expressions';
 
-export type UpdateSelf = {
-  [K in 'inputType' | 'relations' | UpdateColumnArgKeys]: Query[K];
-};
+export interface UpdateSelf
+  extends PickQueryMetaResultRelationsWithDataReturnTypeShape {
+  inputType: RecordUnknown;
+}
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -51,16 +51,6 @@ export type UpdateData<T extends UpdateSelf> = {
     T['relations'][K]['relationConfig']
   >;
 };
-
-type UpdateColumnArgKeys =
-  | keyof JsonModifiers
-  | keyof ExpressionMethods
-  | 'sql'
-  | 'meta'
-  | 'shape'
-  | 'result'
-  | 'returnType'
-  | 'columnTypes';
 
 interface UpdateQueryOrExpression<T> extends QueryOrExpression<T> {
   meta: {
@@ -80,15 +70,11 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
         ? QueryThen<T['inputType'][Key]>
         : Query[K];
     }
-  | ((q: {
-      [K in
-        | keyof T['relations']
-        | UpdateColumnArgKeys]: K extends keyof T['relations']
-        ? T['relations'][K]
-        : K extends UpdateColumnArgKeys
-        ? T[K]
-        : never;
-    }) => JsonItem | UpdateQueryOrExpression<T['inputType'][Key]>);
+  | ((
+      q: T,
+    ) =>
+      | UpdateQueryOrExpression<T['inputType'][Key]>
+      | QueryOrExpression<T['inputType'][Key]>);
 
 // Add relation operations to the update argument.
 type UpdateRelationData<

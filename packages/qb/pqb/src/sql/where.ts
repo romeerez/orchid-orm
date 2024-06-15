@@ -28,11 +28,12 @@ import {
   Expression,
   isExpression,
   MaybeArray,
+  OperatorToSQL,
   RecordUnknown,
   toArray,
 } from 'orchid-core';
-import { BaseOperators, Operator } from '../columns/operators';
 import { getSqlText } from './utils';
+import { selectToSql } from './select';
 
 interface QueryDataForWhere {
   and?: CommonQueryData['and'];
@@ -146,9 +147,13 @@ const processWhere = (
   if ('prototype' in data || 'baseQuery' in data) {
     const query = data as Query;
     if (query.q.expr) {
-      const q = joinSubQuery(table, query);
-      q.q.select = [query.q.expr];
-      ands.push(`(${getSqlText(makeSQL(q as Query, ctx))})`);
+      if (query.q.subQuery === 1) {
+        ands.push(selectToSql(ctx, table, query.q, quotedAs));
+      } else {
+        const q = joinSubQuery(table, query);
+        q.q.select = [query.q.expr];
+        ands.push(`(${getSqlText(makeSQL(q as Query, ctx))})`);
+      }
     } else {
       pushWhereToSql(
         ands,
@@ -321,7 +326,6 @@ const processWhere = (
           }
 
           if (!column || !quotedColumn) {
-            // TODO: custom error classes
             throw new Error(`Unknown column ${key} provided to condition`);
           }
         }
@@ -332,16 +336,17 @@ const processWhere = (
           );
         } else {
           for (const op in value) {
-            const operator = (column.operators as BaseOperators)[op];
+            const operator = (column.operators as RecordUnknown)[op];
             if (!operator) {
-              // TODO: custom error classes
               throw new Error(`Unknown operator ${op} provided to condition`);
             }
 
             if (value[op as keyof typeof value] === undefined) continue;
 
             ands.push(
-              `${(operator as unknown as Operator<unknown>)._op(
+              `${(
+                operator as unknown as { _op: OperatorToSQL<any, ToSQLCtx> }
+              )._op(
                 quotedColumn as string,
                 value[op as keyof typeof value],
                 ctx,

@@ -2,8 +2,10 @@ import {
   ColumnSchemaConfig,
   ColumnTypeBase,
   EncodeColumn,
+  MaybeArray,
   noop,
   ParseColumn,
+  RecordUnknown,
   setColumnData,
 } from 'orchid-core';
 import {
@@ -85,7 +87,10 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
     item: Item,
   ): ArrayColumn<DefaultSchemaConfig, Item, unknown, unknown, unknown>;
 
-  json<T>(): JSONColumn<T, DefaultSchemaConfig>;
+  json<
+    // (#286) must restrict type, because otherwise `update` can't differentiate between a function and non-function value
+    T extends MaybeArray<string | number | boolean | RecordUnknown>,
+  >(): JSONColumn<T, DefaultSchemaConfig>;
 
   inputSchema(): undefined;
   outputSchema(): undefined;

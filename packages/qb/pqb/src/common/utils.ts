@@ -53,11 +53,11 @@ export const resolveSubQueryCallback = (
   q: ToSQLQuery,
   cb: (q: ToSQLQuery) => ToSQLQuery,
 ): ToSQLQuery => {
-  const { isSubQuery, relChain } = q.q;
-  q.q.isSubQuery = true;
+  const { subQuery, relChain } = q.q;
+  q.q.subQuery = 1;
   q.q.relChain = undefined;
   const result = cb(q);
-  q.q.isSubQuery = isSubQuery;
+  q.q.subQuery = subQuery;
   q.q.relChain = relChain;
   return result;
 };

@@ -1,7 +1,7 @@
 import { Code } from './code';
 import { RawSQLBase } from '../raw';
 import { QueryBaseCommon } from '../query';
-import { CoreBaseOperators, OperatorBase } from './operators';
+import { OperatorBase } from './operators';
 import { ColumnTypeSchemaArg } from './columnSchema';
 import { RecordString } from '../utils';
 
@@ -89,8 +89,8 @@ type DataNullable = {
 
 export type OperatorsNullable<T> = {
   // allow `null` in .where({ column: { equals: null } }) and the same for `not`
-  equals: OperatorBase<T | null, any>;
-  not: OperatorBase<T | null, any>;
+  equals: OperatorBase<T | null>;
+  not: OperatorBase<T | null>;
 };
 
 // change column type and all schemas to nullable
@@ -391,7 +391,8 @@ export interface PickOutputTypeAndOperators {
 }
 
 // Use a lightweight column type across the query builder, this helps TS significantly.
-export interface QueryColumn<T = unknown, Op = CoreBaseOperators> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface QueryColumn<T = unknown, Op = any> {
   dataType: string;
   type: T;
   outputType: T;
@@ -399,9 +400,9 @@ export interface QueryColumn<T = unknown, Op = CoreBaseOperators> {
   operators: Op;
 }
 
-export type QueryColumnBooleanOrNull = QueryColumn<boolean | null>;
-
-export type QueryColumns = { [K: string]: QueryColumn };
+export interface QueryColumns {
+  [K: string]: QueryColumn;
+}
 
 export interface QueryColumnInit extends QueryColumn {
   inputType: unknown;
@@ -431,7 +432,8 @@ export abstract class ColumnTypeBase<
   Type = unknown,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   InputSchema = any,
-  Ops extends CoreBaseOperators = CoreBaseOperators,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Ops = any,
   InputType = Type,
   OutputType = Type,
   OutputSchema = InputSchema,

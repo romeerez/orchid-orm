@@ -34,7 +34,7 @@ import { FromMethods, FromQuerySelf } from './from';
 import { Join, OnMethods } from './join/join';
 import { WithMethods } from './with';
 import { Union } from './union';
-import { JsonMethods, JsonModifiers } from './json';
+import { JsonMethods } from './json';
 import { Create } from './create';
 import { Update } from './update';
 import { Delete } from './delete';
@@ -200,7 +200,6 @@ export interface QueryMethods<ColumnTypes>
     Join,
     WithMethods,
     Union,
-    JsonModifiers,
     JsonMethods,
     Create,
     Update,
@@ -1022,7 +1021,6 @@ applyMixins(QueryMethods, [
   OnMethods,
   WithMethods,
   Union,
-  JsonModifiers,
   JsonMethods,
   Create,
   Update,

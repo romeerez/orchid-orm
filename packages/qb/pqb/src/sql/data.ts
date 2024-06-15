@@ -32,7 +32,6 @@ import {
   FnUnknownToUnknown,
   ExpressionChain,
 } from 'orchid-core';
-import { BaseOperators } from '../columns/operators';
 import { RelationQuery } from '../relations';
 
 export interface RecordOfColumnsShapeBase {
@@ -145,17 +144,18 @@ export interface CommonQueryData {
   transform?: FnUnknownToUnknown[];
   // default language for the full text search
   language?: string;
-  // Is true for query arg inside `select`, `where`, and others callbacks.
-  // It is used by ORM to skip applying a join to the query when `isSubQuery` is true,
+  // Is set for query arg inside `select`, `where`, and others callbacks.
+  // It is used by ORM to skip applying a join to the query when `subQuery` is true,
   // the join will be applied after callback is resolved.
-  isSubQuery?: true;
+  // 1 for the same query, 2 for relation queries returned from the callback.
+  subQuery?: number;
   // Chained relations, such as `db.user.messages.chat` are stored into array.
   relChain?: (Query | RelationQuery)[];
   /**
    * Stores current operator functions available for the query.
    * Is needed to remove these operators from query object when changing the query type, see {@link setQueryOperators}.
    */
-  operators?: BaseOperators;
+  operators?: RecordUnknown;
   // Track the applied scopes, this is used when removing the scope from the query.
   scopes?: { [K: string]: QueryScopeData };
   // to allow updating or deleting all records

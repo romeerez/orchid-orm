@@ -22,7 +22,7 @@ export class SelectItemExpression<
 
   constructor(
     public query: ToSQLQuery,
-    public item: Exclude<SelectItem, SelectAs>,
+    public item: string | Expression,
     value?: T,
   ) {
     super();
@@ -41,6 +41,6 @@ export class SelectItemExpression<
         : ctx.aliasValue
         ? columnToSql(ctx, this.q, this.q.shape, this.item, quotedAs, true)
         : columnToSqlWithAs(ctx, this.q, this.item, quotedAs, true)
-      : selectedObjectToSQL(ctx, this.query, quotedAs, this.item);
+      : selectedObjectToSQL(ctx, quotedAs, this.item);
   }
 }

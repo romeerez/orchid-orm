@@ -75,6 +75,10 @@ export default {
             link: '/guide/aggregate',
           },
           {
+            text: 'JSON functions',
+            link: '/guide/json',
+          },
+          {
             text: 'Window functions',
             link: '/guide/window',
           },

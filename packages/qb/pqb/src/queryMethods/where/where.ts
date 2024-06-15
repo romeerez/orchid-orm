@@ -91,6 +91,8 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
           | keyof Where
           | keyof ExpressionMethods
           | 'sql'
+          | 'get'
+          | 'ref'
           ? T[K]
           : never;
       }
@@ -102,6 +104,8 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
               | keyof Where
               | keyof ExpressionMethods
               | 'sql'
+              | 'get'
+              | 'ref'
           ? T[K]
           : never;
       };
@@ -165,7 +169,7 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
       const qb = Object.create(q);
       qb.q = getClonedQueryData((q as unknown as Query).q);
       qb.q.and = qb.q.or = qb.q.scopes = undefined;
-      qb.q.isSubQuery = true;
+      qb.q.subQuery = 1;
 
       args[i] = resolveSubQueryCallback(qb, arg as never) as never;
     }

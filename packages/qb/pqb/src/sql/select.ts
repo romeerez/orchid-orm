@@ -1,4 +1,4 @@
-import { JsonItem, SelectItem } from './types';
+import { SelectItem } from './types';
 import { RawSQL } from './rawSql';
 import { columnToSql, columnToSqlWithAs } from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
@@ -13,72 +13,6 @@ import { queryWrap } from '../queryMethods/queryMethods.utils';
 import { isQueryNone } from '../queryMethods/none';
 import { IntegerBaseColumn } from '../columns';
 import { getSqlText } from './utils';
-
-const jsonColumnOrMethodToSql = (
-  ctx: ToSQLCtx,
-  table: ToSQLQuery,
-  column: string | JsonItem,
-  values: unknown[],
-  quotedAs?: string,
-) => {
-  return typeof column === 'string'
-    ? columnToSql(ctx, table.q, table.q.shape, column, quotedAs)
-    : jsonToSql(ctx, table, column, values, quotedAs);
-};
-
-export const jsonToSql = (
-  ctx: ToSQLCtx,
-  table: ToSQLQuery,
-  item: JsonItem,
-  values: unknown[],
-  quotedAs?: string,
-): string => {
-  const json = item.__json;
-  if (json[0] === 'pathQuery') {
-    const [, , , column, path, options] = json;
-    return `jsonb_path_query(${jsonColumnOrMethodToSql(
-      ctx,
-      table,
-      column,
-      values,
-      quotedAs,
-    )}, ${addValue(values, path)}${
-      options?.vars ? `, ${addValue(values, options.vars)}` : ''
-    }${options?.silent ? ', true' : ''})`;
-  } else if (json[0] === 'set') {
-    const [, , , column, path, value, options] = json;
-    return `jsonb_set(${jsonColumnOrMethodToSql(
-      ctx,
-      table,
-      column,
-      values,
-      quotedAs,
-    )}, '{${path.join(', ')}}', ${addValue(values, JSON.stringify(value))}${
-      options?.createIfMissing ? ', true' : ''
-    })`;
-  } else if (json[0] === 'insert') {
-    const [, , , column, path, value, options] = json;
-    return `jsonb_insert(${jsonColumnOrMethodToSql(
-      ctx,
-      table,
-      column,
-      values,
-      quotedAs,
-    )}, '{${path.join(', ')}}', ${addValue(values, JSON.stringify(value))}${
-      options?.insertAfter ? ', true' : ''
-    })`;
-  } else if (json[0] === 'remove') {
-    const [, , , column, path] = json;
-    return `${jsonColumnOrMethodToSql(
-      ctx,
-      table,
-      column,
-      values,
-      quotedAs,
-    )} #- '{${path.join(', ')}}'`;
-  }
-  return '';
-};
 
 export const pushSelectSql = (
   ctx: ToSQLCtx,
@@ -126,7 +60,7 @@ export const selectToSql = (
           }
         }
       } else {
-        list.push(selectedObjectToSQL(ctx, table, quotedAs, item));
+        list.push(selectedObjectToSQL(ctx, quotedAs, item));
       }
     }
     return list.join(', ');
@@ -148,16 +82,9 @@ export const selectedStringToSQL = (
 
 export function selectedObjectToSQL(
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
   quotedAs: string | undefined,
-  item: JsonItem | Expression,
+  item: Expression,
 ) {
-  if ('__json' in item) {
-    return `${jsonToSql(ctx, table, item, ctx.values, quotedAs)} "${
-      item.__json[1]
-    }"`;
-  }
-
   const sql = item.toSQL(ctx, quotedAs);
   return ctx.aliasValue ? `${sql} r` : sql;
 }

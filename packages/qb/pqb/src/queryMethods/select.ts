@@ -443,7 +443,7 @@ export const processSelectArg = <T extends SelectSelf>(
           (q) => q,
           key,
         );
-      } else if (value.q?.isSubQuery && value.q.expr) {
+      } else if (value.q?.subQuery && value.q.expr) {
         value = value.q.expr;
       }
     }
