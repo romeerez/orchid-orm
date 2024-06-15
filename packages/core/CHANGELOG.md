@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.16.0
+
+### Minor Changes
+
+- ee49636: json\* methods rework (#287)
+
 ## 0.15.6
 
 ### Patch Changes

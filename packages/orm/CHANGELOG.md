@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.29.0
+
+### Minor Changes
+
+- ee49636: json\* methods rework (#287)
+
+### Patch Changes
+
+- Updated dependencies [ee49636]
+  - pqb@0.33.0
+  - orchid-core@0.16.0
+  - rake-db@2.20.27
+
 ## 1.28.14
 
 ### Patch Changes

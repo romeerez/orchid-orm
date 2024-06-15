@@ -1,5 +1,16 @@
 # pqb
 
+## 0.33.0
+
+### Minor Changes
+
+- ee49636: json\* methods rework (#287)
+
+### Patch Changes
+
+- Updated dependencies [ee49636]
+  - orchid-core@0.16.0
+
 ## 0.32.0
 
 ### Minor Changes
