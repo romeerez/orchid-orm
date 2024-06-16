@@ -1,5 +1,13 @@
 # pqb
 
+## 0.33.1
+
+### Patch Changes
+
+- 9c82aca: Add `map` helper method similar to `transform` (#281)
+- Updated dependencies [9c82aca]
+  - orchid-core@0.16.1
+
 ## 0.33.0
 
 ### Minor Changes

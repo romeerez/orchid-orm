@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.16.1
+
+### Patch Changes
+
+- 9c82aca: Add `map` helper method similar to `transform` (#281)
+
 ## 0.16.0
 
 ### Minor Changes
