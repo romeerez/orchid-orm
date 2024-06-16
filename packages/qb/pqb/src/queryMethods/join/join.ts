@@ -18,7 +18,6 @@ import {
   PickQueryMeta,
   PickQueryMetaResultReturnType,
   PickQueryMetaShape,
-  PickQueryResult,
   PickQueryTable,
   PickQueryTableMetaResult,
   PickQueryTableMetaResultShape,
@@ -271,6 +270,7 @@ type JoinResultSelectable<
 
 // Replace the 'selectable' of the query with the given selectable.
 type JoinAddSelectable<T extends PickQueryMeta, Selectable> = {
+  // is optimal
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta']]: K extends 'selectable'
@@ -296,18 +296,25 @@ type JoinOptionalMain<
                   T['meta']['selectable'][K]['column']
                 >;
               };
-            } & Selectable
+            } & Selectable // & is optimal
           : T['meta'][K];
       }
     : K extends 'result'
-    ? NullableResult<T>
+    ? // nullable result: inlined for optimization
+      {
+        [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
+      }
     : K extends 'then'
-    ? QueryThen<GetQueryResult<T, NullableResult<T>>>
+    ? QueryThen<
+        GetQueryResult<
+          T,
+          // nullable result: inlined for optimization
+          {
+            [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
+          }
+        >
+      >
     : T[K];
-};
-
-type NullableResult<T extends PickQueryResult> = {
-  [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
 };
 
 /**

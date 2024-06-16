@@ -19,7 +19,6 @@ import { anyShape, Db } from '../query/db';
 import {
   isExpression,
   Expression,
-  QueryThen,
   callWithThis,
   RecordUnknown,
   PickQueryShape,
@@ -44,19 +43,12 @@ export interface UpdateSelf
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
 export type UpdateData<T extends UpdateSelf> = {
-  [K in keyof T['inputType']]?: UpdateColumn<T, K>;
-} & {
-  [K in keyof T['relations']]?: UpdateRelationData<
-    T,
-    T['relations'][K]['relationConfig']
-  >;
+  [K in
+    | keyof T['inputType']
+    | keyof T['relations']]?: K extends keyof T['inputType']
+    ? UpdateColumn<T, K>
+    : UpdateRelationData<T, T['relations'][K]['relationConfig']>;
 };
-
-interface UpdateQueryOrExpression<T> extends QueryOrExpression<T> {
-  meta: {
-    kind: 'select';
-  };
-}
 
 // Type of available variants to provide for a specific column when updating.
 // The column value may be a specific value, or raw SQL, or a query returning a single value,
@@ -65,16 +57,7 @@ interface UpdateQueryOrExpression<T> extends QueryOrExpression<T> {
 type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | T['inputType'][Key]
   | QueryOrExpression<T['inputType'][Key]>
-  | {
-      [K in keyof Query]: K extends 'then'
-        ? QueryThen<T['inputType'][Key]>
-        : Query[K];
-    }
-  | ((
-      q: T,
-    ) =>
-      | UpdateQueryOrExpression<T['inputType'][Key]>
-      | QueryOrExpression<T['inputType'][Key]>);
+  | ((q: T) => QueryOrExpression<T['inputType'][Key]>);
 
 // Add relation operations to the update argument.
 type UpdateRelationData<

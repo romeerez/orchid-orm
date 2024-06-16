@@ -183,6 +183,10 @@ export type ColumnParser = FnUnknownToUnknown;
 // or it can be a `getValueKey` to parse single values requested by the `.get()`, `.count()`, or similar methods
 export type ColumnsParsers = { [K in string | getValueKey]?: ColumnParser };
 
+export type QueryDataTransform =
+  | FnUnknownToUnknown
+  | { map: FnUnknownToUnknown };
+
 /**
  * generic utility to add a parser to the query object
  * @param query - the query object, it will be mutated
@@ -223,15 +227,23 @@ export const overrideParserInQuery = (
  * See `transform` query method.
  * This helper applies all transform functions to a result.
  *
+ * @param returnType - return type of the query, for proper `map` handling
  * @param fns - array of transform functions, can be undefined
  * @param result - query result to transform
  */
 export const applyTransforms = (
-  fns: FnUnknownToUnknown[] | undefined,
+  returnType: QueryReturnType,
+  fns: QueryDataTransform[],
   result: unknown,
 ): unknown => {
-  if (fns) {
-    for (const fn of fns) {
+  for (const fn of fns) {
+    if ('map' in fn) {
+      if (returnType === 'all') {
+        result = (result as unknown[]).map(fn.map);
+      } else {
+        result = fn.map(result);
+      }
+    } else {
       result = fn(result);
     }
   }

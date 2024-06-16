@@ -1,12 +1,10 @@
 import {
   Query,
-  SetQueryKind,
   SetQueryReturnsOneKind,
-  SetQueryReturnsVoid,
+  SetQueryReturnsVoidKind,
 } from '../query/query';
-import { _queryUpdate, UpdateData } from './update';
-import { CreateBelongsToData, CreateData } from './create';
-import { WhereResult } from './where/where';
+import { _queryUpdate, UpdateData, UpdateSelf } from './update';
+import { CreateBelongsToData, CreateData, CreateSelf } from './create';
 import { MoreThanOneRowError } from '../errors';
 import {
   FnUnknownToUnknown,
@@ -14,30 +12,11 @@ import {
   PickQueryMetaResult,
   RecordUnknown,
 } from 'orchid-core';
+import { QueryMetaHasWhere } from './where/where';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
-export type OrCreateArg<T extends Query, BT> =
-  | CreateData<T, BT>
-  | (() => CreateData<T, BT>);
-
-// `upsert` arg type.
-// `create` callback arg is of exact `update` type.
-export type UpsertArg<T extends Query, Data, BT> =
-  | {
-      update: Data;
-      create: CreateData<T, BT> | ((update: Data) => CreateData<T, BT>);
-    }
-  | UpsertArgWithData<T, Data, BT>;
-
-// `data` and `create` upsert arg.
-// `create` callback arg is of exact `data` type.
-type UpsertArgWithData<T extends Query, Data, BT> = {
-  data: Data;
-  create:
-    | UpsertCreate<keyof Data, CreateData<T, BT>>
-    | ((update: Data) => UpsertCreate<keyof Data, CreateData<T, BT>>);
-};
+export type OrCreateArg<Data> = Data | (() => Data);
 
 type UpsertCreate<DataKey extends PropertyKey, CD> = {
   [K in keyof CD as K extends DataKey ? never : K]: CD[K];
@@ -49,13 +28,15 @@ type UpsertCreate<DataKey extends PropertyKey, CD> = {
 export type UpsertResult<T extends PickQueryMetaResult> =
   T['meta']['hasSelect'] extends true
     ? SetQueryReturnsOneKind<T, 'upsert'>
-    : SetQueryReturnsVoid<SetQueryKind<T, 'upsert'>>;
+    : SetQueryReturnsVoidKind<T, 'upsert'>;
 
 // Require type of query object to query only one record
 // because upserting multiple isn't possible
-export type UpsertThis = WhereResult<Query> & {
-  returnType: 'one' | 'oneOrThrow';
-};
+export type UpsertThis = UpdateSelf &
+  CreateSelf &
+  QueryMetaHasWhere & {
+    returnType: 'one' | 'oneOrThrow';
+  };
 
 // this is used by `upsert` and `orCreate` methods.
 // `updateData` and `mergeData` args are passed only by `upsert`.
@@ -201,8 +182,23 @@ export class QueryUpsertOrCreate {
     T extends UpsertThis,
     Update extends UpdateData<T>,
     BT extends CreateBelongsToData<T>,
-  >(this: T, data: UpsertArg<T, Update, BT>): UpsertResult<T> {
-    const q = this.clone();
+  >(
+    this: T,
+    data:
+      | {
+          update: Update;
+          create: CreateData<T, BT> | ((update: Update) => CreateData<T, BT>);
+        }
+      | {
+          data: Update;
+          create:
+            | UpsertCreate<keyof Update, CreateData<T, BT>>
+            | ((
+                update: Update,
+              ) => UpsertCreate<keyof Update, CreateData<T, BT>>);
+        },
+  ): UpsertResult<T> {
+    const q = (this as unknown as Query).clone();
 
     let updateData;
     let mergeData;
@@ -213,10 +209,10 @@ export class QueryUpsertOrCreate {
     }
 
     if (!isObjectEmpty(updateData)) {
-      _queryUpdate(q, updateData as unknown as UpdateData<WhereResult<Query>>);
+      _queryUpdate(q, updateData as never);
     }
 
-    return orCreate(q, data.create, updateData, mergeData);
+    return orCreate(q as never, data.create, updateData, mergeData);
   }
 
   /**
@@ -252,8 +248,8 @@ export class QueryUpsertOrCreate {
    */
   orCreate<T extends UpsertThis, BT extends CreateBelongsToData<T>>(
     this: T,
-    data: OrCreateArg<T, BT>,
+    data: OrCreateArg<CreateData<T, BT>>,
   ): UpsertResult<T> {
-    return orCreate(this.clone(), data);
+    return orCreate((this as unknown as Query).clone() as never, data);
   }
 }

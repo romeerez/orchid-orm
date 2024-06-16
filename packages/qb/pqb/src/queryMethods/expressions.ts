@@ -20,7 +20,7 @@ import {
   QueryMetaHasSelect,
   QueryOrExpressionBooleanOrNullResult,
 } from '../query/query';
-import { SelectableOrExpression } from '../common/utils';
+import { SelectableOrExpressions } from '../common/utils';
 import { AggregateOptions, makeFnExpression } from '../common/fn';
 import { BooleanQueryColumn } from './aggregate';
 import { Operators, OperatorsBoolean } from '../columns/operators';
@@ -254,7 +254,7 @@ export class ExpressionMethods {
   >(
     this: T,
     fn: string,
-    args: SelectableOrExpression<T>[],
+    args: SelectableOrExpressions<T>,
     options?: AggregateOptions<T>,
   ): SetQueryReturnsFn<T, C> {
     return makeFnExpression(this, emptyObject as C, fn, args, options) as never;

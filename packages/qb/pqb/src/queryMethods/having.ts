@@ -1,5 +1,5 @@
 import { PickQueryQ, Query } from '../query/query';
-import { SQLQueryArgs } from 'orchid-core';
+import { FnUnknownToUnknown, SQLQueryArgs } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
 
 // Function argument of `having`:
@@ -64,9 +64,7 @@ export class Having {
     return pushQueryValue(
       q,
       'having',
-      args.map(
-        (arg) => ((arg as HavingArgFn<T>)(q) as unknown as PickQueryQ).q.expr,
-      ),
+      args.map((arg) => ((arg as FnUnknownToUnknown)(q) as PickQueryQ).q.expr),
     );
   }
 

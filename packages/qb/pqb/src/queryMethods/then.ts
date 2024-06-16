@@ -10,6 +10,7 @@ import {
 import pg from 'pg';
 import {
   AdapterBase,
+  applyTransforms,
   callWithThis,
   ColumnParser,
   ColumnsParsers,
@@ -327,9 +328,7 @@ const then = async (
     }
 
     if (query.transform) {
-      for (const fn of query.transform) {
-        result = fn(result);
-      }
+      result = applyTransforms(returnType, query.transform, result);
     }
 
     return resolve?.(result);

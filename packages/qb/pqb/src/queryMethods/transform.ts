@@ -1,34 +1,14 @@
 import { Query } from '../query/query';
 import { QueryColumn, QueryThen } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
-import { QueryBase } from '../query/queryBase';
-
-// A function type to transfer query result with.
-// `input` type is inferred from a query `catch` method,
-// it is a result of the query before transform.
-export type QueryTransformFn<T extends Query> = (
-  input: T['then'] extends QueryThen<infer Data> ? Data : never,
-) => unknown;
-
-// Type of query after applying a `transform`.
-// Changes the `returnType` to `valueOrThrow`,
-// because it's always returning a single value - the result of the transform function.
-// Changes the query result to a type returned by the transform function.
-export type QueryTransform<T extends QueryBase, Data> = {
-  [K in keyof T]: K extends 'returnType'
-    ? 'valueOrThrow'
-    : K extends 'result'
-    ? { value: QueryColumn<Data> }
-    : K extends 'then'
-    ? QueryThen<Data>
-    : T[K];
-};
 
 export class TransformMethods {
   /**
    * Transform the result of the query right after loading it.
    *
    * `transform` method should be called in the last order, other methods can't be chained after calling it.
+   *
+   * It is meant to transform the whole result of a query, for transforming individual records consider using {@link QueryMap.map}.
    *
    * The [hooks](/guide/hooks.html) that are going to run after the query will receive the query result **before** transferring.
    *
@@ -76,10 +56,20 @@ export class TransformMethods {
    *
    * @param fn - function to transform query result with
    */
-  transform<T extends Query, Fn extends QueryTransformFn<T>>(
+  transform<T extends Query, Result>(
     this: T,
-    fn: Fn,
-  ): QueryTransform<T, ReturnType<Fn>> {
+    fn: (
+      input: T['then'] extends QueryThen<infer Data> ? Data : never,
+    ) => Result,
+  ): {
+    [K in keyof T]: K extends 'returnType'
+      ? 'valueOrThrow'
+      : K extends 'result'
+      ? { value: QueryColumn<Result> }
+      : K extends 'then'
+      ? QueryThen<Result>
+      : T[K];
+  } {
     return pushQueryValue(this.clone(), 'transform', fn) as never;
   }
 }

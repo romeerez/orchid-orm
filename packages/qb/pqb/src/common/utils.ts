@@ -17,6 +17,11 @@ export type SelectableOrExpression<
   C extends QueryColumn = QueryColumn,
 > = '*' | keyof T['meta']['selectable'] | Expression<C>;
 
+export type SelectableOrExpressions<
+  T extends PickQueryMeta = PickQueryMeta,
+  C extends QueryColumn = QueryColumn,
+> = ('*' | keyof T['meta']['selectable'] | Expression<C>)[];
+
 export type ExpressionOutput<
   T extends PickQueryMeta,
   Expr extends SelectableOrExpression<T>,

@@ -4,9 +4,11 @@ import { assertType, testDb, useTestDatabase } from 'test-utils';
 describe('transform', () => {
   useTestDatabase();
 
-  it('should load and transform records, with respect to column parsers', async () => {
+  beforeAll(async () => {
     await User.insert(userData);
+  });
 
+  it('should load and transform records, with respect to column parsers', async () => {
     const q = User.select('name', 'createdAt').transform((nodes) => ({
       nodes,
       cursor: 1,
@@ -25,8 +27,6 @@ describe('transform', () => {
   });
 
   it('should load and transform records from a sub-query, with respect to column parsers', async () => {
-    await User.insert(userData);
-
     const q = User.select('id', {
       users: () =>
         User.select('name', 'createdAt')
@@ -66,8 +66,6 @@ describe('transform', () => {
       name: t.text(),
       password: t.text(),
     }));
-
-    await User.insert(userData);
 
     const q = User.select('id', {
       users: () =>

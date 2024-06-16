@@ -28,7 +28,13 @@ import { columnToSql, rawOrColumnToSql } from '../sql/common';
 import { pushOrderBySql } from '../sql/orderBy';
 import { whereToSql } from '../sql/where';
 import { windowToSql } from '../sql/window';
-import { OrderArg, WhereArg, WindowArgDeclaration } from '../queryMethods';
+import {
+  OrderArg,
+  OrderArgs,
+  WhereArg,
+  WhereArgs,
+  WindowArgDeclaration,
+} from '../queryMethods';
 import { extendQuery } from '../query/queryUtils';
 
 // Additional SQL options that can be accepted by any aggregate function.
@@ -38,11 +44,11 @@ export interface AggregateOptions<
   // Add DISTINCT inside of function call.
   distinct?: boolean;
   // The same argument as in .order() to be set inside of function call.
-  order?: OrderArg<T> | OrderArg<T>[];
+  order?: OrderArg<T> | OrderArgs<T>;
   // The same argument as in .where() to be set inside of function call.
   filter?: WhereArg<T>;
   // The same argument as in .orWhere() to support OR logic of the filter clause.
-  filterOr?: WhereArg<T>[];
+  filterOr?: WhereArgs<T>;
   // Adds WITHIN GROUP SQL statement.
   withinGroup?: boolean;
   // defines OVER clause.

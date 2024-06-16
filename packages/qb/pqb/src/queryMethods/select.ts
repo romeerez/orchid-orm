@@ -61,25 +61,24 @@ export type SelectArg<T extends SelectSelf> =
   | '*'
   | keyof T['meta']['selectable'];
 
+export type SelectArgs<T extends SelectSelf> = (
+  | '*'
+  | keyof T['meta']['selectable']
+)[];
+
 // .select method object argument.
 // Key is alias for selected item,
 // value can be a column, raw, or a function returning query or raw.
 interface SelectAsArg<T extends SelectSelf> {
-  [K: string]: SelectAsValue<T>;
+  [K: string]:
+    | keyof T['meta']['selectable']
+    | Expression
+    | ((q: {
+        [K in keyof T]: K extends keyof T['relations']
+          ? T['relations'][K]['relationConfig']['methodQuery']
+          : T[K];
+      }) => QueryBase | Expression);
 }
-
-// .select method object argument value.
-// Can be column, raw, or a function returning query or raw.
-type SelectAsValue<T extends SelectSelf> =
-  | keyof T['meta']['selectable']
-  | Expression
-  | ((q: SelectSubQueryArg<T>) => QueryBase | Expression);
-
-type SelectSubQueryArg<T extends SelectSelf> = {
-  [K in keyof T]: K extends keyof T['relations']
-    ? T['relations'][K]['relationConfig']['methodQuery']
-    : T[K];
-};
 
 // Result type of select without the ending object argument.
 type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
@@ -121,17 +120,16 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
 type SelectResultObj<T extends SelectSelf, Obj> = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & {
+        hasSelect: true;
         selectable: SelectAsSelectable<Obj>;
       }
     : K extends 'result'
     ? // Combine previously selected items, all columns if * was provided,
       // and the selected by string and object arguments.
       {
-        [K in
-          | keyof Obj
-          | (T['meta']['hasSelect'] extends true
-              ? keyof T['result']
-              : never)]: K extends keyof Obj
+        [K in T['meta']['hasSelect'] extends true
+          ? keyof Obj | keyof T['result']
+          : keyof Obj]: K extends keyof Obj
           ? SelectAsValueResult<T, Obj[K]>
           : K extends keyof T['result']
           ? T['result'][K]
@@ -143,11 +141,9 @@ type SelectResultObj<T extends SelectSelf, Obj> = {
           T,
           // result is copy-pasted to save on TS instantiations
           {
-            [K in
-              | keyof Obj
-              | (T['meta']['hasSelect'] extends true
-                  ? keyof T['result']
-                  : never)]: K extends keyof Obj
+            [K in T['meta']['hasSelect'] extends true
+              ? keyof Obj | keyof T['result']
+              : keyof Obj]: K extends keyof Obj
               ? SelectAsValueResult<T, Obj[K]>
               : K extends keyof T['result']
               ? T['result'][K]
@@ -156,7 +152,7 @@ type SelectResultObj<T extends SelectSelf, Obj> = {
         >
       >
     : T[K];
-} & QueryMetaHasSelect;
+};
 
 // Result type of select with the ending object argument.
 type SelectResultColumnsAndObj<
@@ -166,6 +162,7 @@ type SelectResultColumnsAndObj<
 > = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & {
+        hasSelect: true;
         selectable: SelectAsSelectable<Obj>;
       }
     : K extends 'result'
@@ -209,7 +206,7 @@ type SelectResultColumnsAndObj<
         >
       >
     : T[K];
-} & QueryMetaHasSelect;
+};
 
 // Add new 'selectable' types based on the select object argument.
 type SelectAsSelectable<Arg> = {
@@ -325,10 +322,10 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
               ? [item]
               : (item as unknown[]);
 
-          return applyTransforms(
-            query.transform,
-            query.handleResult(arg, t, subQueryResult, true),
-          );
+          const result = query.handleResult(arg, t, subQueryResult, true);
+          return query.transform
+            ? applyTransforms(t, query.transform, result)
+            : result;
         });
       }
 
@@ -597,7 +594,7 @@ const maybeUnNameColumn = (column: QueryColumn, isSubQuery?: boolean) => {
 
 export function _querySelect<
   T extends SelectSelf,
-  Columns extends SelectArg<T>[],
+  Columns extends SelectArgs<T>,
 >(q: T, columns: Columns): SelectResult<T, Columns>;
 export function _querySelect<T extends SelectSelf, Obj extends SelectAsArg<T>>(
   q: T,
@@ -605,7 +602,7 @@ export function _querySelect<T extends SelectSelf, Obj extends SelectAsArg<T>>(
 ): SelectResultObj<T, Obj>;
 export function _querySelect<
   T extends SelectSelf,
-  Columns extends SelectArg<T>[],
+  Columns extends SelectArgs<T>,
   Obj extends SelectAsArg<T>,
 >(
   q: T,
@@ -692,7 +689,7 @@ export class Select {
    *   .where({ 'author.isPopular': true });
    * ```
    */
-  select<T extends SelectSelf, Columns extends SelectArg<T>[]>(
+  select<T extends SelectSelf, Columns extends SelectArgs<T>>(
     this: T,
     ...args: Columns
   ): SelectResult<T, Columns>;
@@ -702,7 +699,7 @@ export class Select {
   ): SelectResultObj<T, Obj>;
   select<
     T extends SelectSelf,
-    Columns extends SelectArg<T>[],
+    Columns extends SelectArgs<T>,
     Obj extends SelectAsArg<T>,
   >(
     this: T,

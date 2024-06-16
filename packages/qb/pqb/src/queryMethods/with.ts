@@ -10,6 +10,7 @@ import {
   ColumnsShapeBase,
   EmptyObject,
   PickQueryResult,
+  QueryColumns,
 } from 'orchid-core';
 import { SqlMethod } from './sql';
 import { getShapeFromSelect } from './select';
@@ -34,15 +35,12 @@ export interface WithRecursiveOptions extends WithArgsOptions {
     | 'EXCEPT ALL';
 }
 
-export type WithQueryBuilder<T extends PickQueryWithDataColumnTypes> = {
-  [K in keyof Query]: K extends 'sql'
-    ? SqlMethod<T['columnTypes']>['sql']
-    : K extends 'relations'
-    ? EmptyObject
-    : K extends 'withData'
-    ? T['withData']
-    : Query[K];
-};
+export interface WithQueryBuilder<T extends PickQueryWithDataColumnTypes>
+  extends Query {
+  sql: SqlMethod<T['columnTypes']>['sql'];
+  relations: EmptyObject;
+  withData: T['withData'];
+}
 
 // Adds a `withData` entry to a query
 export type WithResult<
@@ -69,7 +67,7 @@ export type WithResult<
 export type WithSqlResult<
   T extends PickQueryWithDataColumnTypes,
   Name extends string,
-  Shape extends ColumnsShapeBase,
+  Shape extends QueryColumns,
 > = {
   [K in keyof T]: K extends 'withData'
     ? {
@@ -163,17 +161,17 @@ export class WithMethods {
     this: T,
     name: Name,
     options: WithArgsOptions,
-    query: Q | ((qb: WithQueryBuilder<T>) => Q),
+    query: Q | ((q: WithQueryBuilder<T>) => Q),
   ): WithResult<T, Name, Q>;
   with(
     name: string,
     second:
       | WithArgsOptions
       | Query
-      | ((qb: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
+      | ((q: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
     third?:
       | Query
-      | ((qb: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
+      | ((q: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
   ) {
     const q = (this as unknown as Query).clone();
 

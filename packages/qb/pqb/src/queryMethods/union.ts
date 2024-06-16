@@ -5,7 +5,7 @@ import { SelectQueryData, UnionItem, UnionKind } from '../sql';
 // argument of `union`-like query methods.
 // it supports query objects with the same result as in the previous query,
 // or a raw SQL
-export type UnionArg<T extends PickQueryResult> =
+export type UnionArgs<T extends PickQueryResult> = (
   | {
       result: {
         [K in keyof T['result']]: {
@@ -13,11 +13,12 @@ export type UnionArg<T extends PickQueryResult> =
         };
       };
     }
-  | ((q: T) => Expression);
+  | ((q: T) => Expression)
+)[];
 
 export const _queryUnion = <T extends Query>(
   base: T,
-  args: UnionArg<T>[],
+  args: UnionArgs<T>,
   k: UnionKind,
 ): T => {
   const q = base.baseQuery.clone();
@@ -101,10 +102,10 @@ export class Union {
    *
    * @param args - array of queries or SQL expressions
    */
-  union<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+  union<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
       (this as unknown as Query).clone(),
-      args as UnionArg<Query>[],
+      args as UnionArgs<Query>,
       'UNION',
     ) as never;
   }
@@ -114,10 +115,10 @@ export class Union {
    *
    * @param args - array of queries or SQL expressions
    */
-  unionAll<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+  unionAll<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
       (this as unknown as Query).clone(),
-      args as UnionArg<Query>[],
+      args as UnionArgs<Query>,
       'UNION ALL',
     ) as never;
   }
@@ -127,10 +128,10 @@ export class Union {
    *
    * @param args - array of queries or SQL expressions
    */
-  intersect<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+  intersect<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
       (this as unknown as Query).clone(),
-      args as UnionArg<Query>[],
+      args as UnionArgs<Query>,
       'INTERSECT',
     ) as never;
   }
@@ -140,10 +141,10 @@ export class Union {
    *
    * @param args - array of queries or SQL expressions
    */
-  intersectAll<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+  intersectAll<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
       (this as unknown as Query).clone(),
-      args as UnionArg<Query>[],
+      args as UnionArgs<Query>,
       'INTERSECT ALL',
     ) as never;
   }
@@ -153,10 +154,10 @@ export class Union {
    *
    * @param args - array of queries or SQL expressions
    */
-  except<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+  except<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
       (this as unknown as Query).clone(),
-      args as UnionArg<Query>[],
+      args as UnionArgs<Query>,
       'EXCEPT',
     ) as never;
   }
@@ -166,10 +167,10 @@ export class Union {
    *
    * @param args - array of queries or SQL expressions
    */
-  exceptAll<T extends PickQueryResult>(this: T, ...args: UnionArg<T>[]): T {
+  exceptAll<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
       (this as unknown as Query).clone(),
-      args as UnionArg<Query>[],
+      args as UnionArgs<Query>,
       'EXCEPT ALL',
     ) as never;
   }

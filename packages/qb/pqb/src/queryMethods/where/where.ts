@@ -49,9 +49,9 @@ export type WhereArg<T extends PickQueryMetaRelations> =
         | 'NOT'
         | 'OR'
         | 'IN']?: K extends 'NOT'
-        ? MaybeArray<WhereArg<T>>
+        ? WhereArg<T> | WhereArgs<T>
         : K extends 'OR'
-        ? MaybeArray<WhereArg<T>>[]
+        ? (WhereArg<T> | WhereArgs<T>)[]
         : K extends 'IN'
         ? MaybeArray<{
             columns: (keyof T['meta']['selectable'])[];
@@ -231,7 +231,7 @@ export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
  */
 export const _queryOr = <T extends PickQueryMetaRelations>(
   q: T,
-  args: WhereArg<T>[],
+  args: WhereArgs<T>,
 ): WhereResult<T> => {
   resolveCallbacksInArgs(q, args);
 
@@ -247,7 +247,7 @@ export const _queryOr = <T extends PickQueryMetaRelations>(
  */
 export const _queryOrNot = <T extends PickQueryMetaRelations>(
   q: T,
-  args: WhereArg<T>[],
+  args: WhereArgs<T>,
 ): WhereResult<T> => {
   resolveCallbacksInArgs(q, args);
 
@@ -831,7 +831,7 @@ export class Where {
    */
   orWhere<T extends PickQueryMetaRelations>(
     this: T,
-    ...args: WhereArg<T>[]
+    ...args: WhereArgs<T>
   ): WhereResult<T> {
     return _queryOr((this as unknown as Query).clone(), args as never) as never;
   }
@@ -843,7 +843,7 @@ export class Where {
    */
   orWhereNot<T extends PickQueryMetaRelations>(
     this: T,
-    ...args: WhereArg<T>[]
+    ...args: WhereArgs<T>
   ): WhereResult<T> {
     return _queryOrNot(
       (this as unknown as Query).clone(),

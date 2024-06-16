@@ -640,6 +640,47 @@ Provide SQL expression for the `HAVING` SQL statement:
 db.table.havingSql`count(*) >= ${10}`;
 ```
 
+## map
+
+[//]: # 'has JSDoc'
+
+Use `map` to transform individual records of a query result.
+
+It accepts a single record and should return a single transformed record.
+
+For transforming the whole result of a query, consider using [transform](#transform) instead.
+
+The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
+
+```ts
+// add a `titleLength` to every post
+const posts = await db.post.limit(10).map((post) => ({
+  ...post,
+  titleLength: post.title.length,
+}));
+
+posts[0].titleLength; // number
+
+// using the exact same `map` function to transform a single post
+const singlePost = await db.post.find(id).map((post) => ({
+  ...post,
+  titleLength: post.title.length,
+}));
+
+singlePost.titleLength; // number
+
+// can be used in sub-queries
+const postsWithComments = await db.post.select('title', {
+  comments: (q) =>
+    q.comments.map((comment) => ({
+      ...comment,
+      truncatedContent: comment.content.slice(0, 100),
+    })),
+});
+
+postsWithComments[0].comments[0].truncatedContent; // string
+```
+
 ## transform
 
 [//]: # 'has JSDoc'
@@ -647,6 +688,8 @@ db.table.havingSql`count(*) >= ${10}`;
 Transform the result of the query right after loading it.
 
 `transform` method should be called in the last order, other methods can't be chained after calling it.
+
+It is meant to transform the whole result of a query, for transforming individual records consider using [map](#map).
 
 The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
 

@@ -3,7 +3,6 @@ import {
   PickQueryMetaResultReturnTypeWithDataWindowsTable,
   PickQueryQ,
   PickQueryShapeResultSinglePrimaryKey,
-  PickQueryShapeSinglePrimaryKey,
   Query,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
@@ -15,7 +14,11 @@ import {
   SetQueryTableAlias,
   WithDataBase,
 } from '../query/query';
-import { AliasOrTable, SelectableOrExpression } from '../common/utils';
+import {
+  AliasOrTable,
+  SelectableOrExpression,
+  SelectableOrExpressions,
+} from '../common/utils';
 import {
   OrderTsQueryConfig,
   SelectItem,
@@ -43,8 +46,9 @@ import { For } from './for';
 import {
   _queryWhere,
   _queryWhereSql,
+  QueryMetaHasWhere,
   Where,
-  WhereArg,
+  WhereArgs,
   WhereResult,
 } from './where/where';
 import { SearchMethods } from './search';
@@ -79,6 +83,7 @@ import { AsMethods } from './as';
 import { QueryBase } from '../query/queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
+import { QueryMap } from './map';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { ScopeMethods } from './scope';
 import { SoftDeleteMethods } from './softDelete';
@@ -95,7 +100,7 @@ export interface WindowArg<T extends OrderArgSelf> {
 
 // SQL window options to specify partitionBy and order of the window
 export interface WindowArgDeclaration<T extends OrderArgSelf = OrderArgSelf> {
-  partitionBy?: SelectableOrExpression<T> | SelectableOrExpression<T>[];
+  partitionBy?: SelectableOrExpression<T> | SelectableOrExpressions<T>;
   order?: OrderArg<T>;
 }
 
@@ -116,6 +121,8 @@ export type OrderArg<T extends OrderArgSelf> =
     }
   | Expression;
 
+export type OrderArgs<T extends OrderArgSelf> = OrderArg<T>[];
+
 type OrderArgTsQuery<T extends OrderArgSelf> =
   | string
   | undefined extends T['meta']['tsQuery']
@@ -132,9 +139,7 @@ type OrderArgKey<T extends OrderArgSelf> =
         : K;
     }[keyof T['result']];
 
-export type OrderArgs<T extends OrderArgSelf> = OrderArg<T>[];
-
-export type GroupArg<T extends PickQueryResult> =
+export type GroupArgs<T extends PickQueryResult> = (
   | {
       [K in keyof T['result']]: T['result'][K]['dataType'] extends
         | 'array'
@@ -142,17 +147,14 @@ export type GroupArg<T extends PickQueryResult> =
         ? never
         : K;
     }[keyof T['result']]
-  | Expression;
+  | Expression
+)[];
 
-type FindArg<T extends PickQueryShapeSinglePrimaryKey> =
-  | T['internal']['singlePrimaryKey']
-  | Expression;
-
-type QueryHelper<
+interface QueryHelper<
   T extends PickQueryMetaShape,
   Args extends unknown[],
   Result,
-> = {
+> {
   <
     Q extends {
       returnType: QueryReturnType;
@@ -172,7 +174,7 @@ type QueryHelper<
   ): Result extends Query ? MergeQuery<Q, Result> : Result;
 
   result: Result;
-};
+}
 
 // Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
 export type QueryHelperResult<
@@ -217,6 +219,7 @@ export interface QueryMethods<ColumnTypes>
     MergeQueryMethods,
     SqlMethod<ColumnTypes>,
     TransformMethods,
+    QueryMap,
     ScopeMethods,
     SoftDeleteMethods,
     ExpressionMethods {}
@@ -250,14 +253,14 @@ export const _queryExec = <T extends Query>(q: T) => {
 
 export const _queryFindBy = <T extends QueryBase>(
   q: T,
-  args: WhereArg<T>[],
+  args: WhereArgs<T>,
 ): SetQueryReturnsOne<WhereResult<T>> => {
   return _queryTake(_queryWhere(q, args));
 };
 
 export const _queryFindByOptional = <T extends QueryBase>(
   q: T,
-  args: WhereArg<T>[],
+  args: WhereArgs<T>,
 ): SetQueryReturnsOneOptional<WhereResult<T>> => {
   return _queryTakeOptional(_queryWhere(q, args));
 };
@@ -409,7 +412,7 @@ export class QueryMethods<ColumnTypes> {
    */
   distinct<T extends PickQueryMeta>(
     this: T,
-    ...columns: SelectableOrExpression<T>[]
+    ...columns: SelectableOrExpressions<T>
   ): T {
     return pushQueryArray(
       (this as unknown as Query).clone(),
@@ -430,8 +433,8 @@ export class QueryMethods<ColumnTypes> {
    */
   find<T extends PickQueryShapeResultSinglePrimaryKey>(
     this: T,
-    value: FindArg<T>,
-  ): SetQueryReturnsOne<WhereResult<T>> {
+    value: T['internal']['singlePrimaryKey'] | Expression,
+  ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
     const q = (this as unknown as Query).clone();
 
     if (value === null || value === undefined) {
@@ -465,7 +468,7 @@ export class QueryMethods<ColumnTypes> {
   findBySql<T extends PickQueryResult>(
     this: T,
     ...args: SQLQueryArgs
-  ): SetQueryReturnsOne<WhereResult<T>> {
+  ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
     const q = (this as unknown as Query).clone();
     return _queryTake(_queryWhereSql(q, args)) as never;
   }
@@ -482,8 +485,8 @@ export class QueryMethods<ColumnTypes> {
    */
   findOptional<T extends PickQueryShapeResultSinglePrimaryKey>(
     this: T,
-    value: FindArg<T>,
-  ): SetQueryReturnsOneOptional<WhereResult<T>> {
+    value: T['internal']['singlePrimaryKey'] | Expression,
+  ): SetQueryReturnsOneOptional<T> & QueryMetaHasWhere {
     return _queryTakeOptional((this as unknown as Query).find(value)) as never;
   }
 
@@ -503,7 +506,7 @@ export class QueryMethods<ColumnTypes> {
   findBySqlOptional<T extends PickQueryResult>(
     this: T,
     ...args: SQLQueryArgs
-  ): SetQueryReturnsOneOptional<WhereResult<T>> {
+  ): SetQueryReturnsOneOptional<T> & QueryMetaHasWhere {
     return _queryTakeOptional(
       (this as unknown as Query).findBySql(...args),
     ) as never;
@@ -525,7 +528,7 @@ export class QueryMethods<ColumnTypes> {
   findBy<T extends PickQueryResultUniqueColumns>(
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
-  ): SetQueryReturnsOne<WhereResult<T>> {
+  ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
     return _queryFindBy((this as unknown as Query).clone(), [
       uniqueColumnValues,
     ] as never) as never;
@@ -547,7 +550,7 @@ export class QueryMethods<ColumnTypes> {
   findByOptional<T extends PickQueryResultUniqueColumns>(
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
-  ): SetQueryReturnsOneOptional<WhereResult<T>> {
+  ): SetQueryReturnsOneOptional<T> & QueryMetaHasWhere {
     return _queryFindByOptional((this as unknown as Query).clone(), [
       uniqueColumnValues,
     ] as never) as never;
@@ -609,7 +612,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param columns - column names or a raw SQL
    */
-  group<T extends PickQueryResult>(this: T, ...columns: GroupArg<T>[]): T {
+  group<T extends PickQueryResult>(this: T, ...columns: GroupArgs<T>): T {
     return pushQueryArray(
       (this as unknown as Query).clone(),
       'group',
@@ -1039,6 +1042,7 @@ applyMixins(QueryMethods, [
   MergeQueryMethods,
   SqlMethod,
   TransformMethods,
+  QueryMap,
   ScopeMethods,
   SoftDeleteMethods,
   ExpressionMethods,
