@@ -87,10 +87,14 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
     item: Item,
   ): ArrayColumn<DefaultSchemaConfig, Item, unknown, unknown, unknown>;
 
-  json<
-    // (#286) must restrict type, because otherwise `update` can't differentiate between a function and non-function value
-    T extends MaybeArray<string | number | boolean | RecordUnknown>,
-  >(): JSONColumn<T, DefaultSchemaConfig>;
+  json<T>(): JSONColumn<
+    // (#286) the default type shouldn't conform to a function,
+    // because otherwise `update` can't differentiate between a function and non-function value
+    unknown extends T
+      ? MaybeArray<string | number | boolean | RecordUnknown>
+      : T,
+    DefaultSchemaConfig
+  >;
 
   inputSchema(): undefined;
   outputSchema(): undefined;

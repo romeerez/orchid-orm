@@ -1,11 +1,9 @@
 import { codeToString } from 'orchid-core';
-import { testZodColumnTypes as t, useTestDatabase } from 'test-utils';
+import { testZodColumnTypes as t } from 'test-utils';
 import { z } from 'zod';
 
 describe('json columns', () => {
   describe('json', () => {
-    useTestDatabase();
-
     it('should have toCode', () => {
       const code = t.json(z.object({ foo: z.string() })).toCode('t');
       expect(codeToString(code, '', '  ')).toBe(`t.json()`);
