@@ -1,5 +1,21 @@
 # Breaking changes
 
+## orchid-orm 1.30.0
+
+The `text` column type no longer accepts `min` and `max` params.
+
+If you have overridden it in the `BaseTable` config like the following, simply remove it:
+
+```ts
+text: (min = 0, max = Infinity) => t.text(min, max),
+```
+
+Replace all occurrences of `text(min, max)` in your code with `text().min(min).max(max)`.
+
+`varchar`'s limit parameter becomes required, replace unlimited varchars with `text`.
+
+The `char` type is removed because it's [discouraged](https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_char.28n.29) by Postgres.
+
 ## orchid-orm 1.29.0
 
 `json*` methods rework: now all json methods such as `jsonSet` can be used in all contexts on a single JSON value,

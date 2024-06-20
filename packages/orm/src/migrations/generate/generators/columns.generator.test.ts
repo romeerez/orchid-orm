@@ -117,7 +117,7 @@ change(async (db) => {
         await db.createSchema('from');
         await db.createSchema('to');
         await db.createDomain('from.custom', (t) => t.integer());
-        await db.createDomain('to.custom', (t) => t.varchar());
+        await db.createDomain('to.custom', (t) => t.string());
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           unchanged: t.domain('from.custom'),
@@ -127,7 +127,7 @@ change(async (db) => {
       tables: [
         table((t) => ({
           unchanged: t.domain('from.custom').as(t.integer()),
-          column: t.domain('to.custom').as(t.varchar()),
+          column: t.domain('to.custom').as(t.string()),
         })),
       ],
     });

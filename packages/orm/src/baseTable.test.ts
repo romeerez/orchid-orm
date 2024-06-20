@@ -415,7 +415,7 @@ describe('baseTable', () => {
       readonly table = 'some';
       columns = this.setColumns((t) => ({
         id: t.identity().primaryKey(),
-        name: t.text(0, Infinity),
+        name: t.text(),
       }));
     }
 

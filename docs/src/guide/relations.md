@@ -64,7 +64,7 @@ export class AuthorTable extends BaseTable {
   readonly table = 'author';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
+    name: t.string(),
   }));
 }
 
@@ -73,7 +73,7 @@ export class BookTable extends BaseTable {
   readonly table = 'book';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    title: t.text(5, 100),
+    title: t.string(),
     // book has a column pointing to the author table
     authorId: t.integer(),
   }));
@@ -108,7 +108,7 @@ export class SupplierTable extends BaseTable {
   readonly table = 'supplier';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    brand: t.text(2, 30),
+    brand: t.string(),
     // here are no reference columns for an Account
   }));
 
@@ -130,7 +130,7 @@ export class AccountTable extends BaseTable {
   readonly table = 'account';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
+    name: t.string(),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
   }));
@@ -155,7 +155,7 @@ export class SupplierTable extends BaseTable {
   readonly table = 'supplier';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    brand: t.text(2, 30),
+    brand: t.string(),
   }));
 
   relations = {
@@ -180,7 +180,7 @@ export class AccountTable extends BaseTable {
   readonly table = 'account';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
+    name: t.string(),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
   }));
@@ -199,7 +199,7 @@ export class AccountHistoryTable extends BaseTable {
   readonly table = 'accountHistory';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    data: t.text(0, 1000),
+    data: t.text(),
     // column pointing to the Account
     accountId: t.integer(),
   }));
@@ -231,7 +231,7 @@ export class AuthorTable extends BaseTable {
   readonly table = 'author';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
+    name: t.string(),
   }));
 
   relations = {
@@ -249,7 +249,7 @@ export class BookTable extends BaseTable {
   readonly table = 'book';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    title: t.text(3, 100),
+    title: t.string(),
     // book has a column pointing to the author table
     authorId: t.integer(),
   }));
@@ -274,7 +274,7 @@ export class PhysicianTable extends BaseTable {
   readonly table = 'physician';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
+    name: t.string(),
   }));
 
   relations = {
@@ -324,7 +324,7 @@ export class PatientTable extends BaseTable {
   readonly table = 'patient';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
+    name: t.string(),
   }));
 
   relations = {
@@ -363,7 +363,7 @@ export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    title: t.text(5, 100),
+    title: t.string(),
   }));
 
   relations = {
@@ -389,7 +389,7 @@ export class TagTable extends BaseTable {
   readonly table = 'tag';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
+    name: t.string(),
   }));
 
   relations = {

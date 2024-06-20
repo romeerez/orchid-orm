@@ -250,7 +250,7 @@ describe('withSql', () => {
       'w',
       (t) => ({
         one: t.integer(),
-        two: t.text(1, 10),
+        two: t.text(),
       }),
       (q) => q.sql`(VALUES (1, 'two')) t(one, two)`,
     ).from('w');

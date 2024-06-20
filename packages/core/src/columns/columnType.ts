@@ -608,7 +608,7 @@ export abstract class ColumnTypeBase<
    *   columns = this.setColumns((t) => ({
    *     // encode boolean, number, or string to text before saving
    *     column: t
-   *       .text(3, 100)
+   *       .string()
    *       // when having validation library, the first argument is a validation schema
    *       .encode(
    *         z.boolean().or(z.number()).or(z.string()),
@@ -645,14 +645,14 @@ export abstract class ColumnTypeBase<
    *   readonly table = 'table';
    *   columns = this.setColumns((t) => ({
    *     columnZod: t
-   *       .text(3, 100)
+   *       .string()
    *       // when having validation library, the first argument is a schema
    *       .parse(z.number().int(), (input) => parseInt(input))
    *       // no schema argument otherwise
    *       .parse((input) => parseInt(input)),
    *
    *     columnValibot: t
-   *       .text(3, 100)
+   *       .string()
    *       .parse(number([integer()]), (input) => parseInt(input))
    *       .parse((input) => parseInt(input)),
    *   }));
@@ -672,7 +672,7 @@ export abstract class ColumnTypeBase<
    *     // return a default image URL if it is null
    *     // this allows to change the defaultImageURL without modifying a database
    *     imageURL: t
-   *       .text(5, 300)
+   *       .string()
    *       .nullable()
    *       .parse((url) => url ?? defaultImageURL),
    *   }));
@@ -693,7 +693,7 @@ export abstract class ColumnTypeBase<
    * ```ts
    * // column has the same type as t.integer()
    * const column = t
-   *   .text(1, 100)
+   *   .string()
    *   .encode((input: number) => input)
    *   .parse((text) => parseInt(text))
    *   .as(t.integer());

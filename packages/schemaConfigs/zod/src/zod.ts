@@ -20,7 +20,6 @@ import {
   ArrayColumnValue,
   BigIntColumn,
   BigSerialColumn,
-  CharColumn,
   CitextColumn,
   columnCode,
   ColumnData,
@@ -529,11 +528,6 @@ interface VarCharColumnZod
 class VarCharColumnZod extends VarCharColumn<ZodSchemaConfig> {}
 Object.assign(VarCharColumnZod.prototype, stringMethods);
 
-interface CharColumnZod extends CharColumn<ZodSchemaConfig>, StringMethods {}
-
-class CharColumnZod extends CharColumn<ZodSchemaConfig> {}
-Object.assign(CharColumnZod.prototype, stringMethods);
-
 interface TextColumnZod extends TextColumn<ZodSchemaConfig>, StringMethods {}
 
 class TextColumnZod extends TextColumn<ZodSchemaConfig> {}
@@ -741,11 +735,10 @@ export interface ZodSchemaConfig {
   doublePrecision(): DoublePrecisionColumnZod;
   bigSerial(): BigSerialColumnZod;
   money(): MoneyColumnZod;
-  varchar(limit?: number): VarCharColumnZod;
-  char(limit?: number): CharColumnZod;
-  text(min: number, max: number): TextColumnZod;
+  varchar(limit: number): VarCharColumnZod;
+  text(): TextColumnZod;
   string(limit?: number): StringColumnZod;
-  citext(min: number, max: number): CitextColumnZod;
+  citext(): CitextColumnZod;
 
   date(): DateColumnZod;
   timestampNoTZ(precision?: number): TimestampNoTzColumnZod;
@@ -971,10 +964,9 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   bigSerial: () => new BigSerialColumnZod(zodSchemaConfig),
   money: () => new MoneyColumnZod(zodSchemaConfig),
   varchar: (limit) => new VarCharColumnZod(zodSchemaConfig, limit),
-  char: (limit) => new CharColumnZod(zodSchemaConfig, limit),
-  text: (min, max) => new TextColumnZod(zodSchemaConfig, min, max),
+  text: () => new TextColumnZod(zodSchemaConfig),
   string: (limit) => new StringColumnZod(zodSchemaConfig, limit),
-  citext: (min, max) => new CitextColumnZod(zodSchemaConfig, min, max),
+  citext: () => new CitextColumnZod(zodSchemaConfig),
 
   date: () => new DateColumnZod(zodSchemaConfig),
   timestampNoTZ: (precision) =>

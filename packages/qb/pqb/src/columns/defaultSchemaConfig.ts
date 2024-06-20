@@ -29,7 +29,6 @@ import {
   SmallSerialColumn,
 } from './number';
 import {
-  CharColumn,
   CitextColumn,
   MoneyColumn,
   StringColumn,
@@ -116,11 +115,10 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   doublePrecision(): DoublePrecisionColumn<DefaultSchemaConfig>;
   bigSerial(): BigSerialColumn<DefaultSchemaConfig>;
   money(): MoneyColumn<DefaultSchemaConfig>;
-  varchar(limit?: number): VarCharColumn<DefaultSchemaConfig>;
-  char(limit?: number): CharColumn<DefaultSchemaConfig>;
-  text(min: number, max: number): TextColumn<DefaultSchemaConfig>;
+  varchar(limit: number): VarCharColumn<DefaultSchemaConfig>;
+  text(): TextColumn<DefaultSchemaConfig>;
   string(limit?: number): StringColumn<DefaultSchemaConfig>;
-  citext(min: number, max: number): CitextColumn<DefaultSchemaConfig>;
+  citext(): CitextColumn<DefaultSchemaConfig>;
 
   date(): DateColumn<DefaultSchemaConfig>;
   timestampNoTZ(precision?: number): TimestampColumn<DefaultSchemaConfig>;
@@ -200,13 +198,10 @@ export const defaultSchemaConfig = {
   doublePrecision: () => new DoublePrecisionColumn(defaultSchemaConfig),
   bigSerial: () => new BigSerialColumn(defaultSchemaConfig),
   money: () => new MoneyColumn(defaultSchemaConfig),
-  varchar: (limit?: number) => new VarCharColumn(defaultSchemaConfig, limit),
-  char: (limit?: number) => new CharColumn(defaultSchemaConfig, limit),
-  text: (min: number, max: number) =>
-    new TextColumn(defaultSchemaConfig, min, max),
+  varchar: (limit: number) => new VarCharColumn(defaultSchemaConfig, limit),
+  text: () => new TextColumn(defaultSchemaConfig),
   string: (limit?: number) => new StringColumn(defaultSchemaConfig, limit),
-  citext: (min: number, max: number) =>
-    new CitextColumn(defaultSchemaConfig, min, max),
+  citext: () => new CitextColumn(defaultSchemaConfig),
 
   date: () => new DateColumn(defaultSchemaConfig),
   timestampNoTZ: (precision?: number) =>

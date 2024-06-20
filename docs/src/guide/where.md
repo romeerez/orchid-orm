@@ -518,7 +518,7 @@ db.table.where({
 
 ### text operators
 
-For `text`, `char`, `varchar`, and `json` columns.
+For `text`, `varchar`, `string`, and `json` columns.
 
 `json` is stored as text, so it has text operators. Use the `jsonb` type for JSON operators.
 

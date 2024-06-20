@@ -13,7 +13,6 @@ import {
   TableData,
   TableDataFn,
   TableDataItem,
-  TextColumn,
   TransactionAdapter,
 } from 'pqb';
 import {
@@ -60,16 +59,8 @@ export type TableOptions = {
   language?: string;
 };
 
-// Simplified text column type that doesn't require `min` and `max` arguments.
-type TextColumnCreator = (
-  min?: number,
-  max?: number,
-) => TextColumn<ColumnSchemaConfig>;
-
 // Overridden column types to simplify and adapt some column types for a migration.
-export type MigrationColumnTypes<CT> = Omit<CT, 'text' | 'citext' | 'enum'> & {
-  text: TextColumnCreator;
-  citext: TextColumnCreator;
+export type MigrationColumnTypes<CT> = Omit<CT, 'enum'> & {
   enum: (name: string) => EnumColumn<ColumnSchemaConfig, unknown>;
 };
 

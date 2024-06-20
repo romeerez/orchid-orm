@@ -232,7 +232,6 @@ describe('column type', () => {
       adapter: testAdapter,
       columnTypes: (t) => ({
         ...t,
-        text: (min = 0, max = Infinity) => t.text(min, max),
         numberTimestamp: () =>
           td
             .timestampNoTZ()
@@ -249,7 +248,6 @@ describe('column type', () => {
       schemaConfig: zodSchemaConfig,
       columnTypes: (t) => ({
         ...t,
-        text: (min = 0, max = Infinity) => t.text(min, max),
         numberTimestamp: () =>
           tz
             .timestampNoTZ()

@@ -13,11 +13,6 @@ const header = `// Set \`snakeCase\` to \`true\` if columns in your database are
 
 const columnTypesComment = `// Customize column types for all tables.`;
 
-const textColumnComment = (
-  name: string,
-) => `// Set min and max validations for all text columns,
-    // it is only checked when validating with ${name} schemas derived from the table.`;
-
 describe('setupBaseTable', () => {
   beforeEach(jest.resetAllMocks);
 
@@ -30,9 +25,9 @@ describe('setupBaseTable', () => {
 export const BaseTable = createBaseTable({
   ${header}
   ${columnTypesComment}
-  columnTypes: (t) => ({
-    ...t,
-  }),
+  // columnTypes: (t) => ({
+  //   ...t,
+  // }),
 });
 
 export const { sql } = BaseTable;
@@ -51,11 +46,9 @@ export const BaseTable = createBaseTable({
   schemaConfig: zodSchemaConfig,
 
   ${columnTypesComment}
-  columnTypes: (t) => ({
-    ...t,
-    ${textColumnComment('zod')}
-    text: (min = 0, max = Infinity) => t.text(min, max),
-  }),
+  // columnTypes: (t) => ({
+  //   ...t,
+  // }),
 });
 
 export const { sql } = BaseTable;
@@ -77,11 +70,9 @@ export const BaseTable = createBaseTable({
   schemaConfig: valibotSchemaConfig,
 
   ${columnTypesComment}
-  columnTypes: (t) => ({
-    ...t,
-    ${textColumnComment('valibot')}
-    text: (min = 0, max = Infinity) => t.text(min, max),
-  }),
+  // columnTypes: (t) => ({
+  //   ...t,
+  // }),
 });
 
 export const { sql } = BaseTable;

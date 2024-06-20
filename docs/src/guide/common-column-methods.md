@@ -165,7 +165,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     // encode boolean, number, or string to text before saving
     column: t
-      .text(3, 100)
+      .string()
       // when having validation library, the first argument is a validation schema
       .encode(
         z.boolean().or(z.number()).or(z.string()),
@@ -201,14 +201,14 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     columnZod: t
-      .text(3, 100)
+      .string()
       // when having validation library, the first argument is a schema
       .parse(z.number().int(), (input) => parseInt(input))
       // no schema argument otherwise
       .parse((input) => parseInt(input)),
 
     columnValibot: t
-      .text(3, 100)
+      .string()
       .parse(number([integer()]), (input) => parseInt(input))
       .parse((input) => parseInt(input)),
   }));
@@ -228,7 +228,7 @@ export class Table extends BaseTable {
     // return a default image URL if it is null
     // this allows to change the defaultImageURL without modifying a database
     imageURL: t
-      .text(5, 300)
+      .varchar(1000)
       .nullable()
       .parse((url) => url ?? defaultImageURL),
   }));
@@ -247,7 +247,7 @@ and `.parse` which returns the correct type.
 ```ts
 // column has the same type as t.integer()
 const column = t
-  .text(1, 100)
+  .string()
   .encode((input: number) => input)
   .parse((text) => parseInt(text))
   // schema argument is required if you included a validation library
@@ -269,7 +269,7 @@ If you don't specify `schemaConfig` option for a [validation library](/guide/col
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    size: t.text().asType((t) => t<'small' | 'medium' | 'large'>()),
+    size: t.string().asType((t) => t<'small' | 'medium' | 'large'>()),
   }));
 }
 
@@ -373,7 +373,7 @@ When mutating a query in this callback, the changes will be applied to all futur
 export class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
-    name: t.text(3, 100).modifyQuery((table, column) => {
+    name: t.string().modifyQuery((table, column) => {
       // table argument is the query interface of SomeTable
       // column object contains data with column name and other properties
     }),

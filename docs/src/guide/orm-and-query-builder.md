@@ -139,8 +139,8 @@ export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 100),
-    password: t.text(8, 200),
+    name: t.string(),
+    password: t.string(),
     ...t.timestamps(),
   }));
 }
@@ -457,8 +457,8 @@ After `db` is defined, construct queryable tables in such way:
 ```ts
 export const User = db('user', (t) => ({
   id: t.identity().primaryKey(),
-  name: t.text(3, 100),
-  password: t.text(8, 200),
+  name: t.string(),
+  password: t.string(),
   age: t.integer().nullable(),
   ...t.timestamps(),
 }));

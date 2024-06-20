@@ -274,9 +274,8 @@ describe('valibot schema config', () => {
     numeric: t.numeric(),
     decimal: t.decimal(),
     doublePrecision: t.doublePrecision(),
-    varchar: t.varchar(),
-    char: t.char(),
-    text: t.text(0, Infinity),
+    varchar: t.varchar(10),
+    text: t.text(),
     string: t.string(),
   };
 
@@ -292,12 +291,12 @@ describe('valibot schema config', () => {
     'bigint',
     'bigSerial',
     'varchar',
-    'char',
     'text',
     'string',
   ])('%s', (method) => {
     it('should convert to string', () => {
-      const type = t[method as 'numeric'];
+      const type =
+        method === 'varchar' ? () => t.varchar(20) : t[method as 'numeric'];
 
       expectAllParse(type(), 's', 's');
 
@@ -374,7 +373,10 @@ describe('valibot schema config', () => {
     });
 
     it('should convert to string with limit', () => {
-      const type = t[method as 'varchar']().length(3);
+      const type =
+        method === 'varchar'
+          ? t.varchar(10).length(3)
+          : t[method as 'text']().length(3);
 
       expectAllThrow(type, '', 'Invalid length: Expected 3 but received 0');
 
@@ -382,7 +384,7 @@ describe('valibot schema config', () => {
     });
   });
 
-  describe.each(['varchar', 'char', 'string'])('%s', (method) => {
+  describe.each(['varchar', 'string'])('%s', (method) => {
     it('should accept max as argument', () => {
       const type = t[method as 'varchar'](3);
 
@@ -394,7 +396,7 @@ describe('valibot schema config', () => {
 
   describe.each(['text', 'citext'])('%s', (method) => {
     it('should accept min and max as arguments', () => {
-      const type = t[method as 'text'](2, 3);
+      const type = t[method as 'text']().min(2).max(3);
 
       expect(() => parse(type.inputSchema, 'a')).toThrow(
         'Invalid length: Expected >=2 but received 1',

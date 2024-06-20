@@ -26,7 +26,7 @@ describe('domains', () => {
         domains: {
           'schema.domain': (t) =>
             t
-              .text(1, 2)
+              .text()
               .nullable()
               .collate('C')
               .default(t.sql`'default'`)
@@ -40,7 +40,7 @@ describe('domains', () => {
     assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.createDomain('schema.domain', (t) => t.text(1, 2).nullable().default(t.sql\`'default'\`).check(t.sql\`value = 'x'\`).collate('C'));
+  await db.createDomain('schema.domain', (t) => t.text().nullable().default(t.sql\`'default'\`).check(t.sql\`value = 'x'\`).collate('C'));
 });
 `);
 
@@ -56,7 +56,7 @@ change(async (db) => {
 
         await db.createDomain('schema.domain', (t) =>
           t
-            .text(1, 2)
+            .text()
             .nullable()
             .collate('C')
             .default(t.sql`('a'::text || 'b'::text)`)
@@ -85,7 +85,7 @@ change(async (db) => {
 
         await db.createDomain('schema.domain', (t) =>
           t
-            .text(1, 2)
+            .text()
             .nullable()
             .collate('C')
             .default(t.sql`'a'||'b'`)
@@ -96,7 +96,7 @@ change(async (db) => {
         domains: {
           'schema.domain': (t) =>
             t
-              .text(1, 2)
+              .text()
               .nullable()
               .collate('C')
               .default(t.sql`'a'||'b'`)
@@ -116,12 +116,12 @@ change(async (db) => {
         await db.createSchema('schema');
 
         await db.createDomain('schema.domain', (t) =>
-          t.text(1, 2).nullable().collate('C'),
+          t.text().nullable().collate('C'),
         );
       },
       dbOptions: {
         domains: {
-          'schema.domain': (t) => t.text(1, 2).collate('C'),
+          'schema.domain': (t) => t.text().collate('C'),
         },
       },
     });
@@ -135,7 +135,7 @@ change(async (db) => {
 });
 
 change(async (db) => {
-  await db.createDomain('schema.domain', (t) => t.text(1, 2).collate('C'));
+  await db.createDomain('schema.domain', (t) => t.text().collate('C'));
 });
 `);
 
@@ -150,7 +150,7 @@ ${green('+ create domain')} schema.domain`);
 
         await db.createDomain('schema.domain', (t) =>
           t
-            .text(1, 2)
+            .text()
             .nullable()
             .collate('C')
             .default(t.sql`'a'||'b'`)
@@ -161,7 +161,7 @@ ${green('+ create domain')} schema.domain`);
         domains: {
           'schema.domain': (t) =>
             t
-              .text(1, 2)
+              .text()
               .nullable()
               .collate('C')
               .default(t.sql`'a'||'c'`)
@@ -179,7 +179,7 @@ change(async (db) => {
 });
 
 change(async (db) => {
-  await db.createDomain('schema.domain', (t) => t.text(1, 2).nullable().default(t.sql\`'a'||'c'\`).check(t.sql\`value = 'ab'\`).collate('C'));
+  await db.createDomain('schema.domain', (t) => t.text().nullable().default(t.sql\`'a'||'c'\`).check(t.sql\`value = 'ab'\`).collate('C'));
 });
 `);
 
@@ -193,12 +193,12 @@ ${green('+ create domain')} schema.domain`);
         await db.createSchema('schema');
 
         await db.createDomain('schema.from', (t) =>
-          t.text(1, 2).nullable().collate('C'),
+          t.text().nullable().collate('C'),
         );
       },
       dbOptions: {
         domains: {
-          'schema.to': (t) => t.text(1, 2).nullable().collate('C'),
+          'schema.to': (t) => t.text().nullable().collate('C'),
         },
       },
     });
@@ -222,12 +222,12 @@ change(async (db) => {
         await db.createSchema('newSchema');
 
         await db.createDomain('domain', (t) =>
-          t.text(1, 2).nullable().collate('C'),
+          t.text().nullable().collate('C'),
         );
       },
       dbOptions: {
         domains: {
-          'newSchema.domain': (t) => t.text(1, 2).nullable().collate('C'),
+          'newSchema.domain': (t) => t.text().nullable().collate('C'),
         },
       },
     });

@@ -17,7 +17,6 @@ import {
   ArrayColumnValue,
   BigIntColumn,
   BigSerialColumn,
-  CharColumn,
   CitextColumn,
   columnCode,
   ColumnData,
@@ -696,13 +695,6 @@ interface VarCharColumnValibot
 class VarCharColumnValibot extends VarCharColumn<ValibotSchemaConfig> {}
 Object.assign(VarCharColumnValibot.prototype, stringMethods);
 
-interface CharColumnValibot
-  extends CharColumn<ValibotSchemaConfig>,
-    StringMethods {}
-
-class CharColumnValibot extends CharColumn<ValibotSchemaConfig> {}
-Object.assign(CharColumnValibot.prototype, stringMethods);
-
 interface TextColumnValibot
   extends TextColumn<ValibotSchemaConfig>,
     StringMethods {}
@@ -909,11 +901,10 @@ export interface ValibotSchemaConfig {
   doublePrecision(): DoublePrecisionColumnValibot;
   bigSerial(): BigSerialColumnValibot;
   money(): MoneyColumnValibot;
-  varchar(limit?: number): VarCharColumnValibot;
-  char(limit?: number): CharColumnValibot;
-  text(min: number, max: number): TextColumnValibot;
+  varchar(limit: number): VarCharColumnValibot;
+  text(): TextColumnValibot;
   string(limit?: number): StringColumnValibot;
-  citext(min: number, max: number): CitextColumnValibot;
+  citext(): CitextColumnValibot;
 
   date(): DateColumnValibot;
   timestampNoTZ(precision?: number): TimestampNoTzColumnValibot;
@@ -1063,10 +1054,9 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   bigSerial: () => new BigSerialColumnValibot(valibotSchemaConfig),
   money: () => new MoneyColumnValibot(valibotSchemaConfig),
   varchar: (limit) => new VarCharColumnValibot(valibotSchemaConfig, limit),
-  char: (limit) => new CharColumnValibot(valibotSchemaConfig, limit),
-  text: (min, max) => new TextColumnValibot(valibotSchemaConfig, min, max),
+  text: () => new TextColumnValibot(valibotSchemaConfig),
   string: (limit) => new StringColumnValibot(valibotSchemaConfig, limit),
-  citext: (min, max) => new CitextColumnValibot(valibotSchemaConfig, min, max),
+  citext: () => new CitextColumnValibot(valibotSchemaConfig),
 
   date: () => new DateColumnValibot(valibotSchemaConfig),
   timestampNoTZ: (precision) =>

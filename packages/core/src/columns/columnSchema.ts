@@ -58,11 +58,10 @@ export interface ColumnSchemaConfig<T extends ColumnTypeBase = ColumnTypeBase>
   doublePrecision(): T;
   bigSerial(): T;
   money(): T;
-  varchar(limit?: number): T;
-  char(limit?: number): T;
-  text(min: number, max: number): T;
+  varchar(limit: number): T;
+  text(): T;
   string(limit?: number): T;
-  citext(min: number, max: number): T;
+  citext(): T;
 
   date(): T;
   timestampNoTZ(precision?: number): T;

@@ -7,7 +7,6 @@ export const BaseTable = createBaseTable({
   schemaConfig: zodSchemaConfig,
   columnTypes: (t) => ({
     ...t,
-    text: (min = 0, max = Infinity) => t.text(min, max),
     timestamp: () => t.timestamp().asNumber(),
   }),
 });

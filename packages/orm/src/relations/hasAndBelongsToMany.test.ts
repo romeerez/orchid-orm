@@ -1735,7 +1735,7 @@ describe('hasAndBelongsToMany', () => {
     class TagTable extends BaseTable {
       readonly table = 'tag';
       columns = this.setColumns((t) => ({
-        tagId: t.text(1, 2).primaryKey(),
+        tagId: t.text().primaryKey(),
       }));
 
       relations = {

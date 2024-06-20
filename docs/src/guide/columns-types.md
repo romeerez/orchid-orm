@@ -74,23 +74,18 @@ db.someTable.where({
 
 ## text
 
-Use `t.text(min, max)` type as a go-to for strings, other types are for special cases.
-
-`min` and `max` number parameters defines a validation of string length, they are required to ensure that the app won't accept empty or enormous values from user.
-
-These parameters are not required on the `text` method in migrations, because they don't affect on a database column type.
+- `t.text()` is for an unlimited database `text` type.
+- `t.varchar(limit: number)` is for text with a limit on a database level.
+- `t.string(limit = 255)` is the same as `varchar` with 255 default limit.
 
 ```ts
-// character varying(n), varchar(n) variable-length with limit
-t.varchar(limit?: number) // -> string
+// text with unlimited length
+t.text() // -> string
 
-// character(n), char(n) fixed-length, blank padded
-t.chat(limit?: number) // -> string
+// variable-length text with limit
+t.varchar(limit: number) // -> string
 
-// text variable unlimited length
-t.text(min: number, max: number) // -> string
-
-// `varchar` column with optional limit defaulting to 255.
+// `varchar` type with optional limit defaulting to 255.
 t.string(limit?: number = 255) // -> string
 ```
 
@@ -117,6 +112,8 @@ db.someTable.where({
 });
 ```
 
+The `char` database type isn't added because it is [discouraged](https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_char.28n.29) by Postgres.
+
 ## citext
 
 [citext](https://www.postgresql.org/docs/current/citext.html) is a database type that behaves almost exactly like `text`,
@@ -142,11 +139,9 @@ npm run db migrate
 
 And now `citext` is available and can be used just as a `text` type.
 
-It requires `min` and `max`, but can be [overridden](/guide/columns-overview#override-column-types) in the same way as the `text`.
-
 ```ts
 // text variable unlimited length
-t.citext(min: number, max: number) // -> string
+t.citext() // -> string
 ```
 
 ## tsvector

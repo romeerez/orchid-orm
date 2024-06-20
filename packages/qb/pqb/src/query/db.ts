@@ -656,8 +656,8 @@ export interface DbResult<ColumnTypes>
  * ```ts
  * export const User = db('user', (t) => ({
  *   id: t.identity().primaryKey(),
- *   name: t.text(3, 100),
- *   password: t.text(8, 200),
+ *   name: t.string(),
+ *   password: t.varchar(100),
  *   age: t.integer().nullable(),
  *   ...t.timestamps(),
  * }));

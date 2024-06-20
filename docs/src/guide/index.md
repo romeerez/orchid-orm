@@ -117,8 +117,8 @@ export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(3, 30), // 3 characters minimum, 30 maximum
-    password: t.text(8, 200),
+    name: t.string(), // `string` is varchar with 255 default limit
+    password: t.varchar(50), // 50 chars max
     // adds createdAt and updatedAt with defaults:
     ...t.timestamps(),
   }));

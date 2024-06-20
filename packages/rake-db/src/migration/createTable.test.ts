@@ -853,8 +853,8 @@ describe('create and drop table', () => {
     const t = makeColumnTypes(defaultSchemaConfig);
     const columns = {
       id: t.identity().primaryKey(),
-      title: t.text(0, 100),
-      text: t.text(0, 10000),
+      title: t.text(),
+      text: t.text(),
     };
 
     const tableSQL = `

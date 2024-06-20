@@ -32,6 +32,7 @@ describe('setupDemoTables', () => {
     await initSteps.setupDemoTables({
       ...testInitConfig,
       demoTables: true,
+      validation: 'zod',
     });
 
     const call = writeFile.mock.calls.find(([to]) => to === postTablePath);
@@ -53,8 +54,8 @@ export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    title: t.text(3, 100).unique(),
-    text: t.text(20, 10000),
+    title: t.text().min(3).max(100).unique(),
+    text: t.text().min(20).max(10000),
     ...t.timestamps(),
   }));
 
@@ -72,6 +73,7 @@ export class PostTable extends BaseTable {
     await initSteps.setupDemoTables({
       ...testInitConfig,
       demoTables: true,
+      validation: 'zod',
     });
 
     const call = writeFile.mock.calls.find(([to]) => to === commentTablePath);
@@ -97,7 +99,7 @@ export class CommentTable extends BaseTable {
       .integer()
       .foreignKey(() => PostTable, 'id')
       .index(),
-    text: t.text(5, 1000),
+    text: t.text().min(5).max(1000),
     ...t.timestamps(),
   }));
 

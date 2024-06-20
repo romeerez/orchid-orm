@@ -9,7 +9,7 @@ class SomeTable extends BaseTable {
   filePath = 'repo.test.ts';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    name: t.text(0, 100),
+    name: t.text(),
   }));
 
   relations = {

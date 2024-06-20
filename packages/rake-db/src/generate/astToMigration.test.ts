@@ -6,7 +6,6 @@ import { processRakeDbConfig } from '../config';
 const columnTypes = makeColumnTypes(defaultSchemaConfig);
 const t = {
   ...columnTypes,
-  text: (min = 0, max = Infinity) => columnTypes.text(min, max),
 };
 
 const config = processRakeDbConfig({

@@ -20,8 +20,8 @@ describe('orm', () => {
     filePath = 'orm.test.ts';
     columns = this.setColumns((t) => ({
       id: t.identity().primaryKey(),
-      name: t.text(1, 10),
-      password: t.text(1, 10),
+      name: t.text(),
+      password: t.text(),
     }));
   }
 

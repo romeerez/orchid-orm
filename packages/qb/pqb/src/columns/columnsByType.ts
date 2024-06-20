@@ -9,20 +9,18 @@ export interface ColumnsByType {
 export const makeColumnsByType = (schema: ColumnSchemaConfig) => {
   const t = makeColumnTypes(schema);
 
+  // not implementing char, character, bpchar
   return {
     bool: t.boolean,
     boolean: t.boolean,
     bytea: t.bytea,
-    char: t.char,
     int8: t.bigint,
     bigint: t.bigint,
     int2: t.smallint,
     smallint: t.smallint,
     int4: t.integer,
     integer: t.integer,
-    text() {
-      return t.text(0, Infinity);
-    },
+    text: t.text,
     json: t.jsonText,
     xml: t.xml,
     point: t.point,
@@ -41,10 +39,8 @@ export const makeColumnsByType = (schema: ColumnSchemaConfig) => {
     money: t.money,
     macaddr: t.macaddr,
     inet: t.inet,
-    bpchar: t.char,
-    character: t.char,
-    varchar: t.varchar,
-    'character varying': t.varchar,
+    varchar: t.varchar as () => ColumnTypeBase,
+    'character varying': t.varchar as () => ColumnTypeBase,
     date: t.date,
     time: t.time,
     'time without time zone': t.time,

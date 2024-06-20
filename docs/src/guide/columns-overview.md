@@ -58,7 +58,7 @@ Different types of columns support different operations in `where` conditions:
 export class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
-    name: t.text(3, 100),
+    name: t.string(),
     age: t.integer(),
   }));
 }
@@ -202,30 +202,28 @@ ORM doesn't validate inputs by itself,
 use `Table.inputSchema()` (see [Validation methods](/guide/columns-validation-methods)) in your request handlers,
 and then it's guaranteed that user won't be able to submit empty or a million chars long username and other text data.
 
-Type of `text` method forces you to provide the `min` and `max` each time when calling it. To simplify this, define common defaults for all text columns:
+It's important to validate min and max lengths of texts submitted by users,
+because if it's not validated, users are free to submit empty or endless texts.
+
+You may want to force the `text` type to force min and max parameters for validation:
 
 ```ts
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
-    text: (min = 3, max = 100) => t.text(min, max),
+    text: (min: number, max: number) => t.text().min(min).max(max),
   }),
 });
 ```
 
-With such config, all text columns will be validated to have at least 3 and at most 100 characters.
+With such config, all text columns will require explicit min and max parameters:
 
 ```ts
-export class SomeTable extends BaseTable {
-  readonly table = 'someTable';
+export class PostTable extends BaseTable {
+  readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    // name will be validated to have at least 3 and at most 100 chars
-    name: t.text(),
-    // override min
-    password: t.text().min(8),
-    // override max
-    bio: t.text().max(1000),
+    content: t.text(3, 10000),
   }));
 }
 ```

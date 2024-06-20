@@ -58,7 +58,7 @@ describe('query log', () => {
     });
 
     await db('user', (t) => ({
-      name: t.text(1, 2).primaryKey(),
+      name: t.text().primaryKey(),
     })).where({ name: 'name' });
 
     expect(logger.log.mock.calls).toEqual([
@@ -78,7 +78,7 @@ describe('query log', () => {
     });
 
     await db('user', (t) => ({
-      name: t.text(1, 2).primaryKey(),
+      name: t.text().primaryKey(),
     })).where({ name: 'name' });
 
     expect(logger.log.mock.calls).toEqual([

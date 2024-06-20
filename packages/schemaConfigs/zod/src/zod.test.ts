@@ -286,9 +286,8 @@ describe('zod schema config', () => {
   const numeric = t.numeric();
   const decimal = t.decimal();
   const doublePrecision = t.doublePrecision();
-  const varchar = t.varchar();
-  const char = t.char();
-  const text = t.text(0, Infinity);
+  const varchar = t.varchar(5);
+  const text = t.text();
   const string = t.string();
 
   assertAllTypes<
@@ -298,7 +297,6 @@ describe('zod schema config', () => {
     | typeof bigint
     | typeof bigSerial
     | typeof varchar
-    | typeof char
     | typeof text
     | typeof string,
     ZodString
@@ -311,12 +309,11 @@ describe('zod schema config', () => {
     'bigint',
     'bigSerial',
     'varchar',
-    'char',
     'text',
     'string',
   ])('%s', (method) => {
     it('should convert to string', () => {
-      const type = t[method as 'varchar'];
+      const type = t[method as 'text'];
 
       expectAllParse(type(), 's', 's');
 
@@ -393,7 +390,7 @@ describe('zod schema config', () => {
     });
 
     it('should convert to string with limit', () => {
-      const type = t[method as 'varchar']().length(3);
+      const type = t[method as 'text']().length(3);
 
       expectAllThrow(type, '', 'String must contain exactly 3 character(s)');
 
@@ -405,7 +402,7 @@ describe('zod schema config', () => {
     });
   });
 
-  describe.each(['varchar', 'char', 'string'])('%s', (method) => {
+  describe.each(['varchar', 'string'])('%s', (method) => {
     it('should accept max as argument', () => {
       const type = t[method as 'varchar'](3);
 
@@ -417,7 +414,7 @@ describe('zod schema config', () => {
 
   describe.each(['text', 'citext'])('%s', (method) => {
     it('should accept min and max as arguments', () => {
-      const type = t[method as 'text'](2, 3);
+      const type = t[method as 'text']().min(2).max(3);
 
       expect(() => type.inputSchema.parse('a')).toThrow(
         'String must contain at least 2 character(s)',

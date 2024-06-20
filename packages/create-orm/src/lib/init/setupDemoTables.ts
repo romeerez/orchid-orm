@@ -8,6 +8,8 @@ export async function setupDemoTables(config: InitConfig): Promise<void> {
   const tablesDir = join(config.dbDirPath, 'tables');
   await fs.mkdir(tablesDir, { recursive: true });
 
+  const hasValidation = config.validation !== 'no';
+
   await fs.writeFile(
     join(tablesDir, 'post.table.ts'),
     `import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
@@ -27,8 +29,8 @@ export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    title: t.text(3, 100).unique(),
-    text: t.text(20, 10000),
+    title: t.text()${hasValidation ? '.min(3).max(100)' : ''}.unique(),
+    text: t.text()${hasValidation ? '.min(20).max(10000)' : ''},
     ...t.timestamps(),
   }));
 
@@ -65,7 +67,7 @@ export class CommentTable extends BaseTable {
       .integer()
       .foreignKey(() => PostTable, 'id')
       .index(),
-    text: t.text(5, 1000),
+    text: t.text()${hasValidation ? '.min(5).max(1000)' : ''},
     ...t.timestamps(),
   }));
 

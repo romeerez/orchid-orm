@@ -5,6 +5,10 @@ import fs from 'fs/promises';
 export async function setupBaseTable(config: InitConfig): Promise<void> {
   const filePath = join(config.dbDirPath, 'baseTable.ts');
 
+  const { timestamp } = config;
+  const customTimestamp = timestamp && timestamp !== 'string';
+  const columnTypesComment = customTimestamp ? '' : '// ';
+
   let content = `import { createBaseTable } from 'orchid-orm';${
     config.validation === 'zod'
       ? `\nimport { zodSchemaConfig } from 'orchid-orm-schema-to-zod';`
@@ -26,18 +30,10 @@ export const BaseTable = createBaseTable({
   }
 
   // Customize column types for all tables.
-  columnTypes: (t) => ({
-    ...t,${
-      config.validation === 'no'
-        ? ''
-        : `
-    // Set min and max validations for all text columns,
-    // it is only checked when validating with ${config.validation} schemas derived from the table.
-    text: (min = 0, max = Infinity) => t.text(min, max),`
-    }`;
+  ${columnTypesComment}columnTypes: (t) => ({
+  ${columnTypesComment}  ...t,`;
 
-  const { timestamp } = config;
-  if (timestamp && timestamp !== 'string') {
+  if (customTimestamp) {
     content += `
     // Parse timestamps to ${timestamp === 'number' ? 'number' : 'Date object'}.
     timestamp: (precision?: number) => t.timestamp(precision).${
@@ -46,7 +42,7 @@ export const BaseTable = createBaseTable({
   }
 
   content += `
-  }),
+  ${columnTypesComment}}),
 });
 
 export const { sql } = BaseTable;

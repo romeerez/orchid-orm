@@ -25,9 +25,6 @@ const columnTypes = makeColumnTypes(defaultSchemaConfig);
 
 export const testColumnTypes = {
   ...columnTypes,
-  text(min = 0, max = Infinity) {
-    return columnTypes.text(min, max);
-  },
   timestamp(precision?: number) {
     return columnTypes.timestamp(precision).asDate();
   },
@@ -45,9 +42,6 @@ const zodColumnTypes = makeColumnTypes(zodSchemaConfig);
 
 export const testZodColumnTypes = {
   ...zodColumnTypes,
-  text(min = 0, max = Infinity) {
-    return zodColumnTypes.text(min, max);
-  },
   timestamp() {
     return zodColumnTypes.timestamp().asDate();
   },

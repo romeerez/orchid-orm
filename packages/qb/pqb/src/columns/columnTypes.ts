@@ -72,7 +72,6 @@ export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
   bigSerial: SchemaConfig['bigSerial'];
   money: SchemaConfig['money'];
   varchar: SchemaConfig['varchar'];
-  char: SchemaConfig['char'];
   text: SchemaConfig['text'];
   // `varchar` column with optional limit defaulting to 255.
   string: SchemaConfig['string'];
@@ -139,7 +138,6 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
     bigSerial: schema.bigSerial,
     money: schema.money,
     varchar: schema.varchar,
-    char: schema.char,
     text: schema.text,
     string: schema.string,
     citext: schema.citext,

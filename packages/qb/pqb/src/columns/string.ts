@@ -46,19 +46,13 @@ export abstract class LimitedTextBaseColumn<
 > extends TextBaseColumn<Schema> {
   declare data: TextColumnData & { maxChars?: number };
 
-  constructor(schema: Schema, limit?: number) {
-    super(
-      schema,
-      (limit ? schema.stringMax(limit) : schema.stringSchema()) as never,
-    );
+  constructor(schema: Schema, limit: number) {
+    super(schema, schema.stringMax(limit) as never);
     this.data.maxChars = limit;
   }
 
   toSQL() {
-    return joinTruthy(
-      this.dataType,
-      this.data.maxChars !== undefined && `(${this.data.maxChars})`,
-    );
+    return joinTruthy(this.dataType, `(${this.data.maxChars})`);
   }
 }
 
@@ -97,35 +91,6 @@ export class StringColumn<
   }
 }
 
-// character(n), char(n) fixed-length, blank padded
-export class CharColumn<
-  Schema extends ColumnSchemaConfig,
-> extends LimitedTextBaseColumn<Schema> {
-  dataType = 'char' as const;
-  toCode(t: string, m?: boolean): Code {
-    const { maxChars } = this.data;
-    return columnCode(
-      this,
-      t,
-      `char(${maxChars ?? ''})${stringDataToCode(this.data, m)}`,
-      m,
-    );
-  }
-}
-
-const setTextColumnData = (
-  column: { data: TextColumnData & { minArg?: number; maxArg?: number } },
-  minArg?: number,
-  maxArg?: number,
-) => {
-  if (minArg !== undefined) {
-    column.data.min = column.data.minArg = minArg;
-    if (maxArg !== undefined) {
-      column.data.max = column.data.maxArg = maxArg;
-    }
-  }
-};
-
 const textColumnToCode = (
   column: TextBaseColumn<ColumnSchemaConfig> & {
     data: TextColumnData & { minArg?: number; maxArg?: number };
@@ -156,17 +121,6 @@ const textColumnToCode = (
   );
 };
 
-const minMaxToSchema = <Schema extends ColumnSchemaConfig>(
-  schema: Schema,
-  min?: number,
-  max?: number,
-) =>
-  min
-    ? max
-      ? schema.stringMinMax(min, max)
-      : schema.stringMin(min)
-    : schema.stringSchema();
-
 // text	variable unlimited length
 export class TextColumn<
   Schema extends ColumnSchemaConfig,
@@ -174,9 +128,8 @@ export class TextColumn<
   dataType = 'text' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
-  constructor(schema: Schema, min?: number, max?: number) {
-    super(schema, minMaxToSchema(schema, min, max) as never);
-    setTextColumnData(this, min, max);
+  constructor(schema: Schema) {
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string, m?: boolean): Code {
@@ -682,9 +635,8 @@ export class CitextColumn<
   dataType = 'citext' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
-  constructor(schema: Schema, min?: number, max?: number) {
-    super(schema, minMaxToSchema(schema, min, max) as never);
-    setTextColumnData(this, min, max);
+  constructor(schema: Schema) {
+    super(schema, schema.stringSchema() as never);
   }
 
   toCode(t: string, m?: boolean): Code {

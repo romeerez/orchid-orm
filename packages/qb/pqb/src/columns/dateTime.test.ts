@@ -287,7 +287,7 @@ describe('date time columns', () => {
     });
 
     it('should parse and encode timestamp as a number', async () => {
-      t.text(0, 100)
+      t.text()
         .encode(z.number(), (input: number) => input)
         .parse(z.number(), (text) => parseInt(text))
         .as(t.integer());

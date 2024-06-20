@@ -26,10 +26,6 @@ const mockQueryResult = (data: Partial<StructureToAstTableData>) => {
 describe('dbStructure', () => {
   afterAll(() => adapter.close());
 
-  it('should perform working queries', async () => {
-    await introspectDbSchema(adapter);
-  });
-
   describe('searchIndex', () => {
     it('should detect tsVector index', async () => {
       mockQueryResult({

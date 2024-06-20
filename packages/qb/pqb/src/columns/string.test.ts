@@ -15,14 +15,14 @@ const testStringColumnMethods = (
       | 'bigSerial'
       | 'money'
       | 'varchar'
-      | 'char'
       | 'text'
       | 'string'
       | 'citext']
   >,
   name: string,
+  limit = '',
 ) => {
-  expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);
+  expect(type.nonEmpty().toCode('t')).toBe(`t.${name}(${limit}).nonEmpty()`);
 
   expect(
     type
@@ -47,7 +47,7 @@ const testStringColumnMethods = (
       .toUpperCase()
       .toCode('t'),
   ).toBe(
-    `t.${name}()` +
+    `t.${name}(${limit})` +
       `.min(1, 'min message')` +
       `.max(10, 'max message')` +
       `.length(15, 'length message')` +
@@ -85,10 +85,9 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.varchar().toCode('t')).toBe('t.varchar()');
         expect(t.varchar(5).toCode('t')).toBe('t.varchar(5)');
 
-        testStringColumnMethods(t.varchar(), 'varchar');
+        testStringColumnMethods(t.varchar(5), 'varchar', '5');
       });
     });
 
@@ -108,24 +107,6 @@ describe('string columns', () => {
       });
     });
 
-    describe('char', () => {
-      it('should output string', async () => {
-        const result = await testDb.get(
-          testDb.sql`'text'::char(4)`.type((t) => t.char(4)),
-        );
-        expect(result).toBe('text');
-
-        assertType<typeof result, string>();
-      });
-
-      it('should have toCode', () => {
-        expect(t.char().toCode('t')).toBe('t.char()');
-        expect(t.char(5).toCode('t')).toBe('t.char(5)');
-
-        testStringColumnMethods(t.char(), 'char');
-      });
-    });
-
     describe('text', () => {
       it('should output string', async () => {
         const result = await testDb.get(
@@ -139,8 +120,10 @@ describe('string columns', () => {
       it('should have toCode', () => {
         expect(t.text().toCode('t')).toBe('t.text()');
 
-        expect(t.text(1).toCode('t')).toBe('t.text(1)');
-        expect(t.text(1, 2).toCode('t')).toBe('t.text(1, 2)');
+        expect(t.text().min(1).toCode('t')).toBe('t.text().min(1)');
+        expect(t.text().min(1).max(2).toCode('t')).toBe(
+          't.text().min(1).max(2)',
+        );
 
         testStringColumnMethods(t.text(), 'text');
       });
@@ -149,7 +132,7 @@ describe('string columns', () => {
     describe('citext', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'text'::citext`.type(() => t.citext(0, Infinity)),
+          testDb.sql`'text'::citext`.type(() => t.citext()),
         );
         expect(result).toBe('text');
 
@@ -157,9 +140,11 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.citext(1, 2).toCode('t')).toBe('t.citext(1, 2)');
+        expect(t.citext().min(1).max(2).toCode('t')).toBe(
+          't.citext().min(1).max(2)',
+        );
 
-        const type = t.citext(1, 2);
+        const type = t.citext();
         type.data.minArg =
           type.data.min =
           type.data.maxArg =

@@ -66,6 +66,8 @@ export const processDomains = async (
       dbStructure,
       domainsMap,
       {
+        // not destructuring `domain` because need to ignore `numericPrecision`, `numericScale`, etc.,
+        // that are loaded from db, but not defined in the code
         schemaName: domain.typeSchema,
         tableName: 'N/A',
         name: domain.name,
@@ -75,6 +77,7 @@ export const processDomains = async (
         default: domain.default,
         isNullable: domain.isNullable,
         collate: domain.collate,
+        maxChars: domain.maxChars,
       },
     );
 

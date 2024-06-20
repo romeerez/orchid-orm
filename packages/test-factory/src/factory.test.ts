@@ -493,14 +493,18 @@ describe('factory', () => {
         log: false,
       },
       {
-        text: makeTable((t) => ({ name: t.text(3, 100).unique() })),
-        email: makeTable((t) => ({ name: t.text(3, 100).email().unique() })),
-        url: makeTable((t) => ({ name: t.text(3, 100).url().unique() })),
+        text: makeTable((t) => ({ name: t.text().min(3).max(100).unique() })),
+        email: makeTable((t) => ({
+          name: t.text().min(3).max(100).email().unique(),
+        })),
+        url: makeTable((t) => ({
+          name: t.text().min(3).max(100).url().unique(),
+        })),
         max: makeTable((t) => ({
-          name: t.text(3, 100).min(min).max(max).unique(),
+          name: t.text().min(3).max(100).min(min).max(max).unique(),
         })),
         length: makeTable((t) => ({
-          name: t.text(3, 100).length(max).unique(),
+          name: t.text().min(3).max(100).length(max).unique(),
         })),
         number: makeTable((t) => ({ age: t.integer().unique() })),
         gt: makeTable((t) => ({ age: t.integer().gt(gt).unique() })),

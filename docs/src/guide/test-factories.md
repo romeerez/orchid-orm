@@ -353,9 +353,9 @@ class SomeTable extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    text: t.text(5, 1000).unique(),
-    email: t.text(3, 100).email().unique(),
-    url: t.text(10, 200).url().unique(),
+    text: t.text(),
+    email: t.string().email().unique(),
+    url: t.varchar(1000).url().unique(),
     number: t.integer().unique(),
     greaterThan10: t.integer().gt(10).unique(),
     greaterThanOrEqualTo10: t.integer().gte(10).unique(),
