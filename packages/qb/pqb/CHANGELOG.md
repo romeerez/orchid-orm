@@ -1,5 +1,20 @@
 # pqb
 
+## 0.34.0
+
+### Minor Changes
+
+- 9eb720a: Change `text`, `varchar` types, remove `char` (#277)
+
+  The text no longer accepts min and max: `text(min, max)` -> `text()`
+
+  Varchar's limit becomes required: `varchar(limit?: number)` -> `varchar(limit: number)`
+
+### Patch Changes
+
+- Updated dependencies [9eb720a]
+  - orchid-core@0.17.0
+
 ## 0.33.2
 
 ### Patch Changes

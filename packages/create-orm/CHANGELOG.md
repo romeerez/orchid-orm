@@ -1,5 +1,15 @@
 # create-orchid-orm
 
+## 0.3.0
+
+### Minor Changes
+
+- 9eb720a: Change `text`, `varchar` types, remove `char` (#277)
+
+  The text no longer accepts min and max: `text(min, max)` -> `text()`
+
+  Varchar's limit becomes required: `varchar(limit?: number)` -> `varchar(limit: number)`
+
 ## 0.2.4
 
 ### Patch Changes
