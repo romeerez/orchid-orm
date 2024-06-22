@@ -106,7 +106,7 @@ export const applyComputedColumns = (
   for (const key in computed) {
     const item = computed[key];
     if (item instanceof ComputedColumn) {
-      (q.q.computeds ??= {})[key] = item;
+      q.q.computeds = { ...q.q.computeds, [key]: item };
     } else {
       (
         ((q.shape as QueryColumns)[key] =

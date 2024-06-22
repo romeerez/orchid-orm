@@ -288,6 +288,14 @@ describe('computed', () => {
   });
 
   describe('runtime computed', () => {
+    it('should not mutate the query', () => {
+      const q1 = User.select('runtimeComputed');
+      const q2 = q1.select('batchComputed');
+
+      expect(Object.keys(q1.q.selectedComputeds || {}).length).toBe(1);
+      expect(Object.keys(q2.q.selectedComputeds || {}).length).toBe(2);
+    });
+
     describe('select', () => {
       it('should select computed column', async () => {
         const q = User.select('name', 'password', 'runtimeComputed').take();
