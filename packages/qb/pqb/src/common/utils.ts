@@ -36,7 +36,6 @@ export type ExpressionOutput<
 export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };
   delete cloned[toSQLCacheKey];
-  if (cloned.parsers) cloned.parsers = { ...cloned.parsers };
   cloneQuery(cloned);
   return cloned as QueryData;
 };

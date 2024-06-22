@@ -6,6 +6,7 @@ import {
   userData as partialUserData,
 } from '../test-utils/test-utils';
 import { Query } from '../query/query';
+import { NotFoundError } from '../errors';
 
 const User = testDb(
   'user',
@@ -18,9 +19,9 @@ const User = testDb(
   undefined,
   {
     computed: (q) => ({
-      nameAndKey: q.sql`${q.column('name')} || ' ' || ${q.column(
-        'userKey',
-      )}`.type((t) => t.string()),
+      nameAndKey: q
+        .sql(() => q.sql`${q.column('name')} || ' ' || ${q.column('userKey')}`)
+        .type((t) => t.string()),
       runtimeComputed: q.computeAtRuntime(
         ['id', 'name'],
         (record) => `${record.id} ${record.name}`,
@@ -644,6 +645,239 @@ describe('computed', () => {
         expect(res).toEqual([
           { runtimeComputed: `${userId} ${userData.name}` },
         ]);
+      });
+    });
+
+    describe('sub-select', () => {
+      it('should select many', async () => {
+        const res = await User.select({
+          users: () =>
+            User.select({
+              users: () => User.select('runtimeComputed', 'batchComputed'),
+            }),
+        });
+
+        assertType<
+          typeof res,
+          {
+            users: {
+              users: { runtimeComputed: string; batchComputed: string }[];
+            }[];
+          }[]
+        >();
+
+        expect(res).toEqual([
+          {
+            users: [
+              {
+                users: [
+                  {
+                    runtimeComputed: `${userId} ${userData.name}`,
+                    batchComputed: `${userId} ${userData.name}`,
+                  },
+                ],
+              },
+            ],
+          },
+        ]);
+      });
+
+      it('should select one optional', async () => {
+        const res = await User.select({
+          user: () =>
+            User.select({
+              user: () =>
+                User.select('runtimeComputed', 'batchComputed').takeOptional(),
+            }).takeOptional(),
+        }).takeOptional();
+
+        assertType<
+          typeof res,
+          | {
+              user:
+                | {
+                    user:
+                      | { runtimeComputed: string; batchComputed: string }
+                      | undefined;
+                  }
+                | undefined;
+            }
+          | undefined
+        >();
+
+        expect(res).toEqual({
+          user: {
+            user: {
+              runtimeComputed: `${userId} ${userData.name}`,
+              batchComputed: `${userId} ${userData.name}`,
+            },
+          },
+        });
+      });
+
+      it('should return undefined when one optional is not found', async () => {
+        const res = await User.select({
+          user: () =>
+            User.select({
+              user: () =>
+                User.select('runtimeComputed', 'batchComputed').findOptional(0),
+            }).takeOptional(),
+        }).takeOptional();
+
+        expect(res).toEqual({
+          user: { user: null },
+        });
+      });
+
+      it('should select one required', async () => {
+        const res = await User.select({
+          user: () =>
+            User.select({
+              user: () =>
+                User.select('runtimeComputed', 'batchComputed').take(),
+            }).take(),
+        }).take();
+
+        assertType<
+          typeof res,
+          {
+            user: {
+              user: { runtimeComputed: string; batchComputed: string };
+            };
+          }
+        >();
+
+        expect(res).toEqual({
+          user: {
+            user: {
+              runtimeComputed: `${userId} ${userData.name}`,
+              batchComputed: `${userId} ${userData.name}`,
+            },
+          },
+        });
+      });
+
+      it('should throw if one is not found', async () => {
+        const q = User.select({
+          user: () =>
+            User.select({
+              user: () =>
+                User.select('runtimeComputed', 'batchComputed').find(0),
+            }).take(),
+        }).take();
+
+        await expect(q).rejects.toThrow(NotFoundError);
+      });
+
+      it('should select a pluck', async () => {
+        const id = await User.get('id').insert(userData);
+
+        const res = await User.select({
+          users: () =>
+            User.select({
+              runtimeComputed: () => User.pluck('runtimeComputed'),
+              batchComputed: () => User.pluck('batchComputed'),
+            }),
+        });
+
+        const expected = {
+          runtimeComputed: [
+            `${userId} ${userData.name}`,
+            `${id} ${userData.name}`,
+          ],
+          batchComputed: [
+            `${userId} ${userData.name}`,
+            `${id} ${userData.name}`,
+          ],
+        };
+
+        expect(res).toEqual([
+          {
+            users: [expected, expected],
+          },
+          {
+            users: [expected, expected],
+          },
+        ]);
+      });
+
+      it('should select an optional value', async () => {
+        const res = await User.select({
+          user: () =>
+            User.select({
+              runtimeComputed: () => User.getOptional('runtimeComputed'),
+              batchComputed: () => User.getOptional('batchComputed'),
+            }).take(),
+        }).take();
+
+        assertType<
+          typeof res,
+          {
+            user: {
+              runtimeComputed: string | undefined;
+              batchComputed: string | undefined;
+            };
+          }
+        >();
+
+        expect(res).toEqual({
+          user: {
+            runtimeComputed: `${userId} ${userData.name}`,
+            batchComputed: `${userId} ${userData.name}`,
+          },
+        });
+      });
+
+      it('should select undefined for optional value when is not found', async () => {
+        const res = await User.select({
+          user: () =>
+            User.select({
+              runtimeComputed: () =>
+                User.find(0).getOptional('runtimeComputed'),
+              batchComputed: () => User.find(0).getOptional('batchComputed'),
+            }).take(),
+        }).take();
+
+        expect(res).toEqual({
+          user: {
+            runtimeComputed: undefined,
+            batchComputed: undefined,
+          },
+        });
+      });
+
+      it('should select a required value', async () => {
+        const res = await User.select({
+          user: () =>
+            User.select({
+              runtimeComputed: () => User.get('runtimeComputed'),
+              batchComputed: () => User.get('batchComputed'),
+            }).take(),
+        }).take();
+
+        assertType<
+          typeof res,
+          { user: { runtimeComputed: string; batchComputed: string } }
+        >();
+
+        expect(res).toEqual({
+          user: {
+            runtimeComputed: `${userId} ${userData.name}`,
+            batchComputed: `${userId} ${userData.name}`,
+          },
+        });
+      });
+
+      it('should throw when a required value is not found', async () => {
+        const q = User.select({
+          user: () =>
+            User.select({
+              runtimeComputed: () => User.find(0).get('runtimeComputed'),
+              batchComputed: () => User.find(0).get('batchComputed'),
+            }).take(),
+        }).take();
+
+        await expect(q).rejects.toThrow(NotFoundError);
       });
     });
 

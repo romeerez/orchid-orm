@@ -583,10 +583,10 @@ const nestedInsert = ({
         }
       }
 
-      created = await _queryCreateMany(
+      created = (await _queryCreateMany(
         t.select(...throughPrimaryKeys),
         records,
-      );
+      )) as never;
     } else {
       created = [];
     }

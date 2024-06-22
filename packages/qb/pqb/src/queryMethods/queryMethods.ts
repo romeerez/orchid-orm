@@ -21,7 +21,6 @@ import {
 } from '../common/utils';
 import {
   OrderTsQueryConfig,
-  SelectItem,
   SelectQueryData,
   SortDir,
   toSQL,
@@ -354,8 +353,16 @@ export class QueryMethods<ColumnTypes> {
   ): SetQueryReturnsPluck<T, S> {
     const q = (this as unknown as Query).clone();
     q.q.returnType = 'pluck';
-    (q.q as SelectQueryData).select = [select as SelectItem];
-    addParserForSelectItem(q as never, q.q.as || q.table, 'pluck', select);
+
+    const selected = addParserForSelectItem(
+      q as never,
+      q.q.as || q.table,
+      'pluck',
+      select,
+    );
+    (q.q as SelectQueryData).select = selected
+      ? [selected as never]
+      : undefined;
     return q as never;
   }
 

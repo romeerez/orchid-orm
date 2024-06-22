@@ -199,7 +199,7 @@ export interface Db<
     QueryBase {
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>; // Pick is optimal
   queryBuilder: Db;
-  returnType: Query['returnType'];
+  returnType: undefined;
   then: QueryThen<QueryDefaultReturnData<Shape>>;
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;

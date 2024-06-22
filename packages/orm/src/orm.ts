@@ -27,6 +27,10 @@ import {
   TransactionState,
 } from 'orchid-core';
 
+interface FromQuery extends Query {
+  returnType: 'all';
+}
+
 export type OrchidORM<T extends TableClasses = TableClasses> = {
   [K in keyof T]: DbTable<InstanceType<T[K]>>;
 } & {
@@ -98,7 +102,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    */
   $from<Arg extends MaybeArray<FromArg<Query>>>(
     arg: Arg,
-  ): FromResult<Query, Arg>;
+  ): FromResult<FromQuery, Arg>;
 
   $close(): Promise<void>;
 };

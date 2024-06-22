@@ -132,6 +132,7 @@ export function queryFrom<
     const { shape } = data;
     const parsers = (data.parsers ??= {});
     const computeds = (data.computeds ??= {});
+    // TODO: batchParsers
     for (const item of arg) {
       if (typeof item === 'string') {
         const w = (data.withShapes as WithConfigs)[item];
@@ -154,6 +155,7 @@ export function queryFrom<
     data.as ||= q.q.as || q.table || 't';
     data.shape = getShapeFromSelect(arg as QueryBase, true) as ColumnsShapeBase;
     data.parsers = q.q.parsers;
+    data.batchParsers = q.q.batchParsers;
   }
 
   data.from = arg as Query;

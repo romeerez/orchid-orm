@@ -2,7 +2,6 @@ import {
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   Query,
   QueryOrExpression,
-  QueryReturnsAll,
   queryTypeWithLimitOne,
   SetQueryKind,
   SetQueryKindResult,
@@ -152,7 +151,7 @@ export type CreateRelationsDataOmittingFKeys<
 // - if it is a `pluck` query, forces it to return a single value
 type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
-  : QueryReturnsAll<T['returnType']> extends true
+  : T['returnType'] extends undefined | 'all'
   ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : T['returnType'] extends 'pluck'
   ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
@@ -160,7 +159,7 @@ type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
 
 type CreateRawOrFromResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
-  : QueryReturnsAll<T['returnType']> extends true
+  : T['returnType'] extends undefined | 'all'
   ? SetQueryReturnsOneKind<T, 'create'>
   : T['returnType'] extends 'pluck'
   ? SetQueryReturnsColumnKind<T, 'create'>
@@ -175,7 +174,7 @@ type InsertResult<
   T extends CreateSelf,
   BT,
 > = T['meta']['hasSelect'] extends true
-  ? QueryReturnsAll<T['returnType']> extends true
+  ? T['returnType'] extends undefined | 'all'
     ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T, BT>>
     : T['returnType'] extends 'pluck'
     ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
@@ -184,7 +183,7 @@ type InsertResult<
 
 type InsertRawOrFromResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
-    ? QueryReturnsAll<T['returnType']> extends true
+    ? T['returnType'] extends undefined | 'all'
       ? SetQueryReturnsOneKind<T, 'create'>
       : T['returnType'] extends 'pluck'
       ? SetQueryReturnsColumnKind<T, 'create'>
@@ -524,7 +523,7 @@ const insert = (
   // so that author.books.create(data) will actually perform the `from` kind of create
   if (!q.kind) q.kind = kind;
 
-  const { select, returnType = 'all' } = q;
+  const { select, returnType } = q;
 
   if (!select) {
     if (returnType !== 'void') q.returnType = 'rowCount';
@@ -534,7 +533,7 @@ const insert = (
     } else if (returnType === 'value' || returnType === 'valueOrThrow') {
       q.returnType = 'pluck';
     }
-  } else if (returnType === 'all') {
+  } else if (!returnType || returnType === 'all') {
     q.returnType = 'from' in values ? values.from.q.returnType : 'one';
   } else if (returnType === 'pluck') {
     q.returnType = 'valueOrThrow';
@@ -555,7 +554,7 @@ const getFromSelectColumns = (
   obj?: { columns: string[] },
   many?: boolean,
 ) => {
-  if (!many && !queryTypeWithLimitOne[(from as Query).q.returnType]) {
+  if (!many && !queryTypeWithLimitOne[(from as Query).q.returnType as string]) {
     throw new Error(
       'Cannot create based on a query which returns multiple records',
     );

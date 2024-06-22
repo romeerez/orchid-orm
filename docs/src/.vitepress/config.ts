@@ -79,6 +79,10 @@ export default {
             link: '/guide/json',
           },
           {
+            text: 'Computed columns',
+            link: '/guide/computed-columns',
+          },
+          {
             text: 'Window functions',
             link: '/guide/window',
           },

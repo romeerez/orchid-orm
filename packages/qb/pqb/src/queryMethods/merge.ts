@@ -29,7 +29,7 @@ export type MergeQuery<
     : K extends 'result'
     ? MergeQueryResult<T, Q>
     : K extends 'returnType'
-    ? QueryReturnType extends Q['returnType']
+    ? Q['returnType'] extends undefined
       ? T['returnType']
       : Q['returnType']
     : K extends 'then'
@@ -68,6 +68,7 @@ const mergableObjects: RecordBoolean = {
   defaults: true,
   joinedShapes: true,
   joinedParsers: true,
+  joinedBatchParsers: true,
   selectedComputeds: true,
 };
 

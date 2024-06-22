@@ -1,5 +1,23 @@
 # Breaking changes
 
+## orchid-orm 1.31.0
+
+Computed columns change, see the [docs](https://orchid-orm.netlify.app/guide/computed-columns.html).
+
+For SQL computed columns:
+
+```ts
+// before
+computed = this.setComputed({
+  fullName: (q) => q.sql`...`.type((t) => t.string()),
+});
+
+// after
+computed = this.setComputed((q) => ({
+  fullName: q.sql`...`.type((t) => t.string()),
+}));
+```
+
 ## orchid-orm 1.30.0
 
 The `text` column type no longer accepts `min` and `max` params.

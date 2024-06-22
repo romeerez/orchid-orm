@@ -23,8 +23,8 @@ import {
   QueryColumn,
   QueryColumns,
   QueryInternalBase,
-  QueryReturnType,
   QueryThen,
+  RecordKeyTrue,
   RecordUnknown,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
@@ -245,23 +245,20 @@ export interface QueryWithTable extends Query {
   table: string;
 }
 
-export const queryTypeWithLimitOne = {
+export const queryTypeWithLimitOne: RecordKeyTrue = {
   one: true,
   oneOrThrow: true,
   value: true,
   valueOrThrow: true,
-} as { [K in QueryReturnType]: true | undefined };
+};
 
 export const isQueryReturnsAll = (q: Query) =>
   !q.q.returnType || q.q.returnType === 'all';
 
-export type QueryReturnsAll<T extends QueryReturnType> =
-  QueryReturnType extends T ? true : T extends 'all' ? true : false;
-
 export type GetQueryResult<
   T extends PickQueryReturnType,
   Result extends QueryColumns,
-> = QueryReturnsAll<T['returnType']> extends true
+> = T['returnType'] extends undefined | 'all'
   ? ColumnShapeOutput<Result>[]
   : T['returnType'] extends 'one'
   ? ColumnShapeOutput<Result> | undefined

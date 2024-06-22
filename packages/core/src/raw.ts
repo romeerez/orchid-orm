@@ -64,13 +64,13 @@ export const isTemplateLiteralArgs = (
 // Argument type for `sql` function.
 // It can take a template literal, an object `{ raw: string, values?: Record<string, unknown> }`,
 // or a function to build SQL lazily.
-export type SQLArgs = StaticSQLArgs | [DynamicSQLArg];
+export type SQLArgs = StaticSQLArgs | [DynamicSQLArg<QueryColumn>];
 
 // Function for sql method to build SQL lazily (dynamically).
 // May be used for computed column to build a different SQL in different executions.
-export type DynamicSQLArg = (
-  sql: (...args: StaticSQLArgs) => Expression,
-) => Expression;
+export type DynamicSQLArg<T extends QueryColumn> = (
+  sql: (...args: StaticSQLArgs) => Expression<T>,
+) => Expression<T>;
 
 // SQL arguments for a non-lazy SQL expression.
 export type StaticSQLArgs =

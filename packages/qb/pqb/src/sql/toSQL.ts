@@ -218,7 +218,7 @@ export function pushLimitSQL(
   q: SelectQueryData,
 ) {
   if (!q.returnsOne) {
-    if (queryTypeWithLimitOne[q.returnType]) {
+    if (queryTypeWithLimitOne[q.returnType as string]) {
       sql.push(`LIMIT 1`);
     } else if (q.limit) {
       sql.push(`LIMIT ${addValue(values, q.limit)}`);

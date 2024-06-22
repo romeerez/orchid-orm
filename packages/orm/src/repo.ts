@@ -9,7 +9,7 @@ type QueryMethods<T extends Query> = Record<
 
 type QueryOne<T extends Query> = {
   [K in keyof T]: K extends 'returnType'
-    ? Exclude<QueryReturnType, 'all'>
+    ? Exclude<QueryReturnType, 'all' | undefined>
     : T[K];
 };
 

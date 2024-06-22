@@ -14,13 +14,7 @@ import {
   testZodColumnTypes as t,
   testDb,
 } from 'test-utils';
-import {
-  emptyObject,
-  Expression,
-  getValueKey,
-  noop,
-  QueryReturnType,
-} from 'orchid-core';
+import { emptyObject, Expression, getValueKey, noop } from 'orchid-core';
 
 import { ComputedColumn } from '../modules/computed';
 
@@ -47,7 +41,7 @@ describe('merge queries', () => {
     it('should have default return type if none of the queries have it', () => {
       const q = User.merge(User);
 
-      assertType<typeof q.returnType, QueryReturnType>();
+      assertType<typeof q.returnType, undefined>();
     });
 
     it('should use left return type unless right has it', () => {

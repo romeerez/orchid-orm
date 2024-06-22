@@ -4,6 +4,7 @@ import {
   Query,
 } from '../../query/query';
 import {
+  BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
   ColumnTypeBase,
@@ -56,6 +57,7 @@ export const _join = <
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
+  let batchParsers: BatchParsers | undefined;
   let computeds: ComputedColumns | undefined;
   let joinSubQuery = false;
 
@@ -82,6 +84,7 @@ export const _join = <
     if (joinKey) {
       shape = getShapeFromSelect(q, joinSubQuery);
       parsers = q.q.parsers;
+      batchParsers = q.q.batchParsers;
       computeds = q.q.computeds;
 
       if (joinSubQuery) {
@@ -97,11 +100,13 @@ export const _join = <
       shape = getShapeFromSelect(relation.relationConfig.query);
       const r = relation.relationConfig.query;
       parsers = r.q.parsers;
+      batchParsers = r.q.batchParsers;
       computeds = r.q.computeds;
     } else {
       const w = (query as unknown as PickQueryQ).q.withShapes?.[joinKey];
       shape = w?.shape;
       computeds = w?.computeds;
+      // TODO batchParsers
 
       if (shape) {
         // clone the shape to mutate it below, in other cases the shape is newly created
@@ -149,6 +154,12 @@ export const _join = <
         j.q.parsers,
       );
 
+      if (j.q.batchParsers) {
+        ((query as unknown as PickQueryQ).q.joinedBatchParsers ??= {})[
+          joinKey
+        ] = j.q.batchParsers;
+      }
+
       setQueryObjectValue(
         query as unknown as PickQueryQ,
         'joinedComputeds',
@@ -156,12 +167,26 @@ export const _join = <
         j.q.computeds,
       );
     } else {
-      addAllShapesAndParsers(query, joinKey, shape, parsers, computeds);
+      addAllShapesAndParsers(
+        query,
+        joinKey,
+        shape,
+        parsers,
+        batchParsers,
+        computeds,
+      );
     }
   } else if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
     return _queryNone(query) as JoinResult<T, R, RequireJoined, RequireMain>;
   } else {
-    addAllShapesAndParsers(query, joinKey, shape, parsers, computeds);
+    addAllShapesAndParsers(
+      query,
+      joinKey,
+      shape,
+      parsers,
+      batchParsers,
+      computeds,
+    );
   }
 
   return pushQueryValue(query as unknown as PickQueryQ, 'join', {
@@ -175,6 +200,7 @@ const addAllShapesAndParsers = (
   joinKey?: string,
   shape?: QueryColumns,
   parsers?: ColumnsParsers,
+  batchParsers?: BatchParsers,
   computeds?: ComputedColumns,
 ) => {
   if (!joinKey) return;
@@ -182,6 +208,10 @@ const addAllShapesAndParsers = (
   setQueryObjectValue(query as PickQueryQ, 'joinedShapes', joinKey, shape);
 
   setQueryObjectValue(query as PickQueryQ, 'joinedParsers', joinKey, parsers);
+
+  if (batchParsers) {
+    ((query as PickQueryQ).q.joinedBatchParsers ??= {})[joinKey] = batchParsers;
+  }
 
   setQueryObjectValue(
     query as PickQueryQ,
@@ -263,6 +293,9 @@ export const _joinLateral = <
     const shape = getShapeFromSelect(result, true);
     setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
     setQueryObjectValue(q, 'joinedParsers', joinKey, result.q.parsers);
+    if (result.q.batchParsers) {
+      (q.q.joinedBatchParsers ??= {})[joinKey] = result.q.batchParsers;
+    }
   }
 
   as ||= getQueryAs(result);

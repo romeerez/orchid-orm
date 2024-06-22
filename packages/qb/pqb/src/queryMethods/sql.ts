@@ -148,7 +148,7 @@ export class SqlMethod<ColumnTypes> {
   ): RawSQL<QueryColumn<T>, ColumnTypes>;
   sql<T = unknown>(
     this: PickQueryColumnTypes,
-    ...args: [DynamicSQLArg]
+    ...args: [DynamicSQLArg<QueryColumn<T>>]
   ): DynamicRawSQL<QueryColumn<T>, ColumnTypes>;
   sql(this: PickQueryColumnTypes, ...args: unknown[]) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

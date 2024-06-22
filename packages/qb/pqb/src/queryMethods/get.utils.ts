@@ -80,22 +80,28 @@ const _get = <
 
     (q as SelectQueryData)[getValueKey] = type;
 
-    setParserForSelectedString(
+    const selected = setParserForSelectedString(
       query as unknown as Query,
       arg,
       getQueryAs(query as unknown as Query),
       getValueKey,
     );
 
-    q.expr = new SelectItemExpression(query as unknown as Query, arg, type);
+    q.select = selected
+      ? [
+          (q.expr = new SelectItemExpression(
+            query as unknown as Query,
+            selected,
+            type,
+          )),
+        ]
+      : undefined;
   } else {
     type = arg.result.value;
     (q as SelectQueryData)[getValueKey] = type;
     addParserForRawExpression(query as unknown as Query, getValueKey, arg);
-    q.expr = arg;
+    q.select = [(q.expr = arg)];
   }
-
-  q.select = [q.expr];
 
   return setQueryOperators(
     query as unknown as Query,

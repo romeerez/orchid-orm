@@ -32,6 +32,8 @@ import {
   ExpressionChain,
   QueryDataTransform,
   HookSelect,
+  BatchParsers,
+  MaybePromise,
 } from 'orchid-core';
 import { RelationQuery } from '../relations';
 
@@ -80,16 +82,18 @@ export type QueryDataFromItem = string | Query | Expression;
 
 export interface QueryDataJoinTo extends PickQueryTable, PickQueryQ {}
 
+export type HandleResult = (
+  q: Query,
+  returnType: QueryReturnType,
+  result: QueryResult,
+  isSubQuery?: true,
+) => MaybePromise<unknown>;
+
 export interface CommonQueryData {
   adapter: Adapter;
   shape: ColumnsShapeBase;
   patchResult?(q: Query, queryResult: QueryResult): Promise<void>;
-  handleResult(
-    q: Query,
-    returnType: QueryReturnType,
-    result: QueryResult,
-    isSubQuery?: true,
-  ): unknown;
+  handleResult: HandleResult;
   returnType: QueryReturnType;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
@@ -98,6 +102,7 @@ export interface CommonQueryData {
   joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
+  joinedBatchParsers?: { [K: string]: BatchParsers };
   joinedComputeds?: { [K: string]: ComputedColumns };
   joinedForSelect?: string;
   innerJoinLateral?: true;
@@ -113,6 +118,7 @@ export interface CommonQueryData {
   or?: WhereItem[][];
   coalesceValue?: unknown | Expression;
   parsers?: ColumnsParsers;
+  batchParsers?: BatchParsers;
   notFoundDefault?: unknown;
   defaults?: RecordUnknown;
   // for runtime computed dependencies
@@ -300,6 +306,7 @@ export interface PickQueryDataShapeAndJoinedShapes {
   joinedShapes?: JoinedShapes;
 }
 
+// TODO: what if destructure when setting instead of when cloning?
 export const cloneQuery = (q: QueryData) => {
   if (q.with) q.with = q.with.slice(0);
   if (q.select) q.select = q.select.slice(0);
@@ -310,6 +317,7 @@ export const cloneQuery = (q: QueryData) => {
   if (q.after) q.after = q.after.slice(0);
   if (q.joinedShapes) q.joinedShapes = { ...q.joinedShapes };
   if (q.scopes) q.scopes = { ...q.scopes };
+  if (q.parsers) q.parsers = { ...q.parsers };
 
   // may have data for updating timestamps on any kind of query
   if ((q as UpdateQueryData).updateData) {

@@ -576,35 +576,36 @@ describe('baseTable', () => {
     });
 
     describe('select', () => {
-      it.only('should select record with computed', async () => {
-        const q = local.profile
-          .select({
-            user: (q) =>
-              q.user.select('sqlComputed', 'runtimeComputed', 'batchComputed'),
-          })
-          .take();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT row_to_json("user".*) "user"
-            FROM "profile"
-            LEFT JOIN LATERAL (
-              SELECT
-                "user"."name" || ' ' || "user"."userKey" "sqlComputed",
-                "user"."id" "Id",
-                "user"."name" "Name"
-              FROM "user"
-              WHERE "user"."id" = "profile"."userId"
-                AND "user"."userKey" = "profile"."profileKey"
-            ) "user" ON true
-            LIMIT 1
-          `,
-        );
+      it('should select record with computed', async () => {
+        const q = local.profile.select({
+          user: (q) =>
+            q.user.select('sqlComputed', 'runtimeComputed', 'batchComputed'),
+        });
 
         const res = await q;
 
-        console.log(res.user);
+        assertType<
+          typeof res,
+          {
+            user:
+              | {
+                  sqlComputed: string;
+                  runtimeComputed: string;
+                  batchComputed: string;
+                }
+              | undefined;
+          }[]
+        >();
+
+        expect(res).toEqual([
+          {
+            user: {
+              sqlComputed: `${userData.Name} ${userData.UserKey}`,
+              runtimeComputed: `${userId} ${userData.Name}`,
+              batchComputed: `${userId} ${userData.Name}`,
+            },
+          },
+        ]);
       });
     });
   });

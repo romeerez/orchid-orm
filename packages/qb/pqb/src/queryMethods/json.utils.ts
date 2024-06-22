@@ -21,7 +21,7 @@ export function queryJson<T>(
   _queryGetOptional(
     q,
     new RawSQL(
-      queryTypeWithLimitOne[(self as Query).q.returnType]
+      queryTypeWithLimitOne[(self as Query).q.returnType as string]
         ? `row_to_json("t".*)`
         : coalesce !== false
         ? `COALESCE(json_agg(row_to_json("t".*)), '[]')`

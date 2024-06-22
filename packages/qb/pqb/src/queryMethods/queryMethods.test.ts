@@ -118,6 +118,13 @@ describe('queryMethods', () => {
 
       expect(received).toEqual(expected);
     });
+
+    it('should be disabled in a sub-query', () => {
+      // @ts-expect-error rows is disabled in a sub-query
+      User.select({
+        x: () => User.rows(),
+      });
+    });
   });
 
   describe('pluck', () => {

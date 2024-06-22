@@ -255,6 +255,7 @@ const pushSubQuerySql = (
       default:
         throw new UnhandledTypeError(query as Query, returnType);
     }
+
     if (sql) list.push(`${coalesce(ctx, query, sql, quotedAs)} "${as}"`);
     return;
   }
@@ -268,21 +269,27 @@ const pushSubQuerySql = (
     case 'pluck': {
       const { select } = query.q;
       const first = select?.[0];
-      if (!select || !first) {
+      if (!first && query.q.computeds?.[as]) {
+        query = queryJson(query) as unknown as typeof query;
+      } else if (!first) {
         throw new OrchidOrmInternalError(
           query as Query,
           `Nothing was selected for pluck`,
         );
+      } else {
+        const cloned = query.clone();
+        cloned.q.select = [{ selectAs: { c: first } }] as SelectItem[];
+        query = queryWrap(cloned, cloned.baseQuery.clone());
+        _queryGetOptional(query, new RawSQL(`COALESCE(json_agg("c"), '[]')`));
       }
-
-      const cloned = query.clone();
-      cloned.q.select = [{ selectAs: { c: first } }] as SelectItem[];
-      query = queryWrap(cloned, cloned.baseQuery.clone());
-      _queryGetOptional(query, new RawSQL(`COALESCE(json_agg("c"), '[]')`));
       break;
     }
     case 'value':
     case 'valueOrThrow':
+      if (query.q.computeds?.[as]) {
+        query = queryJson(query) as unknown as typeof query;
+      }
+      break;
     case 'rows':
     case 'rowCount':
     case 'void':
