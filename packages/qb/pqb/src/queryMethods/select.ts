@@ -80,7 +80,10 @@ interface SelectAsArg<T extends SelectSelf> {
     | Expression
     | ((q: {
         [K in keyof T]: K extends keyof T['relations']
-          ? T['relations'][K]['relationConfig']['methodQuery']
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            T[K] extends (...args: any[]) => any
+            ? ReturnType<T[K]>
+            : never
           : T[K];
       }) =>
         | (QueryBase & { returnType: Exclude<QueryReturnType, 'rows'> })

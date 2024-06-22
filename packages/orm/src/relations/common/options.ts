@@ -17,21 +17,6 @@ export interface RelationRefsOptions<
   references: Ref[];
 }
 
-export interface RelationKeysOptions<
-  PK extends PropertyKey = string,
-  FK extends PropertyKey = string,
-> {
-  primaryKey: PK;
-  foreignKey: FK;
-}
-
-export type RelationRefsOrKeysOptions<
-  Column extends PropertyKey = string,
-  Ref extends PropertyKey = string,
-  PK extends PropertyKey = string,
-  FK extends PropertyKey = string,
-> = RelationRefsOptions<Column, Ref> | RelationKeysOptions<PK, FK>;
-
 export interface RelationThroughOptions<
   Through extends PropertyKey = string,
   Source extends PropertyKey = string,
@@ -39,8 +24,3 @@ export interface RelationThroughOptions<
   through: Through;
   source: Source;
 }
-
-export type RelationHasOptions<
-  Column extends PropertyKey = string,
-  Ref extends PropertyKey = string,
-> = RelationRefsOrKeysOptions<Column, Ref, Column, Ref>;

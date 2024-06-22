@@ -2,9 +2,8 @@ import {
   RelationConfigSelf,
   RelationData,
   RelationThunkBase,
-  RelationToManyDataForCreate,
 } from './relations';
-import { TableClass } from '../baseTable';
+import { ScopeFn, TableClass } from '../baseTable';
 import {
   _queryCreateFrom,
   _queryCreateMany,
@@ -25,6 +24,7 @@ import {
   NotFoundError,
   OrchidOrmInternalError,
   Query,
+  RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
   toSQLCacheKey,
@@ -38,7 +38,6 @@ import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
   ColumnTypeBase,
-  EmptyObject,
   MaybeArray,
   objectHasValues,
   RecordString,
@@ -55,7 +54,6 @@ import {
   RelJoin,
 } from './common/utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
-import { RelationCommonOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
@@ -63,70 +61,61 @@ export interface HasAndBelongsToMany extends RelationThunkBase {
   options: HasAndBelongsToManyOptions;
 }
 
-export type HasAndBelongsToManyOptions<
+export interface HasAndBelongsToManyOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
   Scope extends Query = Query,
-> = RelationCommonOptions<Related, Scope> &
-  (
-    | {
-        columns: (keyof Columns)[];
-        references: string[];
-        through: {
-          table: string;
-          columns: string[];
-          references: (keyof InstanceType<Related>['columns']['shape'])[];
-        };
-      }
-    | {
-        primaryKey: keyof Columns;
-        foreignKey: string;
-        joinTable: string;
-        associationPrimaryKey: string;
-        associationForeignKey: keyof InstanceType<Related>['columns']['shape'];
-      }
-  );
+> {
+  scope?: ScopeFn<Related, Scope>;
+  required?: boolean;
+  columns: (keyof Columns)[];
+  references: string[];
+  through: {
+    table: string;
+    columns: string[];
+    references: (keyof InstanceType<Related>['columns']['shape'])[];
+  };
+}
 
 export type HasAndBelongsToManyParams<
   T extends RelationConfigSelf,
-  Relation extends RelationThunkBase,
-> = Relation['options'] extends { columns: string[] }
-  ? {
-      [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
-    }
-  : Relation['options'] extends { primaryKey: string }
-  ? Record<
-      Relation['options']['primaryKey'],
-      T['columns']['shape'][Relation['options']['primaryKey']]['type']
-    >
-  : never;
+  Relation extends HasAndBelongsToMany,
+> = {
+  [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
+};
 
-export interface HasAndBelongsToManyInfo<
-  T extends RelationConfigSelf,
-  Name extends keyof T['relations'] & string,
+export type HasAndBelongsToManyQuery<
+  Name extends string,
   TableQuery extends Query,
-  Q extends Query = {
-    [K in keyof TableQuery]: K extends 'meta'
-      ? Omit<TableQuery['meta'], 'selectable'> & {
-          as: Name;
-          hasWhere: true;
-          selectable: SelectableFromShape<TableQuery['shape'], Name>;
-        }
-      : K extends 'join'
-      ? RelJoin
-      : TableQuery[K];
-  },
-> {
+> = {
+  [K in keyof TableQuery]: K extends 'meta'
+    ? Omit<TableQuery['meta'], 'selectable'> & {
+        as: Name;
+        hasWhere: true;
+        selectable: SelectableFromShape<TableQuery['shape'], Name>;
+      }
+    : K extends 'join'
+    ? RelJoin
+    : TableQuery[K];
+};
+
+export interface HasAndBelongsToManyInfo<Name extends string, Q extends Query>
+  extends RelationConfigBase {
   query: Q;
-  methodQuery: Q;
   joinQuery: RelationJoinQuery;
-  one: false;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {
-    [P in Name]?: RelationToManyDataForCreate<{
-      nestedCreateQuery: Q;
-      table: Q;
-    }>;
+    [P in Name]?: {
+      // create related records
+      create?: CreateData<Q>[];
+      // find existing records by `where` conditions and update their foreign keys with the new id
+      connect?: WhereArg<Q>[];
+      // try finding records by `where` conditions, and create them if not found
+      connectOrCreate?: {
+        where: WhereArg<Q>;
+        create: CreateData<Q>;
+      }[];
+    };
   };
   dataForCreate: never;
   // `hasAndBelongsToMany` relation data available for update. It supports:
@@ -145,9 +134,16 @@ export interface HasAndBelongsToManyInfo<
     };
     create?: CreateData<Q>[];
   };
-  dataForUpdateOne: EmptyObject;
-
-  params: HasAndBelongsToManyParams<T, T['relations'][Name]>;
+  dataForUpdateOne: {
+    disconnect?: MaybeArray<WhereArg<Q>>;
+    set?: MaybeArray<WhereArg<Q>>;
+    delete?: MaybeArray<WhereArg<Q>>;
+    update?: {
+      where: MaybeArray<WhereArg<Q>>;
+      data: UpdateData<Q>;
+    };
+    create?: CreateData<Q>[];
+  };
 }
 
 interface State {
@@ -216,26 +212,12 @@ export const makeHasAndBelongsToManyMethod = (
   relationName: string,
   query: Query,
 ): RelationData => {
-  let primaryKeys: string[];
-  let foreignKeys: string[];
-  let joinTable: string;
-  let throughForeignKeys: string[];
-  let throughPrimaryKeys: string[];
-
   const { options } = relation;
-  if ('columns' in options) {
-    primaryKeys = options.columns as string[];
-    foreignKeys = options.references;
-    joinTable = options.through.table;
-    throughForeignKeys = options.through.columns;
-    throughPrimaryKeys = options.through.references as string[];
-  } else {
-    primaryKeys = [options.primaryKey] as string[];
-    foreignKeys = [options.foreignKey];
-    joinTable = options.joinTable;
-    throughForeignKeys = [options.associationForeignKey] as string[];
-    throughPrimaryKeys = [options.associationPrimaryKey];
-  }
+  const primaryKeys = options.columns as string[];
+  const foreignKeys = options.references;
+  const joinTable = options.through.table;
+  const throughForeignKeys = options.through.columns;
+  const throughPrimaryKeys = options.through.references as string[];
 
   const { snakeCase } = table.internal;
 

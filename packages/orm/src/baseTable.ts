@@ -17,7 +17,7 @@ import {
   QueryBeforeHook,
   QueryData,
   QueryHooks,
-  RelationQueryBase,
+  RelationsBase,
   ShapeColumnPrimaryKeys,
   ShapeUniqueColumns,
   SqlMethod,
@@ -45,11 +45,10 @@ import {
   snakeCaseKey,
   toSnakeCase,
 } from 'orchid-core';
-import { MapRelations } from './relations/relations';
+import { MapRelations, RelationConfigSelf } from './relations/relations';
 import { OrchidORM } from './orm';
 import { BelongsToOptions } from './relations/belongsTo';
 import { HasOneOptions } from './relations/hasOne';
-import { HasManyOptions } from './relations/hasMany';
 import { HasAndBelongsToManyOptions } from './relations/hasAndBelongsToMany';
 
 // type of table class itself
@@ -63,17 +62,11 @@ export interface TableClasses {
   [K: string]: TableClass;
 }
 
-interface RelationQueriesBase {
-  [K: string]: RelationQueryBase;
-}
-
 // convert table instance type to queryable interface
 // processes relations to a type that's understandable by `pqb`
 // add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
-export interface TableToDb<
-  T extends Table,
-  RelationQueries extends RelationQueriesBase,
-> extends Db<
+export interface TableToDb<T extends Table, Relations extends RelationsBase>
+  extends Db<
     T['table'],
     T['columns']['shape'],
     keyof ShapeColumnPrimaryKeys<T['columns']['shape']> extends never
@@ -87,11 +80,11 @@ export interface TableToDb<
     >,
     | UniqueConstraints<T['columns']['shape']>
     | TableDataItemsUniqueConstraints<T['columns']['data']>,
-    RelationQueries,
     T['types'],
     T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
     MapTableScopesOption<T['scopes'], T['softDelete']>
   > {
+  relations: Relations;
   definedAs: string;
   db: OrchidORM;
   getFilePath(): string;
@@ -100,8 +93,9 @@ export interface TableToDb<
 
 // convert a table class type into queryable interface
 // add relation methods
-export type DbTable<T extends Table> = TableToDb<T, MapRelations<T>> &
-  MapRelations<T>;
+export type DbTable<T extends Table> = T extends RelationConfigSelf
+  ? TableToDb<T, MapRelations<T>> & MapRelations<T>
+  : TableToDb<T, RelationsBase>;
 
 // `columns` property of table has a shape and an output type of the columns
 // callback with a query of relation, to use as a default scope
@@ -350,7 +344,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Scope extends Query,
     Through extends string,
     Source extends string,
-    Options extends HasManyOptions<Columns, Related, Scope, Through, Source>,
+    Options extends HasOneOptions<Columns, Related, Scope, Through, Source>,
   >(
     this: { columns: { shape: Columns } },
     fn: () => Related,

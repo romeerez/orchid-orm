@@ -55,7 +55,6 @@ import {
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from '../sql/rawSql';
-import { RelationsBase } from '../relations';
 import { ScopeArgumentQuery } from '../queryMethods/scope';
 import { QueryBase } from './queryBase';
 import {
@@ -190,7 +189,6 @@ export interface Db<
   UniqueColumnTuples = never,
   // union of primary keys and unique index names
   UniqueConstraints = never,
-  Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
   ShapeWithComputed extends QueryColumnsInit = Shape,
   Scopes extends CoreQueryScopes | undefined = EmptyObject,
@@ -203,7 +201,7 @@ export interface Db<
   then: QueryThen<QueryDefaultReturnData<Shape>>;
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
-  relations: Relations;
+  relations: EmptyObject;
   withData: Query['withData'];
   error: new (
     message: string,
@@ -250,7 +248,6 @@ export class Db<
   UniqueColumns = never,
   UniqueColumnTuples = never,
   UniqueConstraints = never,
-  Relations extends RelationsBase = EmptyObject,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
   ShapeWithComputed extends QueryColumnsInit = Shape,
 > implements Query
@@ -283,7 +280,7 @@ export class Db<
     } as QueryInternal;
 
     this.baseQuery = this as Query;
-    this.relations = {} as Relations;
+    this.relations = {};
 
     const logger = options.logger || console;
 
@@ -590,7 +587,6 @@ export type DbTableConstructor<ColumnTypes> = <
   ShapeUniqueColumns<Shape> | TableDataItemsUniqueColumns<Shape, Data>,
   TableDataItemsUniqueColumnTuples<Shape, Data>,
   UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
-  EmptyObject,
   ColumnTypes,
   Shape & ComputedColumnsFromOptions<Options['computed']>,
   MapTableScopesOption<Options['scopes'], Options['softDelete']>
@@ -606,16 +602,7 @@ export type MapTableScopesOption<
 };
 
 export interface DbResult<ColumnTypes>
-  extends Db<
-      string,
-      never,
-      never,
-      never,
-      never,
-      never,
-      EmptyObject,
-      ColumnTypes
-    >,
+  extends Db<string, never, never, never, never, never, ColumnTypes>,
     DbTableConstructor<ColumnTypes> {
   adapter: Adapter;
   close: Adapter['close'];

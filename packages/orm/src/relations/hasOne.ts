@@ -12,10 +12,9 @@ import {
   InsertQueryData,
   isQueryReturnsAll,
   Query,
+  RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
@@ -52,8 +51,6 @@ import {
 } from 'orchid-core';
 import {
   RelationCommonOptions,
-  RelationHasOptions,
-  RelationKeysOptions,
   RelationRefsOptions,
   RelationThroughOptions,
 } from './common/options';
@@ -73,7 +70,7 @@ export type HasOneOptions<
   Source extends string = string,
 > = RelationCommonOptions<Related, Scope> &
   (
-    | RelationHasOptions<
+    | RelationRefsOptions<
         keyof Columns,
         keyof InstanceType<Related>['columns']['shape']
       >
@@ -87,67 +84,66 @@ export type HasOneParams<
   ? {
       [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
     }
-  : Relation['options'] extends RelationKeysOptions
-  ? Record<
-      Relation['options']['primaryKey'],
-      T['columns']['shape'][Relation['options']['primaryKey']]['type']
-    >
   : Relation['options'] extends RelationThroughOptions
   ? RelationConfigParams<T, T['relations'][Relation['options']['through']]>
   : never;
 
+export type HasOnePopulate<
+  T extends RelationConfigSelf,
+  Name extends string,
+> = T['relations'][Name]['options'] extends RelationRefsOptions
+  ? Record<T['relations'][Name]['options']['references'][number], true>
+  : never;
+
+export type HasOneQuery<
+  T extends RelationConfigSelf,
+  Name extends string,
+  TableQuery extends Query,
+> = T['relations'][Name]['options'] extends RelationThroughOptions
+  ? {
+      [K in keyof TableQuery]: K extends 'meta'
+        ? Omit<TableQuery['meta'], 'selectable'> & {
+            as: Name;
+            defaults: HasOnePopulate<T, Name>;
+            hasWhere: true;
+            selectable: SelectableFromShape<TableQuery['shape'], Name>;
+          }
+        : K extends 'join'
+        ? RelJoin
+        : K extends CreateMethodsNames
+        ? never
+        : TableQuery[K];
+    }
+  : {
+      [K in keyof TableQuery]: K extends 'meta'
+        ? Omit<TableQuery['meta'], 'selectable'> & {
+            as: Name;
+            defaults: HasOnePopulate<T, Name>;
+            hasWhere: true;
+            selectable: SelectableFromShape<TableQuery['shape'], Name>;
+          }
+        : K extends 'join'
+        ? RelJoin
+        : TableQuery[K];
+    };
+
 export interface HasOneInfo<
   T extends RelationConfigSelf,
-  Name extends keyof T['relations'] & string,
-  TableQuery extends Query,
-  Populate = T['relations'][Name]['options'] extends RelationRefsOptions
-    ? Record<T['relations'][Name]['options']['references'][number], true>
-    : T['relations'][Name]['options'] extends RelationKeysOptions
-    ? Record<T['relations'][Name]['options']['foreignKey'], true>
-    : never,
-  Q extends Query = T['relations'][Name]['options'] extends RelationThroughOptions
-    ? {
-        [K in keyof TableQuery]: K extends 'meta'
-          ? Omit<TableQuery['meta'], 'selectable'> & {
-              as: Name;
-              defaults: Populate;
-              hasWhere: true;
-              selectable: SelectableFromShape<TableQuery['shape'], Name>;
-            }
-          : K extends 'join'
-          ? RelJoin
-          : K extends CreateMethodsNames
-          ? never
-          : TableQuery[K];
-      }
-    : {
-        [K in keyof TableQuery]: K extends 'meta'
-          ? Omit<TableQuery['meta'], 'selectable'> & {
-              as: Name;
-              defaults: Populate;
-              hasWhere: true;
-              selectable: SelectableFromShape<TableQuery['shape'], Name>;
-            }
-          : K extends 'join'
-          ? RelJoin
-          : TableQuery[K];
-      },
-  NestedCreateQuery extends Query = T['relations'][Name]['options'] extends RelationThroughOptions
-    ? Q
-    : AddQueryDefaults<Q, Populate>,
-> {
+  Name extends string,
+  Q extends Query,
+  CD = CreateData<
+    T['relations'][Name]['options'] extends RelationThroughOptions
+      ? Q
+      : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
+  >,
+> extends RelationConfigBase {
   query: Q;
-  methodQuery: T['relations'][Name]['options']['required'] extends true
-    ? SetQueryReturnsOne<Q>
-    : SetQueryReturnsOneOptional<Q>;
-  joinQuery: RelationJoinQuery;
-  one: true;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: T['relations'][Name]['options'] extends RelationThroughOptions
     ? EmptyObject
     : {
         [P in Name]?: RelationToOneDataForCreate<{
-          nestedCreateQuery: NestedCreateQuery;
+          nestedCreateQuery: CD;
           table: Q;
         }>;
       };
@@ -165,20 +161,19 @@ export interface HasOneInfo<
   // - `upsert` to update or create the related record
   // - `create` to create a related record
   dataForUpdateOne:
+    | { disconnect: boolean }
+    | { delete: boolean }
+    | { update: UpdateData<Q> }
     | { set: WhereArg<Q> }
     | {
         upsert: {
           update: UpdateData<Q>;
-          create:
-            | CreateData<NestedCreateQuery>
-            | (() => CreateData<NestedCreateQuery>);
+          create: CD | (() => CD);
         };
       }
     | {
-        create: CreateData<NestedCreateQuery>;
+        create: CD;
       };
-
-  params: HasOneParams<T, T['relations'][Name]>;
 }
 
 interface State {
@@ -296,17 +291,8 @@ export const makeHasOneMethod = (
     };
   }
 
-  const primaryKeys = (
-    'columns' in relation.options
-      ? relation.options.columns
-      : [relation.options.primaryKey]
-  ) as string[];
-
-  const foreignKeys = (
-    'columns' in relation.options
-      ? relation.options.references
-      : [relation.options.foreignKey]
-  ) as string[];
+  const primaryKeys = relation.options.columns as string[];
+  const foreignKeys = relation.options.references as string[];
 
   const state: State = { query, primaryKeys, foreignKeys };
   const len = primaryKeys.length;
@@ -388,8 +374,8 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
               )
             : _queryUpdate(
                 t.where(
-                  (item.connectOrCreate as NestedInsertOneItemConnectOrCreate)
-                    .where,
+                  (item.connectOrCreate as RecordUnknown)
+                    .where as WhereArg<Query>,
                 ) as never,
                 data as never,
               );
@@ -474,7 +460,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         }
 
         await _queryUpdate(
-          _queryWhere(t as Query, [params.set]) as never,
+          _queryWhere(t as Query, [params.set as never]) as never,
           obj as never,
         );
       }

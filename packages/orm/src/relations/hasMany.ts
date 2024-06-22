@@ -1,11 +1,8 @@
 import {
   RelationData,
   RelationThunkBase,
-  RelationToManyDataForCreate,
-  RelationConfigParams,
   RelationConfigSelf,
 } from './relations';
-import { TableClass } from '../baseTable';
 import {
   CreateData,
   Query,
@@ -25,13 +22,11 @@ import {
   _queryUpdate,
   _queryCreateMany,
   _queryDelete,
-  CreateMethodsNames,
-  SelectableFromShape,
   PickQueryMetaRelations,
+  RelationConfigBase,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
-  ColumnsShapeBase,
   EmptyObject,
   MaybeArray,
   objectHasValues,
@@ -51,96 +46,45 @@ import {
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
   NestedUpdateManyItems,
-  RelJoin,
 } from './common/utils';
-import { HasOneOptions } from './hasOne';
-import {
-  RelationKeysOptions,
-  RelationRefsOptions,
-  RelationThroughOptions,
-} from './common/options';
+import { RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
+import { HasOneOptions, HasOnePopulate } from './hasOne';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
-  options: HasManyOptions;
+  options: HasOneOptions;
 }
-
-export type HasManyOptions<
-  Columns extends ColumnsShapeBase = ColumnsShapeBase,
-  Related extends TableClass = TableClass,
-  Scope extends Query = Query,
-  Through extends string = string,
-  Source extends string = string,
-> = HasOneOptions<Columns, Related, Scope, Through, Source>;
-
-export type HasManyParams<
-  T extends RelationConfigSelf,
-  Relation extends RelationThunkBase,
-> = Relation['options'] extends RelationRefsOptions
-  ? {
-      [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
-    }
-  : Relation['options'] extends RelationKeysOptions
-  ? Record<
-      Relation['options']['primaryKey'],
-      T['columns']['shape'][Relation['options']['primaryKey']]['type']
-    >
-  : Relation['options'] extends RelationThroughOptions
-  ? RelationConfigParams<T, T['relations'][Relation['options']['through']]>
-  : never;
 
 export interface HasManyInfo<
   T extends RelationConfigSelf,
-  Name extends keyof T['relations'] & string,
-  TableQuery extends Query,
-  Populate extends PropertyKey = T['relations'][Name]['options'] extends RelationRefsOptions
-    ? T['relations'][Name]['options']['references'][number]
-    : T['relations'][Name]['options'] extends RelationKeysOptions
-    ? T['relations'][Name]['options']['foreignKey']
-    : never,
-  Q extends Query = T['relations'][Name]['options'] extends RelationThroughOptions
-    ? {
-        [K in keyof TableQuery]: K extends 'meta'
-          ? Omit<TableQuery['meta'], 'selectable'> & {
-              as: Name;
-              defaults: Record<Populate, true>;
-              hasWhere: true;
-              selectable: SelectableFromShape<TableQuery['shape'], Name>;
-            }
-          : K extends 'join'
-          ? RelJoin
-          : K extends CreateMethodsNames
-          ? never
-          : TableQuery[K];
-      }
-    : {
-        [K in keyof TableQuery]: K extends 'meta'
-          ? Omit<TableQuery['meta'], 'selectable'> & {
-              as: Name;
-              defaults: Record<Populate, true>;
-              hasWhere: true;
-              selectable: SelectableFromShape<TableQuery['shape'], Name>;
-            }
-          : K extends 'join'
-          ? RelJoin
-          : TableQuery[K];
-      },
-> {
+  Name extends string,
+  Q extends Query,
+> extends RelationConfigBase {
   query: Q;
-  methodQuery: Q;
-  joinQuery: RelationJoinQuery;
-  one: false;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {
     [P in Name]?: T['relations'][Name]['options'] extends RelationThroughOptions
       ? EmptyObject
-      : RelationToManyDataForCreate<{
-          nestedCreateQuery: T['relations'][Name]['options'] extends RelationThroughOptions
-            ? Q
-            : AddQueryDefaults<Q, Record<Populate, true>>;
-          table: Q;
-        }>;
+      : {
+          // create related records
+          create?: CreateData<
+            T['relations'][Name]['options'] extends RelationThroughOptions
+              ? Q
+              : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
+          >[];
+          // find existing records by `where` conditions and update their foreign keys with the new id
+          connect?: WhereArg<Q>[];
+          // try finding records by `where` conditions, and create them if not found
+          connectOrCreate?: {
+            where: WhereArg<Q>;
+            create: CreateData<
+              T['relations'][Name]['options'] extends RelationThroughOptions
+                ? Q
+                : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
+            >;
+          }[];
+        };
   };
   dataForCreate: never;
   // `hasMany` relation data available for update. It supports:
@@ -159,15 +103,19 @@ export interface HasManyInfo<
   // - `set` to update foreign keys of related records found by conditions
   // - `create` to create related records
   dataForUpdateOne: {
+    disconnect?: MaybeArray<WhereArg<Q>>;
+    delete?: MaybeArray<WhereArg<Q>>;
+    update?: {
+      where: MaybeArray<WhereArg<Q>>;
+      data: UpdateData<Q>;
+    };
     set?: MaybeArray<WhereArg<Q>>;
     create?: CreateData<
       T['relations'][Name]['options'] extends RelationThroughOptions
         ? Q
-        : AddQueryDefaults<Q, Record<Populate, true>>
+        : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
     >[];
   };
-
-  params: HasManyParams<T, T['relations'][Name]>;
 }
 
 interface State {
@@ -288,17 +236,8 @@ export const makeHasManyMethod = (
     };
   }
 
-  const primaryKeys = (
-    'columns' in relation.options
-      ? relation.options.columns
-      : [relation.options.primaryKey]
-  ) as string[];
-
-  const foreignKeys = (
-    'columns' in relation.options
-      ? relation.options.references
-      : [relation.options.foreignKey]
-  ) as string[];
+  const primaryKeys = relation.options.columns as string[];
+  const foreignKeys = relation.options.references as string[];
 
   const state: State = { query, primaryKeys, foreignKeys };
   const len = primaryKeys.length;
@@ -424,7 +363,10 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
           }
 
           queries.push(
-            _queryUpdate(t.where(item.where) as never, obj as never),
+            _queryUpdate(
+              t.where(item.where as WhereArg<Query>) as never,
+              obj as never,
+            ),
           );
         }
       }

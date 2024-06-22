@@ -1529,8 +1529,8 @@ describe('hasOne', () => {
 
       relations = {
         profile: this.hasOne(() => ProfileTable, {
-          primaryKey: 'Id',
-          foreignKey: 'UserId',
+          columns: ['Id'],
+          references: ['UserId'],
         }),
       };
     }
@@ -1605,8 +1605,8 @@ describe('hasOne through', () => {
 
       relations = {
         postTag: this.hasOne(() => PostTag, {
-          primaryKey: 'Id',
-          foreignKey: 'PostId',
+          columns: ['Id'],
+          references: ['PostId'],
         }),
 
         tag: this.hasOne(() => Tag, {
@@ -1624,8 +1624,8 @@ describe('hasOne through', () => {
 
       relations = {
         postTag: this.hasOne(() => PostTag, {
-          primaryKey: 'Id',
-          foreignKey: 'PostId',
+          columns: ['Id'],
+          references: ['PostId'],
         }),
 
         post: this.hasOne(() => Post, {
@@ -1653,13 +1653,13 @@ describe('hasOne through', () => {
 
       relations = {
         post: this.belongsTo(() => Post, {
-          primaryKey: 'Id',
-          foreignKey: 'PostId',
+          references: ['Id'],
+          columns: ['PostId'],
         }),
 
         tag: this.belongsTo(() => Tag, {
-          primaryKey: 'Id',
-          foreignKey: 'TagId',
+          references: ['Id'],
+          columns: ['TagId'],
         }),
       };
     }
@@ -1727,8 +1727,8 @@ describe('hasOne through', () => {
 
       relations = {
         postTag: this.hasOne(() => PostTag, {
-          primaryKey: 'Id',
-          foreignKey: 'PostId',
+          columns: ['Id'],
+          references: ['PostId'],
         }),
 
         tag: this.hasOne(() => Tag, {
@@ -2239,8 +2239,8 @@ describe('hasOne through', () => {
 
       relations = {
         profile: this.hasOne(() => ProfileTable, {
-          primaryKey: 'Id',
-          foreignKey: 'UserId',
+          columns: ['Id'],
+          references: ['UserId'],
         }),
       };
     }
@@ -2264,8 +2264,8 @@ describe('hasOne through', () => {
 
       relations = {
         user: this.belongsTo(() => UserTable, {
-          primaryKey: 'Id',
-          foreignKey: 'AuthorId',
+          references: ['Id'],
+          columns: ['AuthorId'],
         }),
 
         profile: this.hasOne(() => ProfileTable, {

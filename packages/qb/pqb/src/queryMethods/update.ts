@@ -64,9 +64,7 @@ type UpdateRelationData<
   Rel extends RelationConfigBase,
 > = T['returnType'] extends undefined | 'all'
   ? Rel['dataForUpdate']
-  : Rel['one'] extends true
-  ? Rel['dataForUpdate'] | Rel['dataForUpdateOne']
-  : Rel['dataForUpdate'] & Rel['dataForUpdateOne'];
+  : Rel['dataForUpdateOne'];
 
 // Type of argument for `update`.
 // not available when there are no conditions on the query.

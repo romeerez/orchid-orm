@@ -1,4 +1,8 @@
-import { Query } from './query/query';
+import {
+  Query,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
+} from './query/query';
 import { RecordUnknown } from 'orchid-core';
 
 export type RelationJoinQuery = (
@@ -8,9 +12,7 @@ export type RelationJoinQuery = (
 
 export interface RelationConfigBase {
   query: Query;
-  methodQuery: Query;
   joinQuery: RelationJoinQuery;
-  one: boolean;
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
   // or with `db.book.create({ author: authorData })`.
@@ -24,7 +26,6 @@ export interface RelationConfigBase {
   optionalDataForCreate: unknown;
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
-  params: RecordUnknown;
 }
 
 export interface RelationConfigDataForCreate {
@@ -42,7 +43,16 @@ export interface RelationQueryBase extends Query {
 
 export type RelationQuery<
   Config extends RelationConfigBase = RelationConfigBase,
-> = ((params: Config['params']) => Config['methodQuery']) &
+  Params = never,
+  Required = never,
+  One = never,
+> = ((
+  params: Params,
+) => One extends true
+  ? Required extends true
+    ? SetQueryReturnsOne<Config['query']>
+    : SetQueryReturnsOneOptional<Config['query']>
+  : Config['query']) &
   Config['query'] & {
     relationConfig: Config;
   };

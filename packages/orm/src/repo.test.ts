@@ -14,8 +14,8 @@ class SomeTable extends BaseTable {
 
   relations = {
     other: this.hasMany(() => OtherTable, {
-      primaryKey: 'id',
-      foreignKey: 'someId',
+      columns: ['id'],
+      references: ['someId'],
     }),
   };
 }
@@ -31,12 +31,12 @@ class OtherTable extends BaseTable {
 
   relations = {
     some: this.belongsTo(() => SomeTable, {
-      primaryKey: 'id',
-      foreignKey: 'someId',
+      references: ['id'],
+      columns: ['someId'],
     }),
     another: this.belongsTo(() => AnotherTable, {
-      primaryKey: 'id',
-      foreignKey: 'anotherId',
+      references: ['id'],
+      columns: ['anotherId'],
     }),
   };
 }

@@ -18,12 +18,11 @@ import {
   pushQueryValue,
   Query,
   QueryResult,
+  RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
   SelectQueryData,
   setQueryObjectValue,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
   UpdateArg,
   UpdateCtx,
   UpdateCtxCollect,
@@ -54,12 +53,7 @@ import {
   EmptyObject,
   RecordUnknown,
 } from 'orchid-core';
-import {
-  RelationCommonOptions,
-  RelationKeysOptions,
-  RelationRefsOptions,
-  RelationRefsOrKeysOptions,
-} from './common/options';
+import { RelationCommonOptions, RelationRefsOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 
 export interface BelongsTo extends RelationThunkBase {
@@ -67,59 +61,51 @@ export interface BelongsTo extends RelationThunkBase {
   options: BelongsToOptions;
 }
 
-export type BelongsToOptions<
+export interface BelongsToOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
   Scope extends Query = Query,
-> = RelationCommonOptions<Related, Scope> &
-  RelationRefsOrKeysOptions<
-    keyof Columns,
-    keyof InstanceType<Related>['columns']['shape'],
-    keyof InstanceType<Related>['columns']['shape'],
-    keyof Columns
-  >;
+> extends RelationCommonOptions<Related, Scope>,
+    RelationRefsOptions<
+      keyof Columns,
+      keyof InstanceType<Related>['columns']['shape']
+    > {}
 
 export type BelongsToFKey<Relation extends RelationThunkBase> =
   Relation['options'] extends RelationRefsOptions
     ? Relation['options']['columns'][number]
-    : Relation['options'] extends RelationKeysOptions
-    ? Relation['options']['foreignKey']
     : never;
 
 export type BelongsToParams<
   T extends RelationConfigSelf,
-  Relation extends RelationThunkBase,
+  Relation extends BelongsTo,
 > = {
   [Name in BelongsToFKey<Relation>]: T['columns']['shape'][Name]['type'];
 };
 
+export type BelongsToQuery<T extends Query, Name extends string> = {
+  [P in keyof T]: P extends 'meta'
+    ? // Omit is optimal
+      Omit<T['meta'], 'selectable'> & {
+        as: Name;
+        hasWhere: true;
+        selectable: SelectableFromShape<T['shape'], Name>;
+      }
+    : P extends 'join'
+    ? RelJoin
+    : P extends CreateMethodsNames | DeleteMethodsNames
+    ? never
+    : T[P];
+};
+
 export interface BelongsToInfo<
   T extends RelationConfigSelf,
-  Name extends keyof T['relations'] & string,
-  TableQuery extends Query,
+  Name extends string,
   FK extends string,
   Required,
-  Q extends Query = {
-    [P in keyof TableQuery]: P extends 'meta'
-      ? // Omit is optimal
-        Omit<TableQuery['meta'], 'selectable'> & {
-          as: Name;
-          hasWhere: true;
-          selectable: SelectableFromShape<TableQuery['shape'], Name>;
-        }
-      : P extends 'join'
-      ? RelJoin
-      : P extends CreateMethodsNames | DeleteMethodsNames
-      ? never
-      : TableQuery[P];
-  },
-> {
+  Q extends Query,
+> extends RelationConfigBase {
   query: Q;
-  methodQuery: Required extends true
-    ? SetQueryReturnsOne<Q>
-    : SetQueryReturnsOneOptional<Q>;
-  joinQuery: RelationJoinQuery;
-  one: true;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: { [L in FK]: T['columns']['shape'][L]['inputType'] };
@@ -148,14 +134,18 @@ export interface BelongsToInfo<
       };
   // Only for records that updates a single record:
   // - `upsert` to update or create the related record
-  dataForUpdateOne: {
-    upsert: {
-      update: UpdateData<Q>;
-      create: CreateData<Q> | (() => CreateData<Q>);
-    };
-  };
-
-  params: BelongsToParams<T, T['relations'][Name]>;
+  dataForUpdateOne:
+    | { disconnect: boolean }
+    | { set: WhereArg<Q> }
+    | { delete: boolean }
+    | { update: UpdateData<Q> }
+    | { create: CreateData<Q> }
+    | {
+        upsert: {
+          update: UpdateData<Q>;
+          create: CreateData<Q> | (() => CreateData<Q>);
+        };
+      };
 }
 
 interface State {
@@ -260,17 +250,8 @@ export const makeBelongsToMethod = (
   relationName: string,
   query: Query,
 ): RelationData => {
-  const primaryKeys = (
-    'columns' in relation.options
-      ? relation.options.references
-      : [relation.options.primaryKey]
-  ) as string[];
-
-  const foreignKeys = (
-    'columns' in relation.options
-      ? relation.options.columns
-      : [relation.options.foreignKey]
-  ) as string[];
+  const primaryKeys = relation.options.references as string[];
+  const foreignKeys = relation.options.columns as string[];
 
   const len = primaryKeys.length;
   const state: State = { query, primaryKeys, foreignKeys, len };

@@ -1508,8 +1508,8 @@ describe('belongsTo', () => {
 
       relations = {
         user: this.belongsTo(() => UserTable, {
-          primaryKey: 'Id',
-          foreignKey: 'UserId',
+          columns: ['UserId'],
+          references: ['Id'],
         }),
       };
     }

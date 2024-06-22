@@ -1,5 +1,9 @@
 # Breaking changes
 
+## orchid-orm 1.31.2
+
+Removing `primaryKey`, `foreignKey`, `associationForeignKey`, and such, as options for `belongsTo`, `hasMany`, etc.
+
 ## orchid-orm 1.31.0
 
 Computed columns change, see the [docs](https://orchid-orm.netlify.app/guide/computed-columns.html).

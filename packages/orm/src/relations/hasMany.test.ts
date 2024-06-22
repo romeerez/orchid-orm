@@ -1995,8 +1995,8 @@ describe('hasMany through', () => {
 
       relations = {
         postTags: this.hasMany(() => PostTag, {
-          primaryKey: 'Id',
-          foreignKey: 'postId',
+          columns: ['Id'],
+          references: ['postId'],
         }),
 
         tags: this.hasMany(() => Tag, {
@@ -2014,8 +2014,8 @@ describe('hasMany through', () => {
 
       relations = {
         postTags: this.hasMany(() => PostTag, {
-          primaryKey: 'Id',
-          foreignKey: 'postId',
+          columns: ['Id'],
+          references: ['postId'],
         }),
 
         posts: this.hasMany(() => Post, {
@@ -2037,13 +2037,13 @@ describe('hasMany through', () => {
 
       relations = {
         post: this.belongsTo(() => Post, {
-          primaryKey: 'Id',
-          foreignKey: 'postId',
+          references: ['Id'],
+          columns: ['postId'],
         }),
 
         tag: this.belongsTo(() => Tag, {
-          primaryKey: 'Id',
-          foreignKey: 'tagId',
+          references: ['Id'],
+          columns: ['tagId'],
         }),
       };
     }
@@ -2111,8 +2111,8 @@ describe('hasMany through', () => {
 
       relations = {
         postTags: this.hasMany(() => PostTag, {
-          primaryKey: 'Id',
-          foreignKey: 'postId',
+          columns: ['Id'],
+          references: ['postId'],
         }),
 
         tags: this.hasMany(() => Tag, {

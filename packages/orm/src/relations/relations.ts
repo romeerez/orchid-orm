@@ -1,11 +1,17 @@
 import {
   BelongsTo,
-  BelongsToFKey,
   BelongsToInfo,
   BelongsToParams,
+  BelongsToQuery,
   makeBelongsToMethod,
 } from './belongsTo';
-import { HasOne, HasOneInfo, HasOneParams, makeHasOneMethod } from './hasOne';
+import {
+  HasOne,
+  HasOneInfo,
+  HasOneParams,
+  HasOneQuery,
+  makeHasOneMethod,
+} from './hasOne';
 import { DbTable, Table, TableClass } from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
@@ -28,16 +34,12 @@ import {
   EmptyObject,
   RecordUnknown,
 } from 'orchid-core';
-import {
-  HasMany,
-  HasManyInfo,
-  HasManyParams,
-  makeHasManyMethod,
-} from './hasMany';
+import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
   HasAndBelongsToManyInfo,
   HasAndBelongsToManyParams,
+  HasAndBelongsToManyQuery,
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './common/utils';
@@ -48,10 +50,10 @@ import { RelationCommonOptions } from './common/options';
 // - `connect` to find existing record and use its primary key
 // - `connectOrCreate` to first try connecting to an existing record, and create it if not found
 export type RelationToOneDataForCreate<
-  Rel extends { nestedCreateQuery: Query; table: Query },
+  Rel extends { nestedCreateQuery: unknown; table: Query },
 > =
   | {
-      create: CreateData<Rel['nestedCreateQuery']>;
+      create: Rel['nestedCreateQuery'];
       connect?: never;
       connectOrCreate?: never;
     }
@@ -65,7 +67,7 @@ export type RelationToOneDataForCreate<
       connect?: never;
       connectOrCreate: {
         where: WhereArg<Rel['table']>;
-        create: CreateData<Rel['nestedCreateQuery']>;
+        create: Rel['nestedCreateQuery'];
       };
     };
 
@@ -88,21 +90,6 @@ export type RelationToOneDataForCreateSameQuery<Q extends Query> =
         create: CreateData<Q>;
       };
     };
-
-// `hasMany` and `hasAndBelongsToMany` relation data available for create. It supports:
-// - `create` to create related records
-// - `connect` to find existing records by `where` conditions and update their foreign keys with the new id
-// - `connectOrCreate` to first try finding records by `where` conditions, and create them if not found
-export type RelationToManyDataForCreate<
-  Rel extends { nestedCreateQuery: Query; table: Query },
-> = {
-  create?: CreateData<Rel['nestedCreateQuery']>[];
-  connect?: WhereArg<Rel['table']>[];
-  connectOrCreate?: {
-    where: WhereArg<Rel['table']>;
-    create: CreateData<Rel['nestedCreateQuery']>;
-  }[];
-};
 
 export interface RelationThunkBase {
   type: string;
@@ -140,10 +127,8 @@ export type RelationConfigParams<
   Relation extends RelationThunk,
 > = Relation extends BelongsTo
   ? BelongsToParams<T, Relation>
-  : Relation extends HasOne
+  : Relation extends HasOne | HasMany
   ? HasOneParams<T, Relation>
-  : Relation extends HasMany
-  ? HasManyParams<T, Relation>
   : Relation extends HasAndBelongsToMany
   ? HasAndBelongsToManyParams<T, Relation>
   : never;
@@ -151,27 +136,61 @@ export type RelationConfigParams<
 export type MapRelation<
   T extends RelationConfigSelf,
   K extends keyof T['relations'] & string,
-> = RelationQuery<
-  T['relations'][K] extends BelongsTo
-    ? BelongsToInfo<
+  R extends Query,
+> = T['relations'][K] extends BelongsTo
+  ? RelationQuery<
+      BelongsToInfo<
         T,
         K,
-        RelationScopeOrTable<T['relations'][K]>,
-        BelongsToFKey<T['relations'][K]>,
-        T['relations'][K]['options']['required']
-      >
-    : T['relations'][K] extends HasOne
-    ? HasOneInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
-    : T['relations'][K] extends HasMany
-    ? HasManyInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
-    : T['relations'][K] extends HasAndBelongsToMany
-    ? HasAndBelongsToManyInfo<T, K, RelationScopeOrTable<T['relations'][K]>>
-    : never
->;
+        T['relations'][K]['options']['columns'][number] & string,
+        T['relations'][K]['options']['required'],
+        BelongsToQuery<R, K>
+      >,
+      BelongsToParams<T, T['relations'][K]>,
+      T['relations'][K]['options']['required'],
+      true
+    >
+  : T['relations'][K] extends HasOne
+  ? RelationQuery<
+      HasOneInfo<
+        T,
+        K,
+        HasOneQuery<T, K, RelationScopeOrTable<T['relations'][K]>>
+      >,
+      HasOneParams<T, T['relations'][K]>,
+      T['relations'][K]['options']['required'],
+      true
+    >
+  : T['relations'][K] extends HasMany
+  ? RelationQuery<
+      HasManyInfo<
+        T,
+        K,
+        HasOneQuery<T, K, RelationScopeOrTable<T['relations'][K]>>
+      >,
+      HasOneParams<T, T['relations'][K]>,
+      true,
+      false
+    >
+  : T['relations'][K] extends HasAndBelongsToMany
+  ? RelationQuery<
+      HasAndBelongsToManyInfo<
+        K,
+        HasAndBelongsToManyQuery<K, RelationScopeOrTable<T['relations'][K]>>
+      >,
+      HasAndBelongsToManyParams<T, T['relations'][K]>,
+      true,
+      false
+    >
+  : never;
 
 export type MapRelations<T> = T extends RelationConfigSelf
   ? {
-      [K in keyof T['relations'] & string]: MapRelation<T, K>;
+      [K in keyof T['relations'] & string]: MapRelation<
+        T,
+        K,
+        RelationScopeOrTable<T['relations'][K]>
+      >;
     }
   : EmptyObject;
 
@@ -262,7 +281,7 @@ export const applyRelations = (
       for (const item of value[key]) {
         const { relation } = item;
 
-        if (item.dbTable.relations[item.relationName as never]) continue;
+        if (item.dbTable.relations[item.relationName] as never) continue;
 
         const as = item.dbTable.definedAs;
         let message = `Cannot define a \`${item.relationName}\` relation on \`${as}\``;

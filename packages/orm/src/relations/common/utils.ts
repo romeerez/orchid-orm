@@ -19,7 +19,9 @@ import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 
 // INNER JOIN the current relation instead of the default OUTER behavior
-export type RelJoin = JoinQueryMethod & (<T extends Query>(this: T) => T);
+export interface RelJoin extends JoinQueryMethod {
+  <T extends Query>(this: T): T;
+}
 
 export interface NestedInsertOneItem {
   create?: NestedInsertOneItemCreate;
@@ -28,32 +30,29 @@ export interface NestedInsertOneItem {
 }
 
 export type NestedInsertOneItemCreate = RecordUnknown;
+export type NestedInsertOneItemConnect = RecordUnknown;
 
-export type NestedInsertOneItemConnect = WhereArg<PickQueryMetaRelations>;
-
-export type NestedInsertOneItemConnectOrCreate = {
+export interface NestedInsertOneItemConnectOrCreate {
   where: WhereArg<PickQueryMetaRelations>;
   create: RecordUnknown;
-};
+}
 
-export type NestedInsertManyItems = {
+export interface NestedInsertManyItems {
   create?: NestedInsertManyCreate;
   connect?: NestedInsertManyConnect;
   connectOrCreate?: NestedInsertManyConnectOrCreate;
-};
+}
 
 export type NestedInsertManyCreate = RecordUnknown[];
 
 export type NestedInsertManyConnect = WhereArg<PickQueryMetaRelations>[];
 
-export type NestedInsertManyConnectOrCreate = {
-  where: WhereArg<PickQueryMetaRelations>;
-  create: RecordUnknown;
-}[];
+export type NestedInsertManyConnectOrCreate =
+  NestedInsertOneItemConnectOrCreate[];
 
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
-export type NestedUpdateOneItem = {
+export interface NestedUpdateOneItem {
   disconnect?: boolean;
   set?: WhereArg<PickQueryMetaRelations>;
   delete?: boolean;
@@ -63,9 +62,9 @@ export type NestedUpdateOneItem = {
     create: RecordUnknown | (() => RecordUnknown);
   };
   create: RecordUnknown;
-};
+}
 
-export type NestedUpdateManyItems = {
+export interface NestedUpdateManyItems {
   disconnect?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
   set?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
   delete?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
@@ -74,7 +73,7 @@ export type NestedUpdateManyItems = {
     data: UpdateData<Query>;
   };
   create: RecordUnknown[];
-};
+}
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
 
