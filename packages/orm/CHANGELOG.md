@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.31.2
+
+### Patch Changes
+
+- c2ee6a9: Removing `primaryKey`, `foreignKey`, `associationForeignKey`, and such, as options for `belongsTo`, `hasMany`, etc.
+- Updated dependencies [c2ee6a9]
+  - pqb@0.35.2
+  - rake-db@2.21.3
+
 ## 1.31.1
 
 ### Patch Changes

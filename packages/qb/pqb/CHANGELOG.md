@@ -1,5 +1,11 @@
 # pqb
 
+## 0.35.2
+
+### Patch Changes
+
+- c2ee6a9: Removing `primaryKey`, `foreignKey`, `associationForeignKey`, and such, as options for `belongsTo`, `hasMany`, etc.
+
 ## 0.35.1
 
 ### Patch Changes
