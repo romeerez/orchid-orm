@@ -701,7 +701,10 @@ export const setParserForSelectedString = (
           map.set(column, { select: `${table}.${column}` });
         }
 
-        (q.q.selectedComputeds ??= {})[column] = computed;
+        q.q.selectedComputeds = {
+          ...q.q.selectedComputeds,
+          [column]: computed,
+        };
         return;
       }
 
@@ -729,7 +732,7 @@ const handleComputed = (
       map.set(column, { select: column });
     }
 
-    (q.q.selectedComputeds ??= {})[column] = computed;
+    q.q.selectedComputeds = { ...q.q.selectedComputeds, [column]: computed };
     return;
   }
 

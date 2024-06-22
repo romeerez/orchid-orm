@@ -131,14 +131,13 @@ export function queryFrom<
   } else if (Array.isArray(arg)) {
     const { shape } = data;
     const parsers = (data.parsers ??= {});
-    const computeds = (data.computeds ??= {});
     // TODO: batchParsers
     for (const item of arg) {
       if (typeof item === 'string') {
         const w = (data.withShapes as WithConfigs)[item];
 
         Object.assign(shape, w.shape);
-        Object.assign(computeds, w.computeds);
+        if (w.computeds) data.computeds = { ...data.computeds, ...w.computeds };
 
         for (const key in w.shape) {
           if (w.shape[key].parseFn) {

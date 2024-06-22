@@ -316,6 +316,9 @@ export const cloneQuery = (q: QueryData) => {
   if (q.before) q.before = q.before.slice(0);
   if (q.after) q.after = q.after.slice(0);
   if (q.joinedShapes) q.joinedShapes = { ...q.joinedShapes };
+  if (q.joinedComputeds) q.joinedComputeds = { ...q.joinedComputeds };
+  if (q.batchParsers) q.batchParsers = [...q.batchParsers];
+  if (q.joinedBatchParsers) q.joinedBatchParsers = { ...q.joinedBatchParsers };
   if (q.scopes) q.scopes = { ...q.scopes };
   if (q.parsers) q.parsers = { ...q.parsers };
 
