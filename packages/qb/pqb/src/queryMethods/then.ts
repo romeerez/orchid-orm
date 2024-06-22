@@ -1,12 +1,7 @@
 import { Query } from '../query/query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
-import {
-  CommonQueryData,
-  QueryAfterHook,
-  QueryBeforeHook,
-  QueryHookSelect,
-} from '../sql';
+import { CommonQueryData, QueryAfterHook, QueryBeforeHook } from '../sql';
 import pg from 'pg';
 import {
   AdapterBase,
@@ -212,7 +207,7 @@ const then = async (
     const { returnType = 'all' } = query;
     const returns = hookSelect ? 'all' : returnType;
 
-    let result;
+    let result: unknown;
     let queryResult;
 
     if ('text' in sql) {
@@ -292,7 +287,54 @@ const then = async (
       result = query.handleResult(q, returns, queryResult!);
     }
 
-    if (afterHooks || afterCommitHooks || query.after) {
+    let tempColumns: Set<string> | undefined;
+    let renames: RecordString | undefined;
+    if (hookSelect) {
+      for (const column of hookSelect.keys()) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const as = hookSelect!.get(column)!.as;
+        if (as) (renames ??= {})[column] = as;
+
+        (tempColumns ??= new Set())?.add(as || column);
+      }
+
+      if (renames) {
+        for (const record of result as RecordUnknown[]) {
+          for (const a in renames) {
+            const value = record[renames[a]];
+            record[renames[a]] = record[a];
+            record[a] = value;
+          }
+        }
+      }
+    }
+
+    if (query.selectedComputeds) {
+      let promises: Promise<void>[] | undefined;
+
+      for (const key in query.selectedComputeds) {
+        const computed = query.selectedComputeds[key];
+        if (computed.kind === 'one') {
+          for (const record of result as RecordUnknown[]) {
+            record[key] = computed.fn(record);
+          }
+        } else {
+          const res = computed.fn(result);
+          if (Array.isArray(res)) saveBatchComputed(key, result, res);
+          else
+            (promises ??= []).push(
+              (res as Promise<unknown[]>).then((res) =>
+                saveBatchComputed(key, result, res),
+              ),
+            );
+        }
+      }
+
+      if (promises) await Promise.all(promises);
+    }
+
+    const hasAfterHook = afterHooks || afterCommitHooks || query.after;
+    if (hasAfterHook) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       if (queryResult!.rowCount) {
         if (afterHooks || query.after) {
@@ -321,10 +363,27 @@ const then = async (
         const args = [result, q];
         await Promise.all(query.after.map(callAfterHook, args));
       }
+    }
 
-      if (hookSelect)
+    // can be set by hooks or by computed columns
+    if (hookSelect) {
+      if (renames) {
+        for (const record of result as RecordUnknown[]) {
+          for (const a in renames) {
+            record[a] = record[renames[a]];
+          }
+        }
+      }
+
+      result = filterResult(
+        q,
+        returnType,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        result = filterResult(q, returnType, queryResult!, hookSelect, result);
+        queryResult!,
+        result,
+        tempColumns,
+        hasAfterHook,
+      );
     }
 
     if (query.transform) {
@@ -349,6 +408,23 @@ const then = async (
       query.log.onError(error as Error, sql as SingleSqlItem, logData);
     }
     return reject?.(error);
+  }
+};
+
+export const saveBatchComputed = (
+  key: string,
+  result: unknown,
+  res: unknown[],
+) => {
+  const len = (result as unknown[]).length;
+  if (len !== res.length) {
+    throw new Error(
+      `Incorrect length of batch computed result for column ${key}. Expected ${len}, received ${res.length}.`,
+    );
+  }
+
+  for (let i = 0; i < len; i++) {
+    (result as RecordUnknown[])[i][key] = res[i];
   }
 };
 
@@ -481,37 +557,34 @@ const parseValue = (value: unknown, parsers?: ColumnsParsers) => {
   return parser ? parser(value) : value;
 };
 
-const filterResult = (
+export const filterResult = (
   q: Query,
   returnType: QueryReturnType,
   queryResult: QueryResult,
-  hookSelect: QueryHookSelect,
   result: unknown,
+  tempColumns: Set<string> | undefined,
+  // result should not be mutated when having hooks, because hook may want to access the data later
+  hasAfterHook?: unknown,
 ): unknown => {
   if (returnType === 'all') {
-    const pick = getSelectPick(queryResult, hookSelect);
-    return (result as unknown[]).map((full) => {
-      const filtered: RecordUnknown = {};
-      for (const key of pick) {
-        filtered[key] = (full as RecordUnknown)[key];
-      }
-      return filtered;
-    });
+    return filterAllResult(result, tempColumns, hasAfterHook);
   }
 
   if (returnType === 'oneOrThrow' || returnType === 'one') {
-    const row = (result as unknown[])[0];
+    let row = (result as RecordUnknown[])[0];
     if (!row) {
       if (returnType === 'oneOrThrow') throw new NotFoundError(q);
       return undefined;
+    } else if (!tempColumns?.size) {
+      return row;
     } else {
-      result = {};
-      for (const key in row) {
-        if (!hookSelect.includes(key)) {
-          (result as RecordUnknown)[key] = (row as RecordUnknown)[key];
-        }
+      if (hasAfterHook) row = { ...row };
+
+      for (const column of tempColumns) {
+        delete row[column];
       }
-      return result;
+
+      return row;
     }
   }
 
@@ -535,22 +608,34 @@ const filterResult = (
   }
 
   if (returnType === 'rows') {
-    const pick = getSelectPick(queryResult, hookSelect);
-    return (result as unknown[]).map((full) =>
-      pick.map((key) => (full as RecordUnknown)[key]),
-    );
+    result = filterAllResult(result, tempColumns, hasAfterHook);
+    return (result as RecordUnknown[]).map((record) => Object.values(record));
   }
 
   return;
 };
 
-const getSelectPick = (
-  queryResult: QueryResult,
-  hookSelect: QueryHookSelect,
-): string[] => {
-  const pick: string[] = [];
-  for (const field of queryResult.fields) {
-    if (!hookSelect.includes(field.name)) pick.push(field.name);
+const filterAllResult = (
+  result: unknown,
+  tempColumns: Set<string> | undefined,
+  hasAfterHook: unknown,
+) => {
+  if (tempColumns?.size) {
+    if (hasAfterHook) {
+      return (result as RecordUnknown[]).map((data) => {
+        const record = { ...data };
+        for (const key of tempColumns) {
+          delete record[key];
+        }
+        return record;
+      });
+    } else {
+      for (const record of result as RecordUnknown[]) {
+        for (const key of tempColumns) {
+          delete record[key];
+        }
+      }
+    }
   }
-  return pick;
+  return result;
 };

@@ -35,6 +35,7 @@ import {
   QueryColumn,
   FnUnknownToUnknown,
   isExpression,
+  EmptyObject,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { resolveSubQueryCallback } from '../common/utils';
@@ -104,18 +105,21 @@ export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
     keyof T['meta']['defaults'],
     T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']
   > &
-    BelongsToData &
+    ([BelongsToData] extends [never] ? EmptyObject : BelongsToData) &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
     T['relations'][keyof T['relations']]['relationConfig']['optionalDataForCreate'];
 
 // Intersection of objects for `belongsTo` relations:
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-export type CreateBelongsToData<T extends CreateSelf> =
-  CreateRelationsDataOmittingFKeys<
-    T,
-    T['relations'][keyof T['relations']]['relationConfig']['dataForCreate']
-  >;
+export type CreateBelongsToData<T extends CreateSelf> = [
+  T['relations'][keyof T['relations']]['relationConfig']['dataForCreate'],
+] extends [never]
+  ? never
+  : CreateRelationsDataOmittingFKeys<
+      T,
+      T['relations'][keyof T['relations']]['relationConfig']['dataForCreate']
+    >;
 
 // Intersection of relations that may omit foreign key (belongsTo):
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
@@ -138,7 +142,7 @@ export type CreateRelationsDataOmittingFKeys<
         ) => void
       : never
   ) extends // must be handled as a function argument, belongsTo.test relies on this
-  (u: infer Obj extends RecordUnknown) => void
+  (u: infer Obj) => void
     ? Obj
     : never;
 
@@ -243,14 +247,14 @@ type InsertManyRawOrFromResult<T extends CreateSelf> =
  *
  * The same should work as well with any non-null columns passed to `create`, but it's to be implemented later.
  */
-type NarrowCreateResult<T extends CreateSelf, BT> = [
-  T['relations'][keyof T['relations'] &
-    keyof BT]['relationConfig']['omitForeignKeyInCreate'],
+type NarrowCreateResult<T extends CreateSelf, Bt> = [
+  {
+    [K in keyof T['relations']]: T['relations'][K]['relationConfig']['omitForeignKeyInCreate'];
+  }[keyof T['relations'] & keyof Bt],
 ] extends [never]
   ? T['result']
   : {
-      [K in keyof T['result']]: K extends T['relations'][keyof T['relations'] &
-        keyof BT]['relationConfig']['omitForeignKeyInCreate']
+      [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']
         ? QueryColumn<
             Exclude<T['result'][K]['type'], null>,
             T['result'][K]['operators']
@@ -562,7 +566,7 @@ const getFromSelectColumns = (
     if (typeof item === 'string') {
       const index = item.indexOf('.');
       queryColumns.push(index === -1 ? item : item.slice(index + 1));
-    } else if ('selectAs' in item) {
+    } else if (item && 'selectAs' in item) {
       queryColumns.push(...Object.keys(item.selectAs));
     }
   });
@@ -664,14 +668,8 @@ export const _queryInsertMany = <
   data: CreateData<T, BT>[],
 ): InsertManyResult<T, BT> => {
   const ctx = createCtx();
-  let result = insert(
-    q,
-    handleManyData(q, data, ctx),
-    'object',
-    true,
-  ) as InsertManyResult<T, BT>;
-  if (!data.length)
-    result = (result as Query).none() as InsertManyResult<T, BT>;
+  let result = insert(q, handleManyData(q, data, ctx), 'object', true) as never;
+  if (!data.length) result = (result as Query).none() as never;
   return result;
 };
 

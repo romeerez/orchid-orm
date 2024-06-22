@@ -130,11 +130,17 @@ type OrderArgTsQuery<T extends OrderArgSelf> =
   : Exclude<T['meta']['tsQuery'], undefined>;
 
 type OrderArgKey<T extends OrderArgSelf> =
-  | keyof T['meta']['selectable']
+  | {
+      // filter out runtime computed selectables
+      [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['queryType'] extends undefined
+        ? never
+        : K;
+    }[keyof T['meta']['selectable']]
   | {
       [K in keyof T['result']]: T['result'][K]['dataType'] extends
         | 'array'
         | 'object'
+        | 'runtimeComputed'
         ? never
         : K;
     }[keyof T['result']];
@@ -144,6 +150,7 @@ export type GroupArgs<T extends PickQueryResult> = (
       [K in keyof T['result']]: T['result'][K]['dataType'] extends
         | 'array'
         | 'object'
+        | 'runtimeComputed'
         ? never
         : K;
     }[keyof T['result']]

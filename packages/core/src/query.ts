@@ -1,11 +1,18 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
-import { EmptyObject, FnUnknownToUnknown, RecordKeyTrue } from './utils';
+import {
+  EmptyObject,
+  FnUnknownToUnknown,
+  RecordKeyTrue,
+  RecordUnknown,
+} from './utils';
 import { QueryColumn, QueryColumns } from './columns';
+
+export type HookSelect = Map<string, { select: string; as?: string }>;
 
 export interface SqlCommonOptions {
   // additional columns to select for `after` hooks
-  hookSelect?: string[];
+  hookSelect?: HookSelect;
 }
 
 export interface SingleSqlItem {
@@ -51,6 +58,7 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
 // and doesn't change anymore
 export interface QueryInternalBase {
   columnsForSelectAll?: string[];
+  columnsKeysForSelectAll?: RecordUnknown;
   runtimeDefaultColumns?: string[];
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.

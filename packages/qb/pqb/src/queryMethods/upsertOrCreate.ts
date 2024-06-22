@@ -64,15 +64,17 @@ function orCreate<T extends Query>(
 
       if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
 
-      const inner = q.create(data as CreateData<Query, never>);
-      const { handleResult } = inner.q;
+      const inner = q.create(data as CreateData<Query>);
+
       inner.q.handleResult = (q, t, r, s) => {
-        queryResult = r;
-        const res = handleResult(q, t, r, s);
-        result = res;
-        return res;
+        result = handleResult(q, t, r, s);
+        return inner.q.hookSelect
+          ? (result as RecordUnknown[]).map((row) => ({ ...row }))
+          : result;
       };
+
       await inner;
+
       created = true;
     } else if (queryResult.rowCount > 1) {
       throw new MoreThanOneRowError(

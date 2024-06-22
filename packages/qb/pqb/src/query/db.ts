@@ -68,11 +68,16 @@ import {
   TableData,
   TableDataFn,
   TableDataItem,
-  TableDataItemsUniqueColumnTuples,
   TableDataItemsUniqueColumns,
+  TableDataItemsUniqueColumnTuples,
   TableDataItemsUniqueConstraints,
   UniqueQueryTypeOrExpression,
 } from '../tableData';
+import {
+  applyComputedColumns,
+  ComputedColumnsFromOptions,
+  ComputedOptionsFactory,
+} from '../modules/computed';
 
 export type ShapeColumnPrimaryKeys<Shape extends QueryColumnsInit> = {
   [K in {
@@ -134,6 +139,7 @@ export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
 
 // Options of `createDb`.
 export interface DbTableOptions<
+  ColumnTypes,
   Table extends string | undefined,
   Shape extends QueryColumns,
 > extends QueryLogOptions {
@@ -155,6 +161,8 @@ export interface DbTableOptions<
   softDelete?: SoftDeleteOption<Shape>;
   // table comment, for migrations generator
   comment?: string;
+
+  computed?: ComputedOptionsFactory<ColumnTypes, Shape>;
 }
 
 /**
@@ -254,7 +262,7 @@ export class Db<
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
     public columnTypes: ColumnTypes,
     transactionStorage: AsyncLocalStorage<TransactionState>,
-    options: DbTableOptions<Table, ShapeWithComputed>,
+    options: DbTableOptions<ColumnTypes, Table, ShapeWithComputed>,
     tableData: TableData = emptyObject,
   ) {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -275,6 +283,7 @@ export class Db<
     } as QueryInternal;
 
     this.baseQuery = this as Query;
+    this.relations = {} as Relations;
 
     const logger = options.logger || console;
 
@@ -334,6 +343,8 @@ export class Db<
         );
       }
       this.internal.columnsForSelectAll = list;
+      // destructuring shape because it's going to be extended with computed columns
+      this.internal.columnsKeysForSelectAll = { ...shape };
     }
 
     this.q = {
@@ -383,6 +394,8 @@ export class Db<
       (column) => !shape[column as keyof typeof shape].data.isHidden,
     ) as DefaultSelectColumns<Shape>;
 
+    if (options.computed) applyComputedColumns(this, options.computed);
+
     const defaultSelect =
       this.defaultSelectColumns.length === columns.length
         ? undefined
@@ -397,8 +410,6 @@ export class Db<
           return toSQL.call(q, options);
         }
       : toSQL;
-
-    this.relations = {} as Relations;
 
     if (modifyQuery) {
       for (const cb of modifyQuery) {
@@ -564,7 +575,7 @@ export type DbTableConstructor<ColumnTypes> = <
   Table extends string,
   Shape extends QueryColumnsInit,
   Data extends MaybeArray<TableDataItem>,
-  Options extends DbTableOptions<Table, Shape>,
+  Options extends DbTableOptions<ColumnTypes, Table, Shape>,
 >(
   table: Table,
   shape?: ((t: ColumnTypes) => Shape) | Shape,
@@ -581,7 +592,7 @@ export type DbTableConstructor<ColumnTypes> = <
   UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
   EmptyObject,
   ColumnTypes,
-  Shape,
+  Shape & ComputedColumnsFromOptions<Options['computed']>,
   MapTableScopesOption<Options['scopes'], Options['softDelete']>
 >;
 
@@ -769,7 +780,7 @@ export const _initQueryBuilder = (
   adapter: Adapter,
   columnTypes: unknown,
   transactionStorage: AsyncLocalStorage<TransactionState>,
-  commonOptions: DbTableOptions<undefined, QueryColumns>,
+  commonOptions: DbTableOptions<unknown, undefined, QueryColumns>,
   options: DbSharedOptions,
 ): Db => {
   const qb = new Db(

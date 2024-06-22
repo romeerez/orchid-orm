@@ -1,23 +1,39 @@
 import { SelectItem } from './types';
 import { RawSQL } from './rawSql';
-import { columnToSql, columnToSqlWithAs } from './common';
+import {
+  columnToSql,
+  ownColumnToSqlWithAs,
+  simpleColumnToSQL,
+  tableColumnToSqlWithAs,
+} from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
-import { addValue, Expression, isExpression } from 'orchid-core';
+import {
+  addValue,
+  Expression,
+  HookSelect,
+  isExpression,
+  QueryColumns,
+  RecordUnknown,
+} from 'orchid-core';
 import { Query } from '../query/query';
 import { _queryGetOptional } from '../queryMethods/get.utils';
 import { queryJson } from '../queryMethods/json.utils';
 import { queryWrap } from '../queryMethods/queryMethods.utils';
 import { isQueryNone } from '../queryMethods/none';
-import { IntegerBaseColumn } from '../columns';
+import { ColumnType, IntegerBaseColumn } from '../columns';
 import { getSqlText } from './utils';
 
 export const pushSelectSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: { select?: SelectQueryData['select']; join?: SelectQueryData['join'] },
+  query: {
+    select?: SelectQueryData['select'];
+    join?: SelectQueryData['join'];
+    shape: QueryColumns;
+  },
   quotedAs?: string,
 ) => {
   ctx.sql.push(selectToSql(ctx, table, query, quotedAs));
@@ -26,59 +42,138 @@ export const pushSelectSql = (
 export const selectToSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: { select?: SelectQueryData['select']; join?: SelectQueryData['join'] },
-  quotedAs?: string,
+  query: {
+    select?: SelectQueryData['select'];
+    join?: SelectQueryData['join'];
+    hookSelect?: HookSelect;
+    shape: QueryColumns;
+  },
+  quotedAs: string | undefined,
+  hookSelect = query.hookSelect,
 ): string => {
+  let selected: RecordUnknown | undefined;
+
+  const list: string[] = [];
+
   if (query.select) {
-    const list: string[] = [];
     for (const item of query.select) {
       if (typeof item === 'string') {
-        list.push(selectedStringToSQL(ctx, table, query, quotedAs, item));
-      } else if ('selectAs' in item) {
-        const obj = item.selectAs as {
-          [K: string]: SelectableOrExpression | ToSQLQuery;
-        };
-        for (const as in obj) {
-          const value = obj[as];
-          if (typeof value === 'object' || typeof value === 'function') {
-            if (isExpression(value)) {
-              list.push(`${value.toSQL(ctx, quotedAs)} "${as}"`);
-            } else {
-              pushSubQuerySql(ctx, value, as, list, quotedAs);
+        let sql;
+        if (item === '*') {
+          if (hookSelect) {
+            selected ??= {};
+            for (const key in table.internal.columnsKeysForSelectAll ||
+              query.shape) {
+              selected[key] = quotedAs;
             }
-          } else {
-            list.push(
-              `${columnToSql(
-                ctx,
-                table.q,
-                table.q.shape,
-                value as string,
-                quotedAs,
-                true,
-              )} "${as}"`,
+          }
+          sql = selectAllSql(table, query, quotedAs);
+        } else {
+          const index = item.indexOf('.');
+          if (index !== -1) {
+            const tableName = item.slice(0, index);
+            const key = item.slice(index + 1);
+            if (hookSelect?.get(key)) (selected ??= {})[key] = `"${tableName}"`;
+
+            sql = tableColumnToSqlWithAs(
+              ctx,
+              table.q,
+              item,
+              tableName,
+              key,
+              quotedAs,
+              true,
             );
+          } else {
+            if (hookSelect?.get(item)) (selected ??= {})[item] = quotedAs;
+            sql = ownColumnToSqlWithAs(ctx, table.q, item, quotedAs, true);
           }
         }
-      } else {
-        list.push(selectedObjectToSQL(ctx, quotedAs, item));
+        list.push(sql);
+      } else if (item) {
+        if ('selectAs' in item) {
+          const obj = item.selectAs as {
+            [K: string]: SelectableOrExpression | ToSQLQuery;
+          };
+          for (const as in obj) {
+            if (hookSelect) (selected ??= {})[as] = true;
+
+            const value = obj[as];
+            if (typeof value === 'object') {
+              if (isExpression(value)) {
+                list.push(`${value.toSQL(ctx, quotedAs)} "${as}"`);
+              } else {
+                pushSubQuerySql(ctx, value, as, list, quotedAs);
+              }
+            } else if (value) {
+              list.push(
+                `${columnToSql(
+                  ctx,
+                  table.q,
+                  table.q.shape,
+                  value as string,
+                  quotedAs,
+                  true,
+                )} "${as}"`,
+              );
+            }
+          }
+        } else {
+          list.push(selectedObjectToSQL(ctx, quotedAs, item));
+        }
       }
     }
-    return list.join(', ');
   }
 
-  return selectAllSql(table, query, quotedAs);
-};
+  if (hookSelect) {
+    for (const column of hookSelect.keys()) {
+      const item = hookSelect.get(column) as { select: string; as?: string };
+      const { select } = item;
+      let sql;
+      let quotedTable;
+      let columnName;
+      let col;
+      const index = select.indexOf('.');
+      if (index !== -1) {
+        const tableName = select.slice(0, index);
+        quotedTable = `"${tableName}"`;
+        columnName = select.slice(index + 1);
+        col = table.q.joinedShapes?.[tableName]?.[columnName] as
+          | ColumnType
+          | undefined;
+        sql = col?.data.computed
+          ? col.data.computed.toSQL(ctx, `"${tableName}"`)
+          : `"${tableName}"."${col?.data.name || columnName}"`;
+      } else {
+        quotedTable = quotedAs;
+        columnName = select;
+        col = query.shape[select] as ColumnType | undefined;
+        sql = simpleColumnToSQL(ctx, select, col, quotedAs);
+      }
 
-export const selectedStringToSQL = (
-  ctx: ToSQLCtx,
-  table: ToSQLQuery,
-  query: { select?: SelectQueryData['select']; join?: SelectQueryData['join'] },
-  quotedAs: string | undefined,
-  item: string,
-) =>
-  item === '*'
-    ? selectAllSql(table, query, quotedAs)
-    : columnToSqlWithAs(ctx, table.q, item, quotedAs, true);
+      if (selected?.[columnName]) {
+        if (selected?.[columnName] === quotedTable) {
+          hookSelect.delete(column);
+          continue;
+        }
+
+        let i = 2;
+        let name: string;
+
+        while (selected[(name = `${column}${i}`)]) i++;
+
+        item.as = name;
+        sql += ` "${name}"`;
+      } else if (col?.data.name) {
+        sql += ` "${columnName}"`;
+      }
+
+      list.push(sql);
+    }
+  }
+
+  return list.length ? list.join(', ') : selectAllSql(table, query, quotedAs);
+};
 
 export function selectedObjectToSQL(
   ctx: ToSQLCtx,

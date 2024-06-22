@@ -1,6 +1,7 @@
 import {
   AfterHook,
-  ComputedColumnsBase,
+  ComputedColumnsFromOptions,
+  ComputedOptionsFactory,
   Db,
   DbTableOptionScopes,
   DefaultColumnTypes,
@@ -38,11 +39,9 @@ import {
   CoreQueryScopes,
   emptyArray,
   emptyObject,
-  EmptyObject,
   getCallerFilePath,
   getStackTrace,
   MaybeArray,
-  RecordUnknown,
   snakeCaseKey,
   toSnakeCase,
 } from 'orchid-core';
@@ -90,13 +89,7 @@ export interface TableToDb<
     | TableDataItemsUniqueConstraints<T['columns']['data']>,
     RelationQueries,
     T['types'],
-    T['computed'] extends RecordUnknown
-      ? T['columns']['shape'] & {
-          [K in keyof T['computed']]: ReturnType<
-            T['computed'][K]
-          >['result']['value'];
-        }
-      : T['columns']['shape'],
+    T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
     MapTableScopesOption<T['scopes'], T['softDelete']>
   > {
   definedAs: string;
@@ -135,7 +128,7 @@ export interface Table {
   /**
    * collect computed columns returned by {@link BaseTable.setColumns}
    */
-  computed?: ComputedColumnsBase<never>;
+  computed?: ComputedOptionsFactory<never, never>;
   // Available scopes for this table defined by user.
   scopes?: CoreQueryScopes;
   // enable soft delete, true for `deletedAt` column, string for column name
@@ -300,12 +293,10 @@ export interface BaseTableInstance<ColumnTypes> {
    * @param computed - object where keys are column names and values are functions returning raw SQL
    */
   setComputed<
-    Table extends string,
     Shape extends ColumnsShapeBase,
-    Computed extends ComputedColumnsBase<
-      Db<Table, Shape, never, never, never, never, EmptyObject, ColumnTypes>
-    >,
+    Computed extends ComputedOptionsFactory<ColumnTypes, Shape>,
   >(
+    this: { columns: { shape: Shape } },
     computed: Computed,
   ): Computed;
 
@@ -314,11 +305,11 @@ export interface BaseTableInstance<ColumnTypes> {
    */
   setScopes<
     Table extends string,
-    Columns extends ColumnsShapeBase,
+    Shape extends ColumnsShapeBase,
     Keys extends string,
   >(
-    this: { table: Table; columns: { shape: Columns } },
-    scopes: DbTableOptionScopes<Table, Columns, Keys>,
+    this: { table: Table; columns: { shape: Shape } },
+    scopes: DbTableOptionScopes<Table, Shape, Keys>,
   ): CoreQueryScopes<Keys>;
 
   belongsTo<
@@ -598,14 +589,7 @@ export function createBaseTable<
       });
     }
 
-    setComputed<
-      Table extends string,
-      Shape extends ColumnsShapeBase,
-      Data extends MaybeArray<TableDataItem>,
-      Computed extends ComputedColumnsBase<
-        Db<Table, Shape, Data, EmptyObject, ColumnTypes>
-      >,
-    >(computed: Computed): Computed {
+    setComputed(computed: unknown) {
       return computed;
     }
 

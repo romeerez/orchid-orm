@@ -1,53 +1,110 @@
-import { Query, SelectableFromShape } from '../query/query';
 import {
-  ColumnTypeBase,
+  EmptyObject,
   Expression,
-  PickQueryTableMetaShape,
+  FnUnknownToUnknown,
+  MaybePromise,
+  QueryColumn,
   QueryColumns,
+  QueryMetaBase,
+  RecordUnknown,
 } from 'orchid-core';
-
-// Type of argument for computed columns, each value is a function returning an Expression.
-export interface ComputedColumnsBase<T extends PickQueryTableMetaShape> {
-  [K: string]: (q: T) => Expression;
-}
-
-// Map query type to apply computed columns to it.
-// Computed columns are added to the query shape and to `selectable`.
-// Not added to `result`, `then`, `catch`, so it doesn't return computed columns by default, only after explicit selecting.
-export type QueryWithComputed<
-  T extends PickQueryTableMetaShape,
-  Computed extends ComputedColumnsBase<T>,
-  Shape extends QueryColumns = {
-    [K in keyof Computed]: ReturnType<Computed[K]>['result']['value'];
-  },
-> = {
-  [K in keyof T]: K extends 'shape'
-    ? T['shape'] & Shape
-    : K extends 'meta'
-    ? T['meta'] & {
-        selectable: SelectableFromShape<Shape, T['table']>;
-      }
-    : T[K];
-};
+import { Query, QueryOrExpression } from '../query/query';
+import { ExpressionMethods, SqlMethod } from '../queryMethods';
+import { RelationsBase } from '../relations';
+import { ColumnType } from '../columns';
 
 declare module 'orchid-core' {
   interface ColumnDataBase {
-    // Computed columns have an Expression in their data, which will be used for building SQL.
+    // SQL computed columns have an Expression in their data, which will be used for building SQL.
     computed?: Expression;
   }
 }
 
-// Adds computed columns to the shape of query object.
-export function addComputedColumns<
-  T extends PickQueryTableMetaShape,
-  Computed extends ComputedColumnsBase<T>,
->(q: T, computed: Computed): QueryWithComputed<T, Computed> {
-  const { shape } = q as unknown as Query;
+export type ComputedColumnsFromOptions<
+  T extends ComputedOptionsFactory<never, never> | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+> = T extends (...args: any[]) => any
+  ? {
+      [K in keyof ReturnType<T>]: ReturnType<T>[K]['result']['value'];
+    }
+  : EmptyObject;
+
+export type ComputedOptionsFactory<ColumnTypes, Shape extends QueryColumns> = (
+  t: ComputedMethods<ColumnTypes, Shape>,
+) => { [K: string]: QueryOrExpression<unknown> };
+
+export interface RuntimeComputedQueryColumn<OutputType> extends QueryColumn {
+  dataType: 'runtimeComputed';
+  type: never;
+  outputType: OutputType;
+  queryType: undefined;
+  operators: { cannotQueryRuntimeComputed: never };
+}
+
+export interface ComputedMethods<ColumnTypes, Shape extends QueryColumns>
+  extends QueryComputedArg<ColumnTypes, Shape> {
+  computeAtRuntime<Deps extends keyof Shape, OutputType>(
+    dependsOn: Deps[],
+    fn: (record: Pick<Shape, Deps>) => OutputType,
+  ): { result: { value: RuntimeComputedQueryColumn<OutputType> } };
+
+  computeBatchAtRuntime<Deps extends keyof Shape, OutputType>(
+    dependsOn: Deps[],
+    fn: (record: Pick<Shape, Deps>[]) => MaybePromise<OutputType[]>,
+  ): { result: { value: RuntimeComputedQueryColumn<OutputType> } };
+}
+
+export class ComputedColumn {
+  constructor(
+    public kind: 'one' | 'many',
+    public deps: string[],
+    public fn: FnUnknownToUnknown,
+  ) {}
+}
+
+export interface ComputedColumns {
+  [K: string]: ComputedColumn;
+}
+
+const computeAtRuntime = (deps: string[], fn: () => void) =>
+  new ComputedColumn('one', deps, fn);
+const computeBatchAtRuntime = (deps: string[], fn: () => void) =>
+  new ComputedColumn('many', deps, fn);
+
+export interface QueryComputedArg<ColumnTypes, Shape extends QueryColumns>
+  extends ExpressionMethods,
+    SqlMethod<ColumnTypes> {
+  shape: Shape;
+  columnTypes: ColumnTypes;
+  windows: EmptyObject;
+  relations: RelationsBase;
+  result: EmptyObject;
+  meta: Omit<QueryMetaBase, 'selectable'> & {
+    selectable: { [K in keyof Shape]: { as: string; column: QueryColumn } };
+  };
+}
+
+export const applyComputedColumns = (
+  q: Query,
+  fn: ComputedOptionsFactory<never, never>,
+) => {
+  (q as unknown as RecordUnknown).computeAtRuntime = computeAtRuntime;
+  (q as unknown as RecordUnknown).computeBatchAtRuntime = computeBatchAtRuntime;
+
+  const computed = fn(q as never);
   for (const key in computed) {
-    const expr = computed[key](q);
-    (shape as QueryColumns)[key] = expr.result.value as never;
-    (expr.result.value as ColumnTypeBase).data.computed = expr;
+    const item = computed[key];
+    if (item instanceof ComputedColumn) {
+      (q.q.computeds ??= {})[key] = item;
+    } else {
+      (
+        ((q.shape as QueryColumns)[key] = item.result
+          .value as never) as ColumnType
+      ).data.computed = item as Expression;
+    }
   }
 
-  return q as never;
-}
+  (q as unknown as RecordUnknown).computeAtRuntime = (
+    q as unknown as RecordUnknown
+  ).computeBatchAtRuntime = undefined;
+};

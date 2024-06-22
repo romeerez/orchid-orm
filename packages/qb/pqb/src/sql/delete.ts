@@ -2,15 +2,17 @@ import { pushWhereStatementSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
-import { DeleteQueryData, QueryHookSelect } from './data';
+import { DeleteQueryData } from './data';
 import { getSqlText } from './utils';
+
+import { HookSelect } from 'orchid-core';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: DeleteQueryData,
   quotedAs: string,
-): QueryHookSelect | undefined => {
+): HookSelect | undefined => {
   const from = `"${table.table}"`;
   ctx.sql.push(`DELETE FROM ${from}`);
 

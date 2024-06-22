@@ -18,7 +18,9 @@ export type SelectableOrExpression<
 > = '*' | keyof T['meta']['selectable'] | Expression<C>;
 
 export type SelectableOrExpressions<
-  T extends PickQueryMeta = PickQueryMeta,
+  T extends { meta: { selectable: unknown } } = {
+    meta: { selectable: unknown };
+  },
   C extends QueryColumn = QueryColumn,
 > = ('*' | keyof T['meta']['selectable'] | Expression<C>)[];
 

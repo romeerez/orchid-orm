@@ -311,7 +311,9 @@ Optionally, provide a migration file name:
 pnpm db g create-some-tables
 ```
 
-Pass `up` argument if you'd like to apply the migration right away:
+It automatically calls `db up` to apply existing migrations when it starts.
+
+Pass `up` argument if you'd like to apply the migration right after it generates:
 
 ```shell
 pnpm db g create-some-tables up

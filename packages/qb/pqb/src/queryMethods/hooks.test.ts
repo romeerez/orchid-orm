@@ -450,6 +450,7 @@ describe('hooks', () => {
         ],
         q,
       );
+
       expect(result).toEqual([['one'], ['two']]);
     });
 

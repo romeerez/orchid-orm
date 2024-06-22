@@ -346,8 +346,10 @@ export const postData = {
 
 export const useRelationCallback = <T extends Query>(
   rel: { relationConfig: { query: T } },
-  select: (keyof T['shape'])[],
+  selectArr: (keyof T['shape'])[],
 ) => {
+  const select = new Set(selectArr);
+
   const beforeCreate = jest.fn();
   const afterCreate = jest.fn();
   const beforeUpdate = jest.fn();

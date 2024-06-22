@@ -5,9 +5,9 @@ import { SelectQueryData } from './data';
 import {
   Expression,
   MaybeArray,
-  TemplateLiteralArgs,
-  SelectableBase,
   RecordUnknown,
+  SelectableBase,
+  TemplateLiteralArgs,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
 
@@ -62,14 +62,14 @@ export interface WithOptions {
   notMaterialized?: true;
 }
 
-export type SelectItem = string | SelectAs | Expression;
+export type SelectItem = string | SelectAs | Expression | undefined;
 
 export interface SelectAs {
   selectAs: SelectAsValue;
 }
 
-interface SelectAsValue {
-  [K: string]: string | Query | Expression;
+export interface SelectAsValue {
+  [K: string]: string | Query | Expression | undefined;
 }
 
 export type OrderTsQueryConfig = true | OrderTsQueryConfigObject;

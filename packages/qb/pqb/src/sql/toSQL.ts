@@ -209,7 +209,7 @@ export const makeSQL = (
     if (query.for.mode) sql.push(query.for.mode);
   }
 
-  return { text: sql.join(' '), values };
+  return { text: sql.join(' '), values, hookSelect: query.hookSelect };
 };
 
 export function pushLimitSQL(

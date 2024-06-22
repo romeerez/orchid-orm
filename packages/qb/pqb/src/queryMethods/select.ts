@@ -1,6 +1,7 @@
 import {
   GetQueryResult,
   PickQueryQ,
+  PickQueryQAndInternal,
   Query,
   QueryMetaHasSelect,
   QueryReturnsAll,
@@ -14,14 +15,16 @@ import {
 } from '../columns';
 import { JSONTextColumn } from '../columns/json';
 import { pushQueryArray, pushQueryValue } from '../query/queryUtils';
-import { SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
+import { SelectAsValue, SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
 import { QueryResult } from '../adapter';
 import {
   applyTransforms,
+  ColumnsParsers,
   ColumnTypeBase,
   emptyArray,
   Expression,
   getValueKey,
+  HookSelect,
   isExpression,
   MaybeArray,
   PickQueryMeta,
@@ -43,9 +46,11 @@ import {
 import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 import { RelationsBase } from '../relations';
-import { parseRecord } from './then';
+import { filterResult, parseRecord } from './then';
 import { _queryNone, isQueryNone } from './none';
 import { NotFoundError } from '../errors';
+
+import { ComputedColumns } from '../modules/computed';
 
 interface SelectSelf {
   shape: QueryColumns;
@@ -173,12 +178,12 @@ type SelectResultColumnsAndObj<
           | ('*' extends Columns[number]
               ? Exclude<Columns[number], '*'> | keyof T['shape']
               : Columns[number])
-          | keyof Obj as K extends keyof T['meta']['selectable']
+          | keyof Obj as K extends Columns[number]
           ? T['meta']['selectable'][K]['as']
-          : K]: K extends keyof T['meta']['selectable']
-          ? T['meta']['selectable'][K]['column']
-          : K extends keyof Obj
+          : K]: K extends keyof Obj
           ? SelectAsValueResult<T, Obj[K]>
+          : K extends Columns[number]
+          ? T['meta']['selectable'][K]['column']
           : never;
       } & (T['meta']['hasSelect'] extends true
         ? Omit<T['result'], Columns[number]>
@@ -193,12 +198,12 @@ type SelectResultColumnsAndObj<
               | ('*' extends Columns[number]
                   ? Exclude<Columns[number], '*'> | keyof T['shape']
                   : Columns[number])
-              | keyof Obj as K extends keyof T['meta']['selectable']
+              | keyof Obj as K extends Columns[number]
               ? T['meta']['selectable'][K]['as']
-              : K]: K extends keyof T['meta']['selectable']
-              ? T['meta']['selectable'][K]['column']
-              : K extends keyof Obj
+              : K]: K extends keyof Obj
               ? SelectAsValueResult<T, Obj[K]>
+              : K extends Columns[number]
+              ? T['meta']['selectable'][K]['column']
               : never;
           } & (T['meta']['hasSelect'] extends true
             ? Omit<T['result'], Columns[number]>
@@ -305,26 +310,45 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
   as: string | getValueKey | undefined,
   key: string,
   arg: SelectableOrExpression<T> | Query,
-): string | Expression | Query => {
+): string | Expression | Query | undefined => {
   if (typeof arg === 'object' || typeof arg === 'function') {
     if (isExpression(arg)) {
       addParserForRawExpression(q as never, key, arg);
     } else {
       const { q: query } = arg;
-      if (query.parsers || query.transform) {
+      if (query.hookSelect || query.parsers || query.transform) {
         setParserToQuery((q as unknown as Query).q, key, (item) => {
-          const t = query.returnType || 'all';
+          const { hookSelect } = query;
+
+          const returnType = query.returnType || 'all';
+          const tempReturnType = hookSelect ? 'all' : returnType;
 
           subQueryResult.rows =
-            t === 'value' || t === 'valueOrThrow'
+            returnType === 'value' || returnType === 'valueOrThrow'
               ? [[item]]
-              : t === 'one' || t === 'oneOrThrow'
+              : returnType === 'one' || returnType === 'oneOrThrow'
               ? [item]
               : (item as unknown[]);
 
-          const result = query.handleResult(arg, t, subQueryResult, true);
+          let result = query.handleResult(
+            arg,
+            tempReturnType,
+            subQueryResult,
+            true,
+          );
+
+          if (hookSelect) {
+            result = filterResult(
+              arg,
+              returnType,
+              subQueryResult,
+              result,
+              new Set(),
+            );
+          }
+
           return query.transform
-            ? applyTransforms(t, query.transform, result)
+            ? applyTransforms(returnType, query.transform, result)
             : result;
         });
       }
@@ -368,12 +392,12 @@ export const processSelectArg = <T extends SelectSelf>(
   as: string | undefined,
   arg: SelectArg<T>,
   columnAs?: string | getValueKey,
-): SelectItem | undefined => {
+): SelectItem | undefined | false => {
   if (typeof arg === 'string') {
     return setParserForSelectedString(q as unknown as Query, arg, as, columnAs);
   }
 
-  const selectAs: { [K: string]: string | Query | Expression } = {};
+  const selectAs: SelectAsValue = {};
 
   for (const key in arg as unknown as SelectAsArg<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -384,7 +408,7 @@ export const processSelectArg = <T extends SelectSelf>(
 
       if (isQueryNone(value)) {
         if (value.q.innerJoinLateral) {
-          return;
+          return false;
         }
       } else if (!isExpression(value) && value.joinQuery) {
         value = value.joinQuery(value, q);
@@ -460,36 +484,72 @@ export const processSelectArg = <T extends SelectSelf>(
 // adds a column parser for a column
 // when table.* string is provided, sets a parser for a joined table
 export const setParserForSelectedString = (
-  q: PickQueryQ,
+  q: PickQueryQAndInternal,
   arg: string,
   as: string | getValueKey | undefined,
   columnAs?: string | getValueKey,
-): string => {
+): string | undefined => {
   const index = arg.indexOf('.');
   if (index !== -1) {
     const table = arg.slice(0, index);
     const column = arg.slice(index + 1);
 
-    // 'table.*' is selecting a full joined record
+    // 'table.*' is selecting a full joined record (without computeds)
     if (column === '*') {
       addParsersForSelectJoined(q, table, columnAs);
       return table === as ? column : arg;
-    } else {
-      if (table === as) {
+    } else if (table === as) {
+      if (columnAs) {
         const parser = q.q.parsers?.[column];
-        if (parser) setParserToQuery(q.q, columnAs || column, parser);
-        return column;
-      } else {
-        const parser = q.q.joinedParsers?.[table]?.[column];
-        if (parser) setParserToQuery(q.q, columnAs || column, parser);
-        return arg;
+        if (parser) (q.q.parsers as ColumnsParsers)[columnAs] = parser;
       }
+
+      return handleComputed(q, q.q.computeds, column);
+    } else {
+      const parser = q.q.joinedParsers?.[table]?.[column];
+      if (parser) setParserToQuery(q.q, columnAs || column, parser);
+
+      const computeds = q.q.joinedComputeds?.[table];
+      if (computeds?.[column]) {
+        const computed = computeds[column];
+        const map: HookSelect = (q.q.hookSelect ??= new Map());
+        for (const column of computed.deps) {
+          map.set(column, { select: `${table}.${column}` });
+        }
+
+        (q.q.selectedComputeds ??= {})[column] = computed;
+        return;
+      }
+
+      return arg;
     }
   } else {
-    const parser = q.q.parsers?.[arg];
-    if (parser) setParserToQuery(q.q, columnAs || arg, parser);
-    return arg;
+    if (columnAs) {
+      const parser = q.q.parsers?.[arg];
+      if (parser) (q.q.parsers as ColumnsParsers)[columnAs] = parser;
+    }
+
+    return handleComputed(q, q.q.computeds, arg);
   }
+};
+
+const handleComputed = (
+  q: PickQueryQAndInternal,
+  computeds: ComputedColumns | undefined,
+  column: string,
+) => {
+  if (computeds?.[column]) {
+    const computed = computeds[column];
+    const map: HookSelect = (q.q.hookSelect ??= new Map());
+    for (const column of computed.deps) {
+      map.set(column, { select: column });
+    }
+
+    (q.q.selectedComputeds ??= {})[column] = computed;
+    return;
+  }
+
+  return column;
 };
 
 // is mapping result of a query into a columns shape
@@ -520,7 +580,9 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
     for (const item of select) {
       if (typeof item === 'string') {
         addColumnToShapeFromSelect(q, item, shape, query, result, isSubQuery);
-      } else if ('selectAs' in item) {
+      } else if (isExpression(item)) {
+        result.value = item.result.value;
+      } else if (item && 'selectAs' in item) {
         for (const key in item.selectAs) {
           const it = item.selectAs[key];
           if (typeof it === 'string') {
@@ -535,7 +597,7 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
             );
           } else if (isExpression(it)) {
             result[key] = it.result.value as unknown as ColumnTypeBase;
-          } else {
+          } else if (it) {
             const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
               const type = (it.q as SelectQueryData)[getValueKey];
@@ -545,8 +607,6 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
             }
           }
         }
-      } else if (isExpression(item)) {
-        result.value = item.result.value;
       }
     }
   }
@@ -616,12 +676,11 @@ export function _querySelect(q: Query, args: any[]): any {
   }
 
   const as = q.q.as || q.table;
-  const selectArgs = new Array(len) as (SelectItem | undefined)[];
-  for (let i = 0; i < len; i++) {
-    selectArgs[i] = processSelectArg(q, as, args[i]);
-    if (!selectArgs[i]) {
-      return _queryNone(q);
-    }
+  const selectArgs: SelectItem[] = [];
+  for (const arg of args) {
+    const item = processSelectArg(q, as, arg);
+    if (item) selectArgs.push(item);
+    else if (item === false) return _queryNone(q);
   }
 
   return pushQueryArray(q, 'select', selectArgs);

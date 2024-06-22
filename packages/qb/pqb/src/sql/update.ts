@@ -3,13 +3,17 @@ import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { pushLimitSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
-  QueryHookSelect,
   SelectQueryData,
   UpdateQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from './data';
-import { addValue, isExpression, pushOrNewArray } from 'orchid-core';
+import {
+  addValue,
+  HookSelect,
+  isExpression,
+  pushOrNewArray,
+} from 'orchid-core';
 import { Db } from '../query/db';
 import { joinSubQuery } from '../common/utils';
 import { selectToSql } from './select';
@@ -22,7 +26,7 @@ export const pushUpdateSql = (
   table: ToSQLQuery,
   query: UpdateQueryData,
   quotedAs: string,
-): QueryHookSelect | undefined => {
+): HookSelect | undefined => {
   const quotedTable = quoteSchemaAndTable(query.schema, table.table as string);
 
   const set: string[] = [];

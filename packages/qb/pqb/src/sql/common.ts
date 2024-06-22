@@ -156,38 +156,62 @@ export const columnToSqlWithAs = (
   select?: true,
 ) => {
   const index = column.indexOf('.');
-  if (index !== -1) {
-    const table = column.slice(0, index);
-    const key = column.slice(index + 1);
-    if (key === '*') {
-      if (data.joinedShapes?.[table]) {
-        return select
-          ? `row_to_json("${table}".*) "${table}"`
-          : `"${table}".r "${table}"`;
-      }
-      return column;
+  return index !== -1
+    ? tableColumnToSqlWithAs(
+        ctx,
+        data,
+        column,
+        column.slice(0, index),
+        column.slice(index + 1),
+        quotedAs,
+        select,
+      )
+    : ownColumnToSqlWithAs(ctx, data, column, quotedAs, select);
+};
+
+export const tableColumnToSqlWithAs = (
+  ctx: ToSQLCtx,
+  data: QueryData,
+  column: string,
+  table: string,
+  key: string,
+  quotedAs?: string,
+  select?: true,
+) => {
+  if (key === '*') {
+    if (data.joinedShapes?.[table]) {
+      return select
+        ? `row_to_json("${table}".*) "${table}"`
+        : `"${table}".r "${table}"`;
     }
-
-    const tableName = data.joinOverrides?.[table] || table;
-    const quoted = `"${table}"`;
-
-    const col =
-      quoted === quotedAs
-        ? data.shape[key]
-        : data.joinedShapes?.[tableName][key];
-    if (col) {
-      if (col.data.name && col.data.name !== key) {
-        return `"${tableName}"."${col.data.name}" "${key}"`;
-      }
-
-      if (col.data.computed) {
-        return `${col.data.computed.toSQL(ctx, quoted)} "${key}"`;
-      }
-    }
-
-    return `"${tableName}"."${key}"`;
+    return column;
   }
 
+  const tableName = data.joinOverrides?.[table] || table;
+  const quoted = `"${table}"`;
+
+  const col =
+    quoted === quotedAs ? data.shape[key] : data.joinedShapes?.[tableName][key];
+  if (col) {
+    if (col.data.name && col.data.name !== key) {
+      return `"${tableName}"."${col.data.name}" "${key}"`;
+    }
+
+    if (col.data.computed) {
+      return `${col.data.computed.toSQL(ctx, quoted)} "${key}"`;
+    }
+  }
+
+  return `"${tableName}"."${key}"`;
+};
+
+export const ownColumnToSqlWithAs = (
+  ctx: ToSQLCtx,
+  data: QueryData,
+  column: string,
+  quotedAs?: string,
+  select?: true,
+) => {
   if (!select && data.joinedShapes?.[column]) {
     return select
       ? `row_to_json("${column}".*) "${column}"`

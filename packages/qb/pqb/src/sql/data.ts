@@ -31,11 +31,21 @@ import {
   PickQueryTable,
   ExpressionChain,
   QueryDataTransform,
+  HookSelect,
 } from 'orchid-core';
 import { RelationQuery } from '../relations';
 
+import { ComputedColumns } from '../modules/computed';
+
 export interface RecordOfColumnsShapeBase {
   [K: string]: ColumnsShapeBase;
+}
+
+export interface WithConfigs {
+  [K: string]: {
+    shape: ColumnsShapeBase;
+    computeds?: ComputedColumns;
+  };
 }
 
 // Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
@@ -84,10 +94,11 @@ export interface CommonQueryData {
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItem[];
-  withShapes?: RecordOfColumnsShapeBase;
+  withShapes?: WithConfigs;
   joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
+  joinedComputeds?: { [K: string]: ComputedColumns };
   joinedForSelect?: string;
   innerJoinLateral?: true;
   joinOverrides?: JoinOverrides;
@@ -104,6 +115,12 @@ export interface CommonQueryData {
   parsers?: ColumnsParsers;
   notFoundDefault?: unknown;
   defaults?: RecordUnknown;
+  // for runtime computed dependencies
+  hookSelect?: HookSelect;
+  // available computed columns, can be set when selecting from a `with` expression
+  computeds?: ComputedColumns;
+  // selected computed columns
+  selectedComputeds?: ComputedColumns;
   // run functions before any query
   before?: QueryBeforeHook[];
   // run functions after any query
@@ -115,7 +132,7 @@ export interface CommonQueryData {
   // run functions after create commit
   afterCreateCommit?: QueryAfterHook[];
   // additional select for afterCreate hooks
-  afterCreateSelect?: QueryHookSelect;
+  afterCreateSelect?: Set<string>;
   // run functions before update
   beforeUpdate?: QueryBeforeHook[];
   // run functions after update in transaction
@@ -123,7 +140,7 @@ export interface CommonQueryData {
   // run functions after update commit
   afterUpdateCommit?: QueryAfterHook[];
   // additional select for afterUpdate hooks
-  afterUpdateSelect?: QueryHookSelect;
+  afterUpdateSelect?: Set<string>;
   // run functions before delete
   beforeDelete?: QueryBeforeHook[];
   // run functions after delete in transaction
@@ -131,7 +148,7 @@ export interface CommonQueryData {
   // run functions after delete commit
   afterDeleteCommit?: QueryAfterHook[];
   // additional select for afterDelete hooks
-  afterDeleteSelect?: QueryHookSelect;
+  afterDeleteSelect?: Set<string>;
   // log settings
   log?: QueryLogObject;
   // logger with `log`, `warn`, `error`
@@ -286,6 +303,7 @@ export interface PickQueryDataShapeAndJoinedShapes {
 export const cloneQuery = (q: QueryData) => {
   if (q.with) q.with = q.with.slice(0);
   if (q.select) q.select = q.select.slice(0);
+  if (q.hookSelect) q.hookSelect = new Map(q.hookSelect);
   if (q.and) q.and = q.and.slice(0);
   if (q.or) q.or = q.or.slice(0);
   if (q.before) q.before = q.before.slice(0);
@@ -317,7 +335,7 @@ export const cloneQuery = (q: QueryData) => {
     if (q.afterCreate) {
       q.afterCreate = q.afterCreate.slice(0);
       if (q.afterCreateSelect) {
-        q.afterCreateSelect = q.afterCreateSelect.slice(0);
+        q.afterCreateSelect = new Set(q.afterCreateSelect);
       }
     }
   } else if (q.type === 'update') {
@@ -325,7 +343,7 @@ export const cloneQuery = (q: QueryData) => {
     if (q.afterUpdate) {
       q.afterUpdate = q.afterUpdate.slice(0);
       if (q.afterUpdateSelect) {
-        q.afterUpdateSelect = q.afterUpdateSelect.slice(0);
+        q.afterUpdateSelect = new Set(q.afterUpdateSelect);
       }
     }
   } else if (q.type === 'delete') {
@@ -333,7 +351,7 @@ export const cloneQuery = (q: QueryData) => {
     if (q.afterDelete) {
       q.afterDelete = q.afterDelete.slice(0);
       if (q.afterDeleteSelect) {
-        q.afterDeleteSelect = q.afterDeleteSelect.slice(0);
+        q.afterDeleteSelect = new Set(q.afterDeleteSelect);
       }
     }
   }

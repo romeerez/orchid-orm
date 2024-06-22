@@ -47,15 +47,16 @@ export const processJoinArgs = (
       return { w: first, a: args as SimpleJoinItemNonSubQueryArgs };
     } else {
       const joinToQ = joinTo.q;
-      const shape = joinToQ.withShapes?.[first];
-      if (!shape) {
-        throw new Error('Cannot get shape of `with` statement');
+      const w = joinToQ.withShapes?.[first];
+      if (!w) {
+        throw new Error('Cannot find a `with` statement');
       }
 
       const j = joinTo.queryBuilder.baseQuery.clone();
       j.table = first;
       j.q = {
-        shape,
+        shape: w.shape,
+        computeds: w.computeds,
         adapter: joinToQ.adapter,
         handleResult: joinToQ.handleResult,
         returnType: 'all',

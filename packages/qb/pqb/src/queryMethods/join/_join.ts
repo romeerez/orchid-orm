@@ -17,14 +17,17 @@ import { RelationQueryBase } from '../../relations';
 import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
 import {
   JoinArgs,
+  JoinArgToQuery,
   JoinFirstArg,
-  JoinLateralCallback,
   JoinLateralResult,
+  JoinQueryBuilder,
   JoinResult,
 } from './join';
 import { getQueryAs, resolveSubQueryCallback } from '../../common/utils';
 import { processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
+
+import { ComputedColumns } from '../../modules/computed';
 
 /**
  * Generic function to construct all JOIN queries.
@@ -32,7 +35,7 @@ import { _queryNone, isQueryNone } from '../none';
  * Adds column parsers of the joined table into `joinedParsers`.
  * Adds join data into `join` of the query data.
  *
- * @param q - query object to join to
+ * @param query - query object to join to
  * @param require - true for INNER kind of JOIN
  * @param type - SQL of the JOIN kind: JOIN, LEFT JOIN, RIGHT JOIN, etc.
  * @param first - the first argument of join: join target
@@ -53,6 +56,7 @@ export const _join = <
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
+  let computeds: ComputedColumns | undefined;
   let joinSubQuery = false;
 
   if (typeof first === 'function') {
@@ -78,6 +82,7 @@ export const _join = <
     if (joinKey) {
       shape = getShapeFromSelect(q, joinSubQuery);
       parsers = q.q.parsers;
+      computeds = q.q.computeds;
 
       if (joinSubQuery) {
         first = q.clone() as JoinFirstArg<Query>;
@@ -90,9 +95,14 @@ export const _join = <
     const relation = query.relations[joinKey];
     if (relation) {
       shape = getShapeFromSelect(relation.relationConfig.query);
-      parsers = relation.relationConfig.query.q.parsers;
+      const r = relation.relationConfig.query;
+      parsers = r.q.parsers;
+      computeds = r.q.computeds;
     } else {
-      shape = (query as unknown as PickQueryQ).q.withShapes?.[joinKey];
+      const w = (query as unknown as PickQueryQ).q.withShapes?.[joinKey];
+      shape = w?.shape;
+      computeds = w?.computeds;
+
       if (shape) {
         // clone the shape to mutate it below, in other cases the shape is newly created
         if (!require) shape = { ...shape };
@@ -106,21 +116,6 @@ export const _join = <
         }
       }
     }
-  }
-
-  if (joinKey) {
-    setQueryObjectValue(
-      query as unknown as PickQueryQ,
-      'joinedShapes',
-      joinKey,
-      shape,
-    );
-    setQueryObjectValue(
-      query as unknown as PickQueryQ,
-      'joinedParsers',
-      joinKey,
-      parsers,
-    );
   }
 
   const joinArgs = processJoinArgs(
@@ -146,21 +141,54 @@ export const _join = <
         joinKey,
         shape,
       );
+
       setQueryObjectValue(
         query as unknown as PickQueryQ,
         'joinedParsers',
         joinKey,
         j.q.parsers,
       );
+
+      setQueryObjectValue(
+        query as unknown as PickQueryQ,
+        'joinedComputeds',
+        joinKey,
+        j.q.computeds,
+      );
+    } else {
+      addAllShapesAndParsers(query, joinKey, shape, parsers, computeds);
     }
   } else if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
     return _queryNone(query) as JoinResult<T, R, RequireJoined, RequireMain>;
+  } else {
+    addAllShapesAndParsers(query, joinKey, shape, parsers, computeds);
   }
 
   return pushQueryValue(query as unknown as PickQueryQ, 'join', {
     type,
     args: joinArgs,
   }) as never;
+};
+
+const addAllShapesAndParsers = (
+  query: unknown,
+  joinKey?: string,
+  shape?: QueryColumns,
+  parsers?: ColumnsParsers,
+  computeds?: ComputedColumns,
+) => {
+  if (!joinKey) return;
+
+  setQueryObjectValue(query as PickQueryQ, 'joinedShapes', joinKey, shape);
+
+  setQueryObjectValue(query as PickQueryQ, 'joinedParsers', joinKey, parsers);
+
+  setQueryObjectValue(
+    query as PickQueryQ,
+    'joinedComputeds',
+    joinKey,
+    computeds,
+  );
 };
 
 /**
@@ -186,7 +214,11 @@ export const _joinLateral = <
   self: T,
   type: string,
   arg: Arg,
-  cb: JoinLateralCallback<T, Arg, Table, Meta, Result>,
+  cb: (q: JoinQueryBuilder<T, JoinArgToQuery<T, Arg>>) => {
+    table: Table;
+    meta: QueryMetaBase;
+    result: QueryColumns;
+  },
   as?: string,
 ): JoinLateralResult<T, Table, Meta, Result, RequireJoined> => {
   const q = self as unknown as Query;
@@ -197,14 +229,15 @@ export const _joinLateral = <
     if (relation) {
       arg = relation.relationConfig.query.clone() as unknown as Arg;
     } else {
-      const shape = q.q.withShapes?.[arg];
-      if (shape) {
+      const w = q.q.withShapes?.[arg];
+      if (w) {
         const t = Object.create((q as unknown as Query).queryBuilder);
         t.table = arg;
-        t.shape = shape;
+        t.shape = w.shape;
+        t.computeds = w.computeds;
         t.q = {
           ...t.q,
-          shape,
+          shape: w.shape,
         };
         t.baseQuery = t;
         arg = t as Arg;
@@ -214,7 +247,8 @@ export const _joinLateral = <
 
   const query = arg as Query;
   query.q.joinTo = q;
-  (query.q.joinedShapes ??= {})[getQueryAs(q)] = q.q.shape;
+  const joinedAs = getQueryAs(q);
+  (query.q.joinedShapes ??= {})[joinedAs] = q.q.shape;
   let result = resolveSubQueryCallback(query, cb as never) as unknown as Query;
 
   if (relation) {
@@ -231,9 +265,8 @@ export const _joinLateral = <
     setQueryObjectValue(q, 'joinedParsers', joinKey, result.q.parsers);
   }
 
-  return pushQueryValue(q, 'join', [
-    type,
-    result,
-    as || getQueryAs(result),
-  ]) as never;
+  as ||= getQueryAs(result);
+  (q.q.joinedComputeds ??= {})[as] = result.q.computeds as ComputedColumns;
+
+  return pushQueryValue(q, 'join', [type, result, as]) as never;
 };

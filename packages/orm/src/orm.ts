@@ -1,9 +1,7 @@
 import {
   Adapter,
   AdapterOptions,
-  addComputedColumns,
   makeColumnTypes,
-  ComputedColumnsBase,
   Db,
   DbTableOptions,
   DbTableOptionScopes,
@@ -175,7 +173,7 @@ export const orchidORM = <T extends TableClasses>(
     const table = tables[key].instance();
     tableInstances[key] = table;
 
-    const options: DbTableOptions<string, ColumnsShapeBase> = {
+    const options: DbTableOptions<unknown, string, ColumnsShapeBase> = {
       ...commonOptions,
       schema: table.schema,
       language: table.language,
@@ -184,6 +182,7 @@ export const orchidORM = <T extends TableClasses>(
       snakeCase: (table as { snakeCase?: boolean }).snakeCase,
       comment: table.comment,
       noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
+      computed: table.computed as never,
     };
 
     const dbTable = new Db(
@@ -202,13 +201,6 @@ export const orchidORM = <T extends TableClasses>(
     (dbTable as unknown as { db: unknown }).db = result;
     (dbTable as unknown as { filePath: string }).filePath = table.filePath;
     (dbTable as unknown as { name: string }).name = table.constructor.name;
-
-    if (table.computed) {
-      addComputedColumns(
-        dbTable,
-        table.computed as ComputedColumnsBase<typeof dbTable>,
-      );
-    }
 
     (result as RecordUnknown)[key] = dbTable;
   }
