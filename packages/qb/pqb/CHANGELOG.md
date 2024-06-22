@@ -1,5 +1,11 @@
 # pqb
 
+## 0.35.1
+
+### Patch Changes
+
+- 8cde8eb: Fix: don't mutate query when selecting a computed column
+
 ## 0.35.0
 
 ### Minor Changes
