@@ -1,5 +1,18 @@
 # pqb
 
+## 0.35.0
+
+### Minor Changes
+
+- 8dd2832: JS computed columns;
+
+  Change `returnType` type to be `undefined` by default.
+
+### Patch Changes
+
+- Updated dependencies [8dd2832]
+  - orchid-core@0.18.0
+
 ## 0.34.0
 
 ### Minor Changes

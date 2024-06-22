@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.31.0
+
+### Minor Changes
+
+- 8dd2832: JS computed columns;
+
+  Change `returnType` type to be `undefined` by default.
+
+### Patch Changes
+
+- Updated dependencies [8dd2832]
+  - pqb@0.35.0
+  - orchid-core@0.18.0
+  - rake-db@2.21.1
+
 ## 1.30.0
 
 ### Minor Changes

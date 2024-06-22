@@ -1,5 +1,13 @@
 # orchid-core
 
+## 0.18.0
+
+### Minor Changes
+
+- 8dd2832: JS computed columns;
+
+  Change `returnType` type to be `undefined` by default.
+
 ## 0.17.0
 
 ### Minor Changes
