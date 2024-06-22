@@ -364,10 +364,10 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
                 .create;
       }
 
-      created = await _queryCreateMany(
+      created = (await _queryCreateMany(
         t.select(...primaryKeys),
         items as never,
-      );
+      )) as never;
     } else {
       created = emptyArray;
     }
@@ -442,7 +442,10 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
       } else if (params.create) {
         const q = query.clone();
         q.q.select = primaryKeys;
-        const record = await _queryCreate(q, params.create);
+        const record = (await _queryCreate(
+          q,
+          params.create,
+        )) as unknown as RecordUnknown;
         for (let i = 0; i < len; i++) {
           update[foreignKeys[i]] = record[primaryKeys[i]];
         }
@@ -489,7 +492,11 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
             typeof upsert.create === 'function'
               ? upsert.create()
               : upsert.create;
-          const result = await _queryCreate(query.select(...primaryKeys), data);
+
+          const result = (await _queryCreate(
+            query.select(...primaryKeys),
+            data,
+          )) as unknown as RecordUnknown;
 
           const collectData: RecordUnknown = {};
           state.collect = {

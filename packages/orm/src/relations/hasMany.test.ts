@@ -781,12 +781,12 @@ describe('hasMany', () => {
         await db.message.createMany([
           {
             ChatId,
-            user: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...userData, Name: 'tmp' } },
             Text: 'message 1',
           },
           {
             ChatId,
-            user: { connect: { Name: 'tmp' } },
+            sender: { connect: { Name: 'tmp' } },
             Text: 'message 2',
           },
         ]);
@@ -823,22 +823,22 @@ describe('hasMany', () => {
         await db.message.createMany([
           {
             ChatId,
-            user: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...userData, Name: 'tmp' } },
             Text: 'message 1',
           },
           {
             ChatId,
-            user: { connect: { Name: 'tmp' } },
+            sender: { connect: { Name: 'tmp' } },
             Text: 'message 2',
           },
           {
             ChatId,
-            user: { connect: { Name: 'tmp' } },
+            sender: { connect: { Name: 'tmp' } },
             Text: 'message 3',
           },
           {
             ChatId,
-            user: { connect: { Name: 'tmp' } },
+            sender: { connect: { Name: 'tmp' } },
             Text: 'message 4',
           },
         ]);
@@ -981,7 +981,7 @@ describe('hasMany', () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const messageId = await db.message.get('Id').create({
           ChatId,
-          user: { create: { ...userData, Name: 'tmp' } },
+          sender: { create: { ...userData, Name: 'tmp' } },
           Text: 'message 1',
         });
 
@@ -1023,12 +1023,12 @@ describe('hasMany', () => {
           .createMany([
             {
               ChatId,
-              user: { create: { ...userData, Name: 'tmp' } },
+              sender: { create: { ...userData, Name: 'tmp' } },
               Text: 'message 1',
             },
             {
               ChatId,
-              user: { create: { ...userData, Name: 'tmp' } },
+              sender: { create: { ...userData, Name: 'tmp' } },
               Text: 'message 4',
             },
           ]);

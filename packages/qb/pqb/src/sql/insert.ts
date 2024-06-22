@@ -1,15 +1,14 @@
-import { ownColumnToSql } from './common';
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query/query';
 import { selectToSql } from './select';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { pushQueryValue } from '../query/queryUtils';
-import { InsertQueryData, QueryData, QueryHookSelect } from './data';
+import { InsertQueryData, QueryData } from './data';
 import {
   addValue,
   ColumnTypeBase,
-  emptyArray,
   Expression,
+  HookSelect,
   isExpression,
   MaybeArray,
   pushOrNewArray,
@@ -342,50 +341,25 @@ export const pushReturningSql = (
   q: ToSQLQuery,
   data: QueryData,
   quotedAs: string,
-  hookSelect?: QueryHookSelect,
+  hookSelect?: Set<string>,
   keyword = 'RETURNING', // noop update can use this function for `SELECT` list
-): QueryHookSelect | undefined => {
+): HookSelect | undefined => {
   const { select } = data;
-  if (!hookSelect?.length && !select) return hookSelect;
-
-  let selected: string | undefined;
-  let hookFiltered: string[] | undefined;
-  if (select) {
-    selected = selectToSql(ctx, q, data, quotedAs);
-    if (hookSelect) {
-      if (select.includes('*')) {
-        hookFiltered = emptyArray;
-      } else {
-        hookFiltered = [];
-        for (const column of hookSelect) {
-          if (
-            !hookFiltered.includes(column) &&
-            !select?.includes(column) &&
-            !select?.includes(`${quotedAs}.${column}`)
-          ) {
-            hookFiltered.push(column);
-          }
-        }
-      }
-    }
-  } else {
-    hookFiltered = [];
-    for (const column of hookSelect as string[]) {
-      if (!hookFiltered.includes(column)) hookFiltered.push(column);
-    }
-  }
+  if (!hookSelect?.size && !select) return hookSelect && new Map();
 
   ctx.sql.push(keyword);
-  if (hookFiltered?.length) {
-    if (selected) ctx.sql.push(`${selected},`);
-    ctx.sql.push(
-      hookFiltered
-        .map((column) => ownColumnToSql(data, column, quotedAs))
-        .join(', '),
-    );
-  } else {
-    ctx.sql.push(selected as string);
+  if (q.q.hookSelect || hookSelect) {
+    const tempSelect: HookSelect = new Map(q.q.hookSelect);
+    if (hookSelect) {
+      for (const column of hookSelect) {
+        tempSelect.set(column, { select: column });
+      }
+    }
+    ctx.sql.push(selectToSql(ctx, q, data, quotedAs, tempSelect));
+    return tempSelect;
+  } else if (select) {
+    ctx.sql.push(selectToSql(ctx, q, data, quotedAs));
   }
 
-  return hookFiltered;
+  return;
 };

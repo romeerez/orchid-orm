@@ -311,7 +311,9 @@ Optionally, provide a migration file name:
 pnpm db g create-some-tables
 ```
 
-Pass `up` argument if you'd like to apply the migration right away:
+It automatically calls `db up` to apply existing migrations when it starts.
+
+Pass `up` argument if you'd like to apply the migration right after it generates:
 
 ```shell
 pnpm db g create-some-tables up
@@ -849,11 +851,6 @@ await db.some.unscope('default');
 ## computed columns
 
 [//]: # 'has JSDoc'
-
-You can add a generated column in the migration (see [generated](/guide/migration-column-methods#generated-column)),
-such column will persist in the database, it can be indexed.
-
-Or you can add a computed column on the ORM level, without adding it to the database, in such a way:
 
 ```ts
 import { BaseTable } from './baseTable';

@@ -14,12 +14,9 @@ import {
   testZodColumnTypes as t,
   testDb,
 } from 'test-utils';
-import {
-  emptyObject,
-  Expression,
-  getValueKey,
-  QueryReturnType,
-} from 'orchid-core';
+import { emptyObject, Expression, getValueKey, noop } from 'orchid-core';
+
+import { ComputedColumn } from '../modules/computed';
 
 describe('merge queries', () => {
   describe('select', () => {
@@ -44,7 +41,7 @@ describe('merge queries', () => {
     it('should have default return type if none of the queries have it', () => {
       const q = User.merge(User);
 
-      assertType<typeof q.returnType, QueryReturnType>();
+      assertType<typeof q.returnType, undefined>();
     });
 
     it('should use left return type unless right has it', () => {
@@ -313,8 +310,8 @@ describe('merge queries', () => {
       q2.q.wrapInTransaction = true;
       q1.q.throwOnNotFound = false;
       q2.q.throwOnNotFound = true;
-      q1.q.withShapes = { a: { id: t.integer() } };
-      q2.q.withShapes = { b: { name: t.string() } };
+      q1.q.withShapes = { a: { shape: { id: t.integer() } } };
+      q2.q.withShapes = { b: { shape: { name: t.string() } } };
       q1.q.schema = 'a';
       q2.q.schema = 'b';
       q1.q.as = 'a';
@@ -341,6 +338,11 @@ describe('merge queries', () => {
       q2.q.logger = console;
       q1.q.type = 'update';
       q2.q.type = 'insert';
+
+      const computedA = new ComputedColumn('one', [], noop);
+      const computedB = new ComputedColumn('one', [], noop);
+      q1.q.selectedComputeds = { a: computedA };
+      q2.q.selectedComputeds = { b: computedB };
 
       const s1 = q1.q as unknown as SelectQueryData;
       const s2 = q2.q as unknown as SelectQueryData;
@@ -392,8 +394,8 @@ describe('merge queries', () => {
       i2.beforeCreate = [() => {}];
       i1.afterCreate = [() => {}];
       i2.afterCreate = [() => {}];
-      i1.afterCreateSelect = ['one'];
-      i2.afterCreateSelect = ['two'];
+      i1.afterCreateSelect = new Set(['one']);
+      i2.afterCreateSelect = new Set(['two']);
 
       const u1 = q1.q as unknown as UpdateQueryData;
       const u2 = q2.q as unknown as UpdateQueryData;
@@ -403,8 +405,8 @@ describe('merge queries', () => {
       u2.beforeUpdate = [() => {}];
       i1.afterUpdate = [() => {}];
       i2.afterUpdate = [() => {}];
-      i1.afterUpdateSelect = ['one'];
-      i2.afterUpdateSelect = ['two'];
+      i1.afterUpdateSelect = new Set(['one']);
+      i2.afterUpdateSelect = new Set(['two']);
 
       const d1 = q1.q as unknown as DeleteQueryData;
       const d2 = q2.q as unknown as DeleteQueryData;
@@ -412,8 +414,8 @@ describe('merge queries', () => {
       d2.beforeDelete = [() => {}];
       i1.afterDelete = [() => {}];
       i2.afterDelete = [() => {}];
-      i1.afterDeleteSelect = ['one'];
-      i2.afterDeleteSelect = ['two'];
+      i1.afterDeleteSelect = new Set(['one']);
+      i2.afterDeleteSelect = new Set(['two']);
 
       const t1 = q1.q as unknown as TruncateQueryData;
       const t2 = q2.q as unknown as TruncateQueryData;
@@ -455,6 +457,10 @@ describe('merge queries', () => {
       expect(q.log).toBe(q2.q.log);
       expect(q.logger).toBe(q2.q.logger);
       expect(q.type).toBe(q2.q.type);
+      expect(q.selectedComputeds).toEqual({
+        a: computedA,
+        b: computedB,
+      });
 
       const s = q as SelectQueryData;
       expect(s.distinct).toEqual([...s1.distinct, ...s2.distinct]);
@@ -484,18 +490,18 @@ describe('merge queries', () => {
       expect(i.onConflict).toEqual(i2.onConflict);
       expect(i.beforeCreate).toEqual([...i1.beforeCreate, ...i2.beforeCreate]);
       expect(i.afterCreate).toEqual([...i1.afterCreate, ...i2.afterCreate]);
-      expect(i.afterCreateSelect).toEqual(['one', 'two']);
+      expect(i.afterCreateSelect).toEqual(new Set(['one', 'two']));
 
       const u = q as UpdateQueryData;
       expect(u.updateData).toEqual([...u1.updateData, ...u2.updateData]);
       expect(u.beforeUpdate).toEqual([...u1.beforeUpdate, ...u2.beforeUpdate]);
       expect(i.afterUpdate).toEqual([...i1.afterUpdate, ...i2.afterUpdate]);
-      expect(i.afterUpdateSelect).toEqual(['one', 'two']);
+      expect(i.afterUpdateSelect).toEqual(new Set(['one', 'two']));
 
       const d = q as DeleteQueryData;
       expect(d.beforeDelete).toEqual([...d1.beforeDelete, ...d2.beforeDelete]);
       expect(i.afterDelete).toEqual([...i1.afterDelete, ...i2.afterDelete]);
-      expect(i.afterDeleteSelect).toEqual(['one', 'two']);
+      expect(i.afterDeleteSelect).toEqual(new Set(['one', 'two']));
 
       const tr = q as TruncateQueryData;
       expect(tr.restartIdentity).toBe(t2.restartIdentity);

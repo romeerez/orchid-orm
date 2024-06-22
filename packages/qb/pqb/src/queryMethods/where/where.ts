@@ -3,10 +3,8 @@ import {
   PickQueryMetaShapeRelationsWithData,
   PickQueryRelations,
   Query,
-  QueryOrExpression,
   QueryOrExpressionBooleanOrNullResult,
 } from '../../query/query';
-import { ColumnOperators } from '../../sql';
 import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
 import { JoinArgs, JoinFirstArg } from '../join/join';
 import {
@@ -60,15 +58,33 @@ export type WhereArg<T extends PickQueryMetaRelations> =
         :
             | T['meta']['selectable'][K]['column']['queryType']
             | null
-            | ColumnOperators<T['meta']['selectable'], K>
-            | QueryOrExpression<
-                T['meta']['selectable'][K]['column']['queryType'] | null
-              >
-            | ((
-                q: T,
-              ) => QueryOrExpression<
-                T['meta']['selectable'][K]['column']['queryType'] | null
-              >);
+            // inlined `ColumnOperators` helper
+            | {
+                [O in keyof T['meta']['selectable'][K]['column']['operators']]?:
+                  | T['meta']['selectable'][K]['column']['operators'][O]['_opType'];
+              }
+            // inlined QueryOrExpression
+            | {
+                result: {
+                  value: {
+                    // simplified QueryColumn
+                    queryType:
+                      | T['meta']['selectable'][K]['column']['queryType']
+                      | null;
+                  };
+                };
+              }
+            // returns inlined QueryOrExpression
+            | ((q: T) => {
+                result: {
+                  value: {
+                    // simplified QueryColumn
+                    queryType:
+                      | T['meta']['selectable'][K]['column']['queryType']
+                      | null;
+                  };
+                };
+              });
     }
   | QueryOrExpressionBooleanOrNullResult
   | ((
@@ -177,7 +193,7 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
 };
 
 /**
- * Mutative {@link Where.where}
+ * Mutative {@link Where.prototype.where}
  */
 export const _queryWhere = <T extends PickQueryMetaRelations>(
   q: T,
@@ -193,7 +209,7 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
 };
 
 /**
- * Mutative {@link Where.whereSql}
+ * Mutative {@link Where.prototype.whereSql}
  */
 export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
   return pushQueryValue(
@@ -204,7 +220,7 @@ export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
 };
 
 /**
- * Mutative {@link Where.whereNot}
+ * Mutative {@link Where.prototype.whereNot}
  */
 export const _queryWhereNot = <T extends PickQueryMetaRelations>(
   q: T,
@@ -218,7 +234,7 @@ export const _queryWhereNot = <T extends PickQueryMetaRelations>(
 };
 
 /**
- * Mutative {@link Where.whereNotSql}
+ * Mutative {@link Where.prototype.whereNotSql}
  */
 export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
   return pushQueryValue(q as unknown as Query, 'and', {
@@ -227,7 +243,7 @@ export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
 };
 
 /**
- * Mutative {@link Where.orWhere}
+ * Mutative {@link Where.prototype.orWhere}
  */
 export const _queryOr = <T extends PickQueryMetaRelations>(
   q: T,
@@ -243,7 +259,7 @@ export const _queryOr = <T extends PickQueryMetaRelations>(
 };
 
 /**
- * Mutative {@link Where.orWhereNot}
+ * Mutative {@link Where.prototype.orWhereNot}
  */
 export const _queryOrNot = <T extends PickQueryMetaRelations>(
   q: T,
@@ -261,7 +277,7 @@ export const _queryOrNot = <T extends PickQueryMetaRelations>(
 };
 
 /**
- * Mutative {@link Where.whereIn}
+ * Mutative {@link Where.prototype.whereIn}
  */
 export const _queryWhereIn = <T>(
   q: T,
@@ -341,7 +357,7 @@ const existsArgs = (
 };
 
 /**
- * Mutative {@link Where.whereExists}
+ * Mutative {@link Where.prototype.whereExists}
  */
 export const _queryWhereExists = <
   T extends PickQueryMetaShapeRelationsWithData,

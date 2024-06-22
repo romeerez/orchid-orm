@@ -2,7 +2,6 @@ import {
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   Query,
   QueryOrExpression,
-  QueryReturnsAll,
   queryTypeWithLimitOne,
   SetQueryKind,
   SetQueryKindResult,
@@ -35,6 +34,7 @@ import {
   QueryColumn,
   FnUnknownToUnknown,
   isExpression,
+  EmptyObject,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { resolveSubQueryCallback } from '../common/utils';
@@ -104,18 +104,21 @@ export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
     keyof T['meta']['defaults'],
     T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']
   > &
-    BelongsToData &
+    ([BelongsToData] extends [never] ? EmptyObject : BelongsToData) &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
     T['relations'][keyof T['relations']]['relationConfig']['optionalDataForCreate'];
 
 // Intersection of objects for `belongsTo` relations:
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-export type CreateBelongsToData<T extends CreateSelf> =
-  CreateRelationsDataOmittingFKeys<
-    T,
-    T['relations'][keyof T['relations']]['relationConfig']['dataForCreate']
-  >;
+export type CreateBelongsToData<T extends CreateSelf> = [
+  T['relations'][keyof T['relations']]['relationConfig']['dataForCreate'],
+] extends [never]
+  ? never
+  : CreateRelationsDataOmittingFKeys<
+      T,
+      T['relations'][keyof T['relations']]['relationConfig']['dataForCreate']
+    >;
 
 // Intersection of relations that may omit foreign key (belongsTo):
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
@@ -138,7 +141,7 @@ export type CreateRelationsDataOmittingFKeys<
         ) => void
       : never
   ) extends // must be handled as a function argument, belongsTo.test relies on this
-  (u: infer Obj extends RecordUnknown) => void
+  (u: infer Obj) => void
     ? Obj
     : never;
 
@@ -148,7 +151,7 @@ export type CreateRelationsDataOmittingFKeys<
 // - if it is a `pluck` query, forces it to return a single value
 type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
-  : QueryReturnsAll<T['returnType']> extends true
+  : T['returnType'] extends undefined | 'all'
   ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : T['returnType'] extends 'pluck'
   ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
@@ -156,7 +159,7 @@ type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
 
 type CreateRawOrFromResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
-  : QueryReturnsAll<T['returnType']> extends true
+  : T['returnType'] extends undefined | 'all'
   ? SetQueryReturnsOneKind<T, 'create'>
   : T['returnType'] extends 'pluck'
   ? SetQueryReturnsColumnKind<T, 'create'>
@@ -171,7 +174,7 @@ type InsertResult<
   T extends CreateSelf,
   BT,
 > = T['meta']['hasSelect'] extends true
-  ? QueryReturnsAll<T['returnType']> extends true
+  ? T['returnType'] extends undefined | 'all'
     ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T, BT>>
     : T['returnType'] extends 'pluck'
     ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
@@ -180,7 +183,7 @@ type InsertResult<
 
 type InsertRawOrFromResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
-    ? QueryReturnsAll<T['returnType']> extends true
+    ? T['returnType'] extends undefined | 'all'
       ? SetQueryReturnsOneKind<T, 'create'>
       : T['returnType'] extends 'pluck'
       ? SetQueryReturnsColumnKind<T, 'create'>
@@ -243,14 +246,14 @@ type InsertManyRawOrFromResult<T extends CreateSelf> =
  *
  * The same should work as well with any non-null columns passed to `create`, but it's to be implemented later.
  */
-type NarrowCreateResult<T extends CreateSelf, BT> = [
-  T['relations'][keyof T['relations'] &
-    keyof BT]['relationConfig']['omitForeignKeyInCreate'],
+type NarrowCreateResult<T extends CreateSelf, Bt> = [
+  {
+    [K in keyof T['relations']]: T['relations'][K]['relationConfig']['omitForeignKeyInCreate'];
+  }[keyof T['relations'] & keyof Bt],
 ] extends [never]
   ? T['result']
   : {
-      [K in keyof T['result']]: K extends T['relations'][keyof T['relations'] &
-        keyof BT]['relationConfig']['omitForeignKeyInCreate']
+      [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']
         ? QueryColumn<
             Exclude<T['result'][K]['type'], null>,
             T['result'][K]['operators']
@@ -520,7 +523,7 @@ const insert = (
   // so that author.books.create(data) will actually perform the `from` kind of create
   if (!q.kind) q.kind = kind;
 
-  const { select, returnType = 'all' } = q;
+  const { select, returnType } = q;
 
   if (!select) {
     if (returnType !== 'void') q.returnType = 'rowCount';
@@ -530,7 +533,7 @@ const insert = (
     } else if (returnType === 'value' || returnType === 'valueOrThrow') {
       q.returnType = 'pluck';
     }
-  } else if (returnType === 'all') {
+  } else if (!returnType || returnType === 'all') {
     q.returnType = 'from' in values ? values.from.q.returnType : 'one';
   } else if (returnType === 'pluck') {
     q.returnType = 'valueOrThrow';
@@ -551,7 +554,7 @@ const getFromSelectColumns = (
   obj?: { columns: string[] },
   many?: boolean,
 ) => {
-  if (!many && !queryTypeWithLimitOne[(from as Query).q.returnType]) {
+  if (!many && !queryTypeWithLimitOne[(from as Query).q.returnType as string]) {
     throw new Error(
       'Cannot create based on a query which returns multiple records',
     );
@@ -562,7 +565,7 @@ const getFromSelectColumns = (
     if (typeof item === 'string') {
       const index = item.indexOf('.');
       queryColumns.push(index === -1 ? item : item.slice(index + 1));
-    } else if ('selectAs' in item) {
+    } else if (item && 'selectAs' in item) {
       queryColumns.push(...Object.keys(item.selectAs));
     }
   });
@@ -664,14 +667,8 @@ export const _queryInsertMany = <
   data: CreateData<T, BT>[],
 ): InsertManyResult<T, BT> => {
   const ctx = createCtx();
-  let result = insert(
-    q,
-    handleManyData(q, data, ctx),
-    'object',
-    true,
-  ) as InsertManyResult<T, BT>;
-  if (!data.length)
-    result = (result as Query).none() as InsertManyResult<T, BT>;
+  let result = insert(q, handleManyData(q, data, ctx), 'object', true) as never;
+  if (!data.length) result = (result as Query).none() as never;
   return result;
 };
 

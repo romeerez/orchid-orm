@@ -128,6 +128,7 @@ export interface HasAndBelongsToManyInfo<
       table: Q;
     }>;
   };
+  dataForCreate: never;
   // `hasAndBelongsToMany` relation data available for update. It supports:
   // - `disconnect` to delete join table records for related records found by conditions
   // - `set` to create join table records for related records found by conditions, deletes previous connects
@@ -582,10 +583,10 @@ const nestedInsert = ({
         }
       }
 
-      created = await _queryCreateMany(
+      created = (await _queryCreateMany(
         t.select(...throughPrimaryKeys),
         records,
-      );
+      )) as never;
     } else {
       created = [];
     }

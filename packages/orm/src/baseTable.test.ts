@@ -16,6 +16,7 @@ import {
 import {
   BaseTable,
   db,
+  profileData,
   userData,
   useTestORM,
 } from './test-utils/orm.test-utils';
@@ -393,15 +394,15 @@ describe('baseTable', () => {
         beforeCreate: [fns.beforeCreate, fns.beforeSave],
         afterCreate: [fns.afterCreate, fns.afterSave],
         afterCreateCommit: [fns.afterCreateCommit, fns.afterSaveCommit],
-        afterCreateSelect: ['one', 'two', 'seven', 'eight'],
+        afterCreateSelect: new Set(['one', 'two', 'seven', 'eight']),
         beforeUpdate: [fns.beforeUpdate, fns.beforeSave],
         afterUpdate: [fns.afterUpdate, fns.afterSave],
         afterUpdateCommit: [fns.afterUpdateCommit, fns.afterSaveCommit],
-        afterUpdateSelect: ['three', 'four', 'seven', 'eight'],
+        afterUpdateSelect: new Set(['three', 'four', 'seven', 'eight']),
         beforeDelete: [fns.beforeDelete],
         afterDelete: [fns.afterDelete],
         afterDeleteCommit: [fns.afterDeleteCommit],
-        afterDeleteSelect: ['five', 'six'],
+        afterDeleteSelect: new Set(['five', 'six']),
       });
     });
   });
@@ -516,50 +517,96 @@ describe('baseTable', () => {
     class UserTable extends BaseTable {
       readonly table = 'user';
       columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        userKey: t.text(),
+        Id: t.name('id').identity().primaryKey(),
+        Name: t.name('name').text(),
+        Password: t.name('password').text(),
+        UserKey: t.name('userKey').text().nullable(),
       }));
 
-      computed = this.setComputed({
-        nameAndKey: (q) =>
-          q.sql`${q.column('name')} || ' ' || ${q.column('userKey')}`.type(
-            (t) => t.text(),
-          ),
-      });
+      computed = this.setComputed((q) => ({
+        sqlComputed: q.sql`${q.column('Name')} || ' ' || ${q.column(
+          'UserKey',
+        )}`.type((t) => t.text()),
+        runtimeComputed: q.computeAtRuntime(
+          ['Id', 'Name'],
+          (record) => `${record.Id} ${record.Name}`,
+        ),
+        batchComputed: q.computeBatchAtRuntime(['Id', 'Name'], (records) =>
+          Promise.all(records.map((record) => `${record.Id} ${record.Name}`)),
+        ),
+      }));
+
+      relations = {
+        profile: this.hasOne(() => ProfileTable, {
+          required: true,
+          columns: ['Id', 'UserKey'],
+          references: ['UserId', 'ProfileKey'],
+        }),
+      };
+    }
+
+    class ProfileTable extends BaseTable {
+      readonly table = 'profile';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        ProfileKey: t.name('profileKey').text(),
+        UserId: t.name('userId').integer().nullable(),
+      }));
+
+      relations = {
+        user: this.belongsTo(() => UserTable, {
+          columns: ['UserId', 'ProfileKey'],
+          references: ['Id', 'UserKey'],
+        }),
+      };
     }
 
     const local = orchidORM(
       { db: db.$queryBuilder },
       {
         user: UserTable,
+        profile: ProfileTable,
       },
     );
 
-    it('should define computed columns', () => {
-      const q = local.user.select('name', 'nameAndKey');
+    let userId = 0;
+    beforeAll(async () => {
+      userId = await local.user.get('Id').insert(userData);
+      await local.profile.insert({ ...profileData, UserId: userId });
+    });
 
-      assertType<Awaited<typeof q>, { name: string; nameAndKey: string }[]>();
+    describe('select', () => {
+      it('should select record with computed', async () => {
+        const q = local.profile.select({
+          user: (q) =>
+            q.user.select('sqlComputed', 'runtimeComputed', 'batchComputed'),
+        });
 
-      local.user.create({
-        name: 'name',
-        userKey: 'key',
-        // @ts-expect-error computed values should not be accepted
-        nameAndKey: 'value',
+        const res = await q;
+
+        assertType<
+          typeof res,
+          {
+            user:
+              | {
+                  sqlComputed: string;
+                  runtimeComputed: string;
+                  batchComputed: string;
+                }
+              | undefined;
+          }[]
+        >();
+
+        expect(res).toEqual([
+          {
+            user: {
+              sqlComputed: `${userData.Name} ${userData.UserKey}`,
+              runtimeComputed: `${userId} ${userData.Name}`,
+              batchComputed: `${userId} ${userData.Name}`,
+            },
+          },
+        ]);
       });
-
-      local.user.find(1).update({
-        // @ts-expect-error computed values should not be accepted
-        nameAndKey: 'value',
-      });
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "nameAndKey"
-          FROM "user"
-        `,
-      );
     });
   });
 

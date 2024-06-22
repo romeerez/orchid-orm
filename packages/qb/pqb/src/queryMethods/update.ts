@@ -2,7 +2,6 @@ import {
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   Query,
   QueryOrExpression,
-  QueryReturnsAll,
   SetQueryKind,
   SetQueryReturnsRowCount,
 } from '../query/query';
@@ -63,7 +62,7 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
 type UpdateRelationData<
   T extends UpdateSelf,
   Rel extends RelationConfigBase,
-> = QueryReturnsAll<T['returnType']> extends true
+> = T['returnType'] extends undefined | 'all'
   ? Rel['dataForUpdate']
   : Rel['one'] extends true
   ? Rel['dataForUpdate'] | Rel['dataForUpdateOne']

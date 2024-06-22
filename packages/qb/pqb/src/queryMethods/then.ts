@@ -1,12 +1,7 @@
 import { Query } from '../query/query';
 import { NotFoundError, QueryError } from '../errors';
-import { QueryArraysResult, QueryResult } from '../adapter';
-import {
-  CommonQueryData,
-  QueryAfterHook,
-  QueryBeforeHook,
-  QueryHookSelect,
-} from '../sql';
+import { QueryResult } from '../adapter';
+import { HandleResult, QueryAfterHook, QueryBeforeHook } from '../sql';
 import pg from 'pg';
 import {
   AdapterBase,
@@ -16,6 +11,7 @@ import {
   ColumnsParsers,
   emptyArray,
   getValueKey,
+  MaybePromise,
   QueryReturnType,
   RecordString,
   RecordUnknown,
@@ -24,10 +20,12 @@ import {
   TransactionState,
 } from 'orchid-core';
 import { commitSql } from './transaction';
+import { processComputedResult } from '../modules/computed';
 
 export const queryMethodByReturnType: {
-  [K in QueryReturnType]: 'query' | 'arrays';
+  [K in string]: 'query' | 'arrays';
 } = {
+  undefined: 'query',
   all: 'query',
   rows: 'arrays',
   pluck: 'arrays',
@@ -73,7 +71,7 @@ if (process.versions.bun) {
     if (!trx) return maybeWrappedThen;
 
     return (resolve, reject) => {
-      // Here `transactionStorage.getStore()` returns undefined,
+      // Here `transactionStorage.getStore()` tempReturnType undefined,
       // need to set the `trx` value to the store to workaround the bug.
       return this.internal.transactionStorage.run(trx, () => {
         return maybeWrappedThen.call(this, resolve, reject);
@@ -96,15 +94,6 @@ Object.defineProperty(Then.prototype, 'then', {
     });
   },
 });
-
-export const handleResult: CommonQueryData['handleResult'] = (
-  q,
-  returnType,
-  result: QueryResult,
-  isSubQuery?: true,
-) => {
-  return parseResult(q, q.q.parsers, returnType, result, isSubQuery);
-};
 
 function maybeWrappedThen(
   this: Query,
@@ -210,9 +199,12 @@ const then = async (
     sql = q.toSQL();
     const { hookSelect } = sql;
     const { returnType = 'all' } = query;
-    const returns = hookSelect ? 'all' : returnType;
+    const tempReturnType =
+      hookSelect || (returnType === 'rows' && q.q.batchParsers)
+        ? 'all'
+        : returnType;
 
-    let result;
+    let result: unknown;
     let queryResult;
 
     if ('text' in sql) {
@@ -227,7 +219,7 @@ const then = async (
       }
 
       queryResult = (await adapter[
-        hookSelect ? 'query' : (queryMethodByReturnType[returnType] as 'query')
+        queryMethodByReturnType[tempReturnType] as 'query'
       ](sql)) as QueryResult;
 
       if (query.patchResult) {
@@ -240,13 +232,11 @@ const then = async (
         sql = undefined;
       }
 
-      result = query.handleResult(q, returns, queryResult);
+      result = query.handleResult(q, tempReturnType, queryResult);
     } else {
       // autoPreparedStatements in batch doesn't seem to make sense
 
-      const queryMethod = hookSelect
-        ? 'query'
-        : (queryMethodByReturnType[returnType] as 'query');
+      const queryMethod = queryMethodByReturnType[tempReturnType] as 'query';
 
       if (!trx) {
         if (query.log) logData = query.log.beforeQuery(beginSql);
@@ -289,10 +279,47 @@ const then = async (
       }
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      result = query.handleResult(q, returns, queryResult!);
+      result = query.handleResult(q, tempReturnType, queryResult!);
     }
 
-    if (afterHooks || afterCommitHooks || query.after) {
+    if (
+      result &&
+      typeof result === 'object' &&
+      typeof (result as RecordUnknown).then === 'function'
+    ) {
+      result = await result;
+    }
+
+    // TODO: move computeds after parsing
+    let tempColumns: Set<string> | undefined;
+    let renames: RecordString | undefined;
+    if (hookSelect) {
+      for (const column of hookSelect.keys()) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const as = hookSelect!.get(column)!.as;
+        if (as) (renames ??= {})[column] = as;
+
+        (tempColumns ??= new Set())?.add(as || column);
+      }
+
+      if (renames) {
+        for (const record of result as RecordUnknown[]) {
+          for (const a in renames) {
+            const value = record[renames[a]];
+            record[renames[a]] = record[a];
+            record[a] = value;
+          }
+        }
+      }
+
+      if (query.selectedComputeds) {
+        const promise = processComputedResult(query, result);
+        if (promise) await promise;
+      }
+    }
+
+    const hasAfterHook = afterHooks || afterCommitHooks || query.after;
+    if (hasAfterHook) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       if (queryResult!.rowCount) {
         if (afterHooks || query.after) {
@@ -321,10 +348,27 @@ const then = async (
         const args = [result, q];
         await Promise.all(query.after.map(callAfterHook, args));
       }
+    }
 
-      if (hookSelect)
+    // can be set by hooks or by computed columns
+    if (hookSelect || tempReturnType !== returnType) {
+      if (renames) {
+        for (const record of result as RecordUnknown[]) {
+          for (const a in renames) {
+            record[a] = record[renames[a]];
+          }
+        }
+      }
+
+      result = filterResult(
+        q,
+        returnType,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        result = filterResult(q, returnType, queryResult!, hookSelect, result);
+        queryResult!,
+        result,
+        tempColumns,
+        hasAfterHook,
+      );
     }
 
     if (query.transform) {
@@ -376,66 +420,115 @@ const assignError = (to: QueryError, from: pg.DatabaseError) => {
   return to;
 };
 
-export const parseResult = (
-  q: Query,
-  parsers: ColumnsParsers | undefined,
-  returnType: QueryReturnType | undefined = 'all',
-  result: QueryResult,
-  isSubQuery?: boolean,
-): unknown => {
+export const handleResult: HandleResult = (
+  q,
+  returnType,
+  result,
+  isSubQuery,
+) => {
+  const { parsers } = q.q;
+
   switch (returnType) {
     case 'all': {
       if (q.q.throwOnNotFound && result.rows.length === 0)
         throw new NotFoundError(q);
 
+      const promise = parseBatch(q, result);
+
       const { rows } = result;
+
       if (parsers) {
         for (const row of rows) {
           parseRecord(parsers, row);
         }
       }
-      return rows;
+
+      return promise ? promise.then(() => rows) : rows;
     }
     case 'one': {
-      const row = result.rows[0];
-      if (!row) return;
+      const { rows } = result;
+      if (!rows.length) return;
 
-      return parsers ? parseRecord(parsers, row) : row;
+      const promise = parseBatch(q, result);
+
+      if (parsers) parseRecord(parsers, rows[0]);
+
+      return promise ? promise.then(() => rows[0]) : rows[0];
     }
     case 'oneOrThrow': {
-      const row = result.rows[0];
-      if (!row) throw new NotFoundError(q);
+      const { rows } = result;
+      if (!rows.length) throw new NotFoundError(q);
 
-      return parsers ? parseRecord(parsers, row) : row;
+      const promise = parseBatch(q, result);
+
+      if (parsers) parseRecord(parsers, rows[0]);
+
+      return promise ? promise.then(() => rows[0]) : rows[0];
     }
     case 'rows': {
-      return parsers
-        ? parseRows(
-            parsers,
-            (result as unknown as QueryArraysResult).fields,
-            result.rows,
-          )
-        : result.rows;
+      const { rows } = result;
+
+      const promise = parseBatch(q, result);
+      if (promise) {
+        return promise.then(() => {
+          if (parsers) parseRows(parsers, result.fields, rows);
+
+          return rows;
+        });
+      } else if (parsers) {
+        parseRows(parsers, result.fields, rows);
+      }
+
+      return rows;
     }
     case 'pluck': {
-      const pluck = parsers?.pluck;
-      if (pluck) {
-        return result.rows.map(isSubQuery ? pluck : (row) => pluck(row[0]));
-      } else if (isSubQuery) {
-        return result.rows;
+      const { rows } = result;
+
+      const promise = parseBatch(q, result);
+
+      if (promise) {
+        return promise.then(() => {
+          parsePluck(parsers, isSubQuery, rows);
+
+          return rows;
+        });
       }
-      return result.rows.map((row) => row[0]);
+
+      parsePluck(parsers, isSubQuery, rows);
+
+      return rows;
     }
     case 'value': {
-      const value = result.rows[0]?.[0];
-      return value !== undefined
-        ? parseValue(value, parsers)
+      const { rows } = result;
+
+      const promise = parseBatch(q, result);
+
+      if (promise) {
+        return promise.then(() => {
+          return rows[0]?.[0] !== undefined
+            ? parseValue(rows[0][0], parsers)
+            : q.q.notFoundDefault;
+        });
+      }
+
+      return rows[0]?.[0] !== undefined
+        ? parseValue(rows[0][0], parsers)
         : q.q.notFoundDefault;
     }
     case 'valueOrThrow': {
-      const value = result.rows[0]?.[0];
-      if (value === undefined) throw new NotFoundError(q);
-      return parseValue(value, parsers);
+      const { rows } = result;
+
+      const promise = parseBatch(q, result);
+
+      if (promise) {
+        return promise.then(() => {
+          if (rows[0]?.[0] === undefined) throw new NotFoundError(q);
+          return parseValue(rows[0][0], parsers);
+        });
+      }
+
+      if (rows[0]?.[0] === undefined) throw new NotFoundError(q);
+      return parseValue(rows[0][0], parsers);
     }
     case 'rowCount': {
       if (q.q.throwOnNotFound && result.rowCount === 0) {
@@ -449,8 +542,21 @@ export const parseResult = (
   }
 };
 
+const parseBatch = (q: Query, queryResult: QueryResult): MaybePromise<void> => {
+  let promises: Promise<void>[] | undefined;
+
+  if (q.q.batchParsers) {
+    for (const parser of q.q.batchParsers) {
+      const res = parser.fn(parser.path, queryResult);
+      if (res) (promises ??= []).push(res);
+    }
+  }
+
+  return promises && (Promise.all(promises) as never);
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const parseRecord = (parsers: ColumnsParsers, row: any) => {
+export const parseRecord = (parsers: ColumnsParsers, row: any): unknown => {
   for (const key in parsers) {
     if (key in row) {
       row[key] = (parsers[key] as ColumnParser)(row[key]);
@@ -464,7 +570,7 @@ const parseRows = (
   fields: { name: string }[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rows: any[],
-) => {
+): void => {
   for (let i = fields.length - 1; i >= 0; i--) {
     const parser = parsers[fields[i].name];
     if (parser) {
@@ -473,45 +579,58 @@ const parseRows = (
       }
     }
   }
-  return rows;
 };
 
-const parseValue = (value: unknown, parsers?: ColumnsParsers) => {
+const parsePluck = (
+  parsers: ColumnsParsers | undefined,
+  isSubQuery: true | undefined,
+  rows: unknown[],
+): void => {
+  const pluck = parsers?.pluck;
+  if (pluck) {
+    for (let i = 0; i < rows.length; i++) {
+      rows[i] = pluck(isSubQuery ? rows[i] : (rows[i] as RecordUnknown)[0]);
+    }
+  } else if (!isSubQuery) {
+    for (let i = 0; i < rows.length; i++) {
+      rows[i] = (rows[i] as RecordUnknown)[0];
+    }
+  }
+};
+
+const parseValue = (value: unknown, parsers?: ColumnsParsers): unknown => {
   const parser = parsers?.[getValueKey];
   return parser ? parser(value) : value;
 };
 
-const filterResult = (
+export const filterResult = (
   q: Query,
   returnType: QueryReturnType,
   queryResult: QueryResult,
-  hookSelect: QueryHookSelect,
   result: unknown,
+  tempColumns: Set<string> | undefined,
+  // result should not be mutated when having hooks, because hook may want to access the data later
+  hasAfterHook?: unknown,
 ): unknown => {
   if (returnType === 'all') {
-    const pick = getSelectPick(queryResult, hookSelect);
-    return (result as unknown[]).map((full) => {
-      const filtered: RecordUnknown = {};
-      for (const key of pick) {
-        filtered[key] = (full as RecordUnknown)[key];
-      }
-      return filtered;
-    });
+    return filterAllResult(result, tempColumns, hasAfterHook);
   }
 
   if (returnType === 'oneOrThrow' || returnType === 'one') {
-    const row = (result as unknown[])[0];
+    let row = (result as RecordUnknown[])[0];
     if (!row) {
       if (returnType === 'oneOrThrow') throw new NotFoundError(q);
       return undefined;
+    } else if (!tempColumns?.size) {
+      return row;
     } else {
-      result = {};
-      for (const key in row) {
-        if (!hookSelect.includes(key)) {
-          (result as RecordUnknown)[key] = (row as RecordUnknown)[key];
-        }
+      if (hasAfterHook) row = { ...row };
+
+      for (const column of tempColumns) {
+        delete row[column];
       }
-      return result;
+
+      return row;
     }
   }
 
@@ -535,22 +654,34 @@ const filterResult = (
   }
 
   if (returnType === 'rows') {
-    const pick = getSelectPick(queryResult, hookSelect);
-    return (result as unknown[]).map((full) =>
-      pick.map((key) => (full as RecordUnknown)[key]),
-    );
+    result = filterAllResult(result, tempColumns, hasAfterHook);
+    return (result as RecordUnknown[]).map((record) => Object.values(record));
   }
 
   return;
 };
 
-const getSelectPick = (
-  queryResult: QueryResult,
-  hookSelect: QueryHookSelect,
-): string[] => {
-  const pick: string[] = [];
-  for (const field of queryResult.fields) {
-    if (!hookSelect.includes(field.name)) pick.push(field.name);
+const filterAllResult = (
+  result: unknown,
+  tempColumns: Set<string> | undefined,
+  hasAfterHook: unknown,
+) => {
+  if (tempColumns?.size) {
+    if (hasAfterHook) {
+      return (result as RecordUnknown[]).map((data) => {
+        const record = { ...data };
+        for (const key of tempColumns) {
+          delete record[key];
+        }
+        return record;
+      });
+    } else {
+      for (const record of result as RecordUnknown[]) {
+        for (const key of tempColumns) {
+          delete record[key];
+        }
+      }
+    }
   }
-  return pick;
+  return result;
 };

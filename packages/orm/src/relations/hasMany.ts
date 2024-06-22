@@ -142,6 +142,7 @@ export interface HasManyInfo<
           table: Q;
         }>;
   };
+  dataForCreate: never;
   // `hasMany` relation data available for update. It supports:
   // - `disconnect` to nullify foreign keys of the related records
   // - `delete` to delete related record found by conditions

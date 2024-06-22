@@ -29,7 +29,7 @@ export type MergeQuery<
     : K extends 'result'
     ? MergeQueryResult<T, Q>
     : K extends 'returnType'
-    ? QueryReturnType extends Q['returnType']
+    ? Q['returnType'] extends undefined
       ? T['returnType']
       : Q['returnType']
     : K extends 'then'
@@ -68,6 +68,8 @@ const mergableObjects: RecordBoolean = {
   defaults: true,
   joinedShapes: true,
   joinedParsers: true,
+  joinedBatchParsers: true,
+  selectedComputeds: true,
 };
 
 export class MergeQueryMethods {
@@ -97,6 +99,10 @@ export class MergeQueryMethods {
                   b: (a[key] as UnionSet).b,
                   u: [...(a[key] as UnionSet).u, ...(value as UnionSet).u],
                 }
+              : value;
+          } else if (value instanceof Set) {
+            a[key] = a[key]
+              ? new Set([...(a[key] as Set<unknown>), ...value])
               : value;
           } else {
             a[key] = value;

@@ -7,7 +7,7 @@ import {
   PickQueryMetaTableShapeReturnTypeWithData,
   GetQueryResult,
 } from '../query/query';
-import { RecordOfColumnsShapeBase, SelectQueryData } from '../sql';
+import { SelectQueryData, WithConfigs } from '../sql';
 import { AliasOrTable } from '../common/utils';
 import {
   QueryThen,
@@ -18,6 +18,7 @@ import {
   Expression,
   MaybeArray,
   PickQueryTableMetaResultInputType,
+  emptyObject,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { QueryBase } from '../query/queryBase';
@@ -122,21 +123,26 @@ export function queryFrom<
   const data = (self as unknown as PickQueryQ).q;
   if (typeof arg === 'string') {
     data.as ||= arg;
-    data.shape = data.withShapes?.[arg] as ColumnsShapeBase;
+    const w = data.withShapes?.[arg];
+    data.shape = w?.shape ?? emptyObject;
+    data.computeds = w?.computeds;
   } else if (isExpression(arg)) {
     data.as ||= 't';
   } else if (Array.isArray(arg)) {
     const { shape } = data;
     const parsers = (data.parsers ??= {});
+    const computeds = (data.computeds ??= {});
+    // TODO: batchParsers
     for (const item of arg) {
       if (typeof item === 'string') {
-        const withShape = (data.withShapes as RecordOfColumnsShapeBase)[item];
+        const w = (data.withShapes as WithConfigs)[item];
 
-        Object.assign(shape, withShape);
+        Object.assign(shape, w.shape);
+        Object.assign(computeds, w.computeds);
 
-        for (const key in withShape) {
-          if (withShape[key].parseFn) {
-            parsers[key] = withShape[key].parseFn;
+        for (const key in w.shape) {
+          if (w.shape[key].parseFn) {
+            parsers[key] = w.shape[key].parseFn;
           }
         }
       } else if (!isExpression(item)) {
@@ -149,6 +155,7 @@ export function queryFrom<
     data.as ||= q.q.as || q.table || 't';
     data.shape = getShapeFromSelect(arg as QueryBase, true) as ColumnsShapeBase;
     data.parsers = q.q.parsers;
+    data.batchParsers = q.q.batchParsers;
   }
 
   data.from = arg as Query;

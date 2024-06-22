@@ -200,7 +200,10 @@ export class WithMethods {
 
     const shape = getShapeFromSelect(query, true);
 
-    return setQueryObjectValue(q, 'withShapes', name, shape);
+    return setQueryObjectValue(q, 'withShapes', name, {
+      shape,
+      computeds: query.q.computeds,
+    });
   }
 
   withRecursive<
@@ -245,10 +248,9 @@ export class WithMethods {
     const arg = q.queryBuilder.clone();
     arg.q.withShapes = q.q.withShapes;
     let query = typeof baseFn === 'function' ? baseFn(arg) : baseFn;
-    const shape = ((arg.q.withShapes ??= {})[name] = getShapeFromSelect(
-      query,
-      true,
-    ) as ColumnsShapeBase);
+    const shape = getShapeFromSelect(query, true) as ColumnsShapeBase;
+    const withConfig = { shape, computeds: query.q.computeds };
+    (arg.q.withShapes ??= {})[name] = withConfig;
     const recursive = recursiveFn(arg);
 
     query = _queryUnion(query, [recursive], options.union ?? 'UNION ALL');
@@ -264,7 +266,7 @@ export class WithMethods {
 
     pushQueryValue(q, 'with', { n: name, o: options, q: query });
 
-    return setQueryObjectValue(q, 'withShapes', name, shape);
+    return setQueryObjectValue(q, 'withShapes', name, withConfig);
   }
 
   withSql<
@@ -301,11 +303,8 @@ export class WithMethods {
       s: sql(q),
     });
 
-    return setQueryObjectValue(
-      q,
-      'withShapes',
-      name,
-      shape(this.columnTypes),
-    ) as never;
+    return setQueryObjectValue(q, 'withShapes', name, {
+      shape: shape(this.columnTypes),
+    }) as never;
   }
 }

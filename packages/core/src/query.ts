@@ -1,11 +1,19 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from './adapter';
-import { EmptyObject, FnUnknownToUnknown, RecordKeyTrue } from './utils';
+import {
+  EmptyObject,
+  FnUnknownToUnknown,
+  MaybePromise,
+  RecordKeyTrue,
+  RecordUnknown,
+} from './utils';
 import { QueryColumn, QueryColumns } from './columns';
+
+export type HookSelect = Map<string, { select: string; as?: string }>;
 
 export interface SqlCommonOptions {
   // additional columns to select for `after` hooks
-  hookSelect?: string[];
+  hookSelect?: HookSelect;
 }
 
 export interface SingleSqlItem {
@@ -51,6 +59,7 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
 // and doesn't change anymore
 export interface QueryInternalBase {
   columnsForSelectAll?: string[];
+  columnsKeysForSelectAll?: RecordUnknown;
   runtimeDefaultColumns?: string[];
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.
@@ -69,6 +78,7 @@ export type CoreQueryScopes<Keys extends string = string> = {
 };
 
 export type QueryReturnType =
+  | undefined
   | 'all'
   | 'one'
   | 'oneOrThrow'
@@ -178,11 +188,25 @@ export const getValueKey = Symbol('get');
 // function to parse a single column after loading the data
 export type ColumnParser = FnUnknownToUnknown;
 
-// functions to parse columns after loading the data
+// To parse all returned rows. Unlike column parser, can return a promise.
+export interface BatchParser {
+  path: string[];
+  fn: (path: string[], queryResult: { rows: unknown[] }) => MaybePromise<void>;
+}
+
+// set of value parsers
 // key is a name of a selected column,
 // or it can be a `getValueKey` to parse single values requested by the `.get()`, `.count()`, or similar methods
 export type ColumnsParsers = { [K in string | getValueKey]?: ColumnParser };
 
+// set of batch parsers
+// is only triggered when loading all,
+// or when using `hookSelect` or computed columns that convert response to `all` internally.
+// key is a name of a selected column,
+// or it can be a `getValueKey` to parse single values requested by the `.get()`, `.count()`, or similar methods
+export type BatchParsers = BatchParser[];
+
+// result transformer: function for `transform`, object for `map`
 export type QueryDataTransform =
   | FnUnknownToUnknown
   | { map: FnUnknownToUnknown };
@@ -238,7 +262,7 @@ export const applyTransforms = (
 ): unknown => {
   for (const fn of fns) {
     if ('map' in fn) {
-      if (returnType === 'all') {
+      if (!returnType || returnType === 'all') {
         result = (result as unknown[]).map(fn.map);
       } else {
         result = fn.map(result);

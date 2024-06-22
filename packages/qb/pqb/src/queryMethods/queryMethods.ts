@@ -21,7 +21,6 @@ import {
 } from '../common/utils';
 import {
   OrderTsQueryConfig,
-  SelectItem,
   SelectQueryData,
   SortDir,
   toSQL,
@@ -130,11 +129,17 @@ type OrderArgTsQuery<T extends OrderArgSelf> =
   : Exclude<T['meta']['tsQuery'], undefined>;
 
 type OrderArgKey<T extends OrderArgSelf> =
-  | keyof T['meta']['selectable']
+  | {
+      // filter out runtime computed selectables
+      [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['queryType'] extends undefined
+        ? never
+        : K;
+    }[keyof T['meta']['selectable']]
   | {
       [K in keyof T['result']]: T['result'][K]['dataType'] extends
         | 'array'
         | 'object'
+        | 'runtimeComputed'
         ? never
         : K;
     }[keyof T['result']];
@@ -144,6 +149,7 @@ export type GroupArgs<T extends PickQueryResult> = (
       [K in keyof T['result']]: T['result'][K]['dataType'] extends
         | 'array'
         | 'object'
+        | 'runtimeComputed'
         ? never
         : K;
     }[keyof T['result']]
@@ -347,8 +353,16 @@ export class QueryMethods<ColumnTypes> {
   ): SetQueryReturnsPluck<T, S> {
     const q = (this as unknown as Query).clone();
     q.q.returnType = 'pluck';
-    (q.q as SelectQueryData).select = [select as SelectItem];
-    addParserForSelectItem(q as never, q.q.as || q.table, 'pluck', select);
+
+    const selected = addParserForSelectItem(
+      q as never,
+      q.q.as || q.table,
+      'pluck',
+      select,
+    );
+    (q.q as SelectQueryData).select = selected
+      ? [selected as never]
+      : undefined;
     return q as never;
   }
 

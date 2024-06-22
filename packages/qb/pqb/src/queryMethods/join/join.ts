@@ -341,7 +341,7 @@ interface JoinWithArgToQuery<With extends WithDataItem> extends Query {
  * query arg is returned as is,
  * relation name is replaced with a relation table.
  */
-type JoinArgToQuery<
+export type JoinArgToQuery<
   T extends PickQueryRelationsWithData,
   Arg extends JoinFirstArg<T>,
 > = Arg extends keyof T['withData']
@@ -374,28 +374,6 @@ export type JoinCallback<
 > = (
   q: JoinQueryBuilder<T, JoinArgToQuery<T, Arg>>,
 ) => PickQueryTableMetaResult;
-
-/**
- * Type of the `joinLateral`.
- *
- * Receives a query builder that can access columns of both the main and the joined table.
- *
- * Query builder inside callback is the query derived from the `joinLateral` first argument,
- * all query methods are allowed, `on` methods are available.
- *
- * The callback must return a query object. Its resulting type will become a type of the joined table.
- */
-export type JoinLateralCallback<
-  T extends PickQueryMetaShapeRelationsWithData,
-  Arg extends JoinFirstArg<T>,
-  Table extends string,
-  Meta extends QueryMetaBase,
-  Result extends QueryColumns,
-> = (q: JoinQueryBuilder<T, JoinArgToQuery<T, Arg>>) => {
-  table: Table;
-  meta: Meta;
-  result: Result;
-};
 
 /**
  * Type of {@link Join.join} query method.
@@ -1039,14 +1017,18 @@ export class Join {
   >(
     this: T,
     arg: Arg,
-    cb: JoinLateralCallback<T, Arg, Table, Meta, Result>,
+    cb: (q: JoinQueryBuilder<T, JoinArgToQuery<T, Arg>>) => {
+      table: Table;
+      meta: Meta;
+      result: Result;
+    },
   ): JoinLateralResult<T, Table, Meta, Result, true> {
-    return _joinLateral<T, Arg, Table, Meta, Result, true>(
+    return _joinLateral(
       (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
       'JOIN',
       arg,
-      cb,
-    );
+      cb as never,
+    ) as never;
   }
 
   /**
@@ -1073,14 +1055,18 @@ export class Join {
   >(
     this: T,
     arg: Arg,
-    cb: JoinLateralCallback<T, Arg, Table, Meta, Result>,
+    cb: (q: JoinQueryBuilder<T, JoinArgToQuery<T, Arg>>) => {
+      table: Table;
+      meta: Meta;
+      result: Result;
+    },
   ): JoinLateralResult<T, Table, Meta, Result, false> {
-    return _joinLateral<T, Arg, Table, Meta, Result, false>(
+    return _joinLateral(
       (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
       'LEFT JOIN',
       arg,
-      cb,
-    );
+      cb as never,
+    ) as never;
   }
 }
 
@@ -1159,7 +1145,7 @@ type OnJsonPathEqualsArgs<S extends SelectableBase> = [
 ];
 
 /**
- * Mutative {@link OnMethods.on}
+ * Mutative {@link OnMethods.prototype.on}
  */
 export const _queryJoinOn = <T extends PickQueryMeta>(
   q: T,
@@ -1174,7 +1160,7 @@ export const _queryJoinOn = <T extends PickQueryMeta>(
 };
 
 /**
- * Mutative {@link OnMethods.orOn}
+ * Mutative {@link OnMethods.prototype.orOn}
  */
 export const _queryJoinOrOn = <T extends PickQueryMeta>(
   q: T,
@@ -1189,7 +1175,7 @@ export const _queryJoinOrOn = <T extends PickQueryMeta>(
 };
 
 /**
- * Mutative {@link OnMethods.onJsonPathEquals}
+ * Mutative {@link OnMethods.prototype.onJsonPathEquals}
  */
 export const _queryJoinOnJsonPathEquals = <T extends PickQueryMeta>(
   q: T,
@@ -1203,7 +1189,7 @@ export const _queryJoinOnJsonPathEquals = <T extends PickQueryMeta>(
 /**
  * Argument of join callback.
  * It is a query object of table that you're joining, with ability to select main table's columns.
- * Adds {@link OnMethods.on} method and similar to the query.
+ * Adds {@link OnMethods.prototype.on} method and similar to the query.
  */
 export type JoinQueryBuilder<
   T extends PickQueryMetaShape = PickQueryMetaShape,

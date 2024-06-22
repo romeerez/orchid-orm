@@ -18,7 +18,9 @@ export type SelectableOrExpression<
 > = '*' | keyof T['meta']['selectable'] | Expression<C>;
 
 export type SelectableOrExpressions<
-  T extends PickQueryMeta = PickQueryMeta,
+  T extends { meta: { selectable: unknown } } = {
+    meta: { selectable: unknown };
+  },
   C extends QueryColumn = QueryColumn,
 > = ('*' | keyof T['meta']['selectable'] | Expression<C>)[];
 
@@ -34,7 +36,6 @@ export type ExpressionOutput<
 export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };
   delete cloned[toSQLCacheKey];
-  if (cloned.parsers) cloned.parsers = { ...cloned.parsers };
   cloneQuery(cloned);
   return cloned as QueryData;
 };

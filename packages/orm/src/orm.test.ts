@@ -149,8 +149,15 @@ describe('orm', () => {
   describe('$from', () => {
     it('should have method `$from` with proper handling of type, where operators, parsers', async () => {
       const ChatId = await db.chat.get('IdOfChat').create(chatData);
-      const AuthorId = await db.user.get('Id').create(userData);
-      await db.message.insert({ ...messageData, ChatId, AuthorId });
+      const [AuthorId1, AuthorId2] = await db.user
+        .pluck('Id')
+        .insertMany([userData, userData]);
+
+      await db.message.createMany([
+        { ...messageData, ChatId, AuthorId: AuthorId1 },
+        { ...messageData, ChatId, AuthorId: AuthorId2 },
+        { ...messageData, ChatId, AuthorId: AuthorId2 },
+      ]);
 
       const inner = db.user.select('createdAt', {
         alias: 'Name',
@@ -191,6 +198,11 @@ describe('orm', () => {
           createdAt: expect.any(Date),
           alias: 'name',
           messagesCount: 1,
+        },
+        {
+          createdAt: expect.any(Date),
+          alias: 'name',
+          messagesCount: 2,
         },
       ]);
     });

@@ -3,7 +3,7 @@ import {
   DynamicSQLArg,
   emptyObject,
   Expression,
-  ExpressionChain,
+  ExpressionData,
   ExpressionTypeMethod,
   isTemplateLiteralArgs,
   QueryColumn,
@@ -140,15 +140,16 @@ export class DynamicRawSQL<
 > extends Expression<T> {
   declare columnTypes: ColumnTypes;
   result: { value: T } = emptyObject as { value: T };
-  q: { chain?: ExpressionChain } = {};
+  q: ExpressionData;
 
-  constructor(public fn: DynamicSQLArg) {
+  constructor(public fn: DynamicSQLArg<T>) {
     super();
+    this.q = { expr: this };
   }
 
   // Calls the given function to get SQL from it.
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    return this.fn(raw).toSQL(ctx, quotedAs);
+    return this.fn(raw as never).toSQL(ctx, quotedAs);
   }
 }
 
@@ -156,7 +157,7 @@ DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
 
 export function raw<T = never>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>>;
 export function raw<T = never>(
-  ...args: [DynamicSQLArg]
+  ...args: [DynamicSQLArg<QueryColumn<T>>]
 ): DynamicRawSQL<QueryColumn<T>>;
 export function raw(...args: SQLArgs) {
   return isTemplateLiteralArgs(args)

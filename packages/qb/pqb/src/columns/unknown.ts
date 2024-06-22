@@ -7,9 +7,11 @@ import { defaultSchemaConfig } from './defaultSchemaConfig';
 export class UnknownColumn<
   Schema extends ColumnSchemaConfig,
 > extends VirtualColumn<Schema> {
+  static instance = new UnknownColumn(defaultSchemaConfig);
+
   constructor(schema: Schema) {
     super(schema, schema.unknown() as never);
   }
 }
 
-RawSQL.prototype.result = { value: new UnknownColumn(defaultSchemaConfig) };
+RawSQL.prototype.result = { value: UnknownColumn.instance };

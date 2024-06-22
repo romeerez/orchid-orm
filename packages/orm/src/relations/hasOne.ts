@@ -151,6 +151,7 @@ export interface HasOneInfo<
           table: Q;
         }>;
       };
+  dataForCreate: never;
   // `hasOne` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key of the related record
   // - `delete` to delete the related record

@@ -1,4 +1,4 @@
-import { pushQueryArray, pushQueryValue } from '../query/queryUtils';
+import { pushQueryValue } from '../query/queryUtils';
 import { PickQueryShape, QueryColumns } from 'orchid-core';
 import { QueryAfterHook, QueryBeforeHook } from '../sql';
 import { PickQueryQ, Query } from '../query/query';
@@ -16,7 +16,7 @@ export type AfterHook<
 >;
 
 // Hook argument for selecting columns: array of column names of the table.
-export type HookSelect<T extends PickQueryShape> = (keyof T['shape'] &
+export type HookSelectArg<T extends PickQueryShape> = (keyof T['shape'] &
   string)[];
 
 // Possible action types to attach hook for.
@@ -27,18 +27,23 @@ const before = <T>(q: T, key: HookAction, cb: QueryBeforeHook): T =>
   pushQueryValue(q as PickQueryQ, `before${key}`, cb) as never;
 
 // Save `after` hook into the query: this saves the function and the hook selection into the query data.
-const after = <T extends PickQueryShape, S extends HookSelect<T>>(
+const after = <T extends PickQueryShape, S extends HookSelectArg<T>>(
   q: T,
   key: HookAction,
   select: S,
   cb: AfterHook<S, T['shape']>,
   commit?: boolean,
-): T =>
-  pushQueryArray(
-    pushQueryValue(q as never, `after${key}${commit ? 'Commit' : ''}`, cb),
-    `after${key}Select`,
-    select,
-  );
+): T => {
+  pushQueryValue(q as never, `after${key}${commit ? 'Commit' : ''}`, cb);
+
+  const set = ((q as unknown as PickQueryQ).q[`after${key}Select`] ??=
+    new Set());
+  for (const column of select) {
+    set.add(column);
+  }
+
+  return q;
+};
 
 export const _queryHookBeforeQuery = <T extends PickQueryShape>(
   q: T,
@@ -63,7 +68,7 @@ export const _queryHookBeforeCreate = <T extends PickQueryShape>(
 
 export const _queryHookAfterCreate = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -74,7 +79,7 @@ export const _queryHookAfterCreate = <
 
 export const _queryHookAfterCreateCommit = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -92,7 +97,7 @@ export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
 
 export const _queryHookAfterUpdate = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -103,7 +108,7 @@ export const _queryHookAfterUpdate = <
 
 export const _queryHookAfterUpdateCommit = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -121,7 +126,7 @@ export const _queryHookBeforeSave = <T extends PickQueryShape>(
 
 export const _queryHookAfterSave = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -132,7 +137,7 @@ export const _queryHookAfterSave = <
 
 export const _queryAfterSaveCommit = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -156,7 +161,7 @@ export const _queryHookBeforeDelete = <T extends PickQueryShape>(
 
 export const _queryHookAfterDelete = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -167,7 +172,7 @@ export const _queryHookAfterDelete = <
 
 export const _queryHookAfterDeleteCommit = <
   T extends PickQueryShape,
-  S extends HookSelect<T>,
+  S extends HookSelectArg<T>,
 >(
   q: T,
   select: S,
@@ -215,7 +220,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterCreate<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterCreate<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,
@@ -234,7 +239,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterCreateCommit<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterCreateCommit<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,
@@ -265,7 +270,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterUpdate<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterUpdate<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,
@@ -285,7 +290,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterUpdateCommit<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterUpdateCommit<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,
@@ -316,7 +321,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterSave<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterSave<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,
@@ -336,7 +341,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterSaveCommit<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterSaveCommit<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,
@@ -367,7 +372,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterDelete<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterDelete<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,
@@ -387,7 +392,7 @@ export abstract class QueryHooks {
    * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
-  afterDeleteCommit<T extends PickQueryShape, S extends HookSelect<T>>(
+  afterDeleteCommit<T extends PickQueryShape, S extends HookSelectArg<T>>(
     this: T,
     select: S,
     cb: AfterHook<S, T['shape']>,

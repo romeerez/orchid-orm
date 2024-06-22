@@ -353,13 +353,6 @@ export const callWithThis = function <T, R>(this: T, cb: (arg: T) => R): R {
   return cb(this);
 };
 
-export const cloneInstance = <T>(instance: T): T => {
-  return Object.assign(
-    Object.create(Object.getPrototypeOf(instance)),
-    instance,
-  );
-};
-
 export const pick = <T, Keys extends keyof T>(
   obj: T,
   keys: Keys[],

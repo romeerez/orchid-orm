@@ -1,4 +1,4 @@
-import { Query, QueryReturnsAll } from '../query/query';
+import { Query } from '../query/query';
 import { QueryColumn, QueryThen, RecordUnknown } from 'orchid-core';
 import { pushQueryValue } from '../query/queryUtils';
 
@@ -46,7 +46,7 @@ export class QueryMap {
   map<T extends Query, Result extends RecordUnknown>(
     this: T,
     fn: (
-      input: QueryReturnsAll<T['returnType']> extends true
+      input: T['returnType'] extends undefined | 'all'
         ? T['then'] extends QueryThen<(infer Data)[]>
           ? Data
           : never
@@ -58,9 +58,7 @@ export class QueryMap {
     [K in keyof T]: K extends 'result'
       ? { [K in keyof Result]: QueryColumn<Result[K]> }
       : K extends 'then'
-      ? QueryThen<
-          QueryReturnsAll<T['returnType']> extends true ? Result[] : Result
-        >
+      ? QueryThen<T['returnType'] extends undefined | 'all' ? Result[] : Result>
       : T[K];
   } {
     return pushQueryValue(this.clone(), 'transform', { map: fn }) as never;

@@ -184,8 +184,7 @@ export type TableDataInput = {
 };
 
 export interface TableDataItem {
-  columns: unknown;
-  name: unknown;
+  tableDataItem: true;
 }
 
 export interface UniqueTableDataItem<
@@ -200,6 +199,7 @@ export interface TableDataMethods<Key extends PropertyKey> {
     columns: Columns,
     name?: Name,
   ): {
+    tableDataItem: true;
     columns: Columns;
     name: string extends Name ? never : Name;
   };
@@ -216,6 +216,7 @@ export interface TableDataMethods<Key extends PropertyKey> {
       | [options?: TableData.Index.UniqueOptionsArg]
       | [name?: Name, options?: TableData.Index.UniqueOptionsArg]
   ): {
+    tableDataItem: true;
     columns: Columns extends (
       | Key
       | TableData.Index.ColumnOptionsForColumn<Key>
@@ -306,7 +307,8 @@ export type TableDataItemsUniqueConstraints<
   ? never
   : T extends UniqueTableDataItem
   ? T['name']
-  : T extends UniqueTableDataItem[]
+  : // TODO: there may be non-unique items
+  T extends UniqueTableDataItem[]
   ? T[number]['name']
   : never;
 
