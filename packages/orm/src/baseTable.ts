@@ -55,7 +55,7 @@ import { HasOneOptions } from './relations/hasOne';
 import { HasAndBelongsToManyOptions } from './relations/hasAndBelongsToMany';
 
 // type of table class itself
-export interface TableClass<T extends Table = Table> {
+export interface TableClass<T extends ORMTableInput = ORMTableInput> {
   new (): T;
   instance(): T;
 }
@@ -65,49 +65,62 @@ export interface TableClasses {
   [K: string]: TableClass;
 }
 
-// convert table instance type to queryable interface
-// processes relations to a type that's understandable by `pqb`
-// add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
-export interface TableToDb<T extends Table, Relations extends RelationsBase>
-  extends Db<
-    T['table'],
-    T['columns']['shape'],
-    keyof ShapeColumnPrimaryKeys<T['columns']['shape']> extends never
-      ? never
-      : ShapeColumnPrimaryKeys<T['columns']['shape']>,
-    | ShapeUniqueColumns<T['columns']['shape']>
-    | TableDataItemsUniqueColumns<T['columns']['shape'], T['columns']['data']>,
-    TableDataItemsUniqueColumnTuples<
-      T['columns']['shape'],
-      T['columns']['data']
-    >,
-    | UniqueConstraints<T['columns']['shape']>
-    | TableDataItemsUniqueConstraints<T['columns']['data']>,
-    T['types'],
-    T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
-    MapTableScopesOption<T['scopes'], T['softDelete']>
-  > {
-  relations: Relations;
+export interface TableInfo {
   definedAs: string;
   db: OrchidORM;
   getFilePath(): string;
   name: string;
 }
 
+export interface Table extends Query, TableInfo {}
+
+// convert table instance type to queryable interface
+// processes relations to a type that's understandable by `pqb`
+// add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
+export interface TableToDb<
+  T extends ORMTableInput,
+  Relations extends RelationsBase,
+> extends TableInfo,
+    Db<
+      T['table'],
+      T['columns']['shape'],
+      keyof ShapeColumnPrimaryKeys<T['columns']['shape']> extends never
+        ? never
+        : ShapeColumnPrimaryKeys<T['columns']['shape']>,
+      | ShapeUniqueColumns<T['columns']['shape']>
+      | TableDataItemsUniqueColumns<
+          T['columns']['shape'],
+          T['columns']['data']
+        >,
+      TableDataItemsUniqueColumnTuples<
+        T['columns']['shape'],
+        T['columns']['data']
+      >,
+      | UniqueConstraints<T['columns']['shape']>
+      | TableDataItemsUniqueConstraints<T['columns']['data']>,
+      T['types'],
+      T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
+      MapTableScopesOption<T>
+    > {
+  relations: Relations;
+}
+
 // convert a table class type into queryable interface
 // add relation methods
-export type DbTable<T extends Table> = T extends RelationConfigSelf
-  ? TableToDb<T, MapRelations<T>> & MapRelations<T>
-  : TableToDb<T, RelationsBase>;
+export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
+  T extends RelationConfigSelf
+    ? TableToDb<T, MapRelations<T>> & MapRelations<T>
+    : TableToDb<T, RelationsBase>;
 
 // `columns` property of table has a shape and an output type of the columns
 // callback with a query of relation, to use as a default scope
 export type ScopeFn<Related extends TableClass, Scope extends Query> = (
-  q: DbTable<InstanceType<Related>>,
+  q: ORMTableInputToQueryBuilder<InstanceType<Related>>,
 ) => Scope;
 
 // type of table instance created by a table class
-export interface Table {
+// is used only in `orchidORM` constructor to accept proper classes
+export interface ORMTableInput {
   // table name
   table: string;
   // columns shape and the record type
@@ -135,22 +148,22 @@ export interface Table {
 }
 
 // Object type that's allowed in `where` and similar methods of the table.
-export type Queryable<T extends Table> = Simplify<{
+export type Queryable<T extends ORMTableInput> = Simplify<{
   [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['queryType'];
 }>;
 
 // Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends Table> = Simplify<
+export type Selectable<T extends ORMTableInput> = Simplify<
   ColumnShapeOutput<T['columns']['shape']>
 >;
 
 // Object type that conforms `create` method of the table.
-export type Insertable<T extends Table> = Simplify<
+export type Insertable<T extends ORMTableInput> = Simplify<
   ColumnShapeInput<T['columns']['shape']>
 >;
 
 // Object type that conforms `update` method of the table.
-export type Updatable<T extends Table> = Simplify<
+export type Updatable<T extends ORMTableInput> = Simplify<
   ColumnShapeInputPartial<T['columns']['shape']>
 >;
 

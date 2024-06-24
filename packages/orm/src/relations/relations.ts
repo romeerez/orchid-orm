@@ -12,7 +12,12 @@ import {
   HasOneQuery,
   makeHasOneMethod,
 } from './hasOne';
-import { DbTable, Table, TableClass } from '../baseTable';
+import {
+  ORMTableInputToQueryBuilder,
+  ORMTableInput,
+  TableClass,
+  TableInfo,
+} from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
   _queryAll,
@@ -115,7 +120,7 @@ export interface RelationData {
 export type RelationScopeOrTable<Relation extends RelationThunkBase> =
   Relation['options']['scope'] extends (q: Query) => Query
     ? ReturnType<Relation['options']['scope']>
-    : DbTable<InstanceType<ReturnType<Relation['fn']>>>;
+    : ORMTableInputToQueryBuilder<InstanceType<ReturnType<Relation['fn']>>>;
 
 export interface RelationConfigSelf {
   columns: { shape: ColumnsShapeBase };
@@ -197,15 +202,15 @@ export type MapRelations<T> = T extends RelationConfigSelf
 interface ApplyRelationData {
   relationName: string;
   relation: RelationThunk;
-  dbTable: DbTable<Table>;
-  otherDbTable: DbTable<Table>;
+  dbTable: Query;
+  otherDbTable: Query;
 }
 
 type DelayedRelations = Map<Query, Record<string, ApplyRelationData[]>>;
 
 export const applyRelations = (
   qb: Query,
-  tables: Record<string, Table>,
+  tables: Record<string, ORMTableInput>,
   result: OrchidORM,
 ) => {
   const tableEntries = Object.entries(tables);
@@ -213,7 +218,7 @@ export const applyRelations = (
   const delayedRelations: DelayedRelations = new Map();
 
   for (const name in tables) {
-    const table = tables[name] as Table & {
+    const table = tables[name] as ORMTableInput & {
       relations?: RelationThunks;
     };
     if (!('relations' in table) || typeof table.relations !== 'object')
@@ -283,7 +288,7 @@ export const applyRelations = (
 
         if (item.dbTable.relations[item.relationName] as never) continue;
 
-        const as = item.dbTable.definedAs;
+        const as = (item.dbTable as unknown as TableInfo).definedAs;
         let message = `Cannot define a \`${item.relationName}\` relation on \`${as}\``;
         const table = result[as];
 
@@ -302,7 +307,7 @@ export const applyRelations = (
           !throughRel.table.relations[source as never]
         ) {
           message += `: cannot find \`${source}\` relation in \`${
-            (throughRel.table as DbTable<Table>).definedAs
+            (throughRel.table as unknown as TableInfo).definedAs
           }\` required by the \`source\` option`;
         }
 

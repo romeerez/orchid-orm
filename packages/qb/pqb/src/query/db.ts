@@ -589,18 +589,17 @@ export interface DbTableConstructor<ColumnTypes> {
     UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
     ColumnTypes,
     Shape & ComputedColumnsFromOptions<Options['computed']>,
-    MapTableScopesOption<Options['scopes'], Options['softDelete']>
+    MapTableScopesOption<Options>
   >;
 }
 
-export type MapTableScopesOption<
-  Scopes extends RecordUnknown | undefined,
-  SoftDelete extends true | PropertyKey | undefined,
-> = {
-  [K in
-    | keyof Scopes
-    | (SoftDelete extends true | PropertyKey ? 'nonDeleted' : never)]: unknown;
-};
+export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
+  ? T extends { softDelete: true | PropertyKey }
+    ? T['scopes'] & { nonDeleted: unknown }
+    : T['scopes']
+  : T extends { softDelete: true | PropertyKey }
+  ? { nonDeleted: unknown }
+  : EmptyObject;
 
 export interface DbResult<ColumnTypes>
   extends Db<string, never, never, never, never, never, ColumnTypes>,

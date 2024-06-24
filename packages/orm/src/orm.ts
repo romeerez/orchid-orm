@@ -15,7 +15,11 @@ import {
   DbSharedOptions,
   _initQueryBuilder,
 } from 'pqb';
-import { DbTable, Table, TableClasses } from './baseTable';
+import {
+  ORMTableInputToQueryBuilder,
+  ORMTableInput,
+  TableClasses,
+} from './baseTable';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -32,7 +36,7 @@ interface FromQuery extends Query {
 }
 
 export type OrchidORM<T extends TableClasses = TableClasses> = {
-  [K in keyof T]: DbTable<InstanceType<T[K]>>;
+  [K in keyof T]: ORMTableInputToQueryBuilder<InstanceType<T[K]>>;
 } & {
   $transaction: typeof transaction;
   $adapter: Adapter;
@@ -167,7 +171,7 @@ export const orchidORM = <T extends TableClasses>(
     $close: adapter.close.bind(adapter),
   } as unknown as OrchidORM;
 
-  const tableInstances: Record<string, Table> = {};
+  const tableInstances: Record<string, ORMTableInput> = {};
 
   for (const key in tables) {
     if (key[0] === '$') {
