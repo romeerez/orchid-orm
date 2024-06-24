@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.18.2
+
+### Patch Changes
+
+- e8682bf: Use Uint8Array type instead of Buffer in the result type for types to work without @types/node
+
 ## 0.18.1
 
 ### Patch Changes
