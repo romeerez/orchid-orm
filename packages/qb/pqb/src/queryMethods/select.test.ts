@@ -30,7 +30,7 @@ const insertUserAndProfile = async () => {
 describe('select', () => {
   useTestDatabase();
 
-  it('should respect previous select', async () => {
+  it('should respect previous select', () => {
     const q = User.select('id').select('name');
 
     assertType<Awaited<typeof q>, { id: number; name: string }[]>();

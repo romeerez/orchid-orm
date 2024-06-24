@@ -53,7 +53,7 @@ export const _join = <
   type: string,
   first: JoinFirstArg<never>,
   args: JoinArgs<Query, JoinFirstArg<Query>>,
-): JoinResult<T, R, RequireJoined, RequireMain> => {
+): JoinResult<T, R, RequireMain> => {
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
@@ -74,7 +74,7 @@ export const _join = <
 
   if (typeof first === 'object') {
     if (require && isQueryNone(first)) {
-      return _queryNone(query) as JoinResult<T, R, RequireJoined, RequireMain>;
+      return _queryNone(query) as never;
     }
 
     const q = first as Query;
@@ -177,7 +177,7 @@ export const _join = <
       );
     }
   } else if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
-    return _queryNone(query) as JoinResult<T, R, RequireJoined, RequireMain>;
+    return _queryNone(query) as never;
   } else {
     addAllShapesAndParsers(
       query,

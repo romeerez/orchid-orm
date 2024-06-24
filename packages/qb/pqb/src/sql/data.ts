@@ -66,7 +66,6 @@ export type QueryAfterHook<Data = unknown> = (
   data: Data,
   query: Query,
 ) => void | Promise<void>;
-export type QueryHookSelect = string[];
 
 export interface QueryScopes {
   [K: string]: QueryScopeData;
@@ -82,12 +81,14 @@ export type QueryDataFromItem = string | Query | Expression;
 
 export interface QueryDataJoinTo extends PickQueryTable, PickQueryQ {}
 
-export type HandleResult = (
-  q: Query,
-  returnType: QueryReturnType,
-  result: QueryResult,
-  isSubQuery?: true,
-) => MaybePromise<unknown>;
+export interface HandleResult {
+  (
+    q: Query,
+    returnType: QueryReturnType,
+    result: QueryResult,
+    isSubQuery?: true,
+  ): MaybePromise<unknown>;
+}
 
 export interface CommonQueryData {
   adapter: Adapter;
@@ -235,9 +236,9 @@ export interface UpdateQueryDataObject {
   [K: string]: Expression | { op: string; arg: unknown } | unknown;
 }
 
-export type UpdatedAtDataInjector = (
-  data: UpdateQueryDataItem[],
-) => UpdateQueryDataItem | void;
+export interface UpdatedAtDataInjector {
+  (data: UpdateQueryDataItem[]): UpdateQueryDataItem | void;
+}
 
 export type UpdateQueryDataItem =
   | UpdateQueryDataObject

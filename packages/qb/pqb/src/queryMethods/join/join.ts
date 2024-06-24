@@ -3,10 +3,8 @@ import {
   PickQueryMetaResultRelationsWithDataReturnType,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaShapeRelationsWithData,
-  PickQueryMetaWithData,
   PickQueryQ,
   PickQueryRelationsWithData,
-  PickQueryWithData,
   Query,
   SelectableFromShape,
   WithDataItem,
@@ -36,15 +34,9 @@ import {
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.
-type WithSelectable<
-  T extends PickQueryWithData,
-  W extends keyof T['withData'],
-> = T['withData'][W] extends WithDataItem
-  ?
-      | keyof T['withData'][W]['shape']
-      | `${T['withData'][W]['table']}.${keyof T['withData'][W]['shape'] &
-          string}`
-  : never;
+type WithSelectable<W extends WithDataItem> =
+  | keyof W['shape']
+  | `${W['table']}.${keyof W['shape'] & string}`;
 
 /**
  * The first argument of all `join` and `joinLateral` methods.
@@ -70,7 +62,7 @@ export type JoinArgs<
       : Arg extends keyof T['relations']
       ? EmptyTuple
       : Arg extends keyof T['withData']
-      ? JoinWithArgs<T, Arg>
+      ? JoinWithArgs<T, T['withData'][Arg]>
       : never);
 
 /**
@@ -121,25 +113,22 @@ type JoinQueryArgs<
 // - raw SQL expression
 // - pair of columns, first is of the `with` table, second is of main table
 // - string tuple of a column of a `with` table, operator string such as '=' or '!=', and a column of the main table
-type JoinWithArgs<
-  T extends PickQueryMetaWithData,
-  W extends keyof T['withData'],
-> =
+type JoinWithArgs<T extends PickQueryMeta, W extends WithDataItem> =
   | [
       conditions:
         | {
-            [K in WithSelectable<T, W>]:
+            [K in WithSelectable<W>]:
               | keyof T['meta']['selectable']
               | Expression;
           }
         | Expression,
     ]
   | [
-      leftColumn: WithSelectable<T, W> | Expression,
+      leftColumn: WithSelectable<W> | Expression,
       rightColumn: keyof T['meta']['selectable'] | Expression,
     ]
   | [
-      leftColumn: WithSelectable<T, W> | Expression,
+      leftColumn: WithSelectable<W> | Expression,
       op: string,
       rightColumn: keyof T['meta']['selectable'] | Expression,
     ];
@@ -155,18 +144,50 @@ type JoinWithArgs<
  */
 export type JoinResult<
   T extends PickQueryMetaResultReturnType,
-  R extends PickQueryTableMetaResult,
-  RequireJoined,
+  JoinedSelectable,
   RequireMain,
 > = RequireMain extends true
-  ? JoinAddSelectable<
-      T,
-      JoinResultSelectable<R['result'], AliasOrTable<R>, RequireJoined>
-    >
-  : JoinOptionalMain<
-      T,
-      JoinResultSelectable<R['result'], AliasOrTable<R>, RequireJoined>
-    >;
+  ? {
+      // is optimal
+      [K in keyof T]: K extends 'meta'
+        ? {
+            [K in keyof T['meta']]: K extends 'selectable'
+              ? T['meta']['selectable'] & JoinedSelectable
+              : T['meta'][K];
+          }
+        : T[K];
+    }
+  : {
+      [K in keyof T]: K extends 'meta'
+        ? {
+            [K in keyof T['meta']]: K extends 'selectable'
+              ? {
+                  [K in keyof T['meta']['selectable']]: {
+                    as: T['meta']['selectable'][K]['as'];
+                    column: QueryColumnToNullable<
+                      T['meta']['selectable'][K]['column']
+                    >;
+                  };
+                } & JoinedSelectable // & is optimal
+              : T['meta'][K];
+          }
+        : K extends 'result'
+        ? // nullable result: inlined for optimization
+          {
+            [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
+          }
+        : K extends 'then'
+        ? QueryThen<
+            GetQueryResult<
+              T,
+              // nullable result: inlined for optimization
+              {
+                [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
+              }
+            >
+          >
+        : T[K];
+    };
 
 /**
  * Calls {@link JoinResult} with either callback result, if join has a callback,
@@ -181,27 +202,51 @@ type JoinResultFromArgs<
 > = JoinResult<
   T,
   Args extends GenericJoinCallbackTuple
-    ? ReturnType<Args[0]>
+    ? JoinResultSelectable<
+        ReturnType<Args[0]>['result'],
+        AliasOrTable<ReturnType<Args[0]>>,
+        RequireJoined
+      >
     : Arg extends PickQueryTableMetaResultShape
     ? Arg['meta']['hasSelect'] extends true
       ? // If joined query has select, computed values won't be available, use `result` as is
-        Arg
+        JoinResultSelectable<Arg['result'], AliasOrTable<Arg>, RequireJoined>
       : // If no select, allow using computed values by setting result to shape
-        { table: Arg['table']; meta: Arg['meta']; result: Arg['shape'] }
+        JoinResultSelectable<
+          Arg['shape'],
+          AliasOrTable<{ table: Arg['table']; meta: Arg['meta'] }>,
+          RequireJoined
+        >
     : Arg extends keyof T['relations']
-    ? T['relations'][Arg]['relationConfig']['query']
+    ? JoinResultSelectable<
+        T['relations'][Arg]['relationConfig']['query']['shape'],
+        AliasOrTable<{
+          table: T['relations'][Arg]['relationConfig']['query']['table'];
+          meta: T['relations'][Arg]['relationConfig']['query']['meta'];
+        }>,
+        RequireJoined
+      >
     : Arg extends GenericJoinCallback
-    ? ReturnType<Arg>
+    ? JoinResultSelectable<
+        ReturnType<Arg>['shape'],
+        AliasOrTable<{
+          table: ReturnType<Arg>['table'];
+          meta: ReturnType<Arg>['meta'];
+        }>,
+        RequireJoined
+      >
     : Arg extends keyof T['withData']
     ? T['withData'][Arg] extends WithDataItem
-      ? {
-          table: T['withData'][Arg]['table'];
-          meta: QueryMetaBase;
-          result: T['withData'][Arg]['shape'];
-        }
+      ? JoinResultSelectable<
+          T['withData'][Arg]['shape'],
+          AliasOrTable<{
+            table: T['withData'][Arg]['table'];
+            meta: QueryMetaBase;
+          }>,
+          RequireJoined
+        >
       : never
     : never,
-  RequireJoined,
   RequireMain
 >;
 
@@ -282,40 +327,7 @@ type JoinAddSelectable<T extends PickQueryMeta, Selectable> = {
 
 // Map `selectable` of the query to make all columns optional, and add the given `Selectable` to it.
 // Derive and apply a new query result type, where all columns become optional.
-type JoinOptionalMain<
-  T extends PickQueryMetaResultReturnType,
-  Selectable extends SelectableBase,
-> = {
-  [K in keyof T]: K extends 'meta'
-    ? {
-        [K in keyof T['meta']]: K extends 'selectable'
-          ? {
-              [K in keyof T['meta']['selectable']]: {
-                as: T['meta']['selectable'][K]['as'];
-                column: QueryColumnToNullable<
-                  T['meta']['selectable'][K]['column']
-                >;
-              };
-            } & Selectable // & is optimal
-          : T['meta'][K];
-      }
-    : K extends 'result'
-    ? // nullable result: inlined for optimization
-      {
-        [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
-      }
-    : K extends 'then'
-    ? QueryThen<
-        GetQueryResult<
-          T,
-          // nullable result: inlined for optimization
-          {
-            [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
-          }
-        >
-      >
-    : T[K];
-};
+// type JoinOptionalMain<T extends PickQueryMetaResultReturnType, Selectable> = ;
 
 /**
  * Map the `with` table first argument of `join` or `joinLateral` to a query type.

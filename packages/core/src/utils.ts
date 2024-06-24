@@ -16,7 +16,9 @@ export type MergeObjects<A extends RecordUnknown, B extends RecordUnknown> = {
     : never;
 };
 
-export type FnUnknownToUnknown = (a: unknown) => unknown;
+export interface FnUnknownToUnknown {
+  (a: unknown): unknown;
+}
 
 // Utility type to store info to know which keys are available.
 // Use it for cases where you'd want to pick a string union,
@@ -40,6 +42,12 @@ export interface RecordUnknown {
 export interface RecordBoolean {
   [K: string]: boolean;
 }
+
+export type Simplify<T> = T extends Date | Buffer
+  ? T
+  : T extends object
+  ? { [K in keyof T]: Simplify<T[K]> }
+  : T;
 
 /**
  * Merge methods from multiple class into another class.

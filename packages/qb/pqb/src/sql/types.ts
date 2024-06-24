@@ -6,7 +6,6 @@ import {
   Expression,
   MaybeArray,
   RecordUnknown,
-  SelectableBase,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
@@ -44,7 +43,7 @@ const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
   'for',
 ];
 
-export type WithItem = {
+export interface WithItem {
   // name
   n: string;
   // options
@@ -53,7 +52,7 @@ export type WithItem = {
   q?: Query;
   // sql
   s?: Expression;
-};
+}
 
 export interface WithOptions {
   columns?: string[];
@@ -229,7 +228,9 @@ export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
 
 export type SearchWeight = 'A' | 'B' | 'C' | 'D';
 
-export type SearchWeightRecord = { [K: string]: SearchWeight };
+export interface SearchWeightRecord {
+  [K: string]: SearchWeight;
+}
 
 export interface WhereSearchItem {
   as: string;
@@ -240,17 +241,11 @@ export type SortDir = 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
 
 export type OrderItem = string | { [K: string]: SortDir } | Expression;
 
-export type ColumnOperators<
-  S extends SelectableBase,
-  Column extends keyof S,
-> = {
-  [O in keyof S[Column]['column']['operators']]?:
-    | S[Column]['column']['operators'][O]['_opType'];
-};
-
 export type HavingItem = TemplateLiteralArgs | Expression[];
 
-export type WindowItem = { [K: string]: WindowDeclaration | Expression };
+export interface WindowItem {
+  [K: string]: WindowDeclaration | Expression;
+}
 
 export interface WindowDeclaration {
   partitionBy?: SelectableOrExpression | SelectableOrExpression[];

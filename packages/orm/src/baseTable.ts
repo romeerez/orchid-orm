@@ -42,6 +42,9 @@ import {
   getCallerFilePath,
   getStackTrace,
   MaybeArray,
+  QueryColumns,
+  RecordUnknown,
+  Simplify,
   snakeCaseKey,
   toSnakeCase,
 } from 'orchid-core';
@@ -124,7 +127,7 @@ export interface Table {
    */
   computed?: ComputedOptionsFactory<never, never>;
   // Available scopes for this table defined by user.
-  scopes?: CoreQueryScopes;
+  scopes?: RecordUnknown;
   // enable soft delete, true for `deletedAt` column, string for column name
   readonly softDelete?: true | string;
   // database table comment
@@ -132,40 +135,40 @@ export interface Table {
 }
 
 // Object type that's allowed in `where` and similar methods of the table.
-export type Queryable<T extends Table> = {
+export type Queryable<T extends Table> = Simplify<{
   [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['queryType'];
-};
+}>;
 
 // Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends Table> = ColumnShapeOutput<
-  T['columns']['shape']
+export type Selectable<T extends Table> = Simplify<
+  ColumnShapeOutput<T['columns']['shape']>
 >;
 
 // Object type that conforms `create` method of the table.
-export type Insertable<T extends Table> = ColumnShapeInput<
-  T['columns']['shape']
+export type Insertable<T extends Table> = Simplify<
+  ColumnShapeInput<T['columns']['shape']>
 >;
 
 // Object type that conforms `update` method of the table.
-export type Updatable<T extends Table> = ColumnShapeInputPartial<
-  T['columns']['shape']
+export type Updatable<T extends Table> = Simplify<
+  ColumnShapeInputPartial<T['columns']['shape']>
 >;
 
 // type of before hook function for the table
-type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
+type BeforeHookMethod = (cb: QueryBeforeHook) => void;
 
 // type of after hook function for the table
-type AfterHookMethod = <T extends Table>(cb: QueryAfterHook) => T;
+type AfterHookMethod = (cb: QueryAfterHook) => void;
 
 // type of after hook function that allows selecting columns for the table
 type AfterSelectableHookMethod = <
-  T extends Table,
-  S extends (keyof T['columns']['shape'])[],
+  Shape extends QueryColumns,
+  S extends (keyof Shape)[],
 >(
-  this: T,
+  this: { columns: { shape: Shape } },
   select: S,
-  cb: AfterHook<S, T['columns']['shape']>,
-) => T;
+  cb: AfterHook<S, Shape>,
+) => void;
 
 export interface SetColumnsResult<
   Shape extends ColumnsShapeBase,

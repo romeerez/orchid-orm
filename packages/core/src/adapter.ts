@@ -80,10 +80,9 @@ export interface AdapterConfigConnectRetry {
   strategy: AdapterConfigConnectRetryStrategy;
 }
 
-type AdapterConfigConnectRetryStrategy = (
-  attempt: number,
-  attempts: number,
-) => Promise<void> | void;
+interface AdapterConfigConnectRetryStrategy {
+  (attempt: number, attempts: number): Promise<void> | void;
+}
 
 // Interface of a database adapter to use for different databases.
 export interface AdapterBase {
@@ -135,10 +134,9 @@ export type TransactionAfterCommitHook =
   | AfterCommitHook[];
 
 // Function to call after transaction commit.
-export type AfterCommitHook = (
-  data: unknown[],
-  q: QueryBaseCommon,
-) => void | Promise<void>;
+export interface AfterCommitHook {
+  (data: unknown[], q: QueryBaseCommon): void | Promise<void>;
+}
 
 export const setAdapterConnectRetry = <Result>(
   adapter: AdapterBase,

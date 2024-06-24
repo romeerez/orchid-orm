@@ -36,9 +36,14 @@ export interface DbExtension {
   version?: string;
 }
 
-export type DbDomainArg<ColumnTypes> = (columnTypes: ColumnTypes) => ColumnType;
+export interface DbDomainArg<ColumnTypes> {
+  (columnTypes: ColumnTypes): ColumnType;
+}
 
-export type DbDomainArgRecord = { [K: string]: DbDomainArg<any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
+export interface DbDomainArgRecord {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [K: string]: DbDomainArg<any>;
+}
 
 export interface QueryInternal<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,8 +88,6 @@ export interface WithDataItems {
   [K: string]: WithDataItem;
 }
 
-export type WithDataBase = EmptyObject;
-
 export interface Query extends QueryBase, QueryMethods<unknown> {
   queryBuilder: Db;
   columnTypes: unknown;
@@ -104,7 +107,7 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
 }
 
 export interface PickQueryWithData {
-  withData: WithDataBase;
+  withData: WithDataItems;
 }
 
 export interface PickQueryWindows {
@@ -275,25 +278,6 @@ export type GetQueryResult<
   : T['returnType'] extends 'rowCount'
   ? number
   : void;
-
-export type AddQuerySelect<
-  T extends PickQueryMetaResultReturnType,
-  Result extends QueryColumns,
-> = {
-  [K in keyof T]: K extends 'result'
-    ? {
-        [K in
-          | (T['meta']['hasSelect'] extends true ? keyof T['result'] : never)
-          | keyof Result]: K extends keyof Result
-          ? Result[K]
-          : K extends keyof T['result']
-          ? T['result'][K]
-          : never;
-      }
-    : K extends 'then'
-    ? QueryThen<GetQueryResult<T, Result>>
-    : T[K];
-} & QueryMetaHasSelect;
 
 // Merge { hasSelect: true } into 'meta' if it's not true yet.
 export interface QueryMetaHasSelect {
@@ -629,6 +613,6 @@ export interface QueryOrExpression<T> {
   result: { value: QueryColumn<T> };
 }
 
-export type QueryOrExpressionBooleanOrNullResult = QueryOrExpression<
-  boolean | null
->;
+export interface QueryOrExpressionBooleanOrNullResult {
+  result: { value: QueryColumn<boolean | null> };
+}

@@ -5,10 +5,9 @@ import {
 } from './query/query';
 import { RecordUnknown } from 'orchid-core';
 
-export type RelationJoinQuery = (
-  joiningQuery: Query,
-  baseQuery: Query,
-) => Query;
+export interface RelationJoinQuery {
+  (joiningQuery: Query, baseQuery: Query): Query;
+}
 
 export interface RelationConfigBase {
   query: Query;
@@ -46,13 +45,18 @@ export type RelationQuery<
   Params = never,
   Required = never,
   One = never,
-> = ((
-  params: Params,
-) => One extends true
-  ? Required extends true
-    ? SetQueryReturnsOne<Config['query']>
-    : SetQueryReturnsOneOptional<Config['query']>
-  : Config['query']) &
-  Config['query'] & {
-    relationConfig: Config;
-  };
+> = RelationQueryFnAndConfig<Config, Params, Required, One> & Config['query'];
+
+interface RelationQueryFnAndConfig<
+  Config extends RelationConfigBase = RelationConfigBase,
+  Params = never,
+  Required = never,
+  One = never,
+> {
+  (params: Params): One extends true
+    ? Required extends true
+      ? SetQueryReturnsOne<Config['query']>
+      : SetQueryReturnsOneOptional<Config['query']>
+    : Config['query'];
+  relationConfig: Config;
+}

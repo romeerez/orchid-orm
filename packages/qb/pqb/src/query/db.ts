@@ -30,7 +30,6 @@ import {
   ColumnShapeOutput,
   ColumnsParsers,
   ColumnTypeBase,
-  CoreQueryScopes,
   DbBase,
   DefaultSelectColumns,
   EmptyObject,
@@ -191,7 +190,7 @@ export interface Db<
   UniqueConstraints = never,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
   ShapeWithComputed extends QueryColumnsInit = Shape,
-  Scopes extends CoreQueryScopes | undefined = EmptyObject,
+  Scopes extends RecordUnknown | undefined = EmptyObject,
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
     QueryMethods<ColumnTypes>,
     QueryBase {
@@ -202,7 +201,7 @@ export interface Db<
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: EmptyObject;
-  withData: Query['withData'];
+  withData: EmptyObject;
   error: new (
     message: string,
     length: number,
@@ -568,32 +567,34 @@ applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
 // Function to build a new table instance.
-export type DbTableConstructor<ColumnTypes> = <
-  Table extends string,
-  Shape extends QueryColumnsInit,
-  Data extends MaybeArray<TableDataItem>,
-  Options extends DbTableOptions<ColumnTypes, Table, Shape>,
->(
-  table: Table,
-  shape?: ((t: ColumnTypes) => Shape) | Shape,
-  tableData?: TableDataFn<Shape, Data>,
-  options?: Options,
-) => Db<
-  Table,
-  Shape,
-  keyof ShapeColumnPrimaryKeys<Shape> extends never
-    ? never
-    : ShapeColumnPrimaryKeys<Shape>,
-  ShapeUniqueColumns<Shape> | TableDataItemsUniqueColumns<Shape, Data>,
-  TableDataItemsUniqueColumnTuples<Shape, Data>,
-  UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
-  ColumnTypes,
-  Shape & ComputedColumnsFromOptions<Options['computed']>,
-  MapTableScopesOption<Options['scopes'], Options['softDelete']>
->;
+export interface DbTableConstructor<ColumnTypes> {
+  <
+    Table extends string,
+    Shape extends QueryColumnsInit,
+    Data extends MaybeArray<TableDataItem>,
+    Options extends DbTableOptions<ColumnTypes, Table, Shape>,
+  >(
+    table: Table,
+    shape?: ((t: ColumnTypes) => Shape) | Shape,
+    tableData?: TableDataFn<Shape, Data>,
+    options?: Options,
+  ): Db<
+    Table,
+    Shape,
+    keyof ShapeColumnPrimaryKeys<Shape> extends never
+      ? never
+      : ShapeColumnPrimaryKeys<Shape>,
+    ShapeUniqueColumns<Shape> | TableDataItemsUniqueColumns<Shape, Data>,
+    TableDataItemsUniqueColumnTuples<Shape, Data>,
+    UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
+    ColumnTypes,
+    Shape & ComputedColumnsFromOptions<Options['computed']>,
+    MapTableScopesOption<Options['scopes'], Options['softDelete']>
+  >;
+}
 
 export type MapTableScopesOption<
-  Scopes extends CoreQueryScopes | undefined,
+  Scopes extends RecordUnknown | undefined,
   SoftDelete extends true | PropertyKey | undefined,
 > = {
   [K in

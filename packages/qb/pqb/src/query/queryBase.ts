@@ -1,4 +1,4 @@
-import { Query, QueryInternal, WithDataBase } from './query';
+import { Query, QueryInternal, WithDataItems } from './query';
 import { QueryData } from '../sql';
 import {
   EmptyObject,
@@ -11,8 +11,6 @@ import {
 } from 'orchid-core';
 import { RelationsBase } from '../relations';
 import { getClonedQueryData } from '../common/utils';
-
-export type CloneSelfKeys = 'clone' | 'baseQuery' | 'q';
 
 export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
   implements QueryBaseCommon<Scopes>
@@ -33,7 +31,7 @@ export abstract class QueryBase<Scopes extends RecordKeyTrue = EmptyObject>
   table?: string;
   shape!: QueryColumns;
   relations!: RelationsBase;
-  withData!: WithDataBase;
+  withData!: WithDataItems;
   baseQuery!: Query;
   internal!: QueryInternal;
   meta!: QueryMetaBase<Scopes>;

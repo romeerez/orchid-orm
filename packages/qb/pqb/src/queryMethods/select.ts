@@ -4,7 +4,6 @@ import {
   PickQueryQAndInternal,
   Query,
   QueryMetaHasSelect,
-  WithDataBase,
 } from '../query/query';
 import {
   ColumnsShapeToNullableObject,
@@ -18,6 +17,7 @@ import { SelectAsValue, SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
 import {
   ColumnsParsers,
   ColumnTypeBase,
+  EmptyObject,
   Expression,
   getValueKey,
   HookSelect,
@@ -58,7 +58,7 @@ interface SelectSelf {
   result: QueryColumns;
   meta: QueryMetaBase;
   returnType: QueryReturnType;
-  withData: WithDataBase;
+  withData: EmptyObject;
 }
 
 // .select method argument.

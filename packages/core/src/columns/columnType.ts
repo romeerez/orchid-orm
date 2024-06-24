@@ -15,12 +15,9 @@ export type ColumnShapeInput<
       ? never
       : K;
   }[keyof Shape],
-> = Omit<
-  {
-    [K in keyof Shape]: Shape[K]['inputType'];
-  },
-  Optional
-> & { [K in Optional]?: Shape[K]['inputType'] };
+> = {
+  [K in Exclude<keyof Shape, Optional>]: Shape[K]['inputType'];
+} & { [K in Optional]?: Shape[K]['inputType'] };
 
 export type ColumnShapeInputPartial<Shape extends QueryColumnsInit> = {
   [K in keyof Shape]?: Shape[K]['inputType'];
@@ -83,15 +80,15 @@ export type NullableColumn<
     : T[K];
 };
 
-type DataNullable = {
+interface DataNullable {
   isNullable: true;
-};
+}
 
-export type OperatorsNullable<T> = {
+export interface OperatorsNullable<T> {
   // allow `null` in .where({ column: { equals: null } }) and the same for `not`
   equals: OperatorBase<T | null>;
   not: OperatorBase<T | null>;
-};
+}
 
 // change column type and all schemas to nullable
 export function makeColumnNullable<
@@ -158,7 +155,7 @@ export type HiddenColumn<T extends PickColumnBaseData> = T & {
   data: { hidden: true };
 };
 
-export type ColumnTypesBase = { [K in string]: ColumnTypeBase }; // converting to interface doesn't help
+export type ColumnTypesBase = { [K in string]: ColumnTypeBase }; // converting to interface harms
 
 // type of columns selected by default, `hidden` columns are omitted
 export type DefaultSelectColumns<S extends QueryColumnsInit> = {
@@ -210,6 +207,7 @@ export const pushColumnData = <
 };
 
 // Can be used to customize required and invalidType validation error message on any column.
+// must be a type, because of zod typing
 export type ErrorMessages = {
   required?: string;
   invalidType?: string;
@@ -416,7 +414,9 @@ export interface QueryColumnInit extends QueryColumn {
   };
 }
 
-export type QueryColumnsInit = { [K: string]: QueryColumnInit };
+export interface QueryColumnsInit {
+  [K: string]: QueryColumnInit;
+}
 
 export type QueryColumnToNullable<C extends QueryColumn> = {
   [K in keyof C]: K extends 'outputType'

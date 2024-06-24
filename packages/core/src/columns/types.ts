@@ -5,11 +5,11 @@
  */
 export const snakeCaseKey: unique symbol = Symbol('snakeCase');
 
-export type TimeInterval = {
+export interface TimeInterval {
   years?: number;
   months?: number;
   days?: number;
   hours?: number;
   minutes?: number;
   seconds?: number;
-};
+}

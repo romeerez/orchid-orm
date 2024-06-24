@@ -56,12 +56,18 @@ export interface ComputedMethods<ColumnTypes, Shape extends QueryColumns>
   extends QueryComputedArg<ColumnTypes, Shape> {
   computeAtRuntime<Deps extends keyof Shape, OutputType>(
     dependsOn: Deps[],
-    fn: (record: Pick<Shape, Deps>) => OutputType,
+    fn: (record: {
+      [K in keyof Shape & Deps]: Shape[K]['outputType'];
+    }) => OutputType,
   ): { result: { value: RuntimeComputedQueryColumn<OutputType> } };
 
   computeBatchAtRuntime<Deps extends keyof Shape, OutputType>(
     dependsOn: Deps[],
-    fn: (record: Pick<Shape, Deps>[]) => MaybePromise<OutputType[]>,
+    fn: (
+      record: {
+        [K in keyof Shape & Deps]: Shape[K]['outputType'];
+      }[],
+    ) => MaybePromise<OutputType[]>,
   ): { result: { value: RuntimeComputedQueryColumn<OutputType> } };
 }
 

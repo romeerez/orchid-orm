@@ -21,27 +21,27 @@ import { addValue, isExpression, Sql } from 'orchid-core';
 import { Db } from '../query/db';
 import { getSqlText } from './utils';
 
-export type ToSQLCtx = {
+export interface ToSQLCtx {
   queryBuilder: Db;
   sql: string[];
   values: unknown[];
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
   aliasValue?: true;
-};
+}
 
 export type toSQLCacheKey = typeof toSQLCacheKey;
 export const toSQLCacheKey = Symbol('toSQLCache');
 
-export type ToSQLOptions = {
+export interface ToSQLOptions {
   clearCache?: boolean;
   values?: unknown[];
-};
+}
 
-type ToSqlOptionsInternal = ToSQLOptions & {
+interface ToSqlOptionsInternal extends ToSQLOptions {
   aliasValue?: true;
-};
+}
 
-export type ToSQLQuery = {
+export interface ToSQLQuery {
   __isQuery: Query['__isQuery'];
   q: Query['q'];
   queryBuilder: Query['queryBuilder'];
@@ -55,7 +55,7 @@ export type ToSQLQuery = {
   returnType: Query['returnType'];
   result: Query['result'];
   shape: Query['shape'];
-};
+}
 
 export const toSQL = (table: ToSQLQuery, options?: ToSQLOptions): Sql => {
   return (

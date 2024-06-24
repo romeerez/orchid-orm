@@ -6,10 +6,10 @@ import { addValue, EmptyObject, RecordUnknown } from './utils';
 // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
 export type ExpressionChain = (OperatorToSQL<unknown, unknown> | unknown)[];
 
-export type ExpressionData = {
+export interface ExpressionData {
   chain?: ExpressionChain;
   expr?: Expression;
-};
+}
 
 // Base class for the raw SQL and other classes that can produce SQL
 export abstract class Expression<T extends QueryColumn = QueryColumn> {
@@ -68,9 +68,9 @@ export type SQLArgs = StaticSQLArgs | [DynamicSQLArg<QueryColumn>];
 
 // Function for sql method to build SQL lazily (dynamically).
 // May be used for computed column to build a different SQL in different executions.
-export type DynamicSQLArg<T extends QueryColumn> = (
-  sql: (...args: StaticSQLArgs) => Expression<T>,
-) => Expression<T>;
+export interface DynamicSQLArg<T extends QueryColumn> {
+  (sql: (...args: StaticSQLArgs) => Expression<T>): Expression<T>;
+}
 
 // SQL arguments for a non-lazy SQL expression.
 export type StaticSQLArgs =

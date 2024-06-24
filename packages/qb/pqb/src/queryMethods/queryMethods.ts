@@ -12,7 +12,7 @@ import {
   SetQueryReturnsVoid,
   SetQueryReturnsVoidKind,
   SetQueryTableAlias,
-  WithDataBase,
+  WithDataItems,
 } from '../query/query';
 import {
   AliasOrTable,
@@ -172,7 +172,7 @@ interface QueryHelper<
       };
       result: QueryColumns;
       windows: EmptyObject;
-      withData: WithDataBase;
+      withData: WithDataItems;
     },
   >(
     q: Q,

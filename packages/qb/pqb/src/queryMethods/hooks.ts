@@ -9,7 +9,7 @@ export type AfterHook<
   Shape extends QueryColumns,
 > = QueryAfterHook<
   {
-    [K in keyof Select[number]]: K extends keyof Shape
+    [K in Select[number]]: K extends keyof Shape
       ? Shape[K]['outputType']
       : never;
   }[]

@@ -178,18 +178,20 @@ export function sqlQueryArgsToExpression(
     : (args[0] as never);
 }
 
-export type SqlFn = <
-  T,
-  Args extends
-    | [sql: TemplateStringsArray, ...values: unknown[]]
-    | [sql: string]
-    | [values: RecordUnknown, sql?: string],
->(
-  this: T,
-  ...args: Args
-) => Args extends [RecordUnknown]
-  ? (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>
-  : RawSQLBase<QueryColumn, T>;
+export interface SqlFn {
+  <
+    T,
+    Args extends
+      | [sql: TemplateStringsArray, ...values: unknown[]]
+      | [sql: string]
+      | [values: RecordUnknown, sql?: string],
+  >(
+    this: T,
+    ...args: Args
+  ): Args extends [RecordUnknown]
+    ? (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>
+    : RawSQLBase<QueryColumn, T>;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const sqlFn: SqlFn = (...args: any[]): any => {
