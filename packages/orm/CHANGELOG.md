@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.31.3
+
+### Patch Changes
+
+- 7546bc8: Simplify output types
+- Updated dependencies [7546bc8]
+  - pqb@0.35.3
+  - orchid-core@0.18.1
+  - rake-db@2.21.4
+
 ## 1.31.2
 
 ### Patch Changes

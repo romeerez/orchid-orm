@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.18.1
+
+### Patch Changes
+
+- 7546bc8: Simplify output types
+
 ## 0.18.0
 
 ### Minor Changes

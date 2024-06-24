@@ -1,5 +1,13 @@
 # pqb
 
+## 0.35.3
+
+### Patch Changes
+
+- 7546bc8: Simplify output types
+- Updated dependencies [7546bc8]
+  - orchid-core@0.18.1
+
 ## 0.35.2
 
 ### Patch Changes
