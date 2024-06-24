@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.31.4
+
+### Patch Changes
+
+- b54bca1: Change types to allow using `Table` type for generics (#301)
+- Updated dependencies [b54bca1]
+  - pqb@0.35.4
+  - rake-db@2.21.5
+
 ## 1.31.3
 
 ### Patch Changes

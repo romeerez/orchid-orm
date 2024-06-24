@@ -1,5 +1,11 @@
 # pqb
 
+## 0.35.4
+
+### Patch Changes
+
+- b54bca1: Change types to allow using `Table` type for generics (#301)
+
 ## 0.35.3
 
 ### Patch Changes
