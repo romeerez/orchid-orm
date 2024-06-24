@@ -43,7 +43,7 @@ export interface RecordBoolean {
   [K: string]: boolean;
 }
 
-export type Simplify<T> = T extends Date | Buffer
+export type Simplify<T> = T extends Date | Uint8Array
   ? T
   : T extends object
   ? { [K in keyof T]: Simplify<T[K]> }
