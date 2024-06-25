@@ -783,8 +783,8 @@ describe('computed', () => {
         const res = await User.select({
           users: () =>
             User.select({
-              runtimeComputed: () => User.pluck('runtimeComputed'),
-              batchComputed: () => User.pluck('batchComputed'),
+              runtimeComputed: () => User.order('id').pluck('runtimeComputed'),
+              batchComputed: () => User.order('id').pluck('batchComputed'),
             }),
         });
 

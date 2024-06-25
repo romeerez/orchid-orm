@@ -134,7 +134,7 @@ export class FnExpression<
           if (typeof arg === 'string') {
             return arg === '*'
               ? '*'
-              : columnToSql(ctx, this.q, this.q.shape, arg, quotedAs, true);
+              : columnToSql(ctx, this.q, this.q.shape, arg, quotedAs);
           } else if (arg instanceof Expression) {
             return arg.toSQL(ctx, quotedAs);
           } else if ('pairs' in (arg as FnExpressionArgsPairs<Query>)) {

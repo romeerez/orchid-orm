@@ -120,10 +120,11 @@ const columnWithDotToSql = (
   const table = column.slice(0, index);
   const key = column.slice(index + 1);
   if (key === '*') {
-    if (data.joinedShapes?.[table]) {
-      return select ? `row_to_json("${table}".*)` : `"${table}".r`;
-    }
-    return column;
+    return data.joinedShapes?.[table]
+      ? select
+        ? `row_to_json("${table}".*)`
+        : `"${table}".*`
+      : column;
   }
 
   const tableName = data.joinOverrides?.[table] || table;

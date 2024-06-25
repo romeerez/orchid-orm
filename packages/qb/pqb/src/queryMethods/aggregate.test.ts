@@ -3,6 +3,7 @@ import {
   expectQueryNotMutated,
   userData,
   Snake,
+  Message,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { Operators } from '../columns/operators';
@@ -213,26 +214,41 @@ describe('aggregate', () => {
       expect(typeof count).toBe('number');
     });
 
-    describe('select count', () => {
-      it('should select number', async () => {
-        await User.create(userData);
+    it('should select number', async () => {
+      await User.create(userData);
 
-        const q = User.select({
-          count: (q) => q.count(),
-        }).take();
+      const q = User.select({
+        count: (q) => q.count(),
+      }).take();
 
-        expectSql(
-          q.toSQL(),
-          `
+      expectSql(
+        q.toSQL(),
+        `
             SELECT count(*) "count" FROM "user" LIMIT 1
           `,
-        );
+      );
 
-        const user = await q;
-        expect(user.count).toBe(1);
+      const user = await q;
+      expect(user.count).toBe(1);
 
-        assertType<typeof user.count, number>();
+      assertType<typeof user.count, number>();
+    });
+
+    it('should correctly select a count of joined records', () => {
+      const q = User.join(Message, 'authorId', 'id').select({
+        messagesCount: (q) => q.count('message.*'),
       });
+
+      assertType<Awaited<typeof q>, { messagesCount: number }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT count("message".*) "messagesCount"
+          FROM "user"
+          JOIN "message" ON "message"."authorId" = "user"."id"
+        `,
+      );
     });
   });
 
