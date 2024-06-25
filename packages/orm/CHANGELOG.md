@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.31.7
+
+### Patch Changes
+
+- 3b9228c: Fix nested aliased select return type
+- Updated dependencies [3b9228c]
+  - pqb@0.35.7
+  - rake-db@2.21.8
+
 ## 1.31.6
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.35.7
+
+### Patch Changes
+
+- 3b9228c: Fix nested aliased select return type
+
 ## 0.35.6
 
 ### Patch Changes
