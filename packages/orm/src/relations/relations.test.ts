@@ -21,6 +21,8 @@ describe('relations', () => {
       messages: (q) => q.messages.where({ Text: 'text' }),
     });
 
+    query.then((res) => res);
+
     expectSql(
       query.toSQL(),
       `
@@ -46,6 +48,14 @@ describe('relations', () => {
       `,
       ['bio', 'text'],
     );
+  });
+
+  it('should correctly type nested selects', () => {
+    const q = db.user.select({
+      profile: (q) => q.profile.select({ bio: 'profile.Bio' }),
+    });
+
+    assertType<Awaited<typeof q>, { profile: { bio: string | null } }[]>();
   });
 
   it('should handle sub query pluck', async () => {

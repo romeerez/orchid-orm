@@ -120,10 +120,11 @@ describe('queryMethods', () => {
     });
 
     it('should be disabled in a sub-query', () => {
-      // @ts-expect-error rows is disabled in a sub-query
-      User.select({
+      const q = User.select({
         x: () => User.rows(),
       });
+
+      assertType<typeof q, 'Invalid return type of x'>();
     });
   });
 

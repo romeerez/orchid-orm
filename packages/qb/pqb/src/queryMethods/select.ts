@@ -85,9 +85,15 @@ interface SelectAsArg<T extends SelectSelf> {
             ? ReturnType<T[K]>
             : never
           : T[K];
-      }) =>
-        | (QueryBase & { returnType: Exclude<QueryReturnType, 'rows'> })
-        | Expression);
+      }) => unknown);
+}
+
+type SelectAsFnReturnType =
+  | { result: QueryColumns; returnType: Exclude<QueryReturnType, 'rows'> }
+  | Expression;
+
+interface SelectAsCheckReturnTypes {
+  [K: string]: PropertyKey | Expression | ((q: never) => SelectAsFnReturnType);
 }
 
 // Result type of select without the ending object argument.
@@ -127,29 +133,19 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
     : T[K];
 } & QueryMetaHasSelect;
 
-type SelectResultObj<T extends SelectSelf, Obj> = {
-  [K in keyof T]: K extends 'meta'
-    ? T['meta'] & {
-        hasSelect: true;
-        selectable: SelectAsSelectable<Obj>;
-      }
-    : K extends 'result'
-    ? // Combine previously selected items, all columns if * was provided,
-      // and the selected by string and object arguments.
-      {
-        [K in T['meta']['hasSelect'] extends true
-          ? keyof Obj | keyof T['result']
-          : keyof Obj]: K extends keyof Obj
-          ? SelectAsValueResult<T, Obj[K]>
-          : K extends keyof T['result']
-          ? T['result'][K]
-          : never;
-      }
-    : K extends 'then'
-    ? QueryThen<
-        GetQueryResult<
-          T,
-          // result is copy-pasted to save on TS instantiations
+type SelectResultObj<
+  T extends SelectSelf,
+  Obj,
+> = Obj extends SelectAsCheckReturnTypes
+  ? {
+      [K in keyof T]: K extends 'meta'
+        ? T['meta'] & {
+            hasSelect: true;
+            selectable: SelectAsSelectable<Obj>;
+          }
+        : K extends 'result'
+        ? // Combine previously selected items, all columns if * was provided,
+          // and the selected by string and object arguments.
           {
             [K in T['meta']['hasSelect'] extends true
               ? keyof Obj | keyof T['result']
@@ -159,10 +155,33 @@ type SelectResultObj<T extends SelectSelf, Obj> = {
               ? T['result'][K]
               : never;
           }
-        >
-      >
-    : T[K];
-};
+        : K extends 'then'
+        ? QueryThen<
+            GetQueryResult<
+              T,
+              // result is copy-pasted to save on TS instantiations
+              {
+                [K in T['meta']['hasSelect'] extends true
+                  ? keyof Obj | keyof T['result']
+                  : keyof Obj]: K extends keyof Obj
+                  ? SelectAsValueResult<T, Obj[K]>
+                  : K extends keyof T['result']
+                  ? T['result'][K]
+                  : never;
+              }
+            >
+          >
+        : T[K];
+    }
+  : `Invalid return type of ${{
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [K in keyof Obj]: Obj[K] extends (...args: any[]) => any
+        ? ReturnType<Obj[K]> extends SelectAsFnReturnType
+          ? never
+          : K
+        : never;
+    }[keyof Obj] &
+      string}`;
 
 // Result type of select with the ending object argument.
 type SelectResultColumnsAndObj<
