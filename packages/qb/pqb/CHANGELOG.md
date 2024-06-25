@@ -1,5 +1,11 @@
 # pqb
 
+## 0.35.6
+
+### Patch Changes
+
+- 1663d8b: Fix selecting count of a joined table
+
 ## 0.35.5
 
 ### Patch Changes
