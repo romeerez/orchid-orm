@@ -1,5 +1,16 @@
 # orchid-core
 
+## 0.19.0
+
+### Minor Changes
+
+- f278b19: Improve column casting to snake case in migrations and code gen:
+
+  When the `snakeCase` option is enabled, columns can be written in camelCase in all contexts,
+  and will be translated to snake_case.
+
+  This includes columns in primary keys, indexes, foreign keys options.
+
 ## 0.18.2
 
 ### Patch Changes

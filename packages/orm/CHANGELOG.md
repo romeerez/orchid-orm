@@ -1,5 +1,23 @@
 # orchid-orm
 
+## 1.32.0
+
+### Minor Changes
+
+- f278b19: Improve column casting to snake case in migrations and code gen:
+
+  When the `snakeCase` option is enabled, columns can be written in camelCase in all contexts,
+  and will be translated to snake_case.
+
+  This includes columns in primary keys, indexes, foreign keys options.
+
+### Patch Changes
+
+- Updated dependencies [f278b19]
+  - rake-db@2.22.0
+  - pqb@0.36.0
+  - orchid-core@0.19.0
+
 ## 1.31.7
 
 ### Patch Changes
