@@ -21,12 +21,12 @@ describe('checks', () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.integer(),
+          colUmn: t.integer(),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.integer().check(t.sql`"column" = 42`),
+          colUmn: t.integer().check(t.sql`"col_umn" = 42`),
         })),
       ],
     });
@@ -38,26 +38,26 @@ describe('checks', () => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.add(
-      t.check(t.sql\`"column" = 42\`)
+      t.check(t.sql\`"col_umn" = 42\`)
     ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add check')} "column" = 42`);
+  ${green('+ add check')} "col_umn" = 42`);
   });
 
   it('should drop a column check', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.integer().check(t.sql`"column" = 42`),
+          colUmn: t.integer().check(t.sql`"col_umn" = 42`),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.integer(),
+          colUmn: t.integer(),
         })),
       ],
     });
@@ -69,26 +69,26 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
-      t.check(t.sql\`("column" = 42)\`, 'table_column_check')
+      t.check(t.sql\`(col_umn = 42)\`, 'table_col_umn_check')
     ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop check')} ("column" = 42)`);
+  ${red('- drop check')} (col_umn = 42)`);
   });
 
   it('should not recreate a column check when it is identical', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer().check(t.sql`id != 123`),
+          iD: t.integer().check(t.sql`i_d != 123`),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.integer().check(t.sql`id != 123`),
+          iD: t.integer().check(t.sql`i_d != 123`),
         })),
       ],
     });
@@ -102,12 +102,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer().check(t.sql`id = 123`),
+          iD: t.integer().check(t.sql`i_d = 123`),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.integer().check(t.sql`id != 123`),
+          iD: t.integer().check(t.sql`i_d != 123`),
         })),
       ],
     });
@@ -119,33 +119,33 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
-      t.check(t.sql\`(id = 123)\`, 'table_id_check')
+      t.check(t.sql\`(i_d = 123)\`, 'table_i_d_check')
     ),
     ...t.add(
-      t.check(t.sql\`id != 123\`)
+      t.check(t.sql\`i_d != 123\`)
     ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop check')} (id = 123)
-  ${green('+ add check')} id != 123`);
+  ${red('- drop check')} (i_d = 123)
+  ${green('+ add check')} i_d != 123`);
   });
 
   it('should create a table check', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
+          iD: t.integer(),
         }));
       },
       tables: [
         table(
           (t) => ({
-            id: t.integer(),
+            iD: t.integer(),
           }),
-          (t) => t.check(t.sql`"id" = 42`),
+          (t) => t.check(t.sql`"i_d" = 42`),
         ),
       ],
     });
@@ -157,14 +157,14 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.add(
-      t.check(t.sql\`"id" = 42\`)
+      t.check(t.sql\`"i_d" = 42\`)
     ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add check')} "id" = 42`);
+  ${green('+ add check')} "i_d" = 42`);
   });
 
   it('should be added together with a column', async () => {
@@ -174,7 +174,7 @@ change(async (db) => {
       },
       tables: [
         table((t) => ({
-          id: t.integer().check(t.sql`"id" = 5`),
+          iD: t.integer().check(t.sql`"i_d" = 5`),
         })),
       ],
     });
@@ -185,20 +185,20 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    id: t.add(t.integer().check(t.sql\`"id" = 5\`)),
+    iD: t.add(t.integer().check(t.sql\`"i_d" = 5\`)),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add column')} id integer, checks "id" = 5`);
+  ${green('+ add column')} iD integer, checks "i_d" = 5`);
   });
 
   it('should be dropped together with a column', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer().check(t.sql`id = 123`),
+          iD: t.integer().check(t.sql`i_d = 123`),
         }));
       },
       tables: [table()],
@@ -210,25 +210,25 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    id: t.drop(t.integer().check(t.sql\`(id = 123)\`)),
+    iD: t.drop(t.integer().check(t.sql\`(i_d = 123)\`)),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop column')} id integer, checks (id = 123)`);
+  ${red('- drop column')} iD integer, checks (i_d = 123)`);
   });
 
   it('should be added in a column change', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer().nullable(),
+          iD: t.integer().nullable(),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.integer().check(t.sql`"id" = 5`),
+          iD: t.integer().check(t.sql`"i_d" = 5`),
         })),
       ],
     });
@@ -239,27 +239,27 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    id: t.change(t.integer().nullable(), t.integer().check(t.sql\`"id" = 5\`)),
+    iD: t.change(t.integer().nullable(), t.integer().check(t.sql\`"i_d" = 5\`)),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} id:
+  ${yellow('~ change column')} iD:
     ${yellow('from')}: t.integer().nullable()
-      ${yellow('to')}: t.integer().check(t.sql\`"id" = 5\`)`);
+      ${yellow('to')}: t.integer().check(t.sql\`"i_d" = 5\`)`);
   });
 
   it('should not be recreated when a column is renamed', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          from: t.integer().check(t.sql`2 = 2`),
+          frOm: t.integer().check(t.sql`2 = 2`),
         }));
       },
       tables: [
         table((t) => ({
-          to: t.integer().check(t.sql`2 = 2`),
+          tO: t.integer().check(t.sql`2 = 2`),
         })),
       ],
       selects: [1],
@@ -271,12 +271,12 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    from: t.rename('to'),
+    fr_om: t.rename('tO'),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ rename column')} from ${yellow('=>')} to`);
+  ${yellow('~ rename column')} fr_om ${yellow('=>')} tO`);
   });
 });

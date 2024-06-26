@@ -63,6 +63,10 @@ export const columnsShapeToCode = (
   for (const key in shape) {
     if (hasTimestamps && (key === 'createdAt' || key === 'updatedAt')) continue;
 
+    const column = shape[key];
+    const name = column.data.name;
+    if (name === key) column.data.name = undefined;
+
     code.push(
       ...combineCodeElements([
         `${quoteObjectKey(key)}: `,
@@ -70,6 +74,8 @@ export const columnsShapeToCode = (
         ',',
       ]),
     );
+
+    if (name === key) column.data.name = name;
   }
 
   if (hasTimestamps) {

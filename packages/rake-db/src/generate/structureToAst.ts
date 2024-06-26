@@ -322,7 +322,9 @@ export const tableToAst = (
     shape: makeDbStructureColumnsShape(ctx, data, domains, table, tableData),
     noPrimaryKey: tableData.primaryKey ? 'error' : 'ignore',
     primaryKey:
-      primaryKey && primaryKey.columns.length > 1 ? primaryKey : undefined,
+      primaryKey && primaryKey.columns.length > 1
+        ? { ...primaryKey, columns: primaryKey.columns.map(toCamelCase) }
+        : undefined,
     indexes: indexes.reduce<TableData.Index[]>((acc, index) => {
       if (
         index.columns.length > 1 ||
@@ -332,13 +334,16 @@ export const tableToAst = (
         acc.push({
           columns: index.columns.map((it) => ({
             ...('column' in it
-              ? { column: it.column }
+              ? { column: toCamelCase(it.column) }
               : { expression: it.expression }),
             collate: it.collate,
             opclass: it.opclass,
             order: it.order,
           })),
-          options,
+          options: {
+            ...options,
+            include: index.include?.map(toCamelCase),
+          },
           name,
         });
       }
@@ -416,7 +421,10 @@ const constraintToAst = (
     result.check = raw({ raw: check.expression });
   }
 
-  if (item.name && item.name !== getConstraintName(item.tableName, result)) {
+  if (
+    item.name &&
+    item.name !== getConstraintName(item.tableName, result, ctx.snakeCase)
+  ) {
     result.name = item.name;
     if (result.references?.options) {
       result.references.options.name = item.name;
@@ -522,6 +530,7 @@ export const dbColumnToAst = (
   checks?: RecordString,
 ): [key: string, column: ColumnType] => {
   let column = instantiateDbColumn(ctx, data, domains, item);
+  column.data.name = item.name;
 
   if (item.identity) {
     column.data.identity = item.identity;
@@ -624,7 +633,8 @@ const dbConstraintToTableConstraint = (
   };
 
   const name =
-    item.name && item.name !== getConstraintName(table.name, constraint)
+    item.name &&
+    item.name !== getConstraintName(table.name, constraint, ctx.snakeCase)
       ? item.name
       : undefined;
 

@@ -6,15 +6,17 @@ import {
   StringTypeData,
   stringDataToCode,
   PrimaryKeyColumn,
-  TemplateLiteralArgs,
   getDefaultLanguage,
   RawSQLBase,
   StaticSQLArgs,
   ColumnSchemaConfig,
   PickColumnBaseData,
+  setColumnData,
+  toSnakeCase,
+  TemplateLiteralArgs,
 } from 'orchid-core';
 import { columnCode } from './code';
-import { RawSQL } from '../sql/rawSql';
+import { raw, RawSQL } from '../sql/rawSql';
 import { SearchWeightRecord } from '../sql';
 import { Operators, OperatorsText } from './operators';
 
@@ -505,41 +507,55 @@ export class TsVectorColumn<
       | [language: string, columns: TsVectorGeneratedColumns]
       | [columns: TsVectorGeneratedColumns]
   ): T {
-    const first = args[0];
-    if (typeof first === 'string' || !('raw' in first)) {
-      const target = typeof first === 'string' ? (args[1] as string[]) : first;
+    return setColumnData(this, 'generated', (ctx, quotedAs): string => {
+      const first = args[0];
+      if (typeof first === 'string' || !('raw' in first)) {
+        const target =
+          typeof first === 'string' ? (args[1] as string[]) : first;
 
-      const language =
-        typeof first === 'string'
-          ? first
-          : (this as unknown as TsVectorColumn<ColumnSchemaConfig>)
-              .defaultLanguage;
+        const language =
+          typeof first === 'string'
+            ? first
+            : (this as unknown as TsVectorColumn<ColumnSchemaConfig>)
+                .defaultLanguage;
 
-      let sql;
-      if (Array.isArray(target)) {
-        const columns =
-          target.length === 1
-            ? `"${target[0]}"`
-            : target
-                .map((column) => `coalesce("${column}", '')`)
-                .join(` || ' ' || `);
+        const { snakeCase } = ctx;
 
-        sql = `to_tsvector('${language}', ${columns})`;
-      } else {
-        for (const key in target) {
-          sql =
-            (sql ? sql + ' || ' : '(') +
-            `setweight(to_tsvector('${language}', coalesce("${key}", '')), '${target[key]}')`;
+        let sql;
+        if (Array.isArray(target)) {
+          const columns =
+            target.length === 1
+              ? `"${snakeCase ? toSnakeCase(target[0]) : target[0]}"`
+              : target
+                  .map(
+                    (column) =>
+                      `coalesce("${
+                        snakeCase ? toSnakeCase(column) : column
+                      }", '')`,
+                  )
+                  .join(` || ' ' || `);
+
+          sql = `to_tsvector('${language}', ${columns})`;
+        } else {
+          for (const key in target) {
+            sql =
+              (sql ? sql + ' || ' : '(') +
+              `setweight(to_tsvector('${language}', coalesce("${
+                snakeCase ? toSnakeCase(key) : key
+              }", '')), '${target[key]}')`;
+          }
+          if (sql) {
+            sql += ')';
+          } else {
+            throw new Error('Empty target in the text search generated column');
+          }
         }
-        if (sql) sql += ')';
+
+        return sql;
+      } else {
+        return raw(...(args as TemplateLiteralArgs)).toSQL(ctx, quotedAs);
       }
-
-      const arr = [sql] as string[] & { raw: string[] };
-      arr.raw = arr;
-      args = [arr] as unknown as TemplateLiteralArgs;
-    }
-
-    return super.generated(...(args as TemplateLiteralArgs)) as unknown as T;
+    });
   }
 }
 

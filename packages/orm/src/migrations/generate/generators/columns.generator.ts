@@ -12,10 +12,16 @@ import {
   getSchemaAndTableFromName,
   promptSelect,
   colors,
+  AnyRakeDbConfig,
 } from 'rake-db';
 import { Adapter, ColumnType, DomainColumn, EnumColumn } from 'pqb';
 import { promptCreateOrRename } from './generators.utils';
-import { ColumnTypeBase, deepCompare, RecordUnknown } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  deepCompare,
+  RecordUnknown,
+  toSnakeCase,
+} from 'orchid-core';
 import { ChangeTableData, CompareSql } from './tables.generator';
 import { AbortSignal } from '../generate';
 
@@ -23,8 +29,14 @@ export interface TypeCastsCache {
   value?: Map<string, Set<string>>;
 }
 
+type ColumnsToChange = Map<
+  string,
+  { key: string; dbName: string; column: ColumnType }
+>;
+
 export const processColumns = async (
   adapter: Adapter,
+  config: AnyRakeDbConfig,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
@@ -49,6 +61,7 @@ export const processColumns = async (
   );
 
   await addOrRenameColumns(
+    config,
     dbStructure,
     changeTableData,
     columnsToAdd,
@@ -59,6 +72,7 @@ export const processColumns = async (
 
   await changeColumns(
     adapter,
+    config,
     structureToAstCtx,
     dbStructure,
     domainsMap,
@@ -86,11 +100,12 @@ const groupColumns = (
 ): {
   columnsToAdd: KeyAndColumn[];
   columnsToDrop: KeyAndColumn[];
-  columnsToChange: Map<string, ColumnType>;
+  columnsToChange: ColumnsToChange;
 } => {
   const columnsToAdd: { key: string; column: ColumnType }[] = [];
   const columnsToDrop: { key: string; column: ColumnType }[] = [];
-  const columnsToChange = new Map<string, ColumnType>();
+  const columnsToChange: ColumnsToChange = new Map();
+  const columnsToChangeByDbName = new Map<string, true>();
 
   const { codeTable, dbTable, dbTableData } = changeTableData;
   const checks = getDbTableColumnsChecks(changeTableData.dbTableData);
@@ -102,14 +117,15 @@ const groupColumns = (
 
     const name = column.data.name ?? key;
     if (dbColumns[name]) {
-      columnsToChange.set(name, column);
+      columnsToChange.set(key, { key, dbName: name, column });
+      columnsToChangeByDbName.set(name, true);
     } else {
-      columnsToAdd.push({ key: name, column });
+      columnsToAdd.push({ key, column });
     }
   }
 
   for (const name in dbColumns) {
-    if (columnsToChange.has(name)) continue;
+    if (columnsToChangeByDbName.has(name)) continue;
 
     const [key, column] = dbColumnToAst(
       structureToAstCtx,
@@ -133,6 +149,7 @@ const groupColumns = (
 };
 
 const addOrRenameColumns = async (
+  config: AnyRakeDbConfig,
   dbStructure: IntrospectedStructure,
   {
     dbTableData,
@@ -141,14 +158,15 @@ const addOrRenameColumns = async (
   }: ChangeTableData,
   columnsToAdd: KeyAndColumn[],
   columnsToDrop: KeyAndColumn[],
-  columnsToChange: Map<string, ColumnType>,
+  columnsToChange: ColumnsToChange,
   verifying: boolean | undefined,
 ) => {
   for (const { key, column } of columnsToAdd) {
     if (columnsToDrop.length) {
+      const codeName = column.data.name ?? key;
       const index = await promptCreateOrRename(
         'column',
-        column.data.name ?? key,
+        codeName,
         columnsToDrop.map((x) => x.key),
         verifying,
       );
@@ -156,27 +174,34 @@ const addOrRenameColumns = async (
         const drop = columnsToDrop[index - 1];
         columnsToDrop.splice(index - 1, 1);
 
-        const from = drop.key;
-        columnsToChange.set(from, column.name(key));
+        const from = drop.column.data.name ?? drop.key;
+        // TODO
+        columnsToChange.set(drop.column.data.name ?? from, {
+          key,
+          dbName: drop.column.data.name ?? from,
+          column: column.name(codeName),
+        });
+
+        const to = config.snakeCase ? toSnakeCase(key) : key;
 
         if (dbTableData.primaryKey) {
-          renameColumn(dbTableData.primaryKey.columns, from, key);
+          renameColumn(dbTableData.primaryKey.columns, from, to);
         }
 
         for (const index of dbTableData.indexes) {
           for (const column of index.columns) {
             if ('column' in column && column.column === from) {
-              column.column = key;
+              column.column = to;
             }
           }
         }
 
         for (const c of dbTableData.constraints) {
           if (c.check?.columns) {
-            renameColumn(c.check.columns, from, key);
+            renameColumn(c.check.columns, from, to);
           }
           if (c.references) {
-            renameColumn(c.references.columns, from, key);
+            renameColumn(c.references.columns, from, to);
           }
         }
 
@@ -186,7 +211,7 @@ const addOrRenameColumns = async (
             c.references.foreignSchema === schema &&
             c.references.foreignTable === tableName
           ) {
-            renameColumn(c.references.foreignColumns, from, key);
+            renameColumn(c.references.foreignColumns, from, to);
           }
         }
 
@@ -215,22 +240,26 @@ const dropColumns = (
 
 const changeColumns = async (
   adapter: Adapter,
+  config: AnyRakeDbConfig,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
   ast: RakeDbAst[],
   currentSchema: string,
   dbColumns: { [K: string]: DbStructure.Column },
-  columnsToChange: Map<string, ColumnType>,
+  columnsToChange: ColumnsToChange,
   compareSql: CompareSql,
   changeTableData: ChangeTableData,
   typeCastsCache: TypeCastsCache,
   verifying: boolean | undefined,
 ) => {
-  const { shape } = changeTableData.changeTableAst;
+  for (const [
+    key,
+    { key: codeKey, dbName, column: codeColumn },
+  ] of columnsToChange) {
+    const dbColumnStructure = dbColumns[dbName];
 
-  for (const [name, codeColumn] of columnsToChange) {
-    const dbColumnStructure = dbColumns[name];
+    const { shape } = changeTableData.changeTableAst;
 
     let changed = false;
 
@@ -299,7 +328,7 @@ JOIN pg_type AS t ON t.oid = casttarget`);
 
           const tableName = concatSchemaAndName(changeTableData.changeTableAst);
           const abort = await promptSelect({
-            message: `Cannot cast type of ${tableName}'s column ${name} from ${dbType} to ${codeType}`,
+            message: `Cannot cast type of ${tableName}'s column ${key} from ${dbType} to ${codeType}`,
             options: [
               `${colors.yellowBold(
                 `-/+`,
@@ -313,7 +342,8 @@ JOIN pg_type AS t ON t.oid = casttarget`);
             throw new AbortSignal();
           }
 
-          shape[name] = [
+          dbColumn.data.name = codeColumn.data.name;
+          shape[key] = [
             {
               type: 'drop',
               item: dbColumn,
@@ -324,7 +354,7 @@ JOIN pg_type AS t ON t.oid = casttarget`);
             },
           ];
 
-          continue;
+          return;
         }
       }
 
@@ -419,7 +449,7 @@ JOIN pg_type AS t ON t.oid = casttarget`);
           inDb: dbDefault,
           inCode: codeDefault,
           change: () => {
-            changeColumn(shape, name, dbColumn, codeColumn);
+            changeColumn(shape, key, dbColumn, codeColumn);
             if (!changeTableData.pushedAst) {
               changeTableData.pushedAst = true;
               ast.push(changeTableData.changeTableAst);
@@ -430,14 +460,23 @@ JOIN pg_type AS t ON t.oid = casttarget`);
     }
 
     if (changed) {
-      changeColumn(shape, name, dbColumn, codeColumn);
+      changeColumn(shape, key, dbColumn, codeColumn);
     } else {
-      const from = dbColumn.data.name ?? name;
-      const to = codeColumn.data.name ?? name;
-      if (from !== to) {
-        shape[from] = {
+      const to = codeColumn.data.name ?? codeKey;
+      if (dbName !== to) {
+        shape[
+          config.snakeCase
+            ? dbName === toSnakeCase(codeKey)
+              ? codeKey
+              : dbName
+            : dbName
+        ] = {
           type: 'rename',
-          name: to,
+          name: config.snakeCase
+            ? to === toSnakeCase(codeKey)
+              ? codeKey
+              : to
+            : to,
         };
       }
     }

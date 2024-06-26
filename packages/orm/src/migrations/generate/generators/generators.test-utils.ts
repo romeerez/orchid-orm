@@ -21,11 +21,16 @@ import {
   createMigrationInterface,
   migrate,
 } from 'rake-db';
-import { asMock } from 'test-utils';
+import { asMock, testColumnTypes } from 'test-utils';
 import { generate } from '../generate';
 import fs from 'fs/promises';
-import { BaseTable } from '../../../test-utils/orm.test-utils';
 import { testConfig } from '../../migrations.test-utils';
+import { createBaseTable } from '../../../baseTable';
+
+export const BaseTable = createBaseTable({
+  columnTypes: testColumnTypes,
+  snakeCase: true,
+});
 
 const defaultOptions: AdapterOptions[] = [
   { databaseURL: process.env.PG_GENERATE_URL },

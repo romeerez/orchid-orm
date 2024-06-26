@@ -13,6 +13,7 @@ import {
 } from 'pqb';
 import { exhaustive, getSchemaAndTableFromName } from '../common';
 import { ColumnTypeSchemaArg, toArray } from 'orchid-core';
+import { AnyRakeDbConfig } from 'rake-db';
 
 export interface GenerateItem {
   ast: RakeDbAst;
@@ -28,13 +29,15 @@ type TableColumn = [
 ];
 
 export const astToGenerateItems = (
+  config: AnyRakeDbConfig,
   asts: RakeDbAst[],
   currentSchema: string,
 ): GenerateItem[] => {
-  return asts.map((ast) => astToGenerateItem(ast, currentSchema));
+  return asts.map((ast) => astToGenerateItem(config, ast, currentSchema));
 };
 
 export const astToGenerateItem = (
+  config: AnyRakeDbConfig,
   ast: RakeDbAst,
   currentSchema: string,
 ): GenerateItem => {
@@ -69,6 +72,7 @@ export const astToGenerateItem = (
         );
 
         analyzeTableColumns(
+          config,
           currentSchema,
           schema,
           table,
@@ -78,7 +82,15 @@ export const astToGenerateItem = (
         );
 
         if (ast.type === 'table') {
-          analyzeTableData(currentSchema, schema, table, keys, deps, ast);
+          analyzeTableData(
+            config,
+            currentSchema,
+            schema,
+            table,
+            keys,
+            deps,
+            ast,
+          );
         } else {
           deps.push(
             ...ast.deps.map(({ schemaName, name }) => `${schemaName}.${name}`),
@@ -104,6 +116,7 @@ export const astToGenerateItem = (
         }
 
         analyzeTableColumns(
+          config,
           currentSchema,
           schema,
           table,
@@ -111,8 +124,24 @@ export const astToGenerateItem = (
           resolveType,
           columns,
         );
-        analyzeTableData(currentSchema, schema, table, add, deps, ast.add);
-        analyzeTableData(currentSchema, schema, table, drop, deps, ast.drop);
+        analyzeTableData(
+          config,
+          currentSchema,
+          schema,
+          table,
+          add,
+          deps,
+          ast.add,
+        );
+        analyzeTableData(
+          config,
+          currentSchema,
+          schema,
+          table,
+          drop,
+          deps,
+          ast.drop,
+        );
       }
       break;
     }
@@ -158,7 +187,7 @@ export const astToGenerateItem = (
     case 'constraint': {
       const { tableSchema = currentSchema, tableName } = ast;
       const name = `${tableSchema}.${
-        ast.name ?? getConstraintName(tableName, ast)
+        ast.name ?? getConstraintName(tableName, ast, config.snakeCase)
       }`;
       (ast.action === 'create' ? add : drop).push(name);
       deps.push(tableSchema, `${tableSchema}.${tableName}`);
@@ -184,6 +213,7 @@ export const astToGenerateItem = (
 };
 
 const analyzeTableColumns = (
+  config: AnyRakeDbConfig,
   currentSchema: string,
   schema: string,
   table: string,
@@ -247,9 +277,13 @@ const analyzeTableColumns = (
         keys.push(
           fkey.options?.name
             ? `${schema}.${fkey.options.name}`
-            : getConstraintName(table, {
-                references: { columns: [change.column?.data.name ?? name] },
-              }),
+            : getConstraintName(
+                table,
+                {
+                  references: { columns: [change.column?.data.name ?? name] },
+                },
+                config.snakeCase,
+              ),
         );
 
         const [s = currentSchema, t] = getForeignKeyTable(fkey.fnOrTable);
@@ -260,6 +294,7 @@ const analyzeTableColumns = (
 };
 
 const analyzeTableData = (
+  config: AnyRakeDbConfig,
   currentSchema: string,
   schema: string,
   table: string,
@@ -287,7 +322,7 @@ const analyzeTableData = (
       keys.push(
         constraint.name
           ? `${schema}.${constraint.name}`
-          : getConstraintName(table, constraint),
+          : getConstraintName(table, constraint, config.snakeCase),
       );
 
       if (constraint.references) {

@@ -21,12 +21,12 @@ describe('primaryKey', () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         })),
       ],
     });
@@ -37,14 +37,14 @@ describe('primaryKey', () => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.add(t.primaryKey(['id'])),
+    ...t.add(t.primaryKey(['iD'])),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${green('+ add primary key')} on (id)`,
+  ${green('+ add primary key')} on (iD)`,
     );
   });
 
@@ -52,12 +52,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity().primaryKey('custom'),
+          iD: t.identity().primaryKey('custom'),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         })),
       ],
     });
@@ -68,14 +68,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.drop(t.primaryKey(['id'], 'custom')),
+    ...t.drop(t.primaryKey(['i_d'], 'custom')),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${red('- drop primary key')} on (id)`,
+  ${red('- drop primary key')} on (i_d)`,
     );
   });
 
@@ -83,14 +83,14 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', (t) => ({
-          id: t.identity().primaryKey(),
-          key: t.text(),
+          iD: t.identity().primaryKey(),
+          kEy: t.text(),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.identity(),
-          key: t.text().primaryKey(),
+          iD: t.identity(),
+          kEy: t.text().primaryKey(),
         })),
       ],
     });
@@ -101,16 +101,16 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.drop(t.primaryKey(['id'])),
-    ...t.add(t.primaryKey(['key'])),
+    ...t.drop(t.primaryKey(['i_d'])),
+    ...t.add(t.primaryKey(['kEy'])),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${red('- drop primary key')} on (id)
-  ${green('+ add primary key')} on (key)`,
+  ${red('- drop primary key')} on (i_d)
+  ${green('+ add primary key')} on (kEy)`,
     );
   });
 
@@ -118,17 +118,17 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity(),
-          key: t.text(),
+          iD: t.identity(),
+          kEy: t.text(),
         }));
       },
       tables: [
         table(
           (t) => ({
-            id: t.identity(),
-            key: t.text(),
+            iD: t.identity(),
+            kEy: t.text(),
           }),
-          (t) => t.primaryKey(['id', 'key'], 'custom'),
+          (t) => t.primaryKey(['iD', 'kEy'], 'custom'),
         ),
       ],
     });
@@ -139,14 +139,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.add(t.primaryKey(['id', 'key'], 'custom')),
+    ...t.add(t.primaryKey(['iD', 'kEy'], 'custom')),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${green('+ add primary key')} on (id, key)`,
+  ${green('+ add primary key')} on (iD, kEy)`,
     );
   });
 
@@ -154,14 +154,14 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity(),
-          key: t.text(),
+          iD: t.identity(),
+          kEy: t.text(),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.identity().primaryKey(),
-          key: t.text().primaryKey(),
+          iD: t.identity().primaryKey(),
+          kEy: t.text().primaryKey(),
         })),
       ],
     });
@@ -172,14 +172,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.add(t.primaryKey(['id', 'key'])),
+    ...t.add(t.primaryKey(['iD', 'kEy'])),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${green('+ add primary key')} on (id, key)`,
+  ${green('+ add primary key')} on (iD, kEy)`,
     );
   });
 
@@ -190,16 +190,16 @@ change(async (db) => {
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            id: t.identity(),
-            key: t.text(),
+            iD: t.identity(),
+            kEy: t.text(),
           }),
-          (t) => t.primaryKey(['id', 'key']),
+          (t) => t.primaryKey(['iD', 'kEy']),
         );
       },
       tables: [
         table((t) => ({
-          id: t.identity(),
-          key: t.text(),
+          iD: t.identity(),
+          kEy: t.text(),
         })),
       ],
     });
@@ -210,14 +210,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.drop(t.primaryKey(['id', 'key'])),
+    ...t.drop(t.primaryKey(['i_d', 'k_ey'])),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${red('- drop primary key')} on (id, key)`,
+  ${red('- drop primary key')} on (i_d, k_ey)`,
     );
   });
 
@@ -356,7 +356,7 @@ change(async (db) => {
       tables: [
         table(
           (t) => ({
-            id: t.identity().primaryKey(),
+            iD: t.identity().primaryKey(),
           }),
           undefined,
           { noPrimaryKey: false },
@@ -370,14 +370,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    id: t.add(t.identity().primaryKey()),
+    iD: t.add(t.identity().primaryKey()),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${green('+ add column')} id integer primary key`,
+  ${green('+ add column')} iD integer primary key`,
     );
   });
 
@@ -385,7 +385,7 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', (t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         }));
       },
       tables: [table()],
@@ -397,14 +397,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    id: t.drop(t.identity().primaryKey()),
+    iD: t.drop(t.identity().primaryKey()),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${red('- drop column')} id integer primary key`,
+  ${red('- drop column')} iD integer primary key`,
     );
   });
 
@@ -412,12 +412,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
+          iD: t.integer(),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         })),
       ],
     });
@@ -428,14 +428,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    id: t.change(t.integer(), t.identity().primaryKey()),
+    iD: t.change(t.integer(), t.identity().primaryKey()),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${yellow('~ change column')} id:
+  ${yellow('~ change column')} iD:
     ${yellow('from')}: t.integer()
       ${yellow('to')}: t.identity().primaryKey()`,
     );
@@ -445,12 +445,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          from: t.integer().primaryKey(),
+          frOm: t.integer().primaryKey(),
         }));
       },
       tables: [
         table((t) => ({
-          to: t.integer().primaryKey(),
+          tO: t.integer().primaryKey(),
         })),
       ],
       selects: [1],
@@ -462,14 +462,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    from: t.rename('to'),
+    fr_om: t.rename('tO'),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${yellow('~ rename column')} from ${yellow('=>')} to`,
+  ${yellow('~ rename column')} fr_om ${yellow('=>')} tO`,
     );
   });
 });

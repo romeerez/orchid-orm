@@ -1,8 +1,44 @@
 import { AnyRakeDbConfig, RakeDbAst, getIndexName, DbStructure } from 'rake-db';
 import { ColumnType, SearchWeight, TableData } from 'pqb';
-import { deepCompare, RecordUnknown, toArray } from 'orchid-core';
+import {
+  deepCompare,
+  MaybeArray,
+  RecordUnknown,
+  toArray,
+  toSnakeCase,
+} from 'orchid-core';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnChange, CompareExpression } from './generators.utils';
+
+interface CodeIndex extends TableData.Index {
+  columnKeys: TableData.Index.ColumnOrExpressionOptions[];
+  includeKeys?: MaybeArray<string>;
+}
+
+interface ComparableIndex {
+  name?: string;
+  using?: string;
+  unique?: boolean;
+  include?: string[];
+  nullsNotDistinct?: boolean;
+  tablespace?: string;
+  tsVector?: boolean;
+  language?: string;
+  languageColumn?: string;
+  columns: {
+    column?: string;
+    collate?: string;
+    opclass?: string;
+    order?: string;
+    weight?: SearchWeight;
+    hasExpression: boolean;
+  }[];
+  hasWith: boolean;
+  hasWhere: boolean;
+  hasExpression: boolean;
+  columnKeys?: string[];
+  includeKeys?: string[];
+}
 
 export const processIndexes = (
   config: AnyRakeDbConfig,
@@ -11,8 +47,11 @@ export const processIndexes = (
   ast: RakeDbAst[],
   compareExpressions: CompareExpression[],
 ) => {
-  const codeIndexes = collectCodeIndexes(changeTableData);
-  const codeComparableIndexes = collectCodeComparableIndexes(codeIndexes);
+  const codeIndexes = collectCodeIndexes(config, changeTableData);
+  const codeComparableIndexes = collectCodeComparableIndexes(
+    config,
+    codeIndexes,
+  );
 
   // to skip indexes without SQL from being added when they are matched with already existing indexes
   const skipCodeIndexes = new Map<number, boolean>();
@@ -126,15 +165,21 @@ export const processIndexes = (
     (index, i) => !skipCodeIndexes.has(i) && !holdCodeIndexes.has(index),
   );
   if (addIndexes.length) {
-    changeTableData.changeTableAst.add.indexes = addIndexes;
+    changeTableData.changeTableAst.add.indexes = addIndexes.map((x) => ({
+      ...x,
+      columns: x.columnKeys,
+      options: x.options.include
+        ? { ...x.options, include: x.includeKeys }
+        : x.options,
+    }));
   }
 };
 
-const collectCodeIndexes = ({
-  codeTable,
-  changeTableAst: { shape },
-}: ChangeTableData): TableData.Index[] => {
-  const codeIndexes: TableData.Index[] = [];
+const collectCodeIndexes = (
+  config: AnyRakeDbConfig,
+  { codeTable, changeTableAst: { shape } }: ChangeTableData,
+): CodeIndex[] => {
+  const codeIndexes: CodeIndex[] = [];
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
     if (!column.data.indexes) continue;
@@ -148,34 +193,75 @@ const collectCodeIndexes = ({
           options: { collate, opclass, order, weight, ...options },
           ...index
         }) => ({
-          columns: [{ collate, opclass, order, weight, column: name }],
-          options,
+          columns: [
+            {
+              collate,
+              opclass,
+              order,
+              weight,
+              column: name,
+            },
+          ],
           ...index,
+          options: options.include
+            ? config.snakeCase
+              ? {
+                  ...options,
+                  include: toArray(options.include).map(toSnakeCase),
+                }
+              : options
+            : options,
+          columnKeys: [{ collate, opclass, order, weight, column: key }],
+          includeKeys: options.include,
         }),
       ),
     );
   }
 
   if (codeTable.internal.tableData.indexes) {
-    codeIndexes.push(...codeTable.internal.tableData.indexes);
+    codeIndexes.push(
+      ...codeTable.internal.tableData.indexes.map((x) => ({
+        ...x,
+        columns: config.snakeCase
+          ? x.columns.map((c) =>
+              'column' in c ? { ...c, column: toSnakeCase(c.column) } : c,
+            )
+          : x.columns,
+        columnKeys: x.columns,
+        options:
+          x.options.include && config.snakeCase
+            ? {
+                ...x.options,
+                include: toArray(x.options.include).map(toSnakeCase),
+              }
+            : x.options,
+        includeKeys: x.options.include,
+      })),
+    );
   }
 
   return codeIndexes;
 };
 
 const collectCodeComparableIndexes = (
-  codeIndexes: TableData.Index[],
+  config: AnyRakeDbConfig,
+  codeIndexes: CodeIndex[],
 ): ComparableIndex[] => {
   return codeIndexes.map((codeIndex) => {
     normalizeIndex(codeIndex.options);
+
     return indexToComparable({
       ...codeIndex.options,
       include:
         codeIndex.options.include === undefined
           ? undefined
+          : config.snakeCase
+          ? toArray(codeIndex.options.include).map(toSnakeCase)
           : toArray(codeIndex.options.include),
       columns: codeIndex.columns,
       name: codeIndex.name,
+      columnKeys: codeIndex.columnKeys,
+      includeKeys: codeIndex.includeKeys,
     });
   });
 };
@@ -190,33 +276,12 @@ const normalizeIndex = (index: {
   if (index.nullsNotDistinct === false) index.nullsNotDistinct = undefined;
 };
 
-interface ComparableIndex {
-  name?: string;
-  using?: string;
-  unique?: boolean;
-  include?: string[];
-  nullsNotDistinct?: boolean;
-  tablespace?: string;
-  tsVector?: boolean;
-  language?: string;
-  languageColumn?: string;
-  columns: {
-    column?: string;
-    collate?: string;
-    opclass?: string;
-    order?: string;
-    weight?: SearchWeight;
-    hasExpression: boolean;
-  }[];
-  hasWith: boolean;
-  hasWhere: boolean;
-  hasExpression: boolean;
-}
-
 const indexToComparable = (
   index: TableData.Index.Options & {
     columns: DbStructure.Index['columns'];
     name?: string;
+    columnKeys?: TableData.Index.ColumnOrExpressionOptions[];
+    includeKeys?: MaybeArray<string>;
   },
 ) => {
   let hasExpression = false;
@@ -274,7 +339,12 @@ const findMatchingIndexWithoutSql = (
       const codeName = b.name ?? getIndexName(tableName, dbColumns);
       if (a.name !== b.name) {
         a = { ...a, name: undefined };
-        b = { ...b, name: undefined };
+        b = {
+          ...b,
+          name: undefined,
+          columnKeys: undefined,
+          includeKeys: undefined,
+        };
         if (a.language && !b.language) {
           b.language = config.language ?? 'english';
         }
@@ -285,9 +355,17 @@ const findMatchingIndexWithoutSql = (
             dbIndexWithoutColumns.name !== codeName ? codeName : undefined,
           );
         }
-      } else if (deepCompare(dbIndexWithoutColumns, codeIndex)) {
-        found.push(codeIndexes[i]);
-        rename.push(undefined);
+      } else {
+        const {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          columnKeys,
+          includeKeys,
+          ...codeIndexWithoutKeys
+        } = codeIndex;
+        if (deepCompare(dbIndexWithoutColumns, codeIndexWithoutKeys)) {
+          found.push(codeIndexes[i]);
+          rename.push(undefined);
+        }
       }
 
       if (found.length && !checkIfIndexHasSql(codeIndex)) {

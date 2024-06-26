@@ -58,7 +58,10 @@ export const columnToSql = (
     line.push(identityToSql(item.data.identity));
   } else if (item.data.generated) {
     line.push(
-      `GENERATED ALWAYS AS (${item.data.generated.toSQL({ values })}) STORED`,
+      `GENERATED ALWAYS AS (${item.data.generated({
+        values,
+        snakeCase,
+      })}) STORED`,
     );
   }
 
@@ -182,9 +185,14 @@ export const getConstraintName = (
     check?: unknown;
     identity?: unknown;
   },
+  snakeCase: boolean | undefined,
 ) => {
-  if (constraint.references)
-    return `${table}_${constraint.references.columns.join('_')}_fkey`;
+  if (constraint.references) {
+    const { columns } = constraint.references;
+    return `${table}_${(snakeCase ? columns.map(toSnakeCase) : columns).join(
+      '_',
+    )}_fkey`;
+  }
   if (constraint.check) return `${table}_check`;
   if (constraint.identity) return `${table}_identity`;
   return `${table}_constraint`;
@@ -197,7 +205,8 @@ export const constraintToSql = (
   values: unknown[],
   snakeCase: boolean | undefined,
 ) => {
-  const constraintName = constraint.name || getConstraintName(name, constraint);
+  const constraintName =
+    constraint.name || getConstraintName(name, constraint, snakeCase);
 
   if (!up) {
     const { dropMode } = constraint;
@@ -222,10 +231,9 @@ const checkToSql = (check: RawSQLBase, values: unknown[]) => {
 };
 
 const foreignKeyToSql = (item: TableData.References, snakeCase?: boolean) => {
-  return `FOREIGN KEY (${joinColumns(item.columns)}) ${referencesToSql(
-    item,
-    snakeCase,
-  )}`;
+  return `FOREIGN KEY (${joinColumns(
+    snakeCase ? item.columns.map(toSnakeCase) : item.columns,
+  )}) ${referencesToSql(item, snakeCase)}`;
 };
 
 export const referencesToSql = (
@@ -271,9 +279,19 @@ export const indexesToQuery = (
   up: boolean,
   { schema, name: tableName }: { schema?: string; name: string },
   indexes: TableData.Index[],
+  snakeCase: boolean | undefined,
   language?: string,
 ): SingleSql[] => {
   return indexes.map(({ columns, options, name }) => {
+    let include = options.include ? toArray(options.include) : undefined;
+
+    if (snakeCase) {
+      columns = columns.map((c) =>
+        'column' in c ? { ...c, column: toSnakeCase(c.column) } : c,
+      );
+      if (include) include = include.map(toSnakeCase);
+    }
+
     const indexName = name || getIndexName(tableName, columns);
 
     if (!up) {
@@ -356,7 +374,7 @@ export const indexesToQuery = (
 
     if (options.include) {
       sql.push(
-        `INCLUDE (${toArray(options.include)
+        `INCLUDE (${toArray(include)
           .map((column) => `"${column}"`)
           .join(', ')})`,
       );

@@ -6,7 +6,13 @@ import {
   getSchemaAndTableFromName,
   pluralize,
 } from 'rake-db';
-import { addCode, Code, codeToString, toArray } from 'orchid-core';
+import {
+  addCode,
+  Code,
+  codeToString,
+  columnToCode,
+  toArray,
+} from 'orchid-core';
 import { getColumnDbType } from './generators/columns.generator';
 import { fnOrTableToString } from './generators/foreignKeys.generator';
 
@@ -97,7 +103,6 @@ export const report = (
           for (const change of changes) {
             if (change.type === 'add' || change.type === 'drop') {
               const column = change.item;
-              const name = column.data.name ?? key;
               const { primaryKey, indexes, foreignKeys, check } = column.data;
 
               inner.push(
@@ -105,7 +110,7 @@ export const report = (
                   change.type === 'add'
                     ? green('+ add column')
                     : red('- drop column')
-                } ${name} ${
+                } ${key} ${
                   column.data.alias ?? getColumnDbType(column, currentSchema)
                 }${column.data.isNullable ? ' nullable' : ''}${
                   primaryKey ? ' primary key' : ''
@@ -132,11 +137,24 @@ export const report = (
               const changes: Code[] = [];
               inner.push(`${yellow('~ change column')} ${name}:`, changes);
               changes.push(`${yellow('from')}: `);
-              for (const code of change.from.column!.toCode('t', true)) {
+
+              const fromCode = columnToCode(
+                key,
+                change.from.column!,
+                config.snakeCase,
+              );
+              for (const code of fromCode) {
                 addCode(changes, code);
               }
+
               changes.push(`  ${yellow('to')}: `);
-              for (const code of change.to.column!.toCode('t', true)) {
+
+              const toCode = columnToCode(
+                key,
+                change.to.column!,
+                config.snakeCase,
+              );
+              for (const code of toCode) {
                 addCode(changes, code);
               }
             } else if (change.type === 'rename') {

@@ -20,15 +20,15 @@ describe('primaryKey', () => {
   const someTable = class Some extends BaseTable {
     table = 'some';
     columns = this.setColumns((t) => ({
-      id: t.integer().primaryKey(),
+      iD: t.integer().primaryKey(),
     }));
   };
 
   const someCompositeTable = class Some extends BaseTable {
     table = 'some';
     columns = this.setColumns((t) => ({
-      fa: t.text().primaryKey(),
-      fb: t.text().primaryKey(),
+      fA: t.text().primaryKey(),
+      fB: t.text().primaryKey(),
     }));
   };
 
@@ -36,7 +36,7 @@ describe('primaryKey', () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
@@ -46,7 +46,7 @@ describe('primaryKey', () => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'iD'),
         })),
       ],
     });
@@ -61,7 +61,7 @@ change(async (db) => {
       t.foreignKey(
         ['someId'],
         'some',
-        ['id'],
+        ['iD'],
       ),
     ),
   }));
@@ -69,18 +69,18 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add foreign key')} on (someId) to some(id)`);
+  ${green('+ add foreign key')} on (someId) to some(iD)`);
   });
 
   it('should drop a column foreign key', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          someId: t.integer().foreignKey('some', 'id', { name: 'fkey' }),
+          someId: t.integer().foreignKey('some', 'iD', { name: 'fkey' }),
         }));
       },
       tables: [
@@ -99,9 +99,9 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
       t.foreignKey(
-        ['someId'],
+        ['some_id'],
         'public.some',
-        ['id'],
+        ['i_d'],
         {
           name: 'fkey',
         },
@@ -112,24 +112,24 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop foreign key')} on (someId) to some(id)`);
+  ${red('- drop foreign key')} on (some_id) to some(i_d)`);
   });
 
   it('should rename a column foreign key', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          someId: t.integer().foreignKey('some', 'id', { name: 'fromName' }),
+          someId: t.integer().foreignKey('some', 'iD', { name: 'fromName' }),
         }));
       },
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'iD'),
         })),
       ],
     });
@@ -139,14 +139,14 @@ change(async (db) => {
     assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.renameConstraint('public.table', 'fromName', 'table_someId_fkey');
+  await db.renameConstraint('public.table', 'fromName', 'table_some_id_fkey');
 });
 `);
 
     assert.report(
       `${yellow('~ rename constraint')} on table table: fromName ${yellow(
         '=>',
-      )} table_someId_fkey`,
+      )} table_some_id_fkey`,
     );
   });
 
@@ -154,11 +154,11 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          someId: t.integer().foreignKey('some', 'id', {
+          someId: t.integer().foreignKey('some', 'iD', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -169,7 +169,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'id', {
+          someId: t.integer().foreignKey(() => someTable, 'iD', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -188,11 +188,11 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          someId: t.integer().foreignKey('some', 'id', {
+          someId: t.integer().foreignKey('some', 'iD', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -203,7 +203,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'id', {
+          someId: t.integer().foreignKey(() => someTable, 'iD', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -221,9 +221,9 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
       t.foreignKey(
-        ['someId'],
+        ['some_id'],
         'public.some',
-        ['id'],
+        ['i_d'],
         {
           name: 'fkeyName',
           match: 'FULL',
@@ -236,7 +236,7 @@ change(async (db) => {
       t.foreignKey(
         ['someId'],
         'some',
-        ['id'],
+        ['iD'],
         {
           name: 'fkeyName',
           match: 'FULL',
@@ -250,32 +250,32 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop foreign key')} on (someId) to some(id)
-  ${green('+ add foreign key')} on (someId) to some(id)`);
+  ${red('- drop foreign key')} on (some_id) to some(i_d)
+  ${green('+ add foreign key')} on (someId) to some(iD)`);
   });
 
   it('should create a composite foreign key', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          fa: t.text().primaryKey(),
-          fb: t.text().primaryKey(),
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          a: t.text(),
-          b: t.text(),
+          aA: t.text(),
+          bB: t.text(),
         }));
       },
       tables: [
         someCompositeTable,
         table(
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
           (t) =>
-            t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb']),
+            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB']),
         ),
       ],
     });
@@ -288,9 +288,9 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.add(
       t.foreignKey(
-        ['a', 'b'],
+        ['aA', 'bB'],
         'some',
-        ['fa', 'fb'],
+        ['fA', 'fB'],
       ),
     ),
   }));
@@ -298,32 +298,32 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add foreign key')} on (a, b) to some(fa, fb)`);
+  ${green('+ add foreign key')} on (aA, bB) to some(fA, fB)`);
   });
 
   it('should drop a composite foreign key', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          fa: t.text().primaryKey(),
-          fb: t.text().primaryKey(),
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
         }));
 
         await db.createTable(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
-          (t) => t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+          (t) => t.foreignKey(['aA', 'bB'], 'some', ['fA', 'fB']),
         );
       },
       tables: [
         someCompositeTable,
         table((t) => ({
-          a: t.text(),
-          b: t.text(),
+          aA: t.text(),
+          bB: t.text(),
         })),
       ],
     });
@@ -336,9 +336,9 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
       t.foreignKey(
-        ['a', 'b'],
+        ['a_a', 'b_b'],
         'public.some',
-        ['fa', 'fb'],
+        ['f_a', 'f_b'],
       ),
     ),
   }));
@@ -346,36 +346,36 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop foreign key')} on (a, b) to some(fa, fb)`);
+  ${red('- drop foreign key')} on (a_a, b_b) to some(f_a, f_b)`);
   });
 
   it('should not recreate composite foreign key when it is identical', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          fa: t.text().primaryKey(),
-          fb: t.text().primaryKey(),
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
         }));
 
         await db.createTable(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
-          (t) => t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+          (t) => t.foreignKey(['aA', 'bB'], 'some', ['fA', 'fB']),
         );
       },
       tables: [
         someCompositeTable,
         table(
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
           (t) =>
-            t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb']),
+            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB']),
         ),
       ],
     });
@@ -389,19 +389,19 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          fa: t.text().primaryKey(),
-          fb: t.text().primaryKey(),
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
         }));
 
         await db.createTable(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
           (t) =>
-            t.foreignKey(['a', 'b'], 'some', ['fa', 'fb'], {
+            t.foreignKey(['aA', 'bB'], 'some', ['fA', 'fB'], {
               match: 'FULL',
             }),
         );
@@ -410,11 +410,11 @@ change(async (db) => {
         someCompositeTable,
         table(
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
           (t) =>
-            t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb']),
+            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB']),
         ),
       ],
     });
@@ -427,9 +427,9 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
       t.foreignKey(
-        ['a', 'b'],
+        ['a_a', 'b_b'],
         'public.some',
-        ['fa', 'fb'],
+        ['f_a', 'f_b'],
         {
           match: 'FULL',
         },
@@ -437,9 +437,9 @@ change(async (db) => {
     ),
     ...t.add(
       t.foreignKey(
-        ['a', 'b'],
+        ['aA', 'bB'],
         'some',
-        ['fa', 'fb'],
+        ['fA', 'fB'],
       ),
     ),
   }));
@@ -447,27 +447,27 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop foreign key')} on (a, b) to some(fa, fb)
-  ${green('+ add foreign key')} on (a, b) to some(fa, fb)`);
+  ${red('- drop foreign key')} on (a_a, b_b) to some(f_a, f_b)
+  ${green('+ add foreign key')} on (aA, bB) to some(fA, fB)`);
   });
 
   it('should rename a composite foreign key', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          fa: t.text().primaryKey(),
-          fb: t.text().primaryKey(),
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
         }));
 
         await db.createTable(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
           (t) =>
-            t.foreignKey(['a', 'b'], 'some', ['fa', 'fb'], {
+            t.foreignKey(['aA', 'bB'], 'some', ['fA', 'fB'], {
               name: 'fromName',
             }),
         );
@@ -476,11 +476,11 @@ change(async (db) => {
         someCompositeTable,
         table(
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
           (t) =>
-            t.foreignKey(['a', 'b'], () => someCompositeTable, ['fa', 'fb'], {
+            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB'], {
               name: 'toName',
             }),
         ),
@@ -507,7 +507,7 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true });
@@ -515,7 +515,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'iD'),
         })),
       ],
     });
@@ -526,14 +526,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    someId: t.add(t.integer().foreignKey('some', 'id')),
+    someId: t.add(t.integer().foreignKey('some', 'iD')),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${green('+ add column')} someId integer references some(id)`,
+  ${green('+ add column')} someId integer references some(iD)`,
     );
   });
 
@@ -541,11 +541,11 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          someId: t.integer().foreignKey('some', 'id'),
+          someId: t.integer().foreignKey('some', 'iD'),
         }));
       },
       tables: [someTable, table()],
@@ -557,14 +557,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    someId: t.drop(t.integer().foreignKey('some', 'id')),
+    someId: t.drop(t.integer().foreignKey('some', 'i_d')),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${red('- drop column')} someId integer references some(id)`,
+  ${red('- drop column')} someId integer references some(i_d)`,
     );
   });
 
@@ -572,7 +572,7 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
@@ -582,7 +582,7 @@ change(async (db) => {
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'id'),
+          someId: t.integer().foreignKey(() => someTable, 'iD'),
         })),
       ],
     });
@@ -593,7 +593,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    someId: t.change(t.integer().nullable(), t.integer().foreignKey('some', 'id')),
+    someId: t.change(t.integer().nullable(), t.integer().foreignKey('some', 'iD')),
   }));
 });
 `);
@@ -602,7 +602,7 @@ change(async (db) => {
       `${yellow('~ change table')} table:
   ${yellow('~ change column')} someId:
     ${yellow('from')}: t.integer().nullable()
-      ${yellow('to')}: t.integer().foreignKey('some', 'id')`,
+      ${yellow('to')}: t.integer().foreignKey('some', 'iD')`,
     );
   });
 
@@ -610,29 +610,29 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          fa: t.text().primaryKey(),
-          fb: t.text().primaryKey(),
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
         }));
 
         await db.createTable(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
-          (t) => t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+          (t) => t.foreignKey(['aA', 'bB'], 'some', ['fA', 'fB']),
         );
       },
       tables: [
         someCompositeTable,
         table(
           (t) => ({
-            a: t.text(),
-            c: t.text(),
+            aA: t.text(),
+            cC: t.text(),
           }),
           (t) =>
-            t.foreignKey(['a', 'c'], () => someCompositeTable, ['fa', 'fb']),
+            t.foreignKey(['aA', 'cC'], () => someCompositeTable, ['fA', 'fB']),
         ),
       ],
       selects: [1],
@@ -644,19 +644,19 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    b: t.rename('c'),
+    b_b: t.rename('cC'),
   }));
 
-  await db.renameConstraint('public.table', 'table_a_b_fkey', 'table_a_c_fkey');
+  await db.renameConstraint('public.table', 'table_a_a_b_b_fkey', 'table_a_a_c_c_fkey');
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${yellow('~ rename column')} b ${yellow('=>')} c
-${yellow('~ rename constraint')} on table table: table_a_b_fkey ${yellow(
+  ${yellow('~ rename column')} b_b ${yellow('=>')} cC
+${yellow('~ rename constraint')} on table table: table_a_a_b_b_fkey ${yellow(
         '=>',
-      )} table_a_c_fkey`,
+      )} table_a_a_c_c_fkey`,
     );
   });
 
@@ -664,36 +664,36 @@ ${yellow('~ rename constraint')} on table table: table_a_b_fkey ${yellow(
     class Some extends BaseTable {
       table = 'some';
       columns = this.setColumns((t) => ({
-        fa: t.text().primaryKey(),
-        fc: t.text().primaryKey(),
+        fA: t.text().primaryKey(),
+        fC: t.text().primaryKey(),
       }));
     }
 
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
-          fa: t.text().primaryKey(),
-          fb: t.text().primaryKey(),
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
         }));
 
         await db.createTable(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
-          (t) => t.foreignKey(['a', 'b'], 'some', ['fa', 'fb']),
+          (t) => t.foreignKey(['aA', 'bB'], 'some', ['fA', 'fB']),
         );
       },
       tables: [
         Some,
         table(
           (t) => ({
-            a: t.text(),
-            b: t.text(),
+            aA: t.text(),
+            bB: t.text(),
           }),
-          (t) => t.foreignKey(['a', 'b'], () => Some, ['fa', 'fc']),
+          (t) => t.foreignKey(['aA', 'bB'], () => Some, ['fA', 'fC']),
         ),
       ],
       selects: [1],
@@ -705,14 +705,14 @@ ${yellow('~ rename constraint')} on table table: table_a_b_fkey ${yellow(
 
 change(async (db) => {
   await db.changeTable('some', (t) => ({
-    fb: t.rename('fc'),
+    f_b: t.rename('fC'),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} some:
-  ${yellow('~ rename column')} fb ${yellow('=>')} fc`,
+  ${yellow('~ rename column')} f_b ${yellow('=>')} fC`,
     );
   });
 });

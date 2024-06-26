@@ -16,6 +16,7 @@ import {
   Code,
   codeToString,
   ColumnSchemaConfig,
+  columnToCode,
   isRawSQL,
   quoteObjectKey,
   singleQuote,
@@ -30,7 +31,7 @@ export const astToMigration = (
   config: AnyRakeDbConfig,
   asts: RakeDbAst[],
 ): string | undefined => {
-  const items = astToGenerateItems(asts, currentSchema);
+  const items = astToGenerateItems(config, asts, currentSchema);
 
   const toBeAdded = new Set<string>();
   const toBeDropped = new Set<string>();
@@ -223,7 +224,6 @@ const astEncoders: {
     }
 
     const timestamps = getHasTimestamps(
-      config,
       ast.shape.createdAt,
       ast.shape.updatedAt,
     );
@@ -236,7 +236,8 @@ const astEncoders: {
         continue;
 
       const line: Code[] = [`${quoteObjectKey(key)}: `];
-      for (const part of ast.shape[key].toCode('t', true)) {
+      const columnCode = columnToCode(key, ast.shape[key], config.snakeCase);
+      for (const part of columnCode) {
         addCode(line, part);
       }
       addCode(line, ',');
@@ -244,7 +245,7 @@ const astEncoders: {
     }
 
     if (timestamps.hasAnyTimestamps) {
-      code.push([`...${timestampsToCode(config, timestamps)},`]);
+      code.push([`...${timestampsToCode(timestamps)},`]);
     }
 
     if (isShifted) {
@@ -286,7 +287,6 @@ const astEncoders: {
     const [addTimestamps, dropTimestamps] = (['add', 'drop'] as const).map(
       (type) =>
         getHasTimestamps(
-          config,
           ast.shape.createdAt &&
             'type' in ast.shape.createdAt &&
             ast.shape.createdAt?.type === type
@@ -314,10 +314,14 @@ const astEncoders: {
           const recreate = changes.length > 1;
           const line: Code[] = [
             recreate
-              ? `...t.${change.type}(t.name(${singleQuote(key)})`
+              ? `...t.${change.type}(t.name(${singleQuote(
+                  change.item.data.name ?? key,
+                )})`
               : `${quoteObjectKey(key)}: t.${change.type}(`,
           ];
-          const columnCode = change.item.toCode('t', true);
+
+          const columnCode = columnToCode(key, change.item, config.snakeCase);
+
           for (let i = 0; i < columnCode.length; i++) {
             let part = columnCode[i];
             if (recreate && !i) part = part.slice(1);
@@ -333,11 +337,20 @@ const astEncoders: {
               change.name ? `.name(${singleQuote(change.name)})` : ''
             }.change(`,
           ];
-          for (const part of change.from.column.toCode('t', true)) {
+
+          const fromCode = columnToCode(
+            key,
+            change.from.column,
+            config.snakeCase,
+          );
+          for (const part of fromCode) {
             addCode(line, part);
           }
+
           addCode(line, ', ');
-          for (const part of change.to.column.toCode('t', true)) {
+
+          const toCode = columnToCode(key, change.to.column, config.snakeCase);
+          for (const part of toCode) {
             addCode(line, part);
           }
 
@@ -369,9 +382,7 @@ const astEncoders: {
     for (const key of ['drop', 'add'] as const) {
       const timestamps = key === 'add' ? addTimestamps : dropTimestamps;
       if (timestamps.hasAnyTimestamps) {
-        addCode(code, [
-          `...t.${key}(${timestampsToCode(config, timestamps)}),`,
-        ]);
+        addCode(code, [`...t.${key}(${timestampsToCode(timestamps)}),`]);
       }
 
       const { primaryKey, indexes, constraints } = ast[key];
@@ -598,84 +609,41 @@ const isTimestamp = (
 interface AnyTimestampsInfo {
   hasTZTimestamps: boolean;
   hasAnyTimestamps: boolean;
-  hasAnyCamelCaseTimestamps: boolean;
 }
 
 const getHasTimestamps = (
-  config: AnyRakeDbConfig,
   createdAt: ColumnType | undefined,
   updatedAt: ColumnType | undefined,
 ): AnyTimestampsInfo => {
-  const timestamps = getTimestampsInfo(
-    config,
-    createdAt,
-    updatedAt,
-    TimestampTZColumn,
-  );
+  const timestamps = getTimestampsInfo(createdAt, updatedAt, TimestampTZColumn);
   const timestampsNoTZ = getTimestampsInfo(
-    config,
     createdAt,
     updatedAt,
     TimestampColumn,
   );
 
   return {
-    hasTZTimestamps: timestamps.hasTimestamps,
-    hasAnyTimestamps: timestamps.hasTimestamps || timestampsNoTZ.hasTimestamps,
-    hasAnyCamelCaseTimestamps:
-      timestamps.camelCaseTimestamps || timestampsNoTZ.camelCaseTimestamps,
+    hasTZTimestamps: timestamps,
+    hasAnyTimestamps: timestamps || timestampsNoTZ,
   };
 };
 
-interface TimestampsInfo {
-  hasTimestamps: boolean;
-  camelCaseTimestamps: boolean;
-  snakeCaseTimestamps: boolean;
-}
-
 const getTimestampsInfo = (
-  config: AnyRakeDbConfig,
   createdAt: ColumnType | undefined,
   updatedAt: ColumnType | undefined,
   type:
     | typeof TimestampTZColumn<ColumnSchemaConfig>
     | typeof TimestampColumn<ColumnSchemaConfig>,
-): TimestampsInfo => {
-  let hasTimestamps =
-    isTimestamp(createdAt, type) && isTimestamp(updatedAt, type);
-
-  const camelCaseTimestamps =
-    !config.snakeCase &&
-    hasTimestamps &&
-    !createdAt?.data.name &&
-    !updatedAt?.data.name;
-
-  const snakeCaseTimestamps =
-    hasTimestamps &&
-    !camelCaseTimestamps &&
-    ((!config.snakeCase &&
-      createdAt?.data.name === 'created_at' &&
-      updatedAt?.data.name === 'updated_at') ||
-      (config.snakeCase && !createdAt?.data.name && !updatedAt?.data.name));
-
-  if (!camelCaseTimestamps && !snakeCaseTimestamps) {
-    hasTimestamps = false;
-  }
-
-  return {
-    hasTimestamps,
-    camelCaseTimestamps,
-    snakeCaseTimestamps,
-  };
+): boolean => {
+  return (
+    isTimestamp(createdAt, type) &&
+    isTimestamp(updatedAt, type) &&
+    (!createdAt?.data.name || createdAt?.data.name === 'created_at') &&
+    (!updatedAt?.data.name || updatedAt?.data.name === 'updated_at')
+  );
 };
 
-const timestampsToCode = (
-  config: AnyRakeDbConfig,
-  { hasTZTimestamps, hasAnyCamelCaseTimestamps }: AnyTimestampsInfo,
-): string => {
+const timestampsToCode = ({ hasTZTimestamps }: AnyTimestampsInfo): string => {
   const key = hasTZTimestamps ? 'timestamps' : 'timestampsNoTZ';
-
-  return `t.${
-    hasAnyCamelCaseTimestamps || config.snakeCase ? key : `${key}SnakeCase`
-  }()`;
+  return `t.${key}()`;
 };

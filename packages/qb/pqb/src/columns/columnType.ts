@@ -10,7 +10,6 @@ import {
   PrimaryKeyColumn,
   pushColumnData,
   QueryBaseCommon,
-  RawSQLBase,
   setColumnData,
   StaticSQLArgs,
   UniqueColumn,
@@ -32,7 +31,10 @@ export interface ColumnData extends ColumnDataBase {
   foreignKeys?: TableData.ColumnReferences[];
   identity?: TableData.Identity;
   // raw SQL for a generated column
-  generated?: RawSQLBase;
+  generated?(
+    ctx: { values: unknown[]; snakeCase: boolean | undefined },
+    quotedAs?: string,
+  ): string;
 }
 
 export interface ColumnFromDbParams {
@@ -442,6 +444,7 @@ export abstract class ColumnType<
    * @param args - raw SQL
    */
   generated<T extends PickColumnData>(this: T, ...args: StaticSQLArgs): T {
-    return setColumnData(this, 'generated', raw(...args));
+    const sql = raw(...args);
+    return setColumnData(this, 'generated', (...args) => sql.toSQL(...args));
   }
 }

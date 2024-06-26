@@ -31,26 +31,35 @@ describe('primaryKey', () => {
   const indexOptions = {
     unique: true,
     nullsNotDistinct: true,
-    include: ['name'],
+    include: ['naMe'],
   } satisfies TableData.Index.Options;
 
   const indexOptionsSql = `{
         nullsNotDistinct: true,
-        include: ['name'],
+        include: ['naMe'],
+      }`;
+
+  const indexOptionsSqlDrop = `{
+        nullsNotDistinct: true,
+        include: ['na_me'],
       }`;
 
   const indexOptionsSqlShifted = indexOptionsSql.replaceAll('\n', '\n  ');
+  const indexOptionsSqlShiftedDrop = indexOptionsSqlDrop.replaceAll(
+    '\n',
+    '\n  ',
+  );
 
   it('should create a column index', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.text(),
+          naMe: t.text(),
         }));
       },
       tables: [
         table((t) => ({
-          name: t.text().index({
+          naMe: t.text().index({
             ...columnOptions,
             ...indexOptions,
           }),
@@ -68,7 +77,7 @@ change(async (db) => {
       t.unique(
         [
           {
-            column: 'name',
+            column: 'naMe',
             ${columnOptionsSql}
           },
         ],
@@ -80,19 +89,19 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add unique index')} on (name)`);
+  ${green('+ add unique index')} on (naMe)`);
   });
 
   it('should drop a column index', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.text().index(indexOptions),
+          naMe: t.text().index(indexOptions),
         }));
       },
       tables: [
         table((t) => ({
-          name: t.text(),
+          naMe: t.text(),
         })),
       ],
     });
@@ -104,26 +113,26 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
-      t.unique(['name'], ${indexOptionsSql})
+      t.unique(['na_me'], ${indexOptionsSqlDrop})
     ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop unique index')} on (name)`);
+  ${red('- drop unique index')} on (na_me)`);
   });
 
   it('should rename an index', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.text().index('from'),
+          naMe: t.text().index('from'),
         }));
       },
       tables: [
         table((t) => ({
-          name: t.text().index('to'),
+          naMe: t.text().index('to'),
         })),
       ],
     });
@@ -149,14 +158,14 @@ change(async (db) => {
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            name: t.text(),
+            naMe: t.text(),
           }),
-          (t) => t.index([{ column: 'name', ...columnOptions }], indexOptions),
+          (t) => t.index([{ column: 'naMe', ...columnOptions }], indexOptions),
         );
       },
       tables: [
         table((t) => ({
-          name: t.text().index({
+          naMe: t.text().index({
             ...columnOptions,
             ...indexOptions,
           }),
@@ -173,12 +182,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.text().index(indexOptions),
+          naMe: t.text().index(indexOptions),
         }));
       },
       tables: [
         table((t) => ({
-          name: t.text().index({ ...indexOptions, unique: false }),
+          naMe: t.text().index({ ...indexOptions, unique: false }),
         })),
       ],
     });
@@ -190,40 +199,40 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.drop(
-      t.unique(['name'], ${indexOptionsSql})
+      t.unique(['na_me'], ${indexOptionsSqlDrop})
     ),
     ...t.add(
-      t.index(['name'], ${indexOptionsSql})
+      t.index(['naMe'], ${indexOptionsSql})
     ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop unique index')} on (name)
-  ${green('+ add index')} on (name)`);
+  ${red('- drop unique index')} on (na_me)
+  ${green('+ add index')} on (naMe)`);
   });
 
   it('should create a composite index', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.integer(),
-          name: t.text(),
+          iD: t.integer(),
+          naMe: t.text(),
         }));
       },
       tables: [
         table(
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
             t.unique(
               [
-                'id',
+                'iD',
                 {
-                  column: 'name',
+                  column: 'naMe',
                   ...columnOptions,
                 },
               ],
@@ -242,9 +251,9 @@ change(async (db) => {
     ...t.add(
       t.unique(
         [
-          'id',
+          'iD',
           {
-            column: 'name',
+            column: 'naMe',
             ${columnOptionsSql}
           },
         ],
@@ -256,7 +265,7 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add unique index')} on (id, name)`);
+  ${green('+ add unique index')} on (iD, naMe)`);
   });
 
   it('should drop a composite index', async () => {
@@ -266,20 +275,20 @@ change(async (db) => {
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
             t.index(
-              [{ column: 'id' }, { column: 'name', ...columnOptions }],
+              [{ column: 'iD' }, { column: 'naMe', ...columnOptions }],
               indexOptions,
             ),
         );
       },
       tables: [
         table((t) => ({
-          id: t.integer(),
-          name: t.text(),
+          iD: t.integer(),
+          naMe: t.text(),
         })),
       ],
     });
@@ -293,13 +302,13 @@ change(async (db) => {
     ...t.drop(
       t.unique(
         [
-          'id',
+          'i_d',
           {
-            column: 'name',
+            column: 'na_me',
             ${columnOptionsSql}
           },
         ],
-        ${indexOptionsSqlShifted},
+        ${indexOptionsSqlShiftedDrop},
       ),
     ),
   }));
@@ -307,7 +316,7 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop unique index')} on (id, name)`);
+  ${red('- drop unique index')} on (i_d, na_me)`);
   });
 
   it('should not recreate composite index when it is identical', async () => {
@@ -317,12 +326,12 @@ change(async (db) => {
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
             t.unique(
-              [{ column: 'id' }, { column: 'name', ...columnOptions }],
+              [{ column: 'iD' }, { column: 'naMe', ...columnOptions }],
               indexOptions,
             ),
         );
@@ -330,15 +339,15 @@ change(async (db) => {
       tables: [
         table(
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
             t.unique(
               [
-                'id',
+                'iD',
                 {
-                  column: 'name',
+                  column: 'naMe',
                   ...columnOptions,
                 },
               ],
@@ -360,11 +369,11 @@ change(async (db) => {
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
-            t.index([{ column: 'id' }, { column: 'name', ...columnOptions }], {
+            t.index([{ column: 'iD' }, { column: 'naMe', ...columnOptions }], {
               ...indexOptions,
               unique: false,
             }),
@@ -373,15 +382,15 @@ change(async (db) => {
       tables: [
         table(
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
             t.unique(
               [
-                'id',
+                'iD',
                 {
-                  column: 'name',
+                  column: 'naMe',
                   ...columnOptions,
                 },
               ],
@@ -400,21 +409,21 @@ change(async (db) => {
     ...t.drop(
       t.index(
         [
-          'id',
+          'i_d',
           {
-            column: 'name',
+            column: 'na_me',
             ${columnOptionsSql}
           },
         ],
-        ${indexOptionsSqlShifted},
+        ${indexOptionsSqlShiftedDrop},
       ),
     ),
     ...t.add(
       t.unique(
         [
-          'id',
+          'iD',
           {
-            column: 'name',
+            column: 'naMe',
             ${columnOptionsSql}
           },
         ],
@@ -426,8 +435,8 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop index')} on (id, name)
-  ${green('+ add unique index')} on (id, name)`);
+  ${red('- drop index')} on (i_d, na_me)
+  ${green('+ add unique index')} on (iD, naMe)`);
   });
 
   it('should rename a composite index', async () => {
@@ -437,12 +446,12 @@ change(async (db) => {
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
             t.index(
-              [{ column: 'id' }, { column: 'name', ...columnOptions }],
+              [{ column: 'iD' }, { column: 'naMe', ...columnOptions }],
               'from',
               indexOptions,
             ),
@@ -451,15 +460,15 @@ change(async (db) => {
       tables: [
         table(
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
+            iD: t.integer(),
+            naMe: t.text(),
           }),
           (t) =>
             t.unique(
               [
-                'id',
+                'iD',
                 {
-                  column: 'name',
+                  column: 'naMe',
                   ...columnOptions,
                 },
               ],
@@ -491,7 +500,7 @@ change(async (db) => {
       },
       tables: [
         table((t) => ({
-          name: t.text().index(),
+          naMe: t.text().index(),
         })),
       ],
     });
@@ -502,14 +511,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    name: t.add(t.text().index()),
+    naMe: t.add(t.text().index()),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${green('+ add column')} name text, has index`,
+  ${green('+ add column')} naMe text, has index`,
     );
   });
 
@@ -517,7 +526,7 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.text().index(),
+          naMe: t.text().index(),
         }));
       },
       tables: [table()],
@@ -529,14 +538,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    name: t.drop(t.text().index()),
+    naMe: t.drop(t.text().index()),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${red('- drop column')} name text, has index`,
+  ${red('- drop column')} naMe text, has index`,
     );
   });
 
@@ -544,12 +553,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.integer(),
+          naMe: t.integer(),
         }));
       },
       tables: [
         table((t) => ({
-          name: t.text().index(),
+          naMe: t.text().index(),
         })),
       ],
     });
@@ -560,14 +569,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    name: t.change(t.integer(), t.text().index()),
+    naMe: t.change(t.integer(), t.text().index()),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${yellow('~ change column')} name:
+  ${yellow('~ change column')} naMe:
     ${yellow('from')}: t.integer()
       ${yellow('to')}: t.text().index()`,
     );
@@ -577,12 +586,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          from: t.text().index(),
+          frOm: t.text().index(),
         }));
       },
       tables: [
         table((t) => ({
-          to: t.text().index(),
+          tO: t.text().index(),
         })),
       ],
       selects: [1],
@@ -594,19 +603,19 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    from: t.rename('to'),
+    fr_om: t.rename('tO'),
   }));
 
-  await db.renameIndex('public.table', 'table_from_idx', 'table_to_idx');
+  await db.renameIndex('public.table', 'table_fr_om_idx', 'table_t_o_idx');
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${yellow('~ rename column')} from ${yellow('=>')} to
-${yellow('~ rename index')} on table table: table_from_idx ${yellow(
+  ${yellow('~ rename column')} fr_om ${yellow('=>')} tO
+${yellow('~ rename index')} on table table: table_fr_om_idx ${yellow(
         '=>',
-      )} table_to_idx`,
+      )} table_t_o_idx`,
     );
   });
 
@@ -617,31 +626,31 @@ ${yellow('~ rename index')} on table table: table_from_idx ${yellow(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
-            active: t.boolean(),
+            iD: t.integer(),
+            naMe: t.text(),
+            actIve: t.boolean(),
           }),
           (t) => [
             t.index(
               [
                 {
-                  expression: `'first' || id || name || active`,
+                  expression: `'first' || i_d || na_me || act_ive`,
                 },
               ],
               'first',
               {
-                where: `name = 'first'`,
+                where: `na_me = 'first'`,
               },
             ),
             t.index(
               [
                 {
-                  expression: `'second' || id || name || active`,
+                  expression: `'second' || i_d || na_me || act_ive`,
                 },
               ],
               'second',
               {
-                where: `name = 'second'`,
+                where: `na_me = 'second'`,
               },
             ),
           ],
@@ -650,31 +659,31 @@ ${yellow('~ rename index')} on table table: table_from_idx ${yellow(
       tables: [
         table(
           (t) => ({
-            id: t.integer(),
-            name: t.text(),
-            active: t.boolean(),
+            iD: t.integer(),
+            naMe: t.text(),
+            actIve: t.boolean(),
           }),
           (t) => [
             t.index(
               [
                 {
-                  expression: `'first'||id||name||active`,
+                  expression: `'first'||i_d||na_me||act_ive`,
                 },
               ],
               'first',
               {
-                where: `name='first'`,
+                where: `na_me='first'`,
               },
             ),
             t.index(
               [
                 {
-                  expression: `'second'||id||name||active`,
+                  expression: `'second'||i_d||na_me||act_ive`,
                 },
               ],
               'second',
               {
-                where: `name='second'`,
+                where: `na_me='second'`,
               },
             ),
           ],
@@ -694,15 +703,15 @@ ${yellow('~ rename index')} on table table: table_from_idx ${yellow(
           'table',
           { noPrimaryKey: true },
           (t) => ({
-            a: t.text(),
-            b: t.text(),
-            c: t.text(),
+            aA: t.text(),
+            bB: t.text(),
+            cC: t.text(),
           }),
           (t) =>
             t.index(
               [
                 {
-                  expression: `(a || b) || c`,
+                  expression: `(a_a || b_b) || c_c`,
                 },
               ],
               'idx',
@@ -712,15 +721,15 @@ ${yellow('~ rename index')} on table table: table_from_idx ${yellow(
       tables: [
         table(
           (t) => ({
-            a: t.text(),
-            b: t.text(),
-            c: t.text(),
+            aA: t.text(),
+            bB: t.text(),
+            cC: t.text(),
           }),
           (t) =>
             t.index(
               [
                 {
-                  expression: `a||c||b`,
+                  expression: `a_a||c_c||b_b`,
                 },
               ],
               'idx',
@@ -739,7 +748,7 @@ change(async (db) => {
       t.index(
         [
           {
-            expression: '(((a || b) || c))',
+            expression: '(((a_a || b_b) || c_c))',
           },
         ],
         'idx',
@@ -749,7 +758,7 @@ change(async (db) => {
       t.index(
         [
           {
-            expression: 'a||c||b',
+            expression: 'a_a||c_c||b_b',
           },
         ],
         'idx',
@@ -760,8 +769,8 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop index')} on ((((a || b) || c)))
-  ${green('+ add index')} on (a||c||b)`);
+  ${red('- drop index')} on ((((a_a || b_b) || c_c)))
+  ${green('+ add index')} on (a_a||c_c||b_b)`);
   });
 
   describe('searchIndex', () => {
@@ -772,19 +781,19 @@ change(async (db) => {
             'table',
             { noPrimaryKey: true },
             (t) => ({
-              title: t.text(),
-              body: t.text(),
+              titLe: t.text(),
+              boDy: t.text(),
             }),
-            (t) => t.searchIndex(['title', 'body']),
+            (t) => t.searchIndex(['titLe', 'boDy']),
           );
         },
         tables: [
           table(
             (t) => ({
-              title: t.text(),
-              body: t.text(),
+              titLe: t.text(),
+              boDy: t.text(),
             }),
-            (t) => t.searchIndex(['title', 'body']),
+            (t) => t.searchIndex(['titLe', 'boDy']),
           ),
         ],
       });
@@ -801,26 +810,26 @@ change(async (db) => {
             'table',
             { noPrimaryKey: true },
             (t) => ({
-              title: t.text(),
-              body: t.text(),
+              titLe: t.text(),
+              boDy: t.text(),
             }),
             (t) =>
               t.searchIndex([
-                { column: 'title', weight: 'A' },
-                { column: 'body', weight: 'B' },
+                { column: 'titLe', weight: 'A' },
+                { column: 'boDy', weight: 'B' },
               ]),
           );
         },
         tables: [
           table(
             (t) => ({
-              title: t.text(),
-              body: t.text(),
+              titLe: t.text(),
+              boDy: t.text(),
             }),
             (t) =>
               t.searchIndex([
-                { column: 'title', weight: 'A' },
-                { column: 'body', weight: 'B' },
+                { column: 'titLe', weight: 'A' },
+                { column: 'boDy', weight: 'B' },
               ]),
           ),
         ],
@@ -838,21 +847,21 @@ change(async (db) => {
             'table',
             { noPrimaryKey: true },
             (t) => ({
-              title: t.text(),
-              body: t.text(),
+              titLe: t.text(),
+              boDy: t.text(),
               lang: t.type('regconfig'),
             }),
-            (t) => t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
+            (t) => t.searchIndex(['titLe', 'boDy'], { languageColumn: 'lang' }),
           );
         },
         tables: [
           table(
             (t) => ({
-              title: t.text(),
-              body: t.text(),
+              titLe: t.text(),
+              boDy: t.text(),
               lang: t.type('regconfig'),
             }),
-            (t) => t.searchIndex(['title', 'body'], { languageColumn: 'lang' }),
+            (t) => t.searchIndex(['titLe', 'boDy'], { languageColumn: 'lang' }),
           ),
         ],
       });

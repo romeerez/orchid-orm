@@ -15,6 +15,7 @@ import {
   EmptyObject,
   RawSQLBase,
   RecordKeyTrue,
+  RecordUnknown,
   setCurrentColumnName,
   setDefaultLanguage,
   snakeCaseKey,
@@ -79,9 +80,13 @@ function add(
   options?: { dropMode?: DropMode },
 ): Record<string, RakeDbAst.ChangeTableItem.Column>;
 function add(
+  this: TableChangeMethods,
   item: ColumnType | EmptyObject | Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
 ): number | EmptyObject | Record<string, RakeDbAst.ChangeTableItem.Column> {
+  consumeColumnName();
+  setName(this, item);
+
   if (item instanceof ColumnType) {
     const result = addOrDrop('add', item, options);
     if (result.type === 'change') return result;
@@ -113,7 +118,10 @@ function add(
   return undefined as never;
 }
 
-const drop = function (item, options) {
+const drop = function (this: TableChangeMethods, item, options) {
+  consumeColumnName();
+  setName(this, item);
+
   if (item instanceof ColumnType) {
     const result = addOrDrop('drop', item, options);
     if (result.type === 'change') return result;
@@ -151,11 +159,6 @@ const addOrDrop = (
   item: ColumnType,
   options?: { dropMode?: DropMode },
 ): RakeDbAst.ChangeTableItem.Column | RakeDbAst.ChangeTableItem.Change => {
-  const name = consumeColumnName();
-  if (name) {
-    item.data.name = name;
-  }
-
   if (item instanceof UnknownColumn) {
     const empty = columnTypeToColumnChange({
       type: 'change',
@@ -191,19 +194,26 @@ type ChangeOptions = RakeDbAst.ChangeTableItem.ChangeUsing;
 
 const columnTypeToColumnChange = (
   item: ColumnType | Change,
+  name?: string,
 ): RakeDbAst.ColumnChange => {
   if (item instanceof ColumnType) {
-    const foreignKeys = item.data.foreignKeys;
+    let column = item;
+    const foreignKeys = column.data.foreignKeys;
     if (foreignKeys?.some((it) => 'fn' in it)) {
       throw new Error('Callback in foreignKey is not allowed in migration');
     }
 
+    if (name && !column.data.name) {
+      column = Object.create(column);
+      column.data = { ...column.data, name };
+    }
+
     return {
-      column: item,
-      type: item.toSQL(),
-      nullable: item.data.isNullable,
-      ...item.data,
-      primaryKey: item.data.primaryKey === undefined ? undefined : true,
+      column: column,
+      type: column.toSQL(),
+      nullable: column.data.isNullable,
+      ...column.data,
+      primaryKey: column.data.primaryKey === undefined ? undefined : true,
       foreignKeys: foreignKeys as RakeDbAst.ColumnChange['foreignKeys'],
     };
   }
@@ -212,6 +222,23 @@ const columnTypeToColumnChange = (
 };
 
 const nameKey = Symbol('name');
+
+const setName = (
+  self: TableChangeMethods,
+  item: RakeDbAst.ColumnChange | ColumnType,
+) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const name = (self as any)[nameKey];
+  if (!name) return;
+
+  if ('column' in item && item.column instanceof ColumnType) {
+    item.column.data.name ??= name;
+  } else if (item instanceof ColumnType) {
+    item.data.name ??= name;
+  } else {
+    (item as RecordUnknown).name ??= name;
+  }
+};
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
@@ -230,11 +257,18 @@ const tableChangeMethods = {
     to: ColumnType | Change,
     using?: ChangeOptions,
   ): Change {
+    consumeColumnName();
+    const f = columnTypeToColumnChange(from);
+    const t = columnTypeToColumnChange(to);
+    setName(this, f);
+    setName(this, t);
+
     return {
       type: 'change',
-      name: consumeColumnName(),
-      from: columnTypeToColumnChange(from),
-      to: columnTypeToColumnChange(to),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      name: (this as any)[nameKey],
+      from: f,
+      to: t,
       using,
     };
   },
@@ -445,30 +479,27 @@ const astToQueries = (
 
   if (ast.add.primaryKey) {
     addPrimaryKeys.name = ast.add.primaryKey.name;
-    addPrimaryKeys.columns.push(...ast.add.primaryKey.columns);
+    const { columns } = ast.add.primaryKey;
+    addPrimaryKeys.columns.push(
+      ...(snakeCase ? columns.map(toSnakeCase) : columns),
+    );
   }
 
   if (ast.drop.primaryKey) {
     dropPrimaryKeys.name = ast.drop.primaryKey.name;
-    dropPrimaryKeys.columns.push(...ast.drop.primaryKey.columns);
+    const { columns } = ast.drop.primaryKey;
+    dropPrimaryKeys.columns.push(
+      ...(snakeCase ? columns.map(toSnakeCase) : columns),
+    );
   }
 
   const alterTable: string[] = [];
   const renameItems: string[] = [];
   const values: unknown[] = [];
-  const addIndexes = mapIndexesForSnakeCase(ast.add.indexes, snakeCase);
-
-  const dropIndexes = mapIndexesForSnakeCase(ast.drop.indexes, snakeCase);
-
-  const addConstraints = mapConstraintsToSnakeCase(
-    ast.add.constraints,
-    snakeCase,
-  );
-
-  const dropConstraints = mapConstraintsToSnakeCase(
-    ast.drop.constraints,
-    snakeCase,
-  );
+  const addIndexes = ast.add.indexes ?? [];
+  const dropIndexes = ast.drop.indexes ?? [];
+  const addConstraints = ast.add.constraints ?? [];
+  const dropConstraints = ast.drop.constraints ?? [];
 
   const comments: ColumnComment[] = [];
 
@@ -566,8 +597,8 @@ const astToQueries = (
     queries.push(alterTableSql(tableName, alterTable, values));
   }
 
-  queries.push(...indexesToQuery(false, ast, dropIndexes, language));
-  queries.push(...indexesToQuery(true, ast, addIndexes, language));
+  queries.push(...indexesToQuery(false, ast, dropIndexes, snakeCase, language));
+  queries.push(...indexesToQuery(true, ast, addIndexes, snakeCase, language));
   queries.push(...commentsToQuery(ast, comments));
 
   return queries;
@@ -681,7 +712,7 @@ const handleTableItemChange = (
     const fromName = getChangeColumnName('from', item, key, snakeCase);
 
     if (fromName !== name) {
-      renameItems.push(renameColumnSql(fromName, name, snakeCase));
+      renameItems.push(renameColumnSql(fromName, name));
     }
 
     let changeType = false;
@@ -867,7 +898,11 @@ const handleTableItemChange = (
       comments.push({ column: name, comment: to.comment || null });
     }
   } else if (item.type === 'rename') {
-    renameItems.push(renameColumnSql(key, item.name, snakeCase));
+    renameItems.push(
+      snakeCase
+        ? renameColumnSql(toSnakeCase(key), toSnakeCase(item.name))
+        : renameColumnSql(key, item.name),
+    );
   }
 };
 
@@ -888,45 +923,6 @@ const getChangeColumnName = (
   );
 };
 
-const renameColumnSql = (from: string, to: string, snakeCase?: boolean) => {
-  return `RENAME COLUMN "${snakeCase ? toSnakeCase(from) : from}" TO "${
-    snakeCase ? toSnakeCase(to) : to
-  }"`;
-};
-
-const mapIndexesForSnakeCase = (
-  indexes?: TableData.Index[],
-  snakeCase?: boolean,
-): TableData.Index[] => {
-  return (
-    indexes?.map((index) => ({
-      ...index,
-      columns: snakeCase
-        ? index.columns.map((item) =>
-            'column' in item
-              ? { ...item, column: toSnakeCase(item.column) }
-              : item,
-          )
-        : index.columns,
-    })) || []
-  );
-};
-
-const mapConstraintsToSnakeCase = (
-  foreignKeys?: TableData.Constraint[],
-  snakeCase?: boolean,
-): TableData.Constraint[] => {
-  return (
-    foreignKeys?.map((item) => ({
-      ...item,
-      references: item.references
-        ? snakeCase
-          ? {
-              ...item.references,
-              columns: item.references.columns.map(toSnakeCase),
-            }
-          : item.references
-        : undefined,
-    })) || []
-  );
+const renameColumnSql = (from: string, to: string) => {
+  return `RENAME COLUMN "${from}" TO "${to}"`;
 };

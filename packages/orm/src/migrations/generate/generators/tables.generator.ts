@@ -111,7 +111,7 @@ export const processTables = async (
     verifying,
   );
 
-  processForeignKeys(ast, changeTables, currentSchema, tableShapes);
+  processForeignKeys(config, ast, changeTables, currentSchema, tableShapes);
 
   await Promise.all([
     applyCompareSql(compareSql, adapter),
@@ -418,6 +418,7 @@ const processTableChange = async (
 ) => {
   await processColumns(
     adapter,
+    config,
     structureToAstCtx,
     dbStructure,
     domainsMap,
@@ -431,7 +432,7 @@ const processTableChange = async (
 
   const delayedAst: RakeDbAst[] = [];
 
-  processPrimaryKey(delayedAst, changeTableData);
+  processPrimaryKey(config, delayedAst, changeTableData);
 
   processIndexes(config, changeTableData, delayedAst, ast, compareExpressions);
 

@@ -25,6 +25,7 @@ import {
   RecordUnknown,
   singleQuote,
   SingleSql,
+  toSnakeCase,
 } from 'orchid-core';
 import { createTable, CreateTableResult } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -1365,7 +1366,10 @@ export class Migration<CT> {
   async columnExists(tableName: string, columnName: string): Promise<boolean> {
     return queryExists(this, {
       text: `SELECT 1 FROM "information_schema"."columns" WHERE "table_name" = $1 AND "column_name" = $2`,
-      values: [tableName, columnName],
+      values: [
+        tableName,
+        this.options.snakeCase ? toSnakeCase(columnName) : columnName,
+      ],
     });
   }
 

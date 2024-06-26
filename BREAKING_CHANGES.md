@@ -1,5 +1,11 @@
 # Breaking changes
 
+## orchid-orm 1.32.0
+
+Improved casting to snake_case, so the columns are translated to snake_case in primary key, indexes, foreign key options.
+
+This may break existing migrations if you had `snakeCase: true` and for some reason have some of the columns in `camelCase` in the db.
+
 ## orchid-orm 1.31.2
 
 Removing `primaryKey`, `foreignKey`, `associationForeignKey`, and such, as options for `belongsTo`, `hasMany`, etc.

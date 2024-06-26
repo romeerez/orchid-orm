@@ -1,28 +1,31 @@
-import { RakeDbAst } from 'rake-db';
+import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
 import { ColumnType } from 'pqb';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnChange } from './generators.utils';
+import { toSnakeCase } from 'orchid-core';
 
 export const processPrimaryKey = (
+  config: AnyRakeDbConfig,
   ast: RakeDbAst[],
   changeTableData: ChangeTableData,
 ) => {
   const { codeTable } = changeTableData;
 
-  const columnsPrimaryKey: string[] = [];
+  const columnsPrimaryKey: { key: string; name: string }[] = [];
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
     if (column.data.primaryKey) {
-      columnsPrimaryKey.push(column.data.name ?? key);
+      columnsPrimaryKey.push({ key, name: column.data.name ?? key });
     }
   }
 
-  changePrimaryKey(columnsPrimaryKey, changeTableData);
+  changePrimaryKey(config, columnsPrimaryKey, changeTableData);
   renamePrimaryKey(ast, changeTableData);
 };
 
 const changePrimaryKey = (
-  columnsPrimaryKey: string[],
+  config: AnyRakeDbConfig,
+  columnsPrimaryKey: { key: string; name: string }[],
   {
     codeTable,
     dbTableData: { primaryKey: dbPrimaryKey },
@@ -31,13 +34,23 @@ const changePrimaryKey = (
 ) => {
   const tablePrimaryKey = codeTable.internal.tableData.primaryKey;
   const primaryKey = [
-    ...new Set([...columnsPrimaryKey, ...(tablePrimaryKey?.columns ?? [])]),
+    ...new Set([
+      ...columnsPrimaryKey,
+      ...((config.snakeCase
+        ? tablePrimaryKey?.columns.map((key) => ({
+            key,
+            name: toSnakeCase(key),
+          }))
+        : tablePrimaryKey?.columns.map((key) => ({ key, name: key }))) ?? []),
+    ]),
   ];
 
   if (
     !dbPrimaryKey ||
     primaryKey.length !== dbPrimaryKey.columns.length ||
-    primaryKey.some((a) => !dbPrimaryKey.columns.some((b) => a === b))
+    primaryKey.some(
+      ({ name }) => !dbPrimaryKey.columns.some((dbName) => name === dbName),
+    )
   ) {
     const toDrop = dbPrimaryKey?.columns.filter(
       (key) => !checkForColumnChange(shape, key),
@@ -46,10 +59,12 @@ const changePrimaryKey = (
       drop.primaryKey = { columns: toDrop, name: dbPrimaryKey?.name };
     }
 
-    const toAdd = primaryKey.filter((key) => !checkForColumnChange(shape, key));
+    const toAdd = primaryKey.filter(
+      ({ key }) => !checkForColumnChange(shape, key),
+    );
     if (toAdd.length) {
       add.primaryKey = {
-        columns: toAdd,
+        columns: toAdd.map((c) => c.key),
         name: tablePrimaryKey?.name,
       };
     }

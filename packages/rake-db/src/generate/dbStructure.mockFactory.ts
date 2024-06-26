@@ -62,14 +62,14 @@ const timestampColumn: DbStructure.Column = {
 
 const createdAtColumn: DbStructure.Column = {
   ...timestampColumn,
-  name: 'createdAt',
+  name: 'created_at',
   dateTimePrecision: 6,
   default: 'now()',
 };
 
 const updatedAtColumn: DbStructure.Column = {
   ...createdAtColumn,
-  name: 'updatedAt',
+  name: 'updated_at',
 };
 
 const varcharColumn: DbStructure.Column = {

@@ -32,7 +32,7 @@ export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
   migrationsPath: testMigrationsPath,
   recurrentPath: join(testMigrationsPath, 'recurrent'),
   migrationsTable: 'schemaMigrations',
-  snakeCase: false,
+  snakeCase: true,
   import: require,
   commands: {},
 };

@@ -1,6 +1,7 @@
 import { RakeDbAst } from '../ast';
 import { astToGenerateItem, GenerateItem } from './astToGenerateItems';
 import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
+import { testConfig } from '../rake-db.test-utils';
 
 const t = makeColumnTypes(defaultSchemaConfig);
 
@@ -36,15 +37,25 @@ const arrangeChangeTable = (ast: Partial<RakeDbAst.ChangeTable>) => {
 
 type TableGenerateItem = [up: GenerateItem, down: GenerateItem];
 
+const config = testConfig;
+
 let result: GenerateItem | TableGenerateItem | undefined;
 const act = () => {
   if ('action' in item) {
     result = [
-      astToGenerateItem({ ...item, action: 'create' } as RakeDbAst, 'public'),
-      astToGenerateItem({ ...item, action: 'drop' } as RakeDbAst, 'public'),
+      astToGenerateItem(
+        config,
+        { ...item, action: 'create' } as RakeDbAst,
+        'public',
+      ),
+      astToGenerateItem(
+        config,
+        { ...item, action: 'drop' } as RakeDbAst,
+        'public',
+      ),
     ];
   } else {
-    result = astToGenerateItem(item, 'public');
+    result = astToGenerateItem(config, item, 'public');
   }
 };
 
@@ -214,7 +225,7 @@ describe('astToGenerateItem', () => {
 
         act();
 
-        assertTableKey('public.tableName_someId_fkey');
+        assertTableKey('public.tableName_some_id_fkey');
       });
 
       it('should have a custom column fkey key', () => {

@@ -300,7 +300,7 @@ const astToQueries = (
       } ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
       values,
     },
-    ...indexesToQuery(true, ast, indexes, language),
+    ...indexesToQuery(true, ast, indexes, snakeCase, language),
     ...commentsToQuery(ast, comments),
   );
 

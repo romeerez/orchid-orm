@@ -4,15 +4,20 @@ import {
   concatSchemaAndName,
   getSchemaAndTableFromName,
   getConstraintName,
+  AnyRakeDbConfig,
 } from 'rake-db';
 import { ColumnType, TableData } from 'pqb';
 import { ChangeTableData, TableShapes } from './tables.generator';
-import { deepCompare } from 'orchid-core';
+import { deepCompare, toSnakeCase } from 'orchid-core';
 import { checkForColumnChange } from './generators.utils';
+
+interface Constraint extends TableData.Constraint {
+  references: TableData.References;
+}
 
 interface CodeForeignKey {
   references: DbStructure.References;
-  codeConstraint: TableData.Constraint;
+  codeConstraint: Constraint;
 }
 
 interface ReferencesWithStringTable extends TableData.References {
@@ -60,13 +65,18 @@ for (const key in mapActionToDb) {
 }
 
 export const processForeignKeys = (
+  config: AnyRakeDbConfig,
   ast: RakeDbAst[],
   changeTables: ChangeTableData[],
   currentSchema: string,
   tableShapes: TableShapes,
 ): void => {
   for (const changeTableData of changeTables) {
-    const codeForeignKeys = collectCodeFkeys(changeTableData, currentSchema);
+    const codeForeignKeys = collectCodeFkeys(
+      config,
+      changeTableData,
+      currentSchema,
+    );
 
     const { codeTable, dbTableData, changeTableAst, schema } = changeTableData;
     const { shape, add, drop } = changeTableAst;
@@ -103,7 +113,11 @@ export const processForeignKeys = (
 
           const codeName =
             codeForeignKey.codeConstraint.name ??
-            getConstraintName(codeTable.table, codeForeignKey);
+            getConstraintName(
+              codeTable.table,
+              codeForeignKey,
+              config.snakeCase,
+            );
           if (codeName !== dbConstraint.name) {
             rename = codeName;
           }
@@ -112,7 +126,7 @@ export const processForeignKeys = (
 
       if (!found) {
         (drop.constraints ??= []).push(
-          dbForeignKeyToCodeForeignKey(dbConstraint, dbReferences),
+          dbForeignKeyToCodeForeignKey(config, dbConstraint, dbReferences),
         );
         changed = true;
       } else if (rename) {
@@ -142,6 +156,7 @@ export const processForeignKeys = (
 };
 
 const collectCodeFkeys = (
+  config: AnyRakeDbConfig,
   { codeTable, changeTableAst: { shape } }: ChangeTableData,
   currentSchema: string,
 ): CodeForeignKey[] => {
@@ -157,19 +172,25 @@ const collectCodeFkeys = (
       ...column.data.foreignKeys.map((x) => {
         const columns = [name];
 
-        const references: ReferencesWithStringTable = {
-          columns,
-          fnOrTable: fnOrTableToString(x.fnOrTable),
-          foreignColumns: x.foreignColumns,
-          options: x.options,
-        };
+        const fnOrTable = fnOrTableToString(x.fnOrTable);
 
         return parseForeignKey(
+          config,
           {
             name: x.options?.name,
-            references,
+            references: {
+              columns: [key],
+              fnOrTable,
+              foreignColumns: x.foreignColumns,
+              options: x.options,
+            },
           },
-          references,
+          {
+            columns,
+            fnOrTable,
+            foreignColumns: x.foreignColumns,
+            options: x.options,
+          },
           currentSchema,
         );
       }),
@@ -177,16 +198,32 @@ const collectCodeFkeys = (
   }
 
   if (codeTable.internal.tableData.constraints) {
-    for (const constraint of codeTable.internal.tableData.constraints) {
-      const { references } = constraint;
-      if (!references) continue;
+    for (const tableConstraint of codeTable.internal.tableData.constraints) {
+      const { references: refs } = tableConstraint;
+      if (!refs) continue;
 
-      references.fnOrTable = fnOrTableToString(references.fnOrTable);
+      const fnOrTable = fnOrTableToString(refs.fnOrTable);
 
       codeForeignKeys.push(
         parseForeignKey(
-          constraint,
-          references as ReferencesWithStringTable,
+          config,
+          {
+            ...tableConstraint,
+            references: {
+              ...refs,
+              fnOrTable,
+            },
+          },
+          {
+            ...refs,
+            fnOrTable,
+            columns: config.snakeCase
+              ? refs.columns.map(toSnakeCase)
+              : refs.columns,
+            foreignColumns: config.snakeCase
+              ? refs.foreignColumns.map(toSnakeCase)
+              : refs.foreignColumns,
+          },
           currentSchema,
         ),
       );
@@ -207,7 +244,8 @@ export const fnOrTableToString = (
 };
 
 const parseForeignKey = (
-  codeConstraint: TableData.Constraint,
+  config: AnyRakeDbConfig,
+  codeConstraint: Constraint,
   references: ReferencesWithStringTable,
   currentSchema: string,
 ): CodeForeignKey => {
@@ -219,7 +257,9 @@ const parseForeignKey = (
       foreignSchema: schema ?? currentSchema,
       foreignTable: table,
       columns,
-      foreignColumns,
+      foreignColumns: config.snakeCase
+        ? foreignColumns.map(toSnakeCase)
+        : foreignColumns,
       match: mapMatchToDb[options?.match || 'SIMPLE'],
       onUpdate: mapActionToDb[options?.onUpdate || 'NO ACTION'],
       onDelete: mapActionToDb[options?.onDelete || 'NO ACTION'],
@@ -229,12 +269,17 @@ const parseForeignKey = (
 };
 
 const dbForeignKeyToCodeForeignKey = (
+  config: AnyRakeDbConfig,
   dbConstraint: DbStructure.Constraint,
   dbReferences: DbStructure.References,
 ): TableData.Constraint => ({
   name:
     dbConstraint.name ===
-    getConstraintName(dbConstraint.tableName, { references: dbReferences })
+    getConstraintName(
+      dbConstraint.tableName,
+      { references: dbReferences },
+      config.snakeCase,
+    )
       ? undefined
       : dbConstraint.name,
   references: {

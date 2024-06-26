@@ -242,7 +242,7 @@ change(async (db) => {
     (t) => ({
       id: t.identity().primaryKey(),
       text: t.text().check(t.sql\`length(text) > 5\`),
-      ...t.timestampsSnakeCase(),
+      ...t.timestamps(),
     }),
     (t) => [
       t.check(t.sql({ raw: 'table check' }), 'table_column_check'),

@@ -24,13 +24,13 @@ describe('columns', () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.identity(),
-          name: t.text(),
+          iD: t.identity(),
+          naMe: t.text(),
         })),
       ],
     });
@@ -41,26 +41,26 @@ describe('columns', () => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    name: t.add(t.text()),
+    naMe: t.add(t.text()),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add column')} name text`);
+  ${green('+ add column')} naMe text`);
   });
 
   it('should drop a column', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          id: t.identity(),
-          name: t.text(),
+          iD: t.identity(),
+          naMe: t.text(),
         }));
       },
       tables: [
         table((t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         })),
       ],
     });
@@ -71,25 +71,25 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    name: t.drop(t.text()),
+    naMe: t.drop(t.text()),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop column')} name text`);
+  ${red('- drop column')} naMe text`);
   });
 
   it('should change column type', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          name: t.integer(),
+          naMe: t.integer(),
         }));
       },
       tables: [
         table((t) => ({
-          name: t.text(),
+          naMe: t.text(),
         })),
       ],
     });
@@ -100,13 +100,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    name: t.change(t.integer(), t.text()),
+    naMe: t.change(t.integer(), t.text()),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} name:
+  ${yellow('~ change column')} naMe:
     ${yellow('from')}: t.integer()
       ${yellow('to')}: t.text()`);
   });
@@ -120,14 +120,14 @@ change(async (db) => {
         await db.createDomain('to.custom', (t) => t.string());
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          unchanged: t.domain('from.custom'),
-          column: t.domain('from.custom'),
+          unChanged: t.domain('from.custom'),
+          colUmn: t.domain('from.custom'),
         }));
       },
       tables: [
         table((t) => ({
-          unchanged: t.domain('from.custom').as(t.integer()),
-          column: t.domain('to.custom').as(t.string()),
+          unChanged: t.domain('from.custom').as(t.integer()),
+          colUmn: t.domain('to.custom').as(t.string()),
         })),
       ],
     });
@@ -138,13 +138,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.domain('from.custom'), t.domain('to.custom')),
+    colUmn: t.change(t.domain('from.custom'), t.domain('to.custom')),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
+  ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.domain('from.custom')
       ${yellow('to')}: t.domain('to.custom')`);
   });
@@ -153,12 +153,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.integer().nullable(),
+          colUmn: t.integer().nullable(),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.integer(),
+          colUmn: t.integer(),
         })),
       ],
     });
@@ -169,13 +169,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.integer().nullable(), t.integer()),
+    colUmn: t.change(t.integer().nullable(), t.integer()),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
+  ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.integer().nullable()
       ${yellow('to')}: t.integer()`);
   });
@@ -183,17 +183,13 @@ change(async (db) => {
   it('should change text data type properties', async () => {
     await arrange({
       async prepareDb(db) {
-        try {
-          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-            column: t.varchar(10).collate('C').compression('pglz'),
-          }));
-        } catch (err) {
-          console.log(err);
-        }
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.varchar(10).collate('C').compression('pglz'),
+        }));
       },
       tables: [
         table((t) => ({
-          column: t.varchar(20).collate('POSIX').compression('lz4'),
+          colUmn: t.varchar(20).collate('POSIX').compression('lz4'),
         })),
       ],
     });
@@ -204,13 +200,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.varchar(10).compression('pglz').collate('C'), t.varchar(20).compression('lz4').collate('POSIX')),
+    colUmn: t.change(t.varchar(10).compression('pglz').collate('C'), t.varchar(20).compression('lz4').collate('POSIX')),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
+  ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.varchar(10).compression('pglz').collate('C')
       ${yellow('to')}: t.varchar(20).compression('lz4').collate('POSIX')`);
   });
@@ -219,12 +215,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.decimal(3, 7),
+          colUmn: t.decimal(3, 7),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.decimal(11, 13),
+          colUmn: t.decimal(11, 13),
         })),
       ],
     });
@@ -235,13 +231,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.decimal(3, 7), t.decimal(11, 13)),
+    colUmn: t.change(t.decimal(3, 7), t.decimal(11, 13)),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
+  ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.decimal(3, 7)
       ${yellow('to')}: t.decimal(11, 13)`);
   });
@@ -250,12 +246,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.timestamp(3),
+          colUmn: t.timestamp(3),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.timestamp(5),
+          colUmn: t.timestamp(5),
         })),
       ],
     });
@@ -266,13 +262,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.timestamp(3), t.timestamp(5)),
+    colUmn: t.change(t.timestamp(3), t.timestamp(5)),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
+  ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.timestamp(3)
       ${yellow('to')}: t.timestamp(5)`);
   });
@@ -324,12 +320,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.identity(),
+          colUmn: t.identity(),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.identity({
+          colUmn: t.identity({
             increment: 2,
             min: 3,
             start: 4,
@@ -348,7 +344,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.identity(), t.identity({
+    colUmn: t.change(t.identity(), t.identity({
       always: true,
       increment: 2,
       start: 4,
@@ -362,7 +358,7 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
+  ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.identity()
       ${yellow('to')}: t.identity({
       always: true,
@@ -379,12 +375,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.text().comment('from'),
+          colUmn: t.text().comment('from'),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.text().comment('to'),
+          colUmn: t.text().comment('to'),
         })),
       ],
     });
@@ -395,13 +391,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    column: t.change(t.text().comment('from'), t.text().comment('to')),
+    colUmn: t.change(t.text().comment('from'), t.text().comment('to')),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} column:
+  ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.text().comment('from')
       ${yellow('to')}: t.text().comment('to')`);
   });
@@ -410,12 +406,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.integer(),
+          colUmn: t.integer(),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.array(t.integer()),
+          colUmn: t.array(t.integer()),
         })),
       ],
       selects: [0],
@@ -427,27 +423,27 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    ...t.drop(t.name('column').integer()),
-    ...t.add(t.name('column').array(t.integer())),
+    ...t.drop(t.name('col_umn').integer()),
+    ...t.add(t.name('col_umn').array(t.integer())),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop column')} column integer
-  ${green('+ add column')} column array`);
+  ${red('- drop column')} colUmn integer
+  ${green('+ add column')} colUmn array`);
   });
 
   it('change from array type: prompt if should recreate the column or abort, selecting abort', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          column: t.array(t.integer()),
+          colUmn: t.array(t.integer()),
         }));
       },
       tables: [
         table((t) => ({
-          column: t.integer(),
+          colUmn: t.integer(),
         })),
       ],
       selects: [1],
@@ -463,7 +459,7 @@ change(async (db) => {
       db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>,
     ) => {
       await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-        from: t.integer(),
+        frOm: t.integer(),
       }));
     };
 
@@ -472,7 +468,7 @@ change(async (db) => {
         prepareDb,
         tables: [
           table((t) => ({
-            to: t.integer(),
+            tO: t.integer(),
           })),
         ],
         selects: [0],
@@ -484,15 +480,15 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    to: t.add(t.integer()),
-    from: t.drop(t.integer()),
+    tO: t.add(t.integer()),
+    frOm: t.drop(t.integer()),
   }));
 });
 `);
 
       assert.report(`${yellow('~ change table')} table:
-  ${green('+ add column')} to integer
-  ${red('- drop column')} from integer`);
+  ${green('+ add column')} tO integer
+  ${red('- drop column')} frOm integer`);
     });
 
     it('should rename column when selected', async () => {
@@ -500,7 +496,7 @@ change(async (db) => {
         prepareDb,
         tables: [
           table((t) => ({
-            to: t.integer(),
+            tO: t.integer(),
           })),
         ],
         selects: [1],
@@ -512,13 +508,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    from: t.rename('to'),
+    fr_om: t.rename('tO'),
   }));
 });
 `);
 
       assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ rename column')} from ${yellow('=>')} to`);
+  ${yellow('~ rename column')} fr_om ${yellow('=>')} tO`);
     });
 
     it('should rename column when using custom name', async () => {
@@ -526,7 +522,7 @@ change(async (db) => {
         prepareDb,
         tables: [
           table((t) => ({
-            from: t.name('to').integer(),
+            frOm: t.name('t_o').integer(),
           })),
         ],
         selects: [1],
@@ -538,13 +534,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    from: t.rename('to'),
+    frOm: t.rename('t_o'),
   }));
 });
 `);
 
       assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ rename column')} from ${yellow('=>')} to`);
+  ${yellow('~ rename column')} frOm ${yellow('=>')} t_o`);
     });
   });
 
@@ -552,12 +548,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          from: t.text(),
+          frOm: t.text(),
         }));
       },
       tables: [
         table((t) => ({
-          to: t.string(),
+          tO: t.string(),
         })),
       ],
       selects: [1],
@@ -569,14 +565,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    from: t.change(t.text(), t.name('to').string()),
+    fr_om: t.change(t.text(), t.name('t_o').string()),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} from:
+  ${yellow('~ change column')} fr_om:
     ${yellow('from')}: t.text()
-      ${yellow('to')}: t.name('to').string()`);
+      ${yellow('to')}: t.name('t_o').string()`);
   });
 });

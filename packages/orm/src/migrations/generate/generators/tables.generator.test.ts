@@ -23,7 +23,7 @@ const { green, red, yellow } = colors;
 describe('tables', () => {
   const { arrange, act, assert, BaseTable, table } = useGeneratorsTestUtils();
 
-  it('should throw if found more than one table with same schema and name', async () => {
+  it('should throw if found more than one table with same schema and naMe', async () => {
     await arrange({
       tables: [
         class One extends BaseTable {
@@ -61,16 +61,16 @@ describe('tables', () => {
             snakeCase = true;
             columns = this.setColumns(
               (t) => ({
-                name: t.string(),
-                int: t.integer(),
-                virtual: new UnknownColumn(defaultSchemaConfig),
-                created: t.timestamps().createdAt,
-                updated: t.timestamps().updatedAt,
+                naMe: t.string(),
+                iNt: t.integer(),
+                virtUal: new UnknownColumn(defaultSchemaConfig),
+                creatEd: t.timestamps().createdAt,
+                updatEd: t.timestamps().updatedAt,
               }),
               (t) => [
-                t.primaryKey(['name', 'int']),
-                t.index(['name', 'int']),
-                t.check(t.sql`int > 5`, 'constraintName'),
+                t.primaryKey(['naMe', 'iNt']),
+                t.index(['naMe', 'iNt']),
+                t.check(t.sql`"i_nt" > 5`, 'constraintName'),
               ],
             );
           },
@@ -90,17 +90,17 @@ change(async (db) => {
       noPrimaryKey: true,
     },
     (t) => ({
-      name: t.string(),
-      int: t.integer(),
+      naMe: t.string(),
+      iNt: t.integer(),
       ` +
           // when creating, logic can see that `createdAt` and `updatedAt` are indeed coming from `timestamps` and can rely on this fact.
-          `created: t.timestamps().createdAt,
-      updated: t.timestamps().updatedAt,
+          `creatEd: t.timestamps().createdAt,
+      updatEd: t.timestamps().updatedAt,
     }),
     (t) => [
-      t.primaryKey(['name', 'int']),
-      t.index(['name', 'int']),
-      t.check(t.sql\`int > 5\`, 'constraintName'),
+      t.primaryKey(['naMe', 'iNt']),
+      t.index(['naMe', 'iNt']),
+      t.check(t.sql\`"i_nt" > 5\`, 'constraintName'),
     ],
   );
 });
@@ -122,12 +122,12 @@ change(async (db) => {
           'schema.one',
           { comment: 'table comment', noPrimaryKey: true },
           (t) => ({
-            name: t.varchar(255),
-            int: t.integer().check(t.sql`("int" > 5)`),
-            created: t.timestamps().createdAt,
-            updated: t.timestamps().updatedAt,
+            naMe: t.varchar(255),
+            iNt: t.integer().check(t.sql`(i_nt > 5)`),
+            creatEd: t.timestamps().createdAt,
+            updatEd: t.timestamps().updatedAt,
           }),
-          (t) => [t.primaryKey(['name', 'int']), t.index(['name', 'int'])],
+          (t) => [t.primaryKey(['naMe', 'iNt']), t.index(['naMe', 'iNt'])],
         );
       },
     });
@@ -144,16 +144,16 @@ change(async (db) => {
       comment: "table comment",
     },
     (t) => ({
-      name: t.varchar(255),
-      int: t.integer().check(t.sql\`("int" > 5)\`),
+      naMe: t.varchar(255),
+      iNt: t.integer().check(t.sql\`(i_nt > 5)\`),
       ` +
         // when dropping, the logic cannot know if it's from `timestamps` or if it's just an arbitrary timestamp.
-        `created: t.timestamp().default(t.sql\`now()\`),
-      updated: t.timestamp().default(t.sql\`now()\`),
+        `creatEd: t.timestamp().default(t.sql\`now()\`),
+      updatEd: t.timestamp().default(t.sql\`now()\`),
     }),
     (t) => [
-      t.primaryKey(['name', 'int']),
-      t.index(['name', 'int']),
+      t.primaryKey(['naMe', 'iNt']),
+      t.index(['naMe', 'iNt']),
     ],
   );
 });
@@ -172,7 +172,7 @@ ${red('- drop table')} schema.one (4 columns, 1 index, 1 check)`);
     await arrange({
       async prepareDb(db) {
         await db.createTable('one', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
       },
       tables: [
@@ -198,7 +198,7 @@ change(async (db) => {
   );
 
   await db.dropTable('one', (t) => ({
-    id: t.integer().primaryKey(),
+    iD: t.integer().primaryKey(),
   }));
 });
 `);
@@ -216,7 +216,7 @@ change(async (db) => {
         await db.createSchema('to');
 
         await db.createTable('from.one', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('from.unchanged', { noPrimaryKey: true });
@@ -250,7 +250,7 @@ change(async (db) => {
   );
 
   await db.dropTable('from.one', (t) => ({
-    id: t.integer().primaryKey(),
+    iD: t.integer().primaryKey(),
   }));
 });
 `);
@@ -265,17 +265,17 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('one', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('two', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
       },
       tables: [
         table(
           (t) => ({
-            id: t.integer().primaryKey(),
+            iD: t.integer().primaryKey(),
           }),
           undefined,
           { name: 'three' },
@@ -292,7 +292,7 @@ change(async (db) => {
   await db.renameTable('one', 'three');
 
   await db.dropTable('two', (t) => ({
-    id: t.integer().primaryKey(),
+    iD: t.integer().primaryKey(),
   }));
 });
 `);
@@ -310,11 +310,11 @@ change(async (db) => {
         await db.createSchema('to');
 
         await db.createTable('from.one', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('from.two', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
 
         await db.createTable('from.unchanged', { noPrimaryKey: true });
@@ -324,7 +324,7 @@ change(async (db) => {
           schema = 'to';
           table = 'three';
           columns = this.setColumns((t) => ({
-            id: t.integer().primaryKey(),
+            iD: t.integer().primaryKey(),
           }));
         },
         class Unchanged extends BaseTable {
@@ -344,7 +344,7 @@ change(async (db) => {
   await db.renameTable('from.one', 'to.three');
 
   await db.dropTable('from.two', (t) => ({
-    id: t.integer().primaryKey(),
+    iD: t.integer().primaryKey(),
   }));
 });
 `);
@@ -361,15 +361,15 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('from', (t) => ({
-          id: t.integer().primaryKey(),
+          iD: t.integer().primaryKey(),
         }));
       },
       tables: [
         class Table extends BaseTable {
           table = 'to';
           columns = this.setColumns((t) => ({
-            id: t.integer().primaryKey(),
-            name: t.text(),
+            iD: t.integer().primaryKey(),
+            naMe: t.text(),
           }));
         },
       ],
@@ -386,7 +386,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('to', (t) => ({
-    name: t.add(t.text()),
+    naMe: t.add(t.text()),
   }));
 });
 `);
@@ -394,7 +394,7 @@ change(async (db) => {
     assert.report(
       `${yellow('~ rename table')} from ${yellow('=>')} to`,
       `${yellow('~ change table')} to:`,
-      `  ${green('+ add column')} name text`,
+      `  ${green('+ add column')} naMe text`,
     );
   });
 
@@ -403,10 +403,10 @@ change(async (db) => {
       db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>,
     ) => {
       await db.createTable('one', { noPrimaryKey: true }, (t) => ({
-        id: t.identity(),
+        iD: t.identity(),
       }));
       await db.createTable('two', { noPrimaryKey: true }, (t) => ({
-        id: t.identity(),
+        iD: t.identity(),
       }));
     };
 
@@ -415,16 +415,16 @@ change(async (db) => {
         table = 'one';
         noPrimaryKey = true;
         columns = this.setColumns((t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         }));
         relations = {
           twos: this.hasAndBelongsToMany(() => Two, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['oneId'],
             through: {
               table: 'joinTable',
               columns: ['twoId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -434,7 +434,7 @@ change(async (db) => {
         table = 'two';
         noPrimaryKey = true;
         columns = this.setColumns((t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         }));
       }
 
@@ -467,16 +467,16 @@ change(async (db) => {
         table = 'one';
         noPrimaryKey = true;
         columns = this.setColumns((t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         }));
         relations = {
           twos: this.hasAndBelongsToMany(() => Two, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['oneId'],
             through: {
               table: 'joinTable',
               columns: ['twoId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -486,16 +486,16 @@ change(async (db) => {
         table = 'two';
         noPrimaryKey = true;
         columns = this.setColumns((t) => ({
-          id: t.identity(),
+          iD: t.identity(),
         }));
         relations = {
           twos: this.hasAndBelongsToMany(() => One, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['twoId'],
             through: {
               table: 'joinTable',
               columns: ['oneId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -529,16 +529,16 @@ change(async (db) => {
       class One extends BaseTable {
         table = 'one';
         columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         }));
         relations = {
           twos: this.hasAndBelongsToMany(() => Two, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['oneId'],
             through: {
               table: 'joinTable',
               columns: ['twoId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -547,16 +547,16 @@ change(async (db) => {
       class Two extends BaseTable {
         table = 'two';
         columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         }));
         relations = {
           twos: this.hasAndBelongsToMany(() => One, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['wrong'],
             through: {
               table: 'joinTable',
               columns: ['oneId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -575,17 +575,17 @@ change(async (db) => {
         readonly table = 'user_staff';
 
         columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         }));
 
         relations = {
           roles: this.hasAndBelongsToMany(() => RoleTable, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['staffId'],
             through: {
               table: 'user_staff_to_role',
               columns: ['roleId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -595,27 +595,27 @@ change(async (db) => {
         readonly table = 'user_staff_role';
 
         columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         }));
 
         relations = {
           staffs: this.hasAndBelongsToMany(() => StaffTable, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['roleId'],
             through: {
               table: 'user_staff_to_role',
               columns: ['staffId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
 
           permissions: this.hasAndBelongsToMany(() => PermissionTable, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['roleId'],
             through: {
               table: 'user_role_to_perm',
               columns: ['permId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -625,17 +625,17 @@ change(async (db) => {
         readonly table = 'user_staff_perm';
 
         columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
+          iD: t.identity().primaryKey(),
         }));
 
         relations = {
           roles: this.hasAndBelongsToMany(() => RoleTable, {
-            columns: ['id'],
+            columns: ['iD'],
             references: ['permId'],
             through: {
               table: 'user_role_to_perm',
               columns: ['roleId'],
-              references: ['id'],
+              references: ['iD'],
             },
           }),
         };
@@ -651,7 +651,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('user_staff', (t) => ({
-    id: t.identity().primaryKey(),
+    iD: t.identity().primaryKey(),
   }));
 
   await db.createTable(
@@ -664,7 +664,7 @@ change(async (db) => {
   );
 
   await db.createTable('user_staff_role', (t) => ({
-    id: t.identity().primaryKey(),
+    iD: t.identity().primaryKey(),
   }));
 
   await db.createTable(
@@ -677,7 +677,7 @@ change(async (db) => {
   );
 
   await db.createTable('user_staff_perm', (t) => ({
-    id: t.identity().primaryKey(),
+    iD: t.identity().primaryKey(),
   }));
 });
 `);

@@ -137,5 +137,16 @@ export const checkForColumnChange = (
   key: string,
 ) => {
   const item = shape[key];
-  return item && (Array.isArray(item) || item.type !== 'rename');
+  if (item) {
+    return item && (Array.isArray(item) || item.type !== 'rename');
+  }
+
+  for (const k in shape) {
+    const item = shape[k];
+    if (Array.isArray(item) || item.type !== 'rename') {
+      return true;
+    }
+  }
+
+  return false;
 };

@@ -3,7 +3,7 @@ import { RawSQLBase } from '../raw';
 import { QueryBaseCommon } from '../query';
 import { OperatorBase } from './operators';
 import { ColumnTypeSchemaArg } from './columnSchema';
-import { RecordString } from '../utils';
+import { RecordString, toSnakeCase } from '../utils';
 
 // get columns object type where nullable columns or columns with a default are optional
 export type ColumnShapeInput<
@@ -794,3 +794,21 @@ export abstract class ColumnTypeBase<
     return setColumnData(this, 'isHidden', true) as never;
   }
 }
+
+export const columnToCode = (
+  key: string,
+  column: ColumnTypeBase,
+  snakeCase: boolean | undefined,
+) => {
+  if (snakeCase) key = toSnakeCase(key);
+
+  if (column.data.name === key) {
+    const name = column.data.name;
+    column.data.name = undefined;
+    const code = column.toCode('t', true);
+    column.data.name = name;
+    return code;
+  } else {
+    return column.toCode('t', true);
+  }
+};

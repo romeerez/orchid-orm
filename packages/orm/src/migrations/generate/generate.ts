@@ -1,4 +1,4 @@
-import { QueryColumn } from 'orchid-core';
+import { QueryColumn, toCamelCase } from 'orchid-core';
 import {
   Adapter,
   AdapterOptions,
@@ -407,7 +407,7 @@ const processHasAndBelongsToManyColumn = (
   const prev = habtmTables.get(q.table);
   if (prev) {
     for (const key in q.shape) {
-      if (q.shape[key] !== prev.shape[key]) {
+      if (q.shape[key].dataType !== prev.shape[key]?.dataType) {
         throw new Error(
           `Column ${key} in ${q.table} in hasAndBelongsToMany relation does not match with the relation on the other side`,
         );
@@ -424,11 +424,12 @@ const processHasAndBelongsToManyColumn = (
     const column = Object.create(joinTable.shape[key]);
     column.data = {
       ...column.data,
+      name: column.data.name ?? key,
       identity: undefined,
       primaryKey: undefined,
       default: undefined,
     };
-    shape[key] = column;
+    shape[toCamelCase(key)] = column;
   }
   joinTable.shape = shape;
   joinTable.internal = {

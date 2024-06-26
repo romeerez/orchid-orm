@@ -3,7 +3,6 @@ import {
   getDb,
   makeTestUpAndDown,
   queryMock,
-  resetDb,
   toLine,
 } from '../rake-db.test-utils';
 import { raw } from 'pqb';
@@ -12,11 +11,6 @@ import { singleQuote } from 'orchid-core';
 const db = getDb();
 
 describe('migration', () => {
-  beforeEach(() => {
-    resetDb();
-    db.options.snakeCase = false;
-  });
-
   describe('renameTable', () => {
     const testRenameTable = makeTestUpAndDown('renameTable');
 
@@ -102,34 +96,16 @@ describe('migration', () => {
 
     it('should use changeTable to add and drop a column', async () => {
       await testUpAndDown(
-        (action) => db[action]('table', 'column', (t) => t.text()),
+        (action) => db[action]('table', 'colUmn', (t) => t.text()),
         () =>
           expectSql(`
             ALTER TABLE "table"
-            ADD COLUMN "column" text NOT NULL
+            ADD COLUMN "col_umn" text NOT NULL
           `),
         () =>
           expectSql(`
             ALTER TABLE "table"
-            DROP COLUMN "column"
-          `),
-      );
-    });
-
-    it('should use changeTable to add and drop a column in snakeCase mode', async () => {
-      db.options.snakeCase = true;
-
-      await testUpAndDown(
-        (action) => db[action]('table', 'columnName', (t) => t.text()),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            ADD COLUMN "column_name" text NOT NULL
-          `),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            DROP COLUMN "column_name"
+            DROP COLUMN "col_umn"
           `),
       );
     });
@@ -143,7 +119,7 @@ describe('migration', () => {
         (action) =>
           db[action](
             'table',
-            ['id', { column: 'name', order: 'DESC' }],
+            ['iD', { column: 'naMe', order: 'DESC' }],
             'indexName',
             {
               unique: true,
@@ -152,41 +128,11 @@ describe('migration', () => {
           ),
         () =>
           expectSql(`
-            CREATE UNIQUE INDEX "indexName" ON "table" ("id", "name" DESC) NULLS NOT DISTINCT
+            CREATE UNIQUE INDEX "indexName" ON "table" ("i_d", "na_me" DESC) NULLS NOT DISTINCT
           `),
         () =>
           expectSql(`
             DROP INDEX "indexName"
-          `),
-      );
-    });
-
-    it('should use changeTable to add and drop an index in snakeCase mode', async () => {
-      db.options.snakeCase = true;
-
-      await testUpAndDown(
-        (action) =>
-          db[action](
-            'table',
-            [
-              'idColumn',
-              {
-                column: 'nameColumn',
-                order: 'DESC',
-              },
-            ],
-            {
-              unique: true,
-              nullsNotDistinct: true,
-            },
-          ),
-        () =>
-          expectSql(`
-            CREATE UNIQUE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC) NULLS NOT DISTINCT
-          `),
-        () =>
-          expectSql(`
-            DROP INDEX "table_id_column_name_column_idx"
           `),
       );
     });
@@ -218,7 +164,7 @@ describe('migration', () => {
         (action) =>
           db[action](
             'table',
-            ['id', 'name'],
+            ['iD', 'naMe'],
             'otherTable',
             ['foreignId', 'foreignName'],
             {
@@ -234,8 +180,8 @@ describe('migration', () => {
             ALTER TABLE "table"
             ${toLine(`
               ADD CONSTRAINT "constraintName"
-                FOREIGN KEY ("id", "name")
-                REFERENCES "otherTable"("foreignId", "foreignName")
+                FOREIGN KEY ("i_d", "na_me")
+                REFERENCES "otherTable"("foreign_id", "foreign_name")
                 MATCH FULL
                 ON DELETE CASCADE
                 ON UPDATE CASCADE
@@ -245,32 +191,6 @@ describe('migration', () => {
           expectSql(`
             ALTER TABLE "table"
             DROP CONSTRAINT "constraintName" CASCADE
-          `),
-      );
-    });
-
-    it('should use changeTable to add and drop a foreignKey in snakeCase mode', async () => {
-      db.options.snakeCase = true;
-
-      await testUpAndDown(
-        (action) =>
-          db[action]('table', ['idColumn', 'nameColumn'], 'otherTable', [
-            'foreignId',
-            'foreignName',
-          ]),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            ${toLine(`
-              ADD CONSTRAINT "table_id_column_name_column_fkey"
-                FOREIGN KEY ("id_column", "name_column")
-                REFERENCES "otherTable"("foreign_id", "foreign_name")
-            `)}
-          `),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            DROP CONSTRAINT "table_id_column_name_column_fkey"
           `),
       );
     });
@@ -319,11 +239,11 @@ describe('migration', () => {
 
     it('should use changeTable to add and drop primary key', async () => {
       await testUpAndDown(
-        (action) => db[action]('table', ['id', 'name']),
+        (action) => db[action]('table', ['iD', 'naMe']),
         () =>
           expectSql(`
             ALTER TABLE "table"
-            ADD PRIMARY KEY ("id", "name")
+            ADD PRIMARY KEY ("i_d", "na_me")
           `),
         () =>
           expectSql(`
@@ -335,34 +255,16 @@ describe('migration', () => {
 
     it('should use changeTable to add and drop primary key with constraint name', async () => {
       await testUpAndDown(
-        (action) => db[action]('table', ['id', 'name'], 'primaryKeyName'),
+        (action) => db[action]('table', ['iD', 'naMe'], 'primaryKeyName'),
         () =>
           expectSql(`
             ALTER TABLE "table"
-            ADD CONSTRAINT "primaryKeyName" PRIMARY KEY ("id", "name")
+            ADD CONSTRAINT "primaryKeyName" PRIMARY KEY ("i_d", "na_me")
           `),
         () =>
           expectSql(`
             ALTER TABLE "table"
             DROP CONSTRAINT "primaryKeyName"
-          `),
-      );
-    });
-
-    it('should use changeTable to add and drop primary key in snakeCase mode', async () => {
-      db.options.snakeCase = true;
-
-      await testUpAndDown(
-        (action) => db[action]('table', ['idColumn', 'nameColumn']),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            ADD PRIMARY KEY ("id_column", "name_column")
-          `),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            DROP CONSTRAINT "table_pkey"
           `),
       );
     });
@@ -373,34 +275,16 @@ describe('migration', () => {
 
     it('should use changeTable to rename a column', async () => {
       await testUpAndDown(
-        () => db.renameColumn('table', 'from', 'to'),
+        () => db.renameColumn('table', 'frOm', 'tO'),
         () =>
           expectSql(`
             ALTER TABLE "table"
-            RENAME COLUMN "from" TO "to"
+            RENAME COLUMN "fr_om" TO "t_o"
           `),
         () =>
           expectSql(`
             ALTER TABLE "table"
-            RENAME COLUMN "to" TO "from"
-          `),
-      );
-    });
-
-    it('should use changeTable to rename a column in snakeCase mode', async () => {
-      db.options.snakeCase = true;
-
-      await testUpAndDown(
-        () => db.renameColumn('table', 'fromColumn', 'toColumn'),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            RENAME COLUMN "from_column" TO "to_column"
-          `),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-            RENAME COLUMN "to_column" TO "from_column"
+            RENAME COLUMN "t_o" TO "fr_om"
           `),
       );
     });
