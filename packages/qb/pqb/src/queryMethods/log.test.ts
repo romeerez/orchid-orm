@@ -1,7 +1,6 @@
 import { createDb } from '../query/db';
 import { userData } from '../test-utils/test-utils';
-import { logColors } from './log';
-import { noop } from 'orchid-core';
+import { logColors, noop } from 'orchid-core';
 import { testAdapter, testDbOptions, useTestDatabase } from 'test-utils';
 
 const hrtime = jest.spyOn(process, 'hrtime');

@@ -6,9 +6,13 @@ import {
   defaultSchemaConfig,
   makeColumnTypes as defaultColumnTypes,
   NoPrimaryKeyOption,
-  QueryLogOptions,
 } from 'pqb';
-import { ColumnSchemaConfig, getStackTrace, MaybePromise } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  getStackTrace,
+  MaybePromise,
+  QueryLogOptions,
+} from 'orchid-core';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrationsSet';

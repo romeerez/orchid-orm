@@ -59,14 +59,14 @@ and [release savepoint](https://www.postgresql.org/docs/current/sql-release-save
 ```ts
 const result = await db.$transaction(async () => {
   await db.table.create(...one);
-  
+
   const result = await db.$transaction(async () => {
-    await db.table.create(...two)
+    await db.table.create(...two);
     return 123;
   });
-  
+
   await db.table.create(...three);
-  
+
   return result;
 });
 
@@ -84,8 +84,8 @@ class CustomError extends Error {}
 await db.$transaction(async () => {
   try {
     await db.$transaction(async () => {
-      throw new CustomError()
-    })
+      throw new CustomError();
+    });
   } catch (err) {
     if (err instanceof CustomError) {
       // ignore this error
@@ -93,10 +93,10 @@ await db.$transaction(async () => {
     }
     throw err;
   }
-  
+
   // this transaction can continue
-  await db.table.create(...data)
-})
+  await db.table.create(...data);
+});
 ```
 
 If the error in the inner transaction is not caught, all nested transactions are rolled back and aborted.
@@ -157,12 +157,12 @@ describe('title', () => {
   it('should run a nested transaction', async () => {
     // the record from the previous test disappeared
     expect(await db.table.count()).toBe(0);
-    
+
     // nested transactions works just fine
     await db.$transaction(async () => {
       await db.table.create({ ...data });
     });
-    
+
     // record in a nested transaction was saved and is available until the end of this `it` test block
     const count = await db.table.count();
     expect(count).toBe(1);
@@ -177,24 +177,24 @@ import { useTestDatabase } from './test-utils';
 
 describe('outer', () => {
   useTestDatabase();
-  
+
   it('should have no records', async () => {
     expect(await db.table.count()).toBe(0);
   });
-  
+
   describe('inner', () => {
     useTestDatabase();
-    
+
     beforeAll(async () => {
-      await db.table.create(...data)
+      await db.table.create(...data);
     });
-    
+
     // all `it` block in the inner describe will have a created record in the db
     it('should have the created record', async () => {
       expect(await db.table.count(1)).toBe(1);
     });
-  })
-  
+  });
+
   // data was cleared in the end of inner describe
   it('should have no records again', async () => {
     expect(await db.table.count()).toBe(0);
@@ -312,5 +312,19 @@ This method can be used after a lock mode has been specified with either forUpda
 ```ts
 await db.$transaction(async () => {
   await db.table.forUpdate().noWait();
+});
+```
+
+## log transaction queries
+
+Pass `{ log: true }` to the transaction to turn logging on for all its queries, including `BEGIN` and `COMMIT`.
+
+Note that setting log on a transaction will override the log setting of a particular query.
+
+```ts
+await db.$transaction({ log: true }, async () => {
+  await db.table.insert(data);
+  // raw SQL queries will also be logged
+  await db.$query`SELECT 1`;
 });
 ```

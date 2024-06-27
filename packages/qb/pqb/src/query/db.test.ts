@@ -1,6 +1,5 @@
 import { User, userData } from '../test-utils/test-utils';
 import { createDb } from './db';
-import { QueryLogger } from '../queryMethods';
 import {
   assertType,
   expectSql,
@@ -9,7 +8,7 @@ import {
   testDbOptions,
   useTestDatabase,
 } from 'test-utils';
-import { RecordUnknown, TransactionState } from 'orchid-core';
+import { QueryLogger, RecordUnknown, TransactionState } from 'orchid-core';
 import { raw } from '../sql/rawSql';
 
 describe('db connection', () => {

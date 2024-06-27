@@ -8,6 +8,7 @@ import {
   TransactionState,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
+import { logParamToLogObject } from './log';
 
 export const commitSql: SingleSqlItem = {
   text: 'COMMIT',
@@ -24,9 +25,10 @@ export type IsolationLevel =
   | 'READ UNCOMMITTED';
 
 export interface TransactionOptions {
-  level: IsolationLevel;
+  level?: IsolationLevel;
   readOnly?: boolean;
   deferrable?: boolean;
+  log?: boolean;
 }
 
 export class Transaction {
@@ -59,7 +61,11 @@ export class Transaction {
       values: emptyArray,
     } as unknown as SingleSqlItem;
 
-    const log = this.q.log;
+    const log =
+      options.log !== undefined
+        ? this.q.log ?? logParamToLogObject(this.q.logger, options.log)
+        : this.q.log;
+
     let logData: unknown | undefined;
 
     let trx = this.internal.transactionStorage.getStore();
@@ -78,6 +84,10 @@ export class Transaction {
         adapter,
         transactionId,
       };
+
+      if (options.log !== undefined) {
+        trx.log = log;
+      }
 
       return this.internal.transactionStorage.run(trx, fn);
     };

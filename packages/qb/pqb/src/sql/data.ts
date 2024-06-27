@@ -1,5 +1,4 @@
 import { PickQueryQ, Query } from '../query/query';
-import { QueryLogger, QueryLogObject } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { toSQLCacheKey } from './toSQL';
 import {
@@ -34,6 +33,8 @@ import {
   HookSelect,
   BatchParsers,
   MaybePromise,
+  QueryLogger,
+  QueryLogObject,
 } from 'orchid-core';
 import { RelationQuery } from '../relations';
 

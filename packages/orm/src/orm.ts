@@ -10,7 +10,6 @@ import {
   NoPrimaryKeyOption,
   Query,
   QueryData,
-  QueryLogOptions,
   defaultSchemaConfig,
   DbSharedOptions,
   _initQueryBuilder,
@@ -27,6 +26,7 @@ import {
   ColumnsShapeBase,
   emptyObject,
   MaybeArray,
+  QueryLogOptions,
   RecordUnknown,
   TransactionState,
 } from 'orchid-core';

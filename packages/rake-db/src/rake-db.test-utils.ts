@@ -2,12 +2,17 @@ import { createMigrationInterface, DbMigration } from './migration/migration';
 import {
   DefaultColumnTypes,
   makeColumnTypes,
-  QueryLogger,
   TransactionAdapter,
   DefaultSchemaConfig,
   defaultSchemaConfig,
 } from 'pqb';
-import { ColumnSchemaConfig, MaybeArray, noop, toArray } from 'orchid-core';
+import {
+  ColumnSchemaConfig,
+  MaybeArray,
+  noop,
+  QueryLogger,
+  toArray,
+} from 'orchid-core';
 import { join } from 'path';
 import { migrationConfigDefaults, RakeDbConfig } from './config';
 

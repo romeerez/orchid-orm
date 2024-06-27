@@ -3,8 +3,8 @@ import {
   migrationConfigDefaults,
   RakeDbConfig,
 } from 'rake-db';
-import { ColumnSchemaConfig, noop } from 'orchid-core';
-import { defaultSchemaConfig, makeColumnTypes, QueryLogger } from 'pqb';
+import { ColumnSchemaConfig, noop, QueryLogger } from 'orchid-core';
+import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 import path from 'node:path';
 import { join } from 'path';
 import { createBaseTable } from '../baseTable';

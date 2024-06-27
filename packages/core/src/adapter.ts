@@ -1,6 +1,7 @@
 import { QueryBaseCommon, Sql } from './query';
 import { emptyObject } from './utils';
 import { setTimeout } from 'timers/promises';
+import { QueryLogObject } from './log';
 
 // Input type of adapter query methods.
 export type QueryInput = string | { text: string; values?: unknown[] };
@@ -123,6 +124,8 @@ export interface TransactionState {
   // Array of data and functions to call after commit.
   // 1st element is a query result, 2nd element is a query object, 3rd element is array of functions to call with the query result and object.
   afterCommit?: TransactionAfterCommitHook[];
+  // To log all the queries inside a transaction.
+  log?: QueryLogObject;
 }
 
 /**

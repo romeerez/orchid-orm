@@ -3,10 +3,11 @@ import { testConfig } from '../rake-db.test-utils';
 import { AnyRakeDbConfig, RakeDbMigrationId } from '../config';
 import { getMigrations } from '../migration/migrationsSet';
 import { asMock } from 'test-utils';
-import { Adapter, QueryLogger } from 'pqb';
+import { Adapter } from 'pqb';
 import fs from 'fs/promises';
 import path from 'path';
 import { generateTimeStamp } from './newMigration';
+import { QueryLogger } from 'orchid-core';
 
 jest.mock('../migration/migrationsSet');
 jest.mock('fs/promises');

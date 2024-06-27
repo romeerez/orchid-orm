@@ -1,5 +1,7 @@
 import pg, { Client } from 'pg';
 import { testDb } from 'test-utils';
+import { User } from '../test-utils/test-utils';
+import { noop } from 'orchid-core';
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -138,5 +140,23 @@ describe('transaction', () => {
     });
 
     expect(client).toBeInstanceOf(Client);
+  });
+
+  describe('log option', () => {
+    it('should log all the queries inside a transaction', async () => {
+      const log = jest.spyOn(console, 'log').mockImplementation(noop);
+
+      await testDb.transaction({ log: true }, async () => {
+        await User.log(false); // transaction log overrides query's log
+        await testDb.query`SELECT 1 AS a`;
+      });
+
+      expect(log.mock.calls).toEqual([
+        [expect.stringContaining(`BEGIN`)],
+        [expect.stringContaining(`SELECT * FROM "user"`)],
+        [expect.stringContaining(`SELECT 1 AS a`)],
+        [expect.stringContaining(`COMMIT`)],
+      ]);
+    });
   });
 });

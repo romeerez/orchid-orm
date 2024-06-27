@@ -7,9 +7,8 @@ import {
 } from './query';
 import {
   handleResult,
-  logParamToLogObject,
-  QueryLogOptions,
   QueryMethods,
+  logParamToLogObject,
 } from '../queryMethods';
 import { QueryData, QueryScopes, SelectQueryData, ToSQLOptions } from '../sql';
 import {
@@ -40,6 +39,7 @@ import {
   QueryCatch,
   QueryColumns,
   QueryColumnsInit,
+  QueryLogOptions,
   QueryResultRow,
   QueryThen,
   RecordString,
@@ -542,7 +542,7 @@ const performQuery = async <Result>(
     };
   }
 
-  const { log } = q.q;
+  const log = trx?.log ?? q.q.log;
   let logData: unknown | undefined;
   if (log) logData = log.beforeQuery(sql);
 

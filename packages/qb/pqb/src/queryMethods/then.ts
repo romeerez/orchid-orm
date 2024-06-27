@@ -182,6 +182,7 @@ const then = async (
 
   let sql: (Sql & { name?: string }) | undefined;
   let logData: unknown | undefined;
+  const log = trx?.log ?? query.log;
 
   // save error to a local variable before async operations
   const localError = queryError;
@@ -214,8 +215,8 @@ const then = async (
           (queriesNames[sql.text] = (nameI++).toString(36));
       }
 
-      if (query.log) {
-        logData = query.log.beforeQuery(sql);
+      if (log) {
+        logData = log.beforeQuery(sql);
       }
 
       queryResult = (await adapter[
@@ -226,8 +227,8 @@ const then = async (
         await query.patchResult(q, queryResult);
       }
 
-      if (query.log) {
-        query.log.afterQuery(sql, logData);
+      if (log) {
+        log.afterQuery(sql, logData);
         // set sql to be undefined to prevent logging on error in case if afterHooks throws
         sql = undefined;
       }
@@ -239,16 +240,16 @@ const then = async (
       const queryMethod = queryMethodByReturnType[tempReturnType] as 'query';
 
       if (!trx) {
-        if (query.log) logData = query.log.beforeQuery(beginSql);
+        if (log) logData = log.beforeQuery(beginSql);
         await adapter.arrays(beginSql);
-        if (query.log) query.log.afterQuery(beginSql, logData);
+        if (log) log.afterQuery(beginSql, logData);
       }
 
       for (const item of sql.batch) {
         sql = item;
 
-        if (query.log) {
-          logData = query.log.beforeQuery(sql);
+        if (log) {
+          logData = log.beforeQuery(sql);
         }
 
         const result = (await adapter[queryMethod](sql)) as QueryResult;
@@ -260,17 +261,17 @@ const then = async (
           queryResult = result;
         }
 
-        if (query.log) {
-          query.log.afterQuery(sql, logData);
+        if (log) {
+          log.afterQuery(sql, logData);
           // set sql to be undefined to prevent logging on error in case if afterHooks throws
           sql = undefined;
         }
       }
 
       if (!trx) {
-        if (query.log) logData = query.log.beforeQuery(commitSql);
+        if (log) logData = log.beforeQuery(commitSql);
         await adapter.arrays(commitSql);
-        if (query.log) query.log.afterQuery(commitSql, logData);
+        if (log) log.afterQuery(commitSql, logData);
       }
 
       if (query.patchResult) {
@@ -389,8 +390,8 @@ const then = async (
       }
     }
 
-    if (query.log && sql) {
-      query.log.onError(error as Error, sql as SingleSqlItem, logData);
+    if (log && sql) {
+      log.onError(error as Error, sql as SingleSqlItem, logData);
     }
     return reject?.(error);
   }
