@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.22.2
+
+### Patch Changes
+
+- fa0f367: Fix renaming multiple columns (#309)
+
 ## 2.22.1
 
 ### Patch Changes
