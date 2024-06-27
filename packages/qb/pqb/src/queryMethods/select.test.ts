@@ -37,17 +37,21 @@ describe('select', () => {
   });
 
   // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
+  // and this: https://github.com/romeerez/orchid-orm/issues/310
   it('should handle nested sub selects', async () => {
     await User.create(userData);
 
-    const res = await User.select({
+    const res = await User.select('*', {
       author: () =>
         User.select({
           count: () => User.count(),
         }).takeOptional(),
     });
 
-    assertType<typeof res, { author: { count: number } | undefined }[]>();
+    assertType<
+      typeof res,
+      (UserRecord & { author: { count: number } | undefined })[]
+    >();
   });
 
   it('should combine multiple selects and give proper types', async () => {

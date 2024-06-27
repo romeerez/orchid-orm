@@ -206,9 +206,7 @@ type SelectResultColumnsAndObj<
           ? T['meta']['selectable'][K]['as']
           : K]: K extends keyof Obj
           ? SelectAsValueResult<T, Obj[K]>
-          : K extends Columns[number]
-          ? T['meta']['selectable'][K]['column']
-          : never;
+          : T['meta']['selectable'][K]['column'];
       } & (T['meta']['hasSelect'] extends true
         ? Omit<T['result'], Columns[number]>
         : unknown)
@@ -226,9 +224,7 @@ type SelectResultColumnsAndObj<
               ? T['meta']['selectable'][K]['as']
               : K]: K extends keyof Obj
               ? SelectAsValueResult<T, Obj[K]>
-              : K extends Columns[number]
-              ? T['meta']['selectable'][K]['column']
-              : never;
+              : T['meta']['selectable'][K]['column'];
           } & (T['meta']['hasSelect'] extends true
             ? Omit<T['result'], Columns[number]>
             : unknown)
