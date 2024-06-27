@@ -1,5 +1,13 @@
 # pqb
 
+## 0.36.2
+
+### Patch Changes
+
+- 57e9e9c: Allow setting `log: true` for a transaction
+- Updated dependencies [57e9e9c]
+  - orchid-core@0.19.1
+
 ## 0.36.1
 
 ### Patch Changes

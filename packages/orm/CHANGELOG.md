@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.32.3
+
+### Patch Changes
+
+- 57e9e9c: Allow setting `log: true` for a transaction
+- Updated dependencies [57e9e9c]
+  - rake-db@2.22.3
+  - pqb@0.36.2
+  - orchid-core@0.19.1
+
 ## 1.32.2
 
 ### Patch Changes

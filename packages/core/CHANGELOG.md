@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.1
+
+### Patch Changes
+
+- 57e9e9c: Allow setting `log: true` for a transaction
+
 ## 0.19.0
 
 ### Minor Changes
