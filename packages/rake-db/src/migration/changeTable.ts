@@ -292,6 +292,25 @@ const tableChangeMethods = {
   comment(comment: string | null): Change {
     return { type: 'change', from: { comment: null }, to: { comment } };
   },
+  /**
+   * Rename a column:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.changeTable('table', (t) => ({
+   *     oldColumnName: t.rename('newColumnName'),
+   *   }));
+   * });
+   * ```
+   *
+   * Note that the renaming `ALTER TABLE` is executed before the rest of alterations,
+   * so if you're also adding a new constraint on this column inside the same `changeTable`,
+   * refer to it with a new name.
+   *
+   * @param name
+   */
   rename(name: string): RakeDbAst.ChangeTableItem.Rename {
     return { type: 'rename', name };
   },
@@ -590,7 +609,13 @@ const astToQueries = (
 
   const tableName = quoteWithSchema(ast);
   if (renameItems.length) {
-    queries.push(alterTableSql(tableName, renameItems, values));
+    queries.push(
+      ...renameItems.map((sql) => ({
+        text: `ALTER TABLE ${tableName}
+  ${sql}`,
+        values,
+      })),
+    );
   }
 
   if (alterTable.length) {

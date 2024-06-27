@@ -1852,22 +1852,35 @@ describe('changeTable', () => {
     });
 
     describe('rename column', () => {
-      it('should rename a column', async () => {
+      it('should rename columns', async () => {
         await testUpAndDown(
           () =>
             db.changeTable('table', (t) => ({
               aA: t.rename('bB'),
+              cC: t.rename('dD'),
             })),
           () =>
-            expectSql(`
-              ALTER TABLE "table"
-              RENAME COLUMN "a_a" TO "b_b"
-            `),
+            expectSql([
+              `
+                ALTER TABLE "table"
+                RENAME COLUMN "a_a" TO "b_b"
+              `,
+              `
+                ALTER TABLE "table"
+                RENAME COLUMN "c_c" TO "d_d"
+              `,
+            ]),
           () =>
-            expectSql(`
-              ALTER TABLE "table"
-              RENAME COLUMN "b_b" TO "a_a"
-            `),
+            expectSql([
+              `
+                ALTER TABLE "table"
+                RENAME COLUMN "b_b" TO "a_a"
+              `,
+              `
+                ALTER TABLE "table"
+                RENAME COLUMN "d_d" TO "c_c"
+              `,
+            ]),
         );
       });
     });

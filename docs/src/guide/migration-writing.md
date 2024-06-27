@@ -419,6 +419,8 @@ change(async (db) => {
 
 ### rename
 
+[//]: # 'has JSDoc'
+
 Rename a column:
 
 ```ts
@@ -430,6 +432,10 @@ change(async (db) => {
   }));
 });
 ```
+
+Note that the renaming `ALTER TABLE` is executed before the rest of alterations,
+so if you're also adding a new constraint on this column inside the same `changeTable`,
+refer to it with a new name.
 
 ## renameTable
 
