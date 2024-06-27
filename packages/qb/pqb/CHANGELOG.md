@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.1
+
+### Patch Changes
+
+- 8d076c6: Fix typings for selecting all columns and object (#310)
+
 ## 0.36.0
 
 ### Minor Changes
