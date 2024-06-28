@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.2
+
+### Patch Changes
+
+- aa9ee08: Fix using `val` query helper inside select
+
 ## 0.19.1
 
 ### Patch Changes

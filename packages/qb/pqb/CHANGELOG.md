@@ -1,5 +1,13 @@
 # pqb
 
+## 0.36.3
+
+### Patch Changes
+
+- aa9ee08: Fix using `val` query helper inside select
+- Updated dependencies [aa9ee08]
+  - orchid-core@0.19.2
+
 ## 0.36.2
 
 ### Patch Changes
