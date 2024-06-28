@@ -99,7 +99,6 @@ export type BelongsToQuery<T extends Query, Name extends string> = {
 };
 
 export interface BelongsToInfo<
-  T extends RelationConfigSelf,
   Name extends string,
   FK extends string,
   Required,
@@ -108,7 +107,7 @@ export interface BelongsToInfo<
   query: Q;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
-    columns: { [L in FK]: T['columns']['shape'][L]['inputType'] };
+    columns: FK;
     nested: Required extends true
       ? {
           [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;

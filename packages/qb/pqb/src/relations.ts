@@ -28,7 +28,7 @@ export interface RelationConfigBase {
 }
 
 export interface RelationConfigDataForCreate {
-  columns: RecordUnknown;
+  columns: PropertyKey;
   nested: RecordUnknown;
 }
 

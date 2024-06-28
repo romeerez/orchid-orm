@@ -5,6 +5,7 @@ import {
   db,
   messageData,
   messageSelectAll,
+  Profile,
   profileData,
   profileSelectAll,
   User,
@@ -571,6 +572,20 @@ describe('belongsTo', () => {
           Title: 'chat 2',
           Name: 'user 2',
         });
+      });
+
+      it('should support nested create with a value from `with`', () => {
+        const q = db.$queryBuilder
+          .with('user', db.user.create(userData))
+          .with('profile', (q) =>
+            db.profile.create({
+              ...profileData,
+              UserId: () => q.from('user').get('Id'),
+            }),
+          )
+          .from('profile');
+
+        assertType<Awaited<typeof q>, Profile[]>();
       });
 
       describe('id has no default', () => {

@@ -145,7 +145,6 @@ export type MapRelation<
 > = T['relations'][K] extends BelongsTo
   ? RelationQuery<
       BelongsToInfo<
-        T,
         K,
         T['relations'][K]['options']['columns'][number] & string,
         T['relations'][K]['options']['required'],

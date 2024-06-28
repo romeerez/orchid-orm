@@ -15,14 +15,13 @@ import {
   IntegerBaseColumn,
   NumberBaseColumn,
   Query,
-  RelationConfigDataForCreate,
-  RelationsBase,
   TextBaseColumn,
 } from 'pqb';
 import {
   ColumnShapeOutput,
   ColumnTypeBase,
   EmptyObject,
+  MaybePromise,
   RecordUnknown,
 } from 'orchid-core';
 import { generateMock } from '@anatine/zod-mock';
@@ -86,42 +85,10 @@ export type CreateArg<T extends TestFactory> = CreateData<{
     ? {
         [K in keyof T['table']['inputType']]?:
           | T['table']['inputType'][K]
-          | ((sequence: number) => T['table']['inputType'][K]);
+          | ((sequence: number) => MaybePromise<T['table']['inputType'][K]>);
       }
-    : /**
-     * Allow defining async functions that create relation records and returns id
-     */
-    K extends 'relations'
-    ? MapRelations<T['table']['relations']>
     : T['table'][K];
 }>;
-
-type MapRelations<T extends RelationsBase> = {
-  [P in keyof T]: {
-    [K in keyof T[P]]: K extends 'relationConfig'
-      ? {
-          [L in keyof T[P]['relationConfig']]: L extends 'dataForCreate'
-            ? MapDataForCreate<T[P]['relationConfig']['dataForCreate']>
-            : T[P]['relationConfig'][L];
-        }
-      : T[P][K];
-  };
-};
-
-type MapDataForCreate<T extends RelationConfigDataForCreate | undefined> =
-  T extends RelationConfigDataForCreate
-    ? {
-        [K in keyof T]: K extends 'columns'
-          ? {
-              [K in keyof T['columns']]:
-                | T['columns'][K]
-                | ((
-                    sequence: number,
-                  ) => T['columns'][K] | Promise<T['columns'][K]>);
-            }
-          : T[K];
-      }
-    : undefined;
 
 type CreateResult<T extends TestFactory> = Result<
   T,

@@ -132,12 +132,22 @@ export type CreateRelationsDataOmittingFKeys<
     Union extends RelationConfigDataForCreate
       ? (
           u: // omit relation columns if they are in defaults, is tested in factory.test.ts
-          keyof Union['columns'] extends keyof T['meta']['defaults']
-            ? Omit<Union['columns'], keyof T['meta']['defaults']> & {
+          Union['columns'] extends keyof T['meta']['defaults']
+            ? {
+                [P in Exclude<
+                  Union['columns'] & keyof T['inputType'],
+                  keyof T['meta']['defaults']
+                >]: CreateColumn<T, P>;
+              } & {
                 [P in keyof T['meta']['defaults'] &
-                  keyof Union['columns']]?: Union['columns'][P];
+                  Union['columns']]?: CreateColumn<T, P>;
               } & Partial<Union['nested']>
-            : Union['columns'] | Union['nested'],
+            :
+                | {
+                    [P in Union['columns'] &
+                      keyof T['inputType']]: CreateColumn<T, P>;
+                  }
+                | Union['nested'],
         ) => void
       : never
   ) extends // must be handled as a function argument, belongsTo.test relies on this
