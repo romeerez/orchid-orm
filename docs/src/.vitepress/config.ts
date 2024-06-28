@@ -13,6 +13,11 @@ export default {
   markdown: {
     theme: 'one-dark-pro',
   },
+  vite: {
+    ssr: {
+      noExternal: ['monaco-editor'],
+    },
+  },
   themeConfig: {
     nav: [{ text: 'Guide', link: '/guide/', activeMatch: '^/guide/' }],
     search: {
@@ -37,6 +42,10 @@ export default {
             text: 'Current status and limitations',
             link: '/guide/current-status-and-limitations',
           },
+          // {
+          //   text: 'Compare with Kysely',
+          //   link: '/guide/compare-with-kysely',
+          // },
         ],
       },
       {
