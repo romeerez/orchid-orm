@@ -1,6 +1,6 @@
 import { ColumnTypeBase, QueryColumn } from './columns/columnType';
 import { OperatorToSQL } from './columns';
-import { addValue, EmptyObject, RecordUnknown } from './utils';
+import { addValue, emptyObject, EmptyObject, RecordUnknown } from './utils';
 
 // The chain array is used to store a sequence of operators and their arguments, one be one.
 // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
@@ -175,7 +175,8 @@ export const isRawSQL = (arg: unknown): arg is RawSQLBase =>
   arg instanceof RawSQLBase;
 
 export class ValExpression extends Expression {
-  declare result: { value: QueryColumn };
+  // TODO: move unknown column to core and use it here
+  result = { value: emptyObject as ColumnTypeBase };
   q: ExpressionData;
 
   constructor(public value: unknown) {

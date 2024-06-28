@@ -1100,7 +1100,7 @@ describe('create functions', () => {
 
       const sub = Chat.find(chatId).select({
         chatId: 'idOfChat',
-        text: 'title',
+        text: (q) => q.val('title'),
       });
       const q = Message.insertManyFrom(sub);
 

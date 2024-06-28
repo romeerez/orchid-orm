@@ -78,14 +78,18 @@ interface SelectAsArg<T extends SelectSelf> {
   [K: string]:
     | keyof T['meta']['selectable']
     | Expression
-    | ((q: {
-        [K in keyof T]: K extends keyof T['relations']
-          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            T[K] extends (...args: any[]) => any
-            ? ReturnType<T[K]>
-            : never
-          : T[K];
-      }) => unknown);
+    | ((
+        q: RelationsBase extends T['relations']
+          ? T
+          : {
+              [K in keyof T]: K extends keyof T['relations']
+                ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  T[K] extends (...args: any[]) => any
+                  ? ReturnType<T[K]>
+                  : never
+                : T[K];
+            },
+      ) => unknown);
 }
 
 type SelectAsFnReturnType =
