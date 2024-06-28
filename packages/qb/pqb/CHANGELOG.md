@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.4
+
+### Patch Changes
+
+- c9697c9: Add `whereOneOf` method
+
 ## 0.36.3
 
 ### Patch Changes
