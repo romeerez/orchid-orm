@@ -201,11 +201,7 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
 ): WhereResult<T> => {
   resolveCallbacksInArgs(q, args);
 
-  return pushQueryArray(
-    q as unknown as Query,
-    'and',
-    args,
-  ) as unknown as WhereResult<T>;
+  return pushQueryArray(q as unknown as Query, 'and', args) as never;
 };
 
 /**
@@ -216,7 +212,7 @@ export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
     q as unknown as Query,
     'and',
     sqlQueryArgsToExpression(args),
-  ) as unknown as WhereResult<T>;
+  ) as never;
 };
 
 /**
@@ -239,7 +235,27 @@ export const _queryWhereNot = <T extends PickQueryMetaRelations>(
 export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
   return pushQueryValue(q as unknown as Query, 'and', {
     NOT: sqlQueryArgsToExpression(args),
-  }) as unknown as WhereResult<T>;
+  }) as never;
+};
+
+export const _queryWhereOneOf = <T extends PickQueryMetaRelations>(
+  q: T,
+  args: WhereArgs<T>,
+): T => {
+  resolveCallbacksInArgs(q, args);
+
+  return pushQueryValue(q as unknown as Query, 'and', { OR: args }) as never;
+};
+
+export const _queryWhereNotOneOf = <T extends PickQueryMetaRelations>(
+  q: T,
+  args: WhereArgs<T>,
+): T => {
+  resolveCallbacksInArgs(q, args);
+
+  return pushQueryValue(q as unknown as Query, 'and', {
+    NOT: { OR: args },
+  }) as never;
 };
 
 /**
@@ -255,7 +271,7 @@ export const _queryOr = <T extends PickQueryMetaRelations>(
     q as unknown as Query,
     'or',
     args.map((item) => [item]),
-  ) as unknown as WhereResult<T>;
+  ) as never;
 };
 
 /**
@@ -273,7 +289,7 @@ export const _queryOrNot = <T extends PickQueryMetaRelations>(
     args.map((item) => {
       return [{ NOT: item }];
     }),
-  ) as unknown as WhereResult<T>;
+  ) as never;
 };
 
 /**
@@ -322,7 +338,7 @@ export const _queryWhereIn = <T>(
     pushQueryValue(q as unknown as Query, 'or', [item]);
   }
 
-  return q as unknown as WhereResult<T>;
+  return q as never;
 };
 
 /**
@@ -823,11 +839,70 @@ export class Where {
   }
 
   /**
-   * `orWhere` is accepting the same arguments as {@link where}, joining arguments with `OR`.
+   * `whereOneOf` stands for "...**and** where one of the given is true".
    *
-   * Columns in single arguments are still joined with `AND`.
+   * Accepts the same arguments as `where`.
    *
-   * The database is processing `AND` before `OR`, so this should be intuitively clear.
+   * ```ts
+   * db.table.where({ id: 1 }).whereOneOf({ color: 'red' }, { color: 'blue' });
+   * ```
+   *
+   * ```sql
+   * SELECT * FROM table
+   * WHERE id = 1 AND (color = 'red' OR color = 'blue')
+   * ```
+   *
+   * Note that columns inside every argument are joined with `AND`:
+   *
+   * ```ts
+   * db.table.whereOneOf({ id: 1, color: 'red' }, { id: 2 });
+   * ```
+   *
+   * ```sql
+   * SELECT * FROM table
+   * WHERE (id = 1 AND color = 'red') OR (id = 2)
+   * ```
+   *
+   * @param args - same arguments as in {@link where}, joined with `OR`
+   */
+  whereOneOf<T extends PickQueryMetaRelations>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): T {
+    return _queryWhereOneOf(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
+  }
+
+  /**
+   * Negative {@link whereOneOf}:
+   *
+   * ```ts
+   * db.table.where({ id: 1 }).whereNotOneOf({ color: 'red' }, { color: 'blue' });
+   * ```
+   *
+   * ```sql
+   * SELECT * FROM table
+   * WHERE id = 1 AND NOT (color = 'red' OR color = 'blue')
+   * ```
+   *
+   * @param args - same arguments as in {@link where}, joined with `OR`
+   */
+  whereNotOneOf<T extends PickQueryMetaRelations>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): T {
+    return _queryWhereNotOneOf(
+      (this as unknown as Query).clone(),
+      args as never,
+    ) as never;
+  }
+
+  /**
+   * `orWhere` stands for "...**or** where one of the given is true".
+   *
+   * Accepts the same arguments as `where`.
    *
    * ```ts
    * db.table.where({ id: 1, color: 'red' }).orWhere({ id: 2, color: 'blue' });
@@ -835,15 +910,12 @@ export class Where {
    * db.table.orWhere({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
    * ```
    *
-   * This query will produce such SQL (simplified):
-   *
    * ```sql
-   * SELECT * FROM "table"
-   * WHERE id = 1 AND color = 'red'
-   *    OR id = 2 AND color = 'blue'
+   * SELECT * FROM table
+   * WHERE (id = 1 AND color = 'red') OR (id = 2 AND color = 'blue')
    * ```
    *
-   * @param args - {@link WhereArgs} will be joined with `OR`
+   * @param args - same arguments as in {@link where}, joined with `OR`
    */
   orWhere<T extends PickQueryMetaRelations>(
     this: T,

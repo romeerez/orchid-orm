@@ -59,6 +59,36 @@ describe('where', () => {
   });
 });
 
+describe('whereOneOf', () => {
+  it('should be appended with AND and join conditions with OR', () => {
+    const q = User.where({ id: 1 }).whereOneOf({ name: 'a' }, { name: 'b' });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT * FROM "user"
+        WHERE "user"."id" = $1 AND ("user"."name" = $2 OR "user"."name" = $3)
+      `,
+      [1, 'a', 'b'],
+    );
+  });
+});
+
+describe('whereNotOneOf', () => {
+  it('should be appended with AND and join conditions with OR', () => {
+    const q = User.where({ id: 1 }).whereNotOneOf({ name: 'a' }, { name: 'b' });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT * FROM "user"
+        WHERE "user"."id" = $1 AND NOT ("user"."name" = $2 OR "user"."name" = $3)
+      `,
+      [1, 'a', 'b'],
+    );
+  });
+});
+
 describe('where with named columns', () => {
   testWhere(
     (cb) => cb(Snake.all()).toSQL(),

@@ -213,15 +213,56 @@ Use a custom SQL expression in `WHERE` statement:
 db.table.whereSql`a = b`;
 ```
 
+### whereOneOf
+
+[//]: # 'has JSDoc'
+
+`whereOneOf` stands for "...**and** where one of the given is true".
+
+Accepts the same arguments as `where`.
+
+```ts
+db.table.where({ id: 1 }).whereOneOf({ color: 'red' }, { color: 'blue' });
+```
+
+```sql
+SELECT * FROM table
+WHERE id = 1 AND (color = 'red' OR color = 'blue')
+```
+
+Note that columns inside every argument are joined with `AND`:
+
+```ts
+db.table.whereOneOf({ id: 1, color: 'red' }, { id: 2 });
+```
+
+```sql
+SELECT * FROM table
+WHERE (id = 1 AND color = 'red') OR (id = 2)
+```
+
+#### whereNotOneOf
+
+[//]: # 'has JSDoc'
+
+Negative [whereOneOf](#whereoneof):
+
+```ts
+db.table.where({ id: 1 }).whereNotOneOf({ color: 'red' }, { color: 'blue' });
+```
+
+```sql
+SELECT * FROM table
+WHERE id = 1 AND NOT (color = 'red' OR color = 'blue')
+```
+
 ### orWhere
 
 [//]: # 'has JSDoc'
 
-`orWhere` is accepting the same arguments as `where`, joining arguments with `OR`.
+`orWhere` stands for "...**or** where one of the given is true".
 
-Columns in single arguments are still joined with `AND`.
-
-The database is processing `AND` before `OR`, so this should be intuitively clear.
+Accepts the same arguments as `where`.
 
 ```ts
 db.table.where({ id: 1, color: 'red' }).orWhere({ id: 2, color: 'blue' });
@@ -229,12 +270,9 @@ db.table.where({ id: 1, color: 'red' }).orWhere({ id: 2, color: 'blue' });
 db.table.orWhere({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
 ```
 
-This query will produce such SQL (simplified):
-
 ```sql
-SELECT * FROM "table"
-WHERE id = 1 AND color = 'red'
-   OR id = 2 AND color = 'blue'
+SELECT * FROM table
+WHERE (id = 1 AND color = 'red') OR (id = 2 AND color = 'blue')
 ```
 
 ### whereNot
