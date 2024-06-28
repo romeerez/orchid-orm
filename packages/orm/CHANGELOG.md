@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.32.6
+
+### Patch Changes
+
+- 690ecad: Fix passing a callback for a belongsTo foreign key in create
+- Updated dependencies [690ecad]
+  - pqb@0.36.5
+  - rake-db@2.22.6
+
 ## 1.32.5
 
 ### Patch Changes

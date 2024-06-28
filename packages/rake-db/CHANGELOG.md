@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.22.6
+
+### Patch Changes
+
+- Updated dependencies [690ecad]
+  - pqb@0.36.5
+
 ## 2.22.5
 
 ### Patch Changes

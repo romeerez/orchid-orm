@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.5
+
+### Patch Changes
+
+- 690ecad: Fix passing a callback for a belongsTo foreign key in create
+
 ## 0.36.4
 
 ### Patch Changes

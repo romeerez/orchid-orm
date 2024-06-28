@@ -1,5 +1,13 @@
 # orchid-orm-test-factory
 
+## 0.7.14
+
+### Patch Changes
+
+- Updated dependencies [690ecad]
+  - pqb@0.36.5
+  - orchid-orm-schema-to-zod@0.8.14
+
 ## 0.7.13
 
 ### Patch Changes
