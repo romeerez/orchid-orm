@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.6
+
+### Patch Changes
+
+- 15cdb45: Fix callback arg typing in update for a table without relations (#311)
+
 ## 0.36.5
 
 ### Patch Changes

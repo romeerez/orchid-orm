@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.32.7
+
+### Patch Changes
+
+- 15cdb45: Fix callback arg typing in update for a table without relations (#311)
+- Updated dependencies [15cdb45]
+  - pqb@0.36.6
+  - rake-db@2.22.7
+
 ## 1.32.6
 
 ### Patch Changes
