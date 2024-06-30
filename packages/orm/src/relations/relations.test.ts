@@ -1,5 +1,6 @@
 import { assertType, expectSql } from 'test-utils';
 import {
+  BaseTable,
   chatData,
   db,
   messageData,
@@ -11,6 +12,7 @@ import {
   userData,
   useTestORM,
 } from '../test-utils/orm.test-utils';
+import { orchidORM } from '../orm';
 
 describe('relations', () => {
   useTestORM();
@@ -461,6 +463,22 @@ describe('relations', () => {
 
       const res = await q;
       expect(res).toEqual([]);
+    });
+  });
+
+  it('should be able to update json on a table without relations (#311)', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        data: t.json(),
+      }));
+    }
+
+    const local = orchidORM({ db: db.$queryBuilder }, { user: UserTable });
+
+    local.user.find(1).update({
+      data: (q) => q.get('data').jsonSet('key', 'value'),
     });
   });
 });

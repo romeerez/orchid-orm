@@ -10,7 +10,7 @@ import {
   saveSearchAlias,
   throwIfNoWhere,
 } from '../query/queryUtils';
-import { RelationConfigBase } from '../relations';
+import { RelationConfigBase, RelationsBase } from '../relations';
 import { _queryWhereIn, WhereResult } from './where/where';
 import { ToSQLQuery } from '../sql';
 import { VirtualColumn } from '../columns';
@@ -41,13 +41,18 @@ export interface UpdateSelf
 // or a callback with JSON methods.
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
-export type UpdateData<T extends UpdateSelf> = {
-  [K in
-    | keyof T['inputType']
-    | keyof T['relations']]?: K extends keyof T['inputType']
-    ? UpdateColumn<T, K>
-    : UpdateRelationData<T, T['relations'][K]['relationConfig']>;
-};
+export type UpdateData<T extends UpdateSelf> =
+  RelationsBase extends T['relations']
+    ? {
+        [K in keyof T['inputType']]?: UpdateColumn<T, K>;
+      }
+    : {
+        [K in
+          | keyof T['inputType']
+          | keyof T['relations']]?: K extends keyof T['inputType']
+          ? UpdateColumn<T, K>
+          : UpdateRelationData<T, T['relations'][K]['relationConfig']>;
+      };
 
 // Type of available variants to provide for a specific column when updating.
 // The column value may be a specific value, or raw SQL, or a query returning a single value,
