@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.32.9
+
+### Patch Changes
+
+- b30d7a2: Ignore computed columns in the migration generator (#315)
+
 ## 1.32.8
 
 ### Patch Changes
