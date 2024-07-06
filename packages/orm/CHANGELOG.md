@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.32.11
+
+### Patch Changes
+
+- 6bbea86: Fix create result type for tables without relations (#317)
+- Updated dependencies [6bbea86]
+  - pqb@0.36.9
+  - rake-db@2.22.10
+
 ## 1.32.10
 
 ### Patch Changes

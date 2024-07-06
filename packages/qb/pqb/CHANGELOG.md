@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.9
+
+### Patch Changes
+
+- 6bbea86: Fix create result type for tables without relations (#317)
+
 ## 0.36.8
 
 ### Patch Changes
