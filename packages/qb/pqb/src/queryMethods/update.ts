@@ -10,7 +10,7 @@ import {
   saveSearchAlias,
   throwIfNoWhere,
 } from '../query/queryUtils';
-import { RelationConfigBase, RelationsBase } from '../relations';
+import { RelationConfigBase } from '../relations';
 import { _queryWhereIn, WhereResult } from './where/where';
 import { ToSQLQuery } from '../sql';
 import { VirtualColumn } from '../columns';
@@ -22,6 +22,7 @@ import {
   RecordUnknown,
   PickQueryShape,
   SQLQueryArgs,
+  EmptyObject,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
@@ -42,7 +43,7 @@ export interface UpdateSelf
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
 export type UpdateData<T extends UpdateSelf> =
-  RelationsBase extends T['relations']
+  EmptyObject extends T['relations']
     ? {
         [K in keyof T['inputType']]?: UpdateColumn<T, K>;
       }

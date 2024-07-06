@@ -9,6 +9,7 @@ import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
 import { JoinArgs, JoinFirstArg } from '../join/join';
 import {
   ColumnsShapeBase,
+  EmptyObject,
   Expression,
   MaybeArray,
   PickQueryMeta,
@@ -18,7 +19,6 @@ import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { QueryBase } from '../../query/queryBase';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
-import { RelationsBase } from '../../relations';
 import { processJoinArgs } from '../join/processJoinArgs';
 import { ExpressionMethods } from '../expressions';
 import { _queryNone } from '../none';
@@ -100,7 +100,7 @@ export type WhereArg<T extends PickQueryMetaRelations> =
  * ```
  */
 export type WhereQueryBuilder<T extends PickQueryRelations> =
-  RelationsBase extends T['relations']
+  EmptyObject extends T['relations']
     ? {
         [K in keyof T]: K extends
           | keyof QueryBase

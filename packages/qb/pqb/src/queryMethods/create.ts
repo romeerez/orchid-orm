@@ -17,7 +17,7 @@ import {
   SetQueryReturnsPluckColumnKindResult,
   SetQueryReturnsRowCount,
 } from '../query/query';
-import { RelationConfigDataForCreate, RelationsBase } from '../relations';
+import { RelationConfigDataForCreate } from '../relations';
 import {
   CreateKind,
   InsertQueryData,
@@ -59,7 +59,7 @@ export interface CreateSelf
 export type CreateData<
   T extends CreateSelf,
   BelongsToData = CreateBelongsToData<T>,
-> = RelationsBase extends T['relations']
+> = EmptyObject extends T['relations']
   ? // if no relations, don't load TS with extra calculations
     CreateDataWithDefaults<T, keyof T['meta']['defaults']>
   : CreateRelationsData<T, BelongsToData>;
@@ -159,7 +159,7 @@ export type CreateRelationsDataOmittingFKeys<
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
+export type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : T['returnType'] extends undefined | 'all'
   ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T, BT>>
@@ -256,11 +256,16 @@ type InsertManyRawOrFromResult<T extends CreateSelf> =
  *
  * The same should work as well with any non-null columns passed to `create`, but it's to be implemented later.
  */
-type NarrowCreateResult<T extends CreateSelf, Bt> = [
-  {
-    [K in keyof T['relations']]: T['relations'][K]['relationConfig']['omitForeignKeyInCreate'];
-  }[keyof T['relations'] & keyof Bt],
-] extends [never]
+type NarrowCreateResult<
+  T extends CreateSelf,
+  Bt,
+> = EmptyObject extends T['relations']
+  ? T['result']
+  : [
+      {
+        [K in keyof T['relations']]: T['relations'][K]['relationConfig']['omitForeignKeyInCreate'];
+      }[keyof T['relations'] & keyof Bt],
+    ] extends [never]
   ? T['result']
   : {
       [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']

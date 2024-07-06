@@ -231,7 +231,7 @@ describe('create functions', () => {
   });
 
   describe('create', () => {
-    it('should create one record with raw SQL for a column value', async () => {
+    it('should create one record with raw SQL for a column value', () => {
       const q = User.create({
         name: userData.name,
         password: (q) => q.sql<string>`'password'`,
@@ -250,7 +250,7 @@ describe('create functions', () => {
       );
     });
 
-    it('should support a query builder for a column', async () => {
+    it('should support a query builder for a column', () => {
       const q = User.create({
         name: userData.name,
         // it's expected to fail on db side, cannot reference table
@@ -268,7 +268,7 @@ describe('create functions', () => {
       );
     });
 
-    it('should use a sub query value', async () => {
+    it('should use a sub query value', () => {
       const q = User.create({
         ...userData,
         age: User.avg('age'),

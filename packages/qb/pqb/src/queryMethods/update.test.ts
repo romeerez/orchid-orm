@@ -607,7 +607,7 @@ describe('update', () => {
 
     const profile = Object.assign(Profile, {
       user,
-    }) as unknown as typeof Profile & {
+    }) as unknown as Omit<typeof Profile, 'relations'> & {
       relations: {
         user: RelationQuery<RelationConfigBase & { query: typeof User }>;
       };

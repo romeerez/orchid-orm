@@ -38,6 +38,7 @@ import {
   ColumnsShapeBase,
   CoreQueryScopes,
   emptyArray,
+  EmptyObject,
   emptyObject,
   getCallerFilePath,
   getStackTrace,
@@ -110,7 +111,7 @@ export interface TableToDb<
 export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
   T extends RelationConfigSelf
     ? TableToDb<T, MapRelations<T>> & MapRelations<T>
-    : TableToDb<T, RelationsBase>;
+    : TableToDb<T, EmptyObject>;
 
 // `columns` property of table has a shape and an output type of the columns
 // callback with a query of relation, to use as a default scope

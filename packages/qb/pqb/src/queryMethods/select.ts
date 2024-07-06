@@ -79,7 +79,7 @@ interface SelectAsArg<T extends SelectSelf> {
     | keyof T['meta']['selectable']
     | Expression
     | ((
-        q: RelationsBase extends T['relations']
+        q: EmptyObject extends T['relations']
           ? T
           : {
               [K in keyof T]: K extends keyof T['relations']
