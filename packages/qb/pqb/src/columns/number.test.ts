@@ -5,6 +5,9 @@ import {
   testDb,
   TestSchemaConfig,
 } from 'test-utils';
+import { ColumnToCodeCtx } from 'orchid-core';
+
+const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
 const testNumberColumnMethods = (
   type: ReturnType<
@@ -21,7 +24,7 @@ const testNumberColumnMethods = (
       .step(5, 'step message')
       .finite('finite message')
       .safe('safe message')
-      .toCode('t'),
+      .toCode(ctx, 'key'),
   ).toBe(
     `t.${name}()` +
       ".gt(3, 'gt message')" +
@@ -33,12 +36,12 @@ const testNumberColumnMethods = (
       ".safe('safe message')",
   );
 
-  expect(type.positive().toCode('t')).toBe(`t.${name}().gt(0)`);
-  expect(type.nonNegative().toCode('t')).toBe(`t.${name}().min(0)`);
-  expect(type.negative().toCode('t')).toBe(`t.${name}().lt(0)`);
-  expect(type.nonPositive().toCode('t')).toBe(`t.${name}().max(0)`);
+  expect(type.positive().toCode(ctx, 'key')).toBe(`t.${name}().gt(0)`);
+  expect(type.nonNegative().toCode(ctx, 'key')).toBe(`t.${name}().min(0)`);
+  expect(type.negative().toCode(ctx, 'key')).toBe(`t.${name}().lt(0)`);
+  expect(type.nonPositive().toCode(ctx, 'key')).toBe(`t.${name}().max(0)`);
 
-  expect(type.min(1).max(2).step(3).toCode('t')).toBe(
+  expect(type.min(1).max(2).step(3).toCode(ctx, 'key')).toBe(
     `t.${name}().min(1).max(2).step(3)`,
   );
 };
@@ -57,13 +60,13 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.smallint().toCode('t')).toBe('t.smallint()');
+      expect(t.smallint().toCode(ctx, 'key')).toBe('t.smallint()');
 
       testNumberColumnMethods(t.smallint(), 'smallint');
     });
 
     it('should have toCode with identity', () => {
-      const code = t.smallint().identity({ always: true }).toCode('t');
+      const code = t.smallint().identity({ always: true }).toCode(ctx, 'key');
 
       expect(code).toEqual([
         't.smallint().identity({',
@@ -84,13 +87,13 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.integer().toCode('t')).toBe('t.integer()');
+      expect(t.integer().toCode(ctx, 'key')).toBe('t.integer()');
 
       testNumberColumnMethods(t.integer(), 'integer');
     });
 
     it('should have toCode with identity', () => {
-      const code = t.identity({ always: true }).toCode('t');
+      const code = t.identity({ always: true }).toCode(ctx, 'key');
 
       expect(code).toEqual(['t.identity({', ['always: true,'], '})']);
     });
@@ -107,11 +110,11 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.bigint().toCode('t')).toBe('t.bigint()');
+      expect(t.bigint().toCode(ctx, 'key')).toBe('t.bigint()');
     });
 
     it('should have toCode with identity', () => {
-      const code = t.bigint().identity({ always: true }).toCode('t');
+      const code = t.bigint().identity({ always: true }).toCode(ctx, 'key');
 
       expect(code).toEqual(['t.bigint().identity({', ['always: true,'], '})']);
     });
@@ -153,9 +156,9 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.decimal().toCode('t')).toBe('t.decimal()');
-      expect(t.decimal(1).toCode('t')).toBe('t.decimal(1)');
-      expect(t.decimal(1, 2).toCode('t')).toBe('t.decimal(1, 2)');
+      expect(t.decimal().toCode(ctx, 'key')).toBe('t.decimal()');
+      expect(t.decimal(1).toCode(ctx, 'key')).toBe('t.decimal(1)');
+      expect(t.decimal(1, 2).toCode(ctx, 'key')).toBe('t.decimal(1, 2)');
     });
   });
 
@@ -168,7 +171,7 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.real().toCode('t')).toBe('t.real()');
+      expect(t.real().toCode(ctx, 'key')).toBe('t.real()');
 
       testNumberColumnMethods(t.real(), 'real');
     });
@@ -185,7 +188,9 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.doublePrecision().toCode('t')).toBe('t.doublePrecision()');
+      expect(t.doublePrecision().toCode(ctx, 'key')).toBe(
+        't.doublePrecision()',
+      );
     });
   });
 
@@ -200,7 +205,7 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.smallSerial().toCode('t')).toBe('t.smallSerial()');
+      expect(t.smallSerial().toCode(ctx, 'key')).toBe('t.smallSerial()');
 
       testNumberColumnMethods(t.smallSerial(), 'smallSerial');
     });
@@ -217,7 +222,7 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.serial().toCode('t')).toBe('t.serial()');
+      expect(t.serial().toCode(ctx, 'key')).toBe('t.serial()');
 
       testNumberColumnMethods(t.serial(), 'serial');
     });
@@ -234,7 +239,7 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.bigSerial().toCode('t')).toBe('t.bigSerial()');
+      expect(t.bigSerial().toCode(ctx, 'key')).toBe('t.bigSerial()');
     });
   });
 });

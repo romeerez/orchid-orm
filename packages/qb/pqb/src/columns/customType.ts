@@ -2,6 +2,7 @@ import {
   Code,
   ColumnDataBase,
   ColumnSchemaConfig,
+  ColumnToCodeCtx,
   ColumnTypeBase,
   setColumnData,
   singleQuote,
@@ -31,8 +32,8 @@ export class CustomTypeColumn<
     this.data.isOfCustomType = true;
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, `type(${singleQuote(this.dataType)})`, m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, `type(${singleQuote(this.dataType)})`);
   }
 
   as<
@@ -61,7 +62,7 @@ export class CustomTypeColumn<
 export class DomainColumn<
   Schema extends ColumnSchemaConfig,
 > extends CustomTypeColumn<Schema> {
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, `domain(${singleQuote(this.dataType)})`, m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, `domain(${singleQuote(this.dataType)})`);
   }
 }

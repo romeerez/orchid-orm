@@ -1,4 +1,5 @@
 import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
+import { ColumnToCodeCtx } from 'orchid-core';
 
 describe('array column', () => {
   afterAll(testDb.close);
@@ -44,10 +45,12 @@ describe('array column', () => {
     });
 
     it('should have toCode', async () => {
-      const column = t.array(t.integer());
-      expect(column.toCode('t')).toBe('t.array(t.integer())');
+      const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
-      expect(column.nonEmpty('nonEmpty message').toCode('t')).toBe(
+      const column = t.array(t.integer());
+      expect(column.toCode(ctx, 'key')).toBe('t.array(t.integer())');
+
+      expect(column.nonEmpty('nonEmpty message').toCode(ctx, 'key')).toBe(
         `t.array(t.integer()).nonEmpty('nonEmpty message')`,
       );
 
@@ -56,7 +59,7 @@ describe('array column', () => {
           .min(1, 'min message')
           .max(10, 'max message')
           .length(15, 'length message')
-          .toCode('t'),
+          .toCode(ctx, 'key'),
       ).toBe(
         `t.array(t.integer())` +
           `.min(1, 'min message')` +

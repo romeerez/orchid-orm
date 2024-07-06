@@ -8,6 +8,7 @@ import {
   ColumnTypeSchemaArg,
   ColumnDataBase,
   Codes,
+  ColumnToCodeCtx,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { Operators, OperatorsArray } from './operators';
@@ -24,7 +25,7 @@ export interface ArrayColumnValue {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   querySchema: any;
   toSQL(): string;
-  toCode(t: string, m?: boolean): Code;
+  toCode(ctx: ColumnToCodeCtx, key: string): Code;
   parseItem?(input: string): unknown;
   data: ColumnDataBase;
 }
@@ -87,13 +88,13 @@ export class ArrayColumn<
       unknown,
       unknown
     >,
-    t: string,
-    m?: boolean,
+    ctx: ColumnToCodeCtx,
+    key: string,
   ): Code {
     let open = 'array(';
     let close = ')';
     for (let i = 1; i < this.data.arrayDims; i++) {
-      open += `${t}.array(`;
+      open += `${ctx.t}.array(`;
       close += ')';
     }
 
@@ -102,11 +103,11 @@ export class ArrayColumn<
     const { item } = this.data;
     const { isNullable } = item.data;
     delete item.data.isNullable;
-    addCode(code, item.toCode(t));
+    addCode(code, item.toCode(ctx, key));
     item.data.isNullable = isNullable;
 
-    addCode(code, `${close}${arrayDataToCode(this.data, m)}`);
-    return columnCode(this, t, code, m);
+    addCode(code, `${close}${arrayDataToCode(this.data, ctx.migration)}`);
+    return columnCode(this, ctx, key, code);
   }
 
   parseFn = Object.assign(

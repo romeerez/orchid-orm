@@ -181,10 +181,9 @@ const addOrRenameColumns = async (
         columnsToDrop.splice(index - 1, 1);
 
         const from = drop.column.data.name ?? drop.key;
-        // TODO
-        columnsToChange.set(drop.column.data.name ?? from, {
+        columnsToChange.set(from, {
           key,
-          dbName: drop.column.data.name ?? from,
+          dbName: from,
           column: column.name(codeName),
         });
 
@@ -265,8 +264,6 @@ const changeColumns = async (
   ] of columnsToChange) {
     const dbColumnStructure = dbColumns[dbName];
 
-    const { shape } = changeTableData.changeTableAst;
-
     const dbColumn = instantiateDbColumn(
       structureToAstCtx,
       dbStructure,
@@ -284,12 +281,13 @@ const changeColumns = async (
       typeCastsCache,
       verifying,
       key,
+      dbName,
       dbColumn,
       codeColumn,
     );
 
     if (action === 'change') {
-      changeColumn(shape, key, dbColumn, codeColumn);
+      changeColumn(changeTableData, key, dbName, dbColumn, codeColumn);
     } else if (action === 'recreate') {
       changeTableData.changeTableAst.shape[key] = [
         {
@@ -304,7 +302,7 @@ const changeColumns = async (
     } else if (action !== 'recreate') {
       const to = codeColumn.data.name ?? codeKey;
       if (dbName !== to) {
-        shape[
+        changeTableData.changeTableAst.shape[
           config.snakeCase
             ? dbName === toSnakeCase(codeKey)
               ? codeKey
@@ -333,6 +331,7 @@ const compareColumns = async (
   typeCastsCache: TypeCastsCache,
   verifying: boolean | undefined,
   key: string,
+  dbName: string,
   dbColumn: ColumnType,
   codeColumn: ColumnType,
 ): Promise<'change' | 'recreate' | undefined> => {
@@ -497,12 +496,7 @@ JOIN pg_type AS t ON t.oid = casttarget`);
         inDb: dbDefault,
         inCode: codeDefault,
         change: () => {
-          changeColumn(
-            changeTableData.changeTableAst.shape,
-            key,
-            dbColumn,
-            codeColumn,
-          );
+          changeColumn(changeTableData, key, dbName, dbColumn, codeColumn);
           if (!changeTableData.pushedAst) {
             changeTableData.pushedAst = true;
             ast.push(changeTableData.changeTableAst);
@@ -516,17 +510,32 @@ JOIN pg_type AS t ON t.oid = casttarget`);
 };
 
 const changeColumn = (
-  shape: RakeDbAst.ChangeTableShape,
-  name: string,
+  changeTableData: ChangeTableData,
+  key: string,
+  dbName: string,
   dbColumn: ColumnType,
   codeColumn: ColumnType,
 ) => {
   dbColumn.data.as = codeColumn.data.as = undefined;
 
-  shape[name] = {
+  const simpleCodeColumn = Object.create(codeColumn);
+  simpleCodeColumn.data = {
+    ...codeColumn.data,
+    primaryKey: undefined,
+    indexes: undefined,
+    foreignKeys: undefined,
+    check: undefined,
+  };
+
+  changeTableData.changingColumns[dbName] = {
+    from: dbColumn,
+    to: simpleCodeColumn,
+  };
+
+  changeTableData.changeTableAst.shape[key] = {
     type: 'change',
     from: { column: dbColumn },
-    to: { column: codeColumn },
+    to: { column: simpleCodeColumn },
   };
 };
 

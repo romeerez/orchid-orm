@@ -1,8 +1,12 @@
 import { ColumnDataCheckBase, TemplateLiteralArgs } from 'orchid-core';
-import { ColumnType, RawSQL, TableData } from 'pqb';
+import { ColumnType, RawSQL } from 'pqb';
 import { DbStructure, RakeDbAst } from 'rake-db';
 import { ChangeTableData } from './tables.generator';
-import { checkForColumnChange, CompareExpression } from './generators.utils';
+import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';
+
+interface CodeCheck extends ColumnDataCheckBase {
+  column?: string;
+}
 
 export const processChecks = (
   ast: RakeDbAst[],
@@ -12,15 +16,21 @@ export const processChecks = (
   const codeChecks = collectCodeChecks(changeTableData);
   const {
     dbTableData,
-    changeTableAst: { add, drop, shape },
+    changeTableAst: { add, shape },
   } = changeTableData;
 
   const hasDbChecks = dbTableData.constraints.some((c) => c.check);
   if (!hasDbChecks) {
     if (codeChecks.length) {
-      (add.constraints ??= []).push(
-        ...codeChecks.map((check) => ({ check: check.sql, name: check.name })),
-      );
+      const constraints = (add.constraints ??= []);
+      for (const check of codeChecks) {
+        if (check.column && changeTableData.changingColumns[check.column]) {
+          const column = changeTableData.changingColumns[check.column];
+          column.to.data.check = check;
+        } else {
+          constraints.push({ check: check.sql, name: check.name });
+        }
+      }
     }
     return;
   }
@@ -32,7 +42,7 @@ export const processChecks = (
     if (!dbCheck) continue;
 
     const hasChangedColumn = dbCheck.columns?.some((column) =>
-      checkForColumnChange(shape, column),
+      checkForColumnAddOrDrop(shape, column),
     );
     if (hasChangedColumn) continue;
 
@@ -48,7 +58,7 @@ export const processChecks = (
         handle(index) {
           if (index !== undefined) return;
 
-          dropCheck(drop, dbCheck, name);
+          dropCheck(changeTableData, dbCheck, name);
 
           if (--wait === 0 && !changeTableData.pushedAst) {
             changeTableData.pushedAst = true;
@@ -67,7 +77,7 @@ export const processChecks = (
         },
       });
     } else {
-      dropCheck(drop, dbCheck, name);
+      dropCheck(changeTableData, dbCheck, name);
     }
   }
 };
@@ -75,16 +85,19 @@ export const processChecks = (
 const collectCodeChecks = ({
   codeTable,
   changeTableAst: { shape },
-}: ChangeTableData): ColumnDataCheckBase[] => {
-  const codeChecks: ColumnDataCheckBase[] = [];
+}: ChangeTableData): CodeCheck[] => {
+  const codeChecks: CodeCheck[] = [];
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
     if (!column.data.check) continue;
 
     const name = column.data.name ?? key;
-    if (checkForColumnChange(shape, name)) continue;
+    if (checkForColumnAddOrDrop(shape, name)) continue;
 
-    codeChecks.push(column.data.check);
+    codeChecks.push({
+      ...column.data.check,
+      column: name,
+    });
   }
 
   if (codeTable.internal.tableData.constraints) {
@@ -100,12 +113,26 @@ const collectCodeChecks = ({
 };
 
 const dropCheck = (
-  drop: TableData,
+  { changeTableAst: { drop }, changingColumns }: ChangeTableData,
   dbCheck: DbStructure.Check,
   name: string,
 ) => {
-  (drop.constraints ??= []).push({
-    name,
-    check: new RawSQL([[dbCheck.expression]] as unknown as TemplateLiteralArgs),
-  });
+  const constraints = (drop.constraints ??= []);
+  const sql = new RawSQL([
+    [dbCheck.expression],
+  ] as unknown as TemplateLiteralArgs);
+
+  if (dbCheck.columns?.length === 1 && changingColumns[dbCheck.columns[0]]) {
+    const column = changingColumns[dbCheck.columns[0]];
+    column.from.data.name = 'i_d';
+    column.from.data.check = {
+      name,
+      sql,
+    };
+  } else {
+    constraints.push({
+      name,
+      check: sql,
+    });
+  }
 };

@@ -1,12 +1,11 @@
-import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
+import { AnyRakeDbConfig } from 'rake-db';
 import { ColumnType } from 'pqb';
 import { ChangeTableData } from './tables.generator';
-import { checkForColumnChange } from './generators.utils';
-import { toSnakeCase } from 'orchid-core';
+import { checkForColumnAddOrDrop } from './generators.utils';
+import { toArray, toSnakeCase } from 'orchid-core';
 
 export const processPrimaryKey = (
   config: AnyRakeDbConfig,
-  ast: RakeDbAst[],
   changeTableData: ChangeTableData,
 ) => {
   const { codeTable } = changeTableData;
@@ -20,7 +19,7 @@ export const processPrimaryKey = (
   }
 
   changePrimaryKey(config, columnsPrimaryKey, changeTableData);
-  renamePrimaryKey(ast, changeTableData);
+  renamePrimaryKey(changeTableData);
 };
 
 const changePrimaryKey = (
@@ -30,6 +29,7 @@ const changePrimaryKey = (
     codeTable,
     dbTableData: { primaryKey: dbPrimaryKey },
     changeTableAst: { shape, add, drop },
+    changingColumns,
   }: ChangeTableData,
 ) => {
   const tablePrimaryKey = codeTable.internal.tableData.primaryKey;
@@ -46,23 +46,56 @@ const changePrimaryKey = (
   ];
 
   if (
-    !dbPrimaryKey ||
-    primaryKey.length !== dbPrimaryKey.columns.length ||
-    primaryKey.some(
+    dbPrimaryKey &&
+    primaryKey.length === dbPrimaryKey.columns.length &&
+    !primaryKey.some(
       ({ name }) => !dbPrimaryKey.columns.some((dbName) => name === dbName),
     )
   ) {
-    const toDrop = dbPrimaryKey?.columns.filter(
-      (key) => !checkForColumnChange(shape, key),
-    );
-    if (toDrop?.length) {
+    if (primaryKey.length === 1) {
+      const { key } = primaryKey[0];
+      const changes = shape[key] && toArray(shape[key]);
+      if (changes) {
+        for (const change of changes) {
+          if (change.type !== 'change') continue;
+
+          if (change.from.column) {
+            change.from.column.data.primaryKey = undefined;
+          }
+
+          if (change.to.column) {
+            const column = Object.create(change.to.column);
+            column.data = { ...column.data, primaryKey: undefined };
+            change.to.column = column;
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  const toDrop = dbPrimaryKey?.columns.filter(
+    (key) => !checkForColumnAddOrDrop(shape, key),
+  );
+  if (toDrop?.length) {
+    if (toDrop.length === 1 && changingColumns[toDrop[0]]) {
+      const column = changingColumns[toDrop[0]];
+      column.from.data.primaryKey =
+        dbPrimaryKey?.name ?? (true as unknown as string);
+    } else {
       drop.primaryKey = { columns: toDrop, name: dbPrimaryKey?.name };
     }
+  }
 
-    const toAdd = primaryKey.filter(
-      ({ key }) => !checkForColumnChange(shape, key),
-    );
-    if (toAdd.length) {
+  const toAdd = primaryKey.filter(
+    ({ key }) => !checkForColumnAddOrDrop(shape, key),
+  );
+  if (toAdd.length) {
+    if (toAdd.length === 1 && changingColumns[toAdd[0].name]) {
+      const column = changingColumns[toAdd[0].name];
+      column.to.data.primaryKey =
+        tablePrimaryKey?.name ?? (true as unknown as string);
+    } else {
       add.primaryKey = {
         columns: toAdd.map((c) => c.key),
         name: tablePrimaryKey?.name,
@@ -71,21 +104,19 @@ const changePrimaryKey = (
   }
 };
 
-const renamePrimaryKey = (
-  ast: RakeDbAst[],
-  {
-    codeTable,
-    dbTableData: { primaryKey: dbPrimaryKey },
-    schema,
-  }: ChangeTableData,
-) => {
+const renamePrimaryKey = ({
+  codeTable,
+  dbTableData: { primaryKey: dbPrimaryKey },
+  schema,
+  delayedAst,
+}: ChangeTableData) => {
   const tablePrimaryKey = codeTable.internal.tableData.primaryKey;
   if (
     dbPrimaryKey &&
     tablePrimaryKey &&
     dbPrimaryKey?.name !== tablePrimaryKey?.name
   ) {
-    ast.push({
+    delayedAst.push({
       type: 'renameTableItem',
       kind: 'CONSTRAINT',
       tableSchema: schema,

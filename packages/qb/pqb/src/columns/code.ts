@@ -15,6 +15,8 @@ import {
   ColumnDataCheckBase,
   Codes,
   emptyObject,
+  ColumnToCodeCtx,
+  toSnakeCase,
 } from 'orchid-core';
 import { TableData } from '../tableData';
 
@@ -49,8 +51,8 @@ const combineCodeElements = (input: Code): Code => {
 };
 
 export const columnsShapeToCode = (
+  ctx: ColumnToCodeCtx,
   shape: ColumnsShapeBase,
-  t: string,
 ): Codes => {
   const hasTimestamps =
     'createdAt' in shape &&
@@ -70,7 +72,7 @@ export const columnsShapeToCode = (
     code.push(
       ...combineCodeElements([
         `${quoteObjectKey(key)}: `,
-        ...toArray(shape[key].toCode(t)),
+        ...toArray(shape[key].toCode(ctx, key)),
         ',',
       ]),
     );
@@ -79,7 +81,7 @@ export const columnsShapeToCode = (
   }
 
   if (hasTimestamps) {
-    code.push(`...${t}.timestamps(),`);
+    code.push(`...${ctx.t}.timestamps(),`);
   }
 
   return code;
@@ -444,10 +446,15 @@ export const columnIndexesToCode = (
 };
 
 export const columnCheckToCode = (
-  t: string,
+  ctx: ColumnToCodeCtx,
   { sql, name }: ColumnDataCheckBase,
+  columnName: string,
 ): string => {
-  return `.check(${sql.toCode(t)}${name ? `, { name: '${name}' }` : ''})`;
+  return `.check(${sql.toCode(ctx.t)}${
+    name && name !== `${ctx.table}_${columnName}_check`
+      ? `, { name: '${name}' }`
+      : ''
+  })`;
 };
 
 export const identityToCode = (
@@ -486,17 +493,19 @@ export const identityToCode = (
 
 export const columnCode = (
   type: ColumnType,
-  t: string,
+  ctx: ColumnToCodeCtx,
+  key: string,
   code: Code,
-  migration: boolean | undefined,
   data = type.data,
   skip?: { encodeFn: unknown },
 ): Code => {
   code = toArray(code);
 
-  let prepend = `${t}.`;
-  if (data.name) {
-    prepend += `name(${singleQuote(data.name)}).`;
+  let prepend = `${ctx.t}.`;
+  const keyName = ctx.snakeCase ? toSnakeCase(key) : key;
+  const name = data.name ?? keyName;
+  if (name !== keyName) {
+    prepend += `name(${singleQuote(name)}).`;
   }
 
   if (typeof code[0] === 'string') {
@@ -515,7 +524,10 @@ export const columnCode = (
   }
 
   if (data.foreignKeys) {
-    for (const part of columnForeignKeysToCode(data.foreignKeys, migration)) {
+    for (const part of columnForeignKeysToCode(
+      data.foreignKeys,
+      ctx.migration,
+    )) {
       addCode(code, part);
     }
   }
@@ -530,13 +542,16 @@ export const columnCode = (
   if (type.parseFn && !('hideFromCode' in type.parseFn))
     addCode(code, `.parse(${type.parseFn.toString()})`);
 
-  if (data.as) addCode(code, `.as(${data.as.toCode(t)})`);
+  if (data.as) addCode(code, `.as(${data.as.toCode(ctx, key)})`);
 
   if (
     data.default !== undefined &&
-    (!migration || typeof data.default !== 'function')
+    (!ctx.migration || typeof data.default !== 'function')
   ) {
-    addCode(code, `.default(${columnDefaultArgumentToCode(t, data.default)})`);
+    addCode(
+      code,
+      `.default(${columnDefaultArgumentToCode(ctx.t, data.default)})`,
+    );
   }
 
   if (data.indexes) {
@@ -548,7 +563,7 @@ export const columnCode = (
   if (data.comment) addCode(code, `.comment(${singleQuote(data.comment)})`);
 
   if (data.check) {
-    addCode(code, columnCheckToCode(t, data.check));
+    addCode(code, columnCheckToCode(ctx, data.check, name));
   }
 
   if (data.errors) {

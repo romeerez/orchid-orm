@@ -5,6 +5,9 @@ import {
   TestSchemaConfig,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
+import { ColumnToCodeCtx } from 'orchid-core';
+
+const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
 const testStringColumnMethods = (
   type: ReturnType<
@@ -22,7 +25,9 @@ const testStringColumnMethods = (
   name: string,
   limit = '',
 ) => {
-  expect(type.nonEmpty().toCode('t')).toBe(`t.${name}(${limit}).nonEmpty()`);
+  expect(type.nonEmpty().toCode(ctx, 'key')).toBe(
+    `t.${name}(${limit}).nonEmpty()`,
+  );
 
   expect(
     type
@@ -45,7 +50,7 @@ const testStringColumnMethods = (
       .trim()
       .toLowerCase()
       .toUpperCase()
-      .toCode('t'),
+      .toCode(ctx, 'key'),
   ).toBe(
     `t.${name}(${limit})` +
       `.min(1, 'min message')` +
@@ -85,7 +90,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.varchar(5).toCode('t')).toBe('t.varchar(5)');
+        expect(t.varchar(5).toCode(ctx, 'key')).toBe('t.varchar(5)');
 
         testStringColumnMethods(t.varchar(5), 'varchar', '5');
       });
@@ -100,8 +105,8 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.string().toCode('t')).toBe('t.string()');
-        expect(t.string(5).toCode('t')).toBe('t.string(5)');
+        expect(t.string().toCode(ctx, 'key')).toBe('t.string()');
+        expect(t.string(5).toCode(ctx, 'key')).toBe('t.string(5)');
 
         testStringColumnMethods(t.string(), 'string');
       });
@@ -118,10 +123,10 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.text().toCode('t')).toBe('t.text()');
+        expect(t.text().toCode(ctx, 'key')).toBe('t.text()');
 
-        expect(t.text().min(1).toCode('t')).toBe('t.text().min(1)');
-        expect(t.text().min(1).max(2).toCode('t')).toBe(
+        expect(t.text().min(1).toCode(ctx, 'key')).toBe('t.text().min(1)');
+        expect(t.text().min(1).max(2).toCode(ctx, 'key')).toBe(
           't.text().min(1).max(2)',
         );
 
@@ -140,7 +145,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.citext().min(1).max(2).toCode('t')).toBe(
+        expect(t.citext().min(1).max(2).toCode(ctx, 'key')).toBe(
           't.citext().min(1).max(2)',
         );
 
@@ -168,7 +173,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.bytea().toCode('t')).toBe('t.bytea()');
+        expect(t.bytea().toCode(ctx, 'key')).toBe('t.bytea()');
       });
     });
   });
@@ -185,7 +190,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.point().toCode('t')).toBe('t.point()');
+        expect(t.point().toCode(ctx, 'key')).toBe('t.point()');
       });
     });
 
@@ -200,7 +205,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.line().toCode('t')).toBe('t.line()');
+        expect(t.line().toCode(ctx, 'key')).toBe('t.line()');
       });
     });
 
@@ -215,7 +220,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.lseg().toCode('t')).toBe('t.lseg()');
+        expect(t.lseg().toCode(ctx, 'key')).toBe('t.lseg()');
       });
     });
 
@@ -230,7 +235,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.box().toCode('t')).toBe('t.box()');
+        expect(t.box().toCode(ctx, 'key')).toBe('t.box()');
       });
     });
 
@@ -245,7 +250,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.path().toCode('t')).toBe('t.path()');
+        expect(t.path().toCode(ctx, 'key')).toBe('t.path()');
       });
     });
 
@@ -260,7 +265,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.polygon().toCode('t')).toBe('t.polygon()');
+        expect(t.polygon().toCode(ctx, 'key')).toBe('t.polygon()');
       });
     });
 
@@ -275,7 +280,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.circle().toCode('t')).toBe('t.circle()');
+        expect(t.circle().toCode(ctx, 'key')).toBe('t.circle()');
       });
     });
   });
@@ -292,7 +297,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.cidr().toCode('t')).toBe('t.cidr()');
+        expect(t.cidr().toCode(ctx, 'key')).toBe('t.cidr()');
       });
     });
 
@@ -307,7 +312,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.inet().toCode('t')).toBe('t.inet()');
+        expect(t.inet().toCode(ctx, 'key')).toBe('t.inet()');
       });
     });
 
@@ -322,7 +327,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.macaddr().toCode('t')).toBe('t.macaddr()');
+        expect(t.macaddr().toCode(ctx, 'key')).toBe('t.macaddr()');
       });
     });
 
@@ -339,7 +344,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.macaddr8().toCode('t')).toBe('t.macaddr8()');
+        expect(t.macaddr8().toCode(ctx, 'key')).toBe('t.macaddr8()');
       });
     });
   });
@@ -356,7 +361,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.bit(5).toCode('t')).toBe('t.bit(5)');
+        expect(t.bit(5).toCode(ctx, 'key')).toBe('t.bit(5)');
       });
     });
 
@@ -371,8 +376,8 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.bitVarying().toCode('t')).toBe('t.bitVarying()');
-        expect(t.bitVarying(5).toCode('t')).toBe('t.bitVarying(5)');
+        expect(t.bitVarying().toCode(ctx, 'key')).toBe('t.bitVarying()');
+        expect(t.bitVarying(5).toCode(ctx, 'key')).toBe('t.bitVarying(5)');
       });
     });
   });
@@ -393,7 +398,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.tsvector().toCode('t')).toBe('t.tsvector()');
+        expect(t.tsvector().toCode(ctx, 'key')).toBe('t.tsvector()');
       });
     });
 
@@ -408,7 +413,7 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.tsquery().toCode('t')).toBe('t.tsquery()');
+        expect(t.tsquery().toCode(ctx, 'key')).toBe('t.tsquery()');
       });
     });
   });
@@ -426,7 +431,7 @@ describe('string columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.uuid().toCode('t')).toBe('t.uuid()');
+      expect(t.uuid().toCode(ctx, 'key')).toBe('t.uuid()');
     });
 
     describe('primaryKey', () => {
@@ -439,7 +444,7 @@ describe('string columns', () => {
       it('should not reveal default when converting to code', () => {
         const column = t.uuid().primaryKey();
 
-        expect(column.toCode('t')).toEqual('t.uuid().primaryKey()');
+        expect(column.toCode(ctx, 'key')).toEqual('t.uuid().primaryKey()');
       });
 
       it('should not change default if it is set by user', () => {
@@ -461,7 +466,7 @@ describe('string columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.xml().toCode('t')).toBe('t.xml()');
+      expect(t.xml().toCode(ctx, 'key')).toBe('t.xml()');
     });
   });
 
@@ -476,7 +481,7 @@ describe('string columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.money().toCode('t')).toBe('t.money()');
+      expect(t.money().toCode(ctx, 'key')).toBe('t.money()');
     });
   });
 });

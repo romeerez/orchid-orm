@@ -5,6 +5,9 @@ import {
   testDb,
   testSchemaConfig,
 } from 'test-utils';
+import { ColumnToCodeCtx } from 'orchid-core';
+
+const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
 describe('custom type column', () => {
   it('should output value of `as` type', () => {
@@ -32,14 +35,14 @@ describe('custom type column', () => {
   });
 
   it('should have toCode', () => {
-    expect(new CustomTypeColumn(testSchemaConfig, 'name').toCode('t')).toBe(
-      `t.type('name')`,
-    );
+    expect(
+      new CustomTypeColumn(testSchemaConfig, 'name').toCode(ctx, 'key'),
+    ).toBe(`t.type('name')`);
   });
 });
 
 describe('domain column', () => {
   it('should have toCode', () => {
-    expect(t.domain('name').toCode('t')).toBe(`t.domain('name')`);
+    expect(t.domain('name').toCode(ctx, 'key')).toBe(`t.domain('name')`);
   });
 });

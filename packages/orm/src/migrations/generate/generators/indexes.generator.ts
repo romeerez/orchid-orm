@@ -8,7 +8,7 @@ import {
   toSnakeCase,
 } from 'orchid-core';
 import { ChangeTableData } from './tables.generator';
-import { checkForColumnChange, CompareExpression } from './generators.utils';
+import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';
 
 interface CodeIndex extends TableData.Index {
   columnKeys: TableData.Index.ColumnOrExpressionOptions[];
@@ -43,7 +43,6 @@ interface ComparableIndex {
 export const processIndexes = (
   config: AnyRakeDbConfig,
   changeTableData: ChangeTableData,
-  delayedAst: RakeDbAst[],
   ast: RakeDbAst[],
   compareExpressions: CompareExpression[],
 ) => {
@@ -66,19 +65,16 @@ export const processIndexes = (
     changeTableAst: { shape },
   } = changeTableData;
   for (const dbIndex of changeTableData.dbTableData.indexes) {
-    const hasChangedColumn = dbIndex.columns.some(
+    const hasAddedOrDroppedColumn = dbIndex.columns.some(
       (column) =>
-        'column' in column && checkForColumnChange(shape, column.column),
+        'column' in column && checkForColumnAddOrDrop(shape, column.column),
     );
-    if (hasChangedColumn) continue;
+    if (hasAddedOrDroppedColumn) continue;
 
     normalizeIndex(dbIndex);
 
-    const dbComparableIndex = indexToComparable(dbIndex);
-
-    const { columns: dbColumns } = dbIndex;
-    const { found, rename } = findMatchingIndexWithoutSql(
-      dbComparableIndex,
+    const { found, rename, foundAndHasSql } = findMatchingIndex(
+      dbIndex,
       codeComparableIndexes,
       codeIndexes,
       skipCodeIndexes,
@@ -86,92 +82,95 @@ export const processIndexes = (
       config,
     );
 
-    if (found.length && checkIfIndexHasSql(dbComparableIndex)) {
-      for (const codeIndex of found) {
-        holdCodeIndexes.set(codeIndex, true);
-      }
+    const { columns: dbColumns } = dbIndex;
 
-      const compare: CompareExpression['compare'] = [];
-      for (let i = 0; i < dbIndex.columns.length; i++) {
-        const column = dbIndex.columns[i];
-        if (!('expression' in column)) continue;
-
-        compare.push({
-          inDb: column.expression,
-          inCode: found.map(
-            (index) => (index.columns[i] as { expression: string }).expression,
-          ),
-        });
-      }
-
-      if (dbIndex.with) {
-        compare.push({
-          inDb: dbIndex.with,
-          inCode: found.map((index) => index.options.with as string),
-        });
-      }
-
-      if (dbIndex.where) {
-        compare.push({
-          inDb: dbIndex.where,
-          inCode: found.map((index) => index.options.where as string),
-        });
-      }
-
-      wait++;
-      compareExpressions.push({
-        compare,
-        handle(index) {
-          const codeIndex = index === undefined ? undefined : found[index];
-
-          handleIndexChange(
-            ast,
-            changeTableData,
-            dbIndex,
-            dbColumns,
-            codeIndex,
-            index === undefined ? undefined : rename[index],
-          );
-
-          if (codeIndex) {
-            holdCodeIndexes.delete(codeIndex);
-          }
-
-          if (!--wait && holdCodeIndexes.size) {
-            (changeTableData.changeTableAst.add.indexes ??= []).push(
-              ...holdCodeIndexes.keys(),
-            );
-
-            if (!changeTableData.pushedAst) {
-              changeTableData.pushedAst = true;
-              ast.push(changeTableData.changeTableAst);
-            }
-          }
-        },
-      });
-    } else {
+    if (!foundAndHasSql) {
       handleIndexChange(
-        delayedAst,
         changeTableData,
         dbIndex,
         dbColumns,
         found[0],
         rename[0],
       );
+      continue;
     }
+
+    for (const codeIndex of found) {
+      holdCodeIndexes.set(codeIndex, true);
+    }
+
+    const compare: CompareExpression['compare'] = [];
+    for (let i = 0; i < dbIndex.columns.length; i++) {
+      const column = dbIndex.columns[i];
+      if (!('expression' in column)) continue;
+
+      compare.push({
+        inDb: column.expression,
+        inCode: found.map(
+          (index) => (index.columns[i] as { expression: string }).expression,
+        ),
+      });
+    }
+
+    if (dbIndex.with) {
+      compare.push({
+        inDb: dbIndex.with,
+        inCode: found.map((index) => index.options.with as string),
+      });
+    }
+
+    if (dbIndex.where) {
+      compare.push({
+        inDb: dbIndex.where,
+        inCode: found.map((index) => index.options.where as string),
+      });
+    }
+
+    wait++;
+    compareExpressions.push({
+      compare,
+      handle(index) {
+        const codeIndex = index === undefined ? undefined : found[index];
+
+        handleIndexChange(
+          changeTableData,
+          dbIndex,
+          dbColumns,
+          codeIndex,
+          index === undefined ? undefined : rename[index],
+        );
+
+        if (codeIndex) {
+          holdCodeIndexes.delete(codeIndex);
+        }
+
+        if (!--wait && holdCodeIndexes.size) {
+          addIndexes(changeTableData, [...holdCodeIndexes.keys()]);
+
+          if (!changeTableData.pushedAst) {
+            changeTableData.pushedAst = true;
+            ast.push(changeTableData.changeTableAst);
+          }
+        }
+      },
+    });
   }
 
-  const addIndexes = codeIndexes.filter(
+  const indexesToAdd = codeIndexes.filter(
     (index, i) => !skipCodeIndexes.has(i) && !holdCodeIndexes.has(index),
   );
-  if (addIndexes.length) {
-    changeTableData.changeTableAst.add.indexes = addIndexes.map((x) => ({
-      ...x,
-      columns: x.columnKeys,
-      options: x.options.include
-        ? { ...x.options, include: x.includeKeys }
-        : x.options,
-    }));
+  if (indexesToAdd.length) {
+    addIndexes(
+      changeTableData,
+      indexesToAdd.map((x) => ({
+        ...x,
+        columns: x.columnKeys,
+        columnNames: x.columns,
+        options: x.options.include
+          ? { ...x.options, include: x.includeKeys }
+          : x.options,
+      })),
+    );
   }
 };
 
@@ -185,7 +184,7 @@ const collectCodeIndexes = (
     if (!column.data.indexes) continue;
 
     const name = column.data.name ?? key;
-    if (checkForColumnChange(shape, name)) continue;
+    if (checkForColumnAddOrDrop(shape, name)) continue;
 
     codeIndexes.push(
       ...column.data.indexes.map(
@@ -313,6 +312,30 @@ interface IndexChange {
   rename: (string | undefined)[];
 }
 
+const findMatchingIndex = (
+  dbIndex: DbStructure.Index,
+  codeComparableIndexes: ComparableIndex[],
+  codeIndexes: TableData.Index[],
+  skipCodeIndexes: Map<number, boolean>,
+  tableName: string,
+  config: AnyRakeDbConfig,
+) => {
+  const dbComparableIndex = indexToComparable(dbIndex);
+
+  const { found, rename } = findMatchingIndexWithoutSql(
+    dbComparableIndex,
+    codeComparableIndexes,
+    codeIndexes,
+    skipCodeIndexes,
+    tableName,
+    config,
+  );
+
+  const foundAndHasSql = found.length && checkIfIndexHasSql(dbComparableIndex);
+
+  return { found, rename, foundAndHasSql };
+};
+
 const findMatchingIndexWithoutSql = (
   dbIndex: ComparableIndex,
   codeComparableIndexes: ComparableIndex[],
@@ -382,24 +405,42 @@ const checkIfIndexHasSql = (
 ) => index.hasWith || index.hasWhere || index.hasExpression;
 
 const handleIndexChange = (
-  ast: RakeDbAst[],
-  { changeTableAst, schema, codeTable }: ChangeTableData,
+  {
+    changeTableAst,
+    schema,
+    codeTable,
+    changingColumns,
+    delayedAst,
+  }: ChangeTableData,
   dbIndex: DbStructure.Index,
   dbColumns: DbStructure.Index['columns'],
   found?: TableData.Index,
   rename?: string,
 ) => {
   if (!found) {
+    const indexName =
+      dbIndex.name === getIndexName(changeTableAst.name, dbColumns)
+        ? undefined
+        : dbIndex.name;
+
+    if (dbColumns.length === 1 && 'column' in dbColumns[0]) {
+      const column = changingColumns[dbColumns[0].column];
+      if (column) {
+        (column.from.data.indexes ??= []).push({
+          options: dbIndex,
+          name: indexName,
+        });
+        return;
+      }
+    }
+
     (changeTableAst.drop.indexes ??= []).push({
       columns: dbColumns,
       options: dbIndex,
-      name:
-        dbIndex.name === getIndexName(changeTableAst.name, dbColumns)
-          ? undefined
-          : dbIndex.name,
+      name: indexName,
     });
   } else if (rename) {
-    ast.push({
+    delayedAst.push({
       type: 'renameTableItem',
       kind: 'INDEX',
       tableSchema: schema,
@@ -407,5 +448,30 @@ const handleIndexChange = (
       from: dbIndex.name,
       to: rename,
     });
+  }
+};
+
+interface IndexWithMaybeColumnNames extends TableData.Index {
+  columnNames?: TableData.Index.ColumnOrExpressionOptions[];
+}
+
+const addIndexes = (
+  { changeTableAst, changingColumns }: ChangeTableData,
+  add: IndexWithMaybeColumnNames[],
+) => {
+  const indexes = (changeTableAst.add.indexes ??= []);
+  for (const index of add) {
+    if (index.columns.length === 1 && 'column' in index.columns[0]) {
+      const column =
+        changingColumns[
+          ((index.columnNames || index.columns)[0] as { column: string }).column
+        ];
+      if (column) {
+        (column.to.data.indexes ??= []).push(index);
+        continue;
+      }
+    }
+
+    indexes.push(index);
   }
 };

@@ -1,6 +1,6 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Code, ColumnSchemaConfig } from 'orchid-core';
+import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from 'orchid-core';
 import { Operators, OperatorsBoolean } from './operators';
 
 // 1 byte, true or false
@@ -20,8 +20,8 @@ export class BooleanColumn<
     this.data.alias = 'boolean';
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, 'boolean()', m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, 'boolean()');
   }
 
   parseItem = (input: string) => input[0] === 't';

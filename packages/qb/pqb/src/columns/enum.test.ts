@@ -1,4 +1,7 @@
 import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
+import { ColumnToCodeCtx } from 'orchid-core';
+
+const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
 describe('enum column', () => {
   afterAll(testDb.close);
@@ -26,7 +29,7 @@ describe('enum column', () => {
   });
 
   it('should have toCode', () => {
-    expect(t.enum('mood', ['sad', 'ok', 'happy']).toCode('t')).toBe(
+    expect(t.enum('mood', ['sad', 'ok', 'happy']).toCode(ctx, 'key')).toBe(
       `t.enum('mood', ['sad', 'ok', 'happy'])`,
     );
   });

@@ -10,7 +10,7 @@ import {
   addCode,
   Code,
   codeToString,
-  columnToCode,
+  ColumnToCodeCtx,
   toArray,
 } from 'orchid-core';
 import { getColumnDbType } from './generators/columns.generator';
@@ -98,6 +98,13 @@ export const report = (
       case 'changeTable': {
         const inner: Code[] = [];
 
+        const toCodeCtx: ColumnToCodeCtx = {
+          t: 't',
+          table: a.name,
+          migration: true,
+          snakeCase: config.snakeCase,
+        };
+
         for (const key in a.shape) {
           const changes = toArray(a.shape[key]);
           for (const change of changes) {
@@ -138,22 +145,14 @@ export const report = (
               inner.push(`${yellow('~ change column')} ${name}:`, changes);
               changes.push(`${yellow('from')}: `);
 
-              const fromCode = columnToCode(
-                key,
-                change.from.column!,
-                config.snakeCase,
-              );
+              const fromCode = change.from.column!.toCode(toCodeCtx, key);
               for (const code of fromCode) {
                 addCode(changes, code);
               }
 
               changes.push(`  ${yellow('to')}: `);
 
-              const toCode = columnToCode(
-                key,
-                change.to.column!,
-                config.snakeCase,
-              );
+              const toCode = change.to.column!.toCode(toCodeCtx, key);
               for (const code of toCode) {
                 addCode(changes, code);
               }

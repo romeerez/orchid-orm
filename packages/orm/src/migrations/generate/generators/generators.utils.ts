@@ -132,18 +132,21 @@ export const promptCreateOrRename = (
   });
 };
 
-export const checkForColumnChange = (
+export const checkForColumnAddOrDrop = (
   shape: RakeDbAst.ChangeTableShape,
   key: string,
 ) => {
   const item = shape[key];
   if (item) {
-    return item && (Array.isArray(item) || item.type !== 'rename');
+    return (
+      item &&
+      (Array.isArray(item) || item.type === 'add' || item.type === 'drop')
+    );
   }
 
   for (const k in shape) {
     const item = shape[k];
-    if (Array.isArray(item) || item.type !== 'rename') {
+    if (Array.isArray(item) || item.type === 'add' || item.type === 'drop') {
       return true;
     }
   }

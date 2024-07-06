@@ -14,6 +14,7 @@ import {
   ErrorMessages,
   setColumnData,
   ColumnDataBase,
+  ColumnToCodeCtx,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -78,8 +79,8 @@ class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends ColumnType<
     super(zodSchemaConfig, schema);
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, [`json()`], m, this.data, toCodeSkip);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, [`json()`], this.data, toCodeSkip);
   }
 }
 

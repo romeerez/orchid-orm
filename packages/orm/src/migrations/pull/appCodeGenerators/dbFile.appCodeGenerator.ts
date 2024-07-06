@@ -61,7 +61,10 @@ export const appCodeGenUpdateDbFile = async (
           (ast) =>
             `${quoteObjectKey(
               ast.schema ? `${ast.schema}.${ast.name}` : ast.name,
-            )}: (t) => ${ast.baseType.toCode('t')},`,
+            )}: (t) => ${ast.baseType.toCode(
+              { t: 't', table: ast.name },
+              ast.baseType.data.name ?? '',
+            )},`,
         )
         .join('\n    ')}\n  },`;
     }

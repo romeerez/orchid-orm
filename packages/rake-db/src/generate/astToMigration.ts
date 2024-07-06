@@ -16,7 +16,7 @@ import {
   Code,
   codeToString,
   ColumnSchemaConfig,
-  columnToCode,
+  ColumnToCodeCtx,
   isRawSQL,
   quoteObjectKey,
   singleQuote,
@@ -228,6 +228,13 @@ const astEncoders: {
       ast.shape.updatedAt,
     );
 
+    const toCodeCtx: ColumnToCodeCtx = {
+      t: 't',
+      table: ast.name,
+      migration: true,
+      snakeCase: config.snakeCase,
+    };
+
     for (const key in ast.shape) {
       if (
         timestamps.hasAnyTimestamps &&
@@ -236,7 +243,7 @@ const astEncoders: {
         continue;
 
       const line: Code[] = [`${quoteObjectKey(key)}: `];
-      const columnCode = columnToCode(key, ast.shape[key], config.snakeCase);
+      const columnCode = ast.shape[key].toCode(toCodeCtx, key);
       for (const part of columnCode) {
         addCode(line, part);
       }
@@ -300,6 +307,13 @@ const astEncoders: {
         ),
     );
 
+    const toCodeCtx: ColumnToCodeCtx = {
+      t: 't',
+      table: ast.name,
+      migration: true,
+      snakeCase: config.snakeCase,
+    };
+
     for (const key in ast.shape) {
       const changes = toArray(ast.shape[key]);
       for (const change of changes) {
@@ -320,7 +334,7 @@ const astEncoders: {
               : `${quoteObjectKey(key)}: t.${change.type}(`,
           ];
 
-          const columnCode = columnToCode(key, change.item, config.snakeCase);
+          const columnCode = change.item.toCode(toCodeCtx, key);
 
           for (let i = 0; i < columnCode.length; i++) {
             let part = columnCode[i];
@@ -338,10 +352,14 @@ const astEncoders: {
             }.change(`,
           ];
 
-          const fromCode = columnToCode(
+          const fromCode = change.from.column.toCode(
+            {
+              t: 't',
+              table: ast.name,
+              migration: true,
+              snakeCase: config.snakeCase,
+            },
             key,
-            change.from.column,
-            config.snakeCase,
           );
           for (const part of fromCode) {
             addCode(line, part);
@@ -349,7 +367,7 @@ const astEncoders: {
 
           addCode(line, ', ');
 
-          const toCode = columnToCode(key, change.to.column, config.snakeCase);
+          const toCode = change.to.column.toCode(toCodeCtx, key);
           for (const part of toCode) {
             addCode(line, part);
           }
@@ -493,7 +511,10 @@ const astEncoders: {
   domain(ast) {
     return `await db.${ast.action}Domain(${quoteSchemaTable(
       ast,
-    )}, (t) => ${ast.baseType.toCode('t')});`;
+    )}, (t) => ${ast.baseType.toCode(
+      { t: 't', table: ast.name },
+      ast.baseType.data.name ?? '',
+    )});`;
   },
   collation(ast) {
     const params: string[] = [];

@@ -1849,6 +1849,32 @@ describe('changeTable', () => {
             ]),
         );
       });
+
+      it('should change index together with a column change', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.varchar(100).index(),
+                t.text().index({
+                  nullsNotDistinct: true,
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `ALTER TABLE "table"\nALTER COLUMN "col_umn" TYPE text`,
+              `DROP INDEX "table_col_umn_idx"`,
+              `CREATE INDEX "table_col_umn_idx" ON "table" ("col_umn") NULLS NOT DISTINCT`,
+            ]),
+          () =>
+            expectSql([
+              `ALTER TABLE "table"\nALTER COLUMN "col_umn" TYPE varchar(100)`,
+              `DROP INDEX "table_col_umn_idx"`,
+              `CREATE INDEX "table_col_umn_idx" ON "table" ("col_umn")`,
+            ]),
+        );
+      });
     });
 
     describe('rename column', () => {

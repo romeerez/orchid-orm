@@ -1,6 +1,8 @@
 import { columnsShapeToCode } from './code';
-import { codeToString } from 'orchid-core';
+import { codeToString, ColumnToCodeCtx } from 'orchid-core';
 import { testZodColumnTypes as t } from 'test-utils';
+
+const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
 describe('code', () => {
   describe('codeToString', () => {
@@ -35,13 +37,10 @@ describe('code', () => {
 
   describe('columnsShapeToCode', () => {
     it('should convert columns shape to code', () => {
-      const code = columnsShapeToCode(
-        {
-          id: t.serial().primaryKey(),
-          active: t.boolean(),
-        },
-        't',
-      );
+      const code = columnsShapeToCode(ctx, {
+        id: t.serial().primaryKey(),
+        active: t.boolean(),
+      });
 
       expect(codeToString(code, '', '  ')).toEqual(
         `
@@ -52,13 +51,10 @@ active: t.boolean(),
     });
 
     it('should handle timestamps', () => {
-      const code = columnsShapeToCode(
-        {
-          id: t.serial().primaryKey(),
-          ...t.timestamps(),
-        },
-        't',
-      );
+      const code = columnsShapeToCode(ctx, {
+        id: t.serial().primaryKey(),
+        ...t.timestamps(),
+      });
 
       expect(codeToString(code, '', '  ')).toEqual(
         `
@@ -69,14 +65,11 @@ id: t.serial().primaryKey(),
     });
 
     it('should handle renamed timestamps', () => {
-      const code = columnsShapeToCode(
-        {
-          id: t.serial().primaryKey(),
-          created: t.timestamps().createdAt,
-          updated: t.timestamps().updatedAt,
-        },
-        't',
-      );
+      const code = columnsShapeToCode(ctx, {
+        id: t.serial().primaryKey(),
+        created: t.timestamps().createdAt,
+        updated: t.timestamps().updatedAt,
+      });
 
       expect(codeToString(code, '', '  ')).toEqual(
         `
@@ -96,7 +89,7 @@ updated: t.timestamps().updatedAt,
               required: 'column is required',
               invalidType: 'column must be a number',
             })
-            .toCode('t'),
+            .toCode(ctx, 'key'),
           '',
           '  ',
         );

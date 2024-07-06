@@ -441,6 +441,39 @@ change(async (db) => {
     );
   });
 
+  it('should be dropped in a column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.identity().primaryKey(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          iD: t.integer(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    iD: t.change(t.identity().primaryKey(), t.integer()),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} iD:
+    ${yellow('from')}: t.identity().primaryKey()
+      ${yellow('to')}: t.integer()`,
+    );
+  });
+
   it('should not be recreated when a column is renamed', async () => {
     await arrange({
       async prepareDb(db) {
@@ -470,6 +503,39 @@ change(async (db) => {
     assert.report(
       `${yellow('~ change table')} table:
   ${yellow('~ rename column')} fr_om ${yellow('=>')} tO`,
+    );
+  });
+
+  it('should not be added during unrelated column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.varchar(100).primaryKey(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          iD: t.text().primaryKey(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    iD: t.change(t.varchar(100), t.text()),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} iD:
+    ${yellow('from')}: t.varchar(100)
+      ${yellow('to')}: t.text()`,
     );
   });
 });

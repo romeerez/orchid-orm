@@ -3,7 +3,7 @@ import { RawSQLBase } from '../raw';
 import { QueryBaseCommon } from '../query';
 import { OperatorBase } from './operators';
 import { ColumnTypeSchemaArg } from './columnSchema';
-import { RecordString, toSnakeCase } from '../utils';
+import { RecordString } from '../utils';
 
 // get columns object type where nullable columns or columns with a default are optional
 export type ColumnShapeInput<
@@ -426,6 +426,13 @@ export type QueryColumnToNullable<C extends QueryColumn> = {
     : C[K];
 };
 
+export interface ColumnToCodeCtx {
+  t: string;
+  table: string;
+  migration?: boolean;
+  snakeCase?: boolean;
+}
+
 // base column type
 export abstract class ColumnTypeBase<
   Schema extends ColumnTypeSchemaArg = ColumnTypeSchemaArg,
@@ -448,7 +455,7 @@ export abstract class ColumnTypeBase<
   abstract operators: Ops;
 
   // turn the column into TS code, used for code generation
-  abstract toCode(t: string, migration?: boolean): Code;
+  abstract toCode(ctx: ColumnToCodeCtx, key: string): Code;
 
   // format the column into the database type
   abstract toSQL(): string;
@@ -794,21 +801,3 @@ export abstract class ColumnTypeBase<
     return setColumnData(this, 'isHidden', true) as never;
   }
 }
-
-export const columnToCode = (
-  key: string,
-  column: ColumnTypeBase,
-  snakeCase: boolean | undefined,
-) => {
-  if (snakeCase) key = toSnakeCase(key);
-
-  if (column.data.name === key) {
-    const name = column.data.name;
-    column.data.name = undefined;
-    const code = column.toCode('t', true);
-    column.data.name = name;
-    return code;
-  } else {
-    return column.toCode('t', true);
-  }
-};

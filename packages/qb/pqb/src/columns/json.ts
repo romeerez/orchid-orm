@@ -1,7 +1,12 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
 import { Operators, OperatorsJson, OperatorsText } from './operators';
-import { Code, ColumnSchemaConfig, ColumnTypeSchemaArg } from 'orchid-core';
+import {
+  Code,
+  ColumnSchemaConfig,
+  ColumnToCodeCtx,
+  ColumnTypeSchemaArg,
+} from 'orchid-core';
 
 const encodeFn = (x: unknown) => (x === null ? x : JSON.stringify(x));
 
@@ -15,8 +20,8 @@ export class JSONColumn<
 > extends ColumnType<Schema, T, Schema['type'], OperatorsJson> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, `json()`, m, this.data, toCodeSkip);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, `json()`, this.data, toCodeSkip);
   }
 }
 
@@ -39,7 +44,7 @@ export class JSONTextColumn<
     super(schema, schema.stringSchema() as never);
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, `jsonText()`, m, this.data, toCodeSkip);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, `jsonText()`, this.data, toCodeSkip);
   }
 }

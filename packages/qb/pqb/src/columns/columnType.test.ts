@@ -7,7 +7,7 @@ import {
 } from '../test-utils/test-utils';
 import { createDb } from '../query/db';
 import { columnCode } from './code';
-import { Code, ColumnSchemaConfig } from 'orchid-core';
+import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from 'orchid-core';
 import {
   assertType,
   expectSql,
@@ -36,11 +36,13 @@ describe('column type', () => {
       super(schema, schema.unknown);
     }
 
-    toCode(t: string, m?: boolean): Code {
-      return columnCode(this, t, 'column()', m);
+    toCode(ctx: ColumnToCodeCtx, key: string): Code {
+      return columnCode(this, ctx, key, 'column()');
     }
   }
   const column = new Column(testSchemaConfig);
+
+  const columnToCodeCtx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
   describe('.primaryKey', () => {
     it('should mark column as a primary key', () => {
@@ -49,7 +51,9 @@ describe('column type', () => {
     });
 
     it('should have toCode', () => {
-      expect(column.primaryKey().toCode('t')).toBe('t.column().primaryKey()');
+      expect(column.primaryKey().toCode(columnToCodeCtx, 'key')).toBe(
+        't.column().primaryKey()',
+      );
     });
   });
 
@@ -60,13 +64,13 @@ describe('column type', () => {
         columns = { shape: { column: td.integer() } };
       }
 
-      expect(column.foreignKey(() => Table, 'column').toCode('t')).toBe(
-        `t.column().foreignKey(()=>Table, 'column')`,
-      );
+      expect(
+        column.foreignKey(() => Table, 'column').toCode(columnToCodeCtx, 'key'),
+      ).toBe(`t.column().foreignKey(()=>Table, 'column')`);
 
-      expect(column.foreignKey('table', 'column').toCode('t')).toBe(
-        `t.column().foreignKey('table', 'column')`,
-      );
+      expect(
+        column.foreignKey('table', 'column').toCode(columnToCodeCtx, 'key'),
+      ).toBe(`t.column().foreignKey('table', 'column')`);
 
       expect(
         column
@@ -76,7 +80,7 @@ describe('column type', () => {
             onUpdate: 'CASCADE',
             onDelete: 'CASCADE',
           })
-          .toCode('t'),
+          .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
         `t.column().foreignKey('table', 'column', {`,
         [
@@ -97,7 +101,9 @@ describe('column type', () => {
     });
 
     it('should have toCode', () => {
-      expect(column.hidden().toCode('t')).toBe('t.column().hidden()');
+      expect(column.hidden().toCode(columnToCodeCtx, 'key')).toBe(
+        't.column().hidden()',
+      );
     });
 
     test('table with hidden column should omit from select it by default', () => {
@@ -147,7 +153,9 @@ describe('column type', () => {
     });
 
     it('should have toCode', () => {
-      expect(column.nullable().toCode('t')).toEqual('t.column().nullable()');
+      expect(column.nullable().toCode(columnToCodeCtx, 'key')).toEqual(
+        't.column().nullable()',
+      );
     });
   });
 
@@ -288,7 +296,7 @@ describe('column type', () => {
       it('should have toCode', () => {
         const t = schema === 'default' ? td : tz;
 
-        expect(column.as(t.integer()).toCode('t')).toEqual(
+        expect(column.as(t.integer()).toCode(columnToCodeCtx, 'key')).toEqual(
           't.column().as(t.integer())',
         );
       });
@@ -477,21 +485,25 @@ describe('column type', () => {
 
   describe('.default', () => {
     it('should have toCode', () => {
-      expect(column.default(123).toCode('t')).toBe(`t.column().default(123)`);
+      expect(column.default(123).toCode(columnToCodeCtx, 'key')).toBe(
+        `t.column().default(123)`,
+      );
 
-      expect(column.default('hello').toCode('t')).toBe(
+      expect(column.default('hello').toCode(columnToCodeCtx, 'key')).toBe(
         `t.column().default('hello')`,
       );
 
       expect(
-        column.default(raw`sql`.values({ key: 'value' })).toCode('t'),
+        column
+          .default(raw`sql`.values({ key: 'value' }))
+          .toCode(columnToCodeCtx, 'key'),
       ).toBe(`t.column().default(t.sql\`sql\`.values({"key":"value"}))`);
     });
 
     describe('value is null', () => {
       it('should not be added by toCode', () => {
         const uuid = td.uuid().primaryKey();
-        expect(uuid.default(null).toCode('t')).toBe(
+        expect(uuid.default(null).toCode(columnToCodeCtx, 'key')).toBe(
           `t.uuid().primaryKey().default(null)`,
         );
       });
@@ -528,7 +540,7 @@ describe('column type', () => {
             tablespace: 'tablespace',
             where: 'where',
           })
-          .toCode('t'),
+          .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
         't.column().index({',
         [
@@ -549,7 +561,9 @@ describe('column type', () => {
 
   describe('unique', () => {
     it('should have toCode', () => {
-      expect(column.unique().toCode('t')).toBe('t.column().unique()');
+      expect(column.unique().toCode(columnToCodeCtx, 'key')).toBe(
+        't.column().unique()',
+      );
     });
 
     it('should handle options', () => {
@@ -565,7 +579,7 @@ describe('column type', () => {
             tablespace: 'tablespace',
             where: 'where',
           })
-          .toCode('t'),
+          .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
         't.column().unique({',
         [
@@ -586,7 +600,7 @@ describe('column type', () => {
 
   describe('comment', () => {
     it('should have toCode', () => {
-      expect(column.comment('comment').toCode('t')).toBe(
+      expect(column.comment('comment').toCode(columnToCodeCtx, 'key')).toBe(
         `t.column().comment('comment')`,
       );
     });
@@ -594,15 +608,15 @@ describe('column type', () => {
 
   describe('compression', () => {
     it('should have toCode', () => {
-      expect(column.compression('compression').toCode('t')).toBe(
-        `t.column().compression('compression')`,
-      );
+      expect(
+        column.compression('compression').toCode(columnToCodeCtx, 'key'),
+      ).toBe(`t.column().compression('compression')`);
     });
   });
 
   describe('collate', () => {
     it('should have toCode', () => {
-      expect(column.collate('collate').toCode('t')).toBe(
+      expect(column.collate('collate').toCode(columnToCodeCtx, 'key')).toBe(
         `t.column().collate('collate')`,
       );
     });
@@ -610,9 +624,9 @@ describe('column type', () => {
 
   describe('modifyQuery', () => {
     it('should have toCode', () => {
-      expect(column.modifyQuery((table) => table).toCode('t')).toBe(
-        't.column().modifyQuery((table)=>table)',
-      );
+      expect(
+        column.modifyQuery((table) => table).toCode(columnToCodeCtx, 'key'),
+      ).toBe('t.column().modifyQuery((table)=>table)');
     });
   });
 

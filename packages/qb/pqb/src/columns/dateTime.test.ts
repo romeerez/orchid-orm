@@ -8,8 +8,10 @@ import {
   testSchemaConfig,
   useTestDatabase,
 } from 'test-utils';
-import { ColumnTypeBase, TimeInterval } from 'orchid-core';
+import { ColumnToCodeCtx, ColumnTypeBase, TimeInterval } from 'orchid-core';
 import { z } from 'zod';
+
+const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
 const testTimestampInput = (column: ColumnTypeBase) => {
   const date = new Date();
@@ -50,12 +52,15 @@ describe('date time columns', () => {
 
     it('should have toCode', () => {
       const column = t.date();
-      expect(column.toCode('t')).toBe('t.date()');
+      expect(column.toCode(ctx, 'key')).toBe('t.date()');
 
       const now = new Date();
       const s = now.toISOString();
       expect(
-        column.min(now, 'min message').max(now, 'max message').toCode('t'),
+        column
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode(ctx, 'key'),
       ).toBe(
         `t.date()` +
           `.min(new Date('${s}'), 'min message')` +
@@ -92,15 +97,15 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampColumn(testSchemaConfig).toCode('t')).toBe(
+      expect(new TimestampColumn(testSchemaConfig).toCode(ctx, 'key')).toBe(
         't.timestampNoTZ()',
       );
 
-      expect(new TimestampColumn(testSchemaConfig, 10).toCode('t')).toBe(
+      expect(new TimestampColumn(testSchemaConfig, 10).toCode(ctx, 'key')).toBe(
         't.timestampNoTZ(10)',
       );
 
-      expect(new TimestampColumn(testSchemaConfig, 6).toCode('t')).toBe(
+      expect(new TimestampColumn(testSchemaConfig, 6).toCode(ctx, 'key')).toBe(
         't.timestampNoTZ()',
       );
 
@@ -110,7 +115,10 @@ describe('date time columns', () => {
       delete timestamp.parseFn;
 
       expect(
-        timestamp.min(now, 'min message').max(now, 'max message').toCode('t'),
+        timestamp
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode(ctx, 'key'),
       ).toBe(
         `t.timestampNoTZ()` +
           `.min(new Date('${s}'), 'min message')` +
@@ -147,17 +155,17 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampTZColumn(testSchemaConfig).toCode('t')).toBe(
+      expect(new TimestampTZColumn(testSchemaConfig).toCode(ctx, 'key')).toBe(
         't.timestamp()',
       );
 
-      expect(new TimestampTZColumn(testSchemaConfig, 6).toCode('t')).toBe(
-        't.timestamp()',
-      );
+      expect(
+        new TimestampTZColumn(testSchemaConfig, 6).toCode(ctx, 'key'),
+      ).toBe('t.timestamp()');
 
-      expect(new TimestampTZColumn(testSchemaConfig, 10).toCode('t')).toBe(
-        't.timestamp(10)',
-      );
+      expect(
+        new TimestampTZColumn(testSchemaConfig, 10).toCode(ctx, 'key'),
+      ).toBe('t.timestamp(10)');
 
       const now = new Date();
       const s = now.toISOString();
@@ -166,7 +174,10 @@ describe('date time columns', () => {
       delete timestamp.parseFn;
 
       expect(
-        timestamp.min(now, 'min message').max(now, 'max message').toCode('t'),
+        timestamp
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode(ctx, 'key'),
       ).toBe(
         `t.timestamp()` +
           `.min(new Date('${s}'), 'min message')` +
@@ -186,8 +197,8 @@ describe('date time columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.time().toCode('t')).toBe('t.time()');
-      expect(t.time(10).toCode('t')).toBe('t.time(10)');
+      expect(t.time().toCode(ctx, 'key')).toBe('t.time()');
+      expect(t.time(10).toCode(ctx, 'key')).toBe('t.time(10)');
     });
   });
 
@@ -211,9 +222,11 @@ describe('date time columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(t.interval().toCode('t')).toBe('t.interval()');
-      expect(t.interval('fields').toCode('t')).toBe("t.interval('fields')");
-      expect(t.interval('fields', 10).toCode('t')).toBe(
+      expect(t.interval().toCode(ctx, 'key')).toBe('t.interval()');
+      expect(t.interval('fields').toCode(ctx, 'key')).toBe(
+        "t.interval('fields')",
+      );
+      expect(t.interval('fields', 10).toCode(ctx, 'key')).toBe(
         "t.interval('fields', 10)",
       );
     });

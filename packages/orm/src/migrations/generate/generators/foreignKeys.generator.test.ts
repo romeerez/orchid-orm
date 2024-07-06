@@ -606,6 +606,44 @@ change(async (db) => {
     );
   });
 
+  it('should be dropped in a column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          iD: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().nullable().foreignKey('some', 'iD'),
+        }));
+      },
+      tables: [
+        someTable,
+        table((t) => ({
+          someId: t.integer(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    someId: t.change(t.integer().foreignKey('public.some', 'i_d').nullable(), t.integer()),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} someId:
+    ${yellow('from')}: t.integer().foreignKey('public.some', 'i_d').nullable()
+      ${yellow('to')}: t.integer()`,
+    );
+  });
+
   it('should not be recreated when a column is renamed', async () => {
     await arrange({
       async prepareDb(db) {
@@ -713,6 +751,52 @@ change(async (db) => {
     assert.report(
       `${yellow('~ change table')} some:
   ${yellow('~ rename column')} f_b ${yellow('=>')} fC`,
+    );
+  });
+
+  it('should not be added during unrelated column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          iD: t.smallint().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.smallint().foreignKey('some', 'iD'),
+        }));
+      },
+      tables: [
+        someTable,
+        table((t) => ({
+          someId: t.integer().foreignKey('some', 'iD'),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('some', (t) => ({
+    iD: t.change(t.smallint(), t.integer()),
+  }));
+
+  await db.changeTable('table', (t) => ({
+    someId: t.change(t.smallint(), t.integer()),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} some:
+  ${yellow('~ change column')} iD:
+    ${yellow('from')}: t.smallint()
+      ${yellow('to')}: t.integer()
+${yellow('~ change table')} table:
+  ${yellow('~ change column')} someId:
+    ${yellow('from')}: t.smallint()
+      ${yellow('to')}: t.integer()`,
     );
   });
 });

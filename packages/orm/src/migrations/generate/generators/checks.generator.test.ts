@@ -250,6 +250,40 @@ change(async (db) => {
       ${yellow('to')}: t.integer().check(t.sql\`"i_d" = 5\`)`);
   });
 
+  it('should be dropped in a column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t
+            .integer()
+            .nullable()
+            .check(t.sql`"i_d" = 5`),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          iD: t.integer(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    iD: t.change(t.integer().nullable().check(t.sql\`(i_d = 5)\`), t.integer()),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} i_d:
+    ${yellow('from')}: t.integer().nullable().check(t.sql\`(i_d = 5)\`)
+      ${yellow('to')}: t.integer()`);
+  });
+
   it('should not be recreated when a column is renamed', async () => {
     await arrange({
       async prepareDb(db) {
@@ -278,5 +312,39 @@ change(async (db) => {
 
     assert.report(`${yellow('~ change table')} table:
   ${yellow('~ rename column')} fr_om ${yellow('=>')} tO`);
+  });
+
+  it('should not be added during unrelated column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t
+            .integer()
+            .nullable()
+            .check(t.sql`"i_d" = 5`),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          iD: t.integer().check(t.sql`"i_d" = 5`),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    iD: t.change(t.integer().nullable(), t.integer()),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} iD:
+    ${yellow('from')}: t.integer().nullable()
+      ${yellow('to')}: t.integer()`);
   });
 });

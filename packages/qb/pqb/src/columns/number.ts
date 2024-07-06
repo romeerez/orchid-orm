@@ -11,6 +11,7 @@ import {
   ColumnSchemaConfig,
   PickColumnBaseData,
   Codes,
+  ColumnToCodeCtx,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
 import { Operators, OperatorsNumber } from './operators';
@@ -87,15 +88,15 @@ export class DecimalColumn<
     this.data.alias = 'decimal';
   }
 
-  toCode(t: string, m?: boolean): Code {
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
     const { numericPrecision, numericScale } = this.data;
     return columnCode(
       this,
-      t,
+      ctx,
+      key,
       `decimal(${numericPrecision || ''}${
         numericScale ? `, ${numericScale}` : ''
       })`,
-      m,
     );
   }
 
@@ -117,9 +118,9 @@ const skipNumberMethods = { int: true } as const;
 
 const intToCode = (
   column: ColumnType,
-  t: string,
+  ctx: ColumnToCodeCtx,
+  key: string,
   alias: string,
-  m: boolean | undefined,
 ): Code => {
   let code: Codes;
 
@@ -129,9 +130,12 @@ const intToCode = (
     code = [`${alias}()`];
   }
 
-  addCode(code, numberDataToCode(column.data, m, skipNumberMethods));
+  addCode(
+    code,
+    numberDataToCode(column.data, ctx.migration, skipNumberMethods),
+  );
 
-  return columnCode(column, t, code, m);
+  return columnCode(column, ctx, key, code);
 };
 
 export type IdentityColumn<T extends PickColumnBaseData> = ColumnWithDefault<
@@ -151,8 +155,8 @@ export class SmallIntColumn<
   }
 
   parseItem = parseInt;
-  toCode(t: string, m?: boolean): Code {
-    return intToCode(this, t, 'smallint', m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return intToCode(this, ctx, key, 'smallint');
   }
 
   identity<T extends ColumnType>(
@@ -175,8 +179,8 @@ export class IntegerColumn<
   }
 
   parseItem = parseInt;
-  toCode(t: string, m?: boolean): Code {
-    return intToCode(this, t, 'integer', m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return intToCode(this, ctx, key, 'integer');
   }
 
   identity<T extends ColumnType>(
@@ -198,8 +202,8 @@ export class BigIntColumn<
     this.data.alias = 'bigint';
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return intToCode(this, t, 'bigint', m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return intToCode(this, ctx, key, 'bigint');
   }
 
   identity<T extends ColumnType>(
@@ -222,8 +226,13 @@ export class RealColumn<
     this.data.alias = 'real';
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, `real()${numberDataToCode(this.data, m)}`, m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(
+      this,
+      ctx,
+      key,
+      `real()${numberDataToCode(this.data, ctx.migration)}`,
+    );
   }
 }
 
@@ -238,8 +247,8 @@ export class DoublePrecisionColumn<
     this.data.alias = 'doublePrecision';
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, `doublePrecision()`, m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, `doublePrecision()`);
   }
 }
 
@@ -261,12 +270,16 @@ export class SmallSerialColumn<
     return 'smallserial';
   }
 
-  toCode(t: string, m?: boolean): Code {
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
     return columnCode(
       this,
-      t,
-      `smallSerial()${numberDataToCode(this.data, m, skipNumberMethods)}`,
-      m,
+      ctx,
+      key,
+      `smallSerial()${numberDataToCode(
+        this.data,
+        ctx.migration,
+        skipNumberMethods,
+      )}`,
     );
   }
 }
@@ -289,12 +302,16 @@ export class SerialColumn<
     return 'serial';
   }
 
-  toCode(t: string, m?: boolean): Code {
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
     return columnCode(
       this,
-      t,
-      `serial()${numberDataToCode(this.data, m, skipNumberMethods)}`,
-      m,
+      ctx,
+      key,
+      `serial()${numberDataToCode(
+        this.data,
+        ctx.migration,
+        skipNumberMethods,
+      )}`,
     );
   }
 }
@@ -315,7 +332,7 @@ export class BigSerialColumn<
     return 'bigserial';
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, `bigSerial()`, m);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, `bigSerial()`);
   }
 }

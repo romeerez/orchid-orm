@@ -51,6 +51,17 @@ export interface ChangeTableData extends ChangeTableSchemaData {
   schema: string;
   changeTableAst: RakeDbAst.ChangeTable;
   pushedAst: boolean;
+  changingColumns: ChangingColumns;
+  delayedAst: RakeDbAst[];
+}
+
+interface ChangingColumns {
+  [dbName: string]: ChangingColumnsPair;
+}
+
+export interface ChangingColumnsPair {
+  from: ColumnType;
+  to: ColumnType;
 }
 
 export interface TableShapes {
@@ -370,6 +381,8 @@ const addChangeTable = (
       drop: {},
     },
     pushedAst: false,
+    changingColumns: {},
+    delayedAst: [],
   });
 
   tableShapes[`${schema}.${codeTable.table}`] = shape;
@@ -430,11 +443,9 @@ const processTableChange = async (
     verifying,
   );
 
-  const delayedAst: RakeDbAst[] = [];
+  processPrimaryKey(config, changeTableData);
 
-  processPrimaryKey(config, delayedAst, changeTableData);
-
-  processIndexes(config, changeTableData, delayedAst, ast, compareExpressions);
+  processIndexes(config, changeTableData, ast, compareExpressions);
 
   processChecks(ast, changeTableData, compareExpressions);
 
@@ -448,5 +459,7 @@ const processTableChange = async (
     ast.push(changeTableAst);
   }
 
-  if (delayedAst.length) ast.push(...delayedAst);
+  if (changeTableData.delayedAst.length) {
+    ast.push(...changeTableData.delayedAst);
+  }
 };

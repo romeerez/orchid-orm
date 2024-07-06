@@ -11,6 +11,7 @@ import {
   ErrorMessage,
   setDataValue,
   StringTypeData,
+  ColumnToCodeCtx,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -116,8 +117,8 @@ class ValibotJSONColumn<Schema extends BaseSchema> extends ColumnType<
     super(valibotSchemaConfig, schema);
   }
 
-  toCode(t: string, m?: boolean): Code {
-    return columnCode(this, t, [`json()`], m, this.data, toCodeSkip);
+  toCode(ctx: ColumnToCodeCtx, key: string): Code {
+    return columnCode(this, ctx, key, [`json()`], this.data, toCodeSkip);
   }
 }
 

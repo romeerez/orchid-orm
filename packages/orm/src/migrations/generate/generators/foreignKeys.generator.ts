@@ -9,7 +9,7 @@ import {
 import { ColumnType, TableData } from 'pqb';
 import { ChangeTableData, TableShapes } from './tables.generator';
 import { deepCompare, toSnakeCase } from 'orchid-core';
-import { checkForColumnChange } from './generators.utils';
+import { checkForColumnAddOrDrop } from './generators.utils';
 
 interface Constraint extends TableData.Constraint {
   references: TableData.References;
@@ -78,7 +78,8 @@ export const processForeignKeys = (
       currentSchema,
     );
 
-    const { codeTable, dbTableData, changeTableAst, schema } = changeTableData;
+    const { codeTable, dbTableData, changeTableAst, schema, changingColumns } =
+      changeTableData;
     const { shape, add, drop } = changeTableAst;
     let changed = false;
 
@@ -87,7 +88,7 @@ export const processForeignKeys = (
       if (!dbReferences) continue;
 
       const hasChangedColumn = dbReferences.columns.some((column) =>
-        checkForColumnChange(shape, column),
+        checkForColumnAddOrDrop(shape, column),
       );
       if (hasChangedColumn) continue;
 
@@ -98,7 +99,7 @@ export const processForeignKeys = (
       const hasForeignChangedColumn =
         foreignShape &&
         dbReferences.foreignColumns.some((column) =>
-          checkForColumnChange(foreignShape, column),
+          checkForColumnAddOrDrop(foreignShape, column),
         );
       if (hasForeignChangedColumn) continue;
 
@@ -125,9 +126,26 @@ export const processForeignKeys = (
       }
 
       if (!found) {
-        (drop.constraints ??= []).push(
-          dbForeignKeyToCodeForeignKey(config, dbConstraint, dbReferences),
+        const foreignKey = dbForeignKeyToCodeForeignKey(
+          config,
+          dbConstraint,
+          dbReferences,
         );
+
+        if (
+          dbReferences.columns.length === 1 &&
+          changingColumns[dbReferences.columns[0]]
+        ) {
+          const column = changingColumns[dbReferences.columns[0]];
+          (column.from.data.foreignKeys ??= []).push({
+            fnOrTable: foreignKey.references.fnOrTable,
+            foreignColumns: foreignKey.references.foreignColumns,
+            options: foreignKey.references.options,
+          });
+        } else {
+          (drop.constraints ??= []).push(foreignKey);
+        }
+
         changed = true;
       } else if (rename) {
         ast.push({
@@ -142,9 +160,23 @@ export const processForeignKeys = (
     }
 
     if (codeForeignKeys.length) {
-      (add.constraints ??= []).push(
-        ...codeForeignKeys.map((x) => x.codeConstraint),
-      );
+      const constraints = (add.constraints ??= []);
+      for (const { codeConstraint, references } of codeForeignKeys) {
+        if (
+          references.columns.length === 1 &&
+          changingColumns[references.columns[0]]
+        ) {
+          const column = changingColumns[references.columns[0]];
+          (column.to.data.foreignKeys ??= []).push({
+            fnOrTable: references.foreignTable,
+            foreignColumns: codeConstraint.references.foreignColumns,
+            options: codeConstraint.references.options,
+          });
+        } else {
+          constraints.push(codeConstraint);
+        }
+      }
+
       changed = true;
     }
 
@@ -166,7 +198,7 @@ const collectCodeFkeys = (
     if (!column.data.foreignKeys) continue;
 
     const name = column.data.name ?? key;
-    if (checkForColumnChange(shape, name)) continue;
+    if (checkForColumnAddOrDrop(shape, name)) continue;
 
     codeForeignKeys.push(
       ...column.data.foreignKeys.map((x) => {
@@ -272,7 +304,7 @@ const dbForeignKeyToCodeForeignKey = (
   config: AnyRakeDbConfig,
   dbConstraint: DbStructure.Constraint,
   dbReferences: DbStructure.References,
-): TableData.Constraint => ({
+): { name?: string; references: TableData.References } => ({
   name:
     dbConstraint.name ===
     getConstraintName(

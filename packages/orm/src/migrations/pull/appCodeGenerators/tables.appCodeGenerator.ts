@@ -114,7 +114,7 @@ export const appCodeGenTable = (
     ast.primaryKey || ast.indexes?.length || ast.constraints?.length,
   );
 
-  const shapeCode = columnsShapeToCode(ast.shape, 't');
+  const shapeCode = columnsShapeToCode({ t: 't', table: ast.name }, ast.shape);
 
   props.push(
     `columns = this.setColumns(${hasTableData ? '\n    ' : ''}(t) => ({`,

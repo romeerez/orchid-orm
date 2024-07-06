@@ -875,23 +875,7 @@ const handleTableItemChange = (
 
       if (
         (fromIndex || toIndex) &&
-        (!fromIndex ||
-          !toIndex ||
-          fromIndex.options.collate !== toIndex.options.collate ||
-          fromIndex.options.opclass !== toIndex.options.opclass ||
-          fromIndex.options.order !== toIndex.options.order ||
-          fromIndex.name !== toIndex.name ||
-          fromIndex.options.unique !== toIndex.options.unique ||
-          fromIndex.options.using !== toIndex.options.using ||
-          fromIndex.options.include !== toIndex.options.include ||
-          (Array.isArray(fromIndex.options.include) &&
-            Array.isArray(toIndex.options.include) &&
-            fromIndex.options.include.join(',') !==
-              toIndex.options.include.join(',')) ||
-          fromIndex.options.with !== toIndex.options.with ||
-          fromIndex.options.tablespace !== toIndex.options.tablespace ||
-          fromIndex.options.where !== toIndex.options.where ||
-          fromIndex.options.dropMode !== toIndex.options.dropMode)
+        (!fromIndex || !toIndex || !deepCompare(fromIndex, toIndex))
       ) {
         if (fromIndex) {
           dropIndexes.push({

@@ -15,7 +15,7 @@ jest.mock('fs/promises', () => ({
 
 const { green, red, yellow } = colors;
 
-describe('primaryKey', () => {
+describe('indexes', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
   const columnOptions: TableData.Index.ColumnOptions = {
@@ -616,6 +616,76 @@ change(async (db) => {
 ${yellow('~ rename index')} on table table: table_fr_om_idx ${yellow(
         '=>',
       )} table_t_o_idx`,
+    );
+  });
+
+  it('should change index together with a column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.varchar(100).index(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          colUmn: t.text().index({ nullsNotDistinct: true }),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    colUmn: t.change(t.varchar(100).index(), t.text().index({
+      nullsNotDistinct: true,
+    })),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} colUmn:
+    ${yellow('from')}: t.varchar(100).index()
+      ${yellow('to')}: t.text().index({
+      nullsNotDistinct: true,
+    })`,
+    );
+  });
+
+  it('should not be added during a unrelated column change', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.varchar(100).index(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          colUmn: t.text().index(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    colUmn: t.change(t.varchar(100), t.text()),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} colUmn:
+    ${yellow('from')}: t.varchar(100)
+      ${yellow('to')}: t.text()`,
     );
   });
 
