@@ -39,7 +39,7 @@ export namespace DbStructure {
     name: string;
     typeSchema: string;
     type: string;
-    isArray: boolean;
+    arrayDims: number;
     maxChars?: number;
     numericPrecision?: number;
     numericScale?: number;
@@ -140,7 +140,7 @@ export namespace DbStructure {
     name: string;
     type: string;
     typeSchema: string;
-    isArray: boolean;
+    arrayDims: number;
     isNullable: boolean;
     maxChars?: number;
     numericPrecision?: number;
@@ -183,25 +183,13 @@ const columnsSql = ({
   ${schema}.nspname AS "schemaName",
   ${table}.relname AS "tableName",
   a.attname AS "name",
-  COALESCE(et.typname, t.typname) AS "type",
+  t.typname AS "type",
   tn.nspname AS "typeSchema",
-  et.typname IS NOT NULL AS "isArray",
-  information_schema._pg_char_max_length(
-    information_schema._pg_truetypid(a, t),
-    information_schema._pg_truetypmod(a, t)
-  ) AS "maxChars",
-  information_schema._pg_numeric_precision(
-    information_schema._pg_truetypid(a, t),
-    information_schema._pg_truetypmod(a, t)
-  ) AS "numericPrecision",
-  information_schema._pg_numeric_scale(
-    information_schema._pg_truetypid(a, t),
-    information_schema._pg_truetypmod(a, t)
-  ) AS "numericScale",
-  information_schema._pg_datetime_precision(
-    information_schema._pg_truetypid(a, t),
-    information_schema._pg_truetypmod(a, t)
-  ) AS "dateTimePrecision",
+  a.attndims AS "arrayDims",
+  information_schema._pg_char_max_length(tt.id, tt.mod) "maxChars",
+  information_schema._pg_numeric_precision(tt.id, tt.mod) "numericPrecision",
+  information_schema._pg_numeric_scale(tt.id,tt.mod) "numericScale",
+  information_schema._pg_datetime_precision(tt.id,tt.mod) "dateTimePrecision",
   CAST(
     CASE WHEN a.attgenerated = ''
       THEN pg_get_expr(ad.adbin, ad.adrelid)
@@ -224,7 +212,7 @@ const columnsSql = ({
         nullif(seq.seqmin, 1),
         'max',
         nullif(seq.seqmax, (
-          CASE COALESCE(et.typname, t.typname)
+          CASE t.typname
             WHEN 'int2' THEN 32767
             WHEN 'int4' THEN 2147483647
             WHEN 'int8' THEN 9223372036854775807
@@ -241,8 +229,18 @@ const columnsSql = ({
 FROM pg_attribute a
 ${join}
 LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
-JOIN pg_type t ON a.atttypid = t.oid
-LEFT JOIN pg_type et ON t.typelem = et.oid
+JOIN pg_type t
+  ON t.oid = (
+    CASE WHEN a.attndims = 0
+      THEN a.atttypid
+      ELSE (SELECT t.typelem FROM pg_type t WHERE t.oid = a.atttypid)
+    END
+  )
+JOIN LATERAL (
+  SELECT
+    CASE WHEN t.typtype = 'd' THEN t.typbasetype ELSE t.oid END id,
+    CASE WHEN t.typtype = 'd' THEN t.typtypmod ELSE a.atttypmod END mod
+) tt ON true
 JOIN pg_namespace tn ON tn.oid = t.typnamespace
 LEFT JOIN (pg_collation co JOIN pg_namespace nco ON (co.collnamespace = nco.oid))
   ON a.attcollation = co.oid AND (nco.nspname, co.collname) <> ('pg_catalog', 'default')
@@ -510,7 +508,7 @@ const domainsSql = `SELECT
   t.typname AS "type",
   s.nspname AS "typeSchema",
   NOT d.typnotnull AS "isNullable",
-  d.typcategory = 'A' AS "isArray",
+  d.typndims AS "arrayDims",
   character_maximum_length AS "maxChars",
   numeric_precision AS "numericPrecision",
   numeric_scale AS "numericScale",

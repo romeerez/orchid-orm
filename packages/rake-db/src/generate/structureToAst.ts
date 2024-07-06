@@ -181,7 +181,7 @@ export const makeDomainsMap = (
       name: it.name,
       type: it.type,
       typeSchema: it.typeSchema,
-      isArray: it.isArray,
+      arrayDims: it.arrayDims,
       tableName: '',
       isNullable: it.isNullable,
       collate: it.collate,
@@ -269,14 +269,20 @@ export const instantiateDbColumn = (
   }
 
   column.data.name = undefined;
+  if (!column.data.isNullable) column.data.isNullable = undefined;
 
-  return dbColumn.isArray
-    ? new ArrayColumn(
-        ctx.columnSchemaConfig,
-        column,
-        ctx.columnSchemaConfig.type,
-      )
-    : column;
+  if (dbColumn.arrayDims) {
+    const arr = new ArrayColumn(
+      ctx.columnSchemaConfig,
+      column,
+      ctx.columnSchemaConfig.type,
+    );
+    arr.data.isNullable = dbColumn.isNullable as true;
+    arr.data.arrayDims = dbColumn.arrayDims;
+    column = arr;
+  }
+
+  return column;
 };
 
 const instantiateColumnByDbType = (

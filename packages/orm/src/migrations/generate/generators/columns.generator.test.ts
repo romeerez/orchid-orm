@@ -402,24 +402,25 @@ change(async (db) => {
       ${yellow('to')}: t.text().comment('to')`);
   });
 
-  it('change to array type: prompt if should recreate the column or abort, selecting recreate', async () => {
-    await arrange({
-      async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          colUmn: t.integer(),
-        }));
-      },
-      tables: [
-        table((t) => ({
-          colUmn: t.array(t.integer()),
-        })),
-      ],
-      selects: [0],
-    });
+  describe('array', () => {
+    it('change to array type: prompt if should recreate the column or abort, selecting recreate', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            colUmn: t.integer(),
+          }));
+        },
+        tables: [
+          table((t) => ({
+            colUmn: t.array(t.integer()),
+          })),
+        ],
+        selects: [0],
+      });
 
-    await act();
+      await act();
 
-    assert.migration(`import { change } from '../src/migrations/dbScript';
+      assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -429,29 +430,49 @@ change(async (db) => {
 });
 `);
 
-    assert.report(`${yellow('~ change table')} table:
+      assert.report(`${yellow('~ change table')} table:
   ${red('- drop column')} colUmn integer
-  ${green('+ add column')} colUmn array`);
-  });
-
-  it('change from array type: prompt if should recreate the column or abort, selecting abort', async () => {
-    await arrange({
-      async prepareDb(db) {
-        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          colUmn: t.array(t.integer()),
-        }));
-      },
-      tables: [
-        table((t) => ({
-          colUmn: t.integer(),
-        })),
-      ],
-      selects: [1],
+  ${green('+ add column')} colUmn int4[]`);
     });
 
-    await act();
+    it('change from array type: prompt if should recreate the column or abort, selecting abort', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            colUmn: t.array(t.integer()),
+          }));
+        },
+        tables: [
+          table((t) => ({
+            colUmn: t.integer(),
+          })),
+        ],
+        selects: [1],
+      });
 
-    assert.migration();
+      await act();
+
+      assert.migration();
+    });
+
+    it('should not change nullable multi-dimensional array', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            column: t.array(t.array(t.decimal(5, 3))),
+          }));
+        },
+        tables: [
+          table((t) => ({
+            column: t.array(t.array(t.decimal(5, 3))),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration();
+    });
   });
 
   describe('recreating and renaming', () => {

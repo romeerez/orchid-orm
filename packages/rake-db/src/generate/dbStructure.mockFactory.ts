@@ -11,7 +11,7 @@ const column: Omit<DbStructure.Column, 'type'> = {
   tableName: 'table',
   name: 'column',
   typeSchema: 'pg_catalog',
-  isArray: false,
+  arrayDims: 0,
   isNullable: false,
 };
 
@@ -44,7 +44,7 @@ const domain: DbStructure.Domain = {
   type: 'int4',
   typeSchema: 'pg_catalog',
   isNullable: false,
-  isArray: false,
+  arrayDims: 0,
 };
 
 const domainColumn: DbStructure.Column = {

@@ -33,6 +33,7 @@ export interface ArrayData<Item extends ArrayColumnValue>
   extends ColumnData,
     ArrayMethodsData {
   item: Item;
+  arrayDims: number;
 }
 
 export class ArrayColumn<
@@ -64,12 +65,18 @@ export class ArrayColumn<
     queryType?: QueryType,
   ) {
     super(schema, inputType, outputType, queryType);
-    this.data.item = item;
+
+    // array items cannot be non-nullable, postgres limitation
+    item.data.isNullable = true;
+
+    this.data.item = item instanceof ArrayColumn ? item.data.item : item;
     this.data.name = item.data.name;
+    this.data.arrayDims =
+      item instanceof ArrayColumn ? item.data.arrayDims + 1 : 1;
   }
 
   toSQL(): string {
-    return `${this.data.item.toSQL()}[]`;
+    return this.data.item.toSQL() + '[]'.repeat(this.data.arrayDims);
   }
 
   toCode(
@@ -83,9 +90,22 @@ export class ArrayColumn<
     t: string,
     m?: boolean,
   ): Code {
-    const code: Codes = ['array('];
-    addCode(code, this.data.item.toCode(t));
-    addCode(code, `)${arrayDataToCode(this.data, m)}`);
+    let open = 'array(';
+    let close = ')';
+    for (let i = 1; i < this.data.arrayDims; i++) {
+      open += `${t}.array(`;
+      close += ')';
+    }
+
+    const code: Codes = [open];
+
+    const { item } = this.data;
+    const { isNullable } = item.data;
+    delete item.data.isNullable;
+    addCode(code, item.toCode(t));
+    item.data.isNullable = isNullable;
+
+    addCode(code, `${close}${arrayDataToCode(this.data, m)}`);
     return columnCode(this, t, code, m);
   }
 

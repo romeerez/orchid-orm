@@ -177,7 +177,7 @@ describe('structureToAst', () => {
     it('should add array column', async () => {
       structure.tables = [
         dbStructureMockFactory.table({
-          columns: [dbStructureMockFactory.intColumn({ isArray: true })],
+          columns: [dbStructureMockFactory.intColumn({ arrayDims: 1 })],
         }),
       ];
 
@@ -266,7 +266,7 @@ describe('structureToAst', () => {
         dbStructureMockFactory.table({
           columns: [
             dbStructureMockFactory.domainColumn({
-              isArray: true,
+              arrayDims: 1,
             }),
           ],
         }),
@@ -1114,7 +1114,7 @@ describe('structureToAst', () => {
       });
 
       expect(ast.baseType.data).toMatchObject({
-        isNullable: false,
+        isNullable: undefined,
         collate: 'C',
         default: raw`123`,
         check: { sql: raw`VALUE = 42` },

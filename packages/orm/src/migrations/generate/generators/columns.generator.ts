@@ -14,7 +14,13 @@ import {
   colors,
   AnyRakeDbConfig,
 } from 'rake-db';
-import { Adapter, ColumnType, DomainColumn, EnumColumn } from 'pqb';
+import {
+  Adapter,
+  ArrayColumn,
+  ColumnType,
+  DomainColumn,
+  EnumColumn,
+} from 'pqb';
 import { promptCreateOrRename } from './generators.utils';
 import {
   ColumnTypeBase,
@@ -261,8 +267,6 @@ const changeColumns = async (
 
     const { shape } = changeTableData.changeTableAst;
 
-    let changed = false;
-
     const dbColumn = instantiateDbColumn(
       structureToAstCtx,
       dbStructure,
@@ -270,198 +274,34 @@ const changeColumns = async (
       dbColumnStructure,
     );
 
-    const dbType = getColumnDbType(dbColumn, currentSchema);
-    const codeType = getColumnDbType(codeColumn, currentSchema);
-    if (dbType !== codeType) {
-      let typeCasts = typeCastsCache.value;
-      if (!typeCasts) {
-        const { rows } = await adapter.arrays(`SELECT s.typname, t.typname
-FROM pg_cast
-JOIN pg_type AS s ON s.oid = castsource
-JOIN pg_type AS t ON t.oid = casttarget`);
+    const action = await compareColumns(
+      adapter,
+      domainsMap,
+      ast,
+      currentSchema,
+      compareSql,
+      changeTableData,
+      typeCastsCache,
+      verifying,
+      key,
+      dbColumn,
+      codeColumn,
+    );
 
-        const directTypeCasts = new Map<string, Set<string>>();
-        for (const [source, target] of rows) {
-          const set = directTypeCasts.get(source);
-          if (set) {
-            set.add(target);
-          } else {
-            directTypeCasts.set(source, new Set([target]));
-          }
-        }
-
-        typeCasts = new Map<string, Set<string>>();
-        for (const [type, directSet] of directTypeCasts.entries()) {
-          const set = new Set<string>(directSet);
-          typeCasts.set(type, set);
-
-          for (const subtype of directSet) {
-            const subset = directTypeCasts.get(subtype);
-            if (subset) {
-              for (const type of subset) {
-                set.add(type);
-              }
-            }
-          }
-        }
-
-        typeCastsCache.value = typeCasts;
-      }
-
-      const dbBaseType =
-        dbColumn instanceof DomainColumn
-          ? domainsMap[dbColumn.dataType]?.dataType
-          : dbType;
-
-      const codeBaseType =
-        codeColumn instanceof DomainColumn
-          ? domainsMap[codeColumn.dataType]?.dataType
-          : codeType;
-
-      if (!typeCasts.get(dbBaseType)?.has(codeBaseType)) {
-        if (
-          !(dbColumn instanceof EnumColumn) ||
-          !(codeColumn instanceof EnumColumn) ||
-          !deepCompare(dbColumn.options, codeColumn.options)
-        ) {
-          if (verifying) throw new AbortSignal();
-
-          const tableName = concatSchemaAndName(changeTableData.changeTableAst);
-          const abort = await promptSelect({
-            message: `Cannot cast type of ${tableName}'s column ${key} from ${dbType} to ${codeType}`,
-            options: [
-              `${colors.yellowBold(
-                `-/+`,
-              )} recreate the column, existing data will be ${colors.red(
-                'lost',
-              )}`,
-              `write migration manually`,
-            ],
-          });
-          if (abort) {
-            throw new AbortSignal();
-          }
-
-          dbColumn.data.name = codeColumn.data.name;
-          shape[key] = [
-            {
-              type: 'drop',
-              item: dbColumn,
-            },
-            {
-              type: 'add',
-              item: codeColumn,
-            },
-          ];
-
-          return;
-        }
-      }
-
-      changed = true;
-    }
-
-    const dbData = dbColumn.data as unknown as RecordUnknown;
-    const codeData = codeColumn.data as unknown as RecordUnknown;
-
-    if (!changed) {
-      if (!dbData.isNullable) dbData.isNullable = undefined;
-
-      for (const key of ['isNullable', 'comment']) {
-        if (dbData[key] !== codeData[key]) {
-          changed = true;
-          break;
-        }
-      }
-    }
-
-    if (!changed) {
-      for (const key of [
-        'maxChars',
-        'collation',
-        'compression',
-        'numericPrecision',
-        'numericScale',
-        'dateTimePrecision',
-      ]) {
-        // Check if key in codeData so that default precision/scale values for such columns as integer aren't counted.
-        // If column supports precision/scale, it should have it listed in the data, even if it's undefined.
-        if (key in codeData && dbData[key] !== codeData[key]) {
-          changed = true;
-          break;
-        }
-      }
-    }
-
-    if (
-      !changed &&
-      !deepCompare(
-        dbData.identity,
-        codeData.identity
-          ? {
-              always: false,
-              start: 1,
-              increment: 1,
-              cache: 1,
-              cycle: false,
-              ...(codeData.identity ?? {}),
-            }
-          : undefined,
-      )
-    ) {
-      changed = true;
-    }
-
-    if (
-      !changed &&
-      dbData.default !== undefined &&
-      dbData.default !== null &&
-      codeData.default !== undefined &&
-      codeData.default !== null
-    ) {
-      const valuesBeforeLen = compareSql.values.length;
-      const dbDefault = encodeColumnDefault(
-        dbData.default,
-        compareSql.values,
-        dbColumn,
-      ) as string;
-      const dbValues = compareSql.values.slice(valuesBeforeLen);
-
-      const codeDefault = encodeColumnDefault(
-        codeData.default,
-        compareSql.values,
-        codeColumn,
-      ) as string;
-      const codeValues = compareSql.values.slice(valuesBeforeLen);
-
-      if (
-        dbValues.length !== codeValues.length ||
-        (dbValues.length &&
-          JSON.stringify(dbValues) !== JSON.stringify(codeValues))
-      ) {
-        changed = true;
-        compareSql.values.length = valuesBeforeLen;
-      } else if (
-        dbDefault !== codeDefault &&
-        dbDefault !== `(${codeDefault})`
-      ) {
-        compareSql.expressions.push({
-          inDb: dbDefault,
-          inCode: codeDefault,
-          change: () => {
-            changeColumn(shape, key, dbColumn, codeColumn);
-            if (!changeTableData.pushedAst) {
-              changeTableData.pushedAst = true;
-              ast.push(changeTableData.changeTableAst);
-            }
-          },
-        });
-      }
-    }
-
-    if (changed) {
+    if (action === 'change') {
       changeColumn(shape, key, dbColumn, codeColumn);
-    } else {
+    } else if (action === 'recreate') {
+      changeTableData.changeTableAst.shape[key] = [
+        {
+          type: 'drop',
+          item: dbColumn,
+        },
+        {
+          type: 'add',
+          item: codeColumn,
+        },
+      ];
+    } else if (action !== 'recreate') {
       const to = codeColumn.data.name ?? codeKey;
       if (dbName !== to) {
         shape[
@@ -481,6 +321,198 @@ JOIN pg_type AS t ON t.oid = casttarget`);
       }
     }
   }
+};
+
+const compareColumns = async (
+  adapter: Adapter,
+  domainsMap: DbStructureDomainsMap,
+  ast: RakeDbAst[],
+  currentSchema: string,
+  compareSql: CompareSql,
+  changeTableData: ChangeTableData,
+  typeCastsCache: TypeCastsCache,
+  verifying: boolean | undefined,
+  key: string,
+  dbColumn: ColumnType,
+  codeColumn: ColumnType,
+): Promise<'change' | 'recreate' | undefined> => {
+  const dbType = getColumnDbType(dbColumn, currentSchema);
+  const codeType = getColumnDbType(codeColumn, currentSchema);
+
+  if (dbColumn instanceof ArrayColumn && codeColumn instanceof ArrayColumn) {
+    dbColumn = dbColumn.data.item;
+    codeColumn = codeColumn.data.item;
+  }
+
+  if (dbType !== codeType) {
+    let typeCasts = typeCastsCache.value;
+    if (!typeCasts) {
+      const { rows } = await adapter.arrays(`SELECT s.typname, t.typname
+FROM pg_cast
+JOIN pg_type AS s ON s.oid = castsource
+JOIN pg_type AS t ON t.oid = casttarget`);
+
+      const directTypeCasts = new Map<string, Set<string>>();
+      for (const [source, target] of rows) {
+        const set = directTypeCasts.get(source);
+        if (set) {
+          set.add(target);
+        } else {
+          directTypeCasts.set(source, new Set([target]));
+        }
+      }
+
+      typeCasts = new Map<string, Set<string>>();
+      for (const [type, directSet] of directTypeCasts.entries()) {
+        const set = new Set<string>(directSet);
+        typeCasts.set(type, set);
+
+        for (const subtype of directSet) {
+          const subset = directTypeCasts.get(subtype);
+          if (subset) {
+            for (const type of subset) {
+              set.add(type);
+            }
+          }
+        }
+      }
+
+      typeCastsCache.value = typeCasts;
+    }
+
+    const dbBaseType =
+      dbColumn instanceof DomainColumn
+        ? domainsMap[dbColumn.dataType]?.dataType
+        : dbType;
+
+    const codeBaseType =
+      codeColumn instanceof DomainColumn
+        ? domainsMap[codeColumn.dataType]?.dataType
+        : codeType;
+
+    if (!typeCasts.get(dbBaseType)?.has(codeBaseType)) {
+      if (
+        !(dbColumn instanceof EnumColumn) ||
+        !(codeColumn instanceof EnumColumn) ||
+        !deepCompare(dbColumn.options, codeColumn.options)
+      ) {
+        if (verifying) throw new AbortSignal();
+
+        const tableName = concatSchemaAndName(changeTableData.changeTableAst);
+        const abort = await promptSelect({
+          message: `Cannot cast type of ${tableName}'s column ${key} from ${dbType} to ${codeType}`,
+          options: [
+            `${colors.yellowBold(
+              `-/+`,
+            )} recreate the column, existing data will be ${colors.red(
+              'lost',
+            )}`,
+            `write migration manually`,
+          ],
+        });
+        if (abort) {
+          throw new AbortSignal();
+        }
+
+        dbColumn.data.name = codeColumn.data.name;
+        return 'recreate';
+      }
+    }
+
+    return 'change';
+  }
+
+  const dbData = dbColumn.data as unknown as RecordUnknown;
+  const codeData = codeColumn.data as unknown as RecordUnknown;
+
+  for (const key of ['isNullable', 'comment']) {
+    if (dbData[key] !== codeData[key]) {
+      return 'change';
+    }
+  }
+
+  for (const key of [
+    'maxChars',
+    'collation',
+    'compression',
+    'numericPrecision',
+    'numericScale',
+    'dateTimePrecision',
+  ]) {
+    // Check if key in codeData so that default precision/scale values for such columns as integer aren't counted.
+    // If column supports precision/scale, it should have it listed in the data, even if it's undefined.
+    if (key in codeData && dbData[key] !== codeData[key]) {
+      return 'change';
+    }
+  }
+
+  if (
+    !deepCompare(
+      dbData.identity,
+      codeData.identity
+        ? {
+            always: false,
+            start: 1,
+            increment: 1,
+            cache: 1,
+            cycle: false,
+            ...(codeData.identity ?? {}),
+          }
+        : undefined,
+    )
+  ) {
+    return 'change';
+  }
+
+  if (
+    dbData.default !== undefined &&
+    dbData.default !== null &&
+    codeData.default !== undefined &&
+    codeData.default !== null
+  ) {
+    const valuesBeforeLen = compareSql.values.length;
+    const dbDefault = encodeColumnDefault(
+      dbData.default,
+      compareSql.values,
+      dbColumn,
+    ) as string;
+    const dbValues = compareSql.values.slice(valuesBeforeLen);
+
+    const codeDefault = encodeColumnDefault(
+      codeData.default,
+      compareSql.values,
+      codeColumn,
+    ) as string;
+    const codeValues = compareSql.values.slice(valuesBeforeLen);
+
+    if (
+      dbValues.length !== codeValues.length ||
+      (dbValues.length &&
+        JSON.stringify(dbValues) !== JSON.stringify(codeValues))
+    ) {
+      compareSql.values.length = valuesBeforeLen;
+      return 'change';
+    } else if (dbDefault !== codeDefault && dbDefault !== `(${codeDefault})`) {
+      compareSql.expressions.push({
+        inDb: dbDefault,
+        inCode: codeDefault,
+        change: () => {
+          changeColumn(
+            changeTableData.changeTableAst.shape,
+            key,
+            dbColumn,
+            codeColumn,
+          );
+          if (!changeTableData.pushedAst) {
+            changeTableData.pushedAst = true;
+            ast.push(changeTableData.changeTableAst);
+          }
+        },
+      });
+    }
+  }
+
+  return;
 };
 
 const changeColumn = (
@@ -507,6 +539,8 @@ export const getColumnDbType = (
       column.enumName,
     );
     return (column.enumName = `${schema}.${name}`);
+  } else if (column instanceof ArrayColumn) {
+    return column.data.item.dataType + '[]'.repeat(column.data.arrayDims);
   } else {
     return column.dataType;
   }

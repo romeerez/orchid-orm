@@ -131,7 +131,7 @@ describe('pull', () => {
           dbStructureMockFactory.domainColumn({
             name: 'domainColumn',
             typeSchema: 'schema',
-            isArray: true,
+            arrayDims: 1,
           }),
           dbStructureMockFactory.intColumn({
             name: 'customTypeColumn',

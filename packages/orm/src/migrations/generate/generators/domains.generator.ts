@@ -73,7 +73,7 @@ export const processDomains = async (
         name: domain.name,
         typeSchema: domain.typeSchema,
         type: domain.type,
-        isArray: domain.isArray,
+        arrayDims: domain.arrayDims,
         default: domain.default,
         isNullable: domain.isNullable,
         collate: domain.collate,
@@ -172,12 +172,12 @@ const makeComparableDomain = (
   name: string,
   column: ColumnType,
 ): ComparableDomain => {
-  let isArray = false;
+  let arrayDims = 0;
   const isNullable = column.data.isNullable ?? false;
   let inner = column;
-  if (column instanceof ArrayColumn) {
-    inner = column.data.item;
-    isArray = true;
+  while (inner instanceof ArrayColumn) {
+    inner = inner.data.item;
+    arrayDims++;
   }
   const fullType = getColumnDbType(inner, currentSchema);
   const [typeSchema = 'pg_catalog', type] = getSchemaAndTableFromName(fullType);
@@ -189,7 +189,7 @@ const makeComparableDomain = (
     compare: {
       type,
       typeSchema,
-      isArray,
+      arrayDims,
       isNullable,
       maxChars: inner.data.maxChars,
       numericPrecision: inner.data.numericPrecision,
