@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.3
+
+### Patch Changes
+
+- 1285118: Fix migration gen: handle column changes together with primaryKey/index/foreignKey/check changes (#316)
+
 ## 0.19.2
 
 ### Patch Changes

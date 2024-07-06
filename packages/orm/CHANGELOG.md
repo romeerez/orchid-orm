@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.32.10
+
+### Patch Changes
+
+- 1285118: Fix migration gen: handle column changes together with primaryKey/index/foreignKey/check changes (#316)
+- Updated dependencies [1285118]
+  - rake-db@2.22.9
+  - pqb@0.36.8
+  - orchid-core@0.19.3
+
 ## 1.32.9
 
 ### Patch Changes

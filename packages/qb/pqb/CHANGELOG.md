@@ -1,5 +1,13 @@
 # pqb
 
+## 0.36.8
+
+### Patch Changes
+
+- 1285118: Fix migration gen: handle column changes together with primaryKey/index/foreignKey/check changes (#316)
+- Updated dependencies [1285118]
+  - orchid-core@0.19.3
+
 ## 0.36.7
 
 ### Patch Changes
