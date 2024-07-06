@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.22.8
+
+### Patch Changes
+
+- e7656c4: Fix migration generation for array columns
+- Updated dependencies [e7656c4]
+  - pqb@0.36.7
+
 ## 2.22.7
 
 ### Patch Changes

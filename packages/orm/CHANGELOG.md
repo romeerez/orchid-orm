@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.32.8
+
+### Patch Changes
+
+- e7656c4: Fix migration generation for array columns
+- Updated dependencies [e7656c4]
+  - rake-db@2.22.8
+  - pqb@0.36.7
+
 ## 1.32.7
 
 ### Patch Changes

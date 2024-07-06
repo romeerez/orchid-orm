@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.7
+
+### Patch Changes
+
+- e7656c4: Fix migration generation for array columns
+
 ## 0.36.6
 
 ### Patch Changes
