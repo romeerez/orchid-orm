@@ -18,7 +18,7 @@ jest.mock('fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('columns', () => {
-  const { arrange, act, assert, table } = useGeneratorsTestUtils();
+  const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
 
   it('should add a column', async () => {
     await arrange({
@@ -595,5 +595,47 @@ change(async (db) => {
   ${yellow('~ change column')} fr_om:
     ${yellow('from')}: t.text()
       ${yellow('to')}: t.name('t_o').string()`);
+  });
+
+  it('should ignore computed columns', async () => {
+    await arrange({
+      tables: [
+        class UserTable extends BaseTable {
+          readonly table = 'table';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+            firstName: t.string(),
+            lastName: t.string(),
+          }));
+
+          computed = this.setComputed((q) => ({
+            one: q.sql`${q.column('firstName')} || ' ' || ${q.column(
+              'lastName',
+            )}`.type((t) => t.string()),
+            two: q.computeAtRuntime(
+              // define columns that it depends on
+              ['firstName', 'lastName'],
+              // only columns defined above are available in the callback
+              (record) => `${record.firstName} ${record.lastName}`,
+            ),
+          }));
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.identity().primaryKey(),
+    firstName: t.string(),
+    lastName: t.string(),
+  }));
+});
+`);
+
+    assert.report(`${green('+ create table')} table (3 columns)`);
   });
 });

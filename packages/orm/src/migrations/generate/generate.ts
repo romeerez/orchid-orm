@@ -333,7 +333,10 @@ const getActualItems = async (
 
     for (const key in table.shape) {
       const column = table.shape[key] as ColumnType;
-      if (column instanceof DomainColumn) {
+      // remove computed columns from the shape
+      if (column.data.computed) {
+        delete table.shape[key];
+      } else if (column instanceof DomainColumn) {
         const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
           column.dataType,
         );
