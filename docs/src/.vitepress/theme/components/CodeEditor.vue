@@ -246,18 +246,6 @@ function setupVim() {
 </script>
 
 <style>
-.VPContent {
-  padding-right: 0 !important;
-}
-
-html .content-container {
-  max-width: none !important;
-}
-
-.aside {
-  display: none !important;
-}
-
 .monaco-editor-container {
   width: 100%;
 }

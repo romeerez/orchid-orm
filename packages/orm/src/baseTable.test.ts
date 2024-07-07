@@ -420,20 +420,39 @@ describe('baseTable', () => {
       }));
     }
 
-    it('should expose inputSchema, outputSchema, outputSchema', () => {
+    it('should expose inputSchema, outputSchema, querySchema, updateSchema, pkeySchema', () => {
       const inputSchema = SomeTable.inputSchema();
       const outputSchema = SomeTable.outputSchema();
       const querySchema = SomeTable.querySchema();
+      const createSchema = SomeTable.createSchema();
+      const updateSchema = SomeTable.updateSchema();
+      const pkeySchema = SomeTable.pkeySchema();
 
       const expected = z.object({ id: z.number(), name: z.string() });
       assertType<typeof inputSchema, typeof expected>();
       assertType<typeof outputSchema, typeof expected>();
       assertType<typeof querySchema, typeof expected>();
 
+      const expectedCreate = expected.omit({ id: true });
+      assertType<typeof createSchema, typeof expectedCreate>();
+
+      const expectedUpdate = expectedCreate.partial();
+      assertType<typeof updateSchema, typeof expectedUpdate>();
+
+      const expectedPKeys = expected.pick({ id: true });
+      assertType<typeof pkeySchema, typeof expectedPKeys>();
+
       const data = { id: 1, name: 'name' };
-      expect(() => inputSchema.parse(data)).not.toThrow();
-      expect(() => outputSchema.parse(data)).not.toThrow();
-      expect(() => querySchema.parse(data)).not.toThrow();
+      for (const schema of [
+        inputSchema,
+        outputSchema,
+        querySchema,
+        createSchema,
+        updateSchema,
+        pkeySchema,
+      ]) {
+        expect(() => schema.parse(data)).not.toThrow();
+      }
     });
 
     it('should be memoized', () => {

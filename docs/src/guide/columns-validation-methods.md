@@ -7,9 +7,7 @@ ORM and query builder do not perform validation because it's expected that data 
 You can convert the column schema into a validation schema with the use of an additional package.
 
 Column methods described in this section have **no** effect on parsing, or encoding values, or tables schema in migrations,
-they only alter the validation schema exposed by `Table.inputSchema()`, `Table.outputSchema()`, and similar.
-
-Use the `Table.inputSchema()` when validating incoming parameters.
+they only have affect on the validation schema exposed by `Table.createSchema()`, `Table.updateSchema()`, and others.
 
 [Zod](https://github.com/colinhacks/zod) and [Valibot](https://valibot.dev/) are supported.
 
@@ -44,13 +42,23 @@ export const BaseTable = createBaseTable({
 });
 ```
 
-All table classes will now expose schemas for different purposes:
+All table classes will now expose schemas for different purposes.
 
-- `Table.inputSchema()` - validating input data for inserting records.
-- `Table.updateSchema()` - partial `inputSchema` for updating records.
-- `Table.ouputSchema()` - not sure why you might want to validate output, but you can. Perhaps, for testing purposes.
-- `Table.querySchema()` - validating parameters for use in `where` or `find`. It's a very rare case when it does not match the `inputSchema`, so you can simply use the `inputSchema` for this instead.
+- `Table.inputSchema()` - validating input data for inserting records, primary keys are not omitted.
+  Nullable and columns with default are optional, the rest are required.
+  Timestamps can be accepted as a string or a number.
+
+- `Table.ouputSchema()` - validation schema for data as it is returned from a database,
+  may be useful for test purposes.
+
+- `Table.querySchema()` - validating parameters to use in `where` or `find`.
+  Unless you customize columns with custom `parse` functions, `querySchema` will be the same as the `inputSchema`.
+
 - `Table.pkeySchema()` - picked primary keys from `querySchema`, validates object like `{ id: 123 }`.
+
+- `Table.createSchema()` - `inputSchema` with omitted primary keys, to validate data for creating records.
+
+- `Table.updateSchema()` - omitted primary keys, partial `inputSchema` for updating records.
 
 Use it in your controllers:
 

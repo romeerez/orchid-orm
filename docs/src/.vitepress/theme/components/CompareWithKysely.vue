@@ -55,13 +55,71 @@
   };
   updateAnchor();
 
+  // for applying global styles only for this page
+  let styleElement;
+
   onMounted(() => {
     window.addEventListener('hashchange', updateAnchor);
     updateAnchor();
+
+    styleElement = document.createElement("style");
+    styleElement.type = "text/css";
+    styleElement.innerText = `
+.main {
+  max-width: 1150px;
+}
+
+.VPContent {
+  padding-right: 0 !important;
+}
+
+html .content-container {
+  max-width: none !important;
+}
+
+.aside {
+  display: none !important;
+}
+
+@media (max-width: 1050px) {
+  .VPSidebar {
+    width: calc(100vw - 64px) !important;
+    max-width: 320px !important;
+    background-color: var(--vp-sidebar-bg-color) !important;
+    opacity: 0 !important;
+    transform: translateX(-100%) !important;
+  }
+
+  .VPNav {
+    position: relative !important;
+  }
+
+  .VPLocalNav {
+    display: block !important;
+    padding-left: 0 !important;
+    top: 0 !important;
+  }
+
+  .menu {
+    display: flex !important;
+    padding: 12px 24px 11px !important;
+  }
+
+  .VPContent.has-sidebar {
+    margin: 0 !important;
+    padding-left: 0 !important;
+  }
+}
+`;
+    document.head.appendChild(styleElement);
   });
 
   onUnmounted(() => {
     window.removeEventListener('hashchange', updateAnchor);
+
+    if (styleElement) {
+      document.head.removeChild(styleElement);
+    }
   });
 
   const vimMode = ref(localStorage.getItem('vimMode') === 'true');
@@ -99,10 +157,6 @@
 </template>
 
 <style>
-.main {
-  max-width: 1150px;
-}
-
 .example-text {
   margin: 32px 0 16px;
   line-height: 28px;
@@ -152,36 +206,6 @@
 
 .example-link.active a {
   color: var(--vp-c-brand)
-}
-
-@media (max-width: 1050px) {
-  .VPSidebar {
-    width: calc(100vw - 64px) !important;
-    max-width: 320px !important;
-    background-color: var(--vp-sidebar-bg-color) !important;
-    opacity: 0 !important;
-    transform: translateX(-100%) !important;
-  }
-
-  .VPNav {
-    position: relative !important;
-  }
-
-  .VPLocalNav {
-    display: block !important;
-    padding-left: 0 !important;
-    top: 0 !important;
-  }
-
-  .menu {
-    display: flex !important;
-    padding: 12px 24px 11px !important;
-  }
-
-  .VPContent.has-sidebar {
-    margin: 0 !important;
-    padding-left: 0 !important;
-  }
 }
 
 @media (max-width: 780px) {

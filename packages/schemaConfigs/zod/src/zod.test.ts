@@ -92,6 +92,8 @@ describe('zod schema config', () => {
       inputSchema: zodSchemaConfig.inputSchema,
       outputSchema: zodSchemaConfig.outputSchema,
       querySchema: zodSchemaConfig.querySchema,
+      pkeySchema: zodSchemaConfig.pkeySchema,
+      createSchema: zodSchemaConfig.createSchema,
     };
 
     const type = {
@@ -108,8 +110,42 @@ describe('zod schema config', () => {
     expectAllThrow(type, { id: '1' }, 'Expected number, received string');
   });
 
+  describe('createSchema', () => {
+    it('should be an inputSchema without primary keys', () => {
+      const columns = {
+        shape: {
+          id: t.identity().primaryKey(),
+          name: t.string(),
+          optional: t.string().nullable(),
+          withDefault: t.string().default(''),
+        },
+      };
+
+      const klass = {
+        prototype: { columns },
+        inputSchema: zodSchemaConfig.inputSchema,
+        querySchema: zodSchemaConfig.outputSchema,
+        pkeySchema: zodSchemaConfig.pkeySchema,
+        createSchema: zodSchemaConfig.createSchema,
+      };
+
+      const createSchema = klass.createSchema();
+
+      const expected = z.object({
+        name: z.string(),
+        optional: z.string().nullable().optional(),
+        withDefault: z.string().optional(),
+      });
+      assertType<typeof createSchema, typeof expected>();
+
+      expect(createSchema.parse({ name: 'name' })).toEqual({
+        name: 'name',
+      });
+    });
+  });
+
   describe('updateSchema', () => {
-    it('should be a partial inputSchema', () => {
+    it('should be a partial inputSchema without primary keys', () => {
       const columns = {
         shape: {
           id: t.identity().primaryKey(),
@@ -121,16 +157,17 @@ describe('zod schema config', () => {
         prototype: { columns },
         inputSchema: zodSchemaConfig.inputSchema,
         querySchema: zodSchemaConfig.outputSchema,
+        pkeySchema: zodSchemaConfig.pkeySchema,
+        createSchema: zodSchemaConfig.createSchema,
         updateSchema: zodSchemaConfig.updateSchema,
       };
 
       const updateSchema = klass.updateSchema();
 
-      const expected = z.object({ id: z.number(), name: z.string() }).partial();
+      const expected = z.object({ name: z.string() }).partial();
       assertType<typeof updateSchema, typeof expected>();
 
-      expect(updateSchema.parse({ id: 1, name: 'name' })).toEqual({
-        id: 1,
+      expect(updateSchema.parse({ name: 'name' })).toEqual({
         name: 'name',
       });
 
@@ -153,6 +190,7 @@ describe('zod schema config', () => {
         inputSchema: zodSchemaConfig.inputSchema,
         querySchema: zodSchemaConfig.outputSchema,
         pkeySchema: zodSchemaConfig.pkeySchema,
+        createSchema: zodSchemaConfig.createSchema,
       };
 
       const pkeySchema = klass.pkeySchema();

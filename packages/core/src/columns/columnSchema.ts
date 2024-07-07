@@ -1,9 +1,15 @@
 import { ColumnTypeBase, ColumnTypesBase, NullableColumn } from './columnType';
 
 export interface ColumnSchemaGetterTableClass {
-  prototype: { columns: { shape: ColumnTypesBase } };
+  prototype: {
+    columns: {
+      shape: ColumnTypesBase;
+    };
+  };
   inputSchema(): unknown;
   querySchema(): unknown;
+  pkeySchema(): unknown;
+  createSchema(): unknown;
 }
 
 export type ColumnSchemaGetterColumns<T extends ColumnSchemaGetterTableClass> =
@@ -44,6 +50,7 @@ export interface ColumnSchemaConfig<T extends ColumnTypeBase = ColumnTypeBase>
   inputSchema(this: ColumnSchemaGetterTableClass): unknown;
   outputSchema(this: ColumnSchemaGetterTableClass): unknown;
   querySchema(this: ColumnSchemaGetterTableClass): unknown;
+  createSchema(this: ColumnSchemaGetterTableClass): unknown;
   updateSchema(this: ColumnSchemaGetterTableClass): unknown;
   pkeySchema(this: ColumnSchemaGetterTableClass): unknown;
 

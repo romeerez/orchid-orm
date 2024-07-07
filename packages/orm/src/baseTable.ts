@@ -415,9 +415,32 @@ export interface BaseTableClass<
   new (): BaseTableInstance<ColumnTypes>;
   instance(): BaseTableInstance<ColumnTypes>;
 
+  /**
+   * All column types for inserting.
+   */
   inputSchema: SchemaConfig['inputSchema'];
+  /**
+   * All column types as returned from a database.
+   */
   outputSchema: SchemaConfig['outputSchema'];
+  /**
+   * All column types for query methods such as `where`.
+   */
   querySchema: SchemaConfig['querySchema'];
+  /**
+   * Primary key column(s) type for query methods such as `where`.
+   */
+  pkeySchema: SchemaConfig['pkeySchema'];
+  /**
+   * Column types for inserting, excluding primary keys.
+   * Equals to {@link inputSchema} without primary keys.
+   */
+  createSchema: SchemaConfig['createSchema'];
+  /**
+   * Column types for updating, excluding primary keys.
+   * Equals to partial {@link createSchema}.
+   */
+  updateSchema: SchemaConfig['updateSchema'];
 }
 
 // base table constructor
@@ -501,6 +524,14 @@ export function createBaseTable<
       return this._querySchema === undefined
         ? (this._querySchema = schemaConfig.querySchema.call(this))
         : this._querySchema;
+    }
+
+    private static _createSchema: unknown;
+    static createSchema() {
+      this.instance();
+      return this._createSchema === undefined
+        ? (this._createSchema = schemaConfig.createSchema.call(this))
+        : this._createSchema;
     }
 
     private static _updateSchema: unknown;

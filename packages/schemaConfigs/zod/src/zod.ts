@@ -717,6 +717,10 @@ export interface ZodSchemaConfig {
     this: T,
   ): MapSchema<T, 'querySchema'>;
 
+  createSchema<T extends ColumnSchemaGetterTableClass>(
+    this: T,
+  ): CreateSchema<T>;
+
   updateSchema<T extends ColumnSchemaGetterTableClass>(
     this: T,
   ): UpdateSchema<T>;
@@ -845,9 +849,29 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     return mapSchema(this, 'querySchema');
   },
 
+  createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+    const input = this.inputSchema() as ZodObject<ZodRawShape>;
+
+    const shape: ZodRawShape = {};
+    const { shape: columns } = this.prototype.columns;
+
+    for (const key in columns) {
+      const column = columns[key];
+      if (!column.data.primaryKey) {
+        shape[key] = input.shape[key];
+
+        if (column.data.isNullable || column.data.default !== undefined) {
+          shape[key] = shape[key].optional();
+        }
+      }
+    }
+
+    return z.object(shape) as CreateSchema<T>;
+  },
+
   updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
     return (
-      this.inputSchema() as ZodObject<ZodRawShape>
+      this.createSchema() as ZodObject<ZodRawShape>
     ).partial() as UpdateSchema<T>;
   },
 
@@ -985,11 +1009,24 @@ type MapSchema<
   'strip'
 >;
 
+type CreateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
+  {
+    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
+      ? never
+      : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
+      ? ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
+      : undefined extends ColumnSchemaGetterColumns<T>[K]['data']['default']
+      ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
+      : ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+  },
+  'strip'
+>;
+
 type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
   {
-    [K in keyof ColumnSchemaGetterColumns<T>]: ZodOptional<
-      ColumnSchemaGetterColumns<T>[K]['inputSchema']
-    >;
+    [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
+      ? never
+      : K]: ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
   },
   'strip'
 >;

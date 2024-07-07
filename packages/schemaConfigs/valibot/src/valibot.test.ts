@@ -21,6 +21,8 @@ import {
   date,
   NeverSchema,
   transform,
+  optional,
+  nullable,
 } from 'valibot';
 
 const t = makeColumnTypes(valibotSchemaConfig);
@@ -100,6 +102,8 @@ describe('valibot schema config', () => {
       inputSchema: valibotSchemaConfig.inputSchema,
       outputSchema: valibotSchemaConfig.outputSchema,
       querySchema: valibotSchemaConfig.querySchema,
+      pkeySchema: valibotSchemaConfig.pkeySchema,
+      createSchema: valibotSchemaConfig.createSchema,
     };
 
     const type = {
@@ -120,8 +124,42 @@ describe('valibot schema config', () => {
     );
   });
 
+  describe('createSchema', () => {
+    it('should be an inputSchema without primary keys', () => {
+      const columns = {
+        shape: {
+          id: t.identity().primaryKey(),
+          name: t.string(),
+          optional: t.string().nullable(),
+          withDefault: t.string().default(''),
+        },
+      };
+
+      const klass = {
+        prototype: { columns },
+        inputSchema: valibotSchemaConfig.inputSchema,
+        querySchema: valibotSchemaConfig.outputSchema,
+        pkeySchema: valibotSchemaConfig.pkeySchema,
+        createSchema: valibotSchemaConfig.createSchema,
+      };
+
+      const createSchema = klass.createSchema();
+
+      const expected = object({
+        name: string(),
+        optional: optional(nullable(string())),
+        withDefault: optional(string()),
+      });
+      assertType<typeof createSchema, typeof expected>();
+
+      expect(parse(createSchema, { name: 'name' })).toEqual({
+        name: 'name',
+      });
+    });
+  });
+
   describe('updateSchema', () => {
-    it('should be a partial inputSchema', () => {
+    it('should be a partial inputSchema without primary keys', () => {
       const columns = {
         shape: {
           id: t.identity().primaryKey(),
@@ -133,16 +171,17 @@ describe('valibot schema config', () => {
         prototype: { columns },
         inputSchema: valibotSchemaConfig.inputSchema,
         querySchema: valibotSchemaConfig.outputSchema,
+        pkeySchema: valibotSchemaConfig.pkeySchema,
+        createSchema: valibotSchemaConfig.createSchema,
         updateSchema: valibotSchemaConfig.updateSchema,
       };
 
       const updateSchema = klass.updateSchema();
 
-      const expected = partial(object({ id: number(), name: string() }));
+      const expected = partial(object({ name: string() }));
       assertType<typeof updateSchema, typeof expected>();
 
-      expect(parse(updateSchema, { id: 1, name: 'name' })).toEqual({
-        id: 1,
+      expect(parse(updateSchema, { name: 'name' })).toEqual({
         name: 'name',
       });
 
@@ -165,6 +204,7 @@ describe('valibot schema config', () => {
         inputSchema: valibotSchemaConfig.inputSchema,
         querySchema: valibotSchemaConfig.outputSchema,
         pkeySchema: valibotSchemaConfig.pkeySchema,
+        createSchema: valibotSchemaConfig.createSchema,
       };
 
       const pkeySchema = klass.pkeySchema();

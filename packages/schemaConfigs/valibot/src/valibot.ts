@@ -880,6 +880,10 @@ export interface ValibotSchemaConfig {
     this: T,
   ): MapSchema<T, 'querySchema'>;
 
+  createSchema<T extends ColumnSchemaGetterTableClass>(
+    this: T,
+  ): CreateSchema<T>;
+
   updateSchema<T extends ColumnSchemaGetterTableClass>(
     this: T,
   ): UpdateSchema<T>;
@@ -1015,8 +1019,28 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
     return mapSchema(this, 'querySchema');
   },
 
+  createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+    const input = this.inputSchema() as ObjectSchema<ObjectEntries>;
+
+    const shape: ObjectEntries = {};
+    const { shape: columns } = this.prototype.columns;
+
+    for (const key in columns) {
+      const column = columns[key];
+      if (!column.data.primaryKey) {
+        shape[key] = input.entries[key];
+
+        if (column.data.isNullable || column.data.default !== undefined) {
+          shape[key] = optional(shape[key]);
+        }
+      }
+    }
+
+    return object(shape) as CreateSchema<T>;
+  },
+
   updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    return partial(this.inputSchema() as never) as UpdateSchema<T>;
+    return partial(this.createSchema() as never) as UpdateSchema<T>;
   },
 
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
@@ -1073,10 +1097,20 @@ type MapSchema<
   [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
 }>;
 
+type CreateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
+  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
+    ? never
+    : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
+    ? OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
+    : undefined extends ColumnSchemaGetterColumns<T>[K]['data']['default']
+    ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
+    : OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+}>;
+
 type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T>]: OptionalSchema<
-    ColumnSchemaGetterColumns<T>[K]['inputSchema']
-  >;
+  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
+    ? never
+    : K]: OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
 }>;
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
