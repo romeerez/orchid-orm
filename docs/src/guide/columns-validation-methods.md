@@ -51,8 +51,8 @@ All table classes will now expose schemas for different purposes.
 - `Table.ouputSchema()` - validation schema for data as it is returned from a database,
   may be useful for test purposes.
 
-- `Table.querySchema()` - validating parameters to use in `where` or `find`.
-  Unless you customize columns with custom `parse` functions, `querySchema` will be the same as the `inputSchema`.
+- `Table.querySchema()` - is partial, validating parameters to use in `where` or `find`.
+  Unless you customize columns with custom `parse` functions, types are the same as in the `inputSchema`.
 
 - `Table.pkeySchema()` - picked primary keys from `querySchema`, validates object like `{ id: 123 }`.
 

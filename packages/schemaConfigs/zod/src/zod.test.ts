@@ -103,11 +103,48 @@ describe('zod schema config', () => {
     };
 
     const expected = z.object({ id: z.number(), name: z.string() });
-    assertAllTypes<typeof type, typeof expected>();
+
+    assertType<typeof type.inputSchema, typeof expected>();
+    assertType<typeof type.outputSchema, typeof expected>();
 
     expectAllParse(type, { id: 1, name: 'name' }, { id: 1, name: 'name' });
 
     expectAllThrow(type, { id: '1' }, 'Expected number, received string');
+  });
+
+  describe('querySchema', () => {
+    it('should be partial', () => {
+      const columns = {
+        shape: {
+          id: t.identity().primaryKey(),
+          name: t.string(),
+        },
+      };
+
+      const klass = {
+        prototype: { columns },
+        inputSchema: zodSchemaConfig.inputSchema,
+        outputSchema: zodSchemaConfig.outputSchema,
+        querySchema: zodSchemaConfig.querySchema,
+        pkeySchema: zodSchemaConfig.pkeySchema,
+        createSchema: zodSchemaConfig.createSchema,
+      };
+
+      const schema = klass.querySchema();
+
+      const expected = z.object({ id: z.number(), name: z.string() }).partial();
+
+      assertType<typeof schema, typeof expected>();
+
+      expect(schema.parse({ id: 1, name: 'name' })).toEqual({
+        id: 1,
+        name: 'name',
+      });
+
+      expect(() => schema.parse({ id: '1' })).toThrow(
+        'Expected number, received string',
+      );
+    });
   });
 
   describe('createSchema', () => {

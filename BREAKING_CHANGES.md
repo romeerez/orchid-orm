@@ -1,5 +1,9 @@
 # Breaking changes
 
+## orchid-orm 1.32.13
+
+Validation schema `Table.querySchema()` becomes partial by default.
+
 ## orchid-orm 1.32.0
 
 Improved casting to snake_case, so the columns are translated to snake_case in primary key, indexes, foreign key options.

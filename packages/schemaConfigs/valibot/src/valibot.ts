@@ -86,6 +86,7 @@ import {
   picklist,
   PicklistSchema,
   regex,
+  required,
   startsWith,
   string,
   stringify,
@@ -876,9 +877,7 @@ export interface ValibotSchemaConfig {
     this: T,
   ): MapSchema<T, 'outputSchema'>;
 
-  querySchema<T extends ColumnSchemaGetterTableClass>(
-    this: T,
-  ): MapSchema<T, 'querySchema'>;
+  querySchema<T extends ColumnSchemaGetterTableClass>(this: T): QuerySchema<T>;
 
   createSchema<T extends ColumnSchemaGetterTableClass>(
     this: T,
@@ -1016,7 +1015,7 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   },
 
   querySchema() {
-    return mapSchema(this, 'querySchema');
+    return partial(mapSchema(this, 'querySchema'));
   },
 
   createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
@@ -1055,7 +1054,9 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
       }
     }
 
-    return pick(this.querySchema() as never, keys as never) as PkeySchema<T>;
+    return required(
+      pick(this.querySchema() as never, keys as never),
+    ) as PkeySchema<T>;
   },
 
   error(message: string) {
@@ -1095,6 +1096,12 @@ type MapSchema<
   Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
 > = ObjectSchema<{
   [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
+}>;
+
+type QuerySchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
+  [K in keyof ColumnSchemaGetterColumns<T>]: OptionalSchema<
+    ColumnSchemaGetterColumns<T>[K]['querySchema']
+  >;
 }>;
 
 type CreateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{

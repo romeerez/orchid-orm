@@ -431,7 +431,11 @@ describe('baseTable', () => {
       const expected = z.object({ id: z.number(), name: z.string() });
       assertType<typeof inputSchema, typeof expected>();
       assertType<typeof outputSchema, typeof expected>();
-      assertType<typeof querySchema, typeof expected>();
+
+      const expectedQuery = z
+        .object({ id: z.number(), name: z.string() })
+        .partial();
+      assertType<typeof querySchema, typeof expectedQuery>();
 
       const expectedCreate = expected.omit({ id: true });
       assertType<typeof createSchema, typeof expectedCreate>();

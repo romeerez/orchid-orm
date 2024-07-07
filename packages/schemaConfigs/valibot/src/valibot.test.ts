@@ -113,7 +113,9 @@ describe('valibot schema config', () => {
     };
 
     const expected = object({ id: number(), name: string() });
-    assertAllTypes<typeof type, typeof expected>();
+
+    assertType<typeof type.inputSchema, typeof expected>();
+    assertType<typeof type.outputSchema, typeof expected>();
 
     expectAllParse(type, { id: 1, name: 'name' }, { id: 1, name: 'name' });
 
@@ -122,6 +124,41 @@ describe('valibot schema config', () => {
       { id: '1' },
       'Invalid type: Expected number but received "1"',
     );
+  });
+
+  describe('querySchema', () => {
+    it('should be partial', () => {
+      const columns = {
+        shape: {
+          id: t.identity().primaryKey(),
+          name: t.string(),
+        },
+      };
+
+      const klass = {
+        prototype: { columns },
+        inputSchema: valibotSchemaConfig.inputSchema,
+        outputSchema: valibotSchemaConfig.outputSchema,
+        querySchema: valibotSchemaConfig.querySchema,
+        pkeySchema: valibotSchemaConfig.pkeySchema,
+        createSchema: valibotSchemaConfig.createSchema,
+      };
+
+      const schema = klass.querySchema();
+
+      const expected = partial(object({ id: number(), name: string() }));
+
+      assertType<typeof schema, typeof expected>();
+
+      expect(parse(schema, { id: 1, name: 'name' })).toEqual({
+        id: 1,
+        name: 'name',
+      });
+
+      expect(() => parse(schema, { id: '1' })).toThrow(
+        'Invalid type: Expected number but received "1"',
+      );
+    });
   });
 
   describe('createSchema', () => {
@@ -218,7 +255,7 @@ describe('valibot schema config', () => {
       });
 
       expect(() => parse(pkeySchema, {})).toThrow(
-        'Invalid type: Expected number but received undefined',
+        'Invalid type: Expected !undefined but received undefined',
       );
     });
   });

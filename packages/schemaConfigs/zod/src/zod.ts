@@ -713,9 +713,7 @@ export interface ZodSchemaConfig {
     this: T,
   ): MapSchema<T, 'outputSchema'>;
 
-  querySchema<T extends ColumnSchemaGetterTableClass>(
-    this: T,
-  ): MapSchema<T, 'querySchema'>;
+  querySchema<T extends ColumnSchemaGetterTableClass>(this: T): QuerySchema<T>;
 
   createSchema<T extends ColumnSchemaGetterTableClass>(
     this: T,
@@ -846,7 +844,14 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
 
   querySchema() {
-    return mapSchema(this, 'querySchema');
+    const shape: ZodRawShape = {};
+    const { shape: columns } = this.prototype.columns;
+
+    for (const key in columns) {
+      shape[key] = columns[key].querySchema.optional();
+    }
+
+    return z.object(shape) as never;
   },
 
   createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
@@ -887,9 +892,9 @@ export const zodSchemaConfig: ZodSchemaConfig = {
       }
     }
 
-    return (this.querySchema() as ZodObject<ZodRawShape>).pick(
-      pkeys,
-    ) as PkeySchema<T>;
+    return (this.querySchema() as ZodObject<ZodRawShape>)
+      .pick(pkeys)
+      .required() as PkeySchema<T>;
   },
 
   /**
@@ -1005,6 +1010,15 @@ type MapSchema<
 > = ZodObject<
   {
     [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
+  },
+  'strip'
+>;
+
+type QuerySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
+  {
+    [K in keyof ColumnSchemaGetterColumns<T>]: ZodOptional<
+      ColumnSchemaGetterColumns<T>[K]['querySchema']
+    >;
   },
   'strip'
 >;
