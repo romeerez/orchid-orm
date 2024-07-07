@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.4
+
+### Patch Changes
+
+- 3db10bd: Add validation schemas `createSchema` and `updateSchema` (#305)
+
 ## 0.19.3
 
 ### Patch Changes

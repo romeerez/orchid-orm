@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.8.19
+
+### Patch Changes
+
+- 3db10bd: Add validation schemas `createSchema` and `updateSchema` (#305)
+- Updated dependencies [3db10bd]
+  - orchid-core@0.19.4
+  - pqb@0.36.10
+
 ## 0.8.18
 
 ### Patch Changes

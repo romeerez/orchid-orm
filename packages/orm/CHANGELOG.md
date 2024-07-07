@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.32.12
+
+### Patch Changes
+
+- 3db10bd: Add validation schemas `createSchema` and `updateSchema` (#305)
+- Updated dependencies [3db10bd]
+  - orchid-core@0.19.4
+  - pqb@0.36.10
+  - rake-db@2.22.11
+
 ## 1.32.11
 
 ### Patch Changes
