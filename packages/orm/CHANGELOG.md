@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.32.13
+
+### Patch Changes
+
+- 082a958: Make validation schema `querySchema` partial (#305)
+
 ## 1.32.12
 
 ### Patch Changes

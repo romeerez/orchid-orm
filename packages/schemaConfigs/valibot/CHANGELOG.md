@@ -1,5 +1,11 @@
 # orchid-orm-valibot
 
+## 0.2.20
+
+### Patch Changes
+
+- 082a958: Make validation schema `querySchema` partial (#305)
+
 ## 0.2.19
 
 ### Patch Changes

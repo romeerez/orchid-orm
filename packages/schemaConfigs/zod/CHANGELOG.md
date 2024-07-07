@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.8.20
+
+### Patch Changes
+
+- 082a958: Make validation schema `querySchema` partial (#305)
+
 ## 0.8.19
 
 ### Patch Changes
