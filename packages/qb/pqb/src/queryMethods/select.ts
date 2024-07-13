@@ -105,9 +105,9 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
   [K in keyof T]: K extends 'result'
     ? ('*' extends Columns[number]
         ? {
-            [K in
-              | Columns[number]
-              | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+            [K in Columns[number] | keyof T['shape'] as K extends '*'
+              ? never
+              : T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
           }
         : {
             [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
@@ -123,7 +123,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
           ('*' extends Columns[number]
             ? {
                 [K in
-                  | Columns[number]
+                  | Exclude<Columns[number], '*'>
                   | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
               }
             : {

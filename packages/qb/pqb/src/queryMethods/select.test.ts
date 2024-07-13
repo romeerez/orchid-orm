@@ -851,6 +851,17 @@ describe('select', () => {
         `,
       );
     });
+
+    it('should properly select 3 levels deep select *', () => {
+      const q = User.select({
+        arr: () =>
+          User.select({
+            arr: () => User.select('*'),
+          }),
+      });
+
+      assertType<Awaited<typeof q>, { arr: { arr: UserRecord[] }[] }[]>();
+    });
   });
 
   describe('selectAll', () => {
