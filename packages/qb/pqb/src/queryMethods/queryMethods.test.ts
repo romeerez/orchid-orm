@@ -17,6 +17,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { Sql } from 'orchid-core';
+import { QueryHelperResult } from './queryMethods';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -1000,6 +1001,14 @@ describe('queryMethods', () => {
       const q = fn(User.select('name'), true);
 
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+    });
+
+    it('QueryHelperResult type should be fine', () => {
+      const helper = User.makeHelper((q, param?: string) =>
+        q.where({ name: param }),
+      );
+
+      assertType<Awaited<QueryHelperResult<typeof helper>>, UserRecord[]>();
     });
   });
 
