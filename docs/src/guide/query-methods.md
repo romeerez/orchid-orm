@@ -121,7 +121,7 @@ await db.table.findByOptional({ key: 'value' });
 Finds a single record with a given SQL, throws [NotFoundError](/guide/error-handling) if not found:
 
 ```ts
-await db.user.find`
+await db.user.findBySql`
   age = ${age} AND
   name = ${name}
 `;
@@ -135,7 +135,7 @@ Finds a single record with a given SQL.
 Returns `undefined` when not found.
 
 ```ts
-await db.user.find`
+await db.user.findBySqlOptional`
   age = ${age} AND
   name = ${name}
 `;
