@@ -471,7 +471,7 @@ export class QueryMethods<ColumnTypes> {
    * Finds a single record with a given SQL, throws {@link NotFoundError} if not found:
    *
    * ```ts
-   * await db.user.find`
+   * await db.user.findBySql`
    *   age = ${age} AND
    *   name = ${name}
    * `;
@@ -509,7 +509,7 @@ export class QueryMethods<ColumnTypes> {
    * Returns `undefined` when not found.
    *
    * ```ts
-   * await db.user.find`
+   * await db.user.findBySqlOptional`
    *   age = ${age} AND
    *   name = ${name}
    * `;
