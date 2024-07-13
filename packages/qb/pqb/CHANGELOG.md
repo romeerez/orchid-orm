@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.11
+
+### Patch Changes
+
+- 86aead8: Fix deeply nested select \* (#322)
+
 ## 0.36.10
 
 ### Patch Changes
