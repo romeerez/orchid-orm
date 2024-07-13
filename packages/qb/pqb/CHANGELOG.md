@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.12
+
+### Patch Changes
+
+- 81af2e1: Fix overriding return type when merging queries (#320)
+
 ## 0.36.11
 
 ### Patch Changes
