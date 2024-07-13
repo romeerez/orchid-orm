@@ -1,4 +1,4 @@
-import { Message, Profile, User } from '../test-utils/test-utils';
+import { Message, Profile, User, UserRecord } from '../test-utils/test-utils';
 import { logParamToLogObject } from './log';
 import {
   ColumnInfoQueryData,
@@ -15,7 +15,6 @@ import {
   testDb,
 } from 'test-utils';
 import { emptyObject, Expression, getValueKey, noop } from 'orchid-core';
-
 import { ComputedColumn } from '../modules/computed';
 
 describe('merge queries', () => {
@@ -42,12 +41,14 @@ describe('merge queries', () => {
       const q = User.merge(User);
 
       assertType<typeof q.returnType, undefined>();
+      assertType<Awaited<typeof q>, UserRecord[]>();
     });
 
     it('should use left return type unless right has it', () => {
       const q = User.take().merge(User);
 
       assertType<typeof q.returnType, 'oneOrThrow'>();
+      assertType<Awaited<typeof q>, UserRecord>();
 
       expectSql(q.toSQL(), `SELECT * FROM "user" LIMIT 1`);
     });
@@ -56,6 +57,7 @@ describe('merge queries', () => {
       const q = User.take().merge(User.all());
 
       assertType<typeof q.returnType, 'all'>();
+      assertType<Awaited<typeof q>, UserRecord[]>();
 
       expectSql(q.toSQL(), `SELECT * FROM "user"`);
     });
