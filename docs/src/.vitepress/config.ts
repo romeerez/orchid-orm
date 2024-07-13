@@ -42,10 +42,10 @@ export default {
             text: 'Current status and limitations',
             link: '/guide/current-status-and-limitations',
           },
-          // {
-          //   text: 'Compare with Kysely',
-          //   link: '/guide/compare-with-kysely',
-          // },
+          {
+            text: 'Compare with Kysely',
+            link: '/guide/compare-with-kysely',
+          },
         ],
       },
       {
