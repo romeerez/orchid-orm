@@ -1,5 +1,11 @@
 # pqb
 
+## 0.36.13
+
+### Patch Changes
+
+- b658f19: Fix QueryResultType type (#319)
+
 ## 0.36.12
 
 ### Patch Changes
