@@ -8,7 +8,6 @@ import {
   getValueKey,
   MergeObjects,
   PickQueryMetaResult,
-  QueryReturnType,
   QueryThen,
   RecordBoolean,
   RecordUnknown,
@@ -35,7 +34,7 @@ export type MergeQuery<
     : K extends 'then'
     ? QueryThen<
         GetQueryResult<
-          QueryReturnType extends Q['returnType'] ? T : Q,
+          Q['returnType'] extends undefined ? T : Q,
           MergeQueryResult<T, Q>
         >
       >

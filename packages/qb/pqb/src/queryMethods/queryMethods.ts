@@ -158,7 +158,8 @@ export type GroupArgs<T extends PickQueryResult> = (
 
 interface QueryHelper<
   T extends PickQueryMetaShape,
-  Args extends unknown[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Args extends any[],
   Result,
 > {
   <
@@ -184,7 +185,8 @@ interface QueryHelper<
 
 // Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
 export type QueryHelperResult<
-  T extends QueryHelper<Query, unknown[], unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends QueryHelper<Query, any[], unknown>,
 > = T['result'];
 
 type NarrowTypeResult<T extends PickQueryMetaResultReturnType, Narrow> = {

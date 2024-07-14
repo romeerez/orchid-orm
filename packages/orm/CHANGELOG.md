@@ -1,5 +1,21 @@
 # orchid-orm
 
+## 1.32.16
+
+### Patch Changes
+
+- Updated dependencies [b658f19]
+  - pqb@0.36.13
+  - rake-db@2.22.14
+
+## 1.32.15
+
+### Patch Changes
+
+- Updated dependencies [81af2e1]
+  - pqb@0.36.12
+  - rake-db@2.22.13
+
 ## 1.32.14
 
 ### Patch Changes
