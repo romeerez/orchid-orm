@@ -767,7 +767,7 @@ export class Where {
    * ```ts
    * db.table.where({
    *   jsonbColumn: {
-   *     jsonSupersetOf: { a: 1 },
+   *     jsonSubsetOf: { a: 1 },
    *   },
    * });
    * ```

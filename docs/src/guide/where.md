@@ -624,7 +624,7 @@ Takes the value of any type, or sub query which returns a single value, or a raw
 ```ts
 db.table.where({
   jsonbColumn: {
-    jsonSupersetOf: { a: 1 },
+    jsonSubsetOf: { a: 1 },
   },
 });
 ```
