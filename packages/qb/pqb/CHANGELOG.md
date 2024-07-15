@@ -1,5 +1,12 @@
 # pqb
 
+## 0.36.14
+
+### Patch Changes
+
+- c35175b: Fix `jsonSet` and similar methods for snake case columns (#327)
+- b372aaa: Respect `nowSQL` option in soft delete (#328)
+
 ## 0.36.13
 
 ### Patch Changes

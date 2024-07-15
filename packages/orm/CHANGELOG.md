@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.32.17
+
+### Patch Changes
+
+- c35175b: Fix `jsonSet` and similar methods for snake case columns (#327)
+- Updated dependencies [c35175b]
+- Updated dependencies [b372aaa]
+  - pqb@0.36.14
+  - rake-db@2.22.15
+
 ## 1.32.16
 
 ### Patch Changes
