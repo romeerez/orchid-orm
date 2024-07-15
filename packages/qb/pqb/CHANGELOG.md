@@ -1,5 +1,13 @@
 # pqb
 
+## 0.36.15
+
+### Patch Changes
+
+- 2dca8a5: Change repository types to allow reassigning queries in some cases (#329)
+- Updated dependencies [2dca8a5]
+  - orchid-core@0.19.5
+
 ## 0.36.14
 
 ### Patch Changes

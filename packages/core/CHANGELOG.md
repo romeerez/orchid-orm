@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.5
+
+### Patch Changes
+
+- 2dca8a5: Change repository types to allow reassigning queries in some cases (#329)
+
 ## 0.19.4
 
 ### Patch Changes

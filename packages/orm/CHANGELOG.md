@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.32.18
+
+### Patch Changes
+
+- 2dca8a5: Change repository types to allow reassigning queries in some cases (#329)
+- Updated dependencies [2dca8a5]
+  - pqb@0.36.15
+  - orchid-core@0.19.5
+  - rake-db@2.22.16
+
 ## 1.32.17
 
 ### Patch Changes
