@@ -42,7 +42,7 @@ export function enableSoftDelete(
   (scopes as RecordUnknown).deleted = scope;
   (q.q.scopes ??= {}).nonDeleted = scope;
 
-  const _del = _softDelete(column);
+  const _del = _softDelete(column, q.internal.nowSQL);
   // @ts-expect-error it's ok
   q.baseQuery.delete = function (this: Query) {
     return _del.call(this.clone());
@@ -51,8 +51,8 @@ export function enableSoftDelete(
 
 const nowSql = new RawSQL('now()');
 
-const _softDelete = (column: PropertyKey) => {
-  const set = { [column]: nowSql };
+const _softDelete = (column: PropertyKey, customNowSQL?: string) => {
+  const set = { [column]: customNowSQL ? new RawSQL(customNowSQL) : nowSql };
   return function <T extends Query>(this: T) {
     return _queryUpdate(this, set as UpdateArg<T>);
   };

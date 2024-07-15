@@ -65,6 +65,8 @@ export interface QueryInternal<
   extensions?: DbExtension[];
   domains?: DbDomainArgRecord;
   tableData: TableData;
+  // For customizing `now()` sql
+  nowSQL?: string;
   // access with `getPrimaryKeys` utility
   primaryKeys?: string[];
 }

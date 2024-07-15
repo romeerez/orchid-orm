@@ -31,8 +31,6 @@ export const _queryDelete = <T extends PickQueryMetaResult>(
 
 export class Delete {
   /**
-   * It is aliased to `del` because `delete` is a reserved word in JavaScript.
-   *
    * This method deletes one or more rows, based on other conditions specified in the query.
    *
    * By default, `delete` will return a count of deleted records.

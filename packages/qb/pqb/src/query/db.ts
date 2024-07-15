@@ -142,12 +142,16 @@ export interface DbTableOptions<
   Shape extends QueryColumns,
 > extends QueryLogOptions {
   schema?: string;
-  // prepare all SQL queries before executing
-  // true by default
+  /**
+   * Prepare all SQL queries before executing,
+   * true by default
+   */
   autoPreparedStatements?: boolean;
   noPrimaryKey?: NoPrimaryKeyOption;
   snakeCase?: boolean;
-  // default language for the full text search
+  /**
+   * Default language for the full text search
+   */
   language?: string;
   /**
    * See {@link ScopeMethods}
@@ -157,10 +161,18 @@ export interface DbTableOptions<
    * See {@link SoftDeleteMethods}
    */
   softDelete?: SoftDeleteOption<Shape>;
-  // table comment, for migrations generator
+  /**
+   * Table comment, for migrations generator
+   */
   comment?: string;
-
+  /**
+   * Computed SQL or JS columns definitions
+   */
   computed?: ComputedOptionsFactory<ColumnTypes, Shape>;
+  /**
+   * For customizing `now()` sql, used in soft delete
+   */
+  nowSQL?: string;
 }
 
 /**
@@ -275,6 +287,7 @@ export class Db<
       snakeCase: options.snakeCase,
       noPrimaryKey: options.noPrimaryKey === 'ignore',
       comment: options.comment,
+      nowSQL: options.nowSQL,
       tableData,
     } as QueryInternal;
 
@@ -693,7 +706,6 @@ export const createDb = <
   log,
   logger,
   snakeCase,
-  nowSQL,
   schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
   columnTypes: ctOrFn = makeColumnTypes(schemaConfig) as unknown as ColumnTypes,
   ...options
@@ -704,6 +716,7 @@ export const createDb = <
     logger,
     autoPreparedStatements: options.autoPreparedStatements ?? false,
     noPrimaryKey: options.noPrimaryKey ?? 'error',
+    nowSQL: options.nowSQL,
     snakeCase,
   };
 
@@ -730,13 +743,14 @@ export const createDb = <
     options,
   );
 
+  const { nowSQL } = options;
   const tableConstructor: DbTableConstructor<ColumnTypes> = (
     table,
     shape,
     dataFn,
     options,
-  ) =>
-    new Db(
+  ) => {
+    return new Db(
       adapter,
       qb as never,
       table,
@@ -748,6 +762,7 @@ export const createDb = <
       { ...commonOptions, ...options },
       parseTableData(dataFn),
     ) as never;
+  };
 
   const db = Object.assign(tableConstructor, qb, {
     adapter,

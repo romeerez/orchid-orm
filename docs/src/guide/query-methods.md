@@ -226,7 +226,7 @@ await db.table.findOptional(123).none(); // -> undefined
 await db.table.find(123).none(); // throws NotFoundError
 ```
 
-[insert](/guide/create-update-delete#create-insert), [update](/guide/create-update-delete#update), and [delete](/guide/create-update-delete#del-delete) are returning a count of affected records.
+[insert](/guide/create-update-delete#create-insert), [update](/guide/create-update-delete#update), and [delete](/guide/create-update-delete#delete) are returning a count of affected records.
 
 When they are called with `none`, query does not execute and 0 is returned.
 

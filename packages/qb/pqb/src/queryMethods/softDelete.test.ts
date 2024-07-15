@@ -1,5 +1,6 @@
-import { expectSql } from 'test-utils';
+import { expectSql, testAdapter, testColumnTypes } from 'test-utils';
 import { UserSoftDelete } from '../test-utils/test-utils';
+import { createDb } from '../query/db';
 
 describe('softDelete', () => {
   it('should have nonDeleted scope enabled by default', () => {
@@ -28,6 +29,38 @@ describe('softDelete', () => {
       `
         UPDATE "user"
            SET "deletedAt" = now()
+         WHERE ("user"."deletedAt" IS NULL)
+      `,
+    );
+  });
+
+  it('should respect `nowSql` option', () => {
+    const db = createDb({
+      adapter: testAdapter,
+      columnTypes: testColumnTypes,
+      nowSQL: 'CURRENT_TIMESTAMP',
+    });
+
+    const UserSoftDelete = db(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string(),
+        active: t.boolean().nullable(),
+        deletedAt: t.timestamp().nullable(),
+      }),
+      undefined,
+      {
+        softDelete: true,
+      },
+    );
+
+    const q = UserSoftDelete.all().delete();
+    expectSql(
+      q.toSQL(),
+      `
+        UPDATE "user"
+           SET "deletedAt" = CURRENT_TIMESTAMP
          WHERE ("user"."deletedAt" IS NULL)
       `,
     );
