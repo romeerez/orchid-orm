@@ -55,18 +55,19 @@ export type MapMethods<T extends Query, Methods extends MethodsBase<T>> = {
     : never;
 };
 
-export type Repo<T extends Query, Methods extends MethodsBase<T>> = (<
-  Q extends { table: T['table']; shape: T['shape'] },
->(
-  q: Q,
-) => Query & Q & MapMethods<T, Methods>) &
-  T &
+export type Repo<T extends Query, Methods extends MethodsBase<T>> = T &
   MapMethods<T, Methods>;
 
 export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
   table: T,
   methods: Methods,
-): Repo<T, Methods> => {
+): Repo<
+  (<Q extends { table: T['table']; shape: T['shape'] }>(
+    q: Q,
+  ) => Query & Q & MapMethods<T, Methods>) &
+    T,
+  Methods
+> => {
   const queryMethods = {
     ...methods.queryMethods,
     ...methods.queryOneMethods,
@@ -104,5 +105,5 @@ export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
     get(_, key) {
       return q[key];
     },
-  }) as unknown as Repo<T, Methods>;
+  }) as never;
 };

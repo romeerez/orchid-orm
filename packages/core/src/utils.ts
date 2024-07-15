@@ -6,16 +6,6 @@ export type MaybeArray<T> = T | T[];
 
 export type MaybePromise<T> = T | Promise<T>;
 
-// Simple merge two objects.
-// When they have common keys, the value of the second object will be used.
-export type MergeObjects<A extends RecordUnknown, B extends RecordUnknown> = {
-  [K in keyof A | keyof B]: K extends keyof B
-    ? B[K]
-    : K extends keyof A
-    ? A[K]
-    : never;
-};
-
 export interface FnUnknownToUnknown {
   (a: unknown): unknown;
 }

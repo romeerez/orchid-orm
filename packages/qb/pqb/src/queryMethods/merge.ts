@@ -6,7 +6,6 @@ import {
 import { SelectQueryData, UnionSet } from '../sql';
 import {
   getValueKey,
-  MergeObjects,
   PickQueryMetaResult,
   QueryThen,
   RecordBoolean,
@@ -20,7 +19,8 @@ export type MergeQuery<
   [K in keyof T]: K extends 'meta'
     ? {
         [K in keyof T['meta'] | keyof Q['meta']]: K extends 'selectable'
-          ? MergeObjects<T['meta']['selectable'], Q['meta']['selectable']>
+          ? Q['meta']['selectable'] &
+              Omit<T['meta']['selectable'], keyof Q['meta']['selectable']>
           : K extends keyof Q['meta']
           ? Q['meta'][K]
           : T['meta'][K];
@@ -39,9 +39,9 @@ export type MergeQuery<
         >
       >
     : K extends 'windows'
-    ? MergeObjects<T['windows'], Q['windows']>
+    ? Q['windows'] & Omit<T['windows'], keyof Q['windows']>
     : K extends 'withData'
-    ? MergeObjects<T['withData'], Q['withData']>
+    ? Q['withData'] & Omit<T['withData'], keyof Q['withData']>
     : T[K];
 };
 
