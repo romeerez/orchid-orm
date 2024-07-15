@@ -583,22 +583,16 @@ db.table.where({
 
 ### JSONB column operators
 
-For the `jsonb` column, note that the `json` type has text operators instead.
+JSON functions are available only for the `jsonb` column, note that the `json` type has text operators instead.
 
-`jsonPath` operator: compare a column value under a given JSON path with the provided value.
+You can use [jsonPathQueryFirst](/guide/json.html#jsonpathqueryfirst) to filter by a JSON value, follow the link for details.
 
-Value can be of any type to compare with JSON value, or it can be a sub-query or a raw SQL expression.
+The value can be of any type, it can also be returned from a sub-query, raw SQL expression.
 
 ```ts
-db.table.where({
-  jsonbColumn: {
-    jsonPath: [
-      '$.name', // first element is JSON path
-      '=', // second argument is comparison operator
-      'value', // third argument is a value to compare with
-    ],
-  },
-});
+db.table.where((q) =>
+  q.get('jsonbColumn').jsonPathQueryFirst('$.name').equals(value),
+);
 ```
 
 `jsonSupersetOf`: check if the column value is a superset of provided value.
