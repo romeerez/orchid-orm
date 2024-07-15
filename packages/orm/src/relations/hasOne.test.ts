@@ -480,7 +480,7 @@ describe('hasOne', () => {
             UPDATE "profile"
             SET
               "bio" = (
-                SELECT "user"."name" "Name"
+                SELECT "user"."name"
                 FROM "user"
                 WHERE "user"."id" = "profile"."userId"
                   AND "user"."userKey" = "profile"."profileKey"

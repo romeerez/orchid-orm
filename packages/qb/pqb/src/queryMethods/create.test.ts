@@ -392,7 +392,7 @@ describe('create functions', () => {
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES ($1, $2)
-          RETURNING "snake"."snake_name" "snakeName"
+          RETURNING "snake"."snake_name"
         `,
         [snakeData.snakeName, snakeData.tailLength],
       );

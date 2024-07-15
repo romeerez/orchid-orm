@@ -61,7 +61,7 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "snakeName"
+          SELECT "snake"."snake_name"
           FROM "snake"
           LIMIT 1
         `,
@@ -126,7 +126,7 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "snakeName"
+          SELECT "snake"."snake_name"
           FROM "snake"
           LIMIT 1
         `,

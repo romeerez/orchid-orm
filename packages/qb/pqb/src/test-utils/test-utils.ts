@@ -88,13 +88,14 @@ export const Message = testDb('message', (t) => ({
 }));
 
 export type SnakeRecord = typeof Snake.outputType;
+export type SnakeData = { name: string; tags: string[] };
 export const Snake = testDb(
   'snake',
   (t) => ({
     snakeId: t.identity().primaryKey(),
     snakeName: t.text().unique(),
     tailLength: t.integer(),
-    snakeData: t.json().nullable(),
+    snakeData: t.json<SnakeData>().nullable(),
     ...t.timestamps(),
   }),
   undefined,

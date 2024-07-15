@@ -171,7 +171,7 @@ describe('update', () => {
             "tail_length" = $2,
             "updated_at" = now()
         WHERE "snake"."snake_id" = $3
-        RETURNING "snake"."snake_id" "snakeId"
+        RETURNING "snake"."snake_id"
       `,
       [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
     );

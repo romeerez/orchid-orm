@@ -49,7 +49,7 @@ describe('delete', () => {
       query.toSQL(),
       `
         DELETE FROM "snake" WHERE "snake"."snake_name" = $1
-        RETURNING "snake"."snake_name" "snakeName"
+        RETURNING "snake"."snake_name"
       `,
       ['name'],
     );

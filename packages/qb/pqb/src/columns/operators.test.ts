@@ -1,4 +1,10 @@
-import { User, userData, UserData } from '../test-utils/test-utils';
+import {
+  Snake,
+  snakeData,
+  SnakeData,
+  snakeSelectAll,
+  User,
+} from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
 describe('operators', () => {
@@ -523,15 +529,15 @@ describe('operators', () => {
   describe('json operators', () => {
     describe('jsonSet', () => {
       it('should select jsonSet', () => {
-        const q = User.get('data').jsonSet('key', 'value');
+        const q = Snake.get('snakeData').jsonSet('key', 'value');
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, SnakeData | null>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_set("user"."data", $1, $2)
-            FROM "user"
+            SELECT jsonb_set("snake"."snake_data", $1, $2)
+            FROM "snake"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -539,38 +545,45 @@ describe('operators', () => {
       });
 
       it('should update with jsonSet', () => {
-        const q = User.find(1).update({
-          data: (q) => q.get('data').jsonSet('key', 'value'),
+        const q = Snake.find(1).update({
+          snakeData: (q) => q.get('snakeData').jsonSet('key', 'value'),
         });
 
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "snake"
             SET
-              "data" = jsonb_set("user"."data", $1, $2),
-              "updatedAt" = now()
-            WHERE "user"."id" = $3
+              "snake_data" = jsonb_set("snake"."snake_data", $1, $2),
+              "updated_at" = now()
+            WHERE "snake"."snake_id" = $3
           `,
           ['{key}', '"value"', 1],
         );
       });
 
       it('should work with untyped json', () => {
-        const table = testDb('table', (t) => ({
-          id: t.identity().primaryKey(),
-          data: t.json(),
-        }));
+        const table = testDb(
+          'table',
+          (t) => ({
+            id: t.identity().primaryKey(),
+            daTa: t.json(),
+          }),
+          undefined,
+          {
+            snakeCase: true,
+          },
+        );
 
         const q = table.find(1).update({
-          data: (q) => q.get('data').jsonSet('key', 'value'),
+          daTa: (q) => q.get('daTa').jsonSet('key', 'value'),
         });
 
         expectSql(
           q.toSQL(),
           `
             UPDATE "table"
-            SET "data" = jsonb_set("table"."data", $1, $2)
+            SET "da_ta" = jsonb_set("table"."da_ta", $1, $2)
             WHERE "table"."id" = $3
           `,
           ['{key}', '"value"', 1],
@@ -580,15 +593,15 @@ describe('operators', () => {
 
     describe('jsonReplace', () => {
       it('should select jsonReplace to do json_set with false to only replace existing', () => {
-        const q = User.get('data').jsonReplace('key', 'value');
+        const q = Snake.get('snakeData').jsonReplace('key', 'value');
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, SnakeData | null>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_set("user"."data", $1, $2, false)
-            FROM "user"
+            SELECT jsonb_set("snake"."snake_data", $1, $2, false)
+            FROM "snake"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -596,18 +609,18 @@ describe('operators', () => {
       });
 
       it('should update with jsonReplace', () => {
-        const q = User.find(1).update({
-          data: (q) => q.get('data').jsonReplace('key', 'value'),
+        const q = Snake.find(1).update({
+          snakeData: (q) => q.get('snakeData').jsonReplace('key', 'value'),
         });
 
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "snake"
             SET
-              "data" = jsonb_set("user"."data", $1, $2, false),
-              "updatedAt" = now()
-            WHERE "user"."id" = $3
+              "snake_data" = jsonb_set("snake"."snake_data", $1, $2, false),
+              "updated_at" = now()
+            WHERE "snake"."snake_id" = $3
           `,
           ['{key}', '"value"', 1],
         );
@@ -616,15 +629,15 @@ describe('operators', () => {
 
     describe('jsonInsert', () => {
       it('should select jsonInsert', () => {
-        const q = User.get('data').jsonInsert('key', 'value');
+        const q = Snake.get('snakeData').jsonInsert('key', 'value');
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, SnakeData | null>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_insert("user"."data", $1, $2)
-            FROM "user"
+            SELECT jsonb_insert("snake"."snake_data", $1, $2)
+            FROM "snake"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -632,35 +645,35 @@ describe('operators', () => {
       });
 
       it('should update with jsonInsert', () => {
-        const q = User.find(1).update({
-          data: (q) => q.get('data').jsonInsert('key', 'value'),
+        const q = Snake.find(1).update({
+          snakeData: (q) => q.get('snakeData').jsonInsert('key', 'value'),
         });
 
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "snake"
             SET
-              "data" = jsonb_insert("user"."data", $1, $2),
-              "updatedAt" = now()
-            WHERE "user"."id" = $3
+              "snake_data" = jsonb_insert("snake"."snake_data", $1, $2),
+              "updated_at" = now()
+            WHERE "snake"."snake_id" = $3
           `,
           ['{key}', '"value"', 1],
         );
       });
 
       it('should select jsonInsert with after: true', () => {
-        const q = User.get('data').jsonInsert('key', 'value', {
+        const q = Snake.get('snakeData').jsonInsert('key', 'value', {
           after: true,
         });
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, SnakeData | null>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_insert("user"."data", $1, $2, true)
-            FROM "user"
+            SELECT jsonb_insert("snake"."snake_data", $1, $2, true)
+            FROM "snake"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -668,19 +681,19 @@ describe('operators', () => {
       });
 
       it('should update with jsonInsert with after: true', () => {
-        const q = User.find(1).update({
-          data: (q) =>
-            q.get('data').jsonInsert('key', 'value', { after: true }),
+        const q = Snake.find(1).update({
+          snakeData: (q) =>
+            q.get('snakeData').jsonInsert('key', 'value', { after: true }),
         });
 
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "snake"
             SET
-              "data" = jsonb_insert("user"."data", $1, $2, true),
-              "updatedAt" = now()
-            WHERE "user"."id" = $3
+              "snake_data" = jsonb_insert("snake"."snake_data", $1, $2, true),
+              "updated_at" = now()
+            WHERE "snake"."snake_id" = $3
           `,
           ['{key}', '"value"', 1],
         );
@@ -689,15 +702,15 @@ describe('operators', () => {
 
     describe('jsonRemove', () => {
       it('should select jsonRemove', () => {
-        const q = User.get('data').jsonRemove('key');
+        const q = Snake.get('snakeData').jsonRemove('key');
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, SnakeData | null>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT ("user"."data" #- $1)
-            FROM "user"
+            SELECT ("snake"."snake_data" #- $1)
+            FROM "snake"
             LIMIT 1
           `,
           ['{key}'],
@@ -705,18 +718,18 @@ describe('operators', () => {
       });
 
       it('should update with jsonRemove', () => {
-        const q = User.find(1).update({
-          data: (q) => q.get('data').jsonRemove('key'),
+        const q = Snake.find(1).update({
+          snakeData: (q) => q.get('snakeData').jsonRemove('key'),
         });
 
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "snake"
             SET
-              "data" = ("user"."data" #- $1),
-              "updatedAt" = now()
-            WHERE "user"."id" = $2
+              "snake_data" = ("snake"."snake_data" #- $1),
+              "updated_at" = now()
+            WHERE "snake"."snake_id" = $2
           `,
           ['{key}', 1],
         );
@@ -728,20 +741,20 @@ describe('operators', () => {
         useTestDatabase();
 
         it('should select json property', async () => {
-          await User.create({
-            ...userData,
-            data: { name: new Date().toISOString(), tags: ['one'] },
+          await Snake.create({
+            ...snakeData,
+            snakeData: { name: new Date().toISOString(), tags: ['one'] },
           });
 
-          const q = User.get('data').jsonPathQueryFirst('$.name', {
+          const q = Snake.get('snakeData').jsonPathQueryFirst('$.name', {
             type: (q) => q.date().asDate(),
           });
 
           expectSql(
             q.toSQL(),
             `
-            SELECT jsonb_path_query_first("user"."data", $1)
-            FROM "user"
+            SELECT jsonb_path_query_first("snake"."snake_data", $1)
+            FROM "snake"
             LIMIT 1
           `,
             ['$.name'],
@@ -756,15 +769,15 @@ describe('operators', () => {
       });
 
       it('should support `vars`', () => {
-        const q = User.get('data').jsonPathQueryFirst('$.name', {
+        const q = Snake.get('snakeData').jsonPathQueryFirst('$.name', {
           vars: { key: 'value' },
         });
 
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_path_query_first("user"."data", $1, $2)
-            FROM "user"
+            SELECT jsonb_path_query_first("snake"."snake_data", $1, $2)
+            FROM "snake"
             LIMIT 1
           `,
           ['$.name', '{"key":"value"}'],
@@ -772,15 +785,15 @@ describe('operators', () => {
       });
 
       it('should support `silent`', () => {
-        const q = User.get('data').jsonPathQueryFirst('$.name', {
+        const q = Snake.get('snakeData').jsonPathQueryFirst('$.name', {
           silent: true,
         });
 
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_path_query_first("user"."data", $1, NULL, true)
-            FROM "user"
+            SELECT jsonb_path_query_first("snake"."snake_data", $1, NULL, true)
+            FROM "snake"
             LIMIT 1
           `,
           ['$.name'],
@@ -788,7 +801,7 @@ describe('operators', () => {
       });
 
       it('should support `vars` and `silent`', () => {
-        const q = User.get('data').jsonPathQueryFirst('$.name', {
+        const q = Snake.get('snakeData').jsonPathQueryFirst('$.name', {
           vars: { key: 'value' },
           silent: true,
         });
@@ -796,8 +809,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_path_query_first("user"."data", $1, $2, true)
-            FROM "user"
+            SELECT jsonb_path_query_first("snake"."snake_data", $1, $2, true)
+            FROM "snake"
             LIMIT 1
           `,
           ['$.name', '{"key":"value"}'],
@@ -805,49 +818,49 @@ describe('operators', () => {
       });
 
       it('should be usable in where', () => {
-        const q = User.where((q) =>
-          q.get('data').jsonPathQueryFirst('$.name').equals('name'),
+        const q = Snake.where((q) =>
+          q.get('snakeData').jsonPathQueryFirst('$.name').equals('name'),
         );
 
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE jsonb_path_query_first("user"."data", $1) = $2
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) = $2
           `,
           ['$.name', 'name'],
         );
       });
 
       it('should be usable in where with null value', () => {
-        const q = User.where((q) =>
-          q.get('data').jsonPathQueryFirst('$.name').equals(null),
+        const q = Snake.where((q) =>
+          q.get('snakeData').jsonPathQueryFirst('$.name').equals(null),
         );
 
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE jsonb_path_query_first("user"."data", $1) IS NULL
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) IS NULL
           `,
           ['$.name'],
         );
       });
 
       it('should be usable in where with a sub query', () => {
-        const q = User.where((q) =>
+        const q = Snake.where((q) =>
           q
-            .get('data')
+            .get('snakeData')
             .jsonPathQueryFirst('$.name')
-            .equals(User.select('name').get('name')),
+            .equals(Snake.select('snakeName').get('snakeName')),
         );
 
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE jsonb_path_query_first("user"."data", $1) = (
-              SELECT "user"."name" FROM "user" LIMIT 1
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) = (
+              SELECT "snake"."snake_name" FROM "snake" LIMIT 1
             )
           `,
           ['$.name'],
@@ -855,9 +868,9 @@ describe('operators', () => {
       });
 
       it('should be usable in where with raw sql', () => {
-        const q = User.where((q) =>
+        const q = Snake.where((q) =>
           q
-            .get('data')
+            .get('snakeData')
             .jsonPathQueryFirst('$.name')
             .equals(testDb.sql`'name'`),
         );
@@ -865,8 +878,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE jsonb_path_query_first("user"."data", $1) = 'name'
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) = 'name'
           `,
           ['$.name'],
         );
@@ -875,14 +888,14 @@ describe('operators', () => {
 
     describe('json operators chaining', () => {
       it('should select a chain of json operators', () => {
-        const q = User.get('data')
+        const q = Snake.get('snakeData')
           .jsonSet('a', 1)
           .jsonReplace('b', 2)
           .jsonInsert('c', 3)
           .jsonInsert('d', 4, { after: true })
           .jsonRemove('e');
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, SnakeData | null>();
 
         expectSql(
           q.toSQL(),
@@ -892,7 +905,7 @@ describe('operators', () => {
                 jsonb_insert(
                   jsonb_set(
                     jsonb_set(
-                      "user"."data",
+                      "snake"."snake_data",
                       $1,
                       $2
                     ),
@@ -908,7 +921,7 @@ describe('operators', () => {
                 true
               ) #- $9
             )
-            FROM "user"
+            FROM "snake"
             LIMIT 1
           `,
           ['{a}', '1', '{b}', '2', '{c}', '3', '{d}', '4', '{e}'],
@@ -916,10 +929,10 @@ describe('operators', () => {
       });
 
       it('should update record with a chain of json operators', () => {
-        const q = User.find(1).update({
-          data: (q) =>
+        const q = Snake.find(1).update({
+          snakeData: (q) =>
             q
-              .get('data')
+              .get('snakeData')
               .jsonSet('a', 1)
               .jsonReplace('b', 2)
               .jsonInsert('c', 3)
@@ -930,13 +943,13 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
-            SET "data" = (
+            UPDATE "snake"
+            SET "snake_data" = (
               jsonb_insert(
                 jsonb_insert(
                   jsonb_set(
                     jsonb_set(
-                      "user"."data",
+                      "snake"."snake_data",
                       $1,
                       $2
                     ),
@@ -951,8 +964,8 @@ describe('operators', () => {
                 $8,
                 true
               ) #- $9
-            ), "updatedAt" = now()
-            WHERE "user"."id" = $10
+            ), "updated_at" = now()
+            WHERE "snake"."snake_id" = $10
           `,
           ['{a}', '1', '{b}', '2', '{c}', '3', '{d}', '4', '{e}', 1],
         );
@@ -966,10 +979,10 @@ describe('operators', () => {
     `('$method', ({ method, sql }) => {
       it('should handle value', () => {
         expectSql(
-          User.where({ data: { [method]: { a: 'b' } } }).toSQL(),
+          Snake.where({ snakeData: { [method]: { a: 'b' } } }).toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE "user"."data" ${sql} $1
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE "snake"."snake_data" ${sql} $1
           `,
           [{ a: 'b' }],
         );
@@ -977,24 +990,24 @@ describe('operators', () => {
 
       it('should handle sub query', () => {
         expectSql(
-          User.where({
-            data: { [method]: User.select('data').take() },
+          Snake.where({
+            snakeData: { [method]: Snake.select('snakeData').take() },
           }).toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE "snake"."snake_data" ${sql} (SELECT "snake"."snake_data" "snakeData" FROM "snake" LIMIT 1)
           `,
         );
       });
 
       it('should handle raw query', () => {
         expectSql(
-          User.where({
-            data: { [method]: testDb.sql`'{"a":"b"}'` },
+          Snake.where({
+            snakeData: { [method]: testDb.sql`'{"a":"b"}'` },
           }).toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE "user"."data" ${sql} '{"a":"b"}'
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE "snake"."snake_data" ${sql} '{"a":"b"}'
           `,
         );
       });
