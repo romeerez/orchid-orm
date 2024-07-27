@@ -8,15 +8,12 @@ import {
 import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
 import { JoinArgs, JoinFirstArg } from '../join/join';
 import {
-  ColumnsShapeBase,
   EmptyObject,
   Expression,
   MaybeArray,
   PickQueryMeta,
   SQLQueryArgs,
 } from 'orchid-core';
-import { getIsJoinSubQuery } from '../../sql/join';
-import { getShapeFromSelect } from '../select';
 import { QueryBase } from '../../query/queryBase';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
 import { processJoinArgs } from '../join/processJoinArgs';
@@ -349,21 +346,7 @@ const existsArgs = (
   q: JoinFirstArg<Query>,
   args: JoinArgs<Query, Query>,
 ) => {
-  let joinSubQuery;
-  if (typeof q === 'object') {
-    joinSubQuery = getIsJoinSubQuery(q as Query);
-    if (joinSubQuery) {
-      q = (q as Query).clone();
-      (q as Query).shape = getShapeFromSelect(
-        q as Query,
-        true,
-      ) as ColumnsShapeBase;
-    }
-  } else {
-    joinSubQuery = false;
-  }
-
-  const joinArgs = processJoinArgs(self, q, args as never, joinSubQuery);
+  const joinArgs = processJoinArgs(self, q, args as never, false, true);
 
   return [
     {

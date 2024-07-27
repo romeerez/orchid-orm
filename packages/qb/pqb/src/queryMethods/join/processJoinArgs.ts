@@ -22,12 +22,14 @@ import { returnArg } from 'orchid-core';
  * @param first - first join argument
  * @param args - rest join arguments
  * @param joinSubQuery - callee should find out whether first argument should result in a sub-queried join
+ * @param whereExists - the lateral expression should be never wrapped into a sub query for `whereExist`
  */
 export const processJoinArgs = (
   joinTo: Query,
   first: JoinFirstArg<never>,
   args: JoinArgs<Query, JoinFirstArg<Query>>,
   joinSubQuery: boolean,
+  whereExists?: boolean,
 ): JoinItemArgs => {
   if (typeof first === 'string') {
     if (first in joinTo.relations) {
@@ -39,7 +41,11 @@ export const processJoinArgs = (
         const r = args[0](
           makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo),
         ) as Query;
-        return { j: j.merge(r), s: joinSubQuery || getIsJoinSubQuery(r), r };
+        return {
+          j: j.merge(r),
+          s: whereExists ? false : joinSubQuery || getIsJoinSubQuery(r),
+          r,
+        };
       }
 
       return { j, s: joinSubQuery };
@@ -82,7 +88,11 @@ export const processJoinArgs = (
         ),
       ) as Query;
 
-      return { w: first, r, s: joinSubQuery || getIsJoinSubQuery(r) };
+      return {
+        w: first,
+        r,
+        s: whereExists ? false : joinSubQuery || getIsJoinSubQuery(r),
+      };
     }
   }
 

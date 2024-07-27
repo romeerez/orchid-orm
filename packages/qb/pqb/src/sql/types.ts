@@ -136,7 +136,7 @@ export type JoinItemArgs =
   | {
       // relation query from `relationConfig.joinQuery`
       j: Query;
-      // join sub query
+      // join sub query, is not applicable in whereExists
       s: boolean;
       // callback result, if callback is present
       r?: Query;
@@ -146,7 +146,7 @@ export type JoinItemArgs =
       w: string;
       // callback result
       r: Query;
-      // join sub query
+      // join sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
@@ -158,7 +158,7 @@ export type JoinItemArgs =
   | {
       // joining query
       q: QueryWithTable;
-      // join sub query
+      // join sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
@@ -166,7 +166,7 @@ export type JoinItemArgs =
       q: QueryWithTable;
       // callback result
       r: Query;
-      // join sub query
+      // join sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
@@ -174,7 +174,7 @@ export type JoinItemArgs =
       q: QueryWithTable;
       // join arguments
       a: SimpleJoinItemNonSubQueryArgs;
-      // join sub query
+      // join sub query, is not applicable in whereExists
       s: boolean;
     };
 

@@ -254,14 +254,18 @@ export const testJoin = ({
           q.toSQL(),
           makeSql({
             select: `SELECT "as"."one" "id", "as"."two" "text" FROM "${table}"`,
-            target: `
-              (
+            target: whereExists
+              ? `"${joinTable}" AS "as"`
+              : `(
                 SELECT "as"."${fkeyColumn}" "one", "as"."${textColumn}" "two"
                 FROM "${joinTable}" AS "as"
                 WHERE "as"."${fkeyColumn}" = $${values.length + (or ? 2 : 1)}
-              ) "as"
-            `,
-            conditions: `"as"."one" = ${pkeySql}`,
+              ) "as"`,
+            conditions: whereExists
+              ? `"one" = ${pkeySql} AND "as"."${fkeyColumn}" = $${
+                  values.length + (or ? 2 : 1)
+                }`
+              : `"as"."one" = ${pkeySql}`,
             where: `"as"."two" = $${values.length + (or ? 1 : 2)}`,
           }),
           [...values, or ? 'two' : 'one', or ? 'one' : 'two'],
