@@ -351,7 +351,7 @@ describe('valibot schema config', () => {
     numeric: t.numeric(),
     decimal: t.decimal(),
     doublePrecision: t.doublePrecision(),
-    varchar: t.varchar(10),
+    varchar: t.varchar(),
     text: t.text(),
     string: t.string(),
   };
@@ -372,8 +372,7 @@ describe('valibot schema config', () => {
     'string',
   ])('%s', (method) => {
     it('should convert to string', () => {
-      const type =
-        method === 'varchar' ? () => t.varchar(20) : t[method as 'numeric'];
+      const type = t[method as 'numeric'];
 
       expectAllParse(type(), 's', 's');
 
@@ -450,10 +449,7 @@ describe('valibot schema config', () => {
     });
 
     it('should convert to string with limit', () => {
-      const type =
-        method === 'varchar'
-          ? t.varchar(10).length(3)
-          : t[method as 'text']().length(3);
+      const type = t[method as 'text']().length(3);
 
       expectAllThrow(type, '', 'Invalid length: Expected 3 but received 0');
 

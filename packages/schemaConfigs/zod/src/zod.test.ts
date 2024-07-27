@@ -361,7 +361,7 @@ describe('zod schema config', () => {
   const numeric = t.numeric();
   const decimal = t.decimal();
   const doublePrecision = t.doublePrecision();
-  const varchar = t.varchar(5);
+  const varchar = t.varchar();
   const text = t.text();
   const string = t.string();
 

@@ -905,7 +905,7 @@ export interface ValibotSchemaConfig {
   doublePrecision(): DoublePrecisionColumnValibot;
   bigSerial(): BigSerialColumnValibot;
   money(): MoneyColumnValibot;
-  varchar(limit: number): VarCharColumnValibot;
+  varchar(limit?: number): VarCharColumnValibot;
   text(): TextColumnValibot;
   string(limit?: number): StringColumnValibot;
   citext(): CitextColumnValibot;

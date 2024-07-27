@@ -49,13 +49,21 @@ export abstract class LimitedTextBaseColumn<
 > extends TextBaseColumn<Schema> {
   declare data: TextColumnData & { maxChars?: number };
 
-  constructor(schema: Schema, limit: number) {
-    super(schema, schema.stringMax(limit) as never);
+  constructor(schema: Schema, limit?: number) {
+    super(
+      schema,
+      (limit !== undefined
+        ? schema.stringMax(limit)
+        : schema.stringSchema()) as never,
+    );
     this.data.maxChars = limit;
   }
 
   toSQL() {
-    return joinTruthy(this.dataType, `(${this.data.maxChars})`);
+    return joinTruthy(
+      this.dataType,
+      this.data.maxChars !== undefined && `(${this.data.maxChars})`,
+    );
   }
 }
 

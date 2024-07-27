@@ -23,11 +23,8 @@ const testStringColumnMethods = (
       | 'citext']
   >,
   name: string,
-  limit = '',
 ) => {
-  expect(type.nonEmpty().toCode(ctx, 'key')).toBe(
-    `t.${name}(${limit}).nonEmpty()`,
-  );
+  expect(type.nonEmpty().toCode(ctx, 'key')).toBe(`t.${name}().nonEmpty()`);
 
   expect(
     type
@@ -52,7 +49,7 @@ const testStringColumnMethods = (
       .toUpperCase()
       .toCode(ctx, 'key'),
   ).toBe(
-    `t.${name}(${limit})` +
+    `t.${name}()` +
       `.min(1, 'min message')` +
       `.max(10, 'max message')` +
       `.length(15, 'length message')` +
@@ -82,7 +79,7 @@ describe('string columns', () => {
     describe('varchar', () => {
       it('should output string', async () => {
         const result = await testDb.get(
-          testDb.sql`'text'::varchar(4)`.type(() => t.varchar(4)),
+          testDb.sql`'text'::varchar`.type(() => t.varchar()),
         );
         expect(result).toBe('text');
 
@@ -90,9 +87,9 @@ describe('string columns', () => {
       });
 
       it('should have toCode', () => {
-        expect(t.varchar(5).toCode(ctx, 'key')).toBe('t.varchar(5)');
+        expect(t.varchar().toCode(ctx, 'key')).toBe('t.varchar()');
 
-        testStringColumnMethods(t.varchar(5), 'varchar', '5');
+        testStringColumnMethods(t.varchar(), 'varchar');
       });
     });
 

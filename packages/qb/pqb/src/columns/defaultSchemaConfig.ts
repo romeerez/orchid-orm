@@ -115,7 +115,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   doublePrecision(): DoublePrecisionColumn<DefaultSchemaConfig>;
   bigSerial(): BigSerialColumn<DefaultSchemaConfig>;
   money(): MoneyColumn<DefaultSchemaConfig>;
-  varchar(limit: number): VarCharColumn<DefaultSchemaConfig>;
+  varchar(limit?: number): VarCharColumn<DefaultSchemaConfig>;
   text(): TextColumn<DefaultSchemaConfig>;
   string(limit?: number): StringColumn<DefaultSchemaConfig>;
   citext(): CitextColumn<DefaultSchemaConfig>;

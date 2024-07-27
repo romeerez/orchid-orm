@@ -65,7 +65,7 @@ export interface ColumnSchemaConfig<T extends ColumnTypeBase = ColumnTypeBase>
   doublePrecision(): T;
   bigSerial(): T;
   money(): T;
-  varchar(limit: number): T;
+  varchar(limit?: number): T;
   text(): T;
   string(limit?: number): T;
   citext(): T;

@@ -738,7 +738,7 @@ export interface ZodSchemaConfig {
   doublePrecision(): DoublePrecisionColumnZod;
   bigSerial(): BigSerialColumnZod;
   money(): MoneyColumnZod;
-  varchar(limit: number): VarCharColumnZod;
+  varchar(limit?: number): VarCharColumnZod;
   text(): TextColumnZod;
   string(limit?: number): StringColumnZod;
   citext(): CitextColumnZod;

@@ -75,7 +75,8 @@ db.someTable.where({
 ## text
 
 - `t.text()` is for an unlimited database `text` type.
-- `t.varchar(limit: number)` is for text with a limit on a database level.
+- `t.varchar(limit?: number)` is for text with a limit on a database level.
+  If you don't specify a limit, it is identical to the `TEXT` Postgres type.
 - `t.string(limit = 255)` is the same as `varchar` with 255 default limit.
 
 ```ts
@@ -83,7 +84,7 @@ db.someTable.where({
 t.text() // -> string
 
 // variable-length text with limit
-t.varchar(limit: number) // -> string
+t.varchar(limit?: number) // -> string
 
 // `varchar` type with optional limit defaulting to 255.
 t.string(limit?: number = 255) // -> string
