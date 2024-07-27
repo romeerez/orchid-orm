@@ -19,9 +19,20 @@ import {
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { raw } from '../sql/rawSql';
+import { MAX_BINDING_PARAMS } from '../sql/constants';
+
+const setMaxBindingParams = (value: number) => {
+  (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;
+};
 
 jest.mock('../sql/constants', () => ({
-  MAX_BINDING_PARAMS: 5,
+  // Behold the power of JS coercions
+  MAX_BINDING_PARAMS: {
+    value: 5,
+    toString() {
+      return this.value;
+    },
+  },
 }));
 
 const RuntimeDefaultTable = testDb('user', (t) => ({
@@ -32,6 +43,10 @@ const RuntimeDefaultTable = testDb('user', (t) => ({
 
 describe('create functions', () => {
   useTestDatabase();
+
+  beforeEach(() => {
+    setMaxBindingParams(5);
+  });
 
   describe('createRaw', () => {
     it('should create with raw sql and list of columns', () => {
@@ -538,6 +553,25 @@ describe('create functions', () => {
         ['password'],
       );
     });
+
+    it('should not call `encode` with undefined', () => {
+      const table = testDb('table', (t) => ({
+        id: t.identity().primaryKey(),
+        key: t.text(),
+        value: t
+          .integer()
+          .encode(() => 'encoded')
+          .nullable(),
+      }));
+
+      const q = table.create({ key: 'key', value: undefined });
+
+      expectSql(
+        q.toSQL(),
+        `INSERT INTO "table"("key") VALUES ($1) RETURNING *`,
+        ['key'],
+      );
+    });
   });
 
   describe('insert', () => {
@@ -827,6 +861,32 @@ describe('create functions', () => {
           VALUES (DEFAULT), (DEFAULT), (DEFAULT)
           RETURNING *
         `,
+      );
+    });
+
+    it('should not call `encode` with undefined', () => {
+      setMaxBindingParams(6);
+
+      const table = testDb('table', (t) => ({
+        id: t.identity().primaryKey(),
+        key: t.text(),
+        value: t
+          .integer()
+          .encode(() => 'encoded')
+          .nullable(),
+      }));
+
+      const q = table.createMany([
+        { key: 'key', value: 1 },
+        { key: 'key' },
+        { key: 'key', value: 1 },
+        { key: 'key' },
+      ]);
+
+      expectSql(
+        q.toSQL(),
+        `INSERT INTO "table"("key", "value") VALUES ($1, $2), ($3, DEFAULT), ($4, $5), ($6, DEFAULT) RETURNING *`,
+        ['key', 'encoded', 'key', 'key', 'encoded', 'key'],
       );
     });
 

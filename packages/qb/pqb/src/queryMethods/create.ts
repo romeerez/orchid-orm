@@ -406,7 +406,8 @@ const processCreateItem = (
 
       if (
         !ctx.columns.has(key) &&
-        ((shape[key] && !shape[key].data.computed) || shape === anyShape)
+        ((shape[key] && !shape[key].data.computed) || shape === anyShape) &&
+        item[key] !== undefined
       ) {
         ctx.columns.set(key, ctx.columns.size);
         encoders[key] = shape[key]?.encodeFn as FnUnknownToUnknown;
@@ -420,20 +421,6 @@ const createCtx = (): CreateCtx => ({
   columns: new Map(),
   resultAll: undefined as unknown as RecordUnknown[],
 });
-
-// Packs record values from the provided object into array of values.
-// Encode values when the column has an encoder.
-const mapColumnValues = (
-  columns: string[],
-  encoders: RecordEncoder,
-  data: RecordUnknown,
-): unknown[] => {
-  return columns.map((key) =>
-    encoders[key] && !isExpression(data[key])
-      ? encoders[key](data[key])
-      : data[key],
-  );
-};
 
 /**
  * Processes arguments of `create`, `insert`, `createFrom` and `insertFrom` when it has data.
@@ -459,7 +446,14 @@ const handleOneData = (
   processCreateItem(q, data, 0, ctx, encoders);
 
   const columns = Array.from(ctx.columns.keys());
-  const values = [mapColumnValues(columns, encoders, data)];
+  const values = [
+    columns.map((key) =>
+      // undefined values were stripped and no need to check for them
+      encoders[key] && !isExpression(data[key])
+        ? encoders[key](data[key])
+        : data[key],
+    ),
+  ];
 
   return { columns, values };
 };
@@ -493,7 +487,11 @@ const handleManyData = (
   const columns = Array.from(ctx.columns.keys());
 
   data.forEach((item, i) => {
-    (values as unknown[][])[i] = mapColumnValues(columns, encoders, item);
+    (values as unknown[][])[i] = columns.map((key) =>
+      encoders[key] && item[key] !== undefined && !isExpression(item[key])
+        ? encoders[key](item[key])
+        : item[key],
+    );
   });
 
   return { columns, values };
