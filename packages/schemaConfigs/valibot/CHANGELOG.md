@@ -1,5 +1,17 @@
 # orchid-orm-valibot
 
+## 0.2.26
+
+### Patch Changes
+
+- d401313: Make varchar limit optional (#331)
+- Updated dependencies [d401313]
+- Updated dependencies [637b970]
+- Updated dependencies [1073559]
+- Updated dependencies [684945e]
+  - pqb@0.36.16
+  - orchid-core@0.19.6
+
 ## 0.2.25
 
 ### Patch Changes

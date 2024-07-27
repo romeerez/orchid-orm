@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.6
+
+### Patch Changes
+
+- d401313: Make varchar limit optional (#331)
+
 ## 0.19.5
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # pqb
 
+## 0.36.16
+
+### Patch Changes
+
+- d401313: Make varchar limit optional (#331)
+- 637b970: Fix incorrect whereExist query wrapping into a sub query (#333)
+- 1073559: Fix: prevent calling `encode` with undefined when creating (#340)
+- 684945e: Fix inserting multiple empty records (#339)
+- Updated dependencies [d401313]
+  - orchid-core@0.19.6
+
 ## 0.36.15
 
 ### Patch Changes
