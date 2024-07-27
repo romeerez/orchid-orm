@@ -58,7 +58,7 @@ export const makeInsertSql = (
     // for `create({})` case: `{}` is transformed into `[[]]`,
     // we replace it with `[[undefined]]`, and it generates SQL `VALUES (DEFAULT)`
     if (Array.isArray(values) && Array.isArray(values[0])) {
-      values = [[undefined]];
+      values = values.map(() => [undefined]);
     }
   }
 

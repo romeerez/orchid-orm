@@ -813,6 +813,23 @@ describe('create functions', () => {
       assertType<Awaited<typeof q>, string[]>();
     });
 
+    it('should create multiple empty records', () => {
+      const table = testDb('table', (t) => ({
+        id: t.identity().primaryKey(),
+      }));
+
+      const q = table.createMany([{}, {}, {}]);
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "table"("id")
+          VALUES (DEFAULT), (DEFAULT), (DEFAULT)
+          RETURNING *
+        `,
+      );
+    });
+
     describe('auto-batching lots of value groups', () => {
       it('should split large insert into batches', () => {
         const q = Tag.insertMany(
