@@ -273,10 +273,12 @@ export const pushJoinSql = (
     let sql;
     if (Array.isArray(item)) {
       const q = item[1];
+
       const { aliasValue } = ctx;
       ctx.aliasValue = true;
 
       const as = item[2];
+
       sql = `${item[0]} LATERAL (${getSqlText(q.toSQL(ctx))}) "${
         query.joinOverrides?.[as] || as
       }" ON true`;

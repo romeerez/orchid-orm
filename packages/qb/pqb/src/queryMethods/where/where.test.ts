@@ -52,7 +52,7 @@ describe('where', () => {
 
   testWhereExists({
     joinTo: User,
-    pkey: 'id',
+    pkey: 'user.id',
     joinTarget: Message,
     fkey: 'authorId',
     text: 'text',
@@ -103,7 +103,7 @@ describe('where with named columns', () => {
 
   testWhereExists({
     joinTo: User,
-    pkey: 'id',
+    pkey: 'user.id',
     joinTarget: Snake,
     fkey: 'tailLength',
     text: 'snakeName',
@@ -112,7 +112,7 @@ describe('where with named columns', () => {
 
 describe('where joined columns', () => {
   testWhere(
-    (cb) => cb(User.join(Message, (q) => q.on('authorId', 'id'))).toSQL(),
+    (cb) => cb(User.join(Message, (q) => q.on('authorId', 'user.id'))).toSQL(),
     `SELECT "user".* FROM "user" JOIN "message" ON "message"."authorId" = "user"."id" WHERE `,
     {
       model: User,
@@ -124,8 +124,8 @@ describe('where joined columns', () => {
   );
 
   testWhereExists({
-    joinTo: User.join(Message, (q) => q.on('authorId', 'id')),
-    pkey: 'id',
+    joinTo: User.join(Message, (q) => q.on('authorId', 'user.id')),
+    pkey: 'user.id',
     joinTarget: Profile,
     columnsOf: Message,
     fkey: 'message.authorId',
@@ -149,7 +149,7 @@ describe('where joined named columns', () => {
 
   testWhereExists({
     joinTo: User.join(Snake, (q) => q.on('tailLength', 'user.id')),
-    pkey: 'id',
+    pkey: 'user.id',
     joinTarget: Profile,
     columnsOf: Snake,
     fkey: 'snake.tailLength',
@@ -300,5 +300,32 @@ describe('orWhere', () => {
       `,
       [1, 2, 10],
     );
+  });
+});
+
+describe('whereExists', () => {
+  it('should handle sub-querying by a snake cased table', () => {
+    const q = User.whereExists(Snake, (q) => q.on('user.id', 'tailLength'));
+    const q2 = User.whereExists(Snake, (q) =>
+      q.on('user.id', 'snake.tailLength'),
+    );
+    const q3 = User.whereExists(Snake, (q) =>
+      q.on('user.id', '=', 'snake.tailLength'),
+    );
+
+    const sql = q.toSQL();
+
+    expectSql(
+      sql,
+      `
+        SELECT * FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM "snake" WHERE "user"."id" = "snake"."tail_length"
+        )
+      `,
+    );
+
+    expect(q2.toSQL()).toEqual(sql);
+    expect(q3.toSQL()).toEqual(sql);
   });
 });

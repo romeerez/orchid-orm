@@ -18,8 +18,8 @@ import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
   CommonQueryData,
-  JoinedShapes,
   PickQueryDataShapeAndJoinedShapes,
+  QueryData,
   QueryScopeData,
 } from './data';
 import {
@@ -29,6 +29,7 @@ import {
   isExpression,
   MaybeArray,
   OperatorToSQL,
+  QueryColumns,
   RecordUnknown,
   toArray,
 } from 'orchid-core';
@@ -41,6 +42,8 @@ interface QueryDataForWhere {
   shape: CommonQueryData['shape'];
   joinedShapes?: CommonQueryData['joinedShapes'];
   scopes?: { [K: string]: QueryScopeData };
+  joinOverrides?: CommonQueryData['joinOverrides'];
+  outerJoinOverrides?: CommonQueryData['outerJoinOverrides'];
 }
 
 interface QueryDataWithLanguage extends QueryDataForWhere {
@@ -222,40 +225,22 @@ const processWhere = (
         );
       } else {
         const item = value as WhereOnItem;
-        const leftColumn = columnToSql(
-          ctx,
-          query,
-          query.shape,
-          item.on[0],
-          `"${getJoinItemSource(item.joinFrom)}"`,
+        const joinAs = `"${getJoinItemSource(item.joinFrom)}"`;
+        const { on } = item;
+
+        const q: OnColumnToSQLQuery = item.useOuterJoinOverrides
+          ? {
+              joinedShapes: query.joinedShapes,
+              joinOverrides: query.outerJoinOverrides,
+              shape: query.shape,
+            }
+          : query;
+
+        ands.push(
+          `${onColumnToSql(ctx, q, joinAs, on[0])} ${
+            on.length === 2 ? '=' : on[1]
+          } ${onColumnToSql(ctx, q, joinAs, on.length === 3 ? on[2] : on[1])}`,
         );
-
-        const joinTo = getJoinItemSource(item.joinTo);
-        const joinedShape = (query.joinedShapes as JoinedShapes)[joinTo];
-
-        let op;
-        let rightColumn;
-        if (item.on.length === 2) {
-          op = '=';
-          rightColumn = columnToSql(
-            ctx,
-            query,
-            joinedShape,
-            item.on[1],
-            `"${joinTo}"`,
-          );
-        } else {
-          op = item.on[1];
-          rightColumn = columnToSql(
-            ctx,
-            query,
-            joinedShape,
-            item.on[2],
-            `"${joinTo}"`,
-          );
-        }
-
-        ands.push(`${leftColumn} ${op} ${rightColumn}`);
       }
     } else if (key === 'IN') {
       toArray(value as MaybeArray<WhereInItem>).forEach((item) => {
@@ -371,6 +356,19 @@ const processWhere = (
     }
   }
 };
+
+interface OnColumnToSQLQuery {
+  joinedShapes?: QueryData['joinedShapes'];
+  joinOverrides?: QueryData['joinOverrides'];
+  shape: QueryColumns;
+}
+
+const onColumnToSql = (
+  ctx: ToSQLCtx,
+  query: OnColumnToSQLQuery,
+  joinAs: string,
+  column: string,
+) => columnToSql(ctx, query, query.shape, column, joinAs);
 
 const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
   return typeof joinItem === 'string' ? joinItem : getQueryAs(joinItem);

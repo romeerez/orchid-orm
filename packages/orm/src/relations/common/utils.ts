@@ -6,7 +6,7 @@ import {
   JoinCallback,
   JoinQueryMethod,
   PickQueryMetaRelations,
-  pushQueryOn,
+  pushQueryOnForOuter,
   Query,
   RelationConfigBase,
   RelationJoinQuery,
@@ -234,8 +234,15 @@ export function joinHasRelation(
     baseQuery.q.shape,
   );
 
+  const baseAs = getQueryAs(baseQuery);
   for (let i = 0; i < len; i++) {
-    pushQueryOn(q, baseQuery, joiningQuery, foreignKeys[i], primaryKeys[i]);
+    pushQueryOnForOuter(
+      q,
+      baseQuery,
+      joiningQuery,
+      foreignKeys[i],
+      `${baseAs}.${primaryKeys[i]}`,
+    );
   }
 
   return q;

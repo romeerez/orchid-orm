@@ -19,7 +19,7 @@ describe('joinLateral', () => {
   useTestDatabase();
 
   it('should ignore duplicated joins', () => {
-    const q = User.joinLateral(Message, (q) => q.on('authorId', 'id'));
+    const q = User.joinLateral(Message, (q) => q.on('authorId', 'user.id'));
 
     expectSql(
       q.toSQL(),
@@ -40,7 +40,7 @@ describe('joinLateral', () => {
       q
         .select('text', 'createdAt')
         .where({ text: messageData.text, 'user.name': userData.name })
-        .on('authorId', 'id')
+        .on('authorId', 'user.id')
         .order({ createdAt: 'DESC' }),
     )
       .select('id', 'm.createdAt')
@@ -79,7 +79,7 @@ describe('joinLateral', () => {
     await insertUserAndMessage();
 
     const q = User.joinLateral(Message.as('m'), (q) =>
-      q.on('authorId', 'id').order({ createdAt: 'DESC' }),
+      q.on('authorId', 'user.id').order({ createdAt: 'DESC' }),
     ).select('id', 'm.*');
 
     assertType<Awaited<typeof q>, { id: number; m: MessageRecord }[]>();

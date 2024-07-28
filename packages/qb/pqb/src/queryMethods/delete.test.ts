@@ -182,7 +182,7 @@ describe('delete', () => {
   it('should support implicit lateral join', () => {
     const q = User.selectAll()
       .where({ id: 1 })
-      .join(Profile, (q) => q.on('userId', 'id').limit(5))
+      .join(Profile, (q) => q.on('userId', 'user.id').limit(5))
       .delete();
 
     expectSql(
@@ -202,7 +202,7 @@ describe('delete', () => {
   it('should support explicit lateral join', () => {
     const q = User.selectAll()
       .where({ id: 1 })
-      .joinLateral(Profile, (q) => q.on('userId', 'id').limit(5))
+      .joinLateral(Profile, (q) => q.on('userId', 'user.id').limit(5))
       .delete();
 
     expectSql(

@@ -599,7 +599,13 @@ describe('update', () => {
     const user = Object.assign(Object.create(User), {
       relationConfig: {
         joinQuery(toQuery: Query, baseQuery: Query) {
-          return addQueryOn(toQuery, baseQuery, toQuery, 'id', 'userId');
+          return addQueryOn(
+            toQuery,
+            baseQuery,
+            toQuery,
+            'id',
+            'profile.userId',
+          );
         },
       },
     });

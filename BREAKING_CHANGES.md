@@ -1,5 +1,23 @@
 # Breaking changes
 
+## orchid-orm 1.33
+
+Previously when joining with columns, you could omit table names of both tables:
+
+```ts
+db.user.join(db.message, 'userId', 'id'); // id -> user.id
+```
+
+Now, columns without a table will be addressed to the joining table:
+
+```ts
+// wrong: message.userId = message.id
+db.user.join(db.message, 'userId', 'id' ❌);
+
+// correct: message.userId = user.id
+db.user.join(db.message, 'userId', 'user.id' ✅);
+```
+
 ## orchid-orm 1.32.13
 
 Validation schema `Table.querySchema()` becomes partial by default.

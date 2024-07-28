@@ -1,7 +1,7 @@
 import { Query } from '../../query/query';
-import { testJoin } from '../join/testJoin';
 import { ColumnTypeBase, Sql } from 'orchid-core';
 import { expectSql, testDb } from 'test-utils';
+import { getSqlText } from '../../sql';
 
 export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
   const index = key.indexOf('.');
@@ -1629,10 +1629,13 @@ export const testWhereExists = ({
   selectFrom?: string;
 }) => {
   const table = joinTo.table;
-  const pkeySql = (joinTo.shape[pkey] as ColumnTypeBase).data.name || pkey;
+  const index = pkey.indexOf('.');
+  const pkeyColumn = index === -1 ? pkey : pkey.slice(index + 1);
+  const pkeySql =
+    (joinTo.shape[pkeyColumn] as ColumnTypeBase).data.name || pkeyColumn;
 
   describe('whereExists', () => {
-    testJoin({
+    testWhereExistsCase({
       method: 'whereExists',
       joinTo,
       pkey,
@@ -1641,12 +1644,11 @@ export const testWhereExists = ({
       fkey,
       text,
       selectFrom,
-      whereExists: true,
     });
   });
 
   describe('orWhereExists', () => {
-    testJoin({
+    testWhereExistsCase({
       method: 'orWhereExists',
       joinTo: joinTo.where({ [pkey]: 1 }),
       pkey,
@@ -1655,7 +1657,6 @@ export const testWhereExists = ({
       fkey,
       text,
       selectFrom,
-      whereExists: true,
       where: `"${table}"."${pkeySql}" = $1`,
       or: 'OR',
       values: [1],
@@ -1663,7 +1664,7 @@ export const testWhereExists = ({
   });
 
   describe('whereNotExists', () => {
-    testJoin({
+    testWhereExistsCase({
       method: 'whereNotExists',
       joinTo,
       pkey,
@@ -1672,13 +1673,12 @@ export const testWhereExists = ({
       fkey,
       text,
       selectFrom,
-      whereExists: true,
       where: 'NOT',
     });
   });
 
   describe('orWhereNotExists', () => {
-    testJoin({
+    testWhereExistsCase({
       method: 'orWhereNotExists',
       joinTo: joinTo.where({ [pkey]: 1 }),
       pkey,
@@ -1687,10 +1687,265 @@ export const testWhereExists = ({
       fkey,
       text,
       selectFrom,
-      whereExists: true,
       where: `"${table}"."${pkeySql}" = $1`,
       or: 'OR NOT',
       values: [1],
     });
   });
+};
+
+export const testWhereExistsCase = ({
+  method,
+  joinTo,
+  pkey,
+  joinTarget,
+  columnsOf = joinTarget,
+  fkey,
+  text,
+  selectFrom = `SELECT * FROM "${joinTo.table}"`,
+  where,
+  or,
+  values = [],
+}: {
+  method: string;
+  joinTo: Query;
+  pkey: string;
+  joinTarget: Query;
+  columnsOf?: Query;
+  fkey: string;
+  text: string;
+  selectFrom?: string;
+  where?: string;
+  or?: string;
+  values?: unknown[];
+}) => {
+  const join = method as unknown as 'join';
+  const initialSql = getSqlText(joinTo.toSQL());
+
+  const table = joinTo.table as string;
+  const [pkeySql] = columnSqlForTest(joinTo, pkey);
+
+  const joinTable = joinTarget.table as string;
+  const [fkeySql, , fkeyColumn] = columnSqlForTest(columnsOf, fkey);
+  const [textSql] = columnSqlForTest(columnsOf, text);
+
+  const asFkeySql =
+    columnsOf === joinTarget ? `"as".${fkeySql.split('.')[1]}` : fkeySql;
+
+  const makeSql = ({
+    select = selectFrom,
+    target,
+    conditions,
+    where: addWhere,
+  }: {
+    select?: string;
+    target: string;
+    conditions: string;
+    where?: string;
+  }) => {
+    return `${select} WHERE ${where ? `${where} ` : ''}${
+      where && addWhere && or ? 'AND ' : ''
+    }${addWhere && or ? `${addWhere} ` : ''}${
+      or ? `${or} ` : ''
+    }EXISTS ( SELECT 1 FROM ${target} WHERE ${conditions})${
+      addWhere && !or ? ` AND ${addWhere}` : ''
+    }`;
+  };
+
+  const sql = (target: string, conditions: string) => {
+    return makeSql({ target, conditions });
+  };
+
+  it('should accept left column and right column', () => {
+    expectSql(
+      joinTo[join](joinTarget, fkey, pkey).toSQL(),
+      sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expectSql(
+      joinTo[join](joinTarget.as('as'), fkey, pkey).toSQL(),
+      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
+  });
+
+  it('should accept left column, op and right column', () => {
+    expectSql(
+      joinTo[join](joinTarget, fkey, '=', pkey).toSQL(),
+      sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expectSql(
+      joinTo[join](joinTarget.as('as'), fkey, '=', pkey).toSQL(),
+      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
+  });
+
+  it('should accept raw and raw', () => {
+    expectSql(
+      joinTo[join](
+        joinTarget,
+        testDb.sql({ raw: `${fkeySql}` }),
+        testDb.sql({ raw: `${pkeySql}` }),
+      ).toSQL(),
+      sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expectSql(
+      joinTo[join](
+        joinTarget.as('as'),
+        testDb.sql({ raw: `${asFkeySql}` }),
+        testDb.sql({ raw: `${pkeySql}` }),
+      ).toSQL(),
+      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
+  });
+
+  it('should accept raw, op and raw', () => {
+    expectSql(
+      joinTo[join](
+        joinTarget,
+        testDb.sql({ raw: `${fkeySql}` }),
+        '=',
+        testDb.sql({ raw: `${pkeySql}` }),
+      ).toSQL(),
+      sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expectSql(
+      joinTo[join](
+        joinTarget.as('as'),
+        testDb.sql({ raw: `${asFkeySql}` }),
+        '=',
+        testDb.sql({ raw: `${pkeySql}` }),
+      ).toSQL(),
+      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
+  });
+
+  it('should accept object of columns', () => {
+    expectSql(
+      joinTo[join](joinTarget, { [fkey]: pkey }).toSQL(),
+      sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expectSql(
+      joinTo[join](joinTarget.as('as'), { [fkey]: pkey }).toSQL(),
+      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
+  });
+
+  it('should accept object of columns with raw value', () => {
+    expectSql(
+      joinTo[join](joinTarget, {
+        [fkey]: testDb.sql({ raw: `${pkeySql}` }),
+      }).toSQL(),
+      sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expectSql(
+      joinTo[join](joinTarget.as('as'), {
+        [fkey]: testDb.sql({ raw: `${pkeySql}` }),
+      }).toSQL(),
+      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      values,
+    );
+
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
+  });
+
+  it('should accept raw sql', () => {
+    expectSql(
+      joinTo[join](
+        joinTarget,
+        testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
+      ).toSQL(),
+      sql(`"${joinTable}"`, `"${fkeySql}" = "${table}".${pkey}`),
+      values,
+    );
+
+    expectSql(
+      joinTo[join](
+        joinTarget.as('as'),
+        testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
+      ).toSQL(),
+      sql(`"${joinTable}" AS "as"`, `"${fkeySql}" = "${table}".${pkey}`),
+      values,
+    );
+
+    expect(getSqlText(joinTo.toSQL())).toBe(initialSql);
+  });
+
+  it('should use conditions from provided query', () => {
+    expectSql(
+      joinTo[join](joinTarget, (q) =>
+        q.on(fkey, pkey).where({ [text]: 'text' }),
+      ).toSQL(),
+      sql(
+        `"${joinTable}"`,
+        `${fkeySql} = ${pkeySql} AND ${textSql} = $${values.length + 1}`,
+      ),
+      [...values, 'text'],
+    );
+  });
+
+  if (columnsOf === joinTarget) {
+    describe('sub query', () => {
+      it('should join a sub query', () => {
+        const q = joinTo[join](
+          joinTarget
+            .select({
+              one: fkey,
+              two: text,
+            })
+            .where({
+              [fkey]: 'one',
+            })
+            .as('as'),
+          'one',
+          pkey,
+        )
+          .where({
+            [`as.two`]: 'two',
+          })
+          .select({
+            id: `as.one`,
+            text: `as.two`,
+          });
+
+        expectSql(
+          q.toSQL(),
+          makeSql({
+            select: `SELECT "as"."one" "id", "as"."two" "text" FROM "${table}"`,
+            target: `"${joinTable}" AS "as"`,
+            conditions: `"one" = ${pkeySql} AND "as"."${fkeyColumn}" = $${
+              values.length + (or ? 2 : 1)
+            }`,
+            where: `"as"."two" = $${values.length + (or ? 1 : 2)}`,
+          }),
+          [...values, or ? 'two' : 'one', or ? 'one' : 'two'],
+        );
+      });
+    });
+  }
 };

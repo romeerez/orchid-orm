@@ -49,7 +49,7 @@ describe('join', () => {
   testJoin({
     method: 'join',
     joinTo: User,
-    pkey: 'id',
+    pkey: 'user.id',
     joinTarget: Message,
     fkey: 'authorId',
     text: 'text',
@@ -61,7 +61,7 @@ describe('join table with named columns', () => {
   testJoin({
     method: 'join',
     joinTo: User,
-    pkey: 'name',
+    pkey: 'user.name',
     joinTarget: Snake,
     fkey: 'tailLength',
     text: 'snakeName',
@@ -73,7 +73,7 @@ describe('join to table with named columns', () => {
   testJoin({
     method: 'join',
     joinTo: Snake,
-    pkey: 'snakeName',
+    pkey: 'snake.snakeName',
     joinTarget: User,
     fkey: 'name',
     text: 'name',
@@ -492,7 +492,7 @@ describe('join callback with query builder', () => {
       `SELECT "message".* FROM "message" JOIN "user" ON`,
       {
         model: User,
-        pkey: 'id',
+        pkey: 'user.id',
         nullable: 'picture',
         text: 'name',
       },
@@ -500,7 +500,7 @@ describe('join callback with query builder', () => {
 
     testWhereExists({
       joinTo: User,
-      pkey: 'id',
+      pkey: 'user.id',
       joinTarget: Message,
       fkey: 'authorId',
       text: 'text',
@@ -511,7 +511,7 @@ describe('join callback with query builder', () => {
       `SELECT ${snakeSelectAllWithTable} FROM "snake" JOIN "user" ON`,
       {
         model: User,
-        pkey: 'id',
+        pkey: 'user.id',
         nullable: 'picture',
         text: 'name',
       },
@@ -519,7 +519,7 @@ describe('join callback with query builder', () => {
 
     testWhereExists({
       joinTo: User,
-      pkey: 'id',
+      pkey: 'user.id',
       joinTarget: Snake,
       fkey: 'tailLength',
       text: 'snakeName',
@@ -530,7 +530,7 @@ describe('join callback with query builder', () => {
       `SELECT "user".* FROM "user" JOIN "snake" ON`,
       {
         model: Snake,
-        pkey: 'tailLength',
+        pkey: 'snake.tailLength',
         nullable: 'snakeData',
         text: 'snakeName',
       },
@@ -538,7 +538,7 @@ describe('join callback with query builder', () => {
 
     testWhereExists({
       joinTo: Snake,
-      pkey: 'tailLength',
+      pkey: 'snake.tailLength',
       joinTarget: User,
       fkey: 'id',
       text: 'name',

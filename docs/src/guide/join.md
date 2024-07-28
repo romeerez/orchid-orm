@@ -63,7 +63,7 @@ db.post.select('*', {
 
 All the `join` methods accept the same arguments, but returning type is different because with `join` it's guaranteed to load joined table, and with `leftJoin` the joined table columns may be `NULL` when no matching record was found.
 
-For the following examples, imagine we have a `User` table with `id` and `name`, and `Message` table with `id`, `text`, messages belongs to user via `userId` column:
+For the following examples, imagine you have a `User` table with `id` and `name`, and `Message` table with `id`, `text`, messages belongs to user via `userId` column:
 
 ```ts
 export class UserTable extends BaseTable {
@@ -146,7 +146,7 @@ Joined table can be references from `where` and `select` by a relation name.
 ```ts
 const result = await db.user
   .join('messages')
-  // after joining a table, we can use it in `where` conditions:
+  // after joining a table, you can use it in `where` conditions:
   .where({ 'messages.text': { startsWith: 'Hi' } })
   .select(
     'name', // name is User column, table name may be omitted
@@ -157,8 +157,8 @@ const result = await db.user
 const ok: { name: string; text: string }[] = result;
 ```
 
-The first argument can also be a callback, where instead of relation name as a string we're picking it as a property of `q`.
-In such a way, we can alias the relation with `as`, add `where` conditions, use other query methods.
+The first argument can also be a callback, where instead of relation name as a string you're picking it as a property of `q`.
+In such a way, you can alias the relation with `as`, add `where` conditions, use other query methods.
 
 ```ts
 const result = await db.user.join((q) =>
@@ -175,7 +175,7 @@ const result = await db.user.join(
   (q) => q.messages.as('m'),
   (q) =>
     q
-      .on('text', 'name') // additionally, match message with user name
+      .on('messages.text', 'user.name') // additionally, match message with user name
       .where({ text: 'some text' }), // you can add `where` in a second callback as well.
 );
 ```
@@ -233,17 +233,16 @@ If relation wasn't defined, provide a `db.table` instance and specify columns fo
 Joined table can be references from `where` and `select` by a table name.
 
 ```ts
-// Join message where userId = id:
 db.user
-  .join(db.message, 'userId', 'id')
+  .join(db.message, 'userId', 'user.id')
   .where({ 'message.text': { startsWith: 'Hi' } })
   .select('name', 'message.text');
 ```
 
-Columns in the join list may be prefixed with table names for clarity:
+The name of the joining table can be omitted, but not the name of the main table:
 
 ```ts
-db.user.join(db.message, 'message.userId', 'user.id');
+db.user.join(db.message, 'userId', 'user.id');
 ```
 
 Joined table can have an alias for referencing it further:
@@ -274,7 +273,7 @@ const ok: {
 You can provide a custom comparison operator
 
 ```ts
-db.user.join(db.message, 'userId', '!=', 'id');
+db.user.join(db.message, 'userId', '!=', 'user.id');
 ```
 
 Join can accept raw SQL for the `ON` part of join:
@@ -309,10 +308,10 @@ To join based on multiple columns, you can provide an object where keys are join
 
 ```ts
 db.user.join(db.message, {
-  userId: 'id',
-
-  // with table names:
   'message.userId': 'user.id',
+
+  // joined table name may be omitted
+  userId: 'user.id',
 
   // value can be a raw SQL expression:
   text: sql`lower("user"."name")`,
@@ -332,17 +331,16 @@ db.user.join(
   db.message,
   (q) =>
     q
-      // left column is the db.message column, right column is the db.user column
-      .on('userId', 'id')
-      // table names can be provided:
       .on('message.userId', 'user.id')
+      // joined table name may be omitted
+      .on('userId', 'user.id')
       // operator can be specified:
-      .on('userId', '!=', 'id')
+      .on('userId', '!=', 'user.id')
       // operator can be specified with table names as well:
       .on('message.userId', '!=', 'user.id')
       // `.orOn` takes the same arguments as `.on` and acts like `.or`:
-      .on('userId', 'id') // where message.userId = user.id
-      .orOn('text', 'name'), // or message.text = user.name
+      .on('userId', 'user.id') // where message.userId = user.id
+      .orOn('text', 'user.name'), // or message.text = user.name
 );
 ```
 
@@ -351,7 +349,7 @@ Column names in the where conditions are applied for the joined table, but you c
 ```ts
 db.user.join(db.message, (q) =>
   q
-    .on('userId', 'id')
+    .on('userId', 'user.id')
     .where({
       // not prefixed column name is for joined table:
       text: { startsWith: 'hello' },
@@ -386,7 +384,7 @@ db.user.join(
     .where({ text: { startsWith: 'Hi' } })
     .as('t'),
   'userId',
-  'id',
+  'user.id',
 );
 ```
 
@@ -445,7 +443,7 @@ User.joinLateral(Message.as('m'), (q) =>
     // select message columns
     .select('text')
     // join the message to the user, column names can be prefixed with table names
-    .on('authorId', 'id')
+    .on('authorId', 'user.id')
     // message columns are available without prefixing,
     // outer table columns are available with a table name
     .where({ text: 'some text', 'user.name': 'name' })
@@ -507,7 +505,7 @@ const result = await db.user
 
 // the same query, but joining table explicitly
 const result2: typeof result = await db.user
-  .leftJoin(db.message, 'userId', 'id')
+  .leftJoin(db.message, 'userId', 'user.id')
   .select('name', 'message.text');
 
 // result has the following type:

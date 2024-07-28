@@ -299,7 +299,7 @@ db.table.select('user.id', 'user.name', { nameAlias: 'user.name' });
 
 // table name may refer to the current table or a joined table:
 db.table
-  .join(Message, 'authorId', 'id')
+  .join(Message, 'authorId', 'user.id')
   .select('user.name', 'message.text', { textAlias: 'message.text' });
 
 // select value from the sub-query,

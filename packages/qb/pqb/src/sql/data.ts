@@ -108,7 +108,10 @@ export interface CommonQueryData {
   joinedComputeds?: { [K: string]: ComputedColumns };
   joinedForSelect?: string;
   innerJoinLateral?: true;
+  // to implicitly alias joined tables so there can be a "user" on top and a nested joined "user", the nested user is internally aliased as "user2".
   joinOverrides?: JoinOverrides;
+  // stores `joinOverrides` of the parent query object when the current query object is withing a query callback.
+  outerJoinOverrides?: JoinOverrides;
   schema?: string;
   select?: SelectItem[];
   // expr when a single value is returned from the query, when using `get`, or functions.

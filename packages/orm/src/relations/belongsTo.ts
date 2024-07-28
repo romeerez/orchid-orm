@@ -12,9 +12,10 @@ import {
   CreateData,
   CreateMethodsNames,
   DeleteMethodsNames,
+  getQueryAs,
   InsertQueryData,
   isQueryReturnsAll,
-  pushQueryOn,
+  pushQueryOnForOuter,
   pushQueryValue,
   Query,
   QueryResult,
@@ -270,8 +271,15 @@ export const makeBelongsToMethod = (
       baseQuery.q.shape,
     );
 
+    const baseAs = getQueryAs(baseQuery);
     for (let i = 0; i < len; i++) {
-      pushQueryOn(q, baseQuery, joiningQuery, primaryKeys[i], foreignKeys[i]);
+      pushQueryOnForOuter(
+        q,
+        baseQuery,
+        joiningQuery,
+        primaryKeys[i],
+        `${baseAs}.${foreignKeys[i]}`,
+      );
     }
 
     return q;

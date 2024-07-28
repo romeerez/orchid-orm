@@ -62,7 +62,7 @@ Instead, use the [column](/guide/sql-expressions#column) or [ref](/guide/sql-exp
 
 ```ts
 // ids will be prefixed with proper table names, no ambiguity:
-db.table.join(db.otherTable, 'id', 'otherId').where`
+db.table.join(db.otherTable, 'id', 'other.otherId').where`
   ${db.table.column('id')} = 1 AND
   ${db.otherTable.ref('id')} = 2
 `;

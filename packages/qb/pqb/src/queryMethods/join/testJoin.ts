@@ -12,8 +12,6 @@ export const testJoin = ({
   fkey,
   text,
   selectFrom = `SELECT * FROM "${joinTo.table}"`,
-  whereExists,
-  where,
   or,
   values = [],
 }: {
@@ -25,8 +23,6 @@ export const testJoin = ({
   fkey: string;
   text: string;
   selectFrom?: string;
-  whereExists?: boolean;
-  where?: string;
   or?: string;
   values?: unknown[];
 }) => {
@@ -54,19 +50,9 @@ export const testJoin = ({
     conditions: string;
     where?: string;
   }) => {
-    if (whereExists) {
-      return `${select} WHERE ${where ? `${where} ` : ''}${
-        where && addWhere && or ? 'AND ' : ''
-      }${addWhere && or ? `${addWhere} ` : ''}${
-        or ? `${or} ` : ''
-      }EXISTS ( SELECT 1 FROM ${target} WHERE ${conditions})${
-        addWhere && !or ? ` AND ${addWhere}` : ''
-      }`;
-    } else {
-      return `${select} JOIN ${target} ON ${conditions}${
-        addWhere ? ` WHERE ${addWhere}` : ''
-      }`;
-    }
+    return `${select} JOIN ${target} ON ${conditions}${
+      addWhere ? ` WHERE ${addWhere}` : ''
+    }`;
   };
 
   const sql = (target: string, conditions: string) => {
@@ -254,18 +240,12 @@ export const testJoin = ({
           q.toSQL(),
           makeSql({
             select: `SELECT "as"."one" "id", "as"."two" "text" FROM "${table}"`,
-            target: whereExists
-              ? `"${joinTable}" AS "as"`
-              : `(
+            target: `(
                 SELECT "as"."${fkeyColumn}" "one", "as"."${textColumn}" "two"
                 FROM "${joinTable}" AS "as"
                 WHERE "as"."${fkeyColumn}" = $${values.length + (or ? 2 : 1)}
               ) "as"`,
-            conditions: whereExists
-              ? `"one" = ${pkeySql} AND "as"."${fkeyColumn}" = $${
-                  values.length + (or ? 2 : 1)
-                }`
-              : `"as"."one" = ${pkeySql}`,
+            conditions: `"as"."one" = ${pkeySql}`,
             where: `"as"."two" = $${values.length + (or ? 1 : 2)}`,
           }),
           [...values, or ? 'two' : 'one', or ? 'one' : 'two'],
