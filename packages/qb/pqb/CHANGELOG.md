@@ -1,5 +1,11 @@
 # pqb
 
+## 0.37.0
+
+### Minor Changes
+
+- dc1fb10: Change join behavior so that unprefixed columns are always addressed to the joining table
+
 ## 0.36.16
 
 ### Patch Changes

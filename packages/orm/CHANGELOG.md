@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.33.0
+
+### Minor Changes
+
+- dc1fb10: Change join behavior so that unprefixed columns are always addressed to the joining table
+
+### Patch Changes
+
+- Updated dependencies [dc1fb10]
+  - pqb@0.37.0
+  - rake-db@2.22.18
+
 ## 1.32.19
 
 ### Patch Changes
