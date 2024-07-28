@@ -94,6 +94,8 @@ Text type columns support the following `where` operators:
 
 `contains`, `startsWith`, `endsWith` are case-insensitive.
 
+`%` and `_` chars in the input are escaped so the data entered by the user cannot affect the search logic.
+
 ```ts
 db.someTable.where({
   textColumn: {

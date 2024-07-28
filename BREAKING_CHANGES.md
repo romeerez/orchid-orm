@@ -1,5 +1,13 @@
 # Breaking changes
 
+## orchid-orm 1.34
+
+Previously, input for `startWith`, `contains`, `endsWith`, and case-sensitive versions was not escaped.
+
+It becomes escaped now.
+
+`db.table.where({ title: { contains: '100%' } })` - 100% will be searched literally, the `%` sign won't be treated as a wildcard.
+
 ## orchid-orm 1.33
 
 Previously when joining with columns, you could omit table names of both tables:

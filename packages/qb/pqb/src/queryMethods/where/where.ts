@@ -106,6 +106,7 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
           | 'sql'
           | 'get'
           | 'ref'
+          | 'columnTypes'
           ? T[K]
           : never;
       }
@@ -119,6 +120,7 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
               | 'sql'
               | 'get'
               | 'ref'
+              | 'columnTypes'
           ? T[K]
           : never;
       };

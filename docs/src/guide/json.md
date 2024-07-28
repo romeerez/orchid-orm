@@ -35,6 +35,9 @@ Type can be provided via `{ type: (t) => t.columnType() }` options, by default t
 
 Optionally takes `vars` and `silent` parameters, see [Postgres docs](https://www.postgresql.org/docs/current/functions-json.html) for details.
 
+The `type` option sets the output type when selecting a value,
+also it makes specific operators available in `where`, so that you can apply `contains` if the type is text, and `gt` if the type is numeric.
+
 ```ts
 // query a single value from a JSON data,
 // because of the provided type, string JSON value will be parsed to a Date object.
@@ -65,6 +68,14 @@ await db.table.find(id).update({
   name: (q) =>
     q.get('data').jsonPathQueryFirst('$.name', { type: (t) => t.string() }),
 });
+
+// filtering records to contain 'word' in the json property "name"
+await db.table.where((q) =>
+  q
+    .get('data')
+    .jsonPathQueryFirst('$.name', { type: (t) => t.string() })
+    .contains('word'),
+);
 ```
 
 ## jsonSet

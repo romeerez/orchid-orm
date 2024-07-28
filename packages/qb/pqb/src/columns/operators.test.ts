@@ -280,12 +280,12 @@ describe('operators', () => {
   describe('contains', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { contains: 'ko' } }).toSQL(),
+        User.where({ name: { contains: 'ko%' } }).toSQL(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || $1 || '%'
         `,
-        ['ko'],
+        ['ko\\%'],
       );
     });
 
@@ -294,7 +294,7 @@ describe('operators', () => {
         User.where({ name: { contains: User.select('name').take() } }).toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
+          WHERE "user"."name" ILIKE '%' || replace(replace((SELECT "user"."name" FROM "user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -313,12 +313,12 @@ describe('operators', () => {
   describe('containsSensitive', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { containsSensitive: 'ko' } }).toSQL(),
+        User.where({ name: { containsSensitive: 'ko%' } }).toSQL(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || $1 || '%'
         `,
-        ['ko'],
+        ['ko\\%'],
       );
     });
 
@@ -329,7 +329,7 @@ describe('operators', () => {
         }).toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
+          WHERE "user"."name" LIKE '%' || replace(replace((SELECT "user"."name" FROM "user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -348,12 +348,12 @@ describe('operators', () => {
   describe('startsWith', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { startsWith: 'ko' } }).toSQL(),
+        User.where({ name: { startsWith: 'ko%' } }).toSQL(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" ILIKE $1 || '%'
         `,
-        ['ko'],
+        ['ko\\%'],
       );
     });
 
@@ -364,7 +364,7 @@ describe('operators', () => {
         }).toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
+          WHERE "user"."name" ILIKE replace(replace((SELECT "user"."name" FROM "user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -383,12 +383,12 @@ describe('operators', () => {
   describe('startsWithSensitive', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { startsWithSensitive: 'ko' } }).toSQL(),
+        User.where({ name: { startsWithSensitive: 'ko%' } }).toSQL(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" LIKE $1 || '%'
         `,
-        ['ko'],
+        ['ko\\%'],
       );
     });
 
@@ -399,7 +399,7 @@ describe('operators', () => {
         }).toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
+          WHERE "user"."name" LIKE replace(replace((SELECT "user"."name" FROM "user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -420,12 +420,12 @@ describe('operators', () => {
   describe('endsWith', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { endsWith: 'ko' } }).toSQL(),
+        User.where({ name: { endsWith: 'ko%' } }).toSQL(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || $1
         `,
-        ['ko'],
+        ['ko\\%'],
       );
     });
 
@@ -436,7 +436,7 @@ describe('operators', () => {
         }).toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1)
+          WHERE "user"."name" ILIKE '%' || replace(replace((SELECT "user"."name" FROM "user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_')
         `,
       );
     });
@@ -455,12 +455,12 @@ describe('operators', () => {
   describe('endsWithSensitive', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { endsWithSensitive: 'ko' } }).toSQL(),
+        User.where({ name: { endsWithSensitive: 'ko%' } }).toSQL(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || $1
         `,
-        ['ko'],
+        ['ko\\%'],
       );
     });
 
@@ -471,7 +471,7 @@ describe('operators', () => {
         }).toSQL(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1)
+          WHERE "user"."name" LIKE '%' || replace(replace((SELECT "user"."name" FROM "user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_')
         `,
       );
     });
@@ -882,6 +882,24 @@ describe('operators', () => {
             WHERE jsonb_path_query_first("snake"."snake_data", $1) = 'name'
           `,
           ['$.name'],
+        );
+      });
+
+      it('should allow to use an arbitrary operator on a jsonb column', () => {
+        const q = Snake.where((q) =>
+          q
+            .get('snakeData')
+            .jsonPathQueryFirst('$.name', { type: (t) => t.text() })
+            .contains('string'),
+        );
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${snakeSelectAll} FROM "snake"
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) ILIKE '%' || $2 || '%'
+          `,
+          ['$.name', 'string'],
         );
       });
     });

@@ -137,6 +137,31 @@ const quoteValue = (
   return addValue(ctx.values, arg);
 };
 
+const quoteLikeValue = (
+  arg: unknown,
+  ctx: ToSQLCtx,
+  quotedAs: string | undefined,
+  jsonArray?: boolean,
+): string => {
+  if (arg && typeof arg === 'object') {
+    if (!jsonArray && Array.isArray(arg)) {
+      return `(${arg.map((value) => addValue(ctx.values, value)).join(', ')})`;
+    }
+
+    if (isExpression(arg)) {
+      return arg.toSQL(ctx, quotedAs);
+    }
+
+    if ('toSQL' in arg) {
+      return `replace(replace((${getSqlText(
+        (arg as Query).toSQL({ values: ctx.values }),
+      )}), '%', '\\\\%'), '_', '\\\\_')`;
+    }
+  }
+
+  return addValue(ctx.values, (arg as string).replace(/[%_]/g, '\\$&'));
+};
+
 // common operators that exist for any types
 interface Base<Value> {
   equals: Operator<Value | Query | Expression, BooleanQueryColumn>;
@@ -247,27 +272,27 @@ const text = {
   ...base,
   contains: make(
     (key, value, ctx, quotedAs) =>
-      `${key} ILIKE '%' || ${quoteValue(value, ctx, quotedAs)} || '%'`,
+      `${key} ILIKE '%' || ${quoteLikeValue(value, ctx, quotedAs)} || '%'`,
   ),
   containsSensitive: make(
     (key, value, ctx, quotedAs) =>
-      `${key} LIKE '%' || ${quoteValue(value, ctx, quotedAs)} || '%'`,
+      `${key} LIKE '%' || ${quoteLikeValue(value, ctx, quotedAs)} || '%'`,
   ),
   startsWith: make(
     (key, value, ctx, quotedAs) =>
-      `${key} ILIKE ${quoteValue(value, ctx, quotedAs)} || '%'`,
+      `${key} ILIKE ${quoteLikeValue(value, ctx, quotedAs)} || '%'`,
   ),
   startsWithSensitive: make(
     (key, value, ctx, quotedAs) =>
-      `${key} LIKE ${quoteValue(value, ctx, quotedAs)} || '%'`,
+      `${key} LIKE ${quoteLikeValue(value, ctx, quotedAs)} || '%'`,
   ),
   endsWith: make(
     (key, value, ctx, quotedAs) =>
-      `${key} ILIKE '%' || ${quoteValue(value, ctx, quotedAs)}`,
+      `${key} ILIKE '%' || ${quoteLikeValue(value, ctx, quotedAs)}`,
   ),
   endsWithSensitive: make(
     (key, value, ctx, quotedAs) =>
-      `${key} LIKE '%' || ${quoteValue(value, ctx, quotedAs)}`,
+      `${key} LIKE '%' || ${quoteLikeValue(value, ctx, quotedAs)}`,
   ),
 } as OperatorsText;
 
@@ -292,6 +317,9 @@ interface JsonPathQuery {
    * Type can be provided via `{ type: (t) => t.columnType() }` options, by default the type is `unknown`.
    *
    * Optionally takes `vars` and `silent` parameters, see [Postgres docs](https://www.postgresql.org/docs/current/functions-json.html) for details.
+   *
+   * The `type` option sets the output type when selecting a value,
+   * also it makes specific operators available in `where`, so that you can apply `contains` if the type is text, and `gt` if the type is numeric.
    *
    * ```ts
    * // query a single value from a JSON data,
@@ -323,6 +351,14 @@ interface JsonPathQuery {
    *   name: (q) =>
    *     q.get('data').jsonPathQueryFirst('$.name', { type: (t) => t.string() }),
    * });
+   *
+   * // filtering records to contain 'word' in the json property "name"
+   * await db.table.where((q) =>
+   *   q
+   *     .get('data')
+   *     .jsonPathQueryFirst('$.name', { type: (t) => t.string() })
+   *     .contains('word'),
+   * );
    * ```
    *
    * @param path - JSON path
@@ -495,8 +531,10 @@ const json = {
       }
 
       if (options?.type) {
-        const parse = options.type(this.columnTypes).parseFn;
-        if (parse) (this.q.parsers ??= {})[getValueKey] = parse;
+        const type = options.type(this.columnTypes);
+        if (type.parseFn) (this.q.parsers ??= {})[getValueKey] = type.parseFn;
+
+        return setQueryOperators(this, type.operators);
       }
 
       return this;
