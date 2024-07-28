@@ -1026,7 +1026,7 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
 
     for (const key in columns) {
       const column = columns[key];
-      if (!column.data.primaryKey) {
+      if (column.dataType && !column.data.primaryKey) {
         shape[key] = input.entries[key];
 
         if (column.data.isNullable || column.data.default !== undefined) {
@@ -1134,7 +1134,9 @@ function mapSchema<
   const { shape: columns } = klass.prototype.columns;
 
   for (const key in columns) {
-    shape[key] = columns[key][schemaKey];
+    if (columns[key].dataType) {
+      shape[key] = columns[key][schemaKey];
+    }
   }
 
   return object(shape) as MapSchema<T, Key>;

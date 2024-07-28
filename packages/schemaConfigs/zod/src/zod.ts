@@ -848,7 +848,9 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     const { shape: columns } = this.prototype.columns;
 
     for (const key in columns) {
-      shape[key] = columns[key].querySchema.optional();
+      if (columns[key].dataType) {
+        shape[key] = columns[key].querySchema.optional();
+      }
     }
 
     return z.object(shape) as never;
@@ -862,7 +864,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
 
     for (const key in columns) {
       const column = columns[key];
-      if (!column.data.primaryKey) {
+      if (column.dataType && !column.data.primaryKey) {
         shape[key] = input.shape[key];
 
         if (column.data.isNullable || column.data.default !== undefined) {
@@ -887,7 +889,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
       columns: { shape },
     } = this.prototype;
     for (const key in shape) {
-      if (shape[key].data.primaryKey) {
+      if (shape[key].dataType && shape[key].data.primaryKey) {
         pkeys[key] = true;
       }
     }
@@ -1062,7 +1064,9 @@ function mapSchema<
   const { shape: columns } = klass.prototype.columns;
 
   for (const key in columns) {
-    shape[key] = columns[key][schemaKey];
+    if (columns[key].dataType) {
+      shape[key] = columns[key][schemaKey];
+    }
   }
 
   return z.object(shape) as MapSchema<T, Key>;

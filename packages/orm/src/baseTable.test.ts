@@ -418,7 +418,30 @@ describe('baseTable', () => {
         id: t.identity().primaryKey(),
         name: t.text(),
       }));
+
+      relations = {
+        some: this.belongsTo(() => OtherTable, {
+          columns: ['id'],
+          references: ['someId'],
+        }),
+      };
     }
+
+    class OtherTable extends BaseTable {
+      readonly table = 'some';
+      columns = this.setColumns((t) => ({
+        someId: t.integer().primaryKey(),
+      }));
+    }
+
+    // need to instantiate tables so that the relations add special virtual columns
+    orchidORM(
+      { db: db.$queryBuilder },
+      {
+        some: SomeTable,
+        other: OtherTable,
+      },
+    );
 
     it('should expose inputSchema, outputSchema, querySchema, updateSchema, pkeySchema', () => {
       const inputSchema = SomeTable.inputSchema();
