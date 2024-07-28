@@ -897,7 +897,7 @@ describe('operators', () => {
           q.toSQL(),
           `
             SELECT ${snakeSelectAll} FROM "snake"
-            WHERE jsonb_path_query_first("snake"."snake_data", $1) ILIKE '%' || $2 || '%'
+            WHERE jsonb_path_query_first("snake"."snake_data", $1)::text ILIKE '%' || $2 || '%'
           `,
           ['$.name', 'string'],
         );

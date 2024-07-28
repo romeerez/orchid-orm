@@ -11,6 +11,7 @@ import { getSqlText } from '../sql/utils';
 import {
   addValue,
   ColumnTypeBase,
+  emptyArray,
   Expression,
   getValueKey,
   isExpression,
@@ -524,7 +525,8 @@ const json = {
       path: string,
       options?: JsonPathQueryTypeOptions<PickQueryColumnTypes, ColumnTypeBase>,
     ) {
-      (this.q.chain ??= []).push(jsonPathQueryOp, [path, options]);
+      const chain = (this.q.chain ??= []);
+      chain.push(jsonPathQueryOp, [path, options]);
 
       if (this.q.parsers?.[getValueKey]) {
         this.q.parsers[getValueKey] = undefined;
@@ -533,6 +535,13 @@ const json = {
       if (options?.type) {
         const type = options.type(this.columnTypes);
         if (type.parseFn) (this.q.parsers ??= {})[getValueKey] = type.parseFn;
+
+        // push the type cast `::type` only if operator is applied
+        chain.push = (...args: unknown[]) => {
+          chain.push = Array.prototype.push;
+          chain.push((s: string) => `${s}::${type.dataType}`, emptyArray);
+          return chain.push(...args);
+        };
 
         return setQueryOperators(this, type.operators);
       }
