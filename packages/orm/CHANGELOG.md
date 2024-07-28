@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.33.1
+
+### Patch Changes
+
+- 3289064: Fix deriving validation schema when table has relations (#335)
+
 ## 1.33.0
 
 ### Minor Changes

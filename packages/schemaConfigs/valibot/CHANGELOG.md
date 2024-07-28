@@ -1,5 +1,11 @@
 # orchid-orm-valibot
 
+## 0.2.28
+
+### Patch Changes
+
+- 3289064: Fix deriving validation schema when table has relations (#335)
+
 ## 0.2.27
 
 ### Patch Changes

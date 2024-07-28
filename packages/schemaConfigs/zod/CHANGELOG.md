@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.8.28
+
+### Patch Changes
+
+- 3289064: Fix deriving validation schema when table has relations (#335)
+
 ## 0.8.27
 
 ### Patch Changes
