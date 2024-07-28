@@ -1,5 +1,11 @@
 # pqb
 
+## 0.38.1
+
+### Patch Changes
+
+- d163e5a: Fix jsonPathQueryFirst type casting when applying a text operator (#343)
+
 ## 0.38.0
 
 ### Minor Changes
