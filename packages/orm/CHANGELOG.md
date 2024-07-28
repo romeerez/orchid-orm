@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.34.0
+
+### Minor Changes
+
+- f8a45d1: Escape special chars in LIKE, allow LIKE for jsonb columns (#342)
+
+### Patch Changes
+
+- Updated dependencies [f8a45d1]
+  - pqb@0.38.0
+  - rake-db@2.22.19
+
 ## 1.33.1
 
 ### Patch Changes

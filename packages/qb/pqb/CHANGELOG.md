@@ -1,5 +1,11 @@
 # pqb
 
+## 0.38.0
+
+### Minor Changes
+
+- f8a45d1: Escape special chars in LIKE, allow LIKE for jsonb columns (#342)
+
 ## 0.37.0
 
 ### Minor Changes

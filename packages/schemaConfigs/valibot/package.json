@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-valibot",
-  "version": "0.2.28",
+  "version": "0.2.29",
   "description": "OrchidORM valibot integration",
   "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
   "repository": {
