@@ -18,11 +18,13 @@ import {
   ORMTableInputToQueryBuilder,
   ORMTableInput,
   TableClasses,
+  BaseTableClass,
 } from './baseTable';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import {
+  ColumnSchemaConfig,
   ColumnsShapeBase,
   emptyObject,
   MaybeArray,
@@ -178,7 +180,8 @@ export const orchidORM = <T extends TableClasses>(
       throw new Error(`Table class name must not start with $`);
     }
 
-    const table = tables[key].instance();
+    const tableClass = tables[key];
+    const table = tableClass.instance();
     tableInstances[key] = table;
 
     const options: DbTableOptions<unknown, string, ColumnsShapeBase> = {
@@ -191,6 +194,9 @@ export const orchidORM = <T extends TableClasses>(
       comment: table.comment,
       noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
       computed: table.computed as never,
+      nowSQL: (
+        tableClass as unknown as BaseTableClass<ColumnSchemaConfig, unknown>
+      ).nowSQL,
     };
 
     const dbTable = new Db(

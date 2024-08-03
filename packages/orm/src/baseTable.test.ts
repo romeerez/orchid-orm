@@ -295,8 +295,9 @@ describe('baseTable', () => {
 
   describe('nowSQL', () => {
     it('should produce custom SQL for timestamps when updating', () => {
+      const nowSQL = `now() AT TIME ZONE 'UTC'`;
       const BaseTable = createBaseTable({
-        nowSQL: `now() AT TIME ZONE 'UTC'`,
+        nowSQL,
       });
 
       class UserTable extends BaseTable {
@@ -313,6 +314,8 @@ describe('baseTable', () => {
           user: UserTable,
         },
       );
+
+      expect(user.internal.nowSQL).toBe(nowSQL);
 
       expectSql(
         user.find(1).update({}).toSQL(),
