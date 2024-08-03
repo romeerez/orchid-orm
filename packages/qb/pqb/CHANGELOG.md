@@ -1,5 +1,11 @@
 # pqb
 
+## 0.38.2
+
+### Patch Changes
+
+- 15ce29a: Fix `asDate` type to keep base column types (#350)
+
 ## 0.38.1
 
 ### Patch Changes

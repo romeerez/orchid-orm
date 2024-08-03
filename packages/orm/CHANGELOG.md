@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.34.2
+
+### Patch Changes
+
+- 68dd117: Fix `nowSQL` option in softDelete (#350)
+- Updated dependencies [15ce29a]
+  - pqb@0.38.2
+  - rake-db@2.22.21
+
 ## 1.34.1
 
 ### Patch Changes
