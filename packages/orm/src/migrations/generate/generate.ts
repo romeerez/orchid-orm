@@ -109,6 +109,7 @@ export const generate = async (
       dbStructure,
       generateMigrationParams,
     );
+    // console.log(migrationCode);
   } catch (err) {
     if (err instanceof AbortSignal) {
       await closeAdapters(adapters);

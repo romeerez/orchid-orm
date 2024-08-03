@@ -14,7 +14,7 @@ jest.mock('fs/promises', () => ({
 
 const { green, red, yellow } = colors;
 
-describe('primaryKey', () => {
+describe('foreignKeys', () => {
   const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
 
   const someTable = class Some extends BaseTable {
@@ -797,6 +797,65 @@ ${yellow('~ change table')} table:
   ${yellow('~ change column')} someId:
     ${yellow('from')}: t.smallint()
       ${yellow('to')}: t.integer()`,
+    );
+  });
+
+  // https://github.com/romeerez/orchid-orm/issues/348
+  it('should not be added when an unrelated column is added', async () => {
+    class A extends BaseTable {
+      readonly table = 'a';
+
+      columns = this.setColumns((t) => ({
+        id: t.identity({ always: true }).primaryKey(),
+        name: t.text(),
+      }));
+    }
+
+    class B extends BaseTable {
+      readonly table = 'b';
+
+      columns = this.setColumns((t) => ({
+        id: t.identity({ always: true }).primaryKey(),
+        aId: t.integer().foreignKey(() => A, 'id'),
+      }));
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('a', (t) => ({
+          id: t
+            .identity({
+              always: true,
+            })
+            .primaryKey(),
+        }));
+
+        await db.createTable('b', (t) => ({
+          id: t
+            .identity({
+              always: true,
+            })
+            .primaryKey(),
+          aId: t.integer().foreignKey('a', 'id'),
+        }));
+      },
+      tables: [A, B],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('a', (t) => ({
+    name: t.add(t.text()),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} a:
+  ${green('+ add column')} name text`,
     );
   });
 });

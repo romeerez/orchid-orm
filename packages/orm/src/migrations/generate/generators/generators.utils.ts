@@ -146,7 +146,16 @@ export const checkForColumnAddOrDrop = (
 
   for (const k in shape) {
     const item = shape[k];
-    if (Array.isArray(item) || item.type === 'add' || item.type === 'drop') {
+    if (
+      Array.isArray(item)
+        ? item.some(
+            (item) =>
+              (item.type === 'add' || item.type === 'drop') &&
+              item.item.data.name === key,
+          )
+        : (item.type === 'add' || item.type === 'drop') &&
+          item.item.data.name === key
+    ) {
       return true;
     }
   }

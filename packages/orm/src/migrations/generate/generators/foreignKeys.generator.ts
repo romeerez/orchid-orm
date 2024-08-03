@@ -98,9 +98,11 @@ export const processForeignKeys = (
         ];
       const hasForeignChangedColumn =
         foreignShape &&
-        dbReferences.foreignColumns.some((column) =>
-          checkForColumnAddOrDrop(foreignShape, column),
-        );
+        dbReferences.foreignColumns.some((column) => {
+          const res = checkForColumnAddOrDrop(foreignShape, column);
+          // console.log(res, column);
+          return res;
+        });
       if (hasForeignChangedColumn) continue;
 
       let found = false;
