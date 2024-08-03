@@ -120,7 +120,7 @@ const andOrToSql = (
     return;
   }
 
-  return parens ? `(${sql})` : sql;
+  return parens && sql ? `(${sql})` : sql;
 };
 
 const processAnds = (

@@ -3,6 +3,18 @@ import { UserSoftDelete } from '../test-utils/test-utils';
 import { createDb } from '../query/db';
 
 describe('softDelete', () => {
+  it('should ignore empty where object', () => {
+    const q = UserSoftDelete.where({}).delete();
+
+    expectSql(
+      q.toSQL(),
+      `
+        UPDATE "user" SET "deletedAt" = now()
+        WHERE ("user"."deletedAt" IS NULL)
+      `,
+    );
+  });
+
   it('should have nonDeleted scope enabled by default', () => {
     expectSql(
       UserSoftDelete.toSQL(),
