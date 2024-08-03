@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.34.3
+
+### Patch Changes
+
+- 30c16e4: Fix migration generator: do not add a foreign key when unrelated column is added (#348)
+
 ## 1.34.2
 
 ### Patch Changes
