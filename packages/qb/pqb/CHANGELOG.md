@@ -1,5 +1,11 @@
 # pqb
 
+## 0.38.3
+
+### Patch Changes
+
+- 279f556: Fix empty where when soft deleting and having empty object in where (#347)
+
 ## 0.38.2
 
 ### Patch Changes
