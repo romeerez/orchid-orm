@@ -3,6 +3,7 @@ import { TimestampColumn, TimestampTZColumn } from './dateTime';
 import {
   assertType,
   expectSql,
+  testColumnTypes,
   testZodColumnTypes as t,
   testDb,
   testSchemaConfig,
@@ -297,6 +298,13 @@ describe('date time columns', () => {
     it('should accept string, number, and Date', () => {
       const { inputType } = t.timestamp().asDate();
       assertType<typeof inputType, string | number | Date>();
+    });
+
+    it('should keep the default type', () => {
+      const column = testColumnTypes.timestamp().default(() => new Date());
+      const asDate = column.asDate();
+
+      assertType<typeof column.data.default, typeof asDate.data.default>();
     });
 
     it('should parse and encode timestamp as a number', async () => {

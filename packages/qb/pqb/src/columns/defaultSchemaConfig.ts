@@ -8,12 +8,7 @@ import {
   RecordUnknown,
   setColumnData,
 } from 'orchid-core';
-import {
-  DateBaseColumn,
-  DateColumn,
-  TimestampColumn,
-  TimestampTZColumn,
-} from './dateTime';
+import { DateColumn, TimestampColumn, TimestampTZColumn } from './dateTime';
 import { EnumColumn } from './enum';
 import { ArrayColumn, ArrayColumnValue } from './array';
 import { JSONColumn } from './json';
@@ -69,13 +64,8 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
     ) => Types,
   ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
 
-  dateAsNumber(): ParseColumn<
-    DateBaseColumn<DefaultSchemaConfig>,
-    unknown,
-    number
-  >;
-
-  dateAsDate(): ParseColumn<DateBaseColumn<DefaultSchemaConfig>, unknown, Date>;
+  dateAsNumber<T extends ColumnType>(this: T): ParseColumn<T, unknown, number>;
+  dateAsDate<T extends ColumnType>(this: T): ParseColumn<T, unknown, Date>;
 
   enum<U extends string, T extends readonly [U, ...U[]]>(
     dataType: string,
