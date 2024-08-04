@@ -15,6 +15,7 @@ const User = testDb(
     name: t.text(),
     password: t.text(),
     userKey: t.text().nullable(),
+    column: t.integer().nullable(),
   }),
   undefined,
   {
@@ -297,6 +298,54 @@ describe('computed', () => {
     });
 
     describe('select', () => {
+      it.each(['runtimeComputed', 'batchComputed'] as const)(
+        '%s should be supported in `get`',
+        async (column) => {
+          const q = User.get(column);
+
+          expectSql(
+            q.toSQL(),
+            `SELECT "user"."id", "user"."name" FROM "user" LIMIT 1`,
+          );
+
+          const res = await q;
+
+          assertType<typeof res, string>();
+
+          expect(res).toBe(`${userId} name`);
+        },
+      );
+
+      it.each(['runtimeComputed', 'batchComputed'] as const)(
+        '%s should be supported in `pluck`',
+        async (column) => {
+          const q = User.pluck(column);
+
+          expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
+
+          const res = await q;
+
+          assertType<typeof res, string[]>();
+
+          expect(res).toEqual([`${userId} name`]);
+        },
+      );
+
+      it.each(['runtimeComputed', 'batchComputed'] as const)(
+        '%s should be supported in `rows`',
+        async (column) => {
+          const q = User.select(column).rows();
+
+          expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
+
+          const res = await q;
+
+          assertType<typeof res, string[][]>();
+
+          expect(res).toEqual([[`${userId} name`]]);
+        },
+      );
+
       it('should select computed column', async () => {
         const q = User.select('name', 'password', 'runtimeComputed').take();
 

@@ -12,7 +12,6 @@ import {
   PickQueryMeta,
   QueryColumn,
 } from 'orchid-core';
-import { SelectQueryData } from '../sql';
 import {
   addParserForRawExpression,
   setParserForSelectedString,
@@ -78,7 +77,7 @@ const _get = <
       }
     }
 
-    (q as SelectQueryData)[getValueKey] = type;
+    q.getColumn = type;
 
     const selected = setParserForSelectedString(
       query as unknown as Query,
@@ -98,7 +97,7 @@ const _get = <
       : undefined;
   } else {
     type = arg.result.value;
-    (q as SelectQueryData)[getValueKey] = type;
+    q.getColumn = type;
     addParserForRawExpression(query as unknown as Query, getValueKey, arg);
     q.select = [(q.expr = arg)];
   }

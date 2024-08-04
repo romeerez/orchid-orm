@@ -374,8 +374,8 @@ describe('merge queries', () => {
       s2.offset = 2;
       s1.for = { type: 'UPDATE' };
       s2.for = { type: 'SHARE' };
-      s1[getValueKey] = t.integer();
-      s2[getValueKey] = t.string();
+      s1.getColumn = t.integer();
+      s2.getColumn = t.string();
 
       const i1 = q1.q as unknown as InsertQueryData;
       const i2 = q2.q as unknown as InsertQueryData;
@@ -482,7 +482,7 @@ describe('merge queries', () => {
       expect(s.limit).toEqual(s2.limit);
       expect(s.offset).toEqual(s2.offset);
       expect(s.for).toEqual(s2.for);
-      expect(s[getValueKey]).toEqual(s2[getValueKey]);
+      expect(s.getColumn).toEqual(s2.getColumn);
 
       const i = q as InsertQueryData;
       expect(i.columns).toEqual([...i1.columns, ...i2.columns]);

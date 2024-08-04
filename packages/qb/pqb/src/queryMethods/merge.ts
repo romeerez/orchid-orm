@@ -3,9 +3,8 @@ import {
   GetQueryResult,
   PickQueryMetaResultReturnTypeWithDataWindows,
 } from '../query/query';
-import { SelectQueryData, UnionSet } from '../sql';
+import { UnionSet } from '../sql';
 import {
-  getValueKey,
   PickQueryMetaResult,
   QueryThen,
   RecordBoolean,
@@ -109,10 +108,6 @@ export class MergeQueryMethods {
           break;
       }
     }
-
-    (a as never as SelectQueryData)[getValueKey] = (
-      b as never as SelectQueryData
-    )[getValueKey];
 
     if (b.returnType) a.returnType = b.returnType;
 

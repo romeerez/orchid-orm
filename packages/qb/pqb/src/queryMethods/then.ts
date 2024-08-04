@@ -636,13 +636,16 @@ export const filterResult = (
   }
 
   if (returnType === 'value') {
-    return (result as RecordUnknown[])[0]?.[queryResult.fields[0].name];
+    return (result as RecordUnknown[])[0]?.[
+      getFirstResultKey(q, queryResult) as string
+    ];
   }
 
   if (returnType === 'valueOrThrow') {
     const row = (result as RecordUnknown[])[0];
     if (!row) throw new NotFoundError(q);
-    return row[queryResult.fields[0].name];
+
+    return row[getFirstResultKey(q, queryResult) as string];
   }
 
   if (returnType === 'rowCount') {
@@ -650,7 +653,7 @@ export const filterResult = (
   }
 
   if (returnType === 'pluck') {
-    const key = queryResult.fields[0].name;
+    const key = getFirstResultKey(q, queryResult) as string;
     return (result as RecordUnknown[]).map((row) => row[key]);
   }
 
@@ -659,6 +662,17 @@ export const filterResult = (
     return (result as RecordUnknown[]).map((record) => Object.values(record));
   }
 
+  return;
+};
+
+const getFirstResultKey = (q: Query, queryResult: QueryResult) => {
+  if (q.q.select) {
+    return queryResult.fields[0].name;
+  } else {
+    for (const key in q.q.selectedComputeds) {
+      return key;
+    }
+  }
   return;
 };
 

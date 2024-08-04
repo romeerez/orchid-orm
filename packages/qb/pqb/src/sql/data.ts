@@ -20,7 +20,6 @@ import {
   ColumnsShapeBase,
   MaybeArray,
   Sql,
-  getValueKey,
   ColumnsParsers,
   Expression,
   QueryColumn,
@@ -114,6 +113,11 @@ export interface CommonQueryData {
   outerJoinOverrides?: JoinOverrides;
   schema?: string;
   select?: SelectItem[];
+  /**
+   * column type for query with 'value' or 'valueOrThrow' return type
+   * Is needed in {@link getShapeFromSelect} to get shape of sub-select that returns a single value.
+   */
+  getColumn?: QueryColumn;
   // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
   as?: string;
@@ -210,8 +214,6 @@ export interface SelectQueryData extends CommonQueryData {
     tableNames?: string[] | Expression;
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
-  // column type for query with 'value' or 'valueOrThrow' return type
-  [getValueKey]?: QueryColumn;
 }
 
 export type CreateKind = 'object' | 'raw' | 'from';

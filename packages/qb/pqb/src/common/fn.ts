@@ -110,7 +110,7 @@ export class FnExpression<
     // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
     query.q.returnType = 'valueOrThrow';
     (query.q as SelectQueryData).returnsOne = true;
-    (query.q as SelectQueryData)[getValueKey] = value;
+    query.q.getColumn = value;
     query.q.select = [this];
 
     const { parseFn } = value as never as ColumnTypeBase;

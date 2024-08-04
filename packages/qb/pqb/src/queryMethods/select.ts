@@ -809,7 +809,7 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
           } else if (it) {
             const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
-              const type = (it.q as SelectQueryData)[getValueKey];
+              const type = it.q.getColumn;
               if (type) result[key] = type;
             } else {
               result[key] = new JSONTextColumn(defaultSchemaConfig);
