@@ -1,5 +1,11 @@
 # pqb
 
+## 0.38.4
+
+### Patch Changes
+
+- dec67df: Fix js computed columns when querying `get` (#346)
+
 ## 0.38.3
 
 ### Patch Changes
