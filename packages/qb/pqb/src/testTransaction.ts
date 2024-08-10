@@ -70,6 +70,10 @@ export const testTransaction = {
               adapter.query = t.query.bind(t);
               adapter.arrays = t.arrays.bind(t);
               adapter.transaction = t.transaction.bind(t);
+
+              trx.testTransactionCount = trx.testTransactionCount
+                ? trx.testTransactionCount + 1
+                : 1;
             }
             data.reject = rej;
           });
@@ -80,6 +84,11 @@ export const testTransaction = {
           }
         })
         .finally(() => {
+          const trx = db.internal.transactionStorage.getStore();
+          if (trx?.testTransactionCount) {
+            trx.testTransactionCount--;
+          }
+
           db.internal.transactionStorage.getStore = getStore;
         });
     });

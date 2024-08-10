@@ -126,6 +126,8 @@ export interface TransactionState {
   afterCommit?: TransactionAfterCommitHook[];
   // To log all the queries inside a transaction.
   log?: QueryLogObject;
+  // number of test transaction wrapping the current one
+  testTransactionCount?: number;
 }
 
 /**

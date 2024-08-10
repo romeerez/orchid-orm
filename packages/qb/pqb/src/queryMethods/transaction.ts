@@ -5,6 +5,7 @@ import {
   emptyObject,
   SingleSqlItem,
   TransactionAdapterBase,
+  TransactionAfterCommitHook,
   TransactionState,
 } from 'orchid-core';
 import { QueryBase } from '../query/queryBase';
@@ -112,18 +113,7 @@ export class Transaction {
         if (log) log.afterQuery(commitSql, logData);
 
         // trx was defined in the callback above
-        const { afterCommit } = trx as unknown as TransactionState;
-        if (afterCommit) {
-          const promises = [];
-          for (let i = 0, len = afterCommit.length; i < len; i += 2) {
-            const q = afterCommit[i] as QueryBase;
-            const result = afterCommit[i + 1] as unknown[];
-            for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
-              promises.push(fn(result, q));
-            }
-          }
-          await Promise.all(promises);
-        }
+        await runAfterCommit((trx as unknown as TransactionState).afterCommit);
 
         return result;
       } catch (err) {
@@ -155,6 +145,14 @@ export class Transaction {
         await adapter.query(sql);
         if (log) log.afterQuery(sql, logData);
 
+        // transactionId is trx.testTransactionCount when only the test transactions are left,
+        // and it's time to execute after commit hooks, because they won't be executed for test transactions.
+        if (transactionId === trx.testTransactionCount) {
+          await runAfterCommit(
+            (trx as unknown as TransactionState).afterCommit,
+          );
+        }
+
         return result;
       } finally {
         trx.transactionId = transactionId - 1;
@@ -162,3 +160,19 @@ export class Transaction {
     }
   }
 }
+
+const runAfterCommit = async (
+  afterCommit: TransactionAfterCommitHook[] | undefined,
+) => {
+  if (afterCommit) {
+    const promises = [];
+    for (let i = 0, len = afterCommit.length; i < len; i += 3) {
+      const result = afterCommit[i] as unknown[];
+      const q = afterCommit[i + 1] as QueryBase;
+      for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
+        promises.push(fn(result, q));
+      }
+    }
+    await Promise.all(promises);
+  }
+};

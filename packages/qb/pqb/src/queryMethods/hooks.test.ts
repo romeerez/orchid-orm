@@ -239,6 +239,22 @@ describe('hooks', () => {
           [noop],
         ]);
       });
+
+      it('tmp', async () => {
+        const callback = jest.fn(async () => {
+          const count = await User.count();
+          expect(count).toBe(1);
+        });
+
+        await User.transaction(async () => {
+          await User.afterCreateCommit(['name'], callback).insert({
+            name: 'name',
+            password: 'password',
+          });
+        });
+
+        expect(callback).toBeCalledWith([{ name: 'name' }], expect.any(Object));
+      });
     });
 
     describe('afterUpdateCommit', () => {
