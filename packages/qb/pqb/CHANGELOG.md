@@ -1,5 +1,13 @@
 # pqb
 
+## 0.38.5
+
+### Patch Changes
+
+- ae0cc21: Fix `afterCreateCommit` (#355)
+- Updated dependencies [ae0cc21]
+  - orchid-core@0.19.7
+
 ## 0.38.4
 
 ### Patch Changes

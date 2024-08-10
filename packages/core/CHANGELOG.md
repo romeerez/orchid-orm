@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.7
+
+### Patch Changes
+
+- ae0cc21: Fix `afterCreateCommit` (#355)
+
 ## 0.19.6
 
 ### Patch Changes
