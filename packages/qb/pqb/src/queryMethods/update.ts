@@ -13,7 +13,7 @@ import {
 import { RelationConfigBase } from '../relations';
 import { _queryWhereIn, WhereResult } from './where/where';
 import { ToSQLQuery } from '../sql';
-import { VirtualColumn } from '../columns';
+import { NumberAsStringBaseColumn, VirtualColumn } from '../columns';
 import { anyShape, Db } from '../query/db';
 import {
   isExpression,
@@ -23,6 +23,7 @@ import {
   PickQueryShape,
   SQLQueryArgs,
   EmptyObject,
+  ColumnSchemaConfig,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
@@ -90,11 +91,23 @@ type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
   ? SetQueryKind<T, 'update'>
   : SetQueryReturnsRowCount<T, 'update'>;
 
+export type NumericColumns<T extends PickQueryShape> = {
+  [K in keyof T['shape']]: T['shape'][K]['type'] extends number | null
+    ? K
+    : T['shape'][K] extends NumberAsStringBaseColumn<ColumnSchemaConfig>
+    ? K
+    : never;
+}[keyof T['shape']];
+
 // `increment` and `decrement` methods argument type.
 // Accepts a column name to change, or an object with column names and number values to increment or decrement with.
-type ChangeCountArg<T extends PickQueryShape> =
-  | keyof T['shape']
-  | { [K in keyof T['shape']]?: number };
+export type ChangeCountArg<T extends PickQueryShape> =
+  | NumericColumns<T>
+  | {
+      [K in NumericColumns<T>]?: T['shape'][K]['type'] extends number | null
+        ? number
+        : string;
+    };
 
 // Context object for `update` logic used internally.
 // It's being used by relations logic in the ORM.
@@ -129,7 +142,7 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
   if (typeof data === 'object') {
     map = {};
     for (const key in data) {
-      map[key] = { op, arg: data[key] as number };
+      map[key] = { op, arg: data[key as never] as number };
     }
   } else {
     map = { [data as string]: { op, arg: 1 } };

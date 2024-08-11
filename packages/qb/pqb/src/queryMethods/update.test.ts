@@ -8,6 +8,7 @@ import {
   Profile,
   userData,
   UserInsert,
+  Product,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { RelationConfigBase, RelationQuery } from '../relations';
@@ -700,63 +701,97 @@ describe('update', () => {
     );
   });
 
-  describe('increment', () => {
+  describe.each(['increment'] as const)('%s', (action) => {
+    // describe.each(['increment', 'decrement'] as const)('%s', (action) => {
+    const sign = action === 'increment' ? '+' : '-';
+
     it('should not mutate query', () => {
       const q = User.all();
-      q.where({ name: 'name' }).increment('age');
+
+      q.where({ name: 'name' })[action]('age');
+
       expectQueryNotMutated(q);
     });
 
-    it('should increment column by 1', () => {
-      const query = User.increment('age');
+    it(`should ${action} column by 1`, () => {
+      const q = User[action]('age');
+
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           UPDATE "user"
-          SET "age" = "age" + $1,
+          SET "age" = "age" ${sign} $1,
               "updatedAt" = now()
         `,
         [1],
       );
     });
 
-    it('should increment column by provided amount', () => {
-      const query = User.increment({ age: 3 });
+    it(`should ${action} decimal column by 1`, () => {
+      const q = Product[action]('price');
+
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
+        `
+          UPDATE "product"
+          SET "price" = "price" ${sign} $1
+        `,
+        [1],
+      );
+    });
+
+    it(`should ${action} column by provided amount`, () => {
+      const q = User[action]({ age: 3 });
+
+      expectSql(
+        q.toSQL(),
         `
           UPDATE "user"
-          SET "age" = "age" + $1,
+          SET "age" = "age" ${sign} $1,
               "updatedAt" = now()
         `,
         [3],
       );
     });
 
-    it('should support returning', () => {
-      const query = User.select('id').increment({ age: 3 });
+    it(`should ${action} decimal column by provided amount`, () => {
+      const q = Product[action]({ price: '1' });
+
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
+        `
+          UPDATE "product"
+          SET "price" = "price" ${sign} $1
+        `,
+        ['1'],
+      );
+    });
+
+    it('should support returning', () => {
+      const q = User.select('id')[action]({ age: 3 });
+
+      expectSql(
+        q.toSQL(),
         `
           UPDATE "user"
-          SET "age" = "age" + $1,
+          SET "age" = "age" ${sign} $1,
               "updatedAt" = now()
           RETURNING "user"."id"
         `,
         [3],
       );
 
-      assertType<Awaited<typeof query>, { id: number }[]>();
+      assertType<Awaited<typeof q>, { id: number }[]>();
     });
 
-    it('should increment named column', () => {
-      const q = Snake.select('snakeId').increment({ tailLength: 3 });
+    it(`should ${action} named column`, () => {
+      const q = Snake.select('snakeId')[action]({ tailLength: 3 });
 
       expectSql(
         q.toSQL(),
         `
           UPDATE "snake"
-          SET "tail_length" = "tail_length" + $1,
+          SET "tail_length" = "tail_length" ${sign} $1,
               "updated_at" = now()
           RETURNING "snake"."snake_id" "snakeId"
         `,
@@ -767,7 +802,7 @@ describe('update', () => {
     });
 
     it('should throw not found error when record does not exist', async () => {
-      await expect(User.find(123).increment('age')).rejects.toThrow(
+      await expect(User.find(123)[action]('age')).rejects.toThrow(
         'Record is not found',
       );
     });
@@ -775,83 +810,7 @@ describe('update', () => {
     it('should not throw not found error when record exists', async () => {
       const id = await User.get('id').create(userData);
 
-      const res = await User.find(id).increment('age');
-
-      expect(res).toBe(1);
-      assertType<typeof res, number>();
-    });
-  });
-
-  describe('decrement', () => {
-    it('should decrement column by 1', () => {
-      const query = User.decrement('age');
-      expectSql(
-        query.toSQL(),
-        `
-          UPDATE "user"
-          SET "age" = "age" - $1,
-              "updatedAt" = now()
-        `,
-        [1],
-      );
-    });
-
-    it('should decrement column by provided amount', () => {
-      const query = User.decrement({ age: 3 });
-      expectSql(
-        query.toSQL(),
-        `
-          UPDATE "user"
-          SET "age" = "age" - $1,
-              "updatedAt" = now()
-        `,
-        [3],
-      );
-    });
-
-    it('should support returning', () => {
-      const query = User.select('id').decrement({ age: 3 });
-      expectSql(
-        query.toSQL(),
-        `
-          UPDATE "user"
-          SET "age" = "age" - $1,
-              "updatedAt" = now()
-          RETURNING "user"."id"
-        `,
-        [3],
-      );
-
-      assertType<Awaited<typeof query>, { id: number }[]>();
-    });
-
-    it('should decrement named column', () => {
-      const q = Snake.select('snakeId').decrement({ tailLength: 3 });
-
-      expectSql(
-        q.toSQL(),
-        `
-          UPDATE "snake"
-          SET "tail_length" = "tail_length" - $1,
-              "updated_at" = now()
-          RETURNING "snake"."snake_id" "snakeId"
-        `,
-        [3],
-      );
-
-      assertType<Awaited<typeof q>, { snakeId: number }[]>();
-    });
-
-    it('should throw not found error when record does not exist', async () => {
-      await expect(User.find(123).decrement('age')).rejects.toThrow(
-        'Record is not found',
-      );
-    });
-
-    it('should not throw not found error when record exists', async () => {
-      const id = await User.get('id').create(userData);
-
-      const res = await User.find(id).decrement('age');
+      const res = await User.find(id)[action]('age');
 
       expect(res).toBe(1);
       assertType<typeof res, number>();

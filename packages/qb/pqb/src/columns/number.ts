@@ -67,12 +67,7 @@ export interface DecimalColumnData extends ColumnData {
 // exact numeric of selectable precision
 export class DecimalColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsNumber
-> {
+> extends NumberAsStringBaseColumn<Schema> {
   declare data: DecimalColumnData;
   operators = Operators.number;
   dataType = 'numeric' as const;
@@ -82,7 +77,7 @@ export class DecimalColumn<
     numericPrecision?: number,
     numericScale?: number,
   ) {
-    super(schema, schema.stringSchema() as never);
+    super(schema);
     this.data.numericPrecision = numericPrecision;
     this.data.numericScale = numericScale;
     this.data.alias = 'decimal';

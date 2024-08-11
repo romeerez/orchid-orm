@@ -7,8 +7,10 @@ import {
 } from '../query/query';
 import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
 import {
+  ColumnSchemaConfig,
   emptyArray,
   emptyObject,
+  Expression,
   PickQueryMeta,
   QueryColumn,
 } from 'orchid-core';
@@ -26,9 +28,20 @@ import {
   OperatorsText,
 } from '../columns/operators';
 import { RawSQL } from '../sql/rawSql';
-import { IntegerColumn, RealColumn } from '../columns';
+import {
+  ColumnType,
+  DecimalColumn,
+  IntegerColumn,
+  NumberAsStringBaseColumn,
+  NumberBaseColumn,
+  RealColumn,
+} from '../columns';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
-import { _queryGetOptional, QueryGetSelf } from './get.utils';
+import {
+  _getSelectableColumn,
+  _queryGetOptional,
+  QueryGetSelf,
+} from './get.utils';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
@@ -54,6 +67,23 @@ const nullableFloat = new RealColumn(defaultSchemaConfig);
 nullableFloat.parseItem = nullableFloat.parseFn = (input): number =>
   (input === null ? null : parseFloat(input as never)) as number;
 
+const stringAsNumber =
+  new (NumberAsStringBaseColumn as unknown as typeof DecimalColumn)(
+    defaultSchemaConfig,
+  );
+
+const numericResultColumn = (
+  q: unknown,
+  arg: PropertyKey | Expression,
+): ColumnType => {
+  const type =
+    typeof arg === 'string'
+      ? _getSelectableColumn(q as Query, arg)
+      : (arg as Expression).result.value;
+
+  return type instanceof NumberBaseColumn ? nullableFloat : stringAsNumber;
+};
+
 type QueryReturnsAgg<T, C, Op> = SetQueryReturnsColumnOrThrow<
   T,
   QueryColumn<C, Op>
@@ -64,9 +94,39 @@ type CountReturn<T> = QueryReturnsAgg<T, number, OperatorsNumber> & {
   isCount: true;
 };
 
-type NumberColumn = QueryColumn<number, OperatorsNumber>;
+type NumberColumnSelectable<T extends PickQueryMeta> =
+  | {
+      [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends
+        | number
+        | null
+        ? K
+        : T['meta']['selectable'][K]['column'] extends NumberAsStringBaseColumn<ColumnSchemaConfig>
+        ? K
+        : never;
+    }[keyof T['meta']['selectable']]
+  | Expression<QueryColumn<number | null>>;
 
 type NumberNullable = QueryColumn<number | null, OperatorsNumber>;
+
+type NumericReturn<
+  T extends PickQueryMeta,
+  Arg,
+> = Arg extends keyof T['meta']['selectable']
+  ? SetQueryReturnsColumnOrThrow<
+      T,
+      QueryColumn<
+        T['meta']['selectable'][Arg]['column']['type'] | null,
+        OperatorsNumber
+      >
+    > &
+      OperatorsNumber
+  : Arg extends Expression
+  ? SetQueryReturnsColumnOrThrow<
+      T,
+      QueryColumn<Arg['result']['value']['type'] | null, OperatorsNumber>
+    > &
+      OperatorsNumber
+  : never;
 
 type NullableNumberReturn<T> = SetQueryReturnsColumnOrThrow<T, NumberNullable> &
   OperatorsNumber;
@@ -210,14 +270,13 @@ export class AggregateMethods {
    * @param arg - numeric column or raw SQL
    * @param options - aggregation options
    */
-  min<T extends PickQueryMetaResultRelationsWindows>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberColumn>,
-    options?: AggregateOptions<T>,
-  ): NullableNumberReturn<T> {
+  min<
+    T extends PickQueryMetaResultRelationsWindows,
+    Arg extends NumberColumnSelectable<T>,
+  >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
-      nullableFloat,
+      numericResultColumn(this, arg),
       'min',
       [arg],
       options,
@@ -245,14 +304,13 @@ export class AggregateMethods {
    * @param arg - numeric column or raw SQL
    * @param options - aggregation options
    */
-  max<T extends PickQueryMetaResultRelationsWindows>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberColumn>,
-    options?: AggregateOptions<T>,
-  ): NullableNumberReturn<T> {
+  max<
+    T extends PickQueryMetaResultRelationsWindows,
+    Arg extends NumberColumnSelectable<T>,
+  >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
-      nullableFloat,
+      numericResultColumn(this, arg),
       'max',
       [arg],
       options,
@@ -279,14 +337,13 @@ export class AggregateMethods {
    * @param arg - numeric column or raw SQL
    * @param options - aggregation options
    */
-  sum<T extends PickQueryMetaResultRelationsWindows>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberColumn>,
-    options?: AggregateOptions<T>,
-  ): NullableNumberReturn<T> {
+  sum<
+    T extends PickQueryMetaResultRelationsWindows,
+    Arg extends NumberColumnSelectable<T>,
+  >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
-      nullableFloat,
+      numericResultColumn(this, arg),
       'sum',
       [arg],
       options,
@@ -310,14 +367,13 @@ export class AggregateMethods {
    * @param arg - numeric column or raw SQL
    * @param options - aggregation options
    */
-  avg<T extends PickQueryMetaResultRelationsWindows>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberColumn>,
-    options?: AggregateOptions<T>,
-  ): NullableNumberReturn<T> {
+  avg<
+    T extends PickQueryMetaResultRelationsWindows,
+    Arg extends NumberColumnSelectable<T>,
+  >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
-      nullableFloat,
+      numericResultColumn(this, arg),
       'avg',
       [arg],
       options,
@@ -344,14 +400,13 @@ export class AggregateMethods {
    * @param arg - numeric column or raw SQL
    * @param options - aggregation options
    */
-  bitAnd<T extends PickQueryMetaResultRelationsWindows>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberColumn>,
-    options?: AggregateOptions<T>,
-  ): NullableNumberReturn<T> {
+  bitAnd<
+    T extends PickQueryMetaResultRelationsWindows,
+    Arg extends NumberColumnSelectable<T>,
+  >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
-      nullableFloat,
+      numericResultColumn(this, arg),
       'bit_and',
       [arg],
       options,
@@ -375,14 +430,13 @@ export class AggregateMethods {
    * @param arg - numeric column or raw SQL
    * @param options - aggregation options
    */
-  bitOr<T extends PickQueryMetaResultRelationsWindows>(
-    this: T,
-    arg: SelectableOrExpressionOfType<T, NumberColumn>,
-    options?: AggregateOptions<T>,
-  ): NullableNumberReturn<T> {
+  bitOr<
+    T extends PickQueryMetaResultRelationsWindows,
+    Arg extends NumberColumnSelectable<T>,
+  >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
-      nullableFloat,
+      numericResultColumn(this, arg),
       'bit_or',
       [arg],
       options,

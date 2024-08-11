@@ -359,8 +359,8 @@ describe('merge queries', () => {
       s1.group = ['a'];
       s2.group = ['b'];
 
-      const sum = [User.sum('id' as never).gt(1).q.expr as Expression];
-      const avg = [User.avg('id' as never).lt(10).q.expr as Expression];
+      const sum = [User.sum('id').gt(1).q.expr as Expression];
+      const avg = [User.avg('id').lt(10).q.expr as Expression];
       s1.having = [sum];
       s2.having = [avg];
 

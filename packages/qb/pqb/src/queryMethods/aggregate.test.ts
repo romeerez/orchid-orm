@@ -4,6 +4,7 @@ import {
   userData,
   Snake,
   Message,
+  Product,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { Operators } from '../columns/operators';
@@ -249,6 +250,35 @@ describe('aggregate', () => {
           JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
+    });
+  });
+
+  describe('numeric aggregations', () => {
+    it('should return number for numeric types returning a number', async () => {
+      await Product.insertMany([{ price: '1' }, { price: '2' }]);
+
+      const value = await Product[
+        'sum' as 'avg' | 'min' | 'max' | 'sum' | 'bitAnd' | 'bitOr'
+      ]('id');
+
+      assertType<typeof value, number | null>();
+
+      expect(typeof value).toBe('number');
+    });
+
+    it('should return string for precise numeric types', async () => {
+      await Product.insertMany([
+        { price: '111111111111111.111111111111111' },
+        { price: '222222222222222.222222222222222' },
+      ]);
+
+      const value = await Product[
+        'sum' as 'avg' | 'min' | 'max' | 'sum' | 'bitAnd' | 'bitOr'
+      ]('price');
+
+      assertType<typeof value, string | null>();
+
+      expect(typeof value).toBe('string');
     });
   });
 

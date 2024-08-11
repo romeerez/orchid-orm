@@ -47,6 +47,27 @@ export type GetResultOptional<
   ? SetQueryReturnsColumnOptional<T, Arg['result']['value']>
   : never;
 
+export const _getSelectableColumn = (
+  q: Query,
+  arg: string,
+): QueryColumn | undefined => {
+  let type: QueryColumn | undefined = q.q.shape[arg];
+  if (!type) {
+    const index = arg.indexOf('.');
+    if (index !== -1) {
+      const table = arg.slice(0, index);
+      const column = arg.slice(index + 1);
+
+      if (table === (q.q.as || q.table)) {
+        type = q.shape[column];
+      } else {
+        type = q.q.joinedShapes?.[table]?.[column];
+      }
+    }
+  }
+  return type;
+};
+
 // mutate the query to get a single value
 const _get = <
   T extends QueryGetSelf,
@@ -62,21 +83,7 @@ const _get = <
 
   let type: QueryColumn | undefined;
   if (typeof arg === 'string') {
-    type = q.shape[arg];
-    if (!type) {
-      const index = arg.indexOf('.');
-      if (index !== -1) {
-        const table = arg.slice(0, index);
-        const column = arg.slice(index + 1);
-
-        if (table === (q.as || (query as unknown as Query).table)) {
-          type = q.shape[column];
-        } else {
-          type = q.joinedShapes?.[table]?.[column];
-        }
-      }
-    }
-
+    type = _getSelectableColumn(query as unknown as Query, arg);
     q.getColumn = type;
 
     const selected = setParserForSelectedString(

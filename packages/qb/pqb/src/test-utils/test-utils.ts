@@ -127,6 +127,11 @@ export const Tag = testDb('tag', (t) => ({
   tag: t.text().primaryKey(),
 }));
 
+export const Product = testDb('product', (t) => ({
+  id: t.identity().primaryKey(),
+  price: t.decimal(),
+}));
+
 export const expectQueryNotMutated = (q: Query) => {
   expectSql(q.toSQL(), `SELECT * FROM "${q.table}"`);
 };
