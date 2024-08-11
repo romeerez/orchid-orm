@@ -1,5 +1,11 @@
 # pqb
 
+## 0.38.6
+
+### Patch Changes
+
+- 1de9370: Allow numeric columns in numeric aggregations and in increment (#356)
+
 ## 0.38.5
 
 ### Patch Changes
