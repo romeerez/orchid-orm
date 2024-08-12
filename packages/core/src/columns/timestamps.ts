@@ -30,7 +30,7 @@ const raw = (sql: string) => new SimpleRawSQL(sql);
 
 export interface TimestampHelpers {
   /**
-   * Add `createdAt` and `updatedAt timestamps. Both have `now()` as a default, `updatedAt` is automatically updated during update.
+   * Add `createdAt` and `updatedAt` timestamps. Both have `now()` as a default, `updatedAt` is automatically updated during update.
    */
   timestamps<T extends ColumnTypeBase>(this: { timestamp(): T }): Timestamps<T>;
 
