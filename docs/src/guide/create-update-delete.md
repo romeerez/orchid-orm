@@ -391,7 +391,7 @@ Use this method to merge all the data you have passed into [create](#create-inse
 
 If the table has columns with **dynamic** default values, such values will be applied as well.
 
-You can exclude certain columns from being merged by passing the `exclude` option.
+You can exclude certain columns from being merged by passing the `except` option.
 
 ```ts
 // merge the full data
