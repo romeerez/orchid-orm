@@ -1358,7 +1358,7 @@ export class OnConflictQueryBuilder<
    *
    * If the table has columns with **dynamic** default values, such values will be applied as well.
    *
-   * You can exclude certain columns from being merged by passing the `exclude` option.
+   * You can exclude certain columns from being merged by passing the `except` option.
    *
    * ```ts
    * // merge the full data
