@@ -1,5 +1,5 @@
 import { Post, User } from '../test-utils/test-utils';
-import { assertType, expectSql } from 'test-utils';
+import { assertType, expectSql, sql } from 'test-utils';
 
 describe('expressions', () => {
   describe('column', () => {
@@ -109,9 +109,9 @@ describe('expressions', () => {
       const q = User.select({
         count: (q) =>
           q
-            .fn('count', [q.sql`coalesce(one, two)`])
+            .fn('count', [sql`coalesce(one, two)`])
             .type((t) => t.integer())
-            .gt(q.sql`2 + 2`),
+            .gt(sql`2 + 2`),
       }).take();
 
       assertType<Awaited<typeof q>, { count: boolean }>();

@@ -291,6 +291,8 @@ Takes a list of columns to be selected, and by default, the query builder will s
 The last argument can be an object. Keys of the object are column aliases, value can be a column name, sub-query, or raw SQL expression.
 
 ```ts
+import { sql } from './baseTable';
+
 // select columns of the table:
 db.table.select('id', 'name', { idAlias: 'id' });
 
@@ -318,9 +320,9 @@ db.table.select({
   raw: sql`1 + 2`.type((t) => t.integer()),
 });
 
-// same raw SQL query as above, but raw value is returned from a callback
+// same raw SQL query as above, but the sql is returned from a callback
 db.table.select({
-  raw: (q) => q.sql`1 + 2`.type((t) => t.integer()),
+  raw: () => sql`1 + 2`.type((t) => t.integer()),
 });
 ```
 
@@ -627,7 +629,9 @@ db.table.having((q) =>
 Arguments of the aggregate function and of the comparison can be raw SQL:
 
 ```ts
-db.table.having((q) => q.count(q.sql('coalesce(one, two)')).gte(q.sql`2 + 2`));
+import { sql } from './baseTable';
+
+db.table.having((q) => q.count(sql('coalesce(one, two)')).gte(sql`2 + 2`));
 ```
 
 ### havingSql

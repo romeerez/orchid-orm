@@ -6,17 +6,12 @@ import {
   Updatable,
 } from './baseTable';
 import { orchidORM } from './orm';
-import {
-  ColumnType,
-  makeColumnTypes,
-  Operators,
-  SqlMethod,
-  TextColumn,
-} from 'pqb';
+import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
 import {
   BaseTable,
   db,
   profileData,
+  sql,
   userData,
   useTestORM,
 } from './test-utils/orm.test-utils';
@@ -52,8 +47,12 @@ describe('baseTable', () => {
     expect(BaseTable.exportAs).toBe('BaseTable');
   });
 
-  it('should have `sql`', () => {
-    expect(BaseTable.sql).toBe(SqlMethod.prototype.sql);
+  it('should have `sql` with bound column types', () => {
+    const { sql } = BaseTable;
+
+    const s = sql``;
+
+    expect(s.columnTypes).toBe(BaseTable.columnTypes);
   });
 
   it('should allow to customize a name', () => {
@@ -573,7 +572,7 @@ describe('baseTable', () => {
       }));
 
       computed = this.setComputed((q) => ({
-        sqlComputed: q.sql`${q.column('Name')} || ' ' || ${q.column(
+        sqlComputed: sql`${q.column('Name')} || ' ' || ${q.column(
           'UserKey',
         )}`.type((t) => t.text()),
         runtimeComputed: q.computeAtRuntime(

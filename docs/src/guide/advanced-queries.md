@@ -14,20 +14,24 @@ Use `with` to add a Common Table Expression (CTE) to the query.
 note that in the latter case it won't have customized column types to use for typing SQL.
 
 ```ts
+import { sql } from './baseTable';
+
 // can access custom columns when using off a table
 db.anyTable.with('x', (q) =>
-  q.select({ column: (q) => q.sql`123`.type((t) => t.customColumn()) }),
+  q.select({ column: (q) => sql`123`.type((t) => t.customColumn()) }),
 );
 
 // only default columns are available when using off `$queryBuilder`
 db.$queryBuilder.with('x', (q) =>
-  q.select({ column: (q) => q.sql`123`.type((t) => t.integer()) }),
+  q.select({ column: (q) => sql`123`.type((t) => t.integer()) }),
 );
 ```
 
 `with` accepts query objects, callbacks returning query objects, and custom SQL expressions returned from callbacks.
 
 ```ts
+import { sql } from './baseTable';
+
 db.table
   .with(
     'alias',
@@ -42,7 +46,7 @@ db.table
 db.table
   .with('alias', (q) =>
     // select a custom sql
-    q.select({ column: (q) => q.sql`123`.type((t) => t.integer()) }),
+    q.select({ column: (q) => sql`123`.type((t) => t.integer()) }),
   )
   .from('alias')
   .select('column')
@@ -149,17 +153,19 @@ Recursive query can be constructed with basic SQL instructions only, without ref
 In the following example, we recursively select numbers from 1 to 100, and additionally apply n > 10 filter in the end.
 
 ```ts
+import { sql } from './baseTable';
+
 db.$queryBuilder
   .withRecursive(
     't',
     // select `1 AS n` for the base query
-    (q) => q.select({ n: (q) => q.sql`1`.type((t) => t.integer()) }),
+    (q) => q.select({ n: (q) => sql`1`.type((t) => t.integer()) }),
     // select `n + 1 AS n` for the recursive part
     (q) =>
       q
         .from('t')
         // type can be omitted here because it was defined in the base query
-        .select({ n: (q) => q.sql`n + 1` })
+        .select({ n: (q) => sql`n + 1` })
         .where({ n: { lt: 100 } }),
   )
   .from('t')
@@ -175,6 +181,8 @@ Use `withSql` to add a Common Table Expression (CTE) based on a custom SQL.
 Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$queryBuilder`.
 
 ```ts
+import { sql } from './baseTable';
+
 db.table
   .withSql(
     'alias',
@@ -184,7 +192,7 @@ db.table
       two: t.string(),
     }),
     // define SQL expression:
-    (q) => q.sql`(VALUES (1, 'two')) t(one, two)`,
+    (q) => sql`(VALUES (1, 'two')) t(one, two)`,
   )
   // is not prefixed in the middle of a query chain
   .withSql(
@@ -192,7 +200,7 @@ db.table
     (t) => ({
       x: t.integer(),
     }),
-    (q) => q.sql`(VALUES (1)) t(x)`,
+    (q) => sql`(VALUES (1)) t(x)`,
   )
   .from('alias');
 ```
@@ -200,6 +208,8 @@ db.table
 Options can be passed via a second argument:
 
 ```ts
+import { sql } from './baseTable';
+
 db.table
   .withSql(
     'alias',
@@ -213,7 +223,7 @@ db.table
       one: t.integer(),
       two: t.string(),
     }),
-    (q) => q.sql`(VALUES (1, 'two')) t(one, two)`,
+    (q) => sql`(VALUES (1, 'two')) t(one, two)`,
   )
   .from('alias');
 ```
@@ -244,13 +254,15 @@ SELECT "user"."id" FROM "customSchema"."user"
 Creates a union query, takes one or more queries or SQL expressions.
 
 ```ts
+import { sql } from './baseTable';
+
 // The first query of the union
 db.one
   .select('id', 'name')
   // add two more queries to the union
   .union(
     db.two.select('id', 'name'),
-    (q = q.sql`SELECT id, name FROM "thirdTable"`),
+    (q = sql`SELECT id, name FROM "thirdTable"`),
   )
   // sub-sequent `union` is equivalent to passing multiple queries into a single `union`
   .union(db.three.select('id', 'name'));

@@ -1,4 +1,10 @@
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  sql,
+  testDb,
+  useTestDatabase,
+} from 'test-utils';
 import {
   Profile,
   profileData,
@@ -21,7 +27,7 @@ const User = testDb(
   {
     computed: (q) => ({
       nameAndKey: q
-        .sql(() => q.sql`${q.column('name')} || ' ' || ${q.column('userKey')}`)
+        .sql(() => sql`${q.column('name')} || ' ' || ${q.column('userKey')}`)
         .type((t) => t.string()),
       runtimeComputed: q.computeAtRuntime(
         ['id', 'name'],
@@ -466,7 +472,7 @@ describe('computed', () => {
 
       it('should select with alias when there is a conflicting select', async () => {
         const q = User.select('runtimeComputed', {
-          id: (q) => q.sql<boolean>`true`,
+          id: () => sql<boolean>`true`,
         }).take();
 
         expectSql(

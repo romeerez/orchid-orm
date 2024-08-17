@@ -38,6 +38,8 @@ export const testDb = createDb({
   columnTypes: testColumnTypes,
 });
 
+export const { sql } = testDb;
+
 const zodColumnTypes = makeColumnTypes(zodSchemaConfig);
 
 export const testZodColumnTypes = {

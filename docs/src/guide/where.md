@@ -11,6 +11,8 @@ outline: deep
 Constructing `WHERE` conditions:
 
 ```ts
+import { sql } from './baseTable';
+
 db.table.where({
   // column of the current table
   name: 'John',
@@ -27,8 +29,8 @@ db.table.where({
   // where column equals to raw SQL
   // import `sql` from your `BaseTable`
   column: sql`sql expression`,
-  // or use `(q) => q.sql` for the same
-  column2: (q) => q.sql`sql expression`,
+  // or use `(q) => sql` for the same
+  column2: (q) => sql`sql expression`,
 
   // reference other columns in such a way:
   firstName: (q) => q.ref('lastName'),

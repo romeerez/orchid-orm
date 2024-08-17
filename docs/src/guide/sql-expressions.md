@@ -32,7 +32,7 @@ In some cases such as when using [from](/guide/orm-and-query-builder#from), sett
 
 ```ts
 const subQuery = db.someTable.select({
-  sum: (q) => q.sql`$a + $b`.type((t) => t.decimal()).values({ a: 1, b: 2 }),
+  sum: (q) => sql`$a + $b`.type((t) => t.decimal()).values({ a: 1, b: 2 }),
 });
 
 // `gt`, `gte`, `min`, `lt`, `lte`, `max` in `where`
@@ -151,7 +151,7 @@ await db.table.select({
   // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
   // returns a boolean
   one: (q) =>
-    q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
+    sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
 
   // selects the same as above, but by building a query
   two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
@@ -166,11 +166,13 @@ await db.table.select({
 and other dynamically defined columns.
 
 ```ts
+import { sql } from './baseTable';
+
 await db.table.join('otherTable').select({
   // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
   // returns a boolean
   one: (q) =>
-    q.sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
+    sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
       'otherTable.name',
     )} = ${'name'}`,
 

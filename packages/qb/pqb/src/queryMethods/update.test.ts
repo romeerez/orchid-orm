@@ -10,7 +10,13 @@ import {
   UserInsert,
   Product,
 } from '../test-utils/test-utils';
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  sql,
+  testDb,
+  useTestDatabase,
+} from 'test-utils';
 import { RelationConfigBase, RelationQuery } from '../relations';
 import { addQueryOn } from './join/join';
 import { Query } from '../query/query';
@@ -427,7 +433,7 @@ describe('update', () => {
 
   it('should support raw sql as a value', () => {
     const query = User.where({ id: 1 }).update({
-      name: (q) => q.sql<string>`'raw sql'`,
+      name: () => sql<string>`'raw sql'`,
     });
 
     expectSql(

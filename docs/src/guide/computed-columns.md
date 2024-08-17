@@ -15,6 +15,8 @@ SQL computed column is going to unwrap into the given SQL when selecting it from
 In the following example, selecting `fullName` will unwrap into `"firstName" || ' ' || "lastName"` SQL:
 
 ```ts
+import { BaseTable, sql } from './baseTable';
+
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -24,17 +26,17 @@ export class UserTable extends BaseTable {
   }));
 
   computed = this.setComputed((q) => ({
-    fullName: q.sql`${q.column('firstName')} || ' ' || ${q.column(
+    fullName: sql`${q.column('firstName')} || ' ' || ${q.column(
       'lastName',
     )}`.type((t) => t.string()),
-    randomizedName: q
-      .sql(() => q.sql`${Math.random()} ${q.column('firstName')}`)
-      .type((t) => t.string()),
+    randomizedName: sql(
+      () => sql`${Math.random()} ${q.column('firstName')}`,
+    ).type((t) => t.string()),
   }));
 }
 ```
 
-`randomizedName` in the example is defined with `` q.sql(() => q.sql`...`) `` syntax that makes it dynamic,
+`randomizedName` in the example is defined with `` sql(() => sql`...`) `` syntax that makes it dynamic,
 so that a new random value will be selected for every query.
 
 Such can be column can be selected, can be used for filtering and ordering, available in nested sub-queries.

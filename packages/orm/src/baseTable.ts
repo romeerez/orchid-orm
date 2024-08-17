@@ -7,6 +7,7 @@ import {
   DefaultColumnTypes,
   defaultSchemaConfig,
   DefaultSchemaConfig,
+  DynamicRawSQL,
   getColumnTypes,
   makeColumnTypes,
   MapTableScopesOption,
@@ -17,10 +18,10 @@ import {
   QueryBeforeHook,
   QueryData,
   QueryHooks,
+  RawSQL,
   RelationsBase,
   ShapeColumnPrimaryKeys,
   ShapeUniqueColumns,
-  SqlMethod,
   TableData,
   TableDataFn,
   TableDataItem,
@@ -28,6 +29,7 @@ import {
   TableDataItemsUniqueColumnTuples,
   TableDataItemsUniqueConstraints,
   UniqueConstraints,
+  raw,
 } from 'pqb';
 import {
   applyMixins,
@@ -37,16 +39,19 @@ import {
   ColumnShapeOutput,
   ColumnsShapeBase,
   CoreQueryScopes,
+  DynamicSQLArg,
   emptyArray,
   EmptyObject,
   emptyObject,
   getCallerFilePath,
   getStackTrace,
   MaybeArray,
+  QueryColumn,
   QueryColumns,
   RecordUnknown,
   Simplify,
   snakeCaseKey,
+  StaticSQLArgs,
   toSnakeCase,
 } from 'orchid-core';
 import { MapRelations, RelationConfigSelf } from './relations/relations';
@@ -220,7 +225,7 @@ export interface BaseTableInstance<ColumnTypes> {
    * Or you can add a computed column on the ORM level, without adding it to the database, in such a way:
    *
    * ```ts
-   * import { BaseTable } from './baseTable';
+   * import { BaseTable, sql } from './baseTable';
    *
    * export class UserTable extends BaseTable {
    *   readonly table = 'user';
@@ -232,7 +237,7 @@ export interface BaseTableInstance<ColumnTypes> {
    *
    *   computed = this.setComputed({
    *     fullName: (q) =>
-   *       q.sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
+   *       sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
    *         (t) => t.string(),
    *       ),
    *   });
@@ -269,6 +274,8 @@ export interface BaseTableInstance<ColumnTypes> {
    * We can define a computed `title` by passing a function into `sql` method:
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * type Locale = 'en' | 'uk' | 'be';
    * const asyncLanguageStorage = new AsyncLocalStorage<Locale>();
    * const defaultLocale: Locale = 'en';
@@ -283,20 +290,18 @@ export interface BaseTableInstance<ColumnTypes> {
    *   }));
    *
    *   computed = this.setComputed({
-   *     title: (q) =>
-   *       q
-   *         // .sql can take a function that accepts `sql` argument and must return SQL
-   *         .sql((sql) => {
-   *           // get locale dynamically based on current storage value
-   *           const locale = asyncLanguageStorage.getStore() || defaultLocale;
+   *     title: () =>
+   *       // `sql` accepts a callback to generate a new query on every run
+   *       sql(() => {
+   *         // get locale dynamically based on current storage value
+   *         const locale = asyncLanguageStorage.getStore() || defaultLocale;
    *
-   *           // use COALESCE in case when localized title is NULL, use title_en
-   *           return sql`COALESCE(
+   *         // use COALESCE in case when localized title is NULL, use title_en
+   *         return sql`COALESCE(
    *             ${q.column(`title_${locale}`)},
    *             ${q.column(`title_${defaultLocale}`)}
    *           )`;
-   *         })
-   *         .type((t) => t.text()),
+   *       }).type((t) => t.text()),
    *   });
    * }
    * ```
@@ -406,11 +411,16 @@ export interface BaseTableInstance<ColumnTypes> {
 export interface BaseTableClass<
   SchemaConfig extends ColumnSchemaConfig,
   ColumnTypes,
-> extends SqlMethod<ColumnTypes> {
+> {
   nowSQL: string | undefined;
   exportAs: string;
   columnTypes: ColumnTypes;
   getFilePath(): string;
+
+  sql<T>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>, ColumnTypes>;
+  sql<T>(
+    ...args: [DynamicSQLArg<QueryColumn<T>>]
+  ): DynamicRawSQL<QueryColumn<T>, ColumnTypes>;
 
   new (): BaseTableInstance<ColumnTypes>;
   instance(): BaseTableInstance<ColumnTypes>;
@@ -499,7 +509,13 @@ export function createBaseTable<
     static nowSQL = nowSQL;
     static exportAs = exportAs;
     static columnTypes = columnTypes;
-    static sql = SqlMethod.prototype.sql;
+
+    static sql(...args: unknown[]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sql = (raw as any)(...args);
+      sql.columnTypes = columnTypes;
+      return sql;
+    }
 
     private static _inputSchema: unknown;
     static inputSchema() {

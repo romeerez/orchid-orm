@@ -130,11 +130,13 @@ export class ExpressionMethods {
    * Only for referencing a column in the query's table. For referencing joined table's columns, see [ref](#ref).
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * await db.table.select({
    *   // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
    *   // returns a boolean
    *   one: (q) =>
-   *     q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
+   *     sql<boolean>`${q.column('id')} = ${1} OR ${q.column('name')} = ${'name'}`,
    *
    *   // selects the same as above, but by building a query
    *   two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
@@ -159,11 +161,13 @@ export class ExpressionMethods {
    * and other dynamically defined columns.
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * await db.table.join('otherTable').select({
    *   // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
    *   // returns a boolean
    *   one: (q) =>
-   *     q.sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
+   *     sql<boolean>`${q.ref('otherTable.id')} = ${1} OR ${q.ref(
    *       'otherTable.name',
    *     )} = ${'name'}`,
    *

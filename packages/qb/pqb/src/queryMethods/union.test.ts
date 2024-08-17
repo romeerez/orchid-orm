@@ -1,5 +1,5 @@
 import { User } from '../test-utils/test-utils';
-import { expectSql } from 'test-utils';
+import { expectSql, sql } from 'test-utils';
 
 describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
   it('should handle limit, offset, order differently when placed before or after union', () => {
@@ -8,11 +8,8 @@ describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
     const q = User.order('id')
       .limit(1)
       .offset(1)
-      [union](User.order('name').limit(2).offset(2), (q) => q.sql`custom sql 1`)
-      [unionAll](
-        User.order('age').limit(3).offset(3),
-        (q) => q.sql`custom sql 2`,
-      )
+      [union](User.order('name').limit(2).offset(2), () => sql`custom sql 1`)
+      [unionAll](User.order('age').limit(3).offset(3), () => sql`custom sql 2`)
       .order('active')
       .limit(4)
       .offset(4);

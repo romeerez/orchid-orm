@@ -52,6 +52,14 @@ describe('db connection', () => {
 describe('db', () => {
   useTestDatabase();
 
+  it('should have `sql` method bound to column types', () => {
+    const { sql } = testDb;
+
+    const s = sql``;
+
+    expect(s.columnTypes).toBe(testDb.columnTypes);
+  });
+
   it('supports table without schema', () => {
     const table = testDb('table', (t) => ({
       id: t.identity().primaryKey(),

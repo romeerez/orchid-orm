@@ -54,7 +54,9 @@ export class Having {
    * Arguments of the aggregate function and of the comparison can be raw SQL:
    *
    * ```ts
-   * db.table.having((q) => q.count(q.sql('coalesce(one, two)')).gte(q.sql`2 + 2`));
+   * import { sql } from './baseTable';
+   *
+   * db.table.having((q) => q.count(sql('coalesce(one, two)')).gte(sql`2 + 2`));
    * ```
    *
    * @param args - raw SQL template string or one or multiple callbacks returning a boolean expression

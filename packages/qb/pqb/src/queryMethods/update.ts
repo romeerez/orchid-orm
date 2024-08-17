@@ -316,6 +316,8 @@ export class Update {
    * and [jsonRemove](/guide/advanced-queries.html#jsonremove) for a JSON column (see `jsonColumn` below).
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * // returns number of updated records by default
    * const updatedCount = await db.table
    *   .where({ name: 'old name' })
@@ -341,7 +343,7 @@ export class Update {
    *   column1: 123,
    *
    *   // use raw SQL to update the column
-   *   column2: (q) => q.sql`2 + 2`,
+   *   column2: () => sql`2 + 2`,
    *
    *   // use query that returns a single value
    *   // returning multiple values will result in Postgres error

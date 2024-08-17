@@ -200,7 +200,7 @@ while a table in OrchidORM is only meant for configuring a database table column
 query [hooks](/guide/hooks#lifecycle-hooks) (aka callbacks), so to define the database table and querying specifics, but not for app's logic.
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable, sql } from './baseTable';
 import { PostTable } from './post.table';
 import { SubscriptionTable } from './subscription.table';
 
@@ -253,14 +253,14 @@ export class UserTable extends BaseTable {
         ['provider', 'id'],
       ),
       // database-level check
-      t.check(t.sql`username != email`),
+      t.check(sql`username != email`),
     ],
   );
 
   // To define "virtual" columns that will be computed on a database side with a custom SQL
   computed = this.setComputed({
     fullName: (q) =>
-      q.sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
+      sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
         (t) => t.string(),
       ),
   });
@@ -360,6 +360,8 @@ export const db = orchidORM(
 For [domain](/guide/migration-column-methods#domain) types:
 
 ```ts
+import { sql } from './baseTable';
+
 export const db = orchidORM(
   {
     databaseURL: process.env.DATABASE_URL,
@@ -368,7 +370,7 @@ export const db = orchidORM(
         t
           .integer()
           .nullable()
-          .check(t.sql`VALUE = 69`),
+          .check(sql`VALUE = 69`),
 
       // domain residing in a certain schema:
       'mySchema.domainName': (t) => t.integer().default(123),
@@ -853,7 +855,7 @@ await db.some.unscope('default');
 [//]: # 'has JSDoc'
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable, sql } from './baseTable';
 
 export class UserTable extends BaseTable {
   readonly table = 'user';
@@ -864,8 +866,8 @@ export class UserTable extends BaseTable {
   }));
 
   computed = this.setComputed({
-    fullName: (q) =>
-      q.sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
+    fullName: () =>
+      sql`${q.column('firstName')} || ' ' || ${q.column('lastName')}`.type(
         (t) => t.string(),
       ),
   });
@@ -902,6 +904,8 @@ And we have articles translated to different languages, each article has `title_
 We can define a computed `title` by passing a function into `sql` method:
 
 ```ts
+import { sql } from './baseTable';
+
 type Locale = 'en' | 'uk' | 'be';
 const asyncLanguageStorage = new AsyncLocalStorage<Locale>();
 const defaultLocale: Locale = 'en';
@@ -916,20 +920,18 @@ export class ArticleTable extends BaseTable {
   }));
 
   computed = this.setComputed({
-    title: (q) =>
-      q
-        // .sql can take a function that accepts `sql` argument and must return SQL
-        .sql((sql) => {
-          // get locale dynamically based on current storage value
-          const locale = asyncLanguageStorage.getStore() || defaultLocale;
+    title: () =>
+      // `sql` accepts a callback to generate a new query on every run
+      sql(() => {
+        // get locale dynamically based on current storage value
+        const locale = asyncLanguageStorage.getStore() || defaultLocale;
 
-          // use COALESCE in case when localized title is NULL, use title_en
-          return sql`COALESCE(
+        // use COALESCE in case when localized title is NULL, use title_en
+        return sql`COALESCE(
             ${q.column(`title_${locale}`)},
             ${q.column(`title_${defaultLocale}`)}
           )`;
-        })
-        .type((t) => t.text()),
+      }).type((t) => t.text()),
   });
 }
 ```

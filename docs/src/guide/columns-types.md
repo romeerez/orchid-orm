@@ -438,8 +438,10 @@ await db.post.find(1).update({ data: null });
 To insert or update JSON null, provide SQL for this:
 
 ```ts
+import { sql } from './baseTable';
+
 // 'null' is in single quotes
-await db.post.create({ data: (q) => q.sql`'null'` });
+await db.post.create({ data: () => sql`'null'` });
 ```
 
 ## geometry

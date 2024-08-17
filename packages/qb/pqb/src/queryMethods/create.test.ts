@@ -17,7 +17,13 @@ import {
   UserInsert,
   UserRecord,
 } from '../test-utils/test-utils';
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  sql,
+  testDb,
+  useTestDatabase,
+} from 'test-utils';
 import { raw } from '../sql/rawSql';
 import { MAX_BINDING_PARAMS } from '../sql/constants';
 
@@ -249,7 +255,7 @@ describe('create functions', () => {
     it('should create one record with raw SQL for a column value', () => {
       const q = User.create({
         name: userData.name,
-        password: (q) => q.sql<string>`'password'`,
+        password: () => sql<string>`'password'`,
       });
 
       assertType<Awaited<typeof q>, UserRecord>();
@@ -642,10 +648,10 @@ describe('create functions', () => {
       const q = User.createMany([
         {
           name: userData.name,
-          password: (q) => q.sql<string>`'password'`,
+          password: () => sql<string>`'password'`,
         },
         {
-          name: (q) => q.sql<string>`'name'`,
+          name: () => sql<string>`'name'`,
           password: userData.password,
         },
       ]);

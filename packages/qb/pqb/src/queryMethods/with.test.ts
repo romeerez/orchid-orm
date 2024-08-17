@@ -5,7 +5,7 @@ import {
   User,
   UserRecord,
 } from '../test-utils/test-utils';
-import { expectSql, assertType } from 'test-utils';
+import { expectSql, assertType, sql } from 'test-utils';
 import { WithOptions } from '../sql';
 
 const options: { options: WithOptions; sql: string }[] = [
@@ -43,7 +43,7 @@ describe('with', () => {
 
   it('should use query builder callback', () => {
     const q = User.with('w', (q) =>
-      q.select({ one: (q) => q.sql`1`.type((t) => t.integer()) }),
+      q.select({ one: () => sql`1`.type((t) => t.integer()) }),
     ).from('w');
 
     assertType<Awaited<typeof q>, { one: number }[]>();
@@ -176,11 +176,11 @@ describe('withRecursive', () => {
     const q = User.withRecursive(
       't',
       { union: 'UNION' },
-      (q) => q.select({ n: (q) => q.sql`1`.type((t) => t.integer()) }),
+      (q) => q.select({ n: () => sql`1`.type((t) => t.integer()) }),
       (q) =>
         q
           .from('t')
-          .select({ n: (q) => q.sql<number>`n + 1` })
+          .select({ n: () => sql<number>`n + 1` })
           .where({ n: { lt: 100 } }),
     )
       .from('t')
@@ -252,7 +252,7 @@ describe('withSql', () => {
         one: t.integer(),
         two: t.text(),
       }),
-      (q) => q.sql`(VALUES (1, 'two')) t(one, two)`,
+      () => sql`(VALUES (1, 'two')) t(one, two)`,
     ).from('w');
 
     assertType<Awaited<typeof q>, { one: number; two: string }[]>();
@@ -266,15 +266,15 @@ describe('withSql', () => {
   });
 
   it('should support all with options', () => {
-    for (const { options: opts, sql } of options) {
+    for (const { options: opts, sql: s } of options) {
       const q = User.withSql(
         'w',
         opts,
         () => ({}),
-        (q) => q.sql`SELECT * FROM "user"`,
+        () => sql`SELECT * FROM "user"`,
       ).from('w');
 
-      expectSql(q.toSQL(), sql);
+      expectSql(q.toSQL(), s);
     }
   });
 });

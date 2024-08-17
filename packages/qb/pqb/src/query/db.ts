@@ -31,12 +31,14 @@ import {
   ColumnTypeBase,
   DbBase,
   DefaultSelectColumns,
+  DynamicSQLArg,
   EmptyObject,
   emptyObject,
   isRawSQL,
   MaybeArray,
   pushOrNewArray,
   QueryCatch,
+  QueryColumn,
   QueryColumns,
   QueryColumnsInit,
   QueryLogOptions,
@@ -47,13 +49,19 @@ import {
   snakeCaseKey,
   Sql,
   SQLQueryArgs,
+  StaticSQLArgs,
   TemplateLiteralArgs,
   toSnakeCase,
   TransactionState,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { templateLiteralToSQL } from '../sql/rawSql';
+import {
+  DynamicRawSQL,
+  raw,
+  RawSQL,
+  templateLiteralToSQL,
+} from '../sql/rawSql';
 import { ScopeArgumentQuery } from '../queryMethods/scope';
 import { QueryBase } from './queryBase';
 import {
@@ -619,6 +627,10 @@ export interface DbResult<ColumnTypes>
     DbTableConstructor<ColumnTypes> {
   adapter: Adapter;
   close: Adapter['close'];
+  sql<T = unknown>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>, ColumnTypes>;
+  sql<T = unknown>(
+    ...args: [DynamicSQLArg<QueryColumn<T>>]
+  ): DynamicRawSQL<QueryColumn<T>, ColumnTypes>;
 }
 {
 }
@@ -774,6 +786,13 @@ export const createDb = <
     (db as unknown as RecordUnknown)[name] =
       Db.prototype[name as keyof typeof Db.prototype];
   }
+
+  // bind column types to the `sql` method
+  db.sql = (...args: unknown[]) => {
+    const sql = (raw as any)(...args);
+    sql.columnTypes = ct;
+    return sql;
+  };
 
   return db as never;
 };

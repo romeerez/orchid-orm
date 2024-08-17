@@ -85,67 +85,82 @@ export type WithSqlResult<
 
 export class WithMethods {
   /**
-   * Add Common Table Expression (CTE) to the query.
+   * Use `with` to add a Common Table Expression (CTE) to the query.
+   *
+   * `with` can be chained to any table on `db` instance, or to `db.$queryBuilder`,
+   * note that in the latter case it won't have customized column types to use for typing SQL.
    *
    * ```ts
-   * import { columnTypes } from 'orchid-orm';
-   * import { NumberColumn } from './number';
+   * import { sql } from './baseTable';
    *
-   * // .with optionally accepts such options:
-   * type WithOptions = {
-   *   // list of columns returned by this WITH statement
-   *   // by default all columns from provided column shape will be included
-   *   // true is for default behavior
-   *   columns?: string[] | boolean;
-   *
-   *   // Adds RECURSIVE keyword:
-   *   recursive?: true;
-   *
-   *   // Adds MATERIALIZED keyword:
-   *   materialized?: true;
-   *
-   *   // Adds NOT MATERIALIZED keyword:
-   *   notMaterialized?: true;
-   * };
-   *
-   * // accepts columns shape and a raw expression:
-   * db.table.with(
-   *   'alias',
-   *   {
-   *     id: columnTypes.integer(),
-   *     name: columnTypes.text(3, 100),
-   *   },
-   *   sql`SELECT id, name FROM "someTable"`,
+   * // can access custom columns when using off a table
+   * db.anyTable.with('x', (q) =>
+   *   q.select({ column: (q) => sql`123`.type((t) => t.customColumn()) }),
    * );
    *
-   * // accepts query:
-   * db.table.with('alias', db.table.all());
-   *
-   * // accepts a callback for a query builder:
-   * db.table.with('alias', (qb) =>
-   *   qb.select({ one: sql`1`.type((t) => t.integer()) }),
-   * );
-   *
-   * // All mentioned forms can accept options as a second argument:
-   * db.table.with(
-   *   'alias',
-   *   {
-   *     recursive: true,
-   *     materialized: true,
-   *   },
-   *   rawOrQueryOrCallback,
+   * // only default columns are available when using off `$queryBuilder`
+   * db.$queryBuilder.with('x', (q) =>
+   *   q.select({ column: (q) => sql`123`.type((t) => t.integer()) }),
    * );
    * ```
    *
-   * Defined `WITH` table can be used in `.from` or `.join` with all the type safeness:
+   * `with` accepts query objects, callbacks returning query objects, and custom SQL expressions returned from callbacks.
    *
    * ```ts
-   * db.table.with('alias', db.table.all()).from('alias').select('alias.id');
+   * import { sql } from './baseTable';
    *
    * db.table
-   *   .with('alias', db.table.all())
-   *   .join('alias', 'alias.id', 'user.id')
-   *   .select('alias.id');
+   *   .with(
+   *     'alias',
+   *     // define CTE by building a query
+   *     db.table.select('one', 'two', 'three').where({ x: 123 }),
+   *   )
+   *   .from('alias')
+   *   .select('one')
+   *   .where({ two: 123 });
+   *
+   * // 2nd argument can be a callback accepting a query builder
+   * db.table
+   *   .with('alias', (q) =>
+   *     // select a custom sql
+   *     q.select({ column: (q) => sql`123`.type((t) => t.integer()) }),
+   *   )
+   *   .from('alias')
+   *   .select('column')
+   *   .where({ column: 123 });
+   *
+   * // 2nd argument can be used for options
+   * db.table
+   *   .with(
+   *     'alias',
+   *     {
+   *       // all parameters are optional
+   *       materialized: true,
+   *       notMaterialized: true,
+   *     },
+   *     db.table,
+   *   )
+   *   .from('alias');
+   * ```
+   *
+   * One `WITH` expression can reference the other:
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   .with('a', db.table.select('id', 'name'))
+   *   .with('b', (q) => q.from('a').where({ key: 'value' }))
+   *   .from('b');
+   * ```
+   *
+   * Defined `WITH` expression can be used in `.from` or `.join` with all the type safeness:
+   *
+   * ```ts
+   * db.table.with('alias', db.table).from('alias').select('alias.id');
+   *
+   * db.firstTable
+   *   .with('secondTable', db.secondTable)
+   *   .join('secondTable', 'secondTable.someId', 'firstTable.id')
+   *   .select('firstTable.column', 'secondTable.column');
    * ```
    */
   with<T extends PickQueryMetaWithDataColumnTypes, Name extends string, Q>(
@@ -206,6 +221,89 @@ export class WithMethods {
     });
   }
 
+  /**
+   * It is priceless for fetching tree-like structures, or any other recursive cases.
+   *
+   * For example, it is useful for loading a tree of categories, where one category can include many other categories.
+   *
+   * Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$queryBuilder`.
+   *
+   * For the first example, consider the employee table, an employee may or may not have a manager.
+   *
+   * ```ts
+   * class Employee extends BaseTable {
+   *   readonly table = 'employee';
+   *   columns = this.setColumns((t) => ({
+   *     id: t.identity().primaryKey(),
+   *     name: t.string(),
+   *     managerId: t.integer().nullable(),
+   *   }));
+   * }
+   * ```
+   *
+   * The task is to load all subordinates of the manager with the id 1.
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   .withRecursive(
+   *     'subordinates',
+   *     // the base, anchor query: find the manager to begin recursion with
+   *     Employee.select('id', 'name', 'managerId').find(1),
+   *     // recursive query:
+   *     // find employees whos managerId is id from the surrounding subordinates CTE
+   *     (q) =>
+   *       q
+   *         .from(Employee)
+   *         .select('id', 'name', 'managerId')
+   *         .join('subordinates', 'subordinates.id', 'profile.managerId'),
+   *   )
+   *   .from('subordinates');
+   * ```
+   *
+   * As being shown, `withRecursive` accepts one query to begin with, and a second query in a callback that can reference the surrounding table expression "subordinates".
+   *
+   * These two queries are joined with `UNION ALL` by default.
+   *
+   * You can customize it by passing options after the name.
+   *
+   * ```ts
+   * db.$queryBuilder
+   *   .withRecursive(
+   *     'subordinates',
+   *     {
+   *       // all parameters are optional
+   *       union: 'UNION',
+   *       materialized: true,
+   *       notMaterialized: true,
+   *     },
+   *     // ...snip
+   *   )
+   *   .from('subordinates');
+   * ```
+   *
+   * Recursive query can be constructed with basic SQL instructions only, without referencing other tables.
+   * In the following example, we recursively select numbers from 1 to 100, and additionally apply n > 10 filter in the end.
+   *
+   * ```ts
+   * import { sql } from './baseTable';
+   *
+   * db.$queryBuilder
+   *   .withRecursive(
+   *     't',
+   *     // select `1 AS n` for the base query
+   *     (q) => q.select({ n: (q) => sql`1`.type((t) => t.integer()) }),
+   *     // select `n + 1 AS n` for the recursive part
+   *     (q) =>
+   *       q
+   *         .from('t')
+   *         // type can be omitted here because it was defined in the base query
+   *         .select({ n: (q) => sql`n + 1` })
+   *         .where({ n: { lt: 100 } }),
+   *   )
+   *   .from('t')
+   *   .where({ n: { gt: 10 } });
+   * ```
+   */
   withRecursive<
     T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
@@ -269,6 +367,59 @@ export class WithMethods {
     return setQueryObjectValue(q, 'withShapes', name, withConfig);
   }
 
+  /**
+   * Use `withSql` to add a Common Table Expression (CTE) based on a custom SQL.
+   *
+   * Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$queryBuilder`.
+   *
+   * ```ts
+   * import { sql } from './baseTable';
+   *
+   * db.table
+   *   .withSql(
+   *     'alias',
+   *     // define column types of the expression:
+   *     (t) => ({
+   *       one: t.integer(),
+   *       two: t.string(),
+   *     }),
+   *     // define SQL expression:
+   *     (q) => sql`(VALUES (1, 'two')) t(one, two)`,
+   *   )
+   *   // is not prefixed in the middle of a query chain
+   *   .withSql(
+   *     'second',
+   *     (t) => ({
+   *       x: t.integer(),
+   *     }),
+   *     (q) => sql`(VALUES (1)) t(x)`,
+   *   )
+   *   .from('alias');
+   * ```
+   *
+   * Options can be passed via a second argument:
+   *
+   * ```ts
+   * import { sql } from './baseTable';
+   *
+   * db.table
+   *   .withSql(
+   *     'alias',
+   *     {
+   *       // all parameters are optional
+   *       recursive: true,
+   *       materialized: true,
+   *       notMaterialized: true,
+   *     },
+   *     (t) => ({
+   *       one: t.integer(),
+   *       two: t.string(),
+   *     }),
+   *     (q) => sql`(VALUES (1, 'two')) t(one, two)`,
+   *   )
+   *   .from('alias');
+   * ```
+   */
   withSql<
     T extends PickQueryWithDataColumnTypes,
     Name extends string,

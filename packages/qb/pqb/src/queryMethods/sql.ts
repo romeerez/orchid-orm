@@ -32,7 +32,7 @@ export class SqlMethod<ColumnTypes> {
    *
    * ```ts
    * const subQuery = db.someTable.select({
-   *   sum: (q) => q.sql`$a + $b`.type((t) => t.decimal()).values({ a: 1, b: 2 }),
+   *   sum: () => sql`$a + $b`.type((t) => t.decimal()).values({ a: 1, b: 2 }),
    * });
    *
    * // `gt`, `gte`, `min`, `lt`, `lte`, `max` in `where`
@@ -139,6 +139,7 @@ export class SqlMethod<ColumnTypes> {
    * sql`($one + $two) / $one`.type((t) => t.numeric()).values({ one: 1, two: 2 });
    * ```
    *
+   * @deprecated use `sql` exported from the `createBaseTable` (see "define a base table" in the docs)
    * @param args - template literal or an object { raw: string }
    * @return object that has `type` and `values` methods
    */

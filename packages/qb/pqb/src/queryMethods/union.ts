@@ -52,13 +52,15 @@ export class Union {
    * Creates a union query, takes one or more queries or SQL expressions.
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * // The first query of the union
    * db.one
    *   .select('id', 'name')
    *   // add two more queries to the union
    *   .union(
    *     db.two.select('id', 'name'),
-   *     (q = q.sql`SELECT id, name FROM "thirdTable"`),
+   *     (q = sql`SELECT id, name FROM "thirdTable"`),
    *   )
    *   // sub-sequent `union` is equivalent to passing multiple queries into a single `union`
    *   .union(db.three.select('id', 'name'));

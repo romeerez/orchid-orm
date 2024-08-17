@@ -17,6 +17,7 @@ import { getShapeFromSelect } from './select';
 import {
   assertType,
   expectSql,
+  sql,
   testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
@@ -675,7 +676,7 @@ describe('select', () => {
     it('should support conditional query or raw expression', async () => {
       const condition = true;
       const q = User.select({
-        key: (q) => (condition ? User.exists() : q.sql<boolean>`false`),
+        key: () => (condition ? User.exists() : sql<boolean>`false`),
       });
 
       assertType<Awaited<typeof q>, { key: boolean }[]>();
@@ -775,7 +776,7 @@ describe('select', () => {
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.select({ one: q.sql`1` });
+      const query = q.select({ one: sql`1` });
 
       assertType<Awaited<typeof query>, { one: unknown }[]>();
 
@@ -790,7 +791,7 @@ describe('select', () => {
 
     it('should accept raw in a callback', () => {
       const query = User.select({
-        one: (q) => q.sql`1`.type((t) => t.integer()),
+        one: () => sql`1`.type((t) => t.integer()),
       });
 
       assertType<Awaited<typeof query>, { one: number }[]>();

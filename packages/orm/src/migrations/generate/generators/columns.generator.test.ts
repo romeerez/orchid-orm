@@ -1,6 +1,7 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import { DbMigration, colors } from 'rake-db';
 import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import { sql } from '../../../test-utils/orm.test-utils';
 
 jest.mock('rake-db', () => {
   return {
@@ -609,7 +610,7 @@ change(async (db) => {
           }));
 
           computed = this.setComputed((q) => ({
-            one: q.sql`${q.column('firstName')} || ' ' || ${q.column(
+            one: sql`${q.column('firstName')} || ' ' || ${q.column(
               'lastName',
             )}`.type((t) => t.string()),
             two: q.computeAtRuntime(

@@ -7,6 +7,8 @@ export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
 });
 
+export const { sql } = BaseTable;
+
 export type User = Selectable<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';

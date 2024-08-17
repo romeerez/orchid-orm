@@ -40,6 +40,8 @@ const objects2: { id: number }[] = await db.table.select('id').createRaw({
 Each column may accept a specific value, a raw SQL, or a query that returns a single value.
 
 ```ts
+import { sql } from './baseTable';
+
 const oneRecord = await db.table.create({
   name: 'John',
   password: '1234',
@@ -51,7 +53,7 @@ const createdCount = await db.table.insert(data).onConflictIgnore();
 
 await db.table.create({
   // raw SQL
-  column1: (q) => q.sql`'John' || ' ' || 'Doe'`,
+  column1: () => sql`'John' || ' ' || 'Doe'`,
 
   // query that returns a single value
   // returning multiple values will result in Postgres error
@@ -504,6 +506,8 @@ or to use a [jsonSet](/guide/advanced-queries#jsonset),
 and [jsonRemove](/guide/advanced-queries#jsonremove) for a JSON column (see `jsonColumn` below).
 
 ```ts
+import { sql } from './baseTable';
+
 // returns number of updated records by default
 const updatedCount = await db.table
   .where({ name: 'old name' })
@@ -529,7 +533,7 @@ await db.table.where({ ...conditions }).update({
   column1: 123,
 
   // use custom SQL to update the column
-  column2: (q) => q.sql`2 + 2`,
+  column2: () => sql`2 + 2`,
 
   // use query that returns a single value
   // returning multiple values will result in Postgres error

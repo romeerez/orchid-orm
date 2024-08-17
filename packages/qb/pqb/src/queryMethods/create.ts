@@ -801,6 +801,8 @@ export class Create {
    * Each column may accept a specific value, a raw SQL, or a query that returns a single value.
    *
    * ```ts
+   * import { sql } from './baseTable';
+   *
    * const oneRecord = await db.table.create({
    *   name: 'John',
    *   password: '1234',
@@ -812,7 +814,7 @@ export class Create {
    *
    * await db.table.create({
    *   // raw SQL
-   *   column1: (q) => q.sql`'John' || ' ' || 'Doe'`,
+   *   column1: () => sql`'John' || ' ' || 'Doe'`,
    *
    *   // query that returns a single value
    *   // returning multiple values will result in Postgres error

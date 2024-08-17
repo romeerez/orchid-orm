@@ -1,4 +1,4 @@
-import { assertType, expectSql, testAdapter, testDb } from 'test-utils';
+import { assertType, expectSql, sql, testAdapter, testDb } from 'test-utils';
 import { BooleanColumn, ColumnType } from '../columns';
 import { createDb } from '../query/db';
 import { ColumnTypeBase, emptyObject, Expression } from 'orchid-core';
@@ -231,7 +231,7 @@ describe('sql', () => {
   it('should handle column and ref expressions', () => {
     const q = User.select({
       value: (q) =>
-        q.sql<string>`${q.column('name')} || ' ' || ${q.ref('user.password')}`,
+        sql<string>`${q.column('name')} || ' ' || ${q.ref('user.password')}`,
     });
 
     assertType<Awaited<typeof q>, { value: string }[]>();

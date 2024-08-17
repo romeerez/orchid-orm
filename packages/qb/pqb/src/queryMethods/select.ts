@@ -902,6 +902,8 @@ export class Select {
    * The last argument can be an object. Keys of the object are column aliases, value can be a column name, sub-query, or raw SQL expression.
    *
    * ```ts
+   * import { sql } from './baseTable'
+   *
    * // select columns of the table:
    * db.table.select('id', 'name', { idAlias: 'id' });
    *
@@ -929,9 +931,9 @@ export class Select {
    *   raw: sql`1 + 2`.type((t) => t.integer()),
    * });
    *
-   * // same raw SQL query as above, but raw value is returned from a callback
+   * // same raw SQL query as above, but the sql is returned from a callback
    * db.table.select({
-   *   raw: (q) => q.sql`1 + 2`.type((t) => t.integer()),
+   *   raw: () => sql`1 + 2`.type((t) => t.integer()),
    * });
    * ```
    *
