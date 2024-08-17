@@ -392,7 +392,7 @@ import { object, number, string, optional, array } from 'valibot';
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    dataZod: t.json(() =>
+    dataZod: t.json(
       z.object({
         age: z.number(),
         name: z.string(),
@@ -401,7 +401,7 @@ export class Table extends BaseTable {
       }),
     ),
     // or
-    dataValibot: t.json(() =>
+    dataValibot: t.json(
       object({
         age: number(),
         name: string(),
