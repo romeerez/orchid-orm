@@ -2,12 +2,9 @@
   "ts-node": {
     "swc": true
   },
-  "exclude": [
-    "node_modules",
-    "gitignored"
-  ],
+  "exclude": ["node_modules", "gitignored"],
   "compilerOptions": {
-    "target": "ES2015",
+    "target": "ES2020",
     "module": "commonjs",
     "lib": ["esnext"],
     "importHelpers": true,
@@ -36,6 +33,6 @@
     // error out if import and file system have a casing mismatch. Recommended by TS
     "forceConsistentCasingInFileNames": true,
     // only type check files, rollup will handle compilation
-    "noEmit": true,
+    "noEmit": true
   }
 }

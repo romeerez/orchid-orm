@@ -707,9 +707,29 @@ describe('update', () => {
     );
   });
 
-  describe.each(['increment'] as const)('%s', (action) => {
-    // describe.each(['increment', 'decrement'] as const)('%s', (action) => {
+  describe.each(['increment', 'decrement'] as const)('%s', (action) => {
     const sign = action === 'increment' ? '+' : '-';
+
+    it('should support bigint', () => {
+      const table = testDb(
+        'table',
+        (t) => ({
+          num: t.bigint().nullable(),
+          nullable: t.bigint().nullable(),
+        }),
+        undefined,
+        { noPrimaryKey: 'ignore' },
+      );
+
+      table[action]('num');
+      table[action]('nullable');
+
+      table[action]({ num: 1n });
+      table[action]({ nullable: 1n });
+
+      table[action]({ num: '1' });
+      table[action]({ nullable: '1' });
+    });
 
     it('should not mutate query', () => {
       const q = User.all();

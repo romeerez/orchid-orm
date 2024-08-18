@@ -13,7 +13,7 @@ import {
 import { RelationConfigBase } from '../relations';
 import { _queryWhereIn, WhereResult } from './where/where';
 import { ToSQLQuery } from '../sql';
-import { NumberAsStringBaseColumn, VirtualColumn } from '../columns';
+import { VirtualColumn } from '../columns';
 import { anyShape, Db } from '../query/db';
 import {
   isExpression,
@@ -23,7 +23,6 @@ import {
   PickQueryShape,
   SQLQueryArgs,
   EmptyObject,
-  ColumnSchemaConfig,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
@@ -92,9 +91,10 @@ type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
   : SetQueryReturnsRowCount<T, 'update'>;
 
 export type NumericColumns<T extends PickQueryShape> = {
-  [K in keyof T['shape']]: T['shape'][K]['type'] extends number | null
-    ? K
-    : T['shape'][K] extends NumberAsStringBaseColumn<ColumnSchemaConfig>
+  [K in keyof T['shape']]: Exclude<T['shape'][K]['queryType'], string> extends
+    | number
+    | bigint
+    | null
     ? K
     : never;
 }[keyof T['shape']];
@@ -106,7 +106,7 @@ export type ChangeCountArg<T extends PickQueryShape> =
   | {
       [K in NumericColumns<T>]?: T['shape'][K]['type'] extends number | null
         ? number
-        : string;
+        : number | string | bigint;
     };
 
 // Context object for `update` logic used internally.

@@ -45,11 +45,13 @@ export abstract class IntegerBaseColumn<
 
 export abstract class NumberAsStringBaseColumn<
   Schema extends ColumnSchemaConfig,
+  InputType = string | number,
 > extends ColumnType<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
-  OperatorsNumber
+  OperatorsNumber,
+  InputType
 > {
   operators = Operators.number;
   declare data: ColumnData;
@@ -189,7 +191,7 @@ export class IntegerColumn<
 // signed eight-byte integer
 export class BigIntColumn<
   Schema extends ColumnSchemaConfig,
-> extends NumberAsStringBaseColumn<Schema> {
+> extends NumberAsStringBaseColumn<Schema, string | number | bigint> {
   dataType = 'int8' as const;
 
   constructor(schema: Schema) {

@@ -4,6 +4,7 @@ import {
   testZodColumnTypes as t,
   testDb,
   TestSchemaConfig,
+  useTestDatabase,
 } from 'test-utils';
 import { ColumnToCodeCtx } from 'orchid-core';
 
@@ -100,6 +101,8 @@ describe('number columns', () => {
   });
 
   describe('bigint', () => {
+    useTestDatabase();
+
     it('should output string', async () => {
       const result = await testDb.get(
         testDb.sql`1::bigint`.type(() => t.bigint()),
@@ -117,6 +120,12 @@ describe('number columns', () => {
       const code = t.bigint().identity({ always: true }).toCode(ctx, 'key');
 
       expect(code).toEqual(['t.bigint().identity({', ['always: true,'], '})']);
+    });
+
+    it('should encode JS BigInt', () => {
+      const { inputType } = t.bigint();
+
+      assertType<typeof inputType, string | bigint>();
     });
   });
 
