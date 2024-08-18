@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.34.8
+
+### Patch Changes
+
+- 8e600c8: Fix `sql` exported from BaseTable and deprecate `sql` as a query method (#336)
+- Updated dependencies [8e600c8]
+  - pqb@0.38.7
+  - orchid-core@0.19.7
+  - rake-db@2.22.26
+
 ## 1.34.7
 
 ### Patch Changes

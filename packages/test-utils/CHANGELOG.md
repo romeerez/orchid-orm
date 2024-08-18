@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.3.1
+
+### Patch Changes
+
+- 8e600c8: Fix `sql` exported from BaseTable and deprecate `sql` as a query method (#336)
+
 ## 0.3.0
 
 ### Minor Changes

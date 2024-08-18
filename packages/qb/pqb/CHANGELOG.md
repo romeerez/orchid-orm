@@ -1,5 +1,12 @@
 # pqb
 
+## 0.38.7
+
+### Patch Changes
+
+- 8e600c8: Fix `sql` exported from BaseTable and deprecate `sql` as a query method (#336)
+  - orchid-core@0.19.7
+
 ## 0.38.6
 
 ### Patch Changes
