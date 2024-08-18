@@ -1,5 +1,11 @@
 # pqb
 
+## 0.38.8
+
+### Patch Changes
+
+- 60596d1: Support JS BigInt in create/update/increment (#365)
+
 ## 0.38.7
 
 ### Patch Changes
