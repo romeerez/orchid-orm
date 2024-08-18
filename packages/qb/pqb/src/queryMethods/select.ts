@@ -881,6 +881,7 @@ export function _querySelect<
 export function _querySelect(q: Query, args: any[]): any {
   const len = args.length;
   if (!len) {
+    q.q.select ??= [];
     return q;
   }
 

@@ -1,5 +1,9 @@
 # Breaking changes
 
+## orchid-orm 1.35
+
+Empty select `select()` was selecting a full record, and from now will select an empty record.
+
 ## orchid-orm 1.34
 
 Previously, input for `startWith`, `contains`, `endsWith`, and case-sensitive versions was not escaped.

@@ -22,6 +22,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { z } from 'zod';
+import { EmptyObject } from 'orchid-core';
 
 const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);
@@ -117,22 +118,17 @@ describe('select', () => {
       );
     });
 
-    it('should have no effect if no columns provided', () => {
-      const q = User.all();
-      const query = q.select();
+    it('should be able to select nothing', async () => {
+      await User.insert(userData);
 
-      assertType<Awaited<typeof q>, UserRecord[]>();
+      const q = User.select();
 
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT * FROM "user"
-        `,
-      );
+      expectSql(q.toSQL(), `SELECT FROM "user"`);
 
-      expect(getShapeFromSelect(query)).toBe(User.shape);
+      const users = await q;
+      assertType<typeof users, EmptyObject[]>();
 
-      expectQueryNotMutated(q);
+      expect(users).toEqual([{}]);
     });
 
     it('should select provided columns', () => {

@@ -36,7 +36,8 @@ export const pushSelectSql = (
   },
   quotedAs?: string,
 ) => {
-  ctx.sql.push(selectToSql(ctx, table, query, quotedAs));
+  const sql = selectToSql(ctx, table, query, quotedAs);
+  if (sql) ctx.sql.push(sql);
 };
 
 export const selectToSql = (
@@ -172,7 +173,11 @@ export const selectToSql = (
     }
   }
 
-  return list.length ? list.join(', ') : selectAllSql(table, query, quotedAs);
+  return list.length
+    ? list.join(', ')
+    : query.select
+    ? ''
+    : selectAllSql(table, query, quotedAs);
 };
 
 export function selectedObjectToSQL(
