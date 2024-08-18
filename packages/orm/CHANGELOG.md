@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.35.0
+
+### Minor Changes
+
+- edfa4cb: Select empty record with empty `select()` (#364)
+
+### Patch Changes
+
+- Updated dependencies [edfa4cb]
+  - pqb@0.39.0
+  - rake-db@2.22.28
+
 ## 1.34.9
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.39.0
+
+### Minor Changes
+
+- edfa4cb: Select empty record with empty `select()` (#364)
+
 ## 0.38.8
 
 ### Patch Changes
