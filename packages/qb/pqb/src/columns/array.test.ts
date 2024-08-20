@@ -21,13 +21,13 @@ describe('array column', () => {
 
     it('should output nested array of strings', async () => {
       const result = await testDb.get(
-        testDb.sql`'{{"a", "b"}, {"c", "d"}}'::text[][]`.type((t) =>
-          t.array(t.array(t.text())),
+        testDb.sql`'{{"a", "b"}, {"str''ing", "str\\"ing"}}'::text[][]`.type(
+          (t) => t.array(t.array(t.text())),
         ),
       );
       expect(result).toEqual([
         ['a', 'b'],
-        ['c', 'd'],
+        ["str'ing", 'str"ing'],
       ]);
 
       assertType<typeof result, string[][]>();

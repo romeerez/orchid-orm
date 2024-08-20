@@ -158,14 +158,15 @@ const parseArray = (
 
     if (char === '"' && !escaped) {
       if (quote) {
-        pushEntry(input, start, pos, entries, item);
+        pushEntry(input, start, pos, entries, unquoteString);
+        start = pos + 1;
       } else {
         start = pos;
       }
       quote = !quote;
     } else if (char === ',' && !quote) {
       if (start !== pos) {
-        pushEntry(input, start, pos, entries, item);
+        pushEntry(input, start, pos, entries, item.parseItem);
       }
       start = pos;
     } else if (char === '{' && !quote) {
@@ -186,7 +187,7 @@ const parseArray = (
       start = pos + 1;
     } else if (char === '}' && !quote) {
       if (start !== pos) {
-        pushEntry(input, start, pos, entries, item);
+        pushEntry(input, start, pos, entries, item.parseItem);
       }
       start = pos + 1;
       break;
@@ -201,13 +202,15 @@ const pushEntry = (
   start: number,
   pos: number,
   entries: unknown[],
-  item: ArrayColumnValue,
+  parseItem?: (input: string) => unknown,
 ) => {
   let entry: unknown = input.slice(start, pos - 1);
   if (entry === 'NULL') {
     entry = null;
-  } else if (item.parseItem) {
-    entry = item.parseItem(entry as string);
+  } else if (parseItem) {
+    entry = parseItem(entry as string);
   }
   entries.push(entry);
 };
+
+const unquoteString = (input: string) => input.replaceAll('\\"', '"');
