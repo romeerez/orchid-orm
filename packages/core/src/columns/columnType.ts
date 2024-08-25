@@ -540,7 +540,7 @@ export abstract class ColumnTypeBase<
    */
   default<
     T extends Pick<ColumnTypeBase, 'type' | 'inputType' | 'data'>,
-    Value extends T['type'] | null | RawSQLBase | (() => T['inputType']),
+    Value extends T['inputType'] | null | RawSQLBase | (() => T['inputType']),
   >(this: T, value: Value): ColumnWithDefault<T, Value> {
     return setColumnData(this, 'default', value) as ColumnWithDefault<T, Value>;
   }
