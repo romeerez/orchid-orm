@@ -39,19 +39,6 @@
     "build": "rimraf ./dist/ ./codegen/ && rollup -c ./rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
-  "jest": {
-    "rootDir": "src",
-    "coverageDirectory": "../coverage",
-    "setupFiles": [
-      "dotenv/config"
-    ],
-    "setupFilesAfterEnv": [
-      "../../../jest-setup.ts"
-    ],
-    "transform": {
-      "^.+\\.ts$": "@swc/jest"
-    }
-  },
   "keywords": [
     "pg",
     "postgres",

@@ -20,8 +20,15 @@ export class NotFoundError extends OrchidOrmError {
 }
 
 export class OrchidOrmInternalError extends Error {
-  constructor(public query: Query, message?: string) {
+  readonly #query: Query;
+
+  constructor(query: Query, message?: string) {
     super(message);
+    this.#query = query;
+  }
+
+  get query() {
+    return this.#query;
   }
 }
 
@@ -57,9 +64,9 @@ export type QueryErrorName =
 export abstract class QueryError<
   T extends PickQueryShape = PickQueryShape,
 > extends OrchidOrmInternalError {
-  message!: string;
-  name!: QueryErrorName;
-  stack: string | undefined;
+  declare message: string;
+  declare name: QueryErrorName;
+  declare stack: string | undefined;
   code: string | undefined;
   detail: string | undefined;
   severity: string | undefined;
@@ -111,7 +118,7 @@ export class MoreThanOneRowError extends OrchidOrmInternalError {
 }
 
 export class UnhandledTypeError extends OrchidOrmInternalError {
-  constructor(public query: Query, value: never) {
+  constructor(query: Query, value: never) {
     super(query, `Unhandled type: ${JSON.stringify(value)} received`);
   }
 }

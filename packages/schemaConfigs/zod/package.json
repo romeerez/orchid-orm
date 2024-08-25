@@ -28,20 +28,6 @@
     "build": "rimraf dist && rollup -c ../../../rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
-  "jest": {
-    "rootDir": "src",
-    "coverageDirectory": "../../coverage",
-    "setupFiles": [
-      "dotenv/config"
-    ],
-    "globalSetup": "../../../../jest-global-setup.ts",
-    "setupFilesAfterEnv": [
-      "../../../../jest-setup.ts"
-    ],
-    "transform": {
-      "^.+\\.ts$": "@swc/jest"
-    }
-  },
   "keywords": [
     "orchid-orm",
     "query-builder",
