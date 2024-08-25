@@ -24,5 +24,7 @@ export class BooleanColumn<
     return columnCode(this, ctx, key, 'boolean()');
   }
 
-  parseItem = (input: string) => input[0] === 't';
+  parseItem(input: string) {
+    return input[0] === 't';
+  }
 }

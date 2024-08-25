@@ -111,16 +111,9 @@ export class ArrayColumn<
   }
 
   parseFn = Object.assign(
-    (input: unknown) => {
+    (source: string) => {
       const entries: unknown[] = [];
-      parseArray(
-        input as string,
-        0,
-        (input as string).length,
-        entries,
-        false,
-        this.data.item,
-      );
+      parsePostgresArray(source, entries, this.data.item.parseItem);
       return entries;
     },
     {
@@ -129,85 +122,81 @@ export class ArrayColumn<
   );
 }
 
-const parseArray = (
-  input: string,
-  pos: number,
-  len: number,
+/**
+ * based on https://github.com/bendrucker/postgres-array/tree/master
+ * and slightly optimized
+ */
+const parsePostgresArray = (
+  source: string,
   entries: unknown[],
-  nested: boolean,
-  item: ArrayColumnValue,
+  transform?: (input: string) => unknown,
 ): number => {
-  if (input[0] === '[') {
-    while (pos < len) {
-      let char = input[pos++];
-      if (char === '\\') {
-        char = input[pos++];
-      }
-      if (char === '=') break;
-    }
+  let pos = 0;
+
+  if (source[0] === '[') {
+    pos = source.indexOf('=') + 1;
+    if (!pos) pos = source.length;
   }
 
-  let quote = false;
-  let start = pos;
-  while (pos < len) {
-    let char = input[pos++];
-    const escaped = char === '\\';
-    if (escaped) {
-      char = input[pos++];
-    }
+  if (source[pos] === '{') pos++;
 
-    if (char === '"' && !escaped) {
-      if (quote) {
-        pushEntry(input, start, pos, entries, item);
-      } else {
-        start = pos;
+  let recorded = '';
+  while (pos < source.length) {
+    const character = source[pos++];
+
+    if (character === '{') {
+      const innerEntries: unknown[] = [];
+      entries.push(innerEntries);
+      pos +=
+        parsePostgresArray(source.slice(pos - 1), innerEntries, transform) - 1;
+    } else if (character === '}') {
+      if (recorded) {
+        entries.push(
+          recorded === 'NULL'
+            ? null
+            : transform
+            ? transform(recorded)
+            : recorded,
+        );
       }
-      quote = !quote;
-    } else if (char === ',' && !quote) {
-      if (start !== pos) {
-        pushEntry(input, start, pos, entries, item);
-      }
-      start = pos;
-    } else if (char === '{' && !quote) {
-      let array: unknown[];
-      let nestedItem = item;
-      if (nested) {
-        array = [];
-        entries.push(array);
-        if ('item' in item.data) {
-          nestedItem = (
-            item as unknown as { data: ArrayData<ArrayColumnValue> }
-          ).data.item as ArrayColumnValue;
+
+      return pos;
+    } else if (character === '"') {
+      let esc = false;
+      let rec = '';
+      while (pos < source.length) {
+        let char: string;
+        while ((char = source[pos++]) === '\\') {
+          if (!(esc = !esc)) rec += '\\';
         }
-      } else {
-        array = entries;
+
+        if (esc) {
+          esc = false;
+        } else if (char === '"') {
+          break;
+        }
+
+        rec += char;
       }
-      pos = parseArray(input, pos, len, array, true, nestedItem);
-      start = pos + 1;
-    } else if (char === '}' && !quote) {
-      if (start !== pos) {
-        pushEntry(input, start, pos, entries, item);
+
+      entries.push(transform ? transform(rec) : rec);
+      recorded = '';
+    } else if (character === ',') {
+      if (recorded) {
+        entries.push(
+          recorded === 'NULL'
+            ? null
+            : transform
+            ? transform(recorded)
+            : recorded,
+        );
+
+        recorded = '';
       }
-      start = pos + 1;
-      break;
+    } else {
+      recorded += character;
     }
   }
 
   return pos;
-};
-
-const pushEntry = (
-  input: string,
-  start: number,
-  pos: number,
-  entries: unknown[],
-  item: ArrayColumnValue,
-) => {
-  let entry: unknown = input.slice(start, pos - 1);
-  if (entry === 'NULL') {
-    entry = null;
-  } else if (item.parseItem) {
-    entry = item.parseItem(entry as string);
-  }
-  entries.push(entry);
 };

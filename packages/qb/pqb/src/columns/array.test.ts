@@ -1,71 +1,62 @@
-import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
+import { assertType, testZodColumnTypes as t } from 'test-utils';
 import { ColumnToCodeCtx } from 'orchid-core';
 
 describe('array column', () => {
-  afterAll(testDb.close);
+  it('should correctly parse various array types', () => {
+    const textArray = t.array(t.text());
 
-  describe('array', () => {
-    it('should output nested array of numbers', async () => {
-      const result = await testDb.get(
-        testDb.sql`'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`.type((t) =>
-          t.array(t.array(t.integer())),
-        ),
-      );
-      expect(result).toEqual([
-        [1, 2, 3],
-        [4, 5, 6],
-      ]);
+    assertType<typeof textArray.outputType, string[]>();
 
-      assertType<typeof result, number[][]>();
-    });
+    const parse = textArray.parseFn;
+    expect(parse('{}')).toEqual([]);
+    expect(parse('{1,2,3}')).toEqual(['1', '2', '3']);
+    expect(parse('{a,b,c}')).toEqual(['a', 'b', 'c']);
+    expect(parse('{"\\"\\"\\"","\\\\\\\\\\\\"}')).toEqual(['"""', '\\\\\\']);
+    expect(parse('{NULL,NULL}')).toEqual([null, null]);
+    expect(parse('{{a,b},{c,d}')).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ]);
 
-    it('should output nested array of strings', async () => {
-      const result = await testDb.get(
-        testDb.sql`'{{"a", "b"}, {"c", "d"}}'::text[][]`.type((t) =>
-          t.array(t.array(t.text())),
-        ),
-      );
-      expect(result).toEqual([
-        ['a', 'b'],
-        ['c', 'd'],
-      ]);
+    const intArray = t.array(t.integer());
+    assertType<typeof intArray.outputType, number[]>();
 
-      assertType<typeof result, string[][]>();
-    });
+    const parseInt = intArray.parseFn;
+    expect(parseInt('{1,2,3}')).toEqual([1, 2, 3]);
+    expect(parseInt('{{1,2,3},{4,5,6}}')).toEqual([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
+    expect(parseInt('[0:2]={1,2,3}')).toEqual([1, 2, 3]);
 
-    it('should output nested array of booleans', async () => {
-      const result = await testDb.get(
-        testDb.sql`'{{true}, {false}}'::text[][]`.type((t) =>
-          t.array(t.array(t.boolean())),
-        ),
-      );
-      expect(result).toEqual([[true], [false]]);
+    const boolArray = t.array(t.boolean());
+    assertType<typeof boolArray.outputType, boolean[]>();
 
-      assertType<typeof result, boolean[][]>();
-    });
+    const parseBool = boolArray.parseFn;
+    expect(parseBool('{{true},{false}}')).toEqual([[true], [false]]);
+  });
 
-    it('should have toCode', async () => {
-      const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+  it('should have toCode', async () => {
+    const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
-      const column = t.array(t.integer());
-      expect(column.toCode(ctx, 'key')).toBe('t.array(t.integer())');
+    const column = t.array(t.integer());
+    expect(column.toCode(ctx, 'key')).toBe('t.array(t.integer())');
 
-      expect(column.nonEmpty('nonEmpty message').toCode(ctx, 'key')).toBe(
-        `t.array(t.integer()).nonEmpty('nonEmpty message')`,
-      );
+    expect(column.nonEmpty('nonEmpty message').toCode(ctx, 'key')).toBe(
+      `t.array(t.integer()).nonEmpty('nonEmpty message')`,
+    );
 
-      expect(
-        column
-          .min(1, 'min message')
-          .max(10, 'max message')
-          .length(15, 'length message')
-          .toCode(ctx, 'key'),
-      ).toBe(
-        `t.array(t.integer())` +
-          `.min(1, 'min message')` +
-          `.max(10, 'max message')` +
-          `.length(15, 'length message')`,
-      );
-    });
+    expect(
+      column
+        .min(1, 'min message')
+        .max(10, 'max message')
+        .length(15, 'length message')
+        .toCode(ctx, 'key'),
+    ).toBe(
+      `t.array(t.integer())` +
+        `.min(1, 'min message')` +
+        `.max(10, 'max message')` +
+        `.length(15, 'length message')`,
+    );
   });
 });
