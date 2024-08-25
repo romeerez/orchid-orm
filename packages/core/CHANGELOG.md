@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.8
+
+### Patch Changes
+
+- 9dff1fa: Accept the type defined by `encode` in the `default` instead of db column type (#370)
+
 ## 0.19.7
 
 ### Patch Changes

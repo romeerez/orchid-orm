@@ -1,5 +1,14 @@
 # pqb
 
+## 0.39.1
+
+### Patch Changes
+
+- 109287f: Fix text array parsing (#371)
+- 9cf9a6d: Make ORM error property `query` to be private to fix serializing problem of Jest (#373)
+- Updated dependencies [9dff1fa]
+  - orchid-core@0.19.8
+
 ## 0.39.0
 
 ### Minor Changes
