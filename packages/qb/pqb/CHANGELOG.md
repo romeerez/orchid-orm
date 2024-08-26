@@ -1,5 +1,15 @@
 # pqb
 
+## 0.39.3
+
+### Patch Changes
+
+- c8f9549: Handle after commit hook errors, add `catchAfterCommitError` (#376)
+- 216a42a: Fix `onConflict` type error when the table has a composite index (#381)
+- Updated dependencies [c8f9549]
+- Updated dependencies [b61b6ba]
+  - orchid-core@0.19.9
+
 ## 0.39.2
 
 ### Patch Changes

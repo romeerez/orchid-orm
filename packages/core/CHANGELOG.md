@@ -1,5 +1,12 @@
 # orchid-core
 
+## 0.19.9
+
+### Patch Changes
+
+- c8f9549: Handle after commit hook errors, add `catchAfterCommitError` (#376)
+- b61b6ba: Fix `Simplify`: don't simplify functions (#377)
+
 ## 0.19.8
 
 ### Patch Changes
