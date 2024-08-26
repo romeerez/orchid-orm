@@ -123,6 +123,21 @@ describe('tableData', () => {
         ['a', 'b'] | ['c', 'd']
       >();
     });
+
+    // for https://github.com/romeerez/orchid-orm/issues/381
+    it('should ignore composite non-unique index', () => {
+      const table = testDb(
+        'table',
+        (t) => ({
+          a: t.string().index(),
+          b: t.string().unique(),
+          c: t.string().unique(),
+        }),
+        (t) => [t.index(['a']), t.unique(['b']), t.unique(['c'])],
+      );
+
+      assertType<typeof table.internal.uniqueColumnTuples, ['b'] | ['c']>();
+    });
   });
 
   describe('unique constraints', () => {

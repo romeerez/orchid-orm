@@ -1,6 +1,7 @@
 import {
   ColumnNameOfTable,
   EmptyObject,
+  EmptyTuple,
   Expression,
   ForeignKeyTable,
   MaybeArray,
@@ -185,6 +186,11 @@ export type TableDataInput = {
 
 export interface TableDataItem {
   tableDataItem: true;
+  columns: unknown;
+}
+
+export interface NonUniqDataItem extends TableDataItem {
+  columns: EmptyTuple;
 }
 
 export interface UniqueTableDataItem<
@@ -235,14 +241,14 @@ export interface TableDataMethods<Key extends PropertyKey> {
     ...args:
       | [options?: TableData.Index.OptionsArg]
       | [name?: string, options?: TableData.Index.OptionsArg]
-  ): TableDataItem;
+  ): NonUniqDataItem;
 
   searchIndex(
     columns: (Key | TableData.Index.ColumnOrExpressionOptions<Key>)[],
     ...args:
       | [options?: TableData.Index.TsVectorArg]
       | [name?: string, options?: TableData.Index.TsVectorArg]
-  ): TableDataItem;
+  ): NonUniqDataItem;
 
   foreignKey<
     ForeignTable extends (() => ForeignKeyTable) | string,
@@ -257,9 +263,9 @@ export interface TableDataMethods<Key extends PropertyKey> {
     fnOrTable: ForeignTable,
     foreignColumns: ForeignColumns,
     options?: TableData.References.Options,
-  ): TableDataItem;
+  ): NonUniqDataItem;
 
-  check(check: RawSQLBase, name?: string): TableDataItem;
+  check(check: RawSQLBase, name?: string): NonUniqDataItem;
 
   sql: SqlFn;
 }
@@ -293,8 +299,8 @@ export type TableDataItemsUniqueColumnTuples<
   ? never
   : T extends UniqueTableDataItem<Shape>
   ? T['columns']
-  : T extends UniqueTableDataItem<Shape>[]
-  ? T[number]['columns']
+  : T extends TableDataItem[]
+  ? Exclude<T[number]['columns'], []>
   : never;
 
 export type UniqueQueryTypeOrExpression<T> =
