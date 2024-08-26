@@ -1,5 +1,11 @@
 # pqb
 
+## 0.39.4
+
+### Patch Changes
+
+- 2bff8da: Handle after commit hooks inside test transaction without user transaction (#375)
+
 ## 0.39.3
 
 ### Patch Changes
