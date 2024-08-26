@@ -1,7 +1,7 @@
 import { SelectItem } from './types';
 import { RawSQL } from './rawSql';
 import {
-  columnToSql,
+  columnToSqlWithAs,
   ownColumnToSqlWithAs,
   simpleColumnToSQL,
   tableColumnToSqlWithAs,
@@ -12,6 +12,7 @@ import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
 import {
   addValue,
+  ColumnsParsers,
   Expression,
   HookSelect,
   isExpression,
@@ -48,6 +49,7 @@ export const selectToSql = (
     join?: SelectQueryData['join'];
     hookSelect?: HookSelect;
     shape: QueryColumns;
+    parsers?: ColumnsParsers;
   },
   quotedAs: string | undefined,
   hookSelect = query.hookSelect,
@@ -82,12 +84,20 @@ export const selectToSql = (
               item,
               tableName,
               key,
+              key === '*' ? tableName : key,
               quotedAs,
               true,
             );
           } else {
             if (hookSelect?.get(item)) (selected ??= {})[item] = quotedAs;
-            sql = ownColumnToSqlWithAs(ctx, table.q, item, quotedAs, true);
+            sql = ownColumnToSqlWithAs(
+              ctx,
+              table.q,
+              item,
+              item,
+              quotedAs,
+              true,
+            );
           }
         }
         list.push(sql);
@@ -108,14 +118,14 @@ export const selectToSql = (
               }
             } else if (value) {
               list.push(
-                `${columnToSql(
+                columnToSqlWithAs(
                   ctx,
                   table.q,
-                  table.q.shape,
                   value as string,
+                  as,
                   quotedAs,
                   true,
-                )} "${as}"`,
+                ),
               );
             }
           }
@@ -149,7 +159,7 @@ export const selectToSql = (
         quotedTable = quotedAs;
         columnName = select;
         col = query.shape[select] as ColumnType | undefined;
-        sql = simpleColumnToSQL(ctx, select, col, quotedAs);
+        sql = simpleColumnToSQL(ctx, query, select, col, quotedAs);
       }
 
       if (selected?.[columnName]) {

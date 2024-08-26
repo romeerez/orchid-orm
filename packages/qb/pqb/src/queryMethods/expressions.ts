@@ -40,6 +40,8 @@ export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     return simpleExistingColumnToSQL(
       ctx,
+      // it's for parsers for computed SQL. In the column ref case, parsers should be set when selecting the column ref.
+      {},
       this.name,
       this.result.value,
       quotedAs,

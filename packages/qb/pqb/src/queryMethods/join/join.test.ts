@@ -427,7 +427,7 @@ describe('join callback with query builder', () => {
           q.toSQL(),
           `
             SELECT
-              "t"."messageId" "messageId",
+              "t"."messageId",
               "t"."content" "messageText"
             FROM "user"
             JOIN

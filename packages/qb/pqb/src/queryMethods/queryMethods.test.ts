@@ -657,13 +657,13 @@ describe('queryMethods', () => {
     });
 
     it('should not prefix the column when it is customly selected', () => {
-      const q = User.select({ id: 'id' }).group('id');
+      const q = User.select({ name: 'id' }).group('name');
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" "id" FROM "user"
-          GROUP BY "id"
+          SELECT "user"."id" "name" FROM "user"
+          GROUP BY "name"
         `,
       );
     });
@@ -855,13 +855,13 @@ describe('queryMethods', () => {
     });
 
     it('should not prefix the column when it is customly selected', () => {
-      const q = User.select({ id: 'id' }).order('id');
+      const q = User.select({ name: 'id' }).order('name');
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" "id" FROM "user"
-          ORDER BY "id" ASC
+          SELECT "user"."id" "name" FROM "user"
+          ORDER BY "name" ASC
         `,
       );
     });

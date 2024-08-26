@@ -28,7 +28,7 @@ const User = testDb(
     computed: (q) => ({
       nameAndKey: q
         .sql(() => sql`${q.column('name')} || ' ' || ${q.column('userKey')}`)
-        .type((t) => t.string()),
+        .type((t) => t.string().parse((s) => s + ' parsed')),
       runtimeComputed: q.computeAtRuntime(
         ['id', 'name'],
         (record) => `${record.id} ${record.name}`,
@@ -41,7 +41,7 @@ const User = testDb(
 );
 
 const userData = { ...partialUserData, userKey: 'key' };
-const nameAndKey = `${userData.name} ${userData.userKey}`;
+const nameAndKey = `${userData.name} ${userData.userKey} parsed`;
 
 const joinQuery = User.as('user').whereSql`"profile"."userId" = "user"."id"`;
 

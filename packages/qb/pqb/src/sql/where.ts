@@ -24,6 +24,7 @@ import {
 } from './data';
 import {
   addValue,
+  ColumnsParsers,
   ColumnTypeBase,
   Expression,
   isExpression,
@@ -44,6 +45,7 @@ interface QueryDataForWhere {
   scopes?: { [K: string]: QueryScopeData };
   joinOverrides?: CommonQueryData['joinOverrides'];
   outerJoinOverrides?: CommonQueryData['outerJoinOverrides'];
+  parsers?: ColumnsParsers;
 }
 
 interface QueryDataWithLanguage extends QueryDataForWhere {
@@ -290,7 +292,13 @@ const processWhere = (
         let column: ColumnTypeBase | undefined = query.shape[key];
         let quotedColumn: string | undefined;
         if (column) {
-          quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
+          quotedColumn = simpleExistingColumnToSQL(
+            ctx,
+            query,
+            key,
+            column,
+            quotedAs,
+          );
         } else if (!column) {
           const index = key.indexOf('.');
           if (index !== -1) {
@@ -304,7 +312,7 @@ const processWhere = (
                 : query.joinedShapes?.[table]?.[name]
             ) as typeof column;
 
-            quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
+            quotedColumn = simpleColumnToSQL(ctx, query, name, column, quoted);
           } else {
             column = query.joinedShapes?.[key]?.value;
             quotedColumn = `"${key}".r`;

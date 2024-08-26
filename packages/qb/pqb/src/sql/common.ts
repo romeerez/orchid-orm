@@ -2,17 +2,31 @@ import { SelectableOrExpression } from '../common/utils';
 import { PickQueryDataShapeAndJoinedShapes, QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
 import {
+  ColumnsParsers,
   ColumnTypeBase,
   Expression,
   QueryColumn,
   QueryColumns,
 } from 'orchid-core';
 
+const applySqlComputed = (
+  ctx: ToSQLCtx,
+  q: { parsers?: ColumnsParsers },
+  computed: Expression,
+  as: string,
+  quotedAs?: string,
+) => {
+  const parser = (computed.result.value as ColumnTypeBase).parseFn;
+  if (parser) (q.parsers ??= {})[as] = parser;
+  return computed.toSQL(ctx, quotedAs);
+};
+
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
  */
 export function simpleColumnToSQL(
   ctx: ToSQLCtx,
+  q: { parsers?: ColumnsParsers },
   key: string,
   column?: QueryColumn,
   quotedAs?: string,
@@ -21,7 +35,7 @@ export function simpleColumnToSQL(
 
   const { data } = column as ColumnTypeBase;
   return data.computed
-    ? data.computed.toSQL(ctx, quotedAs)
+    ? applySqlComputed(ctx, q, data.computed, key, quotedAs)
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
@@ -29,13 +43,14 @@ export function simpleColumnToSQL(
 // Handles computed column, uses column.data.name when set, prefixes regular column with `quotedAs`.
 export function simpleExistingColumnToSQL(
   ctx: ToSQLCtx,
+  q: { parsers?: ColumnsParsers },
   key: string,
   column: QueryColumn,
   quotedAs?: string,
 ): string {
   const { data } = column as ColumnTypeBase;
   return data.computed
-    ? data.computed.toSQL(ctx, quotedAs)
+    ? applySqlComputed(ctx, q, data.computed, key, quotedAs)
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
@@ -44,6 +59,7 @@ export const columnToSql = (
   data: {
     joinedShapes?: QueryData['joinedShapes'];
     joinOverrides?: QueryData['joinOverrides'];
+    parsers?: ColumnsParsers;
   },
   shape: QueryColumns,
   column: string,
@@ -67,7 +83,7 @@ export const columnToSql = (
     return `"${column}".r`;
   }
 
-  return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
+  return simpleColumnToSQL(ctx, data, column, shape[column], quotedAs);
 };
 
 /**
@@ -95,13 +111,13 @@ export const maybeSelectedColumnToSql = (
       for (const s of data.select) {
         if (typeof s === 'object' && 'selectAs' in s) {
           if (column in s.selectAs) {
-            return simpleColumnToSQL(ctx, column, data.shape[column]);
+            return simpleColumnToSQL(ctx, data, column, data.shape[column]);
           }
         }
       }
     }
 
-    return simpleColumnToSQL(ctx, column, data.shape[column], quotedAs);
+    return simpleColumnToSQL(ctx, data, column, data.shape[column], quotedAs);
   }
 };
 
@@ -110,6 +126,7 @@ const columnWithDotToSql = (
   data: {
     joinedShapes?: QueryData['joinedShapes'];
     joinOverrides?: QueryData['joinOverrides'];
+    parsers?: ColumnsParsers;
   },
   shape: QueryColumns,
   column: string,
@@ -140,7 +157,7 @@ const columnWithDotToSql = (
     }
 
     if (col.data.computed) {
-      return `${col.data.computed.toSQL(ctx, quoted)}`;
+      return applySqlComputed(ctx, data, col.data.computed, column, quoted);
     }
 
     return `"${tableName}"."${key}"`;
@@ -153,6 +170,7 @@ export const columnToSqlWithAs = (
   ctx: ToSQLCtx,
   data: QueryData,
   column: string,
+  as: string,
   quotedAs?: string,
   select?: true,
 ) => {
@@ -164,10 +182,11 @@ export const columnToSqlWithAs = (
         column,
         column.slice(0, index),
         column.slice(index + 1),
+        as,
         quotedAs,
         select,
       )
-    : ownColumnToSqlWithAs(ctx, data, column, quotedAs, select);
+    : ownColumnToSqlWithAs(ctx, data, column, as, quotedAs, select);
 };
 
 export const tableColumnToSqlWithAs = (
@@ -176,14 +195,15 @@ export const tableColumnToSqlWithAs = (
   column: string,
   table: string,
   key: string,
+  as: string,
   quotedAs?: string,
   select?: true,
 ) => {
   if (key === '*') {
     if (data.joinedShapes?.[table]) {
       return select
-        ? `row_to_json("${table}".*) "${table}"`
-        : `"${table}".r "${table}"`;
+        ? `row_to_json("${table}".*) "${as}"`
+        : `"${table}".r "${as}"`;
     }
     return column;
   }
@@ -195,42 +215,59 @@ export const tableColumnToSqlWithAs = (
     quoted === quotedAs ? data.shape[key] : data.joinedShapes?.[tableName][key];
   if (col) {
     if (col.data.name && col.data.name !== key) {
-      return `"${tableName}"."${col.data.name}" "${key}"`;
+      return `"${tableName}"."${col.data.name}" "${as}"`;
     }
 
     if (col.data.computed) {
-      return `${col.data.computed.toSQL(ctx, quoted)} "${key}"`;
+      return `${applySqlComputed(
+        ctx,
+        data,
+        col.data.computed,
+        as,
+        quoted,
+      )} "${as}"`;
     }
   }
 
-  return `"${tableName}"."${key}"`;
+  return `"${tableName}"."${key}"${key === as ? '' : ` "${as}"`}`;
 };
 
 export const ownColumnToSqlWithAs = (
   ctx: ToSQLCtx,
   data: QueryData,
   column: string,
+  as: string,
   quotedAs?: string,
   select?: true,
 ) => {
   if (!select && data.joinedShapes?.[column]) {
     return select
-      ? `row_to_json("${column}".*) "${column}"`
-      : `"${column}".r "${column}"`;
+      ? `row_to_json("${column}".*) "${as}"`
+      : `"${column}".r "${as}"`;
   }
 
   const col = data.shape[column];
   if (col) {
     if (col.data.name && col.data.name !== column) {
-      return `${quotedAs ? `${quotedAs}.` : ''}"${col.data.name}" "${column}"`;
+      return `${quotedAs ? `${quotedAs}.` : ''}"${col.data.name}"${
+        col.data.name === as ? '' : ` "${as}"`
+      }`;
     }
 
     if (col.data.computed) {
-      return `${col.data.computed.toSQL(ctx, quotedAs)} "${column}"`;
+      return `${applySqlComputed(
+        ctx,
+        data,
+        col.data.computed,
+        as,
+        quotedAs,
+      )} "${as}"`;
     }
   }
 
-  return `${quotedAs ? `${quotedAs}.` : ''}"${column}"`;
+  return `${quotedAs ? `${quotedAs}.` : ''}"${column}"${
+    column === as ? '' : ` "${as}"`
+  }`;
 };
 
 export const ownColumnToSql = (
