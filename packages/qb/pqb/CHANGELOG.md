@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.0
+
+### Minor Changes
+
+- d7c98b5: Use ARRAY[] for arrays, support native JS bigint for raw values.
+
 ## 0.39.4
 
 ### Patch Changes
