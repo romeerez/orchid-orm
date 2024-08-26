@@ -241,6 +241,36 @@ describe('hooks', () => {
       if (t) delete t.afterCommit;
     });
 
+    it('should work in a test transaction', async () => {
+      const hook = jest.fn();
+
+      await User.insert(userData).afterCreateCommit([], hook);
+
+      expect(hook).toHaveBeenCalledTimes(1);
+    });
+
+    it('should work in a user transaction inside test transaction', async () => {
+      const hook = jest.fn();
+
+      await User.transaction(async () => {
+        await User.insert(userData).afterCreateCommit([], hook);
+      });
+
+      expect(hook).toHaveBeenCalledTimes(1);
+    });
+
+    it('should work in a nested user transaction inside test transaction', async () => {
+      const hook = jest.fn();
+
+      await User.transaction(async () => {
+        await User.transaction(async () => {
+          await User.insert(userData).afterCreateCommit([], hook);
+        });
+      });
+
+      expect(hook).toHaveBeenCalledTimes(1);
+    });
+
     describe('AfterCommitError', () => {
       it('should throw AfterCommitError with transaction result and hook results from Promise.allSettled', async () => {
         const err = await User.transaction(async () => {
@@ -285,32 +315,15 @@ describe('hooks', () => {
     });
 
     describe('afterCreateCommit', () => {
-      it('should push query, result, and the hooks into `afterCommit` of the transaction', async () => {
-        const q = User.afterCreateCommit(['id'], noop)
-          .select('name')
-          .create(userData);
-
-        await q;
-
-        const t = q.internal.transactionStorage.getStore();
-        expect(t?.afterCommit).toEqual([
-          [{ id: expect.any(Number), name: userData.name }],
-          q,
-          [noop],
-        ]);
-      });
-
       it('should call the after create commit hook with created data and query object', async () => {
         const callback = jest.fn(async () => {
           const count = await User.count();
           expect(count).toBe(1);
         });
 
-        await User.transaction(async () => {
-          await User.afterCreateCommit(['name'], callback).insert({
-            name: 'name',
-            password: 'password',
-          });
+        await User.afterCreateCommit(['name'], callback).insert({
+          name: 'name',
+          password: 'password',
         });
 
         expect(callback).toBeCalledWith([{ name: 'name' }], expect.any(Object));
@@ -318,40 +331,24 @@ describe('hooks', () => {
     });
 
     describe('afterUpdateCommit', () => {
-      it('should push query, result, and the hooks into `afterCommit` of the transaction', async () => {
+      it('should call the after update commit hook with updated data and query object', async () => {
+        const hook = jest.fn();
+
         const id = await User.get('id').create(userData);
-        const q = User.afterUpdateCommit(['id'], noop)
-          .select('name')
-          .find(id)
-          .update({});
+        await User.afterUpdateCommit(['name'], hook).find(id).update({});
 
-        await q;
-
-        const t = q.internal.transactionStorage.getStore();
-        expect(t?.afterCommit).toEqual([
-          [{ id: expect.any(Number), name: userData.name }],
-          q,
-          [noop],
-        ]);
+        expect(hook).toBeCalledWith([{ name: 'name' }], expect.any(Object));
       });
     });
 
     describe('afterDeleteCommit', () => {
       it('should push query, result, and the hooks into `afterCommit` of the transaction', async () => {
+        const hook = jest.fn();
+
         const id = await User.get('id').create(userData);
-        const q = User.afterDeleteCommit(['id'], noop)
-          .select('name')
-          .find(id)
-          .delete();
+        await User.afterDeleteCommit(['name'], hook).find(id).delete();
 
-        await q;
-
-        const t = q.internal.transactionStorage.getStore();
-        expect(t?.afterCommit).toEqual([
-          [{ id: expect.any(Number), name: userData.name }],
-          q,
-          [noop],
-        ]);
+        expect(hook).toBeCalledWith([{ name: 'name' }], expect.any(Object));
       });
     });
   });

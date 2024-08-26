@@ -337,7 +337,12 @@ const then = async (
         // afterCommitHooks are executed later after transaction commit,
         // or, if we don't have transaction, they are executed intentionally after other after hooks
         if (afterCommitHooks) {
-          if (trx) {
+          if (
+            trx &&
+            // when inside test transactions, push to a transaction only unless it's the outer user transaction.
+            (!trx.testTransactionCount ||
+              trx.transactionId + 1 > trx.testTransactionCount)
+          ) {
             (trx.afterCommit ??= []).push(
               result as unknown[],
               q,
