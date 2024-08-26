@@ -1,5 +1,11 @@
 # pqb
 
+## 0.39.2
+
+### Patch Changes
+
+- c8b03d9: Fix type parsing for SQL computeds (#380)
+
 ## 0.39.1
 
 ### Patch Changes
