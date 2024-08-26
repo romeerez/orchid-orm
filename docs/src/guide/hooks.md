@@ -141,12 +141,24 @@ After-commit hooks are similar to [after hook](#after-hooks): they also can acce
 
 If the query was wrapped into a transaction, these hooks will run after the commit. For a single query without a transaction, these hooks will run after the query.
 
-This makes the after-commit hook the right choice for sending emails and performing other side effects, that cannot be rolled back by transaction.
-
 Regular [after hooks](#after-hooks) will run before the transaction commit, and it's possible that some of the following queries inside a transaction will fail and the transaction will be rolled back.
-After-commit hooks have a guarantee that the transaction, or a single query, was successful before running the hook.
+After-commit hooks have a guarantee that the transaction, or a single query, finished successfully before running the hook.
 
 If no records were updated or deleted, the `afterUpdateCommit` and `afterDeleteCommit` hooks **won't** run.
+
+If at least one of the after commit hooks fails, the whole transaction (even though it is committed) throws a special [AfterCommitError](#AfterCommitError) error.
+Consider [catchAfterCommitError](#catchAfterCommitError) for catching such errors.
+
+**after-commit** hooks are a better option for performing side effects outside of transaction, but beware that if a side effect, such as sending an email, fails, the transaction is not rolled back.
+Third-party services can fail, leaving the side effect non-applied, even though the transaction data was persisted.
+It's better to send such actions to a persistent message queue, where actions can be retried and monitored.
+
+Even with a message queue in place, there is still a chance that the message queue itself will fail to accept the message, causing a loss of the needed action.
+To have a 100% guarantee that the side effect is going to eventually happen, you need to apply some of distributed transaction techniques, such as Outbox Pattern.
+
+In the case of sending emails upon user registration, you could save "send a registration email" action to a special table from the `afterCreate` hook,
+then in `afterCreateCommit` send it to a message queue, then delete it from the special table.
+If the message queue fails, the action is still saved in a db table, the table could be periodically scanned in a cron job and sent to the queue.
 
 ```ts
 class SomeTable extends BaseTable {
@@ -221,4 +233,79 @@ await db.table
   .afterDeleteCommit((data, q) => console.log('after delete commit'))
   .where({ ...conditions })
   .delete();
+```
+
+## catchAfterCommitError
+
+[//]: # 'has JSDoc'
+
+Add `catchAfterCommitError` to the query to catch possible errors that are coming from after commit hooks.
+
+When it is used, the transaction will return its result disregarding of a failed hook.
+
+Without `catchAfterCommitError`, the transaction function throws and won't return result.
+Result is still accessible from the error object [AfterCommitError](#AfterCommitError).
+
+```ts
+const result = await db
+  .$transaction(async () => {
+    return db.table.create(data);
+  })
+  .catchAfterCommitError((err) => {
+    // err is instance of AfterCommitError (see below)
+  });
+
+// result is available even if an after commit hook has failed
+result.id;
+```
+
+## AfterCommitError
+
+[//]: # 'has JSDoc'
+
+`AfterCommitError` is thrown when one of after commit hooks throws.
+
+```ts
+interface AfterCommitError extends OrchidOrmError {
+  // the result of transaction functions
+  result: unknown;
+
+  // Promise.allSettled result + optional function names
+  hookResults: (
+    | {
+        status: 'fulfilled';
+        value: unknown;
+        name?: string;
+      }
+    | {
+        status: 'rejected';
+        reason: any; // the error object thrown by a hook
+        name?: string;
+      }
+  )[];
+}
+```
+
+Use `functoin name() {}` function syntax for hooks to give them names,
+so later they can be identified when handling after commit errors.
+
+```ts
+class SomeTable extends BaseTable {
+  readonly table = 'someTable';
+  columns = this.setColumns((t) => ({
+    ...someColumns,
+  }));
+
+  init(orm: typeof db) {
+    // anonymous funciton - has no name
+    this.afterCreateCommit([], async () => {
+      // ...
+    });
+
+    // named function
+    this.afterCreateCommit([], function myHook() => {
+      // ...
+    });
+  }
+}
 ```

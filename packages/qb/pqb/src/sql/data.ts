@@ -38,6 +38,7 @@ import {
 import { RelationQuery } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
+import { AfterCommitError } from '../queryMethods';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: ColumnsShapeBase;
@@ -65,7 +66,7 @@ export type QueryBeforeHook = (query: Query) => void | Promise<void>;
 export type QueryAfterHook<Data = unknown> = (
   data: Data,
   query: Query,
-) => void | Promise<void>;
+) => unknown | Promise<unknown>;
 
 export interface QueryScopes {
   [K: string]: QueryScopeData;
@@ -164,6 +165,8 @@ export interface CommonQueryData {
   afterDeleteCommit?: QueryAfterHook[];
   // additional select for afterDelete hooks
   afterDeleteSelect?: Set<string>;
+  // catch after commit hooks errors, letting query to return its result
+  catchAfterCommitError?(error: AfterCommitError): void;
   // log settings
   log?: QueryLogObject;
   // logger with `log`, `warn`, `error`

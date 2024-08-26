@@ -140,7 +140,7 @@ export type TransactionAfterCommitHook =
 
 // Function to call after transaction commit.
 export interface AfterCommitHook {
-  (data: unknown[], q: QueryBaseCommon): void | Promise<void>;
+  (data: unknown[], q: QueryBaseCommon): unknown | Promise<unknown>;
 }
 
 export const setAdapterConnectRetry = <Result>(

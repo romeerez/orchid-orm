@@ -1,9 +1,7 @@
 import { Query } from './query/query';
 import { PickQueryShape } from 'orchid-core';
 
-export abstract class OrchidOrmError extends Error {
-  abstract query: Query;
-}
+export abstract class OrchidOrmError extends Error {}
 
 /**
  * When we search for a single record, and it is not found, it can either throw an error, or return `undefined`.
@@ -14,12 +12,21 @@ export abstract class OrchidOrmError extends Error {
  * If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
  */
 export class NotFoundError extends OrchidOrmError {
-  constructor(public query: Query, message = 'Record is not found') {
+  // `#query` is private to prevent it from serializing to not cause problems to test runner reports
+  readonly #query: Query;
+
+  constructor(query: Query, message = 'Record is not found') {
     super(message);
+    this.#query = query;
+  }
+
+  get query() {
+    return this.#query;
   }
 }
 
 export class OrchidOrmInternalError extends Error {
+  // `#query` is private to prevent it from serializing to not cause problems to test runner reports
   readonly #query: Query;
 
   constructor(query: Query, message?: string) {

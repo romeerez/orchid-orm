@@ -2,6 +2,7 @@ import { pushQueryValue } from '../query/queryUtils';
 import { PickQueryShape, QueryColumns } from 'orchid-core';
 import { QueryAfterHook, QueryBeforeHook } from '../sql';
 import { PickQueryQ, Query } from '../query/query';
+import { AfterCommitError } from './transaction';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
 export type AfterHook<
@@ -402,5 +403,32 @@ export abstract class QueryHooks {
       select,
       cb,
     ) as unknown as T;
+  }
+
+  /**
+   * Add `catchAfterCommitError` to the query to catch possible errors that are coming from after commit hooks.
+   *
+   * When it is used, the transaction will return its result disregarding of a failed hook.
+   *
+   * Without `catchAfterCommitError`, the transaction function throws and won't return result.
+   * Result is still accessible from the error object [AfterCommitError](#AfterCommitError).
+   *
+   * ```ts
+   * const result = await db
+   *   .$transaction(async () => {
+   *     return db.table.create(data);
+   *   })
+   *   .catchAfterCommitError((err) => {
+   *     // err is instance of AfterCommitError (see below)
+   *   });
+   *
+   * // result is available even if an after commit hook has failed
+   * result.id;
+   * ```
+   */
+  catchAfterCommitError<T>(this: T, fn: (error: AfterCommitError) => void): T {
+    const q = (this as unknown as Query).clone();
+    q.q.catchAfterCommitError = fn;
+    return q as T;
   }
 }

@@ -134,6 +134,7 @@ describe('tableData', () => {
           c: t.string().unique(),
         }),
         (t) => [t.index(['a']), t.unique(['b']), t.unique(['c'])],
+        { noPrimaryKey: 'ignore' },
       );
 
       assertType<typeof table.internal.uniqueColumnTuples, ['b'] | ['c']>();

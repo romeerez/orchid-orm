@@ -5,6 +5,7 @@ import { HandleResult, QueryAfterHook, QueryBeforeHook } from '../sql';
 import pg from 'pg';
 import {
   AdapterBase,
+  AfterCommitHook,
   applyTransforms,
   callWithThis,
   ColumnParser,
@@ -19,7 +20,7 @@ import {
   Sql,
   TransactionState,
 } from 'orchid-core';
-import { commitSql } from './transaction';
+import { _afterCommitError, commitSql } from './transaction';
 import { processComputedResult } from '../modules/computed';
 
 export const queryMethodByReturnType: {
@@ -335,15 +336,37 @@ const then = async (
 
         // afterCommitHooks are executed later after transaction commit,
         // or, if we don't have transaction, they are executed intentionally after other after hooks
-        if (afterCommitHooks && trx) {
-          (trx.afterCommit ??= []).push(
-            result as unknown[],
-            q,
-            afterCommitHooks,
-          );
-        } else if (afterCommitHooks) {
-          const args = [result, q];
-          await Promise.all(afterCommitHooks.map(callAfterHook, args));
+        if (afterCommitHooks) {
+          if (trx) {
+            (trx.afterCommit ??= []).push(
+              result as unknown[],
+              q,
+              afterCommitHooks,
+            );
+          } else {
+            const promises: (unknown | Promise<unknown>)[] = [];
+            for (const fn of afterCommitHooks) {
+              try {
+                promises.push(
+                  (fn as unknown as AfterCommitHook)(result as unknown[], q),
+                );
+              } catch (err) {
+                promises.push(Promise.reject(err));
+              }
+            }
+
+            const hookResults = await Promise.allSettled(promises);
+            if (hookResults.some((result) => result.status === 'rejected')) {
+              _afterCommitError(
+                result,
+                hookResults.map((result, i) => ({
+                  ...result,
+                  name: afterCommitHooks[i].name,
+                })),
+                q.q.catchAfterCommitError,
+              );
+            }
+          }
         }
       } else if (query.after) {
         const args = [result, q];

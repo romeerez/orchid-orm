@@ -4,6 +4,7 @@ import { NotFoundError } from '../errors';
 import { noop, TransactionState } from 'orchid-core';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Query } from '../query/query';
+import { AfterCommitError } from './transaction';
 
 // make query ignore the transaction that is injected by `useTestDatabase`
 const ignoreTestTransactionOnce = (q: Query) => {
@@ -13,6 +14,22 @@ const ignoreTestTransactionOnce = (q: Query) => {
       q.internal.transactionStorage = original;
     },
   } as unknown as AsyncLocalStorage<TransactionState>;
+};
+
+const afterCommitSampleError = {
+  hookResults: [
+    {
+      status: 'fulfilled',
+      value: 'ok',
+      name: 'one',
+    },
+    {
+      status: 'rejected',
+      reason: expect.objectContaining({
+        message: 'error',
+      }),
+    },
+  ],
 };
 
 describe('hooks', () => {
@@ -224,6 +241,49 @@ describe('hooks', () => {
       if (t) delete t.afterCommit;
     });
 
+    describe('AfterCommitError', () => {
+      it('should throw AfterCommitError with transaction result and hook results from Promise.allSettled', async () => {
+        const err = await User.transaction(async () => {
+          await User.afterCreateCommit([], function one() {
+            return 'ok';
+          })
+            .afterCreateCommit([], function two() {
+              throw new Error('error');
+            })
+            .insert(userData);
+
+          return 'transaction result';
+        }).catch((err) => err);
+
+        expect(err).toBeInstanceOf(AfterCommitError);
+        expect(err).toMatchObject({
+          ...afterCommitSampleError,
+          result: 'transaction result',
+        });
+      });
+
+      it('should catch error with `catchAfterCommitError', async () => {
+        let err;
+
+        const res = await User.transaction(async () => {
+          return User.afterCreateCommit([], function one() {
+            return 'ok';
+          })
+            .afterCreateCommit([], function two() {
+              throw new Error('error');
+            })
+            .insert(userData)
+            .catchAfterCommitError((error) => {
+              err = error;
+            });
+        });
+
+        expect(res).toBe(1);
+        expect(err).toBeInstanceOf(AfterCommitError);
+        expect(err).toMatchObject({ ...afterCommitSampleError, result: 1 });
+      });
+    });
+
     describe('afterCreateCommit', () => {
       it('should push query, result, and the hooks into `afterCommit` of the transaction', async () => {
         const q = User.afterCreateCommit(['id'], noop)
@@ -240,7 +300,7 @@ describe('hooks', () => {
         ]);
       });
 
-      it('tmp', async () => {
+      it('should call the after create commit hook with created data and query object', async () => {
         const callback = jest.fn(async () => {
           const count = await User.count();
           expect(count).toBe(1);
@@ -487,5 +547,49 @@ describe('hooks', () => {
       );
       expect(result).toBe(undefined);
     });
+  });
+});
+
+describe('hooks with no test transaction', () => {
+  beforeEach(() => {
+    jest
+      .spyOn(User.adapter, 'query')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] } as any);
+  });
+
+  it('should throw AfterCommitError with transaction result and hook results from Promise.allSettled', async () => {
+    const err = await User.afterDeleteCommit([], function one() {
+      return 'ok';
+    })
+      .afterDeleteCommit([], function two() {
+        throw new Error('error');
+      })
+      .all()
+      .delete()
+      .catch((err) => err);
+
+    expect(err).toBeInstanceOf(AfterCommitError);
+    expect(err).toMatchObject({ ...afterCommitSampleError, result: [] });
+  });
+
+  it('should catch error with `catchAfterCommitError', async () => {
+    let err;
+
+    const res = await User.afterDeleteCommit([], function one() {
+      return 'ok';
+    })
+      .afterDeleteCommit([], function two() {
+        throw new Error('error');
+      })
+      .all()
+      .delete()
+      .catchAfterCommitError((error) => {
+        err = error;
+      });
+
+    expect(res).toBe(1);
+    expect(err).toBeInstanceOf(AfterCommitError);
+    expect(err).toMatchObject({ ...afterCommitSampleError, result: [] });
   });
 });
