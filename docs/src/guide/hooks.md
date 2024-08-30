@@ -286,7 +286,7 @@ interface AfterCommitError extends OrchidOrmError {
 }
 ```
 
-Use `functoin name() {}` function syntax for hooks to give them names,
+Use `function name() {}` function syntax for hooks to give them names,
 so later they can be identified when handling after commit errors.
 
 ```ts
