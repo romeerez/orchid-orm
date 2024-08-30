@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.3.2
+
+### Patch Changes
+
+- 041f3ac: More precise arg types for aggregate functions + fix parse null for arrgay and money (#391, #353)
+
 ## 0.3.1
 
 ### Patch Changes

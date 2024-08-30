@@ -1,5 +1,13 @@
 # pqb
 
+## 0.40.1
+
+### Patch Changes
+
+- 041f3ac: More precise arg types for aggregate functions + fix parse null for arrgay and money (#391, #353)
+- Updated dependencies [041f3ac]
+  - orchid-core@0.19.10
+
 ## 0.40.0
 
 ### Minor Changes

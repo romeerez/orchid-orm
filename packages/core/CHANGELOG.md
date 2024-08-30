@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.10
+
+### Patch Changes
+
+- 041f3ac: More precise arg types for aggregate functions + fix parse null for arrgay and money (#391, #353)
+
 ## 0.19.9
 
 ### Patch Changes
