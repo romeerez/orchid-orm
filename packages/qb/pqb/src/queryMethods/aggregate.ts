@@ -7,12 +7,12 @@ import {
 } from '../query/query';
 import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
 import {
-  ColumnSchemaConfig,
   emptyArray,
   emptyObject,
   Expression,
   PickQueryMeta,
   QueryColumn,
+  QueryColumnOfDataType,
 } from 'orchid-core';
 import {
   AggregateOptions,
@@ -94,17 +94,13 @@ type CountReturn<T> = QueryReturnsAgg<T, number, OperatorsNumber> & {
   isCount: true;
 };
 
-type NumberColumnSelectable<T extends PickQueryMeta> =
+type SelectableDataType<T extends PickQueryMeta, DataType extends string> =
   | {
-      [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends
-        | number
-        | null
-        ? K
-        : T['meta']['selectable'][K]['column'] extends NumberAsStringBaseColumn<ColumnSchemaConfig>
+      [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['dataType'] extends DataType
         ? K
         : never;
     }[keyof T['meta']['selectable']]
-  | Expression<QueryColumn<number | null>>;
+  | Expression<QueryColumnOfDataType<DataType>>;
 
 type NumberNullable = QueryColumn<number | null, OperatorsNumber>;
 
@@ -194,6 +190,39 @@ type StringNullable = QueryColumn<string | null, OperatorsText>;
 type NullableStringReturn<T> = SetQueryReturnsColumnOrThrow<T, StringNullable> &
   OperatorsText;
 
+export interface AggregateArgTypes {
+  minMax: // bpchar, timetz not supported by ORM
+  | 'citext'
+    | 'date'
+    | 'float4'
+    | 'float8'
+    | 'inet'
+    | 'int2'
+    | 'int4'
+    | 'int8'
+    | 'interval'
+    | 'money'
+    | 'numeric'
+    | 'text'
+    | 'time'
+    | 'timestamp'
+    | 'timestamptz';
+  sum:
+    | 'float4'
+    | 'float8'
+    | 'int2'
+    | 'int4'
+    | 'int8'
+    | 'interval'
+    | 'money'
+    | 'numeric';
+  avg: // unlike sum, avg has no money
+  'float4' | 'float8' | 'int2' | 'int4' | 'int8' | 'interval' | 'numeric';
+  bit: 'bit' | 'int2' | 'int4' | 'int8';
+  bool: 'bool';
+  stringAgg: 'bytea' | 'text';
+}
+
 // Query methods to get a single value for an aggregate function
 export class AggregateMethods {
   /**
@@ -272,7 +301,7 @@ export class AggregateMethods {
    */
   min<
     T extends PickQueryMetaResultRelationsWindows,
-    Arg extends NumberColumnSelectable<T>,
+    Arg extends SelectableDataType<T, AggregateArgTypes['minMax']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
@@ -306,7 +335,7 @@ export class AggregateMethods {
    */
   max<
     T extends PickQueryMetaResultRelationsWindows,
-    Arg extends NumberColumnSelectable<T>,
+    Arg extends SelectableDataType<T, AggregateArgTypes['minMax']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
@@ -339,7 +368,7 @@ export class AggregateMethods {
    */
   sum<
     T extends PickQueryMetaResultRelationsWindows,
-    Arg extends NumberColumnSelectable<T>,
+    Arg extends SelectableDataType<T, AggregateArgTypes['sum']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
@@ -369,7 +398,7 @@ export class AggregateMethods {
    */
   avg<
     T extends PickQueryMetaResultRelationsWindows,
-    Arg extends NumberColumnSelectable<T>,
+    Arg extends SelectableDataType<T, AggregateArgTypes['avg']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
@@ -402,7 +431,7 @@ export class AggregateMethods {
    */
   bitAnd<
     T extends PickQueryMetaResultRelationsWindows,
-    Arg extends NumberColumnSelectable<T>,
+    Arg extends SelectableDataType<T, AggregateArgTypes['bit']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
@@ -432,7 +461,7 @@ export class AggregateMethods {
    */
   bitOr<
     T extends PickQueryMetaResultRelationsWindows,
-    Arg extends NumberColumnSelectable<T>,
+    Arg extends SelectableDataType<T, AggregateArgTypes['bit']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
       this,
@@ -465,7 +494,7 @@ export class AggregateMethods {
    */
   boolAnd<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanQueryColumn>,
+    arg: SelectableDataType<T, AggregateArgTypes['bool']>,
     options?: AggregateOptions<T>,
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
@@ -499,7 +528,7 @@ export class AggregateMethods {
    */
   boolOr<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanQueryColumn>,
+    arg: SelectableDataType<T, AggregateArgTypes['bool']>,
     options?: AggregateOptions<T>,
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
@@ -516,7 +545,7 @@ export class AggregateMethods {
    */
   every<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, BooleanQueryColumn>,
+    arg: SelectableDataType<T, AggregateArgTypes['bool']>,
     options?: AggregateOptions<T>,
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
@@ -682,7 +711,7 @@ export class AggregateMethods {
    */
   stringAgg<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
-    arg: SelectableOrExpressionOfType<T, StringColumn>,
+    arg: SelectableDataType<T, AggregateArgTypes['stringAgg']>,
     delimiter: string,
     options?: AggregateOptions<T>,
   ): NullableStringReturn<T> {

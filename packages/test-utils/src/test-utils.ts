@@ -21,7 +21,7 @@ export const testSchemaConfig = zodSchemaConfig;
 
 export const testAdapter = new Adapter(testDbOptions);
 
-const columnTypes = makeColumnTypes(defaultSchemaConfig);
+export const columnTypes = makeColumnTypes(defaultSchemaConfig);
 
 export const testColumnTypes = {
   ...columnTypes,

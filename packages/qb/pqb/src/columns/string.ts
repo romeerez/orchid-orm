@@ -1,5 +1,5 @@
 import { ColumnData, ColumnType, PickColumnData } from './columnType';
-import { NumberBaseColumn } from './number';
+import { NumberColumnData } from './number';
 import {
   Code,
   joinTruthy,
@@ -19,7 +19,7 @@ import {
 import { columnCode } from './code';
 import { raw, RawSQL } from '../sql/rawSql';
 import { SearchWeightRecord } from '../sql';
-import { Operators, OperatorsText } from './operators';
+import { Operators, OperatorsNumber, OperatorsText } from './operators';
 
 export type TextColumnData = StringTypeData;
 
@@ -303,10 +303,19 @@ export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   }
 }
 
-export class MoneyColumn<
-  Schema extends ColumnSchemaConfig,
-> extends NumberBaseColumn<Schema, ReturnType<Schema['stringSchema']>> {
+export class MoneyColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['number']>,
+  OperatorsNumber,
+  string | number,
+  number,
+  ReturnType<Schema['number']>,
+  string | number
+> {
   dataType = 'money' as const;
+  declare data: NumberColumnData;
+  operators = Operators.number;
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
@@ -318,7 +327,9 @@ export class MoneyColumn<
 
   parseFn = Object.assign(
     function (input: unknown) {
-      return parseFloat((input as string).replace(/,/g, '').replace(/\$/g, ''));
+      return input === null
+        ? input
+        : parseFloat((input as string).replace(/,/g, '').replace(/\$/g, ''));
     },
     {
       hideFromCode: true,

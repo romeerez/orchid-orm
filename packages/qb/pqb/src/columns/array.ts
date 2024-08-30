@@ -111,7 +111,9 @@ export class ArrayColumn<
   }
 
   parseFn = Object.assign(
-    (source: string) => {
+    (source: string | null) => {
+      if (!source) return source;
+
       const entries: unknown[] = [];
       parsePostgresArray(source, entries, this.data.item.parseItem);
       return entries;

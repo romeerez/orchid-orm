@@ -398,6 +398,11 @@ export interface QueryColumn<T = unknown, Op = any> {
   operators: Op;
 }
 
+export interface QueryColumnOfDataType<DataType extends string>
+  extends QueryColumn {
+  dataType: DataType;
+}
+
 export interface QueryColumns {
   [K: string]: QueryColumn;
 }

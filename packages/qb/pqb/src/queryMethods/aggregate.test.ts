@@ -257,9 +257,7 @@ describe('aggregate', () => {
     it('should return number for numeric types returning a number', async () => {
       await Product.insertMany([{ price: '1' }, { price: '2' }]);
 
-      const value = await Product[
-        'sum' as 'avg' | 'min' | 'max' | 'sum' | 'bitAnd' | 'bitOr'
-      ]('id');
+      const value = await Product.sum('id');
 
       assertType<typeof value, number | null>();
 
@@ -272,9 +270,7 @@ describe('aggregate', () => {
         { price: '222222222222222.222222222222222' },
       ]);
 
-      const value = await Product[
-        'sum' as 'avg' | 'min' | 'max' | 'sum' | 'bitAnd' | 'bitOr'
-      ]('price');
+      const value = await Product.sum('price');
 
       assertType<typeof value, string | null>();
 
@@ -665,7 +661,12 @@ describe('aggregate', () => {
     it('should support raw sql parameter', async () => {
       const q = User.all();
       expectSql(
-        q.stringAgg(testDb.sql`name`, ' & ').toSQL(),
+        q
+          .stringAgg(
+            testDb.sql`name`.type((t) => t.text()),
+            ' & ',
+          )
+          .toSQL(),
         `SELECT string_agg(name, $1) FROM "user"`,
         [' & '],
       );
@@ -682,9 +683,16 @@ describe('aggregate', () => {
     it(`.stringAgg supports raw sql`, () => {
       const q = User.all();
       const expectedSql = `SELECT string_agg(name, $1) FROM "user"`;
-      expectSql(q.stringAgg(testDb.sql`name`, ' & ').toSQL(), expectedSql, [
-        ' & ',
-      ]);
+      expectSql(
+        q
+          .stringAgg(
+            testDb.sql`name`.type((t) => t.text()),
+            ' & ',
+          )
+          .toSQL(),
+        expectedSql,
+        [' & '],
+      );
       expectQueryNotMutated(q);
     });
   });
