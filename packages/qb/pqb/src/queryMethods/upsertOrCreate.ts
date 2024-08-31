@@ -105,7 +105,7 @@ export class QueryUpsertOrCreate {
    *
    * ```ts
    * await User.selectAll()
-   *   .find({ email: 'some@email.com' })
+   *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     data: {
    *       // update record's name
@@ -119,7 +119,7 @@ export class QueryUpsertOrCreate {
    *
    * // the same as above but using `update` and `create`
    * await User.selectAll()
-   *   .find({ email: 'some@email.com' })
+   *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     update: {
    *       name: 'updated user',
@@ -136,7 +136,7 @@ export class QueryUpsertOrCreate {
    *
    * ```ts
    * await User.selectAll()
-   *   .find({ email: 'some@email.com' })
+   *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     update: {
    *       name: 'updated user',
@@ -149,7 +149,7 @@ export class QueryUpsertOrCreate {
    *
    * // the same as above using `data`
    * await User.selectAll()
-   *   .find({ email: 'some@email.com' })
+   *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     data: {
    *       name: 'updated user',
@@ -166,7 +166,7 @@ export class QueryUpsertOrCreate {
    *
    * ```ts
    * const user = await User.selectAll()
-   *   .find({ email: 'some@email.com' })
+   *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     data: {
    *       name: 'updated user',
@@ -229,17 +229,19 @@ export class QueryUpsertOrCreate {
    * By default, it is not returning columns, place `get`, `select`, or `selectAll` before `orCreate` to specify returning columns.
    *
    * ```ts
-   * const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({
-   *   email: 'some@email.com',
-   *   name: 'created user',
-   * });
+   * const user = await User.selectAll()
+   *   .findBy({ email: 'some@email.com' })
+   *   .orCreate({
+   *     email: 'some@email.com',
+   *     name: 'created user',
+   *   });
    * ```
    *
    * The data may be returned from a function, it won't be called if the record was found:
    *
    * ```ts
    * const user = await User.selectAll()
-   *   .find({ email: 'some@email.com' })
+   *   .findBy({ email: 'some@email.com' })
    *   .orCreate(() => ({
    *     email: 'some@email.com',
    *     name: 'created user',

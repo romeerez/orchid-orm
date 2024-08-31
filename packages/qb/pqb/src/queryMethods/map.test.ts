@@ -63,4 +63,13 @@ describe('map', () => {
       },
     ]);
   });
+
+  it('should not be called when there is no records for takeOptional', async () => {
+    const fn = jest.fn();
+
+    const res = await User.findOptional(0).map(fn);
+
+    expect(res).toBe(undefined);
+    expect(fn).not.toBeCalled();
+  });
 });

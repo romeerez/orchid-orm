@@ -264,7 +264,7 @@ export const applyTransforms = (
     if ('map' in fn) {
       if (!returnType || returnType === 'all') {
         result = (result as unknown[]).map(fn.map);
-      } else {
+      } else if (result !== undefined) {
         result = fn.map(result);
       }
     } else {

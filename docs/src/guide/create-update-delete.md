@@ -216,17 +216,19 @@ It is accepting the same argument as `create` commands.
 By default, it is not returning columns, place `get`, `select`, or `selectAll` before `orCreate` to specify returning columns.
 
 ```ts
-const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({
-  email: 'some@email.com',
-  name: 'created user',
-});
+const user = await User.selectAll()
+  .findBy({ email: 'some@email.com' })
+  .orCreate({
+    email: 'some@email.com',
+    name: 'created user',
+  });
 ```
 
 The data may be returned from a function, it won't be called if the record was found:
 
 ```ts
 const user = await User.selectAll()
-  .find({ email: 'some@email.com' })
+  .findBy({ email: 'some@email.com' })
   .orCreate(() => ({
     email: 'some@email.com',
     name: 'created user',
@@ -726,7 +728,7 @@ It is not returning a value by default, place `select` or `selectAll` before `up
 
 ```ts
 await User.selectAll()
-  .find({ email: 'some@email.com' })
+  .findBy({ email: 'some@email.com' })
   .upsert({
     data: {
       // update record's name
@@ -740,7 +742,7 @@ await User.selectAll()
 
 // the same as above but using `update` and `create`
 await User.selectAll()
-  .find({ email: 'some@email.com' })
+  .findBy({ email: 'some@email.com' })
   .upsert({
     update: {
       name: 'updated user',
@@ -757,7 +759,7 @@ The data for `create` may be returned from a function, it won't be called if a r
 
 ```ts
 await User.selectAll()
-  .find({ email: 'some@email.com' })
+  .findBy({ email: 'some@email.com' })
   .upsert({
     update: {
       name: 'updated user',
@@ -770,7 +772,7 @@ await User.selectAll()
 
 // the same as above using `data`
 await User.selectAll()
-  .find({ email: 'some@email.com' })
+  .findBy({ email: 'some@email.com' })
   .upsert({
     data: {
       name: 'updated user',
@@ -787,7 +789,7 @@ Data from `data` or `update` is passed to the `create` function and can be used:
 
 ```ts
 const user = await User.selectAll()
-  .find({ email: 'some@email.com' })
+  .findBy({ email: 'some@email.com' })
   .upsert({
     data: {
       name: 'updated user',

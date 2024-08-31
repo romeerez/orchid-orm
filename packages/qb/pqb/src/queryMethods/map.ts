@@ -6,11 +6,11 @@ export class QueryMap {
   /**
    * Use `map` to transform individual records of a query result.
    *
-   * It accepts a single record and should return a single transformed record.
+   * Use `map` to transform individual records of a query result. If the query returns multiple, `map` function going to transform records one by one.
    *
-   * For transforming the whole result of a query, consider using [transform](#transform) instead.
+   * For an optional query result (`findOptional`, `getOptional`, etc.), `map` is **not** called for empty results.
    *
-   * The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
+   * For transforming the result of a query as a whole, consider using {@link Query.transform} instead.
    *
    * ```ts
    * // add a `titleLength` to every post

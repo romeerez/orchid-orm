@@ -648,11 +648,11 @@ db.table.havingSql`count(*) >= ${10}`;
 
 [//]: # 'has JSDoc'
 
-Use `map` to transform individual records of a query result.
+Use `map` to transform individual records of a query result. If the query returns multiple, `map` function going to transform records one by one.
 
-It accepts a single record and should return a single transformed record.
+For an optional query result (`findOptional`, `getOptional`, etc.), `map` is **not** called for empty results.
 
-For transforming the whole result of a query, consider using [transform](#transform) instead.
+For transforming the result of a query as a whole, consider using [transform](#transform) instead.
 
 The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
 
