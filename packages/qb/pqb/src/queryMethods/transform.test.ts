@@ -4,8 +4,9 @@ import { assertType, testDb, useTestDatabase } from 'test-utils';
 describe('transform', () => {
   useTestDatabase();
 
+  const age = 10;
   beforeAll(async () => {
-    await User.insert(userData);
+    await User.insert({ ...userData, age });
   });
 
   it('should load and transform records, with respect to column parsers', async () => {
@@ -98,5 +99,21 @@ describe('transform', () => {
         },
       },
     ]);
+  });
+
+  it('should transform nested aggregated value', async () => {
+    const result = await User.select({
+      sum: () => User.sum('age'),
+    }).transform((x) => x);
+
+    expect(result).toEqual([{ sum: age }]);
+  });
+
+  it('should transform aggregated value', async () => {
+    const res = await User.select({
+      sum: () => User.sum('age').transform((x) => x),
+    });
+
+    expect(res).toEqual([{ sum: age }]);
   });
 });

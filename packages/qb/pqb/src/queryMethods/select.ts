@@ -369,7 +369,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             const { hookSelect } = query;
             const batches: QueryBatchResult[] = [];
 
-            let last = path.length;
+            const last = path.length;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
               if (hookSelect) {
                 batches.push = (item) => {
@@ -382,9 +382,10 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
                   return batches.push(item);
                 };
               } else {
-                last--;
+                // last--;
               }
             }
+            // last--;
 
             collectNestedSelectBatches(batches, rows, path, last);
 
@@ -447,21 +448,22 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
                 const parse = query.parsers?.[getValueKey];
                 if (parse) {
                   if (returnType === 'value') {
-                    for (const { data } of batches) {
-                      data[key] =
-                        data[key] === undefined
+                    for (const item of batches) {
+                      item.parent[item.key] = item.data =
+                        item.data === undefined
                           ? arg.q.notFoundDefault
-                          : parse(data[key]);
+                          : parse(item.data);
                     }
                   } else {
-                    for (const { data } of batches) {
-                      if (data[key] === undefined) throw new NotFoundError(arg);
-                      data[key] = parse(data[key]);
+                    for (const item of batches) {
+                      if (item.data === undefined) throw new NotFoundError(arg);
+
+                      item.parent[item.key] = item.data = parse(item.data);
                     }
                   }
                 } else if (returnType !== 'value') {
                   for (const { data } of batches) {
-                    if (data[key] === undefined) throw new NotFoundError(arg);
+                    if (data === undefined) throw new NotFoundError(arg);
                   }
                 }
 
@@ -540,6 +542,17 @@ const collectNestedSelectBatches = (
   path: string[],
   last: number,
 ) => {
+  // if (last === 0) {
+  //   for (const row of rows) {
+  //     batches.push({
+  //       data: (row as RecordUnknown)[path[0]],
+  //       parent: row,
+  //       key: path[0],
+  //     });
+  //   }
+  //   return;
+  // }
+
   const stack: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
@@ -551,7 +564,9 @@ const collectNestedSelectBatches = (
     (row) =>
       ({
         data: row,
+        parent: row,
         i: 0,
+        key: path[0],
       } as never),
   );
 
