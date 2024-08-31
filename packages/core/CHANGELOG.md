@@ -1,5 +1,12 @@
 # orchid-core
 
+## 0.19.11
+
+### Patch Changes
+
+- 5f14844: Do not call query `map` for empty (undefined) query results (#387)
+- c6a8975: Support returning scalars from query `map` (#386)
+
 ## 0.19.10
 
 ### Patch Changes

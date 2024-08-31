@@ -1,5 +1,15 @@
 # pqb
 
+## 0.40.3
+
+### Patch Changes
+
+- 5f14844: Do not call query `map` for empty (undefined) query results (#387)
+- c6a8975: Support returning scalars from query `map` (#386)
+- Updated dependencies [5f14844]
+- Updated dependencies [c6a8975]
+  - orchid-core@0.19.11
+
 ## 0.40.2
 
 ### Patch Changes
