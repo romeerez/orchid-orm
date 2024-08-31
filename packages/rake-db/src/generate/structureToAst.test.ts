@@ -21,7 +21,7 @@ import {
 } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
-import { getIndexName } from '../migration/migrationUtils';
+import { getIndexName } from '../migration/migration.utils';
 import { isRawSQL, TemplateLiteralArgs } from 'orchid-core';
 import { asMock } from 'test-utils';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';

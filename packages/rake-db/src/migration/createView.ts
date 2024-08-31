@@ -2,6 +2,7 @@ import { Migration } from './migration';
 import { RawSQLBase, singleQuote, SingleSql } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { raw } from 'pqb';
+import { interpolateSqlValues } from './migration.utils';
 
 export const createView = async <CT>(
   migration: Migration<CT>,
@@ -13,7 +14,7 @@ export const createView = async <CT>(
   const ast = makeAst(up, name, options, sql);
   const query = astToQuery(ast);
 
-  await migration.adapter.query(query);
+  await migration.adapter.arrays(interpolateSqlValues(query));
 };
 
 const makeAst = (

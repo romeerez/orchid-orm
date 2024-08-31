@@ -2,7 +2,7 @@ import {
   ColumnType,
   EnumColumn,
   parseTableDataInput,
-  quote,
+  escapeString,
   TableData,
   TableDataMethods,
   tableDataMethods,
@@ -47,8 +47,9 @@ import {
   getColumnName,
   identityToSql,
   indexesToQuery,
+  interpolateSqlValues,
   primaryKeyToSql,
-} from './migrationUtils';
+} from './migration.utils';
 import { tableMethods } from './tableMethods';
 import { TableQuery } from './createTable';
 
@@ -355,7 +356,7 @@ export const changeTable = async <CT>(
 
   const queries = astToQueries(ast, snakeCase, language);
   for (const query of queries) {
-    const result = await migration.adapter.arrays(query);
+    const result = await migration.adapter.arrays(interpolateSqlValues(query));
     query.then?.(result);
   }
 };
@@ -459,7 +460,13 @@ const astToQueries = (
 
   if (ast.comment !== undefined) {
     queries.push({
-      text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${quote(ast.comment)}`,
+      text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${
+        ast.comment === null
+          ? 'NULL'
+          : escapeString(
+              typeof ast.comment === 'string' ? ast.comment : ast.comment[1],
+            )
+      }`,
     });
   }
 

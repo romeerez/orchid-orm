@@ -6,7 +6,7 @@ import {
   resetDb,
   toLine,
 } from '../rake-db.test-utils';
-import { asMock } from 'test-utils';
+import { asMock, sql } from 'test-utils';
 
 const db = getDb();
 
@@ -25,6 +25,17 @@ const testUpAndDown = async (
 };
 
 describe('changeTable', () => {
+  it('should interpolate SQL parameters because pg does not support binding params for modifying schema', async () => {
+    await db.changeTable('table', (t) => ({
+      coL: t.integer().default(sql`1 + ${2}`),
+    }));
+
+    expectSql(`
+      ALTER TABLE "table"
+      ADD COLUMN "co_l" int4 NOT NULL DEFAULT 1 + 2
+    `);
+  });
+
   it('should work for table with schema', async () => {
     await testUpAndDown(
       () =>

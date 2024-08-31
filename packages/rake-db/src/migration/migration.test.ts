@@ -7,6 +7,7 @@ import {
 } from '../rake-db.test-utils';
 import { raw } from 'pqb';
 import { singleQuote } from 'orchid-core';
+import { sql } from 'test-utils';
 
 const db = getDb();
 
@@ -565,14 +566,14 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
             t
               .integer()
               .collate('C')
-              .default(123)
+              .default(sql`1 + ${2}`)
               .check(t.sql`VALUE = 42`),
           ),
         () =>
           expectSql(`
             CREATE DOMAIN "schema"."domain" AS int4
             COLLATE "C"
-            DEFAULT 123
+            DEFAULT 1 + 2
             NOT NULL CHECK (VALUE = 42)
           `),
         () =>

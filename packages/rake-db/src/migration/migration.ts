@@ -7,7 +7,7 @@ import {
   DbResult,
   EnumColumn,
   logParamToLogObject,
-  quote,
+  escapeForMigration,
   raw,
   TableData,
   TableDataFn,
@@ -36,7 +36,11 @@ import {
   quoteWithSchema,
 } from '../common';
 import { RakeDbAst } from '../ast';
-import { columnTypeToSql, encodeColumnDefault } from './migrationUtils';
+import {
+  columnTypeToSql,
+  encodeColumnDefault,
+  interpolateSqlValues,
+} from './migration.utils';
 import { createView } from './createView';
 import { RakeDbConfig } from '../config';
 
@@ -1433,7 +1437,7 @@ const wrapWithLog = async <Result>(
 };
 
 /**
- * See {@link Migration.addColumn}
+ * See {@link Migration.prototype.addColumn}
  */
 const addColumn = <CT>(
   migration: Migration<CT>,
@@ -1448,7 +1452,7 @@ const addColumn = <CT>(
 };
 
 /**
- * See {@link Migration.addIndex}
+ * See {@link Migration.prototype.addIndex}
  */
 const addIndex = (
   migration: Migration<unknown>,
@@ -1465,7 +1469,7 @@ const addIndex = (
 };
 
 /**
- * See {@link Migration.addForeignKey}
+ * See {@link Migration.prototype.addForeignKey}
  */
 const addForeignKey = (
   migration: Migration<unknown>,
@@ -1482,7 +1486,7 @@ const addForeignKey = (
 };
 
 /**
- * See {@link Migration.addPrimaryKey}
+ * See {@link Migration.prototype.addPrimaryKey}
  */
 const addPrimaryKey = (
   migration: Migration<unknown>,
@@ -1497,7 +1501,7 @@ const addPrimaryKey = (
 };
 
 /**
- * See {@link Migration.addCheck}
+ * See {@link Migration.prototype.addCheck}
  */
 const addCheck = (
   migration: Migration<unknown>,
@@ -1511,7 +1515,7 @@ const addCheck = (
 };
 
 /**
- * See {@link Migration.createSchema}
+ * See {@link Migration.prototype.createSchema}
  */
 const createSchema = async (
   migration: Migration<unknown>,
@@ -1565,7 +1569,7 @@ const createExtension = async (
 };
 
 /**
- * See {@link Migration.createEnum}
+ * See {@link Migration.prototype.createEnum}
  */
 const createEnum = async (
   migration: Migration<unknown>,
@@ -1592,7 +1596,7 @@ const createEnum = async (
   const quotedName = quoteWithSchema(ast);
   if (ast.action === 'create') {
     query = `CREATE TYPE ${quotedName} AS ENUM (${values
-      .map(quote)
+      .map(escapeForMigration)
       .join(', ')})`;
   } else {
     query = `DROP TYPE${ast.dropIfExists ? ' IF EXISTS' : ''} ${quotedName}${
@@ -1604,7 +1608,7 @@ const createEnum = async (
 };
 
 /**
- * See {@link Migration.createDomain}
+ * See {@link Migration.prototype.createDomain}
  */
 const createDomain = async <CT>(
   migration: Migration<CT>,
@@ -1647,14 +1651,16 @@ DEFAULT ${encodeColumnDefault(column.data.default, values)}`
     query = `DROP DOMAIN ${quotedName}`;
   }
 
-  await migration.adapter.query({
-    text: query,
-    values,
-  });
+  await migration.adapter.query(
+    interpolateSqlValues({
+      text: query,
+      values,
+    }),
+  );
 };
 
 /**
- * See {@link Migration.createCollation}
+ * See {@link Migration.prototype.createCollation}
  */
 const createCollation = async (
   migration: Migration<unknown>,
@@ -1699,9 +1705,7 @@ const createCollation = async (
     } ${quotedName}${ast.cascade ? ` CASCADE` : ''}`;
   }
 
-  await migration.adapter.query({
-    text: query,
-  });
+  await migration.adapter.query(query);
 };
 
 /**

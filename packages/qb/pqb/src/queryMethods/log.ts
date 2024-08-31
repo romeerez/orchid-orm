@@ -1,5 +1,5 @@
 import { Query } from '../query/query';
-import { quote } from '../quote';
+import { escapeForLog } from '../quote';
 import {
   logColors,
   QueryLogger,
@@ -29,7 +29,7 @@ const makeMessage = (
     return result;
   }
 
-  const formattedValues = `[${values.map(quote).join(', ')}]`;
+  const formattedValues = `[${values.map(escapeForLog).join(', ')}]`;
 
   return `${result} ${colors ? valuesColor(formattedValues) : formattedValues}`;
 };

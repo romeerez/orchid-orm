@@ -1,4 +1,4 @@
-import { ColumnType, quote, TableData } from 'pqb';
+import { ColumnType, escapeForMigration, TableData } from 'pqb';
 import {
   ColumnTypeBase,
   ForeignKeyTable,
@@ -17,6 +17,7 @@ import {
   quoteWithSchema,
 } from '../common';
 import { AnyRakeDbConfig } from '../config';
+import { TableQuery } from './createTable';
 
 export const versionToString = (config: AnyRakeDbConfig, version: number) =>
   config.migrationId === 'timestamp'
@@ -112,7 +113,7 @@ export const encodeColumnDefault = (
     if (isRawSQL(def)) {
       return def.toSQL({ values });
     } else {
-      return quote(column?.encodeFn ? column.encodeFn(def) : def);
+      return escapeForMigration(column?.encodeFn ? column.encodeFn(def) : def);
     }
   }
 
@@ -413,7 +414,7 @@ export const commentsToQuery = (
   return comments.map(({ column, comment }) => ({
     text: `COMMENT ON COLUMN ${quoteWithSchema(
       schemaTable,
-    )}."${column}" IS ${quote(comment)}`,
+    )}."${column}" IS ${escapeForMigration(comment)}`,
     values: [],
   }));
 };
@@ -424,4 +425,13 @@ export const primaryKeyToSql = (
   return `${
     primaryKey.name ? `CONSTRAINT "${primaryKey.name}" ` : ''
   }PRIMARY KEY (${joinColumns(primaryKey.columns)})`;
+};
+
+export const interpolateSqlValues = ({ text, values }: TableQuery): string => {
+  return values?.length
+    ? text.replace(/\$(\d+)/g, (_, n) => {
+        const i = +n - 1;
+        return escapeForMigration(values[i]);
+      })
+    : text;
 };

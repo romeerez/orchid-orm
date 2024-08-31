@@ -25,6 +25,14 @@ const testUpAndDown = async (
 };
 
 describe('create and drop view', () => {
+  it('should interpolate SQL parameters because pg does not support binding params for modifying schema', async () => {
+    await db.createView('name', `1 + ${2}`);
+
+    expectSql(`
+      CREATE VIEW "name" AS (1 + 2)
+    `);
+  });
+
   it('should create and drop view', async () => {
     await testUpAndDown(
       (action) => db[action]('name', 'sql'),

@@ -3,7 +3,7 @@ import {
   getConstraintName,
   getForeignKeyTable,
   getIndexName,
-} from '../migration/migrationUtils';
+} from '../migration/migration.utils';
 import {
   ArrayColumn,
   ArrayColumnValue,

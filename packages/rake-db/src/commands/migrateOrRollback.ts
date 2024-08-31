@@ -35,7 +35,7 @@ import {
   MigrationItem,
   MigrationsSet,
 } from '../migration/migrationsSet';
-import { versionToString } from '../migration/migrationUtils';
+import { versionToString } from '../migration/migration.utils';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 

@@ -6,7 +6,7 @@ export * from './generate/structureToAst';
 export * from './generate/astToMigration';
 export * from './migration/migration';
 export * from './migration/change';
-export * from './migration/migrationUtils';
+export * from './migration/migration.utils';
 export * from './rakeDb';
 export * from './ast';
 export * from './migration/manageMigratedVersions';

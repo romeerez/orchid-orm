@@ -6,7 +6,7 @@ import {
   NoPrimaryKeyOption,
   parseTableData,
   QueryArraysResult,
-  quote,
+  escapeString,
   TableData,
   TableDataFn,
   TableDataItem,
@@ -26,8 +26,9 @@ import {
   constraintToSql,
   getColumnName,
   indexesToQuery,
+  interpolateSqlValues,
   primaryKeyToSql,
-} from './migrationUtils';
+} from './migration.utils';
 import {
   getSchemaAndTableFromName,
   makePopulateEnumQuery,
@@ -121,7 +122,7 @@ export const createTable = async <
 
   const queries = astToQueries(ast, snakeCase, language);
   for (const { then, ...query } of queries) {
-    const result = await migration.adapter.arrays(query);
+    const result = await migration.adapter.arrays(interpolateSqlValues(query));
     then?.(result);
   }
 
@@ -306,7 +307,9 @@ const astToQueries = (
 
   if (ast.comment) {
     queries.push({
-      text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${quote(ast.comment)}`,
+      text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${escapeString(
+        ast.comment,
+      )}`,
     });
   }
 

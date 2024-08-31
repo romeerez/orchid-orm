@@ -1,5 +1,5 @@
 import { Query } from '../query/query';
-import { quote } from '../quote';
+import { escapeForLog } from '../quote';
 import { expectSql, testDb, testDbZodTypes } from 'test-utils';
 import { z } from 'zod';
 import { RecordUnknown } from 'orchid-core';
@@ -145,7 +145,7 @@ export const insert = async <T extends RecordUnknown & { id: number }>(
     `INSERT INTO "${table}"(${columns
       .map((column) => `"${column}"`)
       .join(', ')}) VALUES (${columns
-      .map((column) => quote(record[column]))
+      .map((column) => escapeForLog(record[column]))
       .join(', ')}) RETURNING "id"`,
   );
 

@@ -1,6 +1,6 @@
 import { expectSql, getDb, resetDb, toLine } from '../rake-db.test-utils';
 import { makeColumnTypes, Db, defaultSchemaConfig } from 'pqb';
-import { asMock } from 'test-utils';
+import { asMock, sql } from 'test-utils';
 import { setDefaultLanguage } from 'orchid-core';
 
 const db = getDb();
@@ -28,6 +28,18 @@ const testUpAndDown = async (
 };
 
 describe('create and drop table', () => {
+  it('should interpolate SQL parameters because pg does not support binding params for modifying schema', async () => {
+    await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+      coL: t.integer().default(sql`1 + ${2}`),
+    }));
+
+    expectSql(`
+      CREATE TABLE "table" (
+        "co_l" int4 NOT NULL DEFAULT 1 + 2
+      )
+    `);
+  });
+
   it('create and drop an empty table', async () => {
     await testUpAndDown(
       (action) => db[action]('name'),

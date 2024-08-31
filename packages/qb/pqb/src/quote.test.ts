@@ -1,23 +1,23 @@
-import { quote } from './quote';
+import { escapeForLog } from './quote';
 
 describe('quote', () => {
-  it('should quote different values', () => {
-    expect(quote(123)).toBe('123');
-    expect(quote(12345678901234567890n)).toBe('12345678901234567890');
-    expect(quote('string')).toBe("'string'");
-    expect(quote(`str'ing`)).toBe(`'str''ing'`);
-    expect(quote(true)).toBe('true');
-    expect(quote(false)).toBe('false');
-    expect(quote(null)).toBe('NULL');
-    expect(quote(undefined)).toBe('NULL');
+  it('should escapeForLog different values', () => {
+    expect(escapeForLog(123)).toBe('123');
+    expect(escapeForLog(12345678901234567890n)).toBe('12345678901234567890');
+    expect(escapeForLog('string')).toBe("'string'");
+    expect(escapeForLog(`str'ing`)).toBe(`'str''ing'`);
+    expect(escapeForLog(true)).toBe('true');
+    expect(escapeForLog(false)).toBe('false');
+    expect(escapeForLog(null)).toBe('NULL');
+    expect(escapeForLog(undefined)).toBe('NULL');
 
     const now = new Date();
-    expect(quote(now)).toBe(`'${now.toISOString()}'`);
+    expect(escapeForLog(now)).toBe(`'${now.toISOString()}'`);
 
-    expect(quote({ key: `val'ue` })).toBe(`'{"key":"val''ue"}'`);
+    expect(escapeForLog({ key: `val'ue` })).toBe(`'{"key":"val''ue"}'`);
 
     expect(
-      quote([
+      escapeForLog([
         1,
         12345678901234567890n,
         'string',

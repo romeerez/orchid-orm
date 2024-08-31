@@ -28,7 +28,7 @@ import {
   toCamelCase,
   toSnakeCase,
 } from 'orchid-core';
-import { getConstraintName, getIndexName } from '../migration/migrationUtils';
+import { getConstraintName, getIndexName } from '../migration/migration.utils';
 import { AnyRakeDbConfig } from '../config';
 
 const matchMap: Record<string, undefined | TableData.References.Match> = {

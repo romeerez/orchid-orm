@@ -4,6 +4,8 @@ import { PickQueryColumnTypes } from '../query/query';
 
 export class SqlMethod<ColumnTypes> {
   /**
+   * @deprecated: use `sql` exported from the `createBaseTable` (see "define a base table" in the docs)
+   *
    * When there is a need to use a piece of raw SQL, use the `sql` exported from the `BaseTable` file, it is also attached to query objects for convenience.
    *
    * When selecting a custom SQL, specify a resulting type with `<generic>` syntax:
@@ -139,7 +141,6 @@ export class SqlMethod<ColumnTypes> {
    * sql`($one + $two) / $one`.type((t) => t.numeric()).values({ one: 1, two: 2 });
    * ```
    *
-   * @deprecated use `sql` exported from the `createBaseTable` (see "define a base table" in the docs)
    * @param args - template literal or an object { raw: string }
    * @return object that has `type` and `values` methods
    */
