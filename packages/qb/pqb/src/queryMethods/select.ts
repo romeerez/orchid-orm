@@ -381,11 +381,8 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
                   batches.push = Array.prototype.push;
                   return batches.push(item);
                 };
-              } else {
-                // last--;
               }
             }
-            // last--;
 
             collectNestedSelectBatches(batches, rows, path, last);
 
@@ -542,17 +539,6 @@ const collectNestedSelectBatches = (
   path: string[],
   last: number,
 ) => {
-  // if (last === 0) {
-  //   for (const row of rows) {
-  //     batches.push({
-  //       data: (row as RecordUnknown)[path[0]],
-  //       parent: row,
-  //       key: path[0],
-  //     });
-  //   }
-  //   return;
-  // }
-
   const stack: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
