@@ -72,4 +72,72 @@ describe('map', () => {
     expect(res).toBe(undefined);
     expect(fn).not.toBeCalled();
   });
+
+  describe('nested map', () => {
+    it('should transform `all` result into `pluck`', async () => {
+      const res = await User.select({
+        nested: () => User.select('name').map(({ name }) => `${name} mapped`),
+      });
+
+      assertType<typeof res, { nested: string[] }[]>();
+
+      expect(res).toEqual([{ nested: ['name mapped'] }]);
+    });
+
+    it('should transform `one` result into `value`', async () => {
+      const res = await User.select({
+        nested: () =>
+          User.select('name')
+            .takeOptional()
+            .map(({ name }) => `${name} mapped`),
+      });
+
+      assertType<typeof res, { nested: string | undefined }[]>();
+
+      expect(res).toEqual([{ nested: 'name mapped' }]);
+    });
+
+    it('should transform `oneOrThrow` result into `valueOrThrow`', async () => {
+      const res = await User.select({
+        nested: () =>
+          User.select('name')
+            .takeOptional()
+            .map(({ name }) => `${name} mapped`),
+      });
+
+      assertType<typeof res, { nested: string | undefined }[]>();
+
+      expect(res).toEqual([{ nested: 'name mapped' }]);
+    });
+
+    it('should handle `value` query', async () => {
+      const res = await User.select({
+        nested: () => User.getOptional('name').map((name) => `${name} mapped`),
+      });
+
+      assertType<typeof res, { nested: string | undefined }[]>();
+
+      expect(res).toEqual([{ nested: 'name mapped' }]);
+    });
+
+    it('should handle `valueOrThrow` query', async () => {
+      const res = await User.select({
+        nested: () => User.get('name').map((name) => `${name} mapped`),
+      });
+
+      assertType<typeof res, { nested: string }[]>();
+
+      expect(res).toEqual([{ nested: 'name mapped' }]);
+    });
+
+    it('should handle `pluck` query', async () => {
+      const res = await User.select({
+        nested: () => User.pluck('name').map((name) => `${name} mapped`),
+      });
+
+      assertType<typeof res, { nested: string[] }[]>();
+
+      expect(res).toEqual([{ nested: ['name mapped'] }]);
+    });
+  });
 });

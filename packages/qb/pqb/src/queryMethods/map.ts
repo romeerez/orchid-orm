@@ -43,24 +43,52 @@ export class QueryMap {
    *
    * @param fn - function to transform an individual record
    */
-  map<T extends Query, Result extends RecordUnknown>(
+  map<T extends Query, Result>(
     this: T,
     fn: (
-      input: T['returnType'] extends undefined | 'all'
+      input: T['returnType'] extends undefined | 'all' | 'pluck'
         ? T['then'] extends QueryThen<(infer Data)[]>
           ? Data
           : never
-        : T['then'] extends QueryThen<infer Data>
+        : // `| undefined` is needed to remove undefined type from map's arg
+        T['then'] extends QueryThen<infer Data | undefined>
         ? Data
         : never,
     ) => Result,
-  ): {
-    [K in keyof T]: K extends 'result'
-      ? { [K in keyof Result]: QueryColumn<Result[K]> }
-      : K extends 'then'
-      ? QueryThen<T['returnType'] extends undefined | 'all' ? Result[] : Result>
-      : T[K];
-  } {
+  ): // When the map returns object, query result is a map of key-value columns.
+  // It's used to correctly infer type in case of a nested sub-query select with the map inside.
+  Result extends RecordUnknown
+    ? {
+        [K in keyof T]: K extends 'result'
+          ? { [K in keyof Result]: QueryColumn<Result[K]> }
+          : K extends 'then'
+          ? QueryThen<
+              T['returnType'] extends undefined | 'all' ? Result[] : Result
+            >
+          : T[K];
+      }
+    : // When the map returns a scalar value, query type should adjust to a single value
+      {
+        [K in keyof T]: K extends 'returnType'
+          ? T['returnType'] extends undefined | 'all' | 'pluck'
+            ? 'pluck'
+            : T['returnType'] extends 'one'
+            ? 'value'
+            : 'valueOrThrow'
+          : K extends 'result'
+          ? T['returnType'] extends undefined | 'all' | 'pluck'
+            ? { pluck: QueryColumn<Result> }
+            : T['returnType'] extends 'one' | 'value'
+            ? { value: QueryColumn<Result | undefined> }
+            : { value: QueryColumn<Result> }
+          : K extends 'then'
+          ? QueryThen<
+              T['returnType'] extends undefined | 'all' | 'pluck'
+                ? Result[]
+                : Result
+            >
+          : T[K];
+      } {
     return pushQueryValue(this.clone(), 'transform', { map: fn }) as never;
   }
 }

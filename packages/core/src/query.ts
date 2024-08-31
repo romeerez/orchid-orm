@@ -262,7 +262,7 @@ export const applyTransforms = (
 ): unknown => {
   for (const fn of fns) {
     if ('map' in fn) {
-      if (!returnType || returnType === 'all') {
+      if (!returnType || returnType === 'all' || returnType === 'pluck') {
         result = (result as unknown[]).map(fn.map);
       } else if (result !== undefined) {
         result = fn.map(result);
