@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.22.35
+
+### Patch Changes
+
+- d1590e8: Fix encoding empty array to SQL in migration (#390)
+- Updated dependencies [68d1f07]
+  - pqb@0.40.2
+
 ## 2.22.34
 
 ### Patch Changes

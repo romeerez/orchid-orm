@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.2
+
+### Patch Changes
+
+- 68d1f07: Fix transform on aggregated values (#389)
+
 ## 0.40.1
 
 ### Patch Changes
