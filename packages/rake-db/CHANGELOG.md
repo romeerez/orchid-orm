@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.22.37
+
+### Patch Changes
+
+- b822dd0: Support citext column in generator
+- Updated dependencies [b822dd0]
+  - pqb@0.40.4
+
 ## 2.22.36
 
 ### Patch Changes

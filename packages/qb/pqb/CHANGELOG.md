@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.4
+
+### Patch Changes
+
+- b822dd0: Support citext column in generator
+
 ## 0.40.3
 
 ### Patch Changes
