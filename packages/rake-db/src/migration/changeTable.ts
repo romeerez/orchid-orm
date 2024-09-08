@@ -7,6 +7,7 @@ import {
   TableDataMethods,
   tableDataMethods,
   UnknownColumn,
+  DomainColumn,
 } from 'pqb';
 import {
   ColumnTypeBase,
@@ -34,6 +35,7 @@ import { RakeDbAst } from '../ast';
 import {
   getSchemaAndTableFromName,
   makePopulateEnumQuery,
+  quoteCustomType,
   quoteNameFromString,
   quoteWithSchema,
 } from '../common';
@@ -753,7 +755,9 @@ const handleTableItemChange = (
 
       const type =
         !to.column || to.column.data.isOfCustomType
-          ? quoteNameFromString(to.type)
+          ? to.column && to.column instanceof DomainColumn
+            ? quoteNameFromString(to.type)
+            : quoteCustomType(to.type)
           : to.type;
 
       alterTable.push(

@@ -1,4 +1,4 @@
-import { ColumnType, escapeForMigration, TableData } from 'pqb';
+import { ColumnType, DomainColumn, escapeForMigration, TableData } from 'pqb';
 import {
   ColumnTypeBase,
   ForeignKeyTable,
@@ -12,6 +12,7 @@ import { ColumnComment } from './migration';
 import {
   getSchemaAndTableFromName,
   joinColumns,
+  quoteCustomType,
   quoteNameFromString,
   quoteTable,
   quoteWithSchema,
@@ -26,7 +27,9 @@ export const versionToString = (config: AnyRakeDbConfig, version: number) =>
 
 export const columnTypeToSql = (item: ColumnTypeBase) => {
   return item.data.isOfCustomType
-    ? quoteNameFromString(item.toSQL())
+    ? item instanceof DomainColumn
+      ? quoteNameFromString(item.dataType)
+      : quoteCustomType(item.toSQL())
     : item.toSQL();
 };
 

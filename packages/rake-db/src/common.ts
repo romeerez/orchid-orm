@@ -84,6 +84,14 @@ export const quoteNameFromString = (string: string) => {
   return quoteTable(...getSchemaAndTableFromName(string));
 };
 
+/**
+ * Do not quote the type itself because it can be an expression like `geography(point)` for postgis.
+ */
+export const quoteCustomType = (s: string) => {
+  const [schema, type] = getSchemaAndTableFromName(s);
+  return schema ? '"' + schema + '".' + type : type;
+};
+
 export const quoteSchemaTable = (arg: { schema?: string; name: string }) => {
   return singleQuote(concatSchemaAndName(arg));
 };

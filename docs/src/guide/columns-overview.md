@@ -76,7 +76,26 @@ db.someTable.where({
 });
 ```
 
-## add custom columns
+## custom column type
+
+When you want to use a type defined in an extension, that is not directly supported, define it with `type`.
+
+It will have input, output, and rest of TS types `unknown`.
+
+To make it typed, try [asType](/guide/common-column-methods#asType), and/or [encode](/guide/common-column-methods#encode), [decode](/guide/common-column-methods.html#decode).
+
+[//]: # 'TODO: explain this better'
+
+```ts
+export const BaseTable = createBaseTable({
+  columnTypes: (t) => ({
+    ...t,
+    point: () => t.type('geography(point)'),
+  }),
+});
+```
+
+## custom column type based on other type
 
 It's possible to define custom columns, they can have a special behavior or a meaning, or to simply serve as an alias.
 

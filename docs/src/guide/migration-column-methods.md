@@ -620,11 +620,11 @@ change(async (db) => {
 });
 ```
 
-## unsupported types
+## custom types
 
-For user-defined types or for types that are not supported yet, use `type`:
+For user-defined types or for types from extensions that aren't directly supported yet, use `type`:
 
-When using `type` to define columns in application, you need to also specify `as` so application knows the actual type behind the domain.
+When using `type` to define columns **in application**, you need to also specify `as` so application knows the actual type behind the domain.
 
 In migration, `as` won't have effect.
 
@@ -633,7 +633,7 @@ import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    name: t.type('type_name'),
+    point: t.type('geography(point)'), // point from postgis
   }));
 });
 ```

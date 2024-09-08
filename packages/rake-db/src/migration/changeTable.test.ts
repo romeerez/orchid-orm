@@ -601,7 +601,7 @@ describe('changeTable', () => {
         () =>
           expectSql(`
             ALTER TABLE "table"
-              ADD COLUMN "col_umn" "schema"."type" NOT NULL
+              ADD COLUMN "col_umn" "schema".type NOT NULL
           `),
         () =>
           expectSql(`
@@ -1134,14 +1134,14 @@ describe('changeTable', () => {
               ALTER TABLE "table"
                 ALTER COLUMN "change_type" TYPE text,
                 ALTER COLUMN "change_domain_type" TYPE "two",
-                ALTER COLUMN "change_custom_type" TYPE "two"
+                ALTER COLUMN "change_custom_type" TYPE two
             `),
           () =>
             expectSql(`
               ALTER TABLE "table"
                 ALTER COLUMN "change_type" TYPE int4,
                 ALTER COLUMN "change_domain_type" TYPE "one",
-                ALTER COLUMN "change_custom_type" TYPE "one"
+                ALTER COLUMN "change_custom_type" TYPE one
             `),
         );
       });

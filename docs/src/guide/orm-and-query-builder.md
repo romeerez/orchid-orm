@@ -385,6 +385,20 @@ tables, columns, schemas, enums, primary keys, foreign keys, indexes, database c
 
 Please let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
 
+## extensions
+
+There is a change to be done to support enabling extensions properly, and for know, enabling an extension requires some manual workaround.
+
+If you use `createExtension` in a migration, and the following migration relies on the extension, the migration will fail because Postgres can't enable and use an extension in a single transaction.
+
+You need to enable the extension manually in the local db and then in all other databases (dev, staging, production).
+
+```sql
+CREATE EXTENSION "postgis";
+```
+
+Then, add it to the `extensions` array as shown in the previous [section](#generate-migrations).
+
 ## table utility types
 
 Utility types available for tables:
