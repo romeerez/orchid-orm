@@ -63,5 +63,7 @@ export const makeColumnsByType = (schema: ColumnSchemaConfig) => {
     smallserial: t.smallSerial,
     serial: t.serial,
     bigserial: t.bigSerial,
+    // requires citext extension
+    citext: t.citext,
   } as ColumnsByType;
 };
