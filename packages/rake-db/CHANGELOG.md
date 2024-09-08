@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.22.38
+
+### Patch Changes
+
+- 1d32bb1: Support unquoted custom types in migration
+
 ## 2.22.37
 
 ### Patch Changes
