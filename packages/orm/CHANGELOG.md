@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.35.9
+
+### Patch Changes
+
+- 945b99f: Support citext column in generator
+
 ## 1.35.8
 
 ### Patch Changes
