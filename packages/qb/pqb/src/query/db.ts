@@ -1,6 +1,7 @@
 import {
   DbDomainArg,
   DbExtension,
+  GeneratorIgnore,
   Query,
   QueryInternal,
   SelectableFromShape,
@@ -124,6 +125,7 @@ export interface DbSharedOptions extends QueryLogOptions {
   domains?: {
     [K: string]: DbDomainArg<DefaultColumnTypes<DefaultSchemaConfig>>;
   };
+  generatorIgnore?: GeneratorIgnore;
 }
 
 export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
@@ -829,6 +831,7 @@ export const _initQueryBuilder = (
   }
 
   qb.internal.domains = options.domains;
+  qb.internal.generatorIgnore = options.generatorIgnore;
 
   return (qb.queryBuilder = qb as never);
 };

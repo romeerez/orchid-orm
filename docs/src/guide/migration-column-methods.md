@@ -640,7 +640,7 @@ change(async (db) => {
 
 ## domain
 
-Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+Domain is a custom database type that is based on other type and can include `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
 Before adding a domain column, create the domain type itself, see [create domain](/guide/migration-writing#createdomain-dropdomain).
 

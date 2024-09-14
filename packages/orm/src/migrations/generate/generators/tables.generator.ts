@@ -2,6 +2,7 @@ import {
   Adapter,
   ColumnsShape,
   ColumnType,
+  GeneratorIgnore,
   QueryWithTable,
   VirtualColumn,
 } from 'pqb';
@@ -15,6 +16,7 @@ import {
   StructureToAstCtx,
   StructureToAstTableData,
   tableToAst,
+  getSchemaAndTableFromName,
 } from 'rake-db';
 import {
   CompareExpression,
@@ -77,6 +79,7 @@ export const processTables = async (
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   config: AnyRakeDbConfig,
+  generatorIgnore: GeneratorIgnore | undefined,
   verifying: boolean | undefined,
 ): Promise<void> => {
   const createTables: QueryWithTable[] = collectCreateTables(
@@ -93,6 +96,7 @@ export const processTables = async (
       dbStructure,
       currentSchema,
       createTables,
+      generatorIgnore,
     );
 
   applyChangeTableSchemas(changeTableSchemas, currentSchema, ast);
@@ -159,6 +163,7 @@ const collectChangeAndDropTables = (
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   createTables: QueryWithTable[],
+  generatorIgnore: GeneratorIgnore | undefined,
 ): {
   changeTables: ChangeTableData[];
   changeTableSchemas: ChangeTableSchemaData[];
@@ -169,9 +174,20 @@ const collectChangeAndDropTables = (
   const changeTableSchemas: ChangeTableSchemaData[] = [];
   const dropTables: DbStructure.Table[] = [];
   const tableShapes: TableShapes = {};
+  const ignoreTables = generatorIgnore?.tables?.map((name) => {
+    const [schema = currentSchema, table] = getSchemaAndTableFromName(name);
+    return { schema, table };
+  });
 
   for (const dbTable of dbStructure.tables) {
-    if (dbTable.name === config.migrationsTable) continue;
+    if (
+      dbTable.name === config.migrationsTable ||
+      ignoreTables?.some(
+        ({ schema, table }) =>
+          table === dbTable.name && schema === dbTable.schemaName,
+      )
+    )
+      continue;
 
     const codeTable = tables.find(
       (t) =>

@@ -834,6 +834,8 @@ change(async (db) => {
 
 Domain is a custom database type that is based on other type and can include `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
+When using ORM's migration generator, follow [this](/guide/orm-and-query-builder.html#postgres-domains) instead.
+
 Construct a column type in the function as the second argument.
 
 Specifiers [nullable](/guide/common-column-methods#nullable), [default](/guide/common-column-methods#default), [check](/guide/migration-column-methods#check), [collate](/guide/migration-column-methods#collate)

@@ -336,7 +336,14 @@ Such as when renaming a column, you may choose to drop the old one and create a 
 If you don't set a custom constraint name for indexes, primary keys, foreign keys, they have a default name such as `table_pkey`, `table_column_idx`, `table_someId_fkey`.
 When renaming a table, the table primary key will be also renamed. When renaming a column, its index or foreign key will be renamed as well.
 
-To enable Postgres extension, add `extensions` to the database config:
+The tool handles migration generation for
+tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, extensions, domain types.
+
+Please let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
+
+## Postgres extensions
+
+To enable a postgres extension such as `citext`, list it in the `extensions` config in the `orchidORM` call:
 
 ```ts
 export const db = orchidORM(
@@ -344,20 +351,44 @@ export const db = orchidORM(
     databaseURL: process.env.DATABASE_URL,
     extensions: [
       // just the extension name for a recent version
-      'postgis',
+      'citext',
 
       // you can specify a certain version
-      { name: 'postgis', version: '1.2.3' },
+      { name: 'citext', version: '1.2.3' },
 
       // define extension only for specific schema:
-      'mySchema.postgis',
+      'mySchema.citext',
     ],
   },
   { ...tables },
 );
 ```
 
-For [domain](/guide/migration-column-methods#domain) types:
+Run the migration generator (`npm run g`) and apply the migration (`npm run db up`).
+
+In the case when the extension automatically creates a table, which is the case for the `postgis`,
+list its tables in `generatorIgnore` config,
+so the migration generator won't consider it to be redundant and won't drop it:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    extensions: ['postgis'],
+    generatorIgnore: {
+      // spatial_ref_sys is automatically created by postgis
+      tables: ['spatial_ref_sys'],
+    },
+  },
+  { ...tables },
+);
+```
+
+## Postgres domains
+
+Domain is a custom database type that is based on other type and can include `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+
+Define a domain as follows for the migration generator to write a corresponding migration:
 
 ```ts
 import { sql } from './baseTable';
@@ -379,25 +410,6 @@ export const db = orchidORM(
   { ...tables },
 );
 ```
-
-The tool handles migration generation for
-tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, extensions, domain types.
-
-Please let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
-
-## extensions
-
-There is a change to be done to support enabling extensions properly, and for know, enabling an extension requires some manual workaround.
-
-If you use `createExtension` in a migration, and the following migration relies on the extension, the migration will fail because Postgres can't enable and use an extension in a single transaction.
-
-You need to enable the extension manually in the local db and then in all other databases (dev, staging, production).
-
-```sql
-CREATE EXTENSION "postgis";
-```
-
-Then, add it to the `extensions` array as shown in the previous [section](#generate-migrations).
 
 ## table utility types
 

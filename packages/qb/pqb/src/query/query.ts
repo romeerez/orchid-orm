@@ -36,6 +36,10 @@ export interface DbExtension {
   version?: string;
 }
 
+export interface GeneratorIgnore {
+  tables?: string[];
+}
+
 export interface DbDomainArg<ColumnTypes> {
   (columnTypes: ColumnTypes): ColumnType;
 }
@@ -64,6 +68,7 @@ export interface QueryInternal<
   uniqueConstraints: UniqueConstraints;
   extensions?: DbExtension[];
   domains?: DbDomainArgRecord;
+  generatorIgnore?: GeneratorIgnore;
   tableData: TableData;
   // For customizing `now()` sql
   nowSQL?: string;

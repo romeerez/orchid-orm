@@ -115,7 +115,8 @@ const assert = {
     expect(asMock(fs.writeFile).mock.calls[0]?.[1]).toBe(code);
   },
   report(...logs: string[]) {
-    expect(asMock(config.logger?.log).mock.calls[0][0]).toBe(logs.join('\n'));
+    const calls = asMock(config.logger?.log).mock.calls[0][0];
+    expect(calls).toBe(logs.join('\n'));
   },
 };
 

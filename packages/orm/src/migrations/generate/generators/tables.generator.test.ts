@@ -23,6 +23,25 @@ const { green, red, yellow } = colors;
 describe('tables', () => {
   const { arrange, act, assert, BaseTable, table } = useGeneratorsTestUtils();
 
+  it('should not drop tables specified in generatorIgnore config', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', (t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['table'],
+        },
+      },
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should throw if found more than one table with same schema and naMe', async () => {
     await arrange({
       tables: [

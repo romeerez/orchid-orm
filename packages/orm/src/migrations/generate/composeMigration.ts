@@ -58,6 +58,7 @@ export const composeMigration = async (
     dbStructure,
     currentSchema,
     config,
+    internal.generatorIgnore,
     verifying,
   );
 
