@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.5
+
+### Patch Changes
+
+- dcbd839: Support ignoring table from migration generator
+
 ## 0.40.4
 
 ### Patch Changes
