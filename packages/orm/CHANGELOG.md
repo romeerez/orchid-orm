@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.35.12
+
+### Patch Changes
+
+- 71a0c9e: Support ignoring tables in the migration generator (#400)
+
 ## 1.35.11
 
 ### Patch Changes
