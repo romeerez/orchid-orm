@@ -1,5 +1,5 @@
 import pg, { Client } from 'pg';
-import { testDb } from 'test-utils';
+import { assertType, testDb } from 'test-utils';
 import { User } from '../test-utils/test-utils';
 import { noop } from 'orchid-core';
 
@@ -17,8 +17,10 @@ describe('transaction', () => {
       const {
         rows: [{ b }],
       } = await testDb.query`SELECT 2 AS b`;
-      return a + b;
+      return (a + b) as number;
     });
+
+    assertType<typeof result, number>();
 
     expect(result).toBe(3);
 
@@ -157,6 +159,58 @@ describe('transaction', () => {
         [expect.stringContaining(`SELECT 1 AS a`)],
         [expect.stringContaining(`COMMIT`)],
       ]);
+    });
+  });
+
+  describe('ensureTransaction', () => {
+    it('should not start another transaction when already inside a transaction', async () => {
+      const spy = jest.spyOn(pg.Client.prototype, 'query');
+
+      const result = await testDb.transaction(async () => {
+        return testDb.ensureTransaction(async () => {
+          const {
+            rows: [{ a }],
+          } = await testDb.query`SELECT 1 AS a`;
+          const {
+            rows: [{ b }],
+          } = await testDb.query`SELECT 2 AS b`;
+
+          return a + b;
+        });
+      });
+
+      expect(result).toBe(3);
+
+      expect(
+        spy.mock.calls.map(
+          (call) => (call[0] as unknown as { text: string }).text,
+        ),
+      ).toEqual(['BEGIN', 'SELECT 1 AS a', 'SELECT 2 AS b', 'COMMIT']);
+    });
+
+    it('should start a transaction if it was not started yet', async () => {
+      const spy = jest.spyOn(pg.Client.prototype, 'query');
+
+      const result = await testDb.ensureTransaction(async () => {
+        const {
+          rows: [{ a }],
+        } = await testDb.query`SELECT 1 AS a`;
+        const {
+          rows: [{ b }],
+        } = await testDb.query`SELECT 2 AS b`;
+
+        return (a + b) as number;
+      });
+
+      assertType<typeof result, number>();
+
+      expect(result).toBe(3);
+
+      expect(
+        spy.mock.calls.map(
+          (call) => (call[0] as unknown as { text: string }).text,
+        ),
+      ).toEqual(['BEGIN', 'SELECT 1 AS a', 'SELECT 2 AS b', 'COMMIT']);
     });
   });
 });

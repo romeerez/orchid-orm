@@ -117,17 +117,117 @@ export const _afterCommitError = (
 };
 
 export class Transaction {
-  transaction<T extends PickQueryQAndInternal, Result>(
-    this: T,
+  /**
+   * In Orchid ORM the method is `$transaction`, when using `pqb` on its own it is `transaction`.
+   *
+   * `COMMIT` happens automatically after the callback was successfully resolved, and `ROLLBACK` is done automatically if the callback fails.
+   *
+   * Let's consider the case of transferring money from one user to another:
+   *
+   * ```ts
+   * export const transferMoney = async (
+   *   fromId: number,
+   *   toId: number,
+   *   amount: number,
+   * ) => {
+   *   try {
+   *     // db.$transaction returns data that is returned from the callback
+   *     // result here is senderRemainder
+   *     const result = await db.$transaction(async () => {
+   *       const sender = await db.user.find(fromId);
+   *       const senderRemainder = sender.balance - amount;
+   *       if (senderRemainder < 0) {
+   *         throw new Error('Sender does not have enough money');
+   *       }
+   *
+   *       await db.user.find(fromId).decrement({
+   *         balance: amount,
+   *       });
+   *       await db.user.find(toId).increment({
+   *         balance: amount,
+   *       });
+   *
+   *       return senderRemainder;
+   *     });
+   *   } catch (error) {
+   *     // handle transaction error
+   *   }
+   * };
+   * ```
+   *
+   * It performs 3 queries in a single transaction: load sender record, decrement sender's balance, increment receiver's balance.
+   *
+   * If sender or receiver record doesn't exist, it will throw `NotFound` error, and there is an error thrown when sender's balance is too low.
+   * In such case, the transaction will be rolled back and no changes will be applied to the database.
+   *
+   * Internally, ORM relies on [AsyncLocalStorage](https://nodejs.org/api/async_context.html#class-asynclocalstorage) feature of node.js,
+   * it allows passing the transaction object implicitly. So that any query that is done inside of callback, will run inside a transaction.
+   *
+   * ## nested transactions
+   *
+   * Transactions can be nested one in another.
+   * The top level transaction is the real one,
+   * and the nested ones are emulated with [savepoint](https://www.postgresql.org/docs/current/sql-savepoint.html) instead of `BEGIN`
+   * and [release savepoint](https://www.postgresql.org/docs/current/sql-release-savepoint.html) instead of `COMMIT`.
+   *
+   * Use [ensureTransaction](#ensuretransaction) to run all queries in a single transaction.
+   *
+   * ```ts
+   * const result = await db.$transaction(async () => {
+   *   await db.table.create(...one);
+   *
+   *   const result = await db.$transaction(async () => {
+   *     await db.table.create(...two);
+   *     return 123;
+   *   });
+   *
+   *   await db.table.create(...three);
+   *
+   *   return result;
+   * });
+   *
+   * // result is returned from the inner transaction
+   * result === 123;
+   * ```
+   *
+   * If the inner transaction throws an error, and it is caught by `try/catch` of outer transaction,
+   * it performs [rollback to savepoint](https://www.postgresql.org/docs/current/sql-rollback-to.html)
+   * and the outer transaction can continue:
+   *
+   * ```ts
+   * class CustomError extends Error {}
+   *
+   * await db.$transaction(async () => {
+   *   try {
+   *     await db.$transaction(async () => {
+   *       throw new CustomError();
+   *     });
+   *   } catch (err) {
+   *     if (err instanceof CustomError) {
+   *       // ignore this error
+   *       return;
+   *     }
+   *     throw err;
+   *   }
+   *
+   *   // this transaction can continue
+   *   await db.table.create(...data);
+   * });
+   * ```
+   *
+   * If the error in the inner transaction is not caught, all nested transactions are rolled back and aborted.
+   */
+  transaction<Result>(
+    this: PickQueryQAndInternal,
     cb: () => Promise<Result>,
   ): Promise<Result>;
-  transaction<T extends PickQueryQAndInternal, Result>(
-    this: T,
+  transaction<Result>(
+    this: PickQueryQAndInternal,
     options: IsolationLevel | TransactionOptions,
     cb: () => Promise<Result>,
   ): Promise<Result>;
-  async transaction<T extends PickQueryQAndInternal, Result>(
-    this: T,
+  async transaction<Result>(
+    this: PickQueryQAndInternal,
     cbOrOptions: IsolationLevel | TransactionOptions | (() => Promise<Result>),
     cb?: () => Promise<Result>,
   ): Promise<Result> {
@@ -246,6 +346,38 @@ export class Transaction {
         trx.transactionId = transactionId - 1;
       }
     }
+  }
+
+  /**
+   * Use the `$ensureTransaction` when you want to ensure the sequence of queries is running in a transaction, but there is no need for Postgres [savepoints](https://www.postgresql.org/docs/current/sql-savepoint.html).
+   *
+   * ```ts
+   * async function updateUserBalance(userId: string, amount: number) {
+   *   await db.$ensureTransaction(async () => {
+   *     await db.transfer.create({ userId, amount })
+   *     await db.user.find(userId).increment({ balance: amount })
+   *   })
+   * }
+   *
+   * async function saveDeposit(userId: string, deposit: { ... }) {
+   *   await db.$ensureTransaction(async () => {
+   *     await db.deposit.create(deposit)
+   *     // transaction in updateUserBalance won't be started
+   *     await updateUserBalance(userId, deposit.amount)
+   *   })
+   * }
+   * ```
+   */
+  ensureTransaction<Result>(
+    this: PickQueryQAndInternal,
+    cb: () => Promise<Result>,
+  ): Promise<Result> {
+    const trx = this.internal.transactionStorage.getStore();
+    if (trx) return cb();
+
+    return (
+      Transaction.prototype.transaction as (cb: unknown) => Promise<Result>
+    ).call(this, cb) as Promise<Result>;
   }
 }
 

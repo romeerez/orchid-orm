@@ -637,6 +637,7 @@ describe('column type', () => {
         numericPrecision: 2,
         numericScale: 3,
         dateTimePrecision: 4,
+        typmod: -1,
       };
       const column = instantiateColumn(
         () => new Column(testSchemaConfig),

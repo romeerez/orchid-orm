@@ -72,7 +72,7 @@ describe('hooks', () => {
       const q = User.afterCreate([], fn).insert(userData);
       ignoreTestTransactionOnce(q);
 
-      q.transaction = jest.fn(() => Promise.resolve());
+      q.transaction = jest.fn(() => Promise.resolve()) as never;
 
       await q;
 
@@ -117,7 +117,7 @@ describe('hooks', () => {
       const q = User.afterUpdate([], fn).all().update({});
       ignoreTestTransactionOnce(q);
 
-      q.transaction = jest.fn(() => Promise.resolve());
+      q.transaction = jest.fn(() => Promise.resolve()) as never;
 
       await q;
 
@@ -186,7 +186,7 @@ describe('hooks', () => {
       const q = User.afterDelete([], fn).all().delete();
       ignoreTestTransactionOnce(q);
 
-      q.transaction = jest.fn(() => Promise.resolve());
+      q.transaction = jest.fn(() => Promise.resolve()) as never;
 
       await q;
 

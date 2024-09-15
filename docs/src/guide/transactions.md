@@ -4,6 +4,8 @@ All queries within a transaction are executed on the same database connection an
 
 ## transaction
 
+[//]: # 'has JSDoc'
+
 In Orchid ORM the method is `$transaction`, when using `pqb` on its own it is `transaction`.
 
 `COMMIT` happens automatically after the callback was successfully resolved, and `ROLLBACK` is done automatically if the callback fails.
@@ -51,10 +53,14 @@ it allows passing the transaction object implicitly. So that any query that is d
 
 ## nested transactions
 
+[//]: # 'has JSDoc'
+
 Transactions can be nested one in another.
 The top level transaction is the real one,
 and the nested ones are emulated with [savepoint](https://www.postgresql.org/docs/current/sql-savepoint.html) instead of `BEGIN`
 and [release savepoint](https://www.postgresql.org/docs/current/sql-release-savepoint.html) instead of `COMMIT`.
+
+Use [ensureTransaction](#ensuretransaction) to run all queries in a single transaction.
 
 ```ts
 const result = await db.$transaction(async () => {
@@ -100,6 +106,29 @@ await db.$transaction(async () => {
 ```
 
 If the error in the inner transaction is not caught, all nested transactions are rolled back and aborted.
+
+## ensureTransaction
+
+[//]: # 'has JSDoc'
+
+Use the `$ensureTransaction` when you want to ensure the sequence of queries is running in a transaction, but there is no need for Postgres [savepoints](https://www.postgresql.org/docs/current/sql-savepoint.html).
+
+```ts
+async function updateUserBalance(userId: string, amount: number) {
+  await db.$ensureTransaction(async () => {
+    await db.transfer.create({ userId, amount })
+    await db.user.find(userId).increment({ balance: amount })
+  })
+}
+
+async function saveDeposit(userId: string, deposit: { ... }) {
+  await db.$ensureTransaction(async () => {
+    await db.deposit.create(deposit)
+    // transaction in updateUserBalance won't be started
+    await updateUserBalance(userId, deposit.amount)
+  })
+}
+```
 
 ## testTransaction
 

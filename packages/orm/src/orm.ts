@@ -21,7 +21,7 @@ import {
   BaseTableClass,
 } from './baseTable';
 import { applyRelations } from './relations/relations';
-import { transaction } from './transaction';
+import { transaction, ensureTransaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   ColumnSchemaConfig,
@@ -40,7 +40,14 @@ interface FromQuery extends Query {
 export type OrchidORM<T extends TableClasses = TableClasses> = {
   [K in keyof T]: ORMTableInputToQueryBuilder<InstanceType<T[K]>>;
 } & {
+  /**
+   * @see import('pqb').Transaction.prototype.transaction
+   */
   $transaction: typeof transaction;
+  /**
+   * @see import('pqb').Transaction.prototype.ensureTransaction
+   */
+  $ensureTransaction: typeof ensureTransaction;
   $adapter: Adapter;
   $queryBuilder: Db;
 
@@ -161,6 +168,7 @@ export const orchidORM = <T extends TableClasses>(
 
   const result = {
     $transaction: transaction,
+    $ensureTransaction: ensureTransaction,
     $adapter: adapter,
     $queryBuilder: qb,
     $query: ((...args) => qb.query(...args)) as typeof qb.query,
