@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.3.1
+
+### Patch Changes
+
+- 94a1a9d: Update relations syntax in demo tables
+
 ## 0.3.0
 
 ### Minor Changes
