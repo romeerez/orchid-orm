@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.8
+
+### Patch Changes
+
+- 2218208: Add `ensureTransaction` (#398)
+
 ## 0.40.7
 
 ### Patch Changes

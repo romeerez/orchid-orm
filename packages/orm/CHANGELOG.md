@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.35.16
+
+### Patch Changes
+
+- 2218208: Add `ensureTransaction` (#398)
+- Updated dependencies [2218208]
+  - pqb@0.40.8
+  - rake-db@2.22.42
+
 ## 1.35.15
 
 ### Patch Changes
