@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.35.18
+
+### Patch Changes
+
+- 0ab781e: Support whereExists with a single fn argument (#395)
+- Updated dependencies [0ab781e]
+  - pqb@0.40.10
+  - rake-db@2.22.44
+
 ## 1.35.17
 
 ### Patch Changes

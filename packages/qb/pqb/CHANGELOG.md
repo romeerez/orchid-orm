@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.10
+
+### Patch Changes
+
+- 0ab781e: Support whereExists with a single fn argument (#395)
+
 ## 0.40.9
 
 ### Patch Changes
