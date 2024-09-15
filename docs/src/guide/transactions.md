@@ -251,8 +251,8 @@ To be used in select queries inside the transaction adds the `FOR UPDATE` table 
 await db.$transaction(async () => {
   await db.table.forUpdate();
 
-  // Can specify columns for the lock (FOR UPDATE OF column list)
-  await db.table.forUpdate(['someColumn', 'otherColumn']);
+  // Can specify tables for the lock (FOR UPDATE OF table list)
+  await db.table.forUpdate(['someTable', 'otherTable']);
 });
 ```
 
@@ -264,8 +264,8 @@ To be used in select queries inside the transaction adds the `FOR NO KEY UPDATE`
 await db.$transaction(async () => {
   await db.table.forUpdate();
 
-  // Can specify columns for the lock (FOR NO KEY UPDATE OF column list)
-  await db.table.forNoKeyUpdate(['someColumn', 'otherColumn']);
+  // Can specify tables for the lock (FOR NO KEY UPDATE OF table list)
+  await db.table.forNoKeyUpdate(['someTable', 'otherTable']);
 });
 ```
 
@@ -277,8 +277,8 @@ To be used in select queries inside the transaction adds the `FOR SHARE` table l
 await db.$transaction(async () => {
   await db.table.forUpdate();
 
-  // Can specify columns for the lock (FOR SHARE OF column list)
-  await db.table.forShare(['someColumn', 'otherColumn']);
+  // Can specify tables for the lock (FOR SHARE OF table list)
+  await db.table.forShare(['someTable', 'otherTable']);
 });
 ```
 
@@ -290,8 +290,8 @@ To be used in select queries inside the transaction adds the `FOR KEY SHARE` tab
 await db.$transaction(async () => {
   await db.table.forUpdate();
 
-  // Can specify columns for the lock (FOR KEY SHARE OF column list)
-  await db.table.forKeyShare(['someColumn', 'otherColumn']);
+  // Can specify tables for the lock (FOR KEY SHARE OF table list)
+  await db.table.forKeyShare(['someTable', 'otherTable']);
 });
 ```
 
