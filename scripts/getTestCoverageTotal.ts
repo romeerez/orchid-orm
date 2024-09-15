@@ -24,11 +24,12 @@ const main = async () => {
   const values = await Promise.all(
     [
       'core',
+      'create-orm',
       'orm',
-      'qb/myqb',
       'qb/pqb',
       'rake-db',
-      'schema-to-zod',
+      'schemaConfigs/zod',
+      'schemaConfigs/valibot',
       'test-factory',
     ].map(calculatePackageCoverage),
   );

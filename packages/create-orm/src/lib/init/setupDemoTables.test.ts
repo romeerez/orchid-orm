@@ -61,8 +61,8 @@ export class PostTable extends BaseTable {
 
   relations = {
     comments: this.hasMany(() => CommentTable, {
-      primaryKey: 'id',
-      foreignKey: 'postId',
+      columns: ['id'],
+      references: ['postId'],
     }),
   };
 }
@@ -105,8 +105,8 @@ export class CommentTable extends BaseTable {
 
   relations = {
     post: this.belongsTo(() => PostTable, {
-      primaryKey: 'id',
-      foreignKey: 'postId',
+      columns: ['postId'],
+      references: ['id'],
     }),
   };
 }
