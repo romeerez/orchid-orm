@@ -28,6 +28,14 @@ export type ColumnShapeOutput<Shape extends QueryColumns> = {
   [K in keyof Shape]: Shape[K]['outputType'];
 };
 
+export type DefaultSelectOutput<Shape extends QueryColumnsInit> = {
+  [K in keyof Shape as Shape[K]['data']['explicitSelect'] extends
+    | true
+    | undefined
+    ? never
+    : K]: Shape[K]['outputType'];
+};
+
 // type of columns shape to use in `where` and other query methods
 export type ColumnShapeQueryType<Shape extends QueryColumns> = {
   [K in keyof Shape]: Shape[K]['queryType'];
@@ -150,17 +158,30 @@ export type ColumnWithDefault<T extends PickColumnBaseData, Value> = {
     : T[K];
 };
 
-// marks the column as hidden
-export type HiddenColumn<T extends PickColumnBaseData> = T & {
-  data: { hidden: true };
+// whether to select column by default or with *
+export type ColumnDefaultSelect<
+  T extends PickColumnBaseData,
+  Value extends boolean,
+> = {
+  [K in keyof T]: K extends 'data'
+    ? {
+        [K in keyof T['data']]: K extends 'explicitSelect'
+          ? Value extends true
+            ? false
+            : true
+          : T['data'][K];
+      }
+    : T[K];
 };
 
 export type ColumnTypesBase = { [K in string]: ColumnTypeBase }; // converting to interface harms
 
 // type of columns selected by default, `hidden` columns are omitted
 export type DefaultSelectColumns<S extends QueryColumnsInit> = {
-  [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
-}[keyof S & string][];
+  [K in keyof S]: S[K]['data']['explicitSelect'] extends true | undefined
+    ? never
+    : K;
+}[keyof S];
 
 // minimal table class type to use in the foreign key option
 export interface ForeignKeyTable {
@@ -282,8 +303,8 @@ export interface ColumnDataBase {
   // if the `default` is a function, instantiating table query will set `runtimeDefault` to wrap the `default` function with `encodeFn` if it is set.
   runtimeDefault?(): unknown;
 
-  // is column removed from default table selection
-  isHidden?: true;
+  // column should not be implicitly selected
+  explicitSelect?: boolean;
 
   // parse and encode a column to use it `as` another column
   as?: ColumnTypeBase;
@@ -413,7 +434,7 @@ export interface QueryColumns {
 export interface QueryColumnInit extends QueryColumn {
   inputType: unknown;
   data: {
-    isHidden?: true;
+    explicitSelect?: boolean;
     primaryKey?: string;
     unique?: string;
     isNullable?: true;
@@ -801,11 +822,44 @@ export abstract class ColumnTypeBase<
   }
 
   /**
-   * @deprecated this feature is in a draft state
+   * Append `select(false)` to a column to exclude it from the default selection.
+   * It won't be selected with `selectAll` or `select('*')` as well.
    *
-   * Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
+   * ```ts
+   * export class UserTable extends BaseTable {
+   *   readonly table = 'user';
+   *   columns = this.setColumns((t) => ({
+   *     id: t.identity().primaryKey(),
+   *     name: t.string(),
+   *     password: t.string().select(false),
+   *   }));
+   * }
+   *
+   * // only id and name are selected, without password
+   * const user = await db.user.find(123);
+   *
+   * // password is still omitted, even with the wildcard
+   * const same = await db.user.find(123).select('*');
+   *
+   * const comment = await db.comment.find(123).select({
+   *   // password is omitted in the sub-selects as well
+   *   author: (q) => q.author,
+   * });
+   *
+   * // password is omitted here as well
+   * const created = await db.user.create(userData);
+   * ```
+   *
+   * Such a column can only be selected explicitly.
+   *
+   * ```ts
+   * const userWithPassword = await db.user.find(123).select('*', 'password');
+   * ```
    */
-  hidden<T extends PickColumnBaseData>(this: T): HiddenColumn<T> {
-    return setColumnData(this, 'isHidden', true) as never;
+  select<T extends PickColumnBaseData, Value extends boolean>(
+    this: T,
+    value: Value,
+  ): ColumnDefaultSelect<T, Value> {
+    return setColumnData(this, 'explicitSelect', !value) as never;
   }
 }

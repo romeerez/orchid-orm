@@ -242,7 +242,7 @@ export const testJoin = ({
             select: `SELECT "as"."one" "id", "as"."two" "text" FROM "${table}"`,
             target: `(
                 SELECT "as"."${fkeyColumn}" "one", "as"."${textColumn}" "two"
-                FROM "${joinTable}" AS "as"
+                FROM "${joinTable}" "as"
                 WHERE "as"."${fkeyColumn}" = $${values.length + (or ? 2 : 1)}
               ) "as"`,
             conditions: `"as"."one" = ${pkeySql}`,

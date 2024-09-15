@@ -12,7 +12,7 @@ import {
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
-import { Sql } from 'orchid-core';
+import { omit, Sql } from 'orchid-core';
 import { assertType, expectSql, now } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 import { orchidORM } from '../orm';
@@ -35,7 +35,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT ${chatSelectAll} FROM "chat" AS "chats"
+        SELECT ${chatSelectAll} FROM "chat" "chats"
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
           WHERE "chatUser"."chatId" = "chats"."idOfChat"
@@ -60,7 +60,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT ${chatSelectAll} FROM "chat" AS "chats"
+          SELECT ${chatSelectAll} FROM "chat" "chats"
           WHERE EXISTS (
               SELECT 1 FROM "user"
               WHERE "user"."name" = $1
@@ -90,7 +90,7 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
           SELECT ${postTagSelectAll}
-          FROM "postTag" AS "postTags"
+          FROM "postTag" "postTags"
           WHERE
             EXISTS (
               SELECT 1
@@ -192,7 +192,7 @@ describe('hasAndBelongsToMany', () => {
           .joinQuery(db.chat.as('c'), db.user.as('u'))
           .toSQL(),
         `
-          SELECT ${chatSelectAll} FROM "chat" AS "c"
+          SELECT ${chatSelectAll} FROM "chat" "c"
           WHERE EXISTS (
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "c"."idOfChat"
@@ -223,7 +223,7 @@ describe('hasAndBelongsToMany', () => {
       );
 
       const sql = `
-        SELECT ${userSelectAll} FROM "user" AS "u"
+        SELECT ${userSelectAll} FROM "user" "u"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
           WHERE
@@ -269,7 +269,7 @@ describe('hasAndBelongsToMany', () => {
         query.toSQL(),
         `
         SELECT "u"."name" "Name", "chats"."title" "Title"
-        FROM "user" AS "u"
+        FROM "user" "u"
         JOIN "chat" AS "chats"
           ON EXISTS (
             SELECT 1 FROM "chatUser"
@@ -301,7 +301,7 @@ describe('hasAndBelongsToMany', () => {
         query.toSQL(),
         `
         SELECT "u"."name" "Name", "c"."title" "Title"
-        FROM "user" AS "u"
+        FROM "user" "u"
         JOIN "chat" AS "c"
           ON "c"."title" = $1
           AND "c"."updatedAt" = $2
@@ -332,7 +332,7 @@ describe('hasAndBelongsToMany', () => {
           FROM "user"
           JOIN LATERAL (
             SELECT ${chatSelectAll}
-            FROM "chat" AS "c"
+            FROM "chat" "c"
             WHERE "c"."title" = $1
               AND EXISTS (
                 SELECT 1
@@ -367,14 +367,14 @@ describe('hasAndBelongsToMany', () => {
             SELECT
               "u"."id" "Id",
               COALESCE("chats".r, '[]') "chats"
-            FROM "user" AS "u"
+            FROM "user" "u"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json("t".*)) r
               FROM (
                 SELECT
                   "chats"."idOfChat" "IdOfChat",
                   "chats"."title" "Title"
-                FROM "chat" AS "chats"
+                FROM "chat" "chats"
                 WHERE "chats"."title" = $1
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
@@ -383,7 +383,7 @@ describe('hasAndBelongsToMany', () => {
                       AND "chatUser"."userId" = "u"."id"
                       AND "chatUser"."userKey" = "u"."userKey"
                   )
-              ) AS "t"
+              ) "t"
             ) "chats" ON true
           `,
           ['title'],
@@ -406,7 +406,7 @@ describe('hasAndBelongsToMany', () => {
               SELECT json_agg(row_to_json("t".*)) r
               FROM (
                 SELECT ${postTagSelectAll}
-                FROM "postTag" AS "postTags"
+                FROM "postTag" "postTags"
                 WHERE EXISTS (
                   SELECT 1 FROM "user" AS "users"
                   WHERE EXISTS (
@@ -422,7 +422,7 @@ describe('hasAndBelongsToMany', () => {
                       AND "post"."title" = "users"."userKey"
                   )
                 )
-              ) AS "t"
+              ) "t"
             ) "items" ON true
           `,
         );
@@ -442,10 +442,10 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             "chatsCount".r "chatsCount"
-          FROM "user" AS "u"
+          FROM "user" "u"
           LEFT JOIN LATERAL (
             SELECT count(*) r
-            FROM "chat" AS "chats"
+            FROM "chat" "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
@@ -471,12 +471,12 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("titles".r, '[]') "titles"
-          FROM "user" AS "u"
+          FROM "user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Title") r
             FROM (
               SELECT "chats"."title" "Title"
-              FROM "chat" AS "chats"
+              FROM "chat" "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
@@ -484,7 +484,7 @@ describe('hasAndBelongsToMany', () => {
                   AND "chatUser"."userId" = "u"."id"
                   AND "chatUser"."userKey" = "u"."userKey"
               )
-            ) AS "t"
+            ) "t"
           ) "titles" ON true
         `,
       );
@@ -503,10 +503,10 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("hasChats".r, false) "hasChats"
-          FROM "user" AS "u"
+          FROM "user" "u"
           LEFT JOIN LATERAL (
             SELECT true r
-            FROM "chat" AS "chats"
+            FROM "chat" "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
@@ -540,17 +540,17 @@ describe('hasAndBelongsToMany', () => {
             SELECT json_agg(row_to_json("t".*)) r
             FROM (
               SELECT COALESCE("users".r, '[]') "users"
-              FROM "chat" AS "chats"
+              FROM "chat" "chats"
               LEFT JOIN LATERAL (
                 SELECT json_agg(row_to_json("t".*)) r
                 FROM (
                   SELECT COALESCE("chats2".r, '[]') "chats"
-                  FROM "user" AS "users"
+                  FROM "user" "users"
                   LEFT JOIN LATERAL (
                     SELECT json_agg(row_to_json("t".*)) r
                     FROM (
                       SELECT ${chatSelectAll}
-                      FROM "chat" AS "chats"
+                      FROM "chat" "chats"
                       WHERE EXISTS (
                         SELECT 1
                         FROM "chatUser"
@@ -559,7 +559,7 @@ describe('hasAndBelongsToMany', () => {
                           AND "chatUser"."userId" = "users"."id"
                           AND "chatUser"."userKey" = "users"."userKey"
                       )
-                    ) AS "t"
+                    ) "t"
                   ) "chats2" ON true
                   WHERE EXISTS (
                     SELECT 1
@@ -569,7 +569,7 @@ describe('hasAndBelongsToMany', () => {
                       AND "chatUser"."chatId" = "chats"."idOfChat"
                       AND "chatUser"."chatKey" = "chats"."chatKey"
                   )
-                ) AS "t"
+                ) "t"
               ) "users" ON true
               WHERE EXISTS (
                 SELECT 1
@@ -579,7 +579,7 @@ describe('hasAndBelongsToMany', () => {
                   AND "chatUser"."userId" = "user"."id"
                   AND "chatUser"."userKey" = "user"."userKey"
               )
-            ) AS "t"
+            ) "t"
           ) "chats" ON true
         `,
       );
@@ -601,7 +601,7 @@ describe('hasAndBelongsToMany', () => {
       title2: string;
     }) => {
       expect(user).toEqual({
-        ...userData,
+        ...omit(userData, ['Password']),
         Active: null,
         Age: null,
         Data: null,
@@ -918,7 +918,7 @@ describe('hasAndBelongsToMany', () => {
             sql as Sql,
             `
             SELECT "chats"."idOfChat" "IdOfChat", "chats"."chatKey" "ChatKey"
-            FROM "chat" AS "chats"
+            FROM "chat" "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
           `,
@@ -1023,7 +1023,7 @@ describe('hasAndBelongsToMany', () => {
             sql as Sql,
             `
             SELECT "chats"."idOfChat" "IdOfChat", "chats"."chatKey" "ChatKey"
-            FROM "chat" AS "chats"
+            FROM "chat" "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
           `,
@@ -1691,7 +1691,7 @@ describe('hasAndBelongsToMany', () => {
       `
         SELECT ${userSelectAll} FROM "user" WHERE (
           SELECT count(*) = $1
-          FROM "chat" AS "chats"
+          FROM "chat" "chats"
           WHERE "chats"."title" IN ($2, $3)
             AND EXISTS (
               SELECT 1
@@ -1772,14 +1772,14 @@ describe('hasAndBelongsToMany', () => {
           SELECT json_agg(row_to_json("t".*)) r
           FROM (
             SELECT "tag_id" AS "tagId"
-            FROM "tag" AS "tags"
+            FROM "tag" "tags"
             WHERE EXISTS (
               SELECT 1
               FROM "postTag"
               WHERE "postTag"."tag_id" = "tags"."tag_id"
                 AND "postTag"."post_id" = "post"."post_id"
             )
-          ) AS "t"
+          ) "t"
         ) "tags" ON true
       `,
     );

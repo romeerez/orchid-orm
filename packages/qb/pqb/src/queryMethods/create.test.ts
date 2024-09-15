@@ -13,6 +13,7 @@ import {
   uniqueTableData,
   UniqueTableRecord,
   User,
+  userColumnsSql,
   userData,
   UserInsert,
   UserRecord,
@@ -26,6 +27,7 @@ import {
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
 import { MAX_BINDING_PARAMS } from '../sql/constants';
+import { omit } from 'orchid-core';
 
 const setMaxBindingParams = (value: number) => {
   (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;
@@ -68,7 +70,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES (raw sql)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
       );
 
@@ -164,7 +166,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES (sql1), (sql2)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
       );
 
@@ -265,7 +267,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, 'password')
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         [userData.name],
       );
@@ -283,7 +285,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, "user"."name")
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         [userData.name],
       );
@@ -300,7 +302,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password", "age")
           VALUES ($1, $2, (SELECT avg("user"."age") FROM "user"))
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         [userData.name, userData.password],
       );
@@ -346,18 +348,18 @@ describe('create functions', () => {
         `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
-        RETURNING *
+        RETURNING ${userColumnsSql}
       `,
         ['name', 'password'],
       );
 
       const result = await query;
-      expect(result).toMatchObject(userData);
+      expect(result).toMatchObject(omit(userData, ['password']));
 
       assertType<typeof result, UserRecord>();
 
       const created = await User.take();
-      expect(created).toMatchObject(userData);
+      expect(created).toMatchObject(omit(userData, ['password']));
 
       expectQueryNotMutated(q);
     });
@@ -503,7 +505,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         ['name', 'override'],
       );
@@ -521,7 +523,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         ['name', 'password'],
       );
@@ -554,7 +556,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ((SELECT "user"."name" FROM "user" LIMIT 1), $1)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         ['password'],
       );
@@ -663,7 +665,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, 'password'), ('name', $2)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         [userData.name, userData.password],
       );
@@ -700,7 +702,7 @@ describe('create functions', () => {
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
-        expect(item).toMatchObject(arr[i]);
+        expect(item).toMatchObject(omit(arr[i], ['password']));
       });
 
       expectQueryNotMutated(q);
@@ -736,7 +738,7 @@ describe('create functions', () => {
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
-        expect(item).toMatchObject(arr[i]);
+        expect(item).toMatchObject(omit(arr[i], ['password']));
       });
 
       expectQueryNotMutated(q);
@@ -762,21 +764,21 @@ describe('create functions', () => {
         VALUES
           ($1, $2, $3),
           ($4, $5, DEFAULT)
-        RETURNING *
+        RETURNING ${userColumnsSql}
       `,
         ['name', 'password', null, 'name', 'password'],
       );
 
       const result = await query;
       result.forEach((item, i) => {
-        expect(item).toMatchObject(arr[i]);
+        expect(item).toMatchObject(omit(arr[i], ['password']));
       });
 
       assertType<typeof result, (typeof User.outputType)[]>();
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
-        expect(item).toMatchObject(arr[i]);
+        expect(item).toMatchObject(omit(arr[i], ['password']));
       });
 
       expectQueryNotMutated(q);
@@ -822,7 +824,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2), ($3, $4)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         ['name', 'password', 'name', 'password'],
       );
@@ -841,7 +843,7 @@ describe('create functions', () => {
         `
           INSERT INTO "user"("name", "password")
           VALUES ((SELECT "user"."name" FROM "user" LIMIT 1), $1)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         ['password'],
       );

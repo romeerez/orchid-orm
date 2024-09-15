@@ -20,6 +20,7 @@ import {
 import { Db } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
+import { omit } from 'orchid-core';
 
 useTestORM();
 
@@ -81,7 +82,7 @@ describe('hasOne', () => {
         q.toSQL(),
         `
           SELECT ${postTagSelectAll}
-          FROM "postTag" AS "onePostTag"
+          FROM "postTag" "onePostTag"
           WHERE
             EXISTS (
               SELECT 1
@@ -210,7 +211,7 @@ describe('hasOne', () => {
           .joinQuery(db.profile.as('p'), db.user.as('u'))
           .toSQL(),
         `
-          SELECT ${profileSelectAll} FROM "profile" AS "p"
+          SELECT ${profileSelectAll} FROM "profile" "p"
           WHERE "p"."userId" = "u"."id"
             AND "p"."profileKey" = "u"."userKey"
         `,
@@ -221,7 +222,7 @@ describe('hasOne', () => {
       expectSql(
         db.user.as('u').whereExists('profile').toSQL(),
         `
-        SELECT ${userSelectAll} FROM "user" AS "u"
+        SELECT ${userSelectAll} FROM "user" "u"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE "profile"."userId" = "u"."id"
@@ -231,7 +232,7 @@ describe('hasOne', () => {
       );
 
       const sql = `
-        SELECT ${userSelectAll} FROM "user" AS "u"
+        SELECT ${userSelectAll} FROM "user" "u"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE "profile"."userId" = "u"."id"
@@ -274,7 +275,7 @@ describe('hasOne', () => {
         query.toSQL(),
         `
         SELECT "u"."name" "Name", "profile"."bio" "Bio"
-        FROM "user" AS "u"
+        FROM "user" "u"
         JOIN "profile"
           ON "profile"."userId" = "u"."id"
                AND "profile"."profileKey" = "u"."userKey"
@@ -302,7 +303,7 @@ describe('hasOne', () => {
         query.toSQL(),
         `
         SELECT "u"."name" "Name", "p"."bio" "Bio"
-        FROM "user" AS "u"
+        FROM "user" "u"
         JOIN "profile" AS "p"
           ON "p"."bio" = $1
           AND "p"."userId" = $2
@@ -328,7 +329,7 @@ describe('hasOne', () => {
           FROM "user"
           JOIN LATERAL (
             SELECT ${profileSelectAll}
-            FROM "profile" AS "p"
+            FROM "profile" "p"
             WHERE "p"."bio" = $1
               AND "p"."userId" = "user"."id"
               AND "p"."profileKey" = "user"."userKey"
@@ -356,7 +357,7 @@ describe('hasOne', () => {
             SELECT
               "u"."id" "Id",
               row_to_json("profile".*) "profile"
-            FROM "user" AS "u"
+            FROM "user" "u"
             LEFT JOIN LATERAL (
               SELECT ${profileSelectAll}
               FROM "profile"
@@ -386,7 +387,7 @@ describe('hasOne', () => {
               SELECT json_agg(row_to_json("t".*)) r
               FROM (
                 SELECT ${postTagSelectAll}
-                FROM "postTag" AS "onePostTag"
+                FROM "postTag" "onePostTag"
                 WHERE EXISTS (
                   SELECT 1
                   FROM "post" AS "onePost"
@@ -394,7 +395,7 @@ describe('hasOne', () => {
                     AND "onePost"."title" = "user"."userKey"
                     AND "onePost"."id" = "onePostTag"."postId"
                 )
-              ) AS "t"
+              ) "t"
             ) "items" ON true
           `,
         );
@@ -416,7 +417,7 @@ describe('hasOne', () => {
             SELECT
               "u"."id" "Id",
               COALESCE("hasProfile".r, false) "hasProfile"
-            FROM "user" AS "u"
+            FROM "user" "u"
             LEFT JOIN LATERAL (
               SELECT true r
               FROM "profile"
@@ -504,7 +505,7 @@ describe('hasOne', () => {
         Bio: string;
       }) => {
         expect(user).toEqual({
-          ...userData,
+          ...omit(userData, ['Password']),
           Id: user.Id,
           Name,
           Active: null,
@@ -1835,7 +1836,7 @@ describe('hasOne through', () => {
       q.toSQL(),
       `
         SELECT ${postSelectAll}
-        FROM "post" AS "onePost"
+        FROM "post" "onePost"
         WHERE
           EXISTS (
             SELECT 1
@@ -1908,7 +1909,7 @@ describe('hasOne through', () => {
         .joinQuery(db.profile.as('p'), db.message.as('m'))
         .toSQL(),
       `
-        SELECT ${profileSelectAll} FROM "profile" AS "p"
+        SELECT ${profileSelectAll} FROM "profile" "p"
         WHERE EXISTS (
           SELECT 1 FROM "user" AS "sender"
           WHERE "p"."userId" = "sender"."id"
@@ -1939,7 +1940,7 @@ describe('hasOne through', () => {
     );
 
     const sql = `
-      SELECT ${messageSelectAll} FROM "message" AS "m"
+      SELECT ${messageSelectAll} FROM "message" "m"
       WHERE EXISTS (
         SELECT 1 FROM "profile"
         WHERE EXISTS (
@@ -1984,7 +1985,7 @@ describe('hasOne through', () => {
       query.toSQL(),
       `
         SELECT "m"."text" "Text", "profile"."bio" "Bio"
-        FROM "message" AS "m"
+        FROM "message" "m"
         JOIN "profile"
           ON EXISTS (
             SELECT 1 FROM "user" AS "sender"
@@ -2014,7 +2015,7 @@ describe('hasOne through', () => {
       query.toSQL(),
       `
         SELECT "m"."text" "Text", "p"."bio" "Bio"
-        FROM "message" AS "m"
+        FROM "message" "m"
         JOIN "profile" AS "p"
           ON "p"."bio" = $1
          AND "p"."userId" = $2
@@ -2045,7 +2046,7 @@ describe('hasOne through', () => {
         FROM "message"
         JOIN LATERAL (
           SELECT ${profileSelectAll}
-          FROM "profile" AS "p"
+          FROM "profile" "p"
           WHERE "p"."bio" = $1
             AND EXISTS (
             SELECT 1
@@ -2076,7 +2077,7 @@ describe('hasOne through', () => {
           SELECT
             "m"."id" "Id",
             row_to_json("profile".*) "profile"
-          FROM "message" AS "m"
+          FROM "message" "m"
           LEFT JOIN LATERAL (
             SELECT ${profileSelectAll} FROM "profile"
             WHERE "profile"."bio" = $1
@@ -2109,7 +2110,7 @@ describe('hasOne through', () => {
             SELECT json_agg(row_to_json("t".*)) r
             FROM (
               SELECT ${postSelectAll}
-              FROM "post" AS "onePost"
+              FROM "post" "onePost"
               WHERE EXISTS (
                 SELECT 1 FROM "profile"
                 WHERE EXISTS (
@@ -2126,7 +2127,7 @@ describe('hasOne through', () => {
                     AND "user"."userKey" = "profile"."profileKey"
                 )
               )
-            ) AS "t"
+            ) "t"
           ) "items" ON true
         `,
       );
@@ -2148,7 +2149,7 @@ describe('hasOne through', () => {
           SELECT
             "m"."id" "Id",
             COALESCE("hasProfile".r, false) "hasProfile"
-          FROM "message" AS "m"
+          FROM "message" "m"
           LEFT JOIN LATERAL (
             SELECT true r
             FROM "profile"
@@ -2189,7 +2190,7 @@ describe('hasOne through', () => {
               SELECT json_agg(row_to_json("t".*)) r
               FROM (
                 SELECT row_to_json("profile2".*) "profile"
-                FROM "message" AS "messages"
+                FROM "message" "messages"
                 LEFT JOIN LATERAL (
                   SELECT ${profileSelectAll}
                   FROM "profile"
@@ -2211,7 +2212,7 @@ describe('hasOne through', () => {
                       AND "user"."id" = "profile"."userId"
                       AND "user"."userKey" = "profile"."profileKey"
                   )
-              ) AS "t"
+              ) "t"
             ) "messages" ON true
             WHERE EXISTS (
               SELECT 1

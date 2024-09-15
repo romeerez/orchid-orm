@@ -6,6 +6,7 @@ import {
   snakeSelectAll,
   snakeSelectAllWithTable,
   User,
+  userTableColumnsSql,
 } from '../../test-utils/test-utils';
 import { _join } from './_join';
 import { testWhere, testWhereExists } from '../where/testWhere';
@@ -39,7 +40,7 @@ it('should ignore duplicated joins', () => {
   expectSql(
     q.toSQL(),
     `
-      SELECT "user".* FROM "user"
+      SELECT ${userTableColumnsSql} FROM "user"
       JOIN "message" ON "message"."id" = "user"."id"
     `,
   );
@@ -53,7 +54,7 @@ describe('join', () => {
     joinTarget: Message,
     fkey: 'authorId',
     text: 'text',
-    selectFrom: `SELECT "user".* FROM "user"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM "user"`,
   });
 });
 
@@ -65,7 +66,7 @@ describe('join table with named columns', () => {
     joinTarget: Snake,
     fkey: 'tailLength',
     text: 'snakeName',
-    selectFrom: `SELECT "user".* FROM "user"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM "user"`,
   });
 });
 
@@ -107,7 +108,7 @@ describe('join callback with query builder', () => {
     const q = User.all();
 
     const expectedSql = `
-      SELECT "user".* FROM "user"
+      SELECT ${userTableColumnsSql} FROM "user"
       JOIN "message"
         ON "message"."authorId" = "user"."id"
         OR "message"."text" = "user"."name"
@@ -165,7 +166,7 @@ describe('join callback with query builder', () => {
 
   it('should have .on and .onOr properly working when joining table with named columns', () => {
     const reverseSql = `
-      SELECT "user".* FROM "user"
+      SELECT ${userTableColumnsSql} FROM "user"
       JOIN "snake"
         ON "snake"."snake_name" = "user"."name"
         OR "snake"."tail_length" = "user"."id"
@@ -196,7 +197,7 @@ describe('join callback with query builder', () => {
         q.onJsonPathEquals('otherUser.data', '$.name', 'user.data', '$.name'),
       ).toSQL(),
       `
-        SELECT "user".* FROM "user"
+        SELECT ${userTableColumnsSql} FROM "user"
         JOIN "user" AS "otherUser"
           ON jsonb_path_query_first("otherUser"."data", $1) = jsonb_path_query_first("user"."data", $2)
       `,
@@ -225,7 +226,7 @@ describe('join callback with query builder', () => {
 
   describe('where methods', () => {
     describe('using main table columns', () => {
-      const sql = `SELECT "user".* FROM "user" JOIN "message" ON `;
+      const sql = `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON `;
       const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM "snake" JOIN "user" ON `;
 
       it('should use main table column in .where', () => {
@@ -436,7 +437,7 @@ describe('join callback with query builder', () => {
                   "t"."id" "messageId",
                   "t"."authorId" "userId",
                   "t"."text" "content"
-                FROM "message" AS "t"
+                FROM "message" "t"
                 WHERE "t"."text" = $1
               ) "t"
               ON "t"."userId" = "user"."id"
@@ -476,7 +477,7 @@ describe('join callback with query builder', () => {
                 SELECT
                   "t"."snake_name" "snakeName",
                   "t"."tail_length" "tailLength"
-                FROM "snake" AS "t"
+                FROM "snake" "t"
                 WHERE "t"."snake_name" = $1
               ) "t"
               ON "t"."tailLength" = "user"."id"
@@ -527,7 +528,7 @@ describe('join callback with query builder', () => {
 
     testWhere(
       (cb) => User.join(Snake, cb as never).toSQL(),
-      `SELECT "user".* FROM "user" JOIN "snake" ON`,
+      `SELECT ${userTableColumnsSql} FROM "user" JOIN "snake" ON`,
       {
         model: Snake,
         pkey: 'snake.tailLength',
@@ -585,7 +586,7 @@ describe('join callback with query builder', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user".* FROM "user" LEFT JOIN "message" ON (false)`,
+        `SELECT ${userTableColumnsSql} FROM "user" LEFT JOIN "message" ON (false)`,
       );
     });
 
@@ -596,7 +597,7 @@ describe('join callback with query builder', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user".* FROM "user" LEFT JOIN "message" ON (false)`,
+        `SELECT ${userTableColumnsSql} FROM "user" LEFT JOIN "message" ON (false)`,
       );
     });
   });
@@ -620,7 +621,7 @@ describe('implicit lateral joins', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user".*
+        SELECT ${userTableColumnsSql}
         FROM "user"
         JOIN LATERAL (
           SELECT *
@@ -643,7 +644,7 @@ describe('implicit lateral joins', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user".*
+        SELECT ${userTableColumnsSql}
         FROM "user"
         JOIN LATERAL (
           SELECT *
@@ -666,7 +667,7 @@ describe('implicit lateral joins', () => {
       q.toSQL(),
       `
         WITH "p" AS (SELECT * FROM "profile")
-        SELECT "user".*
+        SELECT ${userTableColumnsSql}
         FROM "user"
         JOIN LATERAL (
           SELECT *

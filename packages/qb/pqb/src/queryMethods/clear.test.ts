@@ -1,4 +1,4 @@
-import { Message, User } from '../test-utils/test-utils';
+import { Message, User, userColumnsSql } from '../test-utils/test-utils';
 import { expectSql, line } from 'test-utils';
 
 describe('clear', () => {
@@ -32,7 +32,7 @@ describe('clear', () => {
           'offset',
         )
         .toSQL(),
-      `SELECT * FROM "user"`,
+      `SELECT ${userColumnsSql} FROM "user"`,
     );
   });
 

@@ -133,6 +133,44 @@ type IdentityOptions = {
 };
 ```
 
+## exclude from select
+
+[//]: # 'has JSDoc'
+
+Append `select(false)` to a column to exclude it from the default selection.
+It won't be selected with `selectAll` or `select('*')` as well.
+
+```ts
+export class UserTable extends BaseTable {
+  readonly table = 'user';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    name: t.string(),
+    password: t.string().select(false),
+  }));
+}
+
+// only id and name are selected, without password
+const user = await db.user.find(123);
+
+// password is still omitted, even with the wildcard
+const same = await db.user.find(123).select('*');
+
+const comment = await db.comment.find(123).select({
+  // password is omitted in the sub-selects as well
+  author: (q) => q.author,
+});
+
+// password is omitted here as well
+const created = await db.user.create(userData);
+```
+
+Such a column can only be selected explicitly.
+
+```ts
+const userWithPassword = await db.user.find(123).select('*', 'password');
+```
+
 ## name
 
 To specify a real name of column in a database:
@@ -386,13 +424,3 @@ export class SomeTable extends BaseTable {
 Column methods such as [foreignKey](/guide/migration-column-methods#foreignkey), [index](/guide/migration-column-methods#index), [unique](/guide/migration-column-methods#unique), [comment](/guide/migration-column-methods#comment) and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
 
 Though `unique` is used for deriving types for [findBy](/guide/query-methods#findBy) and [onConflict](/guide/create-update-delete#onconflict).
-
-## hidden
-
-[//]: # 'has JSDoc'
-
-::: danger
-This feature is in a draft state
-:::
-
-Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.

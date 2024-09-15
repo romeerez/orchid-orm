@@ -138,7 +138,7 @@ export const _join = <
         ? joinArgs.r
         : joinArgs.q;
 
-    if (j.q.select || !j.internal.columnsForSelectAll) {
+    if (j.q.select || !j.q.selectAllColumns) {
       const shape = getShapeFromSelect(j, true);
       setQueryObjectValue(
         query as unknown as PickQueryQ,

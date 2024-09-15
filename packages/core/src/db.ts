@@ -1,7 +1,7 @@
 import { AdapterBase } from './adapter';
 import {
   ColumnShapeInput,
-  ColumnShapeOutput,
+  DefaultSelectOutput,
   QueryColumns,
   QueryColumnsInit,
 } from './columns/columnType';
@@ -22,7 +22,7 @@ export interface DbBase<
   columns: (keyof Shape)[];
   columnTypes: CT;
   shape: ShapeWithComputed;
-  outputType: ColumnShapeOutput<Shape>;
+  outputType: DefaultSelectOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
   query(...args: SQLQueryArgs): Promise<unknown>;
   queryArrays(...args: SQLQueryArgs): Promise<unknown>;

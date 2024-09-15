@@ -1,6 +1,6 @@
 import { expect, test, afterAll } from 'bun:test';
 import { testDb } from 'test-utils';
-import { User } from './src/test-utils/test-utils';
+import { User, userColumnsSql } from './src/test-utils/test-utils';
 import { noop } from 'orchid-core';
 import { getSqlText } from './src';
 
@@ -27,9 +27,9 @@ test('should handle nested transactions', async () => {
 
   expect(queries).toEqual([
     'BEGIN',
-    'SELECT * FROM "user"',
+    `SELECT ${userColumnsSql} FROM "user"`,
     'SAVEPOINT "1"',
-    'SELECT * FROM "user"',
+    `SELECT ${userColumnsSql} FROM "user"`,
     'RELEASE SAVEPOINT "1"',
     'COMMIT',
   ]);

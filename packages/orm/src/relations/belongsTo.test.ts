@@ -16,6 +16,7 @@ import {
 } from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
+import { omit } from 'orchid-core';
 
 describe('belongsTo', () => {
   useTestORM();
@@ -42,7 +43,7 @@ describe('belongsTo', () => {
 
       const user = await query;
 
-      expect(user).toMatchObject(userData);
+      expect(user).toMatchObject(omit(userData, ['Password']));
     });
 
     it('should handle chained query', async () => {
@@ -137,7 +138,7 @@ describe('belongsTo', () => {
           .joinQuery(db.user.as('u'), db.profile.as('p'))
           .toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" AS "u"
+          SELECT ${userSelectAll} FROM "user" "u"
           WHERE "u"."id" = "p"."userId"
             AND "u"."userKey" = "p"."profileKey"
         `,
@@ -158,7 +159,7 @@ describe('belongsTo', () => {
       );
 
       const sql = `
-        SELECT ${profileSelectAll} FROM "profile" AS "p"
+        SELECT ${profileSelectAll} FROM "profile" "p"
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE "user"."id" = "p"."userId"
@@ -188,7 +189,7 @@ describe('belongsTo', () => {
 
     it('should support nested whereExists', () => {
       const sql = `
-        SELECT ${messageSelectAll} FROM "message" AS "m"
+        SELECT ${messageSelectAll} FROM "message" "m"
         WHERE EXISTS (
           SELECT 1 FROM "user" AS "sender"
           WHERE "sender"."id" = "m"."authorId"
@@ -240,7 +241,7 @@ describe('belongsTo', () => {
         query.toSQL(),
         `
         SELECT "p"."bio" "Bio", "user"."name" "Name"
-        FROM "profile" AS "p"
+        FROM "profile" "p"
         JOIN "user"
           ON "user"."id" = "p"."userId"
          AND "user"."userKey" = "p"."profileKey"
@@ -268,7 +269,7 @@ describe('belongsTo', () => {
         query.toSQL(),
         `
         SELECT "p"."bio" "Bio", "u"."name" "Name"
-        FROM "profile" AS "p"
+        FROM "profile" "p"
         JOIN "user" AS "u"
           ON "u"."name" = $1
          AND "u"."age" = $2
@@ -294,7 +295,7 @@ describe('belongsTo', () => {
           FROM "profile"
           JOIN LATERAL (
             SELECT ${userSelectAll}
-            FROM "user" AS "u"
+            FROM "user" "u"
             WHERE "u"."name" = $1 
               AND "u"."id" = "profile"."userId"
               AND "u"."userKey" = "profile"."profileKey"
@@ -325,7 +326,7 @@ describe('belongsTo', () => {
             SELECT
               "p"."id" "Id",
               row_to_json("user".*) "user"
-            FROM "profile" AS "p"
+            FROM "profile" "p"
             LEFT JOIN LATERAL (
               SELECT "user"."id" "Id", "user"."name" "Name"
               FROM "user"
@@ -362,7 +363,7 @@ describe('belongsTo', () => {
                     AND "post"."userId" = "user"."id"
                     AND "post"."title" = "user"."userKey"
                 )
-              ) AS "t"
+              ) "t"
             ) "items" ON true
           `,
         );
@@ -381,7 +382,7 @@ describe('belongsTo', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("hasUser".r, false) "hasUser"
-            FROM "profile" AS "p"
+            FROM "profile" "p"
             LEFT JOIN LATERAL (
               SELECT true r
               FROM "user"
@@ -472,7 +473,7 @@ describe('belongsTo', () => {
       const user = await db.user.find(AuthorId);
       expect(user).toEqual({
         ...user,
-        ...userData,
+        ...omit(userData, ['Password']),
         Active: null,
         Age: null,
         Data: null,

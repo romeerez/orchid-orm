@@ -16,7 +16,7 @@ export class UserTable extends BaseTable {
     Id: t.name('id').identity().primaryKey(),
     Name: t.name('name').text(),
     UserKey: t.name('userKey').text(),
-    Password: t.name('password').text(),
+    Password: t.name('password').text().select(false),
     Picture: t.name('picture').text().nullable(),
     Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
     Age: t.name('age').integer().nullable(),
@@ -297,20 +297,17 @@ export const db = orchidORM(
   },
 );
 
-export const userSelectAll = db.user.internal.columnsForSelectAll!.join(', ');
+export const userSelectAll = db.user.q.selectAllColumns!.join(', ');
 
-export const profileSelectAll =
-  db.profile.internal.columnsForSelectAll!.join(', ');
+export const profileSelectAll = db.profile.q.selectAllColumns!.join(', ');
 
-export const messageSelectAll =
-  db.message.internal.columnsForSelectAll!.join(', ');
+export const messageSelectAll = db.message.q.selectAllColumns!.join(', ');
 
-export const chatSelectAll = db.chat.internal.columnsForSelectAll!.join(', ');
+export const chatSelectAll = db.chat.q.selectAllColumns!.join(', ');
 
-export const postSelectAll = db.post.internal.columnsForSelectAll!.join(', ');
+export const postSelectAll = db.post.q.selectAllColumns!.join(', ');
 
-export const postTagSelectAll =
-  db.postTag.internal.columnsForSelectAll!.join(', ');
+export const postTagSelectAll = db.postTag.q.selectAllColumns!.join(', ');
 
 export const userData = {
   Name: 'name',

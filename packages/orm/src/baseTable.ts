@@ -39,6 +39,7 @@ import {
   ColumnShapeOutput,
   ColumnsShapeBase,
   CoreQueryScopes,
+  DefaultSelectColumns,
   DynamicSQLArg,
   emptyArray,
   EmptyObject,
@@ -160,7 +161,10 @@ export type Queryable<T extends ORMTableInput> = Simplify<{
 
 // Object type of table's record that's returned from database and is parsed.
 export type Selectable<T extends ORMTableInput> = Simplify<
-  ColumnShapeOutput<T['columns']['shape']>
+  Pick<
+    ColumnShapeOutput<T['columns']['shape']>,
+    DefaultSelectColumns<T['columns']['shape']>
+  >
 >;
 
 // Object type that conforms `create` method of the table.

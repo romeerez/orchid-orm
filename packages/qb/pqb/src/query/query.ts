@@ -104,7 +104,6 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
   then: QueryThen<unknown>;
   catch: QueryCatch;
   windows: EmptyObject;
-  defaultSelectColumns: string[];
   relations: RelationsBase;
   error: new (
     message: string,

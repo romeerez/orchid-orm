@@ -4,12 +4,7 @@ import {
   PickQueryMetaResultReturnTypeWithDataWindows,
 } from '../query/query';
 import { UnionSet } from '../sql';
-import {
-  PickQueryMetaResult,
-  QueryThen,
-  RecordBoolean,
-  RecordUnknown,
-} from 'orchid-core';
+import { PickQueryMetaResult, QueryThen, RecordUnknown } from 'orchid-core';
 
 export type MergeQuery<
   T extends PickQueryMetaResultReturnTypeWithDataWindows,
@@ -59,16 +54,18 @@ type MergeQueryResult<
     : T['result']
   : Q['result'];
 
-const mergableObjects: RecordBoolean = {
-  shape: true,
-  withShapes: true,
-  parsers: true,
-  defaults: true,
-  joinedShapes: true,
-  joinedParsers: true,
-  joinedBatchParsers: true,
-  selectedComputeds: true,
-};
+const mergableObjects = new Set([
+  'shape',
+  'withShapes',
+  'parsers',
+  'defaults',
+  'joinedShapes',
+  'joinedParsers',
+  'joinedBatchParsers',
+  'selectedComputeds',
+]);
+
+const dontMergeArrays = new Set(['selectAllColumns', 'selectAllKeys']);
 
 export class MergeQueryMethods {
   merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
@@ -86,8 +83,10 @@ export class MergeQueryMethods {
           break;
         case 'object':
           if (Array.isArray(value)) {
-            a[key] = a[key] ? [...(a[key] as unknown[]), ...value] : value;
-          } else if (mergableObjects[key]) {
+            if (!dontMergeArrays.has(key)) {
+              a[key] = a[key] ? [...(a[key] as unknown[]), ...value] : value;
+            }
+          } else if (mergableObjects.has(key)) {
             a[key] = a[key]
               ? { ...(a[key] as RecordUnknown), ...value }
               : value;

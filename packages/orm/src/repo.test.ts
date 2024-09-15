@@ -107,7 +107,7 @@ describe('createRepo', () => {
           FROM "otherTable"
           LEFT JOIN LATERAL (
             SELECT "some"."id", "some"."name"
-            FROM "someTable" AS "some"
+            FROM "someTable" "some"
             WHERE "some"."id" = $1
               AND "some"."id" = "otherTable"."someId"
           ) "some" ON true

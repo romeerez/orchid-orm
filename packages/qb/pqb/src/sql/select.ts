@@ -46,6 +46,8 @@ export const selectToSql = (
   table: ToSQLQuery,
   query: {
     select?: SelectQueryData['select'];
+    selectAllColumns?: string[];
+    selectAllKeys?: RecordUnknown;
     join?: SelectQueryData['join'];
     hookSelect?: HookSelect;
     shape: QueryColumns;
@@ -65,12 +67,11 @@ export const selectToSql = (
         if (item === '*') {
           if (hookSelect) {
             selected ??= {};
-            for (const key in table.internal.columnsKeysForSelectAll ||
-              query.shape) {
+            for (const key in query.selectAllKeys || query.shape) {
               selected[key] = quotedAs;
             }
           }
-          sql = selectAllSql(table, query, quotedAs);
+          sql = selectAllSql(query, quotedAs);
         } else {
           const index = item.indexOf('.');
           if (index !== -1) {
@@ -187,7 +188,7 @@ export const selectToSql = (
     ? list.join(', ')
     : query.select
     ? ''
-    : selectAllSql(table, query, quotedAs);
+    : selectAllSql(query, quotedAs);
 };
 
 export function selectedObjectToSQL(
@@ -200,15 +201,16 @@ export function selectedObjectToSQL(
 }
 
 export const selectAllSql = (
-  table: ToSQLQuery,
-  query: { join?: SelectQueryData['join'] },
+  query: {
+    join?: SelectQueryData['join'];
+    selectAllColumns?: string[];
+  },
   quotedAs?: string,
 ) => {
   return query.join?.length
-    ? table.internal.columnsForSelectAll
-        ?.map((item) => `${quotedAs}.${item}`)
-        .join(', ') || `${quotedAs}.*`
-    : table.internal.columnsForSelectAll?.join(', ') || '*';
+    ? query.selectAllColumns?.map((item) => `${quotedAs}.${item}`).join(', ') ||
+        `${quotedAs}.*`
+    : query.selectAllColumns?.join(', ') || '*';
 };
 
 const pushSubQuerySql = (

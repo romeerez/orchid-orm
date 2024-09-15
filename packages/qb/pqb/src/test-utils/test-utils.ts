@@ -10,13 +10,19 @@ export type UserData = { name: string; tags: string[] };
 export const User = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
   name: t.text().unique(),
-  password: t.text(),
+  password: t.text().select(false),
   picture: t.text().nullable(),
   data: t.json<UserData>().nullable(),
   age: t.integer().nullable(),
   active: t.boolean().nullable(),
   ...t.timestamps(),
 }));
+
+export const userColumnsSql = User.q.selectAllColumns!.join(', ');
+
+export const userTableColumnsSql = User.q
+  .selectAllColumns!.map((c) => '"user".' + c)
+  .join(', ');
 
 export const UserZodTypes = testDbZodTypes('user', (t) => ({
   id: t.identity().primaryKey(),
@@ -133,7 +139,8 @@ export const Product = testDb('product', (t) => ({
 }));
 
 export const expectQueryNotMutated = (q: Query) => {
-  expectSql(q.toSQL(), `SELECT * FROM "${q.table}"`);
+  const select = q.table === 'user' ? userColumnsSql : '*';
+  expectSql(q.toSQL(), `SELECT ${select} FROM "${q.table}"`);
 };
 
 export const insert = async <T extends RecordUnknown & { id: number }>(

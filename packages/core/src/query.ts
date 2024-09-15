@@ -53,13 +53,13 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
   scopes: Scopes;
   // tracking columns of the main table, joined tables, `with` tables that are available for `select`.
   selectable: SelectableBase;
+  // union of columns to select by default or with *
+  defaultSelect: PropertyKey;
 }
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
 export interface QueryInternalBase {
-  columnsForSelectAll?: string[];
-  columnsKeysForSelectAll?: RecordUnknown;
   runtimeDefaultColumns?: string[];
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.

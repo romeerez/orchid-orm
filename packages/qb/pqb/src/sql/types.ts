@@ -14,7 +14,7 @@ import { QueryBase } from '../query/queryBase';
 export const checkIfASimpleQuery = (q: Query) => {
   if (
     (q.q.returnType && q.q.returnType !== 'all') ||
-    q.internal.columnsForSelectAll ||
+    q.q.selectAllColumns ||
     q.q.and?.length ||
     q.q.or?.length ||
     q.q.scopes

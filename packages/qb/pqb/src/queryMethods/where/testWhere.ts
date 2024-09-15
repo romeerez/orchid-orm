@@ -2,6 +2,7 @@ import { Query } from '../../query/query';
 import { ColumnTypeBase, Sql } from 'orchid-core';
 import { expectSql, testDb } from 'test-utils';
 import { getSqlText } from '../../sql';
+import { userColumnsSql } from '../../test-utils/test-utils';
 
 export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
   const index = key.indexOf('.');
@@ -1702,7 +1703,9 @@ export const testWhereExistsCase = ({
   columnsOf = joinTarget,
   fkey,
   text,
-  selectFrom = `SELECT * FROM "${joinTo.table}"`,
+  selectFrom = `SELECT ${
+    joinTo.table === 'user' ? userColumnsSql : '*'
+  } FROM "${joinTo.table}"`,
   where,
   or,
   values = [],

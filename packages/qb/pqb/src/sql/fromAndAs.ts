@@ -18,7 +18,7 @@ export const pushFromAndAs = (
   sql += from;
 
   if (data.as && quotedAs && quotedAs !== from) {
-    sql += ` AS ${quotedAs}`;
+    sql += ` ${quotedAs}`;
   }
 
   for (const as in data.sources) {

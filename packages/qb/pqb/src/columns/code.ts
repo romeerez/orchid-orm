@@ -532,7 +532,7 @@ export const columnCode = (
     }
   }
 
-  if (data.isHidden) addCode(code, '.hidden()');
+  if (data.explicitSelect) addCode(code, '.select(false)');
 
   if (data.isNullable) addCode(code, '.nullable()');
 

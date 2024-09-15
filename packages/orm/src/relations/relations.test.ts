@@ -41,11 +41,11 @@ describe('relations', () => {
         LEFT JOIN LATERAL (
           SELECT json_agg(row_to_json("t".*)) r
           FROM (
-            SELECT ${messageSelectAll} FROM "message" AS "messages"
+            SELECT ${messageSelectAll} FROM "message" "messages"
             WHERE "messages"."text" = $2
               AND "messages"."authorId" = "user"."id"
               AND "messages"."messageKey" = "user"."userKey"
-          ) AS "t"
+          ) "t"
         ) "messages" ON true
       `,
       ['bio', 'text'],
@@ -134,11 +134,11 @@ describe('relations', () => {
           SELECT
             "sender"."createdAt",
             row_to_json("userProfile".*) "userProfile"
-          FROM "user" AS "sender"
+          FROM "user" "sender"
           LEFT JOIN LATERAL (
             SELECT
               "p"."createdAt"
-            FROM "profile" AS "p"
+            FROM "profile" "p"
             WHERE "p"."bio" = $1
               AND "p"."userId" = "sender"."id"
               AND "p"."profileKey" = "sender"."userKey"
@@ -180,7 +180,7 @@ describe('relations', () => {
         FROM "user"
         LEFT JOIN LATERAL (
           SELECT count(*) r
-          FROM "message" AS "messages"
+          FROM "message" "messages"
           WHERE "messages"."authorId" = "user"."id"
             AND "messages"."messageKey" = "user"."userKey"
         ) "messagesCount" ON true
@@ -263,7 +263,7 @@ describe('relations', () => {
             FROM "post"
             WHERE "post"."userId" = "user"."id"
               AND "post"."title" = "user"."userKey"
-          ) AS "t"
+          ) "t"
         ) "posts" ON true
       `,
     );
@@ -284,10 +284,10 @@ describe('relations', () => {
         FROM "user"
         WHERE (
           SELECT count(*) > $1
-          FROM "post" AS "posts"
+          FROM "post" "posts"
           WHERE (
             SELECT true
-            FROM "postTag" AS "postTags"
+            FROM "postTag" "postTags"
             WHERE "postTags"."tag" = $2
               AND "postTags"."postId" = "posts"."id"
             LIMIT 1
@@ -328,7 +328,7 @@ describe('relations', () => {
         FROM "user"
         JOIN LATERAL (
           SELECT "message".*
-          FROM "message" AS "messages"
+          FROM "message" "messages"
           WHERE "messages"."authorId" = "user"."id"
             AND "messages"."messageKey" = "user"."userKey"
           LIMIT $1
@@ -352,7 +352,7 @@ describe('relations', () => {
         FROM "user"
         JOIN LATERAL (
           SELECT "messages"."text" "Text"
-          FROM "message" AS "messages"
+          FROM "message" "messages"
           WHERE "messages"."authorId" = "user"."id"
             AND "messages"."messageKey" = "user"."userKey"
         ) "messages" ON true
@@ -377,7 +377,7 @@ describe('relations', () => {
         FROM "user"
         LEFT JOIN LATERAL (
           SELECT count(*) r
-          FROM "post" AS "posts"
+          FROM "post" "posts"
           WHERE "posts"."userId" = "user"."id" AND "posts"."title" = "user"."userKey"
         ) "postsCount" ON true
         WHERE "postsCount".r > $1

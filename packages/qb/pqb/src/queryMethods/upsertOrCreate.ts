@@ -214,7 +214,13 @@ export class QueryUpsertOrCreate {
       _queryUpdate(q, updateData as never);
     }
 
-    return orCreate(q as never, data.create, updateData, mergeData);
+    const c = orCreate(q as Query, data.create, updateData, mergeData);
+
+    if (!c.q.select) {
+      c.q.returnType = 'void';
+    }
+
+    return c as never;
   }
 
   /**

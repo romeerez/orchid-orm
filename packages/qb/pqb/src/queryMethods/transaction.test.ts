@@ -1,6 +1,6 @@
 import pg, { Client } from 'pg';
 import { assertType, testDb } from 'test-utils';
-import { User } from '../test-utils/test-utils';
+import { User, userColumnsSql } from '../test-utils/test-utils';
 import { noop } from 'orchid-core';
 
 describe('transaction', () => {
@@ -155,7 +155,7 @@ describe('transaction', () => {
 
       expect(log.mock.calls).toEqual([
         [expect.stringContaining(`BEGIN`)],
-        [expect.stringContaining(`SELECT * FROM "user"`)],
+        [expect.stringContaining(`SELECT ${userColumnsSql} FROM "user"`)],
         [expect.stringContaining(`SELECT 1 AS a`)],
         [expect.stringContaining(`COMMIT`)],
       ]);

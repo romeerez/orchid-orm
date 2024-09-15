@@ -1,6 +1,7 @@
 import {
   expectQueryNotMutated,
   User,
+  userColumnsSql,
   UserSoftDelete,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
@@ -20,9 +21,9 @@ describe('json methods', () => {
         `
           SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
           FROM (
-            SELECT * FROM "user"
+            SELECT ${userColumnsSql} FROM "user"
             WHERE "user"."id" = $1
-          ) AS "t"
+          ) "t"
         `,
         [1],
       );
@@ -41,10 +42,10 @@ describe('json methods', () => {
         `
           SELECT row_to_json("t".*)
           FROM (
-            SELECT * FROM "user"
+            SELECT ${userColumnsSql} FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
-          ) AS "t"
+          ) "t"
         `,
         [1],
       );
@@ -63,7 +64,7 @@ describe('json methods', () => {
             SELECT *
             FROM "user"
             WHERE ("user"."deletedAt" IS NULL)
-          ) AS "t"
+          ) "t"
         `,
       );
     });

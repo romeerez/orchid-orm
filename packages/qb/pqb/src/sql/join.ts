@@ -171,7 +171,7 @@ const subJoinToSql = (
   outerAs?: string,
   cloned?: boolean,
 ) => {
-  if (!jq.q.select && jq.internal.columnsForSelectAll) {
+  if (!jq.q.select && jq.q.selectAllColumns) {
     if (!cloned) jq = jq.clone();
     jq.q.select = [new RawSQL(`${innerAs}.*`)];
   }

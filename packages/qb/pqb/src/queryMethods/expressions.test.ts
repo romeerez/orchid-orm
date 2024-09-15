@@ -1,4 +1,4 @@
-import { Post, User } from '../test-utils/test-utils';
+import { Post, User, userColumnsSql } from '../test-utils/test-utils';
 import { assertType, expectSql, sql } from 'test-utils';
 
 describe('expressions', () => {
@@ -50,12 +50,12 @@ describe('expressions', () => {
           SELECT (
             SELECT row_to_json("t".*)
             FROM (
-              SELECT *
-              FROM "user" AS "u"
+              SELECT ${userColumnsSql}
+              FROM "user" "u"
               WHERE "u"."id" = "user"."id"
                 AND "u"."name" = "post"."title"
               LIMIT 1
-            ) AS "t"
+            ) "t"
           ) "alias"
           FROM "user"
           JOIN "post" ON "post"."title" = "user"."id"
@@ -134,7 +134,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WHERE ((
             (SELECT "user"."active" FROM "user" WHERE "user"."id" = $1 LIMIT 1)
             OR

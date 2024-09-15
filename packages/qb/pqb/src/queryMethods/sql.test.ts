@@ -3,7 +3,7 @@ import { BooleanColumn, ColumnType } from '../columns';
 import { createDb } from '../query/db';
 import { ColumnTypeBase, emptyObject, Expression } from 'orchid-core';
 import { ToSQLCtx } from '../sql';
-import { User } from '../test-utils/test-utils';
+import { User, userColumnsSql } from '../test-utils/test-utils';
 
 describe('sql', () => {
   it('should use column types in callback from a db instance', () => {
@@ -30,7 +30,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE (simple sql)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE (simple sql)`,
     );
   });
 
@@ -53,7 +53,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE ("name" = $1)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE ("name" = $1)`,
       ['value'],
     );
   });
@@ -94,7 +94,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE (simple sql)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE (simple sql)`,
     );
   });
 
@@ -117,7 +117,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE ("name" = $1)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE ("name" = $1)`,
       ['value'],
     );
   });
@@ -132,7 +132,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE (one $1 two $2 three $3 four)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
@@ -150,7 +150,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE (one $1 two $2 three $3 four)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
@@ -171,7 +171,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE (value = $2 AND $1)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE (value = $2 AND $1)`,
       [true, 'value'],
     );
   });
@@ -191,7 +191,7 @@ describe('sql', () => {
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT * FROM "user" WHERE ("user"."name")`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE ("user"."name")`,
     );
   });
 
@@ -207,7 +207,7 @@ describe('sql', () => {
 
     expectSql(
       query.toSQL(),
-      `SELECT * FROM "user" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
       [1, true],
     );
   });

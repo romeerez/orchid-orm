@@ -9,6 +9,7 @@ import {
   userData,
   UserInsert,
   Product,
+  userColumnsSql,
 } from '../test-utils/test-utils';
 import {
   assertType,
@@ -110,7 +111,7 @@ describe('update', () => {
     expect(result).toBe(1);
 
     const updated = await User.take();
-    expect(updated).toMatchObject({ ...userData, ...update });
+    expect(updated).toMatchObject({ name: update.name });
   });
 
   it('should update record with named columns, returning updated row count', async () => {
@@ -162,7 +163,7 @@ describe('update', () => {
     expect(typeof result).toBe('number');
 
     const updated = await User.take();
-    expect(updated).toMatchObject({ ...userData, ...update });
+    expect(updated).toMatchObject({ name: update.name });
   });
 
   it('should update record with named columns, returning value', async () => {
@@ -214,7 +215,7 @@ describe('update', () => {
     assertType<typeof result, { id: number; name: string }>();
 
     const updated = await User.take();
-    expect(updated).toMatchObject({ ...userData, ...update });
+    expect(updated).toMatchObject({ name: update.name });
   });
 
   it('should update one record with named columns, return selected columns', async () => {
@@ -259,7 +260,7 @@ describe('update', () => {
             "password" = $2,
             "updatedAt" = now()
         WHERE "user"."id" = $3
-        RETURNING *
+        RETURNING ${userColumnsSql}
       `,
       [update.name, update.password, id],
     );
@@ -268,7 +269,7 @@ describe('update', () => {
     assertType<typeof result, typeof User.outputType>();
 
     const updated = await User.take();
-    expect(updated).toMatchObject({ ...userData, ...update });
+    expect(updated).toMatchObject({ name: update.name });
   });
 
   it('should update one record with named columns, return all columns', async () => {
@@ -320,7 +321,10 @@ describe('update', () => {
     assertType<typeof result, { id: number; name: string }[]>();
 
     const updated = await User.all();
-    expect(updated).toMatchObject([update, update]);
+    expect(updated).toMatchObject([
+      { name: update.name },
+      { name: update.name },
+    ]);
   });
 
   it('should update multiple records with named columns, return selected columns', async () => {
@@ -368,18 +372,18 @@ describe('update', () => {
             "password" = $2,
             "updatedAt" = now()
         WHERE "user"."id" IN ($3, $4)
-        RETURNING *
+        RETURNING ${userColumnsSql}
       `,
       [update.name, update.password, ids[0], ids[1]],
     );
 
     const result = await query;
-    expect(result[0]).toMatchObject({ ...userData, ...update });
+    expect(result[0]).toMatchObject({ name: update.name });
 
     assertType<typeof result, (typeof User.outputType)[]>();
 
     const updated = await User.take();
-    expect(updated).toMatchObject({ ...userData, ...update });
+    expect(updated).toMatchObject({ name: update.name });
   });
 
   it('should update multiple records with named columns, return all columns', async () => {
@@ -499,7 +503,7 @@ describe('update', () => {
             "password" = $2,
             "updatedAt" = now()
         WHERE "user"."id" = $3
-        RETURNING *
+        RETURNING ${userColumnsSql}
       `,
       [update.name, update.password, id],
     );
@@ -507,7 +511,7 @@ describe('update', () => {
     const result = await query;
     assertType<typeof result, typeof User.outputType>();
 
-    expect(result).toMatchObject({ ...userData, ...update });
+    expect(result).toMatchObject({ name: update.name });
   });
 
   it('should throw when searching for one to update and it is not found', async () => {

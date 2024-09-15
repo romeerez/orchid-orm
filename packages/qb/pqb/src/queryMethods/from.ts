@@ -70,6 +70,8 @@ export type FromResult<
               ? SelectableFromShape<Arg['result'], AliasOrTable<Arg>>
               : K extends 'kind'
               ? 'select'
+              : K extends 'defaultSelect'
+              ? keyof Arg['result']
               : T['meta'][K];
           }
         : K extends 'result'
@@ -158,6 +160,7 @@ export function queryFrom<
   }
 
   data.from = arg as Query;
+  data.selectAllColumns = data.selectAllKeys = undefined;
 
   return self as never;
 }
@@ -169,6 +172,7 @@ export function queryFromSql<T extends FromQuerySelf>(
   const data = (self as unknown as PickQueryQ).q;
   data.as ||= 't';
   data.from = sqlQueryArgsToExpression(args);
+  data.selectAllColumns = data.selectAllKeys = undefined;
   return self;
 }
 

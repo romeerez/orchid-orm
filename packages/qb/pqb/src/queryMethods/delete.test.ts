@@ -4,8 +4,10 @@ import {
   Snake,
   snakeSelectAll,
   User,
+  userColumnsSql,
   userData,
   UserRecord,
+  userTableColumnsSql,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
@@ -81,7 +83,7 @@ describe('delete', () => {
     const query = q.selectAll().where({ id: 1 }).delete();
     expectSql(
       query.toSQL(),
-      `DELETE FROM "user" WHERE "user"."id" = $1 RETURNING *`,
+      `DELETE FROM "user" WHERE "user"."id" = $1 RETURNING ${userColumnsSql}`,
       [1],
     );
 
@@ -144,7 +146,7 @@ describe('delete', () => {
         DELETE FROM "user"
         USING "profile"
         WHERE "user"."id" = $1 AND "profile"."userId" = "user"."id"
-        RETURNING "user".*
+        RETURNING ${userTableColumnsSql}
       `,
       [1],
     );
@@ -191,7 +193,7 @@ describe('delete', () => {
         DELETE FROM "user"
         USING LATERAL (SELECT * FROM "profile" WHERE "profile"."userId" = "user"."id" LIMIT $1) "profile"
         WHERE "user"."id" = $2
-        RETURNING "user".*
+        RETURNING ${userTableColumnsSql}
       `,
       [5, 1],
     );
@@ -211,7 +213,7 @@ describe('delete', () => {
         DELETE FROM "user"
         USING LATERAL (SELECT * FROM "profile" WHERE "profile"."userId" = "user"."id" LIMIT $1) "profile"
         WHERE "user"."id" = $2
-        RETURNING "user".*
+        RETURNING ${userTableColumnsSql}
       `,
       [5, 1],
     );

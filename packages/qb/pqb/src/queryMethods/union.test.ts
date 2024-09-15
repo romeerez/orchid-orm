@@ -1,4 +1,4 @@
-import { User } from '../test-utils/test-utils';
+import { User, userColumnsSql } from '../test-utils/test-utils';
 import { expectSql, sql } from 'test-utils';
 
 describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
@@ -20,18 +20,18 @@ describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
       q.toSQL(),
       `
       (
-        SELECT * FROM "user" ORDER BY "user"."id" ASC LIMIT $1 OFFSET $2
+        SELECT ${userColumnsSql} FROM "user" ORDER BY "user"."id" ASC LIMIT $1 OFFSET $2
       )
       ${UNION}
       (
-        SELECT * FROM "user" ORDER BY "user"."name" ASC LIMIT $3 OFFSET $4
+        SELECT ${userColumnsSql} FROM "user" ORDER BY "user"."name" ASC LIMIT $3 OFFSET $4
       )
       ${UNION} (
         custom sql 1
       )
       ${UNION} ALL
       (
-        SELECT * FROM "user" ORDER BY "user"."age" ASC LIMIT $5 OFFSET $6
+        SELECT ${userColumnsSql} FROM "user" ORDER BY "user"."age" ASC LIMIT $5 OFFSET $6
       )
       ${UNION} ALL (
         custom sql 2

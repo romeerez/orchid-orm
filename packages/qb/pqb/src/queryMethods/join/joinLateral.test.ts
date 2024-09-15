@@ -6,6 +6,7 @@ import {
   MessageRecord,
   User,
   userData,
+  userTableColumnsSql,
 } from '../../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
@@ -24,7 +25,7 @@ describe('joinLateral', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user".* FROM "user"
+        SELECT ${userTableColumnsSql} FROM "user"
         JOIN LATERAL (
           SELECT * FROM "message"
           WHERE "message"."authorId" = "user"."id"
@@ -55,7 +56,7 @@ describe('joinLateral', () => {
         FROM "user"
         JOIN LATERAL (
           SELECT "m"."text", "m"."createdAt"
-          FROM "message" AS "m"
+          FROM "message" "m"
           WHERE "m"."text" = $1
             AND "user"."name" = $2
             AND "m"."authorId" = "user"."id"
@@ -91,7 +92,7 @@ describe('joinLateral', () => {
         FROM "user"
         JOIN LATERAL (
           SELECT *
-          FROM "message" AS "m"
+          FROM "message" "m"
           WHERE "m"."authorId" = "user"."id"
           ORDER BY "m"."createdAt" DESC
         ) "m" ON true
@@ -131,7 +132,7 @@ describe('joinLateral', () => {
         FROM "user"
         LEFT JOIN LATERAL (
           SELECT *
-          FROM "message" AS "m"
+          FROM "message" "m"
         ) "m" ON true
       `,
     );
@@ -155,7 +156,7 @@ describe('joinLateral', () => {
         FROM "user"
         LEFT JOIN LATERAL (
           SELECT *
-          FROM "message" AS "m"
+          FROM "message" "m"
         ) "m" ON true
       `,
     );

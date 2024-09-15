@@ -1,5 +1,5 @@
 import { expectSql } from 'test-utils';
-import { User } from '../test-utils/test-utils';
+import { User, userColumnsSql } from '../test-utils/test-utils';
 
 describe('having', () => {
   it('should support simple object as an argument', () => {
@@ -9,7 +9,7 @@ describe('having', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT *
+        SELECT ${userColumnsSql}
         FROM "user"
         HAVING count(*) = $1
       `,
@@ -26,7 +26,7 @@ describe('having', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT *
+        SELECT ${userColumnsSql}
         FROM "user"
         HAVING sum("user"."id") > $1 AND avg("user"."id") < $2
       `,
@@ -40,7 +40,7 @@ describe('having', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT *
+        SELECT ${userColumnsSql}
         FROM "user"
         HAVING min("user"."id") > $1 AND max("user"."id") < $2
       `,
@@ -60,7 +60,7 @@ describe('having', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT *
+        SELECT ${userColumnsSql}
         FROM "user"
         HAVING (min("user"."id") > $1 AND max("user"."id") < $2)
             OR (sum("user"."id") >= $3 AND avg("user"."id") <= $4)
@@ -77,7 +77,7 @@ describe('havingSql', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT *
+        SELECT ${userColumnsSql}
         FROM "user"
         HAVING count(*) = $1
       `,

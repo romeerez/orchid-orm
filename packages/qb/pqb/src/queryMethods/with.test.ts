@@ -3,29 +3,37 @@ import {
   ProfileRecord,
   Snake,
   User,
+  userColumnsSql,
   UserRecord,
 } from '../test-utils/test-utils';
 import { expectSql, assertType, sql } from 'test-utils';
 import { WithOptions } from '../sql';
 
-const options: { options: WithOptions; sql: string }[] = [
-  {
-    options: { columns: ['id', 'name'] },
-    sql: 'WITH "w"("id", "name") AS (SELECT * FROM "user") SELECT * FROM "w"',
-  },
-  {
-    options: { recursive: true },
-    sql: 'WITH RECURSIVE "w" AS (SELECT * FROM "user") SELECT * FROM "w"',
-  },
-  {
-    options: { materialized: true },
-    sql: 'WITH "w" AS MATERIALIZED (SELECT * FROM "user") SELECT * FROM "w"',
-  },
-  {
-    options: { notMaterialized: true },
-    sql: 'WITH "w" AS NOT MATERIALIZED (SELECT * FROM "user") SELECT * FROM "w"',
-  },
-];
+const makeOptions = (
+  select: string,
+): { options: WithOptions; sql: string }[] => {
+  return [
+    {
+      options: { columns: ['id', 'name'] },
+      sql: `WITH "w"("id", "name") AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+    },
+    {
+      options: { recursive: true },
+      sql: `WITH RECURSIVE "w" AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+    },
+    {
+      options: { materialized: true },
+      sql: `WITH "w" AS MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+    },
+    {
+      options: { notMaterialized: true },
+      sql: `WITH "w" AS NOT MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+    },
+  ];
+};
+
+const selectedOptions = makeOptions(userColumnsSql);
+const selectAllOptions = makeOptions('*');
 
 describe('with', () => {
   it('should use a query, handle selection', () => {
@@ -64,7 +72,7 @@ describe('with', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT * FROM "user")
+        WITH "w" AS (SELECT ${userColumnsSql} FROM "user")
         SELECT "w"."id" FROM "user"
         JOIN "w" ON "w"."id" = "user"."id"
       `,
@@ -129,13 +137,15 @@ describe('with', () => {
         `
           WITH "w"(${Object.keys(User.q.shape)
             .map((c) => `"${c}"`)
-            .join(', ')}) AS (SELECT * FROM "user") SELECT * FROM "w"
+            .join(
+              ', ',
+            )}) AS (SELECT ${userColumnsSql} FROM "user") SELECT * FROM "w"
         `,
       );
     });
 
     it('should support all with options', () => {
-      for (const { options: opts, sql } of options) {
+      for (const { options: opts, sql } of selectedOptions) {
         const q = User.with('w', opts, User).from('w');
 
         assertType<Awaited<typeof q>, UserRecord[]>();
@@ -149,7 +159,7 @@ describe('with', () => {
     const q = User.with('a', () => User.where({ id: 1 }))
       .with('b', (q) => q.from('a').where({ name: 'name' }))
       .from('b')
-      .where({ password: 'password' });
+      .where({ active: true });
 
     assertType<Awaited<typeof q>, UserRecord[]>();
 
@@ -157,16 +167,16 @@ describe('with', () => {
       q.toSQL(),
       `
         WITH "a" AS (
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WHERE "user"."id" = $1
         ), "b" AS (
           SELECT * FROM "a"
           WHERE "a"."name" = $2
         )
         SELECT * FROM "b"
-        WHERE "b"."password" = $3
+        WHERE "b"."active" = $3
       `,
-      [1, 'name', 'password'],
+      [1, 'name', true],
     );
   });
 });
@@ -266,7 +276,7 @@ describe('withSql', () => {
   });
 
   it('should support all with options', () => {
-    for (const { options: opts, sql: s } of options) {
+    for (const { options: opts, sql: s } of selectAllOptions) {
       const q = User.withSql(
         'w',
         opts,

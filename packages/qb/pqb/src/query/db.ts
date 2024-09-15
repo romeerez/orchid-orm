@@ -11,7 +11,7 @@ import {
   QueryMethods,
   logParamToLogObject,
 } from '../queryMethods';
-import { QueryData, QueryScopes, SelectQueryData, ToSQLOptions } from '../sql';
+import { QueryData, QueryScopes, SelectQueryData } from '../sql';
 import {
   Adapter,
   AdapterOptions,
@@ -197,7 +197,7 @@ export type DbTableOptionScopes<
 // Type of data returned from the table query by default, doesn't include computed columns.
 // `const user: User[] = await db.user;`
 export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = {
-  [K in DefaultSelectColumns<Shape>[number]]: Shape[K]['outputType'];
+  [K in DefaultSelectColumns<Shape>]: Shape[K]['outputType'];
 }[];
 
 export interface Db<
@@ -216,12 +216,11 @@ export interface Db<
 > extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
     QueryMethods<ColumnTypes>,
     QueryBase {
-  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>; // Pick is optimal
+  result: Pick<Shape, DefaultSelectColumns<Shape>>; // Pick is optimal
   queryBuilder: Db;
   returnType: undefined;
   then: QueryThen<QueryDefaultReturnData<Shape>>;
   windows: Query['windows'];
-  defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: EmptyObject;
   withData: EmptyObject;
   error: new (
@@ -238,6 +237,7 @@ export interface Db<
     };
     scopes: { [K in keyof Scopes]: true };
     selectable: SelectableFromShape<ShapeWithComputed, Table>;
+    defaultSelect: DefaultSelectColumns<Shape>;
   };
   internal: QueryInternal<
     {
@@ -309,7 +309,7 @@ export class Db<
     const parsers = {} as ColumnsParsers;
     let hasParsers = false;
     let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
-    let hasCustomName = false;
+    let prepareSelectAll = false;
     const { snakeCase } = options;
     for (const key in shape) {
       const column = shape[key] as unknown as ColumnTypeBase;
@@ -321,13 +321,17 @@ export class Db<
       }
 
       if (column.data.name) {
-        hasCustomName = true;
+        prepareSelectAll = true;
       } else if (snakeCase) {
         const snakeName = toSnakeCase(key);
         if (snakeName !== key) {
-          hasCustomName = true;
+          prepareSelectAll = true;
           column.data.name = snakeName;
         }
+      }
+
+      if (column.data.explicitSelect) {
+        prepareSelectAll = true;
       }
 
       const { modifyQuery: mq } = column.data;
@@ -351,19 +355,6 @@ export class Db<
             : (def as () => unknown);
         }
       }
-    }
-
-    if (hasCustomName) {
-      const list: string[] = [];
-      for (const key in shape) {
-        const column = shape[key] as unknown as ColumnTypeBase;
-        list.push(
-          column.data.name ? `"${column.data.name}" AS "${key}"` : `"${key}"`,
-        );
-      }
-      this.internal.columnsForSelectAll = list;
-      // destructuring shape because it's going to be extended with computed columns
-      this.internal.columnsKeysForSelectAll = { ...shape };
     }
 
     this.q = {
@@ -406,29 +397,25 @@ export class Db<
     const columns = Object.keys(
       shape,
     ) as unknown as (keyof ColumnShapeOutput<Shape>)[];
-    const { toSQL } = this;
 
     this.columns = columns as (keyof ColumnShapeOutput<Shape>)[];
-    this.defaultSelectColumns = columns.filter(
-      (column) => !shape[column as keyof typeof shape].data.isHidden,
-    ) as DefaultSelectColumns<Shape>;
 
     if (options.computed) applyComputedColumns(this, options.computed);
 
-    const defaultSelect =
-      this.defaultSelectColumns.length === columns.length
-        ? undefined
-        : this.defaultSelectColumns;
-
-    this.toSQL = defaultSelect
-      ? function <T extends Query>(this: T, options?: ToSQLOptions): Sql {
-          const q = this.clone();
-          if (!(q.q as SelectQueryData).select) {
-            (q.q as SelectQueryData).select = defaultSelect as string[];
-          }
-          return toSQL.call(q, options);
+    if (prepareSelectAll) {
+      const list: string[] = [];
+      for (const key in shape) {
+        const column = shape[key] as unknown as ColumnTypeBase;
+        if (!column.data.explicitSelect) {
+          list.push(
+            column.data.name ? `"${column.data.name}" AS "${key}"` : `"${key}"`,
+          );
         }
-      : toSQL;
+      }
+      this.q.selectAllColumns = list;
+      // destructuring shape because it's going to be extended with computed columns
+      this.q.selectAllKeys = { ...shape };
+    }
 
     if (modifyQuery) {
       for (const cb of modifyQuery) {

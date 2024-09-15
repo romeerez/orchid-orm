@@ -9,8 +9,10 @@ import {
   snakeSelectAll,
   snakeSelectAllWithTable,
   User,
+  userColumnsSql,
   userData,
   UserRecord,
+  userTableColumnsSql,
 } from '../test-utils/test-utils';
 import { DateColumn, IntegerColumn, JSONTextColumn } from '../columns';
 import { getShapeFromSelect } from './select';
@@ -81,7 +83,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user".* FROM "user"
+          SELECT ${userTableColumnsSql} FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
@@ -112,7 +114,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user".*, "message"."text" FROM "user"
+          SELECT ${userTableColumnsSql}, "message"."text" FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
@@ -820,7 +822,7 @@ describe('select', () => {
           SELECT
             (
               SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-              FROM "user" AS "t"
+              FROM (SELECT ${userColumnsSql} FROM "user") "t"
             ) "subquery"
           FROM "user"
         `,
@@ -842,7 +844,7 @@ describe('select', () => {
               FROM (
                 SELECT ${snakeSelectAll}
                 FROM "snake"
-              ) AS "t"
+              ) "t"
             ) "subquery"
           FROM "snake"
         `,
@@ -869,7 +871,7 @@ describe('select', () => {
 
       expect(getShapeFromSelect(query)).toEqual(User.shape);
 
-      expectSql(query.toSQL(), `SELECT * FROM "user"`);
+      expectSql(query.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
     });
 
     it('should select all named columns', () => {

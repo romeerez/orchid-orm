@@ -94,33 +94,33 @@ describe('column type', () => {
     });
   });
 
-  describe('.hidden', () => {
+  describe('.select(false)', () => {
     it('should mark column as hidden', () => {
-      expect(column.data.isHidden).toBe(undefined);
-      expect(column.hidden().data.isHidden).toBe(true);
+      expect(column.data.explicitSelect).toBe(undefined);
+      expect(column.select(false).data.explicitSelect).toBe(true);
     });
 
     it('should have toCode', () => {
-      expect(column.hidden().toCode(columnToCodeCtx, 'key')).toBe(
-        't.column().hidden()',
+      expect(column.select(false).toCode(columnToCodeCtx, 'key')).toBe(
+        't.column().select(false)',
       );
     });
 
-    test('table with hidden column should omit from select it by default', () => {
+    test('table with select(false) column should omit from select it by default', () => {
       const User = testDb('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
-        password: t.text().hidden(),
+        password: t.text().select(false),
       }));
 
       const q = User.all();
+
+      assertType<Awaited<typeof q>, (typeof User.outputType)[]>();
+
       expectSql(
         q.toSQL(),
         `
-          SELECT
-            "user"."id",
-            "user"."name"
-          FROM "user"
+          SELECT "id", "name" FROM "user"
         `,
       );
     });
@@ -129,10 +129,16 @@ describe('column type', () => {
       const User = testDb('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
-        password: t.text().hidden(),
+        password: t.text().select(false),
       }));
 
       const q = User.select('id', 'name', 'password');
+
+      assertType<
+        Awaited<typeof q>,
+        (typeof User.outputType & { password: string })[]
+      >();
+
       expectSql(
         q.toSQL(),
         `

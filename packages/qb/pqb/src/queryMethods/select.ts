@@ -105,7 +105,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
   [K in keyof T]: K extends 'result'
     ? ('*' extends Columns[number]
         ? {
-            [K in Columns[number] | keyof T['shape'] as K extends '*'
+            [K in Columns[number] | T['meta']['defaultSelect'] as K extends '*'
               ? never
               : T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
           }
@@ -124,7 +124,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
             ? {
                 [K in
                   | Exclude<Columns[number], '*'>
-                  | keyof T['shape'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+                  | T['meta']['defaultSelect'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
               }
             : {
                 [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
@@ -204,7 +204,7 @@ type SelectResultColumnsAndObj<
       {
         [K in
           | ('*' extends Columns[number]
-              ? Exclude<Columns[number], '*'> | keyof T['shape']
+              ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
               : Columns[number])
           | keyof Obj as K extends Columns[number]
           ? T['meta']['selectable'][K]['as']
@@ -222,7 +222,7 @@ type SelectResultColumnsAndObj<
           {
             [K in
               | ('*' extends Columns[number]
-                  ? Exclude<Columns[number], '*'> | keyof T['shape']
+                  ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
                   : Columns[number])
               | keyof Obj as K extends Columns[number]
               ? T['meta']['selectable'][K]['as']

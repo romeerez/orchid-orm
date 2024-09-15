@@ -114,6 +114,8 @@ export interface CommonQueryData {
   outerJoinOverrides?: JoinOverrides;
   schema?: string;
   select?: SelectItem[];
+  selectAllColumns?: string[];
+  selectAllKeys?: RecordUnknown;
   /**
    * column type for query with 'value' or 'valueOrThrow' return type
    * Is needed in {@link getShapeFromSelect} to get shape of sub-select that returns a single value.

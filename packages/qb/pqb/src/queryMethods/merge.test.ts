@@ -1,4 +1,11 @@
-import { Message, Profile, User, UserRecord } from '../test-utils/test-utils';
+import {
+  Message,
+  Profile,
+  User,
+  userColumnsSql,
+  UserRecord,
+  userTableColumnsSql,
+} from '../test-utils/test-utils';
 import { logParamToLogObject } from './log';
 import {
   ColumnInfoQueryData,
@@ -50,7 +57,7 @@ describe('merge queries', () => {
       assertType<typeof q.returnType, 'oneOrThrow'>();
       assertType<Awaited<typeof q>, UserRecord>();
 
-      expectSql(q.toSQL(), `SELECT * FROM "user" LIMIT 1`);
+      expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "user" LIMIT 1`);
     });
 
     it('should prefer right return type', () => {
@@ -59,7 +66,7 @@ describe('merge queries', () => {
       assertType<typeof q.returnType, 'all'>();
       assertType<Awaited<typeof q>, UserRecord[]>();
 
-      expectSql(q.toSQL(), `SELECT * FROM "user"`);
+      expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
     });
   });
 
@@ -69,7 +76,11 @@ describe('merge queries', () => {
 
       assertType<(typeof q)['meta']['hasWhere'], true>();
 
-      expectSql(q.toSQL(), `SELECT * FROM "user" WHERE "user"."id" = $1`, [1]);
+      expectSql(
+        q.toSQL(),
+        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."id" = $1`,
+        [1],
+      );
     });
 
     it('should merge where when both have it', () => {
@@ -82,7 +93,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WHERE "user"."id" = $1 AND "user"."name" = $2 AND "user"."id" = $3
         `,
         [1, 'name', 2],
@@ -101,7 +112,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user".* FROM "user"
+          SELECT ${userTableColumnsSql} FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
@@ -117,7 +128,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user".* FROM "user"
+          SELECT ${userTableColumnsSql} FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
@@ -137,7 +148,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user".* FROM "user"
+          SELECT ${userTableColumnsSql} FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
           JOIN "profile" ON "profile"."userId" = "user"."id"
         `,
@@ -158,7 +169,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WINDOW "w" AS (PARTITION BY "user"."id")
         `,
       );
@@ -178,7 +189,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WINDOW "w" AS (PARTITION BY "user"."id")
         `,
       );
@@ -202,7 +213,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WINDOW "a" AS (PARTITION BY "user"."id"),
                  "b" AS (PARTITION BY "user"."name")
         `,
@@ -232,7 +243,7 @@ describe('merge queries', () => {
           WITH "withAlias" AS (
             SELECT "user"."id" FROM "user"
           )
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
         `,
       );
     });
@@ -258,7 +269,7 @@ describe('merge queries', () => {
           WITH "withAlias" AS (
             SELECT "user"."id" FROM "user"
           )
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
         `,
       );
     });
@@ -291,7 +302,7 @@ describe('merge queries', () => {
           ), "b" AS (
             SELECT "user"."name" FROM "user"
           )
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
         `,
       );
     });

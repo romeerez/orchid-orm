@@ -120,34 +120,44 @@ describe('upsertOrCreate', () => {
     });
 
     it('should inject update data into create function', async () => {
-      const created = await User.find(1).upsert({
-        update: {
-          name: 'name',
-        },
-        create: (data) => ({
-          ...data,
-          password: 'password',
-        }),
-      });
+      const created = await User.find(1)
+        .select('*')
+        .upsert({
+          update: {
+            name: 'name',
+          },
+          create: (data) => ({
+            ...data,
+            password: 'password',
+          }),
+        });
 
       expect(created).toMatchObject({
         name: 'name',
+      });
+
+      expect(created).not.toMatchObject({
         password: 'password',
       });
     });
 
     it('should use `data` for both update and create', async () => {
-      const created = await User.find(1).upsert({
-        data: {
-          name: 'name',
-        },
-        create: {
-          password: 'password',
-        },
-      });
+      const created = await User.find(1)
+        .select('*')
+        .upsert({
+          data: {
+            name: 'name',
+          },
+          create: {
+            password: 'password',
+          },
+        });
 
       expect(created).toMatchObject({
         name: 'name',
+      });
+
+      expect(created).not.toMatchObject({
         password: 'password',
       });
     });
@@ -162,10 +172,9 @@ describe('upsertOrCreate', () => {
         }),
       });
 
-      expect(created).toMatchObject({
-        name: 'name',
-        password: 'name',
-      });
+      assertType<typeof created, void>();
+
+      expect(created).toBe(undefined);
     });
   });
 
