@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.22.40
+
+### Patch Changes
+
+- 890dfb4: Add basic support for postgis geography point type
+- Updated dependencies [890dfb4]
+  - pqb@0.40.6
+  - orchid-core@0.19.12
+
 ## 2.22.39
 
 ### Patch Changes

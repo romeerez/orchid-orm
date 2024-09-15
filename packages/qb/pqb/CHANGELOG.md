@@ -1,5 +1,13 @@
 # pqb
 
+## 0.40.6
+
+### Patch Changes
+
+- 890dfb4: Add basic support for postgis geography point type
+- Updated dependencies [890dfb4]
+  - orchid-core@0.19.12
+
 ## 0.40.5
 
 ### Patch Changes

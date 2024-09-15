@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.8.49
+
+### Patch Changes
+
+- 890dfb4: Add basic support for postgis geography point type
+- Updated dependencies [890dfb4]
+  - pqb@0.40.6
+  - orchid-core@0.19.12
+
 ## 0.8.48
 
 ### Patch Changes

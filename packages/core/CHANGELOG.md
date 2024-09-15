@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.12
+
+### Patch Changes
+
+- 890dfb4: Add basic support for postgis geography point type
+
 ## 0.19.11
 
 ### Patch Changes
