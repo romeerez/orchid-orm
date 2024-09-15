@@ -14,9 +14,9 @@ const escape = (
   else if (Array.isArray(value))
     return migration && nested && !value.length
       ? ''
-      : (migration ? '{' : nested ? '[' : 'ARRAY[') +
+      : (migration ? (nested ? '{' : "'{") : nested ? '[' : 'ARRAY[') +
           value.map((el) => escape(el, migration, true)).join(',') +
-          (migration ? '}' : ']');
+          (migration ? (nested ? '}' : "}'") : ']');
   else if (value === null || value === undefined) return 'NULL';
   else return escapeString(JSON.stringify(value));
 };

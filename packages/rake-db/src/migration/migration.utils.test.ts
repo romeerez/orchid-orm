@@ -15,7 +15,7 @@ describe('migration utils', () => {
     it('should escape values', () => {
       const result = encodeColumnDefault([[]], []);
 
-      expect(result).toBe('{}');
+      expect(result).toBe("'{}'");
     });
 
     it('should return null as is', () => {

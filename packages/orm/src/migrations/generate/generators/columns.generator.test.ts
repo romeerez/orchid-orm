@@ -404,6 +404,24 @@ change(async (db) => {
   });
 
   describe('array', () => {
+    it('should add array column with empty default', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, () => ({}));
+        },
+        tables: [
+          table((t) => ({
+            colUmn: t.array(t.integer()).default([]),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} colUmn int4[]`);
+    });
+
     it('change to array type: prompt if should recreate the column or abort, selecting recreate', async () => {
       await arrange({
         async prepareDb(db) {
