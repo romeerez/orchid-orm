@@ -25,7 +25,7 @@ import {
   JoinResult,
 } from './join';
 import { getQueryAs, resolveSubQueryCallback } from '../../common/utils';
-import { processJoinArgs } from './processJoinArgs';
+import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
 
 import { ComputedColumns } from '../../modules/computed';
@@ -61,16 +61,7 @@ export const _join = <
   let computeds: ComputedColumns | undefined;
   let joinSubQuery = false;
 
-  if (typeof first === 'function') {
-    first = (
-      first as unknown as (q: { [K: string]: Query }) => JoinFirstArg<Query>
-    )(query.relations);
-    (
-      first as unknown as { joinQueryAfterCallback: unknown }
-    ).joinQueryAfterCallback = (
-      first as unknown as { joinQuery: unknown }
-    ).joinQuery;
-  }
+  first = preprocessJoinArg(query, first);
 
   if (typeof first === 'object') {
     if (require && isQueryNone(first)) {

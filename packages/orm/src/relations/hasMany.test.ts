@@ -222,22 +222,20 @@ describe('hasMany', () => {
       `,
       );
 
-      const sql = `
-        SELECT ${userSelectAll} FROM "user" "u"
-        WHERE EXISTS (
-          SELECT 1 FROM "message" AS "messages"
-          WHERE "messages"."authorId" = "u"."id"
-            AND "messages"."messageKey" = "u"."userKey"
-            AND "messages"."text" = $1
-        )
-      `;
-
       expectSql(
         db.user
           .as('u')
-          .whereExists('messages', (q) => q.where({ Text: 'text' }))
+          .whereExists((q) => q.messages.where({ Text: 'text' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${userSelectAll} FROM "user" "u"
+          WHERE EXISTS (
+            SELECT 1 FROM "message" AS "messages"
+            WHERE "messages"."text" = $1
+              AND "messages"."authorId" = "u"."id"
+              AND "messages"."messageKey" = "u"."userKey"
+          )
+        `,
         ['text'],
       );
 
@@ -246,7 +244,15 @@ describe('hasMany', () => {
           .as('u')
           .whereExists('messages', (q) => q.where({ 'messages.Text': 'text' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${userSelectAll} FROM "user" "u"
+          WHERE EXISTS (
+            SELECT 1 FROM "message" AS "messages"
+            WHERE "messages"."authorId" = "u"."id"
+              AND "messages"."messageKey" = "u"."userKey"
+              AND "messages"."text" = $1
+          )
+        `,
         ['text'],
       );
     });
@@ -2345,32 +2351,30 @@ describe('hasMany through', () => {
       `,
       );
 
-      const sql = `
-        SELECT ${profileSelectAll} FROM "profile" "p"
-        WHERE EXISTS (
-          SELECT 1 FROM "chat" AS "chats"
-          WHERE EXISTS (
-            SELECT 1 FROM "user"
-            WHERE EXISTS (
-              SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                AND "chatUser"."chatKey" = "chats"."chatKey"
-                AND "chatUser"."userId" = "user"."id"
-                AND "chatUser"."userKey" = "user"."userKey"
-            )
-            AND "user"."id" = "p"."userId"
-            AND "user"."userKey" = "p"."profileKey"
-          )
-          AND "chats"."title" = $1
-        )
-      `;
-
       expectSql(
         db.profile
           .as('p')
-          .whereExists('chats', (q) => q.where({ Title: 'title' }))
+          .whereExists((q) => q.chats.where({ Title: 'title' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${profileSelectAll} FROM "profile" "p"
+          WHERE EXISTS (
+            SELECT 1 FROM "chat" AS "chats"
+            WHERE "chats"."title" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user"
+                WHERE EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."chatKey" = "chats"."chatKey"
+                    AND "chatUser"."userId" = "user"."id"
+                    AND "chatUser"."userKey" = "user"."userKey"
+                )
+                AND "user"."id" = "p"."userId"
+                AND "user"."userKey" = "p"."profileKey"
+              )
+          )
+        `,
         ['title'],
       );
 
@@ -2379,7 +2383,25 @@ describe('hasMany through', () => {
           .as('p')
           .whereExists('chats', (q) => q.where({ 'chats.Title': 'title' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${profileSelectAll} FROM "profile" "p"
+          WHERE EXISTS (
+            SELECT 1 FROM "chat" AS "chats"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
+                  AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userKey" = "user"."userKey"
+              )
+              AND "user"."id" = "p"."userId"
+              AND "user"."userKey" = "p"."profileKey"
+            )
+            AND "chats"."title" = $1
+          )
+        `,
         ['title'],
       );
     });
@@ -2901,32 +2923,30 @@ describe('hasMany through', () => {
         `,
       );
 
-      const sql = `
-        SELECT ${chatSelectAll} FROM "chat" "c"
-        WHERE EXISTS (
-          SELECT 1 FROM "profile" AS "profiles"
-          WHERE EXISTS (
-            SELECT 1 FROM "user" AS "users"
-            WHERE "profiles"."userId" = "users"."id"
-              AND "profiles"."profileKey" = "users"."userKey"
-              AND EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."userId" = "users"."id"
-                  AND "chatUser"."userKey" = "users"."userKey"
-                  AND "chatUser"."chatId" = "c"."idOfChat"
-                    AND "chatUser"."chatKey" = "c"."chatKey"
-              )
-          )
-          AND "profiles"."bio" = $1
-        )
-      `;
-
       expectSql(
         db.chat
           .as('c')
-          .whereExists('profiles', (q) => q.where({ Bio: 'bio' }))
+          .whereExists((q) => q.profiles.where({ Bio: 'bio' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${chatSelectAll} FROM "chat" "c"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile" AS "profiles"
+            WHERE "profiles"."bio" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "profiles"."userId" = "users"."id"
+                  AND "profiles"."profileKey" = "users"."userKey"
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."userKey" = "users"."userKey"
+                      AND "chatUser"."chatId" = "c"."idOfChat"
+                        AND "chatUser"."chatKey" = "c"."chatKey"
+                  )
+              )
+          )
+        `,
         ['bio'],
       );
 
@@ -2935,7 +2955,25 @@ describe('hasMany through', () => {
           .as('c')
           .whereExists('profiles', (q) => q.where({ 'profiles.Bio': 'bio' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${chatSelectAll} FROM "chat" "c"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile" AS "profiles"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "users"
+              WHERE "profiles"."userId" = "users"."id"
+                AND "profiles"."profileKey" = "users"."userKey"
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."userKey" = "users"."userKey"
+                    AND "chatUser"."chatId" = "c"."idOfChat"
+                      AND "chatUser"."chatKey" = "c"."chatKey"
+                )
+            )
+            AND "profiles"."bio" = $1
+          )
+        `,
         ['bio'],
       );
     });

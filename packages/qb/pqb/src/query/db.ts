@@ -43,6 +43,7 @@ import {
   QueryColumns,
   QueryColumnsInit,
   QueryLogOptions,
+  QueryMetaBase,
   QueryResultRow,
   QueryThen,
   RecordString,
@@ -200,6 +201,22 @@ export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = {
   [K in DefaultSelectColumns<Shape>]: Shape[K]['outputType'];
 }[];
 
+interface TableMeta<
+  Table extends string | undefined,
+  Shape extends QueryColumnsInit,
+  ShapeWithComputed extends QueryColumnsInit,
+  Scopes extends RecordUnknown | undefined,
+> extends QueryMetaBase<{ [K in keyof Scopes]: true }> {
+  kind: 'select';
+  defaults: {
+    [K in keyof Shape as unknown extends Shape[K]['data']['default']
+      ? never
+      : K]: true;
+  };
+  selectable: SelectableFromShape<ShapeWithComputed, Table>;
+  defaultSelect: DefaultSelectColumns<Shape>;
+}
+
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends QueryColumnsInit = QueryColumnsInit,
@@ -228,17 +245,7 @@ export interface Db<
     length: number,
     name: QueryErrorName,
   ) => QueryError<this>;
-  meta: {
-    kind: 'select';
-    defaults: {
-      [K in keyof Shape as unknown extends Shape[K]['data']['default']
-        ? never
-        : K]: true;
-    };
-    scopes: { [K in keyof Scopes]: true };
-    selectable: SelectableFromShape<ShapeWithComputed, Table>;
-    defaultSelect: DefaultSelectColumns<Shape>;
-  };
+  meta: TableMeta<Table, Shape, ShapeWithComputed, Scopes>;
   internal: QueryInternal<
     {
       [K in keyof PrimaryKeys]: (

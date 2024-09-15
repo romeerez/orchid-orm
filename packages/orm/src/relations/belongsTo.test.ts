@@ -147,33 +147,19 @@ describe('belongsTo', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.profile.whereExists('user').toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile"
-          WHERE EXISTS (
-            SELECT 1 FROM "user"
-            WHERE "user"."id" = "profile"."userId"
-              AND "user"."userKey" = "profile"."profileKey"
-          )
-        `,
-      );
-
-      const sql = `
-        SELECT ${profileSelectAll} FROM "profile" "p"
-        WHERE EXISTS (
-          SELECT 1 FROM "user"
-          WHERE "user"."id" = "p"."userId"
-            AND "user"."userKey" = "p"."profileKey"
-            AND "user"."name" = $1
-        )
-      `;
-
-      expectSql(
         db.profile
           .as('p')
-          .whereExists('user', (q) => q.where({ Name: 'name' }))
+          .whereExists((q) => q.user.where({ Name: 'name' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${profileSelectAll} FROM "profile" "p"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "user"."name" = $1
+              AND "user"."id" = "p"."userId"
+              AND "user"."userKey" = "p"."profileKey"
+          )
+        `,
         ['name'],
       );
 
@@ -182,35 +168,41 @@ describe('belongsTo', () => {
           .as('p')
           .whereExists('user', (q) => q.where({ 'user.Name': 'name' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${profileSelectAll} FROM "profile" "p"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "user"."id" = "p"."userId"
+              AND "user"."userKey" = "p"."profileKey"
+              AND "user"."name" = $1
+          )
+        `,
         ['name'],
       );
     });
 
     it('should support nested whereExists', () => {
-      const sql = `
-        SELECT ${messageSelectAll} FROM "message" "m"
-        WHERE EXISTS (
-          SELECT 1 FROM "user" AS "sender"
-          WHERE "sender"."id" = "m"."authorId"
-            AND "sender"."userKey" = "m"."messageKey"
-            AND EXISTS (
-            SELECT 1 FROM "profile"
-            WHERE "profile"."userId" = "sender"."id"
-              AND "profile"."profileKey" = "sender"."userKey"
-              AND "profile"."bio" = $1
-          )
-        )
-      `;
-
       expectSql(
         db.message
           .as('m')
-          .whereExists('sender', (q) => {
-            return q.whereExists('profile', (q) => q.where({ Bio: 'bio' }));
-          })
+          .whereExists((q) =>
+            q.sender.whereExists('profile', (q) => q.where({ Bio: 'bio' })),
+          )
           .toSQL(),
-        sql,
+        `
+            SELECT ${messageSelectAll} FROM "message" "m"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "sender"
+              WHERE EXISTS (
+                  SELECT 1 FROM "profile"
+                  WHERE "profile"."userId" = "sender"."id"
+                    AND "profile"."profileKey" = "sender"."userKey"
+                    AND "profile"."bio" = $1
+                )
+                AND "sender"."id" = "m"."authorId"
+                AND "sender"."userKey" = "m"."messageKey"
+            )
+          `,
         ['bio'],
       );
 
@@ -221,7 +213,20 @@ describe('belongsTo', () => {
             q.whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' })),
           )
           .toSQL(),
-        sql,
+        `
+            SELECT ${messageSelectAll} FROM "message" "m"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "sender"
+              WHERE "sender"."id" = "m"."authorId"
+                AND "sender"."userKey" = "m"."messageKey"
+                AND EXISTS (
+                SELECT 1 FROM "profile"
+                WHERE "profile"."userId" = "sender"."id"
+                  AND "profile"."profileKey" = "sender"."userKey"
+                  AND "profile"."bio" = $1
+              )
+            )
+          `,
         ['bio'],
       );
     });

@@ -218,10 +218,7 @@ export const makeHasManyMethod = (
           through
         ](params);
 
-        return query.whereExists<Query, Query>(
-          throughQuery,
-          whereExistsCallback as never,
-        );
+        return query.whereExists(throughQuery, whereExistsCallback);
       },
       joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
         joinHasThrough(

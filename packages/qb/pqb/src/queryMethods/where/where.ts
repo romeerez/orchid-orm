@@ -16,7 +16,7 @@ import {
 } from 'orchid-core';
 import { QueryBase } from '../../query/queryBase';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
-import { processJoinArgs } from '../join/processJoinArgs';
+import { preprocessJoinArg, processJoinArgs } from '../join/processJoinArgs';
 import { ExpressionMethods } from '../expressions';
 import { _queryNone } from '../none';
 import {
@@ -171,6 +171,12 @@ export type WhereResult<T> = T & QueryMetaHasWhere;
 export interface QueryMetaHasWhere {
   meta: {
     hasWhere: true;
+  };
+}
+
+interface QueryFnReturningSelect {
+  (q: never): {
+    meta: { hasSelect: true };
   };
 }
 
@@ -349,7 +355,13 @@ const existsArgs = (
   q: JoinFirstArg<Query>,
   args: JoinArgs<Query, Query>,
 ) => {
-  const joinArgs = processJoinArgs(self, q, args as never, false, true);
+  const joinArgs = processJoinArgs(
+    self,
+    preprocessJoinArg(self, q),
+    args as never,
+    false,
+    true,
+  );
 
   return [
     {
@@ -1058,6 +1070,10 @@ export class Where {
    * // find by a relation name if it's defined
    * db.user.whereExists('account');
    *
+   * // find users who have an account with positive balance
+   * // `accounts` is a relation name
+   * db.user.whereExists((q) => q.accounts.where({ balance: { gt: 0 } }));
+   *
    * // find using a table and a join conditions
    * db.user.whereExists(db.account, 'account.id', 'user.id');
    *
@@ -1068,12 +1084,21 @@ export class Where {
   whereExists<
     T extends PickQueryMetaShapeRelationsWithData,
     Arg extends JoinFirstArg<T>,
-  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+    Args extends JoinArgs<T, Arg>,
+  >(
+    this: T,
+    arg: Arg,
+    ...args: Args
+  ): Arg extends QueryFnReturningSelect
+    ? { error: 'Cannot select in whereExists' }
+    : Args[0] extends QueryFnReturningSelect
+    ? { error: 'Cannot select in whereExists' }
+    : WhereResult<T> {
     return _queryWhereExists(
       (this as unknown as Query).clone() as unknown as T,
       arg,
       args,
-    );
+    ) as never;
   }
 
   /**

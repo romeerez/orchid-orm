@@ -231,22 +231,20 @@ describe('hasOne', () => {
       `,
       );
 
-      const sql = `
-        SELECT ${userSelectAll} FROM "user" "u"
-        WHERE EXISTS (
-          SELECT 1 FROM "profile"
-          WHERE "profile"."userId" = "u"."id"
-            AND "profile"."profileKey" = "u"."userKey"
-            AND "profile"."bio" = $1
-        )
-      `;
-
       expectSql(
         db.user
           .as('u')
-          .whereExists('profile', (q) => q.where({ Bio: 'bio' }))
+          .whereExists((q) => q.profile.where({ Bio: 'bio' }))
           .toSQL(),
-        sql,
+        `
+            SELECT ${userSelectAll} FROM "user" "u"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile"
+              WHERE "profile"."bio" = $1
+                AND "profile"."userId" = "u"."id"
+                AND "profile"."profileKey" = "u"."userKey"
+            )
+          `,
         ['bio'],
       );
 
@@ -255,7 +253,15 @@ describe('hasOne', () => {
           .as('u')
           .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${userSelectAll} FROM "user" "u"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile"
+            WHERE "profile"."userId" = "u"."id"
+              AND "profile"."profileKey" = "u"."userKey"
+              AND "profile"."bio" = $1
+          )
+        `,
         ['bio'],
       );
     });
@@ -1939,27 +1945,25 @@ describe('hasOne through', () => {
       `,
     );
 
-    const sql = `
-      SELECT ${messageSelectAll} FROM "message" "m"
-      WHERE EXISTS (
-        SELECT 1 FROM "profile"
-        WHERE EXISTS (
-          SELECT 1 FROM "user" AS "sender"
-          WHERE "profile"."userId" = "sender"."id"
-            AND "profile"."profileKey" = "sender"."userKey"
-            AND "sender"."id" = "m"."authorId"
-            AND "sender"."userKey" = "m"."messageKey"
-        )
-        AND "profile"."bio" = $1
-      )
-    `;
-
     expectSql(
       db.message
         .as('m')
-        .whereExists('profile', (q) => q.where({ Bio: 'bio' }))
+        .whereExists((q) => q.profile.where({ Bio: 'bio' }))
         .toSQL(),
-      sql,
+      `
+        SELECT ${messageSelectAll} FROM "message" "m"
+        WHERE EXISTS (
+          SELECT 1 FROM "profile"
+          WHERE "profile"."bio" = $1
+            AND EXISTS (
+              SELECT 1 FROM "user" AS "sender"
+              WHERE "profile"."userId" = "sender"."id"
+                AND "profile"."profileKey" = "sender"."userKey"
+                AND "sender"."id" = "m"."authorId"
+                AND "sender"."userKey" = "m"."messageKey"
+            )
+        )
+      `,
       ['bio'],
     );
 
@@ -1968,7 +1972,20 @@ describe('hasOne through', () => {
         .as('m')
         .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
         .toSQL(),
-      sql,
+      `
+        SELECT ${messageSelectAll} FROM "message" "m"
+        WHERE EXISTS (
+          SELECT 1 FROM "profile"
+          WHERE EXISTS (
+            SELECT 1 FROM "user" AS "sender"
+            WHERE "profile"."userId" = "sender"."id"
+              AND "profile"."profileKey" = "sender"."userKey"
+              AND "sender"."id" = "m"."authorId"
+              AND "sender"."userKey" = "m"."messageKey"
+          )
+          AND "profile"."bio" = $1
+        )
+      `,
       ['bio'],
     );
   });

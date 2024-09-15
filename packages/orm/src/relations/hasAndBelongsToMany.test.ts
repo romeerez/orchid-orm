@@ -222,28 +222,25 @@ describe('hasAndBelongsToMany', () => {
         `,
       );
 
-      const sql = `
-        SELECT ${userSelectAll} FROM "user" "u"
-        WHERE EXISTS (
-          SELECT 1 FROM "chat" AS "chats"
-          WHERE
-            EXISTS (
-              SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                AND "chatUser"."chatKey" = "chats"."chatKey"
-                AND "chatUser"."userId" = "u"."id"
-                AND "chatUser"."userKey" = "u"."userKey"
-            )
-            AND "chats"."title" = $1
-        )
-      `;
-
       expectSql(
         db.user
           .as('u')
-          .whereExists('chats', (q) => q.where({ Title: 'title' }))
+          .whereExists((q) => q.chats.where({ Title: 'title' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${userSelectAll} FROM "user" "u"
+          WHERE EXISTS (
+            SELECT 1 FROM "chat" AS "chats"
+            WHERE "chats"."title" = $1
+              AND EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
+                  AND "chatUser"."userId" = "u"."id"
+                  AND "chatUser"."userKey" = "u"."userKey"
+              )
+          )
+        `,
         ['title'],
       );
 
@@ -252,7 +249,21 @@ describe('hasAndBelongsToMany', () => {
           .as('u')
           .whereExists('chats', (q) => q.where({ 'chats.Title': 'title' }))
           .toSQL(),
-        sql,
+        `
+          SELECT ${userSelectAll} FROM "user" "u"
+          WHERE EXISTS (
+            SELECT 1 FROM "chat" AS "chats"
+            WHERE
+              EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
+                  AND "chatUser"."userId" = "u"."id"
+                  AND "chatUser"."userKey" = "u"."userKey"
+              )
+              AND "chats"."title" = $1
+          )
+        `,
         ['title'],
       );
     });

@@ -206,7 +206,7 @@ export function joinHasThrough(
   throughRelation: RelationConfigBase,
   sourceRelation: RelationConfigBase,
 ): Query {
-  return q.whereExists<Query, Query>(
+  return q.whereExists(
     throughRelation.joinQuery(throughRelation.query, baseQuery),
     (() => {
       const as = getQueryAs(joiningQuery);

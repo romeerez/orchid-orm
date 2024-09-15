@@ -1,4 +1,4 @@
-import { Query, QueryWithTable } from '../../query/query';
+import { PickQueryRelations, Query, QueryWithTable } from '../../query/query';
 import { JoinArgs, JoinFirstArg, JoinQueryBuilder } from './join';
 import {
   JoinedShapes,
@@ -147,6 +147,23 @@ export const processJoinArgs = (
     a: args as SimpleJoinItemNonSubQueryArgs,
     s: joinSubQuery,
   };
+};
+
+export const preprocessJoinArg = (
+  q: PickQueryRelations,
+  arg: JoinFirstArg<never>,
+) => {
+  if (typeof arg !== 'function') return arg;
+
+  arg = arg(q.relations as never);
+
+  (
+    arg as unknown as { joinQueryAfterCallback: unknown }
+  ).joinQueryAfterCallback = (
+    arg as unknown as { joinQuery: unknown }
+  ).joinQuery;
+
+  return arg;
 };
 
 /**

@@ -400,6 +400,10 @@ This method is accepting the same arguments as `join`, see the [join](#join) sec
 // find by a relation name if it's defined
 db.user.whereExists('account');
 
+// find users who have an account with positive balance
+// `accounts` is a relation name
+db.user.whereExists((q) => q.accounts.where({ balance: { gt: 0 } }));
+
 // find using a table and a join conditions
 db.user.whereExists(db.account, 'account.id', 'user.id');
 

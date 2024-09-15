@@ -8,7 +8,7 @@ import {
   userTableColumnsSql,
 } from '../../test-utils/test-utils';
 import { testWhere, testWhereExists } from './testWhere';
-import { expectSql, testDb } from 'test-utils';
+import { assertType, expectSql, testDb } from 'test-utils';
 import { RelationQueryBase } from '../../relations';
 import { Query } from '../../query/query';
 
@@ -310,6 +310,14 @@ describe('orWhere', () => {
 });
 
 describe('whereExists', () => {
+  it('should forbid selecting values on a type level', () => {
+    const q = User.whereExists(Snake, (q) => q.sum('tailLength'));
+    assertType<typeof q, { error: 'Cannot select in whereExists' }>();
+
+    const q2 = User.whereExists(() => Snake.sum('tailLength'));
+    assertType<typeof q2, { error: 'Cannot select in whereExists' }>();
+  });
+
   it('should handle sub-querying by a snake cased table', () => {
     const q = User.whereExists(Snake, (q) => q.on('user.id', 'tailLength'));
     const q2 = User.whereExists(Snake, (q) =>
