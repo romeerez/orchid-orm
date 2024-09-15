@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.35.15
+
+### Patch Changes
+
+- 77ab544: Fix quoting empty array in migration (#390)
+- Updated dependencies [77ab544]
+  - pqb@0.40.7
+  - rake-db@2.22.41
+
 ## 1.35.14
 
 ### Patch Changes

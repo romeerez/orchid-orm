@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.7
+
+### Patch Changes
+
+- 77ab544: Fix quoting empty array in migration (#390)
+
 ## 0.40.6
 
 ### Patch Changes
