@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.35.17
+
+### Patch Changes
+
+- d288a45: Add `select(false)` for columns (#393)
+- Updated dependencies [d288a45]
+  - pqb@0.40.9
+  - orchid-core@0.19.13
+  - rake-db@2.22.43
+
 ## 1.35.16
 
 ### Patch Changes

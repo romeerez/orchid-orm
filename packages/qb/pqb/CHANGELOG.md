@@ -1,5 +1,13 @@
 # pqb
 
+## 0.40.9
+
+### Patch Changes
+
+- d288a45: Add `select(false)` for columns (#393)
+- Updated dependencies [d288a45]
+  - orchid-core@0.19.13
+
 ## 0.40.8
 
 ### Patch Changes

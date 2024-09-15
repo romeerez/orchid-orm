@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.19.13
+
+### Patch Changes
+
+- d288a45: Add `select(false)` for columns (#393)
+
 ## 0.19.12
 
 ### Patch Changes
