@@ -318,7 +318,7 @@ export class MoneyColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   operators = Operators.number;
 
   constructor(schema: Schema) {
-    super(schema, schema.stringSchema() as never);
+    super(schema, schema.number() as never);
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
@@ -673,6 +673,7 @@ export class CitextColumn<
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
+    this.data.extension = 'citext';
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {

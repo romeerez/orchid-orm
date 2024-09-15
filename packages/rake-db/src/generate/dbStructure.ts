@@ -58,6 +58,8 @@ export namespace DbStructure {
       cache: number;
       cycle: boolean;
     };
+    extension?: string;
+    typmod: number;
   }
 
   export interface Index {
@@ -180,12 +182,12 @@ const columnsSql = ({
   join?: string;
   where: string;
 }) => `SELECT
-  ${schema}.nspname AS "schemaName",
-  ${table}.relname AS "tableName",
-  a.attname AS "name",
-  t.typname AS "type",
-  tn.nspname AS "typeSchema",
-  a.attndims AS "arrayDims",
+  ${schema}.nspname "schemaName",
+  ${table}.relname "tableName",
+  a.attname "name",
+  t.typname "type",
+  tn.nspname "typeSchema",
+  a.attndims "arrayDims",
   information_schema._pg_char_max_length(tt.id, tt.mod) "maxChars",
   information_schema._pg_numeric_precision(tt.id, tt.mod) "numericPrecision",
   information_schema._pg_numeric_scale(tt.id,tt.mod) "numericScale",
@@ -225,7 +227,9 @@ const columnsSql = ({
         seq.seqcycle
       )
     ) END
-  ) "identity"
+  ) "identity",
+  ext.extname "extension",
+  a.atttypmod "typmod"
 FROM pg_attribute a
 ${join}
 LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
@@ -249,6 +253,8 @@ LEFT JOIN pg_catalog.pg_description pgd
  AND pgd.objsubid = a.attnum
 LEFT JOIN (pg_depend dep JOIN pg_sequence seq ON (dep.classid = 'pg_class'::regclass AND dep.objid = seq.seqrelid AND dep.deptype = 'i'))
   ON (dep.refclassid = 'pg_class'::regclass AND dep.refobjid = ${table}.oid AND dep.refobjsubid = a.attnum)
+LEFT JOIN pg_depend d ON d.objid = t.oid AND d.classid = 'pg_type'::regclass AND d.deptype = 'e'
+LEFT JOIN pg_extension ext ON ext.oid = d.refobjid
 WHERE a.attnum > 0
   AND NOT a.attisdropped
   AND ${where}

@@ -15,3 +15,4 @@ export * from './virtual';
 export * from './code';
 export * from './columnsByType';
 export * from './defaultSchemaConfig';
+export * from './postgis';

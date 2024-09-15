@@ -708,4 +708,25 @@ ${green('+ create table')} user_role_to_perm (2 columns)
 ${green('+ create table')} user_staff_perm (1 column)`);
     });
   });
+
+  it('should create postgis extension and a table with a postgis column', async () => {
+    await arrange({
+      dbOptions: {
+        extensions: ['postgis'],
+        generatorIgnore: {
+          tables: ['spatial_ref_sys'],
+        },
+      },
+      tables: [
+        table((t) => ({
+          point: t.geography.point().primaryKey(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.report(`${green('+ create extension')} postgis
+${green('+ create table')} table (1 column)`);
+  });
 });

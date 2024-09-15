@@ -65,5 +65,6 @@ export const makeColumnsByType = (schema: ColumnSchemaConfig) => {
     bigserial: t.bigSerial,
     // requires citext extension
     citext: t.citext,
+    geographyDefaultPoint: t.geography.point,
   } as ColumnsByType;
 };

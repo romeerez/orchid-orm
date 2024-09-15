@@ -35,6 +35,7 @@ import { makeRegexToFindInSql } from '../common/utils';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL, sqlFn, SqlFn } from '../sql/rawSql';
 import { TableData } from '../tableData';
+import { PostgisGeographyPointColumn } from './postgis';
 
 export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
   types: ColumnTypes,
@@ -104,6 +105,10 @@ export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
   jsonText(): JSONTextColumn<SchemaConfig>;
   type(dataType: string): CustomTypeColumn<SchemaConfig>;
   domain(dataType: string): DomainColumn<SchemaConfig>;
+
+  geography: {
+    point(): PostgisGeographyPointColumn<SchemaConfig>;
+  };
 }
 
 export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
@@ -216,6 +221,12 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
     },
     domain(dataType) {
       return new DomainColumn<SchemaConfig>(schema, dataType);
+    },
+
+    geography: {
+      point() {
+        return new PostgisGeographyPointColumn(schema);
+      },
     },
 
     ...makeTimestampsHelpers(makeRegexToFindInSql),

@@ -517,10 +517,10 @@ interface BigSerialColumnZod
 class BigSerialColumnZod extends BigSerialColumn<ZodSchemaConfig> {}
 Object.assign(BigSerialColumnZod.prototype, stringMethods);
 
-interface MoneyColumnZod extends MoneyColumn<ZodSchemaConfig>, StringMethods {}
+interface MoneyColumnZod extends MoneyColumn<ZodSchemaConfig>, NumberMethods {}
 
 class MoneyColumnZod extends MoneyColumn<ZodSchemaConfig> {}
-Object.assign(MoneyColumnZod.prototype, stringMethods);
+Object.assign(MoneyColumnZod.prototype, numberMethods);
 
 interface VarCharColumnZod
   extends VarCharColumn<ZodSchemaConfig>,
@@ -583,6 +583,14 @@ interface TimestampColumnZod
 
 class TimestampColumnZod extends TimestampTZColumn<ZodSchemaConfig> {}
 Object.assign(TimestampColumnZod.prototype, dateMethods);
+
+type PointSchemaZod = ZodObject<{
+  srid: ZodOptional<ZodNumber>;
+  lon: ZodNumber;
+  lat: ZodNumber;
+}>;
+
+let pointSchema: PointSchemaZod | undefined;
 
 export interface ZodSchemaConfig {
   type: ZodTypeAny;
@@ -746,6 +754,8 @@ export interface ZodSchemaConfig {
   date(): DateColumnZod;
   timestampNoTZ(precision?: number): TimestampNoTzColumnZod;
   timestamp(precision?: number): TimestampColumnZod;
+
+  geographyPointSchema(): PointSchemaZod;
 }
 
 // parse a date string to number, with respect to null
@@ -1004,6 +1014,13 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   timestampNoTZ: (precision) =>
     new TimestampNoTzColumnZod(zodSchemaConfig, precision),
   timestamp: (precision) => new TimestampColumnZod(zodSchemaConfig, precision),
+
+  geographyPointSchema: () =>
+    (pointSchema ??= z.object({
+      srid: z.number().optional(),
+      lon: z.number(),
+      lat: z.number(),
+    })),
 };
 
 type MapSchema<

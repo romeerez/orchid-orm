@@ -542,3 +542,25 @@ XML data type can be used to store XML data
 ```ts
 t.xml(); // -> string
 ```
+
+## Postgis geography
+
+There's only a very basic support for postgis, open an issue if you need some more.
+
+Here is a geography point type:
+
+```ts
+t.geography.point();
+```
+
+In the migration the type will have the default `4326` SRID.
+p
+The input and output type is:
+
+```ts
+type PostgisPoint {
+  lon: number;
+  lat: number;
+  srid?: number; // absent for the default 4326
+}
+```

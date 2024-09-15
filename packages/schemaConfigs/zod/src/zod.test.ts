@@ -9,6 +9,8 @@ import {
   ZodNever,
   ZodNullable,
   ZodNumber,
+  ZodObject,
+  ZodOptional,
   ZodString,
   ZodType,
   ZodTypeAny,
@@ -747,12 +749,22 @@ describe('zod schema config', () => {
     });
   });
 
-  const money = t.money();
+  describe('money', () => {
+    it('should parse to a number', () => {
+      const type = t.money();
+      assertAllTypes<typeof type, ZodNumber>();
+
+      expectAllParse(type, 123, 123);
+
+      expectAllThrow(type, '123', 'Expected number, received string');
+    });
+  });
+
   const xml = t.xml();
   const jsonText = t.jsonText();
-  assertAllTypes<typeof money | typeof xml | typeof jsonText, ZodString>();
+  assertAllTypes<typeof xml | typeof jsonText, ZodString>();
 
-  describe.each(['money', 'xml', 'jsonText'])('%s', (method) => {
+  describe.each(['xml', 'jsonText'])('%s', (method) => {
     it('should parse to a string without validation', () => {
       const type = t[method as 'xml']();
 
@@ -931,5 +943,27 @@ describe('zod schema config', () => {
     const type = t.string().input(fn).output(fn).query(fn);
 
     expectAllParse(type, 'foo', 'oof');
+  });
+
+  describe('geography point', () => {
+    it('should parse', () => {
+      const type = t.geography.point();
+      assertAllTypes<
+        typeof type,
+        ZodObject<{
+          srid: ZodOptional<ZodNumber>;
+          lon: ZodNumber;
+          lat: ZodNumber;
+        }>
+      >();
+
+      expectAllParse(
+        type,
+        { srid: 1, lon: 2, lat: 3 },
+        { srid: 1, lon: 2, lat: 3 },
+      );
+
+      expectAllThrow(type, '123', 'Expected object, received string');
+    });
   });
 });

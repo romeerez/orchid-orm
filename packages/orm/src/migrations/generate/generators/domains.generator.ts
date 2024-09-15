@@ -78,6 +78,7 @@ export const processDomains = async (
         isNullable: domain.isNullable,
         collate: domain.collate,
         maxChars: domain.maxChars,
+        typmod: -1,
       },
     );
 

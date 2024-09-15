@@ -497,7 +497,7 @@ export const columnCode = (
   key: string,
   code: Code,
   data = type.data,
-  skip?: { encodeFn: unknown },
+  skip?: { encodeFn?: unknown; parseFn?: unknown },
 ): Code => {
   code = toArray(code);
 
@@ -539,7 +539,11 @@ export const columnCode = (
   if (type.encodeFn && type.encodeFn !== skip?.encodeFn)
     addCode(code, `.encode(${type.encodeFn.toString()})`);
 
-  if (type.parseFn && !('hideFromCode' in type.parseFn))
+  if (
+    type.parseFn &&
+    type.parseFn !== skip?.parseFn &&
+    !('hideFromCode' in type.parseFn)
+  )
     addCode(code, `.parse(${type.parseFn.toString()})`);
 
   if (data.as) addCode(code, `.as(${data.as.toCode(ctx, key)})`);

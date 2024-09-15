@@ -685,10 +685,10 @@ Object.assign(BigSerialColumnValibot.prototype, stringMethods);
 
 interface MoneyColumnValibot
   extends MoneyColumn<ValibotSchemaConfig>,
-    StringMethods {}
+    NumberMethods {}
 
 class MoneyColumnValibot extends MoneyColumn<ValibotSchemaConfig> {}
-Object.assign(MoneyColumnValibot.prototype, stringMethods);
+Object.assign(MoneyColumnValibot.prototype, numberMethods);
 
 interface VarCharColumnValibot
   extends VarCharColumn<ValibotSchemaConfig>,
@@ -755,6 +755,14 @@ interface TimestampColumnValibot
 
 class TimestampColumnValibot extends TimestampTZColumn<ValibotSchemaConfig> {}
 Object.assign(TimestampColumnValibot.prototype, dateMethods);
+
+type PointSchemaValibot = ObjectSchema<{
+  srid: OptionalSchema<NumberSchema>;
+  lon: NumberSchema;
+  lat: NumberSchema;
+}>;
+
+let pointSchema: PointSchemaValibot | undefined;
 
 export interface ValibotSchemaConfig {
   type: BaseSchema;
@@ -913,6 +921,8 @@ export interface ValibotSchemaConfig {
   date(): DateColumnValibot;
   timestampNoTZ(precision?: number): TimestampNoTzColumnValibot;
   timestamp(precision?: number): TimestampColumnValibot;
+
+  geographyPointSchema(): PointSchemaValibot;
 }
 
 // parse a date string to number, with respect to null
@@ -1089,6 +1099,13 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
     new TimestampNoTzColumnValibot(valibotSchemaConfig, precision),
   timestamp: (precision) =>
     new TimestampColumnValibot(valibotSchemaConfig, precision),
+
+  geographyPointSchema: () =>
+    (pointSchema ??= object({
+      srid: optional(number()),
+      lon: number(),
+      lat: number(),
+    })),
 };
 
 type MapSchema<

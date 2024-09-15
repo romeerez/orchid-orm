@@ -9,7 +9,7 @@ import {
 } from 'orchid-core';
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Operators } from './operators';
+import { Operators, OperatorsAny } from './operators';
 
 // for a user-defined type, or for unsupported yet type from some module
 export class CustomTypeColumn<
@@ -18,11 +18,11 @@ export class CustomTypeColumn<
   Schema,
   unknown,
   ReturnType<Schema['unknown']>,
-  typeof Operators.any
+  OperatorsAny
 > {
   operators = Operators.any;
 
-  constructor(schema: Schema, public dataType: string) {
+  constructor(schema: Schema, public dataType: string, extension?: string) {
     super(
       schema,
       schema.unknown() as never,
@@ -30,6 +30,7 @@ export class CustomTypeColumn<
       schema.unknown() as never,
     );
     this.data.isOfCustomType = true;
+    this.data.extension = extension;
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {

@@ -13,6 +13,7 @@ const column: Omit<DbStructure.Column, 'type'> = {
   typeSchema: 'pg_catalog',
   arrayDims: 0,
   isNullable: false,
+  typmod: -1,
 };
 
 const intColumn: DbStructure.Column = {

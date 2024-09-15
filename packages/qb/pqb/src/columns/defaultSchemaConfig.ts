@@ -198,4 +198,6 @@ export const defaultSchemaConfig = {
     new TimestampColumn(defaultSchemaConfig, precision),
   timestamp: (precision?: number) =>
     new TimestampTZColumn(defaultSchemaConfig, precision),
+
+  geographyPointSchema: noop,
 } as unknown as DefaultSchemaConfig;

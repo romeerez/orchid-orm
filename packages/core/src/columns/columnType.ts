@@ -308,6 +308,9 @@ export interface ColumnDataBase {
 
   // alias of the type used as a column function name
   alias?: string;
+
+  // name of extension that contains the column type, if it's not standard
+  extension?: string;
 }
 
 export interface ColumnDataCheckBase {

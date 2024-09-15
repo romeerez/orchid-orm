@@ -23,6 +23,8 @@ import {
   transform,
   optional,
   nullable,
+  ObjectSchema,
+  OptionalSchema,
 } from 'valibot';
 
 const t = makeColumnTypes(valibotSchemaConfig);
@@ -759,12 +761,26 @@ describe('valibot schema config', () => {
     });
   });
 
-  const money = t.money();
+  describe('money', () => {
+    it('should parse to a number', () => {
+      const type = t.money();
+      assertAllTypes<typeof type, NumberSchema>();
+
+      expectAllParse(type, 123, 123);
+
+      expectAllThrow(
+        type,
+        '123',
+        'Invalid type: Expected number but received "123"',
+      );
+    });
+  });
+
   const xml = t.xml();
   const jsonText = t.jsonText();
-  assertAllTypes<typeof money | typeof xml | typeof jsonText, StringSchema>();
+  assertAllTypes<typeof xml | typeof jsonText, StringSchema>();
 
-  describe.each(['money', 'xml', 'jsonText'])('%s', (method) => {
+  describe.each(['xml', 'jsonText'])('%s', (method) => {
     it('should parse to a string without validation', () => {
       const type = t[method as 'xml']();
 
@@ -955,5 +971,31 @@ describe('valibot schema config', () => {
     const type = t.string().input(fn).output(fn).query(fn);
 
     expectAllParse(type, 'foo', 'oof');
+  });
+
+  describe('geography point', () => {
+    it('should parse', () => {
+      const type = t.geography.point();
+      assertAllTypes<
+        typeof type,
+        ObjectSchema<{
+          srid: OptionalSchema<NumberSchema>;
+          lon: NumberSchema;
+          lat: NumberSchema;
+        }>
+      >();
+
+      expectAllParse(
+        type,
+        { srid: 1, lon: 2, lat: 3 },
+        { srid: 1, lon: 2, lat: 3 },
+      );
+
+      expectAllThrow(
+        type,
+        '123',
+        'Invalid type: Expected Object but received "123"',
+      );
+    });
   });
 });

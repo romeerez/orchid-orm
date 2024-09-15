@@ -980,6 +980,32 @@ describe('structureToAst', () => {
         expect(shape.identity.data.identity).toEqual(options);
       });
     });
+
+    describe('column extension', () => {
+      it('should preserve column extension', async () => {
+        structure.tables = [
+          dbStructureMockFactory.table({
+            columns: [
+              dbStructureMockFactory.column({
+                name: 'column',
+                type: 'custom',
+                extension: 'custom',
+              }),
+            ],
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+
+        const { column } = ast.shape;
+        expect(column).toBeInstanceOf(CustomTypeColumn);
+        expect(column.data).toMatchObject({
+          extension: 'custom',
+        });
+      });
+    });
   });
 
   describe('constraint', () => {

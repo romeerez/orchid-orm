@@ -16,7 +16,6 @@ const testStringColumnMethods = (
       | 'decimal'
       | 'doublePrecision'
       | 'bigSerial'
-      | 'money'
       | 'varchar'
       | 'text'
       | 'string'

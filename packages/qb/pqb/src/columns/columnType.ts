@@ -46,6 +46,8 @@ export interface ColumnFromDbParams {
   dateTimePrecision?: number;
   compression?: string;
   collate?: string;
+  extension?: string;
+  typmod: number;
 }
 
 export interface PickColumnData {

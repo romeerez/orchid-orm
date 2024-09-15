@@ -73,4 +73,6 @@ export interface ColumnSchemaConfig<T extends ColumnTypeBase = ColumnTypeBase>
   date(): T;
   timestampNoTZ(precision?: number): T;
   timestamp(precision?: number): T;
+
+  geographyPointSchema(): unknown;
 }

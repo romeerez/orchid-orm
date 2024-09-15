@@ -19,6 +19,7 @@ import {
   makeColumnsByType,
   RawSQL,
   TableData,
+  PostgisGeographyPointColumn,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -186,6 +187,7 @@ export const makeDomainsMap = (
       isNullable: it.isNullable,
       collate: it.collate,
       default: it.default,
+      typmod: -1,
     });
 
     if (it.check) {
@@ -242,9 +244,11 @@ export const instantiateDbColumn = (
       typeSchema === 'pg_catalog' ? typeName : `${typeSchema}.${typeName}`;
     const domainColumn = domains[typeId];
     if (domainColumn) {
-      column = new DomainColumn(ctx.columnSchemaConfig, typeId).as(
-        domainColumn,
-      );
+      column = new DomainColumn(
+        ctx.columnSchemaConfig,
+        typeId,
+        dbColumn.extension,
+      ).as(domainColumn);
     } else {
       const enumType = data.enums.find(
         (x) => x.name === typeName && x.schemaName === typeSchema,
@@ -257,7 +261,11 @@ export const instantiateDbColumn = (
           ctx.columnSchemaConfig.type,
         );
       } else {
-        column = new CustomTypeColumn(ctx.columnSchemaConfig, typeId);
+        column = new CustomTypeColumn(
+          ctx.columnSchemaConfig,
+          typeId,
+          dbColumn.extension,
+        );
 
         (ctx.unsupportedTypes[dbColumn.type] ??= []).push(
           `${dbColumn.schemaName}${
@@ -291,7 +299,7 @@ const instantiateColumnByDbType = (
   isSerial: boolean,
   params: ColumnFromDbParams,
 ) => {
-  const columnFn =
+  let columnFn =
     ctx.columnsByType[
       !isSerial
         ? type
@@ -301,6 +309,15 @@ const instantiateColumnByDbType = (
         ? 'serial'
         : 'bigserial'
     ];
+
+  if (
+    !columnFn &&
+    params.extension === 'postgis' &&
+    type === 'geography' &&
+    PostgisGeographyPointColumn.isDefaultPoint(params.typmod)
+  ) {
+    columnFn = ctx.columnsByType.geographyDefaultPoint;
+  }
 
   return columnFn
     ? (instantiateColumn(columnFn, params) as ColumnType)
