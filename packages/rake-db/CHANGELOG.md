@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.22.45
+
+### Patch Changes
+
+- 1bfe969: Prevent computed columns from getting into default select, and some other snake_case related fixes (#404)
+- Updated dependencies [1bfe969]
+  - pqb@0.40.11
+
 ## 2.22.44
 
 ### Patch Changes

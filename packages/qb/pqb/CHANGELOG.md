@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.11
+
+### Patch Changes
+
+- 1bfe969: Prevent computed columns from getting into default select, and some other snake_case related fixes (#404)
+
 ## 0.40.10
 
 ### Patch Changes
