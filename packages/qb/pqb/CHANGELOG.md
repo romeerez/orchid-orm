@@ -1,5 +1,11 @@
 # pqb
 
+## 0.40.12
+
+### Patch Changes
+
+- 0e06547: Support selecting a relation with the same name as the outer table (#407)
+
 ## 0.40.11
 
 ### Patch Changes

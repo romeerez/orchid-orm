@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.35.20
+
+### Patch Changes
+
+- 0e06547: Support selecting a relation with the same name as the outer table (#407)
+- Updated dependencies [0e06547]
+  - pqb@0.40.12
+  - rake-db@2.22.46
+
 ## 1.35.19
 
 ### Patch Changes
