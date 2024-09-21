@@ -43,8 +43,7 @@ interface QueryDataForWhere {
   shape: CommonQueryData['shape'];
   joinedShapes?: CommonQueryData['joinedShapes'];
   scopes?: { [K: string]: QueryScopeData };
-  joinOverrides?: CommonQueryData['joinOverrides'];
-  outerJoinOverrides?: CommonQueryData['outerJoinOverrides'];
+  outerAliases?: CommonQueryData['outerAliases'];
   parsers?: ColumnsParsers;
 }
 
@@ -230,10 +229,10 @@ const processWhere = (
         const joinAs = `"${getJoinItemSource(item.joinFrom)}"`;
         const { on } = item;
 
-        const q: OnColumnToSQLQuery = item.useOuterJoinOverrides
+        const q: OnColumnToSQLQuery = item.useOuterAliases
           ? {
               joinedShapes: query.joinedShapes,
-              joinOverrides: query.outerJoinOverrides,
+              aliases: query.outerAliases,
               shape: query.shape,
             }
           : query;
@@ -367,7 +366,7 @@ const processWhere = (
 
 interface OnColumnToSQLQuery {
   joinedShapes?: QueryData['joinedShapes'];
-  joinOverrides?: QueryData['joinOverrides'];
+  aliases?: QueryData['aliases'];
   shape: QueryColumns;
 }
 

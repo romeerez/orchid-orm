@@ -457,16 +457,16 @@ describe('hasOne', () => {
               FROM "profile"
               LEFT JOIN LATERAL (
                 SELECT row_to_json("profile2".*) "profile"
-                FROM "user"
+                FROM "user" "user2"
                 LEFT JOIN LATERAL (
                   SELECT ${profileSelectAll}
-                  FROM "profile"
-                  WHERE "profile"."user_id" = "user"."id"
-                    AND "profile"."profile_key" = "user"."user_key"
+                  FROM "profile" "profile2"
+                  WHERE "profile2"."user_id" = "user2"."id"
+                    AND "profile2"."profile_key" = "user2"."user_key"
                 ) "profile2" ON true
                 WHERE "profile2"."Bio" = $1
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
+                  AND "user2"."id" = "profile"."user_id"
+                  AND "user2"."user_key" = "profile"."profile_key"
               ) "user2" ON true
               WHERE "profile"."user_id" = "user"."id"
                 AND "profile"."profile_key" = "user"."user_key"
@@ -2210,12 +2210,12 @@ describe('hasOne through', () => {
                 FROM "message" "messages"
                 LEFT JOIN LATERAL (
                   SELECT ${profileSelectAll}
-                  FROM "profile"
+                  FROM "profile" "profile2"
                   WHERE EXISTS (
                     SELECT 1
                     FROM "user" AS "sender"
-                    WHERE "profile"."user_id" = "sender"."id"
-                      AND "profile"."profile_key" = "sender"."user_key"
+                    WHERE "profile2"."user_id" = "sender"."id"
+                      AND "profile2"."profile_key" = "sender"."user_key"
                       AND "sender"."id" = "messages"."author_id"
                       AND "sender"."user_key" = "messages"."message_key"
                   )

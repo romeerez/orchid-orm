@@ -219,7 +219,7 @@ export type WhereJsonPathEqualsItem = [
 export interface WhereOnItem {
   joinFrom: WhereOnJoinItem;
   joinTo: WhereOnJoinItem;
-  useOuterJoinOverrides?: true;
+  useOuterAliases?: true;
   on:
     | [leftFullColumn: string, rightFullColumn: string]
     | [leftFullColumn: string, op: string, rightFullColumn: string];

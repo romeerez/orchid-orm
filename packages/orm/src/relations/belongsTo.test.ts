@@ -421,16 +421,16 @@ describe('belongsTo', () => {
               FROM "user"
               LEFT JOIN LATERAL (
                 SELECT row_to_json("user2".*) "user"
-                FROM "profile"
+                FROM "profile" "profile2"
                 LEFT JOIN LATERAL (
                   SELECT ${userSelectAll}
-                  FROM "user"
-                  WHERE "user"."id" = "profile"."user_id"
-                    AND "user"."user_key" = "profile"."profile_key"
+                  FROM "user" "user2"
+                  WHERE "user2"."id" = "profile2"."user_id"
+                    AND "user2"."user_key" = "profile2"."profile_key"
                 ) "user2" ON true
                 WHERE "user2"."Name" = $1
-                  AND "profile"."user_id" = "user"."id"
-                  AND "profile"."profile_key" = "user"."user_key"
+                  AND "profile2"."user_id" = "user"."id"
+                  AND "profile2"."profile_key" = "user"."user_key"
               ) "profile2" ON true
               WHERE "user"."id" = "profile"."user_id"
                 AND "user"."user_key" = "profile"."profile_key"

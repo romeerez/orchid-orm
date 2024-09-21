@@ -58,9 +58,6 @@ export type JoinedShapes = RecordOfColumnsShapeBase;
 export interface JoinedParsers {
   [K: string]: ColumnsParsers;
 }
-// Keep track of joined table names.
-// When joining the same table second time, this allows to add a numeric suffix to avoid name collisions.
-export type JoinOverrides = RecordString;
 
 export type QueryBeforeHook = (query: Query) => void | Promise<void>;
 export type QueryAfterHook<Data = unknown> = (
@@ -108,10 +105,8 @@ export interface CommonQueryData {
   joinedComputeds?: { [K: string]: ComputedColumns };
   joinedForSelect?: string;
   innerJoinLateral?: true;
-  // to implicitly alias joined tables so there can be a "user" on top and a nested joined "user", the nested user is internally aliased as "user2".
-  joinOverrides?: JoinOverrides;
-  // stores `joinOverrides` of the parent query object when the current query object is withing a query callback.
-  outerJoinOverrides?: JoinOverrides;
+  // stores `aliases` of the parent query object when the current query object is withing a query callback.
+  outerAliases?: RecordString;
   schema?: string;
   select?: SelectItem[];
   selectAllColumns?: string[];

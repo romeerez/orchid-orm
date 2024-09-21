@@ -7,6 +7,7 @@ import {
   Expression,
   QueryColumn,
   QueryColumns,
+  RecordString,
 } from 'orchid-core';
 import { VirtualColumn } from '../columns';
 
@@ -58,8 +59,8 @@ export function simpleExistingColumnToSQL(
 export const columnToSql = (
   ctx: ToSQLCtx,
   data: {
+    aliases?: RecordString;
     joinedShapes?: QueryData['joinedShapes'];
-    joinOverrides?: QueryData['joinOverrides'];
     parsers?: ColumnsParsers;
   },
   shape: QueryColumns,
@@ -125,8 +126,8 @@ export const maybeSelectedColumnToSql = (
 const columnWithDotToSql = (
   ctx: ToSQLCtx,
   data: {
+    aliases?: RecordString;
     joinedShapes?: QueryData['joinedShapes'];
-    joinOverrides?: QueryData['joinOverrides'];
     parsers?: ColumnsParsers;
   },
   shape: QueryColumns,
@@ -145,7 +146,7 @@ const columnWithDotToSql = (
       : column;
   }
 
-  const tableName = data.joinOverrides?.[table] || table;
+  const tableName = data.aliases?.[table] || table;
   const quoted = `"${table}"`;
 
   const col = (
@@ -232,7 +233,7 @@ export const tableColumnToSqlWithAs = (
     return column;
   }
 
-  const tableName = data.joinOverrides?.[table] || table;
+  const tableName = data.aliases?.[table] || table;
   const quoted = `"${table}"`;
 
   const col =

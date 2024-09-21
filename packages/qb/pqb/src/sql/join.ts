@@ -280,7 +280,7 @@ export const pushJoinSql = (
       const as = item[2];
 
       sql = `${item[0]} LATERAL (${getSqlText(q.toSQL(ctx))}) "${
-        query.joinOverrides?.[as] || as
+        query.aliases?.[as] || as
       }" ON true`;
 
       ctx.aliasValue = aliasValue;

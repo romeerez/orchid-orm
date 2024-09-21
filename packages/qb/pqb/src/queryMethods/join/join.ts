@@ -1110,7 +1110,7 @@ export const pushQueryOnForOuter = <T extends PickQueryMeta>(
     ON: {
       joinTo: joinFrom,
       joinFrom: joinTo,
-      useOuterJoinOverrides: true,
+      useOuterAliases: true,
       on,
     },
   }) as never;

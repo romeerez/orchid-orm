@@ -191,7 +191,7 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
       qb.q = getClonedQueryData((q as unknown as Query).q);
       qb.q.and = qb.q.or = qb.q.scopes = undefined;
       qb.q.subQuery = 1;
-      qb.q.outerJoinOverrides = qb.q.joinOverrides;
+      qb.q.outerAliases = qb.q.aliases;
 
       args[i] = resolveSubQueryCallback(qb, arg as never) as never;
     }

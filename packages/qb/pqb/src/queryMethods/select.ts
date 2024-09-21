@@ -592,6 +592,7 @@ export const processSelectArg = <T extends SelectSelf>(
   }
 
   const selectAs: SelectAsValue = {};
+  let aliases: RecordString | undefined;
 
   for (const key in arg as unknown as SelectAsArg<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -638,22 +639,13 @@ export const processSelectArg = <T extends SelectSelf>(
           }
         }
 
-        let asOverride = key;
-
-        if (value.q.joinedShapes?.[key]) {
-          let suffix = 2;
-          const joinOverrides = ((q as unknown as Query).q.joinOverrides ??=
-            {});
-          while (joinOverrides[(asOverride = `${key}${suffix}`)]) {
-            suffix++;
-          }
-          // aliases points to a table in a query
-          joinOverrides[asOverride] = asOverride;
-          // table name points to an alias
-          joinOverrides[key] = asOverride;
-        }
+        const asOverride = value.q.aliases[key] ?? key;
 
         value.q.joinedForSelect = asOverride;
+
+        if (asOverride !== key) {
+          aliases = { ...(q as unknown as Query).q.aliases, [key]: asOverride };
+        }
 
         _joinLateral(
           q,
@@ -666,6 +658,8 @@ export const processSelectArg = <T extends SelectSelf>(
         value = value.q.expr;
       }
     }
+
+    if (aliases) (q as unknown as Query).q.aliases = aliases;
 
     selectAs[key] = addParserForSelectItem(
       q as unknown as Query,

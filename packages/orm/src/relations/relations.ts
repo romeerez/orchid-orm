@@ -456,11 +456,12 @@ const makeRelationQuery = (
         ? { ...this.q.aliases }
         : { ...this.q.aliases, [this.table]: this.table };
 
-      const relAliases = query.q.aliases!;
+      const relAliases = query.q.aliases!; // is always set for a relation
       for (const as in relAliases) {
         aliases[as] = _queryResolveAlias(aliases, as);
       }
-      query.q.as = aliases[query.q.as!];
+      query.q.as = aliases[query.q.as!]; // `as` is always set for a relation;
+      query.q.aliases = aliases;
 
       query.q.joinedShapes = {
         [getQueryAs(this)]: this.q.shape,

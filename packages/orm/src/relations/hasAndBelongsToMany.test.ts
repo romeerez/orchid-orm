@@ -561,12 +561,12 @@ describe('hasAndBelongsToMany', () => {
                     SELECT json_agg(row_to_json("t".*)) r
                     FROM (
                       SELECT ${chatSelectAll}
-                      FROM "chat" "chats"
+                      FROM "chat" "chats2"
                       WHERE EXISTS (
                         SELECT 1
                         FROM "chatUser"
-                        WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                          AND "chatUser"."chat_key" = "chats"."chat_key"
+                        WHERE "chatUser"."chat_id" = "chats2"."id_of_chat"
+                          AND "chatUser"."chat_key" = "chats2"."chat_key"
                           AND "chatUser"."user_id" = "users"."id"
                           AND "chatUser"."user_key" = "users"."user_key"
                       )

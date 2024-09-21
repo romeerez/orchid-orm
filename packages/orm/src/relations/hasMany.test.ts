@@ -547,18 +547,18 @@ describe('hasMany', () => {
               FROM "message" "messages"
               LEFT JOIN LATERAL (
                 SELECT COALESCE("messages2".r, '[]') "messages"
-                FROM "user" "sender"
+                FROM "user" "sender2"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(row_to_json("t".*)) r
                   FROM (
                     SELECT ${messageSelectAll}
-                    FROM "message" "messages"
-                    WHERE "messages"."author_id" = "sender"."id"
-                      AND "messages"."message_key" = "sender"."user_key"
+                    FROM "message" "messages2"
+                    WHERE "messages2"."author_id" = "sender2"."id"
+                      AND "messages2"."message_key" = "sender2"."user_key"
                   ) "t"
                 ) "messages2" ON true
-                WHERE "sender"."id" = "messages"."author_id"
-                  AND "sender"."user_key" = "messages"."message_key"
+                WHERE "sender2"."id" = "messages"."author_id"
+                  AND "sender2"."user_key" = "messages"."message_key"
               ) "sender2" ON true
               WHERE "messages"."author_id" = "sender"."id"
                 AND "messages"."message_key" = "sender"."user_key"
@@ -2698,7 +2698,7 @@ describe('hasMany through', () => {
                     SELECT json_agg(row_to_json("t".*)) r
                     FROM (
                       SELECT ${chatSelectAll}
-                      FROM "chat" "chats"
+                      FROM "chat" "chats2"
                       WHERE EXISTS (
                         SELECT 1
                         FROM "user"
@@ -2706,8 +2706,8 @@ describe('hasMany through', () => {
                           EXISTS (
                             SELECT 1
                             FROM "chatUser"
-                            WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                              AND "chatUser"."chat_key" = "chats"."chat_key"
+                            WHERE "chatUser"."chat_id" = "chats2"."id_of_chat"
+                              AND "chatUser"."chat_key" = "chats2"."chat_key"
                               AND "chatUser"."user_id" = "user"."id"
                             AND "chatUser"."user_key" = "user"."user_key"
                           )
@@ -3319,12 +3319,12 @@ describe('hasMany through', () => {
                       SELECT json_agg(row_to_json("t".*)) r
                       FROM (
                         SELECT ${profileSelectAll}
-                        FROM "profile" "profiles"
+                        FROM "profile" "profiles2"
                         WHERE EXISTS (
                           SELECT 1
                           FROM "user" AS "users"
-                          WHERE "profiles"."user_id" = "users"."id"
-                            AND "profiles"."profile_key" = "users"."user_key"
+                          WHERE "profiles2"."user_id" = "users"."id"
+                            AND "profiles2"."profile_key" = "users"."user_key"
                           AND EXISTS (
                             SELECT 1
                             FROM "chatUser"
