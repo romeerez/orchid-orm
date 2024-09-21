@@ -124,6 +124,7 @@ export interface CommonQueryData {
   // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
   as?: string;
+  aliases?: RecordString;
   from?: MaybeArray<QueryDataFromItem>;
   sources?: { [K: string]: QuerySourceItem };
   and?: WhereItem[];

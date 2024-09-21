@@ -281,6 +281,22 @@ export class ActiveUserWithProfile extends BaseTable {
   }));
 }
 
+class CategoryTable extends BaseTable {
+  readonly table = 'category';
+  columns = this.setColumns((t) => ({
+    categoryName: t.text().primaryKey(),
+    parentName: t.text(),
+    ...t.timestamps(),
+  }));
+
+  relations = {
+    category: this.belongsTo(() => CategoryTable, {
+      columns: ['parentName'],
+      references: ['categoryName'],
+    }),
+  };
+}
+
 export const db = orchidORM(
   {
     adapter: testAdapter,
@@ -295,6 +311,7 @@ export const db = orchidORM(
     postTag: PostTagTable,
     tag: TagTable,
     activeUserWithProfile: ActiveUserWithProfile,
+    category: CategoryTable,
   },
 );
 
@@ -309,6 +326,8 @@ export const chatSelectAll = db.chat.q.selectAllColumns!.join(', ');
 export const postSelectAll = db.post.q.selectAllColumns!.join(', ');
 
 export const postTagSelectAll = db.postTag.q.selectAllColumns!.join(', ');
+
+export const categorySelectAll = db.category.q.selectAllColumns!.join(', ');
 
 export const userData = {
   Name: 'name',

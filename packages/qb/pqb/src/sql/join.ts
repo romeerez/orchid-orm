@@ -315,6 +315,7 @@ const skipQueryKeysForSubQuery: RecordBoolean = {
   returnType: true,
   joinedShapes: true,
   returnsOne: true,
+  aliases: true,
 };
 
 export const getIsJoinSubQuery = (query: PickQueryQAndBaseQuery) => {

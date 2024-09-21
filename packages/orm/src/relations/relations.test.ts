@@ -1,6 +1,7 @@
 import { assertType, expectSql } from 'test-utils';
 import {
   BaseTable,
+  categorySelectAll,
   chatData,
   db,
   messageData,
@@ -162,6 +163,25 @@ describe('relations', () => {
         },
       },
     ]);
+  });
+
+  it('should load nested relations with the same name and properly differentiate them', () => {
+    const q = db.category.select({
+      category: (q) => q.category,
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT row_to_json("category2".*) "category"
+        FROM "category"
+        LEFT JOIN LATERAL (
+          SELECT ${categorySelectAll}
+          FROM "category" "category2"
+          WHERE "category2"."category_name" = "category"."parent_name"
+        ) "category2" ON true
+      `,
+    );
   });
 
   it('should select and order by relation count', () => {

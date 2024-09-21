@@ -3,6 +3,7 @@ import {
   Query,
   SetQueryTableAlias,
 } from '../query/query';
+import { RecordString } from 'orchid-core';
 
 export type AsQueryArg = PickQueryMetaTableShape;
 
@@ -10,8 +11,29 @@ export const _queryAs = <T extends AsQueryArg, As extends string>(
   self: T,
   as: As,
 ): SetQueryTableAlias<T, As> => {
-  (self as unknown as Query).q.as = as;
+  const { q } = self as unknown as Query;
+  q.as = as;
+  q.aliases = {
+    ...q.aliases!,
+    [as]: q.aliases ? _queryResolveAlias(q.aliases, as) : as,
+  };
+
   return self as SetQueryTableAlias<T, As>;
+};
+
+export const _queryResolveAlias = (
+  aliases: RecordString,
+  as: string,
+): string => {
+  if (!aliases[as]) return as;
+
+  let suffix = 2;
+  let privateAs;
+  while (aliases[(privateAs = as + suffix)]) {
+    suffix++;
+  }
+
+  return privateAs;
 };
 
 export abstract class AsMethods {

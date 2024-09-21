@@ -21,6 +21,7 @@ import {
 import { OrchidORM } from '../orm';
 import {
   _queryAll,
+  _queryResolveAlias,
   _queryTake,
   _queryTakeOptional,
   _queryWhere,
@@ -450,6 +451,16 @@ const makeRelationQuery = (
       } else {
         query.q.relChain = [this];
       }
+
+      const aliases = this.q.as
+        ? { ...this.q.aliases }
+        : { ...this.q.aliases, [this.table]: this.table };
+
+      const relAliases = query.q.aliases!;
+      for (const as in relAliases) {
+        aliases[as] = _queryResolveAlias(aliases, as);
+      }
+      query.q.as = aliases[query.q.as!];
 
       query.q.joinedShapes = {
         [getQueryAs(this)]: this.q.shape,
