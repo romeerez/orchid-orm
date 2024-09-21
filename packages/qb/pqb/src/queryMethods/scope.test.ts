@@ -18,6 +18,8 @@ const User = testDb(
   },
 );
 
+const userColumnsSql = User.q.selectAllColumns!.join(', ');
+
 describe('ScopeMethods', () => {
   describe('scope', () => {
     it('should apply where, whereOr, and order', () => {
@@ -26,7 +28,7 @@ describe('ScopeMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WHERE (
              "user"."name" = $1 OR "user"."name" = $2
           )
@@ -56,9 +58,9 @@ describe('ScopeMethods', () => {
       expectSql(
         User.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WHERE (
-            "user"."deletedAt" IS NULL OR "user"."active" = $1
+            "user"."deleted_at" IS NULL OR "user"."active" = $1
           )
         `,
         [true],
@@ -71,11 +73,11 @@ describe('ScopeMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WHERE (
             "user"."id" = $1 OR "user"."id" = $2
           ) AND (
-            "user"."deletedAt" IS NULL OR "user"."active" = $3
+            "user"."deleted_at" IS NULL OR "user"."active" = $3
           )
         `,
         [1, 2, true],
@@ -95,14 +97,14 @@ describe('ScopeMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
           WHERE (
             "user"."id" = $1
             AND "user"."id" = $2
             OR "user"."id" = $3
             OR "user"."id" = $4
           ) AND (
-            "user"."deletedAt" IS NULL
+            "user"."deleted_at" IS NULL
             OR "user"."active" = $5
           )
         `,
@@ -114,7 +116,7 @@ describe('ScopeMethods', () => {
       expectSql(
         User.unscope('default').toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT ${userColumnsSql} FROM "user"
         `,
       );
     });

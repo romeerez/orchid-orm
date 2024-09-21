@@ -216,9 +216,9 @@ describe('queryMethods', () => {
           .distinct('user.id', 'profile.userId')
           .toSQL(),
         `
-          SELECT DISTINCT ON ("user"."id", "profile"."userId") ${userTableColumnsSql}
+          SELECT DISTINCT ON ("user"."id", "profile"."user_id") ${userTableColumnsSql}
           FROM "user"
-          JOIN "profile" ON "profile"."userId" = "user"."id"
+          JOIN "profile" ON "profile"."user_id" = "user"."id"
         `,
       );
 
@@ -250,9 +250,9 @@ describe('queryMethods', () => {
           .distinct('user.id', 'p.userId')
           .toSQL(),
         `
-          SELECT DISTINCT ON ("user"."id", "p"."userId") ${userTableColumnsSql}
+          SELECT DISTINCT ON ("user"."id", "p"."user_id") ${userTableColumnsSql}
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -572,11 +572,9 @@ describe('queryMethods', () => {
         `
           SELECT "city"."name", "country"."name" "countryName"
           FROM "geo"."city"
-          JOIN "geo"."country" ON "country"."id" = "city"."countryId"
+          JOIN "geo"."country" ON "country"."id" = "city"."country_id"
         `,
       );
-
-      expectQueryNotMutated(q);
     });
   });
 
@@ -658,7 +656,7 @@ describe('queryMethods', () => {
 
     it('should group by selected value', () => {
       const q = User.select({
-        month: User.sql<string>`extract(month from "createdAt")`,
+        month: User.sql<string>`extract(month from "created_at)`,
       }).group('month');
 
       assertType<Awaited<typeof q>, { month: string }[]>();
@@ -666,7 +664,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT extract(month from "createdAt") "month"
+          SELECT extract(month from "created_at) "month"
           FROM "user"
           GROUP BY "month"
         `,

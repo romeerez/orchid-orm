@@ -145,7 +145,7 @@ describe('delete', () => {
       `
         DELETE FROM "user"
         USING "profile"
-        WHERE "user"."id" = $1 AND "profile"."userId" = "user"."id"
+        WHERE "user"."id" = $1 AND "profile"."user_id" = "user"."id"
         RETURNING ${userTableColumnsSql}
       `,
       [1],
@@ -181,44 +181,21 @@ describe('delete', () => {
     );
   });
 
-  it('should support implicit lateral join', () => {
-    const q = User.selectAll()
-      .where({ id: 1 })
-      .join(Profile, (q) => q.on('userId', 'user.id').limit(5))
-      .delete();
-
-    expectSql(
-      q.toSQL(),
-      `
-        DELETE FROM "user"
-        USING LATERAL (SELECT * FROM "profile" WHERE "profile"."userId" = "user"."id" LIMIT $1) "profile"
-        WHERE "user"."id" = $2
-        RETURNING ${userTableColumnsSql}
-      `,
-      [5, 1],
-    );
-
-    assertType<Awaited<typeof q>, UserRecord[]>();
+  // DELETE FROM ... USING LATERAL does not support referencing the table under deletion.
+  it('should throw when deleting after joining a complex query (limit in this case)', () => {
+    expect(() =>
+      User.where({ id: 1 })
+        .join(Profile, (q) => q.on('userId', 'user.id').limit(5))
+        .delete(),
+    ).toThrow('Cannot join a complex query in delete');
   });
 
-  it('should support explicit lateral join', () => {
-    const q = User.selectAll()
-      .where({ id: 1 })
-      .joinLateral(Profile, (q) => q.on('userId', 'user.id').limit(5))
-      .delete();
-
-    expectSql(
-      q.toSQL(),
-      `
-        DELETE FROM "user"
-        USING LATERAL (SELECT * FROM "profile" WHERE "profile"."userId" = "user"."id" LIMIT $1) "profile"
-        WHERE "user"."id" = $2
-        RETURNING ${userTableColumnsSql}
-      `,
-      [5, 1],
-    );
-
-    assertType<Awaited<typeof q>, UserRecord[]>();
+  it('should throw when joining a complex query after delete statement (limit in this case)', () => {
+    expect(() =>
+      User.where({ id: 1 })
+        .delete()
+        .join(Profile, (q) => q.on('userId', 'user.id').limit(5)),
+    ).toThrow('Cannot join a complex query in delete');
   });
 
   it('should throw NotFoundError when no records to delete for a `one` query kind', async () => {

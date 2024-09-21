@@ -74,6 +74,8 @@ export interface QueryInternal<
   nowSQL?: string;
   // access with `getPrimaryKeys` utility
   primaryKeys?: string[];
+  // cache `columnNameToKey` method that's available on table instances
+  columnNameToKeyMap?: Map<string, string>;
 }
 
 export type SelectableFromShape<
@@ -110,6 +112,7 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
     length: number,
     name: QueryErrorName,
   ) => QueryError;
+  columnNameToKey(name: string): string | undefined;
 }
 
 export interface PickQueryWithData {

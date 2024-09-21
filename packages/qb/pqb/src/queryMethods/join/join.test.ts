@@ -1,7 +1,9 @@
 import {
   expectQueryNotMutated,
   Message,
+  messageTableColumnsSql,
   Profile,
+  profileColumnsSql,
   Snake,
   snakeSelectAll,
   snakeSelectAllWithTable,
@@ -110,7 +112,7 @@ describe('join callback with query builder', () => {
     const expectedSql = `
       SELECT ${userTableColumnsSql} FROM "user"
       JOIN "message"
-        ON "message"."authorId" = "user"."id"
+        ON "message"."author_id" = "user"."id"
         OR "message"."text" = "user"."name"
     `;
 
@@ -435,7 +437,7 @@ describe('join callback with query builder', () => {
               (
                 SELECT
                   "t"."id" "messageId",
-                  "t"."authorId" "userId",
+                  "t"."author_id" "userId",
                   "t"."text" "content"
                 FROM "message" "t"
                 WHERE "t"."text" = $1
@@ -490,7 +492,7 @@ describe('join callback with query builder', () => {
 
     testWhere(
       (cb) => Message.join(User, cb as never).toSQL(),
-      `SELECT "message".* FROM "message" JOIN "user" ON`,
+      `SELECT ${messageTableColumnsSql} FROM "message" JOIN "user" ON`,
       {
         model: User,
         pkey: 'user.id',
@@ -624,7 +626,7 @@ describe('implicit lateral joins', () => {
         SELECT ${userTableColumnsSql}
         FROM "user"
         JOIN LATERAL (
-          SELECT *
+          SELECT "message".*
           FROM "message"
           WHERE "message"."id" = "user"."id" AND "message"."text" = $1
           LIMIT $2
@@ -638,16 +640,21 @@ describe('implicit lateral joins', () => {
   it('should work when joining a sub-query', () => {
     const q = User.join(
       () => Message.limit(5),
-      (q) => q.on('message.id', 'user.id').where({ text: 'text' }).offset(10),
-    );
+      (q) =>
+        q
+          .on('message.id', 'user.id')
+          .where({ text: 'text' })
+          .limit(5)
+          .offset(10),
+    ).select('message.authorId');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userTableColumnsSql}
+        SELECT "message"."author_id" "authorId"
         FROM "user"
         JOIN LATERAL (
-          SELECT *
+          SELECT "message".*
           FROM "message"
           WHERE "message"."id" = "user"."id" AND "message"."text" = $1
           LIMIT $2
@@ -666,7 +673,7 @@ describe('implicit lateral joins', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "p" AS (SELECT * FROM "profile")
+        WITH "p" AS (SELECT ${profileColumnsSql} FROM "profile")
         SELECT ${userTableColumnsSql}
         FROM "user"
         JOIN LATERAL (

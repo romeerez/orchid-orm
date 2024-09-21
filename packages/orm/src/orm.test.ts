@@ -177,15 +177,15 @@ describe('orm', () => {
         q.toSQL(),
         `SELECT * FROM (
         SELECT
-          "user"."createdAt",
+          "user"."created_at" "createdAt",
           "user"."name" "alias",
           "messagesCount".r "messagesCount"
         FROM "user"
         LEFT JOIN LATERAL (
           SELECT count(*) r
           FROM "message" "messages"
-          WHERE "messages"."authorId" = "user"."id"
-            AND "messages"."messageKey" = "user"."userKey"
+          WHERE "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
         ) "messagesCount" ON true
       ) "user"
       WHERE "user"."messagesCount" >= $1`,

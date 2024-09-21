@@ -418,9 +418,22 @@ const then = async (
       }
     }
 
+    // shift stack by one to point to the calling code
+    const stack = localError.stack;
+    if (stack) {
+      const from = stack.indexOf('\n');
+      if (from !== -1) {
+        const to = stack.indexOf('\n', from + 1);
+        if (to !== -1) {
+          localError.stack = stack.slice(0, from) + stack.slice(to);
+        }
+      }
+    }
+
     if (log && sql) {
       log.onError(error as Error, sql as SingleSqlItem, logData);
     }
+
     return reject?.(error);
   }
 };

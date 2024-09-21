@@ -16,7 +16,7 @@ import {
   useTestORM,
 } from './test-utils/orm.test-utils';
 import path from 'path';
-import { getCallerFilePath } from 'orchid-core';
+import { getCallerFilePath, pick } from 'orchid-core';
 import {
   asMock,
   assertType,
@@ -151,7 +151,7 @@ describe('baseTable', () => {
         readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.identity().primaryKey(),
-          createdAt: t.timestamp(),
+          createdAt: t.name('created_at').timestamp(),
         }));
       }
 
@@ -172,6 +172,7 @@ describe('baseTable', () => {
       await db.user.create(userData);
 
       const BaseTable = createBaseTable({
+        snakeCase: true,
         columnTypes: (t) => ({
           identity: t.identity,
           timestamp() {
@@ -296,6 +297,7 @@ describe('baseTable', () => {
     it('should produce custom SQL for timestamps when updating', () => {
       const nowSQL = `now() AT TIME ZONE 'UTC'`;
       const BaseTable = createBaseTable({
+        snakeCase: true,
         nowSQL,
       });
 
@@ -319,7 +321,7 @@ describe('baseTable', () => {
       expectSql(
         user.find(1).update({}).toSQL(),
         `
-          UPDATE "user" SET "updatedAt" = (now() AT TIME ZONE 'UTC') WHERE "user"."id" = $1
+          UPDATE "user" SET "updated_at" = (now() AT TIME ZONE 'UTC') WHERE "user"."id" = $1
         `,
         [1],
       );
@@ -568,7 +570,7 @@ describe('baseTable', () => {
         Id: t.name('id').identity().primaryKey(),
         Name: t.name('name').text(),
         Password: t.name('password').text(),
-        UserKey: t.name('userKey').text().nullable(),
+        UserKey: t.name('user_key').text().nullable(),
       }));
 
       computed = this.setComputed((q) => ({
@@ -597,8 +599,8 @@ describe('baseTable', () => {
       readonly table = 'profile';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
-        ProfileKey: t.name('profileKey').text(),
-        UserId: t.name('userId').integer().nullable(),
+        ProfileKey: t.name('profile_key').text(),
+        UserId: t.name('user_id').integer().nullable(),
       }));
 
       relations = {
@@ -619,8 +621,14 @@ describe('baseTable', () => {
 
     let userId = 0;
     beforeAll(async () => {
-      userId = await local.user.get('Id').insert(userData);
-      await local.profile.insert({ ...profileData, UserId: userId });
+      userId = await local.user
+        .get('Id')
+        .insert(pick(userData, ['Name', 'Password', 'UserKey']));
+
+      await local.profile.insert({
+        ProfileKey: profileData.ProfileKey,
+        UserId: userId,
+      });
     });
 
     describe('select', () => {
@@ -706,14 +714,14 @@ describe('baseTable', () => {
       expectSql(
         local.user.toSQL(),
         `
-          SELECT * FROM "user" WHERE ("user"."deletedAt" IS NULL)
+          SELECT "id", "deleted_at" AS "deletedAt" FROM "user" WHERE ("user"."deleted_at" IS NULL)
         `,
       );
 
       expectSql(
         local.user.includeDeleted().toSQL(),
         `
-          SELECT * FROM "user"
+          SELECT "id", "deleted_at" AS "deletedAt" FROM "user"
         `,
       );
 

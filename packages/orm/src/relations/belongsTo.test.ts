@@ -36,7 +36,7 @@ describe('belongsTo', () => {
         `
         SELECT ${userSelectAll} FROM "user"
         WHERE "user"."id" = $1
-          AND "user"."userKey" = $2
+          AND "user"."user_key" = $2
       `,
         [UserId, 'key'],
       );
@@ -75,8 +75,8 @@ describe('belongsTo', () => {
           WHERE EXISTS (
               SELECT 1 FROM "profile"
               WHERE "profile"."bio" = $1
-                AND "profile"."userId" = "user"."id"
-                AND "profile"."profileKey" = "user"."userKey"
+                AND "profile"."user_id" = "user"."id"
+                AND "profile"."profile_key" = "user"."user_key"
             )
             AND "user"."name" = $2
         `,
@@ -112,11 +112,11 @@ describe('belongsTo', () => {
                   SELECT 1
                   FROM "postTag"
                   WHERE "postTag"."tag" = $1
-                    AND "postTag"."postId" = "post"."id"
+                    AND "postTag"."post_id" = "post"."id"
                 )
                 AND "post"."body" = $2
-                AND "post"."userId" = "user"."id"
-                AND "post"."title" = "user"."userKey"
+                AND "post"."user_id" = "user"."id"
+                AND "post"."title" = "user"."user_key"
             )
             AND "user"."name" = $3
         `,
@@ -139,8 +139,8 @@ describe('belongsTo', () => {
           .toSQL(),
         `
           SELECT ${userSelectAll} FROM "user" "u"
-          WHERE "u"."id" = "p"."userId"
-            AND "u"."userKey" = "p"."profileKey"
+          WHERE "u"."id" = "p"."user_id"
+            AND "u"."user_key" = "p"."profile_key"
         `,
       );
     });
@@ -156,8 +156,8 @@ describe('belongsTo', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "user"."name" = $1
-              AND "user"."id" = "p"."userId"
-              AND "user"."userKey" = "p"."profileKey"
+              AND "user"."id" = "p"."user_id"
+              AND "user"."user_key" = "p"."profile_key"
           )
         `,
         ['name'],
@@ -172,8 +172,8 @@ describe('belongsTo', () => {
           SELECT ${profileSelectAll} FROM "profile" "p"
           WHERE EXISTS (
             SELECT 1 FROM "user"
-            WHERE "user"."id" = "p"."userId"
-              AND "user"."userKey" = "p"."profileKey"
+            WHERE "user"."id" = "p"."user_id"
+              AND "user"."user_key" = "p"."profile_key"
               AND "user"."name" = $1
           )
         `,
@@ -195,12 +195,12 @@ describe('belongsTo', () => {
               SELECT 1 FROM "user" AS "sender"
               WHERE EXISTS (
                   SELECT 1 FROM "profile"
-                  WHERE "profile"."userId" = "sender"."id"
-                    AND "profile"."profileKey" = "sender"."userKey"
+                  WHERE "profile"."user_id" = "sender"."id"
+                    AND "profile"."profile_key" = "sender"."user_key"
                     AND "profile"."bio" = $1
                 )
-                AND "sender"."id" = "m"."authorId"
-                AND "sender"."userKey" = "m"."messageKey"
+                AND "sender"."id" = "m"."author_id"
+                AND "sender"."user_key" = "m"."message_key"
             )
           `,
         ['bio'],
@@ -217,12 +217,12 @@ describe('belongsTo', () => {
             SELECT ${messageSelectAll} FROM "message" "m"
             WHERE EXISTS (
               SELECT 1 FROM "user" AS "sender"
-              WHERE "sender"."id" = "m"."authorId"
-                AND "sender"."userKey" = "m"."messageKey"
+              WHERE "sender"."id" = "m"."author_id"
+                AND "sender"."user_key" = "m"."message_key"
                 AND EXISTS (
                 SELECT 1 FROM "profile"
-                WHERE "profile"."userId" = "sender"."id"
-                  AND "profile"."profileKey" = "sender"."userKey"
+                WHERE "profile"."user_id" = "sender"."id"
+                  AND "profile"."profile_key" = "sender"."user_key"
                   AND "profile"."bio" = $1
               )
             )
@@ -248,8 +248,8 @@ describe('belongsTo', () => {
         SELECT "p"."bio" "Bio", "user"."name" "Name"
         FROM "profile" "p"
         JOIN "user"
-          ON "user"."id" = "p"."userId"
-         AND "user"."userKey" = "p"."profileKey"
+          ON "user"."id" = "p"."user_id"
+         AND "user"."user_key" = "p"."profile_key"
          AND "user"."name" = $1
       `,
         ['name'],
@@ -278,8 +278,8 @@ describe('belongsTo', () => {
         JOIN "user" AS "u"
           ON "u"."name" = $1
          AND "u"."age" = $2
-         AND "u"."id" = "p"."userId"
-         AND "u"."userKey" = "p"."profileKey"
+         AND "u"."id" = "p"."user_id"
+         AND "u"."user_key" = "p"."profile_key"
       `,
         ['name', 20],
       );
@@ -302,8 +302,8 @@ describe('belongsTo', () => {
             SELECT ${userSelectAll}
             FROM "user" "u"
             WHERE "u"."name" = $1 
-              AND "u"."id" = "profile"."userId"
-              AND "u"."userKey" = "profile"."profileKey"
+              AND "u"."id" = "profile"."user_id"
+              AND "u"."user_key" = "profile"."profile_key"
           ) "u" ON true
           WHERE "u"."Name" = $2
         `,
@@ -336,8 +336,8 @@ describe('belongsTo', () => {
               SELECT "user"."id" "Id", "user"."name" "Name"
               FROM "user"
               WHERE "user"."name" = $1
-                AND "user"."id" = "p"."userId"
-                AND "user"."userKey" = "p"."profileKey"
+                AND "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
             ) "user" ON true
             ORDER BY "user"."Name" ASC
           `,
@@ -364,9 +364,9 @@ describe('belongsTo', () => {
                 FROM "user"
                 WHERE EXISTS (
                   SELECT 1 FROM "post"
-                  WHERE "post"."id" = "postTag"."postId"
-                    AND "post"."userId" = "user"."id"
-                    AND "post"."title" = "user"."userKey"
+                  WHERE "post"."id" = "postTag"."post_id"
+                    AND "post"."user_id" = "user"."id"
+                    AND "post"."title" = "user"."user_key"
                 )
               ) "t"
             ) "items" ON true
@@ -391,8 +391,8 @@ describe('belongsTo', () => {
             LEFT JOIN LATERAL (
               SELECT true r
               FROM "user"
-              WHERE "user"."id" = "p"."userId"
-                AND "user"."userKey" = "p"."profileKey"
+              WHERE "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
             ) "hasUser" ON true
           `,
         );
@@ -425,15 +425,15 @@ describe('belongsTo', () => {
                 LEFT JOIN LATERAL (
                   SELECT ${userSelectAll}
                   FROM "user"
-                  WHERE "user"."id" = "profile"."userId"
-                    AND "user"."userKey" = "profile"."profileKey"
+                  WHERE "user"."id" = "profile"."user_id"
+                    AND "user"."user_key" = "profile"."profile_key"
                 ) "user2" ON true
                 WHERE "user2"."Name" = $1
-                  AND "profile"."userId" = "user"."id"
-                  AND "profile"."profileKey" = "user"."userKey"
+                  AND "profile"."user_id" = "user"."id"
+                  AND "profile"."profile_key" = "user"."user_key"
               ) "profile2" ON true
-              WHERE "user"."id" = "profile"."userId"
-                AND "user"."userKey" = "profile"."profileKey"
+              WHERE "user"."id" = "profile"."user_id"
+                AND "user"."user_key" = "profile"."profile_key"
             ) "user" ON true
           `,
           ['name'],
@@ -603,7 +603,7 @@ describe('belongsTo', () => {
             readonly table = 'user';
             columns = this.setColumns((t) => ({
               Id: t.name('id').identity().primaryKey(),
-              UserKey: t.name('userKey').text(),
+              UserKey: t.name('user_key').text(),
             }));
           }
 
@@ -611,9 +611,9 @@ describe('belongsTo', () => {
             readonly table = 'profile';
             columns = this.setColumns((t) => ({
               Id: t.name('id').identity().primaryKey(),
-              ProfileKey: t.name('profileKey').text(),
+              ProfileKey: t.name('profile_key').text(),
               UserId: t
-                .name('userId')
+                .name('user_id')
                 .integer()
                 .nullable()
                 .foreignKey(() => UserTable, 'Id'),
@@ -648,7 +648,7 @@ describe('belongsTo', () => {
           expectSql(
             q.toSQL(),
             `
-              INSERT INTO "profile"("id", "userId", "profileKey", "bio")
+              INSERT INTO "profile"("id", "user_id", "profile_key", "bio")
               VALUES ($1, $2, $3, $4)
               RETURNING ${profileSelectAll}
             `,
@@ -1524,7 +1524,7 @@ describe('belongsTo', () => {
       readonly table = 'profile';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
-        UserId: t.name('userId').integer().nullable(),
+        UserId: t.name('user_id').integer().nullable(),
       }));
 
       relations = {
@@ -1585,8 +1585,8 @@ describe('belongsTo', () => {
           SELECT count(*) = $1
           FROM "user"
           WHERE "user"."name" IN ($2, $3)
-            AND "user"."id" = "profile"."userId"
-            AND "user"."userKey" = "profile"."profileKey"
+            AND "user"."id" = "profile"."user_id"
+            AND "user"."user_key" = "profile"."profile_key"
         )
       `,
       [1, 'a', 'b'],

@@ -4,6 +4,7 @@ import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
 
 export const BaseTable = createBaseTable({
+  snakeCase: true,
   columnTypes: testColumnTypes,
 });
 
@@ -15,7 +16,7 @@ export class UserTable extends BaseTable {
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     Name: t.name('name').text(),
-    UserKey: t.name('userKey').text(),
+    UserKey: t.name('user_key').text(),
     Password: t.name('password').text().select(false),
     Picture: t.name('picture').text().nullable(),
     Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
@@ -73,9 +74,9 @@ export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
-    ProfileKey: t.name('profileKey').text(),
+    ProfileKey: t.name('profile_key').text(),
     UserId: t
-      .name('userId')
+      .name('user_id')
       .integer()
       .nullable()
       .unique()
@@ -117,8 +118,8 @@ export class ChatTable extends BaseTable {
   readonly table = 'chat';
   columns = this.setColumns((t) => ({
     // a different id name to better test has and belongs to many
-    IdOfChat: t.name('idOfChat').identity().primaryKey(),
-    ChatKey: t.name('chatKey').text(),
+    IdOfChat: t.name('id_of_chat').identity().primaryKey(),
+    ChatKey: t.name('chat_key').text(),
     Title: t.name('title').text(),
     ...t.timestamps(),
   }));
@@ -151,13 +152,13 @@ export class MessageTable extends BaseTable {
   readonly table = 'message';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
-    MessageKey: t.name('messageKey').text(),
+    MessageKey: t.name('message_key').text(),
     ChatId: t
-      .name('chatId')
+      .name('chat_id')
       .integer()
       .foreignKey(() => ChatTable, 'IdOfChat'),
     AuthorId: t
-      .name('authorId')
+      .name('author_id')
       .integer()
       .nullable()
       .foreignKey(() => UserTable, 'Id'),
@@ -196,7 +197,7 @@ export class PostTable extends BaseTable {
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     UserId: t
-      .name('userId')
+      .name('user_id')
       .integer()
       .foreignKey(() => UserTable, 'Id'),
     Body: t.name('body').text(),
@@ -233,7 +234,7 @@ export class PostTagTable extends BaseTable {
   columns = this.setColumns(
     (t) => ({
       PostId: t
-        .name('postId')
+        .name('post_id')
         .integer()
         .foreignKey(() => PostTable, 'Id'),
       Tag: t

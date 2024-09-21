@@ -31,12 +31,12 @@ describe('transaction', () => {
       ).toEqual([
         'BEGIN',
         line(`
-        INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+        INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
         VALUES ($1, $2, $3, $4, $5)
         RETURNING ${userSelectAll}
       `),
         line(`
-        INSERT INTO "profile"("bio", "profileKey", "updatedAt", "createdAt")
+        INSERT INTO "profile"("bio", "profile_key", "updated_at", "created_at")
         VALUES ($1, $2, $3, $4)
         RETURNING ${profileSelectAll}
       `),

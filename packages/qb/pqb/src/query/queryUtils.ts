@@ -1,4 +1,4 @@
-import { QueryData } from '../sql';
+import { DeleteQueryData, QueryData } from '../sql';
 import {
   emptyObject,
   pushOrNewArrayToObject,
@@ -82,6 +82,19 @@ export const throwIfNoWhere = (q: PickQueryQ, method: string): void => {
     throw new OrchidOrmInternalError(
       q as Query,
       `Dangerous ${method} without conditions`,
+    );
+  }
+};
+
+export const throwIfJoinLateral = (q: PickQueryQ, method: string): void => {
+  if (
+    (q.q as DeleteQueryData).join?.some(
+      (x) => Array.isArray(x) || ('s' in x.args && x.args.s),
+    )
+  ) {
+    throw new OrchidOrmInternalError(
+      q as Query,
+      `Cannot join a complex query in ${method}`,
     );
   }
 };

@@ -3,6 +3,7 @@ import {
   chatData,
   expectQueryNotMutated,
   Message,
+  messageColumnsSql,
   MessageRecord,
   Snake,
   snakeData,
@@ -993,12 +994,12 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "message"("chatId")
-          SELECT "chat"."idOfChat" "chatId"
+          INSERT INTO "message"("chat_id")
+          SELECT "chat"."id_of_chat" "chatId"
           FROM "chat"
-          WHERE "chat"."idOfChat" = $1
+          WHERE "chat"."id_of_chat" = $1
           LIMIT 1
-          RETURNING *
+          RETURNING ${messageColumnsSql}
         `,
         [1],
       );
@@ -1017,12 +1018,12 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "message"("chatId", "authorId", "text")
-          SELECT "chat"."idOfChat" "chatId", $1, 'text'
+          INSERT INTO "message"("chat_id", "author_id", "text")
+          SELECT "chat"."id_of_chat" "chatId", $1, 'text'
           FROM "chat"
-          WHERE "chat"."idOfChat" = $2
+          WHERE "chat"."id_of_chat" = $2
           LIMIT 1
-          RETURNING *
+          RETURNING ${messageColumnsSql}
         `,
         [1, 1],
       );
@@ -1149,11 +1150,11 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "message"("chatId")
-          SELECT "chat"."idOfChat" "chatId"
+          INSERT INTO "message"("chat_id")
+          SELECT "chat"."id_of_chat" "chatId"
           FROM "chat"
           WHERE "chat"."title" = $1
-          RETURNING *
+          RETURNING ${messageColumnsSql}
         `,
         ['title'],
       );
@@ -1686,7 +1687,7 @@ describe('create functions', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "table"("name", "password", "hasDefault")
+            INSERT INTO "table"("name", "password", "has_default")
             VALUES ($1, $2, $3)
             ON CONFLICT ("id", "name")
             DO UPDATE SET "password" = excluded."password"

@@ -38,10 +38,10 @@ describe('hasAndBelongsToMany', () => {
         SELECT ${chatSelectAll} FROM "chat" "chats"
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
-          WHERE "chatUser"."chatId" = "chats"."idOfChat"
-            AND "chatUser"."chatKey" = "chats"."chatKey"
-            AND "chatUser"."userId" = $1
-            AND "chatUser"."userKey" = $2
+          WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+            AND "chatUser"."chat_key" = "chats"."chat_key"
+            AND "chatUser"."user_id" = $1
+            AND "chatUser"."user_key" = $2
         )
       `,
         [userId, 'key'],
@@ -66,10 +66,10 @@ describe('hasAndBelongsToMany', () => {
               WHERE "user"."name" = $1
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                    AND "chatUser"."chatKey" = "chats"."chatKey"
-                    AND "chatUser"."userId" = "user"."id"
-                    AND "chatUser"."userKey" = "user"."userKey"
+                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                    AND "chatUser"."chat_key" = "chats"."chat_key"
+                    AND "chatUser"."user_id" = "user"."id"
+                    AND "chatUser"."user_key" = "user"."user_key"
                 )
             )
             AND "chats"."title" = $2
@@ -103,19 +103,19 @@ describe('hasAndBelongsToMany', () => {
                     AND EXISTS (
                       SELECT 1
                       FROM "chatUser"
-                      WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."userKey" = "users"."userKey"
-                        AND "chatUser"."chatId" = "chat"."idOfChat"
-                        AND "chatUser"."chatKey" = "chat"."chatKey"
+                      WHERE "chatUser"."user_id" = "users"."id"
+                        AND "chatUser"."user_key" = "users"."user_key"
+                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                        AND "chatUser"."chat_key" = "chat"."chat_key"
                     )
                 )
                 AND "users"."name" = $2
                 AND EXISTS (
                   SELECT 1
                   FROM "post"
-                  WHERE "post"."id" = "postTags"."postId"
-                    AND "post"."userId" = "users"."id"
-                    AND "post"."title" = "users"."userKey"
+                  WHERE "post"."id" = "postTags"."post_id"
+                    AND "post"."user_id" = "users"."id"
+                    AND "post"."title" = "users"."user_key"
                 )
             )
             AND "postTags"."tag" = $3
@@ -174,10 +174,10 @@ describe('hasAndBelongsToMany', () => {
               WHERE "user"."name" = $1
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                    AND "chatUser"."chatKey" = "chats"."chatKey"
-                    AND "chatUser"."userId" = "user"."id"
-                    AND "chatUser"."userKey" = "user"."userKey"
+                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                    AND "chatUser"."chat_key" = "chats"."chat_key"
+                    AND "chatUser"."user_id" = "user"."id"
+                    AND "chatUser"."user_key" = "user"."user_key"
                 )
             )
             AND "chats"."title" = $2
@@ -195,10 +195,10 @@ describe('hasAndBelongsToMany', () => {
           SELECT ${chatSelectAll} FROM "chat" "c"
           WHERE EXISTS (
             SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "c"."idOfChat"
-              AND "chatUser"."chatKey" = "c"."chatKey"
-              AND "chatUser"."userId" = "u"."id"
-              AND "chatUser"."userKey" = "u"."userKey"
+            WHERE "chatUser"."chat_id" = "c"."id_of_chat"
+              AND "chatUser"."chat_key" = "c"."chat_key"
+              AND "chatUser"."user_id" = "u"."id"
+              AND "chatUser"."user_key" = "u"."user_key"
           )
         `,
       );
@@ -213,10 +213,10 @@ describe('hasAndBelongsToMany', () => {
             SELECT 1 FROM "chat" AS "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                AND "chatUser"."chatKey" = "chats"."chatKey"
-                AND "chatUser"."userId" = "user"."id"
-                AND "chatUser"."userKey" = "user"."userKey"
+              WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                AND "chatUser"."chat_key" = "chats"."chat_key"
+                AND "chatUser"."user_id" = "user"."id"
+                AND "chatUser"."user_key" = "user"."user_key"
             )
           )
         `,
@@ -234,10 +234,10 @@ describe('hasAndBelongsToMany', () => {
             WHERE "chats"."title" = $1
               AND EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                  AND "chatUser"."chatKey" = "chats"."chatKey"
-                  AND "chatUser"."userId" = "u"."id"
-                  AND "chatUser"."userKey" = "u"."userKey"
+                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                  AND "chatUser"."chat_key" = "chats"."chat_key"
+                  AND "chatUser"."user_id" = "u"."id"
+                  AND "chatUser"."user_key" = "u"."user_key"
               )
           )
         `,
@@ -256,10 +256,10 @@ describe('hasAndBelongsToMany', () => {
             WHERE
               EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                  AND "chatUser"."chatKey" = "chats"."chatKey"
-                  AND "chatUser"."userId" = "u"."id"
-                  AND "chatUser"."userKey" = "u"."userKey"
+                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                  AND "chatUser"."chat_key" = "chats"."chat_key"
+                  AND "chatUser"."user_id" = "u"."id"
+                  AND "chatUser"."user_key" = "u"."user_key"
               )
               AND "chats"."title" = $1
           )
@@ -284,10 +284,10 @@ describe('hasAndBelongsToMany', () => {
         JOIN "chat" AS "chats"
           ON EXISTS (
             SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "chats"."idOfChat"
-              AND "chatUser"."chatKey" = "chats"."chatKey"
-              AND "chatUser"."userId" = "u"."id"
-              AND "chatUser"."userKey" = "u"."userKey"
+            WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+              AND "chatUser"."chat_key" = "chats"."chat_key"
+              AND "chatUser"."user_id" = "u"."id"
+              AND "chatUser"."user_key" = "u"."user_key"
           )
           AND "chats"."title" = $1
       `,
@@ -315,13 +315,13 @@ describe('hasAndBelongsToMany', () => {
         FROM "user" "u"
         JOIN "chat" AS "c"
           ON "c"."title" = $1
-          AND "c"."updatedAt" = $2
+          AND "c"."updated_at" = $2
           AND EXISTS (
             SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "c"."idOfChat"
-              AND "chatUser"."chatKey" = "c"."chatKey"
-              AND "chatUser"."userId" = "u"."id"
-              AND "chatUser"."userKey" = "u"."userKey"
+            WHERE "chatUser"."chat_id" = "c"."id_of_chat"
+              AND "chatUser"."chat_key" = "c"."chat_key"
+              AND "chatUser"."user_id" = "u"."id"
+              AND "chatUser"."user_key" = "u"."user_key"
           )
       `,
         ['title', now],
@@ -348,10 +348,10 @@ describe('hasAndBelongsToMany', () => {
               AND EXISTS (
                 SELECT 1
                 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "c"."idOfChat"
-                  AND "chatUser"."chatKey" = "c"."chatKey"
-                  AND "chatUser"."userId" = "user"."id"
-                  AND "chatUser"."userKey" = "user"."userKey"
+                WHERE "chatUser"."chat_id" = "c"."id_of_chat"
+                  AND "chatUser"."chat_key" = "c"."chat_key"
+                  AND "chatUser"."user_id" = "user"."id"
+                  AND "chatUser"."user_key" = "user"."user_key"
               )
           ) "c" ON true
           WHERE "c"."Title" = $2
@@ -383,16 +383,16 @@ describe('hasAndBelongsToMany', () => {
               SELECT json_agg(row_to_json("t".*)) r
               FROM (
                 SELECT
-                  "chats"."idOfChat" "IdOfChat",
+                  "chats"."id_of_chat" "IdOfChat",
                   "chats"."title" "Title"
                 FROM "chat" "chats"
                 WHERE "chats"."title" = $1
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                      AND "chatUser"."chatKey" = "chats"."chatKey"
-                      AND "chatUser"."userId" = "u"."id"
-                      AND "chatUser"."userKey" = "u"."userKey"
+                    WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chats"."chat_key"
+                      AND "chatUser"."user_id" = "u"."id"
+                      AND "chatUser"."user_key" = "u"."user_key"
                   )
               ) "t"
             ) "chats" ON true
@@ -422,15 +422,15 @@ describe('hasAndBelongsToMany', () => {
                   SELECT 1 FROM "user" AS "users"
                   WHERE EXISTS (
                     SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."userId" = "users"."id"
-                      AND "chatUser"."userKey" = "users"."userKey"
-                      AND "chatUser"."chatId" = "chat"."idOfChat"
-                      AND "chatUser"."chatKey" = "chat"."chatKey"
+                    WHERE "chatUser"."user_id" = "users"."id"
+                      AND "chatUser"."user_key" = "users"."user_key"
+                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chat"."chat_key"
                   ) AND EXISTS (
                     SELECT 1 FROM "post"
-                    WHERE "post"."id" = "postTags"."postId"
-                      AND "post"."userId" = "users"."id"
-                      AND "post"."title" = "users"."userKey"
+                    WHERE "post"."id" = "postTags"."post_id"
+                      AND "post"."user_id" = "users"."id"
+                      AND "post"."title" = "users"."user_key"
                   )
                 )
               ) "t"
@@ -459,10 +459,10 @@ describe('hasAndBelongsToMany', () => {
             FROM "chat" "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                AND "chatUser"."chatKey" = "chats"."chatKey"
-                AND "chatUser"."userId" = "u"."id"
-                AND "chatUser"."userKey" = "u"."userKey"
+              WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                AND "chatUser"."chat_key" = "chats"."chat_key"
+                AND "chatUser"."user_id" = "u"."id"
+                AND "chatUser"."user_key" = "u"."user_key"
             )
           ) "chatsCount" ON true
         `,
@@ -490,10 +490,10 @@ describe('hasAndBelongsToMany', () => {
               FROM "chat" "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                  AND "chatUser"."chatKey" = "chats"."chatKey"
-                  AND "chatUser"."userId" = "u"."id"
-                  AND "chatUser"."userKey" = "u"."userKey"
+                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                  AND "chatUser"."chat_key" = "chats"."chat_key"
+                  AND "chatUser"."user_id" = "u"."id"
+                  AND "chatUser"."user_key" = "u"."user_key"
               )
             ) "t"
           ) "titles" ON true
@@ -520,10 +520,10 @@ describe('hasAndBelongsToMany', () => {
             FROM "chat" "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                AND "chatUser"."chatKey" = "chats"."chatKey"
-                AND "chatUser"."userId" = "u"."id"
-                AND "chatUser"."userKey" = "u"."userKey"
+              WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                AND "chatUser"."chat_key" = "chats"."chat_key"
+                AND "chatUser"."user_id" = "u"."id"
+                AND "chatUser"."user_key" = "u"."user_key"
             )
             LIMIT 1
           ) "hasChats" ON true
@@ -565,30 +565,30 @@ describe('hasAndBelongsToMany', () => {
                       WHERE EXISTS (
                         SELECT 1
                         FROM "chatUser"
-                        WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                          AND "chatUser"."chatKey" = "chats"."chatKey"
-                          AND "chatUser"."userId" = "users"."id"
-                          AND "chatUser"."userKey" = "users"."userKey"
+                        WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                          AND "chatUser"."chat_key" = "chats"."chat_key"
+                          AND "chatUser"."user_id" = "users"."id"
+                          AND "chatUser"."user_key" = "users"."user_key"
                       )
                     ) "t"
                   ) "chats2" ON true
                   WHERE EXISTS (
                     SELECT 1
                     FROM "chatUser"
-                    WHERE "chatUser"."userId" = "users"."id"
-                      AND "chatUser"."userKey" = "users"."userKey"
-                      AND "chatUser"."chatId" = "chats"."idOfChat"
-                      AND "chatUser"."chatKey" = "chats"."chatKey"
+                    WHERE "chatUser"."user_id" = "users"."id"
+                      AND "chatUser"."user_key" = "users"."user_key"
+                      AND "chatUser"."chat_id" = "chats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chats"."chat_key"
                   )
                 ) "t"
               ) "users" ON true
               WHERE EXISTS (
                 SELECT 1
                 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                  AND "chatUser"."chatKey" = "chats"."chatKey"
-                  AND "chatUser"."userId" = "user"."id"
-                  AND "chatUser"."userKey" = "user"."userKey"
+                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                  AND "chatUser"."chat_key" = "chats"."chat_key"
+                  AND "chatUser"."user_id" = "user"."id"
+                  AND "chatUser"."user_key" = "user"."user_key"
               )
             ) "t"
           ) "chats" ON true
@@ -671,9 +671,9 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
-          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
+          RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
           ['user 1', 'key', 'password', now, now],
         );
@@ -681,9 +681,9 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatsSql as Sql,
           `
-          INSERT INTO "chat"("title", "chatKey", "updatedAt", "createdAt")
+          INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
-          RETURNING "chat"."idOfChat" "IdOfChat", "chat"."chatKey" "ChatKey"
+          RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
         `,
           ['chat 1', 'key', now, now, 'chat 2', 'key', now, now],
         );
@@ -691,7 +691,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
         `,
           [
@@ -758,9 +758,9 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
-          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
+          RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
           [
             'user 1',
@@ -779,9 +779,9 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatsSql as Sql,
           `
-          INSERT INTO "chat"("title", "chatKey", "updatedAt", "createdAt")
+          INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
-          RETURNING "chat"."idOfChat" "IdOfChat", "chat"."chatKey" "ChatKey"
+          RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
         `,
           [
             'chat 1',
@@ -806,7 +806,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
         `,
           [
@@ -916,9 +916,9 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
-          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
+          RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
           ['user 1', 'key', 'password', now, now],
         );
@@ -928,7 +928,7 @@ describe('hasAndBelongsToMany', () => {
           expectSql(
             sql as Sql,
             `
-            SELECT "chats"."idOfChat" "IdOfChat", "chats"."chatKey" "ChatKey"
+            SELECT "chats"."id_of_chat" "IdOfChat", "chats"."chat_key" "ChatKey"
             FROM "chat" "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
@@ -940,7 +940,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
         `,
           [
@@ -1010,9 +1010,9 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
-          RETURNING "user"."id" "Id", "user"."userKey" "UserKey"
+          RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
           [
             'user 1',
@@ -1033,7 +1033,7 @@ describe('hasAndBelongsToMany', () => {
           expectSql(
             sql as Sql,
             `
-            SELECT "chats"."idOfChat" "IdOfChat", "chats"."chatKey" "ChatKey"
+            SELECT "chats"."id_of_chat" "IdOfChat", "chats"."chat_key" "ChatKey"
             FROM "chat" "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
@@ -1045,7 +1045,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
         `,
           [
@@ -1707,10 +1707,10 @@ describe('hasAndBelongsToMany', () => {
             AND EXISTS (
               SELECT 1
               FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                AND "chatUser"."chatKey" = "chats"."chatKey"
-                AND "chatUser"."userId" = "user"."id"
-                AND "chatUser"."userKey" = "user"."userKey"
+              WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                AND "chatUser"."chat_key" = "chats"."chat_key"
+                AND "chatUser"."user_id" = "user"."id"
+                AND "chatUser"."user_key" = "user"."user_key"
             )
         )
       `,

@@ -8,6 +8,7 @@ import {
   QueryColumn,
   QueryColumns,
 } from 'orchid-core';
+import { VirtualColumn } from '../columns';
 
 const applySqlComputed = (
   ctx: ToSQLCtx,
@@ -200,10 +201,33 @@ export const tableColumnToSqlWithAs = (
   select?: true,
 ) => {
   if (key === '*') {
-    if (data.joinedShapes?.[table]) {
-      return select
-        ? `row_to_json("${table}".*) "${as}"`
-        : `"${table}".r "${as}"`;
+    const shape = data.joinedShapes?.[table];
+    if (shape) {
+      if (select) {
+        let isSimple = true;
+        const list: string[] = [];
+
+        for (const key in shape) {
+          const column = shape[key];
+          if (column.data.explicitSelect || column instanceof VirtualColumn) {
+            continue;
+          }
+
+          if (column.data.name) {
+            isSimple = false;
+          }
+
+          list.push(`'${key}'`, `"${table}"."${column.data.name || key}"`);
+        }
+
+        return (
+          (isSimple
+            ? `row_to_json("${table}".*)`
+            : 'json_build_object(' + list.join(', ') + ')') + ` "${as}"`
+        );
+      }
+
+      return `"${table}".r "${as}"`;
     }
     return column;
   }

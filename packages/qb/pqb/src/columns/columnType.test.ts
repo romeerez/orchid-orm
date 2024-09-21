@@ -201,7 +201,10 @@ describe('column type', () => {
       });
 
       it('should return column data as returned from db if not set', async () => {
-        const db = createDb({ adapter: testAdapter });
+        const db = createDb({
+          snakeCase: true,
+          adapter: testAdapter,
+        });
 
         const UserWithPlainTimestamp = db('user', (t) => ({
           id: t.serial().primaryKey(),
@@ -243,6 +246,7 @@ describe('column type', () => {
 
   describe('as', () => {
     const db = createDb({
+      snakeCase: true,
       adapter: testAdapter,
       columnTypes: (t) => ({
         ...t,
@@ -258,6 +262,7 @@ describe('column type', () => {
     });
 
     const dbZod = createDb({
+      snakeCase: true,
       adapter: testAdapter,
       schemaConfig: zodSchemaConfig,
       columnTypes: (t) => ({
@@ -288,6 +293,9 @@ describe('column type', () => {
       createdAt: t.numberTimestamp(),
       updatedAt: t.dateTimestamp(),
     }));
+
+    const userColumnsSql =
+      UserWithCustomTimestamps.q.selectAllColumns!.join(', ');
 
     describe.each`
       schema
@@ -354,15 +362,15 @@ describe('column type', () => {
         expectSql(
           query.toSQL(),
           `
-          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          INSERT INTO "user"("name", "password", "created_at", "updated_at")
           VALUES ($1, $2, $3, $4)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
           [userData.name, userData.password, new Date(createdAt), updatedAt],
         );
       });
 
-      it('should encode columns when update', async () => {
+      it('should encode columns for update', async () => {
         const id = await User.get('id').create(userData);
         const createdAt = Date.now();
         const updatedAt = new Date();
@@ -376,7 +384,7 @@ describe('column type', () => {
           query.toSQL(),
           `
           UPDATE "user"
-          SET "createdAt" = $1, "updatedAt" = $2
+          SET "created_at" = $1, "updated_at" = $2
           WHERE "user"."id" = $3
         `,
           [new Date(createdAt), updatedAt, id],

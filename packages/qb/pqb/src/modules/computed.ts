@@ -114,10 +114,12 @@ export const applyComputedColumns = (
     if (item instanceof ComputedColumn) {
       q.q.computeds = { ...q.q.computeds, [key]: item };
     } else {
-      (
+      const data = (
         ((q.shape as QueryColumns)[key] =
           item.result.value || UnknownColumn.instance) as ColumnType
-      ).data.computed = item as Expression;
+      ).data;
+      data.computed = item as Expression;
+      data.explicitSelect = true;
     }
   }
 

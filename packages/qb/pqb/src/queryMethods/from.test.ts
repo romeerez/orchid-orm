@@ -1,6 +1,7 @@
 import {
   expectQueryNotMutated,
   Profile,
+  profileColumnsSql,
   User,
   userColumnsSql,
   userData,
@@ -38,7 +39,7 @@ describe('from', () => {
       q.toSQL(),
       `
         WITH "w" AS (
-          SELECT "profile"."userId"
+          SELECT "profile"."user_id" "userId"
           FROM "profile"
         )
         SELECT "w"."userId", "user"."id"
@@ -53,7 +54,10 @@ describe('from', () => {
 
     assertType<Awaited<typeof q>, { bio: string | null }[]>();
 
-    expectSql(q.toSQL(), 'SELECT "profile"."bio" FROM "profile"');
+    expectSql(
+      q.toSQL(),
+      `SELECT "profile"."bio" FROM (SELECT ${profileColumnsSql} FROM "profile") "profile"`,
+    );
   });
 
   describe('inner query', () => {
@@ -79,7 +83,7 @@ describe('from', () => {
         q.toSQL(),
         `SELECT * FROM (
         SELECT
-          "user"."createdAt",
+          "user"."created_at" "createdAt",
           "user"."name" "alias",
           (SELECT count(*) FROM "user") "count"
         FROM "user"
@@ -128,7 +132,7 @@ describe('from multiple', () => {
           "with1" AS (SELECT 1 "one"),
           "with2" AS (SELECT 1 "two")
         SELECT "with1"."one", "with2"."two", "user"."active", "profile"."bio"
-        FROM "with1", "with2", (SELECT ${userColumnsSql} FROM "user"), "profile"
+        FROM "with1", "with2", (SELECT ${userColumnsSql} FROM "user"), (SELECT ${profileColumnsSql} FROM "profile")
       `,
     );
   });

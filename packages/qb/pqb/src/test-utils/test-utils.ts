@@ -56,6 +56,9 @@ export const UserSoftDelete = testDb(
   },
 );
 
+export const userSoftDeleteColumnsSql =
+  UserSoftDelete.q.selectAllColumns!.join(', ');
+
 export type ProfileRecord = typeof Profile.outputType;
 export const Profile = testDb('profile', (t) => ({
   id: t.identity().primaryKey(),
@@ -63,6 +66,12 @@ export const Profile = testDb('profile', (t) => ({
   bio: t.text().nullable(),
   ...t.timestamps(),
 }));
+
+export const profileColumnsSql = Profile.q.selectAllColumns!.join(', ');
+
+export const profileTableColumnsSql = Profile.q
+  .selectAllColumns!.map((c) => '"profile".' + c)
+  .join(', ');
 
 export const Chat = testDb('chat', (t) => ({
   idOfChat: t.identity().primaryKey(),
@@ -92,6 +101,12 @@ export const Message = testDb('message', (t) => ({
   meta: t.json().nullable(),
   ...t.timestamps(),
 }));
+
+export const messageColumnsSql = Message.q.selectAllColumns!.join(', ');
+
+export const messageTableColumnsSql = Message.q
+  .selectAllColumns!.map((c) => '"message".' + c)
+  .join(', ');
 
 export type SnakeRecord = typeof Snake.outputType;
 export type SnakeData = { name: string; tags: string[] };
@@ -128,6 +143,8 @@ export const Post = testDb('post', (t) => ({
   generatedTsVector: t.tsvector().generated(['title', 'text']).searchIndex(),
   ...t.timestamps(),
 }));
+
+export const postColumnsSql = Post.q.selectAllColumns!.join(', ');
 
 export const Tag = testDb('tag', (t) => ({
   tag: t.text().primaryKey(),

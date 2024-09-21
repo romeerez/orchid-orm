@@ -15,7 +15,11 @@ import {
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { RelationQueryBase } from '../../relations';
-import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
+import {
+  pushQueryValue,
+  setQueryObjectValue,
+  throwIfJoinLateral,
+} from '../../query/queryUtils';
 import {
   JoinArgs,
   JoinArgToQuery,
@@ -73,7 +77,7 @@ export const _join = <
 
     joinKey = q.q.as || q.table;
     if (joinKey) {
-      shape = getShapeFromSelect(q, joinSubQuery);
+      shape = getShapeFromSelect(q, joinSubQuery && !!q.q.select);
       parsers = q.q.parsers;
       batchParsers = q.q.batchParsers;
       computeds = q.q.computeds;
@@ -180,10 +184,16 @@ export const _join = <
     );
   }
 
-  return pushQueryValue(query as unknown as PickQueryQ, 'join', {
+  const q = pushQueryValue(query as unknown as PickQueryQ, 'join', {
     type,
     args: joinArgs,
-  }) as never;
+  });
+
+  if ((query as unknown as PickQueryQ).q.type === 'delete') {
+    throwIfJoinLateral(q, (query as unknown as PickQueryQ).q.type as string);
+  }
+
+  return q as never;
 };
 
 const addAllShapesAndParsers = (

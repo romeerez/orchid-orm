@@ -65,7 +65,7 @@ describe('update', () => {
       query.toSQL(),
       `
         UPDATE "user"
-        SET name = 'name', "updatedAt" = now()
+        SET name = 'name', "updated_at" = now()
         WHERE "user"."id" = $1 OR "user"."id" = $2
       `,
       [users[0].id, users[1].id],
@@ -83,7 +83,7 @@ describe('update', () => {
       q.toSQL(),
       `
         UPDATE "user"
-        SET name = $1, "updatedAt" = now()
+        SET name = $1, "updated_at" = now()
       `,
       ['name'],
     );
@@ -99,7 +99,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "password" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" = $3
       `,
       [update.name, update.password, id],
@@ -150,7 +150,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "password" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" = $3
         RETURNING "user"."id"
       `,
@@ -204,7 +204,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "password" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" = $3
         RETURNING "user"."id", "user"."name"
       `,
@@ -258,7 +258,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "password" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" = $3
         RETURNING ${userColumnsSql}
       `,
@@ -310,7 +310,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "password" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" IN ($3, $4)
         RETURNING "user"."id", "user"."name"
       `,
@@ -370,7 +370,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "password" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" IN ($3, $4)
         RETURNING ${userColumnsSql}
       `,
@@ -426,7 +426,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "data" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" = $3
       `,
       ['new name', null, 1],
@@ -444,7 +444,7 @@ describe('update', () => {
       query.toSQL(),
       `
         UPDATE "user"
-        SET "name" = 'raw sql', "updatedAt" = now()
+        SET "name" = 'raw sql', "updated_at" = now()
         WHERE "user"."id" = $1
       `,
       [1],
@@ -471,7 +471,7 @@ describe('update', () => {
       `
         WITH "a" AS (
           UPDATE "user"
-          SET "name" = $1, "password" = $2, "updatedAt" = now()
+          SET "name" = $1, "password" = $2, "updated_at" = now()
           WHERE "user"."id" = $3
           RETURNING "user"."name"
         ), "b" AS (
@@ -480,7 +480,7 @@ describe('update', () => {
             "name" = (
               SELECT "a"."name" FROM "a" LIMIT 1
             ),
-            "updatedAt" = now()
+            "updated_at" = now()
           WHERE "user"."id" = $4
           RETURNING "user"."id"
         )
@@ -501,7 +501,7 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "password" = $2,
-            "updatedAt" = now()
+            "updated_at" = now()
         WHERE "user"."id" = $3
         RETURNING ${userColumnsSql}
       `,
@@ -533,7 +533,7 @@ describe('update', () => {
         UPDATE "user"
         SET
           "name" = (SELECT "user"."name" FROM "user" LIMIT 1),
-          "updatedAt" = now()
+          "updated_at" = now()
       `,
     );
   });
@@ -549,13 +549,13 @@ describe('update', () => {
         WITH "q" AS (
           UPDATE "user"
              SET "name" = $1,
-                 "updatedAt" = now()
+                 "updated_at" = now()
           WHERE "user"."id" = $2
           RETURNING "user"."name"
         )
         UPDATE "user"
            SET "name" = (SELECT * FROM "q"),
-               "updatedAt" = now()
+               "updated_at" = now()
         WHERE "user"."id" = $3
       `,
       ['new name', 2, 1],
@@ -577,7 +577,7 @@ describe('update', () => {
         )
         UPDATE "user"
            SET "name" = (SELECT * FROM "q"),
-               "updatedAt" = now()
+               "updated_at" = now()
         WHERE "user"."id" = $3
       `,
       [userData.name, userData.password, 1],
@@ -599,7 +599,7 @@ describe('update', () => {
         )
         UPDATE "user"
            SET "name" = (SELECT * FROM "q"),
-               "updatedAt" = now()
+               "updated_at" = now()
         WHERE "user"."id" = $2
       `,
       [2, 1],
@@ -641,13 +641,13 @@ describe('update', () => {
         `
         UPDATE "profile"
         SET
-          "userId" = (
+          "user_id" = (
             SELECT "user"."id"
             FROM "user"
-            WHERE "user"."id" = "profile"."userId"
+            WHERE "user"."id" = "profile"."user_id"
             LIMIT 1
           ),
-          "updatedAt" = now()
+          "updated_at" = now()
       `,
       );
     });
@@ -704,7 +704,7 @@ describe('update', () => {
       query.toSQL(),
       `
         UPDATE "user"
-        SET "name" = $1, "updatedAt" = now()
+        SET "name" = $1, "updated_at" = now()
         WHERE "user"."id" = $2
       `,
       ['name', 1],
@@ -751,7 +751,7 @@ describe('update', () => {
         `
           UPDATE "user"
           SET "age" = "age" ${sign} $1,
-              "updatedAt" = now()
+              "updated_at" = now()
         `,
         [1],
       );
@@ -778,7 +778,7 @@ describe('update', () => {
         `
           UPDATE "user"
           SET "age" = "age" ${sign} $1,
-              "updatedAt" = now()
+              "updated_at" = now()
         `,
         [3],
       );
@@ -805,7 +805,7 @@ describe('update', () => {
         `
           UPDATE "user"
           SET "age" = "age" ${sign} $1,
-              "updatedAt" = now()
+              "updated_at" = now()
           RETURNING "user"."id"
         `,
         [3],
@@ -868,7 +868,7 @@ describe('update', () => {
               "password" = $3,
               "age" = "age" - $4,
               "data" = jsonb_insert("user"."data", $5, $6),
-              "updatedAt" = now()
+              "updated_at" = now()
           WHERE "user"."id" = $7
           RETURNING "user"."id"
         `,

@@ -228,7 +228,7 @@ describe('hooks', () => {
       q.toSQL(),
       `
         UPDATE "user"
-        SET "name" = $1, "updatedAt" = now()
+        SET "name" = $1, "updated_at" = now()
         RETURNING "user"."id", "user"."name", "user"."password"
       `,
       ['new name'],

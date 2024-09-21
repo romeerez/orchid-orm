@@ -1,5 +1,6 @@
 import {
   Profile,
+  profileColumnsSql,
   ProfileRecord,
   Snake,
   User,
@@ -89,7 +90,7 @@ describe('with', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT * FROM "profile")
+        WITH "w" AS (SELECT ${profileColumnsSql} FROM "profile")
         SELECT "user"."name", row_to_json("w".*) "w"
         FROM "user"
         JOIN LATERAL (
@@ -235,7 +236,7 @@ describe('withRecursive', () => {
       `
         WITH RECURSIVE "rec" AS (
           (
-            SELECT "profile"."id", "profile"."userId"
+            SELECT "profile"."id", "profile"."user_id" "userId"
             FROM "profile"
             WHERE "profile"."id" = $1
             LIMIT 1
@@ -243,7 +244,7 @@ describe('withRecursive', () => {
           UNION ALL
           (
             SELECT "profile"."id", "profile"."userId"
-            FROM "profile"
+            FROM (SELECT ${profileColumnsSql} FROM "profile") "profile"
             JOIN "rec" ON "rec"."id" = "profile"."userId"
           )
         )

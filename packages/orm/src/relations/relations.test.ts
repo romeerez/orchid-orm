@@ -35,16 +35,16 @@ describe('relations', () => {
         LEFT JOIN LATERAL (
           SELECT ${profileSelectAll} FROM "profile"
           WHERE "profile"."bio" = $1
-            AND "profile"."userId" = "user"."id"
-            AND "profile"."profileKey" = "user"."userKey"
+            AND "profile"."user_id" = "user"."id"
+            AND "profile"."profile_key" = "user"."user_key"
         ) "profile" ON true
         LEFT JOIN LATERAL (
           SELECT json_agg(row_to_json("t".*)) r
           FROM (
             SELECT ${messageSelectAll} FROM "message" "messages"
             WHERE "messages"."text" = $2
-              AND "messages"."authorId" = "user"."id"
-              AND "messages"."messageKey" = "user"."userKey"
+              AND "messages"."author_id" = "user"."id"
+              AND "messages"."message_key" = "user"."user_key"
           ) "t"
         ) "messages" ON true
       `,
@@ -127,24 +127,24 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT
-          "message"."createdAt",
+          "message"."created_at" "createdAt",
           row_to_json("chatUser".*) "chatUser"
         FROM "message"
         LEFT JOIN LATERAL (
           SELECT
-            "sender"."createdAt",
+            "sender"."created_at" "createdAt",
             row_to_json("userProfile".*) "userProfile"
           FROM "user" "sender"
           LEFT JOIN LATERAL (
             SELECT
-              "p"."createdAt"
+              "p"."created_at" "createdAt"
             FROM "profile" "p"
             WHERE "p"."bio" = $1
-              AND "p"."userId" = "sender"."id"
-              AND "p"."profileKey" = "sender"."userKey"
+              AND "p"."user_id" = "sender"."id"
+              AND "p"."profile_key" = "sender"."user_key"
           ) "userProfile" ON true
-          WHERE "sender"."id" = "message"."authorId"
-            AND "sender"."userKey" = "message"."messageKey"
+          WHERE "sender"."id" = "message"."author_id"
+            AND "sender"."user_key" = "message"."message_key"
         ) "chatUser" ON true
       `,
       ['bio'],
@@ -181,8 +181,8 @@ describe('relations', () => {
         LEFT JOIN LATERAL (
           SELECT count(*) r
           FROM "message" "messages"
-          WHERE "messages"."authorId" = "user"."id"
-            AND "messages"."messageKey" = "user"."userKey"
+          WHERE "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
         ) "messagesCount" ON true
         ORDER BY "messagesCount".r DESC
       `,
@@ -206,8 +206,8 @@ describe('relations', () => {
         LEFT JOIN LATERAL (
           SELECT "profile"."bio" r
           FROM "profile"
-          WHERE "profile"."userId" = "user"."id"
-            AND "profile"."profileKey" = "user"."userKey"
+          WHERE "profile"."user_id" = "user"."id"
+            AND "profile"."profile_key" = "user"."user_key"
         ) "bio" ON true
         ORDER BY "bio".r DESC
       `,
@@ -232,8 +232,8 @@ describe('relations', () => {
         JOIN LATERAL (
           SELECT ${profileSelectAll}
           FROM "profile"
-          WHERE "profile"."userId" = "user"."id"
-            AND "profile"."profileKey" = "user"."userKey"
+          WHERE "profile"."user_id" = "user"."id"
+            AND "profile"."profile_key" = "user"."user_key"
         ) "profile" ON true
       `,
     );
@@ -261,8 +261,8 @@ describe('relations', () => {
           FROM (
             SELECT "post"."id" "Id", "post"."title" "Title"
             FROM "post"
-            WHERE "post"."userId" = "user"."id"
-              AND "post"."title" = "user"."userKey"
+            WHERE "post"."user_id" = "user"."id"
+              AND "post"."title" = "user"."user_key"
           ) "t"
         ) "posts" ON true
       `,
@@ -289,11 +289,11 @@ describe('relations', () => {
             SELECT true
             FROM "postTag" "postTags"
             WHERE "postTags"."tag" = $2
-              AND "postTags"."postId" = "posts"."id"
+              AND "postTags"."post_id" = "posts"."id"
             LIMIT 1
           )
-          AND "posts"."userId" = "user"."id"
-          AND "posts"."title" = "user"."userKey"
+          AND "posts"."user_id" = "user"."id"
+          AND "posts"."title" = "user"."user_key"
         )
       `,
       [3, 'tag'],
@@ -309,8 +309,8 @@ describe('relations', () => {
         SELECT "user"."id" "Id"
         FROM "user"
         JOIN "post" AS "posts"
-          ON "posts"."userId" = "user"."id"
-         AND "posts"."title" = "user"."userKey"
+          ON "posts"."user_id" = "user"."id"
+         AND "posts"."title" = "user"."user_key"
       `,
     );
   });
@@ -329,8 +329,8 @@ describe('relations', () => {
         JOIN LATERAL (
           SELECT "message".*
           FROM "message" "messages"
-          WHERE "messages"."authorId" = "user"."id"
-            AND "messages"."messageKey" = "user"."userKey"
+          WHERE "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
           LIMIT $1
         ) "messages" ON true
         WHERE "messages"."text" = $2
@@ -353,8 +353,8 @@ describe('relations', () => {
         JOIN LATERAL (
           SELECT "messages"."text" "Text"
           FROM "message" "messages"
-          WHERE "messages"."authorId" = "user"."id"
-            AND "messages"."messageKey" = "user"."userKey"
+          WHERE "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
         ) "messages" ON true
         WHERE "messages"."Text" = $1
       `,
@@ -378,7 +378,7 @@ describe('relations', () => {
         LEFT JOIN LATERAL (
           SELECT count(*) r
           FROM "post" "posts"
-          WHERE "posts"."userId" = "user"."id" AND "posts"."title" = "user"."userKey"
+          WHERE "posts"."user_id" = "user"."id" AND "posts"."title" = "user"."user_key"
         ) "postsCount" ON true
         WHERE "postsCount".r > $1
         ORDER BY "postsCount".r DESC
@@ -396,8 +396,8 @@ describe('relations', () => {
         SELECT "user"."id" "Id"
         FROM "user"
         JOIN "profile" AS "p"
-          ON "p"."userId" = "user"."id"
-         AND "p"."profileKey" = "user"."userKey"
+          ON "p"."user_id" = "user"."id"
+         AND "p"."profile_key" = "user"."user_key"
       `,
     );
   });

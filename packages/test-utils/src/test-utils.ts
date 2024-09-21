@@ -4,8 +4,16 @@ import {
   createDb,
   testTransaction,
   defaultSchemaConfig,
+  QueryData,
 } from '../../qb/pqb/src';
-import { MaybeArray, SingleSqlItem, Sql, toArray } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  MaybeArray,
+  QueryColumns,
+  SingleSqlItem,
+  Sql,
+  toArray,
+} from 'orchid-core';
 import { zodSchemaConfig, ZodSchemaConfig } from 'schema-to-zod';
 // is needed to get rid of TS portability error in zod column types
 import 'zod';
@@ -34,6 +42,7 @@ export const testColumnTypes = {
 };
 
 export const testDb = createDb({
+  snakeCase: true,
   adapter: testAdapter,
   columnTypes: testColumnTypes,
 });
@@ -57,6 +66,23 @@ export const testDbZodTypes = createDb({
   schemaConfig: zodSchemaConfig,
   columnTypes: testZodColumnTypes,
 });
+
+export const jsonBuildObjectAllSql = (
+  table: { q: QueryData; shape: QueryColumns },
+  as: string,
+) =>
+  'json_build_object(' +
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  Object.keys(table.q.selectAllKeys!)
+    .map(
+      (c) =>
+        `'${c}', "${as}"."${
+          (table.shape[c as keyof typeof table.shape] as ColumnTypeBase).data
+            .name ?? c
+        }"`,
+    )
+    .join(', ') +
+  ')';
 
 export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');

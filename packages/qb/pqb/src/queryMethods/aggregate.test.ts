@@ -2,7 +2,6 @@ import {
   User,
   expectQueryNotMutated,
   userData,
-  Snake,
   Message,
   Product,
 } from '../test-utils/test-utils';
@@ -50,8 +49,8 @@ describe('aggregate', () => {
 
     it('should support a column with name', () => {
       expectSql(
-        Snake.count('snakeName').toSQL(),
-        'SELECT count("snake"."snake_name") FROM "snake"',
+        User.count('createdAt').toSQL(),
+        'SELECT count("user"."created_at") FROM "user"',
       );
     });
 
@@ -71,8 +70,8 @@ describe('aggregate', () => {
 
     it('should support order by column with name', () => {
       expectSql(
-        Snake.count('snakeName', { order: { snakeName: 'DESC' } }).toSQL(),
-        'SELECT count("snake"."snake_name" ORDER BY "snake"."snake_name" DESC) FROM "snake"',
+        User.count('createdAt', { order: { createdAt: 'DESC' } }).toSQL(),
+        'SELECT count("user"."created_at" ORDER BY "user"."created_at" DESC) FROM "user"',
       );
     });
 
@@ -85,10 +84,10 @@ describe('aggregate', () => {
 
     it('should support filter by column with name', () => {
       expectSql(
-        Snake.count('snakeName', {
-          filter: { snakeName: { not: 'Bob' } },
+        User.count('createdAt', {
+          filter: { createdAt: { not: 'Bob' } },
         }).toSQL(),
-        'SELECT count("snake"."snake_name") FILTER (WHERE "snake"."snake_name" <> $1) FROM "snake"',
+        'SELECT count("user"."created_at") FILTER (WHERE "user"."created_at" <> $1) FROM "user"',
         ['Bob'],
       );
     });
@@ -113,17 +112,17 @@ describe('aggregate', () => {
 
       it('should support partitionBy column with name', () => {
         expectSql(
-          Snake.count('snakeName', {
+          User.count('createdAt', {
             over: {
-              partitionBy: 'snakeName',
+              partitionBy: 'createdAt',
               order: {
-                snakeName: 'DESC',
+                createdAt: 'DESC',
               },
             },
           }).toSQL(),
           `
-            SELECT count("snake"."snake_name") OVER (PARTITION BY "snake"."snake_name" ORDER BY "snake"."snake_name" DESC)
-            FROM "snake"
+            SELECT count("user"."created_at") OVER (PARTITION BY "user"."created_at" ORDER BY "user"."created_at" DESC)
+            FROM "user"
           `,
         );
       });
@@ -147,17 +146,17 @@ describe('aggregate', () => {
 
       it('should support partitionBy array of columns with names', () => {
         expectSql(
-          Snake.count('snakeName', {
+          User.count('createdAt', {
             over: {
-              partitionBy: ['snakeName', 'tailLength'],
+              partitionBy: ['createdAt', 'updatedAt'],
               order: {
-                tailLength: 'DESC',
+                updatedAt: 'DESC',
               },
             },
           }).toSQL(),
           `
-            SELECT count("snake"."snake_name") OVER (PARTITION BY "snake"."snake_name", "snake"."tail_length" ORDER BY "snake"."tail_length" DESC)
-            FROM "snake"
+            SELECT count("user"."created_at") OVER (PARTITION BY "user"."created_at", "user"."updated_at" ORDER BY "user"."updated_at" DESC)
+            FROM "user"
           `,
         );
       });
@@ -247,7 +246,7 @@ describe('aggregate', () => {
         `
           SELECT count("message".*) "messagesCount"
           FROM "user"
-          JOIN "message" ON "message"."authorId" = "user"."id"
+          JOIN "message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -733,7 +732,7 @@ describe('aggregate', () => {
           `
             SELECT ${functionName}() OVER (
               PARTITION BY "user"."age"
-              ORDER BY "user"."createdAt" DESC
+              ORDER BY "user"."created_at" DESC
             ) "result" FROM "user"
           `,
           [],

@@ -1,5 +1,5 @@
 import { Query, SetQueryKind, SetQueryReturnsRowCount } from '../query/query';
-import { throwIfNoWhere } from '../query/queryUtils';
+import { throwIfJoinLateral, throwIfNoWhere } from '../query/queryUtils';
 import { EmptyTuple, PickQueryMetaResult } from 'orchid-core';
 
 export type DeleteMethodsNames = 'delete';
@@ -24,6 +24,7 @@ export const _queryDelete = <T extends PickQueryMetaResult>(
   }
 
   throwIfNoWhere(query as unknown as Query, 'delete');
+  throwIfJoinLateral(query as unknown as Query, 'delete');
 
   q.type = 'delete';
   return query as never;

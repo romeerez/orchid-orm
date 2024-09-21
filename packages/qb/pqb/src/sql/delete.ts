@@ -3,7 +3,6 @@ import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { DeleteQueryData } from './data';
-import { getSqlText } from './utils';
 
 import { HookSelect } from 'orchid-core';
 
@@ -28,30 +27,15 @@ export const pushDeleteSql = (
     const joinSet = query.join.length > 1 ? new Set<string>() : null;
 
     for (const item of query.join) {
-      if (Array.isArray(item)) {
-        const q = item[1];
-        const { aliasValue } = ctx;
-        ctx.aliasValue = true;
+      const join = processJoinItem(ctx, table, query, item.args, quotedAs);
 
-        const as = item[2];
-        targets.push(
-          `LATERAL (${getSqlText(q.toSQL(ctx))}) "${
-            query.joinOverrides?.[as] || as
-          }"`,
-        );
-
-        ctx.aliasValue = aliasValue;
-      } else {
-        const join = processJoinItem(ctx, table, query, item.args, quotedAs);
-
-        const key = `${join.target}${join.on}`;
-        if (joinSet) {
-          if (joinSet.has(key)) continue;
-          joinSet.add(key);
-        }
-        targets.push(join.target);
-        if (join.on) ons.push(join.on);
+      const key = `${join.target}${join.on}`;
+      if (joinSet) {
+        if (joinSet.has(key)) continue;
+        joinSet.add(key);
       }
+      targets.push(join.target);
+      if (join.on) ons.push(join.on);
     }
 
     if (targets.length) {

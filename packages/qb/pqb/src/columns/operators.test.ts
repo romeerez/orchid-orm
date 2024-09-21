@@ -1041,7 +1041,7 @@ describe('operators', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."createdAt" > $1
+        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."created_at" > $1
         `,
         [now],
       );
@@ -1054,7 +1054,7 @@ describe('operators', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."createdAt" > $1
+        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."created_at" > $1
         `,
         [now],
       );

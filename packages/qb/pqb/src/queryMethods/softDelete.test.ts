@@ -1,5 +1,8 @@
 import { expectSql, testAdapter, testColumnTypes } from 'test-utils';
-import { UserSoftDelete } from '../test-utils/test-utils';
+import {
+  UserSoftDelete,
+  userSoftDeleteColumnsSql,
+} from '../test-utils/test-utils';
 import { createDb } from '../query/db';
 
 describe('softDelete', () => {
@@ -9,8 +12,8 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "user" SET "deletedAt" = now()
-        WHERE ("user"."deletedAt" IS NULL)
+        UPDATE "user" SET "deleted_at" = now()
+        WHERE ("user"."deleted_at" IS NULL)
       `,
     );
   });
@@ -19,8 +22,8 @@ describe('softDelete', () => {
     expectSql(
       UserSoftDelete.toSQL(),
       `
-          SELECT * FROM "user"
-          WHERE ("user"."deletedAt" IS NULL)
+          SELECT ${userSoftDeleteColumnsSql} FROM "user"
+          WHERE ("user"."deleted_at" IS NULL)
         `,
     );
   });
@@ -29,7 +32,7 @@ describe('softDelete', () => {
     expectSql(
       UserSoftDelete.includeDeleted().toSQL(),
       `
-          SELECT * FROM "user"
+          SELECT ${userSoftDeleteColumnsSql} FROM "user"
         `,
     );
   });
@@ -40,14 +43,15 @@ describe('softDelete', () => {
       q.toSQL(),
       `
         UPDATE "user"
-           SET "deletedAt" = now()
-         WHERE ("user"."deletedAt" IS NULL)
+           SET "deleted_at" = now()
+         WHERE ("user"."deleted_at" IS NULL)
       `,
     );
   });
 
   it('should respect `nowSql` option', () => {
     const db = createDb({
+      snakeCase: true,
       adapter: testAdapter,
       columnTypes: testColumnTypes,
       nowSQL: 'CURRENT_TIMESTAMP',
@@ -72,8 +76,8 @@ describe('softDelete', () => {
       q.toSQL(),
       `
         UPDATE "user"
-           SET "deletedAt" = CURRENT_TIMESTAMP
-         WHERE ("user"."deletedAt" IS NULL)
+           SET "deleted_at" = CURRENT_TIMESTAMP
+         WHERE ("user"."deleted_at" IS NULL)
       `,
     );
   });

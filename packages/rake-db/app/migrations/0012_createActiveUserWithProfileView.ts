@@ -6,7 +6,7 @@ change(async (db) => {
     `
       SELECT "user".*, p.bio
       FROM "user"
-      JOIN profile p on "user".id = p."userId"
+      JOIN profile p on "user".id = p."user_id"
       WHERE "user"."active"
     `,
   );

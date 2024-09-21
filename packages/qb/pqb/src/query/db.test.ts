@@ -82,7 +82,10 @@ describe('db', () => {
     it('should return date as string by default', async () => {
       await User.create(userData);
 
-      const db = createDb({ adapter: testAdapter });
+      const db = createDb({
+        adapter: testAdapter,
+        snakeCase: true,
+      });
       const table = db('user', (t) => ({
         id: t.identity().primaryKey(),
         createdAt: t.timestampNoTZ(),
@@ -98,6 +101,7 @@ describe('db', () => {
       await User.create(userData);
 
       const db = createDb({
+        snakeCase: true,
         adapter: testAdapter,
         columnTypes: (t) => ({
           identity: t.identity,

@@ -19,6 +19,7 @@ import { getShapeFromSelect } from './select';
 import {
   assertType,
   expectSql,
+  jsonBuildObjectAllSql,
   sql,
   testZodColumnTypes as t,
   useTestDatabase,
@@ -30,6 +31,8 @@ const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);
   await Profile.create({ ...profileData, userId: id });
 };
+
+const profileJsonBuildObjectSql = jsonBuildObjectAllSql(Profile, 'p');
 
 describe('select', () => {
   useTestDatabase();
@@ -84,7 +87,7 @@ describe('select', () => {
         query.toSQL(),
         `
           SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."authorId" = "user"."id"
+          JOIN "message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -98,7 +101,7 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${snakeSelectAllWithTable} FROM "snake"
-          JOIN "message" ON "message"."authorId" = "snake"."tail_length"
+          JOIN "message" ON "message"."author_id" = "snake"."tail_length"
         `,
       );
     });
@@ -115,7 +118,7 @@ describe('select', () => {
         query.toSQL(),
         `
           SELECT ${userTableColumnsSql}, "message"."text" FROM "user"
-          JOIN "message" ON "message"."authorId" = "user"."id"
+          JOIN "message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -220,8 +223,8 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "profile"."userId" FROM "user"
-          JOIN "profile" ON "profile"."userId" = "user"."id"
+          SELECT "user"."id", "profile"."user_id" "userId" FROM "user"
+          JOIN "profile" ON "profile"."user_id" = "user"."id"
         `,
       );
 
@@ -244,8 +247,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "profile"."userId" FROM "user"
-          LEFT JOIN "profile" ON "profile"."userId" = "user"."id"
+          SELECT "user"."id", "profile"."user_id" "userId" FROM "user"
+          LEFT JOIN "profile" ON "profile"."user_id" = "user"."id"
         `,
       );
     });
@@ -279,8 +282,8 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "p"."userId" FROM "user"
-          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          SELECT "user"."id", "p"."user_id" "userId" FROM "user"
+          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -324,9 +327,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT row_to_json("p".*) "p"
+          SELECT ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -337,7 +340,6 @@ describe('select', () => {
         {
           p: {
             id: expect.any(Number),
-            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),
@@ -363,9 +365,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT row_to_json("p".*) "profile"
+          SELECT ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -376,7 +378,6 @@ describe('select', () => {
         {
           profile: {
             id: expect.any(Number),
-            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),
@@ -398,9 +399,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT row_to_json("p".*) "p"
+          SELECT ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          LEFT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          LEFT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -409,7 +410,6 @@ describe('select', () => {
         {
           p: {
             id: expect.any(Number),
-            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),
@@ -431,9 +431,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT row_to_json("p".*) "profile"
+          SELECT ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          LEFT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          LEFT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -442,7 +442,6 @@ describe('select', () => {
         {
           profile: {
             id: expect.any(Number),
-            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),
@@ -466,9 +465,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", row_to_json("p".*) "p"
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          RIGHT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          RIGHT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -487,9 +486,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", row_to_json("p".*) "profile"
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          RIGHT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          RIGHT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -508,9 +507,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", row_to_json("p".*) "p"
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          FULL JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          FULL JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -529,9 +528,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", row_to_json("p".*) "profile"
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          FULL JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          FULL JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -700,9 +699,9 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" "aliasedId", "profile"."userId" "aliasedUserId"
+          SELECT "user"."id" "aliasedId", "profile"."user_id" "aliasedUserId"
           FROM "user"
-          JOIN "profile" ON "profile"."userId" = "user"."id"
+          JOIN "profile" ON "profile"."user_id" = "user"."id"
         `,
       );
       expectQueryNotMutated(q);
@@ -746,9 +745,9 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" "aliasedId", "p"."userId" "aliasedUserId"
+          SELECT "user"."id" "aliasedId", "p"."user_id" "aliasedUserId"
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
         `,
       );
       expectQueryNotMutated(q);
@@ -941,7 +940,7 @@ describe('select', () => {
 
     it('should parse raw column', async () => {
       const q = User.select({
-        date: User.sql`"createdAt"`.type(() =>
+        date: User.sql`"created_at"`.type(() =>
           t.date().parse(z.date(), (input) => new Date(input)),
         ),
       });

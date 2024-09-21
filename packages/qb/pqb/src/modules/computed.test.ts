@@ -9,6 +9,7 @@ import {
   Profile,
   profileData,
   ProfileRecord,
+  profileTableColumnsSql,
   userData as partialUserData,
 } from '../test-utils/test-utils';
 import { Query } from '../query/query';
@@ -40,10 +41,12 @@ const User = testDb(
   },
 );
 
+const userColumnsSql = User.q.selectAllColumns!.join(', ');
+
 const userData = { ...partialUserData, userKey: 'key' };
 const nameAndKey = `${userData.name} ${userData.userKey} parsed`;
 
-const joinQuery = User.as('user').whereSql`"profile"."userId" = "user"."id"`;
+const joinQuery = User.as('user').whereSql`"profile"."user_id" = "user"."id"`;
 
 Object.assign(Profile.relations, {
   user: {
@@ -65,6 +68,10 @@ describe('computed', () => {
   });
 
   describe('sql computed', () => {
+    it('should not be included into the table columns', () => {
+      expect('nameAndKey' in User.q.selectAllKeys!).toBe(false);
+    });
+
     describe('select', () => {
       it('should select computed column', async () => {
         const q = User.select('name', 'nameAndKey').take();
@@ -72,7 +79,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "nameAndKey"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "nameAndKey"
             FROM "user"
             LIMIT 1
           `,
@@ -91,7 +98,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "nameAndKey"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "nameAndKey"
             FROM "user"
             LIMIT 1
           `,
@@ -110,7 +117,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "as"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "as"
             FROM "user"
             LIMIT 1
           `,
@@ -129,7 +136,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."userKey" "as"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "as"
             FROM "user"
             LIMIT 1
           `,
@@ -150,9 +157,9 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name" || ' ' || "user"."userKey" "nameAndKey"
+            SELECT "user"."name" || ' ' || "user"."user_key" "nameAndKey"
             FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."userId"
+            JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -172,9 +179,9 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name" || ' ' || "user"."userKey" "as"
+            SELECT "user"."name" || ' ' || "user"."user_key" "as"
             FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."userId"
+            JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -194,8 +201,8 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE "user"."name" || ' ' || "user"."userKey" = $1
+            SELECT ${userColumnsSql} FROM "user"
+            WHERE "user"."name" || ' ' || "user"."user_key" = $1
           `,
           ['value'],
         );
@@ -207,8 +214,8 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE "user"."name" || ' ' || "user"."userKey" ILIKE $1 || '%'
+            SELECT ${userColumnsSql} FROM "user"
+            WHERE "user"."name" || ' ' || "user"."user_key" ILIKE $1 || '%'
           `,
           ['value'],
         );
@@ -220,8 +227,8 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            WHERE "user"."name" || ' ' || "user"."userKey" ILIKE $1 || '%'
+            SELECT ${userColumnsSql} FROM "user"
+            WHERE "user"."name" || ' ' || "user"."user_key" ILIKE $1 || '%'
           `,
           ['value'],
         );
@@ -235,8 +242,8 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            ORDER BY "user"."name" || ' ' || "user"."userKey" ASC
+            SELECT ${userColumnsSql} FROM "user"
+            ORDER BY "user"."name" || ' ' || "user"."user_key" ASC
           `,
         );
       });
@@ -247,8 +254,8 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT * FROM "user"
-            ORDER BY "user"."name" || ' ' || "user"."userKey" DESC
+            SELECT ${userColumnsSql} FROM "user"
+            ORDER BY "user"."name" || ' ' || "user"."user_key" DESC
           `,
         );
       });
@@ -500,7 +507,7 @@ describe('computed', () => {
           `
             SELECT "profile"."id", "user"."name", "user"."password", "user"."id" "id2"
             FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."userId"
+            JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -533,9 +540,9 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile".*, "user"."name", "user"."password", "user"."id" "id2"
+            SELECT ${profileTableColumnsSql}, "user"."name", "user"."password", "user"."id" "id2"
             FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."userId"
+            JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -569,7 +576,7 @@ describe('computed', () => {
           `
             SELECT "user"."name", "user"."id"
             FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."userId"
+            JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -594,7 +601,7 @@ describe('computed', () => {
           `
             SELECT "user"."id", "user"."name"
             FROM "profile"
-            JOIN "user" ON ("profile"."userId" = "user"."id")
+            JOIN "user" ON ("profile"."user_id" = "user"."id")
           `,
         );
 
@@ -619,7 +626,7 @@ describe('computed', () => {
             JOIN (
               SELECT "user"."id", "user"."name"
               FROM "user"
-            ) "user" ON "user"."id" = "profile"."userId"
+            ) "user" ON "user"."id" = "profile"."user_id"
           `,
         );
 
@@ -646,7 +653,7 @@ describe('computed', () => {
             JOIN LATERAL (
               SELECT "user"."id", "user"."name"
               FROM "user"
-              WHERE "user"."id" = "profile"."userId"
+              WHERE "user"."id" = "profile"."user_id"
             ) "user" ON true
           `,
         );
@@ -697,7 +704,7 @@ describe('computed', () => {
             )
             SELECT "u"."id", "u"."name"
             FROM "profile"
-            JOIN "u" ON "u"."id" = "profile"."userId"
+            JOIN "u" ON "u"."id" = "profile"."user_id"
           `,
         );
 

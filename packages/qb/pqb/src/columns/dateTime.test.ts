@@ -248,6 +248,9 @@ describe('date time columns', () => {
         updatedAt: t.timestamp().asNumber(),
       }));
 
+      const userColumnsSql =
+        UserWithNumberTimestamp.q.selectAllColumns!.join(', ');
+
       const now = Date.now();
 
       const createQuery = UserWithNumberTimestamp.create({
@@ -259,9 +262,9 @@ describe('date time columns', () => {
       expectSql(
         createQuery.toSQL(),
         `
-          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          INSERT INTO "user"("name", "password", "created_at", "updated_at")
           VALUES ($1, $2, $3, $4)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         [userData.name, userData.password, new Date(now), new Date(now)],
       );
@@ -286,7 +289,7 @@ describe('date time columns', () => {
         updateQuery.toSQL(),
         `
           UPDATE "user"
-          SET "createdAt" = $1, "updatedAt" = $2
+          SET "created_at" = $1, "updated_at" = $2
           WHERE "user"."id" = $3
         `,
         [new Date(now), new Date(now), id],
@@ -321,6 +324,9 @@ describe('date time columns', () => {
         updatedAt: t.timestampNoTZ().asDate(),
       }));
 
+      const userColumnsSql =
+        UserWithNumberTimestamp.q.selectAllColumns!.join(', ');
+
       const now = new Date();
 
       const createQuery = UserWithNumberTimestamp.create({
@@ -332,9 +338,9 @@ describe('date time columns', () => {
       expectSql(
         createQuery.toSQL(),
         `
-          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          INSERT INTO "user"("name", "password", "created_at", "updated_at")
           VALUES ($1, $2, $3, $4)
-          RETURNING *
+          RETURNING ${userColumnsSql}
         `,
         [userData.name, userData.password, new Date(now), new Date(now)],
       );
@@ -359,7 +365,7 @@ describe('date time columns', () => {
         updateQuery.toSQL(),
         `
           UPDATE "user"
-          SET "createdAt" = $1, "updatedAt" = $2
+          SET "created_at" = $1, "updated_at" = $2
           WHERE "user"."id" = $3
         `,
         [now, now, id],

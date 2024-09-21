@@ -411,17 +411,19 @@ export class Db<
 
     if (prepareSelectAll) {
       const list: string[] = [];
+      const keys: RecordUnknown = {};
       for (const key in shape) {
         const column = shape[key] as unknown as ColumnTypeBase;
         if (!column.data.explicitSelect) {
           list.push(
             column.data.name ? `"${column.data.name}" AS "${key}"` : `"${key}"`,
           );
+          keys[key] = column;
         }
       }
       this.q.selectAllColumns = list;
       // destructuring shape because it's going to be extended with computed columns
-      this.q.selectAllKeys = { ...shape };
+      this.q.selectAllKeys = keys;
     }
 
     if (modifyQuery) {
@@ -526,6 +528,25 @@ export class Db<
     ...args: SQLQueryArgs
   ): Promise<QueryArraysResult<R>> {
     return performQuery<QueryArraysResult<R>>(this, args, 'arrays');
+  }
+
+  /**
+   * In snake case mode, or when columns have custom names,
+   * use this method to exchange a db column name to its runtime key.
+   */
+  columnNameToKey(name: string): string | undefined {
+    let map = this.internal.columnNameToKeyMap;
+    if (!map) {
+      this.internal.columnNameToKeyMap = map = new Map<string, string>();
+
+      const { shape } = this;
+      for (const key in this.shape) {
+        const column = shape[key];
+        map.set(column.data.name ?? key, key);
+      }
+    }
+
+    return map.get(name);
   }
 }
 

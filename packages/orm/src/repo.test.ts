@@ -109,7 +109,7 @@ describe('createRepo', () => {
             SELECT "some"."id", "some"."name"
             FROM "someTable" "some"
             WHERE "some"."id" = $1
-              AND "some"."id" = "otherTable"."someId"
+              AND "some"."id" = "otherTable"."some_id"
           ) "some" ON true
         `,
         [123],

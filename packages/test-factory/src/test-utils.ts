@@ -4,6 +4,7 @@ import { zodSchemaConfig } from 'schema-to-zod';
 import { z } from 'zod';
 
 export const BaseTable = createBaseTable({
+  snakeCase: true,
   schemaConfig: zodSchemaConfig,
   columnTypes: (t) => ({
     ...t,

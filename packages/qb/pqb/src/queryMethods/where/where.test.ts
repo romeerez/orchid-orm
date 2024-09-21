@@ -119,7 +119,7 @@ describe('where with named columns', () => {
 describe('where joined columns', () => {
   testWhere(
     (cb) => cb(User.join(Message, (q) => q.on('authorId', 'user.id'))).toSQL(),
-    `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON "message"."authorId" = "user"."id" WHERE `,
+    `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON "message"."author_id" = "user"."id" WHERE `,
     {
       model: User,
       columnsOf: Message,
@@ -136,7 +136,7 @@ describe('where joined columns', () => {
     columnsOf: Message,
     fkey: 'message.authorId',
     text: 'message.text',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON "message"."authorId" = "user"."id"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON "message"."author_id" = "user"."id"`,
   });
 });
 

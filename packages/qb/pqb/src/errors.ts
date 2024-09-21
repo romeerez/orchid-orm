@@ -109,7 +109,8 @@ export abstract class QueryError<
             item.startsWith('"') ? item.slice(1, -1) : item
           ) as keyof T['shape'];
 
-          columns[column] = true;
+          const key = this.query.columnNameToKey(column as string) ?? column;
+          columns[key as keyof T['shape']] = true;
         });
       }
     }

@@ -113,7 +113,7 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."authorId" = "user"."id"
+          JOIN "message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -129,7 +129,7 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."authorId" = "user"."id"
+          JOIN "message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -149,8 +149,8 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."authorId" = "user"."id"
-          JOIN "profile" ON "profile"."userId" = "user"."id"
+          JOIN "message" ON "message"."author_id" = "user"."id"
+          JOIN "profile" ON "profile"."user_id" = "user"."id"
         `,
       );
     });

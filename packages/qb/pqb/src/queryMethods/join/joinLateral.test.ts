@@ -2,6 +2,7 @@ import {
   Chat,
   chatData,
   Message,
+  messageColumnsSql,
   messageData,
   MessageRecord,
   User,
@@ -27,8 +28,9 @@ describe('joinLateral', () => {
       `
         SELECT ${userTableColumnsSql} FROM "user"
         JOIN LATERAL (
-          SELECT * FROM "message"
-          WHERE "message"."authorId" = "user"."id"
+          SELECT ${messageColumnsSql}
+          FROM "message"
+          WHERE "message"."author_id" = "user"."id"
         ) "message" ON true
       `,
     );
@@ -55,12 +57,12 @@ describe('joinLateral', () => {
         SELECT "user"."id", "m"."createdAt"
         FROM "user"
         JOIN LATERAL (
-          SELECT "m"."text", "m"."createdAt"
+          SELECT "m"."text", "m"."created_at" "createdAt"
           FROM "message" "m"
           WHERE "m"."text" = $1
             AND "user"."name" = $2
-            AND "m"."authorId" = "user"."id"
-          ORDER BY "m"."createdAt" DESC
+            AND "m"."author_id" = "user"."id"
+          ORDER BY "m"."created_at" DESC
         ) "m" ON true
         WHERE "m"."text" = $3
       `,
@@ -91,10 +93,10 @@ describe('joinLateral', () => {
         SELECT "user"."id", row_to_json("m".*) "m"
         FROM "user"
         JOIN LATERAL (
-          SELECT *
+          SELECT ${messageColumnsSql}
           FROM "message" "m"
-          WHERE "m"."authorId" = "user"."id"
-          ORDER BY "m"."createdAt" DESC
+          WHERE "m"."author_id" = "user"."id"
+          ORDER BY "m"."created_at" DESC
         ) "m" ON true
       `,
     );
@@ -105,7 +107,6 @@ describe('joinLateral', () => {
         id: expect.any(Number),
         m: {
           id: expect.any(Number),
-          messageKey: null,
           authorId: expect.any(Number),
           chatId: expect.any(Number),
           meta: null,
@@ -131,7 +132,7 @@ describe('joinLateral', () => {
         SELECT "user"."id", "m"."text"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT *
+          SELECT ${messageColumnsSql}
           FROM "message" "m"
         ) "m" ON true
       `,
@@ -155,7 +156,7 @@ describe('joinLateral', () => {
         SELECT "user"."id", row_to_json("m".*) "m"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT *
+          SELECT ${messageColumnsSql}
           FROM "message" "m"
         ) "m" ON true
       `,
