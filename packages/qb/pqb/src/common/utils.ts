@@ -1,9 +1,8 @@
 import { cloneQuery, QueryData, toSQLCacheKey, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
-import type { QueryColumn } from 'orchid-core';
-import { RelationQuery } from '../relations';
-import { Expression, PickQueryMeta } from 'orchid-core';
 import { PickQueryMetaTable } from '../query/query';
+import { Expression, PickQueryMeta, QueryColumn } from 'orchid-core';
+import { RelationQuery } from '../relations';
 
 export type AliasOrTable<T extends PickQueryMetaTable> =
   T['meta']['as'] extends string

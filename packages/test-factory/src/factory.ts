@@ -505,7 +505,7 @@ export const tableFactory = <T extends Query>(
     if (column instanceof DateBaseColumn) {
       if (column.data.as instanceof IntegerBaseColumn) {
         data[key] = (sequence: number) => now + sequence;
-      } else if (column.parseFn?.(nowString) instanceof Date) {
+      } else if (column.data.parse?.(nowString) instanceof Date) {
         data[key] = (sequence: number) => new Date(now + sequence);
       } else {
         data[key] = (sequence: number) =>

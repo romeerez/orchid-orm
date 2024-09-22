@@ -22,6 +22,7 @@ import {
   RecordUnknown,
 } from 'orchid-core';
 import { BooleanQueryColumn } from '../queryMethods';
+import { addColumnParserToQuery } from './column.utils';
 
 // Operator function type.
 // Table.count().gt(10) <- here `.gt(10)` is this operator function.
@@ -534,7 +535,7 @@ const json = {
 
       if (options?.type) {
         const type = options.type(this.columnTypes);
-        if (type.parseFn) (this.q.parsers ??= {})[getValueKey] = type.parseFn;
+        addColumnParserToQuery(this.q, getValueKey, type);
 
         // push the type cast `::type` only if operator is applied
         chain.push = (...args: unknown[]) => {

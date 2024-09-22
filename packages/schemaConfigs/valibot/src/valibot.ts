@@ -1,6 +1,5 @@
 import {
   AsTypeArg,
-  Code,
   ColumnSchemaGetterColumns,
   ColumnSchemaGetterTableClass,
   ColumnTypeBase,
@@ -11,7 +10,7 @@ import {
   ErrorMessage,
   setDataValue,
   StringTypeData,
-  ColumnToCodeCtx,
+  ParseNullColumn,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -19,19 +18,19 @@ import {
   BigIntColumn,
   BigSerialColumn,
   CitextColumn,
-  columnCode,
-  ColumnData,
   ColumnType,
   DateColumn,
   DecimalColumn,
   DoublePrecisionColumn,
   EnumColumn,
   IntegerColumn,
+  JSONColumn,
   MoneyColumn,
-  Operators,
-  OperatorsJson,
   RealColumn,
   SerialColumn,
+  setColumnEncode,
+  setColumnParse,
+  setColumnParseNull,
   SmallIntColumn,
   SmallSerialColumn,
   StringColumn,
@@ -95,36 +94,23 @@ import {
   toTrimmed,
   toUpperCase,
   ulid,
+  union,
   unknown,
   UnknownSchema,
+  UnionSchema,
   url,
   uuid,
 } from 'valibot';
 
-// skip adding the default `encode` function to code
-const toCodeSkip = { encodeFn: JSON.stringify };
-
-class ValibotJSONColumn<Schema extends BaseSchema> extends ColumnType<
-  ValibotSchemaConfig,
+class ValibotJSONColumn<Schema extends BaseSchema> extends JSONColumn<
   Output<Schema>,
-  Schema,
-  OperatorsJson
+  ValibotSchemaConfig,
+  Schema
 > {
-  dataType = 'jsonb' as const;
-  operators = Operators.json;
-  declare data: ColumnData;
-
   constructor(schema: Schema) {
     super(valibotSchemaConfig, schema);
   }
-
-  toCode(ctx: ColumnToCodeCtx, key: string): Code {
-    return columnCode(this, ctx, key, [`json()`], this.data, toCodeSkip);
-  }
 }
-
-// Encode data of both types with JSON.stringify
-ValibotJSONColumn.prototype.encodeFn = JSON.stringify;
 
 function applyMethod<T extends ColumnTypeBase>(
   column: T,
@@ -768,7 +754,7 @@ export interface ValibotSchemaConfig {
   type: BaseSchema;
 
   parse<
-    T extends { type: unknown },
+    T extends ColumnTypeBase,
     OutputSchema extends BaseSchema,
     Out = Output<OutputSchema>,
   >(
@@ -776,6 +762,16 @@ export interface ValibotSchemaConfig {
     _schema: OutputSchema,
     fn: (input: T['type']) => Out,
   ): ParseColumn<T, OutputSchema, Out>;
+
+  parseNull<
+    T extends ColumnTypeBase,
+    NullSchema extends BaseSchema,
+    NullType = Output<NullSchema>,
+  >(
+    this: T,
+    _schema: NullSchema,
+    fn: () => NullType,
+  ): ParseNullColumn<T, NullSchema, NullType>;
 
   encode<
     T extends { type: unknown },
@@ -847,7 +843,9 @@ export interface ValibotSchemaConfig {
   ): NullableColumn<
     T,
     NullableSchema<T['inputSchema']>,
-    NullableSchema<T['outputSchema']>,
+    T['nullSchema'] extends BaseSchema
+      ? UnionSchema<[T['outputSchema'], T['nullSchema']]>
+      : NullableSchema<T['outputSchema']>,
     NullableSchema<T['querySchema']>
   >;
 
@@ -925,41 +923,32 @@ export interface ValibotSchemaConfig {
   geographyPointSchema(): PointSchemaValibot;
 }
 
-// parse a date string to number, with respect to null
-const parseDateToNumber = (value: unknown) =>
-  (value ? Date.parse(value as string) : value) as number;
-
 // parse a date string to date object, with respect to null
-const parseDateToDate = (value: unknown) =>
-  (value ? new Date(value as string) : value) as Date;
-
-(parseDateToNumber as unknown as { hideFromCode: boolean }).hideFromCode = (
-  parseDateToDate as unknown as { hideFromCode: boolean }
-).hideFromCode = true;
+const parseDateToDate = (value: unknown) => new Date(value as string);
 
 export const valibotSchemaConfig: ValibotSchemaConfig = {
   type: undefined as unknown as BaseSchema,
   parse(schema, fn) {
-    return Object.assign(Object.create(this), {
-      outputSchema: schema,
-      parseFn: fn,
-      parseItem: fn,
-    });
+    return setColumnParse(this as never, fn, schema);
+  },
+  parseNull(schema, fn) {
+    return setColumnParseNull(this as never, fn, schema);
   },
   encode(schema, fn) {
-    return Object.assign(Object.create(this), {
-      inputSchema: schema,
-      encodeFn: fn,
-    });
+    return setColumnEncode(this as never, fn, schema);
   },
   asType(_types) {
     return this as never;
   },
   dateAsNumber() {
-    return this.parse(number([]), parseDateToNumber) as never;
+    const c = this.parse(number([]), Date.parse as never) as ColumnTypeBase;
+    c.data.defaultParse = Date.parse;
+    return c as never;
   },
   dateAsDate() {
-    return this.parse(date([]), parseDateToDate) as never;
+    const c = this.parse(date([]), parseDateToDate) as ColumnTypeBase;
+    c.data.defaultParse = parseDateToDate;
+    return c as never;
   },
   enum(dataType, type) {
     return new EnumColumn(valibotSchemaConfig, dataType, type, picklist(type));
@@ -971,9 +960,11 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
     return makeColumnNullable(
       this,
       nullable(this.inputSchema),
-      nullable(this.outputSchema),
+      this.nullSchema
+        ? union([this.outputSchema, this.nullSchema])
+        : nullable(this.outputSchema),
       nullable(this.querySchema),
-    );
+    ) as never;
   },
   json<Schema extends BaseSchema = UnknownSchema>(schema?: Schema) {
     return new ValibotJSONColumn((schema ?? unknown([])) as Schema);

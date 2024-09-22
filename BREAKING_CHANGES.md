@@ -1,5 +1,12 @@
 # Breaking changes
 
+## orchid-orm 1.36
+
+Stop handling null in column `parse`, add `parseNull` for this instead.
+
+Update your column `parse` to not handle null where it is just returning nulls as they come in,
+and add separate `parseNull` ([docs](https://orchid-orm.netlify.app/guide/common-column-methods.html#parsenull)) to return a default value.
+
 ## orchid-orm 1.35
 
 Empty select `select()` was selecting a full record, and from now will select an empty record.

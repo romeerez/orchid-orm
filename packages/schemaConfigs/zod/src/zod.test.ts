@@ -14,6 +14,7 @@ import {
   ZodString,
   ZodType,
   ZodTypeAny,
+  ZodUnion,
 } from 'zod';
 import { AssertEqual, assertType } from 'test-utils';
 
@@ -964,6 +965,24 @@ describe('zod schema config', () => {
       );
 
       expectAllThrow(type, '123', 'Expected object, received string');
+    });
+  });
+
+  describe('parseNull', () => {
+    it('should combine output schema with null schema for parsing', () => {
+      const type = t
+        .string()
+        .parse(z.number(), parseInt)
+        .parseNull(z.boolean(), () => true)
+        .nullable();
+
+      assertType<typeof type.outputSchema, ZodUnion<[ZodNumber, ZodBoolean]>>();
+
+      expect(type.outputSchema.parse(123)).toBe(123);
+      expect(type.outputSchema.parse(true)).toBe(true);
+      expect(() => type.outputSchema.parse(null)).toThrow(
+        'Expected number, received null',
+      );
     });
   });
 });

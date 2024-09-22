@@ -8,25 +8,26 @@ import {
   ColumnTypeSchemaArg,
 } from 'orchid-core';
 
-const encodeFn = (x: unknown) => (x === null ? x : JSON.stringify(x));
-
-// skip adding the default `encode` function to code
-const toCodeSkip = { encodeFn };
+const encode = (x: unknown) => (x === null ? x : JSON.stringify(x));
 
 // Type of JSON column (jsonb).
 export class JSONColumn<
   T,
   Schema extends ColumnTypeSchemaArg,
-> extends ColumnType<Schema, T, Schema['type'], OperatorsJson> {
+  InputSchema = Schema['type'],
+> extends ColumnType<Schema, T, InputSchema, OperatorsJson> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
+
+  constructor(schema: Schema, inputType: Schema['type']) {
+    super(schema, inputType as InputSchema);
+    this.data.encode = this.data.defaultEncode = encode;
+  }
+
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
-    return columnCode(this, ctx, key, `json()`, this.data, toCodeSkip);
+    return columnCode(this, ctx, key, `json()`);
   }
 }
-
-// Encode data of both types with JSON.stringify
-JSONColumn.prototype.encodeFn = encodeFn;
 
 // JSON non-binary type, stored as a text in the database, so it doesn't have rich functionality.
 export class JSONTextColumn<
@@ -45,6 +46,6 @@ export class JSONTextColumn<
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
-    return columnCode(this, ctx, key, `jsonText()`, this.data, toCodeSkip);
+    return columnCode(this, ctx, key, `jsonText()`);
   }
 }

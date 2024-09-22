@@ -16,3 +16,4 @@ export * from './code';
 export * from './columnsByType';
 export * from './defaultSchemaConfig';
 export * from './postgis';
+export * from './column.utils';

@@ -42,9 +42,9 @@ describe('postgis columns', () => {
       const postgisHex = (await testDb.get(
         testDb.sql`ST_MakePoint(${lon}, ${lat})::geography`,
       )) as string;
-      const decoded = pointColumn.parseFn(postgisHex) as PostgisPoint;
+      const decoded = pointColumn.data.parse!(postgisHex) as PostgisPoint;
 
-      const encoded = pointColumn.encodeFn(decoded);
+      const encoded = pointColumn.data.encode!(decoded) as string;
 
       expect(encoded.toUpperCase()).toBe(postgisHex);
     });
@@ -53,9 +53,9 @@ describe('postgis columns', () => {
       const postgisHex = (await testDb.get(
         testDb.sql`ST_SetSrid(ST_MakePoint(${lon}, ${lat}), ${customSrid})::geography`,
       )) as string;
-      const decoded = pointColumn.parseFn(postgisHex) as PostgisPoint;
+      const decoded = pointColumn.data.parse!(postgisHex) as PostgisPoint;
 
-      const encoded = pointColumn.encodeFn(decoded);
+      const encoded = pointColumn.data.encode!(decoded) as string;
 
       expect(encoded.toUpperCase()).toBe(postgisHex);
     });

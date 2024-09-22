@@ -18,7 +18,7 @@ import { Operators, OperatorsNumber } from './operators';
 import { TableData } from '../tableData';
 
 export interface NumberColumnData extends BaseNumberData {
-  identity: TableData.Identity;
+  identity?: TableData.Identity;
 }
 
 export interface SerialColumnData extends NumberColumnData {
@@ -149,9 +149,9 @@ export class SmallIntColumn<
   constructor(schema: Schema) {
     super(schema);
     this.data.alias = 'smallint';
+    this.data.parseItem = parseInt;
   }
 
-  parseItem = parseInt;
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
     return intToCode(this, ctx, key, 'smallint');
   }
@@ -173,9 +173,9 @@ export class IntegerColumn<
   constructor(schema: Schema) {
     super(schema);
     this.data.alias = 'integer';
+    this.data.parseItem = parseInt;
   }
 
-  parseItem = parseInt;
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
     return intToCode(this, ctx, key, 'integer');
   }
@@ -216,11 +216,11 @@ export class RealColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberBaseColumn<Schema, ReturnType<Schema['number']>> {
   dataType = 'float4' as const;
-  parseItem = parseFloat;
 
   constructor(schema: Schema) {
     super(schema, schema.number() as never);
     this.data.alias = 'real';
+    this.data.parseItem = parseFloat;
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
@@ -254,13 +254,13 @@ export class SmallSerialColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
   dataType = 'int2' as const;
-  parseItem = parseInt;
   declare data: SerialColumnData;
 
   constructor(schema: Schema) {
     super(schema);
     this.data.int = true;
     this.data.alias = 'smallSerial';
+    this.data.parseItem = parseInt;
   }
 
   toSQL() {
@@ -286,13 +286,13 @@ export class SerialColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
   dataType = 'int4' as const;
-  parseItem = parseInt;
   declare data: SerialColumnData;
 
   constructor(schema: Schema) {
     super(schema);
     this.data.int = true;
     this.data.alias = 'serial';
+    this.data.parseItem = parseInt;
   }
 
   toSQL() {

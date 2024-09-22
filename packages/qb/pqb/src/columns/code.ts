@@ -496,9 +496,9 @@ export const columnCode = (
   ctx: ColumnToCodeCtx,
   key: string,
   code: Code,
-  data = type.data,
-  skip?: { encodeFn?: unknown; parseFn?: unknown },
 ): Code => {
+  const { data } = type;
+
   code = toArray(code);
 
   let prepend = `${ctx.t}.`;
@@ -536,20 +536,20 @@ export const columnCode = (
 
   if (data.isNullable) addCode(code, '.nullable()');
 
-  if (type.encodeFn && type.encodeFn !== skip?.encodeFn)
-    addCode(code, `.encode(${type.encodeFn.toString()})`);
+  if (data.encode && data.encode !== data.defaultEncode)
+    addCode(code, `.encode(${data.encode.toString()})`);
 
-  if (
-    type.parseFn &&
-    type.parseFn !== skip?.parseFn &&
-    !('hideFromCode' in type.parseFn)
-  )
-    addCode(code, `.parse(${type.parseFn.toString()})`);
+  if (data.parse && data.parse !== data.defaultParse)
+    addCode(code, `.parse(${data.parse.toString()})`);
+
+  if (type.data.parseNull)
+    addCode(code, `.parseNull(${type.data.parseNull.toString()})`);
 
   if (data.as) addCode(code, `.as(${data.as.toCode(ctx, key)})`);
 
   if (
     data.default !== undefined &&
+    data.default !== data.defaultDefault &&
     (!ctx.migration || typeof data.default !== 'function')
   ) {
     addCode(

@@ -9,7 +9,7 @@ import {
   QueryColumns,
   RecordString,
 } from 'orchid-core';
-import { VirtualColumn } from '../columns';
+import { addColumnParserToQuery, VirtualColumn } from '../columns';
 
 const applySqlComputed = (
   ctx: ToSQLCtx,
@@ -18,8 +18,7 @@ const applySqlComputed = (
   as: string,
   quotedAs?: string,
 ) => {
-  const parser = (computed.result.value as ColumnTypeBase).parseFn;
-  if (parser) (q.parsers ??= {})[as] = parser;
+  addColumnParserToQuery(q, as, computed.result.value);
   return computed.toSQL(ctx, quotedAs);
 };
 

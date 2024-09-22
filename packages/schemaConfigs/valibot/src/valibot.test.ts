@@ -25,6 +25,7 @@ import {
   nullable,
   ObjectSchema,
   OptionalSchema,
+  UnionSchema,
 } from 'valibot';
 
 const t = makeColumnTypes(valibotSchemaConfig);
@@ -995,6 +996,27 @@ describe('valibot schema config', () => {
         type,
         '123',
         'Invalid type: Expected Object but received "123"',
+      );
+    });
+  });
+
+  describe('parseNull', () => {
+    it('should combine output schema with null schema for parsing', () => {
+      const type = t
+        .string()
+        .parse(number(), parseInt)
+        .parseNull(boolean(), () => true)
+        .nullable();
+
+      assertType<
+        typeof type.outputSchema,
+        UnionSchema<[NumberSchema, BooleanSchema]>
+      >();
+
+      expect(parse(type.outputSchema, 123)).toBe(123);
+      expect(parse(type.outputSchema, true)).toBe(true);
+      expect(() => parse(type.outputSchema, null)).toThrow(
+        'Invalid type: Expected number | boolean but received null',
       );
     });
   });

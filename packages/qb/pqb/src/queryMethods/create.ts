@@ -352,7 +352,7 @@ export interface CreateCtx {
   resultAll: RecordUnknown[];
 }
 
-// Type of `encodeFn` of columns.
+// Type of `encode` of columns.
 interface RecordEncoder {
   [K: string]: FnUnknownToUnknown;
 }
@@ -378,7 +378,7 @@ const createSelect = (q: Query) => {
  * @param item - argument of data to create.
  * @param rowIndex - index of record's data in `createMany` args array.
  * @param ctx - context of create query to be shared with a {@link VirtualColumn}.
- * @param encoders - to collect `encodeFn`s of columns.
+ * @param encoders - to collect `encode`s of columns.
  */
 const processCreateItem = (
   q: CreateSelf,
@@ -410,7 +410,7 @@ const processCreateItem = (
         item[key] !== undefined
       ) {
         ctx.columns.set(key, ctx.columns.size);
-        encoders[key] = shape[key]?.encodeFn as FnUnknownToUnknown;
+        encoders[key] = shape[key]?.data.encode as FnUnknownToUnknown;
       }
     }
   }

@@ -54,18 +54,10 @@ export const isSelectingCount = (q: PickQueryQ) => {
 
 // `count` returns `bigint` type that is represented by a string.
 // This is needed to parse the value back to a number.
-const int = new IntegerColumn(defaultSchemaConfig);
-int.parseItem = int.parseFn = (input): number => parseInt(input as never);
-
-// Parse nullable string to int, the nullable string may happen because of `bigint` db type.
-const nullableInt = new IntegerColumn(defaultSchemaConfig);
-nullableInt.parseItem = nullableInt.parseFn = (input): number =>
-  (input === null ? null : parseInt(input as never)) as number;
+const int = new IntegerColumn(defaultSchemaConfig).parse(parseInt as never);
 
 // double-precision is represented by string in JS, parse it to float.
-const nullableFloat = new RealColumn(defaultSchemaConfig);
-nullableFloat.parseItem = nullableFloat.parseFn = (input): number =>
-  (input === null ? null : parseFloat(input as never)) as number;
+const float = new RealColumn(defaultSchemaConfig).parse(parseFloat as never);
 
 const stringAsNumber =
   new (NumberAsStringBaseColumn as unknown as typeof DecimalColumn)(
@@ -81,7 +73,7 @@ const numericResultColumn = (
       ? _getSelectableColumn(q as Query, arg)
       : (arg as Expression).result.value;
 
-  return type instanceof NumberBaseColumn ? nullableFloat : stringAsNumber;
+  return type instanceof NumberBaseColumn ? float : stringAsNumber;
 };
 
 type QueryReturnsAgg<T, C, Op> = SetQueryReturnsColumnOrThrow<
@@ -777,7 +769,7 @@ export class AggregateMethods {
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T> {
-    return makeFnExpression(this, nullableInt, 'row_number', emptyArray, {
+    return makeFnExpression(this, int, 'row_number', emptyArray, {
       over,
     }) as never;
   }
@@ -804,7 +796,7 @@ export class AggregateMethods {
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T> {
-    return makeFnExpression(this, nullableInt, 'rank', emptyArray, {
+    return makeFnExpression(this, int, 'rank', emptyArray, {
       over,
     }) as never;
   }
@@ -831,7 +823,7 @@ export class AggregateMethods {
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T> {
-    return makeFnExpression(this, nullableInt, 'dense_rank', emptyArray, {
+    return makeFnExpression(this, int, 'dense_rank', emptyArray, {
       over,
     }) as never;
   }
@@ -858,7 +850,7 @@ export class AggregateMethods {
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T> {
-    return makeFnExpression(this, nullableInt, 'percent_rank', emptyArray, {
+    return makeFnExpression(this, int, 'percent_rank', emptyArray, {
       over,
     }) as never;
   }
@@ -885,7 +877,7 @@ export class AggregateMethods {
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T> {
-    return makeFnExpression(this, nullableFloat, 'cume_dist', emptyArray, {
+    return makeFnExpression(this, float, 'cume_dist', emptyArray, {
       over,
     }) as never;
   }

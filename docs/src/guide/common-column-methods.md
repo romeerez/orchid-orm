@@ -231,6 +231,8 @@ The type of input is the type of column before `.parse`, the resulting type will
 If you have a validation library [installed and configured](/guide/columns-validation-methods),
 first argument is a schema for validating the output.
 
+For handling `null` values use [parseNull](#parse-null) instead or in addition.
+
 ```ts
 import { z } from 'zod';
 import { number, integer } from 'valibot';
@@ -256,21 +258,51 @@ export class Table extends BaseTable {
 const value: number = await db.table.get('column');
 ```
 
-If the column is `nullable`, the `input` type will also have `null` and you should handle this case.
-This allows using `parse` to set a default value after loading from the database.
+## parseNull
+
+[//]: # 'has JSDoc'
+
+Use `parseNull` to specify runtime defaults at selection time.
+
+The `parseNull` function is only triggered for `nullable` columns.
 
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    // return a default image URL if it is null
-    // this allows to change the defaultImageURL without modifying a database
-    imageURL: t
-      .varchar(1000)
-      .nullable()
-      .parse((url) => url ?? defaultImageURL),
+    column: t
+      .integer()
+      .parse(String) // parse non-nulls to string
+      .parseNull(() => false), // replace nulls with false
+      .nullable(),
   }));
 }
+
+const record = await db.table.take()
+record.column // can be a string or boolean, not null
+```
+
+If you have a validation library [installed and configured](/guide/columns-validation-methods),
+first argument is a schema for validating the output.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    column: t
+      .integer()
+      .parse(z.string(), String) // parse non-nulls to string
+      .parseNull(z.literal(false), () => false), // replace nulls with false
+    .nullable(),
+  }));
+}
+
+const record = await db.table.take()
+record.column // can be a string or boolean, not null
+
+Table.outputSchema().parse({
+  column: false, // the schema expects strings or `false` literals, not nulls
+})
 ```
 
 ## as

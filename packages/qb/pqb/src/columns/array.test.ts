@@ -7,7 +7,7 @@ describe('array column', () => {
 
     assertType<typeof textArray.outputType, string[]>();
 
-    const parse = textArray.parseFn;
+    const parse = textArray.data.parse!;
     expect(parse('{}')).toEqual([]);
     expect(parse('{1,2,3}')).toEqual(['1', '2', '3']);
     expect(parse('{a,b,c}')).toEqual(['a', 'b', 'c']);
@@ -21,7 +21,7 @@ describe('array column', () => {
     const intArray = t.array(t.integer());
     assertType<typeof intArray.outputType, number[]>();
 
-    const parseInt = intArray.parseFn;
+    const parseInt = intArray.data.parse!;
     expect(parseInt('{1,2,3}')).toEqual([1, 2, 3]);
     expect(parseInt('{{1,2,3},{4,5,6}}')).toEqual([
       [1, 2, 3],
@@ -32,7 +32,7 @@ describe('array column', () => {
     const boolArray = t.array(t.boolean());
     assertType<typeof boolArray.outputType, boolean[]>();
 
-    const parseBool = boolArray.parseFn;
+    const parseBool = boolArray.data.parse!;
     expect(parseBool('{{true},{false}}')).toEqual([[true], [false]]);
   });
 

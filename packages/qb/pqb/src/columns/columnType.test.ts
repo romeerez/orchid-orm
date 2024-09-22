@@ -17,6 +17,7 @@ import {
   testDb,
   testSchemaConfig,
   useTestDatabase,
+  testZodColumnTypes as t,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
@@ -28,7 +29,10 @@ describe('column type', () => {
   useTestDatabase();
   afterAll(testDb.close);
 
-  class Column<Schema extends ColumnSchemaConfig> extends ColumnType<Schema> {
+  class Column<Schema extends ColumnSchemaConfig> extends ColumnType<
+    Schema,
+    number | string
+  > {
     dataType = 'test';
     operators = Operators.any;
 
@@ -167,20 +171,20 @@ describe('column type', () => {
 
   describe('.encode', () => {
     it('should set a function to encode value for this column', () => {
-      expect(column.encodeFn).toBe(undefined);
+      expect(column.data.encode).toBe(undefined);
       const fn = (input: number) => input.toString();
       const withEncode = column.encode(z.number(), fn);
-      expect(withEncode.encodeFn).toBe(fn);
+      expect(withEncode.data.encode).toBe(fn);
       assertType<typeof withEncode.inputType, number>();
     });
   });
 
   describe('.parse', () => {
     it('should set a function to encode value for this column', () => {
-      expect(column.parseFn).toBe(undefined);
+      expect(column.data.parse).toBe(undefined);
       const fn = () => 123;
       const withEncode = column.parse(z.number(), fn);
-      expect(withEncode.parseFn).toBe(fn);
+      expect(withEncode.data.parse).toBe(fn);
       assertType<typeof withEncode.outputType, number>();
     });
 
@@ -241,6 +245,60 @@ describe('column type', () => {
 
         expect(result.user.createdAt).toBeInstanceOf(Date);
       });
+    });
+  });
+
+  describe('parseNull', () => {
+    it('should set nullType but not alter outputType', () => {
+      const c = column
+        .parse(z.number(), () => 1)
+        .parseNull(z.boolean(), () => true);
+
+      const c2 = column
+        .parseNull(z.boolean(), () => true)
+        .parse(z.number(), () => 1);
+
+      assertType<typeof c.nullType | typeof c2.nullType, boolean>();
+      assertType<typeof c.outputType | typeof c2.outputType, number>();
+    });
+
+    it('should alter output type only for nullable column', () => {
+      const c = column
+        .parse(z.number(), () => 1)
+        .parseNull(z.boolean(), () => true)
+        .nullable();
+
+      const c2 = column
+        .parse(z.number(), () => 1)
+        .nullable()
+        .parseNull(z.boolean(), () => true);
+
+      const c3 = column
+        .nullable()
+        .parseNull(z.boolean(), () => true)
+        .parse(z.number(), () => 1);
+
+      assertType<
+        typeof c.nullType | typeof c2.nullType | typeof c3.nullType,
+        boolean
+      >();
+      assertType<
+        typeof c.outputType | typeof c2.outputType | typeof c3.outputType,
+        number | boolean
+      >();
+    });
+
+    it('should replace null at runtime', async () => {
+      const result = await testDb.get(
+        testDb.sql`NULL`.type(() =>
+          t
+            .integer()
+            .parseNull(z.string(), () => 'parsed null')
+            .nullable(),
+        ),
+      );
+
+      expect(result).toBe('parsed null');
     });
   });
 

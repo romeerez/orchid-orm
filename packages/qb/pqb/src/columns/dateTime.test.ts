@@ -17,12 +17,12 @@ const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 const testTimestampInput = (column: ColumnTypeBase) => {
   const date = new Date();
   const string = date.toISOString();
-  expect(column.encodeFn?.(string) as Date).toBe(string);
+  expect(column.data.encode?.(string) as Date).toBe(string);
 
   const number = date.getTime();
-  expect((column.encodeFn?.(number) as Date).getTime()).toBe(number);
+  expect((column.data.encode?.(number) as Date).getTime()).toBe(number);
 
-  expect(column.encodeFn?.(date) as Date).toBe(date);
+  expect(column.data.encode?.(date) as Date).toBe(date);
 };
 
 describe('date time columns', () => {
@@ -42,13 +42,13 @@ describe('date time columns', () => {
 
     it('should encode number, but not encode string and date', () => {
       const num = new Date().getTime();
-      expect(t.date().encodeFn?.(num)).toEqual(new Date(num));
+      expect(t.date().data.encode?.(num)).toEqual(new Date(num));
 
       const string = '2000-10-20';
-      expect(t.date().encodeFn?.(string)).toBe(string);
+      expect(t.date().data.encode?.(string)).toBe(string);
 
       const date = new Date();
-      expect(t.date().encodeFn?.(date)).toBe(date);
+      expect(t.date().data.encode?.(date)).toBe(date);
     });
 
     it('should have toCode', () => {
@@ -88,13 +88,13 @@ describe('date time columns', () => {
 
     it('should encode number, but not encode string and Date', () => {
       const num = new Date().getTime();
-      expect(t.timestampNoTZ().encodeFn?.(num)).toEqual(new Date(num));
+      expect(t.timestampNoTZ().data.encode?.(num)).toEqual(new Date(num));
 
       const string = new Date().toISOString();
-      expect(t.timestampNoTZ().encodeFn?.(string)).toBe(string);
+      expect(t.timestampNoTZ().data.encode?.(string)).toBe(string);
 
       const date = new Date();
-      expect(t.timestampNoTZ().encodeFn?.(date)).toBe(date);
+      expect(t.timestampNoTZ().data.encode?.(date)).toBe(date);
     });
 
     it('should have toCode, ignore default precision', () => {
@@ -113,7 +113,7 @@ describe('date time columns', () => {
       const now = new Date();
       const s = now.toISOString();
       const timestamp = t.timestampNoTZ();
-      delete timestamp.parseFn;
+      delete timestamp.data.parse;
 
       expect(
         timestamp
@@ -146,13 +146,13 @@ describe('date time columns', () => {
 
     it('should encode number, but not encode string and Date', () => {
       const num = new Date().getTime();
-      expect(t.timestamp().encodeFn?.(num)).toEqual(new Date(num));
+      expect(t.timestamp().data.encode?.(num)).toEqual(new Date(num));
 
       const string = new Date().toISOString();
-      expect(t.timestamp().encodeFn?.(string)).toBe(string);
+      expect(t.timestamp().data.encode?.(string)).toBe(string);
 
       const date = new Date();
-      expect(t.timestamp().encodeFn?.(date)).toBe(date);
+      expect(t.timestamp().data.encode?.(date)).toBe(date);
     });
 
     it('should have toCode, ignore default precision', () => {
@@ -172,7 +172,7 @@ describe('date time columns', () => {
       const s = now.toISOString();
 
       const timestamp = t.timestamp();
-      delete timestamp.parseFn;
+      delete timestamp.data.parse;
 
       expect(
         timestamp

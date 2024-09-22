@@ -18,13 +18,12 @@ export class BooleanColumn<
   constructor(schema: Schema) {
     super(schema, schema.boolean() as never);
     this.data.alias = 'boolean';
+    this.data.parseItem = parseItem;
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
     return columnCode(this, ctx, key, 'boolean()');
   }
-
-  parseItem(input: string) {
-    return input[0] === 't';
-  }
 }
+
+const parseItem = (input: string) => input[0] === 't';

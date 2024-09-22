@@ -22,6 +22,7 @@ export interface ColumnTypeSchemaArg {
   ): NullableColumn<T, unknown, unknown, unknown>;
   encode: unknown;
   parse: unknown;
+  parseNull: unknown;
   asType: unknown;
   error?: unknown;
 }

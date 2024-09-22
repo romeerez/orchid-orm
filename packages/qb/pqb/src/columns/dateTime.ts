@@ -18,9 +18,6 @@ const dateTimeEncode = (input: DateColumnInput) => {
   return typeof input === 'number' ? new Date(input) : input;
 };
 
-// when generating code, don't output `encodeFn` because it is a default
-const skipDateMethodsFromToCode = { encodeFn: dateTimeEncode };
-
 // common class for Date and DateTime columns
 export abstract class DateBaseColumn<
   Schema extends ColumnSchemaConfig,
@@ -35,7 +32,6 @@ export abstract class DateBaseColumn<
 > {
   declare data: DateColumnData;
   operators = Operators.date;
-  encodeFn = dateTimeEncode;
   asNumber: Schema['dateAsNumber'];
   asDate: Schema['dateAsDate'];
 
@@ -48,6 +44,7 @@ export abstract class DateBaseColumn<
     );
     this.asNumber = schema.dateAsNumber;
     this.asDate = schema.dateAsDate;
+    this.data.encode = this.data.defaultEncode = dateTimeEncode;
   }
 }
 
@@ -62,8 +59,6 @@ export class DateColumn<
       ctx,
       key,
       `date()${dateDataToCode(this.data, ctx.migration)}`,
-      this.data,
-      skipDateMethodsFromToCode,
     );
   }
 }
@@ -127,8 +122,6 @@ const timestampToCode = (
       `timestamps${noTz}(${
         p && p !== 6 ? p : ''
       }).${defaultTimestamp}${dateDataToCode(self.data, ctx.migration)}`,
-      self.data,
-      skipDateMethodsFromToCode,
     );
 
     self.data.default = def;
@@ -143,8 +136,6 @@ const timestampToCode = (
       `${self instanceof TimestampColumn ? 'timestampNoTZ' : 'timestamp'}(${
         p && p !== 6 ? p : ''
       })${dateDataToCode(self.data, ctx.migration)}`,
-      self.data,
-      skipDateMethodsFromToCode,
     );
   }
 };
@@ -196,8 +187,6 @@ export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
         this.data,
         ctx.migration,
       )}`,
-      this.data,
-      skipDateMethodsFromToCode,
     );
   }
 }
@@ -230,8 +219,6 @@ export class IntervalColumn<
       `interval(${[fields && `'${fields}'`, precision && String(precision)]
         .filter((part) => part)
         .join(', ')})`,
-      this.data,
-      skipDateMethodsFromToCode,
     );
   }
 

@@ -223,7 +223,7 @@ export const setParserToQuery = (
   parser: ColumnParser,
 ) => {
   if (query.parsers) query.parsers[key] = parser;
-  else query.parsers = { [key]: parser } as ColumnsParsers;
+  else query.parsers = { [key]: parser };
 };
 
 /**

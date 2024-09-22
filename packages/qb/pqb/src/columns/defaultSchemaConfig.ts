@@ -1,10 +1,13 @@
 import {
+  ColumnDataBase,
   ColumnSchemaConfig,
   ColumnTypeBase,
   EncodeColumn,
   MaybeArray,
   noop,
   ParseColumn,
+  ParseNullColumn,
+  PickColumnBaseData,
   RecordUnknown,
   setColumnData,
 } from 'orchid-core';
@@ -31,12 +34,18 @@ import {
   VarCharColumn,
 } from './string';
 import { ColumnType } from './columnType';
+import { setColumnParse, setColumnParseNull } from './column.utils';
 
 export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
-  parse<T extends { type: unknown }, Output>(
+  parse<T extends ColumnTypeBase, Output>(
     this: T,
     fn: (input: T['type']) => Output,
   ): ParseColumn<T, unknown, Output>;
+
+  parseNull<T extends ColumnTypeBase, Output>(
+    this: T,
+    fn: (input: T['type']) => Output,
+  ): ParseNullColumn<T, unknown, Output>;
 
   encode<T extends { type: unknown }, Input>(
     this: T,
@@ -115,38 +124,33 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   timestamp(precision?: number): TimestampTZColumn<DefaultSchemaConfig>;
 }
 
-// parse a date string to number, with respect to null
-const parseDateToNumber = (value: unknown): number =>
-  (value ? Date.parse(value as string) : value) as number;
-
 // parse a date string to date object, with respect to null
-const parseDateToDate = (value: unknown): Date =>
-  (value ? new Date(value as string) : value) as Date;
-
-(parseDateToNumber as unknown as { hideFromCode: boolean }).hideFromCode = (
-  parseDateToDate as unknown as { hideFromCode: boolean }
-).hideFromCode = true;
+const parseDateToDate = (value: unknown): Date => new Date(value as string);
 
 export const defaultSchemaConfig = {
-  parse(fn: unknown) {
-    return Object.assign(Object.create(this), {
-      parseFn: fn,
-      parseItem: fn,
-    });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parse(fn: (input: any) => unknown) {
+    return setColumnParse(this as ColumnTypeBase, fn);
   },
-  encode(fn: unknown) {
-    return Object.assign(Object.create(this), {
-      encodeFn: fn,
-    });
+  parseNull(fn: () => unknown) {
+    return setColumnParseNull(this as ColumnTypeBase, fn);
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  encode(fn: (input: any) => unknown) {
+    return setColumnData(this as PickColumnBaseData, 'encode', fn);
   },
   asType() {
     return this as never;
   },
-  dateAsNumber(this: { parse(fn: unknown): unknown }) {
-    return this.parse(parseDateToNumber);
+  dateAsNumber(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {
+    const c = this.parse(Date.parse) as ColumnTypeBase;
+    c.data.defaultParse = Date.parse;
+    return c;
   },
-  dateAsDate(this: { parse(fn: unknown): unknown }) {
-    return this.parse(parseDateToDate);
+  dateAsDate(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {
+    const c = this.parse(parseDateToDate) as ColumnTypeBase;
+    c.data.defaultParse = parseDateToDate;
+    return c;
   },
   enum<T extends readonly [string, ...string[]]>(dataType: string, type: T) {
     return new EnumColumn(defaultSchemaConfig, dataType, type, undefined);

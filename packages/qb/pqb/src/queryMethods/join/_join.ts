@@ -7,7 +7,6 @@ import {
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
-  ColumnTypeBase,
   PickQueryTableMetaResult,
   QueryColumns,
   QueryMetaBase,
@@ -33,6 +32,7 @@ import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
 
 import { ComputedColumns } from '../../modules/computed';
+import { addColumnParserToQuery } from '../../columns';
 
 /**
  * Generic function to construct all JOIN queries.
@@ -107,12 +107,9 @@ export const _join = <
         // clone the shape to mutate it below, in other cases the shape is newly created
         if (!require) shape = { ...shape };
 
-        parsers = {} as ColumnsParsers;
+        const arg = { parsers: {} as ColumnsParsers };
         for (const key in shape) {
-          const parser = (shape[key] as ColumnTypeBase).parseFn;
-          if (parser) {
-            parsers[key] = parser;
-          }
+          addColumnParserToQuery(arg, key, shape[key]);
         }
       }
     }

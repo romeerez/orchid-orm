@@ -20,6 +20,7 @@ import { columnCode } from './code';
 import { raw, RawSQL } from '../sql/rawSql';
 import { SearchWeightRecord } from '../sql';
 import { Operators, OperatorsNumber, OperatorsText } from './operators';
+import { setColumnDefaultParse } from './column.utils';
 
 export type TextColumnData = StringTypeData;
 
@@ -319,23 +320,24 @@ export class MoneyColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
   constructor(schema: Schema) {
     super(schema, schema.number() as never);
+    setColumnDefaultParse(this, moneyParse);
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
     return columnCode(this, ctx, key, `money()`);
   }
-
-  parseFn = Object.assign(
-    function (input: unknown) {
-      return input === null
-        ? input
-        : parseFloat((input as string).replace(/,/g, '').replace(/\$/g, ''));
-    },
-    {
-      hideFromCode: true,
-    },
-  );
 }
+
+const moneyParse = Object.assign(
+  function (input: unknown) {
+    return input === null
+      ? input
+      : parseFloat((input as string).replace(/,/g, '').replace(/\$/g, ''));
+  },
+  {
+    hideFromCode: true,
+  },
+);
 
 // cidr	7 or 19 bytes	IPv4 and IPv6 networks
 export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
@@ -615,6 +617,7 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
   constructor(schema: Schema) {
     super(schema, schema.uuid() as never);
+    this.data.defaultDefault = uuidDefault;
   }
 
   /**
@@ -631,17 +634,7 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
-    const { data } = this;
-    return columnCode(
-      this,
-      ctx,
-      key,
-      `uuid()`,
-      // don't output the default default
-      data.default instanceof RawSQLBase && data.default._sql === uuidDefaultSQL
-        ? { ...data, default: undefined }
-        : data,
-    );
+    return columnCode(this, ctx, key, `uuid()`);
   }
 }
 

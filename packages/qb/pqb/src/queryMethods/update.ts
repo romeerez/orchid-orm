@@ -225,7 +225,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
           }
         } else {
           // encode if not a query object
-          const encode = shape[key].encodeFn;
+          const encode = shape[key].data.encode;
           if (encode) set[key] = encode(value);
         }
       }

@@ -19,10 +19,12 @@ import {
   MaybeArray,
   PickQueryTableMetaResultInputType,
   emptyObject,
+  ColumnsParsers,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { QueryBase } from '../query/queryBase';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
+import { addColumnParserToQuery } from '../columns';
 
 export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
 
@@ -132,7 +134,6 @@ export function queryFrom<
     data.as ||= 't';
   } else if (Array.isArray(arg)) {
     const { shape } = data;
-    const parsers = (data.parsers ??= {});
     // TODO: batchParsers
     for (const item of arg) {
       if (typeof item === 'string') {
@@ -142,13 +143,15 @@ export function queryFrom<
         if (w.computeds) data.computeds = { ...data.computeds, ...w.computeds };
 
         for (const key in w.shape) {
-          if (w.shape[key].parseFn) {
-            parsers[key] = w.shape[key].parseFn;
-          }
+          addColumnParserToQuery(
+            self as { parsers?: ColumnsParsers },
+            key,
+            w.shape[key],
+          );
         }
       } else if (!isExpression(item)) {
         Object.assign(shape, getShapeFromSelect(item as QueryBase, true));
-        Object.assign(parsers, item.q.parsers);
+        Object.assign((data.parsers ??= {}), item.q.parsers);
       }
     }
   } else {

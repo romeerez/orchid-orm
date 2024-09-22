@@ -6,6 +6,7 @@ import {
   QueryMetaHasSelect,
 } from '../query/query';
 import {
+  addColumnParserToQuery,
   ColumnsShapeToNullableObject,
   ColumnsShapeToObject,
   ColumnsShapeToObjectArray,
@@ -303,8 +304,7 @@ export const addParserForRawExpression = (
   key: string | getValueKey,
   raw: Expression,
 ) => {
-  const type = raw.result.value as unknown as ColumnTypeBase;
-  if (type?.parseFn) setParserToQuery(q.q, key, type.parseFn);
+  if (raw.result.value) addColumnParserToQuery(q.q, key, raw.result.value);
 };
 
 // add parsers when selecting a full joined table by name or alias

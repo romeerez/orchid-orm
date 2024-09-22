@@ -1,6 +1,5 @@
 import {
   AsTypeArg,
-  Code,
   ColumnSchemaGetterColumns,
   ColumnSchemaGetterTableClass,
   ColumnTypeBase,
@@ -14,7 +13,7 @@ import {
   ErrorMessages,
   setColumnData,
   ColumnDataBase,
-  ColumnToCodeCtx,
+  ParseNullColumn,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -22,19 +21,19 @@ import {
   BigIntColumn,
   BigSerialColumn,
   CitextColumn,
-  columnCode,
-  ColumnData,
   ColumnType,
   DateColumn,
   DecimalColumn,
   DoublePrecisionColumn,
   EnumColumn,
   IntegerColumn,
+  JSONColumn,
   MoneyColumn,
-  Operators,
-  OperatorsJson,
   RealColumn,
   SerialColumn,
+  setColumnEncode,
+  setColumnParse,
+  setColumnParseNull,
   SmallIntColumn,
   SmallSerialColumn,
   StringColumn,
@@ -58,34 +57,20 @@ import {
   ZodString,
   ZodType,
   ZodTypeAny,
+  ZodUnion,
   ZodUnknown,
 } from 'zod';
 import { ZodErrorMap } from 'zod/lib/ZodError';
 
-// skip adding the default `encode` function to code
-const toCodeSkip = { encodeFn: JSON.stringify };
-
-class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends ColumnType<
-  ZodSchemaConfig,
+class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends JSONColumn<
   ZodSchema['_output'],
-  ZodSchema,
-  OperatorsJson
+  ZodSchemaConfig,
+  ZodSchema
 > {
-  dataType = 'jsonb' as const;
-  operators = Operators.json;
-  declare data: ColumnData;
-
   constructor(schema: ZodSchema) {
     super(zodSchemaConfig, schema);
   }
-
-  toCode(ctx: ColumnToCodeCtx, key: string): Code {
-    return columnCode(this, ctx, key, [`json()`], this.data, toCodeSkip);
-  }
 }
-
-// Encode data of both types with JSON.stringify
-ZodJSONColumn.prototype.encodeFn = JSON.stringify;
 
 type NumberMethodSchema<Key extends string> = {
   [K in Key]: (
@@ -596,7 +581,7 @@ export interface ZodSchemaConfig {
   type: ZodTypeAny;
 
   parse<
-    T extends { type: unknown },
+    T extends ColumnTypeBase,
     OutputSchema extends ZodTypeAny,
     Output = OutputSchema['_output'],
   >(
@@ -604,6 +589,16 @@ export interface ZodSchemaConfig {
     _schema: OutputSchema,
     fn: (input: T['type']) => Output,
   ): ParseColumn<T, OutputSchema, Output>;
+
+  parseNull<
+    T extends ColumnTypeBase,
+    NullSchema extends ZodTypeAny,
+    NullType = NullSchema['_output'],
+  >(
+    this: T,
+    _schema: NullSchema,
+    fn: () => NullType,
+  ): ParseNullColumn<T, NullSchema, NullType>;
 
   encode<
     T extends { type: unknown },
@@ -683,7 +678,9 @@ export interface ZodSchemaConfig {
   ): NullableColumn<
     T,
     ZodNullable<T['inputSchema']>,
-    ZodNullable<T['outputSchema']>,
+    T['nullSchema'] extends ZodTypeAny
+      ? ZodUnion<[T['outputSchema'], T['nullSchema']]>
+      : ZodNullable<T['outputSchema']>,
     ZodNullable<T['querySchema']>
   >;
 
@@ -758,41 +755,32 @@ export interface ZodSchemaConfig {
   geographyPointSchema(): PointSchemaZod;
 }
 
-// parse a date string to number, with respect to null
-const parseDateToNumber = (value: unknown) =>
-  (value ? Date.parse(value as string) : value) as number;
-
 // parse a date string to date object, with respect to null
-const parseDateToDate = (value: unknown) =>
-  (value ? new Date(value as string) : value) as Date;
-
-(parseDateToNumber as unknown as { hideFromCode: boolean }).hideFromCode = (
-  parseDateToDate as unknown as { hideFromCode: boolean }
-).hideFromCode = true;
+const parseDateToDate = (value: unknown) => new Date(value as string);
 
 export const zodSchemaConfig: ZodSchemaConfig = {
   type: undefined as unknown as ZodTypeAny,
   parse(schema, fn) {
-    return Object.assign(Object.create(this), {
-      outputSchema: schema,
-      parseFn: fn,
-      parseItem: fn,
-    });
+    return setColumnParse(this as never, fn, schema);
+  },
+  parseNull(schema, fn) {
+    return setColumnParseNull(this as never, fn, schema);
   },
   encode(schema, fn) {
-    return Object.assign(Object.create(this), {
-      inputSchema: schema,
-      encodeFn: fn,
-    });
+    return setColumnEncode(this as never, fn, schema);
   },
   asType(_types) {
     return this as never;
   },
   dateAsNumber() {
-    return this.parse(z.number(), parseDateToNumber) as never;
+    const c = this.parse(z.number(), Date.parse as never) as ColumnTypeBase;
+    c.data.defaultParse = Date.parse;
+    return c as never;
   },
   dateAsDate() {
-    return this.parse(z.date(), parseDateToDate) as never;
+    const c = this.parse(z.date(), parseDateToDate) as ColumnTypeBase;
+    c.data.defaultParse = parseDateToDate;
+    return c as never;
   },
   enum(dataType, type) {
     return new EnumColumn(zodSchemaConfig, dataType, type, z.enum(type));
@@ -804,9 +792,11 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     return makeColumnNullable(
       this,
       z.nullable(this.inputSchema),
-      z.nullable(this.outputSchema),
+      this.nullSchema
+        ? this.outputSchema.or(this.nullSchema)
+        : z.nullable(this.outputSchema),
       z.nullable(this.querySchema),
-    );
+    ) as never;
   },
   json<ZodSchema extends ZodTypeAny = ZodUnknown>(schema?: ZodSchema) {
     return new ZodJSONColumn((schema ?? z.unknown()) as ZodSchema);

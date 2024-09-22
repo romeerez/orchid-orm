@@ -73,7 +73,7 @@ export type NullableColumn<
     : K extends 'inputSchema'
     ? InputSchema
     : K extends 'outputType'
-    ? T['outputType'] | null
+    ? T['outputType'] | (unknown extends T['nullType'] ? null : T['nullType'])
     : K extends 'outputSchema'
     ? OutputSchema
     : K extends 'queryType'
@@ -132,11 +132,34 @@ export type EncodeColumn<T, InputSchema, Input> = {
 };
 
 // change the output type of the column
-export type ParseColumn<T, OutputSchema, Output> = {
+export type ParseColumn<T extends ColumnTypeBase, OutputSchema, Output> = {
   [K in keyof T]: K extends 'outputType'
-    ? Output
+    ? null extends T['type']
+      ?
+          | Exclude<Output, null>
+          | (unknown extends T['nullType'] ? null : T['nullType'])
+      : Output
     : K extends 'outputSchema'
-    ? OutputSchema
+    ? null extends T['type']
+      ? OutputSchema | T['nullSchema']
+      : OutputSchema
+    : T[K];
+};
+
+// change the output type of null value
+export type ParseNullColumn<T extends ColumnTypeBase, NullSchema, NullType> = {
+  [K in keyof T]: K extends 'outputType'
+    ? null extends T['type']
+      ? Exclude<T['outputType'], null> | NullType
+      : T['outputType']
+    : K extends 'nullType'
+    ? NullType
+    : K extends 'outputSchema'
+    ? null extends T['type']
+      ? T['outputSchema'] | NullSchema
+      : T['outputSchema']
+    : K extends 'nullSchema'
+    ? NullSchema
     : T[K];
 };
 
@@ -300,7 +323,10 @@ export interface ColumnDataBase {
   // if column has a default value, then it can be omitted in `create` method
   default: unknown;
 
-  // if the `default` is a function, instantiating table query will set `runtimeDefault` to wrap the `default` function with `encodeFn` if it is set.
+  // to hide default from generated code
+  defaultDefault: unknown;
+
+  // if the `default` is a function, instantiating table query will set `runtimeDefault` to wrap the `default` function with `encode` if it is set.
   runtimeDefault?(): unknown;
 
   // column should not be implicitly selected
@@ -332,6 +358,24 @@ export interface ColumnDataBase {
 
   // name of extension that contains the column type, if it's not standard
   extension?: string;
+
+  // encode value passed to `create` to an appropriate value for a database
+  encode?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  // parse value from a database into what is preferred by the app
+  parse?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  // parse value from a database when it is an element of database array type
+  parseItem?(input: string): unknown;
+
+  // replaces selected nulls with custom values
+  parseNull?(): unknown;
+
+  // to hide encode from generated code
+  defaultEncode?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  // to hide the parse from generated code
+  defaultParse?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export interface ColumnDataCheckBase {
@@ -504,10 +548,16 @@ export abstract class ColumnTypeBase<
   // It is **not** processed by the ORM, only by a database driver.
   queryType!: QueryType;
 
+  declare nullType: unknown;
+  declare nullSchema: unknown;
+  declare isNullable: boolean;
+
   // data of the column that specifies column characteristics and validations
   data: Data;
 
   error: Schema['error'];
+
+  declare _parse: (input: unknown) => unknown;
 
   constructor(
     schema: ColumnTypeSchemaArg,
@@ -519,27 +569,15 @@ export abstract class ColumnTypeBase<
     // type for validation lib for validating filters
     public querySchema: QuerySchema = inputSchema as unknown as QuerySchema,
   ) {
-    // this.schema = schema;
     this.parse = schema.parse;
+    this.parseNull = schema.parseNull;
     this.encode = schema.encode;
     this.asType = schema.asType;
     this.nullable = schema.nullable;
-    this.data = {} as Data;
     this.error = schema.error;
     const name = consumeColumnName();
-    if (name) {
-      this.data.name = name;
-    }
+    this.data = (name ? { name } : {}) as Data;
   }
-
-  // encode value passed to `create` to an appropriate value for a database
-  encodeFn?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-  // parse value from a database into what is preferred by the app
-  parseFn?(input: unknown): unknown;
-
-  // parse value from a database when it is an element of database array type
-  parseItem?(input: string): unknown;
 
   /**
    * Set a default value to a column. Columns that have defaults become optional when creating a record.
@@ -673,6 +711,8 @@ export abstract class ColumnTypeBase<
    * If you have a validation library [installed and configured](/guide/columns-validation-methods.html),
    * first argument is a schema for validating the output.
    *
+   * For handling `null` values use {@link parseNull} instead or in addition.
+   *
    * ```ts
    * import { z } from 'zod';
    * import { number, integer } from 'valibot';
@@ -698,26 +738,55 @@ export abstract class ColumnTypeBase<
    * const value: number = await db.table.get('column');
    * ```
    *
-   * If the column is `nullable`, the `input` type will also have `null` and you should handle this case.
-   * This allows using `parse` to set a default value after loading from the database.
+   * @param fn - function to parse a value from the database, argument is the type of this column, return type is up to you
+   */
+  parse: Schema['parse'];
+
+  /**
+   * Use `parseNull` to specify runtime defaults at selection time.
+   *
+   * The `parseNull` function is only triggered for `nullable` columns.
    *
    * ```ts
    * export class Table extends BaseTable {
    *   readonly table = 'table';
    *   columns = this.setColumns((t) => ({
-   *     // return a default image URL if it is null
-   *     // this allows to change the defaultImageURL without modifying a database
-   *     imageURL: t
-   *       .string()
-   *       .nullable()
-   *       .parse((url) => url ?? defaultImageURL),
+   *     column: t
+   *       .integer()
+   *       .parse(String) // parse non-nulls to string
+   *       .parseNull(() => false), // replace nulls with false
+   *       .nullable(),
    *   }));
    * }
+   *
+   * const record = await db.table.take()
+   * record.column // can be a string or boolean, not null
    * ```
    *
-   * @param fn - function to parse a value from the database, argument is the type of this column, return type is up to you
+   * If you have a validation library [installed and configured](/guide/columns-validation-methods),
+   * first argument is a schema for validating the output.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     column: t
+   *       .integer()
+   *       .parse(z.string(), String) // parse non-nulls to string
+   *       .parseNull(z.literal(false), () => false), // replace nulls with false
+   *     .nullable(),
+   *   }));
+   * }
+   *
+   * const record = await db.table.take()
+   * record.column // can be a string or boolean, not null
+   *
+   * Table.outputSchema().parse({
+   *   column: false, // the schema expects strings or `false` literals, not nulls
+   * })
+   * ```
    */
-  parse: Schema['parse'];
+  parseNull: Schema['parseNull'];
 
   /**
    * This method changes a column type without modifying its behavior.

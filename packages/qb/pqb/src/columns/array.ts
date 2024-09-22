@@ -12,6 +12,7 @@ import {
 } from 'orchid-core';
 import { columnCode } from './code';
 import { Operators, OperatorsArray } from './operators';
+import { setColumnDefaultParse } from './column.utils';
 
 export interface ArrayColumnValue {
   type: unknown;
@@ -26,7 +27,6 @@ export interface ArrayColumnValue {
   querySchema: any;
   toSQL(): string;
   toCode(ctx: ColumnToCodeCtx, key: string): Code;
-  parseItem?(input: string): unknown;
   data: ColumnDataBase;
 }
 
@@ -70,6 +70,8 @@ export class ArrayColumn<
     // array items cannot be non-nullable, postgres limitation
     item.data.isNullable = true;
 
+    setColumnDefaultParse(this, (input) => parse.call(this, input));
+
     this.data.item = item instanceof ArrayColumn ? item.data.item : item;
     this.data.name = item.data.name;
     this.data.arrayDims =
@@ -109,20 +111,22 @@ export class ArrayColumn<
     addCode(code, `${close}${arrayDataToCode(this.data, ctx.migration)}`);
     return columnCode(this, ctx, key, code);
   }
-
-  parseFn = Object.assign(
-    (source: string | null) => {
-      if (!source) return source;
-
-      const entries: unknown[] = [];
-      parsePostgresArray(source, entries, this.data.item.parseItem);
-      return entries;
-    },
-    {
-      hideFromCode: true,
-    },
-  );
 }
+
+const parse = function (
+  this: ArrayColumn<
+    ColumnTypeSchemaArg,
+    ArrayColumnValue,
+    unknown,
+    unknown,
+    unknown
+  >,
+  source: string,
+) {
+  const entries: unknown[] = [];
+  parsePostgresArray(source, entries, this.data.item.data.parseItem);
+  return entries;
+};
 
 /**
  * based on https://github.com/bendrucker/postgres-array/tree/master

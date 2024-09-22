@@ -5,7 +5,6 @@ import {
 } from '../query/query';
 import {
   addValue,
-  ColumnTypeBase,
   emptyObject,
   Expression,
   ExpressionTypeMethod,
@@ -13,7 +12,6 @@ import {
   PickQueryMeta,
   PickQueryMetaResultWindows,
   QueryColumn,
-  setParserToQuery,
   toArray,
 } from 'orchid-core';
 import { SelectableOrExpression } from './utils';
@@ -36,6 +34,7 @@ import {
   WindowArgDeclaration,
 } from '../queryMethods';
 import { extendQuery } from '../query/queryUtils';
+import { addColumnParserToQuery } from '../columns';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
@@ -113,10 +112,7 @@ export class FnExpression<
     query.q.getColumn = value;
     query.q.select = [this];
 
-    const { parseFn } = value as never as ColumnTypeBase;
-    if (parseFn) {
-      setParserToQuery(query.q, getValueKey, parseFn);
-    }
+    addColumnParserToQuery(query.q, getValueKey, value);
   }
 
   // Builds function SQL.

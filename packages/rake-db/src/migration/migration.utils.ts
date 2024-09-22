@@ -116,7 +116,9 @@ export const encodeColumnDefault = (
     if (isRawSQL(def)) {
       return def.toSQL({ values });
     } else {
-      return escapeForMigration(column?.encodeFn ? column.encodeFn(def) : def);
+      return escapeForMigration(
+        column?.data.encode ? column.data.encode(def) : def,
+      );
     }
   }
 

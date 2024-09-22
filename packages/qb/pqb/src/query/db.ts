@@ -322,9 +322,9 @@ export class Db<
       const column = shape[key] as unknown as ColumnTypeBase;
       column.data.key = key;
 
-      if (column.parseFn) {
+      if (column._parse) {
         hasParsers = true;
-        parsers[key] = column.parseFn;
+        parsers[key] = column._parse;
       }
 
       if (column.data.name) {
@@ -353,12 +353,11 @@ export class Db<
 
         if (!column.data.runtimeDefault) {
           const {
-            data: { default: def },
-            encodeFn,
+            data: { default: def, encode },
           } = column;
 
-          column.data.runtimeDefault = encodeFn
-            ? () => encodeFn(def())
+          column.data.runtimeDefault = encode
+            ? () => encode(def())
             : (def as () => unknown);
         }
       }
