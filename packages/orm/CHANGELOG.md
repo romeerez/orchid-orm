@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.36.0
+
+### Minor Changes
+
+- d89252d: Stop handling null in column `parse`, add `parseNull` for this instead (#405), (#96)
+
+### Patch Changes
+
+- Updated dependencies [d89252d]
+  - pqb@0.41.0
+  - orchid-core@0.20.0
+  - rake-db@2.23.0
+
 ## 1.35.20
 
 ### Patch Changes

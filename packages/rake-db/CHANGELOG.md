@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.23.0
+
+### Minor Changes
+
+- d89252d: Stop handling null in column `parse`, add `parseNull` for this instead (#405), (#96)
+
+### Patch Changes
+
+- Updated dependencies [d89252d]
+  - pqb@0.41.0
+  - orchid-core@0.20.0
+
 ## 2.22.46
 
 ### Patch Changes

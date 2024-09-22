@@ -1,5 +1,16 @@
 # pqb
 
+## 0.41.0
+
+### Minor Changes
+
+- d89252d: Stop handling null in column `parse`, add `parseNull` for this instead (#405), (#96)
+
+### Patch Changes
+
+- Updated dependencies [d89252d]
+  - orchid-core@0.20.0
+
 ## 0.40.12
 
 ### Patch Changes

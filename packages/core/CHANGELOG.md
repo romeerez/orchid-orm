@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.20.0
+
+### Minor Changes
+
+- d89252d: Stop handling null in column `parse`, add `parseNull` for this instead (#405), (#96)
+
 ## 0.19.13
 
 ### Patch Changes
