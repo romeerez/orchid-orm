@@ -1,5 +1,11 @@
 # pqb
 
+## 0.41.1
+
+### Patch Changes
+
+- 6685176: Fix `makeHelper` to respect `hasWhere` and `hasSelect` of both queries of the equasion (#403)
+
 ## 0.41.0
 
 ### Minor Changes
