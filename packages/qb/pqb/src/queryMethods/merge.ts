@@ -15,6 +15,8 @@ export type MergeQuery<
         [K in keyof T['meta'] | keyof Q['meta']]: K extends 'selectable'
           ? Q['meta']['selectable'] &
               Omit<T['meta']['selectable'], keyof Q['meta']['selectable']>
+          : K extends 'hasWhere' | 'hasSelect'
+          ? T['meta'][K] & Q['meta'][K] // true if any of them is true
           : K extends keyof Q['meta']
           ? Q['meta'][K]
           : T['meta'][K];
