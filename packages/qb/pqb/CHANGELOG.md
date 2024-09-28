@@ -1,5 +1,11 @@
 # pqb
 
+## 0.41.2
+
+### Patch Changes
+
+- 19975ae: Fix typing when defining a non-unique index and a unique one (#392)
+
 ## 0.41.1
 
 ### Patch Changes
