@@ -139,6 +139,26 @@ describe('tableData', () => {
 
       assertType<typeof table.internal.uniqueColumnTuples, ['b'] | ['c']>();
     });
+
+    // https://github.com/romeerez/orchid-orm/issues/392
+    it('should support unique composite index together with a non-unique index', () => {
+      const table = testDb(
+        'table',
+        (t) => ({
+          a: t.string(),
+          b: t.string(),
+        }),
+        (t) => [t.index(['a']), t.unique(['a', 'b'])],
+        { noPrimaryKey: 'ignore' },
+      );
+
+      assertType<
+        typeof table.internal.uniqueColumns,
+        { a: UniqueString; b: UniqueString }
+      >();
+
+      assertType<typeof table.internal.uniqueColumnTuples, ['a', 'b']>();
+    });
   });
 
   describe('unique constraints', () => {

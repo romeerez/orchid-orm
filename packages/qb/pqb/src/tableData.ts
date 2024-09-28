@@ -277,9 +277,11 @@ export type TableDataItemsUniqueColumns<
   ? never
   : T extends UniqueTableDataItem<Shape>
   ? ItemUniqueColumns<Shape, T>
-  : T extends UniqueTableDataItem<Shape>[]
+  : T extends unknown[]
   ? {
-      [Item in T[number] as PropertyKey]: ItemUniqueColumns<Shape, Item>;
+      [Item in T[number] as PropertyKey]: Item extends UniqueTableDataItem<Shape>
+        ? ItemUniqueColumns<Shape, Item>
+        : never;
     }[PropertyKey]
   : never;
 
