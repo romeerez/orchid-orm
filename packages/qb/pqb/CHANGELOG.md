@@ -1,5 +1,11 @@
 # pqb
 
+## 0.41.3
+
+### Patch Changes
+
+- 7af0640: Fix `transform`ing value of the samee table in select (#384)
+
 ## 0.41.2
 
 ### Patch Changes
