@@ -79,6 +79,9 @@ const _get = <
   arg: Arg,
 ): R extends 'value' ? GetResultOptional<T, Arg> : GetResult<T, Arg> => {
   const q = (query as unknown as Query).q;
+
+  if (q.returning) q.returning = undefined;
+
   q.returnType = returnType;
 
   let type: QueryColumn | undefined;

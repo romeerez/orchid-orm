@@ -231,7 +231,10 @@ const pushSubQuerySql = (
         return;
       case 'value':
       case 'valueOrThrow':
-        if (query.q.expr?.result.value instanceof IntegerBaseColumn) {
+        if (
+          query.q.returning ||
+          query.q.expr?.result.value instanceof IntegerBaseColumn
+        ) {
           sql = '0';
         } else {
           return;
@@ -241,9 +244,6 @@ const pushSubQuerySql = (
       case 'pluck':
       case 'rows':
         sql = `'[]'::json`;
-        break;
-      case 'rowCount':
-        sql = '0';
         break;
       default:
         throw new UnhandledTypeError(query as Query, returnType);
@@ -262,11 +262,13 @@ const pushSubQuerySql = (
       case 'all':
       case 'pluck':
       case 'value':
-      case 'valueOrThrow':
       case 'rows':
         sql = `"${query.q.joinedForSelect}".r`;
         break;
-      case 'rowCount':
+      case 'valueOrThrow':
+        if (query.q.returning) return;
+        sql = `"${query.q.joinedForSelect}".r`;
+        break;
       case 'void':
         return;
       default:
@@ -303,12 +305,11 @@ const pushSubQuerySql = (
     }
     case 'value':
     case 'valueOrThrow':
-      if (query.q.computeds?.[as]) {
+      if (!query.q.returning && query.q.computeds?.[as]) {
         query = queryJson(query) as unknown as typeof query;
       }
       break;
     case 'rows':
-    case 'rowCount':
     case 'void':
       break;
     default:

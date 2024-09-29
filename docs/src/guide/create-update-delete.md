@@ -10,14 +10,20 @@ To perform custom actions before or after creating records, see `beforeCreate`, 
 
 `create*` and `insert*` methods require columns that are not nullable and don't have a default.
 
-Place `select`, or `get` before `create` or `insert` to specify returning columns:
+Place `select`, or `get` before or after `create` or `insert` to specify returning columns:
 
 ```ts
 // to return only `id`, use get('id')
 const id: number = await db.table.get('id').create(data);
 
+// same as above
+const id2: number = await db.table.create(data).get('id');
+
 // returns a single object when creating a single record
 const objectWithId: { id: number } = await db.table.select('id').create(data);
+
+// same as above
+const objectWithId2: { id: number } = await db.table.create(data).select('id');
 
 // returns an array of objects when creating multiple
 const objects: { id: number }[] = await db.table

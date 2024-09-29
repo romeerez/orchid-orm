@@ -34,7 +34,6 @@ export const queryMethodByReturnType: {
   oneOrThrow: 'query',
   value: 'arrays',
   valueOrThrow: 'arrays',
-  rowCount: 'arrays',
   void: 'arrays',
 };
 
@@ -558,6 +557,13 @@ export const handleResult: HandleResult = (
         : q.q.notFoundDefault;
     }
     case 'valueOrThrow': {
+      if (q.q.returning) {
+        if (q.q.throwOnNotFound && result.rowCount === 0) {
+          throw new NotFoundError(q);
+        }
+        return result.rowCount;
+      }
+
       const { rows } = result;
 
       const promise = parseBatch(q, result);
@@ -571,12 +577,6 @@ export const handleResult: HandleResult = (
 
       if (rows[0]?.[0] === undefined) throw new NotFoundError(q);
       return parseValue(rows[0][0], parsers);
-    }
-    case 'rowCount': {
-      if (q.q.throwOnNotFound && result.rowCount === 0) {
-        throw new NotFoundError(q);
-      }
-      return result.rowCount;
     }
     case 'void': {
       return;
@@ -683,14 +683,14 @@ export const filterResult = (
   }
 
   if (returnType === 'valueOrThrow') {
+    if (q.q.returning) {
+      return queryResult.rowCount;
+    }
+
     const row = (result as RecordUnknown[])[0];
     if (!row) throw new NotFoundError(q);
 
     return row[getFirstResultKey(q, queryResult) as string];
-  }
-
-  if (returnType === 'rowCount') {
-    return queryResult.rowCount;
   }
 
   if (returnType === 'pluck') {

@@ -92,6 +92,36 @@ describe('delete', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should support appending selectAll', async () => {
+    const user = await User.create(userData);
+
+    const result = await User.where({ id: user.id }).delete().selectAll();
+
+    assertType<typeof result, UserRecord[]>();
+
+    expect(result).toEqual([user]);
+  });
+
+  it('should selectAll when deleting a single record', async () => {
+    const user = await User.create(userData);
+
+    const result = await User.find(user.id).selectAll().delete();
+
+    assertType<typeof result, UserRecord>();
+
+    expect(result).toEqual(user);
+  });
+
+  it('should support appending selectAll when deleting a single record', async () => {
+    const user = await User.create(userData);
+
+    const result = await User.find(user.id).delete().selectAll();
+
+    assertType<typeof result, UserRecord>();
+
+    expect(result).toEqual(user);
+  });
+
   it('should delete records, returning all named columns', () => {
     const query = Snake.selectAll().all().delete();
     expectSql(
@@ -116,6 +146,38 @@ describe('delete', () => {
     assertType<Awaited<typeof query>, { id: number; name: string }[]>();
 
     expectQueryNotMutated(q);
+  });
+
+  it('should support appending select', async () => {
+    const user = await User.select('id', 'name').create(userData);
+
+    const result = await User.where({ id: user.id })
+      .delete()
+      .select('id', 'name');
+
+    assertType<typeof result, { id: number; name: string }[]>();
+
+    expect(result).toEqual([user]);
+  });
+
+  it('should select column when deleting a single record', async () => {
+    const user = await User.select('id', 'name').create(userData);
+
+    const result = await User.find(user.id).select('id', 'name').delete();
+
+    assertType<typeof result, { id: number; name: string }>();
+
+    expect(result).toEqual(user);
+  });
+
+  it('should support appending select when deleting a single record', async () => {
+    const user = await User.select('id', 'name').create(userData);
+
+    const result = await User.find(user.id).delete().select('id', 'name');
+
+    assertType<typeof result, { id: number; name: string }>();
+
+    expect(result).toEqual(user);
   });
 
   it('should delete records, returning specified named columns', () => {

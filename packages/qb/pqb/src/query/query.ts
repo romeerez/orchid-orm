@@ -285,8 +285,6 @@ export type GetQueryResult<
   ? ColumnShapeOutput<Result>[keyof Result][][]
   : T['returnType'] extends 'pluck'
   ? Result['pluck']['outputType'][]
-  : T['returnType'] extends 'rowCount'
-  ? number
   : void;
 
 export type QueryResultByReturnType<
@@ -306,8 +304,6 @@ export type QueryResultByReturnType<
   ? ColumnShapeOutput<Result>[keyof Result][][]
   : ReturnType extends 'pluck'
   ? Result['pluck']['outputType'][]
-  : ReturnType extends 'rowCount'
-  ? number
   : void;
 
 // Merge { hasSelect: true } into 'meta' if it's not true yet.

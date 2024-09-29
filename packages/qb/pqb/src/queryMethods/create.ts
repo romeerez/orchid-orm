@@ -526,6 +526,10 @@ const insert = (
 ) => {
   const { q } = self as unknown as { q: InsertQueryData };
 
+  if (!q.select?.length) {
+    q.returning = true;
+  }
+
   delete q.and;
   delete q.or;
   delete q.scopes;
@@ -542,7 +546,7 @@ const insert = (
 
   if (!select) {
     if (returnType !== 'void') {
-      q.returnType = 'rowCount';
+      q.returnType = 'valueOrThrow';
       if (many) q.returningMany = true;
     }
   } else if (many) {

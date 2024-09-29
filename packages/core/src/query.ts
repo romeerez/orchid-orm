@@ -86,7 +86,6 @@ export type QueryReturnType =
   | 'pluck'
   | 'value'
   | 'valueOrThrow'
-  | 'rowCount'
   | 'void';
 
 export interface PickQueryTable {

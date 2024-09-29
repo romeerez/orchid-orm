@@ -19,7 +19,7 @@ export const noneMethods = {
     if (!type || type === 'all' || type === 'rows' || type === 'pluck')
       resolve?.([]);
     else if (type === 'one' || type === 'value' || type === 'void') resolve?.();
-    else if (type === 'rowCount') resolve?.(0);
+    else if (type === 'valueOrThrow' && this.q.returning) resolve?.(0);
     else reject?.(new NotFoundError(this));
   },
   // `catch` returns a Promise, so it is chainable with then/catch.

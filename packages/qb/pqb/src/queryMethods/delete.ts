@@ -1,18 +1,29 @@
-import { Query, SetQueryKind, SetQueryReturnsRowCount } from '../query/query';
+import {
+  Query,
+  SetQueryKind,
+  SetQueryReturnsRowCount,
+  SetQueryReturnsRowCountMany,
+} from '../query/query';
 import { throwIfJoinLateral, throwIfNoWhere } from '../query/queryUtils';
-import { EmptyTuple, PickQueryMetaResult } from 'orchid-core';
+import {
+  EmptyTuple,
+  PickQueryMetaResult,
+  PickQueryMetaResultReturnType,
+} from 'orchid-core';
 
 export type DeleteMethodsNames = 'delete';
 
 export type DeleteArgs<T extends PickQueryMetaResult> =
   T['meta']['hasWhere'] extends true ? EmptyTuple : [never];
 
-export type DeleteResult<T extends PickQueryMetaResult> =
+export type DeleteResult<T extends PickQueryMetaResultReturnType> =
   T['meta']['hasSelect'] extends true
     ? SetQueryKind<T, 'delete'>
+    : T['returnType'] extends undefined | 'all'
+    ? SetQueryReturnsRowCountMany<T, 'delete'>
     : SetQueryReturnsRowCount<T, 'delete'>;
 
-export const _queryDelete = <T extends PickQueryMetaResult>(
+export const _queryDelete = <T extends PickQueryMetaResultReturnType>(
   query: T,
 ): DeleteResult<T> => {
   const q = (query as unknown as Query).q;
@@ -20,7 +31,9 @@ export const _queryDelete = <T extends PickQueryMetaResult>(
     if (q.returnType === 'oneOrThrow' || q.returnType === 'valueOrThrow') {
       q.throwOnNotFound = true;
     }
-    q.returnType = 'rowCount';
+    q.returningMany = !q.returnType || q.returnType === 'all';
+    q.returnType = 'valueOrThrow';
+    q.returning = true;
   }
 
   throwIfNoWhere(query as unknown as Query, 'delete');
@@ -91,7 +104,7 @@ export class Delete {
    * ```
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  delete<T extends PickQueryMetaResult>(
+  delete<T extends PickQueryMetaResultReturnType>(
     this: T,
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {

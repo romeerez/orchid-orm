@@ -218,6 +218,18 @@ describe('update', () => {
     expect(updated).toMatchObject({ name: update.name });
   });
 
+  it('should support appending select', async () => {
+    const id = await User.get('id').create(userData);
+
+    const result = await User.find(id)
+      .update(update)
+      .select('name', 'password');
+
+    assertType<typeof result, { name: string; password: string }>();
+
+    expect(result).toEqual(update);
+  });
+
   it('should update one record with named columns, return selected columns', async () => {
     const id = await Snake.get('snakeId').create(snakeData);
 
@@ -272,6 +284,16 @@ describe('update', () => {
     expect(updated).toMatchObject({ name: update.name });
   });
 
+  it('should support appending selectAll', async () => {
+    const id = await User.get('id').create(userData);
+
+    const result = await User.find(id).update(update).selectAll();
+
+    assertType<typeof result, typeof User.outputType>();
+
+    expect(result).toMatchObject({ name: update.name });
+  });
+
   it('should update one record with named columns, return all columns', async () => {
     const id = await Snake.get('snakeId').create(snakeData);
 
@@ -322,6 +344,21 @@ describe('update', () => {
 
     const updated = await User.all();
     expect(updated).toMatchObject([
+      { name: update.name },
+      { name: update.name },
+    ]);
+  });
+
+  it('should support appending select', async () => {
+    const ids = await User.pluck('id').createMany([userData, userData]);
+
+    const result = await User.where({ id: { in: ids } })
+      .update(update)
+      .select('id', 'name');
+
+    assertType<typeof result, { id: number; name: string }[]>();
+
+    expect(result).toMatchObject([
       { name: update.name },
       { name: update.name },
     ]);
@@ -384,6 +421,21 @@ describe('update', () => {
 
     const updated = await User.take();
     expect(updated).toMatchObject({ name: update.name });
+  });
+
+  it('should support appending selectAll', async () => {
+    const ids = await User.pluck('id').createMany([userData, userData]);
+
+    const result = await User.where({ id: { in: ids } })
+      .update(update)
+      .selectAll();
+
+    assertType<typeof result, (typeof User.outputType)[]>();
+
+    expect(result).toMatchObject([
+      { name: update.name },
+      { name: update.name },
+    ]);
   });
 
   it('should update multiple records with named columns, return all columns', async () => {
@@ -799,6 +851,23 @@ describe('update', () => {
 
     it('should support returning', () => {
       const q = User.select('id')[action]({ age: 3 });
+
+      expectSql(
+        q.toSQL(),
+        `
+          UPDATE "user"
+          SET "age" = "age" ${sign} $1,
+              "updated_at" = now()
+          RETURNING "user"."id"
+        `,
+        [3],
+      );
+
+      assertType<Awaited<typeof q>, { id: number }[]>();
+    });
+
+    it('should support appending select', () => {
+      const q = User[action]({ age: 3 }).select('id');
 
       expectSql(
         q.toSQL(),

@@ -921,7 +921,7 @@ export function _querySelect(q: Query, args: any[]): any {
   }
 
   const { returnType } = q.q;
-  if (returnType === 'rowCount' || returnType === 'valueOrThrow') {
+  if (returnType === 'valueOrThrow') {
     q.q.returnType = q.q.returningMany ? 'all' : 'oneOrThrow';
   } else if (returnType === 'value') {
     q.q.returnType = q.q.returningMany ? 'all' : 'one';
@@ -1048,6 +1048,10 @@ export class Select {
   selectAll<T extends SelectSelf>(this: T): SelectResult<T, ['*']> {
     const q = (this as unknown as Query).clone();
     q.q.select = ['*'];
+    if (q.q.returning) {
+      q.q.returnType = q.q.returningMany ? 'all' : 'oneOrThrow';
+      q.q.returning = undefined;
+    }
     return q as never;
   }
 }

@@ -4,6 +4,7 @@ import {
   QueryOrExpression,
   SetQueryKind,
   SetQueryReturnsRowCount,
+  SetQueryReturnsRowCountMany,
 } from '../query/query';
 import {
   pushQueryValue,
@@ -88,6 +89,8 @@ type UpdateRawArgs<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
 type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
   ? SetQueryKind<T, 'update'>
+  : T['returnType'] extends undefined | 'all'
+  ? SetQueryReturnsRowCountMany<T, 'update'>
   : SetQueryReturnsRowCount<T, 'update'>;
 
 export type NumericColumns<T extends PickQueryShape> = {
@@ -135,7 +138,9 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
     if (q.returnType === 'oneOrThrow' || q.returnType === 'valueOrThrow') {
       q.throwOnNotFound = true;
     }
-    q.returnType = 'rowCount';
+    q.returningMany = !q.returnType || q.returnType === 'all';
+    q.returnType = 'valueOrThrow';
+    q.returning = true;
   }
 
   let map: { [K: string]: { op: string; arg: number } };
@@ -158,7 +163,9 @@ const update = <T extends UpdateSelf>(self: T): UpdateResult<T> => {
   q.type = 'update';
 
   if (!q.select) {
-    q.returnType = 'rowCount';
+    q.returningMany = !q.returnType || q.returnType === 'all';
+    q.returnType = 'valueOrThrow';
+    q.returning = true;
   }
 
   throwIfNoWhere(self as unknown as Query, 'update');
