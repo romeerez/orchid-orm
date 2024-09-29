@@ -1,5 +1,5 @@
 import {
-  PickQueryResult,
+  PickQueryMetaResultReturnType,
   QueryColumns,
   QueryColumnsInit,
   QueryMetaBase,
@@ -58,7 +58,7 @@ const _softDelete = (column: PropertyKey, customNowSQL?: string) => {
   };
 };
 
-export interface QueryWithSoftDelete extends PickQueryResult {
+export interface QueryWithSoftDelete extends PickQueryMetaResultReturnType {
   meta: QueryMetaBase<{ nonDeleted: true }>;
 }
 
