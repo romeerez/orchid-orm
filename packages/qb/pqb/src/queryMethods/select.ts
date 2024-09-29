@@ -343,190 +343,198 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
   as: string | getValueKey | undefined,
   key: string,
   arg: SelectableOrExpression<T> | Query,
+  joinQuery?: boolean,
 ): string | Expression | Query | undefined => {
   if (typeof arg === 'object' || typeof arg === 'function') {
-    if (isExpression(arg)) {
-      addParserForRawExpression(q as never, key, arg);
-    } else {
-      const { q: query } = arg;
+    const { q: query } = arg as Query;
 
-      if (query.batchParsers) {
-        const batchParsers = ((q as unknown as Query).q.batchParsers ??= []);
-        for (const bp of query.batchParsers) {
-          batchParsers.push({ path: [key, ...bp.path], fn: bp.fn });
-        }
+    if (query.batchParsers) {
+      const batchParsers = ((q as unknown as Query).q.batchParsers ??= []);
+      for (const bp of query.batchParsers) {
+        batchParsers.push({ path: [key, ...bp.path], fn: bp.fn });
       }
+    }
 
-      if (query.hookSelect || query.parsers || query.transform) {
-        const batchParsers = ((q as unknown as Query).q.batchParsers ??= []);
+    if (query.hookSelect || query.parsers || query.transform) {
+      const batchParsers = ((q as unknown as Query).q.batchParsers ??= []);
 
-        batchParsers.push({
-          path: [key],
-          fn: (path, queryResult) => {
-            const { rows } = queryResult;
-            const originalReturnType = query.returnType || 'all';
-            let returnType = originalReturnType;
-            const { hookSelect } = query;
-            const batches: QueryBatchResult[] = [];
+      batchParsers.push({
+        path: [key],
+        fn: (path, queryResult) => {
+          const { rows } = queryResult;
+          const originalReturnType = query.returnType || 'all';
+          let returnType = originalReturnType;
+          const { hookSelect } = query;
+          const batches: QueryBatchResult[] = [];
 
-            const last = path.length;
-            if (returnType === 'value' || returnType === 'valueOrThrow') {
-              if (hookSelect) {
-                batches.push = (item) => {
-                  // if the item has no key, it means value return was implicitly turned into 'one' return,
-                  // happens when getting a computed column
-                  if (!(key in item)) {
-                    returnType = returnType === 'value' ? 'one' : 'oneOrThrow';
-                  }
-                  batches.push = Array.prototype.push;
-                  return batches.push(item);
-                };
-              }
-            }
-
-            collectNestedSelectBatches(batches, rows, path, last);
-
-            switch (returnType) {
-              case 'all': {
-                const { parsers } = query;
-                if (parsers) {
-                  for (const { data } of batches) {
-                    for (const one of data) {
-                      parseRecord(parsers, one);
-                    }
-                  }
-                }
-                break;
-              }
-              case 'one':
-              case 'oneOrThrow': {
-                const { parsers } = query;
-                if (parsers) {
-                  if (returnType === 'one') {
-                    for (const { data } of batches) {
-                      if (data) parseRecord(parsers, data);
-                    }
-                  } else {
-                    for (const { data } of batches) {
-                      if (!data) throw new NotFoundError(arg);
-                      parseRecord(parsers, data);
-                    }
-                  }
-                } else if (returnType !== 'one') {
-                  for (const { data } of batches) {
-                    if (!data) throw new NotFoundError(arg);
-                  }
-                }
-
-                if (hookSelect) {
-                  for (const batch of batches) {
-                    batch.data = [batch.data];
-                  }
-                }
-
-                break;
-              }
-              case 'pluck': {
-                const parse = query.parsers?.pluck;
-                if (parse) {
-                  for (const { data } of batches) {
-                    for (let i = 0; i < data.length; i++) {
-                      (data as unknown as RecordUnknown)[i] = parse(data[i]);
-                    }
-                  }
-                }
-
-                // not transforming data for hookSelect because it's set to load 'all' elsewhere for this case
-
-                break;
-              }
-              case 'value':
-              case 'valueOrThrow': {
-                const parse = query.parsers?.[getValueKey];
-                if (parse) {
-                  if (returnType === 'value') {
-                    for (const item of batches) {
-                      item.parent[item.key] = item.data =
-                        item.data === undefined
-                          ? arg.q.notFoundDefault
-                          : parse(item.data);
-                    }
-                  } else {
-                    for (const item of batches) {
-                      if (item.data === undefined) throw new NotFoundError(arg);
-
-                      item.parent[item.key] = item.data = parse(item.data);
-                    }
-                  }
-                } else if (returnType !== 'value') {
-                  for (const { data } of batches) {
-                    if (data === undefined) throw new NotFoundError(arg);
-                  }
-                }
-
-                if (hookSelect) {
-                  for (const batch of batches) {
-                    batch.data = [batch.data];
-                  }
-                }
-
-                break;
-              }
-            }
-
+          const last = path.length;
+          if (returnType === 'value' || returnType === 'valueOrThrow') {
             if (hookSelect) {
-              let tempColumns: Set<string> | undefined;
-              let renames: RecordString | undefined;
-              for (const column of hookSelect.keys()) {
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                const as = hookSelect!.get(column)!.as;
-                if (as) (renames ??= {})[column] = as;
+              batches.push = (item) => {
+                // if the item has no key, it means value return was implicitly turned into 'one' return,
+                // happens when getting a computed column
+                if (!(key in item)) {
+                  returnType = returnType === 'value' ? 'one' : 'oneOrThrow';
+                }
+                batches.push = Array.prototype.push;
+                return batches.push(item);
+              };
+            }
+          }
 
-                (tempColumns ??= new Set())?.add(as || column);
+          collectNestedSelectBatches(batches, rows, path, last);
+
+          switch (returnType) {
+            case 'all': {
+              const { parsers } = query;
+              if (parsers) {
+                for (const { data } of batches) {
+                  for (const one of data) {
+                    parseRecord(parsers, one);
+                  }
+                }
+              }
+              break;
+            }
+            case 'one':
+            case 'oneOrThrow': {
+              const { parsers } = query;
+              if (parsers) {
+                if (returnType === 'one') {
+                  for (const { data } of batches) {
+                    if (data) parseRecord(parsers, data);
+                  }
+                } else {
+                  for (const { data } of batches) {
+                    if (!data) throw new NotFoundError(arg as Query);
+                    parseRecord(parsers, data);
+                  }
+                }
+              } else if (returnType !== 'one') {
+                for (const { data } of batches) {
+                  if (!data) throw new NotFoundError(arg as Query);
+                }
               }
 
-              if (renames) {
+              if (hookSelect) {
+                for (const batch of batches) {
+                  batch.data = [batch.data];
+                }
+              }
+
+              break;
+            }
+            case 'pluck': {
+              const parse = query.parsers?.pluck;
+              if (parse) {
                 for (const { data } of batches) {
-                  for (const record of data) {
-                    if (record) {
-                      for (const a in renames) {
-                        const value = record[renames[a]];
-                        record[renames[a]] = record[a];
-                        record[a] = value;
-                      }
-                    }
+                  for (let i = 0; i < data.length; i++) {
+                    (data as unknown as RecordUnknown)[i] = parse(data[i]);
                   }
                 }
               }
 
-              if (query.selectedComputeds) {
-                const maybePromise = processComputedBatches(
-                  query,
-                  batches,
-                  originalReturnType,
-                  returnType,
-                  tempColumns,
-                  renames,
-                  key,
-                );
-                if (maybePromise) return maybePromise;
+              // not transforming data for hookSelect because it's set to load 'all' elsewhere for this case
+
+              break;
+            }
+            case 'value':
+            case 'valueOrThrow': {
+              const parse = query.parsers?.[getValueKey];
+              if (parse) {
+                if (returnType === 'value') {
+                  for (const item of batches) {
+                    item.parent[item.key] = item.data =
+                      item.data === undefined
+                        ? query.notFoundDefault
+                        : parse(item.data);
+                  }
+                } else {
+                  for (const item of batches) {
+                    if (item.data === undefined)
+                      throw new NotFoundError(arg as Query);
+
+                    item.parent[item.key] = item.data = parse(item.data);
+                  }
+                }
+              } else if (returnType !== 'value') {
+                for (const { data } of batches) {
+                  if (data === undefined) throw new NotFoundError(arg as Query);
+                }
               }
 
-              finalizeNestedHookSelect(
+              if (hookSelect) {
+                for (const batch of batches) {
+                  batch.data = [batch.data];
+                }
+              }
+
+              break;
+            }
+          }
+
+          if (hookSelect) {
+            let tempColumns: Set<string> | undefined;
+            let renames: RecordString | undefined;
+            for (const column of hookSelect.keys()) {
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              const as = hookSelect!.get(column)!.as;
+              if (as) (renames ??= {})[column] = as;
+
+              (tempColumns ??= new Set())?.add(as || column);
+            }
+
+            if (renames) {
+              for (const { data } of batches) {
+                for (const record of data) {
+                  if (record) {
+                    for (const a in renames) {
+                      const value = record[renames[a]];
+                      record[renames[a]] = record[a];
+                      record[a] = value;
+                    }
+                  }
+                }
+              }
+            }
+
+            if (query.selectedComputeds) {
+              const maybePromise = processComputedBatches(
+                query,
                 batches,
                 originalReturnType,
+                returnType,
                 tempColumns,
                 renames,
                 key,
               );
+              if (maybePromise) return maybePromise;
             }
 
-            applyBatchTransforms(query, batches);
-            return;
-          },
-        });
-      }
+            finalizeNestedHookSelect(
+              batches,
+              originalReturnType,
+              tempColumns,
+              renames,
+              key,
+            );
+          }
+
+          applyBatchTransforms(query, batches);
+          return;
+        },
+      });
     }
+
+    if (!joinQuery && (arg as Query).q?.subQuery && arg.q.expr) {
+      arg = arg.q.expr;
+    }
+
+    if (isExpression(arg)) {
+      addParserForRawExpression(q as never, key, arg);
+      return arg;
+    }
+
     return arg;
   }
 
@@ -597,6 +605,7 @@ export const processSelectArg = <T extends SelectSelf>(
   for (const key in arg as unknown as SelectAsArg<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let value = (arg as unknown as SelectAsArg<T>)[key] as any;
+    let joinQuery: boolean | undefined;
 
     if (typeof value === 'function') {
       value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
@@ -605,7 +614,11 @@ export const processSelectArg = <T extends SelectSelf>(
         if (value.q.innerJoinLateral) {
           return false;
         }
-      } else if (!isExpression(value) && value.joinQuery) {
+      }
+
+      if (!isExpression(value) && value.joinQuery) {
+        joinQuery = true;
+
         value = value.joinQuery(value, q);
 
         let query;
@@ -654,8 +667,6 @@ export const processSelectArg = <T extends SelectSelf>(
           (q) => q,
           key,
         );
-      } else if (value.q?.subQuery && value.q.expr) {
-        value = value.q.expr;
       }
     }
 
@@ -666,6 +677,7 @@ export const processSelectArg = <T extends SelectSelf>(
       as,
       key,
       value,
+      joinQuery,
     );
   }
 

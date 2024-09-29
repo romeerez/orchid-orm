@@ -5,8 +5,9 @@ describe('transform', () => {
   useTestDatabase();
 
   const age = 10;
+  let userId: number | undefined;
   beforeAll(async () => {
-    await User.insert({ ...userData, age });
+    userId = await User.insert({ ...userData, age }).get('id');
   });
 
   it('should load and transform records, with respect to column parsers', async () => {
@@ -115,5 +116,15 @@ describe('transform', () => {
     });
 
     expect(res).toEqual([{ sum: age }]);
+  });
+
+  it('should transform a value loaded from the main query table', async () => {
+    const data = await User.take().select('id', {
+      x: (q) => q.get('id').transform(() => 'bang'),
+    });
+
+    assertType<typeof data, { id: number; x: string }>();
+
+    expect(data).toEqual({ id: userId, x: 'bang' });
   });
 });
