@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.20.1
+
+### Patch Changes
+
+- 74c1232: Support placing select after create/update/delete (#361)
+
 ## 0.20.0
 
 ### Minor Changes

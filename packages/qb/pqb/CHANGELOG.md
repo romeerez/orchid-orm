@@ -1,5 +1,13 @@
 # pqb
 
+## 0.41.5
+
+### Patch Changes
+
+- 74c1232: Support placing select after create/update/delete (#361)
+- Updated dependencies [74c1232]
+  - orchid-core@0.20.1
+
 ## 0.41.4
 
 ### Patch Changes
