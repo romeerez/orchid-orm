@@ -94,6 +94,8 @@ export interface CommonQueryData {
   patchResult?(q: Query, queryResult: QueryResult): Promise<void>;
   handleResult: HandleResult;
   returnType: QueryReturnType;
+  returning?: boolean;
+  returningMany?: boolean;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItem[];

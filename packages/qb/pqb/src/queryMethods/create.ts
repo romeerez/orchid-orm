@@ -16,6 +16,7 @@ import {
   SetQueryReturnsPluckColumnKind,
   SetQueryReturnsPluckColumnKindResult,
   SetQueryReturnsRowCount,
+  SetQueryReturnsRowCountMany,
 } from '../query/query';
 import { RelationConfigDataForCreate } from '../relations';
 import {
@@ -239,7 +240,7 @@ type InsertManyResult<
         NarrowCreateResult<T, BT>
       >
     : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>
-  : SetQueryReturnsRowCount<T, 'create'>;
+  : SetQueryReturnsRowCountMany<T, 'create'>;
 
 type InsertManyRawOrFromResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
@@ -248,7 +249,7 @@ type InsertManyRawOrFromResult<T extends CreateSelf> =
       : T['returnType'] extends 'value' | 'valueOrThrow'
       ? SetQueryReturnsPluckColumnKind<T, 'create'>
       : SetQueryKind<T, 'create'>
-    : SetQueryReturnsRowCount<T, 'create'>;
+    : SetQueryReturnsRowCountMany<T, 'create'>;
 
 /**
  * When creating a record with a *belongs to* nested record,
@@ -365,6 +366,7 @@ const createSelect = (q: Query) => {
     q.q.select = undefined;
   } else if (!q.q.select) {
     q.q.select = ['*'];
+    q.q.returning = true;
   }
 };
 
@@ -539,7 +541,10 @@ const insert = (
   const { select, returnType } = q;
 
   if (!select) {
-    if (returnType !== 'void') q.returnType = 'rowCount';
+    if (returnType !== 'void') {
+      q.returnType = 'rowCount';
+      if (many) q.returningMany = true;
+    }
   } else if (many) {
     if (returnType === 'one' || returnType === 'oneOrThrow') {
       q.returnType = 'all';

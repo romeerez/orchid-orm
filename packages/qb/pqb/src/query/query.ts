@@ -23,6 +23,7 @@ import {
   QueryColumn,
   QueryColumns,
   QueryInternalBase,
+  QueryReturnType,
   QueryThen,
   RecordKeyTrue,
   RecordUnknown,
@@ -288,6 +289,27 @@ export type GetQueryResult<
   ? number
   : void;
 
+export type QueryResultByReturnType<
+  ReturnType extends QueryReturnType,
+  Result extends QueryColumns,
+> = ReturnType extends undefined | 'all'
+  ? ColumnShapeOutput<Result>[]
+  : ReturnType extends 'one'
+  ? ColumnShapeOutput<Result> | undefined
+  : ReturnType extends 'oneOrThrow'
+  ? ColumnShapeOutput<Result>
+  : ReturnType extends 'value'
+  ? Result['value']['outputType'] | undefined
+  : ReturnType extends 'valueOrThrow'
+  ? Result['value']['outputType']
+  : ReturnType extends 'rows'
+  ? ColumnShapeOutput<Result>[keyof Result][][]
+  : ReturnType extends 'pluck'
+  ? Result['pluck']['outputType'][]
+  : ReturnType extends 'rowCount'
+  ? number
+  : void;
+
 // Merge { hasSelect: true } into 'meta' if it's not true yet.
 export interface QueryMetaHasSelect {
   meta: {
@@ -540,7 +562,26 @@ export type SetQueryReturnsRowCount<
         [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
       }
     : K extends 'returnType'
-    ? 'rowCount'
+    ? 'valueOrThrow'
+    : K extends 'result'
+    ? { value: QueryColumn<number> }
+    : K extends 'then'
+    ? QueryThen<number>
+    : T[K];
+};
+
+export type SetQueryReturnsRowCountMany<
+  T extends PickQueryMetaResult,
+  Kind extends string,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? 'pluck'
+    : K extends 'result'
+    ? { pluck: QueryColumn<number> }
     : K extends 'then'
     ? QueryThen<number>
     : T[K];

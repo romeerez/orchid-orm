@@ -140,6 +140,19 @@ describe('create functions', () => {
       expect(result).toEqual({ name: 'name' });
     });
 
+    it('should return selected columns when appending select', async () => {
+      const q = User.insertRaw({
+        columns: ['name', 'password'],
+        values: raw`'name', 'password'`,
+      }).select('name');
+
+      const result = await q;
+
+      assertType<typeof result, { name: string }>();
+
+      expect(result).toEqual({ name: 'name' });
+    });
+
     it('should override pluck to a single value', async () => {
       const q = User.pluck('name').insertRaw({
         columns: ['name', 'password'],
@@ -223,7 +236,7 @@ describe('create functions', () => {
       expect(result).toBe(2);
     });
 
-    it('should return override returning one record to multiple', async () => {
+    it('should return multiple records', async () => {
       const q = User.take()
         .select('name')
         .insertManyRaw({
@@ -238,13 +251,43 @@ describe('create functions', () => {
       expect(result).toEqual([{ name: 'name' }, { name: 'name' }]);
     });
 
-    it('should return override returning single value with a pluck', async () => {
+    it('should return multiple records when appending select', async () => {
+      const q = User.take()
+        .insertManyRaw({
+          columns: ['name', 'password'],
+          values: [raw`'name', 'password'`, raw`'name', 'password'`],
+        })
+        .select('name');
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, { name: string }[]>();
+
+      expect(result).toEqual([{ name: 'name' }, { name: 'name' }]);
+    });
+
+    it('should override selected value with a pluck', async () => {
       const q = User.take()
         .get('name')
         .insertManyRaw({
           columns: ['name', 'password'],
           values: [raw`'name', 'password'`, raw`'name', 'password'`],
         });
+
+      const result = await q;
+
+      assertType<Awaited<typeof q>, string[]>();
+
+      expect(result).toEqual(['name', 'name']);
+    });
+
+    it('should support appending pluck', async () => {
+      const q = User.take()
+        .insertManyRaw({
+          columns: ['name', 'password'],
+          values: [raw`'name', 'password'`, raw`'name', 'password'`],
+        })
+        .pluck('name');
 
       const result = await q;
 
@@ -451,6 +494,14 @@ describe('create functions', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should support appending select', async () => {
+      const result = await User.create(userData).select('id', 'name');
+
+      assertType<typeof result, { id: number; name: string }>();
+
+      expect(result).toEqual({ id: expect.any(Number), name: userData.name });
+    });
+
     it('should create one record, returning named columns', async () => {
       const query = Snake.select('snakeName', 'tailLength').create(snakeData);
       expectSql(
@@ -595,9 +646,15 @@ describe('create functions', () => {
     });
 
     it('should return selected columns', async () => {
-      const q = User.select('name').insert(userData);
+      const result = await User.select('name').insert(userData);
 
-      const result = await q;
+      assertType<typeof result, { name: string }>();
+
+      expect(result).toEqual({ name: userData.name });
+    });
+
+    it('should support appending select', async () => {
+      const result = await User.insert(userData).select('name');
 
       assertType<typeof result, { name: string }>();
 
@@ -605,9 +662,15 @@ describe('create functions', () => {
     });
 
     it('should return a single selected value', async () => {
-      const q = User.get('name').insert(userData);
+      const result = await User.get('name').insert(userData);
 
-      const result = await q;
+      assertType<typeof result, string>();
+
+      expect(result).toBe(userData.name);
+    });
+
+    it('should support appending get', async () => {
+      const result = await User.insert(userData).get('name');
 
       assertType<typeof result, string>();
 
@@ -743,6 +806,20 @@ describe('create functions', () => {
       });
 
       expectQueryNotMutated(q);
+    });
+
+    it('should support appending select', async () => {
+      const result = await User.createMany([userData, userData]).select(
+        'id',
+        'name',
+      );
+
+      assertType<typeof result, { id: number; name: string }[]>();
+
+      expect(result).toEqual([
+        { id: expect.any(Number), name: userData.name },
+        { id: expect.any(Number), name: userData.name },
+      ]);
     });
 
     it('should create many records, returning all columns', async () => {
@@ -951,9 +1028,7 @@ describe('create functions', () => {
     });
 
     it('should return row count by default', async () => {
-      const q = User.insertMany([userData, userData]);
-
-      const result = await q;
+      const result = await User.insertMany([userData, userData]);
 
       assertType<typeof result, number>();
 
@@ -961,9 +1036,18 @@ describe('create functions', () => {
     });
 
     it('should return records with selected columns', async () => {
-      const q = User.select('name').insertMany([userData, userData]);
+      const result = await User.select('name').insertMany([userData, userData]);
 
-      const result = await q;
+      assertType<typeof result, { name: string }[]>();
+
+      expect(result).toEqual([
+        { name: userData.name },
+        { name: userData.name },
+      ]);
+    });
+
+    it('should support appending select', async () => {
+      const result = await User.insertMany([userData, userData]).select('name');
 
       assertType<typeof result, { name: string }[]>();
 
@@ -974,9 +1058,7 @@ describe('create functions', () => {
     });
 
     it('should override single returning value with multiple', async () => {
-      const q = User.get('name').insertMany([userData, userData]);
-
-      const result = await q;
+      const result = await User.get('name').insertMany([userData, userData]);
 
       assertType<typeof result, string[]>();
 
@@ -1088,6 +1170,18 @@ describe('create functions', () => {
         'Cannot create based on a query which returns multiple records',
       );
     });
+
+    it('should support appending select', async () => {
+      const user = await User.create(userData);
+
+      const sub = User.find(user.id).select('name', 'password');
+
+      const result = await User.createFrom(sub).select('name');
+
+      assertType<typeof result, { name: string }>();
+
+      expect(result).toEqual({ name: userData.name });
+    });
   });
 
   describe('insertFrom', () => {
@@ -1177,6 +1271,18 @@ describe('create functions', () => {
         `,
         ['name'],
       );
+    });
+
+    it('should support appending select', async () => {
+      const user = await User.create(userData);
+
+      const sub = User.where({ id: user.id }).select('name', 'password');
+
+      const result = await User.createManyFrom(sub).select('name');
+
+      assertType<typeof result, { name: string }[]>();
+
+      expect(result).toEqual([{ name: userData.name }]);
     });
   });
 

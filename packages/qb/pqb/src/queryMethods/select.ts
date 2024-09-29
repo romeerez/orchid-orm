@@ -1,9 +1,9 @@
 import {
-  GetQueryResult,
   PickQueryQ,
   PickQueryQAndInternal,
   Query,
   QueryMetaHasSelect,
+  QueryResultByReturnType,
 } from '../query/query';
 import {
   addColumnParserToQuery,
@@ -24,6 +24,7 @@ import {
   HookSelect,
   isExpression,
   PickQueryMeta,
+  PickQueryReturnType,
   QueryColumn,
   QueryColumns,
   QueryMetaBase,
@@ -101,6 +102,15 @@ interface SelectAsCheckReturnTypes {
   [K: string]: PropertyKey | Expression | ((q: never) => SelectAsFnReturnType);
 }
 
+type SelectReturnType<T extends PickQueryReturnType> =
+  T['returnType'] extends 'valueOrThrow'
+    ? 'oneOrThrow'
+    : T extends 'value'
+    ? 'one'
+    : T['returnType'] extends 'pluck'
+    ? 'all'
+    : T['returnType'];
+
 // Result type of select without the ending object argument.
 type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
   [K in keyof T]: K extends 'result'
@@ -113,13 +123,17 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
         : {
             [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
           }) &
-        (T['meta']['hasSelect'] extends true
+        (T['meta']['hasSelect'] extends (
+          T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+        )
           ? Omit<T['result'], Columns[number]> // Omit is optimal
           : unknown)
+    : K extends 'returnType'
+    ? SelectReturnType<T>
     : K extends 'then'
     ? QueryThen<
-        GetQueryResult<
-          T,
+        QueryResultByReturnType<
+          SelectReturnType<T>,
           // result is copy-pasted to save on TS instantiations
           ('*' extends Columns[number]
             ? {
@@ -130,7 +144,9 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
             : {
                 [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
               }) &
-            (T['meta']['hasSelect'] extends true
+            (T['meta']['hasSelect'] extends (
+              T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+            )
               ? Omit<T['result'], Columns[number]>
               : unknown)
         >
@@ -152,7 +168,9 @@ type SelectResultObj<
         ? // Combine previously selected items, all columns if * was provided,
           // and the selected by string and object arguments.
           {
-            [K in T['meta']['hasSelect'] extends true
+            [K in T['meta']['hasSelect'] extends (
+              T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+            )
               ? keyof Obj | keyof T['result']
               : keyof Obj]: K extends keyof Obj
               ? SelectAsValueResult<T, Obj[K]>
@@ -160,13 +178,19 @@ type SelectResultObj<
               ? T['result'][K]
               : never;
           }
+        : K extends 'returnType'
+        ? SelectReturnType<T>
         : K extends 'then'
         ? QueryThen<
-            GetQueryResult<
-              T,
+            QueryResultByReturnType<
+              SelectReturnType<T>,
               // result is copy-pasted to save on TS instantiations
               {
-                [K in T['meta']['hasSelect'] extends true
+                [K in T['meta']['hasSelect'] extends (
+                  T['returnType'] extends 'value' | 'valueOrThrow'
+                    ? never
+                    : true
+                )
                   ? keyof Obj | keyof T['result']
                   : keyof Obj]: K extends keyof Obj
                   ? SelectAsValueResult<T, Obj[K]>
@@ -212,13 +236,17 @@ type SelectResultColumnsAndObj<
           : K]: K extends keyof Obj
           ? SelectAsValueResult<T, Obj[K]>
           : T['meta']['selectable'][K]['column'];
-      } & (T['meta']['hasSelect'] extends true
+      } & (T['meta']['hasSelect'] extends (
+        T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+      )
         ? Omit<T['result'], Columns[number]>
         : unknown)
+    : K extends 'returnType'
+    ? SelectReturnType<T>
     : K extends 'then'
     ? QueryThen<
-        GetQueryResult<
-          T,
+        QueryResultByReturnType<
+          SelectReturnType<T>,
           // result is copy-pasted to save on TS instantiations
           {
             [K in
@@ -230,7 +258,9 @@ type SelectResultColumnsAndObj<
               : K]: K extends keyof Obj
               ? SelectAsValueResult<T, Obj[K]>
               : T['meta']['selectable'][K]['column'];
-          } & (T['meta']['hasSelect'] extends true
+          } & (T['meta']['hasSelect'] extends (
+            T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+          )
             ? Omit<T['result'], Columns[number]>
             : unknown)
         >
@@ -886,6 +916,17 @@ export function _querySelect<
 ): SelectResultColumnsAndObj<T, Columns, Obj>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function _querySelect(q: Query, args: any[]): any {
+  if (q.q.returning) {
+    q.q.select = q.q.returning = undefined;
+  }
+
+  const { returnType } = q.q;
+  if (returnType === 'rowCount' || returnType === 'valueOrThrow') {
+    q.q.returnType = q.q.returningMany ? 'all' : 'oneOrThrow';
+  } else if (returnType === 'value') {
+    q.q.returnType = q.q.returningMany ? 'all' : 'one';
+  }
+
   const len = args.length;
   if (!len) {
     q.q.select ??= [];
