@@ -1,5 +1,11 @@
 # pqb
 
+## 0.41.4
+
+### Patch Changes
+
+- 374bb5d: Don't log ROLLBACK for error in after\*Commit (#376)
+
 ## 0.41.3
 
 ### Patch Changes
