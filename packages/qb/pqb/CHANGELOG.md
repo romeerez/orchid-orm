@@ -1,5 +1,11 @@
 # pqb
 
+## 0.41.6
+
+### Patch Changes
+
+- ab7ad6b: Fix typing error in softDelete
+
 ## 0.41.5
 
 ### Patch Changes
