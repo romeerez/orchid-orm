@@ -291,23 +291,24 @@ export class Transaction {
       }`;
       if (log) logData = log.beforeQuery(sql);
 
-      try {
-        const result = await this.q.adapter.transaction(sql, callback);
+      const result = await this.q.adapter
+        .transaction(sql, callback)
+        .catch((err) => {
+          if (log) log.afterQuery(rollbackSql, logData);
 
-        if (log) log.afterQuery(commitSql, logData);
+          throw err;
+        });
 
-        // trx was defined in the callback above
-        await runAfterCommit(
-          (trx as unknown as TransactionState).afterCommit,
-          result,
-        );
+      if (log) log.afterQuery(commitSql, logData);
 
-        return result;
-      } catch (err) {
-        if (log) log.afterQuery(rollbackSql, logData);
+      // trx was defined in the callback above;
+      // `runAfterCommit` cannot throw because it's using `Promise.allSettled`.
+      await runAfterCommit(
+        (trx as unknown as TransactionState).afterCommit,
+        result,
+      );
 
-        throw err;
-      }
+      return result;
     } else {
       try {
         sql.text = `SAVEPOINT "${transactionId}"`;
