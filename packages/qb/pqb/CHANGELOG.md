@@ -1,5 +1,16 @@
 # pqb
 
+## 0.42.0
+
+### Minor Changes
+
+- 5cd5ac1: Add `queryRelated` and `chain` instead of implicit relation chaining (#351), (#337)
+
+### Patch Changes
+
+- Updated dependencies [5cd5ac1]
+  - orchid-core@0.21.0
+
 ## 0.41.6
 
 ### Patch Changes

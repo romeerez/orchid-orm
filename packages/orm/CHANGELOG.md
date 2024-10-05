@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.37.0
+
+### Minor Changes
+
+- 5cd5ac1: Add `queryRelated` and `chain` instead of implicit relation chaining (#351), (#337)
+
+### Patch Changes
+
+- Updated dependencies [5cd5ac1]
+  - pqb@0.42.0
+  - orchid-core@0.21.0
+  - rake-db@2.23.7
+
 ## 1.36.6
 
 ### Patch Changes
