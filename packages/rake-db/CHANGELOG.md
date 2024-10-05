@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.23.8
+
+### Patch Changes
+
+- dd2a911: Run recurrent migrations on db reset (#413)
+
 ## 2.23.7
 
 ### Patch Changes
