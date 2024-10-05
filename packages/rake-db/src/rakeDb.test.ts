@@ -10,7 +10,11 @@ import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
 import { processRakeDbConfig } from './config';
 
-jest.mock('./commands/createOrDrop');
+jest.mock('./commands/createOrDrop', () => ({
+  createDb: jest.fn(() => Promise.resolve()),
+  dropDb: jest.fn(() => Promise.resolve()),
+  resetDb: jest.fn(() => Promise.resolve()),
+}));
 jest.mock('./commands/migrateOrRollback', () => ({
   migrate: jest.fn(() => Promise.resolve()),
   rollback: jest.fn(() => Promise.resolve()),
@@ -54,10 +58,12 @@ describe('rakeDb', () => {
     expect(dropDb).toBeCalledWith(options, processedConfig, []);
   });
 
-  it('should support reset command', async () => {
+  it('should support reset command, run recurrent migrations', async () => {
     await rakeDb(options, config, ['reset']).promise;
 
-    expect(resetDb).toBeCalledWith(options, processedConfig, []);
+    expect(resetDb).toBeCalledWith(options, processedConfig);
+
+    expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
   });
 
   it('should run migrations and recurrent on `up` command', async () => {

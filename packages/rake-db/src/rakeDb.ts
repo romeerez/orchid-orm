@@ -291,7 +291,10 @@ export const rakeDbCommands: RakeDbCommands = {
     help: 'drop databases',
   },
   reset: {
-    run: resetDb,
+    run: (options, config) =>
+      resetDb(options, config).then(() =>
+        runRecurrentMigrations(options, config),
+      ),
     help: 'drop, create and migrate databases',
   },
   up: upCommand,
