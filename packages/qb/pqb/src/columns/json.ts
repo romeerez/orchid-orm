@@ -22,6 +22,7 @@ export class JSONColumn<
   constructor(schema: Schema, inputType: Schema['type']) {
     super(schema, inputType as InputSchema);
     this.data.encode = this.data.defaultEncode = encode;
+    this.data.parseItem = JSON.parse;
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {

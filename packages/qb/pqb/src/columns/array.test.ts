@@ -1,5 +1,6 @@
 import { assertType, testZodColumnTypes as t } from 'test-utils';
 import { ColumnToCodeCtx } from 'orchid-core';
+import { z } from 'zod';
 
 describe('array column', () => {
   it('should correctly parse various array types', () => {
@@ -34,6 +35,26 @@ describe('array column', () => {
 
     const parseBool = boolArray.data.parse!;
     expect(parseBool('{{true},{false}}')).toEqual([[true], [false]]);
+
+    const jsonArray = t.array(
+      t.json(
+        z
+          .object({ a: z.number() })
+          .or(z.object({ b: z.boolean() }))
+          .nullable(),
+      ),
+    );
+    assertType<
+      typeof jsonArray.outputType,
+      ({ a: number } | { b: boolean } | null)[]
+    >();
+
+    const parseJson = jsonArray.data.parse!;
+    expect(parseJson(`{"{\\"a\\":1}","{\\"b\\":true}",null}`)).toEqual([
+      { a: 1 },
+      { b: true },
+      null,
+    ]);
   });
 
   it('should have toCode', async () => {
