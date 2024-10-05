@@ -1,6 +1,7 @@
-import { Query, SetQueryReturnsColumnOptional } from '../query/query';
+import { SetQueryReturnsColumnOptional } from '../query/query';
 import { QueryColumn } from 'orchid-core';
 import { queryJson } from './json.utils';
+import { _clone } from '../query/queryUtils';
 
 export abstract class JsonMethods {
   /**
@@ -19,6 +20,6 @@ export abstract class JsonMethods {
     this: T,
     coalesce?: boolean,
   ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
-    return queryJson((this as unknown as Query).clone(), coalesce) as never;
+    return queryJson(_clone(this), coalesce) as never;
   }
 }

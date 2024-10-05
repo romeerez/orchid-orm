@@ -1,6 +1,5 @@
-import { Query } from '../query/query';
-import { QueryColumn, QueryThen } from 'orchid-core';
-import { pushQueryValue } from '../query/queryUtils';
+import { IsQuery, QueryColumn, QueryThen } from 'orchid-core';
+import { _clone, pushQueryValue } from '../query/queryUtils';
 
 export class TransformMethods {
   /**
@@ -56,10 +55,10 @@ export class TransformMethods {
    *
    * @param fn - function to transform query result with
    */
-  transform<T extends Query, Result>(
+  transform<T extends IsQuery, Result>(
     this: T,
     fn: (
-      input: T['then'] extends QueryThen<infer Data> ? Data : never,
+      input: T extends { then: QueryThen<infer Data> } ? Data : never,
     ) => Result,
   ): {
     [K in keyof T]: K extends 'returnType'
@@ -70,6 +69,6 @@ export class TransformMethods {
       ? QueryThen<Result>
       : T[K];
   } {
-    return pushQueryValue(this.clone(), 'transform', fn) as never;
+    return pushQueryValue(_clone(this), 'transform', fn) as never;
   }
 }

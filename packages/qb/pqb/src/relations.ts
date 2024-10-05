@@ -1,17 +1,18 @@
-import {
-  Query,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
-} from './query/query';
-import { RecordUnknown } from 'orchid-core';
+import { Query } from './query/query';
+import { IsQuery, RecordUnknown } from 'orchid-core';
 
 export interface RelationJoinQuery {
-  (joiningQuery: Query, baseQuery: Query): Query;
+  (joiningQuery: IsQuery, baseQuery: IsQuery): IsQuery;
 }
 
 export interface RelationConfigBase {
-  query: Query;
+  query: IsQuery;
   joinQuery: RelationJoinQuery;
+  reverseJoin: RelationJoinQuery;
+  params: unknown;
+  queryRelated(params: unknown): unknown;
+  modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
+  maybeSingle: unknown;
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
   // or with `db.book.create({ author: authorData })`.
@@ -38,25 +39,4 @@ export interface RelationsBase {
 
 export interface RelationQueryBase extends Query {
   relationConfig: RelationConfigBase;
-}
-
-export type RelationQuery<
-  Config extends RelationConfigBase = RelationConfigBase,
-  Params = never,
-  Required = never,
-  One = never,
-> = RelationQueryFnAndConfig<Config, Params, Required, One> & Config['query'];
-
-interface RelationQueryFnAndConfig<
-  Config extends RelationConfigBase = RelationConfigBase,
-  Params = never,
-  Required = never,
-  One = never,
-> {
-  (params: Params): One extends true
-    ? Required extends true
-      ? SetQueryReturnsOne<Config['query']>
-      : SetQueryReturnsOneOptional<Config['query']>
-    : Config['query'];
-  relationConfig: Config;
 }

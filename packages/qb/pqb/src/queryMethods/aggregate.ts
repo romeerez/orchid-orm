@@ -42,6 +42,7 @@ import {
   _queryGetOptional,
   QueryGetSelf,
 } from './get.utils';
+import { _clone } from '../query/queryUtils';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
@@ -229,10 +230,7 @@ export class AggregateMethods {
   exists<T extends QueryGetSelf>(
     this: T,
   ): SetQueryReturnsColumnOrThrow<T, BooleanQueryColumn> {
-    const q = _queryGetOptional(
-      (this as unknown as Query).clone(),
-      new RawSQL('true'),
-    );
+    const q = _queryGetOptional(_clone(this), new RawSQL('true'));
     q.q.notFoundDefault = false;
     q.q.coalesceValue = new RawSQL('false');
     return q as never;

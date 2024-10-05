@@ -1,4 +1,4 @@
-import { QueryColumn, toCamelCase } from 'orchid-core';
+import { PickQueryShape, QueryColumn, toCamelCase } from 'orchid-core';
 import {
   Adapter,
   AdapterOptions,
@@ -6,9 +6,10 @@ import {
   ColumnType,
   defaultSchemaConfig,
   DomainColumn,
+  PickQueryInternal,
+  PickQueryQ,
   Query,
   QueryInternal,
-  QueryWithTable,
   UnknownColumn,
 } from 'pqb';
 import {
@@ -31,10 +32,17 @@ import { report } from './reportGeneratedMigration';
 import path from 'node:path';
 import { pathToFileURL } from 'url';
 
+export interface CodeTable
+  extends PickQueryQ,
+    PickQueryShape,
+    PickQueryInternal {
+  table: string;
+}
+
 export interface CodeItems {
   schemas: Set<string>;
   enums: Map<string, EnumItem>;
-  tables: QueryWithTable[];
+  tables: CodeTable[];
   domains: CodeDomain[];
 }
 
@@ -292,7 +300,7 @@ const getActualItems = async (
   columnTypes: unknown,
 ): Promise<CodeItems> => {
   const tableNames = new Set<string>();
-  const habtmTables = new Map<string, QueryWithTable>();
+  const habtmTables = new Map<string, CodeTable>();
 
   const codeItems: CodeItems = {
     schemas: new Set(undefined),
@@ -322,7 +330,7 @@ const getActualItems = async (
 
     if (schema) codeItems.schemas.add(schema);
 
-    codeItems.tables.push(table as QueryWithTable);
+    codeItems.tables.push(table as never);
 
     for (const key in table.relations) {
       const column = table.shape[key];
@@ -404,10 +412,10 @@ const processEnumColumn = (
 
 const processHasAndBelongsToManyColumn = (
   column: QueryColumn & { joinTable: unknown },
-  habtmTables: Map<string, QueryWithTable>,
+  habtmTables: Map<string, CodeTable>,
   codeItems: CodeItems,
 ) => {
-  const q = (column as { joinTable: QueryWithTable }).joinTable;
+  const q = (column as { joinTable: CodeTable }).joinTable;
   const prev = habtmTables.get(q.table);
   if (prev) {
     for (const key in q.shape) {

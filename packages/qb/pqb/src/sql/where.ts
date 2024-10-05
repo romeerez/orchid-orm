@@ -28,6 +28,7 @@ import {
   ColumnTypeBase,
   Expression,
   isExpression,
+  IsQuery,
   MaybeArray,
   OperatorToSQL,
   QueryColumns,
@@ -388,7 +389,7 @@ const pushIn = (
   quotedAs: string | undefined,
   arg: {
     columns: string[];
-    values: unknown[][] | Query | Expression;
+    values: unknown[][] | IsQuery | Expression;
   },
 ) => {
   // if there are multiple columns, make `(col1, col2) IN ((1, 2), (3, 4))`,
@@ -412,7 +413,7 @@ const pushIn = (
   } else if (isExpression(arg.values)) {
     value = arg.values.toSQL(ctx, quotedAs);
   } else {
-    value = `(${getSqlText(makeSQL(arg.values, ctx))})`;
+    value = `(${getSqlText(makeSQL(arg.values as never, ctx))})`;
   }
 
   const columnsSql = arg.columns

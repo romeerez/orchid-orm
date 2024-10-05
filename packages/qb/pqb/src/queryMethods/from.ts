@@ -22,9 +22,9 @@ import {
   ColumnsParsers,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
-import { QueryBase } from '../query/queryBase';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { addColumnParserToQuery } from '../columns';
+import { _clone } from '../query/queryUtils';
 
 export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
 
@@ -150,14 +150,14 @@ export function queryFrom<
           );
         }
       } else if (!isExpression(item)) {
-        Object.assign(shape, getShapeFromSelect(item as QueryBase, true));
+        Object.assign(shape, getShapeFromSelect(item, true));
         Object.assign((data.parsers ??= {}), item.q.parsers);
       }
     }
   } else {
     const q = arg as Query;
     data.as ||= q.q.as || q.table || 't';
-    data.shape = getShapeFromSelect(arg as QueryBase, true) as ColumnsShapeBase;
+    data.shape = getShapeFromSelect(q, true) as ColumnsShapeBase;
     data.parsers = q.q.parsers;
     data.batchParsers = q.q.batchParsers;
   }
@@ -217,7 +217,7 @@ export class FromMethods {
       ? '`select` must be placed after `from`'
       : Arg,
   ): FromResult<T, Arg> {
-    return queryFrom((this as unknown as Query).clone(), arg as never) as never;
+    return queryFrom(_clone(this), arg as never) as never;
   }
 
   /**
@@ -231,10 +231,7 @@ export class FromMethods {
    * @param args - SQL expression
    */
   fromSql<T extends FromQuerySelf>(this: T, ...args: SQLQueryArgs): T {
-    return queryFromSql(
-      (this as unknown as Query).clone(),
-      args as never,
-    ) as never;
+    return queryFromSql(_clone(this), args as never) as never;
   }
 
   /**
@@ -252,7 +249,7 @@ export class FromMethods {
    * @param only - can be disabled by passing `false` if was enabled previously.
    */
   only<T>(this: T, only = true): T {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     (q.q as SelectQueryData).only = only;
     return q as T;
   }

@@ -1,7 +1,10 @@
 import {
   GetQueryResult,
+  PickQueryMetaRelations,
+  PickQueryMetaResultReturnTypeWithDataWindows,
   PickQueryMetaResultReturnTypeWithDataWindowsTable,
   PickQueryQ,
+  PickQueryRelations,
   PickQueryShapeResultSinglePrimaryKey,
   Query,
   SetQueryReturnsAll,
@@ -16,6 +19,7 @@ import {
 } from '../query/query';
 import {
   AliasOrTable,
+  getClonedQueryData,
   SelectableOrExpression,
   SelectableOrExpressions,
 } from '../common/utils';
@@ -28,7 +32,18 @@ import {
   ToSQLQuery,
   TruncateQueryData,
 } from '../sql';
-import { pushQueryArray, pushQueryValue } from '../query/queryUtils';
+import {
+  _clone,
+  _queryAll,
+  _queryExec,
+  _queryFindBy,
+  _queryFindByOptional,
+  _queryRows,
+  _queryTake,
+  _queryTakeOptional,
+  pushQueryArray,
+  pushQueryValue,
+} from '../query/queryUtils';
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
@@ -47,8 +62,6 @@ import {
   _queryWhereSql,
   QueryMetaHasWhere,
   Where,
-  WhereArgs,
-  WhereResult,
 } from './where/where';
 import { SearchMethods } from './search';
 import { Clear } from './clear';
@@ -63,6 +76,7 @@ import {
   applyMixins,
   EmptyObject,
   Expression,
+  IsQuery,
   PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaResultReturnType,
@@ -79,7 +93,6 @@ import {
   SQLQueryArgs,
 } from 'orchid-core';
 import { AsMethods } from './as';
-import { QueryBase } from '../query/queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { QueryMap } from './map';
@@ -89,6 +102,7 @@ import { SoftDeleteMethods } from './softDelete';
 import { queryWrap } from './queryMethods.utils';
 import { ExpressionMethods } from './expressions';
 import { _queryNone } from './none';
+import { _chain } from './chain';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -178,7 +192,9 @@ interface QueryHelper<
   >(
     q: Q,
     ...args: Args
-  ): Result extends Query ? MergeQuery<Q, Result> : Result;
+  ): Result extends PickQueryMetaResultReturnTypeWithDataWindows
+    ? MergeQuery<Q, Result>
+    : Result;
 
   result: Result;
 }
@@ -186,7 +202,7 @@ interface QueryHelper<
 // Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
 export type QueryHelperResult<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends QueryHelper<Query, any[], unknown>,
+  T extends QueryHelper<PickQueryMetaShape, any[], unknown>,
 > = T['result'];
 
 type NarrowTypeResult<T extends PickQueryMetaResultReturnType, Narrow> = {
@@ -234,51 +250,18 @@ export interface QueryMethods<ColumnTypes>
 
 export type WrapQueryArg = FromQuerySelf;
 
-export const _queryAll = <T extends Query>(q: T): SetQueryReturnsAll<T> => {
-  q.q.returnType = 'all';
-  q.q.all = true;
-  return q as never;
-};
-
-export const _queryTake = <T extends PickQueryResult>(
-  q: T,
-): SetQueryReturnsOne<T> => {
-  (q as unknown as PickQueryQ).q.returnType = 'oneOrThrow';
-  return q as never;
-};
-
-export const _queryTakeOptional = <T extends PickQueryResult>(
-  q: T,
-): SetQueryReturnsOneOptional<T> => {
-  (q as unknown as PickQueryQ).q.returnType = 'one';
-  return q as never;
-};
-
-export const _queryExec = <T extends Query>(q: T) => {
-  q.q.returnType = 'void';
-  return q as never;
-};
-
-export const _queryFindBy = <T extends QueryBase>(
-  q: T,
-  args: WhereArgs<T>,
-): SetQueryReturnsOne<WhereResult<T>> => {
-  return _queryTake(_queryWhere(q, args));
-};
-
-export const _queryFindByOptional = <T extends QueryBase>(
-  q: T,
-  args: WhereArgs<T>,
-): SetQueryReturnsOneOptional<WhereResult<T>> => {
-  return _queryTakeOptional(_queryWhere(q, args));
-};
-
-export const _queryRows = <T extends Query>(q: T): SetQueryReturnsRows<T> => {
-  q.q.returnType = 'rows';
-  return q as never;
-};
-
 export class QueryMethods<ColumnTypes> {
+  /**
+   * Clones the current query chain, useful for re-using partial query snippets in other queries without mutating the original.
+   *
+   * Used under the hood, and not really needed on the app side.
+   */
+  clone<T>(this: T): T {
+    const cloned = Object.create((this as unknown as Query).baseQuery);
+    cloned.q = getClonedQueryData((this as unknown as PickQueryQ).q);
+    return cloned;
+  }
+
   /**
    * `.all` is a default behavior, that returns an array of objects:
    *
@@ -289,7 +272,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   all<T extends PickQueryResult>(this: T): SetQueryReturnsAll<T> {
-    return _queryAll((this as unknown as Query).clone()) as never;
+    return _queryAll(_clone(this)) as never;
   }
 
   /**
@@ -301,7 +284,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   take<T extends PickQueryResult>(this: T): SetQueryReturnsOne<T> {
-    return _queryTake((this as unknown as Query).clone()) as never;
+    return _queryTake(_clone(this)) as never;
   }
 
   /**
@@ -317,7 +300,7 @@ export class QueryMethods<ColumnTypes> {
   takeOptional<T extends PickQueryResult>(
     this: T,
   ): SetQueryReturnsOneOptional<T> {
-    return _queryTakeOptional((this as unknown as Query).clone()) as never;
+    return _queryTakeOptional(_clone(this)) as never;
   }
 
   /**
@@ -337,7 +320,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   rows<T extends PickQueryResult>(this: T): SetQueryReturnsRows<T> {
-    return _queryRows((this as unknown as Query).clone()) as never;
+    return _queryRows(_clone(this)) as never;
   }
 
   /**
@@ -353,7 +336,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     q.q.returnType = 'pluck';
 
     const selected = addParserForSelectItem(
@@ -376,7 +359,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    */
   exec<T>(this: T): SetQueryReturnsVoid<T> {
-    return _queryExec((this as unknown as Query).clone()) as never;
+    return _queryExec(_clone(this)) as never;
   }
 
   /**
@@ -431,7 +414,7 @@ export class QueryMethods<ColumnTypes> {
     ...columns: SelectableOrExpressions<T>
   ): T {
     return pushQueryArray(
-      (this as unknown as Query).clone(),
+      _clone(this),
       'distinct',
       columns as string[],
     ) as never;
@@ -451,7 +434,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     value: T['internal']['singlePrimaryKey'] | Expression,
   ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     if (value === null || value === undefined) {
       throw new OrchidOrmInternalError(
@@ -485,7 +468,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     ...args: SQLQueryArgs
   ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     return _queryTake(_queryWhereSql(q, args)) as never;
   }
 
@@ -545,9 +528,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
   ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
-    return _queryFindBy((this as unknown as Query).clone(), [
-      uniqueColumnValues,
-    ] as never) as never;
+    return _queryFindBy(_clone(this), [uniqueColumnValues] as never) as never;
   }
 
   /**
@@ -567,7 +548,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
   ): SetQueryReturnsOneOptional<T> & QueryMetaHasWhere {
-    return _queryFindByOptional((this as unknown as Query).clone(), [
+    return _queryFindByOptional(_clone(this), [
       uniqueColumnValues,
     ] as never) as never;
   }
@@ -591,7 +572,7 @@ export class QueryMethods<ColumnTypes> {
    * @param schema - a name of the database schema to use
    */
   withSchema<T>(this: T, schema: string): T {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     q.q.schema = schema;
     return q as T;
   }
@@ -629,11 +610,7 @@ export class QueryMethods<ColumnTypes> {
    * @param columns - column names or a raw SQL
    */
   group<T extends PickQueryResult>(this: T, ...columns: GroupArgs<T>): T {
-    return pushQueryArray(
-      (this as unknown as Query).clone(),
-      'group',
-      columns,
-    ) as never;
+    return pushQueryArray(_clone(this), 'group', columns) as never;
   }
 
   /**
@@ -666,11 +643,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     arg: W,
   ): WindowResult<T, W> {
-    return pushQueryValue(
-      (this as unknown as Query).clone(),
-      'window',
-      arg,
-    ) as never;
+    return pushQueryValue(_clone(this), 'window', arg) as never;
   }
 
   wrap<
@@ -678,7 +651,7 @@ export class QueryMethods<ColumnTypes> {
     Q extends WrapQueryArg,
     As extends string = 't',
   >(this: T, query: Q, as?: As): SetQueryTableAlias<Q, As> {
-    return queryWrap(this, (query as unknown as Query).clone(), as) as never;
+    return queryWrap(this, _clone(query), as) as never;
   }
 
   /**
@@ -717,11 +690,7 @@ export class QueryMethods<ColumnTypes> {
    * @param args - column name(s) or an object with column names and sort directions.
    */
   order<T extends OrderArgSelf>(this: T, ...args: OrderArgs<T>): T {
-    return pushQueryArray(
-      (this as unknown as Query).clone(),
-      'order',
-      args,
-    ) as never;
+    return pushQueryArray(_clone(this), 'order', args) as never;
   }
 
   /**
@@ -737,7 +706,7 @@ export class QueryMethods<ColumnTypes> {
    */
   orderSql<T>(this: T, ...args: SQLQueryArgs): T {
     return pushQueryValue(
-      (this as unknown as Query).clone(),
+      _clone(this),
       'order',
       sqlQueryArgsToExpression(args),
     ) as never;
@@ -753,7 +722,7 @@ export class QueryMethods<ColumnTypes> {
    * @param arg - limit number
    */
   limit<T>(this: T, arg: number | undefined): T {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     (q.q as SelectQueryData).limit = arg;
     return q as T;
   }
@@ -767,10 +736,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param arg - offset number
    */
-  offset<T extends Query>(this: T, arg: number | undefined): T {
-    const q = (this as unknown as Query).clone();
+  offset<T extends IsQuery>(this: T, arg: number | undefined): T {
+    const q = _clone(this);
     (q.q as SelectQueryData).offset = arg;
-    return q as T;
+    return q as never;
   }
 
   /**
@@ -793,7 +762,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): SetQueryReturnsVoidKind<T, 'truncate'> {
-    const query = (this as unknown as Query).clone();
+    const query = _clone(this);
     const q = query.q as TruncateQueryData;
     q.type = 'truncate';
     if (options?.restartIdentity) {
@@ -926,7 +895,9 @@ export class QueryMethods<ColumnTypes> {
   >(
     this: T,
     fn: (q: Arg) => Result,
-  ): Result extends Query ? MergeQuery<T, Result> : Result {
+  ): Result extends PickQueryMetaResultReturnTypeWithDataWindows
+    ? MergeQuery<T, Result>
+    : Result {
     return fn(this as unknown as Arg) as never;
   }
 
@@ -986,7 +957,7 @@ export class QueryMethods<ColumnTypes> {
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {
     return ((query: T, ...args: Args) => {
-      const q = (query as unknown as Query).clone();
+      const q = _clone(query);
       q.q.as = undefined;
       return fn(q as never, ...args);
     }) as never;
@@ -1028,10 +999,33 @@ export class QueryMethods<ColumnTypes> {
   } {
     return () => this as never;
   }
+
+  queryRelated<
+    T extends PickQueryRelations,
+    RelName extends keyof T['relations'],
+  >(
+    this: T,
+    relName: RelName,
+    params: T['relations'][RelName]['relationConfig']['params'],
+  ): T['relations'][RelName]['relationConfig']['maybeSingle'] {
+    return this.relations[relName as string].relationConfig.queryRelated(
+      params,
+    );
+  }
+
+  chain<T extends PickQueryMetaRelations, RelName extends keyof T['relations']>(
+    this: T,
+    relName: RelName,
+  ): T['meta']['subQuery'] extends true
+    ? T['relations'][RelName]['relationConfig']['maybeSingle']
+    : T['relations'][RelName]['relationConfig']['query'] {
+    const rel = this.relations[relName as string].relationConfig;
+
+    return _chain(this as unknown as IsQuery, _clone(rel.query), rel);
+  }
 }
 
 applyMixins(QueryMethods, [
-  QueryBase,
   AsMethods,
   AggregateMethods,
   Select,

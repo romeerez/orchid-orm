@@ -1,4 +1,3 @@
-import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
 import {
   logColors,
@@ -6,6 +5,7 @@ import {
   QueryLogObject,
   QueryLogOptions,
 } from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 
 const makeMessage = (
   colors: boolean,
@@ -85,7 +85,7 @@ export const logParamToLogObject = (
 
 export class QueryLog {
   log<T>(this: T, log = true): T {
-    const q = (this as Query).clone();
+    const q = _clone(this);
     q.q.log = logParamToLogObject(q.q.logger, log);
     return q as T;
   }

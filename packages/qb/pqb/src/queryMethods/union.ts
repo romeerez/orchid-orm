@@ -1,6 +1,7 @@
 import { Expression, PickQueryResult } from 'orchid-core';
-import { Query } from '../query/query';
+import { PickQueryQ, Query } from '../query/query';
 import { SelectQueryData, UnionItem, UnionKind } from '../sql';
+import { _clone } from '../query/queryUtils';
 
 // argument of `union`-like query methods.
 // it supports query objects with the same result as in the previous query,
@@ -16,12 +17,12 @@ export type UnionArgs<T extends PickQueryResult> = (
   | ((q: T) => Expression)
 )[];
 
-export const _queryUnion = <T extends Query>(
+export const _queryUnion = <T extends PickQueryResult>(
   base: T,
   args: UnionArgs<T>,
   k: UnionKind,
 ): T => {
-  const q = base.baseQuery.clone();
+  const q = (base as unknown as Query).baseQuery.clone();
 
   const u = args.map(
     (a) =>
@@ -32,14 +33,14 @@ export const _queryUnion = <T extends Query>(
   );
 
   const union = ((q.q as SelectQueryData).union = (
-    base.q as SelectQueryData
+    (base as unknown as PickQueryQ).q as SelectQueryData
   ).union);
 
   if (union) {
     union.u.push(...u);
   } else {
     (q.q as SelectQueryData).union = {
-      b: base,
+      b: base as never,
       u,
     };
   }
@@ -106,7 +107,7 @@ export class Union {
    */
   union<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
-      (this as unknown as Query).clone(),
+      _clone(this),
       args as UnionArgs<Query>,
       'UNION',
     ) as never;
@@ -119,7 +120,7 @@ export class Union {
    */
   unionAll<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
-      (this as unknown as Query).clone(),
+      _clone(this),
       args as UnionArgs<Query>,
       'UNION ALL',
     ) as never;
@@ -132,7 +133,7 @@ export class Union {
    */
   intersect<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
-      (this as unknown as Query).clone(),
+      _clone(this),
       args as UnionArgs<Query>,
       'INTERSECT',
     ) as never;
@@ -145,7 +146,7 @@ export class Union {
    */
   intersectAll<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
-      (this as unknown as Query).clone(),
+      _clone(this),
       args as UnionArgs<Query>,
       'INTERSECT ALL',
     ) as never;
@@ -158,7 +159,7 @@ export class Union {
    */
   except<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
-      (this as unknown as Query).clone(),
+      _clone(this),
       args as UnionArgs<Query>,
       'EXCEPT',
     ) as never;
@@ -171,7 +172,7 @@ export class Union {
    */
   exceptAll<T extends PickQueryResult>(this: T, ...args: UnionArgs<T>): T {
     return _queryUnion(
-      (this as unknown as Query).clone(),
+      _clone(this),
       args as UnionArgs<Query>,
       'EXCEPT ALL',
     ) as never;

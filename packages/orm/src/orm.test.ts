@@ -9,7 +9,7 @@ import {
 } from './test-utils/orm.test-utils';
 import { assertType, expectSql } from 'test-utils';
 import { Selectable } from './baseTable';
-import { raw } from 'pqb';
+import { Db, raw } from 'pqb';
 
 describe('orm', () => {
   useTestORM();
@@ -130,7 +130,7 @@ describe('orm', () => {
 
   describe('query methods', () => {
     it('should perform a query with the $query method', async () => {
-      const spy = jest.spyOn(db.$queryBuilder, 'query');
+      const spy = jest.spyOn(db.$queryBuilder as Db, 'query');
 
       await db.$query`SELECT 1`;
 
@@ -138,7 +138,7 @@ describe('orm', () => {
     });
 
     it('should query arrays with the $queryArrays method', async () => {
-      const spy = jest.spyOn(db.$queryBuilder, 'queryArrays');
+      const spy = jest.spyOn(db.$queryBuilder as Db, 'queryArrays');
 
       await db.$queryArrays`SELECT 1`;
 

@@ -1,4 +1,5 @@
 import {
+  IsQuery,
   PickQueryMetaResultReturnType,
   QueryColumns,
   QueryColumnsInit,
@@ -6,20 +7,20 @@ import {
   RecordUnknown,
 } from 'orchid-core';
 import { QueryScopes } from '../sql';
-import { Query } from '../query/query';
-import { RawSQL } from '../sql/rawSql';
 import {
-  _queryDelete,
-  _queryUpdate,
-  DeleteArgs,
-  DeleteResult,
-  UpdateArg,
-} from './index';
+  PickQueryBaseQuery,
+  PickQueryInternal,
+  PickQueryQ,
+  Query,
+} from '../query/query';
+import { RawSQL } from '../sql/rawSql';
+import { _queryDelete, _queryUpdate, DeleteArgs, DeleteResult } from './index';
+import { _clone } from '../query/queryUtils';
 
 export type SoftDeleteOption<Shape extends QueryColumns> = true | keyof Shape;
 
 export function enableSoftDelete(
-  q: Query,
+  q: IsQuery,
   table: string | undefined,
   shape: QueryColumnsInit,
   softDelete: true | PropertyKey,
@@ -40,12 +41,16 @@ export function enableSoftDelete(
   };
 
   (scopes as RecordUnknown).deleted = scope;
-  (q.q.scopes ??= {}).nonDeleted = scope;
+  ((q as unknown as PickQueryQ).q.scopes ??= {}).nonDeleted = scope;
 
-  const _del = _softDelete(column, q.internal.nowSQL);
-  // @ts-expect-error it's ok
-  q.baseQuery.delete = function (this: Query) {
-    return _del.call(this.clone());
+  const _del = _softDelete(
+    column,
+    (q as unknown as PickQueryInternal).internal.nowSQL,
+  );
+  (q as unknown as PickQueryBaseQuery).baseQuery.delete = function (
+    this: unknown,
+  ) {
+    return _del.call(_clone(this));
   };
 }
 
@@ -53,8 +58,8 @@ const nowSql = new RawSQL('now()');
 
 const _softDelete = (column: PropertyKey, customNowSQL?: string) => {
   const set = { [column]: customNowSQL ? new RawSQL(customNowSQL) : nowSql };
-  return function <T extends Query>(this: T) {
-    return _queryUpdate(this, set as UpdateArg<T>);
+  return function (this: unknown) {
+    return _queryUpdate(this as never, set as never);
   };
 };
 
@@ -117,8 +122,6 @@ export class SoftDeleteMethods {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {
-    return _queryDelete(
-      (this as unknown as Query).clone().unscope('nonDeleted' as never),
-    ) as never;
+    return _queryDelete(_clone(this).unscope('nonDeleted' as never)) as never;
   }
 }

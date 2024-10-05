@@ -7,6 +7,7 @@ import {
   SetQueryReturnsRowCountMany,
 } from '../query/query';
 import {
+  _clone,
   pushQueryValue,
   saveSearchAlias,
   throwIfNoWhere,
@@ -63,7 +64,13 @@ export type UpdateData<T extends UpdateSelf> =
 type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | T['inputType'][Key]
   | QueryOrExpression<T['inputType'][Key]>
-  | ((q: T) => QueryOrExpression<T['inputType'][Key]>);
+  | ((q: {
+      [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
+        ? T['relations'][K]
+        : K extends keyof T
+        ? T[K]
+        : never;
+    }) => QueryOrExpression<T['inputType'][Key]>);
 
 // Add relation operations to the update argument.
 type UpdateRelationData<
@@ -475,10 +482,7 @@ export class Update {
    * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
    */
   update<T extends UpdateSelf>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
-    return _queryUpdate(
-      (this as unknown as Query).clone(),
-      arg as never,
-    ) as never;
+    return _queryUpdate(_clone(this), arg as never) as never;
   }
 
   /**
@@ -505,7 +509,7 @@ export class Update {
     ...args: UpdateRawArgs<T>
   ): UpdateResult<T> {
     return _queryUpdateRaw(
-      (this as unknown as Query).clone(),
+      _clone(this),
       sqlQueryArgsToExpression(args),
     ) as never;
   }
@@ -540,10 +544,7 @@ export class Update {
     this: T,
     arg: UpdateArg<T>,
   ): UpdateResult<T> {
-    return _queryUpdateOrThrow(
-      (this as unknown as Query).clone(),
-      arg as never,
-    ) as never;
+    return _queryUpdateOrThrow(_clone(this), arg as never) as never;
   }
 
   /**
@@ -588,11 +589,7 @@ export class Update {
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
-    return _queryChangeCounter(
-      (this as unknown as Query).clone(),
-      '+',
-      data as never,
-    );
+    return _queryChangeCounter(_clone(this), '+', data as never);
   }
 
   /**
@@ -637,10 +634,6 @@ export class Update {
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
-    return _queryChangeCounter(
-      (this as unknown as Query).clone(),
-      '-',
-      data as never,
-    );
+    return _queryChangeCounter(_clone(this), '-', data as never);
   }
 }

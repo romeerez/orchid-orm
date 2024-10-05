@@ -2,7 +2,9 @@ import { cloneQuery, QueryData, toSQLCacheKey, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
 import { PickQueryMetaTable } from '../query/query';
 import { Expression, PickQueryMeta, QueryColumn } from 'orchid-core';
-import { RelationQuery } from '../relations';
+import { RelationQueryBase } from '../relations';
+import { _clone } from '../query/queryUtils';
+import { _chain } from '../queryMethods/chain';
 
 export type AliasOrTable<T extends PickQueryMetaTable> =
   T['meta']['as'] extends string
@@ -58,11 +60,40 @@ export const resolveSubQueryCallback = (
   q: ToSQLQuery,
   cb: (q: ToSQLQuery) => ToSQLQuery,
 ): ToSQLQuery => {
+  let arg;
+  // `with` can pass a generic `queryBuilder` here, it has no table.
+  // Do not memoize anything into `internal` of a common `queryBuilder`,
+  // because it is common and will be re-used.
+  if (q.table) {
+    if (!q.internal.callbackArg) {
+      const base = Object.create(q.baseQuery);
+      base.baseQuery = base;
+      q.internal.callbackArg = base;
+
+      const { relations } = q;
+      for (const key in relations) {
+        Object.defineProperty(base, key, {
+          get() {
+            const rel = relations[key as string].relationConfig;
+            return _chain(this, _clone(rel.query), rel);
+          },
+        });
+      }
+    }
+
+    arg = Object.create(q.internal.callbackArg!);
+    arg.q = q.q;
+  } else {
+    arg = q;
+  }
+
   const { subQuery, relChain, outerAliases } = q.q;
   q.q.subQuery = 1;
   q.q.relChain = undefined;
   q.q.outerAliases = q.q.aliases;
-  const result = cb(q);
+
+  const result = cb(arg as Query);
+
   q.q.subQuery = subQuery;
   q.q.relChain = relChain;
   q.q.outerAliases = outerAliases;
@@ -79,10 +110,10 @@ export const resolveSubQueryCallback = (
  * @param sub - sub-query query object
  */
 export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): Query => {
-  if (!('relationConfig' in sub)) return sub as Query;
+  if (!('relationConfig' in sub)) return sub as never;
 
-  return (sub as unknown as RelationQuery).relationConfig.joinQuery(
-    sub as unknown as Query,
-    q as Query,
-  );
+  return (sub as unknown as RelationQueryBase).relationConfig.joinQuery(
+    sub,
+    q,
+  ) as never;
 };

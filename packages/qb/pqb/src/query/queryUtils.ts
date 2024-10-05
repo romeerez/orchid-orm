@@ -1,13 +1,33 @@
 import { DeleteQueryData, QueryData } from '../sql';
 import {
   emptyObject,
+  IsQuery,
+  PickQueryResult,
   pushOrNewArrayToObject,
   RecordUnknown,
 } from 'orchid-core';
 import { OrchidOrmInternalError } from '../errors';
-import { PickQueryQ, PickQueryQAndBaseQuery, Query } from './query';
-import { QueryBase } from './queryBase';
+import {
+  PickQueryMetaRelationsResult,
+  PickQueryQ,
+  PickQueryQAndBaseQuery,
+  Query,
+  SetQueryReturnsAll,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
+  SetQueryReturnsRows,
+} from './query';
 import { getClonedQueryData } from '../common/utils';
+import {
+  _queryWhere,
+  WhereArgs,
+  WhereResult,
+} from '../queryMethods/where/where';
+
+/**
+ * Call `.clone()` on a supposed query object
+ */
+export const _clone = (q: unknown): Query => (q as unknown as Query).clone();
 
 /**
  * Push all elements of given array into the array in the query data,
@@ -102,11 +122,11 @@ export const throwIfJoinLateral = (q: PickQueryQ, method: string): void => {
 // Pick an alias for a search query to reference it later in WHERE, in ORDER BY, in headline.
 // If the alias is taken, it tries "@q", "@q1", "@q2" and so on.
 export const saveSearchAlias = (
-  q: QueryBase,
+  q: IsQuery,
   as: string,
   key: 'joinedShapes' | 'withShapes',
 ): string => {
-  const shapes = q.q[key];
+  const shapes = (q as Query).q[key];
   if (shapes?.[as]) {
     let suffix = 2;
     while (shapes[(as = `${as}${suffix}`)]) {
@@ -114,7 +134,7 @@ export const saveSearchAlias = (
     }
   }
 
-  setQueryObjectValue(q, key, as, emptyObject);
+  setQueryObjectValue(q as Query, key, as, emptyObject);
 
   return as;
 };
@@ -162,4 +182,52 @@ const collectPrimaryKeys = (q: Query): string[] => {
   }
 
   return primaryKeys;
+};
+
+export const _queryAll = <T extends PickQueryResult>(
+  q: T,
+): SetQueryReturnsAll<T> => {
+  (q as unknown as PickQueryQ).q.returnType = 'all';
+  (q as unknown as PickQueryQ).q.all = true;
+  return q as never;
+};
+
+export const _queryTake = <T extends PickQueryResult>(
+  q: T,
+): SetQueryReturnsOne<T> => {
+  (q as unknown as PickQueryQ).q.returnType = 'oneOrThrow';
+  return q as never;
+};
+
+export const _queryTakeOptional = <T extends PickQueryResult>(
+  q: T,
+): SetQueryReturnsOneOptional<T> => {
+  (q as unknown as PickQueryQ).q.returnType = 'one';
+  return q as never;
+};
+
+export const _queryExec = <T extends IsQuery>(q: T) => {
+  (q as unknown as PickQueryQ).q.returnType = 'void';
+  return q as never;
+};
+
+export const _queryFindBy = <T extends PickQueryMetaRelationsResult>(
+  q: T,
+  args: WhereArgs<T>,
+): SetQueryReturnsOne<WhereResult<T>> => {
+  return _queryTake(_queryWhere(q, args));
+};
+
+export const _queryFindByOptional = <T extends PickQueryMetaRelationsResult>(
+  q: T,
+  args: WhereArgs<T>,
+): SetQueryReturnsOneOptional<WhereResult<T>> => {
+  return _queryTakeOptional(_queryWhere(q, args));
+};
+
+export const _queryRows = <T extends PickQueryResult>(
+  q: T,
+): SetQueryReturnsRows<T> => {
+  (q as unknown as PickQueryQ).q.returnType = 'rows';
+  return q as never;
 };

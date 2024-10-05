@@ -24,6 +24,7 @@ import {
   _queryDelete,
   PickQueryMetaRelations,
   RelationConfigBase,
+  PickQueryQ,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -49,7 +50,7 @@ import {
 } from './common/utils';
 import { RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
-import { HasOneOptions, HasOnePopulate } from './hasOne';
+import { HasOneOptions, HasOneParams, HasOnePopulate } from './hasOne';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -59,9 +60,12 @@ export interface HasMany extends RelationThunkBase {
 export interface HasManyInfo<
   T extends RelationConfigSelf,
   Name extends string,
+  Rel extends HasMany,
   Q extends Query,
 > extends RelationConfigBase {
   query: Q;
+  params: HasOneParams<T, Rel>;
+  maybeSingle: Q;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {
     [P in Name]?: T['relations'][Name]['options'] extends RelationThroughOptions
@@ -178,10 +182,6 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   }
 }
 
-export interface TableWithQueryMethod {
-  [K: string]: (params: RecordUnknown) => Query;
-}
-
 export const makeHasManyMethod = (
   table: Query,
   relation: HasMany,
@@ -193,7 +193,9 @@ export const makeHasManyMethod = (
 
     const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
-    const sourceRelationQuery = sourceRelation.query.as(relationName);
+    const sourceRelationQuery = (sourceRelation.query as Query).as(
+      relationName,
+    );
     const sourceQuery = sourceRelation.joinQuery(
       sourceRelationQuery,
       throughRelation.query,
@@ -203,9 +205,9 @@ export const makeHasManyMethod = (
 
     const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
       return joinHasThrough(
-        baseQuery,
-        baseQuery,
-        joiningQuery,
+        baseQuery as Query,
+        baseQuery as Query,
+        joiningQuery as Query,
         throughRelation,
         sourceRelation,
       );
@@ -213,18 +215,19 @@ export const makeHasManyMethod = (
 
     return {
       returns: 'many',
-      method: (params: RecordUnknown) => {
-        const throughQuery = (table as unknown as TableWithQueryMethod)[
-          through
-        ](params);
+      queryRelated: (params: RecordUnknown) => {
+        const throughQuery = table.queryRelated(through, params) as Query;
 
-        return query.whereExists(throughQuery, whereExistsCallback);
+        return query.whereExists(
+          throughQuery,
+          whereExistsCallback as never,
+        ) as never;
       },
       joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
         joinHasThrough(
-          joiningQuery,
-          baseQuery,
-          joiningQuery,
+          joiningQuery as Query,
+          baseQuery as Query,
+          joiningQuery as Query,
           throughRelation,
           sourceRelation,
         ),
@@ -248,8 +251,8 @@ export const makeHasManyMethod = (
 
   const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
     return joinHasRelation(
-      joiningQuery,
-      baseQuery,
+      joiningQuery as Query,
+      baseQuery as Query,
       foreignKeys,
       primaryKeys,
       len,
@@ -258,7 +261,7 @@ export const makeHasManyMethod = (
 
   return {
     returns: 'many',
-    method: (params: RecordUnknown) => {
+    queryRelated: (params: RecordUnknown) => {
       const values: RecordUnknown = {};
       for (let i = 0; i < len; i++) {
         values[foreignKeys[i]] = params[primaryKeys[i]];
@@ -271,14 +274,20 @@ export const makeHasManyMethod = (
       state,
     ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-      joinHasRelation(baseQuery, joiningQuery, primaryKeys, foreignKeys, len),
+      joinHasRelation(
+        baseQuery as Query,
+        joiningQuery as Query,
+        primaryKeys,
+        foreignKeys,
+        len,
+      ),
     ),
     reverseJoin,
     modifyRelatedQuery(relationQuery) {
       return (query) => {
-        const baseQuery = query.clone();
+        const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
-        const q = relationQuery.q as InsertQueryData;
+        const q = (relationQuery as unknown as PickQueryQ).q as InsertQueryData;
         q.kind = 'from';
         q.values = { from: baseQuery };
       };

@@ -1,9 +1,11 @@
-import { QueryBase } from '../query/queryBase';
 import { PickQueryMeta, QueryColumns, QueryMetaBase } from 'orchid-core';
 import { QueryScopes } from '../sql';
-import { setQueryObjectValue } from '../query/queryUtils';
+import { _clone, setQueryObjectValue } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
-import { Query, SelectableFromShape } from '../query/query';
+import {
+  PickQueryMetaShapeRelationsWithData,
+  SelectableFromShape,
+} from '../query/query';
 
 interface ScopeArgumentQueryMeta<
   Table extends string | undefined,
@@ -16,7 +18,8 @@ export interface ScopeArgumentQuery<
   Table extends string | undefined,
   Shape extends QueryColumns,
 > extends Where,
-    QueryBase {
+    PickQueryMetaShapeRelationsWithData {
+  __isQuery: true;
   table: Table;
   shape: Shape;
   meta: ScopeArgumentQueryMeta<Table, Shape>;
@@ -72,7 +75,7 @@ export class ScopeMethods {
     this: T,
     scope: keyof T['meta']['scopes'],
   ): WhereResult<T> {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     if (!q.q.scopes?.[scope as string]) {
       const s = (q.internal.scopes as QueryScopes)[scope as string];
@@ -101,7 +104,7 @@ export class ScopeMethods {
     this: T,
     scope: keyof T['meta']['scopes'],
   ): T {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     if (q.q.scopes) {
       delete q.q.scopes[scope as string];

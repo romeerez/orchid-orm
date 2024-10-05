@@ -1,6 +1,10 @@
-import { Query } from '../query/query';
-import { QueryColumn, QueryThen, RecordUnknown } from 'orchid-core';
-import { pushQueryValue } from '../query/queryUtils';
+import {
+  PickQueryReturnType,
+  QueryColumn,
+  QueryThen,
+  RecordUnknown,
+} from 'orchid-core';
+import { _clone, pushQueryValue } from '../query/queryUtils';
 
 export class QueryMap {
   /**
@@ -43,15 +47,15 @@ export class QueryMap {
    *
    * @param fn - function to transform an individual record
    */
-  map<T extends Query, Result>(
+  map<T extends PickQueryReturnType, Result>(
     this: T,
     fn: (
       input: T['returnType'] extends undefined | 'all' | 'pluck'
-        ? T['then'] extends QueryThen<(infer Data)[]>
+        ? T extends { then: QueryThen<(infer Data)[]> }
           ? Data
           : never
         : // `| undefined` is needed to remove undefined type from map's arg
-        T['then'] extends QueryThen<infer Data | undefined>
+        T extends { then: QueryThen<infer Data | undefined> }
         ? Data
         : never,
     ) => Result,
@@ -89,6 +93,6 @@ export class QueryMap {
             >
           : T[K];
       } {
-    return pushQueryValue(this.clone(), 'transform', { map: fn }) as never;
+    return pushQueryValue(_clone(this), 'transform', { map: fn }) as never;
   }
 }

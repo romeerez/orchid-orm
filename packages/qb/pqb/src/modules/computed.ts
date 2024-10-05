@@ -2,7 +2,9 @@ import {
   EmptyObject,
   Expression,
   FnUnknownToUnknown,
+  IsQuery,
   MaybePromise,
+  PickQueryShape,
   QueryColumn,
   QueryColumns,
   QueryMetaBase,
@@ -10,7 +12,7 @@ import {
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
-import { Query, QueryOrExpression } from '../query/query';
+import { PickQueryQ, QueryOrExpression } from '../query/query';
 import {
   ExpressionMethods,
   QueryBatchResult,
@@ -102,7 +104,7 @@ export interface QueryComputedArg<ColumnTypes, Shape extends QueryColumns>
 }
 
 export const applyComputedColumns = (
-  q: Query,
+  q: IsQuery,
   fn: ComputedOptionsFactory<never, never>,
 ) => {
   (q as unknown as RecordUnknown).computeAtRuntime = computeAtRuntime;
@@ -112,10 +114,13 @@ export const applyComputedColumns = (
   for (const key in computed) {
     const item = computed[key];
     if (item instanceof ComputedColumn) {
-      q.q.computeds = { ...q.q.computeds, [key]: item };
+      (q as unknown as PickQueryQ).q.computeds = {
+        ...(q as unknown as PickQueryQ).q.computeds,
+        [key]: item,
+      };
     } else {
       const data = (
-        ((q.shape as QueryColumns)[key] =
+        (((q as unknown as PickQueryShape).shape as QueryColumns)[key] =
           item.result.value || UnknownColumn.instance) as ColumnType
       ).data;
       data.computed = item as Expression;

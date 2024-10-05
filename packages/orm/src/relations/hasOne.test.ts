@@ -17,7 +17,7 @@ import {
   Post,
   postSelectAll,
 } from '../test-utils/orm.test-utils';
-import { Db } from 'pqb';
+import { Db, Query } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { omit } from 'orchid-core';
@@ -26,13 +26,13 @@ useTestORM();
 
 describe('hasOne', () => {
   describe('querying', () => {
-    it('should have method to query related data', async () => {
+    it('should support `queryRelated` to query related data', async () => {
       const UserId = await db.user.get('Id').create(userData);
 
       await db.profile.create({ ...profileData, UserId });
 
       const user = await db.user.find(UserId);
-      const query = db.user.profile(user);
+      const query = db.user.queryRelated('profile', user);
 
       expectSql(
         query.toSQL(),
@@ -52,7 +52,8 @@ describe('hasOne', () => {
     it('should handle chained query', () => {
       const query = db.user
         .where({ Name: 'name' })
-        .profile.where({ Bio: 'bio' });
+        .chain('profile')
+        .where({ Bio: 'bio' });
 
       expectSql(
         query.toSQL(),
@@ -73,8 +74,10 @@ describe('hasOne', () => {
     it('should handle long chained query', () => {
       const q = db.user
         .where({ Name: 'name' })
-        .onePost.where({ Body: 'body' })
-        .onePostTag.where({ Tag: 'tag' });
+        .chain('onePost')
+        .where({ Body: 'body' })
+        .chain('onePostTag')
+        .where({ Tag: 'tag' });
 
       assertType<Awaited<typeof q>, PostTag[]>();
 
@@ -108,7 +111,7 @@ describe('hasOne', () => {
       const user = { Id: 1, UserKey: 'key' };
       const now = new Date();
 
-      const query = db.user.profile(user).insert({
+      const query = db.user.queryRelated('profile', user).insert({
         Bio: 'bio',
         updatedAt: now,
         createdAt: now,
@@ -124,10 +127,10 @@ describe('hasOne', () => {
       );
     });
 
-    it('can create after calling method', async () => {
+    it('can create after calling `queryRelated`', async () => {
       const Id = await db.user.get('Id').create(userData);
       const now = new Date();
-      await db.user.profile({ Id, UserKey: 'key' }).create({
+      await db.user.queryRelated('profile', { Id, UserKey: 'key' }).create({
         UserId: Id,
         Bio: 'bio',
         updatedAt: now,
@@ -137,7 +140,7 @@ describe('hasOne', () => {
 
     describe('chained create', () => {
       it('should have create based on find query', () => {
-        const query = db.user.find(1).profile.create({
+        const query = db.user.find(1).chain('profile').create({
           Bio: 'bio',
         });
 
@@ -158,7 +161,7 @@ describe('hasOne', () => {
       it('should throw when the main query returns many records', async () => {
         await expect(
           async () =>
-            await db.user.profile.create({
+            await db.user.chain('profile').create({
               Bio: 'bio',
             }),
         ).rejects.toThrow(
@@ -167,7 +170,7 @@ describe('hasOne', () => {
       });
 
       it('should throw when main record is not found', async () => {
-        const q = db.user.find(1).profile.create({
+        const q = db.user.find(1).chain('profile').create({
           Bio: 'bio',
         });
 
@@ -175,7 +178,7 @@ describe('hasOne', () => {
       });
 
       it('should not throw when searching with findOptional', async () => {
-        await db.user.findOptional(1).profile.takeOptional().create({
+        await db.user.findOptional(1).chain('profile').takeOptional().create({
           Bio: 'bio',
         });
       });
@@ -185,7 +188,8 @@ describe('hasOne', () => {
       it('should delete relation records', () => {
         const query = db.user
           .where({ Name: 'name' })
-          .profile.where({ Bio: 'bio' })
+          .chain('profile')
+          .where({ Bio: 'bio' })
           .delete();
 
         expectSql(
@@ -207,9 +211,12 @@ describe('hasOne', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.profile.relationConfig
-          .joinQuery(db.profile.as('p'), db.user.as('u'))
-          .toSQL(),
+        (
+          db.user.relations.profile.relationConfig.joinQuery(
+            db.profile.as('p'),
+            db.user.as('u'),
+          ) as Query
+        ).toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" "p"
           WHERE "p"."user_id" = "u"."id"
@@ -379,7 +386,7 @@ describe('hasOne', () => {
 
       it('should support chained select', () => {
         const q = db.user.select({
-          items: (q) => q.onePost.onePostTag,
+          items: (q) => q.onePost.chain('onePostTag'),
         });
 
         assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
@@ -663,7 +670,7 @@ describe('hasOne', () => {
           });
 
           const user = await query;
-          const profile = await db.user.profile(user);
+          const profile = await db.user.queryRelated('profile', user);
 
           checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
         });
@@ -816,7 +823,7 @@ describe('hasOne', () => {
             },
           });
 
-          const profile1 = await db.user.profile(user1);
+          const profile1 = await db.user.queryRelated('profile', user1);
           expect(profile1.Id).toBe(profileId);
           checkUserAndProfile({
             user: user1,
@@ -825,7 +832,7 @@ describe('hasOne', () => {
             Bio: 'profile 1',
           });
 
-          const profile2 = await db.user.profile(user2);
+          const profile2 = await db.user.queryRelated('profile', user2);
           checkUserAndProfile({
             user: user2,
             profile: profile2,
@@ -868,7 +875,7 @@ describe('hasOne', () => {
             },
           ]);
 
-          const profile1 = await db.user.profile(user1);
+          const profile1 = await db.user.queryRelated('profile', user1);
           expect(profile1.Id).toBe(profileId);
           checkUserAndProfile({
             user: user1,
@@ -877,7 +884,7 @@ describe('hasOne', () => {
             Bio: 'profile 1',
           });
 
-          const profile2 = await db.user.profile(user2);
+          const profile2 = await db.user.queryRelated('profile', user2);
           checkUserAndProfile({
             user: user2,
             profile: profile2,
@@ -977,7 +984,7 @@ describe('hasOne', () => {
           const user = await db.user
             .selectAll()
             .create({ ...userData, profile: { create: profileData } });
-          const { Id: profileId } = await db.user.profile(user);
+          const { Id: profileId } = await db.user.queryRelated('profile', user);
 
           const Id = await db.user
             .get('Id')
@@ -1141,7 +1148,7 @@ describe('hasOne', () => {
             .create({ ...userData, profile: { create: profileData } });
 
           const { Id: profileId } = await db.user
-            .profile({ Id, UserKey: 'key' })
+            .queryRelated('profile', { Id, UserKey: 'key' })
             .select('Id')
             .take();
 
@@ -1233,7 +1240,9 @@ describe('hasOne', () => {
             },
           });
 
-          const profile = await db.user.profile({ Id, UserKey: 'key' }).take();
+          const profile = await db.user
+            .queryRelated('profile', { Id, UserKey: 'key' })
+            .take();
           expect(profile.Bio).toBe('updated');
         });
 
@@ -1325,7 +1334,7 @@ describe('hasOne', () => {
             },
           });
 
-          const profile = await db.user.profile(user);
+          const profile = await db.user.queryRelated('profile', user);
           expect(profile.Bio).toBe('updated');
         });
 
@@ -1346,7 +1355,7 @@ describe('hasOne', () => {
             },
           });
 
-          const profile = await db.user.profile(user);
+          const profile = await db.user.queryRelated('profile', user);
           expect(profile.Bio).toBe('created');
         });
 
@@ -1367,7 +1376,7 @@ describe('hasOne', () => {
             },
           });
 
-          const profile = await db.user.profile(user);
+          const profile = await db.user.queryRelated('profile', user);
           expect(profile.Bio).toBe('created');
         });
 
@@ -1455,7 +1464,7 @@ describe('hasOne', () => {
             .create({ ...userData, profile: { create: profileData } });
 
           const previousProfileId = await db.user
-            .profile({ Id: userId, UserKey: 'key' })
+            .queryRelated('profile', { Id: userId, UserKey: 'key' })
             .get('Id');
 
           const updated = await db.user
@@ -1470,7 +1479,7 @@ describe('hasOne', () => {
           const previousProfile = await db.profile.find(previousProfileId);
           expect(previousProfile.UserId).toBe(null);
 
-          const profile = await db.user.profile(updated);
+          const profile = await db.user.queryRelated('profile', updated);
           expect(profile.Bio).toBe('created');
         });
 
@@ -1561,7 +1570,7 @@ describe('hasOne', () => {
     );
 
     it('should query related record and get an `undefined`', async () => {
-      const profile = await local.user.profile({ Id: 123 });
+      const profile = await local.user.queryRelated('profile', { Id: 123 });
       expect(profile).toBe(undefined);
     });
 
@@ -1786,8 +1795,11 @@ describe('hasOne through', () => {
     );
   });
 
-  it('should have method to query related data', async () => {
-    const query = db.message.profile({ AuthorId: 1, MessageKey: 'key' });
+  it('should support `queryRelated` to query related data', async () => {
+    const query = db.message.queryRelated('profile', {
+      AuthorId: 1,
+      MessageKey: 'key',
+    });
     expectSql(
       query.toSQL(),
       `
@@ -1807,7 +1819,8 @@ describe('hasOne through', () => {
   it('should handle chained query', () => {
     const query = db.message
       .where({ Text: 'text' })
-      .profile.where({ Bio: 'bio' });
+      .chain('profile')
+      .where({ Bio: 'bio' });
 
     expectSql(
       query.toSQL(),
@@ -1833,8 +1846,10 @@ describe('hasOne through', () => {
   it('should handle long chained query', () => {
     const q = db.message
       .where({ Text: 'text' })
-      .profile.where({ Bio: 'bio' })
-      .onePost.where({ Body: 'body' });
+      .chain('profile')
+      .where({ Bio: 'bio' })
+      .chain('onePost')
+      .where({ Body: 'body' });
 
     assertType<Awaited<typeof q>, Post[]>();
 
@@ -1877,15 +1892,16 @@ describe('hasOne through', () => {
     );
   });
 
-  it('should have disabled create method', () => {
+  it('should disable create', () => {
     // @ts-expect-error hasOne with through option should not have chained create
-    db.message.profile.create(chatData);
+    db.message.chain('profile').create(chatData);
   });
 
-  it('should have chained delete method', () => {
+  it('should support chained delete', () => {
     const query = db.message
       .where({ Text: 'text' })
-      .profile.where({ Bio: 'bio' })
+      .chain('profile')
+      .where({ Bio: 'bio' })
       .delete();
 
     expectSql(
@@ -1911,9 +1927,12 @@ describe('hasOne through', () => {
 
   it('should have proper joinQuery', () => {
     expectSql(
-      db.message.relations.profile.relationConfig
-        .joinQuery(db.profile.as('p'), db.message.as('m'))
-        .toSQL(),
+      (
+        db.message.relations.profile.relationConfig.joinQuery(
+          db.profile.as('p'),
+          db.message.as('m'),
+        ) as Query
+      ).toSQL(),
       `
         SELECT ${profileSelectAll} FROM "profile" "p"
         WHERE EXISTS (
@@ -2113,7 +2132,7 @@ describe('hasOne through', () => {
 
     it('should support chained select', () => {
       const q = db.message.select({
-        items: (q) => q.profile.onePost,
+        items: (q) => q.profile.chain('onePost'),
       });
 
       assertType<Awaited<typeof q>, { items: Post[] }[]>();
@@ -2305,7 +2324,9 @@ describe('hasOne through', () => {
     );
 
     it('should query related record and get an `undefined`', async () => {
-      const profile = await local.message.profile({ AuthorId: 123 });
+      const profile = await local.message.queryRelated('profile', {
+        AuthorId: 123,
+      });
       expect(profile).toBe(undefined);
     });
 

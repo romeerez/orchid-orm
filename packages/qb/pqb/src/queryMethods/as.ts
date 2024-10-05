@@ -4,6 +4,7 @@ import {
   SetQueryTableAlias,
 } from '../query/query';
 import { RecordString } from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 
 export type AsQueryArg = PickQueryMetaTableShape;
 
@@ -53,6 +54,6 @@ export abstract class AsMethods {
     this: T,
     as: As,
   ): SetQueryTableAlias<T, As> {
-    return _queryAs((this as unknown as Query).clone(), as) as never;
+    return _queryAs(_clone(this), as) as never;
   }
 }

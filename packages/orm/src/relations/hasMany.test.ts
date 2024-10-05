@@ -1,4 +1,4 @@
-import { Db } from 'pqb';
+import { Db, Query } from 'pqb';
 import {
   Chat,
   Message,
@@ -28,7 +28,7 @@ describe('hasMany', () => {
   useTestORM();
 
   describe('querying', () => {
-    it('should have method to query related data', async () => {
+    it('should support `queryRelated` to query related data', async () => {
       const userId = await db.user.get('Id').create(userData);
       const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
@@ -38,7 +38,7 @@ describe('hasMany', () => {
       ]);
 
       const user = await db.user.find(userId);
-      const query = db.user.messages(user);
+      const query = db.user.queryRelated('messages', user);
 
       expectSql(
         query.toSQL(),
@@ -58,7 +58,8 @@ describe('hasMany', () => {
     it('should handle chained query', () => {
       const query = db.user
         .where({ Name: 'name' })
-        .messages.where({ Text: 'text' });
+        .chain('messages')
+        .where({ Text: 'text' });
 
       expectSql(
         query.toSQL(),
@@ -80,8 +81,10 @@ describe('hasMany', () => {
     it('should handle long chained query', () => {
       const q = db.user
         .where({ Name: 'name' })
-        .posts.where({ Body: 'body' })
-        .postTags.where({ Tag: 'tag' });
+        .chain('posts')
+        .where({ Body: 'body' })
+        .chain('postTags')
+        .where({ Tag: 'tag' });
 
       assertType<Awaited<typeof q>, PostTag[]>();
 
@@ -113,7 +116,7 @@ describe('hasMany', () => {
 
     it('should have create with defaults of provided id', () => {
       const user = { Id: 1, UserKey: 'key' };
-      const query = db.user.messages(user).insert({
+      const query = db.user.queryRelated('messages', user).insert({
         ChatId: 2,
         Text: 'text',
       });
@@ -130,7 +133,7 @@ describe('hasMany', () => {
 
     describe('create based on a query', () => {
       it('should have create based on a query', () => {
-        const query = db.chat.find(1).messages.create({
+        const query = db.chat.find(1).chain('messages').create({
           Text: 'text',
         });
 
@@ -151,7 +154,7 @@ describe('hasMany', () => {
       it('should throw when the main query returns many records', async () => {
         await expect(
           async () =>
-            await db.chat.messages.create({
+            await db.chat.chain('messages').create({
               Text: 'text',
             }),
         ).rejects.toThrow(
@@ -160,7 +163,7 @@ describe('hasMany', () => {
       });
 
       it('should throw when main record is not found', async () => {
-        const q = db.chat.find(1).messages.create({
+        const q = db.chat.find(1).chain('messages').create({
           Text: 'text',
         });
 
@@ -168,7 +171,7 @@ describe('hasMany', () => {
       });
 
       it('should not throw when searching with findOptional', async () => {
-        await db.chat.findOptional(1).messages.takeOptional().create({
+        await db.chat.findOptional(1).chain('messages').takeOptional().create({
           Text: 'text',
         });
       });
@@ -177,7 +180,8 @@ describe('hasMany', () => {
     it('should have chained delete', () => {
       const query = db.chat
         .where({ Title: 'title' })
-        .messages.where({ Text: 'text' })
+        .chain('messages')
+        .where({ Text: 'text' })
         .delete();
 
       expectSql(
@@ -198,9 +202,12 @@ describe('hasMany', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.messages.relationConfig
-          .joinQuery(db.message.as('m'), db.user.as('u'))
-          .toSQL(),
+        (
+          db.user.relations.messages.relationConfig.joinQuery(
+            db.message.as('m'),
+            db.user.as('u'),
+          ) as Query
+        ).toSQL(),
         `
         SELECT ${messageSelectAll} FROM "message" "m"
         WHERE "m"."author_id" = "u"."id"
@@ -413,7 +420,7 @@ describe('hasMany', () => {
 
       it('should support chained select', () => {
         const q = db.user.select({
-          items: (q) => q.posts.postTags,
+          items: (q) => q.posts.chain('postTags'),
         });
 
         assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
@@ -1555,7 +1562,7 @@ describe('hasMany', () => {
         expect(await db.message.count()).toBe(1);
 
         const messages = await db.user
-          .messages({ Id, UserKey: 'key' })
+          .queryRelated('messages', { Id, UserKey: 'key' })
           .select('Text');
         expect(messages).toEqual([{ Text: 'message 3' }]);
       });
@@ -1590,7 +1597,7 @@ describe('hasMany', () => {
         expect(await db.message.count()).toBe(1);
 
         const messages = await db.user
-          .messages({ Id: userIds[1], UserKey: 'key' })
+          .queryRelated('messages', { Id: userIds[1], UserKey: 'key' })
           .select('Text');
         expect(messages).toEqual([{ Text: 'message 3' }]);
       });
@@ -1612,7 +1619,7 @@ describe('hasMany', () => {
         });
 
         const messages = await db.user
-          .messages({ Id, UserKey: 'key' })
+          .queryRelated('messages', { Id, UserKey: 'key' })
           .pluck('Text');
         expect(messages).toEqual(['message 1']);
       });
@@ -1731,7 +1738,7 @@ describe('hasMany', () => {
         });
 
         const messages = await db.user
-          .messages({ Id, UserKey: 'key' })
+          .queryRelated('messages', { Id, UserKey: 'key' })
           .order('Id')
           .pluck('Text');
         expect(messages).toEqual(['updated', 'message 2', 'updated']);
@@ -1797,7 +1804,7 @@ describe('hasMany', () => {
         });
 
         const messages = await db.user
-          .messages({ Id, UserKey: 'key' })
+          .queryRelated('messages', { Id, UserKey: 'key' })
           .pluck('Text');
         expect(messages).toEqual(['message 1']);
       });
@@ -1914,7 +1921,10 @@ describe('hasMany', () => {
 
         expect(updated.Age).toBe(2);
 
-        const texts = await db.user.messages(user).order('Text').pluck('Text');
+        const texts = await db.user
+          .queryRelated('messages', user)
+          .order('Text')
+          .pluck('Text');
         expect(texts).toEqual(['created 1', 'created 2']);
       });
 
@@ -1938,7 +1948,10 @@ describe('hasMany', () => {
           },
         });
 
-        const messages = await db.user.messages({ Id, UserKey: 'key' });
+        const messages = await db.user.queryRelated('messages', {
+          Id,
+          UserKey: 'key',
+        });
         expect(messages.length).toEqual(0);
       });
 
@@ -2165,8 +2178,11 @@ describe('hasMany through', () => {
   });
 
   describe('through hasMany', () => {
-    it('should have method to query related data', async () => {
-      const query = db.profile.chats({ UserId: 1, ProfileKey: 'key' });
+    it('should support `queryRelated` to query related data', async () => {
+      const query = db.profile.queryRelated('chats', {
+        UserId: 1,
+        ProfileKey: 'key',
+      });
       expectSql(
         query.toSQL(),
         `
@@ -2191,7 +2207,8 @@ describe('hasMany through', () => {
     it('should handle chained query', () => {
       const query = db.profile
         .where({ Bio: 'bio' })
-        .chats.where({ Title: 'title' });
+        .chain('chats')
+        .where({ Title: 'title' });
 
       expectSql(
         query.toSQL(),
@@ -2222,8 +2239,10 @@ describe('hasMany through', () => {
     it('should handle long chained query', () => {
       const q = db.message
         .where({ Text: 'text' })
-        .profiles.where({ Bio: 'bio' })
-        .posts.where({ Body: 'body' });
+        .chain('profiles')
+        .where({ Bio: 'bio' })
+        .chain('posts')
+        .where({ Body: 'body' });
 
       assertType<Awaited<typeof q>, Post[]>();
 
@@ -2266,16 +2285,17 @@ describe('hasMany through', () => {
       );
     });
 
-    it('should have disabled create method', () => {
+    it('should disable create', () => {
       // @ts-expect-error hasMany with through option should not have chained create
-      db.profile.chats.create(chatData);
+      db.profile.chain('chats').create(chatData);
     });
 
     describe('chained delete', () => {
       it('should have chained delete', () => {
         const query = db.profile
           .where({ Bio: 'bio' })
-          .chats.where({ Title: 'title' })
+          .chain('chats')
+          .where({ Title: 'title' })
           .delete();
 
         expectSql(
@@ -2307,9 +2327,12 @@ describe('hasMany through', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.profile.relations.chats.relationConfig
-          .joinQuery(db.chat.as('c'), db.profile.as('p'))
-          .toSQL(),
+        (
+          db.profile.relations.chats.relationConfig.joinQuery(
+            db.chat.as('c'),
+            db.profile.as('p'),
+          ) as Query
+        ).toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" "c"
           WHERE EXISTS (
@@ -2786,8 +2809,11 @@ describe('hasMany through', () => {
   });
 
   describe('through hasOne', () => {
-    it('should have method to query related data', () => {
-      const query = db.chat.profiles({ IdOfChat: 1, ChatKey: 'key' });
+    it('should support `queryRelated` to query related data', () => {
+      const query = db.chat.queryRelated('profiles', {
+        IdOfChat: 1,
+        ChatKey: 'key',
+      });
       expectSql(
         query.toSQL(),
         `
@@ -2812,7 +2838,8 @@ describe('hasMany through', () => {
     it('should handle chained query', () => {
       const query = db.chat
         .where({ Title: 'title' })
-        .profiles.where({ Bio: 'bio' });
+        .chain('profiles')
+        .where({ Bio: 'bio' });
 
       expectSql(
         query.toSQL(),
@@ -2840,15 +2867,16 @@ describe('hasMany through', () => {
       );
     });
 
-    it('should have disabled create method', () => {
+    it('should disable create', () => {
       // @ts-expect-error hasMany with through option should not have chained create
-      db.chat.profiles.create(chatData);
+      db.chat.chain('profiles').create(chatData);
     });
 
     it('should have chained delete', () => {
       const query = db.chat
         .where({ Title: 'title' })
-        .profiles.where({ Bio: 'bio' })
+        .chain('profiles')
+        .where({ Bio: 'bio' })
         .delete();
 
       expectSql(
@@ -2879,9 +2907,12 @@ describe('hasMany through', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.chat.relations.profiles.relationConfig
-          .joinQuery(db.profile.as('p'), db.chat.as('c'))
-          .toSQL(),
+        (
+          db.chat.relations.profiles.relationConfig.joinQuery(
+            db.profile.as('p'),
+            db.chat.as('c'),
+          ) as Query
+        ).toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" "p"
           WHERE EXISTS (
@@ -3135,7 +3166,7 @@ describe('hasMany through', () => {
 
       it('should support chained select', () => {
         const q = db.message.select({
-          items: (q) => q.profiles.posts,
+          items: (q) => q.profiles.chain('posts'),
         });
 
         assertType<Awaited<typeof q>, { items: Post[] }[]>();

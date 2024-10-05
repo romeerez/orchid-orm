@@ -1,4 +1,4 @@
-import { Db } from 'pqb';
+import { Db, Query } from 'pqb';
 import {
   BaseTable,
   chatData,
@@ -22,14 +22,14 @@ describe('belongsTo', () => {
   useTestORM();
 
   describe('querying', () => {
-    it('should have method to query related data', async () => {
+    it('should support `queryRelated` to query related data', async () => {
       const UserId = await db.user.get('Id').create(userData);
       const profileId = await db.profile
         .get('Id')
         .create({ ...profileData, UserId });
 
       const profile = await db.profile.find(profileId);
-      const query = db.profile.user(profile);
+      const query = db.profile.queryRelated('user', profile);
 
       expectSql(
         query.toSQL(),
@@ -66,7 +66,8 @@ describe('belongsTo', () => {
 
       const query = db.profile
         .where({ Bio: 'bio' })
-        .user.where({ Name: userData.Name });
+        .chain('user')
+        .where({ Name: userData.Name });
 
       expectSql(
         query.toSQL(),
@@ -93,8 +94,10 @@ describe('belongsTo', () => {
     it('should handle long chained query', () => {
       const q = db.postTag
         .where({ Tag: 'tag' })
-        .post.where({ Body: 'body' })
-        .user.where({ Name: 'name' });
+        .chain('post')
+        .where({ Body: 'body' })
+        .chain('user')
+        .where({ Name: 'name' });
 
       assertType<Awaited<typeof q>, User[]>();
 
@@ -124,19 +127,22 @@ describe('belongsTo', () => {
       );
     });
 
-    it('should have disabled create and delete method', () => {
+    it('should disable create and delete', () => {
       // @ts-expect-error belongsTo should not have chained create
-      db.profile.user.create(userData);
+      db.profile.chain('user').create(userData);
 
       // @ts-expect-error belongsTo should not have chained create
-      db.profile.user.find(1).delete();
+      db.profile.chain('user').find(1).delete();
     });
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.profile.relations.user.relationConfig
-          .joinQuery(db.user.as('u'), db.profile.as('p'))
-          .toSQL(),
+        (
+          db.profile.relations.user.relationConfig.joinQuery(
+            db.user.as('u'),
+            db.profile.as('p'),
+          ) as Query
+        ).toSQL(),
         `
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE "u"."id" = "p"."user_id"
@@ -347,7 +353,7 @@ describe('belongsTo', () => {
 
       it('should support chained select', () => {
         const q = db.postTag.select({
-          items: (q) => q.post.user,
+          items: (q) => q.post.chain('user'),
         });
 
         assertType<Awaited<typeof q>, { items: User[] }[]>();
@@ -1288,7 +1294,7 @@ describe('belongsTo', () => {
           },
         });
 
-        const user = await db.profile.user(profile);
+        const user = await db.profile.queryRelated('user', profile);
         expect(user?.Name).toBe('updated');
       });
 
@@ -1312,7 +1318,7 @@ describe('belongsTo', () => {
             },
           });
 
-        const user = await db.profile.user(updated);
+        const user = await db.profile.queryRelated('user', updated);
         expect(user?.Name).toBe('created');
       });
 
@@ -1336,7 +1342,7 @@ describe('belongsTo', () => {
             },
           });
 
-        const user = await db.profile.user(updated);
+        const user = await db.profile.queryRelated('user', updated);
         expect(user?.Name).toBe('created');
       });
 
@@ -1434,7 +1440,7 @@ describe('belongsTo', () => {
             },
           });
 
-        const user = await db.profile.user(updated);
+        const user = await db.profile.queryRelated('user', updated);
         expect(user?.Name).toBe('created');
       });
 
@@ -1546,7 +1552,7 @@ describe('belongsTo', () => {
     );
 
     it('should query related record and get `undefined`', async () => {
-      const user = await local.profile.user({ UserId: 123 });
+      const user = await local.profile.queryRelated('user', { UserId: 123 });
       assertType<
         typeof user,
         { Id: number; Name: string; Password: string } | undefined
@@ -1593,7 +1599,7 @@ describe('belongsTo', () => {
     );
   });
 
-  it('should have a proper argument type in `create` method when the table has 2+ `belongsTo` relations', () => {
+  it('should have a proper argument type in `create` when the table has 2+ `belongsTo` relations', () => {
     class Table extends BaseTable {
       readonly table = 'a';
       columns = this.setColumns((t) => ({

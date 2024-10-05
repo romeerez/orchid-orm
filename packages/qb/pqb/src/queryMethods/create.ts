@@ -1,5 +1,6 @@
 import {
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  PickQueryQ,
   Query,
   QueryOrExpression,
   queryTypeWithLimitOne,
@@ -36,9 +37,12 @@ import {
   FnUnknownToUnknown,
   isExpression,
   EmptyObject,
+  IsQuery,
+  QueryColumns,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 import { resolveSubQueryCallback } from '../common/utils';
+import { _clone } from '../query/queryUtils';
 
 export interface CreateSelf
   extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -611,25 +615,25 @@ const getFromSelectColumns = (
  */
 const insertFromQuery = <
   T extends CreateSelf,
-  Q extends Query,
+  Q extends IsQuery,
   Many extends boolean,
 >(
   q: T,
   from: Q,
   many: Many,
-  data?: Omit<CreateData<T, never>, keyof Q['result']>,
+  data?: RecordUnknown,
 ) => {
   const ctx = createCtx();
 
   const obj = data && handleOneData(q, data, ctx);
 
-  const columns = getFromSelectColumns(from, obj, many);
+  const columns = getFromSelectColumns(from as never, obj, many);
 
   return insert(
     q,
     {
       columns,
-      values: { from, values: obj?.values },
+      values: { from, values: obj?.values } as never,
     },
     'from',
     many,
@@ -737,9 +741,14 @@ export const _queryInsertManyRaw = <T extends CreateSelf>(
   ) as never;
 };
 
+interface QueryReturningOne extends IsQuery {
+  result: QueryColumns;
+  returnType: 'one' | 'oneOrThrow';
+}
+
 export const _queryCreateFrom = <
   T extends CreateSelf,
-  Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+  Q extends QueryReturningOne,
 >(
   q: T,
   query: Q,
@@ -751,7 +760,7 @@ export const _queryCreateFrom = <
 
 export const _queryInsertFrom = <
   T extends CreateSelf,
-  Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+  Q extends QueryReturningOne,
 >(
   q: T,
   query: Q,
@@ -762,7 +771,7 @@ export const _queryInsertFrom = <
 
 export const _queryCreateManyFrom = <T extends CreateSelf>(
   q: T,
-  query: Query,
+  query: IsQuery,
 ): CreateManyRawOrFromResult<T> => {
   createSelect(q as unknown as Query);
   return insertFromQuery(q, query, true) as never;
@@ -770,7 +779,7 @@ export const _queryCreateManyFrom = <T extends CreateSelf>(
 
 export const _queryInsertManyFrom = <T extends CreateSelf>(
   q: T,
-  query: Query,
+  query: IsQuery,
 ): InsertManyRawOrFromResult<T> => {
   return insertFromQuery(q, query, true) as never;
 };
@@ -853,7 +862,7 @@ export class Create {
     this: T,
     data: CreateData<T, BT>,
   ): CreateResult<T, BT> {
-    return _queryCreate((this as unknown as Query).clone(), data) as never;
+    return _queryCreate(_clone(this), data) as never;
   }
 
   /**
@@ -865,7 +874,7 @@ export class Create {
     this: T,
     data: CreateData<T, BT>,
   ): InsertResult<T, BT> {
-    return _queryInsert((this as unknown as Query).clone(), data) as never;
+    return _queryInsert(_clone(this), data) as never;
   }
 
   /**
@@ -904,7 +913,7 @@ export class Create {
     this: T,
     data: CreateData<T, BT>[],
   ): CreateManyResult<T, BT> {
-    return _queryCreateMany((this as unknown as Query).clone(), data) as never;
+    return _queryCreateMany(_clone(this), data) as never;
   }
 
   /**
@@ -916,7 +925,7 @@ export class Create {
     this: T,
     data: CreateData<T, BT>[],
   ): InsertManyResult<T, BT> {
-    return _queryInsertMany((this as unknown as Query).clone(), data) as never;
+    return _queryInsertMany(_clone(this), data) as never;
   }
 
   /**
@@ -941,10 +950,7 @@ export class Create {
     this: T,
     ...args: CreateRawArgs<T, CreateRawData<T>>
   ): CreateRawOrFromResult<T> {
-    return _queryCreateRaw(
-      (this as unknown as Query).clone() as unknown as T,
-      args,
-    );
+    return _queryCreateRaw(_clone(this) as unknown as T, args);
   }
 
   /**
@@ -956,10 +962,7 @@ export class Create {
     this: T,
     ...args: CreateRawArgs<T, CreateRawData<T>>
   ): InsertRawOrFromResult<T> {
-    return _queryInsertRaw(
-      (this as unknown as Query).clone() as unknown as T,
-      args,
-    );
+    return _queryInsertRaw(_clone(this) as unknown as T, args);
   }
 
   /**
@@ -984,10 +987,7 @@ export class Create {
     this: T,
     ...args: CreateRawArgs<T, CreateManyRawData<T>>
   ): CreateManyRawOrFromResult<T> {
-    return _queryCreateManyRaw(
-      (this as unknown as Query).clone() as unknown as T,
-      args,
-    );
+    return _queryCreateManyRaw(_clone(this) as unknown as T, args);
   }
 
   /**
@@ -999,10 +999,7 @@ export class Create {
     this: T,
     ...args: CreateRawArgs<T, CreateManyRawData<T>>
   ): InsertManyRawOrFromResult<T> {
-    return _queryInsertManyRaw(
-      (this as unknown as Query).clone() as unknown as T,
-      args,
-    );
+    return _queryInsertManyRaw(_clone(this) as unknown as T, args);
   }
 
   /**
@@ -1044,19 +1041,12 @@ export class Create {
    * @param query - query to create new records from
    * @param data - additionally you can set some columns
    */
-  createFrom<
-    T extends CreateSelf,
-    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
-  >(
+  createFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
   ): CreateRawOrFromResult<T> {
-    return _queryCreateFrom(
-      (this as unknown as Query).clone() as unknown as T,
-      query,
-      data,
-    );
+    return _queryCreateFrom(_clone(this) as unknown as T, query, data);
   }
 
   /**
@@ -1065,19 +1055,12 @@ export class Create {
    * @param query - query to create new records from
    * @param data - additionally you can set some columns
    */
-  insertFrom<
-    T extends CreateSelf,
-    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
-  >(
+  insertFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
   ): InsertRawOrFromResult<T> {
-    return _queryInsertFrom(
-      (this as unknown as Query).clone() as unknown as T,
-      query,
-      data,
-    );
+    return _queryInsertFrom(_clone(this) as unknown as T, query, data);
   }
 
   /**
@@ -1095,12 +1078,9 @@ export class Create {
    */
   createManyFrom<T extends CreateSelf>(
     this: T,
-    query: Query,
+    query: IsQuery,
   ): CreateManyRawOrFromResult<T> {
-    return _queryCreateManyFrom(
-      (this as unknown as Query).clone() as unknown as T,
-      query,
-    );
+    return _queryCreateManyFrom(_clone(this) as unknown as T, query);
   }
 
   /**
@@ -1110,12 +1090,9 @@ export class Create {
    */
   insertManyFrom<T extends CreateSelf>(
     this: T,
-    query: Query,
+    query: IsQuery,
   ): InsertManyRawOrFromResult<T> {
-    return _queryInsertManyFrom(
-      (this as unknown as Query).clone() as unknown as T,
-      query,
-    );
+    return _queryInsertManyFrom(_clone(this) as unknown as T, query);
   }
 
   /**
@@ -1144,10 +1121,7 @@ export class Create {
     T extends CreateSelf,
     Data extends Partial<CreateData<T, CreateBelongsToData<T>>>,
   >(this: T, data: Data): AddQueryDefaults<T, { [K in keyof Data]: true }> {
-    return _queryDefaults(
-      (this as unknown as Query).clone() as unknown as T,
-      data,
-    );
+    return _queryDefaults(_clone(this) as unknown as T, data);
   }
 
   /**
@@ -1304,7 +1278,7 @@ export class Create {
     this: T,
     arg?: Arg,
   ): IgnoreResult<T> {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     (q.q as InsertQueryData).onConflict = {
       target: arg as never,
     };
@@ -1406,7 +1380,7 @@ export class OnConflictQueryBuilder<
       | (keyof T['shape'])[]
       | { except: keyof T['shape'] | (keyof T['shape'])[] },
   ): T {
-    ((this.query as unknown as Query).q as InsertQueryData).onConflict = {
+    ((this.query as unknown as PickQueryQ).q as InsertQueryData).onConflict = {
       target: this.onConflict as never,
       merge: merge as OnConflictMerge,
     };

@@ -6,15 +6,19 @@ import {
   _queryUpdateOrThrow,
   _queryWhere,
   AddQueryDefaults,
+  CreateBelongsToData,
   CreateCtx,
   CreateData,
   CreateMethodsNames,
   InsertQueryData,
   isQueryReturnsAll,
+  PickQueryQ,
   Query,
   RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
@@ -55,7 +59,6 @@ import {
   RelationThroughOptions,
 } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
-import { TableWithQueryMethod } from './hasMany';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -130,14 +133,20 @@ export type HasOneQuery<
 export interface HasOneInfo<
   T extends RelationConfigSelf,
   Name extends string,
+  Rel extends HasOne,
   Q extends Query,
-  CD = CreateData<
-    T['relations'][Name]['options'] extends RelationThroughOptions
-      ? Q
-      : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
-  >,
+  CD = T['relations'][Name]['options'] extends RelationThroughOptions
+    ? CreateData<Q, CreateBelongsToData<Q>>
+    : CreateData<
+        AddQueryDefaults<Q, HasOnePopulate<T, Name>>,
+        CreateBelongsToData<Q>
+      >,
 > extends RelationConfigBase {
   query: Q;
+  params: HasOneParams<T, Rel>;
+  maybeSingle: T['relations'][Name]['options']['required'] extends true
+    ? SetQueryReturnsOne<Q>
+    : SetQueryReturnsOneOptional<Q>;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: T['relations'][Name]['options'] extends RelationThroughOptions
     ? EmptyObject
@@ -162,9 +171,9 @@ export interface HasOneInfo<
   // - `create` to create a related record
   dataForUpdateOne:
     | { disconnect: boolean }
+    | { set: WhereArg<Q> }
     | { delete: boolean }
     | { update: UpdateData<Q> }
-    | { set: WhereArg<Q> }
     | {
         upsert: {
           update: UpdateData<Q>;
@@ -250,17 +259,20 @@ export const makeHasOneMethod = (
 
     const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
-    const sourceQuery = sourceRelation
-      .joinQuery(sourceRelation.query, throughRelation.query)
-      .as(relationName);
+    const sourceQuery = (
+      sourceRelation.joinQuery(
+        sourceRelation.query,
+        throughRelation.query,
+      ) as Query
+    ).as(relationName);
 
     const whereExistsCallback = () => sourceQuery;
 
     const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
       return joinHasThrough(
-        baseQuery,
-        baseQuery,
-        joiningQuery,
+        baseQuery as Query,
+        baseQuery as Query,
+        joiningQuery as Query,
         throughRelation,
         sourceRelation,
       );
@@ -268,18 +280,16 @@ export const makeHasOneMethod = (
 
     return {
       returns: 'one',
-      method: (params: RecordUnknown) => {
-        const throughQuery = (table as unknown as TableWithQueryMethod)[
-          through
-        ](params);
+      queryRelated: (params: RecordUnknown) => {
+        const throughQuery = table.queryRelated(through, params) as Query;
 
         return query.whereExists(throughQuery, whereExistsCallback);
       },
       joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
         joinHasThrough(
-          joiningQuery,
-          baseQuery,
-          joiningQuery,
+          joiningQuery as Query,
+          baseQuery as Query,
+          joiningQuery as Query,
           throughRelation,
           sourceRelation,
         ),
@@ -303,8 +313,8 @@ export const makeHasOneMethod = (
 
   const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
     return joinHasRelation(
-      joiningQuery,
-      baseQuery,
+      joiningQuery as Query,
+      baseQuery as Query,
       foreignKeys,
       primaryKeys,
       len,
@@ -313,7 +323,7 @@ export const makeHasOneMethod = (
 
   return {
     returns: 'one',
-    method: (params: RecordUnknown) => {
+    queryRelated: (params: RecordUnknown) => {
       const values: RecordUnknown = {};
       for (let i = 0; i < len; i++) {
         values[foreignKeys[i]] = params[primaryKeys[i]];
@@ -326,14 +336,20 @@ export const makeHasOneMethod = (
       state,
     ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-      joinHasRelation(baseQuery, joiningQuery, primaryKeys, foreignKeys, len),
+      joinHasRelation(
+        baseQuery as Query,
+        joiningQuery as Query,
+        primaryKeys,
+        foreignKeys,
+        len,
+      ),
     ),
     reverseJoin,
     modifyRelatedQuery(relationQuery) {
       return (query) => {
-        const baseQuery = query.clone();
+        const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
-        const q = relationQuery.q as InsertQueryData;
+        const q = (relationQuery as unknown as PickQueryQ).q as InsertQueryData;
         q.kind = 'from';
         q.values = { from: baseQuery };
       };

@@ -1,4 +1,4 @@
-import { PickQueryQAndInternal } from '../query/query';
+import { PickQueryQAndInternal, Query } from '../query/query';
 import {
   AfterCommitHook,
   emptyArray,
@@ -8,7 +8,6 @@ import {
   TransactionAfterCommitHook,
   TransactionState,
 } from 'orchid-core';
-import { QueryBase } from '../query/queryBase';
 import { logParamToLogObject } from './log';
 import { OrchidOrmError } from '../errors';
 
@@ -391,7 +390,7 @@ const runAfterCommit = async (
     let catchAfterCommitError: ((error: AfterCommitError) => void) | undefined;
     for (let i = 0, len = afterCommit.length; i < len; i += 3) {
       const result = afterCommit[i] as unknown[];
-      const q = afterCommit[i + 1] as QueryBase;
+      const q = afterCommit[i + 1] as Query;
       if (q.q.catchAfterCommitError) {
         catchAfterCommitError = q.q.catchAfterCommitError;
       }

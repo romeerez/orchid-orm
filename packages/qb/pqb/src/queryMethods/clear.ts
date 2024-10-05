@@ -1,5 +1,5 @@
-import { Query } from '../query/query';
 import { isExpression, RecordUnknown } from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 
 export type ClearStatement =
   | 'with'
@@ -16,8 +16,8 @@ export type ClearStatement =
   | 'counters';
 
 export class Clear {
-  clear<T extends Query>(this: T, ...clears: ClearStatement[]): T {
-    const q = this.clone();
+  clear<T>(this: T, ...clears: ClearStatement[]): T {
+    const q = _clone(this);
     clears.forEach((clear) => {
       if (clear === 'where') {
         delete q.q.and;
@@ -49,6 +49,6 @@ export class Clear {
         delete (q.q as never as RecordUnknown)[clear];
       }
     });
-    return q;
+    return q as never;
   }
 }

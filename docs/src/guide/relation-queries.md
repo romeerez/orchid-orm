@@ -8,20 +8,24 @@ The resulting record of the `belongsTo` and `hasOne` relation can be undefined i
 const book = await db.book.find(1);
 
 // type of `db.book.author` argument is { authorId: number }
-const author = await db.book.author(book);
+const author = await db.book.queryRelated('author', book);
 
 // type of `db.author.books` argument is { id: number }
-const books = await db.author.books(author);
+const books = await db.author.queryRelated('books', author);
 
 // additional query methods can be applied:
-const partialAuthor = await db.book.author(book).select('id', 'name');
+const partialAuthor = await db.book
+  .queryRelated('author', book)
+  .select('id', 'name');
 
 const countBooks: number = await db.author
-  .books(author)
+  .queryRelated('books', author)
   .where({ title: 'Kobzar' })
   .count();
 
-const authorHasBooks: boolean = await db.author.books(author).exists();
+const authorHasBooks: boolean = await db.author
+  .queryRelated('books', author)
+  .exists();
 ```
 
 It's possible to chain relations query without providing a loaded record (supported by all kinds of relations).
@@ -31,35 +35,43 @@ No limits on chaining.
 
 ```ts
 // load author by book id, in a one query:
-const author = await db.book.find(1).author;
+const author = await db.book.find(1).chain('author');
 
 // imagine an author has many awards,
 // load awards for an author by book id, in a one query:
-const authorAwards = await db.book.find(1).author.awards;
+const authorAwards = await db.book.find(1).chain('author').chain('awards');
 
 // find many books and load their authors:
-const manyAuthors = await db.book.where({ id: { in: [1, 2, 3] } }).author;
+const manyAuthors = await db.book
+  .where({ id: { in: [1, 2, 3] } })
+  .chain('author');
 
 // filter both books and the authors and load authors in one query:
 const filteredAuthors = await db.book
   .where({ booksCondition: '...' })
-  .author.where({ authorCondition: '...' });
+  .chain('author')
+  .where({ authorCondition: '...' });
 
 // find the author and load their books:
-const booksFromOneAuthor = await db.author.find(1).books;
+const booksFromOneAuthor = await db.author.find(1).chain('books');
 
 // find many authors and load their books:
-const booksFromManyAuthors = await db.author.where({ id: { in: [1, 2, 3] } })
-  .books;
+const booksFromManyAuthors = await db.author
+  .where({ id: { in: [1, 2, 3] } })
+  .chain('books');
 
 // imagine a book has many reviews,
 // load book reviews for an author, in a one query:
-const bookReviews = await db.author.findBy({ name: '...' }).books.reviews;
+const bookReviews = await db.author
+  .findBy({ name: '...' })
+  .chain('books')
+  .chain('reviews');
 
 // filter both authors and books and load books in one query:
 const filteredBooks = await db.author
   .where({ authorCondition: '...' })
-  .books.where({ booksCondition: '...' });
+  .chain('books')
+  .where({ booksCondition: '...' });
 ```
 
 The relation can be used in `.whereExists` (supported by all kinds of relations):
@@ -285,12 +297,12 @@ while updating the author you can create new books, connect some books, and dele
 It is possible to chain querying of the table with the creating of its relation, in a such way:
 
 ```ts
-await db.author.find(1).books.create({
+await db.author.find(1).chain('books').create({
   title: 'Book title',
 });
 
 // post hasAndBelongsToMany tags
-await db.post.find(1).tags.create({
+await db.post.find(1).chain('tags').create({
   name: 'tag name',
 });
 ```
@@ -310,12 +322,14 @@ in the case when a record is not found by the condition it will throw `NotFoundE
 // will throw if no post with such a title
 await db.post
   .findBy({ title: 'non-existing' })
-  .tags.create({ name: 'tag name' });
+  .chain('tags')
+  .create({ name: 'tag name' });
 
 // will throw either
 const tag = await db.post
   .findByOptional({ title: 'non-existing' })
-  .tags.create({ name: 'tag name' });
+  .chain('tags')
+  .create({ name: 'tag name' });
 
 // we can be sure that the tag is always returned
 tag.name;
@@ -330,18 +344,21 @@ to make sure we're not creating hanging records not connected to other records.
 ```ts
 const tagOrUndefined = await db.author
   .findByOptional({ name: 'Author name' })
-  .books.takeOptional()
+  .chain('books')
+  .takeOptional()
   .create({ name: 'Book title' });
 
 const createdCount = await db.author
   .findByOptional({ name: 'Author name' })
-  .books.count()
+  .chain('books')
+  .count()
   .create({ name: 'Book title' });
 
 // hasAndBelongsToMany will throw when not found anyway:
 await db.post
   .findByOptional({ title: 'Post title' })
-  .tags.takeOptional()
+  .chain('tags')
+  .takeOptional()
   .create({ name: 'tag name' });
 ```
 
@@ -358,12 +375,13 @@ await db.author.find(1).books.all().delete();
 // delete specific books of specific authors
 await db.author
   .where({ name: 'author name' })
-  .books.where({ title: 'book title' })
+  .chain('books')
+  .where({ title: 'book title' })
   .delete();
 
 // TypeScript will highlight the `delete` method
 // because deleting a `belongsTo` relation is not allowed
-await db.book.find(1).author.delete();
+await db.book.find(1).chain('author').delete();
 ```
 
 ## nested create

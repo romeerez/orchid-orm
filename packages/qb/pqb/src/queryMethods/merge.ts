@@ -1,10 +1,11 @@
 import {
-  Query,
   GetQueryResult,
   PickQueryMetaResultReturnTypeWithDataWindows,
+  PickQueryQ,
 } from '../query/query';
 import { UnionSet } from '../sql';
 import { PickQueryMetaResult, QueryThen, RecordUnknown } from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 
 export type MergeQuery<
   T extends PickQueryMetaResultReturnTypeWithDataWindows,
@@ -70,10 +71,13 @@ const mergableObjects = new Set([
 const dontMergeArrays = new Set(['selectAllColumns', 'selectAllKeys']);
 
 export class MergeQueryMethods {
-  merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
-    const query = this.clone();
+  merge<
+    T extends PickQueryMetaResultReturnTypeWithDataWindows,
+    Q extends PickQueryMetaResultReturnTypeWithDataWindows,
+  >(this: T, q: Q): MergeQuery<T, Q> {
+    const query = _clone(this);
     const a = query.q as never as RecordUnknown;
-    const b = q.q as never as RecordUnknown;
+    const b = (q as unknown as PickQueryQ).q as never as RecordUnknown;
 
     for (const key in b) {
       const value = b[key];

@@ -99,10 +99,15 @@ export type HasAndBelongsToManyQuery<
     : TableQuery[K];
 };
 
-export interface HasAndBelongsToManyInfo<Name extends string, Q extends Query>
-  extends RelationConfigBase {
+export interface HasAndBelongsToManyInfo<
+  T extends RelationConfigSelf,
+  Name extends string,
+  Rel extends HasAndBelongsToMany,
+  Q extends Query,
+> extends RelationConfigBase {
   query: Q;
-  joinQuery: RelationJoinQuery;
+  params: HasAndBelongsToManyParams<T, Rel>;
+  maybeSingle: Q;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {
     [P in Name]?: {
@@ -309,16 +314,21 @@ export const makeHasAndBelongsToManyMethod = (
   const selectPrimaryKeysAsForeignKeys = [{ selectAs: obj }];
 
   const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
-    const foreignAs = getQueryAs(joiningQuery);
-    return joinQuery(baseQuery, getQueryAs(baseQuery), foreignAs, {
-      ...baseQuery.q.joinedShapes,
-      [foreignAs]: joiningQuery.q.shape,
-    });
+    const foreignAs = getQueryAs(joiningQuery as Query);
+    return joinQuery(
+      baseQuery as Query,
+      getQueryAs(baseQuery as Query),
+      foreignAs,
+      {
+        ...(baseQuery as Query).q.joinedShapes,
+        [foreignAs]: (joiningQuery as Query).q.shape,
+      },
+    );
   };
 
   return {
     returns: 'many',
-    method(params: RecordUnknown) {
+    queryRelated(params: RecordUnknown) {
       return query.whereExists(subQuery, (q) => {
         q = q.clone();
 
@@ -344,48 +354,58 @@ export const makeHasAndBelongsToManyMethod = (
       state,
     ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-      joinQuery(joiningQuery, getQueryAs(baseQuery), getQueryAs(joiningQuery), {
-        ...joiningQuery.q.joinedShapes,
-        [(baseQuery.q.as || baseQuery.table) as string]: baseQuery.q.shape,
-      }),
+      joinQuery(
+        joiningQuery as Query,
+        getQueryAs(baseQuery as Query),
+        getQueryAs(joiningQuery as Query),
+        {
+          ...(joiningQuery as Query).q.joinedShapes,
+          [((baseQuery as Query).q.as || (baseQuery as Query).table) as string]:
+            (baseQuery as Query).q.shape,
+        },
+      ),
     ),
     reverseJoin,
     modifyRelatedQuery(relationQuery) {
       const ref = {} as { q: Query };
 
-      _queryHookAfterCreate(relationQuery, [], async (result: unknown[]) => {
-        if (result.length > 1) {
-          // TODO: currently this relies on `INSERT ... SELECT` that works only for 1 record
-          // consider using `WITH` to reuse id of main table for multiple related ids
-          throw new OrchidOrmInternalError(
-            relationQuery,
-            'Creating multiple `hasAndBelongsToMany` records is not yet supported',
+      _queryHookAfterCreate(
+        relationQuery as Query,
+        [],
+        async (result: unknown[]) => {
+          if (result.length > 1) {
+            // TODO: currently this relies on `INSERT ... SELECT` that works only for 1 record
+            // consider using `WITH` to reuse id of main table for multiple related ids
+            throw new OrchidOrmInternalError(
+              relationQuery as Query,
+              'Creating multiple `hasAndBelongsToMany` records is not yet supported',
+            );
+          }
+
+          const baseQuery = ref.q.clone();
+          baseQuery.q.select = selectPrimaryKeysAsForeignKeys;
+
+          const data: RecordUnknown = {};
+          for (let i = 0; i < throughLen; i++) {
+            data[throughForeignKeys[i]] = (result[0] as RecordUnknown)[
+              throughPrimaryKeys[i]
+            ];
+          }
+
+          const createdCount = await _queryCreateFrom(
+            subQuery.count(),
+            baseQuery as Query & { returnType: 'one' | 'oneOrThrow' },
+            data as never,
           );
-        }
 
-        const baseQuery = ref.q.clone();
-        baseQuery.q.select = selectPrimaryKeysAsForeignKeys;
-
-        const data: RecordUnknown = {};
-        for (let i = 0; i < throughLen; i++) {
-          data[throughForeignKeys[i]] = (result[0] as RecordUnknown)[
-            throughPrimaryKeys[i]
-          ];
-        }
-
-        const createdCount = await _queryCreateFrom(
-          subQuery.count(),
-          baseQuery as Query & { returnType: 'one' | 'oneOrThrow' },
-          data as never,
-        );
-
-        if ((createdCount as unknown as number) === 0) {
-          throw new NotFoundError(baseQuery);
-        }
-      });
+          if ((createdCount as unknown as number) === 0) {
+            throw new NotFoundError(baseQuery);
+          }
+        },
+      );
 
       return (q) => {
-        ref.q = q;
+        ref.q = q as Query;
       };
     },
   };

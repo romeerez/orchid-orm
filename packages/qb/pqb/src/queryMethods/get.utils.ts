@@ -1,6 +1,6 @@
 import {
   PickQueryMetaTable,
-  Query,
+  PickQueryQ,
   SetQueryReturnsColumnOptional,
   SetQueryReturnsColumnOrThrow,
   SetQueryReturnsValueOptional,
@@ -9,7 +9,10 @@ import {
 import {
   Expression,
   getValueKey,
+  IsQuery,
   PickQueryMeta,
+  PickQueryShape,
+  PickQueryTable,
   QueryColumn,
 } from 'orchid-core';
 import {
@@ -48,20 +51,23 @@ export type GetResultOptional<
   : never;
 
 export const _getSelectableColumn = (
-  q: Query,
+  q: IsQuery,
   arg: string,
 ): QueryColumn | undefined => {
-  let type: QueryColumn | undefined = q.q.shape[arg];
+  let type: QueryColumn | undefined = (q as unknown as PickQueryQ).q.shape[arg];
   if (!type) {
     const index = arg.indexOf('.');
     if (index !== -1) {
       const table = arg.slice(0, index);
       const column = arg.slice(index + 1);
 
-      if (table === (q.q.as || q.table)) {
-        type = q.shape[column];
+      if (
+        table ===
+        ((q as unknown as PickQueryQ).q.as || (q as PickQueryTable).table)
+      ) {
+        type = (q as unknown as PickQueryShape).shape[column];
       } else {
-        type = q.q.joinedShapes?.[table]?.[column];
+        type = (q as unknown as PickQueryQ).q.joinedShapes?.[table]?.[column];
       }
     }
   }
@@ -78,7 +84,7 @@ const _get = <
   returnType: R,
   arg: Arg,
 ): R extends 'value' ? GetResultOptional<T, Arg> : GetResult<T, Arg> => {
-  const q = (query as unknown as Query).q;
+  const q = (query as unknown as PickQueryQ).q;
 
   if (q.returning) q.returning = undefined;
 
@@ -86,36 +92,30 @@ const _get = <
 
   let type: QueryColumn | undefined;
   if (typeof arg === 'string') {
-    type = _getSelectableColumn(query as unknown as Query, arg);
+    type = _getSelectableColumn(query as never, arg);
     q.getColumn = type;
 
     const selected = setParserForSelectedString(
-      query as unknown as Query,
+      query as never,
       arg,
-      getQueryAs(query as unknown as Query),
+      getQueryAs(query as never),
       getValueKey,
     );
 
     q.select = selected
-      ? [
-          (q.expr = new SelectItemExpression(
-            query as unknown as Query,
-            selected,
-            type,
-          )),
-        ]
+      ? [(q.expr = new SelectItemExpression(query as never, selected, type))]
       : undefined;
   } else {
     type = arg.result.value;
     q.getColumn = type;
-    addParserForRawExpression(query as unknown as Query, getValueKey, arg);
+    addParserForRawExpression(query as never, getValueKey, arg);
     q.select = [(q.expr = arg)];
   }
 
   return setQueryOperators(
-    query as unknown as Query,
+    query as never,
     type?.operators || Operators.any,
-  ) as unknown as GetResult<T, Arg> & GetResultOptional<T, Arg>;
+  ) as never;
 };
 
 export function _queryGet<T extends QueryGetSelf, Arg extends GetArg<T>>(

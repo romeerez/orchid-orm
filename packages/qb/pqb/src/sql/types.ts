@@ -1,14 +1,14 @@
-import { Query, QueryWithTable } from '../query/query';
-import { RelationQuery } from '../relations';
+import { Query } from '../query/query';
+import { RelationQueryBase } from '../relations';
 import { SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from './data';
 import {
   Expression,
+  IsQuery,
   MaybeArray,
   RecordUnknown,
   TemplateLiteralArgs,
 } from 'orchid-core';
-import { QueryBase } from '../query/queryBase';
 
 // used in `from` logic to decide if convert query to sql or just write table name
 export const checkIfASimpleQuery = (q: Query) => {
@@ -135,17 +135,17 @@ export type SimpleJoinItemNonSubQueryArgs =
 export type JoinItemArgs =
   | {
       // relation query from `relationConfig.joinQuery`
-      j: Query;
+      j: IsQuery;
       // join sub query, is not applicable in whereExists
       s: boolean;
       // callback result, if callback is present
-      r?: Query;
+      r?: IsQuery;
     }
   | {
       // `with` item name
       w: string;
       // callback result
-      r: Query;
+      r: IsQuery;
       // join sub query, is not applicable in whereExists
       s: boolean;
     }
@@ -157,21 +157,21 @@ export type JoinItemArgs =
     }
   | {
       // joining query
-      q: QueryWithTable;
+      q: IsQuery;
       // join sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
       // joining query
-      q: QueryWithTable;
+      q: IsQuery;
       // callback result
-      r: Query;
+      r: IsQuery;
       // join sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
       // joining query
-      q: QueryWithTable;
+      q: IsQuery;
       // join arguments
       a: SimpleJoinItemNonSubQueryArgs;
       // join sub query, is not applicable in whereExists
@@ -200,7 +200,7 @@ export type WhereItem =
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
     }
-  | ((q: unknown) => QueryBase | RelationQuery | Expression)
+  | ((q: unknown) => RelationQueryBase | Expression)
   | Query
   | Expression;
 

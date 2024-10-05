@@ -20,16 +20,11 @@ import {
 } from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
-  _queryAll,
-  _queryResolveAlias,
   _queryTake,
   _queryTakeOptional,
-  _queryWhere,
   CreateData,
-  getQueryAs,
   Query,
   RelationJoinQuery,
-  RelationQuery,
   RelationsBase,
   VirtualColumn,
   WhereArg,
@@ -38,6 +33,7 @@ import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
   EmptyObject,
+  IsQuery,
   RecordUnknown,
 } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
@@ -111,11 +107,11 @@ export interface RelationThunks {
 
 export interface RelationData {
   returns: 'one' | 'many';
-  method(params: RecordUnknown): Query;
+  queryRelated(params: RecordUnknown): Query;
   virtualColumn?: VirtualColumn<ColumnSchemaConfig>;
   joinQuery: RelationJoinQuery;
   reverseJoin: RelationJoinQuery;
-  modifyRelatedQuery?(relatedQuery: Query): (query: Query) => void;
+  modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
 }
 
 export type RelationScopeOrTable<Relation extends RelationThunkBase> =
@@ -142,60 +138,49 @@ export type RelationConfigParams<
 export type MapRelation<
   T extends RelationConfigSelf,
   K extends keyof T['relations'] & string,
-  R extends Query,
 > = T['relations'][K] extends BelongsTo
-  ? RelationQuery<
-      BelongsToInfo<
+  ? {
+      relationConfig: BelongsToInfo<
+        T,
         K,
+        T['relations'][K],
         T['relations'][K]['options']['columns'][number] & string,
         T['relations'][K]['options']['required'],
-        BelongsToQuery<R, K>
-      >,
-      BelongsToParams<T, T['relations'][K]>,
-      T['relations'][K]['options']['required'],
-      true
-    >
+        BelongsToQuery<RelationScopeOrTable<T['relations'][K]>, K>
+      >;
+    }
   : T['relations'][K] extends HasOne
-  ? RelationQuery<
-      HasOneInfo<
+  ? {
+      relationConfig: HasOneInfo<
         T,
         K,
+        T['relations'][K],
         HasOneQuery<T, K, RelationScopeOrTable<T['relations'][K]>>
-      >,
-      HasOneParams<T, T['relations'][K]>,
-      T['relations'][K]['options']['required'],
-      true
-    >
+      >;
+    }
   : T['relations'][K] extends HasMany
-  ? RelationQuery<
-      HasManyInfo<
+  ? {
+      relationConfig: HasManyInfo<
         T,
         K,
+        T['relations'][K],
         HasOneQuery<T, K, RelationScopeOrTable<T['relations'][K]>>
-      >,
-      HasOneParams<T, T['relations'][K]>,
-      true,
-      false
-    >
+      >;
+    }
   : T['relations'][K] extends HasAndBelongsToMany
-  ? RelationQuery<
-      HasAndBelongsToManyInfo<
+  ? {
+      relationConfig: HasAndBelongsToManyInfo<
+        T,
         K,
+        T['relations'][K],
         HasAndBelongsToManyQuery<K, RelationScopeOrTable<T['relations'][K]>>
-      >,
-      HasAndBelongsToManyParams<T, T['relations'][K]>,
-      true,
-      false
-    >
+      >;
+    }
   : never;
 
 export type MapRelations<T> = T extends RelationConfigSelf
   ? {
-      [K in keyof T['relations'] & string]: MapRelation<
-        T,
-        K,
-        RelationScopeOrTable<T['relations'][K]>
-      >;
+      [K in keyof T['relations'] & string]: MapRelation<T, K>;
     }
   : EmptyObject;
 
@@ -389,8 +374,6 @@ const applyRelation = (
       data.virtualColumn;
   }
 
-  makeRelationQuery(dbTable, relationName, data, query);
-
   baseQuery.joinQuery = data.joinQuery;
 
   const { join: originalJoin } = baseQuery;
@@ -407,7 +390,10 @@ const applyRelation = (
   baseQuery.relationConfig = {
     table: otherDbTable,
     query,
+    queryRelated: data.queryRelated,
     joinQuery: data.joinQuery,
+    reverseJoin: data.reverseJoin,
+    modifyRelatedQuery: data.modifyRelatedQuery,
   };
 
   (dbTable.relations as RecordUnknown)[relationName] = query;
@@ -417,70 +403,5 @@ const applyRelation = (
 
   tableRelations[relationName]?.forEach((data) => {
     applyRelation(qb, data, delayedRelations);
-  });
-};
-
-const makeRelationQuery = (
-  table: Query,
-  relationName: string,
-  data: RelationData,
-  q: Query,
-) => {
-  Object.defineProperty(table, relationName, {
-    configurable: true,
-    get() {
-      const toTable = q.clone();
-
-      let query: Query;
-      if (this.q.subQuery) {
-        query = toTable;
-        query.q.subQuery = 2;
-      } else {
-        // Relation query returns a single record in case of belongsTo or hasOne,
-        // but when called as a query chain like `q.user.profile` it should return many.
-        query = _queryWhere(_queryAll(toTable), [
-          {
-            EXISTS: { q: data.reverseJoin(this, toTable) },
-          },
-        ]);
-      }
-
-      if (this.q.relChain) {
-        query.q.relChain = [...this.q.relChain, this];
-        query.q.returnType = 'all';
-      } else {
-        query.q.relChain = [this];
-      }
-
-      const aliases = this.q.as
-        ? { ...this.q.aliases }
-        : { ...this.q.aliases, [this.table]: this.table };
-
-      const relAliases = query.q.aliases!; // is always set for a relation
-      for (const as in relAliases) {
-        aliases[as] = _queryResolveAlias(aliases, as);
-      }
-      query.q.as = aliases[query.q.as!]; // `as` is always set for a relation;
-      query.q.aliases = aliases;
-
-      query.q.joinedShapes = {
-        [getQueryAs(this)]: this.q.shape,
-        ...this.q.joinedShapes,
-      };
-
-      const setQuery = data.modifyRelatedQuery?.(query);
-      setQuery?.(this);
-
-      return new Proxy(data.method, {
-        get(_, prop) {
-          return (query as unknown as RecordUnknown)[prop as string];
-        },
-      }) as unknown as RelationQuery;
-    },
-    set(value) {
-      Object.defineProperty(this, relationName, {
-        value,
-      });
-    },
   });
 };

@@ -15,6 +15,7 @@ import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { RelationQueryBase } from '../../relations';
 import {
+  _clone,
   pushQueryValue,
   setQueryObjectValue,
   throwIfJoinLateral,
@@ -93,7 +94,7 @@ export const _join = <
     const relation = query.relations[joinKey];
     if (relation) {
       shape = getShapeFromSelect(relation.relationConfig.query);
-      const r = relation.relationConfig.query;
+      const r = relation.relationConfig.query as Query;
       parsers = r.q.parsers;
       batchParsers = r.q.batchParsers;
       computeds = r.q.computeds;
@@ -130,7 +131,10 @@ export const _join = <
         ? joinArgs.r
         : joinArgs.q;
 
-    if (j.q.select || !j.q.selectAllColumns) {
+    if (
+      (j as unknown as PickQueryQ).q.select ||
+      !(j as unknown as PickQueryQ).q.selectAllColumns
+    ) {
       const shape = getShapeFromSelect(j, true);
       setQueryObjectValue(
         query as unknown as PickQueryQ,
@@ -143,20 +147,20 @@ export const _join = <
         query as unknown as PickQueryQ,
         'joinedParsers',
         joinKey,
-        j.q.parsers,
+        (j as unknown as PickQueryQ).q.parsers,
       );
 
-      if (j.q.batchParsers) {
+      if ((j as unknown as PickQueryQ).q.batchParsers) {
         ((query as unknown as PickQueryQ).q.joinedBatchParsers ??= {})[
           joinKey
-        ] = j.q.batchParsers;
+        ] = (j as unknown as PickQueryQ).q.batchParsers as BatchParsers;
       }
 
       setQueryObjectValue(
         query as unknown as PickQueryQ,
         'joinedComputeds',
         joinKey,
-        j.q.computeds,
+        (j as unknown as PickQueryQ).q.computeds,
       );
     } else {
       addAllShapesAndParsers(
@@ -255,7 +259,7 @@ export const _joinLateral = <
   if (typeof arg === 'string') {
     relation = q.relations[arg];
     if (relation) {
-      arg = relation.relationConfig.query.clone() as unknown as Arg;
+      arg = _clone(relation.relationConfig.query) as unknown as Arg;
     } else {
       const w = q.q.withShapes?.[arg];
       if (w) {

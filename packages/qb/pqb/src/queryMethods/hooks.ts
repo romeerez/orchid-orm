@@ -1,7 +1,7 @@
-import { pushQueryValue } from '../query/queryUtils';
+import { _clone, pushQueryValue } from '../query/queryUtils';
 import { PickQueryShape, QueryColumns } from 'orchid-core';
 import { QueryAfterHook, QueryBeforeHook } from '../sql';
-import { PickQueryQ, Query } from '../query/query';
+import { PickQueryQ } from '../query/query';
 import { AfterCommitError } from './transaction';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
@@ -189,7 +189,7 @@ export abstract class QueryHooks {
    * @param cb - function to call, first argument is a query object
    */
   beforeQuery<T>(this: T, cb: QueryBeforeHook): T {
-    return _queryHookBeforeQuery((this as Query).clone(), cb) as T;
+    return _queryHookBeforeQuery(_clone(this), cb) as T;
   }
 
   /**
@@ -200,7 +200,7 @@ export abstract class QueryHooks {
    * @param cb - function to call, first argument is the query result of type `unknown`, second argument is a query object
    */
   afterQuery<T>(this: T, cb: QueryAfterHook): T {
-    return _queryHookAfterQuery((this as Query).clone(), cb) as T;
+    return _queryHookAfterQuery(_clone(this), cb) as T;
   }
 
   /**
@@ -209,7 +209,7 @@ export abstract class QueryHooks {
    * @param cb - function to call, first argument is a query object
    */
   beforeCreate<T>(this: T, cb: QueryBeforeHook): T {
-    return _queryHookBeforeCreate((this as Query).clone(), cb) as T;
+    return _queryHookBeforeCreate(_clone(this), cb) as T;
   }
 
   /**
@@ -226,11 +226,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterCreate(
-      (this as unknown as Query).clone(),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryHookAfterCreate(_clone(this), select, cb) as unknown as T;
   }
 
   /**
@@ -246,7 +242,7 @@ export abstract class QueryHooks {
     cb: AfterHook<S, T['shape']>,
   ): T {
     return _queryHookAfterCreateCommit(
-      (this as unknown as Query).clone(),
+      _clone(this),
       select,
       cb,
     ) as unknown as T;
@@ -258,7 +254,7 @@ export abstract class QueryHooks {
    * @param cb - function to call, first argument is a query object
    */
   beforeUpdate<T>(this: T, cb: QueryBeforeHook): T {
-    return _queryHookBeforeUpdate((this as Query).clone(), cb) as T;
+    return _queryHookBeforeUpdate(_clone(this), cb) as T;
   }
 
   /**
@@ -276,11 +272,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterUpdate(
-      (this as unknown as Query).clone(),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryHookAfterUpdate(_clone(this), select, cb) as unknown as T;
   }
 
   /**
@@ -297,7 +289,7 @@ export abstract class QueryHooks {
     cb: AfterHook<S, T['shape']>,
   ): T {
     return _queryHookAfterUpdateCommit(
-      (this as unknown as Query).clone(),
+      _clone(this),
       select,
       cb,
     ) as unknown as T;
@@ -309,7 +301,7 @@ export abstract class QueryHooks {
    * @param cb - function to call, first argument is a query object
    */
   beforeSave<T>(this: T, cb: QueryBeforeHook): T {
-    return _queryHookBeforeSave((this as Query).clone(), cb) as T;
+    return _queryHookBeforeSave(_clone(this), cb) as T;
   }
 
   /**
@@ -327,11 +319,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterSave(
-      (this as unknown as Query).clone(),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryHookAfterSave(_clone(this), select, cb) as unknown as T;
   }
 
   /**
@@ -347,11 +335,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryAfterSaveCommit(
-      (this as unknown as Query).clone(),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryAfterSaveCommit(_clone(this), select, cb) as unknown as T;
   }
 
   /**
@@ -360,7 +344,7 @@ export abstract class QueryHooks {
    * @param cb - function to call, first argument is a query object
    */
   beforeDelete<T>(this: T, cb: QueryBeforeHook): T {
-    return _queryHookBeforeDelete((this as Query).clone(), cb) as T;
+    return _queryHookBeforeDelete(_clone(this), cb) as T;
   }
 
   /**
@@ -378,11 +362,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterDelete(
-      (this as unknown as Query).clone(),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryHookAfterDelete(_clone(this), select, cb) as unknown as T;
   }
 
   /**
@@ -399,7 +379,7 @@ export abstract class QueryHooks {
     cb: AfterHook<S, T['shape']>,
   ): T {
     return _queryHookAfterDeleteCommit(
-      (this as unknown as Query).clone(),
+      _clone(this),
       select,
       cb,
     ) as unknown as T;
@@ -427,7 +407,7 @@ export abstract class QueryHooks {
    * ```
    */
   catchAfterCommitError<T>(this: T, fn: (error: AfterCommitError) => void): T {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     q.q.catchAfterCommitError = fn;
     return q as T;
   }

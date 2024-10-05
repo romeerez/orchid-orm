@@ -1,4 +1,5 @@
 import {
+  PickQueryQ,
   Query,
   SetQueryReturnsOneKind,
   SetQueryReturnsVoidKind,
@@ -13,6 +14,7 @@ import {
   RecordUnknown,
 } from 'orchid-core';
 import { QueryMetaHasWhere } from './where/where';
+import { _clone } from '../query/queryUtils';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -40,23 +42,24 @@ export type UpsertThis = UpdateSelf &
 
 // this is used by `upsert` and `orCreate` methods.
 // `updateData` and `mergeData` args are passed only by `upsert`.
-function orCreate<T extends Query>(
-  q: T,
+function orCreate<T extends PickQueryMetaResult>(
+  query: T,
   data: unknown | FnUnknownToUnknown,
   updateData?: unknown,
   mergeData?: unknown,
 ): UpsertResult<T> {
-  q.q.returnType = 'one';
-  q.q.wrapInTransaction = true;
+  const { q } = query as unknown as PickQueryQ;
+  q.returnType = 'one';
+  q.wrapInTransaction = true;
 
-  const { handleResult } = q.q;
+  const { handleResult } = q;
   let result: unknown;
   let created = false;
-  q.q.handleResult = (q, t, r, s) => {
+  q.handleResult = (q, t, r, s) => {
     return created ? result : handleResult(q, t, r, s);
   };
 
-  q.q.patchResult = async (q, queryResult) => {
+  q.patchResult = async (q, queryResult) => {
     if (queryResult.rowCount === 0) {
       if (typeof data === 'function') {
         data = data(updateData);
@@ -83,7 +86,7 @@ function orCreate<T extends Query>(
       );
     }
   };
-  return q as unknown as UpsertResult<T>;
+  return query as unknown as UpsertResult<T>;
 }
 
 export class QueryUpsertOrCreate {
@@ -200,7 +203,7 @@ export class QueryUpsertOrCreate {
               ) => UpsertCreate<keyof Update, CreateData<T, BT>>);
         },
   ): UpsertResult<T> {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     let updateData;
     let mergeData;
@@ -260,6 +263,6 @@ export class QueryUpsertOrCreate {
     this: T,
     data: OrCreateArg<CreateData<T, BT>>,
   ): UpsertResult<T> {
-    return orCreate((this as unknown as Query).clone() as never, data);
+    return orCreate(_clone(this) as never, data);
   }
 }

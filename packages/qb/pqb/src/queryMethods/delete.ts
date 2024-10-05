@@ -1,10 +1,14 @@
 import {
-  Query,
+  PickQueryQ,
   SetQueryKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../query/query';
-import { throwIfJoinLateral, throwIfNoWhere } from '../query/queryUtils';
+import {
+  _clone,
+  throwIfJoinLateral,
+  throwIfNoWhere,
+} from '../query/queryUtils';
 import {
   EmptyTuple,
   PickQueryMetaResult,
@@ -26,7 +30,7 @@ export type DeleteResult<T extends PickQueryMetaResultReturnType> =
 export const _queryDelete = <T extends PickQueryMetaResultReturnType>(
   query: T,
 ): DeleteResult<T> => {
-  const q = (query as unknown as Query).q;
+  const q = (query as unknown as PickQueryQ).q;
   if (!q.select) {
     if (q.returnType === 'oneOrThrow' || q.returnType === 'valueOrThrow') {
       q.throwOnNotFound = true;
@@ -36,8 +40,8 @@ export const _queryDelete = <T extends PickQueryMetaResultReturnType>(
     q.returning = true;
   }
 
-  throwIfNoWhere(query as unknown as Query, 'delete');
-  throwIfJoinLateral(query as unknown as Query, 'delete');
+  throwIfNoWhere(query as unknown as PickQueryQ, 'delete');
+  throwIfJoinLateral(query as unknown as PickQueryQ, 'delete');
 
   q.type = 'delete';
   return query as never;
@@ -108,6 +112,6 @@ export class Delete {
     this: T,
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {
-    return _queryDelete((this as unknown as Query).clone()) as never;
+    return _queryDelete(_clone(this)) as never;
   }
 }

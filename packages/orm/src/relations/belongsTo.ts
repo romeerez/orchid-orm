@@ -8,6 +8,7 @@ import {
   _queryHookBeforeUpdate,
   _queryRows,
   _queryUpdate,
+  CreateBelongsToData,
   CreateCtx,
   CreateData,
   CreateMethodsNames,
@@ -24,6 +25,8 @@ import {
   SelectableFromShape,
   SelectQueryData,
   setQueryObjectValue,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
   UpdateArg,
   UpdateCtx,
   UpdateCtxCollect,
@@ -100,12 +103,18 @@ export type BelongsToQuery<T extends Query, Name extends string> = {
 };
 
 export interface BelongsToInfo<
+  T extends RelationConfigSelf,
   Name extends string,
+  Rel extends BelongsTo,
   FK extends string,
   Required,
   Q extends Query,
 > extends RelationConfigBase {
   query: Q;
+  params: BelongsToParams<T, Rel>;
+  maybeSingle: Required extends true
+    ? SetQueryReturnsOne<Q>
+    : SetQueryReturnsOneOptional<Q>;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: FK;
@@ -130,7 +139,7 @@ export interface BelongsToInfo<
     | { delete: boolean }
     | { update: UpdateData<Q> }
     | {
-        create: CreateData<Q>;
+        create: CreateData<Q, CreateBelongsToData<Q>>;
       };
   // Only for records that updates a single record:
   // - `upsert` to update or create the related record
@@ -139,11 +148,13 @@ export interface BelongsToInfo<
     | { set: WhereArg<Q> }
     | { delete: boolean }
     | { update: UpdateData<Q> }
-    | { create: CreateData<Q> }
+    | { create: CreateData<Q, CreateBelongsToData<Q>> }
     | {
         upsert: {
           update: UpdateData<Q>;
-          create: CreateData<Q> | (() => CreateData<Q>);
+          create:
+            | CreateData<Q, CreateBelongsToData<Q>>
+            | (() => CreateData<Q, CreateBelongsToData<Q>>);
         };
       };
 }
@@ -286,12 +297,17 @@ export const makeBelongsToMethod = (
   };
 
   const reverseJoin: RelationJoinQuery = (baseQuery, joiningQuery) => {
-    return join(joiningQuery, baseQuery, foreignKeys, primaryKeys);
+    return join(
+      joiningQuery as Query,
+      baseQuery as Query,
+      foreignKeys,
+      primaryKeys,
+    );
   };
 
   return {
     returns: 'one',
-    method(params: RecordUnknown) {
+    queryRelated(params: RecordUnknown) {
       return query.where(makeWhere(params) as never);
     },
     virtualColumn: new BelongsToVirtualColumn(
@@ -300,7 +316,7 @@ export const makeBelongsToMethod = (
       state,
     ),
     joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-      join(baseQuery, joiningQuery, primaryKeys, foreignKeys),
+      join(baseQuery as Query, joiningQuery as Query, primaryKeys, foreignKeys),
     ),
     reverseJoin,
   };

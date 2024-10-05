@@ -4,7 +4,11 @@ import {
   PickQueryWithDataColumnTypes,
   Query,
 } from '../query/query';
-import { pushQueryValue, setQueryObjectValue } from '../query/queryUtils';
+import {
+  _clone,
+  pushQueryValue,
+  setQueryObjectValue,
+} from '../query/queryUtils';
 import {
   Expression,
   ColumnsShapeBase,
@@ -167,11 +171,11 @@ export class WithMethods {
     this: T,
     name: Name,
     query: Q | ((q: WithQueryBuilder<T>) => Q),
-  ): WithResult<T, Name, Q extends Query ? Q : never>;
+  ): WithResult<T, Name, Q extends PickQueryResult ? Q : never>;
   with<
     T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
-    Q extends Query,
+    Q extends PickQueryResult,
   >(
     this: T,
     name: Name,
@@ -182,13 +186,17 @@ export class WithMethods {
     name: string,
     second:
       | WithArgsOptions
-      | Query
-      | ((q: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
+      | PickQueryResult
+      | ((
+          q: WithQueryBuilder<PickQueryWithDataColumnTypes>,
+        ) => PickQueryResult),
     third?:
-      | Query
-      | ((q: WithQueryBuilder<PickQueryWithDataColumnTypes>) => Query),
+      | PickQueryResult
+      | ((
+          q: WithQueryBuilder<PickQueryWithDataColumnTypes>,
+        ) => PickQueryResult),
   ) {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     // eslint-disable-next-line prefer-const
     let [options, queryArg] = third
@@ -199,7 +207,7 @@ export class WithMethods {
     if (typeof queryArg === 'function') {
       const arg = q.queryBuilder.clone();
       arg.q.withShapes = q.q.withShapes;
-      query = queryArg(arg);
+      query = queryArg(arg) as Query;
     } else {
       query = queryArg as Query;
     }
@@ -307,7 +315,7 @@ export class WithMethods {
   withRecursive<
     T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
-    Q extends Query,
+    Q extends PickQueryResult,
     Result = WithResult<T, Name, Q>,
   >(
     this: T,
@@ -315,12 +323,12 @@ export class WithMethods {
     base: Q | ((qb: WithQueryBuilder<T>) => Q),
     recursive: (qb: {
       [K in keyof Result]: K extends 'result' ? Q['result'] : Result[K];
-    }) => Query,
+    }) => PickQueryResult,
   ): Result;
   withRecursive<
     T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
-    Q extends Query,
+    Q extends PickQueryResult,
     Result = WithResult<T, Name, Q>,
   >(
     this: T,
@@ -329,10 +337,10 @@ export class WithMethods {
     base: Q | ((qb: WithQueryBuilder<T>) => Q),
     recursive: (qb: {
       [K in keyof Result]: K extends 'result' ? Q['result'] : Result[K];
-    }) => Query,
+    }) => PickQueryResult,
   ): Result;
   withRecursive(name: string, ...args: unknown[]) {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     // eslint-disable-next-line prefer-const
     let [options, baseFn, recursiveFn] = (
@@ -443,7 +451,7 @@ export class WithMethods {
   ): WithSqlResult<T, Name, Shape>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   withSql(this: PickQueryWithDataColumnTypes, name: string, ...args: any[]) {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     const [options, shape, sql] =
       args.length === 2 ? [undefined, args[0], args[1]] : args;

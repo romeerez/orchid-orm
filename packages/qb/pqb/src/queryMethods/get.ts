@@ -1,4 +1,3 @@
-import { Query } from '../query/query';
 import {
   GetArg,
   GetResult,
@@ -7,6 +6,7 @@ import {
   _queryGetOptional,
   QueryGetSelf,
 } from './get.utils';
+import { _clone } from '../query/queryUtils';
 
 export class QueryGet {
   /**
@@ -33,7 +33,7 @@ export class QueryGet {
     this: T,
     arg: Arg,
   ): GetResult<T, Arg> {
-    return _queryGet((this as unknown as Query).clone(), arg) as never;
+    return _queryGet(_clone(this), arg) as never;
   }
 
   /**
@@ -49,6 +49,6 @@ export class QueryGet {
     this: T,
     arg: Arg,
   ): GetResultOptional<T, Arg> {
-    return _queryGetOptional((this as unknown as Query).clone(), arg) as never;
+    return _queryGetOptional(_clone(this), arg) as never;
   }
 }

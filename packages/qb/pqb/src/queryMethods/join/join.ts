@@ -5,11 +5,14 @@ import {
   PickQueryMetaShapeRelationsWithData,
   PickQueryQ,
   PickQueryRelationsWithData,
-  Query,
   SelectableFromShape,
   WithDataItem,
 } from '../../query/query';
-import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
+import {
+  _clone,
+  pushQueryValue,
+  setQueryObjectValue,
+} from '../../query/queryUtils';
 import {
   EmptyTuple,
   Expression,
@@ -219,10 +222,10 @@ type JoinResultFromArgs<
         >
     : Arg extends keyof T['relations']
     ? JoinResultSelectable<
-        T['relations'][Arg]['relationConfig']['query']['shape'],
+        T['relations'][Arg]['shape'],
         AliasOrTable<{
-          table: T['relations'][Arg]['relationConfig']['query']['table'];
-          meta: T['relations'][Arg]['relationConfig']['query']['meta'];
+          table: T['relations'][Arg]['table'];
+          meta: T['relations'][Arg]['meta'];
         }>,
         RequireJoined
       >
@@ -325,27 +328,6 @@ type JoinAddSelectable<T extends PickQueryMeta, Selectable> = {
     : T[K];
 };
 
-// Map `selectable` of the query to make all columns optional, and add the given `Selectable` to it.
-// Derive and apply a new query result type, where all columns become optional.
-// type JoinOptionalMain<T extends PickQueryMetaResultReturnType, Selectable> = ;
-
-/**
- * Map the `with` table first argument of `join` or `joinLateral` to a query type.
- * Constructs `selectable` based on `with` table shape, and adds generic types to conform the `QueryBase` type.
- */
-interface JoinWithArgToQuery<With extends WithDataItem> extends Query {
-  table: With['table'];
-  meta: QueryMetaBase & {
-    selectable: {
-      [K in keyof With['shape'] & string as `${With['table']}.${K}`]: {
-        as: K;
-        column: With['shape'][K];
-      };
-    };
-  };
-  result: With['shape'];
-}
-
 /**
  * Map the first argument of `join` or `joinLateral` to a query type.
  *
@@ -358,12 +340,34 @@ export type JoinArgToQuery<
   Arg extends JoinFirstArg<T>,
 > = Arg extends keyof T['withData']
   ? T['withData'][Arg] extends WithDataItem
-    ? JoinWithArgToQuery<T['withData'][Arg]>
+    ? /**
+       * Map the `with` table first argument of `join` or `joinLateral` to a query type.
+       * Constructs `selectable` based on `with` table shape.
+       */
+      {
+        [K in 'table' | 'meta' | 'result' | keyof T]: K extends 'table'
+          ? T['withData'][Arg]['table']
+          : K extends 'meta'
+          ? QueryMetaBase & {
+              selectable: {
+                [K in keyof T['withData'][Arg]['shape'] &
+                  string as `${T['withData'][Arg]['table']}.${K}`]: {
+                  as: K;
+                  column: T['withData'][Arg]['shape'][K];
+                };
+              };
+            }
+          : K extends 'result'
+          ? T['withData'][Arg]['shape']
+          : K extends keyof T
+          ? T[K]
+          : never;
+      }
     : never
   : Arg extends PickQueryTableMetaResult
   ? Arg
   : Arg extends keyof T['relations']
-  ? T['relations'][Arg]['relationConfig']['query']
+  ? T['relations'][Arg]
   : Arg extends JoinArgToQueryCallback
   ? ReturnType<Arg>
   : never;
@@ -825,10 +829,10 @@ export class Join {
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, true, true> {
     return _join(
-      (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
+      _clone(this),
       true,
       'JOIN',
-      arg,
+      arg as never,
       args as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     ) as never;
   }
@@ -867,10 +871,10 @@ export class Join {
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, false, true> {
     return _join(
-      (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
+      _clone(this),
       false,
       'LEFT JOIN',
-      arg,
+      arg as never,
       args as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     ) as never;
   }
@@ -906,10 +910,10 @@ export class Join {
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, true, false> {
     return _join(
-      (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
+      _clone(this),
       true,
       'RIGHT JOIN',
-      arg,
+      arg as never,
       args as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     ) as never;
   }
@@ -945,10 +949,10 @@ export class Join {
     ...args: Args
   ): JoinResultFromArgs<T, Arg, Args, false, false> {
     return _join(
-      (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
+      _clone(this),
       false,
       'FULL JOIN',
-      arg,
+      arg as never,
       args as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     ) as never;
   }
@@ -1034,9 +1038,9 @@ export class Join {
     },
   ): JoinLateralResult<T, Table, Meta, Result, true> {
     return _joinLateral(
-      (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
+      _clone(this),
       'JOIN',
-      arg,
+      arg as never,
       cb as never,
     ) as never;
   }
@@ -1072,9 +1076,9 @@ export class Join {
     },
   ): JoinLateralResult<T, Table, Meta, Result, false> {
     return _joinLateral(
-      (this as any).clone(), // eslint-disable-line @typescript-eslint/no-explicit-any
+      _clone(this),
       'LEFT JOIN',
-      arg,
+      arg as never,
       cb as never,
     ) as never;
   }
@@ -1150,15 +1154,15 @@ export const addQueryOn = <T extends PickQueryMeta>(
   joinTo: PickQueryMeta,
   ...args: OnArgs<SelectableBase>
 ): T => {
-  const cloned = (q as unknown as Query).clone() as unknown;
+  const cloned = _clone(q);
   setQueryObjectValue(
-    cloned as PickQueryQ,
+    cloned,
     'joinedShapes',
     ((joinFrom as unknown as PickQueryQ).q.as ||
       (joinFrom as PickQueryTable).table) as string,
     (joinFrom as unknown as PickQueryQ).q.shape,
   );
-  return pushQueryOn(cloned as PickQueryMeta, joinFrom, joinTo, ...args) as T;
+  return pushQueryOn(cloned, joinFrom, joinTo, ...args) as never;
 };
 
 // To join record based on a value inside their json columns
@@ -1251,8 +1255,7 @@ export class OnMethods {
     this: T,
     ...args: OnArgs<T['meta']['selectable']>
   ): T {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return _queryJoinOn((this as any).clone(), args);
+    return _queryJoinOn(_clone(this) as never, args);
   }
 
   /**
@@ -1264,8 +1267,7 @@ export class OnMethods {
     this: T,
     ...args: OnArgs<T['meta']['selectable']>
   ): T {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return _queryJoinOrOn((this as any).clone(), args);
+    return _queryJoinOrOn(_clone(this) as never, args);
   }
 
   /**
@@ -1284,7 +1286,6 @@ export class OnMethods {
     this: T,
     ...args: OnJsonPathEqualsArgs<T['meta']['selectable']>
   ): T {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return _queryJoinOnJsonPathEquals((this as any).clone(), args);
+    return _queryJoinOnJsonPathEquals(_clone(this) as never, args);
   }
 }

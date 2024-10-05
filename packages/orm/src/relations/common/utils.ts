@@ -6,6 +6,8 @@ import {
   JoinCallback,
   JoinQueryMethod,
   PickQueryMetaRelations,
+  PickQueryQ,
+  PickQueryRelations,
   pushQueryOnForOuter,
   Query,
   RelationConfigBase,
@@ -88,7 +90,9 @@ export const getSourceRelation = (
   throughRelation: RelationConfigBase,
   source: string,
 ): RelationConfigBase => {
-  return throughRelation.query.relations[source]?.relationConfig;
+  return (throughRelation.query as unknown as PickQueryRelations).relations[
+    source
+  ]?.relationConfig;
 };
 
 export const hasRelationHandleCreate = (
@@ -207,11 +211,11 @@ export function joinHasThrough(
   sourceRelation: RelationConfigBase,
 ): Query {
   return q.whereExists(
-    throughRelation.joinQuery(throughRelation.query, baseQuery),
+    throughRelation.joinQuery(throughRelation.query, baseQuery) as never,
     (() => {
       const as = getQueryAs(joiningQuery);
       return sourceRelation.joinQuery(
-        sourceRelation.query.as(as),
+        (sourceRelation.query as Query).as(as),
         throughRelation.query,
       );
     }) as unknown as JoinCallback<Query, Query>,
@@ -254,7 +258,7 @@ export const joinQueryChainingHOF =
     joinQuery: RelationJoinQuery,
   ): RelationJoinQuery =>
   (joiningQuery, baseQuery) => {
-    const chain = joiningQuery.q.relChain;
+    const chain = (joiningQuery as unknown as PickQueryQ).q.relChain;
     if (!chain || chain.length === 1) {
       return joinQuery(joiningQuery, baseQuery);
     }
@@ -262,10 +266,10 @@ export const joinQueryChainingHOF =
     const last = chain[chain.length - 1];
     const query =
       'relationConfig' in last
-        ? last.relationConfig.joinQuery(last, baseQuery)
+        ? last.relationConfig.joinQuery(last as never, baseQuery)
         : last;
 
-    return joiningQuery.where({
+    return (joiningQuery as Query).where({
       EXISTS: { q: reverseJoin(query, joiningQuery) },
     });
   };

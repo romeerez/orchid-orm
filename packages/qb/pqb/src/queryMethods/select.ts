@@ -13,7 +13,7 @@ import {
   ColumnsShapeToPluck,
 } from '../columns';
 import { JSONTextColumn } from '../columns/json';
-import { pushQueryArray } from '../query/queryUtils';
+import { _clone, pushQueryArray } from '../query/queryUtils';
 import { SelectAsValue, SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
 import {
   ColumnsParsers,
@@ -23,6 +23,7 @@ import {
   getValueKey,
   HookSelect,
   isExpression,
+  IsQuery,
   PickQueryMeta,
   PickQueryReturnType,
   QueryColumn,
@@ -35,7 +36,6 @@ import {
   setColumnData,
   setParserToQuery,
 } from 'orchid-core';
-import { QueryBase } from '../query/queryBase';
 import { _joinLateral } from './join/_join';
 import {
   resolveSubQueryCallback,
@@ -84,12 +84,13 @@ interface SelectAsArg<T extends SelectSelf> {
         q: EmptyObject extends T['relations']
           ? T
           : {
-              [K in keyof T]: K extends keyof T['relations']
-                ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  T[K] extends (...args: any[]) => any
-                  ? ReturnType<T[K]>
-                  : never
-                : T[K];
+              [K in
+                | keyof T['relations']
+                | keyof T]: K extends keyof T['relations']
+                ? T['relations'][K]['relationConfig']['maybeSingle']
+                : K extends keyof T
+                ? T[K]
+                : never;
             },
       ) => unknown);
 }
@@ -301,14 +302,14 @@ type SelectAsValueResult<
   ? T['meta']['selectable'][Arg]['column']
   : Arg extends Expression
   ? Arg['result']['value']
-  : Arg extends (q: never) => QueryBase
+  : Arg extends (q: never) => IsQuery
   ? SelectSubQueryResult<ReturnType<Arg>>
   : Arg extends (q: never) => Expression
   ? ReturnType<Arg>['result']['value']
-  : Arg extends (q: never) => QueryBase | Expression
+  : Arg extends (q: never) => IsQuery | Expression
   ?
       | SelectSubQueryResult<Exclude<ReturnType<Arg>, Expression>>
-      | Exclude<ReturnType<Arg>, QueryBase>['result']['value']
+      | Exclude<ReturnType<Arg>, IsQuery>['result']['value']
   : never;
 
 // map a sub query result into a column
@@ -804,8 +805,8 @@ const handleComputed = (
 // when isSubQuery is true, it will remove data.name of columns,
 // so that outside of the sub-query the columns are named with app-side names,
 // while db column names are encapsulated inside the sub-query
-export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
-  const query = q.q as SelectQueryData;
+export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
+  const query = (q as Query).q as SelectQueryData;
   const { select, shape } = query;
   let result: QueryColumns;
   if (!select) {
@@ -863,7 +864,7 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
 // converts selected items into a shape of columns
 // when `isSubQuery` is true, it un-names named columns
 const addColumnToShapeFromSelect = (
-  q: QueryBase,
+  q: IsQuery,
   arg: string,
   shape: QueryColumns,
   query: SelectQueryData,
@@ -875,7 +876,7 @@ const addColumnToShapeFromSelect = (
   if (index !== -1) {
     const table = arg.slice(0, index);
     const column = arg.slice(index + 1);
-    if (table === (q.q.as || q.table)) {
+    if (table === ((q as Query).q.as || (q as Query).table)) {
       result[key || column] = shape[column];
     } else {
       const it = query.joinedShapes?.[table]?.[column];
@@ -1026,7 +1027,7 @@ export class Select {
   ): SelectResultColumnsAndObj<T, Columns, Obj>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   select(this: SelectSelf, ...args: any[]): any {
-    return _querySelect((this as Query).clone(), args);
+    return _querySelect(_clone(this), args);
   }
 
   /**
@@ -1046,7 +1047,7 @@ export class Select {
    * ```
    */
   selectAll<T extends SelectSelf>(this: T): SelectResult<T, ['*']> {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
     q.q.select = ['*'];
     if (q.q.returning) {
       q.q.returnType = q.q.returningMany ? 'all' : 'oneOrThrow';

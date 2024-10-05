@@ -1,6 +1,6 @@
 import { quoteSchemaAndTable, rawOrColumnToSql, columnToSql } from './common';
 import { JoinItem, JoinItemArgs, SimpleJoinItemNonSubQueryArgs } from './types';
-import { PickQueryQAndBaseQuery, Query, QueryWithTable } from '../query/query';
+import { PickQueryQAndBaseQuery, Query } from '../query/query';
 import { whereToSql } from './where';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
@@ -42,7 +42,11 @@ export const processJoinItem = (
   let on: string | undefined;
 
   if ('j' in args) {
-    const { j, s, r } = args;
+    const { j, s, r } = args as {
+      j: Query;
+      s: boolean;
+      r?: Query;
+    };
 
     const tableName = (
       typeof j.q.from === 'string' ? j.q.from : j.table
@@ -67,7 +71,11 @@ export const processJoinItem = (
     target = `"${w}"`;
 
     if ('r' in args) {
-      const { s, r } = args;
+      const { s, r } = args as {
+        w: string;
+        s: boolean;
+        r: Query;
+      };
       if (s) {
         target = `LATERAL ${subJoinToSql(ctx, r, target, target)}`;
       } else {
@@ -84,11 +92,18 @@ export const processJoinItem = (
       );
     }
   } else {
-    const { q, s } = args;
+    const { q, s } = args as {
+      q: Query;
+      s: boolean;
+    };
     let joinAs;
 
     if ('r' in args) {
-      const { r } = args;
+      const { r } = args as {
+        q: Query;
+        s: boolean;
+        r: Query;
+      };
 
       const res = getArgQueryTarget(ctx, q, s, s);
       target = s ? `LATERAL ${res.target}` : res.target;
@@ -134,7 +149,7 @@ export const processJoinItem = (
 
 const getArgQueryTarget = (
   ctx: ToSQLCtx,
-  first: QueryWithTable,
+  first: Query,
   joinSubQuery: boolean,
   cloned?: boolean,
 ) => {
@@ -155,7 +170,8 @@ const getArgQueryTarget = (
     };
   } else {
     let target =
-      quotedFrom || quoteSchemaAndTable(joinQuery.schema, first.table);
+      quotedFrom ||
+      quoteSchemaAndTable(joinQuery.schema, first.table as string);
     if (addAs) {
       joinAs = qAs;
       target += ` AS ${qAs}`;

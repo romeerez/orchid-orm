@@ -1,4 +1,4 @@
-import { Query, queryTypeWithLimitOne } from '../query/query';
+import { Query, QueryInternal, queryTypeWithLimitOne } from '../query/query';
 import { maybeSelectedColumnToSql } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
@@ -46,7 +46,7 @@ export interface ToSQLQuery {
   q: Query['q'];
   queryBuilder: Query['queryBuilder'];
   table?: Query['table'];
-  internal: Query['internal'];
+  internal: QueryInternal;
   relations: Query['relations'];
   withData: Query['withData'];
   clone: Query['clone'];

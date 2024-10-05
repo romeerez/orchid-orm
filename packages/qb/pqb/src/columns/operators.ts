@@ -1,5 +1,4 @@
 import {
-  PickQueryBaseQuery,
   PickQueryColumnTypes,
   PickQueryQ,
   PickQueryResultColumnTypes,
@@ -15,6 +14,7 @@ import {
   Expression,
   getValueKey,
   isExpression,
+  IsQuery,
   MaybeArray,
   PickOutputTypeAndOperators,
   PickQueryResult,
@@ -45,10 +45,7 @@ export interface Operator<
 // Extend query object with given operator methods, so that user can call `gt` after calling `count`.
 // If query already has the same operators, nothing is changed.
 // Previously defined operators, if any, are **not** dropped from the query.
-export function setQueryOperators(
-  query: PickQueryBaseQuery,
-  operators: RecordUnknown,
-) {
+export function setQueryOperators(query: IsQuery, operators: RecordUnknown) {
   const q = (query as unknown as PickQueryQ).q;
 
   if (q.operators !== operators) {
@@ -71,7 +68,7 @@ const make = (
 ): any => {
   return Object.assign(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function (this: Query, value: any) {
+    function (this: PickQueryQ, value: any) {
       (this.q.chain ??= []).push(_op, value);
 
       // parser might be set by a previous type, but is not needed for boolean
@@ -79,7 +76,7 @@ const make = (
         this.q.parsers[getValueKey] = undefined;
       }
 
-      return setQueryOperators(this, boolean as never);
+      return setQueryOperators(this as never, boolean as never);
     },
     {
       // function to turn the operator expression into SQL
@@ -96,7 +93,7 @@ const makeVarArg = (
 ): any => {
   return Object.assign(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function (this: Query, ...args: any[]) {
+    function (this: PickQueryQ, ...args: any[]) {
       (this.q.chain ??= []).push(_op, args);
 
       // parser might be set by a previous type, but is not needed for boolean
@@ -104,7 +101,7 @@ const makeVarArg = (
         this.q.parsers[getValueKey] = undefined;
       }
 
-      return setQueryOperators(this, boolean as never);
+      return setQueryOperators(this as never, boolean as never);
     },
     {
       // function to turn the operator expression into SQL
@@ -166,10 +163,10 @@ const quoteLikeValue = (
 
 // common operators that exist for any types
 interface Base<Value> {
-  equals: Operator<Value | Query | Expression, BooleanQueryColumn>;
-  not: Operator<Value | Query | Expression, BooleanQueryColumn>;
-  in: Operator<Value[] | Query | Expression, BooleanQueryColumn>;
-  notIn: Operator<Value[] | Query | Expression, BooleanQueryColumn>;
+  equals: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
+  not: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
+  in: Operator<Value[] | IsQuery | Expression, BooleanQueryColumn>;
+  notIn: Operator<Value[] | IsQuery | Expression, BooleanQueryColumn>;
 }
 
 const base: Base<unknown> = {
@@ -217,12 +214,12 @@ const boolean = {
 
 // Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
 interface Ord<Value> extends Base<Value> {
-  lt: Operator<Value | Query | Expression, BooleanQueryColumn>;
-  lte: Operator<Value | Query | Expression, BooleanQueryColumn>;
-  gt: Operator<Value | Query | Expression, BooleanQueryColumn>;
-  gte: Operator<Value | Query | Expression, BooleanQueryColumn>;
+  lt: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
+  lte: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
+  gt: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
+  gte: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
   between: Operator<
-    [Value | Query | Expression, Value | Query | Expression],
+    [Value | IsQuery | Expression, Value | IsQuery | Expression],
     BooleanQueryColumn
   >;
 }
@@ -259,15 +256,21 @@ const numeric = {
 
 // Text type operators
 export interface OperatorsText extends Base<string> {
-  contains: Operator<string | Query | Expression, BooleanQueryColumn>;
-  containsSensitive: Operator<string | Query | Expression, BooleanQueryColumn>;
-  startsWith: Operator<string | Query | Expression, BooleanQueryColumn>;
-  startsWithSensitive: Operator<
-    string | Query | Expression,
+  contains: Operator<string | IsQuery | Expression, BooleanQueryColumn>;
+  containsSensitive: Operator<
+    string | IsQuery | Expression,
     BooleanQueryColumn
   >;
-  endsWith: Operator<string | Query | Expression, BooleanQueryColumn>;
-  endsWithSensitive: Operator<string | Query | Expression, BooleanQueryColumn>;
+  startsWith: Operator<string | IsQuery | Expression, BooleanQueryColumn>;
+  startsWithSensitive: Operator<
+    string | IsQuery | Expression,
+    BooleanQueryColumn
+  >;
+  endsWith: Operator<string | IsQuery | Expression, BooleanQueryColumn>;
+  endsWithSensitive: Operator<
+    string | IsQuery | Expression,
+    BooleanQueryColumn
+  >;
 }
 
 const text = {
@@ -386,8 +389,8 @@ interface JsonPathQuery {
 // JSON type operators
 export interface OperatorsJson extends Base<unknown> {
   jsonPathQueryFirst: JsonPathQuery;
-  jsonSupersetOf: Operator<unknown | Query | Expression, BooleanQueryColumn>;
-  jsonSubsetOf: Operator<unknown | Query | Expression, BooleanQueryColumn>;
+  jsonSupersetOf: Operator<unknown | IsQuery | Expression, BooleanQueryColumn>;
+  jsonSubsetOf: Operator<unknown | IsQuery | Expression, BooleanQueryColumn>;
   jsonSet: {
     /**
      * Returns a JSON value/object/array where a given value is set at the given path.
@@ -522,20 +525,21 @@ const json = {
   ...base,
   jsonPathQueryFirst: Object.assign(
     function (
-      this: Query,
+      this: IsQuery,
       path: string,
       options?: JsonPathQueryTypeOptions<PickQueryColumnTypes, ColumnTypeBase>,
     ) {
-      const chain = (this.q.chain ??= []);
+      const { q, columnTypes } = this as Query;
+      const chain = (q.chain ??= []);
       chain.push(jsonPathQueryOp, [path, options]);
 
-      if (this.q.parsers?.[getValueKey]) {
-        this.q.parsers[getValueKey] = undefined;
+      if (q.parsers?.[getValueKey]) {
+        q.parsers[getValueKey] = undefined;
       }
 
       if (options?.type) {
-        const type = options.type(this.columnTypes);
-        addColumnParserToQuery(this.q, getValueKey, type);
+        const type = options.type(columnTypes);
+        addColumnParserToQuery(q, getValueKey, type);
 
         // push the type cast `::type` only if operator is applied
         chain.push = (...args: unknown[]) => {

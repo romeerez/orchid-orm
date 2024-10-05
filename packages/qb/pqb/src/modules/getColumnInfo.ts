@@ -1,6 +1,7 @@
-import { Query, SetQueryKind } from '../query/query';
+import { SetQueryKind } from '../query/query';
 import { ColumnInfoQueryData } from '../sql';
 import { PickQueryMetaShape, QueryColumn, QueryThen } from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 
 /**
  * Result type for `columnInfo` method.
@@ -76,7 +77,7 @@ export function getColumnInfo<
   T extends PickQueryMetaShape,
   Column extends keyof T['shape'] | undefined = undefined,
 >(query: T, column?: Column): SetQueryReturnsColumnInfo<T, Column> {
-  const q = (query as unknown as Query).clone();
+  const q = _clone(query);
   q.q.type = 'columnInfo';
   q.q.returnType = 'all';
 

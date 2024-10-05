@@ -24,6 +24,7 @@ import { SelectableOrExpressions } from '../common/utils';
 import { AggregateOptions, makeFnExpression } from '../common/fn';
 import { BooleanQueryColumn } from './aggregate';
 import { Operators, OperatorsBoolean } from '../columns/operators';
+import { _clone } from '../query/queryUtils';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
@@ -192,7 +193,7 @@ export class ExpressionMethods {
     arg: K,
   ): RefExpression<T['meta']['selectable'][K]['column']> &
     T['meta']['selectable'][K]['column']['operators'] {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     const { shape } = q.q;
     let column: QueryColumn;

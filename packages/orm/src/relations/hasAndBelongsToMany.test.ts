@@ -1,4 +1,4 @@
-import { Db, TransactionAdapter } from 'pqb';
+import { Db, Query, TransactionAdapter } from 'pqb';
 import {
   Chat,
   chatData,
@@ -21,7 +21,7 @@ describe('hasAndBelongsToMany', () => {
   useTestORM();
 
   describe('querying', () => {
-    it('should have method to query related data', async () => {
+    it('should support `queryRelated` to query related data', async () => {
       const userId = await db.user.get('Id').create({
         ...userData,
         chats: {
@@ -30,7 +30,7 @@ describe('hasAndBelongsToMany', () => {
       });
 
       const user = await db.user.find(userId);
-      const query = db.user.chats(user);
+      const query = db.user.queryRelated('chats', user);
 
       expectSql(
         query.toSQL(),
@@ -55,7 +55,8 @@ describe('hasAndBelongsToMany', () => {
     it('should handle chained query', () => {
       const query = db.user
         .where({ Name: 'Name' })
-        .chats.where({ Title: 'title' });
+        .chain('chats')
+        .where({ Title: 'title' });
 
       expectSql(
         query.toSQL(),
@@ -81,8 +82,10 @@ describe('hasAndBelongsToMany', () => {
     it('should handle long chained query', () => {
       const q = db.chat
         .where({ Title: 'title' })
-        .users.where({ Name: 'name' })
-        .postTags.where({ Tag: 'tag' });
+        .chain('users')
+        .where({ Name: 'name' })
+        .chain('postTags')
+        .where({ Tag: 'tag' });
 
       assertType<Awaited<typeof q>, PostTag[]>();
 
@@ -128,18 +131,18 @@ describe('hasAndBelongsToMany', () => {
       it('should have create based on find query', async () => {
         const user = await db.user.create(userData);
 
-        const chat = await db.user.find(user.Id).chats.create({
+        const chat = await db.user.find(user.Id).chain('chats').create({
           Title: 'title',
           ChatKey: 'key',
         });
 
         expect(chat.Title).toBe('title');
-        const ids = await db.user.chats(user).pluck('IdOfChat');
+        const ids = await db.user.queryRelated('chats', user).pluck('IdOfChat');
         expect(ids).toEqual([chat.IdOfChat]);
       });
 
       it('should throw not found when not found even when searching with findOptional', async () => {
-        const query = db.user.findOptional(1).chats.create({
+        const query = db.user.findOptional(1).chain('chats').create({
           Title: 'title',
           ChatKey: 'key',
         });
@@ -149,7 +152,7 @@ describe('hasAndBelongsToMany', () => {
 
       it('should throw when the main query returns many records', async () => {
         await expect(() =>
-          db.user.chats.create({
+          db.user.chain('chats').create({
             Title: 'title',
             ChatKey: 'key',
           }),
@@ -159,10 +162,11 @@ describe('hasAndBelongsToMany', () => {
       });
     });
 
-    it('should have chained delete method', () => {
+    it('should support chained delete', () => {
       const query = db.user
         .where({ Name: 'Name' })
-        .chats.where({ Title: 'title' })
+        .chain('chats')
+        .where({ Title: 'title' })
         .delete();
 
       expectSql(
@@ -188,9 +192,12 @@ describe('hasAndBelongsToMany', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.chats.relationConfig
-          .joinQuery(db.chat.as('c'), db.user.as('u'))
-          .toSQL(),
+        (
+          db.user.relations.chats.relationConfig.joinQuery(
+            db.chat.as('c'),
+            db.user.as('u'),
+          ) as Query
+        ).toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" "c"
           WHERE EXISTS (
@@ -403,7 +410,7 @@ describe('hasAndBelongsToMany', () => {
 
       it('should support chained select', () => {
         const q = db.chat.select({
-          items: (q) => q.users.postTags,
+          items: (q) => q.users.chain('postTags'),
         });
 
         assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
@@ -659,7 +666,7 @@ describe('hasAndBelongsToMany', () => {
 
         const user = await query;
         const chatIds = await db.user
-          .chats(user)
+          .queryRelated('chats', user)
           .order('IdOfChat')
           .pluck('IdOfChat');
 
@@ -904,7 +911,7 @@ describe('hasAndBelongsToMany', () => {
 
         const user = await query;
         const chatIds = await db.user
-          .chats(user)
+          .queryRelated('chats', user)
           .order('IdOfChat')
           .pluck('IdOfChat');
 
@@ -1104,7 +1111,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const user = await query;
-        const chats = await db.user.chats(user).order('Title');
+        const chats = await db.user.queryRelated('chats', user).order('Title');
 
         expect(chats[0].IdOfChat).toBe(chatId);
 
@@ -1266,7 +1273,10 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id: userId, UserKey: 'key' });
+        const chats = await db.user.queryRelated('chats', {
+          Id: userId,
+          UserKey: 'key',
+        });
         expect(chats.length).toBe(1);
         expect(chats[0].Title).toEqual('chat 3');
       });
@@ -1286,7 +1296,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const chats = await db.user
-          .chats({ Id, UserKey: 'key' })
+          .queryRelated('chats', { Id, UserKey: 'key' })
           .pluck('Title');
         expect(chats).toEqual(['chat 1']);
       });
@@ -1316,7 +1326,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const chats = await db.user
-          .chats({ Id, UserKey: 'key' })
+          .queryRelated('chats', { Id, UserKey: 'key' })
           .select('Title')
           .order('Title');
 
@@ -1340,7 +1350,10 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id, UserKey: 'key' });
+        const chats = await db.user.queryRelated('chats', {
+          Id,
+          UserKey: 'key',
+        });
 
         expect(chats).toEqual([]);
       });
@@ -1375,7 +1388,7 @@ describe('hasAndBelongsToMany', () => {
         expect(await db.chat.count()).toBe(2);
 
         const chats = await db.user
-          .chats({ Id, UserKey: 'key' })
+          .queryRelated('chats', { Id, UserKey: 'key' })
           .select('Title');
         expect(chats).toEqual([{ Title: 'chat 3' }]);
       });
@@ -1395,7 +1408,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const chats = await db.user
-          .chats({ Id, UserKey: 'key' })
+          .queryRelated('chats', { Id, UserKey: 'key' })
           .pluck('Title');
         expect(chats).toEqual(['chat 1']);
       });
@@ -1524,7 +1537,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const chats = await db.user
-          .chats({ Id, UserKey: 'key' })
+          .queryRelated('chats', { Id, UserKey: 'key' })
           .pluck('Title');
         expect(chats).toEqual(['chat 1']);
       });
@@ -1615,7 +1628,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const firstUserChats = await db.user
-          .chats({ Id: userIds[0], UserKey: 'key' })
+          .queryRelated('chats', { Id: userIds[0], UserKey: 'key' })
           .order('Title');
         expect(firstUserChats.map((chat) => chat.Title)).toEqual([
           'created 1',
@@ -1623,7 +1636,7 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         const secondUserChats = await db.user
-          .chats({ Id: userIds[1], UserKey: 'key' })
+          .queryRelated('chats', { Id: userIds[1], UserKey: 'key' })
           .order('Title');
         expect(secondUserChats.map((chat) => chat.Title)).toEqual([
           'created 1',
@@ -1644,7 +1657,10 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id, UserKey: 'key' });
+        const chats = await db.user.queryRelated('chats', {
+          Id,
+          UserKey: 'key',
+        });
         expect(chats).toEqual([]);
       });
 

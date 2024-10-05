@@ -3,7 +3,6 @@ import {
   ColumnsShape,
   ColumnType,
   GeneratorIgnore,
-  QueryWithTable,
   VirtualColumn,
 } from 'pqb';
 import {
@@ -33,6 +32,7 @@ import {
 } from './columns.generator';
 import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
+import { CodeTable } from '../generate';
 
 export interface CompareSql {
   values: unknown[];
@@ -44,7 +44,7 @@ export interface CompareSql {
 }
 
 export interface ChangeTableSchemaData {
-  codeTable: QueryWithTable;
+  codeTable: CodeTable;
   dbTable: DbStructure.Table;
 }
 
@@ -75,14 +75,14 @@ export const processTables = async (
   structureToAstCtx: StructureToAstCtx,
   domainsMap: DbStructureDomainsMap,
   adapter: Adapter,
-  tables: QueryWithTable[],
+  tables: CodeTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
   config: AnyRakeDbConfig,
   generatorIgnore: GeneratorIgnore | undefined,
   verifying: boolean | undefined,
 ): Promise<void> => {
-  const createTables: QueryWithTable[] = collectCreateTables(
+  const createTables: CodeTable[] = collectCreateTables(
     tables,
     dbStructure,
     currentSchema,
@@ -141,11 +141,11 @@ export const processTables = async (
 };
 
 const collectCreateTables = (
-  tables: QueryWithTable[],
+  tables: CodeTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
-): QueryWithTable[] => {
-  return tables.reduce<QueryWithTable[]>((acc, codeTable) => {
+): CodeTable[] => {
+  return tables.reduce<CodeTable[]>((acc, codeTable) => {
     const tableSchema = codeTable.q.schema ?? currentSchema;
     const hasDbTable = dbStructure.tables.some(
       (t) => t.name === codeTable.table && t.schemaName === tableSchema,
@@ -159,10 +159,10 @@ const collectCreateTables = (
 
 const collectChangeAndDropTables = (
   config: AnyRakeDbConfig,
-  tables: QueryWithTable[],
+  tables: CodeTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
-  createTables: QueryWithTable[],
+  createTables: CodeTable[],
   generatorIgnore: GeneratorIgnore | undefined,
 ): {
   changeTables: ChangeTableData[];
@@ -326,7 +326,7 @@ const applyCompareSql = async (compareSql: CompareSql, adapter: Adapter) => {
 
 const applyCreateOrRenameTables = async (
   dbStructure: IntrospectedStructure,
-  createTables: QueryWithTable[],
+  createTables: CodeTable[],
   dropTables: DbStructure.Table[],
   changeTables: ChangeTableData[],
   tableShapes: TableShapes,
@@ -378,7 +378,7 @@ const addChangeTable = (
   tableShapes: TableShapes,
   currentSchema: string,
   dbTable: DbStructure.Table,
-  codeTable: QueryWithTable,
+  codeTable: CodeTable,
 ) => {
   const shape = {};
   const schema = codeTable.q.schema ?? currentSchema;
@@ -406,7 +406,7 @@ const addChangeTable = (
 
 const createTableAst = (
   currentSchema: string,
-  table: QueryWithTable,
+  table: CodeTable,
 ): RakeDbAst.Table => {
   return {
     type: 'table',
@@ -420,7 +420,7 @@ const createTableAst = (
   };
 };
 
-const makeTableShape = (table: QueryWithTable): ColumnsShape => {
+const makeTableShape = (table: CodeTable): ColumnsShape => {
   const shape: ColumnsShape = {};
   for (const key in table.shape) {
     const column = table.shape[key];

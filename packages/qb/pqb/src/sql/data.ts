@@ -35,7 +35,7 @@ import {
   QueryLogger,
   QueryLogObject,
 } from 'orchid-core';
-import { RelationQuery } from '../relations';
+import { RelationQueryBase } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitError } from '../queryMethods';
@@ -185,7 +185,7 @@ export interface CommonQueryData {
   // 1 for the same query, 2 for relation queries returned from the callback.
   subQuery?: number;
   // Chained relations, such as `db.user.messages.chat` are stored into array.
-  relChain?: (Query | RelationQuery)[];
+  relChain?: (Query | RelationQueryBase)[];
   /**
    * Stores current operator functions available for the query.
    * Is needed to remove these operators from query object when changing the query type, see {@link setQueryOperators}.

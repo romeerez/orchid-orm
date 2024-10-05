@@ -63,7 +63,7 @@ describe('baseTable', () => {
     expect(base.exportAs).toBe('custom');
   });
 
-  it('should have a getFilePath method to return a path where the baseTable is defined', () => {
+  it('should support getFilePath to return a path where the baseTable is defined', () => {
     expect(BaseTable.getFilePath()).toBe(
       path.join(__dirname, 'test-utils', 'test-tables.ts'),
     );
@@ -710,7 +710,7 @@ describe('baseTable', () => {
 
     const local = orchidORM({ db: db.$queryBuilder }, { user: UserTable });
 
-    it('should filter records by `deletedAt`, add `includeDeleted` and `hardDelete` methods', () => {
+    it('should filter records by `deletedAt`, add `includeDeleted` and `hardDelete`', () => {
       expectSql(
         local.user.toSQL(),
         `

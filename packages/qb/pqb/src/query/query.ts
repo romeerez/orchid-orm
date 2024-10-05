@@ -23,12 +23,12 @@ import {
   QueryColumn,
   QueryColumns,
   QueryInternalBase,
+  QueryMetaBase,
   QueryReturnType,
   QueryThen,
   RecordKeyTrue,
   RecordUnknown,
 } from 'orchid-core';
-import { QueryBase } from './queryBase';
 import { ColumnType } from '../columns';
 import { TableData } from '../tableData';
 
@@ -77,6 +77,8 @@ export interface QueryInternal<
   primaryKeys?: string[];
   // cache `columnNameToKey` method that's available on table instances
   columnNameToKeyMap?: Map<string, string>;
+  // for select, where, join callbacks: memoize a query extended with relations, so query.relName is a relation query
+  callbackArg?: Query;
 }
 
 export type SelectableFromShape<
@@ -98,7 +100,15 @@ export interface WithDataItems {
   [K: string]: WithDataItem;
 }
 
-export interface Query extends QueryBase, QueryMethods<unknown> {
+export interface Query extends QueryMethods<unknown> {
+  __isQuery: true;
+  result: QueryColumns;
+  table?: string;
+  withData: WithDataItems;
+  baseQuery: Query;
+  internal: QueryInternal;
+  meta: QueryMetaBase<EmptyObject>;
+  returnType: QueryReturnType;
   queryBuilder: Db;
   columnTypes: unknown;
   shape: QueryColumns;
@@ -143,6 +153,10 @@ export interface PickQueryBaseQuery {
 export interface PickQueryMetaRelations
   extends PickQueryMeta,
     PickQueryRelations {}
+
+export interface PickQueryMetaRelationsResult
+  extends PickQueryMetaRelations,
+    PickQueryResult {}
 
 export interface PickQueryMetaResultRelations
   extends PickQueryResult,
@@ -253,10 +267,6 @@ export type SelectableOrExpressionOfType<
   T extends PickQueryMeta,
   C extends PickType,
 > = SelectableOfType<T, C['type']> | Expression<QueryColumn<C['type'] | null>>;
-
-export interface QueryWithTable extends Query {
-  table: string;
-}
 
 export const queryTypeWithLimitOne: RecordKeyTrue = {
   one: true,

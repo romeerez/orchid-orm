@@ -11,7 +11,7 @@ import {
   QueryMethods,
   logParamToLogObject,
 } from '../queryMethods';
-import { QueryData, QueryScopes, SelectQueryData } from '../sql';
+import { QueryData, QueryScopes } from '../sql';
 import {
   Adapter,
   AdapterOptions,
@@ -27,14 +27,16 @@ import { QueryError, QueryErrorName } from '../errors';
 import {
   applyMixins,
   ColumnSchemaConfig,
+  ColumnShapeInput,
   ColumnShapeOutput,
   ColumnsParsers,
   ColumnTypeBase,
-  DbBase,
   DefaultSelectColumns,
+  DefaultSelectOutput,
   DynamicSQLArg,
   EmptyObject,
   emptyObject,
+  IsQuery,
   isRawSQL,
   MaybeArray,
   pushOrNewArray,
@@ -65,7 +67,6 @@ import {
   templateLiteralToSQL,
 } from '../sql/rawSql';
 import { ScopeArgumentQuery } from '../queryMethods/scope';
-import { QueryBase } from './queryBase';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
@@ -193,7 +194,7 @@ export type DbTableOptionScopes<
   Table extends string | undefined,
   Shape extends QueryColumns,
   Keys extends string = string,
-> = { [K in Keys]: (q: ScopeArgumentQuery<Table, Shape>) => QueryBase };
+> = { [K in Keys]: (q: ScopeArgumentQuery<Table, Shape>) => IsQuery };
 
 // Type of data returned from the table query by default, doesn't include computed columns.
 // `const user: User[] = await db.user;`
@@ -216,36 +217,40 @@ interface TableMeta<
   selectable: SelectableFromShape<ShapeWithComputed, Table>;
   defaultSelect: DefaultSelectColumns<Shape>;
 }
+export const anyShape = {} as QueryColumnsInit;
 
-export interface Db<
-  Table extends string | undefined = undefined,
-  Shape extends QueryColumnsInit = QueryColumnsInit,
-  PrimaryKeys = never,
-  // union of records { column name: query input type }
-  UniqueColumns = never,
-  // union of tuples of column names
-  UniqueColumnTuples = never,
-  // union of primary keys and unique index names
-  UniqueConstraints = never,
-  ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
-  ShapeWithComputed extends QueryColumnsInit = Shape,
-  Scopes extends RecordUnknown | undefined = EmptyObject,
-> extends DbBase<Adapter, Table, Shape, ColumnTypes, ShapeWithComputed>,
-    QueryMethods<ColumnTypes>,
-    QueryBase {
-  result: Pick<Shape, DefaultSelectColumns<Shape>>; // Pick is optimal
-  queryBuilder: Db;
-  returnType: undefined;
-  then: QueryThen<QueryDefaultReturnData<Shape>>;
-  windows: Query['windows'];
+export class Db<
+    Table extends string | undefined = undefined,
+    Shape extends QueryColumnsInit = QueryColumnsInit,
+    PrimaryKeys = never,
+    UniqueColumns = never,
+    UniqueColumnTuples = never,
+    UniqueConstraints = never,
+    ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
+    ShapeWithComputed extends QueryColumnsInit = Shape,
+    Scopes extends RecordUnknown | undefined = EmptyObject,
+  >
+  extends QueryMethods<ColumnTypes>
+  implements Query
+{
+  declare q: QueryData;
+  declare __isQuery: true;
+  baseQuery: Query;
+  columns: (keyof Shape)[];
+  declare outputType: DefaultSelectOutput<Shape>;
+  declare inputType: ColumnShapeInput<Shape>;
+  declare result: Pick<Shape, DefaultSelectColumns<Shape>>; // Pick is optimal
+  declare returnType: undefined;
+  declare then: QueryThen<QueryDefaultReturnData<Shape>>;
+  declare windows: EmptyObject;
   relations: EmptyObject;
-  withData: EmptyObject;
+  declare withData: EmptyObject;
   error: new (
     message: string,
     length: number,
     name: QueryErrorName,
   ) => QueryError<this>;
-  meta: TableMeta<Table, Shape, ShapeWithComputed, Scopes>;
+  declare meta: TableMeta<Table, Shape, ShapeWithComputed, Scopes>;
   internal: QueryInternal<
     {
       [K in keyof PrimaryKeys]: (
@@ -264,22 +269,8 @@ export interface Db<
     UniqueColumnTuples,
     UniqueConstraints
   >;
-  catch: QueryCatch;
-}
+  declare catch: QueryCatch;
 
-export const anyShape = {} as QueryColumnsInit;
-
-export class Db<
-  Table extends string | undefined = undefined,
-  Shape extends QueryColumnsInit = QueryColumnsInit,
-  PrimaryKeys = never,
-  UniqueColumns = never,
-  UniqueColumnTuples = never,
-  UniqueConstraints = never,
-  ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
-  ShapeWithComputed extends QueryColumnsInit = Shape,
-> implements Query
-{
   constructor(
     public adapter: Adapter,
     public queryBuilder: Db,
@@ -290,6 +281,8 @@ export class Db<
     options: DbTableOptions<ColumnTypes, Table, ShapeWithComputed>,
     tableData: TableData = emptyObject,
   ) {
+    super();
+
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
@@ -439,7 +432,7 @@ export class Db<
 
     if (options.scopes) {
       for (const key in options.scopes) {
-        const q = options.scopes[key](this).q as SelectQueryData;
+        const q = (options.scopes[key](this) as Query).q;
 
         (scopes as RecordUnknown)[key] = {
           and: q.and,

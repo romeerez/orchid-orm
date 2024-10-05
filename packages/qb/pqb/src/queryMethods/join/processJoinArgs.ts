@@ -1,4 +1,4 @@
-import { PickQueryRelations, Query, QueryWithTable } from '../../query/query';
+import { PickQueryQ, PickQueryRelations, Query } from '../../query/query';
 import { JoinArgs, JoinFirstArg, JoinQueryBuilder } from './join';
 import {
   JoinedShapes,
@@ -10,8 +10,7 @@ import {
 import { RelationJoinQuery } from '../../relations';
 import { pushQueryArray } from '../../query/queryUtils';
 import { getIsJoinSubQuery } from '../../sql/join';
-import { QueryBase } from '../../query/queryBase';
-import { returnArg } from 'orchid-core';
+import { IsQuery, returnArg } from 'orchid-core';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.
@@ -36,7 +35,7 @@ export const processJoinArgs = (
       const { query: toQuery, joinQuery } =
         joinTo.relations[first].relationConfig;
 
-      const j = joinQuery(toQuery, joinTo);
+      const j = joinQuery(toQuery, joinTo) as Query;
       if (typeof args[0] === 'function') {
         const r = args[0](
           makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo),
@@ -98,7 +97,7 @@ export const processJoinArgs = (
 
   const args0 = args.length ? args[0] : returnArg;
   if (typeof args0 === 'function') {
-    const q = first as QueryWithTable & {
+    const q = first as Query & {
       joinQueryAfterCallback?: RelationJoinQuery;
     };
 
@@ -108,7 +107,10 @@ export const processJoinArgs = (
         base = base.as(q.q.as);
       }
 
-      const { q: query } = q.joinQueryAfterCallback(base, joinTo);
+      const { q: query } = q.joinQueryAfterCallback(
+        base,
+        joinTo,
+      ) as unknown as PickQueryQ;
       if (query.and) {
         pushQueryArray(q, 'and', query.and);
       }
@@ -143,10 +145,10 @@ export const processJoinArgs = (
   }
 
   return {
-    q: first as QueryWithTable,
-    a: args as SimpleJoinItemNonSubQueryArgs,
+    q: first,
+    a: args,
     s: joinSubQuery,
-  };
+  } as never;
 };
 
 export const preprocessJoinArg = (
@@ -174,13 +176,13 @@ export const preprocessJoinArg = (
  * @param joinTo
  */
 const makeJoinQueryBuilder = (
-  joinedQuery: QueryBase,
+  joinedQuery: IsQuery,
   joinedShapes: JoinedShapes | undefined,
   joinTo: QueryDataJoinTo,
 ): JoinQueryBuilder<Query, Query> => {
-  const q = joinedQuery.baseQuery.clone();
-  q.baseQuery = q as unknown as Query;
-  q.q.as = joinedQuery.q.as;
+  const q = (joinedQuery as Query).baseQuery.clone();
+  q.baseQuery = q;
+  q.q.as = (joinedQuery as Query).q.as;
   q.q.joinedShapes = joinedShapes;
   q.q.joinTo = joinTo;
   return q as never;

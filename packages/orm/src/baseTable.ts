@@ -14,7 +14,6 @@ import {
   parseTableData,
   Query,
   QueryAfterHook,
-  QueryBase,
   QueryBeforeHook,
   QueryData,
   QueryHooks,
@@ -46,6 +45,7 @@ import {
   emptyObject,
   getCallerFilePath,
   getStackTrace,
+  IsQuery,
   MaybeArray,
   QueryColumn,
   QueryColumns,
@@ -109,14 +109,16 @@ export interface TableToDb<
       T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
       MapTableScopesOption<T>
     > {
-  relations: Relations;
+  relations: {
+    [K in keyof Relations]: Relations[K]['relationConfig']['query'] &
+      Relations[K];
+  };
 }
 
 // convert a table class type into queryable interface
-// add relation methods
 export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
   T extends RelationConfigSelf
-    ? TableToDb<T, MapRelations<T>> & MapRelations<T>
+    ? TableToDb<T, MapRelations<T>>
     : TableToDb<T, EmptyObject>;
 
 // `columns` property of table has a shape and an output type of the columns
@@ -212,7 +214,7 @@ export interface BaseTableInstance<ColumnTypes> {
   language?: string;
   filePath: string;
   result: ColumnsShapeBase;
-  clone<T extends QueryBase>(this: T): T;
+  clone<T extends IsQuery>(this: T): T;
   getFilePath(): string;
   setColumns<
     Shape extends ColumnsShapeBase,
@@ -601,7 +603,7 @@ export function createBaseTable<
     declare filePath: string;
     declare result: ColumnsShapeBase;
 
-    clone<T extends QueryBase>(this: T): T {
+    clone<T extends IsQuery>(this: T): T {
       return this;
     }
 

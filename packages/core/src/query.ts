@@ -40,6 +40,8 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
   kind: string;
   // table alias
   as?: string;
+  // single relations (belongsTo, hasOne) returns one when subQuery is true, returns many otherwise
+  subQuery?: boolean;
   // return type of `create`, `update`, `delete` depends on whether the query has select
   hasSelect?: true;
   // `update` and `delete` require the query to have `where`.

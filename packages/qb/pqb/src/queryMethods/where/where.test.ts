@@ -168,6 +168,7 @@ describe('where sub query', () => {
   it('should handle boolean operator on aggregate sub query', () => {
     const messageRelation = Object.assign(Object.create(Message), {
       relationConfig: {
+        query: Message,
         joinQuery(q: Query, _baseQuery: Query) {
           return q;
         },

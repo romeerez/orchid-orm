@@ -1,5 +1,54 @@
 # Breaking changes
 
+## orchid-orm 1.37
+
+Previously, you could chain relations in a such way:
+
+```ts
+// load books of an author
+const books = await db.author.take().books;
+```
+
+But if the relation is named `order`, it was causing a naming conflict:
+
+```ts
+// load an order of an order item
+const order = await db.orderItem.take().order; // order here refers to SQL `ORDER BY`
+```
+
+To resolve the naming conflict, such a chaining as shown above is no longer available.
+
+Use `queryRelated` to load related data for a previously loaded record:
+
+```ts
+const author = await db.author.find(1);
+const books = await db.author.queryRelated('books', author);
+```
+
+Use `chain` to load related data based on a query:
+
+```ts
+const books = await db.author.find(1).chain('books');
+```
+
+In `select` and other query callbacks, you can still refer to relations as before:
+
+```ts
+await db.author.select({
+  // load all author books
+  books: (q) => q.books,
+});
+```
+
+In the case you need to load a two or more levels deep relation, use `chain`:
+
+```ts
+await db.author.select({
+  // load all reviews for all author books
+  booksReviews: (q) => q.books.chain('reviews'),
+});
+```
+
 ## orchid-orm 1.36
 
 Stop handling null in column `parse`, add `parseNull` for this instead.

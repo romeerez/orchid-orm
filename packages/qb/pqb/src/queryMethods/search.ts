@@ -20,6 +20,7 @@ import {
   ToSQLCtx,
 } from '../sql';
 import {
+  _clone,
   pushQueryValue,
   saveSearchAlias,
   setQueryObjectValue,
@@ -431,7 +432,7 @@ export class SearchMethods {
     this: T,
     arg: SearchArg<T, As>,
   ): WhereSearchResult<T, As> {
-    const q = (this as unknown as Query).clone();
+    const q = _clone(this);
 
     if (!arg.as) {
       const as = saveSearchAlias(q, '@q', 'joinedShapes') as As;

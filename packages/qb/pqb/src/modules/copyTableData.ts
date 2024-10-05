@@ -1,6 +1,7 @@
-import { Query, SetQueryKind } from '../query/query';
+import { SetQueryKind } from '../query/query';
 import { CopyOptions } from '../sql';
 import { PickQueryMeta, PickQueryMetaShape, PickQueryShape } from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 
 // argument of the `copy` function can accept various options
 type CopyArg<T extends PickQueryShape> = CopyOptions<keyof T['shape']>;
@@ -60,7 +61,7 @@ export function copyTableData<T extends PickQueryMetaShape>(
   query: T,
   arg: CopyArg<T>,
 ): CopyResult<T> {
-  const q = (query as unknown as Query).clone();
+  const q = _clone(query);
   Object.assign(q.q, {
     type: 'copy',
     copy: arg,

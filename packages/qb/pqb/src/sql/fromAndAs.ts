@@ -2,13 +2,19 @@ import { columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { QueryData, QueryDataFromItem, SelectQueryData } from './data';
-import { QueryBase } from '../query/queryBase';
-import { addValue, isExpression, isRawSQL, MaybeArray } from 'orchid-core';
+import {
+  addValue,
+  isExpression,
+  IsQuery,
+  isRawSQL,
+  MaybeArray,
+} from 'orchid-core';
 import { getSqlText } from './utils';
+import { Query } from '../query/query';
 
 export const pushFromAndAs = (
   ctx: ToSQLCtx,
-  table: QueryBase,
+  table: IsQuery,
   data: SelectQueryData,
   quotedAs?: string,
 ) => {
@@ -59,7 +65,7 @@ export const pushFromAndAs = (
 
 const getFrom = (
   ctx: ToSQLCtx,
-  table: QueryBase,
+  table: IsQuery,
   data: SelectQueryData,
   quotedAs?: string,
 ) => {
@@ -74,7 +80,7 @@ const getFrom = (
     return fromToSql(ctx, data, from, quotedAs);
   }
 
-  let sql = quoteSchemaAndTable(data.schema, table.table as string);
+  let sql = quoteSchemaAndTable(data.schema, (table as Query).table as string);
   if (data.only) sql = `ONLY ${sql}`;
   return sql;
 };
