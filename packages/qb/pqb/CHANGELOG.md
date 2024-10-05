@@ -1,5 +1,11 @@
 # pqb
 
+## 0.42.1
+
+### Patch Changes
+
+- 0d88002: Support parsing db array of jsonb type (#415)
+
 ## 0.42.0
 
 ### Minor Changes
