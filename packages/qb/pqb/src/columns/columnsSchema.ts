@@ -1,6 +1,6 @@
 import { ColumnType } from './columnType';
 import { OperatorsAny } from './operators';
-import { QueryColumns } from 'orchid-core';
+import { QueryColumns, ShallowSimplify } from 'orchid-core';
 
 export interface ColumnsShape {
   [K: string]: ColumnType;
@@ -9,7 +9,7 @@ export interface ColumnsShape {
 export interface ColumnsShapeToObject<Shape extends QueryColumns> {
   dataType: 'object';
   type: ObjectType<Shape>;
-  outputType: ObjectOutput<Shape>;
+  outputType: ShallowSimplify<ObjectOutput<Shape>>;
   queryType: ObjectQuery<Shape>;
   operators: OperatorsAny;
 }
@@ -17,7 +17,7 @@ export interface ColumnsShapeToObject<Shape extends QueryColumns> {
 export interface ColumnsShapeToNullableObject<Shape extends QueryColumns> {
   dataType: 'object';
   type: ObjectType<Shape>;
-  outputType: ObjectOutput<Shape> | undefined;
+  outputType: ShallowSimplify<ObjectOutput<Shape>> | undefined;
   queryType: ObjectQuery<Shape> | null;
   operators: OperatorsAny;
 }
@@ -45,7 +45,7 @@ export interface ColumnsShapeToPluck<Shape extends QueryColumns> {
 export interface ColumnsShapeToObjectArray<Shape extends QueryColumns> {
   dataType: 'array';
   type: ObjectType<Shape>[];
-  outputType: ObjectOutput<Shape>[];
+  outputType: ShallowSimplify<ObjectOutput<Shape>>[];
   queryType: ObjectQuery<Shape>[];
   operators: OperatorsAny;
 }

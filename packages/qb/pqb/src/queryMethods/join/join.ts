@@ -1,5 +1,4 @@
 import {
-  GetQueryResult,
   PickQueryMetaResultRelationsWithDataReturnType,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaShapeRelationsWithData,
@@ -25,7 +24,7 @@ import {
   QueryColumns,
   QueryColumnToNullable,
   QueryMetaBase,
-  QueryThen,
+  QueryThenByQuery,
   SelectableBase,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
@@ -180,14 +179,12 @@ export type JoinResult<
             [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
           }
         : K extends 'then'
-        ? QueryThen<
-            GetQueryResult<
-              T,
-              // nullable result: inlined for optimization
-              {
-                [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
-              }
-            >
+        ? QueryThenByQuery<
+            T,
+            // nullable result: inlined for optimization
+            {
+              [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
+            }
           >
         : T[K];
     };

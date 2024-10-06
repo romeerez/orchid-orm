@@ -4,7 +4,6 @@ import {
   pushOrNewArray,
   pushOrNewArrayToObject,
   quoteObjectKey,
-  Simplify,
   singleQuote,
 } from './utils';
 import url from 'url';
@@ -83,17 +82,6 @@ describe('utils', () => {
         value: 'win32',
       });
       expect(pathToLog('path')).toBe('path');
-    });
-  });
-
-  describe('Simplify', () => {
-    it('should not simplify selected types: Date, Unit8Array, functions', () => {
-      assertType<Date, Simplify<Date>>();
-      assertType<Uint8Array, Simplify<Uint8Array>>();
-      assertType<
-        (a: string, b: number) => boolean,
-        Simplify<(a: string, b: number) => boolean>
-      >();
     });
   });
 });

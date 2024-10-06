@@ -33,15 +33,8 @@ export interface RecordBoolean {
   [K: string]: boolean;
 }
 
-export type Simplify<T> = T extends
-  | Date
-  | Uint8Array
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  | ((...args: any[]) => any)
-  ? T
-  : T extends object
-  ? { [K in keyof T]: Simplify<T[K]> }
-  : T;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ShallowSimplify<T> = T extends any ? { [K in keyof T]: T[K] } : T;
 
 /**
  * Merge methods from multiple class into another class.

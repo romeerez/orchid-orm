@@ -1,6 +1,10 @@
 import { SetQueryKind } from '../query/query';
 import { ColumnInfoQueryData } from '../sql';
-import { PickQueryMetaShape, QueryColumn, QueryThen } from 'orchid-core';
+import {
+  PickQueryMetaShape,
+  QueryColumn,
+  QueryThenShallowSimplify,
+} from 'orchid-core';
 import { _clone } from '../query/queryUtils';
 
 /**
@@ -19,7 +23,7 @@ export type SetQueryReturnsColumnInfo<
   Omit<SetQueryKind<T, 'columnInfo'>, 'result' | 'returnType' | 'then'> & {
     result: { value: QueryColumn<Result> };
     returnType: 'value';
-    then: QueryThen<Result>;
+    then: QueryThenShallowSimplify<Result>;
   };
 
 // column info pulled from a database

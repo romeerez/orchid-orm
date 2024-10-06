@@ -47,7 +47,7 @@ import {
   QueryLogOptions,
   QueryMetaBase,
   QueryResultRow,
-  QueryThen,
+  QueryThenShallowSimplifyArr,
   RecordString,
   RecordUnknown,
   snakeCaseKey,
@@ -200,7 +200,7 @@ export type DbTableOptionScopes<
 // `const user: User[] = await db.user;`
 export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = {
   [K in DefaultSelectColumns<Shape>]: Shape[K]['outputType'];
-}[];
+};
 
 interface TableMeta<
   Table extends string | undefined,
@@ -241,7 +241,7 @@ export class Db<
   declare inputType: ColumnShapeInput<Shape>;
   declare result: Pick<Shape, DefaultSelectColumns<Shape>>; // Pick is optimal
   declare returnType: undefined;
-  declare then: QueryThen<QueryDefaultReturnData<Shape>>;
+  declare then: QueryThenShallowSimplifyArr<QueryDefaultReturnData<Shape>>;
   declare windows: EmptyObject;
   relations: EmptyObject;
   declare withData: EmptyObject;

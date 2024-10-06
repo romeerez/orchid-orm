@@ -5,12 +5,10 @@ import {
   WithDataItems,
   PickQueryQ,
   PickQueryMetaTableShapeReturnTypeWithData,
-  GetQueryResult,
 } from '../query/query';
 import { SelectQueryData, WithConfigs } from '../sql';
 import { AliasOrTable } from '../common/utils';
 import {
-  QueryThen,
   ColumnsShapeBase,
   PickQueryTableMetaResult,
   SQLQueryArgs,
@@ -20,6 +18,7 @@ import {
   PickQueryTableMetaResultInputType,
   emptyObject,
   ColumnsParsers,
+  QueryThenByQuery,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
@@ -58,7 +57,7 @@ export type FromResult<
           : K extends 'result'
           ? T['withData'][Arg]['shape']
           : K extends 'then'
-          ? QueryThen<GetQueryResult<T, T['withData'][Arg]['shape']>>
+          ? QueryThenByQuery<T, T['withData'][Arg]['shape']>
           : T[K];
       }
     : SetQueryTableAlias<T, Arg>
@@ -83,7 +82,7 @@ export type FromResult<
         : K extends 'inputType'
         ? Arg['inputType']
         : K extends 'then'
-        ? QueryThen<GetQueryResult<T, Arg['result']>>
+        ? QueryThenByQuery<T, Arg['result']>
         : T[K];
     }
   : Arg extends (infer A)[]

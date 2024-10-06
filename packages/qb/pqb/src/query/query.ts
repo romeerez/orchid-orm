@@ -26,6 +26,10 @@ import {
   QueryMetaBase,
   QueryReturnType,
   QueryThen,
+  QueryThenByQuery,
+  QueryThenShallowSimplify,
+  QueryThenShallowSimplifyArr,
+  QueryThenShallowSimplifyOptional,
   RecordKeyTrue,
   RecordUnknown,
 } from 'orchid-core';
@@ -278,44 +282,6 @@ export const queryTypeWithLimitOne: RecordKeyTrue = {
 export const isQueryReturnsAll = (q: Query) =>
   !q.q.returnType || q.q.returnType === 'all';
 
-export type GetQueryResult<
-  T extends PickQueryReturnType,
-  Result extends QueryColumns,
-> = T['returnType'] extends undefined | 'all'
-  ? ColumnShapeOutput<Result>[]
-  : T['returnType'] extends 'one'
-  ? ColumnShapeOutput<Result> | undefined
-  : T['returnType'] extends 'oneOrThrow'
-  ? ColumnShapeOutput<Result>
-  : T['returnType'] extends 'value'
-  ? Result['value']['outputType'] | undefined
-  : T['returnType'] extends 'valueOrThrow'
-  ? Result['value']['outputType']
-  : T['returnType'] extends 'rows'
-  ? ColumnShapeOutput<Result>[keyof Result][][]
-  : T['returnType'] extends 'pluck'
-  ? Result['pluck']['outputType'][]
-  : void;
-
-export type QueryResultByReturnType<
-  ReturnType extends QueryReturnType,
-  Result extends QueryColumns,
-> = ReturnType extends undefined | 'all'
-  ? ColumnShapeOutput<Result>[]
-  : ReturnType extends 'one'
-  ? ColumnShapeOutput<Result> | undefined
-  : ReturnType extends 'oneOrThrow'
-  ? ColumnShapeOutput<Result>
-  : ReturnType extends 'value'
-  ? Result['value']['outputType'] | undefined
-  : ReturnType extends 'valueOrThrow'
-  ? Result['value']['outputType']
-  : ReturnType extends 'rows'
-  ? ColumnShapeOutput<Result>[keyof Result][][]
-  : ReturnType extends 'pluck'
-  ? Result['pluck']['outputType'][]
-  : void;
-
 // Merge { hasSelect: true } into 'meta' if it's not true yet.
 export interface QueryMetaHasSelect {
   meta: {
@@ -329,7 +295,7 @@ export type SetQueryReturnsAll<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'all'
     : K extends 'then'
-    ? QueryThen<ColumnShapeOutput<T['result']>[]>
+    ? QueryThenShallowSimplifyArr<ColumnShapeOutput<T['result']>>
     : T[K];
 } & QueryMetaHasWhere;
 
@@ -344,7 +310,7 @@ export type SetQueryReturnsAllKind<
     : K extends 'returnType'
     ? 'all'
     : K extends 'then'
-    ? QueryThen<ColumnShapeOutput<T['result']>[]>
+    ? QueryThenShallowSimplifyArr<ColumnShapeOutput<T['result']>>
     : T[K];
 } & QueryMetaHasWhere;
 
@@ -362,7 +328,7 @@ export type SetQueryReturnsAllKindResult<
     : K extends 'result'
     ? Result
     : K extends 'then'
-    ? QueryThen<ColumnShapeOutput<T['result']>[]>
+    ? QueryThenShallowSimplifyArr<T['result']>
     : T[K];
 } & QueryMetaHasWhere;
 
@@ -370,7 +336,7 @@ export type SetQueryReturnsOneOptional<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'one'
     : K extends 'then'
-    ? QueryThen<ColumnShapeOutput<T['result']> | undefined>
+    ? QueryThenShallowSimplifyOptional<ColumnShapeOutput<T['result']>>
     : T[K];
 };
 
@@ -378,7 +344,7 @@ export type SetQueryReturnsOne<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'oneOrThrow'
     : K extends 'then'
-    ? QueryThen<ColumnShapeOutput<T['result']>>
+    ? QueryThenShallowSimplify<ColumnShapeOutput<T['result']>>
     : T[K];
 };
 
@@ -393,7 +359,7 @@ export type SetQueryReturnsOneKind<
     : K extends 'returnType'
     ? 'oneOrThrow'
     : K extends 'then'
-    ? QueryThen<ColumnShapeOutput<T['result']>>
+    ? QueryThenShallowSimplify<ColumnShapeOutput<T['result']>>
     : T[K];
 };
 
@@ -411,7 +377,7 @@ export type SetQueryReturnsOneKindResult<
     : K extends 'result'
     ? Result
     : K extends 'then'
-    ? QueryThen<ColumnShapeOutput<Result>>
+    ? QueryThenShallowSimplify<ColumnShapeOutput<Result>>
     : T[K];
 };
 
@@ -638,7 +604,7 @@ export type SetQueryKindResult<
     : K extends 'result'
     ? Result
     : K extends 'then'
-    ? QueryThen<GetQueryResult<T, Result>>
+    ? QueryThenByQuery<T, Result>
     : T[K];
 };
 

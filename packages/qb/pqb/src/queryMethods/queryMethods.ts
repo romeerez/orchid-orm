@@ -1,5 +1,4 @@
 import {
-  GetQueryResult,
   PickQueryMetaRelations,
   PickQueryMetaResultReturnTypeWithDataWindows,
   PickQueryMetaResultReturnTypeWithDataWindowsTable,
@@ -87,7 +86,7 @@ import {
   QueryColumns,
   QueryMetaBase,
   QueryReturnType,
-  QueryThen,
+  QueryThenByQuery,
   RecordUnknown,
   Sql,
   SQLQueryArgs,
@@ -994,7 +993,7 @@ export class QueryMethods<ColumnTypes> {
     [K in keyof T]: K extends 'result'
       ? NarrowTypeResult<T, Narrow>
       : K extends 'then'
-      ? QueryThen<GetQueryResult<T, NarrowTypeResult<T, Narrow>>>
+      ? QueryThenByQuery<T, NarrowTypeResult<T, Narrow>>
       : T[K];
   } {
     return () => this as never;

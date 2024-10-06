@@ -50,7 +50,7 @@ import {
   QueryColumn,
   QueryColumns,
   RecordUnknown,
-  Simplify,
+  ShallowSimplify,
   snakeCaseKey,
   StaticSQLArgs,
   toSnakeCase,
@@ -157,12 +157,12 @@ export interface ORMTableInput {
 }
 
 // Object type that's allowed in `where` and similar methods of the table.
-export type Queryable<T extends ORMTableInput> = Simplify<{
+export type Queryable<T extends ORMTableInput> = ShallowSimplify<{
   [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['queryType'];
 }>;
 
 // Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends ORMTableInput> = Simplify<
+export type Selectable<T extends ORMTableInput> = ShallowSimplify<
   Pick<
     ColumnShapeOutput<T['columns']['shape']>,
     DefaultSelectColumns<T['columns']['shape']>
@@ -170,12 +170,12 @@ export type Selectable<T extends ORMTableInput> = Simplify<
 >;
 
 // Object type that conforms `create` method of the table.
-export type Insertable<T extends ORMTableInput> = Simplify<
+export type Insertable<T extends ORMTableInput> = ShallowSimplify<
   ColumnShapeInput<T['columns']['shape']>
 >;
 
 // Object type that conforms `update` method of the table.
-export type Updatable<T extends ORMTableInput> = Simplify<
+export type Updatable<T extends ORMTableInput> = ShallowSimplify<
   ColumnShapeInputPartial<T['columns']['shape']>
 >;
 

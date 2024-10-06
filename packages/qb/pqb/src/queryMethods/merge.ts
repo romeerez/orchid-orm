@@ -1,10 +1,13 @@
 import {
-  GetQueryResult,
   PickQueryMetaResultReturnTypeWithDataWindows,
   PickQueryQ,
 } from '../query/query';
 import { UnionSet } from '../sql';
-import { PickQueryMetaResult, QueryThen, RecordUnknown } from 'orchid-core';
+import {
+  PickQueryMetaResult,
+  QueryThenByQuery,
+  RecordUnknown,
+} from 'orchid-core';
 import { _clone } from '../query/queryUtils';
 
 export type MergeQuery<
@@ -29,11 +32,9 @@ export type MergeQuery<
       ? T['returnType']
       : Q['returnType']
     : K extends 'then'
-    ? QueryThen<
-        GetQueryResult<
-          Q['returnType'] extends undefined ? T : Q,
-          MergeQueryResult<T, Q>
-        >
+    ? QueryThenByQuery<
+        Q['returnType'] extends undefined ? T : Q,
+        MergeQueryResult<T, Q>
       >
     : K extends 'windows'
     ? Q['windows'] & Omit<T['windows'], keyof Q['windows']>
