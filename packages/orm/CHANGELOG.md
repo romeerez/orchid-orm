@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.37.4
+
+### Patch Changes
+
+- c52fdb1: Add `$isInTransaction` (#411)
+- Updated dependencies [c52fdb1]
+  - pqb@0.42.3
+  - rake-db@2.23.11
+
 ## 1.37.3
 
 ### Patch Changes

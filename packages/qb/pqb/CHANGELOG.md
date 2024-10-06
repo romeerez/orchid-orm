@@ -1,5 +1,11 @@
 # pqb
 
+## 0.42.3
+
+### Patch Changes
+
+- c52fdb1: Add `$isInTransaction` (#411)
+
 ## 0.42.2
 
 ### Patch Changes
