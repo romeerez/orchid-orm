@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.21.1
+
+### Patch Changes
+
+- 442061f: Simplify return types in a shallow way to support branded types (#412)
+
 ## 0.21.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # pqb
 
+## 0.42.2
+
+### Patch Changes
+
+- 442061f: Simplify return types in a shallow way to support branded types (#412)
+- Updated dependencies [442061f]
+  - orchid-core@0.21.1
+
 ## 0.42.1
 
 ### Patch Changes

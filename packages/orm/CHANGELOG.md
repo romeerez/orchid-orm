@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.37.3
+
+### Patch Changes
+
+- 442061f: Simplify return types in a shallow way to support branded types (#412)
+- Updated dependencies [442061f]
+  - pqb@0.42.2
+  - orchid-core@0.21.1
+  - rake-db@2.23.10
+
 ## 1.37.2
 
 ### Patch Changes
