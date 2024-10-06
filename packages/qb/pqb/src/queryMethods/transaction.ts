@@ -379,6 +379,17 @@ export class Transaction {
       Transaction.prototype.transaction as (cb: unknown) => Promise<Result>
     ).call(this, cb) as Promise<Result>;
   }
+
+  isInTransaction(): boolean {
+    const trx = (
+      this as unknown as Query
+    ).internal.transactionStorage.getStore();
+    return !!(
+      trx &&
+      (!trx.testTransactionCount ||
+        trx.transactionId >= trx.testTransactionCount)
+    );
+  }
 }
 
 const runAfterCommit = async (

@@ -18,7 +18,11 @@ describe('transaction', () => {
     async (method) => {
       const spy = jest.spyOn(Client.prototype, 'query');
 
+      expect(db.$isInTransaction()).toBe(false);
+
       await db[method](async () => {
+        expect(db.$isInTransaction()).toBe(true);
+
         await db.user.create(userData);
         await db.profile.create(profileData);
         throw new Error('Throw error to rollback');

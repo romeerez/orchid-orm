@@ -1,5 +1,5 @@
 import pg, { Client } from 'pg';
-import { assertType, testDb } from 'test-utils';
+import { assertType, testDb, useTestDatabase } from 'test-utils';
 import { User, userColumnsSql } from '../test-utils/test-utils';
 import { noop } from 'orchid-core';
 
@@ -211,6 +211,30 @@ describe('transaction', () => {
           (call) => (call[0] as unknown as { text: string }).text,
         ),
       ).toEqual(['BEGIN', 'SELECT 1 AS a', 'SELECT 2 AS b', 'COMMIT']);
+    });
+  });
+
+  describe('isInTransaction', () => {
+    it("should indicate whether we're inside a transaction", async () => {
+      expect(testDb.isInTransaction()).toBe(false);
+
+      await testDb.transaction(async () => {
+        expect(testDb.isInTransaction()).toBe(true);
+      });
+
+      expect(testDb.isInTransaction()).toBe(false);
+    });
+
+    describe('in testTransaction', () => {
+      useTestDatabase();
+
+      it('should trick testTransaction into thinking that we are not in transaction on the top level', async () => {
+        expect(testDb.isInTransaction()).toBe(false);
+
+        await testDb.transaction(async () => {
+          expect(testDb.isInTransaction()).toBe(true);
+        });
+      });
     });
   });
 });

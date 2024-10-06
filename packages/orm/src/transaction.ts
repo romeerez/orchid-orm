@@ -26,3 +26,7 @@ export function ensureTransaction<Result>(
 ): Promise<Result> {
   return this.$queryBuilder.ensureTransaction(cb);
 }
+
+export function isInTransaction(this: { $queryBuilder: Db }): boolean {
+  return this.$queryBuilder.isInTransaction();
+}

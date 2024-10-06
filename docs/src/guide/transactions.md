@@ -130,6 +130,20 @@ async function saveDeposit(userId: string, deposit: { ... }) {
 }
 ```
 
+## isInTransaction
+
+Returns `true` or `false` to check if inside a transaction.
+
+Ignores opened [test transaction](#testtransaction).
+
+```ts
+db.$isInTransaction(); // -> false
+
+db.$transaction(async () => {
+  db.$isInTransaction(); // -> true
+});
+```
+
 ## testTransaction
 
 `Orchid ORM` has a special utility to wrap your tests in transactions which are rolled back after each test.
