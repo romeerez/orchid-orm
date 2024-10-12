@@ -1,5 +1,13 @@
 # orchid-orm-test-factory
 
+## 1.0.1
+
+### Patch Changes
+
+- f912552: Update build target to es2020 (node v14+)
+- Updated dependencies [f912552]
+  - pqb@0.42.5
+
 ## 1.0.0
 
 ### Major Changes

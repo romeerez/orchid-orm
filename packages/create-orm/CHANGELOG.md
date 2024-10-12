@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.3.2
+
+### Patch Changes
+
+- f912552: Update build target to es2020 (node v14+)
+
 ## 0.3.1
 
 ### Patch Changes

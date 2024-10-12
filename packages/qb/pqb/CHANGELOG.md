@@ -1,5 +1,11 @@
 # pqb
 
+## 0.42.5
+
+### Patch Changes
+
+- f912552: Update build target to es2020 (node v14+)
+
 ## 0.42.4
 
 ### Patch Changes
