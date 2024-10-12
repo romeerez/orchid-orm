@@ -12,7 +12,7 @@ describe('setupTSConfig', () => {
 
     expect(writeFile.mock.calls[0][1]).toBe(`{
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2020",
     "module": "esnext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
@@ -39,7 +39,7 @@ describe('setupTSConfig', () => {
 
     expect(writeFile.mock.calls[0][1]).toBe(`{
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2020",
     "module": "esnext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
@@ -62,7 +62,7 @@ describe('setupTSConfig', () => {
     expect(writeFile.mock.calls[0][1]).toBe(`{
   "compilerOptions": {
     "outDir": "dist",
-    "target": "es2017",
+    "target": "es2020",
     "module": "commonjs",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

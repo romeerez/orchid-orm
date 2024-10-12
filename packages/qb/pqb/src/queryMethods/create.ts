@@ -45,7 +45,8 @@ import { resolveSubQueryCallback } from '../common/utils';
 import { _clone } from '../query/queryUtils';
 
 export interface CreateSelf
-  extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  extends IsQuery,
+    PickQueryMetaResultRelationsWithDataReturnTypeShape,
     PickQueryUniqueProperties {
   inputType: RecordUnknown;
 }

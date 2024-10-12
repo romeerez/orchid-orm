@@ -24,7 +24,7 @@ export async function setupTSConfig(config: InitConfig): Promise<void> {
     "outDir": "dist",`
       : ''
   }
-    "target": "es2017",
+    "target": "es2020",
     "module": "${module}",${moduleResolution}
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

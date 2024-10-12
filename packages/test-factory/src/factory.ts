@@ -13,6 +13,7 @@ import {
   ColumnsShape,
   ColumnType,
   CreateData,
+  CreateSelf,
   DateColumn,
   DecimalColumn,
   DoublePrecisionColumn,
@@ -288,7 +289,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
 };
 
 export class TestFactory<
-  Q extends Query = Query,
+  Q extends CreateSelf = CreateSelf,
   Type extends EmptyObject = EmptyObject,
 > {
   sequence: number;
@@ -394,7 +395,9 @@ export class TestFactory<
     data?: Data,
   ): Promise<CreateResult<T>> {
     const getData = processCreateData(this, this.data, data);
-    return (await this.table.create(await getData())) as CreateResult<T>;
+    return (await (this.table as unknown as Query).create(
+      await getData(),
+    )) as never;
   }
 
   async createList<T extends this, Data extends CreateArg<T>>(
@@ -404,9 +407,9 @@ export class TestFactory<
   ): Promise<CreateResult<T>[]> {
     const getData = processCreateData(this, this.data, data);
     const arr = await Promise.all([...Array(qty)].map(() => getData()));
-    return (await this.table.createMany(
+    return (await (this.table as unknown as Query).createMany(
       arr as CreateData<T['table']>[],
-    )) as CreateResult<T>[];
+    )) as never;
   }
 
   async createMany<T extends this, Args extends CreateArg<T>[]>(
@@ -415,11 +418,9 @@ export class TestFactory<
   ): Promise<{ [K in keyof Args]: CreateResult<T> }> {
     const getData = processCreateData(this, this.data);
     const data = await Promise.all(arr.map(getData));
-    return (await this.table.createMany(
+    return (await (this.table as unknown as Query).createMany(
       data as CreateData<T['table']>[],
-    )) as Promise<{
-      [K in keyof Args]: CreateResult<T>;
-    }>;
+    )) as never;
   }
 
   extend<T extends this>(this: T): new () => TestFactory<Q, Type> {
@@ -433,7 +434,7 @@ export class TestFactory<
   }
 }
 
-type TableFactory<T extends Query> = TestFactory<
+type TableFactory<T extends CreateSelf> = TestFactory<
   T,
   ColumnShapeOutput<T['shape']>
 >;
@@ -535,7 +536,7 @@ const num = (
 
 const makeGeneratorForColumn = (
   config: FactoryConfig,
-  table: Query,
+  table: PickQueryShape,
   uniqueColumns: Set<string>,
   key: string,
   c: ColumnTypeBase,
@@ -858,7 +859,9 @@ const makeGeneratorForColumn = (
     const as = c.data.as;
     if (!as) {
       throw new Error(
-        `Don't know how to generate data for column ${table.table}.${key} that has no \`as\``,
+        `Don't know how to generate data for column ${
+          (table as unknown as Query).table
+        }.${key} that has no \`as\``,
       );
     }
 
@@ -870,7 +873,7 @@ const makeGeneratorForColumn = (
   return fn;
 };
 
-export const tableFactory = <T extends Query>(
+export const tableFactory = <T extends CreateSelf>(
   table: T,
   config?: TableFactoryConfig<T>,
 ): TableFactory<T> => {
@@ -902,7 +905,8 @@ export const tableFactory = <T extends Query>(
     }
   }
 
-  const { primaryKey, indexes } = table.internal.tableData;
+  const { primaryKey, indexes } = (table as unknown as Query).internal
+    .tableData;
   if (primaryKey) {
     for (const key of primaryKey.columns) {
       if (fns[key]) continue;
@@ -940,9 +944,7 @@ export const tableFactory = <T extends Query>(
 };
 
 type ORMFactory<T> = {
-  [K in keyof T]: T[K] extends Query & { definedAs: string }
-    ? TableFactory<T[K]>
-    : never;
+  [K in keyof T]: T[K] extends CreateSelf ? TableFactory<T[K]> : never;
 };
 
 export const ormFactory = <T>(
@@ -957,10 +959,13 @@ export const ormFactory = <T>(
     if (table && typeof table === 'object' && 'definedAs' in table) {
       Object.defineProperty(factory, key, {
         get() {
-          return (defined[key] ??= tableFactory(table as unknown as Query, {
-            ...options,
-            extend: options?.extend?.[key],
-          }));
+          return (defined[key] ??= tableFactory(
+            table as unknown as CreateSelf,
+            {
+              ...options,
+              extend: options?.extend?.[key],
+            },
+          ));
         },
       });
     }

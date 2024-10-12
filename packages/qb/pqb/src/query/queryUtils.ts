@@ -164,21 +164,22 @@ export const extendQuery = <
   return cloned as T & Methods;
 };
 
-export const getPrimaryKeys = (q: Query) => {
-  return (q.internal.primaryKeys ??= collectPrimaryKeys(q));
+export const getPrimaryKeys = (q: IsQuery) => {
+  return ((q as Query).internal.primaryKeys ??= collectPrimaryKeys(q));
 };
 
-const collectPrimaryKeys = (q: Query): string[] => {
+const collectPrimaryKeys = (q: IsQuery): string[] => {
   const primaryKeys = [];
-  const { shape } = q.q;
+  const { shape } = (q as unknown as PickQueryQ).q;
   for (const key in shape) {
     if (shape[key].data.primaryKey) {
       primaryKeys.push(key);
     }
   }
 
-  if (q.internal.primaryKeys) {
-    primaryKeys.push(...q.internal.primaryKeys);
+  const pKeys = (q as Query).internal.primaryKeys;
+  if (pKeys) {
+    primaryKeys.push(...pKeys);
   }
 
   return primaryKeys;
