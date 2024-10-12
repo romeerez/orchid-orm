@@ -1,5 +1,20 @@
 # Breaking changes
 
+## orchid-orm-test-factory 1.0
+
+Now test factories work disregarding if and which one validation library you're using with OrchidORM.
+It no longer depends on `zod`.
+
+Added a peer dependency on `faker`, so need to install this library together with `faker`:
+
+```shell
+npm i -D orchid-orm-test-factory @faker-js/faker
+```
+
+Usability is almost unchanged, except that now JSON data won't be generated automatically,
+and you need to additionally configure how to generate it.
+See details in [these docs](https://orchid-orm.netlify.app/guide/test-factories.html#json).
+
 ## orchid-orm 1.37
 
 Previously, you could chain relations in a such way:

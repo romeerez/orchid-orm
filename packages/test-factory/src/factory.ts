@@ -1,50 +1,99 @@
 import {
-  AnyZodObject,
-  z,
-  ZodNullable,
-  ZodObject,
-  ZodRawShape,
-  ZodString,
-  ZodTypeAny,
-} from 'zod';
-import {
+  ArrayColumn,
+  BigIntColumn,
+  BigSerialColumn,
+  BitColumn,
+  BitVaryingColumn,
+  BooleanColumn,
+  BoxColumn,
+  ByteaColumn,
+  CidrColumn,
+  CircleColumn,
+  CitextColumn,
+  ColumnsShape,
   ColumnType,
   CreateData,
-  DateBaseColumn,
+  DateColumn,
+  DecimalColumn,
+  DoublePrecisionColumn,
+  EnumColumn,
   getPrimaryKeys,
-  IntegerBaseColumn,
-  NumberBaseColumn,
+  InetColumn,
+  IntegerColumn,
+  IntervalColumn,
+  JSONColumn,
+  JSONTextColumn,
+  LineColumn,
+  LsegColumn,
+  MacAddr8Column,
+  MacAddrColumn,
+  MoneyColumn,
+  PathColumn,
+  PointColumn,
+  PolygonColumn,
+  PostgisGeographyPointColumn,
   Query,
-  TextBaseColumn,
+  RealColumn,
+  SerialColumn,
+  SmallIntColumn,
+  SmallSerialColumn,
+  StringColumn,
+  TextColumn,
+  TimeColumn,
+  TimestampColumn,
+  TimestampTZColumn,
+  TsQueryColumn,
+  TsVectorColumn,
+  UUIDColumn,
+  VarCharColumn,
+  VirtualColumn,
+  XMLColumn,
 } from 'pqb';
 import {
+  BaseNumberData,
+  ColumnSchemaConfig,
   ColumnShapeOutput,
   ColumnTypeBase,
+  emptyObject,
   EmptyObject,
   MaybePromise,
+  PickQueryShape,
   RecordUnknown,
+  StringTypeData,
 } from 'orchid-core';
-import { generateMock } from '@anatine/zod-mock';
+import { faker } from '@faker-js/faker';
+import randexp from 'randexp';
 
-type UniqueField =
-  | {
-      key: string;
-      type: 'text';
-      kind?: 'email' | 'url';
-      max?: number;
-      length?: number;
-    }
-  | {
-      key: string;
-      type: 'number';
-      gt?: number;
-      gte?: number;
-    };
+type FakeDataFn = (sequence: number) => unknown;
 
-interface FactoryOptions {
+interface FakeDataDefineFns {
+  [K: string]: (column: ColumnTypeBase) => FakeDataFn;
+}
+
+interface FakeDataFns {
+  [K: string]: FakeDataFn;
+}
+
+export interface FactoryConfig {
   sequence?: number;
   sequenceDistance?: number;
   maxTextLength?: number;
+  fakeDataForTypes?: FakeDataDefineFns;
+}
+
+type FactoryExtend<T extends PickQueryShape> = {
+  [K in keyof T['shape']]?: (sequence: number) => T['shape'][K]['outputType'];
+};
+
+export interface TableFactoryConfig<T extends PickQueryShape>
+  extends FactoryConfig {
+  extend?: FactoryExtend<T>;
+}
+
+export interface OrmFactoryConfig<T> extends FactoryConfig {
+  extend?: {
+    [K in keyof T]?: T[K] extends PickQueryShape ? FactoryExtend<T[K]> : never;
+  };
 }
 
 type metaKey = typeof metaKey;
@@ -120,111 +169,43 @@ const pick = <T, Keys extends RecordUnknown>(
   return res;
 };
 
-const makeUniqueText = (sequence: number, value: string) =>
-  `${sequence} ${value}`;
-
-const makeUniqueEmail = (sequence: number, value: string) =>
-  `${sequence}-${value}`;
-
-const makeUniqueUrl = (sequence: number, value: string) =>
-  value.replace('://', `://${sequence}-`);
-
-const makeUniqueNumber = (sequence: number) => sequence;
-
-const makeSetUniqueValues = (
-  uniqueFields: UniqueField[],
-  data: RecordUnknown,
-) => {
-  type Fn = (sequence: number, value: unknown) => unknown;
-
-  const dataKeys = Object.keys(data);
-
-  const fns: Record<string, Fn> = {};
-  for (const field of uniqueFields) {
-    if (dataKeys.includes(field.key)) continue;
-
-    if (field.type === 'text') {
-      const getValue =
-        field.kind === 'email'
-          ? makeUniqueEmail
-          : field.kind === 'url'
-          ? makeUniqueUrl
-          : makeUniqueText;
-
-      let fn;
-      const max = field.length ?? field.max;
-      if (max !== undefined) {
-        fn = (sequence: number, value: string) => {
-          let result = getValue(sequence, value);
-          if (result.length > max) {
-            result = result.slice(0, -(result.length - max));
-          }
-          return result;
-        };
-      } else {
-        fn = getValue;
-      }
-      fns[field.key] = fn as unknown as Fn;
-    } else {
-      let fn;
-      const { gt, gte } = field;
-      if (gt) {
-        fn = (sequence: number) => sequence + gt;
-      } else if (gte) {
-        fn = (sequence: number) => sequence + gte - 1;
-      } else {
-        fn = makeUniqueNumber;
-      }
-      fns[field.key] = fn as unknown as Fn;
-    }
-  }
-
-  return (record: RecordUnknown, sequence: number) => {
-    for (const key in fns) {
-      record[key] = fns[key](sequence, record[key]);
-    }
-  };
-};
-
 const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
   factory: T,
   data: RecordUnknown,
   omitValues: Record<PropertyKey, true>,
   pickValues: Record<PropertyKey, true>,
-  uniqueFields: UniqueField[],
   arg?: Data,
 ) => {
-  let schema = factory.schema as AnyZodObject;
+  let { fns } = factory;
   let allData = arg ? { ...data, ...arg } : data;
 
   if (omitValues) {
-    schema = schema.omit(omitValues);
+    fns = omit(fns, omitValues);
     allData = omit(allData, omitValues);
   }
 
   if (pickValues && Object.keys(pickValues).length) {
-    schema = schema.pick(pickValues);
+    fns = pick(fns, pickValues);
     allData = pick(allData, pickValues);
   }
 
-  const setUniqueValues = makeSetUniqueValues(uniqueFields, allData);
-
   return (arg?: BuildArg<T>) => {
     const data = arg ? { ...allData, ...arg } : allData;
+    const sequence = factory.sequence++;
 
-    const result = generateMock(schema) as RecordUnknown;
+    const result: RecordUnknown = {};
+    for (const key in fns) {
+      result[key] = fns[key](sequence);
+    }
+
     for (const key in data) {
       const value = (data as RecordUnknown)[key];
       if (typeof value === 'function') {
-        result[key] = value(factory.sequence);
+        result[key] = value(sequence);
       } else {
         result[key] = value;
       }
     }
-
-    setUniqueValues(result, factory.sequence);
-
-    factory.sequence++;
 
     return result as BuildResult<T, Data>;
   };
@@ -233,11 +214,12 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
 const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   factory: T,
   data: RecordUnknown,
-  uniqueFields: UniqueField[],
   arg?: Data,
 ) => {
+  const { fns } = factory;
+
   const pick: Record<string, true> = {};
-  for (const key in factory.table.shape) {
+  for (const key in fns) {
     pick[key] = true;
   }
 
@@ -251,8 +233,6 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
 
   const shared: RecordUnknown = {};
 
-  const fns: Record<string, (sequence: number) => unknown> = {};
-
   const allData = (arg ? { ...data, ...arg } : data) as RecordUnknown;
 
   for (const key in allData) {
@@ -265,14 +245,14 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     }
   }
 
-  const pickedSchema = factory.schema.pick(pick);
-  const setUniqueValues = makeSetUniqueValues(uniqueFields, allData);
-
   return async (arg?: CreateArg<T>) => {
-    const result = Object.assign({ ...shared }, generateMock(pickedSchema));
-
     const { sequence } = factory;
     factory.sequence++;
+
+    const result = { ...shared };
+    for (const key in pick) {
+      result[key] = fns[key](sequence);
+    }
 
     if (arg) {
       for (const key in arg) {
@@ -286,6 +266,8 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
       const promises: Promise<void>[] = [];
 
       for (const key in fns) {
+        if (key in result) continue;
+
         promises.push(
           new Promise(async (resolve, reject) => {
             try {
@@ -301,20 +283,18 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
       await Promise.all(promises);
     }
 
-    setUniqueValues(result, sequence);
-
     return result as CreateData<T['table']>;
   };
 };
 
 export class TestFactory<
   Q extends Query = Query,
-  Schema extends AnyZodObject = AnyZodObject,
   Type extends EmptyObject = EmptyObject,
 > {
   sequence: number;
   private readonly omitValues: Record<PropertyKey, true> = {};
   private readonly pickValues: Record<PropertyKey, true> = {};
+  private readonly data: RecordUnknown = {};
 
   [metaKey]!: {
     type: Type;
@@ -324,10 +304,8 @@ export class TestFactory<
 
   constructor(
     public table: Q,
-    public schema: Schema,
-    private uniqueFields: UniqueField[],
-    private readonly data: RecordUnknown = {},
-    options: FactoryOptions = {},
+    public fns: FakeDataFns,
+    options: TableFactoryConfig<PickQueryShape> = {},
   ) {
     if (options.sequence !== undefined) {
       this.sequence = options.sequence;
@@ -375,15 +353,14 @@ export class TestFactory<
     this: T,
     data?: Data,
   ): BuildResult<T, Data> {
+    // TODO: consider memoizing the base case
     const build = makeBuild(
       this,
       this.data,
       this.omitValues,
       this.pickValues,
-      this.uniqueFields,
       data,
     );
-
     return build();
   }
 
@@ -397,24 +374,17 @@ export class TestFactory<
       this.data,
       this.omitValues,
       this.pickValues,
-      this.uniqueFields,
       data,
     );
 
-    return [...Array(qty)].map(build);
+    return Array.from({ length: qty }, () => build());
   }
 
   buildMany<T extends this, Args extends BuildArg<T>[]>(
     this: T,
     ...arr: Args
   ): { [I in keyof Args]: BuildResult<T, Args[I]> } {
-    const build = makeBuild(
-      this,
-      this.data,
-      this.omitValues,
-      this.pickValues,
-      this.uniqueFields,
-    );
+    const build = makeBuild(this, this.data, this.omitValues, this.pickValues);
 
     return arr.map(build) as { [I in keyof Args]: BuildResult<T, Args[I]> };
   }
@@ -423,7 +393,7 @@ export class TestFactory<
     this: T,
     data?: Data,
   ): Promise<CreateResult<T>> {
-    const getData = processCreateData(this, this.data, this.uniqueFields, data);
+    const getData = processCreateData(this, this.data, data);
     return (await this.table.create(await getData())) as CreateResult<T>;
   }
 
@@ -432,7 +402,7 @@ export class TestFactory<
     qty: number,
     data?: Data,
   ): Promise<CreateResult<T>[]> {
-    const getData = processCreateData(this, this.data, this.uniqueFields, data);
+    const getData = processCreateData(this, this.data, data);
     const arr = await Promise.all([...Array(qty)].map(() => getData()));
     return (await this.table.createMany(
       arr as CreateData<T['table']>[],
@@ -443,7 +413,7 @@ export class TestFactory<
     this: T,
     ...arr: Args
   ): Promise<{ [K in keyof Args]: CreateResult<T> }> {
-    const getData = processCreateData(this, this.data, this.uniqueFields);
+    const getData = processCreateData(this, this.data);
     const data = await Promise.all(arr.map(getData));
     return (await this.table.createMany(
       data as CreateData<T['table']>[],
@@ -452,133 +422,521 @@ export class TestFactory<
     }>;
   }
 
-  extend<T extends this>(this: T): new () => TestFactory<Q, Schema, Type> {
-    const { table, schema, uniqueFields } = this;
+  extend<T extends this>(this: T): new () => TestFactory<Q, Type> {
+    const { table, fns } = this;
 
-    return class extends TestFactory<Q, Schema, Type> {
+    return class extends TestFactory<Q, Type> {
       constructor() {
-        super(table, schema, uniqueFields);
+        super(table, fns);
       }
     };
   }
 }
 
-const nowString = new Date().toISOString();
+type TableFactory<T extends Query> = TestFactory<
+  T,
+  ColumnShapeOutput<T['shape']>
+>;
 
-const maxPostgresInt = 2147483647;
+let fixedTime: Date | undefined;
+let fixedTZ: string | undefined;
 
-type TableFactory<T extends Query> = T['shape'] extends Record<
-  string,
-  { inputSchema: ZodTypeAny }
->
-  ? TestFactory<
-      T,
-      ZodObject<
-        { [K in keyof T['shape']]: T['shape'][K]['inputSchema'] },
-        'strip'
-      >,
-      ColumnShapeOutput<T['shape']>
-    >
-  : never;
+const int = (min: number, max: number) => faker.number.int({ min, max });
+
+const float = (min: number, max: number, multipleOf: number) =>
+  faker.number.float({
+    min,
+    max,
+    multipleOf,
+  });
+
+const point = () => float(-100, 100, 0.01);
+
+const isoTime = (c: ColumnTypeBase, sequence: number) => {
+  const data = c.data as { min?: Date; max?: Date };
+
+  return (
+    data.min || data.max
+      ? faker.date.between({
+          from: data.min || new Date(-8640000000000000),
+          to: data.max || new Date(8640000000000000),
+        })
+      : new Date((fixedTime ??= faker.date.anytime()).getTime() + sequence)
+  ).toISOString();
+};
+
+const bool = () => faker.datatype.boolean();
+
+const arr = (min: number, max: number, fn: (_: void, i: number) => unknown) =>
+  Array.from({ length: int(min, max) }, fn);
+
+const numOpts = (
+  c: { data: BaseNumberData },
+  step?: number | bigint,
+  min?: number | bigint,
+  max?: number | bigint,
+  options?: RecordUnknown,
+): RecordUnknown => ({
+  min: c.data.gt ? c.data.gt + ((step as number) || 0) : c.data.gte || min,
+  max: c.data.lt ? c.data.lt - ((step as number) || 0) : c.data.lte || max,
+  ...options,
+});
+
+const num = (
+  uniqueColumns: Set<string>,
+  key: string,
+  c: ColumnType<ColumnSchemaConfig>,
+  method: 'int' | 'float' | 'bigInt' | 'amount',
+  {
+    step,
+    min,
+    max,
+    module = 'number',
+    ...options
+  }: {
+    step?: number | bigint;
+    min?: number | bigint;
+    max?: number | bigint;
+    module?: 'number' | 'finance';
+    fractionDigits?: number;
+    symbol?: string;
+  } = {},
+): ((sequence: number) => unknown) => {
+  const opts = numOpts(c, step, min, max, options);
+
+  if (uniqueColumns.has(key)) {
+    if (method === 'int' || method === 'float' || method === 'amount') {
+      const st = (step as number | undefined) || 1;
+
+      let min = ((opts.min as number | undefined) ?? 0) - st;
+      if (min < 0) min = 0;
+
+      const { symbol } = options;
+      if (symbol) {
+        return (sequence: number) => `${symbol}${min + sequence * st}`;
+      } else {
+        return (sequence: number) => min + sequence * st;
+      }
+    }
+
+    if (method === 'bigInt') {
+      const st = (step as bigint | undefined) || 1n;
+
+      let min = ((opts.min as bigint | undefined) ?? 0n) - st;
+      if (min < 0n) min = 0n;
+
+      return (sequence: number) => min + BigInt(sequence) * st;
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return () => (faker as any)[module][method](opts);
+};
+
+const makeGeneratorForColumn = (
+  config: FactoryConfig,
+  table: Query,
+  uniqueColumns: Set<string>,
+  key: string,
+  c: ColumnTypeBase,
+): ((sequence: number) => unknown) | undefined => {
+  let fn: (sequence: number) => unknown;
+
+  const custom = config.fakeDataForTypes?.[c.dataType]?.(c);
+  if (custom) {
+    fn = custom;
+  } else if (c instanceof EnumColumn) {
+    fn = () => faker.helpers.arrayElement(c.options);
+  } else if (c instanceof ArrayColumn) {
+    fn = () =>
+      arr(
+        1,
+        5,
+        makeGeneratorForColumn(
+          config,
+          table,
+          uniqueColumns,
+          key,
+          c.data.item,
+        ) as () => unknown,
+      );
+  } else if (c instanceof SmallIntColumn || c instanceof SmallSerialColumn) {
+    fn = num(uniqueColumns, key, c, 'int', {
+      step: 1,
+      min: -32768,
+      max: 32767,
+    });
+  } else if (c instanceof IntegerColumn || c instanceof SerialColumn) {
+    fn = num(uniqueColumns, key, c, 'int', {
+      step: 1,
+      min: -2147483648,
+      max: 2147483648,
+    });
+  } else if (c instanceof BigIntColumn || c instanceof BigSerialColumn) {
+    fn = num(uniqueColumns, key, c, 'bigInt', {
+      step: 1n,
+      min: BigInt('-9223372036854775808'),
+      max: BigInt('9223372036854775807'),
+    });
+  } else if (c instanceof DecimalColumn || c instanceof DoublePrecisionColumn) {
+    fn = num(uniqueColumns, key, c, 'float', {
+      fractionDigits: c.data.numericScale,
+    });
+  } else if (c instanceof RealColumn) {
+    fn = num(uniqueColumns, key, c, 'float');
+  } else if (c instanceof MoneyColumn) {
+    fn = num(uniqueColumns, key, c, 'amount', {
+      module: 'finance',
+      symbol: '$',
+    });
+  } else if (
+    c instanceof VarCharColumn ||
+    c instanceof TextColumn ||
+    c instanceof StringColumn ||
+    c instanceof CitextColumn
+  ) {
+    const data = c.data as StringTypeData;
+    const lowerKey = key.toLowerCase();
+    const strippedKey = lowerKey.replace(/_|-/g, '');
+
+    let gen: ((sequence: number) => string) | undefined;
+    const min = data.length ?? data.min ?? data.nonEmpty ? 1 : 0;
+    const max = Math.min(
+      data.length ?? data.max ?? Infinity,
+      config.maxTextLength ?? 1000,
+    );
+    const { includes, startsWith, endsWith, trim, toLowerCase, toUpperCase } =
+      data;
+
+    let isEmail = false;
+    let isUrl = false;
+
+    if (data.email) {
+      isEmail = true;
+      gen = () => faker.internet.email();
+    } else if (data.emoji) {
+      gen = () => faker.internet.emoji();
+    } else if (data.url) {
+      isUrl = true;
+      gen = () => faker.internet.url();
+    } else if (data.uuid) {
+      gen = () => faker.string.uuid();
+    } else if (data.datetime) {
+      gen = (sequence) => isoTime(c, sequence);
+    } else if (data.ip) {
+      if (data.ip.version === 'v4') {
+        gen = () => faker.internet.ipv4();
+      } else if (data.ip.version === 'v6') {
+        gen = () => faker.internet.ipv6();
+      } else {
+        gen = () => faker.internet.ip();
+      }
+    } else if (data.regex) {
+      const generator = new randexp(data.regex);
+
+      generator.randInt = (min: number, max: number) =>
+        faker.number.int({ min, max });
+
+      if (max !== Infinity) {
+        generator.max = max;
+      }
+
+      gen = () => generator.gen();
+    } else if (strippedKey === 'name') {
+      gen = () => faker.person.fullName();
+    } else if (strippedKey === 'phonenumber') {
+      gen = () => faker.phone.number();
+    } else if (strippedKey === 'image' || strippedKey === 'imageurl') {
+      gen = () => faker.image.url();
+    } else {
+      for (const sectionKey in faker) {
+        for (const key in faker[sectionKey as keyof typeof faker]) {
+          if (key === strippedKey) {
+            // @eslint-disable-next-line typescript-eslint/no-exlicit-any
+            const fn = (faker as any)[sectionKey][key];
+            gen = () => String(fn());
+
+            if (key === 'email') isEmail = true;
+            else if (key === 'url') isUrl = true;
+          }
+        }
+      }
+
+      if (!gen) gen = () => faker.food.dish();
+    }
+
+    const isUnique = uniqueColumns.has(key);
+
+    fn = (sequence) => {
+      const seq = sequence++;
+
+      let s = gen(seq);
+
+      if (isUnique) {
+        if (isEmail) s = `${seq}-${s}`;
+        else if (isUrl) s = s.replace('://', `://${seq}-`);
+        else s = `${seq} ${s}`;
+      }
+
+      while (s.length < min) {
+        s += gen(seq);
+
+        if (trim) s = s.trim();
+      }
+
+      if (s.length > max) {
+        s = s.slice(0, max);
+
+        if (trim) {
+          s = s.trim();
+          while (s.length < min) {
+            s += gen(seq);
+            if (trim) s = s.trim();
+          }
+        }
+      }
+
+      if (startsWith) {
+        s = startsWith + s.slice(startsWith.length);
+      }
+
+      if (includes) {
+        const start = Math.max(
+          0,
+          Math.floor(s.length / 2) - Math.floor(includes.length / 2),
+        );
+        s = s.slice(0, start) + includes + s.slice(start + includes.length);
+      }
+
+      if (endsWith) {
+        s = s.slice(0, endsWith.length + 1) + endsWith;
+      }
+
+      return toLowerCase
+        ? s.toLocaleLowerCase()
+        : toUpperCase
+        ? s.toLocaleUpperCase()
+        : s;
+    };
+  } else if (c instanceof ByteaColumn) {
+    fn = () => Buffer.from(arr(1, 10, () => int(0, 255)) as number[]);
+  } else if (c instanceof DateColumn) {
+    fn = (sequence) => isoTime(c, sequence).split('T')[0];
+  } else if (c instanceof TimestampColumn || c instanceof TimestampTZColumn) {
+    const hasTZ = c instanceof TimestampTZColumn;
+    fn = (sequence) => {
+      let timestamp = isoTime(c, sequence).replace('T', ' ');
+
+      if (hasTZ) {
+        if (!fixedTZ) {
+          const minOffset = -720; // UTC-12:00
+          const maxOffset = 840; // UTC+14:00
+          const randomOffset = int(minOffset, maxOffset);
+
+          const sign = randomOffset >= 0 ? '+' : '-';
+          const absOffset = Math.abs(randomOffset);
+          const hours = String(Math.floor(absOffset / 60)).padStart(2, '0');
+          const minutes = String(absOffset % 60).padStart(2, '0');
+
+          fixedTZ = `${sign}${hours}:${minutes}`;
+        }
+
+        timestamp += fixedTZ;
+      }
+
+      return timestamp;
+    };
+  } else if (c instanceof TimeColumn) {
+    fn = (sequence) => isoTime(c, sequence).split('T')[1].replace(/\..+/, '');
+  } else if (c instanceof IntervalColumn) {
+    fn = () => {
+      const years = int(0, 10);
+      const months = int(0, 11);
+      const days = int(0, 30);
+      const hours = int(0, 23);
+      const minutes = int(0, 59);
+      const seconds = float(0, 59, 0.1);
+
+      return `${years} years ${months} mons ${days} days ${hours} hours ${minutes} mins ${seconds.toFixed(
+        1,
+      )} secs`;
+    };
+  } else if (c instanceof BooleanColumn) {
+    fn = bool;
+  } else if (c instanceof PointColumn) {
+    fn = () => `(${point()}, ${point()})`;
+  } else if (c instanceof LineColumn) {
+    fn = () => `{${point()},${point()},${point()}}`;
+  } else if (c instanceof LsegColumn) {
+    fn = () => `((${point()}, ${point()}), (${point()}, ${point()}))`;
+  } else if (c instanceof BoxColumn) {
+    fn = () => `((${point()}, ${point()}), (${point()}, ${point()}))`;
+  } else if (c instanceof PathColumn) {
+    fn = () => {
+      const s = arr(2, 10, () => `(${point()}, ${point()})`).join(', ');
+      return bool() ? `[${s}]` : `(${s})`;
+    };
+  } else if (c instanceof PolygonColumn) {
+    fn = () => `(${arr(2, 10, () => `(${point()}, ${point()})`).join(', ')})`;
+  } else if (c instanceof CircleColumn) {
+    fn = () => `<(${point()}, ${point()}), ${float(0, 100, 0.01)}>`;
+  } else if (c instanceof CidrColumn) {
+    fn = () => `${faker.internet.ip()}/${int(0, 32)}`;
+  } else if (c instanceof InetColumn) {
+    fn = () => (bool() ? faker.internet.ip() : faker.internet.ipv6());
+  } else if (c instanceof MacAddrColumn) {
+    fn = () => faker.internet.mac();
+  } else if (c instanceof MacAddr8Column) {
+    fn = () =>
+      Array.from({ length: 8 }, () =>
+        faker.string.hexadecimal({ length: 2 }),
+      ).join(':');
+  } else if (c instanceof BitColumn) {
+    const { length } = c.data;
+
+    fn = () => Array.from({ length }, () => (bool() ? '1' : '0')).join('');
+  } else if (c instanceof BitVaryingColumn) {
+    const length = c.data.length;
+
+    fn = () => arr(1, length || 100, () => (bool() ? '1' : '0')).join('');
+  } else if (c instanceof TsVectorColumn) {
+    fn = () => arr(1, 10, () => faker.lorem.word()).join(' ');
+  } else if (c instanceof TsQueryColumn) {
+    fn = () => {
+      const operators = ['&', '|', '<->'];
+      return arr(1, 10, (_, i) => {
+        const word = faker.lorem.word();
+        return i === 0
+          ? word
+          : faker.helpers.arrayElement(operators) + ' ' + word;
+      }).join(' ');
+    };
+  } else if (c instanceof UUIDColumn) {
+    fn = () => faker.string.uuid();
+  } else if (c instanceof XMLColumn) {
+    fn = () =>
+      '<items>\n' +
+      arr(
+        1,
+        5,
+        () =>
+          `  <item>
+    <id>${faker.string.uuid()}</id>
+    <name>${faker.person.firstName()}</name>
+    <email>${faker.internet.email()}</email>
+    <address>${faker.location.streetAddress()}</address>
+    <created_at>${faker.date.past().toISOString()}</created_at>
+  </item>
+`,
+      ).join('') +
+      '</items>';
+  } else if (c instanceof JSONColumn || c instanceof JSONTextColumn) {
+    fn = () =>
+      JSON.stringify(
+        arr(1, 5, () => ({
+          id: faker.string.uuid(),
+          name: faker.person.firstName(),
+          email: faker.internet.email(),
+          address: {
+            street: faker.location.streetAddress(),
+            city: faker.location.city(),
+            state: faker.location.state(),
+            zip: faker.location.zipCode(),
+          },
+          createdAt: faker.date.past().toISOString(),
+        })),
+      );
+  } else if (c instanceof VirtualColumn) {
+    return;
+  } else if (c instanceof PostgisGeographyPointColumn) {
+    fn = () => {
+      const lon = faker.location.longitude({ min: -180, max: 180 });
+      const lat = faker.location.latitude({ min: -90, max: 90 });
+      return PostgisGeographyPointColumn.encode({ lon, lat });
+    };
+  } else {
+    const as = c.data.as;
+    if (!as) {
+      throw new Error(
+        `Don't know how to generate data for column ${table.table}.${key} that has no \`as\``,
+      );
+    }
+
+    return makeGeneratorForColumn(config, table, uniqueColumns, key, as);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  return fn;
+};
 
 export const tableFactory = <T extends Query>(
   table: T,
-  options?: FactoryOptions,
+  config?: TableFactoryConfig<T>,
 ): TableFactory<T> => {
-  const shape: ZodRawShape = {};
-  const columns = table.shape;
+  const { shape } = table;
+  const fns: { [K: string]: (sequence: number) => unknown } = {
+    ...config?.extend,
+  } as never;
 
-  for (const key in columns) {
-    const { inputSchema } = columns[key] as ColumnTypeBase;
-    if (inputSchema) shape[key] = inputSchema as ZodTypeAny;
-  }
+  const uniqueColumns = new Set<string>();
+  for (const key in shape) {
+    if (fns[key]) continue;
 
-  const schema = z.object(shape);
+    const {
+      data: { indexes, primaryKey },
+    } = shape[key] as ColumnType;
 
-  const data: RecordUnknown = {};
-  const now = Date.now();
-
-  const uniqueFields: UniqueField[] = [];
-
-  for (const key in table.shape) {
-    const column = table.shape[key] as ColumnType;
-    if (column instanceof DateBaseColumn) {
-      if (column.data.as instanceof IntegerBaseColumn) {
-        data[key] = (sequence: number) => now + sequence;
-      } else if (column.data.parse?.(nowString) instanceof Date) {
-        data[key] = (sequence: number) => new Date(now + sequence);
-      } else {
-        data[key] = (sequence: number) =>
-          new Date(now + sequence).toISOString();
-      }
-    } else if (column instanceof TextBaseColumn) {
-      const max = options?.maxTextLength ?? 1000;
-      const item = schema.shape[key];
-      const string = (
-        item instanceof ZodNullable ? item.unwrap() : item
-      ) as ZodString;
-
-      const maxCheck = string._def.checks.find(
-        (check) => check.kind === 'max',
-      ) as { value: number } | undefined;
-
-      if (!maxCheck || maxCheck.value > max) {
-        (schema.shape as Record<string, ZodTypeAny>)[key] =
-          item instanceof ZodNullable
-            ? string.max(max).nullable()
-            : string.max(max);
-      }
-    } else if (column instanceof IntegerBaseColumn) {
-      const item = schema.shape[key];
-      const num = (
-        item instanceof ZodNullable ? item.unwrap() : item
-      ) as ZodString;
-
-      const maxCheck = num._def.checks.find((check) => check.kind === 'max') as
-        | { value: number }
-        | undefined;
-
-      if (!maxCheck) {
-        (schema.shape as Record<string, ZodTypeAny>)[key] =
-          item instanceof ZodNullable
-            ? num.max(maxPostgresInt).nullable()
-            : num.max(maxPostgresInt);
-      }
+    if (primaryKey) {
+      uniqueColumns.add(key);
+      continue;
     }
 
-    if (
-      (column as ColumnType).data.indexes?.some((index) => index.options.unique)
-    ) {
-      if (column instanceof TextBaseColumn) {
-        uniqueFields.push({
-          key,
-          type: 'text',
-          kind: column.data.email
-            ? 'email'
-            : column.data.url
-            ? 'url'
-            : undefined,
-          max: column.data.max,
-          length: column.data.length,
-        });
-      } else if (column instanceof NumberBaseColumn) {
-        uniqueFields.push({
-          key,
-          type: 'number',
-          gt: column.data.gt,
-          gte: column.data.gte,
-        });
+    if (!indexes) continue;
+
+    for (const index of indexes) {
+      if (index.options.unique) {
+        uniqueColumns.add(key);
+        break;
       }
     }
   }
 
-  return new TestFactory(
-    table,
-    schema,
-    uniqueFields,
-    data,
-    options,
-  ) as TableFactory<T>;
+  const { primaryKey, indexes } = table.internal.tableData;
+  if (primaryKey) {
+    for (const key of primaryKey.columns) {
+      if (fns[key]) continue;
+
+      uniqueColumns.add(key);
+    }
+  }
+
+  if (indexes) {
+    for (const index of indexes) {
+      if (index.options.unique) {
+        for (const item of index.columns) {
+          if ('column' in item) {
+            uniqueColumns.add(item.column);
+          }
+        }
+      }
+    }
+  }
+
+  for (const key in shape) {
+    if (fns[key]) continue;
+
+    const fn = makeGeneratorForColumn(
+      config || emptyObject,
+      table,
+      uniqueColumns,
+      key,
+      (shape as unknown as ColumnsShape)[key],
+    );
+    if (fn) fns[key] = fn;
+  }
+
+  return new TestFactory(table, fns, config) as TableFactory<T>;
 };
 
 type ORMFactory<T> = {
@@ -589,7 +947,7 @@ type ORMFactory<T> = {
 
 export const ormFactory = <T>(
   orm: T,
-  options?: FactoryOptions,
+  options?: OrmFactoryConfig<T>,
 ): ORMFactory<T> => {
   const factory = {} as ORMFactory<T>;
   const defined: RecordUnknown = {};
@@ -599,10 +957,10 @@ export const ormFactory = <T>(
     if (table && typeof table === 'object' && 'definedAs' in table) {
       Object.defineProperty(factory, key, {
         get() {
-          return (defined[key] ??= tableFactory(
-            table as unknown as Query,
-            options,
-          ));
+          return (defined[key] ??= tableFactory(table as unknown as Query, {
+            ...options,
+            extend: options?.extend?.[key],
+          }));
         },
       });
     }

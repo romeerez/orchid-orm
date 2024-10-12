@@ -10,8 +10,7 @@ It is producing objects of the shape defined by your table columns.
 
 Table schemas for input (inserting) and output (selecting) may vary, the test factory is using the input schema.
 
-Under the hood, it is using [@anatine/zod-mock](https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock)
-to create and fill the object with random values. Random values are produced by [faker.js](https://www.npmjs.com/package/@faker-js/faker).
+Random values are produced by [faker.js](https://www.npmjs.com/package/@faker-js/faker), you can use `faker.seed(1)` to fix the randomness in a test for producing same values.
 
 ```ts
 import { ormFactory } from 'orchid-orm-test-factory';
@@ -37,11 +36,11 @@ const manyUsers = await factory.user.createMany(
 );
 ```
 
-Both `build` and `create` methods will especially handle the timestamp field:
+Both `build` and `create` methods will handle the timestamp field in a certain way:
 
-If the record contains multiple timestamps (such as `createdAt` and `updatedAt`) the value will be equal for each field.
-if you have columns configured for timestamps as numbers (`t.timestamp().asNumber()`) the fields will have an equal numeric timestamp,
-for the default `t.timestamp()` columns will have equal timestamp string and equal `Date` object for timestamp as dates (`t.timestamp().asDate()`).
+- if the record contains multiple timestamps (such as `createdAt` and `updatedAt`) the value will be equal for each field;
+- if you have columns configured for timestamps as numbers (`t.timestamp().asNumber()`) the fields will have an equal numeric timestamp;
+- `t.timestamp()` returning strings and `t.timestamp().asDate()` returning `Date` objects both produce equal dates.
 
 Each newly generated object will have a timestamp increased by 1 millisecond,
 so creating a list of records and then testing a query that is ordered by timestamp should work just fine.
@@ -121,10 +120,10 @@ describe('registration', () => {
 
 ## setup
 
-Install this library:
+Install this library and the faker.js:
 
 ```sh
-npm i -D orchid-orm-test-factory
+npm i -D orchid-orm-test-factory @faker-js/faker
 ```
 
 Export `factory` from some file where you have utilities for tests:
@@ -135,6 +134,99 @@ import { ormFactory } from 'orchid-orm-test-factory';
 import { db } from '../path-to-db';
 
 export const factory = ormFactory(db);
+```
+
+## overriding generators per table
+
+To define a custom data generator for a particular table:
+
+```ts
+import { ormFactory } from 'orchid-orm-test-factory';
+import { db } from '../path-to-db';
+
+const factory = ormFactory(db, {
+  extend: {
+    myTableName: {
+      // called every time when generating data for this column
+      columnName(sequence) {
+        // utilizing the sequence incrementing value to keep data unique
+        return `custom string ${sequence}`;
+      },
+    },
+  },
+});
+```
+
+## json
+
+If you're not using zod schemas integration for the ORM,
+you can define a custom function to return the needed JSON shape for a table:
+
+```ts
+import { ormFactory } from 'orchid-orm-test-factory';
+import { db } from '../path-to-db';
+
+const factory = ormFactory(db, {
+  extend: {
+    myTableName: {
+      // called every time when generating data for this column
+      jsonColumnName(sequence) {
+        // utilizing the sequence incrementing value to keep data unique
+        return {
+          number: sequence,
+          text: `some text ${sequence}`,
+        };
+      },
+    },
+  },
+});
+```
+
+In case you're using [zod schemas](/guide/columns-validation-methods) with the ORM,
+you can install and integrate [@anatine/zod-mock](https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock)
+to automatically generate JSON data based on defined schemas.
+
+```shell
+npm install @anatine/zod-mock
+```
+
+```ts
+import { ormFactory } from 'orchid-orm-test-factory';
+import { db } from '../path-to-db';
+import { ZodAnyType } from 'zod';
+import { generateMock } from '@anatine/zod-mock';
+
+const factory = ormFactory(db, {
+  fakeDataForTypes: {
+    jsonb(column) {
+      const zodSchema = column.inputSchema as ZodAnyType;
+      return () => generateMock(zodSchema);
+    },
+  },
+});
+```
+
+If you're using valibot schemas, there is a library for it as well: [valimock](https://github.com/Saeris/valimock).
+
+```shell
+npm i -D valimock
+```
+
+```ts
+import { ormFactory } from 'orchid-orm-test-factory';
+import { db } from '../path-to-db';
+import { BaseSchema } from 'valibot';
+import { Valimock } from 'valimock';
+
+const factory = ormFactory(db, {
+  fakeDataForTypes: {
+    jsonb(column) {
+      const valibotSchema = column.inputSchema as BaseSchema;
+      const valimock = new Valimock();
+      return () => valimock.mock(valibotSchema);
+    },
+  },
+});
 ```
 
 ## sequence
@@ -152,7 +244,7 @@ const records = factory.user.buildList(3, {
 
 In a such way, each record can have a unique `id` and `email`.
 
-Modern test frameworks such as `Jest` are running test suites in parallel,
+Modern test frameworks and `Jest` are running test suites in parallel,
 and this can lead to a situation when 2 test suites are trying to save a record with the same `email-1@mail.com` email to the database.
 
 This problem is handled specifically for `Jest` by using the `process.env.JEST_WORKER_ID` env variable: if this var is defined,

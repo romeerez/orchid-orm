@@ -219,7 +219,7 @@ importers:
         specifier: workspace:*
         version: link:../../qb/pqb
       zod:
-        specifier: ^3.22.4
+        specifier: ^3.23.8
         version: 3.23.8
     devDependencies:
       test-utils:
@@ -228,24 +228,18 @@ importers:
 
   packages/test-factory:
     dependencies:
-      '@anatine/zod-mock':
-        specifier: ^3.13.3
-        version: 3.13.4(@faker-js/faker@8.4.1)(zod@3.23.8)
       '@faker-js/faker':
-        specifier: ^8.3.1
-        version: 8.4.1
+        specifier: 9.x
+        version: 9.0.3
       orchid-core:
         specifier: workspace:*
         version: link:../core
-      orchid-orm-schema-to-zod:
-        specifier: workspace:*
-        version: link:../schemaConfigs/zod
       pqb:
         specifier: workspace:*
         version: link:../qb/pqb
-      zod:
-        specifier: ^3.22.4
-        version: 3.23.8
+      randexp:
+        specifier: ^0.5.3
+        version: 0.5.3
     devDependencies:
       orchid-orm:
         specifier: workspace:*
@@ -253,6 +247,9 @@ importers:
       test-utils:
         specifier: workspace:*
         version: link:../test-utils
+      zod:
+        specifier: ^3.23.8
+        version: 3.23.8
 
   packages/test-utils:
     devDependencies:
@@ -265,12 +262,6 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
-
-  '@anatine/zod-mock@3.13.4':
-    resolution: {integrity: sha512-yO/KeuyYsEDCTcQ+7CiRuY3dnafMHIZUMok6Ci7aERRCTQ+/XmsiPk/RnMx5wlLmWBTmX9kw+PavbMsjM+sAJA==}
-    peerDependencies:
-      '@faker-js/faker': ^7.0.0 || ^8.0.0
-      zod: ^3.21.4
 
   '@babel/code-frame@7.24.7':
     resolution: {integrity: sha512-BcYH1CVJBO9tvyIZ2jVeXgSIMvGZ2FDRvDdOIVQyuklNKSsx+eppDEBq/g47Ayw+RqNFE+URvOShmf+f/qwAlA==}
@@ -652,9 +643,9 @@ packages:
     resolution: {integrity: sha512-Ys+3g2TaW7gADOJzPt83SJtCDhMjndcDMFVQ/Tj9iA1BfJzFKD9mAUXT3OenpuPHbI6P/myECxRJrofUsDx/5g==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
-  '@faker-js/faker@8.4.1':
-    resolution: {integrity: sha512-XQ3cU+Q8Uqmrbf2e0cIC/QN43sTBSC8KF12u29Mb47tWrt2hAgBXSgpZMj4Ao8Uk0iJcU99QsOCaIL8934obCg==}
-    engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0, npm: '>=6.14.13'}
+  '@faker-js/faker@9.0.3':
+    resolution: {integrity: sha512-lWrrK4QNlFSU+13PL9jMbMKLJYXDFu3tQfayBsMXX7KL/GiQeqfB1CzHkqD5UHBUtPAuPo6XwGbMFNdVMZObRA==}
+    engines: {node: '>=18.0.0', npm: '>=9.0.0'}
 
   '@humanwhocodes/config-array@0.11.14':
     resolution: {integrity: sha512-3T8LkOmg45BV5FICb15QQMsyUSWrQ8AygVfC7ZG32zOalnqrilm018ZVCw0eapXux8FtA33q8PSRSstjee3jSg==}
@@ -3013,12 +3004,6 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.5
       '@jridgewell/trace-mapping': 0.3.25
 
-  '@anatine/zod-mock@3.13.4(@faker-js/faker@8.4.1)(zod@3.23.8)':
-    dependencies:
-      '@faker-js/faker': 8.4.1
-      randexp: 0.5.3
-      zod: 3.23.8
-
   '@babel/code-frame@7.24.7':
     dependencies:
       '@babel/highlight': 7.24.7
@@ -3480,7 +3465,7 @@ snapshots:
 
   '@eslint/js@8.57.0': {}
 
-  '@faker-js/faker@8.4.1': {}
+  '@faker-js/faker@9.0.3': {}
 
   '@humanwhocodes/config-array@0.11.14':
     dependencies:

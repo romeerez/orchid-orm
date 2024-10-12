@@ -12,6 +12,29 @@ export interface PostgisPoint {
   srid?: number;
 }
 
+const defaultEncode = ({
+  srid = defaultSrid,
+  lon,
+  lat,
+}: PostgisPoint): string => {
+  const arr = new Uint8Array(25);
+  const view = new DataView(arr.buffer);
+
+  // first byte 01 indicates little-endian
+  view.setInt8(0, 1);
+
+  // geometry type Point
+  view.setInt8(1, 1);
+  // it's a part of geom type, not sure why it's 32
+  view.setInt8(4, 32);
+
+  view.setUint32(5, srid, true);
+  view.setFloat64(9, lon, true);
+  view.setFloat64(17, lat, true);
+
+  return uint8ArrToHex(arr);
+};
+
 export class PostgisGeographyPointColumn<
   Schema extends ColumnSchemaConfig,
 > extends ColumnType<
@@ -22,6 +45,8 @@ export class PostgisGeographyPointColumn<
 > {
   dataType = 'geography(Point)';
   operators = Operators.any;
+
+  static encode = defaultEncode;
 
   static isDefaultPoint(typmod: number) {
     return typmodType(typmod) === 'Point' && typmodSrid(typmod) === defaultSrid;
@@ -56,29 +81,6 @@ const defaultParse = (input: string): PostgisPoint => {
         lat,
         srid,
       };
-};
-
-const defaultEncode = ({
-  srid = defaultSrid,
-  lon,
-  lat,
-}: PostgisPoint): string => {
-  const arr = new Uint8Array(25);
-  const view = new DataView(arr.buffer);
-
-  // first byte 01 indicates little-endian
-  view.setInt8(0, 1);
-
-  // geometry type Point
-  view.setInt8(1, 1);
-  // it's a part of geom type, not sure why it's 32
-  view.setInt8(4, 32);
-
-  view.setUint32(5, srid, true);
-  view.setFloat64(9, lon, true);
-  view.setFloat64(17, lat, true);
-
-  return uint8ArrToHex(arr);
 };
 
 const typmodGetType = (typmod: number) => (typmod & 0x000000fc) >> 2;

@@ -36,15 +36,16 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "@anatine/zod-mock": "^3.13.3",
-    "@faker-js/faker": "^8.3.1",
-    "orchid-orm-schema-to-zod": "workspace:*",
     "orchid-core": "workspace:*",
     "pqb": "workspace:*",
-    "zod": "^3.22.4"
+    "randexp": "^0.5.3"
   },
   "devDependencies": {
     "orchid-orm": "workspace:*",
-    "test-utils": "workspace:*"
+    "test-utils": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "@faker-js/faker": "9.x"
   }
 }
