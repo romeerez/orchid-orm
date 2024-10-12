@@ -1,5 +1,11 @@
 # pqb
 
+## 0.42.4
+
+### Patch Changes
+
+- 6210ae0: Make test factories usable disregarding of validation library (#245)
+
 ## 0.42.3
 
 ### Patch Changes

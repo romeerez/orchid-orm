@@ -1,5 +1,16 @@
 # orchid-orm-test-factory
 
+## 1.0.0
+
+### Major Changes
+
+- 6210ae0: Make test factories usable disregarding of validation library (#245)
+
+### Patch Changes
+
+- Updated dependencies [6210ae0]
+  - pqb@0.42.4
+
 ## 0.7.66
 
 ### Patch Changes

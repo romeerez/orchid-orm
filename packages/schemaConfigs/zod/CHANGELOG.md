@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.9.11
+
+### Patch Changes
+
+- 6210ae0: Make test factories usable disregarding of validation library (#245)
+- Updated dependencies [6210ae0]
+  - pqb@0.42.4
+
 ## 0.9.10
 
 ### Patch Changes
