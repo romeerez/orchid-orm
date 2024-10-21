@@ -426,6 +426,39 @@ describe('create and drop table', () => {
           ]),
       );
     });
+
+    it("should produce a compact index name when it's too long", async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action](
+            'reallyLongTableNameConsistingOfSeveralWords',
+            { noPrimaryKey: true },
+            (t) => ({
+              longNameForTheFirstColumn: t.integer(),
+              longNameForTheSecondColumn: t.integer(),
+            }),
+            (t) =>
+              t.unique([
+                'longNameForTheFirstColumn',
+                'longNameForTheSecondColumn',
+              ]),
+          ),
+        () =>
+          expectSql([
+            `
+              CREATE TABLE "reallyLongTableNameConsistingOfSeveralWords" (
+                "long_name_for_the_first_column" int4 NOT NULL,
+                "long_name_for_the_second_column" int4 NOT NULL
+              )
+            `,
+            `
+              CREATE UNIQUE INDEX "reLoTaNaCoOfSeWo_loNaFoThFiCo_loNaFoThSeCo_idx" ON "reallyLongTableNameConsistingOfSeveralWords" ("long_name_for_the_first_column", "long_name_for_the_second_column")
+            `,
+          ]),
+        () =>
+          expectSql(`DROP TABLE "reallyLongTableNameConsistingOfSeveralWords"`),
+      );
+    });
   });
 
   describe('timestamps', () => {
@@ -1049,6 +1082,40 @@ describe('create and drop table', () => {
             )
           `);
         },
+      );
+    });
+
+    it('should compact long foreign key names', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action](
+            'reallyLongTableNameConsistingOfSeveralWords',
+            { noPrimaryKey: true },
+            (t) => ({
+              longNameForTheFirstColumn: t.integer(),
+              longNameForTheSecondColumn: t.integer(),
+            }),
+            (t) =>
+              t.foreignKey(
+                ['longNameForTheFirstColumn', 'longNameForTheSecondColumn'],
+                'otherTable',
+                ['foreignOne', 'foreignTwo'],
+              ),
+          ),
+        () =>
+          expectSql(`
+            CREATE TABLE "reallyLongTableNameConsistingOfSeveralWords" (
+              "long_name_for_the_first_column" int4 NOT NULL,
+              "long_name_for_the_second_column" int4 NOT NULL,
+              ${toLine(`
+                CONSTRAINT "reLoTaNaCoOfSeWo_loNaFoThFiCo_loNaFoThSeCo_fkey"
+                  FOREIGN KEY ("long_name_for_the_first_column", "long_name_for_the_second_column")
+                  REFERENCES "otherTable"("foreign_one", "foreign_two")
+              `)}
+            )
+          `),
+        () =>
+          expectSql('DROP TABLE "reallyLongTableNameConsistingOfSeveralWords"'),
       );
     });
   });

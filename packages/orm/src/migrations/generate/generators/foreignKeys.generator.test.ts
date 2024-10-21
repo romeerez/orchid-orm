@@ -858,4 +858,64 @@ change(async (db) => {
   ${green('+ add column')} name text`,
     );
   });
+
+  it('should compact long foreign key names', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
+        }));
+      },
+      tables: [
+        class Table extends BaseTable {
+          table = 'reallyLongTableNameConsistingOfSeveralWords';
+          noPrimaryKey = true;
+          columns = this.setColumns(
+            (t) => ({
+              longNameForTheFirstColumn: t.text(),
+              longNameForTheSecondColumn: t.text(),
+            }),
+            (t) =>
+              t.foreignKey(
+                ['longNameForTheFirstColumn', 'longNameForTheSecondColumn'],
+                () => someCompositeTable,
+                ['fA', 'fB'],
+              ),
+          );
+        },
+        someCompositeTable,
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'reallyLongTableNameConsistingOfSeveralWords',
+    {
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      longNameForTheFirstColumn: t.text(),
+      longNameForTheSecondColumn: t.text(),
+    }),
+    (t) => 
+      t.foreignKey(
+        ['longNameForTheFirstColumn', 'longNameForTheSecondColumn'],
+        'some',
+        ['fA', 'fB'],
+      ),
+  );
+});
+`);
+
+    assert.report(
+      `${green(
+        '+ create table',
+      )} reallyLongTableNameConsistingOfSeveralWords (2 columns, 1 foreign key, no primary key)`,
+    );
+  });
 });

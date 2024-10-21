@@ -16,7 +16,7 @@ jest.mock('fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('indexes', () => {
-  const { arrange, act, assert, table } = useGeneratorsTestUtils();
+  const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
 
   const columnOptions: TableData.Index.ColumnOptions = {
     collate: 'C',
@@ -940,5 +940,52 @@ change(async (db) => {
 
       assert.migration();
     });
+  });
+
+  it('should compact long index names', async () => {
+    await arrange({
+      tables: [
+        class Table extends BaseTable {
+          table = 'reallyLongTableNameConsistingOfSeveralWords';
+          noPrimaryKey = true;
+          columns = this.setColumns(
+            (t) => ({
+              longNameForTheFirstColumn: t.integer(),
+              longNameForTheSecondColumn: t.integer(),
+            }),
+            (t) =>
+              t.unique([
+                'longNameForTheFirstColumn',
+                'longNameForTheSecondColumn',
+              ]),
+          );
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'reallyLongTableNameConsistingOfSeveralWords',
+    {
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      longNameForTheFirstColumn: t.integer(),
+      longNameForTheSecondColumn: t.integer(),
+    }),
+    (t) => t.unique(['longNameForTheFirstColumn', 'longNameForTheSecondColumn']),
+  );
+});
+`);
+
+    assert.report(
+      `${green(
+        '+ create table',
+      )} reallyLongTableNameConsistingOfSeveralWords (2 columns, 1 index, no primary key)`,
+    );
   });
 });

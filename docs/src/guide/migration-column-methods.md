@@ -572,7 +572,7 @@ change(async (db) => {
     (t) => [
       t.check(t.sql`a < b`),
       // constraint name can be passed as a second argument
-      t.integer().check(t.sql`...`, 'check_name'),
+      t.check(t.sql`a < b`, 'check_name'),
     ],
   );
 });

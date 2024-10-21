@@ -6,6 +6,7 @@ import {
   RawSQLBase,
   SingleSql,
   toArray,
+  toCamelCase,
   toSnakeCase,
 } from 'orchid-core';
 import { ColumnComment } from './migration';
@@ -194,10 +195,11 @@ export const getConstraintName = (
   snakeCase: boolean | undefined,
 ) => {
   if (constraint.references) {
-    const { columns } = constraint.references;
-    return `${table}_${(snakeCase ? columns.map(toSnakeCase) : columns).join(
-      '_',
-    )}_fkey`;
+    let { columns } = constraint.references;
+    if (snakeCase) {
+      columns = columns.map(toSnakeCase);
+    }
+    return makeConstraintName(table, columns, 'fkey');
   }
   if (constraint.check) return `${table}_check`;
   if (constraint.identity) return `${table}_identity`;
@@ -272,13 +274,63 @@ export const referencesToSql = (
   return sql.join(' ');
 };
 
+const MAX_CONSTRAINT_NAME_LEN = 63;
+const makeConstraintName = (
+  table: string,
+  columns: string[],
+  suffix: string,
+) => {
+  const long = `${table}_${columns.join('_')}_${suffix}`;
+  if (long.length <= MAX_CONSTRAINT_NAME_LEN) return long;
+
+  for (let partLen = 3; partLen > 0; partLen--) {
+    const shorter = `${toCamelCase(
+      toSnakeCase(table)
+        .split('_')
+        .map((p) => p.slice(0, partLen))
+        .join('_'),
+    )}_${columns
+      .map((c) =>
+        toCamelCase(
+          c
+            .split('_')
+            .map((p) => p.slice(0, partLen))
+            .join('_'),
+        ),
+      )
+      .join('_')}_${suffix}`;
+
+    if (shorter.length <= MAX_CONSTRAINT_NAME_LEN) return shorter;
+  }
+
+  const short = `${table}_${columns.length}columns_${suffix}`;
+  if (short.length <= MAX_CONSTRAINT_NAME_LEN) return short;
+
+  for (let partLen = 3; partLen > 0; partLen--) {
+    const short = `${toCamelCase(
+      toSnakeCase(table)
+        .split('_')
+        .map((p) => p.slice(0, partLen))
+        .join('_'),
+    )}_${columns.length}columns_${suffix}`;
+
+    if (short.length <= MAX_CONSTRAINT_NAME_LEN) return short;
+  }
+
+  return `long_ass_table_${suffix}`;
+};
+
 export const getIndexName = (
   table: string,
   columns: ({ column?: string } | { expression: string })[],
 ) => {
-  return `${table}_${columns
-    .map((it) => ('column' in it ? it.column : 'expression'))
-    .join('_')}_idx`;
+  return makeConstraintName(
+    table,
+    columns.map((it) =>
+      'column' in it ? (it.column as string) : 'expression',
+    ),
+    'idx',
+  );
 };
 
 export const indexesToQuery = (
