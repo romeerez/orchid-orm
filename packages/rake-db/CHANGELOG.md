@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.23.14
+
+### Patch Changes
+
+- d3de0de: Compress long index and foreign key names (#421)
+
 ## 2.23.13
 
 ### Patch Changes

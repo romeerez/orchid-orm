@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.37.7
+
+### Patch Changes
+
+- d3de0de: Compress long index and foreign key names (#421)
+- Updated dependencies [d3de0de]
+  - rake-db@2.23.14
+
 ## 1.37.6
 
 ### Patch Changes
