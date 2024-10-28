@@ -1,5 +1,11 @@
 # pqb
 
+## 0.42.6
+
+### Patch Changes
+
+- a97ebe8: Fix makeHelper/repo in a nested select on same table (#423)
+
 ## 0.42.5
 
 ### Patch Changes

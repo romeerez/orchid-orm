@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.37.8
+
+### Patch Changes
+
+- a97ebe8: Fix makeHelper/repo in a nested select on same table (#423)
+- Updated dependencies [a97ebe8]
+  - rake-db@2.23.15
+  - pqb@0.42.6
+
 ## 1.37.7
 
 ### Patch Changes
