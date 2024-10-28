@@ -22,6 +22,7 @@ import {
 import { getQueryAs } from '../common/utils';
 import { SelectItemExpression } from '../common/selectItemExpression';
 import { Operators, setQueryOperators } from '../columns/operators';
+import { getFullColumnTable } from '../query/queryUtils';
 
 export type QueryGetSelf = PickQueryMetaTable;
 
@@ -58,13 +59,13 @@ export const _getSelectableColumn = (
   if (!type) {
     const index = arg.indexOf('.');
     if (index !== -1) {
-      const table = arg.slice(0, index);
+      const as =
+        (q as unknown as PickQueryQ).q.as || (q as PickQueryTable).table;
+
+      const table = getFullColumnTable(q, arg, index, as);
       const column = arg.slice(index + 1);
 
-      if (
-        table ===
-        ((q as unknown as PickQueryQ).q.as || (q as PickQueryTable).table)
-      ) {
+      if (table === as) {
         type = (q as unknown as PickQueryShape).shape[column];
       } else {
         type = (q as unknown as PickQueryQ).q.joinedShapes?.[table]?.[column];

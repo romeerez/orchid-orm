@@ -285,7 +285,7 @@ class CategoryTable extends BaseTable {
   readonly table = 'category';
   columns = this.setColumns((t) => ({
     categoryName: t.text().primaryKey(),
-    parentName: t.text(),
+    parentName: t.text().nullable(),
     ...t.timestamps(),
   }));
 

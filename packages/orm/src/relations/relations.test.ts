@@ -259,36 +259,6 @@ describe('relations', () => {
     );
   });
 
-  it('should fit into `makeHelper` function', async () => {
-    const fn = db.post.makeHelper((arg) => arg.select('post.Title'));
-
-    const q = db.user.select({
-      posts: (q) => fn(q.posts.select('posts.Id')),
-    });
-
-    assertType<
-      Awaited<typeof q>,
-      { posts: { Id: number; Title: string }[] }[]
-    >();
-
-    expectSql(
-      q.toSQL(),
-      `
-        SELECT COALESCE("posts".r, '[]') "posts"
-        FROM "user"
-        LEFT JOIN LATERAL (
-          SELECT json_agg(row_to_json("t".*)) r
-          FROM (
-            SELECT "post"."id" "Id", "post"."title" "Title"
-            FROM "post"
-            WHERE "post"."user_id" = "user"."id"
-              AND "post"."title" = "user"."user_key"
-          ) "t"
-        ) "posts" ON true
-      `,
-    );
-  });
-
   it('should support nested where with count conditions', async () => {
     const q = db.user.count().where((q) =>
       q.posts
@@ -499,6 +469,58 @@ describe('relations', () => {
 
     local.user.find(1).update({
       data: (q) => q.get('data').jsonSet('key', 'value'),
+    });
+  });
+
+  describe('makeHelper', () => {
+    it('should fit into `makeHelper` function', async () => {
+      const fn = db.post.makeHelper((q) => q.select('post.Title'));
+
+      const q = db.user.select({
+        posts: (q) => fn(q.posts.select('posts.Id')),
+      });
+
+      assertType<
+        Awaited<typeof q>,
+        { posts: { Id: number; Title: string }[] }[]
+      >();
+
+      expectSql(
+        q.toSQL(),
+        `
+        SELECT COALESCE("posts".r, '[]') "posts"
+        FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT json_agg(row_to_json("t".*)) r
+          FROM (
+            SELECT "posts"."id" "Id", "posts"."title" "Title"
+            FROM "post" "posts"
+            WHERE "posts"."user_id" = "user"."id"
+              AND "posts"."title" = "user"."user_key"
+          ) "t"
+        ) "posts" ON true
+      `,
+      );
+    });
+
+    it('should use makeHelper in select on the same table', async () => {
+      await db.category.createMany([
+        { categoryName: 'one' },
+        { categoryName: 'two', parentName: 'one' },
+      ]);
+
+      const helper = db.category.makeHelper((q) => q.select('categoryName'));
+
+      const q = db.category.select({
+        parent: (q) => helper(q.category),
+      });
+
+      const result = await q;
+
+      expect(result).toEqual([
+        { parent: null },
+        { parent: { categoryName: 'one' } },
+      ]);
     });
   });
 });

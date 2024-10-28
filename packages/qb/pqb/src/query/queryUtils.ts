@@ -1,6 +1,7 @@
 import { DeleteQueryData, QueryData } from '../sql';
 import {
   emptyObject,
+  getValueKey,
   IsQuery,
   PickQueryResult,
   pushOrNewArrayToObject,
@@ -231,4 +232,18 @@ export const _queryRows = <T extends PickQueryResult>(
 ): SetQueryReturnsRows<T> => {
   (q as unknown as PickQueryQ).q.returnType = 'rows';
   return q as never;
+};
+
+export const getFullColumnTable = (
+  q: IsQuery,
+  column: string,
+  index: number,
+  as: string | getValueKey | undefined,
+) => {
+  const table = column.slice(0, index);
+  return as &&
+    table !== as &&
+    (q as unknown as PickQueryQ).q.aliases?.[table] === as
+    ? as
+    : table;
 };

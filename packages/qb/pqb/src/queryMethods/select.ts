@@ -12,7 +12,11 @@ import {
   ColumnsShapeToPluck,
 } from '../columns';
 import { JSONTextColumn } from '../columns/json';
-import { _clone, pushQueryArray } from '../query/queryUtils';
+import {
+  _clone,
+  getFullColumnTable,
+  pushQueryArray,
+} from '../query/queryUtils';
 import { SelectAsValue, SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
 import {
   ColumnsParsers,
@@ -717,50 +721,52 @@ export const setParserForSelectedString = (
 ): string | undefined => {
   const index = arg.indexOf('.');
   if (index !== -1) {
-    const table = arg.slice(0, index);
+    const table = getFullColumnTable(q as unknown as IsQuery, arg, index, as);
     const column = arg.slice(index + 1);
 
     // 'table.*' is selecting a full joined record (without computeds)
     if (column === '*') {
       addParsersForSelectJoined(q, table, columnAs);
       return table === as ? column : arg;
-    } else if (table === as) {
+    }
+
+    if (table === as) {
       if (columnAs) {
         const parser = q.q.parsers?.[column];
         if (parser) (q.q.parsers as ColumnsParsers)[columnAs] = parser;
       }
 
       return handleComputed(q, q.q.computeds, column);
-    } else {
-      const parser = q.q.joinedParsers?.[table]?.[column];
-      if (parser) setParserToQuery(q.q, columnAs || column, parser);
-
-      const batchParsers = q.q.joinedBatchParsers?.[table];
-      if (batchParsers) {
-        for (const bp of batchParsers) {
-          if (bp.path[0] === column) {
-            (q.q.batchParsers ??= []).push(bp);
-          }
-        }
-      }
-
-      const computeds = q.q.joinedComputeds?.[table];
-      if (computeds?.[column]) {
-        const computed = computeds[column];
-        const map: HookSelect = (q.q.hookSelect ??= new Map());
-        for (const column of computed.deps) {
-          map.set(column, { select: `${table}.${column}` });
-        }
-
-        q.q.selectedComputeds = {
-          ...q.q.selectedComputeds,
-          [column]: computed,
-        };
-        return;
-      }
-
-      return arg;
     }
+
+    const parser = q.q.joinedParsers?.[table]?.[column];
+    if (parser) setParserToQuery(q.q, columnAs || column, parser);
+
+    const batchParsers = q.q.joinedBatchParsers?.[table];
+    if (batchParsers) {
+      for (const bp of batchParsers) {
+        if (bp.path[0] === column) {
+          (q.q.batchParsers ??= []).push(bp);
+        }
+      }
+    }
+
+    const computeds = q.q.joinedComputeds?.[table];
+    if (computeds?.[column]) {
+      const computed = computeds[column];
+      const map: HookSelect = (q.q.hookSelect ??= new Map());
+      for (const column of computed.deps) {
+        map.set(column, { select: `${table}.${column}` });
+      }
+
+      q.q.selectedComputeds = {
+        ...q.q.selectedComputeds,
+        [column]: computed,
+      };
+      return;
+    }
+
+    return arg;
   } else {
     if (columnAs) {
       const parser = q.q.parsers?.[arg];
@@ -865,9 +871,10 @@ const addColumnToShapeFromSelect = (
 ) => {
   const index = arg.indexOf('.');
   if (index !== -1) {
-    const table = arg.slice(0, index);
+    const as = (q as Query).q.as || (q as Query).table;
+    const table = getFullColumnTable(q, arg, index, as);
     const column = arg.slice(index + 1);
-    if (table === ((q as Query).q.as || (q as Query).table)) {
+    if (table === as) {
       result[key || column] = shape[column];
     } else {
       const it = query.joinedShapes?.[table]?.[column];

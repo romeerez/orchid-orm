@@ -24,7 +24,7 @@ import { SelectableOrExpressions } from '../common/utils';
 import { AggregateOptions, makeFnExpression } from '../common/fn';
 import { BooleanQueryColumn } from './aggregate';
 import { Operators, OperatorsBoolean } from '../columns/operators';
-import { _clone } from '../query/queryUtils';
+import { _clone, getFullColumnTable } from '../query/queryUtils';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
@@ -200,9 +200,10 @@ export class ExpressionMethods {
 
     const index = arg.indexOf('.');
     if (index !== -1) {
-      const table = arg.slice(0, index);
+      const as = q.q.as || q.table;
+      const table = getFullColumnTable(q, arg, index, as);
       const col = arg.slice(index + 1);
-      if (table === (q.q.as || q.table)) {
+      if (table === as) {
         column = shape[col];
       } else {
         column = (q.q.joinedShapes as JoinedShapes)[table][col];

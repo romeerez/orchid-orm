@@ -42,6 +42,7 @@ import {
   _queryTakeOptional,
   pushQueryArray,
   pushQueryValue,
+  setQueryObjectValue,
 } from '../query/queryUtils';
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
@@ -955,9 +956,16 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {
+    const as =
+      (this as unknown as Query).q.as ||
+      ((this as unknown as Query).table as string);
+
     return ((query: T, ...args: Args) => {
       const q = _clone(query);
-      q.q.as = undefined;
+      // alias the original table name inside the makeHelper with dynamic table name from the invoking code
+      if (q.q.as) {
+        setQueryObjectValue(q, 'aliases', as, q.q.as);
+      }
       return fn(q as never, ...args);
     }) as never;
   }
