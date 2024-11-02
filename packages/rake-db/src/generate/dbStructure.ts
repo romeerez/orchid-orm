@@ -82,6 +82,7 @@ export namespace DbStructure {
     tsVector?: boolean;
     language?: string;
     languageColumn?: string;
+    exclude?: string[]; // array of operators for index columns and expressions
   }
 
   // FULL | PARTIAL | SIMPLE
@@ -398,7 +399,17 @@ const indexesSql = `SELECT
     WHERE schemaname = n.nspname
       AND indexname = ic.relname
   ) AS tablespace,
-  pg_get_expr(i.indpred, i.indrelid) AS "where"
+  pg_get_expr(i.indpred, i.indrelid) AS "where",
+  (
+    CASE i.indisexclusion WHEN true
+      THEN (
+        SELECT json_agg(o.oprname)
+        FROM pg_catalog.pg_constraint c, LATERAL unnest(c.conexclop) op_oid
+        JOIN pg_operator o ON o.oid = op_oid
+        WHERE c.conindid = ic.oid
+      )
+    END
+  ) "exclude"
 FROM pg_index i
 JOIN pg_class t ON t.oid = i.indrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
@@ -625,7 +636,11 @@ export async function introspectDbSchema(
     }
   }
 
+  const indexes = [];
   for (const index of result.indexes) {
+    if (index.exclude) continue;
+    indexes.push(index);
+
     nullsToUndefined(index);
     for (const column of index.columns) {
       if (!('expression' in column)) continue;
@@ -703,6 +718,7 @@ export async function introspectDbSchema(
       }
     }
   }
+  result.indexes = indexes;
 
   return result;
 }
