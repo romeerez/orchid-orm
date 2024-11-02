@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.23.17
+
+### Patch Changes
+
+- f6ef5be: Ignore `exclude` constraints in migration gen (#419)
+
 ## 2.23.16
 
 ### Patch Changes

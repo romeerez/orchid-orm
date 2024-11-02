@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.3.3
+
+### Patch Changes
+
+- 8ba0c09: Fix create-orchid-orm shebang
+
 ## 0.3.2
 
 ### Patch Changes
