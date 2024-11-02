@@ -63,7 +63,7 @@ export const columnToSql = (
     line.push(identityToSql(item.data.identity));
   } else if (item.data.generated) {
     line.push(
-      `GENERATED ALWAYS AS (${item.data.generated({
+      `GENERATED ALWAYS AS (${item.data.generated.toSQL({
         values,
         snakeCase,
       })}) STORED`,

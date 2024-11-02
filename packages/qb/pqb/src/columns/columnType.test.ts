@@ -719,4 +719,39 @@ describe('column type', () => {
       expect(column.data).toMatchObject(params);
     });
   });
+
+  describe('generated', () => {
+    it('should have toSQL', () => {
+      const values: unknown[] = [];
+
+      const sql = column.generated`1 + ${2}`.data.generated!.toSQL({
+        values,
+        snakeCase: undefined,
+      });
+
+      expect(sql).toBe('1 + $1');
+      expect(values).toEqual([2]);
+    });
+
+    it('should have toCode', () => {
+      const sql = column.generated`1 + ${2}`.data.generated!;
+
+      expect(sql.toCode()).toBe('.generated`1 + ${2}`');
+    });
+
+    it('should have toCode for raw argument', () => {
+      const sql = column.generated({ raw: 'raw' }).data.generated!;
+
+      expect(sql.toCode()).toBe(".generated({ raw: 'raw' })");
+    });
+
+    it('should have toCode for raw argument with values', () => {
+      const sql = column.generated({ raw: 'raw', values: { num: 123 } }).data
+        .generated!;
+
+      expect(sql.toCode()).toBe(
+        '.generated({ raw: \'raw\', values: {"num":123} })',
+      );
+    });
+  });
 });

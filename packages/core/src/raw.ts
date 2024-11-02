@@ -145,20 +145,10 @@ export abstract class RawSQLBase<
     const { _sql: sql, _values: values } = this;
     let code = `${t}.sql`;
 
-    if (typeof sql === 'string') {
-      code += `({ raw: '${sql.replace(/'/g, "\\'")}' })`;
-    } else {
-      code += '`';
-
-      const parts = sql[0];
-      let i = 0;
-      for (let last = parts.length - 1; i < last; i++) {
-        code += parts[i] + `\${${sql[i + 1]}}`;
-      }
-      code += parts[i];
-
-      code += '`';
-    }
+    code +=
+      typeof sql === 'string'
+        ? `({ raw: '${sql.replace(/'/g, "\\'")}' })`
+        : templateLiteralSQLToCode(sql);
 
     if (values) {
       code += `.values(${JSON.stringify(values)})`;
@@ -167,6 +157,19 @@ export abstract class RawSQLBase<
     return code;
   }
 }
+
+export const templateLiteralSQLToCode = (sql: TemplateLiteralArgs): string => {
+  let code = '`';
+
+  const parts = sql[0];
+  let i = 0;
+  for (let last = parts.length - 1; i < last; i++) {
+    code += parts[i] + `\${${sql[i + 1]}}`;
+  }
+  code += parts[i];
+
+  return code + '`';
+};
 
 RawSQLBase.prototype.type = ExpressionTypeMethod.prototype.type;
 

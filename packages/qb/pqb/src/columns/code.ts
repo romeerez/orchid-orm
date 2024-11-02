@@ -514,6 +514,10 @@ export const columnCode = (
     code[0].unshift(prepend);
   }
 
+  if (data.generated) {
+    addCode(code, data.generated.toCode());
+  }
+
   if (data.primaryKey) {
     addCode(
       code,

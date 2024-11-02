@@ -657,4 +657,91 @@ change(async (db) => {
 
     assert.report(`${green('+ create table')} table (3 columns)`);
   });
+
+  describe('generated', () => {
+    it('should support generated column', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            nUm: t.integer(),
+          }));
+        },
+        tables: [
+          table((t) => ({
+            nUm: t.integer(),
+            genErated: t.integer().generated`n_um + n_um`,
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    genErated: t.add(t.integer().generated\`n_um + n_um\`),
+  }));
+});
+`);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} genErated integer`);
+    });
+
+    it('should support generated tsvector column', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            aA: t.text(),
+            bB: t.text(),
+          }));
+        },
+        tables: [
+          table((t) => ({
+            aA: t.text(),
+            bB: t.text(),
+            tV: t.tsvector().generated('spanish', ['aA', 'bB']),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    tV: t.add(t.tsvector().generated('spanish', ['aA', 'bB'])),
+  }));
+});
+`);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} tV tsvector`);
+    });
+
+    it('should not recreate generated tsvector column', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            aA: t.text(),
+            bB: t.text(),
+            tV: t.tsvector().generated('spanish', ['aA', 'bB']),
+          }));
+        },
+        tables: [
+          table((t) => ({
+            aA: t.text(),
+            bB: t.text(),
+            tV: t.tsvector().generated('spanish', ['aA', 'bB']),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration();
+    });
+  });
 });

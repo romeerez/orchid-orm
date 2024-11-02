@@ -396,6 +396,94 @@ describe('string columns', () => {
       it('should have toCode', () => {
         expect(t.tsvector().toCode(ctx, 'key')).toBe('t.tsvector()');
       });
+
+      describe('generated', () => {
+        describe('toSQL', () => {
+          it('should handle template sql', () => {
+            const values: unknown[] = [];
+
+            const c = t.tsvector().generated`1 + ${2}`;
+
+            expect(
+              c.data.generated?.toSQL({ values, snakeCase: undefined }),
+            ).toBe('1 + $1');
+            expect(values).toEqual([2]);
+          });
+
+          it('should handle raw sql', () => {
+            const values: unknown[] = [];
+
+            const c = t
+              .tsvector()
+              .generated({ raw: '1 + $a', values: { a: 2 } });
+
+            expect(
+              c.data.generated?.toSQL({ values, snakeCase: undefined }),
+            ).toBe('1 + $1');
+            expect(values).toEqual([2]);
+          });
+
+          it('for camel case', () => {
+            const c = t.tsvector().generated(['aA', 'bB']);
+
+            expect(
+              c.data.generated?.toSQL({ values: [], snakeCase: undefined }),
+            ).toBe(
+              `to_tsvector('english', coalesce("aA", '') || ' ' || coalesce("bB", ''))`,
+            );
+          });
+
+          it('for snake case', () => {
+            const c = t.tsvector().generated(['aA', 'bB']);
+
+            expect(
+              c.data.generated?.toSQL({ values: [], snakeCase: true }),
+            ).toBe(
+              `to_tsvector('english', coalesce("a_a", '') || ' ' || coalesce("b_b", ''))`,
+            );
+          });
+        });
+
+        describe('toCode', () => {
+          it('should encode template literal sql', () => {
+            const c = t.tsvector().generated`1 + ${2}`;
+
+            expect(c.data.generated?.toCode()).toBe('.generated`1 + ${2}`');
+          });
+
+          it('should encode raw sql', () => {
+            const c = t
+              .tsvector()
+              .generated({ raw: '1 + $a', values: { a: 2 } });
+
+            expect(c.data.generated?.toCode()).toBe(
+              `.generated({ raw: '1 + $a', values: {"a":2} })`,
+            );
+          });
+
+          it('should encode columns array', () => {
+            const c = t.tsvector().generated(['a', 'b']);
+
+            expect(c.data.generated?.toCode()).toBe(`.generated(['a', 'b'])`);
+          });
+
+          it('should encode columns object', () => {
+            const c = t.tsvector().generated({ a: 'A', b: 'B' });
+
+            expect(c.data.generated?.toCode()).toBe(
+              `.generated({ a: 'A', b: 'B' })`,
+            );
+          });
+
+          it('should encode language', () => {
+            const c = t.tsvector().generated('english', ['a', 'b']);
+
+            expect(c.data.generated?.toCode()).toBe(
+              `.generated('english', ['a', 'b'])`,
+            );
+          });
+        });
+      });
     });
 
     describe('tsquery', () => {

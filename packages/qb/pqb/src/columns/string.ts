@@ -1,4 +1,9 @@
-import { ColumnData, ColumnType, PickColumnData } from './columnType';
+import {
+  ColumnData,
+  ColumnDataGenerated,
+  ColumnType,
+  PickColumnData,
+} from './columnType';
 import { NumberColumnData } from './number';
 import {
   Code,
@@ -13,11 +18,12 @@ import {
   PickColumnBaseData,
   setColumnData,
   toSnakeCase,
-  TemplateLiteralArgs,
   ColumnToCodeCtx,
+  quoteObjectKey,
+  RecordString,
 } from 'orchid-core';
 import { columnCode } from './code';
-import { raw, RawSQL } from '../sql/rawSql';
+import { RawSQL } from '../sql/rawSql';
 import { SearchWeightRecord } from '../sql';
 import { Operators, OperatorsNumber, OperatorsText } from './operators';
 import { setColumnDefaultParse } from './column.utils';
@@ -529,54 +535,87 @@ export class TsVectorColumn<
       | [language: string, columns: TsVectorGeneratedColumns]
       | [columns: TsVectorGeneratedColumns]
   ): T {
-    return setColumnData(this, 'generated', (ctx, quotedAs): string => {
+    const arg = args[0];
+    // early return on StaticSQLArgs case
+    if (typeof arg === 'object' && 'raw' in arg) {
+      return super.generated(...(args as StaticSQLArgs)) as never;
+    }
+
+    const toSQL: ColumnDataGenerated['toSQL'] = (ctx) => {
       const first = args[0];
-      if (typeof first === 'string' || !('raw' in first)) {
-        const target =
-          typeof first === 'string' ? (args[1] as string[]) : first;
+      const target = typeof first === 'string' ? (args[1] as string[]) : first;
 
-        const language =
-          typeof first === 'string'
-            ? first
-            : (this as unknown as TsVectorColumn<ColumnSchemaConfig>)
-                .defaultLanguage;
+      const language =
+        typeof first === 'string'
+          ? first
+          : (this as unknown as TsVectorColumn<ColumnSchemaConfig>)
+              .defaultLanguage;
 
-        const { snakeCase } = ctx;
+      const { snakeCase } = ctx;
 
-        let sql;
-        if (Array.isArray(target)) {
-          const columns =
-            target.length === 1
-              ? `"${snakeCase ? toSnakeCase(target[0]) : target[0]}"`
-              : target
-                  .map(
-                    (column) =>
-                      `coalesce("${
-                        snakeCase ? toSnakeCase(column) : column
-                      }", '')`,
-                  )
-                  .join(` || ' ' || `);
+      let sql;
+      if (Array.isArray(target)) {
+        const columns =
+          target.length === 1
+            ? `"${snakeCase ? toSnakeCase(target[0]) : target[0]}"`
+            : target
+                .map(
+                  (column) =>
+                    `coalesce("${
+                      snakeCase ? toSnakeCase(column) : column
+                    }", '')`,
+                )
+                .join(` || ' ' || `);
 
-          sql = `to_tsvector('${language}', ${columns})`;
-        } else {
-          for (const key in target) {
-            sql =
-              (sql ? sql + ' || ' : '(') +
-              `setweight(to_tsvector('${language}', coalesce("${
-                snakeCase ? toSnakeCase(key) : key
-              }", '')), '${target[key]}')`;
-          }
-          if (sql) {
-            sql += ')';
-          } else {
-            throw new Error('Empty target in the text search generated column');
-          }
-        }
-
-        return sql;
+        sql = `to_tsvector('${language}', ${columns})`;
       } else {
-        return raw(...(args as TemplateLiteralArgs)).toSQL(ctx, quotedAs);
+        for (const key in target) {
+          sql =
+            (sql ? sql + ' || ' : '(') +
+            `setweight(to_tsvector('${language}', coalesce("${
+              snakeCase ? toSnakeCase(key) : key
+            }", '')), '${(target as RecordString)[key]}')`;
+        }
+        if (sql) {
+          sql += ')';
+        } else {
+          throw new Error('Empty target in the text search generated column');
+        }
       }
+
+      return sql;
+    };
+
+    const toCode = (): string => {
+      let code = '.generated(';
+
+      const first = args[0];
+      let target;
+      if (typeof first === 'string') {
+        code += `'${first}', `;
+        target = args[1] as string[];
+      } else {
+        target = args[0];
+      }
+
+      if (Array.isArray(target)) {
+        code += `[${target.map((x) => `'${x}'`).join(', ')}]`;
+      } else {
+        const pairs: string[] = [];
+        for (const key in target as RecordString) {
+          pairs.push(
+            `${quoteObjectKey(key)}: '${(target as RecordString)[key]}'`,
+          );
+        }
+        code += `{ ${pairs.join(', ')} }`;
+      }
+
+      return code + ')';
+    };
+
+    return setColumnData(this, 'generated', {
+      toSQL,
+      toCode,
     });
   }
 }

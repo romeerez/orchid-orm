@@ -10,8 +10,11 @@ import {
   PrimaryKeyColumn,
   pushColumnData,
   QueryBaseCommon,
+  RawSQLValues,
   setColumnData,
   StaticSQLArgs,
+  TemplateLiteralArgs,
+  templateLiteralSQLToCode,
   UniqueColumn,
 } from 'orchid-core';
 import { raw } from '../sql/rawSql';
@@ -30,11 +33,17 @@ export interface ColumnData extends ColumnDataBase {
   compression?: string;
   foreignKeys?: TableData.ColumnReferences[];
   identity?: TableData.Identity;
-  // raw SQL for a generated column
-  generated?(
+  // raw SQL for generated columns
+  generated?: ColumnDataGenerated;
+}
+
+export interface ColumnDataGenerated {
+  toSQL(
     ctx: { values: unknown[]; snakeCase: boolean | undefined },
     quotedAs?: string,
   ): string;
+
+  toCode(): string;
 }
 
 export interface ColumnFromDbParams {
@@ -447,6 +456,28 @@ export abstract class ColumnType<
    */
   generated<T extends PickColumnData>(this: T, ...args: StaticSQLArgs): T {
     const sql = raw(...args);
-    return setColumnData(this, 'generated', (...args) => sql.toSQL(...args));
+    return setColumnData(this, 'generated', {
+      toSQL(ctx, quoted) {
+        return sql.toSQL(ctx, quoted);
+      },
+
+      toCode() {
+        let sql = '.generated';
+
+        if (Array.isArray(args[0])) {
+          sql += templateLiteralSQLToCode(args as TemplateLiteralArgs);
+        } else {
+          const { raw, values } = args[0] as {
+            raw: string;
+            values?: RawSQLValues;
+          };
+          sql += `({ raw: '${raw.replace(/'/g, "\\'")}'${
+            values ? `, values: ${JSON.stringify(values)}` : ''
+          } })`;
+        }
+
+        return sql;
+      },
+    });
   }
 }
