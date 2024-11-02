@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.21.2
+
+### Patch Changes
+
+- c8699da: Support generation migration for generated columns (#424)
+
 ## 0.21.1
 
 ### Patch Changes

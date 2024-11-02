@@ -1,5 +1,13 @@
 # pqb
 
+## 0.42.7
+
+### Patch Changes
+
+- c8699da: Support generation migration for generated columns (#424)
+- Updated dependencies [c8699da]
+  - orchid-core@0.21.2
+
 ## 0.42.6
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.23.16
+
+### Patch Changes
+
+- c8699da: Support generation migration for generated columns (#424)
+- Updated dependencies [c8699da]
+  - pqb@0.42.7
+  - orchid-core@0.21.2
+
 ## 2.23.15
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.37.9
+
+### Patch Changes
+
+- c8699da: Support generation migration for generated columns (#424)
+- Updated dependencies [c8699da]
+  - rake-db@2.23.16
+  - pqb@0.42.7
+  - orchid-core@0.21.2
+
 ## 1.37.8
 
 ### Patch Changes
