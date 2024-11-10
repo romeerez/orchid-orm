@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.23.18
+
+### Patch Changes
+
+- 4935042: Support `EXCLUDE` constraints (#419)
+- Updated dependencies [4935042]
+  - pqb@0.42.8
+
 ## 2.23.17
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.42.8
+
+### Patch Changes
+
+- 4935042: Support `EXCLUDE` constraints (#419)
+
 ## 0.42.7
 
 ### Patch Changes
