@@ -29,6 +29,7 @@ const structure = {
   tables: [],
   views: [],
   indexes: [],
+  excludes: [],
   constraints: [],
   triggers: [],
   extensions: [],

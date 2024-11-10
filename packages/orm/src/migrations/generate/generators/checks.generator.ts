@@ -55,8 +55,8 @@ export const processChecks = (
             inCode: codeChecks.map((check) => check.sql),
           },
         ],
-        handle(index) {
-          if (index !== undefined) return;
+        handle(i) {
+          if (i !== undefined) return;
 
           dropCheck(changeTableData, dbCheck, name);
 

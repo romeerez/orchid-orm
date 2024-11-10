@@ -164,6 +164,21 @@ export const addColumnIndex = (
   }
 };
 
+export const addColumnExclude = (
+  excludes: TableData.Exclude[],
+  name: string,
+  item: ColumnType,
+) => {
+  if (item.data.excludes) {
+    excludes.push(
+      ...item.data.excludes.map(({ with: w, ...exclude }) => ({
+        columns: [{ ...exclude.options, column: name, with: w }],
+        ...exclude,
+      })),
+    );
+  }
+};
+
 export const addColumnComment = (
   comments: ColumnComment[],
   name: string,
@@ -320,18 +335,31 @@ const makeConstraintName = (
   return `long_ass_table_${suffix}`;
 };
 
-export const getIndexName = (
+const getIndexOrExcludeName = (
   table: string,
   columns: ({ column?: string } | { expression: string })[],
-) => {
-  return makeConstraintName(
+  suffix: string,
+): string =>
+  makeConstraintName(
     table,
     columns.map((it) =>
       'column' in it ? (it.column as string) : 'expression',
     ),
-    'idx',
+    suffix,
   );
-};
+
+export interface GetIndexOrExcludeName {
+  (
+    table: string,
+    columns: ({ column?: string } | { expression: string })[],
+  ): string;
+}
+
+export const getIndexName: GetIndexOrExcludeName = (table, columns) =>
+  getIndexOrExcludeName(table, columns, 'idx');
+
+export const getExcludeName: GetIndexOrExcludeName = (table, columns) =>
+  getIndexOrExcludeName(table, columns, 'exclude');
 
 export const indexesToQuery = (
   up: boolean,
@@ -340,24 +368,21 @@ export const indexesToQuery = (
   snakeCase: boolean | undefined,
   language?: string,
 ): SingleSql[] => {
-  return indexes.map(({ columns, options, name }) => {
-    let include = options.include ? toArray(options.include) : undefined;
+  return indexes.map((index) => {
+    const { options } = index;
 
-    if (snakeCase) {
-      columns = columns.map((c) =>
-        'column' in c ? { ...c, column: toSnakeCase(c.column) } : c,
-      );
-      if (include) include = include.map(toSnakeCase);
-    }
-
-    const indexName = name || getIndexName(tableName, columns);
+    const { columns, include, name } = getIndexOrExcludeMainOptions(
+      tableName,
+      index,
+      getIndexName,
+      snakeCase,
+    );
 
     if (!up) {
       return {
-        text: `DROP INDEX "${indexName}"${
+        text: `DROP INDEX "${name}"${
           options.dropMode ? ` ${options.dropMode}` : ''
         }`,
-        values: [],
       };
     }
 
@@ -369,14 +394,12 @@ export const indexesToQuery = (
       sql.push('UNIQUE');
     }
 
-    sql.push(`INDEX "${indexName}" ON ${quoteTable(schema, tableName)}`);
+    sql.push(`INDEX "${name}" ON ${quoteTable(schema, tableName)}`);
 
     const u = options.using || (options.tsVector && 'GIN');
     if (u) {
       sql.push(`USING ${u}`);
     }
-
-    const columnsSql: string[] = [];
 
     const lang =
       options.tsVector && options.languageColumn
@@ -388,24 +411,15 @@ export const indexesToQuery = (
     let hasWeight =
       options.tsVector && columns.some((column) => !!column.weight);
 
-    for (const column of columns) {
-      const columnSql: string[] = [
+    const columnsSql = columns.map((column) => {
+      let sql = [
         'column' in column ? `"${column.column}"` : `(${column.expression})`,
-      ];
-
-      if (column.collate) {
-        columnSql.push(`COLLATE ${quoteNameFromString(column.collate)}`);
-      }
-
-      if (column.opclass) {
-        columnSql.push(column.opclass);
-      }
-
-      if (column.order) {
-        columnSql.push(column.order);
-      }
-
-      let sql = columnSql.join(' ');
+        column.collate && `COLLATE ${quoteNameFromString(column.collate)}`,
+        column.opclass,
+        column.order,
+      ]
+        .filter((x): x is string => !!x)
+        .join(' ');
 
       if (hasWeight) {
         sql = `to_tsvector(${lang}, coalesce(${sql}, ''))`;
@@ -416,8 +430,8 @@ export const indexesToQuery = (
         }
       }
 
-      columnsSql.push(sql);
-    }
+      return sql;
+    });
 
     let columnList;
     if (hasWeight) {
@@ -430,11 +444,9 @@ export const indexesToQuery = (
 
     sql.push(`(${columnList})`);
 
-    if (options.include) {
+    if (include && include.length) {
       sql.push(
-        `INCLUDE (${toArray(include)
-          .map((column) => `"${column}"`)
-          .join(', ')})`,
+        `INCLUDE (${include.map((column) => `"${column}"`).join(', ')})`,
       );
     }
 
@@ -462,6 +474,101 @@ export const indexesToQuery = (
 
     return { text: sql.join(' '), values };
   });
+};
+
+export const excludesToQuery = (
+  up: boolean,
+  { schema, name: tableName }: { schema?: string; name: string },
+  excludes: TableData.Exclude[],
+  snakeCase: boolean | undefined,
+): SingleSql[] => {
+  return excludes.map((exclude) => {
+    const { options } = exclude;
+
+    const { columns, include, name } = getIndexOrExcludeMainOptions(
+      tableName,
+      exclude,
+      getExcludeName,
+      snakeCase,
+    );
+
+    if (!up) {
+      return {
+        text: `ALTER TABLE ${quoteTable(
+          schema,
+          tableName,
+        )} DROP CONSTRAINT "${name}"${
+          options.dropMode ? ` ${options.dropMode}` : ''
+        }`,
+      };
+    }
+
+    const columnList = columns
+      .map((column) =>
+        [
+          'column' in column ? `"${column.column}"` : `(${column.expression})`,
+          column.collate && `COLLATE ${quoteNameFromString(column.collate)}`,
+          column.opclass,
+          column.order,
+          `WITH ${column.with}`,
+        ]
+          .filter((x): x is string => !!x)
+          .join(' '),
+      )
+      .join(', ');
+
+    const values: unknown[] = [];
+
+    const text = [
+      `ALTER TABLE ${quoteTable(
+        schema,
+        tableName,
+      )} ADD CONSTRAINT "${name}" EXCLUDE`,
+      options.using && `USING ${options.using}`,
+      `(${columnList})`,
+      include?.length &&
+        `INCLUDE (${include.map((column) => `"${column}"`).join(', ')})`,
+      options.with && `WITH (${options.with})`,
+      options.tablespace && `USING INDEX TABLESPACE ${options.tablespace}`,
+      options.where &&
+        `WHERE ${
+          isRawSQL(options.where)
+            ? options.where.toSQL({ values })
+            : options.where
+        }`,
+    ]
+      .filter((x): x is string => !!x)
+      .join(' ');
+
+    return { text, values };
+  });
+};
+
+const getIndexOrExcludeMainOptions = <
+  T extends TableData.Index | TableData.Exclude,
+>(
+  tableName: string,
+  item: T,
+  getName: GetIndexOrExcludeName,
+  snakeCase?: boolean,
+): { columns: T['columns']; include?: string[]; name: string } => {
+  let include = item.options.include
+    ? toArray(item.options.include)
+    : undefined;
+
+  let { columns } = item;
+  if (snakeCase) {
+    columns = columns.map((c) =>
+      'column' in c ? { ...c, column: toSnakeCase(c.column) } : c,
+    );
+    if (include) include = include.map(toSnakeCase);
+  }
+
+  return {
+    columns,
+    include,
+    name: item.name || getName(tableName, columns),
+  };
 };
 
 export const commentsToQuery = (

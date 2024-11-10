@@ -48,6 +48,7 @@ const table: RakeDbAst.Table = {
   name: 'table',
   noPrimaryKey: 'error',
   indexes: [],
+  excludes: [],
   constraints: [],
   shape: {
     id: t.identity().primaryKey(),
@@ -270,7 +271,7 @@ change(async (db) => {
       );
     });
 
-    it('should add columns with indexes and foreignKeys', () => {
+    it('should add columns with indexes, excludes, and foreignKeys', () => {
       const result = act([
         {
           ...table,
@@ -278,6 +279,7 @@ change(async (db) => {
             someId: t
               .integer()
               .unique('indexName', { nullsNotDistinct: true })
+              .exclude('=', 'excludeName', { order: 'ASC' })
               .foreignKey('otherTable', 'otherId', {
                 name: 'fkey',
                 match: 'FULL',
@@ -302,6 +304,9 @@ change(async (db) => {
     }).unique({
       name: 'indexName',
       nullsNotDistinct: true,
+    }).exclude('=', {
+      order: 'ASC',
+      name: 'excludeName',
     }),
   }));
 });
@@ -309,7 +314,7 @@ change(async (db) => {
       );
     });
 
-    it('should add composite primaryKeys, indexes, foreignKeys', () => {
+    it('should add composite primaryKeys, indexes, excludes, foreignKeys', () => {
       const result = act([
         {
           ...table,
@@ -322,6 +327,16 @@ change(async (db) => {
               columns: [{ column: 'id' }, { column: 'name' }],
               options: { unique: true, nullsNotDistinct: true },
               name: 'index',
+            },
+          ],
+          excludes: [
+            {
+              columns: [
+                { column: 'id', with: '=' },
+                { column: 'name', with: '!=' },
+              ],
+              options: { where: 'whe' },
+              name: 'exclude',
             },
           ],
           constraints: [
@@ -354,6 +369,22 @@ change(async (db) => {
       t.unique(['id', 'name'], 'index', {
         nullsNotDistinct: true,
       }),
+      t.exclude(
+        [
+          {
+            column: 'id',
+            with: '=',
+          },
+          {
+            column: 'name',
+            with: '!=',
+          },
+        ],
+        'exclude',
+        {
+          where: 'whe',
+        },
+      ),
       t.foreignKey(
         ['id', 'name'],
         'otherTable',
@@ -653,6 +684,111 @@ change(async (db) => {
           where: 'where',
           language: 'language',
           languageColumn: 'languageColumn',
+          dropMode: 'CASCADE',
+        },
+      ),
+    ),
+  }));
+});
+`,
+      );
+    });
+
+    it('should add and drop exclude', () => {
+      const item: TableData.Exclude = {
+        columns: [
+          {
+            column: 'column',
+            with: '=',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+          },
+          {
+            expression: 'expression',
+            with: '&&',
+          },
+        ],
+        options: {
+          using: 'using',
+          include: ['include'],
+          with: 'with',
+          tablespace: 'tablespace',
+          where: 'where',
+          dropMode: 'CASCADE',
+        },
+        name: 'exc',
+      };
+
+      const result = act([
+        {
+          type: 'changeTable',
+          schema: 'schema',
+          name: 'table',
+          shape: {},
+          add: {
+            excludes: [item],
+          },
+          drop: {
+            excludes: [item],
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('schema.table', (t) => ({
+    ...t.drop(
+      t.exclude(
+        [
+          {
+            column: 'column',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            with: '=',
+          },
+          {
+            expression: 'expression',
+            with: '&&',
+          },
+        ],
+        'exc',
+        {
+          using: 'using',
+          include: ['include'],
+          with: 'with',
+          tablespace: 'tablespace',
+          where: 'where',
+          dropMode: 'CASCADE',
+        },
+      ),
+    ),
+    ...t.add(
+      t.exclude(
+        [
+          {
+            column: 'column',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            with: '=',
+          },
+          {
+            expression: 'expression',
+            with: '&&',
+          },
+        ],
+        'exc',
+        {
+          using: 'using',
+          include: ['include'],
+          with: 'with',
+          tablespace: 'tablespace',
+          where: 'where',
           dropMode: 'CASCADE',
         },
       ),

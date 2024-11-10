@@ -11,12 +11,11 @@ export interface RakeDbCtx {
 export const getFirstWordAndRest = (
   input: string,
 ): [string] | [string, string] => {
-  const index = input.search(/(?=[A-Z])|[-_]/);
-  if (index !== -1) {
-    const restStart =
-      input[index] === '-' || input[index] === '_' ? index + 1 : index;
+  const i = input.search(/(?=[A-Z])|[-_]/);
+  if (i !== -1) {
+    const restStart = input[i] === '-' || input[i] === '_' ? i + 1 : i;
     const rest = input.slice(restStart);
-    return [input.slice(0, index), rest[0].toLowerCase() + rest.slice(1)];
+    return [input.slice(0, i), rest[0].toLowerCase() + rest.slice(1)];
   } else {
     return [input];
   }
@@ -27,13 +26,13 @@ const getTextAfterRegExp = (
   regex: RegExp,
   length: number,
 ): string | undefined => {
-  let index = input.search(regex);
-  if (index === -1) return;
+  let i = input.search(regex);
+  if (i === -1) return;
 
-  if (input[index] === '-' || input[index] === '_') index++;
-  index += length;
+  if (input[i] === '-' || input[i] === '_') i++;
+  i += length;
 
-  const start = input[index] == '-' || input[index] === '_' ? index + 1 : index;
+  const start = input[i] == '-' || input[i] === '_' ? i + 1 : i;
   const text = input.slice(start);
   return text[0].toLowerCase() + text.slice(1);
 };
@@ -74,10 +73,8 @@ export const quoteTable = (schema: string | undefined, table: string) =>
 export const getSchemaAndTableFromName = (
   name: string,
 ): [string | undefined, string] => {
-  const index = name.indexOf('.');
-  return index !== -1
-    ? [name.slice(0, index), name.slice(index + 1)]
-    : [undefined, name];
+  const i = name.indexOf('.');
+  return i !== -1 ? [name.slice(0, i), name.slice(i + 1)] : [undefined, name];
 };
 
 export const quoteNameFromString = (string: string) => {

@@ -21,7 +21,7 @@ import {
 } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
-import { getIndexName } from '../migration/migration.utils';
+import { getIndexName, getExcludeName } from '../migration/migration.utils';
 import { isRawSQL, TemplateLiteralArgs } from 'orchid-core';
 import { asMock } from 'test-utils';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
@@ -47,6 +47,7 @@ const structure = {
   tables: [],
   views: [],
   indexes: [],
+  excludes: [],
   constraints: [],
   triggers: [],
   extensions: [],
@@ -103,6 +104,7 @@ describe('structureToAst', () => {
           shape: {},
           noPrimaryKey: 'ignore',
           indexes: [],
+          excludes: [],
           constraints: [],
         },
       ]);
@@ -125,6 +127,7 @@ describe('structureToAst', () => {
           shape: {},
           noPrimaryKey: 'ignore',
           indexes: [],
+          excludes: [],
           constraints: [],
         },
       ]);
@@ -511,193 +514,403 @@ describe('structureToAst', () => {
       });
     });
 
-    it('should add index to column', async () => {
-      structure.tables = [dbStructureMockFactory.tableWithColumns()];
-      structure.indexes = [
-        dbStructureMockFactory.index({ nullsNotDistinct: true }),
-      ];
+    describe('indexes', () => {
+      it('should add index to column', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.indexes = [
+          dbStructureMockFactory.index({ nullsNotDistinct: true }),
+        ];
 
-      const [ast] = (await structureToAst(ctx, adapter, config)) as [
-        RakeDbAst.Table,
-      ];
-      expect(ast.shape.name.data.indexes).toEqual([
-        {
-          options: {
-            nullsNotDistinct: true,
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.indexes).toEqual([
+          {
+            options: {
+              nullsNotDistinct: true,
+            },
+            name: 'index',
           },
-          name: 'index',
-        },
-      ]);
-      expect(ast.indexes).toHaveLength(0);
-    });
+        ]);
+        expect(ast.indexes).toHaveLength(0);
+      });
 
-    it('should ignore standard index name', async () => {
-      structure.tables = [dbStructureMockFactory.tableWithColumns()];
-      structure.indexes = [
-        dbStructureMockFactory.index({
-          name: getIndexName('table', [{ column: 'name' }]),
-        }),
-      ];
+      it('should ignore standard index name', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.indexes = [
+          dbStructureMockFactory.index({
+            name: getIndexName('table', [{ column: 'name' }]),
+          }),
+        ];
 
-      const [ast] = (await structureToAst(ctx, adapter, config)) as [
-        RakeDbAst.Table,
-      ];
-      expect(ast.shape.name.data.indexes).toEqual([
-        {
-          options: {},
-          unique: undefined,
-        },
-      ]);
-      expect(ast.indexes).toHaveLength(0);
-    });
-
-    it('should set index options to column index', async () => {
-      structure.tables = [dbStructureMockFactory.tableWithColumns()];
-      structure.indexes = [
-        dbStructureMockFactory.index({
-          using: 'gist',
-          unique: true,
-          nullsNotDistinct: true,
-          columns: [
-            {
-              column: 'name',
-              collate: 'en_US',
-              opclass: 'varchar_ops',
-              order: 'DESC',
-            },
-          ],
-          include: ['id'],
-          with: 'fillfactor=80',
-          tablespace: 'tablespace',
-          where: 'condition',
-        }),
-      ];
-
-      const [ast] = (await structureToAst(ctx, adapter, config)) as [
-        RakeDbAst.Table,
-      ];
-      expect(ast.shape.name.data.indexes).toEqual([
-        {
-          options: {
-            using: 'gist',
-            unique: true,
-            collate: 'en_US',
-            opclass: 'varchar_ops',
-            order: 'DESC',
-            include: ['id'],
-            nullsNotDistinct: true,
-            with: 'fillfactor=80',
-            tablespace: 'tablespace',
-            where: 'condition',
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.indexes).toEqual([
+          {
+            options: {},
+            unique: undefined,
           },
-          name: 'index',
-        },
-      ]);
-      expect(ast.indexes).toHaveLength(0);
-    });
+        ]);
+        expect(ast.indexes).toHaveLength(0);
+      });
 
-    it('should add composite indexes to the table', async () => {
-      structure.tables = [dbStructureMockFactory.tableWithColumns()];
-      structure.indexes = [
-        dbStructureMockFactory.index({
-          columns: [{ column: 'id' }, { column: 'name' }],
-        }),
-        dbStructureMockFactory.index({
-          columns: [{ column: 'id' }, { column: 'name' }],
-          unique: true,
-          nullsNotDistinct: true,
-        }),
-      ];
-
-      const [ast] = (await structureToAst(ctx, adapter, config)) as [
-        RakeDbAst.Table,
-      ];
-      expect(ast.shape.name.data.indexes).toBe(undefined);
-      expect(ast.indexes).toEqual([
-        {
-          columns: [{ column: 'id' }, { column: 'name' }],
-          options: {},
-          name: 'index',
-        },
-        {
-          columns: [{ column: 'id' }, { column: 'name' }],
-          options: { unique: true, nullsNotDistinct: true },
-          name: 'index',
-        },
-      ]);
-    });
-
-    it('should ignore standard index name in composite index', async () => {
-      structure.tables = [dbStructureMockFactory.tableWithColumns()];
-
-      const indexColumns = [{ column: 'id' }, { column: 'name' }];
-      structure.indexes = [
-        dbStructureMockFactory.index({
-          columns: indexColumns,
-          name: getIndexName('table', indexColumns),
-        }),
-      ];
-
-      const [ast] = (await structureToAst(ctx, adapter, config)) as [
-        RakeDbAst.Table,
-      ];
-      expect(ast.shape.name.data.indexes).toBe(undefined);
-      expect(ast.indexes).toEqual([
-        {
-          columns: indexColumns,
-          options: { unique: undefined },
-        },
-      ]);
-    });
-
-    it('should add index with expression and options to the table', async () => {
-      structure.tables = [dbStructureMockFactory.tableWithColumns()];
-      structure.indexes = [
-        dbStructureMockFactory.index({
-          using: 'gist',
-          unique: true,
-          nullsNotDistinct: true,
-          columns: [
-            {
-              expression: 'lower(name)',
-              collate: 'en_US',
-              opclass: 'varchar_ops',
-              order: 'DESC',
-            },
-          ],
-          include: ['id'],
-          with: 'fillfactor=80',
-          tablespace: 'tablespace',
-          where: 'condition',
-        }),
-      ];
-
-      const [ast] = (await structureToAst(ctx, adapter, config)) as [
-        RakeDbAst.Table,
-      ];
-      expect(ast.shape.name.data.indexes).toBe(undefined);
-      expect(ast.indexes).toEqual([
-        {
-          columns: [
-            {
-              expression: 'lower(name)',
-              collate: 'en_US',
-              opclass: 'varchar_ops',
-              order: 'DESC',
-            },
-          ],
-          options: {
+      it('should set index options to column index', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.indexes = [
+          dbStructureMockFactory.index({
             using: 'gist',
             unique: true,
             nullsNotDistinct: true,
+            columns: [
+              {
+                column: 'name',
+                collate: 'en_US',
+                opclass: 'varchar_ops',
+                order: 'DESC',
+              },
+            ],
             include: ['id'],
             with: 'fillfactor=80',
             tablespace: 'tablespace',
             where: 'condition',
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.indexes).toEqual([
+          {
+            options: {
+              using: 'gist',
+              unique: true,
+              collate: 'en_US',
+              opclass: 'varchar_ops',
+              order: 'DESC',
+              include: ['id'],
+              nullsNotDistinct: true,
+              with: 'fillfactor=80',
+              tablespace: 'tablespace',
+              where: 'condition',
+            },
+            name: 'index',
           },
-          name: 'index',
-        },
-      ]);
+        ]);
+        expect(ast.indexes).toHaveLength(0);
+      });
+
+      it('should add composite indexes to the table', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.indexes = [
+          dbStructureMockFactory.index({
+            columns: [{ column: 'id' }, { column: 'name' }],
+          }),
+          dbStructureMockFactory.index({
+            columns: [{ column: 'id' }, { column: 'name' }],
+            unique: true,
+            nullsNotDistinct: true,
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.indexes).toBe(undefined);
+        expect(ast.indexes).toEqual([
+          {
+            columns: [{ column: 'id' }, { column: 'name' }],
+            options: {},
+            name: 'index',
+          },
+          {
+            columns: [{ column: 'id' }, { column: 'name' }],
+            options: { unique: true, nullsNotDistinct: true },
+            name: 'index',
+          },
+        ]);
+      });
+
+      it('should ignore standard index name in a composite index', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+
+        const indexColumns = [{ column: 'id' }, { column: 'name' }];
+        structure.indexes = [
+          dbStructureMockFactory.index({
+            columns: indexColumns,
+            name: getIndexName('table', indexColumns),
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.indexes).toBe(undefined);
+        expect(ast.indexes).toEqual([
+          {
+            columns: indexColumns,
+            options: { unique: undefined },
+          },
+        ]);
+      });
+
+      it('should add index with expression and options to the table', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.indexes = [
+          dbStructureMockFactory.index({
+            using: 'gist',
+            unique: true,
+            nullsNotDistinct: true,
+            columns: [
+              {
+                expression: 'lower(name)',
+                collate: 'en_US',
+                opclass: 'varchar_ops',
+                order: 'DESC',
+              },
+            ],
+            include: ['id'],
+            with: 'fillfactor=80',
+            tablespace: 'tablespace',
+            where: 'condition',
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.indexes).toBe(undefined);
+        expect(ast.indexes).toEqual([
+          {
+            columns: [
+              {
+                expression: 'lower(name)',
+                collate: 'en_US',
+                opclass: 'varchar_ops',
+                order: 'DESC',
+              },
+            ],
+            options: {
+              using: 'gist',
+              unique: true,
+              nullsNotDistinct: true,
+              include: ['id'],
+              with: 'fillfactor=80',
+              tablespace: 'tablespace',
+              where: 'condition',
+            },
+            name: 'index',
+          },
+        ]);
+      });
+    });
+
+    describe('excludes', () => {
+      it('should add exclude to column', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.excludes = [
+          dbStructureMockFactory.exclude({ nullsNotDistinct: true }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+
+        expect(ast.shape.name.data.excludes).toEqual([
+          {
+            name: 'exclude',
+            options: {
+              nullsNotDistinct: true,
+            },
+            with: '=',
+          },
+        ]);
+        expect(ast.excludes).toHaveLength(0);
+      });
+
+      it('should ignore standard exclude name', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.excludes = [
+          dbStructureMockFactory.exclude({
+            name: getExcludeName('table', [{ column: 'name' }]),
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.excludes).toEqual([
+          {
+            options: {},
+            unique: undefined,
+            with: '=',
+          },
+        ]);
+        expect(ast.excludes).toHaveLength(0);
+      });
+
+      it('should set exclude options to column exclude', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.excludes = [
+          dbStructureMockFactory.exclude({
+            using: 'gist',
+            unique: true,
+            nullsNotDistinct: true,
+            columns: [
+              {
+                column: 'name',
+                collate: 'en_US',
+                opclass: 'varchar_ops',
+                order: 'DESC',
+              },
+            ],
+            include: ['id'],
+            with: 'fillfactor=80',
+            tablespace: 'tablespace',
+            where: 'condition',
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.excludes).toEqual([
+          {
+            options: {
+              using: 'gist',
+              unique: true,
+              collate: 'en_US',
+              opclass: 'varchar_ops',
+              order: 'DESC',
+              include: ['id'],
+              nullsNotDistinct: true,
+              with: 'fillfactor=80',
+              tablespace: 'tablespace',
+              where: 'condition',
+            },
+            name: 'exclude',
+            with: '=',
+          },
+        ]);
+        expect(ast.excludes).toHaveLength(0);
+      });
+
+      it('should add composite excludes to the table', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.excludes = [
+          dbStructureMockFactory.exclude({
+            columns: [{ column: 'id' }, { column: 'name' }],
+            exclude: ['<>', '&&'],
+          }),
+          dbStructureMockFactory.exclude({
+            columns: [{ column: 'id' }, { column: 'name' }],
+            unique: true,
+            nullsNotDistinct: true,
+            exclude: ['<>', '&&'],
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.excludes).toBe(undefined);
+        expect(ast.excludes).toEqual([
+          {
+            columns: [
+              { column: 'id', with: '<>' },
+              { column: 'name', with: '&&' },
+            ],
+            options: {},
+            name: 'exclude',
+          },
+          {
+            columns: [
+              { column: 'id', with: '<>' },
+              { column: 'name', with: '&&' },
+            ],
+            options: { unique: true, nullsNotDistinct: true },
+            name: 'exclude',
+          },
+        ]);
+      });
+
+      it('should ignore standard exclude name in a composite exclude', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+
+        const excludeColumns = [
+          { column: 'id', with: '<>' },
+          { column: 'name', with: '&&' },
+        ];
+        structure.excludes = [
+          dbStructureMockFactory.exclude({
+            columns: excludeColumns,
+            name: getExcludeName('table', excludeColumns),
+            exclude: ['<>', '&&'],
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.excludes).toBe(undefined);
+        expect(ast.excludes).toEqual([
+          {
+            columns: excludeColumns,
+            options: { unique: undefined },
+          },
+        ]);
+      });
+
+      it('should add exclude with expression and options to the table', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.excludes = [
+          dbStructureMockFactory.exclude({
+            using: 'gist',
+            unique: true,
+            nullsNotDistinct: true,
+            columns: [
+              {
+                expression: 'lower(name)',
+                collate: 'en_US',
+                opclass: 'varchar_ops',
+                order: 'DESC',
+              },
+            ],
+            include: ['id'],
+            with: 'fillfactor=80',
+            tablespace: 'tablespace',
+            where: 'condition',
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+        expect(ast.shape.name.data.excludes).toBe(undefined);
+        expect(ast.excludes).toEqual([
+          {
+            columns: [
+              {
+                expression: 'lower(name)',
+                collate: 'en_US',
+                opclass: 'varchar_ops',
+                order: 'DESC',
+                with: '=',
+              },
+            ],
+            options: {
+              using: 'gist',
+              unique: true,
+              nullsNotDistinct: true,
+              include: ['id'],
+              with: 'fillfactor=80',
+              tablespace: 'tablespace',
+              where: 'condition',
+            },
+            name: 'exclude',
+          },
+        ]);
+      });
     });
 
     it('should add foreign key to the column', async () => {

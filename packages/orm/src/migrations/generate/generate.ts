@@ -117,7 +117,6 @@ export const generate = async (
       dbStructure,
       generateMigrationParams,
     );
-    // console.log(migrationCode);
   } catch (err) {
     if (err instanceof AbortSignal) {
       await closeAdapters(adapters);
@@ -219,6 +218,7 @@ const migrateAndPullStructures = async (
         tables: [],
         views: [],
         indexes: [],
+        excludes: [],
         constraints: [],
         triggers: [],
         extensions: [],

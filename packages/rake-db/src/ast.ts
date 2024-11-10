@@ -94,6 +94,7 @@ export namespace RakeDbAst {
     check?: ColumnDataCheckBase;
     foreignKeys?: TableData.ColumnReferences[];
     indexes?: TableData.ColumnIndex[];
+    excludes?: TableData.ColumnExclude[];
     identity?: TableData.Identity;
   }
 

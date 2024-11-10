@@ -111,7 +111,10 @@ export const appCodeGenTable = (
   }
 
   const hasTableData = Boolean(
-    ast.primaryKey || ast.indexes?.length || ast.constraints?.length,
+    ast.primaryKey ||
+      ast.indexes?.length ||
+      ast.excludes?.length ||
+      ast.constraints?.length,
   );
 
   const shapeCode = columnsShapeToCode({ t: 't', table: ast.name }, ast.shape);

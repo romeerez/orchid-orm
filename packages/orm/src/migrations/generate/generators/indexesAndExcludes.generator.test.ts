@@ -28,10 +28,14 @@ describe('indexes', () => {
             opclass: 'varchar_ops',
             order: 'DESC',`;
 
+  const excludeOptions = {
+    include: ['naMe'],
+  } satisfies TableData.Exclude.Options;
+
   const indexOptions = {
+    ...excludeOptions,
     unique: true,
     nullsNotDistinct: true,
-    include: ['naMe'],
   } satisfies TableData.Index.Options;
 
   const indexOptionsSql = `{
@@ -50,7 +54,7 @@ describe('indexes', () => {
     '\n  ',
   );
 
-  it('should create a column index', async () => {
+  it('should create a column index and exclude', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
@@ -59,10 +63,16 @@ describe('indexes', () => {
       },
       tables: [
         table((t) => ({
-          naMe: t.text().index({
-            ...columnOptions,
-            ...indexOptions,
-          }),
+          naMe: t
+            .text()
+            .index({
+              ...columnOptions,
+              ...indexOptions,
+            })
+            .exclude('=', {
+              ...columnOptions,
+              ...excludeOptions,
+            }),
         })),
       ],
     });
@@ -84,19 +94,36 @@ change(async (db) => {
         ${indexOptionsSqlShifted},
       ),
     ),
+    ...t.add(
+      t.exclude(
+        [
+          {
+            column: 'naMe',
+            collate: 'C',
+            opclass: 'varchar_ops',
+            order: 'DESC',
+            with: '=',
+          },
+        ],
+        {
+          include: ['naMe'],
+        },
+      ),
+    ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add unique index')} on (naMe)`);
+  ${green('+ add unique index')} on (naMe)
+  ${green('+ add exclude')} on (naMe)`);
   });
 
-  it('should drop a column index', async () => {
+  it('should drop a column index and exclude', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          naMe: t.text().index(indexOptions),
+          naMe: t.text().index(indexOptions).exclude('=', excludeOptions),
         }));
       },
       tables: [
@@ -115,24 +142,38 @@ change(async (db) => {
     ...t.drop(
       t.unique(['na_me'], ${indexOptionsSqlDrop})
     ),
+    ...t.drop(
+      t.exclude(
+        [
+          {
+            column: 'na_me',
+            with: '=',
+          },
+        ],
+        {
+          include: ['na_me'],
+        },
+      ),
+    ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop unique index')} on (na_me)`);
+  ${red('- drop unique index')} on (na_me)
+  ${red('- drop exclude')} on (na_me)`);
   });
 
-  it('should rename an index', async () => {
+  it('should rename an index and an exclude', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          naMe: t.text().index('from'),
+          naMe: t.text().index('from').exclude('=', 'exclude_from'),
         }));
       },
       tables: [
         table((t) => ({
-          naMe: t.text().index('to'),
+          naMe: t.text().index('to').exclude('=', 'exclude_to'),
         })),
       ],
     });
@@ -143,15 +184,20 @@ change(async (db) => {
 
 change(async (db) => {
   await db.renameIndex('public.table', 'from', 'to');
+
+  await db.renameConstraint('public.table', 'exclude_from', 'exclude_to');
 });
 `);
 
     assert.report(
-      `${yellow('~ rename index')} on table table: from ${yellow('=>')} to`,
+      `${yellow('~ rename index')} on table table: from ${yellow('=>')} to
+${yellow('~ rename constraint')} on table table: exclude_from ${yellow(
+        '=>',
+      )} exclude_to`,
     );
   });
 
-  it('should not be recreated when column index is identical', async () => {
+  it('should not be recreated when column index and exclude is identical', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable(
@@ -160,15 +206,27 @@ change(async (db) => {
           (t) => ({
             naMe: t.text(),
           }),
-          (t) => t.index([{ column: 'naMe', ...columnOptions }], indexOptions),
+          (t) => [
+            t.index([{ column: 'naMe', ...columnOptions }], indexOptions),
+            t.exclude(
+              [{ column: 'naMe', ...columnOptions, with: '=' }],
+              excludeOptions,
+            ),
+          ],
         );
       },
       tables: [
         table((t) => ({
-          naMe: t.text().index({
-            ...columnOptions,
-            ...indexOptions,
-          }),
+          naMe: t
+            .text()
+            .index({
+              ...columnOptions,
+              ...indexOptions,
+            })
+            .exclude('=', {
+              ...columnOptions,
+              ...excludeOptions,
+            }),
         })),
       ],
     });
@@ -178,16 +236,19 @@ change(async (db) => {
     assert.migration();
   });
 
-  it('should recreate a column index with different options', async () => {
+  it('should recreate a column index and a column exclude with different options', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          naMe: t.text().index(indexOptions),
+          naMe: t.text().index(indexOptions).exclude('=', excludeOptions),
         }));
       },
       tables: [
         table((t) => ({
-          naMe: t.text().index({ ...indexOptions, unique: false }),
+          naMe: t
+            .text()
+            .index({ ...indexOptions, unique: false })
+            .exclude('=', { ...excludeOptions, include: [] }),
         })),
       ],
     });
@@ -201,8 +262,34 @@ change(async (db) => {
     ...t.drop(
       t.unique(['na_me'], ${indexOptionsSqlDrop})
     ),
+    ...t.drop(
+      t.exclude(
+        [
+          {
+            column: 'na_me',
+            with: '=',
+          },
+        ],
+        {
+          include: ['na_me'],
+        },
+      ),
+    ),
     ...t.add(
       t.index(['naMe'], ${indexOptionsSql})
+    ),
+    ...t.add(
+      t.exclude(
+        [
+          {
+            column: 'naMe',
+            with: '=',
+          },
+        ],
+        {
+          include: [],
+        },
+      ),
     ),
   }));
 });
@@ -210,10 +297,12 @@ change(async (db) => {
 
     assert.report(`${yellow('~ change table')} table:
   ${red('- drop unique index')} on (na_me)
-  ${green('+ add index')} on (naMe)`);
+  ${red('- drop exclude')} on (na_me)
+  ${green('+ add index')} on (naMe)
+  ${green('+ add exclude')} on (naMe)`);
   });
 
-  it('should create a composite index', async () => {
+  it('should create a composite index and exclude', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
@@ -227,7 +316,7 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.unique(
               [
                 'iD',
@@ -238,6 +327,14 @@ change(async (db) => {
               ],
               indexOptions,
             ),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                { column: 'naMe', with: '=' },
+              ],
+              excludeOptions,
+            ),
+          ],
         ),
       ],
     });
@@ -260,15 +357,33 @@ change(async (db) => {
         ${indexOptionsSqlShifted},
       ),
     ),
+    ...t.add(
+      t.exclude(
+        [
+          {
+            column: 'iD',
+            with: '=',
+          },
+          {
+            column: 'naMe',
+            with: '=',
+          },
+        ],
+        {
+          include: ['naMe'],
+        },
+      ),
+    ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add unique index')} on (iD, naMe)`);
+  ${green('+ add unique index')} on (iD, naMe)
+  ${green('+ add exclude')} on (iD, naMe)`);
   });
 
-  it('should drop a composite index', async () => {
+  it('should drop a composite index exclude', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable(
@@ -278,11 +393,19 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.index(
               [{ column: 'iD' }, { column: 'naMe', ...columnOptions }],
               indexOptions,
             ),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                { column: 'naMe', ...columnOptions, with: '=' },
+              ],
+              indexOptions,
+            ),
+          ],
         );
       },
       tables: [
@@ -311,15 +434,34 @@ change(async (db) => {
         ${indexOptionsSqlShiftedDrop},
       ),
     ),
+    ...t.drop(
+      t.exclude(
+        [
+          {
+            column: 'i_d',
+            with: '=',
+          },
+          {
+            column: 'na_me',
+            ${columnOptionsSql}
+            with: '=',
+          },
+        ],
+        {
+          include: ['na_me'],
+        },
+      ),
+    ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${red('- drop unique index')} on (i_d, na_me)`);
+  ${red('- drop unique index')} on (i_d, na_me)
+  ${red('- drop exclude')} on (i_d, na_me)`);
   });
 
-  it('should not recreate composite index when it is identical', async () => {
+  it('should not recreate composite index and exclude when it is identical', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable(
@@ -329,11 +471,19 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.unique(
               [{ column: 'iD' }, { column: 'naMe', ...columnOptions }],
               indexOptions,
             ),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                { column: 'naMe', ...columnOptions, with: '=' },
+              ],
+              excludeOptions,
+            ),
+          ],
         );
       },
       tables: [
@@ -342,7 +492,7 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.unique(
               [
                 'iD',
@@ -353,6 +503,18 @@ change(async (db) => {
               ],
               indexOptions,
             ),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                {
+                  column: 'naMe',
+                  ...columnOptions,
+                  with: '=',
+                },
+              ],
+              excludeOptions,
+            ),
+          ],
         ),
       ],
     });
@@ -362,7 +524,7 @@ change(async (db) => {
     assert.migration();
   });
 
-  it('should recreate composite index', async () => {
+  it('should recreate composite index and exclude', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable(
@@ -372,11 +534,19 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.index([{ column: 'iD' }, { column: 'naMe', ...columnOptions }], {
               ...indexOptions,
               unique: false,
             }),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                { column: 'naMe', ...columnOptions, with: '=' },
+              ],
+              excludeOptions,
+            ),
+          ],
         );
       },
       tables: [
@@ -385,7 +555,7 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.unique(
               [
                 'iD',
@@ -396,6 +566,18 @@ change(async (db) => {
               ],
               indexOptions,
             ),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                {
+                  column: 'naMe',
+                  ...columnOptions,
+                  with: '=',
+                },
+              ],
+              { ...excludeOptions, include: [] },
+            ),
+          ],
         ),
       ],
     });
@@ -418,6 +600,24 @@ change(async (db) => {
         ${indexOptionsSqlShiftedDrop},
       ),
     ),
+    ...t.drop(
+      t.exclude(
+        [
+          {
+            column: 'i_d',
+            with: '=',
+          },
+          {
+            column: 'na_me',
+            ${columnOptionsSql}
+            with: '=',
+          },
+        ],
+        {
+          include: ['na_me'],
+        },
+      ),
+    ),
     ...t.add(
       t.unique(
         [
@@ -430,16 +630,36 @@ change(async (db) => {
         ${indexOptionsSqlShifted},
       ),
     ),
+    ...t.add(
+      t.exclude(
+        [
+          {
+            column: 'iD',
+            with: '=',
+          },
+          {
+            column: 'naMe',
+            ${columnOptionsSql}
+            with: '=',
+          },
+        ],
+        {
+          include: [],
+        },
+      ),
+    ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${red('- drop index')} on (i_d, na_me)
-  ${green('+ add unique index')} on (iD, naMe)`);
+  ${red('- drop exclude')} on (i_d, na_me)
+  ${green('+ add unique index')} on (iD, naMe)
+  ${green('+ add exclude')} on (iD, naMe)`);
   });
 
-  it('should rename a composite index', async () => {
+  it('should rename a composite index and exclude', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable(
@@ -449,12 +669,21 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.index(
               [{ column: 'iD' }, { column: 'naMe', ...columnOptions }],
               'from',
               indexOptions,
             ),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                { column: 'naMe', ...columnOptions, with: '=' },
+              ],
+              'exclude_from',
+              excludeOptions,
+            ),
+          ],
         );
       },
       tables: [
@@ -463,7 +692,7 @@ change(async (db) => {
             iD: t.integer(),
             naMe: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.unique(
               [
                 'iD',
@@ -475,6 +704,19 @@ change(async (db) => {
               'to',
               indexOptions,
             ),
+            t.exclude(
+              [
+                { column: 'iD', with: '=' },
+                {
+                  column: 'naMe',
+                  ...columnOptions,
+                  with: '=',
+                },
+              ],
+              'exclude_to',
+              excludeOptions,
+            ),
+          ],
         ),
       ],
     });
@@ -485,11 +727,16 @@ change(async (db) => {
 
 change(async (db) => {
   await db.renameIndex('public.table', 'from', 'to');
+
+  await db.renameConstraint('public.table', 'exclude_from', 'exclude_to');
 });
 `);
 
     assert.report(
-      `${yellow('~ rename index')} on table table: from ${yellow('=>')} to`,
+      `${yellow('~ rename index')} on table table: from ${yellow('=>')} to
+${yellow('~ rename constraint')} on table table: exclude_from ${yellow(
+        '=>',
+      )} exclude_to`,
     );
   });
 
@@ -500,7 +747,7 @@ change(async (db) => {
       },
       tables: [
         table((t) => ({
-          naMe: t.text().index(),
+          naMe: t.text().index().exclude('='),
         })),
       ],
     });
@@ -511,14 +758,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    naMe: t.add(t.text().index()),
+    naMe: t.add(t.text().index().exclude('=')),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${green('+ add column')} naMe text, has index`,
+  ${green('+ add column')} naMe text, has index, has exclude`,
     );
   });
 
@@ -526,7 +773,7 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          naMe: t.text().index(),
+          naMe: t.text().index().exclude('='),
         }));
       },
       tables: [table()],
@@ -538,14 +785,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    naMe: t.drop(t.text().index()),
+    naMe: t.drop(t.text().index().exclude('=')),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${red('- drop column')} naMe text, has index`,
+  ${red('- drop column')} naMe text, has index, has exclude`,
     );
   });
 
@@ -558,7 +805,7 @@ change(async (db) => {
       },
       tables: [
         table((t) => ({
-          naMe: t.text().index(),
+          naMe: t.text().index().exclude('='),
         })),
       ],
     });
@@ -569,7 +816,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    naMe: t.change(t.integer(), t.text().index()),
+    naMe: t.change(t.integer(), t.text().index().exclude('=')),
   }));
 });
 `);
@@ -578,7 +825,7 @@ change(async (db) => {
       `${yellow('~ change table')} table:
   ${yellow('~ change column')} naMe:
     ${yellow('from')}: t.integer()
-      ${yellow('to')}: t.text().index()`,
+      ${yellow('to')}: t.text().index().exclude('=')`,
     );
   });
 
@@ -586,12 +833,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          frOm: t.text().index(),
+          frOm: t.text().index().exclude('='),
         }));
       },
       tables: [
         table((t) => ({
-          tO: t.text().index(),
+          tO: t.text().index().exclude('='),
         })),
       ],
       selects: [1],
@@ -607,6 +854,8 @@ change(async (db) => {
   }));
 
   await db.renameIndex('public.table', 'table_fr_om_idx', 'table_t_o_idx');
+
+  await db.renameConstraint('public.table', 'table_fr_om_exclude', 'table_t_o_exclude');
 });
 `);
 
@@ -615,20 +864,26 @@ change(async (db) => {
   ${yellow('~ rename column')} fr_om ${yellow('=>')} tO
 ${yellow('~ rename index')} on table table: table_fr_om_idx ${yellow(
         '=>',
-      )} table_t_o_idx`,
+      )} table_t_o_idx
+${yellow('~ rename constraint')} on table table: table_fr_om_exclude ${yellow(
+        '=>',
+      )} table_t_o_exclude`,
     );
   });
 
-  it('should change index together with a column change', async () => {
+  it('should change index and exclude together with a column change', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          colUmn: t.varchar(100).index(),
+          colUmn: t.varchar(100).index().exclude('='),
         }));
       },
       tables: [
         table((t) => ({
-          colUmn: t.text().index({ nullsNotDistinct: true }),
+          colUmn: t
+            .text()
+            .index({ nullsNotDistinct: true })
+            .exclude('=', { include: ['colUmn'] }),
         })),
       ],
     });
@@ -639,8 +894,10 @@ ${yellow('~ rename index')} on table table: table_fr_om_idx ${yellow(
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    colUmn: t.change(t.varchar(100).index(), t.text().index({
+    colUmn: t.change(t.varchar(100).index().exclude('='), t.text().index({
       nullsNotDistinct: true,
+    }).exclude('=', {
+      include: ['colUmn'],
     })),
   }));
 });
@@ -649,9 +906,11 @@ change(async (db) => {
     assert.report(
       `${yellow('~ change table')} table:
   ${yellow('~ change column')} colUmn:
-    ${yellow('from')}: t.varchar(100).index()
+    ${yellow('from')}: t.varchar(100).index().exclude('=')
       ${yellow('to')}: t.text().index({
       nullsNotDistinct: true,
+    }).exclude('=', {
+      include: ['colUmn'],
     })`,
     );
   });
@@ -660,12 +919,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          colUmn: t.varchar(100).index(),
+          colUmn: t.varchar(100).index().exclude('='),
         }));
       },
       tables: [
         table((t) => ({
-          colUmn: t.text().index(),
+          colUmn: t.text().index().exclude('='),
         })),
       ],
     });
@@ -723,6 +982,12 @@ change(async (db) => {
                 where: `na_me = 'second'`,
               },
             ),
+            t.exclude([
+              {
+                expression: `'first' || i_d || na_me || act_ive`,
+                with: '=',
+              },
+            ]),
           ],
         );
       },
@@ -756,6 +1021,12 @@ change(async (db) => {
                 where: `na_me='second'`,
               },
             ),
+            t.exclude([
+              {
+                expression: `'first'||i_d||na_me||act_ive`,
+                with: '=',
+              },
+            ]),
           ],
         ),
       ],
@@ -777,7 +1048,7 @@ change(async (db) => {
             bB: t.text(),
             cC: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.index(
               [
                 {
@@ -786,6 +1057,13 @@ change(async (db) => {
               ],
               'idx',
             ),
+            t.exclude([
+              {
+                expression: `(a_a || b_b) || c_c`,
+                with: '=',
+              },
+            ]),
+          ],
         );
       },
       tables: [
@@ -795,7 +1073,7 @@ change(async (db) => {
             bB: t.text(),
             cC: t.text(),
           }),
-          (t) =>
+          (t) => [
             t.index(
               [
                 {
@@ -804,6 +1082,13 @@ change(async (db) => {
               ],
               'idx',
             ),
+            t.exclude([
+              {
+                expression: `a_a||c_c||b_b`,
+                with: '=',
+              },
+            ]),
+          ],
         ),
       ],
     });
@@ -824,6 +1109,16 @@ change(async (db) => {
         'idx',
       ),
     ),
+    ...t.drop(
+      t.exclude(
+        [
+          {
+            expression: '(((a_a || b_b) || c_c))',
+            with: '=',
+          },
+        ]
+      ),
+    ),
     ...t.add(
       t.index(
         [
@@ -834,13 +1129,25 @@ change(async (db) => {
         'idx',
       ),
     ),
+    ...t.add(
+      t.exclude(
+        [
+          {
+            expression: 'a_a||c_c||b_b',
+            with: '=',
+          },
+        ]
+      ),
+    ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${red('- drop index')} on ((((a_a || b_b) || c_c)))
-  ${green('+ add index')} on (a_a||c_c||b_b)`);
+  ${red('- drop exclude')} on ((((a_a || b_b) || c_c)))
+  ${green('+ add index')} on (a_a||c_c||b_b)
+  ${green('+ add exclude')} on (a_a||c_c||b_b)`);
   });
 
   describe('searchIndex', () => {
@@ -942,7 +1249,7 @@ change(async (db) => {
     });
   });
 
-  it('should compact long index names', async () => {
+  it('should compact long index and exclude names', async () => {
     await arrange({
       tables: [
         class Table extends BaseTable {
@@ -953,11 +1260,16 @@ change(async (db) => {
               longNameForTheFirstColumn: t.integer(),
               longNameForTheSecondColumn: t.integer(),
             }),
-            (t) =>
+            (t) => [
               t.unique([
                 'longNameForTheFirstColumn',
                 'longNameForTheSecondColumn',
               ]),
+              t.exclude([
+                { column: 'longNameForTheFirstColumn', with: '=' },
+                { column: 'longNameForTheSecondColumn', with: '=' },
+              ]),
+            ],
           );
         },
       ],
@@ -977,7 +1289,21 @@ change(async (db) => {
       longNameForTheFirstColumn: t.integer(),
       longNameForTheSecondColumn: t.integer(),
     }),
-    (t) => t.unique(['longNameForTheFirstColumn', 'longNameForTheSecondColumn']),
+    (t) => [
+      t.unique(['longNameForTheFirstColumn', 'longNameForTheSecondColumn']),
+      t.exclude(
+        [
+          {
+            column: 'longNameForTheFirstColumn',
+            with: '=',
+          },
+          {
+            column: 'longNameForTheSecondColumn',
+            with: '=',
+          },
+        ]
+      ),
+    ],
   );
 });
 `);
@@ -985,7 +1311,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ create table',
-      )} reallyLongTableNameConsistingOfSeveralWords (2 columns, 1 index, no primary key)`,
+      )} reallyLongTableNameConsistingOfSeveralWords (2 columns, 1 index, 1 exclude, no primary key)`,
     );
   });
 });

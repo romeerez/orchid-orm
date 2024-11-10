@@ -219,9 +219,9 @@ The callback of the `changeTable` is different from `createTable` in the way tha
 
 `drop` will remove a column (or a check) on migrating, and add it on rollback.
 
-The column in `add` or `drop` can have all the same methods as when creating a table, such methods as `index`, `unique`, and `foreignKey`.
+The column in `add` or `drop` can have all the same methods as when creating a table, such methods as `index`, `unique`, `exclude`, and `foreignKey`.
 
-Supports adding a composite primary key, foreign key, and index, and all the same as when creating a table.
+Supports adding a composite primary key, foreign key, index, exclude - the same as when creating a table.
 
 ```ts
 import { change } from '../dbScript';
@@ -248,6 +248,17 @@ change(async (db) => {
 
     // add composite unique index:
     ...t.add(t.unique(['foo', 'bar'])),
+
+    // add EXCLUDE constraint on two columns
+    ...t.add(
+      t.exclude(
+        [
+          { column: 'column1', with: '=' },
+          { column: 'column2', with: '<>' },
+        ],
+        { using: 'GIST' },
+      ),
+    ),
 
     // add composite foreign key:
     ...t.add(
@@ -294,6 +305,8 @@ and when doing rollback will change the column to the first element.
 Dropping or creating a primary key on multiple columns is allowed.
 
 Index options are listed [here](/guide/migration-column-methods#index).
+
+Exclude constraint options are listed [here](/guide/migration-column-methods#exclude).
 
 Foreign key options are listed [here](/guide/migration-column-methods#foreignkey).
 
@@ -382,8 +395,24 @@ change(async (db) => {
       }),
     ),
 
+    // add exclude
+    column17: t.change(t.integer(), t.integer().exclude('=')),
+
+    // remove exclude
+    column18: t.change(t.integer().exclude('='), t.integer()),
+
+    // change exclude
+    column19: t.change(
+      t.integer().exclude('=', {
+        // exclude options to be applied when migrating down
+      }),
+      t.integer().exclude('=', {
+        // exclude options to be applied when migrating up
+      }),
+    ),
+
     // change various column properties at once
-    column17: t.change(
+    column20: t.change(
       t
         .integer()
         .collate('de_DE')
@@ -407,7 +436,7 @@ change(async (db) => {
         }),
     ),
 
-    column18: t.change(
+    column21: t.change(
       // change from this check:
       t.check(t.sql`column17 > 5`),
       // to this check:

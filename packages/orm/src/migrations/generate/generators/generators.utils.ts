@@ -9,7 +9,7 @@ export interface CompareExpression {
     inCode: (string | RawSQLBase)[];
   }[];
 
-  handle(index?: number): void;
+  handle(i?: number): void;
 }
 
 export interface TableExpression extends CompareExpression {

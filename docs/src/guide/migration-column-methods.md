@@ -217,7 +217,7 @@ export class SomeTable extends BaseTable {
 Optionally you can pass the third argument to `foreignKey` with options:
 
 ```ts
-type ForeignKeyOptions = {
+interface ForeignKeyOptions {
   // name of the constraint
   name?: string;
   // see database docs for MATCH in FOREIGN KEY
@@ -225,7 +225,7 @@ type ForeignKeyOptions = {
 
   onUpdate?: 'NO ACTION' | 'RESTRICT' | 'CASCADE' | 'SET NULL' | 'SET DEFAULT';
   onDelete?: 'NO ACTION' | 'RESTRICT' | 'CASCADE' | 'SET NULL' | 'SET DEFAULT';
-};
+}
 ```
 
 ### composite foreign key
@@ -283,7 +283,7 @@ change(async (db) => {
 Possible options are:
 
 ```ts
-type IndexOptions = {
+interface IndexOptions {
   // NULLS NOT DISTINCT: availabe in Postgres 15+, makes sense only for unique index
   nullsNotDistinct?: true;
   // index algorithm to use such as GIST, GIN
@@ -304,17 +304,17 @@ type IndexOptions = {
   where?: string;
   // mode is for dropping the index
   mode?: 'CASCADE' | 'RESTRICT';
-};
+}
 ```
 
 ### composite index
 
-To defines an index for multiple columns.
+Defines an index for multiple columns.
 
 The first argument is an array of columns, where the column can be a simple string or an object with such options:
 
 ```ts
-type IndexColumnOptions = {
+interface IndexColumnOptions {
   // column name OR expression is required
   column: string;
   // SQL expression, like 'lower(name)'
@@ -323,13 +323,13 @@ type IndexColumnOptions = {
   collate?: string;
   opclass?: string; // for example, varchar_ops
   order?: string; // ASC, DESC, ASC NULLS FIRST, DESC NULLS LAST
-};
+}
 ```
 
 The second argument is an optional object with index options:
 
 ```ts
-type IndexOptions = {
+interface IndexOptions {
   // see the comments above for these options
   using?: string;
   include?: MaybeArray<string>;
@@ -338,7 +338,7 @@ type IndexOptions = {
   tablespace?: string;
   where?: string;
   mode?: 'CASCADE' | 'RESTRICT';
-};
+}
 ```
 
 Example:
@@ -535,6 +535,126 @@ change(async (db) => {
 ### timestampsNoTZ
 
 The same as `timestamps`, but without a time zone.
+
+## exclude
+
+[//]: # 'has JSDoc'
+
+Add [EXCLUDE constraint](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-EXCLUDE) to the column.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    // exclude rows with overlapping time ranges, && is for the `WITH` operator
+    timeRange: t.type('tstzrange').exclude('&&'),
+    // with a database-level name:
+    timeRange: t.type('tstzrange').exclude('&&', 'no_overlap'),
+    // with options:
+    timeRange: t.type('tstzrange').exclude('&&', { ...options }),
+    // with name and options:
+    name: t.type('tstzrange').exclude('&&', 'no_overlap', { ...options }),
+  }));
+});
+```
+
+Possible options are:
+
+```ts
+interface ExcludeColumnOptions {
+  // specify collation:
+  collate?: string;
+  // see `opclass` in the Postgres document for creating the index
+  opclass?: string;
+  // specify index order such as ASC NULLS FIRST, DESC NULLS LAST
+  order?: string;
+  // algorithm to use such as GIST, GIN
+  using?: string;
+  // EXCLUDE creates an index under the hood, include columns to the index
+  include?: MaybeArray<string>;
+  // see "storage parameters" in the Postgres document for creating an index, for example, 'fillfactor = 70'
+  with?: string;
+  // The tablespace in which to create the constraint. If not specified, default_tablespace is consulted, or temp_tablespaces for indexes on temporary tables.
+  tablespace?: string;
+  // WHERE clause to filter records for the constraint
+  where?: string;
+  // for dropping the index at a down migration
+  dropMode?: DropMode;
+}
+```
+
+### composite exclude
+
+[//]: # 'has JSDoc'
+
+Defines an `EXCLUDE` constraint for multiple columns.
+
+The first argument is an array of columns and/or SQL expressions:
+
+```ts
+interface ExcludeColumnOptions {
+  // column name OR expression is required
+  column: string;
+  // SQL expression, like 'tstzrange("startDate", "endDate")'
+  expression: string;
+
+  // required: operator for the EXCLUDE constraint to work
+  with: string;
+
+  collate?: string;
+  opclass?: string; // for example, varchar_ops
+  order?: string; // ASC, DESC, ASC NULLS FIRST, DESC NULLS LAST
+}
+```
+
+The second argument is an optional object with options for the whole exclude constraint:
+
+```ts
+interface ExcludeOptions {
+  // algorithm to use such as GIST, GIN
+  using?: string;
+  // EXCLUDE creates an index under the hood, include columns to the index
+  include?: MaybeArray<string>;
+  // see "storage parameters" in the Postgres document for creating an index, for example, 'fillfactor = 70'
+  with?: string;
+  // The tablespace in which to create the constraint. If not specified, default_tablespace is consulted, or temp_tablespaces for indexes on temporary tables.
+  tablespace?: string;
+  // WHERE clause to filter records for the constraint
+  where?: string;
+  // for dropping the index at a down migration
+  dropMode?: DropMode;
+}
+```
+
+Example:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'table',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      roomId: t.integer(),
+      startAt: t.timestamp(),
+      endAt: t.timestamp(),
+    }),
+    (t) => [
+      t.exclude(
+        [
+          { column: 'roomId', with: '=' },
+          { expression: 'tstzrange("startAt", "endAt")', with: '&&' },
+        ],
+        {
+          using: 'GIST',
+        },
+      ),
+    ],
+  );
+});
+```
 
 ## check
 

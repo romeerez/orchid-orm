@@ -28,6 +28,7 @@ export interface ColumnData extends ColumnDataBase {
   dateTimePrecision?: number;
   validationDefault?: unknown;
   indexes?: TableData.ColumnIndex[];
+  excludes?: TableData.ColumnExclude[];
   comment?: string;
   collate?: string;
   compression?: string;
@@ -417,6 +418,64 @@ export abstract class ColumnType<
       },
       name: typeof args[0] === 'string' ? args[0] : undefined,
     }) as never;
+  }
+
+  /**
+   * Add [EXCLUDE constraint](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-EXCLUDE) to the column.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     // exclude rows with overlapping time ranges, && is for the `WITH` operator
+   *     timeRange: t.type('tstzrange').exclude('&&'),
+   *     // with a database-level name:
+   *     timeRange: t.type('tstzrange').exclude('&&', 'no_overlap'),
+   *     // with options:
+   *     timeRange: t.type('tstzrange').exclude('&&', { ...options }),
+   *     // with name and options:
+   *     name: t.type('tstzrange').exclude('&&', 'no_overlap', { ...options }),
+   *   }));
+   * });
+   * ```
+   *
+   * Possible options are:
+   *
+   * ```ts
+   * interface ExcludeColumnOptions {
+   *   // specify collation:
+   *   collate?: string;
+   *   // see `opclass` in the Postgres document for creating the index
+   *   opclass?: string;
+   *   // specify index order such as ASC NULLS FIRST, DESC NULLS LAST
+   *   order?: string;
+   *   // algorithm to use such as GIST, GIN
+   *   using?: string;
+   *   // EXCLUDE creates an index under the hood, include columns to the index
+   *   include?: MaybeArray<string>;
+   *   // see "storage parameters" in the Postgres document for creating an index, for example, 'fillfactor = 70'
+   *   with?: string;
+   *   // The tablespace in which to create the constraint. If not specified, default_tablespace is consulted, or temp_tablespaces for indexes on temporary tables.
+   *   tablespace?: string;
+   *   // WHERE clause to filter records for the constraint
+   *   where?: string;
+   *   // for dropping the index at a down migration
+   *   dropMode?: DropMode;
+   * }
+   * ```
+   */
+  exclude<T extends PickColumnData>(
+    this: T,
+    ...args:
+      | [op: string, options?: TableData.Exclude.ColumnArg]
+      | [op: string, name: string, options?: TableData.Exclude.ColumnArg]
+  ): T {
+    return pushColumnData(this, 'excludes', {
+      with: args[0],
+      options: (typeof args[1] === 'string' ? args[2] : args[1]) ?? emptyObject,
+      name: typeof args[1] === 'string' ? args[1] : undefined,
+    });
   }
 
   comment<T extends PickColumnData>(this: T, comment: string): T {

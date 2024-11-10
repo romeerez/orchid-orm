@@ -24,19 +24,20 @@ export const processSchemas = async (
 
   for (const schema of createSchemas) {
     if (dropSchemas.length) {
-      const index = await promptCreateOrRename(
+      const i = await promptCreateOrRename(
         'schema',
         schema,
         dropSchemas,
         verifying,
       );
-      if (index) {
-        const from = dropSchemas[index - 1];
-        dropSchemas.splice(index - 1, 1);
+      if (i) {
+        const from = dropSchemas[i - 1];
+        dropSchemas.splice(i - 1, 1);
 
         renameSchemaInStructures(dbStructure.tables, from, schema);
         renameSchemaInStructures(dbStructure.views, from, schema);
         renameSchemaInStructures(dbStructure.indexes, from, schema);
+        renameSchemaInStructures(dbStructure.excludes, from, schema);
         renameSchemaInStructures(dbStructure.constraints, from, schema);
         renameSchemaInStructures(dbStructure.triggers, from, schema);
         renameSchemaInStructures(dbStructure.enums, from, schema);

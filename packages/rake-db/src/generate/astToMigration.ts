@@ -9,6 +9,7 @@ import {
   constraintInnerToCode,
   TableData,
   pushTableDataCode,
+  excludeInnerToCode,
 } from 'pqb';
 import {
   addCode,
@@ -195,7 +196,10 @@ const astEncoders: {
 
     const hasOptions = Boolean(ast.comment || ast.noPrimaryKey === 'ignore');
     const hasTableData = Boolean(
-      ast.primaryKey || ast.indexes?.length || ast.constraints?.length,
+      ast.primaryKey ||
+        ast.indexes?.length ||
+        ast.excludes?.length ||
+        ast.constraints?.length,
     );
     const isShifted = hasOptions || hasTableData;
 
@@ -403,7 +407,7 @@ const astEncoders: {
         addCode(code, [`...t.${key}(${timestampsToCode(timestamps)}),`]);
       }
 
-      const { primaryKey, indexes, constraints } = ast[key];
+      const { primaryKey, indexes, excludes, constraints } = ast[key];
 
       if (primaryKey) {
         addCode(code, [
@@ -412,8 +416,14 @@ const astEncoders: {
       }
 
       if (indexes) {
-        for (const index of indexes) {
-          addCode(code, [`...t.${key}(`, indexInnerToCode(index, 't'), '),']);
+        for (const item of indexes) {
+          addCode(code, [`...t.${key}(`, indexInnerToCode(item, 't'), '),']);
+        }
+      }
+
+      if (excludes) {
+        for (const item of excludes) {
+          addCode(code, [`...t.${key}(`, excludeInnerToCode(item, 't'), '),']);
         }
       }
 

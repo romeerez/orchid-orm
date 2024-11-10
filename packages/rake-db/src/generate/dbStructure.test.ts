@@ -26,18 +26,19 @@ const mockQueryResult = (data: Partial<StructureToAstTableData>) => {
 describe('dbStructure', () => {
   afterAll(() => adapter.close());
 
-  it('should ignore indexes with `exclude`', async () => {
+  it('should ignore indexes with `exclude` and collect them into `excludes` instead', async () => {
     mockQueryResult({
       indexes: [
         dbStructureMockFactory.index({
           exclude: [],
-        }),
+        } as never),
       ],
     });
 
-    const { indexes } = await introspectDbSchema(adapter);
+    const { indexes, excludes } = await introspectDbSchema(adapter);
 
     expect(indexes).toEqual([]);
+    expect(excludes.length).toBeGreaterThan(0);
   });
 
   describe('searchIndex', () => {

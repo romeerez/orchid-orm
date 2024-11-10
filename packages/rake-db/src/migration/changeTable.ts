@@ -41,11 +41,13 @@ import {
 } from '../common';
 import {
   addColumnComment,
+  addColumnExclude,
   addColumnIndex,
   columnToSql,
   commentsToQuery,
   constraintToSql,
   encodeColumnDefault,
+  excludesToQuery,
   getColumnName,
   identityToSql,
   indexesToQuery,
@@ -526,6 +528,8 @@ const astToQueries = (
   const values: unknown[] = [];
   const addIndexes = ast.add.indexes ?? [];
   const dropIndexes = ast.drop.indexes ?? [];
+  const addExcludes = ast.add.excludes ?? [];
+  const dropExcludes = ast.drop.excludes ?? [];
   const addConstraints = ast.add.constraints ?? [];
   const dropConstraints = ast.drop.constraints ?? [];
 
@@ -545,6 +549,8 @@ const astToQueries = (
           addPrimaryKeys,
           addIndexes,
           dropIndexes,
+          addExcludes,
+          dropExcludes,
           addConstraints,
           dropConstraints,
           comments,
@@ -562,6 +568,8 @@ const astToQueries = (
         addPrimaryKeys,
         addIndexes,
         dropIndexes,
+        addExcludes,
+        dropExcludes,
         addConstraints,
         dropConstraints,
         comments,
@@ -633,6 +641,8 @@ const astToQueries = (
 
   queries.push(...indexesToQuery(false, ast, dropIndexes, snakeCase, language));
   queries.push(...indexesToQuery(true, ast, addIndexes, snakeCase, language));
+  queries.push(...excludesToQuery(false, ast, dropExcludes, snakeCase));
+  queries.push(...excludesToQuery(true, ast, addExcludes, snakeCase));
   queries.push(...commentsToQuery(ast, comments));
 
   return queries;
@@ -714,6 +724,8 @@ const handleTableItemChange = (
   addPrimaryKeys: PrimaryKey,
   addIndexes: TableData.Index[],
   dropIndexes: TableData.Index[],
+  addExcludes: TableData.Exclude[],
+  dropExcludes: TableData.Exclude[],
   addConstraints: TableData.Constraint[],
   dropConstraints: TableData.Constraint[],
   comments: ColumnComment[],
@@ -723,6 +735,7 @@ const handleTableItemChange = (
     const column = item.item;
     const name = getColumnName(column, key, snakeCase);
     addColumnIndex(addIndexes, name, column);
+    addColumnExclude(addExcludes, name, column);
     addColumnComment(comments, name, column);
 
     alterTable.push(
@@ -876,43 +889,15 @@ const handleTableItemChange = (
       }
     }
 
-    const indexesLen = Math.max(
-      from.indexes?.length || 0,
-      to.indexes?.length || 0,
+    pushIndexesOrExcludes('indexes', from, to, name, addIndexes, dropIndexes);
+    pushIndexesOrExcludes(
+      'excludes',
+      from,
+      to,
+      name,
+      addExcludes,
+      dropExcludes,
     );
-    for (let i = 0; i < indexesLen; i++) {
-      const fromIndex = from.indexes?.[i];
-      const toIndex = to.indexes?.[i];
-
-      if (
-        (fromIndex || toIndex) &&
-        (!fromIndex || !toIndex || !deepCompare(fromIndex, toIndex))
-      ) {
-        if (fromIndex) {
-          dropIndexes.push({
-            ...fromIndex,
-            columns: [
-              {
-                column: name,
-                ...fromIndex.options,
-              },
-            ],
-          });
-        }
-
-        if (toIndex) {
-          addIndexes.push({
-            ...toIndex,
-            columns: [
-              {
-                column: name,
-                ...toIndex.options,
-              },
-            ],
-          });
-        }
-      }
-    }
 
     if (from.comment !== to.comment) {
       comments.push({ column: name, comment: to.comment || null });
@@ -923,6 +908,52 @@ const handleTableItemChange = (
         ? renameColumnSql(toSnakeCase(key), toSnakeCase(item.name))
         : renameColumnSql(key, item.name),
     );
+  }
+};
+
+const pushIndexesOrExcludes = <T extends TableData.Index | TableData.Exclude>(
+  key: 'indexes' | 'excludes',
+  from: RakeDbAst.ColumnChange,
+  to: RakeDbAst.ColumnChange,
+  name: string,
+  add: T[],
+  drop: T[],
+) => {
+  const len = Math.max(from[key]?.length || 0, to[key]?.length || 0);
+  for (let i = 0; i < len; i++) {
+    const fromItem = from[key]?.[i];
+    const toItem = to[key]?.[i];
+
+    if (
+      (fromItem || toItem) &&
+      (!fromItem || !toItem || !deepCompare(fromItem, toItem))
+    ) {
+      if (fromItem) {
+        drop.push({
+          ...fromItem,
+          columns: [
+            {
+              column: name,
+              ...fromItem.options,
+              with: (fromItem as TableData.ColumnExclude).with,
+            },
+          ],
+        } as T);
+      }
+
+      if (toItem) {
+        add.push({
+          ...toItem,
+          columns: [
+            {
+              column: name,
+              ...toItem.options,
+              with: (toItem as TableData.ColumnExclude).with,
+            },
+          ],
+        } as T);
+      }
+    }
   }
 };
 

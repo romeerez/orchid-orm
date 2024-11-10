@@ -116,8 +116,8 @@ export const processDomains = async (
       tableExpressions.push({
         compare,
         source,
-        handle(index) {
-          const codeDomain = index === undefined ? undefined : found[index];
+        handle(i) {
+          const codeDomain = i === undefined ? undefined : found[i];
           if (!codeDomain) {
             ast.push(dropAst(dbDomain));
           } else {

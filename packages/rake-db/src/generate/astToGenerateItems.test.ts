@@ -161,59 +161,121 @@ describe('astToGenerateItem', () => {
         assertTableKey('public.pkeyName');
       });
 
-      it('should have a column index key', () => {
-        arrangeTable({
-          shape: {
-            name: t.string().index(),
-          },
-        });
-
-        act();
-
-        assertTableKey('public.tableName_name_idx');
-      });
-
-      it('should have a custom column index key', () => {
-        arrangeTable({
-          shape: {
-            name: t.string().index('indexName'),
-          },
-        });
-
-        act();
-
-        assertTableKey('public.indexName');
-      });
-
-      it('should have a composite index key', () => {
-        arrangeTable({
-          indexes: [
-            {
-              columns: [{ column: 'one' }, { column: 'two' }],
-              options: {},
+      describe('index', () => {
+        it('should have a column index key', () => {
+          arrangeTable({
+            shape: {
+              name: t.string().index(),
             },
-          ],
+          });
+
+          act();
+
+          assertTableKey('public.tableName_name_idx');
         });
 
-        act();
+        it('should have a custom column index key', () => {
+          arrangeTable({
+            shape: {
+              name: t.string().index('indexName'),
+            },
+          });
 
-        assertTableKey('public.tableName_one_two_idx');
+          act();
+
+          assertTableKey('public.indexName');
+        });
+
+        it('should have a composite index key', () => {
+          arrangeTable({
+            indexes: [
+              {
+                columns: [{ column: 'one' }, { column: 'two' }],
+                options: {},
+              },
+            ],
+          });
+
+          act();
+
+          assertTableKey('public.tableName_one_two_idx');
+        });
+
+        it('should have a custom composite index key', () => {
+          arrangeTable({
+            indexes: [
+              {
+                columns: [],
+                options: {},
+                name: 'indexName',
+              },
+            ],
+          });
+
+          act();
+
+          assertTableKey('public.indexName');
+        });
       });
 
-      it('should have a custom composite index key', () => {
-        arrangeTable({
-          indexes: [
-            {
-              columns: [],
-              options: {},
-              name: 'indexName',
+      describe('exclude', () => {
+        it('should have a column exclude key', () => {
+          arrangeTable({
+            shape: {
+              name: t.string().exclude('='),
             },
-          ],
+          });
+
+          act();
+
+          assertTableKey('public.tableName_name_exclude');
         });
 
-        act();
+        it('should have a custom column exclude key', () => {
+          arrangeTable({
+            shape: {
+              name: t.string().exclude('=', 'excludeName'),
+            },
+          });
 
-        assertTableKey('public.indexName');
+          act();
+
+          assertTableKey('public.excludeName');
+        });
+
+        it('should have a composite exclude key', () => {
+          arrangeTable({
+            excludes: [
+              {
+                columns: [
+                  { column: 'one', with: '=' },
+                  { column: 'two', with: '=' },
+                ],
+                options: {},
+              },
+            ],
+          });
+
+          act();
+
+          assertTableKey('public.tableName_one_two_exclude');
+        });
+
+        it('should have a custom composite exclude key', () => {
+          arrangeTable({
+            excludes: [
+              {
+                columns: [],
+                options: {},
+                name: 'excludeName',
+              },
+            ],
+          });
+
+          act();
+
+          assertTableKey('public.excludeName');
+        });
       });
 
       it('should have a column fkey key', () => {
@@ -472,39 +534,82 @@ describe('astToGenerateItem', () => {
           });
         });
 
-        it('should have column index key', () => {
-          arrangeChangeTable({
-            shape: {
-              column: {
-                type: action,
-                item: t.integer().index(),
+        describe('index', () => {
+          it('should have column index key', () => {
+            arrangeChangeTable({
+              shape: {
+                column: {
+                  type: action,
+                  item: t.integer().index(),
+                },
               },
-            },
+            });
+
+            act();
+
+            assertChange({
+              [action]: ['public.tableName_column_idx'],
+            });
           });
 
-          act();
+          it('should have composite index key', () => {
+            arrangeChangeTable({
+              [action]: {
+                indexes: [
+                  {
+                    columns: [{ column: 'one' }, { column: 'two' }],
+                    options: {},
+                  },
+                ],
+              },
+            });
 
-          assertChange({
-            [action]: ['public.tableName_column_idx'],
+            act();
+
+            assertChange({
+              [action]: ['public.tableName_one_two_idx'],
+            });
           });
         });
 
-        it('should have composite index key', () => {
-          arrangeChangeTable({
-            [action]: {
-              indexes: [
-                {
-                  columns: [{ column: 'one' }, { column: 'two' }],
-                  options: {},
+        describe('exclude', () => {
+          it('should have column exclude key', () => {
+            arrangeChangeTable({
+              shape: {
+                column: {
+                  type: action,
+                  item: t.integer().exclude('='),
                 },
-              ],
-            },
+              },
+            });
+
+            act();
+
+            assertChange({
+              [action]: ['public.tableName_column_exclude'],
+            });
           });
 
-          act();
+          it('should have composite exclude key', () => {
+            arrangeChangeTable({
+              [action]: {
+                excludes: [
+                  {
+                    columns: [
+                      { column: 'one', with: '=' },
+                      { column: 'two', with: '=' },
+                    ],
+                    options: {},
+                  },
+                ],
+              },
+            });
 
-          assertChange({
-            [action]: ['public.tableName_one_two_idx'],
+            act();
+
+            assertChange({
+              [action]: ['public.tableName_one_two_exclude'],
+            });
           });
         });
 
@@ -592,6 +697,30 @@ describe('astToGenerateItem', () => {
 
           assertChange({
             add: ['public.tableName_column_idx'],
+          });
+        });
+
+        it('should have change column exclude key', () => {
+          arrangeChangeTable({
+            shape: {
+              column: {
+                type: 'change',
+                from:
+                  type === 'object'
+                    ? { excludes: [] }
+                    : { column: t.integer() },
+                to:
+                  type === 'object'
+                    ? { excludes: [{ with: '=', options: {} }] }
+                    : { column: t.integer().exclude('=') },
+              },
+            },
+          });
+
+          act();
+
+          assertChange({
+            add: ['public.tableName_column_exclude'],
           });
         });
 

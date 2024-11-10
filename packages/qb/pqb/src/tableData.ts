@@ -16,6 +16,7 @@ import OptionsArg = TableData.Index.OptionsArg;
 export interface TableData {
   primaryKey?: TableData.PrimaryKey;
   indexes?: TableData.Index[];
+  excludes?: TableData.Exclude[];
   constraints?: TableData.Constraint[];
 }
 
@@ -33,9 +34,19 @@ export namespace TableData {
     name?: string;
   }
 
+  export interface ColumnExclude extends ColumnIndex {
+    with: string;
+  }
+
   export interface Index {
     columns: Index.ColumnOrExpressionOptions[];
     options: Index.Options;
+    name?: string;
+  }
+
+  export interface Exclude {
+    columns: Exclude.ColumnOrExpressionOptions[];
+    options: Exclude.Options;
     name?: string;
   }
 
@@ -94,7 +105,7 @@ export namespace TableData {
       with?: string;
       tablespace?: string;
       where?: string;
-      dropMode?: 'CASCADE' | 'RESTRICT';
+      dropMode?: DropMode;
     }
 
     export interface OptionsArg extends UniqueOptionsArg {
@@ -142,6 +153,41 @@ export namespace TableData {
       ColumnOptionsForColumn<Column> | ExpressionOptions;
   }
 
+  export namespace Exclude {
+    export interface Options {
+      using?: string;
+      include?: MaybeArray<string>;
+      with?: string;
+      tablespace?: string;
+      where?: string;
+      dropMode?: DropMode;
+    }
+
+    export interface ArgColumnOptions {
+      collate?: string;
+      opclass?: string;
+      order?: string;
+    }
+
+    export interface ColumnArg extends Options, ArgColumnOptions {}
+
+    interface ColumnBaseOptions extends ArgColumnOptions {
+      with: string;
+    }
+
+    interface ColumnOptions<Column extends PropertyKey>
+      extends ColumnBaseOptions {
+      column: Column;
+    }
+
+    interface ExpressionOptions extends ColumnBaseOptions {
+      expression: string;
+    }
+
+    export type ColumnOrExpressionOptions<Column extends PropertyKey = string> =
+      ColumnOptions<Column> | ExpressionOptions;
+  }
+
   export namespace References {
     export type FnOrTable = (() => ForeignKeyTable) | string;
 
@@ -181,6 +227,7 @@ export namespace TableData {
 export type TableDataInput = {
   primaryKey?: TableData.PrimaryKey;
   index?: TableData.Index;
+  exclude?: TableData.Exclude;
   constraint?: TableData.Constraint;
 };
 
@@ -248,6 +295,82 @@ export interface TableDataMethods<Key extends PropertyKey> {
     ...args:
       | [options?: TableData.Index.TsVectorArg]
       | [name?: string, options?: TableData.Index.TsVectorArg]
+  ): NonUniqDataItem;
+
+  /**
+   * Defines an `EXCLUDE` constraint for multiple columns.
+   *
+   * The first argument is an array of columns and/or SQL expressions:
+   *
+   * ```ts
+   * interface ExcludeColumnOptions {
+   *   // column name OR expression is required
+   *   column: string;
+   *   // SQL expression, like 'tstzrange("startDate", "endDate")'
+   *   expression: string;
+   *
+   *   // required: operator for the EXCLUDE constraint to work
+   *   with: string;
+   *
+   *   collate?: string;
+   *   opclass?: string; // for example, varchar_ops
+   *   order?: string; // ASC, DESC, ASC NULLS FIRST, DESC NULLS LAST
+   * }
+   * ```
+   *
+   * The second argument is an optional object with options for the whole exclude constraint:
+   *
+   * ```ts
+   * interface ExcludeOptions {
+   *   // algorithm to use such as GIST, GIN
+   *   using?: string;
+   *   // EXCLUDE creates an index under the hood, include columns to the index
+   *   include?: MaybeArray<string>;
+   *   // see "storage parameters" in the Postgres document for creating an index, for example, 'fillfactor = 70'
+   *   with?: string;
+   *   // The tablespace in which to create the constraint. If not specified, default_tablespace is consulted, or temp_tablespaces for indexes on temporary tables.
+   *   tablespace?: string;
+   *   // WHERE clause to filter records for the constraint
+   *   where?: string;
+   *   // for dropping the index at a down migration
+   *   dropMode?: DropMode;
+   * }
+   * ```
+   *
+   * Example:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable(
+   *     'table',
+   *     (t) => ({
+   *       id: t.identity().primaryKey(),
+   *       roomId: t.integer(),
+   *       startAt: t.timestamp(),
+   *       endAt: t.timestamp(),
+   *     }),
+   *     (t) => [
+   *       t.exclude(
+   *         [
+   *           { column: 'roomId', with: '=' },
+   *           { expression: 'tstzrange("startAt", "endAt")', with: '&&' },
+   *         ],
+   *         {
+   *           using: 'GIST',
+   *         },
+   *       ),
+   *     ],
+   *   );
+   * });
+   * ```
+   */
+  exclude(
+    columns: TableData.Exclude.ColumnOrExpressionOptions<Key>[],
+    ...args:
+      | [options?: TableData.Exclude.Options]
+      | [name?: string, options?: TableData.Exclude.Options]
   ): NonUniqDataItem;
 
   foreignKey<
@@ -365,6 +488,19 @@ export const tableDataMethods: TableDataMethods<string> = {
     input.index.options.tsVector = true;
     return input as never;
   },
+  exclude(columns, ...[first, second]) {
+    if (typeof first === 'string') {
+      const options: TableData.Exclude.Options = second ?? {};
+      return {
+        exclude: { columns, options, name: first },
+      } as never;
+    } else {
+      const options: TableData.Exclude.Options = first ?? {};
+      return {
+        exclude: { columns, options },
+      } as never;
+    }
+  },
   foreignKey(columns, fnOrTable, foreignColumns, options) {
     return {
       constraint: {
@@ -403,19 +539,30 @@ export const parseTableDataInput = (
   if (item.primaryKey) {
     tableData.primaryKey = item.primaryKey;
   } else if (item.index) {
-    const index = item.index as TableData.Index;
-    for (let i = index.columns.length - 1; i >= 0; i--) {
-      if (typeof index.columns[i] === 'string') {
-        index.columns[i] = {
-          column: index.columns[i] as unknown as string,
-        };
-      }
-    }
-    (tableData.indexes ??= []).push(item.index);
+    (tableData.indexes ??= []).push(
+      parseIndexOrExclude(item.index as TableData.Index),
+    );
+  } else if (item.exclude) {
+    (tableData.excludes ??= []).push(
+      parseIndexOrExclude(item.exclude as TableData.Exclude),
+    );
   } else if (item.constraint) {
     (tableData.constraints ??= []).push(item.constraint);
     if (item.constraint.references?.options?.dropMode) {
       item.constraint.dropMode = item.constraint.references.options.dropMode;
     }
   }
+};
+
+const parseIndexOrExclude = <T extends TableData.Index | TableData.Exclude>(
+  item: T,
+): T => {
+  for (let i = item.columns.length - 1; i >= 0; i--) {
+    if (typeof item.columns[i] === 'string') {
+      item.columns[i] = {
+        column: item.columns[i] as unknown as string,
+      };
+    }
+  }
+  return item;
 };

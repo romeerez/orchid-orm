@@ -3,6 +3,11 @@ import { RakeDbAst } from '../ast';
 import { EmptyObject, RecordUnknown } from 'orchid-core';
 
 export namespace DbStructure {
+  export interface TableNameAndSchemaName {
+    schemaName: string;
+    tableName: string;
+  }
+
   export interface Table {
     schemaName: string;
     name: string;
@@ -33,9 +38,7 @@ export namespace DbStructure {
     argNames?: string[];
   }
 
-  export interface Column {
-    schemaName: string;
-    tableName: string;
+  export interface Column extends TableNameAndSchemaName {
     name: string;
     typeSchema: string;
     type: string;
@@ -62,9 +65,7 @@ export namespace DbStructure {
     typmod: number;
   }
 
-  export interface Index {
-    schemaName: string;
-    tableName: string;
+  export interface Index extends TableNameAndSchemaName {
     name: string;
     using: string;
     unique: boolean;
@@ -82,7 +83,10 @@ export namespace DbStructure {
     tsVector?: boolean;
     language?: string;
     languageColumn?: string;
-    exclude?: string[]; // array of operators for index columns and expressions
+  }
+
+  export interface Exclude extends Index {
+    exclude: string[]; // array of operators for index columns and expressions
   }
 
   // FULL | PARTIAL | SIMPLE
@@ -91,9 +95,7 @@ export namespace DbStructure {
   // a = no action, r = restrict, c = cascade, n = set null, d = set default
   export type ForeignKeyAction = 'a' | 'r' | 'c' | 'n' | 'd';
 
-  export interface Constraint {
-    schemaName: string;
-    tableName: string;
+  export interface Constraint extends TableNameAndSchemaName {
     name: string;
     primaryKey?: string[];
     references?: References;
@@ -115,9 +117,7 @@ export namespace DbStructure {
     expression: string;
   }
 
-  export interface Trigger {
-    schemaName: string;
-    tableName: string;
+  export interface Trigger extends TableNameAndSchemaName {
     triggerSchema: string;
     name: string;
     events: string[];
@@ -607,6 +607,7 @@ export interface IntrospectedStructure {
   tables: DbStructure.Table[];
   views: DbStructure.View[];
   indexes: DbStructure.Index[];
+  excludes: DbStructure.Exclude[];
   constraints: DbStructure.Constraint[];
   triggers: DbStructure.Trigger[];
   extensions: DbStructure.Extension[];
@@ -636,11 +637,10 @@ export async function introspectDbSchema(
     }
   }
 
-  const indexes = [];
-  for (const index of result.indexes) {
-    if (index.exclude) continue;
-    indexes.push(index);
+  const indexes: DbStructure.Index[] = [];
+  const excludes: DbStructure.Exclude[] = [];
 
+  for (const index of result.indexes) {
     nullsToUndefined(index);
     for (const column of index.columns) {
       if (!('expression' in column)) continue;
@@ -717,8 +717,12 @@ export async function introspectDbSchema(
         }
       }
     }
+
+    ((index as DbStructure.Exclude).exclude ? excludes : indexes).push(index);
   }
+
   result.indexes = indexes;
+  result.excludes = excludes;
 
   return result;
 }

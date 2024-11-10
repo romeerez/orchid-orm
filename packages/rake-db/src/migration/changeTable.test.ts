@@ -538,6 +538,47 @@ describe('changeTable', () => {
       });
     });
 
+    describe('exclude', () => {
+      it('should handle exclude', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              withExclude: t[action](
+                t.text().exclude('&&', 'excludeName', {
+                  using: 'GIST',
+                  collate: 'col',
+                  opclass: 'opc',
+                  order: 'ASC',
+                  include: 'inc',
+                  with: 'wit',
+                  tablespace: 'tbs',
+                  where: 'whe',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `ALTER TABLE "table"
+                ADD COLUMN "with_exclude" text NOT NULL`,
+              toLine(`
+                ALTER TABLE "table"
+                ADD CONSTRAINT "excludeName"
+                EXCLUDE USING GIST ("with_exclude" COLLATE "col" opc ASC WITH &&)
+                INCLUDE ("inc")
+                WITH (wit)
+                USING INDEX TABLESPACE tbs
+                WHERE whe
+              `),
+            ]),
+          () =>
+            expectSql([
+              `ALTER TABLE "table"
+                DROP COLUMN "with_exclude"`,
+            ]),
+        );
+      });
+    });
+
     describe('column comment', () => {
       it('should handle column comment', async () => {
         await testUpAndDown(
@@ -1033,6 +1074,53 @@ describe('changeTable', () => {
                 DROP COLUMN "gener_ated"
               `,
             ]),
+        );
+      });
+    });
+
+    describe('composite exclude', () => {
+      it('should handle composite exclude', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](
+                t.exclude(
+                  [
+                    {
+                      column: 'iD',
+                      with: '=',
+                      collate: 'col',
+                      opclass: 'opc',
+                      order: 'ASC',
+                    },
+                    { expression: 'expr', with: '&&' },
+                  ],
+                  'excludeName',
+                  {
+                    using: 'GIST',
+                    include: 'inc',
+                    with: 'wit',
+                    tablespace: 'tbs',
+                    where: 'whe',
+                    dropMode: 'CASCADE',
+                  },
+                ),
+              ),
+            })),
+          () =>
+            expectSql(
+              toLine(`ALTER TABLE "table"
+              ADD CONSTRAINT "excludeName"
+              EXCLUDE USING GIST ("i_d" COLLATE "col" opc ASC WITH =, (expr) WITH &&)
+              INCLUDE ("inc")
+              WITH (wit)
+              USING INDEX TABLESPACE tbs
+              WHERE whe`),
+            ),
+          () =>
+            expectSql(
+              `ALTER TABLE "table" DROP CONSTRAINT "excludeName" CASCADE`,
+            ),
         );
       });
     });
@@ -1884,6 +1972,48 @@ describe('changeTable', () => {
               `DROP INDEX "table_col_umn_idx"`,
               `CREATE INDEX "table_col_umn_idx" ON "table" ("col_umn")`,
             ]),
+        );
+      });
+    });
+
+    describe('exclude', () => {
+      it('should add exclude', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              addExclude: t.change(
+                t.integer(),
+                t.integer().exclude('&&', 'excludeName', {
+                  using: 'GIST',
+                  collate: 'col',
+                  opclass: 'opc',
+                  order: 'ASC',
+                  include: 'inc',
+                  with: 'wit',
+                  tablespace: 'tbs',
+                  where: 'whe',
+                  dropMode: 'CASCADE',
+                }),
+              ),
+            })),
+          () =>
+            expectSql(
+              toLine(`
+                ALTER TABLE "table"
+                ADD CONSTRAINT "excludeName"
+                EXCLUDE USING GIST ("add_exclude" COLLATE "col" opc ASC WITH &&)
+                INCLUDE ("inc")
+                WITH (wit)
+                USING INDEX TABLESPACE tbs
+                WHERE whe
+              `),
+            ),
+          () =>
+            expectSql(
+              toLine(`
+                ALTER TABLE "table" DROP CONSTRAINT "excludeName" CASCADE
+              `),
+            ),
         );
       });
     });

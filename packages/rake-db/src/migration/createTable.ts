@@ -20,10 +20,12 @@ import {
 } from './migration';
 import {
   addColumnComment,
+  addColumnExclude,
   addColumnIndex,
   columnToSql,
   commentsToQuery,
   constraintToSql,
+  excludesToQuery,
   getColumnName,
   indexesToQuery,
   interpolateSqlValues,
@@ -235,12 +237,14 @@ const astToQueries = (
   const lines: string[] = [];
   const values: unknown[] = [];
   const indexes: TableData.Index[] = [];
+  const excludes: TableData.Exclude[] = [];
   const comments: ColumnComment[] = [];
 
   for (const key in shape) {
     const item = shape[key];
     const name = getColumnName(item, key, snakeCase);
     addColumnIndex(indexes, name, item);
+    addColumnExclude(excludes, name, item);
     addColumnComment(comments, name, item);
     lines.push(
       `\n  ${columnToSql(name, item, values, !!ast.primaryKey, snakeCase)}`,
@@ -280,19 +284,8 @@ const astToQueries = (
     );
   });
 
-  indexes.push(
-    ...(ast.indexes?.map((index) => ({
-      ...index,
-      columns: index.columns.map((item) => ({
-        ...item,
-        ...('column' in item
-          ? {
-              column: getColumnName(shape[item.column], item.column, snakeCase),
-            }
-          : {}),
-      })),
-    })) || []),
-  );
+  pushIndexesOrExcludesFromAst(indexes, ast.indexes, shape, snakeCase);
+  pushIndexesOrExcludesFromAst(excludes, ast.excludes, shape, snakeCase);
 
   queries.push(
     {
@@ -302,6 +295,7 @@ const astToQueries = (
       values,
     },
     ...indexesToQuery(true, ast, indexes, snakeCase, language),
+    ...excludesToQuery(true, ast, excludes, snakeCase),
     ...commentsToQuery(ast, comments),
   );
 
@@ -314,4 +308,27 @@ const astToQueries = (
   }
 
   return queries;
+};
+
+const pushIndexesOrExcludesFromAst = <
+  T extends TableData.Index | TableData.Exclude,
+>(
+  arr: T[],
+  inAst: T[] | undefined,
+  shape: ColumnsShape,
+  snakeCase?: boolean,
+) => {
+  arr.push(
+    ...(inAst?.map((x) => ({
+      ...x,
+      columns: x.columns.map((item) => ({
+        ...item,
+        ...('column' in item
+          ? {
+              column: getColumnName(shape[item.column], item.column, snakeCase),
+            }
+          : {}),
+      })),
+    })) || []),
+  );
 };

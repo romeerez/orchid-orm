@@ -39,6 +39,7 @@ export const report = (
         const counters = {
           column: 0,
           index: a.indexes?.length ?? 0,
+          exclude: a.excludes?.length ?? 0,
           'foreign key':
             a.constraints?.reduce<number>(
               (sum, c) => (c.references ? sum + 1 : sum),
@@ -60,6 +61,10 @@ export const report = (
 
           if (column.data.indexes) {
             counters.index += column.data.indexes.length;
+          }
+
+          if (column.data.excludes) {
+            counters.exclude += column.data.excludes.length;
           }
 
           if (column.data.foreignKeys) {
@@ -110,7 +115,8 @@ export const report = (
           for (const change of changes) {
             if (change.type === 'add' || change.type === 'drop') {
               const column = change.item;
-              const { primaryKey, indexes, foreignKeys, check } = column.data;
+              const { primaryKey, indexes, excludes, foreignKeys, check } =
+                column.data;
 
               inner.push(
                 `${
@@ -136,6 +142,12 @@ export const report = (
                     ? indexes.length === 1
                       ? ', has index'
                       : `, has ${indexes.length} indexes`
+                    : ''
+                }${
+                  excludes?.length
+                    ? excludes.length === 1
+                      ? ', has exclude'
+                      : `, has ${excludes.length} excludes`
                     : ''
                 }${check ? `, checks ${check.sql.toSQL({ values: [] })}` : ''}`,
               );
@@ -188,6 +200,16 @@ export const report = (
           }
         }
 
+        if (a.drop.excludes) {
+          for (const exclude of a.drop.excludes) {
+            inner.push(
+              `${red(`- drop exclude`)} on (${exclude.columns
+                .map((c) => ('column' in c ? c.column : c.expression))
+                .join(', ')})`,
+            );
+          }
+        }
+
         if (a.drop.constraints) {
           for (const { references } of a.drop.constraints) {
             if (!references) continue;
@@ -230,6 +252,16 @@ export const report = (
               `${green(
                 `+ add${index.options.unique ? ' unique' : ''} index`,
               )} on (${index.columns
+                .map((c) => ('column' in c ? c.column : c.expression))
+                .join(', ')})`,
+            );
+          }
+        }
+
+        if (a.add.excludes) {
+          for (const exclude of a.add.excludes) {
+            inner.push(
+              `${green(`+ add exclude`)} on (${exclude.columns
                 .map((c) => ('column' in c ? c.column : c.expression))
                 .join(', ')})`,
             );

@@ -17,6 +17,7 @@ import {
   emptyObject,
   ColumnToCodeCtx,
   toSnakeCase,
+  emptyArray,
 } from 'orchid-core';
 import { TableData } from '../tableData';
 
@@ -88,23 +89,13 @@ export const columnsShapeToCode = (
 };
 
 export const pushTableDataCode = (code: Codes, ast: TableData): Codes => {
-  const lines: Codes[] = [];
-
-  if (ast.primaryKey) {
-    lines.push([primaryKeyInnerToCode(ast.primaryKey, 't') + ',']);
-  }
-
-  if (ast.indexes) {
-    for (const index of ast.indexes) {
-      lines.push(indexToCode(index, 't'));
-    }
-  }
-
-  if (ast.constraints) {
-    for (const constraint of ast.constraints) {
-      lines.push(constraintToCode(constraint, 't', true));
-    }
-  }
+  const lines: Codes[] = [
+    ast.primaryKey && [primaryKeyInnerToCode(ast.primaryKey, 't') + ','],
+    ...(ast.indexes?.map((x) => indexToCode(x, 't')) || emptyArray),
+    ...(ast.excludes?.map((x) => excludeToCode(x, 't')) || emptyArray),
+    ...(ast.constraints?.map((x) => constraintToCode(x, 't', true)) ||
+      emptyArray),
+  ].filter((x): x is string[] => !!x);
 
   if (lines.length > 1) {
     code.push('(t) => [', ...lines, '],');
@@ -128,22 +119,20 @@ export const primaryKeyInnerToCode = (
   })`;
 };
 
-export const indexToCode = (
-  index: TableData.Index,
-  t: string,
-  prefix?: string,
-): Codes => {
-  const code = indexInnerToCode(index, t);
-  if (prefix) code[0] = prefix + code[0];
-  const last = code[code.length - 1];
-  if (typeof last === 'string' && !last.endsWith(',')) addCode(code, ',');
-  return code;
-};
+const indexOrExcludeToCode =
+  <T extends TableData.Index | TableData.Exclude>(
+    innerToCode: (item: T, t: string) => Codes,
+  ) =>
+  (item: T, t: string, prefix?: string) => {
+    const code = innerToCode(item, t);
+    if (prefix) code[0] = prefix + code[0];
+    const last = code[code.length - 1];
+    if (typeof last === 'string' && !last.endsWith(',')) addCode(code, ',');
+    return code;
+  };
 
 export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
-  const code: Codes = [];
-
-  code.push(
+  const code: Codes = [
     `${t}.${
       index.options.tsVector
         ? 'searchIndex'
@@ -151,7 +140,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
         ? 'unique'
         : 'index'
     }(`,
-  );
+  ];
 
   const columnOptions = ['collate', 'opclass', 'order', 'weight'] as const;
 
@@ -269,6 +258,82 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
 
   return code;
 };
+
+export const indexToCode = indexOrExcludeToCode(indexInnerToCode);
+
+export const excludeInnerToCode = (
+  item: TableData.Exclude,
+  t: string,
+): Codes => {
+  const code: Codes = [`${t}.exclude(`];
+
+  const columnOptions = ['collate', 'opclass', 'order', 'with'] as const;
+
+  const optionsKeys: (undefined | keyof TableData.Exclude.Options)[] = [
+    'using',
+    'include',
+    'with',
+    'tablespace',
+    'where',
+    'dropMode',
+  ];
+
+  const hasOptions = optionsKeys.some((key) => key && item.options[key]);
+
+  const objects: Codes = [];
+
+  for (const column of item.columns) {
+    const expr = 'column' in column ? column.column : column.expression;
+
+    const props: Codes = [
+      `${'column' in column ? 'column' : 'expression'}: ${singleQuote(expr)},`,
+    ];
+    for (const key of columnOptions) {
+      const value = column[key];
+      if (value !== undefined) {
+        props.push(`${key}: ${singleQuote(value)},`);
+      }
+    }
+
+    objects.push('{', props, '},');
+  }
+
+  code.push(['[', objects, hasOptions || item.name ? '],' : ']']);
+
+  if (item.name) {
+    addCode(code, `  ${singleQuote(item.name)},`);
+  }
+
+  if (hasOptions) {
+    code.push(['{']);
+
+    const options: string[] = [];
+    for (const key of optionsKeys) {
+      if (!key) continue;
+
+      const value = item.options[key];
+      if (value === null || value === undefined) continue;
+
+      options.push(
+        `${key}: ${
+          Array.isArray(value)
+            ? singleQuoteArray(value)
+            : typeof value === 'string'
+            ? singleQuote(value)
+            : value
+        },`,
+      );
+    }
+
+    code.push([options, '},']);
+  }
+
+  code.push('),');
+
+  return code;
+};
+
+export const excludeToCode = indexOrExcludeToCode(excludeInnerToCode);
 
 export const constraintToCode = (
   item: TableData.Constraint,
@@ -407,35 +472,67 @@ export const foreignKeyArgumentToCode = (
 };
 
 export const columnIndexesToCode = (
-  indexes: Exclude<ColumnData['indexes'], undefined>,
+  items: Exclude<ColumnData['indexes'], undefined>,
 ): Codes => {
   const code: Codes = [];
-  for (const { options, name } of indexes) {
+  for (const { options, name } of items) {
     addCode(code, `.${options.unique ? 'unique' : 'index'}(`);
 
-    const arr: string[] = [];
-
-    if (options.collate) arr.push(`collate: ${singleQuote(options.collate)},`);
-    if (options.opclass) arr.push(`opclass: ${singleQuote(options.opclass)},`);
-    if (options.order) arr.push(`order: ${singleQuote(options.order)},`);
-    if (name) arr.push(`name: ${singleQuote(name)},`);
-    if (options.using) arr.push(`using: ${singleQuote(options.using)},`);
-    if (options.include)
-      arr.push(
+    const arr = [
+      options.collate && `collate: ${singleQuote(options.collate)},`,
+      options.opclass && `opclass: ${singleQuote(options.opclass)},`,
+      options.order && `order: ${singleQuote(options.order)},`,
+      name && `name: ${singleQuote(name)},`,
+      options.using && `using: ${singleQuote(options.using)},`,
+      options.include &&
         `include: ${
           typeof options.include === 'string'
             ? singleQuote(options.include)
             : `[${options.include.map(singleQuote).join(', ')}]`
         },`,
-      );
-    if (options.nullsNotDistinct) arr.push(`nullsNotDistinct: true,`);
-    if (options.with) arr.push(`with: ${singleQuote(options.with)},`);
-    if (options.tablespace)
-      arr.push(`tablespace: ${singleQuote(options.tablespace)},`);
-    if (options.where) arr.push(`where: ${singleQuote(options.where)},`);
+      options.nullsNotDistinct && `nullsNotDistinct: true,`,
+      options.with && `with: ${singleQuote(options.with)},`,
+      options.tablespace && `tablespace: ${singleQuote(options.tablespace)},`,
+      options.where && `where: ${singleQuote(options.where)},`,
+    ].filter((x): x is string => !!x);
 
     if (arr.length) {
       addCode(code, '{');
+      addCode(code, arr);
+      addCode(code, '}');
+    }
+
+    addCode(code, ')');
+  }
+  return code;
+};
+
+export const columnExcludesToCode = (
+  items: Exclude<ColumnData['excludes'], undefined>,
+): Codes => {
+  const code: Codes = [];
+  for (const { options, name, with: w } of items) {
+    addCode(code, `.exclude('${w}'`);
+
+    const arr = [
+      options.collate && `collate: ${singleQuote(options.collate)},`,
+      options.opclass && `opclass: ${singleQuote(options.opclass)},`,
+      options.order && `order: ${singleQuote(options.order)},`,
+      name && `name: ${singleQuote(name)},`,
+      options.using && `using: ${singleQuote(options.using)},`,
+      options.include &&
+        `include: ${
+          typeof options.include === 'string'
+            ? singleQuote(options.include)
+            : `[${options.include.map(singleQuote).join(', ')}]`
+        },`,
+      options.with && `with: ${singleQuote(options.with)},`,
+      options.tablespace && `tablespace: ${singleQuote(options.tablespace)},`,
+      options.where && `where: ${singleQuote(options.where)},`,
+    ].filter((x): x is string => !!x);
+
+    if (arr.length) {
+      addCode(code, ', {');
       addCode(code, arr);
       addCode(code, '}');
     }
@@ -564,6 +661,12 @@ export const columnCode = (
 
   if (data.indexes) {
     for (const part of columnIndexesToCode(data.indexes)) {
+      addCode(code, part);
+    }
+  }
+
+  if (data.excludes) {
+    for (const part of columnExcludesToCode(data.excludes)) {
       addCode(code, part);
     }
   }

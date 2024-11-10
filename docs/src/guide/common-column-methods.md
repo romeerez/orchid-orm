@@ -453,6 +453,6 @@ export class SomeTable extends BaseTable {
 
 ## methods for migration
 
-Column methods such as [foreignKey](/guide/migration-column-methods#foreignkey), [index](/guide/migration-column-methods#index), [unique](/guide/migration-column-methods#unique), [comment](/guide/migration-column-methods#comment) and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
+Column methods such as [foreignKey](/guide/migration-column-methods#foreignkey), [index](/guide/migration-column-methods#index), [exclude](/guide/migration-column-methods#exclude), [unique](/guide/migration-column-methods#unique), [comment](/guide/migration-column-methods#comment) and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
 
 Though `unique` is used for deriving types for [findBy](/guide/query-methods#findBy) and [onConflict](/guide/create-update-delete#onconflict).

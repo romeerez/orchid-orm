@@ -235,6 +235,8 @@ export class UserTable extends BaseTable {
       deletedAt: t.timestamp().nullable(),
       subscriptionProvider: t.enum('paymentProvider', ['stripe', 'paypal']),
       subscriptionId: t.uuid(),
+      startDate: t.timestamp(),
+      endDate: t.timestamp(),
       ...t.timestamps(),
     }),
     // The second function is optional, it is for composite primary keys, indexes, etc.
@@ -252,6 +254,10 @@ export class UserTable extends BaseTable {
         () => SubscriptionTable,
         ['provider', 'id'],
       ),
+      // postgres `EXCLUDE` constraint: do not let the timeranges of different rows to overlap
+      t.exclude([
+        { expression: `tstzrange("startDate", "endDate")`, with: '&&' },
+      ]),
       // database-level check
       t.check(sql`username != email`),
     ],
@@ -283,7 +289,7 @@ export class UserTable extends BaseTable {
 
 - `table` and `softDelete` must be readonly for TS to recognize them properly, other properties don't have to be readonly.
 - for configuring columns see [Columns schema overview](/guide/columns-overview).
-- documentation for composite primary keys, indexes, foreign keys, is residing in [migration column methods](/guide/migration-column-methods)
+- documentation for composite primary keys, indexes, exclusions, foreign keys, is residing in [migration column methods](/guide/migration-column-methods)
 - for defining table's relations see [Modeling relations](/guide/relations).
 - check out [soft delete](/guide/orm-and-query-builder#softdelete)
 - for `computed` see [Computed columns](/guide/orm-and-query-builder#computed-columns).
@@ -333,11 +339,11 @@ This tool will automatically write a migration to create, drop, change, rename d
 When you're renaming a table, column, enum, or a schema in the code, it will interactively ask via the terminal whether you want to create a new item or to rename the old one.
 Such as when renaming a column, you may choose to drop the old one and create a new (data will be lost), or to rename the existing (data is preserved).
 
-If you don't set a custom constraint name for indexes, primary keys, foreign keys, they have a default name such as `table_pkey`, `table_column_idx`, `table_someId_fkey`.
+If you don't set a custom constraint name for indexes, primary keys, foreign keys, exclude constraints, they have a default name such as `table_pkey`, `table_column_idx`, `table_someId_fkey`, `table_column_exclude`.
 When renaming a table, the table primary key will be also renamed. When renaming a column, its index or foreign key will be renamed as well.
 
 The tool handles migration generation for
-tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, extensions, domain types.
+tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, exclude constraints, extensions, domain types.
 
 Please let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
 

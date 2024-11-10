@@ -62,15 +62,15 @@ export const processEnums = async (
 
   for (const codeEnum of createEnums) {
     if (dropEnums.length) {
-      const index = await promptCreateOrRename(
+      const i = await promptCreateOrRename(
         'enum',
         codeEnum.name,
         dropEnums.map((x) => x.name),
         verifying,
       );
-      if (index) {
-        const dbEnum = dropEnums[index - 1];
-        dropEnums.splice(index - 1, 1);
+      if (i) {
+        const dbEnum = dropEnums[i - 1];
+        dropEnums.splice(i - 1, 1);
 
         const fromSchema = dbEnum.schemaName;
         const from = dbEnum.name;

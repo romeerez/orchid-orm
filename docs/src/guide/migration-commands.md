@@ -46,6 +46,7 @@ Currently, it supports generating code to create:
 - primary keys
 - foreign keys
 - indexes
+- `EXCLUDE` constraints
 - database `CHECK` constraints
 - domain types
 - views (only in migration)

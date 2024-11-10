@@ -29,7 +29,11 @@ import {
   toCamelCase,
   toSnakeCase,
 } from 'orchid-core';
-import { getConstraintName, getIndexName } from '../migration/migration.utils';
+import {
+  getConstraintName,
+  getIndexName,
+  getExcludeName,
+} from '../migration/migration.utils';
 import { AnyRakeDbConfig } from '../config';
 
 const matchMap: Record<string, undefined | TableData.References.Match> = {
@@ -61,6 +65,7 @@ export interface StructureToAstCtx {
 export interface StructureToAstTableData {
   primaryKey?: TableData.PrimaryKey;
   indexes: DbStructure.Index[];
+  excludes: DbStructure.Exclude[];
   constraints: DbStructure.Constraint[];
 }
 
@@ -334,7 +339,7 @@ export const tableToAst = (
   const { schemaName, name: tableName } = table;
 
   const tableData = getDbStructureTableData(data, table);
-  const { primaryKey, indexes, constraints } = tableData;
+  const { primaryKey, constraints } = tableData;
 
   return {
     type: 'table',
@@ -348,30 +353,16 @@ export const tableToAst = (
       primaryKey && primaryKey.columns.length > 1
         ? { ...primaryKey, columns: primaryKey.columns.map(toCamelCase) }
         : undefined,
-    indexes: indexes.reduce<TableData.Index[]>((acc, index) => {
-      if (
-        index.columns.length > 1 ||
-        index.columns.some((it) => 'expression' in it)
-      ) {
-        const { name, ...options } = makeIndexOptions(tableName, index);
-        acc.push({
-          columns: index.columns.map((it) => ({
-            ...('column' in it
-              ? { column: toCamelCase(it.column) }
-              : { expression: it.expression }),
-            collate: it.collate,
-            opclass: it.opclass,
-            order: it.order,
-          })),
-          options: {
-            ...options,
-            include: index.include?.map(toCamelCase),
-          },
-          name,
-        });
-      }
-      return acc;
-    }, []),
+    indexes: indexesOrExcludesToAst<TableData.Index[]>(
+      tableName,
+      tableData,
+      'indexes',
+    ),
+    excludes: indexesOrExcludesToAst<TableData.Exclude[]>(
+      tableName,
+      tableData,
+      'excludes',
+    ),
     constraints: constraints.reduce<TableData.Constraint[]>((acc, it) => {
       if (
         (it.check && it.references) ||
@@ -388,13 +379,50 @@ export const tableToAst = (
   };
 };
 
+const indexesOrExcludesToAst = <T>(
+  tableName: string,
+  tableData: StructureToAstTableData,
+  key: 'indexes' | 'excludes',
+): T => {
+  return tableData[key].reduce<TableData.Index[]>((acc, item) => {
+    if (
+      item.columns.length > 1 ||
+      item.columns.some((it) => 'expression' in it)
+    ) {
+      const { name, ...options } = makeIndexOrExcludeOptions(
+        tableName,
+        item,
+        key,
+      );
+
+      acc.push({
+        columns: item.columns.map((it, i) => ({
+          with: 'exclude' in item && item.exclude ? item.exclude[i] : undefined,
+          ...('column' in it
+            ? { column: toCamelCase(it.column) }
+            : { expression: it.expression }),
+          collate: it.collate,
+          opclass: it.opclass,
+          order: it.order,
+        })),
+        options: {
+          ...options,
+          include: item.include?.map(toCamelCase),
+        },
+        name,
+      });
+    }
+    return acc;
+  }, []) as T;
+};
+
 export const getDbStructureTableData = (
   data: IntrospectedStructure,
   { name, schemaName }: DbStructure.Table,
 ): StructureToAstTableData => {
-  const constraints = data.constraints.filter(
-    (c) => c.tableName === name && c.schemaName === schemaName,
-  );
+  const filterFn = filterByTableSchema(name, schemaName);
+
+  const constraints = data.constraints.filter(filterFn);
 
   const primaryKey = constraints.find((c) => c.primaryKey);
 
@@ -406,12 +434,16 @@ export const getDbStructureTableData = (
             primaryKey.name === `${name}_pkey` ? undefined : primaryKey.name,
         }
       : undefined,
-    indexes: data.indexes.filter(
-      (it) => it.tableName === name && it.schemaName === schemaName,
-    ),
+    indexes: data.indexes.filter(filterFn),
+    excludes: data.excludes.filter(filterFn),
     constraints,
   };
 };
+
+const filterByTableSchema =
+  (tableName: string, schemaName: string) =>
+  (x: DbStructure.TableNameAndSchemaName) =>
+    x.tableName === tableName && x.schemaName === schemaName;
 
 const constraintToAst = (
   ctx: StructureToAstCtx,
@@ -567,27 +599,14 @@ export const dbColumnToAst = (
     column = column.primaryKey();
   }
 
-  if (tableData?.indexes) {
-    const columnIndexes = tableData?.indexes.filter(
-      (it) =>
-        it.columns.length === 1 &&
-        'column' in it.columns[0] &&
-        it.columns[0].column === item.name,
-    );
-    for (const index of columnIndexes) {
-      const columnOptions = index.columns[0];
-      const { name, ...indexOptions } = makeIndexOptions(tableName, index);
-      (column.data.indexes ??= []).push({
-        options: {
-          collate: columnOptions.collate,
-          opclass: columnOptions.opclass,
-          order: columnOptions.order,
-          ...indexOptions,
-        },
-        name,
-      });
-    }
-  }
+  collectColumnIndexesOrExcludes(item, column, tableName, tableData, 'indexes');
+  collectColumnIndexesOrExcludes(
+    item,
+    column,
+    tableName,
+    tableData,
+    'excludes',
+  );
 
   if (table) {
     for (const it of data.constraints) {
@@ -632,6 +651,44 @@ export const dbColumnToAst = (
   return [camelCaseName, column];
 };
 
+const collectColumnIndexesOrExcludes = (
+  dbColumn: DbStructure.Column,
+  column: ColumnType,
+  tableName: string,
+  tableData: StructureToAstTableData | undefined,
+  key: 'indexes' | 'excludes',
+) => {
+  const items = tableData?.[key];
+  if (!items) return;
+
+  const columnItems = items.filter(
+    (it) =>
+      it.columns.length === 1 &&
+      'column' in it.columns[0] &&
+      it.columns[0].column === dbColumn.name,
+  );
+  for (const item of columnItems) {
+    const columnOptions = item.columns[0];
+    const { name, ...itemOptions } = makeIndexOrExcludeOptions(
+      tableName,
+      item,
+      key,
+    );
+    (column.data[key] ??= []).push({
+      with: ('exclude' in item && item.exclude
+        ? (item as DbStructure.Exclude).exclude[0]
+        : undefined) as never,
+      options: {
+        collate: columnOptions.collate,
+        opclass: columnOptions.opclass,
+        order: columnOptions.order,
+        ...itemOptions,
+      },
+      name,
+    });
+  }
+};
+
 const dbConstraintToTableConstraint = (
   ctx: StructureToAstCtx,
   table: DbStructure.Table,
@@ -671,10 +728,18 @@ const dbConstraintToTableConstraint = (
   return constraint;
 };
 
-const makeIndexOptions = (tableName: string, index: DbStructure.Index) => {
+const makeIndexOrExcludeOptions = (
+  tableName: string,
+  index: DbStructure.Index,
+  key: 'indexes' | 'excludes',
+) => {
   return {
     name:
-      index.name !== getIndexName(tableName, index.columns)
+      index.name !==
+      (key === 'indexes' ? getIndexName : getExcludeName)(
+        tableName,
+        index.columns,
+      )
         ? index.name
         : undefined,
     using: index.using === 'btree' ? undefined : index.using,

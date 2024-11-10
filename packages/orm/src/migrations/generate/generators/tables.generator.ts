@@ -24,7 +24,7 @@ import {
   TableExpression,
 } from './generators.utils';
 import { processPrimaryKey } from './primaryKey.generator';
-import { processIndexes } from './indexes.generator';
+import { processIndexesAndExcludes } from './indexesAndExcludes.generator';
 import {
   getColumnDbType,
   processColumns,
@@ -336,15 +336,15 @@ const applyCreateOrRenameTables = async (
 ) => {
   for (const codeTable of createTables) {
     if (dropTables.length) {
-      const index = await promptCreateOrRename(
+      const i = await promptCreateOrRename(
         'table',
         codeTable.table,
         dropTables.map((x) => x.name),
         verifying,
       );
-      if (index) {
-        const dbTable = dropTables[index - 1];
-        dropTables.splice(index - 1, 1);
+      if (i) {
+        const dbTable = dropTables[i - 1];
+        dropTables.splice(i - 1, 1);
 
         ast.push({
           type: 'renameType',
@@ -461,7 +461,7 @@ const processTableChange = async (
 
   processPrimaryKey(config, changeTableData);
 
-  processIndexes(config, changeTableData, ast, compareExpressions);
+  processIndexesAndExcludes(config, changeTableData, ast, compareExpressions);
 
   processChecks(ast, changeTableData, compareExpressions);
 

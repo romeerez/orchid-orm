@@ -150,6 +150,12 @@ const index: DbStructure.Index = {
   columns: [{ column: 'name' }],
 };
 
+const exclude: DbStructure.Exclude = {
+  ...index,
+  name: 'exclude',
+  exclude: ['='],
+};
+
 const extension: DbStructure.Extension = {
   schemaName: 'public',
   name: 'name',
@@ -324,6 +330,10 @@ export const dbStructureMockFactory = {
     })),
   index: (data: Partial<DbStructure.Index> = {}): DbStructure.Index => ({
     ...index,
+    ...data,
+  }),
+  exclude: (data: Partial<DbStructure.Exclude> = {}): DbStructure.Exclude => ({
+    ...exclude,
     ...data,
   }),
   extension: (

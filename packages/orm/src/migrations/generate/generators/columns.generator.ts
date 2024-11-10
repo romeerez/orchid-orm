@@ -170,15 +170,15 @@ const addOrRenameColumns = async (
   for (const { key, column } of columnsToAdd) {
     if (columnsToDrop.length) {
       const codeName = column.data.name ?? key;
-      const index = await promptCreateOrRename(
+      const i = await promptCreateOrRename(
         'column',
         codeName,
         columnsToDrop.map((x) => x.key),
         verifying,
       );
-      if (index) {
-        const drop = columnsToDrop[index - 1];
-        columnsToDrop.splice(index - 1, 1);
+      if (i) {
+        const drop = columnsToDrop[i - 1];
+        columnsToDrop.splice(i - 1, 1);
 
         const from = drop.column.data.name ?? drop.key;
         columnsToChange.set(from, {
@@ -195,6 +195,14 @@ const addOrRenameColumns = async (
 
         for (const index of dbTableData.indexes) {
           for (const column of index.columns) {
+            if ('column' in column && column.column === from) {
+              column.column = to;
+            }
+          }
+        }
+
+        for (const exclude of dbTableData.excludes) {
+          for (const column of exclude.columns) {
             if ('column' in column && column.column === from) {
               column.column = to;
             }
@@ -523,6 +531,7 @@ const changeColumn = (
     ...codeColumn.data,
     primaryKey: undefined,
     indexes: undefined,
+    excludes: undefined,
     foreignKeys: undefined,
     check: undefined,
   };

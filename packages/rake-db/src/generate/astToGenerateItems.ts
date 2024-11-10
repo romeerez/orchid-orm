@@ -1,6 +1,7 @@
 import { RakeDbAst } from '../ast';
 import {
   getConstraintName,
+  getExcludeName,
   getForeignKeyTable,
   getIndexName,
 } from '../migration/migration.utils';
@@ -258,18 +259,8 @@ const analyzeTableColumns = (
       keys.push(`${table}_pkey`);
     }
 
-    const indexes = change.indexes || change.column?.data.indexes;
-    if (indexes) {
-      for (const index of indexes) {
-        keys.push(
-          index.name
-            ? `${schema}.${index.name}`
-            : getIndexName(table, [
-                { column: change.column?.data.name ?? name },
-              ]),
-        );
-      }
-    }
+    pushIndexOrExcludeKeys(change, keys, schema, table, name, 'indexes');
+    pushIndexOrExcludeKeys(change, keys, schema, table, name, 'excludes');
 
     const foreignKeys = change.foreignKeys || change.column?.data.foreignKeys;
     if (foreignKeys) {
@@ -293,6 +284,43 @@ const analyzeTableColumns = (
   }
 };
 
+const pushIndexOrExcludeKeys = (
+  change: RakeDbAst.ColumnChange,
+  keys: string[],
+  schema: string,
+  table: string,
+  name: string,
+  key: 'indexes' | 'excludes',
+) => {
+  const items = change[key] || change.column?.data[key];
+  if (items) {
+    const getName = key === 'indexes' ? getIndexName : getExcludeName;
+    for (const x of items) {
+      keys.push(
+        x.name
+          ? `${schema}.${x.name}`
+          : getName(table, [{ column: change.column?.data.name ?? name }]),
+      );
+    }
+  }
+};
+
+const pushIndexesOrExcludesKeys = (
+  keys: string[],
+  schema: string,
+  table: string,
+  data: TableData,
+  key: 'indexes' | 'excludes',
+) => {
+  const arr = data[key];
+  if (arr) {
+    const getName = key === 'indexes' ? getIndexName : getExcludeName;
+    for (const x of arr) {
+      keys.push(x.name ? `${schema}.${x.name}` : getName(table, x.columns));
+    }
+  }
+};
+
 const analyzeTableData = (
   config: AnyRakeDbConfig,
   currentSchema: string,
@@ -307,15 +335,8 @@ const analyzeTableData = (
     keys.push(name ? `${schema}.${name}` : `${table}_pkey`);
   }
 
-  if (data.indexes) {
-    for (const index of data.indexes) {
-      keys.push(
-        index.name
-          ? `${schema}.${index.name}`
-          : getIndexName(table, index.columns),
-      );
-    }
-  }
+  pushIndexesOrExcludesKeys(keys, schema, table, data, 'indexes');
+  pushIndexesOrExcludesKeys(keys, schema, table, data, 'excludes');
 
   if (data.constraints) {
     for (const constraint of data.constraints) {
