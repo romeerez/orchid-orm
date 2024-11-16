@@ -162,10 +162,7 @@ type SelectResultObj<
 > = Obj extends SelectAsCheckReturnTypes
   ? {
       [K in keyof T]: K extends 'meta'
-        ? T['meta'] & {
-            hasSelect: true;
-            selectable: SelectAsSelectable<Obj>;
-          }
+        ? T['meta'] & SelectAsMeta<Obj>
         : K extends 'result'
         ? // Combine previously selected items, all columns if * was provided,
           // and the selected by string and object arguments.
@@ -217,10 +214,7 @@ type SelectResultColumnsAndObj<
   Obj,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? T['meta'] & {
-        hasSelect: true;
-        selectable: SelectAsSelectable<Obj>;
-      }
+    ? T['meta'] & SelectAsMeta<Obj>
     : K extends 'result'
     ? // Combine previously selected items, all columns if * was provided,
       // and the selected by string and object arguments.
@@ -265,29 +259,37 @@ type SelectResultColumnsAndObj<
 };
 
 // Add new 'selectable' types based on the select object argument.
-type SelectAsSelectable<Arg> = {
-  [K in keyof Arg]: Arg[K] extends (q: never) => {
-    returnType: 'value' | 'valueOrThrow';
-    result: QueryColumns;
-  }
-    ? {
-        [P in K]: {
-          as: K;
-          column: ReturnType<Arg[K]>['result']['value'];
-        };
-      }
-    : Arg[K] extends (q: never) => {
-        result: QueryColumns;
-      }
-    ? {
-        [C in keyof ReturnType<Arg[K]>['result'] & string as `${K &
-          string}.${C}`]: {
-          as: C;
-          column: ReturnType<Arg[K]>['result'][C];
-        };
-      }
-    : never;
-}[keyof Arg];
+type SelectAsMeta<Arg> = {
+  hasSelect: true;
+  selectable: {
+    [K in keyof Arg]: Arg[K] extends (q: never) => {
+      result: QueryColumns;
+      returnType: QueryReturnType;
+    }
+      ? ReturnType<Arg[K]>['returnType'] extends 'value' | 'valueOrThrow'
+        ? {
+            [P in K]: {
+              as: K;
+              column: ReturnType<Arg[K]>['result']['value'];
+            };
+          }
+        : {
+            [C in keyof ReturnType<Arg[K]>['result'] & string as `${K &
+              string}.${C}`]: {
+              as: C;
+              column: ReturnType<Arg[K]>['result'][C];
+            };
+          }
+      : Arg[K] extends Expression
+      ? {
+          [P in K]: {
+            as: K;
+            column: Arg[K]['result']['value'];
+          };
+        }
+      : EmptyObject;
+  }[keyof Arg];
+};
 
 // map a single value of select object arg into a column
 type SelectAsValueResult<

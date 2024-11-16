@@ -860,6 +860,14 @@ describe('select', () => {
 
       assertType<Awaited<typeof q>, { arr: { arr: UserRecord[] }[] }[]>();
     });
+
+    it('should support selecting column after selecting by object', () => {
+      const q = User.select({
+        count: sql<number>`count(*)`,
+      }).select('name');
+
+      assertType<Awaited<typeof q>, { count: number; name: string }[]>();
+    });
   });
 
   describe('selectAll', () => {
