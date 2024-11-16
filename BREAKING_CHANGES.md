@@ -1,5 +1,13 @@
 # Breaking changes
 
+## orchid-orm 1.38
+
+`group` was giving precedence to the table columns over selected values.
+
+Now selected values will take precedence over table columns in `group`.
+
+So if the table has `id` column, and there is a custom select aliased as `id`, the `group` will reference the selected value.
+
 ## orchid-orm-test-factory 1.0
 
 Now test factories work disregarding if and which one validation library you're using with OrchidORM.

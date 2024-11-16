@@ -33,11 +33,20 @@ export const pushSelectSql = (
   query: {
     select?: SelectQueryData['select'];
     join?: SelectQueryData['join'];
+    hookSelect?: HookSelect;
     shape: QueryColumns;
   },
   quotedAs?: string,
+  aliases?: string[],
 ) => {
-  const sql = selectToSql(ctx, table, query, quotedAs);
+  const sql = selectToSql(
+    ctx,
+    table,
+    query,
+    quotedAs,
+    query.hookSelect,
+    aliases,
+  );
   if (sql) ctx.sql.push(sql);
 };
 
@@ -55,6 +64,7 @@ export const selectToSql = (
   },
   quotedAs: string | undefined,
   hookSelect = query.hookSelect,
+  aliases?: string[],
 ): string => {
   let selected: RecordUnknown | undefined;
 
@@ -102,6 +112,7 @@ export const selectToSql = (
           }
         }
         list.push(sql);
+        aliases?.push('');
       } else if (item) {
         if ('selectAs' in item) {
           const obj = item.selectAs as {
@@ -114,8 +125,9 @@ export const selectToSql = (
             if (typeof value === 'object') {
               if (isExpression(value)) {
                 list.push(`${value.toSQL(ctx, quotedAs)} "${as}"`);
+                aliases?.push(as);
               } else {
-                pushSubQuerySql(ctx, value, as, list, quotedAs);
+                pushSubQuerySql(ctx, value, as, list, quotedAs, aliases);
               }
             } else if (value) {
               list.push(
@@ -128,10 +140,12 @@ export const selectToSql = (
                   true,
                 ),
               );
+              aliases?.push(as);
             }
           }
         } else {
           list.push(selectedObjectToSQL(ctx, quotedAs, item));
+          aliases?.push('');
         }
       }
     }
@@ -219,6 +233,7 @@ const pushSubQuerySql = (
   as: string,
   list: string[],
   quotedAs?: string,
+  aliases?: string[],
 ) => {
   const { returnType = 'all' } = query.q;
 
@@ -249,6 +264,7 @@ const pushSubQuerySql = (
         throw new UnhandledTypeError(query as Query, returnType);
     }
     list.push(`${sql} "${as}"`);
+    aliases?.push(as);
     return;
   }
 
@@ -275,7 +291,10 @@ const pushSubQuerySql = (
         throw new UnhandledTypeError(query as Query, returnType);
     }
 
-    if (sql) list.push(`${coalesce(ctx, query, sql, quotedAs)} "${as}"`);
+    if (sql) {
+      list.push(`${coalesce(ctx, query, sql, quotedAs)} "${as}"`);
+      aliases?.push(as);
+    }
     return;
   }
 

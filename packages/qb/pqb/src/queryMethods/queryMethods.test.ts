@@ -14,6 +14,7 @@ import {
   assertType,
   expectSql,
   now,
+  sql,
   testAdapter,
   testDb,
   useTestDatabase,
@@ -665,7 +666,7 @@ describe('queryMethods', () => {
 
     it('should group by selected value', () => {
       const q = User.select({
-        month: User.sql<string>`extract(month from "created_at)`,
+        month: sql<string>`extract(month from "created_at)`,
       }).group('month');
 
       assertType<Awaited<typeof q>, { month: string }[]>();
@@ -675,19 +676,19 @@ describe('queryMethods', () => {
         `
           SELECT extract(month from "created_at) "month"
           FROM "user"
-          GROUP BY "month"
+          GROUP BY 1
         `,
       );
     });
 
-    it('should not prefix the column when it is customly selected', () => {
+    it('should use positional reference when grouping by selected column', () => {
       const q = User.select({ name: 'id' }).group('name');
 
       expectSql(
         q.toSQL(),
         `
           SELECT "user"."id" "name" FROM "user"
-          GROUP BY "name"
+          GROUP BY 1
         `,
       );
     });

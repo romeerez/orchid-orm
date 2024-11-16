@@ -535,6 +535,10 @@ const results = db.product
   .group('month');
 ```
 
+Column aliases in `select` take precedence over table columns,
+so if in the query above `db.product` had a column `month`,
+the query would work in the exact same way, group by would reference the selected `month` expression.
+
 ## order
 
 [//]: # 'has JSDoc'

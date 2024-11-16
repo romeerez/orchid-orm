@@ -1,5 +1,5 @@
 import { Query, QueryInternal, queryTypeWithLimitOne } from '../query/query';
-import { maybeSelectedColumnToSql } from './common';
+import { columnToSql } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -142,7 +142,8 @@ export const makeSQL = (
       pushDistinctSql(ctx, table, query.distinct, quotedAs);
     }
 
-    pushSelectSql(ctx, table, query, quotedAs);
+    const aliases = query.group ? [] : undefined;
+    pushSelectSql(ctx, table, query, quotedAs, aliases);
 
     if (table.table || query.from) {
       pushFromAndAs(ctx, table, query, quotedAs);
@@ -162,11 +163,16 @@ export const makeSQL = (
     }
 
     if (query.group) {
-      const group = query.group.map((item) =>
-        isExpression(item)
-          ? item.toSQL(ctx, quotedAs)
-          : maybeSelectedColumnToSql(ctx, table.q, item as string, quotedAs),
-      );
+      const group = query.group.map((item) => {
+        if (isExpression(item)) {
+          return item.toSQL(ctx, quotedAs);
+        } else {
+          const i = (aliases as string[]).indexOf(item as string);
+          return i !== -1
+            ? i + 1
+            : columnToSql(ctx, table.q, table.shape, item as string, quotedAs);
+        }
+      });
       sql.push(`GROUP BY ${group.join(', ')}`);
     }
 
