@@ -622,9 +622,9 @@ describe('queryMethods', () => {
       const q = User.all();
 
       expectSql(
-        q.group('id', 'name').toSQL(),
+        q.select('id', 'name').group('id', 'name').toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT "user"."id", "user"."name" FROM "user"
           GROUP BY "user"."id", "user"."name"
         `,
       );
@@ -633,12 +633,15 @@ describe('queryMethods', () => {
     });
 
     it('should group by named columns', () => {
-      const q = Snake.group('snakeName', 'tailLength');
+      const q = Snake.select('snakeName', 'tailLength').group(
+        'snakeName',
+        'tailLength',
+      );
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAll} FROM "snake"
+          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength" FROM "snake"
           GROUP BY "snake"."snake_name", "snake"."tail_length"
         `,
       );
@@ -647,10 +650,16 @@ describe('queryMethods', () => {
     it('should group by raw sql', () => {
       const q = User.clone();
       const expectedSql = `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT "user"."id", "user"."name" FROM "user"
         GROUP BY id, name
       `;
-      expectSql(q.group(testDb.sql`id`, testDb.sql`name`).toSQL(), expectedSql);
+      expectSql(
+        q
+          .select('id', 'name')
+          .group(testDb.sql`id`, testDb.sql`name`)
+          .toSQL(),
+        expectedSql,
+      );
       expectQueryNotMutated(q);
     });
 

@@ -609,7 +609,12 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param columns - column names or a raw SQL
    */
-  group<T extends PickQueryResult>(this: T, ...columns: GroupArgs<T>): T {
+  group<T extends PickQueryMetaResult>(
+    this: T,
+    ...columns: T['meta']['hasSelect'] extends true
+      ? GroupArgs<T>
+      : { error: 'select is required for group' }[]
+  ): T {
     return pushQueryArray(_clone(this), 'group', columns) as never;
   }
 
