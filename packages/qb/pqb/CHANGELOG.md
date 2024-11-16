@@ -1,5 +1,16 @@
 # pqb
 
+## 0.43.0
+
+### Minor Changes
+
+- e9ee271: Require select before using group (#428)
+- bf894cb: Change `group` to reference selected values with a precedence over table columns (#429)
+
+### Patch Changes
+
+- 8c364ed: Fix TS error when selecting a column after selecting object (#428)
+
 ## 0.42.9
 
 ### Patch Changes

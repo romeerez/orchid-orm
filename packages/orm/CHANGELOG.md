@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.38.0
+
+### Minor Changes
+
+- bf894cb: Change `group` to reference selected values with a precedence over table columns (#429)
+
+### Patch Changes
+
+- Updated dependencies [e9ee271]
+- Updated dependencies [bf894cb]
+- Updated dependencies [8c364ed]
+  - pqb@0.43.0
+  - rake-db@2.23.20
+
 ## 1.37.12
 
 ### Patch Changes
