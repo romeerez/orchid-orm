@@ -24,7 +24,7 @@ import {
   VirtualColumn,
   WhereArg,
 } from 'pqb';
-import { TableClass } from '../baseTable';
+import { ORMTableInput, TableClass } from '../baseTable';
 import {
   RelationData,
   RelationThunkBase,
@@ -33,6 +33,7 @@ import {
   RelationConfigSelf,
 } from './relations';
 import {
+  addAutoForeignKey,
   getSourceRelation,
   getThroughRelation,
   hasRelationHandleCreate,
@@ -249,6 +250,7 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 }
 
 export const makeHasOneMethod = (
+  tableConfig: ORMTableInput,
   table: Query,
   relation: HasOne,
   relationName: string,
@@ -300,6 +302,14 @@ export const makeHasOneMethod = (
 
   const primaryKeys = relation.options.columns as string[];
   const foreignKeys = relation.options.references as string[];
+  addAutoForeignKey(
+    tableConfig,
+    query,
+    table,
+    primaryKeys,
+    foreignKeys,
+    relation.options,
+  );
 
   const state: State = { query, primaryKeys, foreignKeys };
   const len = primaryKeys.length;

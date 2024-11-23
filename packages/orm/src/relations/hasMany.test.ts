@@ -23,9 +23,77 @@ import {
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { omit } from 'orchid-core';
+import { createBaseTable } from '../baseTable';
+
+const ormParams = {
+  db: db.$queryBuilder,
+};
 
 describe('hasMany', () => {
   useTestORM();
+
+  it('should define foreign keys under autoForeignKeys option', () => {
+    const BaseTable = createBaseTable({
+      autoForeignKeys: {
+        onUpdate: 'CASCADE',
+      },
+    });
+
+    class UserTable extends BaseTable {
+      table = 'user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+      }));
+
+      relations = {
+        user: this.hasMany(() => ProfileTable, {
+          columns: ['Id'],
+          references: ['UserId'],
+        }),
+        user2: this.hasMany(() => ProfileTable, {
+          columns: ['Id'],
+          references: ['UserId2'],
+          foreignKey: false,
+        }),
+        user3: this.hasMany(() => ProfileTable, {
+          columns: ['Id'],
+          references: ['UserId3'],
+          foreignKey: {
+            onDelete: 'CASCADE',
+          },
+        }),
+      };
+    }
+
+    class ProfileTable extends BaseTable {
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('user_id').integer(),
+        UserId2: t.name('user_id_2').integer(),
+        UserId3: t.name('user_id_3').integer(),
+      }));
+    }
+
+    const db = orchidORM(ormParams, { user: UserTable, profile: ProfileTable });
+    expect(db.profile.internal.tableData.constraints).toEqual([
+      {
+        references: {
+          columns: ['UserId'],
+          fnOrTable: 'user',
+          foreignColumns: ['Id'],
+          options: { onUpdate: 'CASCADE' },
+        },
+      },
+      {
+        references: {
+          columns: ['UserId3'],
+          fnOrTable: 'user',
+          foreignColumns: ['Id'],
+          options: { onDelete: 'CASCADE' },
+        },
+      },
+    ]);
+  });
 
   describe('querying', () => {
     it('should support `queryRelated` to query related data', async () => {
@@ -2068,17 +2136,11 @@ describe('hasMany through', () => {
       };
     }
 
-    const local = orchidORM(
-      {
-        db: db.$queryBuilder,
-        log: false,
-      },
-      {
-        post: Post,
-        tag: Tag,
-        postTag: PostTag,
-      },
-    );
+    const local = orchidORM(ormParams, {
+      post: Post,
+      tag: Tag,
+      postTag: PostTag,
+    });
 
     expect(Object.keys(local.post.relations)).toEqual(['postTags', 'tags']);
     expect(Object.keys(local.tag.relations)).toEqual(['postTags', 'posts']);
@@ -2107,16 +2169,10 @@ describe('hasMany through', () => {
     }
 
     expect(() => {
-      orchidORM(
-        {
-          db: db.$queryBuilder,
-          log: false,
-        },
-        {
-          post: Post,
-          tag: Tag,
-        },
-      );
+      orchidORM(ormParams, {
+        post: Post,
+        tag: Tag,
+      });
     }).toThrow(
       'Cannot define a `tags` relation on `post`: cannot find `postTags` relation required by the `through` option',
     );
@@ -2161,17 +2217,11 @@ describe('hasMany through', () => {
     }
 
     expect(() => {
-      orchidORM(
-        {
-          db: db.$queryBuilder,
-          log: false,
-        },
-        {
-          post: Post,
-          tag: Tag,
-          postTag: PostTag,
-        },
-      );
+      orchidORM(ormParams, {
+        post: Post,
+        tag: Tag,
+        postTag: PostTag,
+      });
     }).toThrow(
       'Cannot define a `tags` relation on `post`: cannot find `tag` relation in `postTag` required by the `source` option',
     );

@@ -154,6 +154,8 @@ export interface ORMTableInput {
   readonly softDelete?: true | string;
   // database table comment
   comment?: string;
+  // automatically create foreign keys for relations
+  autoForeignKeys?: TableData.References.BaseOptions;
 }
 
 // Object type that's allowed in `where` and similar methods of the table.
@@ -471,6 +473,7 @@ export function createBaseTable<
   nowSQL,
   exportAs = 'BaseTable',
   language,
+  autoForeignKeys,
 }: {
   schemaConfig?: SchemaConfig;
   // concrete column types or a callback for overriding standard column types
@@ -489,6 +492,8 @@ export function createBaseTable<
   exportAs?: string;
   // default language for the full text search
   language?: string;
+  // automatically create foreign keys for relations
+  autoForeignKeys?: boolean | TableData.References.BaseOptions;
 } = {}): BaseTableClass<SchemaConfig, ColumnTypes> {
   const columnTypes = (
     typeof columnTypesArg === 'function'
@@ -602,6 +607,7 @@ export function createBaseTable<
     language = language;
     declare filePath: string;
     declare result: ColumnsShapeBase;
+    declare autoForeignKeys?: TableData.References.BaseOptions;
 
     clone<T extends IsQuery>(this: T): T {
       return this;
@@ -698,6 +704,8 @@ export function createBaseTable<
 
   base.prototype.types = columnTypes as typeof base.prototype.types;
   base.prototype.snakeCase = snakeCase;
+  base.prototype.autoForeignKeys =
+    autoForeignKeys === true ? {} : autoForeignKeys || undefined;
 
   return base as unknown as BaseTableClass<SchemaConfig, ColumnTypes>;
 }

@@ -1,4 +1,4 @@
-import { TableClass } from '../baseTable';
+import { ORMTableInput, TableClass } from '../baseTable';
 import {
   _queryCreate,
   _queryCreateMany,
@@ -41,6 +41,7 @@ import {
   RelationToOneDataForCreateSameQuery,
 } from './relations';
 import {
+  addAutoForeignKey,
   joinQueryChainingHOF,
   NestedInsertOneItem,
   NestedInsertOneItemConnectOrCreate,
@@ -257,6 +258,8 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 }
 
 export const makeBelongsToMethod = (
+  tableConfig: ORMTableInput,
+  table: Query,
   relation: BelongsTo,
   relationName: string,
   query: Query,
@@ -267,6 +270,15 @@ export const makeBelongsToMethod = (
   const len = primaryKeys.length;
   const state: State = { query, primaryKeys, foreignKeys, len };
   const makeWhere = relationWhere(len, primaryKeys, foreignKeys);
+
+  addAutoForeignKey(
+    tableConfig,
+    table,
+    query,
+    primaryKeys,
+    foreignKeys,
+    relation.options,
+  );
 
   const join = (
     baseQuery: Query,

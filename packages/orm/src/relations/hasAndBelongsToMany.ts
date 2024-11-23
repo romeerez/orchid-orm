@@ -3,7 +3,7 @@ import {
   RelationData,
   RelationThunkBase,
 } from './relations';
-import { ScopeFn, TableClass } from '../baseTable';
+import { ORMTableInput, ScopeFn, TableClass } from '../baseTable';
 import {
   _queryCreateFrom,
   _queryCreateMany,
@@ -27,6 +27,7 @@ import {
   RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
+  TableData,
   toSQLCacheKey,
   UpdateArg,
   UpdateCtx,
@@ -45,6 +46,7 @@ import {
   toSnakeCase,
 } from 'orchid-core';
 import {
+  addAutoForeignKey,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
   joinQueryChainingHOF,
@@ -70,10 +72,12 @@ export interface HasAndBelongsToManyOptions<
   required?: boolean;
   columns: (keyof Columns)[];
   references: string[];
+  foreignKey?: boolean | TableData.References.Options;
   through: {
     table: string;
     columns: string[];
     references: (keyof InstanceType<Related>['columns']['shape'])[];
+    foreignKey?: boolean | TableData.References.Options;
   };
 }
 
@@ -211,6 +215,7 @@ const removeColumnName = (column: ColumnTypeBase) => {
 };
 
 export const makeHasAndBelongsToManyMethod = (
+  tableConfig: ORMTableInput,
   table: Query,
   qb: Query,
   relation: HasAndBelongsToMany,
@@ -268,6 +273,24 @@ export const makeHasAndBelongsToManyMethod = (
     shape: baseQuery.shape,
   };
   const subQuery = Object.create(baseQuery) as Query;
+
+  addAutoForeignKey(
+    tableConfig,
+    subQuery,
+    table,
+    primaryKeys,
+    foreignKeys,
+    relation.options,
+  );
+
+  addAutoForeignKey(
+    tableConfig,
+    subQuery,
+    query,
+    throughPrimaryKeys,
+    throughForeignKeys,
+    relation.options.through,
+  );
 
   const state: State = {
     relatedTableQuery: query,

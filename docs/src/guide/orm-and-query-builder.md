@@ -48,6 +48,10 @@ export const db = orchidORM(
     // option for logging, false by default
     log: true,
 
+    // automatically create foreign keys for relations
+    // see `autoForeignKeys` section below
+    autoForeignKeys: true,
+
     // option to create named prepared statements implicitly, false by default
     autoPreparedStatements: true,
   },
@@ -633,6 +637,85 @@ export const db = orchidORM(
     // ...tables
   },
 );
+```
+
+## autoForeignKeys
+
+In general, it's a good practice to always define database-level foreign keys between related tables,
+so the database guarantees data integrity, and a record cannot mistakenly have an id of a record that does not exist.
+
+Adding `autoForeignKeys: true` option to `createBaseTable` will automatically generate foreign keys based on defined relations (in the case you're using migration generator).
+
+You can provide foreign key options instead of `true` to be used by all auto-generated foreign keys.
+
+```ts
+import { createBaseTable } from 'orchid-orm';
+
+export const BaseTable = createBaseTable({
+  autoForeignKeys: true, // with default options
+
+  // or, you can provide custom options
+  autoForeignKeys: {
+    // all fields are optional
+    match: 'FULL', // 'SIMPLE' by default, can be 'FULL', 'PARTIAL', 'SIMPLE'.
+    onUpdate: 'CASCADE', // 'NO ACTION' by default, can be 'NO ACTION', 'RESTRICT', 'CASCADE', 'SET NULL', 'SET DEFAULT'.
+    onDelete: 'CASCADE', // same as `onUpdate`.
+    dropMode: 'CASCADE', // for the down migration, 'RESTRICT' is the default, can be 'CASCADE' or 'RESTRICT'.
+  },
+});
+```
+
+When this is enabled, you can disable it for a specific table.
+And when this is disabled globally, you can enable it only for a specific table in the same way.
+
+```ts
+import { BaseTable } from './baseTable';
+
+export class MyTable extends BaseTable {
+  autoForeignKey = false; // disable only for this table
+  autoForeignKey = { onUpdate: 'RESTRICT' }; // or, override options only for this table
+}
+```
+
+Auto foreign keys can also be enabled, disabled, overridden for a concrete relation:
+
+```ts
+import { BaseTable } from './baseTable';
+
+export class MyTable extends BaseTable {
+  relations = {
+    btRel: this.belongsTo(() => OtherTable, {
+      columns: ['otherId'],
+      references: ['id'],
+
+      // disable for this relation
+      foreignKey: false,
+      // or, customize options for this relation
+      foreignKey: {
+        onUpdate: 'RESTRICT',
+      },
+    }),
+
+    habtmRel: this.hasAndBelongsToMany(() => OtherTable, {
+      columns: ['id'],
+      references: ['myId'],
+
+      // disable foreign key from the join table to this table
+      foreignKey: false,
+
+      through: {
+        table: 'joinTable',
+        columns: ['otherId'],
+        references: ['id'],
+
+        // customize foreign key from the join table to the other table
+        foreignKey: {
+          onUpdate: 'RESTRICT',
+        },
+      },
+    }),
+  };
+}
 ```
 
 ## connectRetry

@@ -213,13 +213,17 @@ export namespace TableData {
       | 'SET NULL'
       | 'SET DEFAULT';
 
-    // Used in migrations to make foreign key SQL
-    export interface Options {
-      name?: string;
+    // Foreign key options without name, is used for `autoForeignKey` in the ORM.
+    export interface BaseOptions {
       match?: Match;
       onUpdate?: Action;
       onDelete?: Action;
       dropMode?: TableData.DropMode;
+    }
+
+    // Used in migrations to make foreign key SQL
+    export interface Options extends BaseOptions {
+      name?: string;
     }
   }
 }

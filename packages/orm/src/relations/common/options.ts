@@ -1,5 +1,5 @@
 import { ScopeFn, TableClass } from '../../baseTable';
-import { Query } from 'pqb';
+import { Query, TableData } from 'pqb';
 
 export interface RelationCommonOptions<
   Related extends TableClass = TableClass,
@@ -15,6 +15,7 @@ export interface RelationRefsOptions<
 > {
   columns: Column[];
   references: Ref[];
+  foreignKey?: boolean | TableData.References.Options;
 }
 
 export interface RelationThroughOptions<

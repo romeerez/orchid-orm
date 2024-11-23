@@ -36,6 +36,7 @@ import {
   toArray,
 } from 'orchid-core';
 import {
+  addAutoForeignKey,
   getSourceRelation,
   getThroughRelation,
   hasRelationHandleCreate,
@@ -51,6 +52,7 @@ import {
 import { RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 import { HasOneOptions, HasOneParams, HasOnePopulate } from './hasOne';
+import { ORMTableInput } from '../baseTable';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -183,6 +185,7 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 }
 
 export const makeHasManyMethod = (
+  tableConfig: ORMTableInput,
   table: Query,
   relation: HasMany,
   relationName: string,
@@ -238,6 +241,14 @@ export const makeHasManyMethod = (
 
   const primaryKeys = relation.options.columns as string[];
   const foreignKeys = relation.options.references as string[];
+  addAutoForeignKey(
+    tableConfig,
+    query,
+    table,
+    primaryKeys,
+    foreignKeys,
+    relation.options,
+  );
 
   const state: State = { query, primaryKeys, foreignKeys };
   const len = primaryKeys.length;

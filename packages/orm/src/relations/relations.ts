@@ -259,7 +259,7 @@ export const applyRelations = (
         }
       }
 
-      applyRelation(qb, data, delayedRelations);
+      applyRelation(table, qb, data, delayedRelations);
     }
   }
 
@@ -321,6 +321,7 @@ const delayRelation = (
 };
 
 const applyRelation = (
+  table: ORMTableInput,
   qb: Query,
   { relationName, relation, dbTable, otherDbTable }: ApplyRelationData,
   delayedRelations: DelayedRelations,
@@ -342,13 +343,14 @@ const applyRelation = (
   const { type } = relation;
   let data;
   if (type === 'belongsTo') {
-    data = makeBelongsToMethod(relation, relationName, query);
+    data = makeBelongsToMethod(table, dbTable, relation, relationName, query);
   } else if (type === 'hasOne') {
-    data = makeHasOneMethod(dbTable, relation, relationName, query);
+    data = makeHasOneMethod(table, dbTable, relation, relationName, query);
   } else if (type === 'hasMany') {
-    data = makeHasManyMethod(dbTable, relation, relationName, query);
+    data = makeHasManyMethod(table, dbTable, relation, relationName, query);
   } else if (type === 'hasAndBelongsToMany') {
     data = makeHasAndBelongsToManyMethod(
+      table,
       dbTable,
       qb,
       relation,
@@ -402,6 +404,6 @@ const applyRelation = (
   if (!tableRelations) return;
 
   tableRelations[relationName]?.forEach((data) => {
-    applyRelation(qb, data, delayedRelations);
+    applyRelation(table, qb, data, delayedRelations);
   });
 };

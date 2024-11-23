@@ -729,4 +729,63 @@ ${green('+ create table')} user_staff_perm (1 column)`);
     assert.report(`${green('+ create extension')} postgis
 ${green('+ create table')} table (1 column)`);
   });
+
+  it('should auto generate foreign keys when using autoForeignKeys', async () => {
+    class One extends BaseTable {
+      autoForeignKeys = { onDelete: 'CASCADE' };
+      table = 'one';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        twoId: t.integer(),
+      }));
+
+      relations = {
+        two: this.belongsTo(() => Two, {
+          columns: ['twoId'],
+          references: ['id'],
+        }),
+      };
+    }
+
+    class Two extends BaseTable {
+      table = 'two';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+      }));
+    }
+
+    await arrange({
+      tables: [One, Two],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable('two', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
+});
+
+change(async (db) => {
+  await db.createTable(
+    'one',
+    (t) => ({
+      id: t.identity().primaryKey(),
+      twoId: t.integer(),
+    }),
+    (t) => 
+      t.foreignKey(
+        ['twoId'],
+        'two',
+        ['id'],
+        {
+          onDelete: 'CASCADE',
+        },
+      ),
+  );
+});
+`);
+  });
 });

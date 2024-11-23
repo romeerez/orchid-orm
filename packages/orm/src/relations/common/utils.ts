@@ -1,6 +1,7 @@
 import {
   _queryHookAfterCreate,
   _queryHookAfterUpdate,
+  ColumnType,
   CreateCtx,
   getQueryAs,
   JoinCallback,
@@ -16,9 +17,11 @@ import {
   UpdateData,
   WhereArg,
 } from 'pqb';
-import { MaybeArray, RecordUnknown } from 'orchid-core';
+import { emptyObject, MaybeArray, RecordUnknown } from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
+import { BaseTableClass, ORMTableInput } from '../../baseTable';
+import { RelationRefsOptions } from './options';
 
 // INNER JOIN the current relation instead of the default OUTER behavior
 export interface RelJoin extends JoinQueryMethod {
@@ -273,3 +276,90 @@ export const joinQueryChainingHOF =
       EXISTS: { q: reverseJoin(query, joiningQuery) },
     });
   };
+
+export const addAutoForeignKey = (
+  tableConfig: ORMTableInput,
+  from: Query,
+  to: Query,
+  primaryKeys: string[],
+  foreignKeys: string[],
+  options: RelationRefsOptions<PropertyKey, PropertyKey>,
+) => {
+  const toTable = to.table as string;
+
+  let fkeyOptions =
+    options.foreignKey !== undefined
+      ? options.foreignKey
+      : tableConfig.autoForeignKeys;
+  if (!fkeyOptions) return;
+
+  if (fkeyOptions === true) {
+    fkeyOptions = tableConfig.autoForeignKeys || emptyObject;
+  }
+
+  if (foreignKeys.length === 1) {
+    const column = from.shape[foreignKeys[0]] as ColumnType;
+    if (column.data.foreignKeys) {
+      const pkey = primaryKeys[0];
+
+      for (const fkey of column.data.foreignKeys) {
+        let fkeyTable: string;
+        let fkeyColumn = fkey.foreignColumns[0];
+        if (typeof fkey.fnOrTable === 'string') {
+          fkeyTable = fkey.fnOrTable;
+          fkeyColumn = getColumnKeyFromDbName(to, fkeyColumn);
+        } else {
+          fkeyTable = (fkey.fnOrTable() as unknown as BaseTableClass<any, any>) // eslint-disable-line @typescript-eslint/no-explicit-any
+            .instance().table;
+        }
+
+        if (toTable === fkeyTable && pkey === fkeyColumn) return;
+      }
+    }
+  }
+
+  const { constraints } = from.internal.tableData;
+  if (constraints) {
+    const sortedPkeys = primaryKeys.toSorted();
+    const sortedFkeys = foreignKeys.toSorted();
+
+    for (const { references: refs } of constraints) {
+      if (!refs) continue;
+
+      if (
+        refs.columns.length === sortedFkeys.length &&
+        refs.columns.every((column, i) => column === sortedFkeys[i]) &&
+        refs.foreignColumns.length === sortedPkeys.length &&
+        (typeof refs.fnOrTable === 'string'
+          ? refs.fnOrTable === toTable &&
+            refs.foreignColumns.every(
+              (column, i) =>
+                getColumnKeyFromDbName(to, column) === sortedPkeys[i],
+            )
+          : (refs.fnOrTable as unknown as () => BaseTableClass<any, any>)() // eslint-disable-line @typescript-eslint/no-explicit-any
+              .instance().table === toTable &&
+            refs.foreignColumns.every((column, i) => column === sortedPkeys[i]))
+      )
+        return;
+    }
+  }
+
+  (from.internal.tableData.constraints ??= []).push({
+    references: {
+      columns: foreignKeys,
+      fnOrTable: toTable,
+      foreignColumns: primaryKeys,
+      options: fkeyOptions,
+    },
+    dropMode: fkeyOptions.dropMode,
+  });
+};
+
+const getColumnKeyFromDbName = (query: Query, name: string) => {
+  for (const k in query.shape) {
+    if ((query.shape[k] as ColumnType).data.name === name) {
+      return k;
+    }
+  }
+  return name;
+};

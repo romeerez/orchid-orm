@@ -17,7 +17,7 @@ import { columnCode, identityToCode } from './code';
 import { Operators, OperatorsNumber } from './operators';
 import { TableData } from '../tableData';
 
-export interface NumberColumnData extends BaseNumberData {
+export interface NumberColumnData extends BaseNumberData, ColumnData {
   identity?: TableData.Identity;
 }
 

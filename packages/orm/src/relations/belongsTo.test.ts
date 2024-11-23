@@ -17,9 +17,75 @@ import {
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { omit } from 'orchid-core';
+import { createBaseTable } from '../baseTable';
+
+const ormParams = { db: db.$queryBuilder };
 
 describe('belongsTo', () => {
   useTestORM();
+
+  it('should define foreign keys under autoForeignKeys option', () => {
+    const BaseTable = createBaseTable({
+      autoForeignKeys: {
+        onUpdate: 'CASCADE',
+      },
+    });
+
+    class UserTable extends BaseTable {
+      table = 'user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+      }));
+    }
+
+    class ProfileTable extends BaseTable {
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('user_id').integer(),
+        UserId2: t.name('user_id_2').integer(),
+        UserId3: t.name('user_id_3').integer(),
+      }));
+
+      relations = {
+        user: this.belongsTo(() => UserTable, {
+          columns: ['UserId'],
+          references: ['Id'],
+        }),
+        user2: this.belongsTo(() => UserTable, {
+          columns: ['UserId2'],
+          references: ['Id'],
+          foreignKey: false,
+        }),
+        user3: this.belongsTo(() => UserTable, {
+          columns: ['UserId3'],
+          references: ['Id'],
+          foreignKey: {
+            onDelete: 'CASCADE',
+          },
+        }),
+      };
+    }
+
+    const db = orchidORM(ormParams, { user: UserTable, profile: ProfileTable });
+    expect(db.profile.internal.tableData.constraints).toEqual([
+      {
+        references: {
+          columns: ['UserId'],
+          fnOrTable: 'user',
+          foreignColumns: ['Id'],
+          options: { onUpdate: 'CASCADE' },
+        },
+      },
+      {
+        references: {
+          columns: ['UserId3'],
+          fnOrTable: 'user',
+          foreignColumns: ['Id'],
+          options: { onDelete: 'CASCADE' },
+        },
+      },
+    ]);
+  });
 
   describe('querying', () => {
     it('should support `queryRelated` to query related data', async () => {
@@ -603,13 +669,13 @@ describe('belongsTo', () => {
       describe('id has no default', () => {
         // for this issue: https://github.com/romeerez/orchid-orm/issues/34
         it('should create record with explicitly setting id and foreign key', async () => {
-          const UserId = await db.user.get('Id').create(userData);
-
           class UserTable extends BaseTable {
             readonly table = 'user';
             columns = this.setColumns((t) => ({
               Id: t.name('id').identity().primaryKey(),
               UserKey: t.name('user_key').text(),
+              Name: t.name('name').text(),
+              Password: t.name('password').text(),
             }));
           }
 
@@ -636,15 +702,14 @@ describe('belongsTo', () => {
             };
           }
 
-          const local = orchidORM(
-            { db: db.$queryBuilder },
-            {
-              user: UserTable,
-              profile: ProfileTable,
-            },
-          );
+          const db = orchidORM(ormParams, {
+            user: UserTable,
+            profile: ProfileTable,
+          });
 
-          const q = local.profile.create({
+          const UserId = await db.user.get('Id').create(userData);
+
+          const q = db.profile.create({
             Id: 1,
             UserId,
             ProfileKey: 'key',
@@ -1541,18 +1606,13 @@ describe('belongsTo', () => {
       };
     }
 
-    const local = orchidORM(
-      {
-        db: db.$queryBuilder,
-      },
-      {
-        user: UserTable,
-        profile: ProfileTable,
-      },
-    );
+    const db = orchidORM(ormParams, {
+      user: UserTable,
+      profile: ProfileTable,
+    });
 
     it('should query related record and get `undefined`', async () => {
-      const user = await local.profile.queryRelated('user', { UserId: 123 });
+      const user = await db.profile.queryRelated('user', { UserId: 123 });
       assertType<
         typeof user,
         { Id: number; Name: string; Password: string } | undefined
@@ -1562,11 +1622,11 @@ describe('belongsTo', () => {
     });
 
     it('should be selectable', async () => {
-      const id = await local.profile
+      const id = await db.profile
         .get('Id')
         .create({ ...profileData, UserId: null });
 
-      const result = await local.profile.select('Id', {
+      const result = await db.profile.select('Id', {
         user: (q) => q.user,
       });
 
@@ -1623,20 +1683,20 @@ describe('belongsTo', () => {
       };
     }
 
-    const local = orchidORM({ db: db.$queryBuilder }, { a: Table });
+    const db = orchidORM(ormParams, { a: Table });
 
     // @ts-expect-error cId or c is required
-    local.a.create({
+    db.a.create({
       bId: 1,
     });
 
-    local.a.create({
+    db.a.create({
       bId: 1,
       cId: 1,
     });
 
     // @ts-expect-error cId or c is required
-    local.a.create({
+    db.a.create({
       b: {
         create: {
           bId: 1,
@@ -1645,7 +1705,7 @@ describe('belongsTo', () => {
       },
     });
 
-    local.a.create({
+    db.a.create({
       b: {
         create: {
           bId: 1,
@@ -1660,7 +1720,7 @@ describe('belongsTo', () => {
       },
     });
 
-    local.a.create({
+    db.a.create({
       b: {
         create: {
           bId: 1,

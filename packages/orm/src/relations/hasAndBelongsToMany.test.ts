@@ -12,13 +12,116 @@ import {
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
-import { omit, Sql } from 'orchid-core';
+import { omit, RecordUnknown, Sql } from 'orchid-core';
 import { assertType, expectSql, now } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 import { orchidORM } from '../orm';
 
+const ormParams = {
+  db: db.$queryBuilder,
+};
+
 describe('hasAndBelongsToMany', () => {
   useTestORM();
+
+  it('should define foreign keys under autoForeignKeys option', () => {
+    const BaseTable = createBaseTable({
+      autoForeignKeys: {
+        onUpdate: 'CASCADE',
+      },
+    });
+
+    class PostTable extends BaseTable {
+      table = 'post';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+      }));
+
+      relations = {
+        tags: this.hasAndBelongsToMany(() => TagTable, {
+          columns: ['Id'],
+          references: ['PostId'],
+          through: {
+            table: 'postTags',
+            columns: ['TagId'],
+            references: ['Id'],
+          },
+        }),
+        tags2: this.hasAndBelongsToMany(() => TagTable, {
+          columns: ['Id'],
+          references: ['PostId2'],
+          foreignKey: false,
+          through: {
+            table: 'postTags',
+            columns: ['TagId2'],
+            references: ['Id'],
+            foreignKey: false,
+          },
+        }),
+        tags3: this.hasAndBelongsToMany(() => TagTable, {
+          columns: ['Id'],
+          references: ['PostId3'],
+          foreignKey: {
+            onDelete: 'CASCADE',
+          },
+          through: {
+            table: 'postTags',
+            columns: ['TagId3'],
+            references: ['Id'],
+            foreignKey: {
+              onDelete: 'CASCADE',
+            },
+          },
+        }),
+      };
+    }
+
+    class TagTable extends BaseTable {
+      table = 'tag';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+      }));
+    }
+
+    const db = orchidORM(ormParams, { post: PostTable, tag: TagTable });
+    expect(
+      ((db.post.shape as RecordUnknown).tags as { joinTable: Query }).joinTable
+        .internal.tableData.constraints,
+    ).toEqual([
+      {
+        references: {
+          columns: ['PostId'],
+          fnOrTable: 'post',
+          foreignColumns: ['Id'],
+          options: { onUpdate: 'CASCADE' },
+        },
+      },
+      {
+        references: {
+          columns: ['TagId'],
+          fnOrTable: 'tag',
+          foreignColumns: ['Id'],
+          options: { onUpdate: 'CASCADE' },
+        },
+      },
+      {
+        references: {
+          columns: ['PostId3'],
+          fnOrTable: 'post',
+          foreignColumns: ['Id'],
+          options: { onDelete: 'CASCADE' },
+        },
+      },
+      {
+        references: {
+          columns: ['TagId3'],
+          fnOrTable: 'tag',
+          foreignColumns: ['Id'],
+          options: { onDelete: 'CASCADE' },
+        },
+      },
+    ]);
+  });
 
   describe('querying', () => {
     it('should support `queryRelated` to query related data', async () => {

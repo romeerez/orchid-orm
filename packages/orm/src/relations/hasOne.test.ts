@@ -21,10 +21,78 @@ import { Db, Query } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { omit } from 'orchid-core';
+import { createBaseTable } from '../baseTable';
+
+const ormParams = {
+  db: db.$queryBuilder,
+};
 
 useTestORM();
 
 describe('hasOne', () => {
+  it('should define foreign keys under autoForeignKeys option', () => {
+    const BaseTable = createBaseTable({
+      autoForeignKeys: {
+        onUpdate: 'CASCADE',
+      },
+    });
+
+    class UserTable extends BaseTable {
+      table = 'user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+      }));
+
+      relations = {
+        user: this.hasOne(() => ProfileTable, {
+          columns: ['Id'],
+          references: ['UserId'],
+        }),
+        user2: this.hasOne(() => ProfileTable, {
+          columns: ['Id'],
+          references: ['UserId2'],
+          foreignKey: false,
+        }),
+        user3: this.hasOne(() => ProfileTable, {
+          columns: ['Id'],
+          references: ['UserId3'],
+          foreignKey: {
+            onDelete: 'CASCADE',
+          },
+        }),
+      };
+    }
+
+    class ProfileTable extends BaseTable {
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('user_id').integer(),
+        UserId2: t.name('user_id_2').integer(),
+        UserId3: t.name('user_id_3').integer(),
+      }));
+    }
+
+    const db = orchidORM(ormParams, { user: UserTable, profile: ProfileTable });
+    expect(db.profile.internal.tableData.constraints).toEqual([
+      {
+        references: {
+          columns: ['UserId'],
+          fnOrTable: 'user',
+          foreignColumns: ['Id'],
+          options: { onUpdate: 'CASCADE' },
+        },
+      },
+      {
+        references: {
+          columns: ['UserId3'],
+          fnOrTable: 'user',
+          foreignColumns: ['Id'],
+          options: { onDelete: 'CASCADE' },
+        },
+      },
+    ]);
+  });
+
   describe('querying', () => {
     it('should support `queryRelated` to query related data', async () => {
       const UserId = await db.user.get('Id').create(userData);
@@ -1559,15 +1627,10 @@ describe('hasOne', () => {
       }));
     }
 
-    const local = orchidORM(
-      {
-        db: db.$queryBuilder,
-      },
-      {
-        user: UserTable,
-        profile: ProfileTable,
-      },
-    );
+    const local = orchidORM(ormParams, {
+      user: UserTable,
+      profile: ProfileTable,
+    });
 
     it('should query related record and get an `undefined`', async () => {
       const profile = await local.user.queryRelated('profile', { Id: 123 });
@@ -1680,17 +1743,11 @@ describe('hasOne through', () => {
       };
     }
 
-    const local = orchidORM(
-      {
-        db: db.$queryBuilder,
-        log: false,
-      },
-      {
-        post: Post,
-        tag: Tag,
-        postTag: PostTag,
-      },
-    );
+    const local = orchidORM(ormParams, {
+      post: Post,
+      tag: Tag,
+      postTag: PostTag,
+    });
 
     expect(Object.keys(local.post.relations)).toEqual(['postTag', 'tag']);
     expect(Object.keys(local.tag.relations)).toEqual(['postTag', 'post']);
@@ -1719,16 +1776,10 @@ describe('hasOne through', () => {
     }
 
     expect(() => {
-      orchidORM(
-        {
-          db: db.$queryBuilder,
-          log: false,
-        },
-        {
-          post: Post,
-          tag: Tag,
-        },
-      );
+      orchidORM(ormParams, {
+        post: Post,
+        tag: Tag,
+      });
     }).toThrow(
       'Cannot define a `tag` relation on `post`: cannot find `postTag` relation required by the `through` option',
     );
@@ -1779,17 +1830,11 @@ describe('hasOne through', () => {
     }
 
     expect(() => {
-      orchidORM(
-        {
-          db: db.$queryBuilder,
-          log: false,
-        },
-        {
-          post: Post,
-          tag: Tag,
-          postTag: PostTag,
-        },
-      );
+      orchidORM(ormParams, {
+        post: Post,
+        tag: Tag,
+        postTag: PostTag,
+      });
     }).toThrow(
       'Cannot define a `tag` relation on `post`: cannot find `tag` relation in `postTag` required by the `source` option',
     );
@@ -2312,16 +2357,11 @@ describe('hasOne through', () => {
       };
     }
 
-    const local = orchidORM(
-      {
-        db: db.$queryBuilder,
-      },
-      {
-        user: UserTable,
-        profile: ProfileTable,
-        message: MessageTable,
-      },
-    );
+    const local = orchidORM(ormParams, {
+      user: UserTable,
+      profile: ProfileTable,
+      message: MessageTable,
+    });
 
     it('should query related record and get an `undefined`', async () => {
       const profile = await local.message.queryRelated('profile', {

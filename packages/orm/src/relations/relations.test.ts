@@ -14,6 +14,11 @@ import {
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
+import { createBaseTable } from '../baseTable';
+
+const ormParams = {
+  db: db.$queryBuilder,
+};
 
 describe('relations', () => {
   useTestORM();
@@ -520,6 +525,82 @@ describe('relations', () => {
       expect(result).toEqual([
         { parent: null },
         { parent: { categoryName: 'one' } },
+      ]);
+    });
+  });
+
+  describe('autoForeignKeys', () => {
+    const BaseTable = createBaseTable({
+      snakeCase: true,
+      autoForeignKeys: {
+        onUpdate: 'CASCADE',
+      },
+    });
+
+    it('should not redefine foreign key if it already exists', async () => {
+      class UserTable extends BaseTable {
+        table = 'user';
+        columns = this.setColumns((t) => ({
+          Id: t.name('id').identity().primaryKey(),
+          Id2: t.name('id_2').integer(),
+          Id3: t.name('id_3').integer(),
+        }));
+      }
+
+      const userFn = () => UserTable;
+
+      class ProfileTable extends BaseTable {
+        columns = this.setColumns(
+          (t) => ({
+            Id: t.name('id').identity().primaryKey(),
+            UserId: t
+              .name('user_id')
+              .integer()
+              .foreignKey(() => UserTable, 'Id', { onUpdate: 'NO ACTION' }),
+            UserId2: t.name('user_id_2').integer(),
+            UserId3: t.name('user_id_3').integer(),
+          }),
+          (t) => [
+            t.foreignKey(['UserId2'], 'user', ['id_2']),
+            t.foreignKey(['UserId3'], userFn, ['Id3']),
+          ],
+        );
+
+        relations = {
+          user: this.belongsTo(() => UserTable, {
+            columns: ['UserId'],
+            references: ['Id'],
+          }),
+          user2: this.belongsTo(() => UserTable, {
+            columns: ['UserId2'],
+            references: ['Id2'],
+          }),
+          user3: this.belongsTo(() => UserTable, {
+            columns: ['UserId3'],
+            references: ['Id3'],
+          }),
+        };
+      }
+
+      const db = orchidORM(ormParams, {
+        user: UserTable,
+        profile: ProfileTable,
+      });
+      expect(db.profile.internal.tableData.constraints).toEqual([
+        {
+          references: {
+            columns: ['UserId2'],
+            fnOrTable: 'user',
+            foreignColumns: ['id_2'],
+          },
+        },
+        {
+          references: {
+            columns: ['UserId3'],
+            fnOrTable: userFn,
+            foreignColumns: ['Id3'],
+          },
+        },
       ]);
     });
   });
