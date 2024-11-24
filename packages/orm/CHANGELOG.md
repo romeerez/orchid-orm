@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.38.1
+
+### Patch Changes
+
+- d0b5653: Support `autoForeignKeys` option (#322)
+- 8313205: Db checks fixes, support many checks on a single column (#418)
+- Updated dependencies [d0b5653]
+- Updated dependencies [8313205]
+  - pqb@0.43.1
+  - rake-db@2.23.21
+  - orchid-core@0.21.4
+
 ## 1.38.0
 
 ### Minor Changes

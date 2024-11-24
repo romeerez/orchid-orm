@@ -1,5 +1,15 @@
 # rake-db
 
+## 2.23.21
+
+### Patch Changes
+
+- 8313205: Db checks fixes, support many checks on a single column (#418)
+- Updated dependencies [d0b5653]
+- Updated dependencies [8313205]
+  - pqb@0.43.1
+  - orchid-core@0.21.4
+
 ## 2.23.20
 
 ### Patch Changes

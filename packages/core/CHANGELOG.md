@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.21.4
+
+### Patch Changes
+
+- 8313205: Db checks fixes, support many checks on a single column (#418)
+
 ## 0.21.3
 
 ### Patch Changes
