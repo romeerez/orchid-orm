@@ -871,7 +871,9 @@ change(async (db) => {
         {
           ...table,
           shape: {
-            id: table.shape.id.check(raw({ raw: 'column > 10' })),
+            id: table.shape.id
+              .check(raw({ raw: 'column > 10' }))
+              .check(raw({ raw: 'column < 20' })),
           },
         },
       ]);
@@ -882,7 +884,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
-    id: t.identity().primaryKey().check(t.sql({ raw: 'column > 10' })),
+    id: t.identity().primaryKey().check(t.sql({ raw: 'column > 10' })).check(t.sql({ raw: 'column < 20' })),
   }));
 });
 `,

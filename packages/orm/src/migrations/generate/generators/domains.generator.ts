@@ -11,6 +11,7 @@ import {
 import {
   ColumnDataCheckBase,
   deepCompare,
+  emptyArray,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { getColumnDbType } from './columns.generator';
@@ -23,7 +24,7 @@ import {
 interface ComparableDomainCompare
   extends Omit<DbStructure.Domain, 'schemaName' | 'name'> {
   hasDefault: boolean;
-  hasCheck: boolean;
+  hasChecks: boolean;
 }
 
 interface ComparableDomain {
@@ -82,10 +83,10 @@ export const processDomains = async (
       },
     );
 
-    if (domain.check) {
-      dbColumn.data.check = {
-        sql: new RawSQL([[domain.check]] as unknown as TemplateLiteralArgs),
-      };
+    if (domain.checks) {
+      dbColumn.data.checks = domain.checks.map((check) => ({
+        sql: new RawSQL([[check]] as unknown as TemplateLiteralArgs),
+      }));
     }
 
     const dbDomain = makeComparableDomain(
@@ -99,14 +100,14 @@ export const processDomains = async (
       deepCompare(dbDomain.compare, codeDomain.compare),
     );
 
-    if ((domain.default || domain.check) && found.length) {
+    if ((domain.default || domain.checks?.length) && found.length) {
       for (const codeDomain of found) {
         holdCodeDomains.add(codeDomain);
       }
 
       const compare: CompareExpression['compare'] = [];
-      pushCompare(compare, domain, found, 'default');
-      pushCompare(compare, domain, found, 'check');
+      pushCompareDefault(compare, domain, found);
+      pushCompareChecks(compare, domain, found);
 
       const source = `(VALUES (NULL::${getColumnDbType(
         dbColumn,
@@ -198,29 +199,49 @@ const makeComparableDomain = (
       dateTimePrecision: inner.data.dateTimePrecision,
       collate: column.data.collate,
       hasDefault: column.data.default !== undefined,
-      hasCheck: column.data.check !== undefined,
+      hasChecks: !!column.data.checks?.length,
     },
   };
 };
 
-const pushCompare = (
+const pushCompareDefault = (
   compare: CompareExpression['compare'],
   domain: DbStructure.Domain,
   found: ComparableDomain[],
-  key: 'default' | 'check',
 ) => {
-  const inDb = domain[key];
-  if (inDb) {
+  if (domain.default) {
     compare.push({
-      inDb,
+      inDb: domain.default,
       inCode: found.map((codeDomain) => {
-        const value = codeDomain.column.data[key];
+        const value = codeDomain.column.data.default;
         if ('sql' in (value as ColumnDataCheckBase)) {
           return (value as ColumnDataCheckBase).sql;
         }
         return value as string;
       }),
     });
+  }
+};
+
+const pushCompareChecks = (
+  compare: CompareExpression['compare'],
+  domain: DbStructure.Domain,
+  found: ComparableDomain[],
+) => {
+  if (domain.checks?.length) {
+    const inCode = found.flatMap(
+      (codeDomain) =>
+        codeDomain.column.data.checks?.map((check) =>
+          typeof check === 'string' ? check : check.sql,
+        ) || emptyArray,
+    );
+
+    compare.push(
+      ...domain.checks.map((check) => ({
+        inDb: check,
+        inCode,
+      })),
+    );
   }
 };
 

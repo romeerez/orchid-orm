@@ -384,7 +384,7 @@ const addChangeTable = (
   const schema = codeTable.q.schema ?? currentSchema;
 
   changeTables.push({
-    codeTable,
+    codeTable: cloneCodeTableForChange(codeTable),
     dbTable,
     dbTableData: getDbStructureTableData(dbStructure, dbTable),
     schema,
@@ -403,6 +403,21 @@ const addChangeTable = (
 
   tableShapes[`${schema}.${codeTable.table}`] = shape;
 };
+
+const cloneCodeTableForChange = (codeTable: CodeTable) => ({
+  ...codeTable,
+  shape: Object.fromEntries(
+    Object.entries(codeTable.shape).map(([key, column]) => {
+      const cloned = Object.create(column as ColumnType);
+      cloned.data = {
+        ...cloned.data,
+        checks: cloned.data.checks && [...cloned.data.checks],
+      };
+
+      return [key, cloned];
+    }),
+  ),
+});
 
 const createTableAst = (
   currentSchema: string,

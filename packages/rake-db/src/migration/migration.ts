@@ -1641,9 +1641,11 @@ COLLATE "${column.data.collate}"`
         ? `
 DEFAULT ${encodeColumnDefault(column.data.default, values)}`
         : ''
-    }${!column.data.isNullable || column.data.check ? '\n' : ''}${[
+    }${!column.data.isNullable || column.data.checks ? '\n' : ''}${[
       !column.data.isNullable && 'NOT NULL',
-      column.data.check && `CHECK (${column.data.check.sql.toSQL({ values })})`,
+      column.data.checks
+        ?.map((check) => `CHECK (${check.sql.toSQL({ values })})`)
+        .join(' '),
     ]
       .filter(Boolean)
       .join(' ')}`;

@@ -671,6 +671,11 @@ change(async (db) => {
     rank: t.integer().check(t.sql`1 >= "rank" AND "rank" <= 10`),
     // constraint name can be passed as a second argument
     column: t.integer().check(t.sql`...`, 'check_name'),
+    // a single column can have multiple checks
+    multiChecksColumn: t
+      .integer()
+      .check(t.sql`...`)
+      .check(t.sql`...`, 'optional_name'),
   }));
 });
 ```

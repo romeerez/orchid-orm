@@ -1186,6 +1186,30 @@ describe('changeTable', () => {
         );
       });
 
+      it('should handle named column checks', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              colUmn: t[action](
+                t
+                  .text()
+                  .check(t.sql(`length(col_umn) > 10`), 'gt10')
+                  .check(t.sql(`length(col_umn) < 20`), 'lt20'),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD COLUMN "col_umn" text NOT NULL CONSTRAINT "gt10" CHECK (length(col_umn) > 10), CONSTRAINT "lt20" CHECK (length(col_umn) < 20)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP COLUMN "col_umn"
+            `),
+        );
+      });
+
       it('should handle table check', async () => {
         await testUpAndDown(
           (action) =>
@@ -1201,6 +1225,25 @@ describe('changeTable', () => {
             expectSql(`
               ALTER TABLE "table"
                 DROP CONSTRAINT "table_check"
+            `),
+        );
+      });
+
+      it('should handle named table check', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](t.check(t.sql('sql'), 'name')),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD CONSTRAINT "name" CHECK (sql)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "name"
             `),
         );
       });
@@ -1373,28 +1416,40 @@ describe('changeTable', () => {
     });
 
     describe('check', () => {
-      it('should change column check', async () => {
+      it('should change column checks', async () => {
         await testUpAndDown(
           () =>
             db.changeTable('table', (t) => ({
               colUmn: t.change(
-                t.text().check(t.sql`length(col_umn) < 20`),
-                t.text().check(t.sql`length(col_umn) > 10`),
+                t
+                  .text()
+                  .check(t.sql`length(col_umn) < 20`)
+                  .check(t.sql`length(col_umn) < 30`),
+                t
+                  .text()
+                  .check(t.sql`length(col_umn) > 10`)
+                  .check(t.sql`length(col_umn) > 0`),
               ),
             })),
           () =>
             expectSql(`
               ALTER TABLE "table"
                 DROP CONSTRAINT "table_col_umn_check",
+                DROP CONSTRAINT "table_col_umn_check1",
                 ADD CONSTRAINT "table_col_umn_check"
-                CHECK (length(col_umn) > 10)
+                  CHECK (length(col_umn) > 10),
+                ADD CONSTRAINT "table_col_umn_check1"
+                  CHECK (length(col_umn) > 0)
             `),
           () =>
             expectSql(`
               ALTER TABLE "table"
                 DROP CONSTRAINT "table_col_umn_check",
+                DROP CONSTRAINT "table_col_umn_check1",
                 ADD CONSTRAINT "table_col_umn_check"
-                CHECK (length(col_umn) < 20)
+                  CHECK (length(col_umn) < 20),
+                ADD CONSTRAINT "table_col_umn_check1"
+                  CHECK (length(col_umn) < 30)
             `),
         );
       });

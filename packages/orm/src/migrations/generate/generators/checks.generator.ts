@@ -1,10 +1,12 @@
 import { ColumnDataCheckBase, TemplateLiteralArgs } from 'orchid-core';
-import { ColumnType, RawSQL } from 'pqb';
+import { ColumnType, RawSQL, TableData } from 'pqb';
 import { DbStructure, RakeDbAst } from 'rake-db';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';
 
-interface CodeCheck extends ColumnDataCheckBase {
+interface CodeCheck {
+  check: ColumnDataCheckBase;
+  name: string;
   column?: string;
 }
 
@@ -23,12 +25,15 @@ export const processChecks = (
   if (!hasDbChecks) {
     if (codeChecks.length) {
       const constraints = (add.constraints ??= []);
-      for (const check of codeChecks) {
-        if (check.column && changeTableData.changingColumns[check.column]) {
-          const column = changeTableData.changingColumns[check.column];
-          column.to.data.check = check;
-        } else {
-          constraints.push({ check: check.sql, name: check.name });
+      for (const codeCheck of codeChecks) {
+        if (
+          !codeCheck.column ||
+          !changeTableData.changingColumns[codeCheck.column]
+        ) {
+          constraints.push({
+            check: codeCheck.check.sql,
+            name: codeCheck.name,
+          });
         }
       }
     }
@@ -52,26 +57,53 @@ export const processChecks = (
         compare: [
           {
             inDb: dbCheck.expression,
-            inCode: codeChecks.map((check) => check.sql),
+            inCode: codeChecks.map(({ check }) => check.sql),
           },
         ],
         handle(i) {
-          if (i !== undefined) return;
+          if (i !== undefined) {
+            foundCodeChecks.add(i);
+          } else {
+            dropCheck(changeTableData, dbCheck, name);
+          }
 
-          dropCheck(changeTableData, dbCheck, name);
+          if (--wait !== 0) return;
 
-          if (--wait === 0 && !changeTableData.pushedAst) {
+          const checksToAdd: TableData.Constraint[] = [];
+
+          codeChecks.forEach((check, i) => {
+            if (foundCodeChecks.has(i)) {
+              if (!check.column) return;
+
+              const change = changeTableData.changingColumns[check.column];
+              if (!change) return;
+
+              const columnChecks = change.to.data.checks;
+              if (!columnChecks) return;
+
+              const i = columnChecks.indexOf(check.check);
+              if (i !== -1) {
+                columnChecks.splice(i, 1);
+              }
+              return;
+            }
+
+            checksToAdd.push({
+              name: check.name,
+              check: check.check.sql,
+            });
+          });
+
+          if (checksToAdd.length) {
+            (add.constraints ??= []).push(...checksToAdd);
+          }
+
+          if (
+            !changeTableData.pushedAst &&
+            (changeTableData.changeTableAst.drop.constraints?.length ||
+              add.constraints?.length)
+          ) {
             changeTableData.pushedAst = true;
-
-            (add.constraints ??= []).push(
-              ...codeChecks
-                .filter((_, i) => !foundCodeChecks.has(i))
-                .map((check) => ({
-                  name: check.name,
-                  check: check.sql,
-                })),
-            );
-
             ast.push(changeTableData.changeTableAst);
           }
         },
@@ -86,25 +118,58 @@ const collectCodeChecks = ({
   codeTable,
   changeTableAst: { shape },
 }: ChangeTableData): CodeCheck[] => {
+  const names = new Set<string>();
+
   const codeChecks: CodeCheck[] = [];
   for (const key in codeTable.shape) {
     const column = codeTable.shape[key] as ColumnType;
-    if (!column.data.check) continue;
+    if (!column.data.checks) continue;
 
-    const name = column.data.name ?? key;
-    if (checkForColumnAddOrDrop(shape, name)) continue;
+    const columnName = column.data.name ?? key;
+    if (checkForColumnAddOrDrop(shape, columnName)) continue;
 
-    codeChecks.push({
-      ...column.data.check,
-      column: name,
-    });
+    const baseName = `${codeTable.table}_${columnName}_check`;
+
+    codeChecks.push(
+      ...column.data.checks.map((check) => {
+        let name = check.name;
+        if (!name) {
+          name = baseName;
+          let n = 0;
+          while (names.has(name)) {
+            name = baseName + ++n;
+          }
+        }
+        names.add(name);
+
+        return {
+          check,
+          name,
+          column: columnName,
+        };
+      }),
+    );
   }
 
   if (codeTable.internal.tableData.constraints) {
     for (const constraint of codeTable.internal.tableData.constraints) {
       const { check } = constraint;
       if (check) {
-        codeChecks.push({ sql: check, name: constraint.name });
+        const baseName = `${codeTable.table}_check`;
+        let name = constraint.name;
+        if (!name) {
+          name = baseName;
+          let n = 0;
+          while (names.has(name)) {
+            name = baseName + ++n;
+          }
+        }
+        names.add(name);
+
+        codeChecks.push({
+          check: { sql: check, name: constraint.name },
+          name,
+        });
       }
     }
   }
@@ -117,7 +182,6 @@ const dropCheck = (
   dbCheck: DbStructure.Check,
   name: string,
 ) => {
-  const constraints = (drop.constraints ??= []);
   const sql = new RawSQL([
     [dbCheck.expression],
   ] as unknown as TemplateLiteralArgs);
@@ -125,12 +189,12 @@ const dropCheck = (
   if (dbCheck.columns?.length === 1 && changingColumns[dbCheck.columns[0]]) {
     const column = changingColumns[dbCheck.columns[0]];
     column.from.data.name = 'i_d';
-    column.from.data.check = {
+    (column.from.data.checks ??= []).push({
       name,
       sql,
-    };
+    });
   } else {
-    constraints.push({
+    (drop.constraints ??= []).push({
       name,
       check: sql,
     });

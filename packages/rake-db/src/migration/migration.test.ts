@@ -567,14 +567,15 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
               .integer()
               .collate('C')
               .default(sql`1 + ${2}`)
-              .check(t.sql`VALUE = 42`),
+              .check(t.sql`VALUE = 10`)
+              .check(t.sql`VALUE = 20`),
           ),
         () =>
           expectSql(`
             CREATE DOMAIN "schema"."domain" AS int4
             COLLATE "C"
             DEFAULT 1 + 2
-            NOT NULL CHECK (VALUE = 42)
+            NOT NULL CHECK (VALUE = 10) CHECK (VALUE = 20)
           `),
         () =>
           expectSql(`

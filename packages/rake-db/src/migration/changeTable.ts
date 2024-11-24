@@ -43,6 +43,7 @@ import {
   addColumnComment,
   addColumnExclude,
   addColumnIndex,
+  cmpRawSql,
   columnToSql,
   commentsToQuery,
   constraintToSql,
@@ -52,6 +53,7 @@ import {
   identityToSql,
   indexesToQuery,
   interpolateSqlValues,
+  nameColumnChecks,
   primaryKeyToSql,
 } from './migration.utils';
 import { tableMethods } from './tableMethods';
@@ -76,7 +78,7 @@ const resetChangeTableData = () => {
 const addOrDropChanges: RakeDbAst.ChangeTableItem.Column[] = [];
 
 // add column
-function add(item: ColumnType, options?: { dropMode?: DropMode }): number;
+function add(item: ColumnType, options?: { dropMode?: DropMode }): EmptyObject;
 // add primary key, index, etc
 function add(emptyObject: EmptyObject): EmptyObject;
 // add timestamps
@@ -88,7 +90,7 @@ function add(
   this: TableChangeMethods,
   item: ColumnType | EmptyObject | Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
-): number | EmptyObject | Record<string, RakeDbAst.ChangeTableItem.Column> {
+): undefined | EmptyObject | Record<string, RakeDbAst.ChangeTableItem.Column> {
   consumeColumnName();
   setName(this, item);
 
@@ -96,7 +98,7 @@ function add(
     const result = addOrDrop('add', item, options);
     if (result.type === 'change') return result;
     addOrDropChanges.push(result);
-    return addOrDropChanges.length - 1;
+    return (addOrDropChanges.length - 1) as unknown as EmptyObject;
   }
 
   for (const key in item) {
@@ -174,7 +176,7 @@ const addOrDrop = (
       type: 'change',
       from: {},
       to: {
-        check: item.data.check,
+        checks: item.data.checks,
       },
     });
 
@@ -826,19 +828,27 @@ const handleTableItemChange = (
       );
     }
 
-    if (from.check !== to.check) {
-      const checkName = `${ast.name}_${name}_check`;
-      if (from.check) {
-        alterTable.push(`DROP CONSTRAINT "${checkName}"`);
+    const fromChecks =
+      from.checks && nameColumnChecks(ast.name, fromName, from.checks);
+    const toChecks = to.checks && nameColumnChecks(ast.name, name, to.checks);
+
+    fromChecks?.forEach((fromCheck) => {
+      if (!toChecks?.some((toCheck) => cmpRawSql(fromCheck.sql, toCheck.sql))) {
+        alterTable.push(`DROP CONSTRAINT "${fromCheck.name}"`);
       }
-      if (to.check) {
+    });
+
+    toChecks?.forEach((toCheck) => {
+      if (
+        !fromChecks?.some((fromCheck) => cmpRawSql(fromCheck.sql, toCheck.sql))
+      ) {
         alterTable.push(
-          `ADD CONSTRAINT "${checkName}"\n    CHECK (${to.check.sql.toSQL({
+          `ADD CONSTRAINT "${toCheck.name}"\n    CHECK (${toCheck.sql.toSQL({
             values,
           })})`,
         );
       }
-    }
+    });
 
     const foreignKeysLen = Math.max(
       from.foreignKeys?.length || 0,

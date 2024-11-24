@@ -544,14 +544,14 @@ export const columnExcludesToCode = (
 
 export const columnCheckToCode = (
   ctx: ColumnToCodeCtx,
-  { sql, name }: ColumnDataCheckBase,
-  columnName: string,
+  checks: ColumnDataCheckBase[],
 ): string => {
-  return `.check(${sql.toCode(ctx.t)}${
-    name && name !== `${ctx.table}_${columnName}_check`
-      ? `, { name: '${name}' }`
-      : ''
-  })`;
+  return checks
+    .map(
+      ({ sql, name }) =>
+        `.check(${sql.toCode(ctx.t)}${name ? `, '${name}'` : ''})`,
+    )
+    .join('');
 };
 
 export const identityToCode = (
@@ -673,8 +673,8 @@ export const columnCode = (
 
   if (data.comment) addCode(code, `.comment(${singleQuote(data.comment)})`);
 
-  if (data.check) {
-    addCode(code, columnCheckToCode(ctx, data.check, name));
+  if (data.checks) {
+    addCode(code, columnCheckToCode(ctx, data.checks));
   }
 
   if (data.errors) {

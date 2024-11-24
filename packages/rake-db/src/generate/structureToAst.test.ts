@@ -223,24 +223,31 @@ describe('structureToAst', () => {
       ).toBe(structure.enums[0].values);
     });
 
-    it('should support column with check', async () => {
+    it('should support column with checks', async () => {
       structure.tables = [
         dbStructureMockFactory.table({
           columns: [dbStructureMockFactory.intColumn()],
         }),
       ];
       const check = dbStructureMockFactory.check();
-      structure.constraints = [check];
+      structure.constraints = [check, { ...check, name: check.name + '1' }];
 
       const [ast] = (await structureToAst(ctx, adapter, config)) as [
         RakeDbAst.Table,
       ];
 
-      expect(ast.shape.column.data.check).toEqual({
-        sql: new RawSQL([
-          [check.check.expression],
-        ] as unknown as TemplateLiteralArgs),
-      });
+      expect(ast.shape.column.data.checks).toEqual([
+        {
+          sql: new RawSQL([
+            [check.check.expression],
+          ] as unknown as TemplateLiteralArgs),
+        },
+        {
+          sql: new RawSQL([
+            [check.check.expression],
+          ] as unknown as TemplateLiteralArgs),
+        },
+      ]);
     });
 
     it('should support column of custom type', async () => {
@@ -1336,7 +1343,7 @@ describe('structureToAst', () => {
         isNullable: false,
         collate: 'C',
         default: '123',
-        check: 'VALUE = 42',
+        checks: ['VALUE = 42'],
       });
 
       structure.domains = [domain];
@@ -1356,7 +1363,7 @@ describe('structureToAst', () => {
         isNullable: undefined,
         collate: 'C',
         default: raw`123`,
-        check: { sql: raw`VALUE = 42` },
+        checks: [{ sql: raw`VALUE = 42` }],
       });
     });
 

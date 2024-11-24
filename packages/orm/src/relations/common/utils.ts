@@ -320,8 +320,8 @@ export const addAutoForeignKey = (
 
   const { constraints } = from.internal.tableData;
   if (constraints) {
-    const sortedPkeys = primaryKeys.toSorted();
-    const sortedFkeys = foreignKeys.toSorted();
+    const sortedPkeys = [...primaryKeys].sort();
+    const sortedFkeys = [...foreignKeys].sort();
 
     for (const { references: refs } of constraints) {
       if (!refs) continue;

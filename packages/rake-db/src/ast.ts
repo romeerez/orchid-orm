@@ -91,7 +91,7 @@ export namespace RakeDbAst {
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
-    check?: ColumnDataCheckBase;
+    checks?: ColumnDataCheckBase[];
     foreignKeys?: TableData.ColumnReferences[];
     indexes?: TableData.ColumnIndex[];
     excludes?: TableData.ColumnExclude[];

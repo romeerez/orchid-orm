@@ -107,6 +107,11 @@ export const createTable = async <
       language,
     );
     tableData = parseTableData(dataFn);
+    tableData.constraints?.forEach((x, i) => {
+      if (x.name || !x.check) return;
+
+      x.name = `${tableName}_check${i === 0 ? '' : i}`;
+    });
   } else {
     shape = (tableData = emptyObject) as Shape;
   }

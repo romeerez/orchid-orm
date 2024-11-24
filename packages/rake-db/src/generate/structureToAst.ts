@@ -23,7 +23,6 @@ import {
 } from 'pqb';
 import {
   ColumnSchemaConfig,
-  RecordString,
   singleQuote,
   TemplateLiteralArgs,
   toCamelCase,
@@ -195,10 +194,10 @@ export const makeDomainsMap = (
       typmod: -1,
     });
 
-    if (it.check) {
-      column.data.check = {
-        sql: new RawSQL([[it.check]] as unknown as TemplateLiteralArgs),
-      };
+    if (it.checks) {
+      column.data.checks = it.checks.map((check) => ({
+        sql: new RawSQL([[check]] as unknown as TemplateLiteralArgs),
+      }));
     }
 
     domains[`${it.schemaName}.${it.name}`] = column;
@@ -566,10 +565,14 @@ export const makeDbStructureColumnsShape = (
   return shape;
 };
 
+export interface ColumnChecks {
+  [K: string]: string[];
+}
+
 export const getDbTableColumnsChecks = (tableData: StructureToAstTableData) =>
-  tableData.constraints.reduce<RecordString>((acc, item) => {
+  tableData.constraints.reduce<ColumnChecks>((acc, item) => {
     if (isColumnCheck(item)) {
-      acc[item.check.columns[0]] = item.check.expression;
+      (acc[item.check.columns[0]] ??= []).push(item.check.expression);
     }
     return acc;
   }, {});
@@ -582,7 +585,7 @@ export const dbColumnToAst = (
   item: DbStructure.Column,
   table?: DbStructure.Table,
   tableData?: StructureToAstTableData,
-  checks?: RecordString,
+  checks?: ColumnChecks,
 ): [key: string, column: ColumnType] => {
   let column = instantiateDbColumn(ctx, data, domains, item);
   column.data.name = item.name;
@@ -631,11 +634,11 @@ export const dbColumnToAst = (
     }
   }
 
-  const check = checks?.[item.name];
-  if (check) {
-    column.data.check = {
+  const columnChecks = checks?.[item.name];
+  if (columnChecks) {
+    column.data.checks = columnChecks.map((check) => ({
       sql: new RawSQL([[check]] as unknown as TemplateLiteralArgs),
-    };
+    }));
   }
 
   const camelCaseName = toCamelCase(item.name);

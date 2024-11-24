@@ -71,8 +71,8 @@ export const report = (
             counters['foreign key'] += column.data.foreignKeys.length;
           }
 
-          if (column.data.check) {
-            counters.check++;
+          if (column.data.checks) {
+            counters.check += column.data.checks.length;
           }
         }
 
@@ -115,7 +115,7 @@ export const report = (
           for (const change of changes) {
             if (change.type === 'add' || change.type === 'drop') {
               const column = change.item;
-              const { primaryKey, indexes, excludes, foreignKeys, check } =
+              const { primaryKey, indexes, excludes, foreignKeys, checks } =
                 column.data;
 
               inner.push(
@@ -149,7 +149,13 @@ export const report = (
                       ? ', has exclude'
                       : `, has ${excludes.length} excludes`
                     : ''
-                }${check ? `, checks ${check.sql.toSQL({ values: [] })}` : ''}`,
+                }${
+                  checks?.length
+                    ? `, checks ${checks
+                        .map((check) => check.sql.toSQL({ values: [] }))
+                        .join(', ')}`
+                    : ''
+                }`,
               );
             } else if (change.type === 'change') {
               const name = change.from.column?.data.name ?? key;

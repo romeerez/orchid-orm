@@ -151,7 +151,7 @@ export namespace DbStructure {
     dateTimePrecision?: number;
     collate?: string;
     default?: string;
-    check?: string;
+    checks?: string[];
   }
 
   export interface Collation {
@@ -532,7 +532,11 @@ const domainsSql = `SELECT
   datetime_precision AS "dateTimePrecision",
   collation_name AS "collate",
   domain_default AS "default",
-  pg_get_expr(conbin, conrelid) AS "check"
+  (
+    SELECT json_agg(pg_get_expr(conbin, conrelid))
+    FROM pg_catalog.pg_constraint c
+    WHERE c.contypid = d.oid
+  ) AS "checks"
 FROM pg_catalog.pg_type d
 JOIN pg_catalog.pg_namespace n ON n.oid = d.typnamespace
 JOIN information_schema.domains i
@@ -546,7 +550,6 @@ JOIN pg_catalog.pg_type t
     END
   ) = d.typbasetype
 JOIN pg_catalog.pg_namespace s ON s.oid = t.typnamespace
-LEFT JOIN pg_catalog.pg_constraint c ON c.contypid = d.oid
 WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`;
 
 const collationsSql = `SELECT

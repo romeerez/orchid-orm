@@ -38,7 +38,7 @@ describe('checks', () => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.add(
-      t.check(t.sql\`"col_umn" = 42\`)
+      t.check(t.sql\`"col_umn" = 42\`, 'table_col_umn_check')
     ),
   }));
 });
@@ -122,7 +122,7 @@ change(async (db) => {
       t.check(t.sql\`(i_d = 123)\`, 'table_i_d_check')
     ),
     ...t.add(
-      t.check(t.sql\`i_d != 123\`)
+      t.check(t.sql\`i_d != 123\`, 'table_i_d_check')
     ),
   }));
 });
@@ -133,7 +133,7 @@ change(async (db) => {
   ${green('+ add check')} i_d != 123`);
   });
 
-  it('should create a table check', async () => {
+  it('should create table checks', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
@@ -145,7 +145,7 @@ change(async (db) => {
           (t) => ({
             iD: t.integer(),
           }),
-          (t) => t.check(t.sql`"i_d" = 42`),
+          (t) => [t.check(t.sql`"i_d" = 1`), t.check(t.sql`"i_d" = 2`)],
         ),
       ],
     });
@@ -157,14 +157,18 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.add(
-      t.check(t.sql\`"i_d" = 42\`)
+      t.check(t.sql\`"i_d" = 1\`, 'table_check')
+    ),
+    ...t.add(
+      t.check(t.sql\`"i_d" = 2\`, 'table_check1')
     ),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add check')} "i_d" = 42`);
+  ${green('+ add check')} "i_d" = 1
+  ${green('+ add check')} "i_d" = 2`);
   });
 
   it('should be added together with a column', async () => {
@@ -174,7 +178,7 @@ change(async (db) => {
       },
       tables: [
         table((t) => ({
-          iD: t.integer().check(t.sql`"i_d" = 5`),
+          iD: t.integer().check(t.sql`"i_d" = 5`, 'name'),
         })),
       ],
     });
@@ -185,7 +189,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    iD: t.add(t.integer().check(t.sql\`"i_d" = 5\`)),
+    iD: t.add(t.integer().check(t.sql\`"i_d" = 5\`, 'name')),
   }));
 });
 `);
@@ -223,7 +227,7 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          iD: t.integer().nullable(),
+          iD: t.smallint(),
         }));
       },
       tables: [
@@ -239,14 +243,14 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    iD: t.change(t.integer().nullable(), t.integer().check(t.sql\`"i_d" = 5\`)),
+    iD: t.change(t.smallint(), t.integer().check(t.sql\`"i_d" = 5\`)),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${yellow('~ change column')} iD:
-    ${yellow('from')}: t.integer().nullable()
+    ${yellow('from')}: t.smallint()
       ${yellow('to')}: t.integer().check(t.sql\`"i_d" = 5\`)`);
   });
 
@@ -273,14 +277,16 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    iD: t.change(t.integer().nullable().check(t.sql\`(i_d = 5)\`), t.integer()),
+    iD: t.change(t.integer().nullable().check(t.sql\`(i_d = 5)\`, 'table_i_d_check'), t.integer()),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
   ${yellow('~ change column')} i_d:
-    ${yellow('from')}: t.integer().nullable().check(t.sql\`(i_d = 5)\`)
+    ${yellow(
+      'from',
+    )}: t.integer().nullable().check(t.sql\`(i_d = 5)\`, 'table_i_d_check')
       ${yellow('to')}: t.integer()`);
   });
 
@@ -346,5 +352,196 @@ change(async (db) => {
   ${yellow('~ change column')} iD:
     ${yellow('from')}: t.integer().nullable()
       ${yellow('to')}: t.integer()`);
+  });
+
+  it('should add a column check when other column check exists', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          firstName: t.text().check(t.sql`first_name != ''`),
+          lastName: t.text(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          firstName: t.text().check(t.sql`first_name != ''`),
+          lastName: t.text().check(t.sql`last_name != ''`),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.check(t.sql\`last_name != ''\`, 'table_last_name_check')
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add check')} last_name != ''`);
+  });
+
+  it('should add a table check when other column check exists', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          firstName: t.text().check(t.sql`first_name != ''`),
+          lastName: t.text(),
+        }));
+      },
+      tables: [
+        table(
+          (t) => ({
+            firstName: t.text().check(t.sql`first_name != ''`),
+            lastName: t.text(),
+          }),
+          (t) => t.check(t.sql`first_name != last_name`),
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.check(t.sql\`first_name != last_name\`, 'table_check')
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add check')} first_name != last_name`);
+  });
+
+  it('should add column checks to two columns simultaneously', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          firstName: t.text(),
+          lastName: t.text(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          firstName: t.text().check(t.sql`first_name != ''`),
+          lastName: t.text().check(t.sql`last_name != ''`),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.check(t.sql\`first_name != ''\`, 'table_first_name_check')
+    ),
+    ...t.add(
+      t.check(t.sql\`last_name != ''\`, 'table_last_name_check')
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add check')} first_name != ''
+  ${green('+ add check')} last_name != ''`);
+  });
+
+  it('should drop multiple checks and add multiple checks', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            firstName: t
+              .text()
+              .check(t.sql`first_name = 'keep1'`)
+              .check(t.sql`first_name = 'drop1'`)
+              .check(t.sql`first_name = 'drop2'`),
+            lastName: t.text(),
+          }),
+          (t) => [
+            t.check(t.sql`first_name = 'keep2'`),
+            t.check(t.sql`first_name = 'drop3'`),
+            t.check(t.sql`first_name = 'drop4'`),
+          ],
+        );
+      },
+      tables: [
+        table(
+          (t) => ({
+            firstName: t
+              .text()
+              .check(t.sql`first_name = 'keep1'`)
+              .check(t.sql`first_name = 'add1'`)
+              .check(t.sql`first_name = 'add2'`),
+            lastName: t.text(),
+          }),
+          (t) => [
+            t.check(t.sql`first_name = 'keep2'`),
+            t.check(t.sql`first_name = 'add3'`),
+            t.check(t.sql`first_name = 'add4'`),
+          ],
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(
+      t.check(t.sql\`(first_name = 'drop3'::text)\`, 'table_check1')
+    ),
+    ...t.drop(
+      t.check(t.sql\`(first_name = 'drop4'::text)\`, 'table_check2')
+    ),
+    ...t.drop(
+      t.check(t.sql\`(first_name = 'drop1'::text)\`, 'table_first_name_check1')
+    ),
+    ...t.drop(
+      t.check(t.sql\`(first_name = 'drop2'::text)\`, 'table_first_name_check2')
+    ),
+    ...t.add(
+      t.check(t.sql\`first_name = 'add1'\`, 'table_first_name_check1')
+    ),
+    ...t.add(
+      t.check(t.sql\`first_name = 'add2'\`, 'table_first_name_check2')
+    ),
+    ...t.add(
+      t.check(t.sql\`first_name = 'add3'\`, 'table_check1')
+    ),
+    ...t.add(
+      t.check(t.sql\`first_name = 'add4'\`, 'table_check2')
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop check')} (first_name = 'drop3'::text)
+  ${red('- drop check')} (first_name = 'drop4'::text)
+  ${red('- drop check')} (first_name = 'drop1'::text)
+  ${red('- drop check')} (first_name = 'drop2'::text)
+  ${green('+ add check')} first_name = 'add1'
+  ${green('+ add check')} first_name = 'add2'
+  ${green('+ add check')} first_name = 'add3'
+  ${green('+ add check')} first_name = 'add4'`);
   });
 });

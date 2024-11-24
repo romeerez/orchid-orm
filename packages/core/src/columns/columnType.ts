@@ -342,7 +342,7 @@ export interface ColumnDataBase {
   modifyQuery?(q: QueryBaseCommon, column: ColumnTypeBase): void;
 
   // raw database check expression
-  check?: ColumnDataCheckBase;
+  checks?: ColumnDataCheckBase[];
 
   // if the column is of domain or other user-defined type
   isOfCustomType?: boolean;
@@ -635,6 +635,11 @@ export abstract class ColumnTypeBase<
    *     rank: t.integer().check(t.sql`1 >= "rank" AND "rank" <= 10`),
    *     // constraint name can be passed as a second argument
    *     column: t.integer().check(t.sql`...`, 'check_name'),
+   *     // a single column can have multiple checks
+   *     multiChecksColumn: t
+   *       .integer()
+   *       .check(t.sql`...`)
+   *       .check(t.sql`...`, 'optional_name'),
    *   }));
    * });
    * ```
@@ -647,7 +652,7 @@ export abstract class ColumnTypeBase<
     sql: RawSQLBase,
     name?: string,
   ): T {
-    return setColumnData(this, 'check', { sql, name });
+    return pushColumnData(this, 'checks', { sql, name });
   }
 
   /**

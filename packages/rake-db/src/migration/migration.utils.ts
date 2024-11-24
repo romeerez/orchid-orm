@@ -1,5 +1,6 @@
 import { ColumnType, DomainColumn, escapeForMigration, TableData } from 'pqb';
 import {
+  ColumnDataCheckBase,
   ColumnTypeBase,
   ForeignKeyTable,
   isRawSQL,
@@ -79,8 +80,16 @@ export const columnToSql = (
     line.push('NOT NULL');
   }
 
-  if (item.data.check) {
-    line.push(checkToSql(item.data.check.sql, values));
+  if (item.data.checks) {
+    line.push(
+      item.data.checks
+        .map(
+          (check) =>
+            (check.name ? `CONSTRAINT "${check.name}" ` : '') +
+            checkToSql(check.sql, values),
+        )
+        .join(', '),
+    );
   }
 
   const def = encodeColumnDefault(item.data.default, values, item);
@@ -598,4 +607,32 @@ export const interpolateSqlValues = ({ text, values }: TableQuery): string => {
         return escapeForMigration(values[i]);
       })
     : text;
+};
+
+export interface ColumnNamedCheck extends ColumnDataCheckBase {
+  name: string;
+}
+
+export const nameColumnChecks = (
+  table: string,
+  column: string,
+  checks: ColumnDataCheckBase[],
+): ColumnNamedCheck[] =>
+  checks.map((check, i) => ({
+    ...check,
+    name: check.name || `${table}_${column}_check${i === 0 ? '' : i}`,
+  }));
+
+export const cmpRawSql = (a: RawSQLBase, b: RawSQLBase) => {
+  const values: unknown[] = [];
+
+  const aSql = a.makeSQL({ values });
+  const aValues = JSON.stringify(values);
+
+  values.length = 0;
+
+  const bSql = b.makeSQL({ values });
+  const bValues = JSON.stringify(values);
+
+  return aSql === bSql && aValues === bValues;
 };
