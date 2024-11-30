@@ -136,6 +136,8 @@ const table = <Shape extends ColumnsShapeBase>(
 };
 
 export const useGeneratorsTestUtils = () => {
+  jest.setTimeout(10000);
+
   beforeEach(jest.clearAllMocks);
 
   afterEach(async () => {

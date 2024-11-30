@@ -119,6 +119,51 @@ change(async (db) => {
   ${green('+ add exclude')} on (naMe)`);
   });
 
+  it('should handle different `using` casing properly', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          nUm: t.integer(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          nUm: t
+            .integer()
+            .index({ using: 'BtReE' })
+            .exclude('=', { using: 'BtReE' }),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.index(['nUm'])
+    ),
+    ...t.add(
+      t.exclude(
+        [
+          {
+            column: 'nUm',
+            with: '=',
+          },
+        ]
+      ),
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add index')} on (nUm)
+  ${green('+ add exclude')} on (nUm)`);
+  });
+
   it('should drop a column index and exclude', async () => {
     await arrange({
       async prepareDb(db) {

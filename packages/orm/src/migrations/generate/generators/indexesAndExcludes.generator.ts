@@ -416,6 +416,7 @@ const normalizeItem = (item: {
   columns: RecordUnknown[];
   exclude?: string[];
 }) => {
+  if (item.using) item.using = item.using.toLowerCase();
   if (item.using === 'btree') item.using = undefined;
   if (!item.unique) item.unique = undefined;
   if (item.nullsNotDistinct === false) item.nullsNotDistinct = undefined;
@@ -555,6 +556,7 @@ const findMatchingItemWithoutSql = (
           includeKeys,
           ...codeItemWithoutKeys
         } = codeItem;
+
         if (deepCompare(dbItemWithoutColumns, codeItemWithoutKeys)) {
           found.push(codeItems[key][i]);
           rename.push(undefined);
