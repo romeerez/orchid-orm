@@ -15,6 +15,10 @@ import {
 } from 'orchid-core';
 import { QueryMetaHasWhere } from './where/where';
 import { _clone } from '../query/queryUtils';
+import { queryFrom } from './from';
+import { _queryUnion } from './union';
+import { SelectQueryData } from '../sql';
+import { RawSQL } from '../sql/rawSql';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -50,7 +54,7 @@ function orCreate<T extends PickQueryMetaResult>(
 ): UpsertResult<T> {
   const { q } = query as unknown as PickQueryQ;
   q.returnType = 'one';
-  q.wrapInTransaction = true;
+  (q as SelectQueryData).returnsOne = true;
 
   const { handleResult } = q;
   let result: unknown;
@@ -59,7 +63,7 @@ function orCreate<T extends PickQueryMetaResult>(
     return created ? result : handleResult(q, t, r, s);
   };
 
-  q.patchResult = async (q, queryResult) => {
+  q.patchResult = async (q, returnType, queryResult) => {
     if (queryResult.rowCount === 0) {
       if (typeof data === 'function') {
         data = data(updateData);
@@ -67,16 +71,43 @@ function orCreate<T extends PickQueryMetaResult>(
 
       if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
 
-      const inner = q.create(data as CreateData<Query>);
+      const noSelect = !q.q.select?.length;
+      if (noSelect) {
+        q = q.clone();
+        q.q.select = [new RawSQL('1')];
+      }
 
-      inner.q.handleResult = (q, t, r, s) => {
+      const c = q.create(data as CreateData<Query>);
+      if (noSelect) {
+        c.q.select = q.q.select;
+      }
+
+      let q2 = q.queryBuilder.with('f', q).with('c', c);
+
+      q2.q.select = ['*'];
+      (q2.q as SelectQueryData).returnsOne = true;
+      queryFrom(q2, 'f');
+      q2 = _queryUnion(
+        q2,
+        [q.queryBuilder.from('c' as never)],
+        'UNION ALL',
+        true,
+        true,
+      ) as never;
+
+      q2.q.returnType = returnType;
+
+      q2.q.handleResult = (q, t, r, s) => {
         result = handleResult(q, t, r, s);
-        return inner.q.hookSelect
+        return q2.q.hookSelect
           ? (result as RecordUnknown[]).map((row) => ({ ...row }))
           : result;
       };
 
-      await inner;
+      q2.q.log = q.q.log;
+      q2.q.logger = q.q.logger;
+
+      await q2;
 
       created = true;
     } else if (queryResult.rowCount > 1) {
@@ -86,14 +117,13 @@ function orCreate<T extends PickQueryMetaResult>(
       );
     }
   };
+
   return query as unknown as UpsertResult<T>;
 }
 
 export class QueryUpsertOrCreate {
   /**
-   * `upsert` tries to update one record, and it will perform create in case a record was not found.
-   *
-   * It will implicitly wrap queries in a transaction if it was not wrapped yet.
+   * `upsert` tries to update a single record, and then it creates the record if it doesn't yet exist.
    *
    * `find` or `findBy` must precede `upsert` because it does not work with multiple updates.
    *
@@ -104,7 +134,7 @@ export class QueryUpsertOrCreate {
    *
    * `data` and `update` objects are of the same type that's expected by `update` method, `create` object is of type of `create` method argument.
    *
-   * It is not returning a value by default, place `select` or `selectAll` before `upsert` to specify returning columns.
+   * No values are returned by default, place `select` or `selectAll` before `upsert` to specify returning columns.
    *
    * ```ts
    * await User.selectAll()
@@ -181,6 +211,9 @@ export class QueryUpsertOrCreate {
    *   });
    * ```
    *
+   * `upsert` works in the exact same way as [orCreate](#orCreate), but with `UPDATE` statement instead of `SELECT`.
+   * it also performs a single query if the record exists, and two queries if there is no record yet.
+   *
    * @param data - `update` property for the data to update, `create` property for the data to create
    */
   upsert<
@@ -229,13 +262,11 @@ export class QueryUpsertOrCreate {
   /**
    * `orCreate` creates a record only if it was not found by conditions.
    *
-   * It will implicitly wrap queries in a transaction if it was not wrapped yet.
-   *
    * `find` or `findBy` must precede `orCreate`.
    *
    * It is accepting the same argument as `create` commands.
    *
-   * By default, it is not returning columns, place `get`, `select`, or `selectAll` before `orCreate` to specify returning columns.
+   * No result is returned by default, place `get`, `select`, or `selectAll` before `orCreate` to specify returning columns.
    *
    * ```ts
    * const user = await User.selectAll()
@@ -246,7 +277,7 @@ export class QueryUpsertOrCreate {
    *   });
    * ```
    *
-   * The data may be returned from a function, it won't be called if the record was found:
+   * The data can be returned from a function, it won't be called if the record was found:
    *
    * ```ts
    * const user = await User.selectAll()
@@ -255,6 +286,35 @@ export class QueryUpsertOrCreate {
    *     email: 'some@email.com',
    *     name: 'created user',
    *   }));
+   * ```
+   *
+   * `orCreate` works by performing just a single query in the case if the record exists, and one additional query when the record does not exist.
+   *
+   * At first, it performs a "find" query, the query cost is exact same as if you didn't use `orCreate`.
+   *
+   * Then, if the record wasn't found, it performs a single query with CTE expressions to try finding it again, for the case it was already created just a moment before,
+   * and then it creates the record if it's still not found. Using such CTE allows to skip using transactions, while still conforming to atomicity.
+   *
+   * ```sql
+   * -- first query
+   * SELECT * FROM "table" WHERE "key" = 'value'
+   *
+   * -- the record could have been created in between these two queries
+   *
+   * -- second query
+   * WITH find_row AS (
+   *   SELECT * FROM "table" WHERE "key" = 'value'
+   * )
+   * WITH insert_row AS (
+   *   INSERT INTO "table" ("key")
+   *   SELECT 'value'
+   *   -- skip the insert if the row already exists
+   *   WHERE NOT EXISTS (SELECT 1 FROM find_row)
+   *   RETURNING *
+   * )
+   * SELECT * FROM find_row
+   * UNION ALL
+   * SELECT * FROM insert_row
    * ```
    *
    * @param data - the same data as for `create`, it may be returned from a callback

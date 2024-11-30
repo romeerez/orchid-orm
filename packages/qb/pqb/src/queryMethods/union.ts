@@ -21,6 +21,8 @@ export const _queryUnion = <T extends PickQueryResult>(
   base: T,
   args: UnionArgs<T>,
   k: UnionKind,
+  p?: boolean,
+  m?: boolean,
 ): T => {
   const q = (base as unknown as Query).baseQuery.clone();
 
@@ -29,6 +31,7 @@ export const _queryUnion = <T extends PickQueryResult>(
       ({
         a: typeof a === 'function' ? a(q as never) : a,
         k,
+        m,
       } as UnionItem),
   );
 
@@ -42,6 +45,7 @@ export const _queryUnion = <T extends PickQueryResult>(
     (q.q as SelectQueryData).union = {
       b: base as never,
       u,
+      p,
     };
   }
 

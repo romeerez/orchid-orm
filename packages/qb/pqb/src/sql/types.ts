@@ -256,6 +256,8 @@ export interface WindowDeclaration {
 export interface UnionItem {
   a: Query | Expression;
   k: UnionKind;
+  // true to not wrap the union member into parens.
+  p?: boolean;
 }
 
 export interface UnionSet {

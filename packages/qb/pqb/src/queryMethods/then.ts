@@ -223,14 +223,16 @@ const then = async (
         queryMethodByReturnType[tempReturnType] as 'query'
       ](sql)) as QueryResult;
 
-      if (query.patchResult) {
-        await query.patchResult(q, queryResult);
-      }
-
       if (log) {
         log.afterQuery(sql, logData);
         // set sql to be undefined to prevent logging on error in case if afterHooks throws
         sql = undefined;
+      }
+
+      // Has to be after log, so the same logger instance can be used in the sub-suquential queries.
+      // Useful for `upsert` and `orCreate`.
+      if (query.patchResult) {
+        await query.patchResult(q, tempReturnType, queryResult);
       }
 
       result = query.handleResult(q, tempReturnType, queryResult);
@@ -276,7 +278,7 @@ const then = async (
 
       if (query.patchResult) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        await query.patchResult(q, queryResult!);
+        await query.patchResult(q, tempReturnType, queryResult!);
       }
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

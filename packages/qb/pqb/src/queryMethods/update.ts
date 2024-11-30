@@ -248,7 +248,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
   const { queries } = ctx;
   if (queries) {
-    q.patchResult = async (_, queryResult) => {
+    q.patchResult = async (_, _t, queryResult) => {
       await Promise.all(queries.map(callWithThis, queryResult));
 
       if (ctx.collect) {

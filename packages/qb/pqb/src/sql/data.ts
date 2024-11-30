@@ -91,7 +91,11 @@ export interface HandleResult {
 export interface CommonQueryData {
   adapter: Adapter;
   shape: ColumnsShapeBase;
-  patchResult?(q: Query, queryResult: QueryResult): Promise<void>;
+  patchResult?(
+    q: Query,
+    returnType: QueryReturnType,
+    queryResult: QueryResult,
+  ): Promise<void>;
   handleResult: HandleResult;
   returnType: QueryReturnType;
   returning?: boolean;
@@ -207,7 +211,12 @@ export interface SelectQueryData extends CommonQueryData {
   group?: (string | Expression)[];
   having?: HavingItem[];
   window?: WindowItem[];
-  union?: { b: Query; u: UnionItem[] };
+  union?: {
+    b: Query;
+    u: UnionItem[];
+    // true to not wrap the first union query into parens.
+    p?: boolean;
+  };
   order?: OrderItem[];
   returnsOne?: true;
   limit?: number;

@@ -127,13 +127,14 @@ export const makeSQL = (
   const quotedAs = (query.as || table.table) && `"${query.as || table.table}"`;
 
   if (query.union) {
-    sql.push(`(${getSqlText(makeSQL(query.union.b, { values }))})`);
+    const s = getSqlText(makeSQL(query.union.b, { values }));
+    sql.push(query.union.p ? s : `(${s})`);
 
     for (const u of query.union.u) {
-      const itemSql = isExpression(u.a)
+      const s = isExpression(u.a)
         ? u.a.toSQL(ctx, quotedAs)
         : getSqlText(makeSQL(u.a, { values }));
-      sql.push(`${u.k} (${itemSql})`);
+      sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
     }
   } else {
     sql.push('SELECT');
