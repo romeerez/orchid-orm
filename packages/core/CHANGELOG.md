@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.21.5
+
+### Patch Changes
+
+- e02df5e: Fix TS type when selecting multiple nested selections. Allow accessing column from a different query in `ref`. (#430)
+
 ## 0.21.4
 
 ### Patch Changes

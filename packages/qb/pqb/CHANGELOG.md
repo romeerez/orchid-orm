@@ -1,5 +1,18 @@
 # pqb
 
+## 0.43.2
+
+### Patch Changes
+
+- 529abe0: Optimize orCreate and upsert (#431)
+- 9c58c3b: Fix bytea parsing in nested select (#437)
+- e02df5e: Fix TS type when selecting multiple nested selections. Allow accessing column from a different query in `ref`. (#430)
+- 26d8b2e: Pass records to query hooks even when nothing is selected (#436)
+- 64826ba: Conditional select with `if` (#433)
+- 2b3ae9b: Fix integration between upsert and query hooks (#434)
+- Updated dependencies [e02df5e]
+  - orchid-core@0.21.5
+
 ## 0.43.1
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 # orchid-orm
 
+## 1.38.2
+
+### Patch Changes
+
+- 35ae5dd: Fix a concurrency problem when generating a migration with many SQL expressions (#435)
+- 8024665: Fix generating columns/excludes migrations with custom USING (#419)
+- Updated dependencies [529abe0]
+- Updated dependencies [9c58c3b]
+- Updated dependencies [e02df5e]
+- Updated dependencies [26d8b2e]
+- Updated dependencies [64826ba]
+- Updated dependencies [2b3ae9b]
+  - pqb@0.43.2
+  - orchid-core@0.21.5
+  - rake-db@2.23.22
+
 ## 1.38.1
 
 ### Patch Changes
