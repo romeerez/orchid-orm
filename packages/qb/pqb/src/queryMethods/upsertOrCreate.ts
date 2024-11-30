@@ -17,8 +17,7 @@ import { QueryMetaHasWhere } from './where/where';
 import { _clone } from '../query/queryUtils';
 import { queryFrom } from './from';
 import { _queryUnion } from './union';
-import { SelectQueryData } from '../sql';
-import { RawSQL } from '../sql/rawSql';
+import { QueryAfterHook, SelectQueryData } from '../sql';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -53,8 +52,10 @@ function orCreate<T extends PickQueryMetaResult>(
   mergeData?: unknown,
 ): UpsertResult<T> {
   const { q } = query as unknown as PickQueryQ;
-  q.returnType = 'one';
   (q as SelectQueryData).returnsOne = true;
+  if (!q.select) {
+    q.returnType = 'void';
+  }
 
   const { handleResult } = q;
   let result: unknown;
@@ -63,7 +64,8 @@ function orCreate<T extends PickQueryMetaResult>(
     return created ? result : handleResult(q, t, r, s);
   };
 
-  q.patchResult = async (q, returnType, queryResult) => {
+  q.hookSelect ??= new Map();
+  q.patchResult = async (q, hookSelect, queryResult) => {
     if (queryResult.rowCount === 0) {
       if (typeof data === 'function') {
         data = data(updateData);
@@ -71,20 +73,28 @@ function orCreate<T extends PickQueryMetaResult>(
 
       if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
 
-      const noSelect = !q.q.select?.length;
-      if (noSelect) {
-        q = q.clone();
-        q.q.select = [new RawSQL('1')];
+      let hasAfterCallback = q.q.afterCreate;
+      let hasAfterCommitCallback = q.q.afterCreateCommit;
+
+      if (updateData) {
+        hasAfterCallback = hasAfterCallback || q.q.afterUpdate;
+        hasAfterCommitCallback =
+          hasAfterCommitCallback || q.q.afterUpdateCommit;
       }
 
+      const inCTE = {
+        selectNum: !!(hasAfterCallback || hasAfterCommitCallback),
+        targetHookSelect: hookSelect,
+      };
+
+      q = q.clone();
+      q.q.inCTE = inCTE as never;
+
       const c = q.create(data as CreateData<Query>);
-      if (noSelect) {
-        c.q.select = q.q.select;
-      }
+      c.q.select = q.q.select;
 
       let q2 = q.queryBuilder.with('f', q).with('c', c);
 
-      q2.q.select = ['*'];
       (q2.q as SelectQueryData).returnsOne = true;
       queryFrom(q2, 'f');
       q2 = _queryUnion(
@@ -95,17 +105,48 @@ function orCreate<T extends PickQueryMetaResult>(
         true,
       ) as never;
 
-      q2.q.returnType = returnType;
+      let afterHooks: QueryAfterHook[] | undefined;
+      let afterCommitHooks: QueryAfterHook[] | undefined;
+      q2.q.handleResult = (a, t, r, s) => {
+        if (hasAfterCallback || hasAfterCommitCallback) {
+          const fieldName = r.fields[0].name;
+          if (r.rows[0][fieldName]) {
+            afterHooks = q.q.afterCreate;
+            afterCommitHooks = q.q.afterCreateCommit;
+          } else {
+            afterHooks = q.q.afterUpdate;
+            afterCommitHooks = q.q.afterUpdateCommit;
+          }
+          delete r.rows[0][fieldName];
+        }
 
-      q2.q.handleResult = (q, t, r, s) => {
-        result = handleResult(q, t, r, s);
-        return q2.q.hookSelect
+        result = handleResult(a, t, r, s);
+        return a.q.hookSelect
           ? (result as RecordUnknown[]).map((row) => ({ ...row }))
           : result;
       };
 
       q2.q.log = q.q.log;
       q2.q.logger = q.q.logger;
+
+      q2.q.type = 'upsert';
+      q2.q.beforeCreate = q.q.beforeCreate;
+
+      if (hasAfterCallback) {
+        (q2.q.afterCreate ??= []).push(
+          (data, query) =>
+            afterHooks &&
+            Promise.all([...afterHooks].map((fn) => fn(data, query))),
+        );
+      }
+
+      if (hasAfterCommitCallback) {
+        (q2.q.afterCreateCommit ??= []).push(
+          (data, query) =>
+            afterCommitHooks &&
+            Promise.all([...afterCommitHooks].map((fn) => fn(data, query))),
+        );
+      }
 
       await q2;
 
@@ -250,13 +291,7 @@ export class QueryUpsertOrCreate {
       _queryUpdate(q, updateData as never);
     }
 
-    const c = orCreate(q as Query, data.create, updateData, mergeData);
-
-    if (!c.q.select) {
-      c.q.returnType = 'void';
-    }
-
-    return c as never;
+    return orCreate(q as Query, data.create, updateData, mergeData) as never;
   }
 
   /**

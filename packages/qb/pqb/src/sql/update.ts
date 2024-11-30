@@ -1,5 +1,5 @@
 import { quoteSchemaAndTable } from './common';
-import { pushReturningSql } from './insert';
+import { makeReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { pushLimitSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
@@ -38,12 +38,11 @@ export const pushUpdateSql = (
       query.select = countSelect;
     }
 
-    const hookSelect = pushReturningSql(
+    const hookSelect = pushUpdateReturning(
       ctx,
       table,
       query,
       quotedAs,
-      query.afterUpdateSelect,
       'SELECT',
     );
 
@@ -64,7 +63,31 @@ export const pushUpdateSql = (
   ctx.sql.push(set.join(', '));
 
   pushWhereStatementSql(ctx, table, query, quotedAs);
-  return pushReturningSql(ctx, table, query, quotedAs, query.afterUpdateSelect);
+
+  return pushUpdateReturning(ctx, table, query, quotedAs, 'RETURNING');
+};
+
+const pushUpdateReturning = (
+  ctx: ToSQLCtx,
+  table: ToSQLQuery,
+  query: UpdateQueryData,
+  quotedAs: string,
+  keyword: string,
+) => {
+  const { inCTE } = query;
+  const { select, hookSelect } = makeReturningSql(
+    ctx,
+    table,
+    query,
+    quotedAs,
+    1,
+    inCTE && 2,
+  );
+
+  const s = inCTE?.selectNum ? (select ? '0, ' + select : '0') : select;
+  if (s) ctx.sql.push(keyword, s);
+
+  return hookSelect;
 };
 
 const processData = (

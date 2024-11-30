@@ -1004,15 +1004,15 @@ describe('create functions', () => {
         expect(sql).toEqual({
           batch: [
             {
-              text: `INSERT INTO "tag"("tag") VALUES ($1),($2),($3),($4),($5)`,
+              text: `INSERT INTO "tag"("tag") VALUES ($1), ($2), ($3), ($4), ($5)`,
               values: ['0', '1', '2', '3', '4'],
             },
             {
-              text: `INSERT INTO "tag"("tag") VALUES ($1),($2),($3),($4),($5)`,
+              text: `INSERT INTO "tag"("tag") VALUES ($1), ($2), ($3), ($4), ($5)`,
               values: ['5', '6', '7', '8', '9'],
             },
             {
-              text: `INSERT INTO "tag"("tag") VALUES ($1),($2)`,
+              text: `INSERT INTO "tag"("tag") VALUES ($1), ($2)`,
               values: ['10', '11'],
             },
           ],

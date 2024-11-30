@@ -107,7 +107,7 @@ function maybeWrappedThen(
   let afterHooks: QueryAfterHook[] | undefined;
   let afterCommitHooks: QueryAfterHook[] | undefined;
   if (q.type) {
-    if (q.type === 'insert') {
+    if (q.type === 'insert' || q.type === 'upsert') {
       beforeHooks = q.beforeCreate;
       afterHooks = q.afterCreate;
       afterCommitHooks = q.afterCreateCommit;
@@ -235,7 +235,7 @@ const then = async (
       // Has to be after log, so the same logger instance can be used in the sub-suquential queries.
       // Useful for `upsert` and `orCreate`.
       if (query.patchResult) {
-        await query.patchResult(q, tempReturnType, queryResult);
+        await query.patchResult(q, hookSelect, queryResult);
       }
 
       result = query.handleResult(q, tempReturnType, queryResult);
@@ -281,7 +281,7 @@ const then = async (
 
       if (query.patchResult) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        await query.patchResult(q, tempReturnType, queryResult!);
+        await query.patchResult(q, hookSelect, queryResult!);
       }
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

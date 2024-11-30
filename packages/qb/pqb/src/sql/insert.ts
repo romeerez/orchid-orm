@@ -31,7 +31,7 @@ export const makeInsertSql = (
   query: InsertQueryData,
   quotedAs: string,
 ): Sql => {
-  const { columns, shape } = query;
+  const { columns, shape, inCTE } = query;
   quotedColumns.length = columns.length;
   for (let i = 0, len = columns.length; i < len; i++) {
     quotedColumns[i] = `"${shape[columns[i]]?.data.name || columns[i]}"`;
@@ -140,13 +140,17 @@ export const makeInsertSql = (
 
   pushWhereStatementSql(ctx, q, query, quotedAs);
 
-  const hookSelect = pushReturningSql(
-    ctx,
-    q,
-    query,
-    quotedAs,
-    query.afterCreateSelect,
-  );
+  let returning;
+  if (inCTE?.selectNum) {
+    returning = {
+      select: inCTE.returning?.select ? '1, ' + inCTE.returning.select : '1',
+      hookSelect: inCTE.returning?.hookSelect,
+    };
+  } else {
+    returning = makeReturningSql(ctx, q, query, quotedAs, 2);
+  }
+
+  if (returning.select) ctx.sql.push('RETURNING', returning.select);
 
   if (query.kind === 'object') {
     const valuesSql: string[] = [];
@@ -156,7 +160,7 @@ export const makeInsertSql = (
     let batch: SingleSqlItem[] | undefined;
 
     for (let i = 0; i < (values as unknown[][]).length; i++) {
-      const encodedRow = `(${encodeRow(
+      let encodedRow = encodeRow(
         ctx,
         ctxValues,
         q,
@@ -164,7 +168,9 @@ export const makeInsertSql = (
         (values as unknown[][])[i],
         runtimeDefaults,
         quotedAs,
-      )})`;
+      );
+
+      if (!inCTE) encodedRow = '(' + encodedRow + ')';
 
       if (ctxValues.length > MAX_BINDING_PARAMS) {
         if (ctxValues.length - currentValuesLen > MAX_BINDING_PARAMS) {
@@ -174,7 +180,7 @@ export const makeInsertSql = (
         }
 
         // save current batch
-        ctx.sql[1] = `VALUES ${valuesSql.join(',')}`;
+        ctx.sql[1] = (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
         ctxValues.length = currentValuesLen;
         batch = pushOrNewArray(batch, {
           text: ctx.sql.join(' '),
@@ -192,18 +198,22 @@ export const makeInsertSql = (
     }
 
     if (batch) {
-      ctx.sql[1] = `VALUES ${valuesSql.join(',')}`;
+      ctx.sql[1] = (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
       batch.push({
         text: ctx.sql.join(' '),
         values: ctxValues,
       });
 
       return {
-        hookSelect,
+        hookSelect: returning.hookSelect,
         batch,
       };
     } else {
-      ctx.sql[1] = `VALUES ${valuesSql.join(', ')}`;
+      ctx.sql[1] = (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+    }
+
+    if (inCTE) {
+      ctx.sql[1] += ' WHERE NOT EXISTS (SELECT 1 FROM "f")';
     }
   } else if (query.kind === 'raw') {
     if (isExpression(values)) {
@@ -264,7 +274,7 @@ export const makeInsertSql = (
   }
 
   return {
-    hookSelect,
+    hookSelect: returning.hookSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,
   };
@@ -336,32 +346,89 @@ const encodeRow = (
   return arr.join(', ');
 };
 
-export const pushReturningSql = (
+const hookSelectKeys = [
+  null,
+  'afterUpdateSelect' as const,
+  'afterCreateSelect' as const,
+  'afterDeleteSelect' as const,
+];
+
+type QueryDataHookSelectI =
+  | 1 // afterUpdateSelect
+  | 2 // afterCreateSelect
+  | 3; // afterDeleteSelect'
+
+export const makeReturningSql = (
   ctx: ToSQLCtx,
   q: ToSQLQuery,
   data: QueryData,
   quotedAs: string,
-  hookSelect?: Set<string>,
-  keyword = 'RETURNING', // noop update can use this function for `SELECT` list
-): HookSelect | undefined => {
-  const { select } = data;
-  if (!q.q.hookSelect && !hookSelect?.size && !select?.length) {
-    return hookSelect && new Map();
+  hookSelectI?: QueryDataHookSelectI,
+  addHookSelectI?: QueryDataHookSelectI,
+): { select?: string; hookSelect?: HookSelect } => {
+  if (data.inCTE) {
+    if (hookSelectI !== 2) {
+      const returning = makeReturningSql(
+        ctx,
+        q,
+        data,
+        quotedAs,
+        2,
+        hookSelectI,
+      );
+
+      if (returning.hookSelect) {
+        for (const [key, value] of returning.hookSelect) {
+          data.inCTE.targetHookSelect.set(key, value);
+        }
+      }
+
+      return (data.inCTE.returning = returning);
+    }
+
+    if (data.inCTE.returning) {
+      return data.inCTE.returning;
+    }
   }
 
-  ctx.sql.push(keyword);
-  if (q.q.hookSelect || hookSelect) {
-    const tempSelect: HookSelect = new Map(q.q.hookSelect);
+  const hookSelect = hookSelectI && data[hookSelectKeys[hookSelectI]!];
+
+  const { select } = data;
+  if (
+    !q.q.hookSelect &&
+    !hookSelect?.size &&
+    !select?.length &&
+    !addHookSelectI
+  ) {
+    return { hookSelect: hookSelect && new Map() };
+  }
+
+  const otherCTEHookSelect =
+    addHookSelectI && data[hookSelectKeys[addHookSelectI]!];
+
+  let tempSelect: HookSelect | undefined;
+  if (q.q.hookSelect || hookSelect || otherCTEHookSelect) {
+    tempSelect = new Map(q.q.hookSelect);
+
     if (hookSelect) {
       for (const column of hookSelect) {
         tempSelect.set(column, { select: column });
       }
     }
-    ctx.sql.push(selectToSql(ctx, q, data, quotedAs, tempSelect));
-    return tempSelect;
-  } else if (select?.length) {
-    ctx.sql.push(selectToSql(ctx, q, data, quotedAs));
+
+    if (otherCTEHookSelect) {
+      for (const column of otherCTEHookSelect) {
+        tempSelect.set(column, { select: column });
+      }
+    }
   }
 
-  return;
+  let sql: string | undefined;
+  if (tempSelect?.size || select?.length) {
+    sql = selectToSql(ctx, q, data, quotedAs, tempSelect, undefined, true);
+  } else if (addHookSelectI) {
+    sql = '1';
+  }
+
+  return { select: sql, hookSelect: tempSelect };
 };

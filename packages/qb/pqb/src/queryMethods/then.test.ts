@@ -85,7 +85,7 @@ describe('batch queries', () => {
       [{ text: 'BEGIN' }],
       [
         {
-          text: `INSERT INTO "tmp.then"("num") VALUES ($1),($2) RETURNING "tmp.then"."num"`,
+          text: `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
           values: [0, 1],
         },
       ],
@@ -125,7 +125,7 @@ describe('batch queries', () => {
     expect(queryArrays.mock.calls).toEqual([
       [
         {
-          text: `INSERT INTO "tmp.then"("num") VALUES ($1),($2) RETURNING "tmp.then"."num"`,
+          text: `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
           values: [0, 1],
         },
       ],

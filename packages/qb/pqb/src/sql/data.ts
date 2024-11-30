@@ -4,8 +4,9 @@ import { toSQLCacheKey } from './toSQL';
 import {
   HavingItem,
   JoinItem,
-  OnConflictTarget,
+  OnConflictMerge,
   OnConflictSet,
+  OnConflictTarget,
   OrderItem,
   QuerySourceItem,
   SelectItem,
@@ -13,27 +14,26 @@ import {
   WhereItem,
   WindowItem,
   WithItem,
-  OnConflictMerge,
 } from './types';
 import { SelectableOrExpression } from '../common/utils';
 import {
-  ColumnsShapeBase,
-  MaybeArray,
-  Sql,
-  ColumnsParsers,
-  Expression,
-  QueryColumn,
-  RecordString,
-  RecordUnknown,
-  QueryReturnType,
-  PickQueryTable,
-  ExpressionChain,
-  QueryDataTransform,
-  HookSelect,
   BatchParsers,
+  ColumnsParsers,
+  ColumnsShapeBase,
+  Expression,
+  ExpressionChain,
+  HookSelect,
+  MaybeArray,
   MaybePromise,
+  PickQueryTable,
+  QueryColumn,
+  QueryDataTransform,
   QueryLogger,
   QueryLogObject,
+  QueryReturnType,
+  RecordString,
+  RecordUnknown,
+  Sql,
 } from 'orchid-core';
 import { RelationQueryBase } from '../relations';
 
@@ -93,7 +93,7 @@ export interface CommonQueryData {
   shape: ColumnsShapeBase;
   patchResult?(
     q: Query,
-    returnType: QueryReturnType,
+    hookSelect: HookSelect | undefined,
     queryResult: QueryResult,
   ): Promise<void>;
   handleResult: HandleResult;
@@ -201,10 +201,16 @@ export interface CommonQueryData {
   all?: true;
 
   chain?: ExpressionChain;
+
+  inCTE?: {
+    selectNum: boolean;
+    returning?: { select?: string; hookSelect?: HookSelect };
+    targetHookSelect: HookSelect;
+  };
 }
 
 export interface SelectQueryData extends CommonQueryData {
-  type: undefined;
+  type: undefined | 'upsert';
   distinct?: SelectableOrExpression[];
   only?: boolean;
   join?: JoinItem[];

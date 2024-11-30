@@ -1,5 +1,5 @@
 import { pushWhereStatementSql } from './where';
-import { pushReturningSql } from './insert';
+import { makeReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { DeleteQueryData } from './data';
@@ -55,5 +55,8 @@ export const pushDeleteSql = (
     }
   }
 
-  return pushReturningSql(ctx, table, query, quotedAs, query.afterDeleteSelect);
+  const returning = makeReturningSql(ctx, table, query, quotedAs, 3);
+  if (returning.select) ctx.sql.push('RETURNING', returning.select);
+
+  return returning.hookSelect;
 };

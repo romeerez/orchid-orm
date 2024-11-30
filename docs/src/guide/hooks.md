@@ -17,6 +17,12 @@ The argument passed to a function is a query object that is going to be executed
 
 If the query has both `beforeQuery` and `beforeCreate`, `beforeCreate` will run first.
 
+[orCreate](/guide/create-update-delete.html#orcreate) executes two queries: the first to find a record, and the second to find and create if not found.
+If the record is created by another process in between the two queries, `beforeCreate` hook will be triggerred, but no new data will be created.
+
+[upsert](/guide/create-update-delete.html#upsert) has the same behavior for `beforeCreate` as `orCreate`.
+`beforeUpdate` hook is always called once by this `upsert` command, even if the record for the update does not exist.
+
 ```ts
 class SomeTable extends BaseTable {
   readonly table = 'someTable';

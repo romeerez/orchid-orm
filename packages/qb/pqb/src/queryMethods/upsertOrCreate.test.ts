@@ -1,5 +1,21 @@
 import { User, userData } from '../test-utils/test-utils';
 import { assertType, testDb, useTestDatabase } from 'test-utils';
+import { TransactionAdapter } from '../adapter';
+import { QueryInput } from 'orchid-core';
+
+const emulateReturnNoRowsOnce = () => {
+  // emulate the edge case when first query doesn't find the record, and then in CTE it appears
+  const { query } = TransactionAdapter.prototype;
+  TransactionAdapter.prototype.query = async function (
+    this: unknown,
+    q: QueryInput,
+  ) {
+    const result = await query.call(this, q);
+    result.rowCount = 0;
+    TransactionAdapter.prototype.query = query;
+    return result;
+  } as never;
+};
 
 describe('upsertOrCreate', () => {
   useTestDatabase();
@@ -176,6 +192,168 @@ describe('upsertOrCreate', () => {
 
       expect(created).toBe(undefined);
     });
+
+    it('should call both before hooks, after update hooks when updated, should return void by default', async () => {
+      await User.create(userData);
+
+      const beforeUpdate = jest.fn();
+      const afterUpdate = jest.fn();
+      const afterUpdateCommit = jest.fn();
+      const beforeCreate = jest.fn();
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
+
+      emulateReturnNoRowsOnce();
+
+      const res = await User.findBy({ name: 'name' })
+        .upsert({
+          data: userData,
+          create: userData,
+        })
+        .beforeUpdate(beforeUpdate)
+        .afterUpdate(['id'], afterUpdate)
+        .afterUpdateCommit(['name'], afterUpdateCommit)
+        .beforeCreate(beforeCreate)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      assertType<typeof res, void>();
+      expect(res).toBe(undefined);
+
+      expect(beforeUpdate).toHaveBeenCalledTimes(1);
+      expect(afterUpdate).toHaveBeenCalledWith(
+        [
+          {
+            id: expect.any(Number),
+            name: 'name',
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+      expect(afterUpdateCommit).toHaveBeenCalledWith(
+        [
+          {
+            id: expect.any(Number),
+            name: 'name',
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+      expect(beforeCreate).toHaveBeenCalledTimes(1);
+      expect(afterCreate).not.toHaveBeenCalled();
+      expect(afterCreateCommit).not.toHaveBeenCalled();
+    });
+
+    it('should call both before hooks, after update hooks when updated, should return selected columns', async () => {
+      await User.create(userData);
+
+      const beforeUpdate = jest.fn();
+      const afterUpdate = jest.fn();
+      const afterUpdateCommit = jest.fn();
+      const beforeCreate = jest.fn();
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
+
+      emulateReturnNoRowsOnce();
+
+      const res = await User.findBy({ name: 'name' })
+        .select('id')
+        .upsert({
+          data: userData,
+          create: userData,
+        })
+        .beforeUpdate(beforeUpdate)
+        .afterUpdate(['id'], afterUpdate)
+        .afterUpdateCommit(['name'], afterUpdateCommit)
+        .beforeCreate(beforeCreate)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      assertType<typeof res, { id: number }>();
+      expect(res).toEqual({ id: expect.any(Number) });
+
+      expect(beforeUpdate).toHaveBeenCalledTimes(1);
+      expect(afterUpdate).toHaveBeenCalledWith(
+        [
+          {
+            id: expect.any(Number),
+            name: 'name',
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+      expect(afterUpdateCommit).toHaveBeenCalledWith(
+        [
+          {
+            id: expect.any(Number),
+            name: 'name',
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+      expect(beforeCreate).toHaveBeenCalledTimes(1);
+      expect(afterCreate).not.toHaveBeenCalled();
+      expect(afterCreateCommit).not.toHaveBeenCalled();
+    });
+
+    it('should call after create hooks when created', async () => {
+      const beforeUpdate = jest.fn();
+      const afterUpdate = jest.fn();
+      const afterUpdateCommit = jest.fn();
+      const beforeCreate = jest.fn();
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
+
+      const res = await User.findBy({ name: 'name' })
+        .upsert({
+          data: userData,
+          create: userData,
+        })
+        .beforeUpdate(beforeUpdate)
+        .afterUpdate(['id'], afterUpdate)
+        .afterUpdateCommit(['name'], afterUpdateCommit)
+        .beforeCreate(beforeCreate)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      assertType<typeof res, void>();
+      expect(res).toBe(undefined);
+
+      expect(beforeUpdate).toHaveBeenCalledTimes(1);
+      expect(afterUpdate).not.toHaveBeenCalled();
+      expect(afterUpdateCommit).not.toHaveBeenCalled();
+      expect(beforeCreate).toHaveBeenCalledTimes(1);
+      expect(afterCreate).toHaveBeenCalledWith(
+        [
+          {
+            id: expect.any(Number),
+            name: 'name',
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+      expect(afterCreateCommit).toHaveBeenCalledWith(
+        [
+          {
+            id: expect.any(Number),
+            name: 'name',
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+    });
   });
 
   describe('orCreate', () => {
@@ -218,6 +396,76 @@ describe('upsertOrCreate', () => {
         }));
 
       expect(user.name).toBe('created');
+    });
+
+    it('should not call after create hooks when not created, should return void by default', async () => {
+      await User.create(userData);
+
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
+
+      emulateReturnNoRowsOnce();
+
+      const res = await User.findBy({ name: 'name' })
+        .orCreate(userData)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      assertType<typeof res, void>();
+      expect(res).toBe(undefined);
+
+      expect(afterCreate).not.toHaveBeenCalled();
+      expect(afterCreateCommit).not.toHaveBeenCalled();
+    });
+
+    it('should not call after create hooks when not created, should return only the selected columns', async () => {
+      await User.create(userData);
+
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
+
+      emulateReturnNoRowsOnce();
+
+      const res = await User.select('id')
+        .findBy({ name: 'name' })
+        .orCreate(userData)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      assertType<typeof res, { id: number }>();
+      expect(res).toEqual({ id: expect.any(Number) });
+
+      expect(afterCreate).not.toHaveBeenCalled();
+      expect(afterCreateCommit).not.toHaveBeenCalled();
+    });
+
+    it('should call after create hooks when created', async () => {
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
+
+      await User.findBy({ name: 'name' })
+        .orCreate(userData)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      expect(afterCreate).toHaveBeenCalledWith(
+        [
+          {
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+      expect(afterCreateCommit).toHaveBeenCalledWith(
+        [
+          {
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
     });
   });
 });

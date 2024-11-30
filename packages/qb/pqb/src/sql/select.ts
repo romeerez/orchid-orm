@@ -26,6 +26,7 @@ import { queryWrap } from '../queryMethods/queryMethods.utils';
 import { isQueryNone } from '../queryMethods/none';
 import { ColumnType, IntegerBaseColumn } from '../columns';
 import { getSqlText } from './utils';
+import { makeReturningSql } from './insert';
 
 export const pushSelectSql = (
   ctx: ToSQLCtx,
@@ -54,6 +55,7 @@ export const selectToSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: {
+    inCTE?: SelectQueryData['inCTE'];
     select?: SelectQueryData['select'];
     selectAllColumns?: string[];
     selectAllKeys?: RecordUnknown;
@@ -63,9 +65,25 @@ export const selectToSql = (
     parsers?: ColumnsParsers;
   },
   quotedAs: string | undefined,
-  hookSelect = query.hookSelect,
+  hookSelect: HookSelect | undefined = query.hookSelect,
   aliases?: string[],
+  skipCTE?: boolean,
 ): string => {
+  if (query.inCTE && !skipCTE) {
+    const { select } = makeReturningSql(
+      ctx,
+      table,
+      query as never,
+      quotedAs as never,
+    );
+
+    return query.inCTE.selectNum
+      ? select
+        ? '0, ' + select
+        : '0'
+      : select || '';
+  }
+
   let selected: RecordUnknown | undefined;
 
   const list: string[] = [];

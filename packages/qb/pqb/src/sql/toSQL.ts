@@ -82,7 +82,7 @@ export const makeSQL = (
     pushWithSql(ctx, query.with);
   }
 
-  if (query.type) {
+  if (query.type && query.type !== 'upsert') {
     const tableName = table.table ?? query.as;
     if (!tableName) throw new Error(`Table is missing for ${query.type}`);
 
