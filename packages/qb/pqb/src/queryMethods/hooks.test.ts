@@ -67,16 +67,18 @@ describe('hooks', () => {
   });
 
   describe('afterCreate', () => {
-    it('should run inside transaction', async () => {
+    it('should run inside transaction, should pass an empty record to the callback', async () => {
       const fn = jest.fn();
+
       const q = User.afterCreate([], fn).insert(userData);
       ignoreTestTransactionOnce(q);
 
-      q.transaction = jest.fn(() => Promise.resolve()) as never;
+      const trx = jest.spyOn(q, 'transaction');
 
       await q;
 
-      expect(q.transaction).toBeCalled();
+      expect(trx).toHaveBeenCalled();
+      expect(fn).toHaveBeenCalledWith([{}], expect.any(Object));
     });
 
     it('should run a hook after create', async () => {
@@ -567,7 +569,7 @@ describe('hooks with no test transaction', () => {
       .catch((err) => err);
 
     expect(err).toBeInstanceOf(AfterCommitError);
-    expect(err).toMatchObject({ ...afterCommitSampleError, result: [] });
+    expect(err).toMatchObject({ ...afterCommitSampleError, result: [{}] });
   });
 
   it('should catch error with `catchAfterCommitError', async () => {
@@ -587,6 +589,6 @@ describe('hooks with no test transaction', () => {
 
     expect(res).toBe(1);
     expect(err).toBeInstanceOf(AfterCommitError);
-    expect(err).toMatchObject({ ...afterCommitSampleError, result: [] });
+    expect(err).toMatchObject({ ...afterCommitSampleError, result: [{}] });
   });
 });

@@ -3,7 +3,7 @@ import { Adapter } from '../adapter';
 import { NotFoundError } from '../errors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const query = jest.fn<any, any>(() => ({ rows: [] }));
+const query = jest.fn<any, any>(() => Promise.resolve({ rows: [] }));
 Adapter.prototype.query = query;
 Adapter.prototype.arrays = query;
 

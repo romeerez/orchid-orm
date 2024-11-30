@@ -703,6 +703,22 @@ describe('create functions', () => {
         ['name', 'password', null],
       );
     });
+
+    it('should not make an empty RETURNING because it is not valid SQL', async () => {
+      const q = User.insert(userData).select();
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, $2)
+        `,
+        ['name', 'password'],
+      );
+
+      const res = await q;
+      expect(res).toEqual({});
+    });
   });
 
   describe('createMany', () => {

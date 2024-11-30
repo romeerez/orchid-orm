@@ -16,6 +16,7 @@ import {
   QueryReturnType,
   RecordString,
   RecordUnknown,
+  SingleSql,
   SingleSqlItem,
   Sql,
   TransactionState,
@@ -219,9 +220,11 @@ const then = async (
         logData = log.beforeQuery(sql);
       }
 
-      queryResult = (await adapter[
-        queryMethodByReturnType[tempReturnType] as 'query'
-      ](sql)) as QueryResult;
+      queryResult = await execQuery(
+        adapter,
+        queryMethodByReturnType[tempReturnType],
+        sql,
+      );
 
       if (log) {
         log.afterQuery(sql, logData);
@@ -254,7 +257,7 @@ const then = async (
           logData = log.beforeQuery(sql);
         }
 
-        const result = (await adapter[queryMethod](sql)) as QueryResult;
+        const result = await execQuery(adapter, queryMethod, sql);
 
         if (queryResult) {
           queryResult.rowCount += result.rowCount;
@@ -437,6 +440,28 @@ const then = async (
 
     return reject?.(error);
   }
+};
+
+/**
+ * Executes a query and in the case there are rows, but nothing was selected,
+ * it populates the response with empty objects,
+ * because user might expect empty objects to be returned for an empty select.
+ */
+const execQuery = (
+  adapter: AdapterBase,
+  method: 'query' | 'arrays',
+  sql: SingleSql,
+) => {
+  return (adapter[method as 'query'](sql) as Promise<QueryResult>).then(
+    (result) => {
+      if (result.rowCount && !result.rows.length) {
+        result.rows.length = result.rowCount;
+        result.rows.fill({});
+      }
+
+      return result;
+    },
+  );
 };
 
 const assignError = (to: QueryError, from: pg.DatabaseError) => {
