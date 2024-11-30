@@ -155,6 +155,9 @@ export class TextColumn<
   }
 }
 
+const byteaParse = (val: unknown) =>
+  typeof val === 'string' ? Buffer.from(val.slice(2), 'hex') : val;
+
 // To store binary strings
 export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
@@ -167,6 +170,7 @@ export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
   constructor(schema: Schema) {
     super(schema, schema.buffer() as never);
+    setColumnDefaultParse(this, byteaParse);
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {

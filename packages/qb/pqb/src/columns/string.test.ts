@@ -3,9 +3,12 @@ import {
   testZodColumnTypes as t,
   testDb,
   TestSchemaConfig,
+  useTestDatabase,
+  sql,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
 import { ColumnToCodeCtx } from 'orchid-core';
+import { User, userData } from '../test-utils/test-utils';
 
 const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
@@ -170,6 +173,26 @@ describe('string columns', () => {
 
       it('should have toCode', () => {
         expect(t.bytea().toCode(ctx, 'key')).toBe('t.bytea()');
+      });
+
+      describe('with data', () => {
+        useTestDatabase();
+
+        it('should be decoded to a Buffer when sub-selected', async () => {
+          await User.create(userData);
+
+          const {
+            sub: { bytea },
+          } = await User.take().select({
+            sub: () =>
+              User.take().select({
+                bytea: sql`'text'::bytea`.type(() => t.bytea()),
+              }),
+          });
+
+          expect(bytea instanceof Buffer).toBe(true);
+          expect(bytea.toString()).toBe('text');
+        });
       });
     });
   });
