@@ -1,6 +1,6 @@
 import { RakeDbAst, promptSelect, colors } from 'rake-db';
 import { RawSQLBase } from 'orchid-core';
-import { Adapter } from 'pqb';
+import { Adapter, QueryResult } from 'pqb';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
@@ -26,33 +26,39 @@ export const compareSqlExpressions = async (
       tableExpressions.map(async ({ source, compare, handle }) => {
         const viewName = `orchidTmpView${id++}`;
         const values: unknown[] = [];
+        let result: QueryResult | undefined;
         try {
-          const sql = `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
-            .map(
-              ({ inDb, inCode }, i) =>
-                `${inDb} AS "*inDb-${i}*", ${inCode
-                  .map(
-                    (s, j) =>
-                      `(${
-                        typeof s === 'string' ? s : s.toSQL({ values })
-                      }) "*inCode-${i}-${j}*"`,
-                  )
-                  .join(', ')}`,
-            )
-            .join(', ')} FROM ${source})`;
-          await adapter.query({ text: sql, values });
-        } catch (err) {
+          const results = (await adapter.query({
+            // It is important to run `CREATE TEMPORARY VIEW` and `DROP VIEW` on the same db connection,
+            // that's why SQLs are combined into a single query.
+            text: [
+              `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
+                .map(
+                  ({ inDb, inCode }, i) =>
+                    `${inDb} AS "*inDb-${i}*", ${inCode
+                      .map(
+                        (s, j) =>
+                          `(${
+                            typeof s === 'string' ? s : s.toSQL({ values })
+                          }) "*inCode-${i}-${j}*"`,
+                      )
+                      .join(', ')}`,
+                )
+                .join(', ')} FROM ${source})`,
+              `SELECT pg_get_viewdef('${viewName}') v`,
+              `DROP VIEW ${viewName}`,
+            ].join('; '),
+            values,
+          })) as unknown as QueryResult[];
+          result = results[1];
+        } catch {}
+
+        if (!result) {
           handle();
           return;
         }
 
-        const {
-          rows: [{ v }],
-        } = await adapter.query<{ v: string }>(
-          `SELECT pg_get_viewdef('${viewName}') v`,
-        );
-
-        await adapter.query(`DROP VIEW ${viewName}`);
+        const v: string = result.rows[0].v;
 
         let pos = 7;
         const rgx = /\s+AS\s+"\*(inDb-\d+|inCode-\d+-\d+)\*",?/g;

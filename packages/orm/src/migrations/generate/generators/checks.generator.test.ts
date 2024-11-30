@@ -544,4 +544,55 @@ change(async (db) => {
   ${green('+ add check')} first_name = 'add3'
   ${green('+ add check')} first_name = 'add4'`);
   });
+
+  it('should be able to handle 10 checks at a time', async () => {
+    await arrange({
+      tables: [
+        table((t) => ({
+          col1: t.text().check(t.sql`col1 = ''`),
+          col2: t.text().check(t.sql`col2 = ''`),
+          col3: t.text().check(t.sql`col3 = ''`),
+          col4: t.text().check(t.sql`col4 = ''`),
+          col5: t.text().check(t.sql`col5 = ''`),
+          col6: t.text().check(t.sql`col6 = ''`),
+          col7: t.text().check(t.sql`col7 = ''`),
+          col8: t.text().check(t.sql`col8 = ''`),
+          col9: t.text().check(t.sql`col9 = ''`),
+          col10: t.text().check(t.sql`col10 = ''`),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'table',
+    {
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      col1: t.text().check(t.sql\`col1 = ''\`),
+      col2: t.text().check(t.sql\`col2 = ''\`),
+      col3: t.text().check(t.sql\`col3 = ''\`),
+      col4: t.text().check(t.sql\`col4 = ''\`),
+      col5: t.text().check(t.sql\`col5 = ''\`),
+      col6: t.text().check(t.sql\`col6 = ''\`),
+      col7: t.text().check(t.sql\`col7 = ''\`),
+      col8: t.text().check(t.sql\`col8 = ''\`),
+      col9: t.text().check(t.sql\`col9 = ''\`),
+      col10: t.text().check(t.sql\`col10 = ''\`),
+    }),
+  );
+});
+`);
+
+    assert.report(
+      `${green(
+        '+ create table',
+      )} table (10 columns, 10 checks, no primary key)`,
+    );
+  });
 });
