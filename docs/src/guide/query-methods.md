@@ -348,6 +348,18 @@ await db.books
   .where({ 'author.isPopular': true });
 ```
 
+### conditional select
+
+`if` allows to select additional columns based on a condition:
+
+```ts
+type Result = { id: number; title?: string; description?: string };
+
+const result: Result = await db.table
+  .select('id')
+  .if(condition, (q) => q.select('title', 'description'));
+```
+
 ### selectAll
 
 [//]: # 'has JSDoc'

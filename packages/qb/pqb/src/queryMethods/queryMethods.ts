@@ -87,7 +87,11 @@ import {
   QueryColumns,
   QueryMetaBase,
   QueryReturnType,
+  QueryThen,
   QueryThenByQuery,
+  QueryThenShallowSimplify,
+  QueryThenShallowSimplifyArr,
+  QueryThenShallowSimplifyOptional,
   RecordUnknown,
   Sql,
   SQLQueryArgs,
@@ -149,6 +153,7 @@ type OrderArgKey<T extends OrderArgSelf> =
         ? never
         : K;
     }[keyof T['meta']['selectable']]
+  // separate mappings are better than a single combined
   | {
       [K in keyof T['result']]: T['result'][K]['dataType'] extends
         | 'array'
@@ -180,6 +185,7 @@ interface QueryHelper<
     Q extends {
       returnType: QueryReturnType;
       meta: QueryMetaBase & {
+        // Omit is optimal
         selectable: Omit<
           T['meta']['selectable'],
           `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
@@ -217,6 +223,90 @@ type NarrowTypeResult<T extends PickQueryMetaResultReturnType, Narrow> = {
       }
     : T['result'][K];
 };
+
+type QueryIfResult<
+  T extends PickQueryMetaResultReturnType,
+  R extends PickQueryResult,
+> = {
+  [K in keyof T]: K extends 'result'
+    ? {
+        [K in
+          | keyof T['result']
+          | keyof R['result']]: K extends keyof T['result']
+          ? K extends keyof R['result']
+            ? R['result'][K] | T['result'][K]
+            : T['result'][K]
+          : R['result'][K];
+      }
+    : K extends 'then'
+    ? QueryIfResultThen<T, R>
+    : T[K];
+};
+
+export type QueryIfResultThen<
+  T extends PickQueryMetaResultReturnType,
+  R extends PickQueryResult,
+> = T['returnType'] extends undefined | 'all'
+  ? QueryThenShallowSimplifyArr<
+      {
+        [K in keyof T['result']]: K extends keyof R['result']
+          ? T['result'][K]['outputType'] | R['result'][K]['outputType']
+          : T['result'][K]['outputType'];
+      } & {
+        [K in keyof R['result'] as K extends keyof T['result']
+          ? never
+          : K]?: R['result'][K]['outputType'];
+      }
+    >
+  : T['returnType'] extends 'one'
+  ? QueryThenShallowSimplifyOptional<
+      {
+        [K in keyof T['result']]: K extends keyof R['result']
+          ? T['result'][K]['outputType'] | R['result'][K]['outputType']
+          : T['result'][K]['outputType'];
+      } & {
+        [K in keyof R['result'] as K extends keyof T['result']
+          ? never
+          : K]?: R['result'][K]['outputType'];
+      }
+    >
+  : T['returnType'] extends 'oneOrThrow'
+  ? QueryThenShallowSimplify<
+      {
+        [K in keyof T['result']]: K extends keyof R['result']
+          ? T['result'][K]['outputType'] | R['result'][K]['outputType']
+          : T['result'][K]['outputType'];
+      } & {
+        [K in keyof R['result'] as K extends keyof T['result']
+          ? never
+          : K]?: R['result'][K]['outputType'];
+      }
+    >
+  : T['returnType'] extends 'value'
+  ? QueryThen<
+      | T['result']['value']['outputType']
+      | R['result']['value']['outputType']
+      | undefined
+    >
+  : T['returnType'] extends 'valueOrThrow'
+  ? QueryThen<
+      T['result']['value']['outputType'] | R['result']['value']['outputType']
+    >
+  : T['returnType'] extends 'rows'
+  ? QueryThen<
+      (
+        | T['result'][keyof T['result']]['outputType']
+        | R['result'][keyof R['result']]['outputType']
+      )[][]
+    >
+  : T['returnType'] extends 'pluck'
+  ? QueryThen<
+      (
+        | T['result']['pluck']['outputType']
+        | R['result']['pluck']['outputType']
+      )[]
+    >
+  : QueryThen<void>;
 
 export interface QueryMethods<ColumnTypes>
   extends AsMethods,
@@ -1014,6 +1104,14 @@ export class QueryMethods<ColumnTypes> {
       : T[K];
   } {
     return () => this as never;
+  }
+
+  if<T extends PickQueryMetaResultReturnType, R extends PickQueryResult>(
+    this: T,
+    condition: boolean | null | undefined,
+    fn: (q: T) => R & { returnType: T['returnType'] },
+  ): QueryIfResult<T, R> {
+    return (condition ? fn(this) : this) as never;
   }
 
   queryRelated<

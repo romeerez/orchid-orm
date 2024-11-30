@@ -1060,4 +1060,42 @@ describe('queryMethods', () => {
       assertType<Awaited<typeof q>, { id: 123 }[]>();
     });
   });
+
+  describe('if', () => {
+    it('should execute callback based on the condition', () => {
+      const q1 = User.select('id').if(false, (q) => q.select('name'));
+
+      expectSql(q1.toSQL(), `SELECT "user"."id" FROM "user"`);
+
+      const q2 = User.select('id').if(true, (q) => q.select('name'));
+
+      expectSql(q2.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
+    });
+
+    it('should add optional selection', () => {
+      const q = User.select('id', 'name').if(true, (q) =>
+        q.select('name', 'password', 'active'),
+      );
+
+      assertType<
+        Awaited<typeof q>,
+        {
+          id: number;
+          name: string;
+          password?: string;
+          active?: boolean | null;
+        }[]
+      >();
+    });
+
+    it('should handle a query returning a plain value', () => {
+      const q = User.get('id').if(true, (q) => q.get('name'));
+
+      assertType<Awaited<typeof q>, number | string>();
+
+      const q2 = q.if(true, (q) => q.get('active'));
+
+      assertType<Awaited<typeof q2>, number | string | boolean | null>();
+    });
+  });
 });
