@@ -1,5 +1,5 @@
-import { Post, User, userColumnsSql } from '../test-utils/test-utils';
-import { assertType, expectSql, sql } from 'test-utils';
+import { Post, Profile, User, userColumnsSql } from '../test-utils/test-utils';
+import { assertType, expectSql, sql, testDb } from 'test-utils';
 
 describe('expressions', () => {
   describe('column', () => {
@@ -76,6 +76,29 @@ describe('expressions', () => {
           SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "user"
         `,
         [1, 'name'],
+      );
+    });
+
+    it('should reference columns of a `from` subquery in where', () => {
+      const q = testDb.from(Profile.select('bio')).select({
+        sub: (q) =>
+          User.select('id').where({
+            name: q.ref('bio'),
+          }),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT
+            (
+              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+              FROM (
+                SELECT "user"."id" FROM "user" WHERE "user"."name" = "profile"."bio"
+              ) "t"
+            ) "sub"
+          FROM (SELECT "profile"."bio" FROM "profile") "profile"
+        `,
       );
     });
   });

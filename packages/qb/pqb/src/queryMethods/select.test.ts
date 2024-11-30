@@ -75,6 +75,27 @@ describe('select', () => {
     assertType<Awaited<typeof User>, UserRecord[]>();
   });
 
+  it('should allow filtering by selected values', () => {
+    const q = User.select({
+      names: () => User.select('name'),
+      ids: () => Profile.select('id'),
+      name: () => User.get('name'),
+      count: () => User.count(),
+      expr: sql<boolean>`1`,
+    }).where({ name: 'la', count: 0 });
+
+    assertType<
+      Awaited<typeof q>,
+      {
+        names: { name: string }[];
+        ids: { id: number }[];
+        name: string;
+        count: number;
+        expr: boolean;
+      }[]
+    >();
+  });
+
   describe('select', () => {
     it('should select all columns with a *', () => {
       const query = User.join(Message, 'authorId', 'id').select('*');

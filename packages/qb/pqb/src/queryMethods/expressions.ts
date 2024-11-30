@@ -52,16 +52,20 @@ export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
 
 export class RefExpression<T extends QueryColumn> extends Expression<T> {
   result: { value: T };
+  q: QueryData;
+  table?: string;
 
-  constructor(value: T, public q: QueryData, public ref: string) {
+  constructor(value: T, query: Query, public ref: string) {
     super();
     this.result = { value };
-    q.expr = this;
+    (this.q = query.q).expr = this;
+    this.table = query.table;
     Object.assign(this, value.operators);
   }
 
-  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    return columnToSql(ctx, this.q, this.q.shape, this.ref, quotedAs);
+  makeSQL(ctx: ToSQLCtx): string {
+    const as = this.q.as || this.table;
+    return columnToSql(ctx, this.q, this.q.shape, this.ref, as && `"${as}"`);
   }
 }
 
@@ -212,7 +216,7 @@ export class ExpressionMethods {
       column = shape[arg];
     }
 
-    return new RefExpression(column, q.q, arg) as never;
+    return new RefExpression(column, q, arg) as never;
   }
 
   val(value: unknown): ValExpression {

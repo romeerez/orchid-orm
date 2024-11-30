@@ -38,6 +38,7 @@ import {
   RecordUnknown,
   setColumnData,
   setParserToQuery,
+  UnionToIntersection,
 } from 'orchid-core';
 import { _joinLateral } from './join/_join';
 import {
@@ -259,36 +260,40 @@ type SelectResultColumnsAndObj<
 };
 
 // Add new 'selectable' types based on the select object argument.
-type SelectAsMeta<Arg> = {
+type SelectAsMeta<Obj> = {
+  // type is better than interface here
+
   hasSelect: true;
-  selectable: {
-    [K in keyof Arg]: Arg[K] extends (q: never) => {
-      result: QueryColumns;
-      returnType: QueryReturnType;
-    }
-      ? ReturnType<Arg[K]>['returnType'] extends 'value' | 'valueOrThrow'
+  selectable: UnionToIntersection<
+    {
+      [K in keyof Obj]: Obj[K] extends (q: never) => {
+        result: QueryColumns;
+        returnType: infer R;
+      }
+        ? {
+            [C in R extends 'value' | 'valueOrThrow'
+              ? K
+              : keyof ReturnType<Obj[K]>['result'] as R extends
+              | 'value'
+              | 'valueOrThrow'
+              ? K
+              : `${K & string}.${C & string}`]: {
+              as: C;
+              column: R extends 'value' | 'valueOrThrow'
+                ? ReturnType<Obj[K]>['result']['value']
+                : ReturnType<Obj[K]>['result'][C];
+            };
+          }
+        : Obj[K] extends Expression
         ? {
             [P in K]: {
               as: K;
-              column: ReturnType<Arg[K]>['result']['value'];
+              column: Obj[K]['result']['value'];
             };
           }
-        : {
-            [C in keyof ReturnType<Arg[K]>['result'] & string as `${K &
-              string}.${C}`]: {
-              as: C;
-              column: ReturnType<Arg[K]>['result'][C];
-            };
-          }
-      : Arg[K] extends Expression
-      ? {
-          [P in K]: {
-            as: K;
-            column: Arg[K]['result']['value'];
-          };
-        }
-      : EmptyObject;
-  }[keyof Arg];
+        : never;
+    }[keyof Obj]
+  >;
 };
 
 // map a single value of select object arg into a column

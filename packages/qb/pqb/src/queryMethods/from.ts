@@ -19,6 +19,7 @@ import {
   emptyObject,
   ColumnsParsers,
   QueryThenByQuery,
+  UnionToIntersection,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
@@ -31,12 +32,6 @@ export type FromArg<T extends FromQuerySelf> =
   | PickQueryTableMetaResult
   | Expression
   | Exclude<keyof T['withData'], symbol | number>;
-
-type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
-  x: infer I,
-) => void
-  ? I
-  : never;
 
 export type FromResult<
   T extends FromQuerySelf,
