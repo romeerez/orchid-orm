@@ -219,5 +219,8 @@ export function makeFnExpression<
     type,
   );
 
+  // discard 'map` and 'transform' when applying aggregations
+  q.q.transform = undefined;
+
   return q as never;
 }

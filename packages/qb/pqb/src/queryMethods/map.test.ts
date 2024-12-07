@@ -8,6 +8,16 @@ describe('map', () => {
     await User.insert(userData);
   });
 
+  it('should not apply map when doing aggregations', async () => {
+    const res = await User.select('name')
+      .map(() => false)
+      .count();
+
+    assertType<Awaited<typeof res>, number>();
+
+    expect(res).toBe(1);
+  });
+
   it('should map multiple records', async () => {
     const res = await User.select('name', 'createdAt').map((user) => ({
       nameLength: user.name.length,
