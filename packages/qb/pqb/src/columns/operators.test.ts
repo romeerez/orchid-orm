@@ -14,6 +14,13 @@ describe('operators', () => {
     expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
   });
 
+  it('should use the cached values for a sub-query if query sql was cached', () => {
+    const q = User.whereIn('id', User.find(1).pluck('id'));
+
+    expect(q.count().toSQL()).toMatchObject({ values: [1] });
+    expect(q.toSQL()).toMatchObject({ values: [1] });
+  });
+
   describe('equals', () => {
     it('should handle value', () => {
       expectSql(

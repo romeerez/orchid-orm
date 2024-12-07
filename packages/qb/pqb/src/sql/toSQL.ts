@@ -58,10 +58,20 @@ export interface ToSQLQuery {
 }
 
 export const toSQL = (table: ToSQLQuery, options?: ToSQLOptions): Sql => {
-  return (
-    (!options?.clearCache && table.q[toSQLCacheKey]) ||
-    (table.q[toSQLCacheKey] = makeSQL(table, options))
-  );
+  if (table.q[toSQLCacheKey] && !options?.clearCache) {
+    const cached = table.q[toSQLCacheKey];
+    if (
+      options?.values &&
+      'values' in cached &&
+      cached.values &&
+      options.values !== cached.values
+    ) {
+      options.values.push(...cached.values);
+    }
+    return cached;
+  }
+
+  return (table.q[toSQLCacheKey] = makeSQL(table, options));
 };
 
 export const makeSQL = (
