@@ -121,8 +121,11 @@ const parse = function (
     unknown,
     unknown
   >,
-  source: string,
+  source: string | unknown[],
 ) {
+  // in the case it was selected via json agg from a sub-select
+  if (typeof source !== 'string') return source;
+
   const entries: unknown[] = [];
   parsePostgresArray(source, entries, this.data.item.data.parseItem);
   return entries;

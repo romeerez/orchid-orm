@@ -25,6 +25,10 @@ describe('array column', () => {
       ['c', 'd'],
     ]);
 
+    // array is returned as JS array from sub-selects
+    const arr = [1, 2, 3];
+    expect(parse(arr)).toEqual(arr);
+
     const intArray = t.array(t.integer());
     assertType<typeof intArray.outputType, number[]>();
 
