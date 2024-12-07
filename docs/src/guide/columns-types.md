@@ -2,7 +2,9 @@
 
 ## numeric
 
-As not all database numeric types can fit into JS number type, some types will be returned as a string.
+Because not every database numeric type can fit into JS number type, some types will be returned as strings.
+
+Numeric types can have [numeric operators](/guide/where.html#numeric-and-date-operators) in `WHERE` conditions.
 
 ```ts
 // signed two-byte integer
@@ -79,6 +81,8 @@ db.someTable.where({
   If you don't specify a limit, it is identical to the `TEXT` Postgres type.
 - `t.string(limit = 255)` is the same as `varchar` with 255 default limit.
 
+Text types can have [numeric operators](/guide/where.html#text-operators) in `WHERE` conditions.
+
 ```ts
 // text with unlimited length
 t.text() // -> string
@@ -88,31 +92,6 @@ t.varchar(limit?: number) // -> string
 
 // `varchar` type with optional limit defaulting to 255.
 t.string(limit?: number = 255) // -> string
-```
-
-Text type columns support the following `where` operators:
-
-`contains`, `startsWith`, `endsWith` are case-insensitive.
-
-`%` and `_` chars in the input are escaped so the data entered by the user cannot affect the search logic.
-
-```ts
-db.someTable.where({
-  textColumn: {
-    // ILIKE '%string%'
-    contains: 'string',
-    // LIKE '%string%'
-    containsSensitive: 'string',
-    // ILIKE 'string%'
-    startsWith: 'string',
-    // LIKE 'string%'
-    startsWithSensitive: 'string',
-    // ILIKE '%string'
-    endsWith: 'string',
-    // LIKE '%string'
-    endsWithSensitive: 'string',
-  },
-});
 ```
 
 The `char` database type isn't added because it is [discouraged](https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_char.28n.29) by Postgres.
@@ -141,6 +120,7 @@ npm run db migrate
 ```
 
 And now `citext` is available and can be used just as a `text` type.
+It supports the same operators.
 
 ```ts
 // text variable unlimited length
@@ -176,6 +156,8 @@ t.bytea(); // -> Buffer
 ```
 
 ## date and time
+
+Datetime types can have [date operators](/guide/where.html#numeric-and-date-operators) in `WHERE` conditions.
 
 ```ts
 // 4 bytes date (no time of day)
@@ -506,8 +488,10 @@ t.bitVarying(); // -> string
 
 ```ts
 // array of another column type
-t.array(item: ColumnType) // -> array of argument type
+t.array(t.text()); // -> array of argument type
 ```
+
+See [array operators](/guide/where.html#array-operators) for `WHERE` conditions.
 
 ## unsupported types
 

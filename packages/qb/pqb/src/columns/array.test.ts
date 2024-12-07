@@ -1,4 +1,10 @@
-import { assertType, testZodColumnTypes as t } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  testDb,
+  testZodColumnTypes as t,
+  useTestDatabase,
+} from 'test-utils';
 import { ColumnToCodeCtx } from 'orchid-core';
 import { z } from 'zod';
 
@@ -79,5 +85,81 @@ describe('array column', () => {
         `.max(10, 'max message')` +
         `.length(15, 'length message')`,
     );
+  });
+
+  describe('operators', () => {
+    useTestDatabase();
+
+    const table = testDb('table', (t) => ({
+      arr: t.array(t.integer()).primaryKey(),
+    }));
+
+    it('should have `has` operator', () => {
+      const q = table.where({ arr: { has: 1 } });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "table" WHERE $1 = ANY("table"."arr")`,
+        [1],
+      );
+    });
+
+    it('should have `hasEvery` operator', () => {
+      const q = table.where({ arr: { hasEvery: [1, 2] } });
+
+      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" @> $1`, [
+        [1, 2],
+      ]);
+    });
+
+    it('should have `hasSome` operator', () => {
+      const q = table.where({ arr: { hasSome: [1, 2] } });
+
+      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" && $1`, [
+        [1, 2],
+      ]);
+    });
+
+    it('should have `containedIn` operator', () => {
+      const q = table.where({ arr: { containedIn: [1, 2] } });
+
+      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" <@ $1`, [
+        [1, 2],
+      ]);
+    });
+
+    it('should have `length` operator', () => {
+      const q = table.where({
+        arr: { length: 3 },
+      });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "table" WHERE COALESCE(array_length("table"."arr", 1), 0) = $1`,
+        [3],
+      );
+    });
+
+    it('should support numeric operators in the `length` operator', () => {
+      const q = table.where({
+        arr: { length: { gt: 3 } },
+      });
+
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "table" WHERE COALESCE(array_length("table"."arr", 1), 0) > $1`,
+        [3],
+      );
+    });
+
+    it('should support implicit `equals`', () => {
+      const q = table.where({
+        arr: [1, 2],
+      });
+
+      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" = $1`, [
+        [1, 2],
+      ]);
+    });
   });
 });

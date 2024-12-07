@@ -117,10 +117,10 @@ const quoteValue = (
   arg: unknown,
   ctx: ToSQLCtx,
   quotedAs: string | undefined,
-  jsonArray?: boolean,
+  IN?: boolean,
 ): string => {
   if (arg && typeof arg === 'object') {
-    if (!jsonArray && Array.isArray(arg)) {
+    if (IN && Array.isArray(arg)) {
       return `(${arg.map((value) => addValue(ctx.values, value)).join(', ')})`;
     }
 
@@ -182,11 +182,11 @@ const base: Base<unknown> = {
   ),
   in: make(
     (key, value, ctx, quotedAs) =>
-      `${key} IN ${quoteValue(value, ctx, quotedAs)}`,
+      `${key} IN ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
   notIn: make(
     (key, value, ctx, quotedAs) =>
-      `NOT ${key} IN ${quoteValue(value, ctx, quotedAs)}`,
+      `NOT ${key} IN ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
 };
 
@@ -557,11 +557,11 @@ const json = {
   ) as never,
   jsonSupersetOf: make(
     (key, value, ctx, quotedAs) =>
-      `${key} @> ${quoteValue(value, ctx, quotedAs, true)}`,
+      `${key} @> ${quoteValue(value, ctx, quotedAs)}`,
   ),
   jsonSubsetOf: make(
     (key, value, ctx, quotedAs) =>
-      `${key} <@ ${quoteValue(value, ctx, quotedAs, true)}`,
+      `${key} <@ ${quoteValue(value, ctx, quotedAs)}`,
   ),
   jsonSet: makeVarArg(
     (key, [path, value], ctx) =>
@@ -592,10 +592,51 @@ const json = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type OperatorsAny = Base<any>;
 export type OperatorsDate = Ord<Date | string>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OperatorsArray = Base<any>;
 
 export type OperatorsTime = Ord<string>;
+
+export interface OperatorsArray<T> extends Base<T[]> {
+  has: Operator<T | IsQuery | Expression, BooleanQueryColumn>;
+  hasEvery: Operator<T[] | IsQuery | Expression, BooleanQueryColumn>;
+  hasSome: Operator<T[] | IsQuery | Expression, BooleanQueryColumn>;
+  containedIn: Operator<T[] | IsQuery | Expression, BooleanQueryColumn>;
+  length: {
+    _opType:
+      | number
+      | { [K in keyof OperatorsNumber]?: OperatorsNumber[K]['_opType'] };
+  };
+}
+
+const array = {
+  ...base,
+  has: make(
+    (key, value, ctx, quotedAs) =>
+      `${quoteValue(value, ctx, quotedAs)} = ANY(${key})`,
+  ),
+  hasEvery: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} @> ${quoteValue(value, ctx, quotedAs)}`,
+  ),
+  hasSome: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} && ${quoteValue(value, ctx, quotedAs)}`,
+  ),
+  containedIn: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} <@ ${quoteValue(value, ctx, quotedAs)}`,
+  ),
+  length: make((key, value, ctx, quotedAs) => {
+    const expr = `COALESCE(array_length(${key}, 1), 0)`;
+    return typeof value === 'number'
+      ? `${expr} = ${quoteValue(value, ctx, quotedAs)}`
+      : Object.keys(value)
+          .map((key) =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (numeric as any)[key]._op(expr, value[key], ctx, quotedAs),
+          )
+          .join(' AND ');
+  }),
+} as OperatorsArray<unknown>;
 
 // `Operators` has operators grouped by types. To be used by column classes.
 export const Operators: {
@@ -606,7 +647,7 @@ export const Operators: {
   time: OperatorsTime;
   text: OperatorsText;
   json: OperatorsJson;
-  array: OperatorsArray;
+  array: OperatorsArray<unknown>;
 } = {
   any: base,
   boolean,
@@ -615,5 +656,5 @@ export const Operators: {
   time: numeric,
   text,
   json,
-  array: base,
+  array,
 } as never;

@@ -476,7 +476,13 @@ These operators are also available as functions that can be chained to queries, 
 
 ### any operators
 
-`equals` is a simple `=` operator, it may be useful for comparing column value with JSON object:
+The following operators are available for any kind of column:
+
+- `equals`: `=` operator, it may be useful for comparing column value with JSON object;
+- `not`: `!=` (aka `<>`) not equal operator;
+- `in`: `IN` operator to check if the column value is included in a list of values.
+  Takes an array of values, or a sub-query returning a list of values, or a raw SQL expression that returns a list;
+- `notIn`: `NOT IN` operator, and takes the same arguments as `in`.
 
 ```ts
 db.table.where({
@@ -485,23 +491,9 @@ db.table.where({
 
   // use `{ equals: ... }` instead:
   jsonColumn: { equals: someObject },
-});
-```
 
-`not` is `!=` (aka `<>`) not equal operator:
-
-```ts
-db.table.where({
   anyColumn: { not: value },
-});
-```
 
-`in` is for the `IN` operator to check if the column value is included in a list of values.
-
-Takes an array of the same type as a column, a sub-query that returns a list of values, or a raw SQL expression that returns a list.
-
-```ts
-db.table.where({
   column: {
     in: ['a', 'b', 'c'],
 
@@ -513,43 +505,33 @@ db.table.where({
 });
 ```
 
-`notIn` is for the `NOT IN` operator, and takes the same arguments as `in`
-
 ### numeric and date operators
 
-To compare numbers and dates.
+To compare numbers and dates:
 
-`lt` is for `<` (lower than)
-
-`lte` is for `<=` (lower than or equal)
-
-`gt` is for `>` (greater than)
-
-`gte` is for `>=` (greater than or equal)
+- `lt`: `<`, lower than;
+- `lte`: `<=`, lower than or equal to;
+- `gt`: `>`, greater than;
+- `gte`: `>=`, greater than or equal to;
+- `between`: for `BETWEEN ... AND`, it is inclusive, equivalent to `value1 <= target AND target <= value2`.
 
 Numeric types (int, decimal, double precision, etc.) are comparable with numbers,
 date types (date, timestamp) are comparable with `Date` object or `Data.toISOString()` formatted strings.
 
 ```ts
 db.table.where({
+  // works with numbers:
   numericColumn: {
     gt: 5,
     lt: 10,
   },
 
+  // works with dates, timestamps as well:
   date: {
     lte: new Date(),
     gte: new Date().toISOString(),
   },
-});
-```
 
-`between` also works with numeric, dates, and time columns, it takes an array of two elements.
-
-Both elements can be of the same type as a column, a sub-query, or a raw SQL expression.
-
-```ts
-db.table.where({
   column: {
     // simple values
     between: [1, 10],
@@ -564,9 +546,11 @@ db.table.where({
 
 For `text`, `varchar`, `string`, and `json` columns.
 
-`json` is stored as text, so it has text operators. Use the `jsonb` type for JSON operators.
+`json` is stored as text, so it also has text operators. Use the `jsonb` type for JSON operators.
 
 Takes a string, or sub-query returning string, or raw SQL expression as well as other operators.
+
+`%` and `_` chars in the input are escaped so the data entered by the user cannot affect the search logic.
 
 ```ts
 db.table.where({
@@ -625,6 +609,41 @@ Takes the value of any type, or sub query which returns a single value, or a raw
 db.table.where({
   jsonbColumn: {
     jsonSubsetOf: { a: 1 },
+  },
+});
+```
+
+### array operators
+
+- `has`: checks if a value is contained within a list;
+- `hasEvery`: checks if all values are contained within the list;
+- `containedIn`: checks if all values from the array column are present in the given list;
+- `hasSome`: checks if at least one value is contained in the list, i.e. checks if the arrays are overlapping;
+- `length`: filters by array length, it can take a simple value or an object with [numeric operators](#numeric-and-date-operators).
+
+```ts
+db.table.where({
+  arrayColumn: {
+    // WHERE 1 = ANY("arrayColumn")
+    has: 1,
+
+    // WHERE "arrayColumn" @> ARRAY[1, 2]
+    hasEvery: [1, 2]
+
+    // WHERE "arrayColumn" <@ ARRAY[1, 2]
+    containedIn: [1, 2]
+
+    // WHERE "arrayColumn" && ARRAY[1, 2]
+    hasSome: [1, 2]
+
+    // WHERE COALESCE(array_length("arrayColumn", 1), 0) = 0
+    // coalesce is needed because array_length returns NULL for an empty array.
+    length: 0,
+
+    // WHERE COALESCE(array_length("arrayColumn", 1), 0) > 3
+    length: {
+      gt: 3,
+    },
   },
 });
 ```

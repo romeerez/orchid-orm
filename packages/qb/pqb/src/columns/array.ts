@@ -47,7 +47,7 @@ export class ArrayColumn<
   Schema,
   Item['type'][],
   InputType,
-  OperatorsArray,
+  OperatorsArray<Item['queryType']>,
   Item['inputType'][],
   Item['outputType'][],
   OutputType,
@@ -55,7 +55,7 @@ export class ArrayColumn<
   QueryType
 > {
   dataType = 'array' as const;
-  operators = Operators.array;
+  operators = Operators.array as OperatorsArray<Item['queryType']>;
   declare data: ArrayData<Item>;
 
   constructor(
@@ -70,7 +70,7 @@ export class ArrayColumn<
     // array items cannot be non-nullable, postgres limitation
     item.data.isNullable = true;
 
-    setColumnDefaultParse(this, (input) => parse.call(this, input));
+    setColumnDefaultParse(this, (input) => parse.call(this as never, input));
 
     this.data.item = item instanceof ArrayColumn ? item.data.item : item;
     this.data.name = item.data.name;

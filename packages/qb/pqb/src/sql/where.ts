@@ -277,7 +277,12 @@ const processWhere = (
     } else if (key === 'SEARCH') {
       const search = value as WhereSearchItem;
       ands.push(`${search.vectorSQL} @@ "${search.as}"`);
-    } else if (typeof value === 'object' && value && !(value instanceof Date)) {
+    } else if (
+      typeof value === 'object' &&
+      value &&
+      !(value instanceof Date) &&
+      !Array.isArray(value)
+    ) {
       if (isExpression(value)) {
         ands.push(
           `${columnToSql(

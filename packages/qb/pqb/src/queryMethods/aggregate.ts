@@ -140,10 +140,10 @@ type NullableJSONAggReturn<
     type: (ExpressionOutput<T, Arg>['type'] | null)[] | null;
     outputType: (ExpressionOutput<T, Arg>['outputType'] | null)[] | null;
     queryType: (ExpressionOutput<T, Arg>['queryType'] | null)[] | null;
-    operators: OperatorsArray;
+    operators: OperatorsArray<never>;
   }
 > &
-  OperatorsArray;
+  OperatorsArray<never>;
 
 interface RecordSelectableOrExpression<T extends PickQueryMeta> {
   [K: string]: SelectableOrExpression<T>;
