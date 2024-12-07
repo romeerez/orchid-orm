@@ -141,9 +141,11 @@ export const makeInsertSql = (
   pushWhereStatementSql(ctx, q, query, quotedAs);
 
   let returning;
-  if (inCTE?.selectNum) {
+  if (inCTE) {
+    const select = inCTE.returning?.select;
     returning = {
-      select: inCTE.returning?.select ? '1, ' + inCTE.returning.select : '1',
+      select:
+        inCTE.selectNum || !select ? (select ? '1, ' + select : '1') : select,
       hookSelect: inCTE.returning?.hookSelect,
     };
   } else {
@@ -426,8 +428,6 @@ export const makeReturningSql = (
   let sql: string | undefined;
   if (tempSelect?.size || select?.length) {
     sql = selectToSql(ctx, q, data, quotedAs, tempSelect, undefined, true);
-  } else if (addHookSelectI) {
-    sql = '1';
   }
 
   return { select: sql, hookSelect: tempSelect };

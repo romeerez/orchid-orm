@@ -84,7 +84,12 @@ const pushUpdateReturning = (
     inCTE && 2,
   );
 
-  const s = inCTE?.selectNum ? (select ? '0, ' + select : '0') : select;
+  const s =
+    inCTE && (inCTE.selectNum || !select)
+      ? select
+        ? '0, ' + select
+        : '0'
+      : select;
   if (s) ctx.sql.push(keyword, s);
 
   return hookSelect;

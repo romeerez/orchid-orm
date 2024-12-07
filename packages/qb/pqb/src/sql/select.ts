@@ -77,11 +77,11 @@ export const selectToSql = (
       quotedAs as never,
     );
 
-    return query.inCTE.selectNum
+    return query.inCTE.selectNum || !select
       ? select
         ? '0, ' + select
         : '0'
-      : select || '';
+      : select;
   }
 
   let selected: RecordUnknown | undefined;
