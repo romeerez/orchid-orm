@@ -1,5 +1,12 @@
 # pqb
 
+## 0.43.5
+
+### Patch Changes
+
+- 0e4c579: Fix restoring query values from a cached query (#433)
+- db98a1c: Fix parsing of array when returned from sub-selects (#442)
+
 ## 0.43.4
 
 ### Patch Changes
