@@ -1,5 +1,11 @@
 # pqb
 
+## 0.43.3
+
+### Patch Changes
+
+- c46e693: Fix upsert (#438)
+
 ## 0.43.2
 
 ### Patch Changes
