@@ -1,15 +1,16 @@
 import { PickQueryQAndInternal, Query } from '../query/query';
 import {
-  AfterCommitHook,
   emptyArray,
   emptyObject,
   SingleSqlItem,
   TransactionAdapterBase,
-  TransactionAfterCommitHook,
+  AfterCommitHook,
   TransactionState,
+  isInUserTransaction,
+  handleAfterCommitError,
+  AfterCommitErrorResult,
 } from 'orchid-core';
 import { logParamToLogObject } from './log';
-import { OrchidOrmError } from '../errors';
 
 export const commitSql: SingleSqlItem = {
   text: 'COMMIT',
@@ -31,89 +32,6 @@ export interface TransactionOptions {
   deferrable?: boolean;
   log?: boolean;
 }
-
-export interface AfterCommitErrorFulfilledResult
-  extends PromiseFulfilledResult<unknown> {
-  name?: string;
-}
-
-export interface AfterCommitErrorRejectedResult extends PromiseRejectedResult {
-  name?: string;
-}
-
-export type AfterCommitErrorResult =
-  | AfterCommitErrorFulfilledResult
-  | AfterCommitErrorRejectedResult;
-
-/**
- * `AfterCommitError` is thrown when one of after commit hooks throws.
- *
- * ```ts
- * interface AfterCommitError extends OrchidOrmError {
- *   // the result of transaction functions
- *   result: unknown;
- *
- *   // Promise.allSettled result + optional function names
- *   hookResults: (
- *     | {
- *         status: 'fulfilled';
- *         value: unknown;
- *         name?: string;
- *       }
- *     | {
- *         status: 'rejected';
- *         reason: any; // the error object thrown by a hook
- *         name?: string;
- *       }
- *   )[];
- * }
- * ```
- *
- * Use `function name() {}` function syntax for hooks to give them names,
- * so later they can be identified when handling after commit errors.
- *
- * ```ts
- * class SomeTable extends BaseTable {
- *   readonly table = 'someTable';
- *   columns = this.setColumns((t) => ({
- *     ...someColumns,
- *   }));
- *
- *   init(orm: typeof db) {
- *     // anonymous funciton - has no name
- *     this.afterCreateCommit([], async () => {
- *       // ...
- *     });
- *
- *     // named function
- *     this.afterCreateCommit([], function myHook() => {
- *       // ...
- *     });
- *   }
- * }
- * ```
- */
-export class AfterCommitError extends OrchidOrmError {
-  constructor(
-    public result: unknown,
-    public hookResults: AfterCommitErrorResult[],
-  ) {
-    super('After commit hooks have failed');
-  }
-}
-
-export const _afterCommitError = (
-  result: unknown,
-  hookResults: AfterCommitErrorResult[],
-  catchAfterCommitError: ((error: AfterCommitError) => void) | undefined,
-) => {
-  const err = new AfterCommitError(result, hookResults);
-  if (catchAfterCommitError) {
-    catchAfterCommitError(err);
-  } else {
-    throw err;
-  }
-};
 
 export class Transaction {
   /**
@@ -302,10 +220,8 @@ export class Transaction {
 
       // trx was defined in the callback above;
       // `runAfterCommit` cannot throw because it's using `Promise.allSettled`.
-      await runAfterCommit(
-        (trx as unknown as TransactionState).afterCommit,
-        result,
-      );
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      await runAfterCommit(trx!, result);
 
       return result;
     } else {
@@ -335,10 +251,7 @@ export class Transaction {
         // transactionId is trx.testTransactionCount when only the test transactions are left,
         // and it's time to execute after commit hooks, because they won't be executed for test transactions.
         if (transactionId === trx.testTransactionCount) {
-          await runAfterCommit(
-            (trx as unknown as TransactionState).afterCommit,
-            result,
-          );
+          await runAfterCommit(trx, result);
         }
 
         return result;
@@ -384,52 +297,43 @@ export class Transaction {
     const trx = (
       this as unknown as Query
     ).internal.transactionStorage.getStore();
-    return !!(
-      trx &&
-      (!trx.testTransactionCount ||
-        trx.transactionId >= trx.testTransactionCount)
-    );
+    return !!(trx && isInUserTransaction(trx));
+  }
+
+  async afterCommit(this: Query, hook: AfterCommitHook): Promise<void> {
+    const trx = this.internal.transactionStorage.getStore();
+    if (trx && isInUserTransaction(trx)) {
+      (trx.afterCommit ??= []).push(hook);
+    } else {
+      await hook();
+    }
   }
 }
 
-const runAfterCommit = async (
-  afterCommit: TransactionAfterCommitHook[] | undefined,
-  result: unknown,
-) => {
-  if (afterCommit) {
+const runAfterCommit = async (trx: TransactionState, result: unknown) => {
+  if (trx.afterCommit) {
     const promises = [];
-    let catchAfterCommitError: ((error: AfterCommitError) => void) | undefined;
-    for (let i = 0, len = afterCommit.length; i < len; i += 3) {
-      const result = afterCommit[i] as unknown[];
-      const q = afterCommit[i + 1] as Query;
-      if (q.q.catchAfterCommitError) {
-        catchAfterCommitError = q.q.catchAfterCommitError;
-      }
-
-      for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
-        try {
-          promises.push(fn(result, q));
-        } catch (err) {
-          promises.push(Promise.reject(err));
-        }
+    for (const fn of trx.afterCommit) {
+      try {
+        promises.push(fn());
+      } catch (err) {
+        promises.push(Promise.reject(err));
       }
     }
 
     const hookResults = await Promise.allSettled(promises);
     if (hookResults.some((result) => result.status === 'rejected')) {
-      const resultsWithNames: AfterCommitErrorResult[] = [];
-
-      let r = 0;
-      for (let i = 0, len = afterCommit.length; i < len; i += 3) {
-        for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
-          resultsWithNames.push({
-            ...hookResults[r++],
-            name: fn.name,
-          });
-        }
-      }
-
-      _afterCommitError(result, resultsWithNames, catchAfterCommitError);
+      const resultsWithNames: AfterCommitErrorResult[] = hookResults.map(
+        (result, i) => ({
+          ...result,
+          name: trx.afterCommit?.[i].name,
+        }),
+      );
+      handleAfterCommitError(
+        result,
+        resultsWithNames,
+        trx.catchAfterCommitError,
+      );
     }
   }
 };

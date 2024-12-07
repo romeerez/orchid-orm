@@ -1,3 +1,4 @@
+import { AfterCommitHook } from 'orchid-core';
 import { Db, IsolationLevel, TransactionOptions } from 'pqb';
 
 export function transaction<Result>(
@@ -29,4 +30,11 @@ export function ensureTransaction<Result>(
 
 export function isInTransaction(this: { $queryBuilder: Db }): boolean {
   return this.$queryBuilder.isInTransaction();
+}
+
+export function afterCommit(
+  this: { $queryBuilder: Db },
+  hook: AfterCommitHook,
+): Promise<void> {
+  return this.$queryBuilder.afterCommit(hook);
 }

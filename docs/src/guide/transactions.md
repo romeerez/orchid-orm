@@ -144,6 +144,29 @@ db.$transaction(async () => {
 });
 ```
 
+## afterCommit
+
+Schedules a hook to run after the outermost transaction commits:
+
+```ts
+await db.$transaction(async () => {
+  await db.table.create(data)
+  await db.table.where({ ...conditions }).update({ key: 'value' })
+  await db.$afterCommit(async () => {
+    console.log('after commit')
+  })
+})
+```
+
+If used outside of the transaction, the hook will be executed immediately:
+
+```ts
+// Runs hook immediately.
+await db.$afterCommit(async () => {
+  console.log('after commit')
+})
+```
+
 ## testTransaction
 
 `Orchid ORM` has a special utility to wrap your tests in transactions which are rolled back after each test.

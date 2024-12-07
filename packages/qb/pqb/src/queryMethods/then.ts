@@ -5,13 +5,13 @@ import { HandleResult, QueryAfterHook, QueryBeforeHook } from '../sql';
 import pg from 'pg';
 import {
   AdapterBase,
-  AfterCommitHook,
   applyTransforms,
   callWithThis,
   ColumnParser,
   ColumnsParsers,
   emptyArray,
   getValueKey,
+  isInUserTransaction,
   MaybePromise,
   QueryReturnType,
   RecordString,
@@ -20,8 +20,9 @@ import {
   SingleSqlItem,
   Sql,
   TransactionState,
+  handleAfterCommitError,
 } from 'orchid-core';
-import { _afterCommitError, commitSql } from './transaction';
+import { commitSql } from './transaction';
 import { processComputedResult } from '../modules/computed';
 
 export const queryMethodByReturnType: {
@@ -341,24 +342,22 @@ const then = async (
         // afterCommitHooks are executed later after transaction commit,
         // or, if we don't have transaction, they are executed intentionally after other after hooks
         if (afterCommitHooks) {
-          if (
-            trx &&
-            // when inside test transactions, push to a transaction only unless it's the outer user transaction.
-            (!trx.testTransactionCount ||
-              trx.transactionId + 1 > trx.testTransactionCount)
-          ) {
-            (trx.afterCommit ??= []).push(
-              result as unknown[],
-              q,
-              afterCommitHooks,
-            );
+          const boundHooks = afterCommitHooks.map((hook) => {
+            const boundHook = hook.bind(null, result, q);
+            if (hook.name) {
+              Object.defineProperty(boundHook, 'name', { value: hook.name });
+            }
+            return boundHook;
+          });
+
+          if (trx && isInUserTransaction(trx)) {
+            (trx.afterCommit ??= []).push(...boundHooks);
+            trx.catchAfterCommitError = q.q.catchAfterCommitError;
           } else {
-            const promises: (unknown | Promise<unknown>)[] = [];
-            for (const fn of afterCommitHooks) {
+            const promises: MaybePromise<unknown>[] = [];
+            for (const fn of boundHooks) {
               try {
-                promises.push(
-                  (fn as unknown as AfterCommitHook)(result as unknown[], q),
-                );
+                promises.push(fn());
               } catch (err) {
                 promises.push(Promise.reject(err));
               }
@@ -366,7 +365,7 @@ const then = async (
 
             const hookResults = await Promise.allSettled(promises);
             if (hookResults.some((result) => result.status === 'rejected')) {
-              _afterCommitError(
+              handleAfterCommitError(
                 result,
                 hookResults.map((result, i) => ({
                   ...result,

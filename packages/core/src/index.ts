@@ -6,3 +6,5 @@ export * from './query';
 export * from './raw';
 export * from './utils';
 export * from './log';
+export * from './transaction';
+export * from './errors';

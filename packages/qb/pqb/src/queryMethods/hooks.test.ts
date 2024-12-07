@@ -4,7 +4,7 @@ import { NotFoundError } from '../errors';
 import { noop, TransactionState } from 'orchid-core';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Query } from '../query/query';
-import { AfterCommitError } from './transaction';
+import { AfterCommitError } from 'orchid-core';
 
 // make query ignore the transaction that is injected by `useTestDatabase`
 const ignoreTestTransactionOnce = (q: Query) => {
@@ -240,7 +240,10 @@ describe('hooks', () => {
   describe('after commit hooks', () => {
     afterEach(() => {
       const t = testDb.internal.transactionStorage.getStore();
-      if (t) delete t.afterCommit;
+      if (t) {
+        delete t.afterCommit;
+        delete t.catchAfterCommitError;
+      }
     });
 
     it('should work in a test transaction', async () => {
