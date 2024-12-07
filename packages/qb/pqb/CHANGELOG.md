@@ -1,5 +1,12 @@
 # pqb
 
+## 0.43.4
+
+### Patch Changes
+
+- 340a1cb: Discard 'map' and 'transform' when applying aggregations (#440)
+- 07290ae: Add search operators for array column type (#441)
+
 ## 0.43.3
 
 ### Patch Changes
