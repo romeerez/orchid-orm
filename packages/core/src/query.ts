@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TransactionState } from './adapter';
+import { TransactionState } from './transaction';
 import {
   EmptyObject,
   FnUnknownToUnknown,
