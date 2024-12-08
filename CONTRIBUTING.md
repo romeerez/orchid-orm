@@ -16,8 +16,11 @@ If you only wish to enhance the docs, there is no need to set up monorepo, head 
 It's being developed with node.js v18, but other versions should work fine as well.
 
 ```sh
-# install pnpm unless already
-npm i -g pnpm
+# enable corepack
+corepack enable
+
+# if not using corepack, install pnpm manually
+npm i -g pnpm@9
 
 # install deps
 pnpm i
