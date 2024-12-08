@@ -247,7 +247,7 @@ describe('transaction', () => {
       }
     });
 
-    // Async hook is a jets mock which only records the call only after it has been awaited.
+    // Async hook is a jest mock which only records the call only after it has been awaited.
     const createAsyncHook = () => {
       const mock = jest.fn();
       return new Proxy(mock, {
