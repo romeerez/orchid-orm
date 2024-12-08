@@ -158,7 +158,7 @@ await db.$transaction(async () => {
 })
 ```
 
-If used outside of the transaction, the hook will be executed immediately:
+If used outside the transaction, the hook will be executed immediately:
 
 ```ts
 // Runs hook immediately.
