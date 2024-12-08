@@ -309,7 +309,7 @@ class SomeTable extends BaseTable {
     });
 
     // named function
-    this.afterCreateCommit([], function myHook() => {
+    this.afterCreateCommit([], function myHook() {
       // ...
     });
   }

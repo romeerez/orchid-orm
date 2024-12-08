@@ -90,7 +90,7 @@ export type AfterCommitErrorResult =
  *     });
  *
  *     // named function
- *     this.afterCreateCommit([], function myHook() => {
+ *     this.afterCreateCommit([], function myHook() {
  *       // ...
  *     });
  *   }
