@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "author": "Roman K",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "check": "turbo run check",
     "types": "turbo run types",
