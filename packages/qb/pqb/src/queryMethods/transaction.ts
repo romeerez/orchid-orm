@@ -321,17 +321,14 @@ const runAfterCommit = async (trx: TransactionState, result: unknown) => {
       }
     }
 
-    const hookResults = await Promise.allSettled(promises);
+    const hookResults = await Promise.allSettled(promises) as AfterCommitErrorResult[];
     if (hookResults.some((result) => result.status === 'rejected')) {
-      const resultsWithNames: AfterCommitErrorResult[] = hookResults.map(
-        (result, i) => ({
-          ...result,
-          name: trx.afterCommit?.[i].name,
-        }),
-      );
+      for (let i = 0; i < hookResults.length; i++) {
+        hookResults[i].name = trx.afterCommit?.[i].name
+      }
       handleAfterCommitError(
         result,
-        resultsWithNames,
+        hookResults,
         trx.catchAfterCommitError,
       );
     }
