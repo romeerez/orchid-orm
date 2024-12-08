@@ -252,7 +252,7 @@ describe('transaction', () => {
       const mock = jest.fn();
       return new Proxy(mock, {
         apply: async (...args) => {
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise(setImmediate);
           return mock.apply(args);
         },
       });
