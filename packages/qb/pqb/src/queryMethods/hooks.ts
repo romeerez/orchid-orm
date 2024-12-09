@@ -1,8 +1,11 @@
-import { _clone, pushQueryValue } from '../query/queryUtils';
-import { PickQueryShape, QueryColumns } from 'orchid-core';
-import { QueryAfterHook, QueryBeforeHook } from '../sql';
+import {
+  AfterCommitErrorHandler,
+  PickQueryShape,
+  QueryColumns,
+} from 'orchid-core';
 import { PickQueryQ } from '../query/query';
-import { AfterCommitError } from './transaction';
+import { _clone, pushQueryValue } from '../query/queryUtils';
+import { QueryAfterHook, QueryBeforeHook } from '../sql';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
 export type AfterHook<
@@ -406,7 +409,7 @@ export abstract class QueryHooks {
    * result.id;
    * ```
    */
-  catchAfterCommitError<T>(this: T, fn: (error: AfterCommitError) => void): T {
+  catchAfterCommitError<T>(this: T, fn: AfterCommitErrorHandler): T {
     const q = _clone(this);
     q.q.catchAfterCommitError = fn;
     return q as T;

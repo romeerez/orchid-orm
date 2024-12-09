@@ -1,7 +1,5 @@
 import { Query } from './query/query';
-import { PickQueryShape } from 'orchid-core';
-
-export abstract class OrchidOrmError extends Error {}
+import { OrchidOrmError, PickQueryShape } from 'orchid-core';
 
 /**
  * When we search for a single record, and it is not found, it can either throw an error, or return `undefined`.
