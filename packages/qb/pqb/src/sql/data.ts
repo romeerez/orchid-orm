@@ -17,6 +17,7 @@ import {
 } from './types';
 import { SelectableOrExpression } from '../common/utils';
 import {
+  AfterCommitErrorHandler,
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
@@ -38,7 +39,6 @@ import {
 import { RelationQueryBase } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
-import { AfterCommitError } from '../queryMethods';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: ColumnsShapeBase;
@@ -170,7 +170,7 @@ export interface CommonQueryData {
   // additional select for afterDelete hooks
   afterDeleteSelect?: Set<string>;
   // catch after commit hooks errors, letting query to return its result
-  catchAfterCommitError?(error: AfterCommitError): void;
+  catchAfterCommitError?: AfterCommitErrorHandler;
   // log settings
   log?: QueryLogObject;
   // logger with `log`, `warn`, `error`
