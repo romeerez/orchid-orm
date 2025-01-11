@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.39.0
+
+### Minor Changes
+
+- 84576f1: Disallow passing query objects to update for better handling of unknown json column type (#447)
+
+### Patch Changes
+
+- Updated dependencies [84576f1]
+  - pqb@0.44.0
+  - rake-db@2.23.26
+
 ## 1.38.5
 
 ### Patch Changes

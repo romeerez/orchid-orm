@@ -1,5 +1,11 @@
 # pqb
 
+## 0.44.0
+
+### Minor Changes
+
+- 84576f1: Disallow passing query objects to update for better handling of unknown json column type (#447)
+
 ## 0.43.5
 
 ### Patch Changes
