@@ -8,7 +8,6 @@ import {
   ParseColumn,
   ParseNullColumn,
   PickColumnBaseData,
-  RecordUnknown,
   setColumnData,
 } from 'orchid-core';
 import { DateColumn, TimestampColumn, TimestampTZColumn } from './dateTime';
@@ -88,9 +87,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   json<T>(): JSONColumn<
     // (#286) the default type shouldn't conform to a function,
     // because otherwise `update` can't differentiate between a function and non-function value
-    unknown extends T
-      ? MaybeArray<string | number | boolean | RecordUnknown>
-      : T,
+    unknown extends T ? MaybeArray<string | number | boolean | object> : T,
     DefaultSchemaConfig
   >;
 

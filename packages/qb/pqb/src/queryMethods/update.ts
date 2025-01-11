@@ -28,7 +28,7 @@ import {
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
-import { resolveSubQueryCallback } from '../common/utils';
+import { resolveSubQueryCallbackV2 } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
 
 export interface UpdateSelf
@@ -63,7 +63,6 @@ export type UpdateData<T extends UpdateSelf> =
 // or a callback with JSON methods.
 type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | T['inputType'][Key]
-  | QueryOrExpression<T['inputType'][Key]>
   | ((q: {
       [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
         ? T['relations'][K]
@@ -206,11 +205,11 @@ export const _queryUpdate = <T extends UpdateSelf>(
     } else {
       let value = set[key];
       if (typeof value === 'function') {
-        value = resolveSubQueryCallback(
+        value = resolveSubQueryCallbackV2(
           (query as unknown as Query).baseQuery,
           value as (q: ToSQLQuery) => ToSQLQuery,
         );
-        if (value instanceof Db && value.q.type) {
+        if (value instanceof Db && value.q.type && value.q.subQuery) {
           throw new OrchidOrmInternalError(
             value,
             `Only selecting queries are allowed inside callback of update, ${value.q.type} is given instead.`,
@@ -361,7 +360,7 @@ export class Update {
    *
    *   // use query that returns a single value
    *   // returning multiple values will result in Postgres error
-   *   column3: db.otherTable.get('someColumn'),
+   *   column3: () => db.otherTable.get('someColumn'),
    *
    *   // select a single value from a related record
    *   fromRelation: (q) => q.relatedTable.get('someColumn'),
@@ -378,16 +377,16 @@ export class Update {
    * ```ts
    * await db.table.where({ ...conditions }).update({
    *   // `column` will be set to a value of the `otherColumn` of the created record.
-   *   column: db.otherTable.get('otherColumn').create({ ...data }),
+   *   column: () => db.otherTable.get('otherColumn').create({ ...data }),
    *
    *   // `column2` will be set to a value of the `otherColumn` of the updated record.
-   *   column2: db.otherTable
+   *   column2: () => db.otherTable
    *     .get('otherColumn')
    *     .findBy({ ...conditions })
    *     .update({ key: 'value' }),
    *
    *   // `column3` will be set to a value of the `otherColumn` of the deleted record.
-   *   column3: db.otherTable
+   *   column3: () => db.otherTable
    *     .get('otherColumn')
    *     .findBy({ ...conditions })
    *     .delete(),

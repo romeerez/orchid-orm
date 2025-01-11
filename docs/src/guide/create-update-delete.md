@@ -572,7 +572,7 @@ await db.table.where({ ...conditions }).update({
 
   // use query that returns a single value
   // returning multiple values will result in Postgres error
-  column3: db.otherTable.get('someColumn'),
+  column3: () => db.otherTable.get('someColumn'),
 
   // select a single value from a related record
   fromRelation: (q) => q.relatedTable.get('someColumn'),
@@ -589,19 +589,21 @@ In addition to sub-queries that are simply selecting a single value, it's suppor
 ```ts
 await db.table.where({ ...conditions }).update({
   // `column` will be set to a value of the `otherColumn` of the created record.
-  column: db.otherTable.get('otherColumn').create({ ...data }),
+  column: () => db.otherTable.get('otherColumn').create({ ...data }),
 
   // `column2` will be set to a value of the `otherColumn` of the updated record.
-  column2: db.otherTable
-    .get('otherColumn')
-    .findBy({ ...conditions })
-    .update({ key: 'value' }),
+  column2: () =>
+    db.otherTable
+      .get('otherColumn')
+      .findBy({ ...conditions })
+      .update({ key: 'value' }),
 
   // `column3` will be set to a value of the `otherColumn` of the deleted record.
-  column3: db.otherTable
-    .get('otherColumn')
-    .findBy({ ...conditions })
-    .delete(),
+  column3: () =>
+    db.otherTable
+      .get('otherColumn')
+      .findBy({ ...conditions })
+      .delete(),
 });
 ```
 

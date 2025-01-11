@@ -27,7 +27,7 @@ import {
   QueryThenByQuery,
   SelectableBase,
 } from 'orchid-core';
-import { _join, _joinLateral } from './_join';
+import { _join, _joinLateral, _joinLateralProcessArg } from './_join';
 import { AliasOrTable } from '../../common/utils';
 import {
   ColumnsShapeToNullableObject,
@@ -1034,11 +1034,11 @@ export class Join {
       result: Result;
     },
   ): JoinLateralResult<T, Table, Meta, Result, true> {
+    const q = _clone(this);
     return _joinLateral(
-      _clone(this),
+      q,
       'JOIN',
-      arg as never,
-      cb as never,
+      _joinLateralProcessArg(q, arg, cb as never),
     ) as never;
   }
 
@@ -1072,11 +1072,11 @@ export class Join {
       result: Result;
     },
   ): JoinLateralResult<T, Table, Meta, Result, false> {
+    const q = _clone(this);
     return _joinLateral(
       _clone(this),
       'LEFT JOIN',
-      arg as never,
-      cb as never,
+      _joinLateralProcessArg(q, arg, cb as never),
     ) as never;
   }
 }
@@ -1094,9 +1094,11 @@ const makeOnItem = (
   args: OnArgs<SelectableBase>,
 ) => ({
   ON: {
-    joinTo,
     joinFrom,
-    on: args,
+    from: args[0],
+    joinTo,
+    to: args.length === 2 ? args[1] : args[2],
+    op: args.length === 2 ? undefined : args[1],
   },
 });
 
@@ -1109,10 +1111,12 @@ export const pushQueryOnForOuter = <T extends PickQueryMeta>(
 ): T => {
   return pushQueryValue(q as never, 'and', {
     ON: {
-      joinTo: joinFrom,
       joinFrom: joinTo,
+      from: on[0],
+      joinTo: joinFrom,
+      to: on.length === 2 ? on[1] : on[2],
       useOuterAliases: true,
-      on,
+      op: on.length === 2 ? undefined : on[1],
     },
   }) as never;
 };

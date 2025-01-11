@@ -42,7 +42,7 @@ import {
 } from 'orchid-core';
 import { _joinLateral } from './join/_join';
 import {
-  resolveSubQueryCallback,
+  resolveSubQueryCallbackV2,
   SelectableOrExpression,
 } from '../common/utils';
 import { RawSQL } from '../sql/rawSql';
@@ -641,7 +641,7 @@ export const processSelectArg = <T extends SelectSelf>(
     let joinQuery: boolean | undefined;
 
     if (typeof value === 'function') {
-      value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
+      value = resolveSubQueryCallbackV2(q as unknown as ToSQLQuery, value);
 
       if (isQueryNone(value)) {
         if (value.q.innerJoinLateral) {
@@ -697,7 +697,6 @@ export const processSelectArg = <T extends SelectSelf>(
           q,
           value.q.innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
           query,
-          (q) => q,
           key,
         );
       }

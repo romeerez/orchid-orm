@@ -22,7 +22,7 @@ import { ExpressionMethods } from '../expressions';
 import { _queryNone } from '../none';
 import {
   getClonedQueryData,
-  resolveSubQueryCallback,
+  resolveSubQueryCallbackV2,
 } from '../../common/utils';
 
 /*
@@ -194,7 +194,7 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
       qb.q.subQuery = 1;
       qb.q.outerAliases = qb.q.aliases;
 
-      args[i] = resolveSubQueryCallback(qb, arg as never) as never;
+      args[i] = resolveSubQueryCallbackV2(qb, arg as never) as never;
     }
   }
 };

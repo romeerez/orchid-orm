@@ -576,7 +576,7 @@ describe('update', () => {
 
   it('should update column with a sub query result', () => {
     const q = User.all().update({
-      name: User.get('name'),
+      name: () => User.get('name'),
     });
 
     expectSql(
@@ -592,7 +592,7 @@ describe('update', () => {
 
   it('should update column with a result of a sub query that performs update', () => {
     const q = User.find(1).update({
-      name: User.find(2).get('name').update({ name: 'new name' }),
+      name: () => User.find(2).get('name').update({ name: 'new name' }),
     });
 
     expectSql(
@@ -616,7 +616,7 @@ describe('update', () => {
 
   it('should update column with a result of a sub query that performs create', () => {
     const q = User.find(1).update({
-      name: User.get('name').create(userData),
+      name: () => User.get('name').create(userData),
     });
 
     expectSql(
@@ -638,7 +638,7 @@ describe('update', () => {
 
   it('should update column with a result of a sub query that performs delete', () => {
     const q = User.find(1).update({
-      name: User.find(2).get('name').delete(),
+      name: () => User.find(2).get('name').delete(),
     });
 
     expectSql(

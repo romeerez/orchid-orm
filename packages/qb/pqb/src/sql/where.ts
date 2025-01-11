@@ -228,7 +228,6 @@ const processWhere = (
       } else {
         const item = value as WhereOnItem;
         const joinAs = `"${getJoinItemSource(item.joinFrom)}"`;
-        const { on } = item;
 
         const q: OnColumnToSQLQuery = item.useOuterAliases
           ? {
@@ -239,9 +238,9 @@ const processWhere = (
           : query;
 
         ands.push(
-          `${onColumnToSql(ctx, q, joinAs, on[0])} ${
-            on.length === 2 ? '=' : on[1]
-          } ${onColumnToSql(ctx, q, joinAs, on.length === 3 ? on[2] : on[1])}`,
+          `${onColumnToSql(ctx, q, joinAs, item.from)} ${
+            item.op || '='
+          } ${onColumnToSql(ctx, q, joinAs, item.to)}`,
         );
       }
     } else if (key === 'IN') {

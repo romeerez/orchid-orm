@@ -1,5 +1,25 @@
 # Breaking changes
 
+## orchid-orm 1.39
+
+Due to type collisions with `unknown` typed json columns, it's no longer supported to use sub-queries in `update` in this way:
+
+```ts
+await db.table.find(1).update({
+  // No longer supported:
+  column: db.someTable.get('value'),
+});
+```
+
+Instead, return the sub-query from a function:
+
+```ts
+await db.table.find(1).update({
+  // This way is supported:
+  column: () => db.someTable.get('value'),
+});
+```
+
 ## orchid-orm 1.38
 
 `group` was giving precedence to the table columns over selected values.

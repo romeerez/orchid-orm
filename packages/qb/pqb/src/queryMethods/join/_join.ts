@@ -1,12 +1,14 @@
 import {
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryQ,
+  PickQueryRelationsWithData,
   Query,
 } from '../../query/query';
 import {
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
+  PickQueryMetaShape,
   PickQueryTableMetaResult,
   QueryColumns,
   QueryMetaBase,
@@ -28,7 +30,7 @@ import {
   JoinQueryBuilder,
   JoinResult,
 } from './join';
-import { getQueryAs, resolveSubQueryCallback } from '../../common/utils';
+import { getQueryAs, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
 
@@ -223,43 +225,29 @@ const addAllShapesAndParsers = (
   );
 };
 
-/**
- * Generic function to construct all JOIN LATERAL queries.
- * Adds a shape of the joined table into `joinedShapes`.
- * Adds column parsers of the joined table into `joinedParsers`.
- * Adds join data into `join` of the query data.
- *
- * @param self - query object to join to
- * @param type - SQL of the JOIN kind: JOIN or LEFT JOIN
- * @param arg - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
- * @param cb - callback where you can use `on` to join by columns, select needed data from the joined table, add where conditions, etc.
- * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
- */
-export const _joinLateral = <
-  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  Arg extends JoinFirstArg<T>,
-  Table extends string,
-  Meta extends QueryMetaBase,
-  Result extends QueryColumns,
-  RequireJoined extends boolean,
->(
-  self: T,
-  type: string,
-  arg: Arg,
-  cb: (q: JoinQueryBuilder<T, JoinArgToQuery<T, Arg>>) => {
-    table: Table;
+export const _joinLateralProcessArg = (
+  q: Query,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  arg: JoinFirstArg<any>,
+  cb: (
+    q: JoinQueryBuilder<
+      PickQueryMetaShape,
+      JoinArgToQuery<
+        PickQueryRelationsWithData,
+        JoinFirstArg<PickQueryRelationsWithData>
+      >
+    >,
+  ) => {
+    table: string;
     meta: QueryMetaBase;
     result: QueryColumns;
   },
-  as?: string,
-): JoinLateralResult<T, Table, Meta, Result, RequireJoined> => {
-  const q = self as unknown as Query;
-
+): Query => {
   let relation: RelationQueryBase | undefined;
   if (typeof arg === 'string') {
     relation = q.relations[arg];
     if (relation) {
-      arg = _clone(relation.relationConfig.query) as unknown as Arg;
+      arg = _clone(relation.relationConfig.query);
     } else {
       const w = q.q.withShapes?.[arg];
       if (w) {
@@ -272,16 +260,15 @@ export const _joinLateral = <
           shape: w.shape,
         };
         t.baseQuery = t;
-        arg = t as Arg;
+        arg = t;
       }
     }
   }
 
-  const query = arg as Query;
-  query.q.joinTo = q;
-  const joinedAs = getQueryAs(q);
-  (query.q.joinedShapes ??= {})[joinedAs] = q.q.shape;
-  let result = resolveSubQueryCallback(query, cb as never) as unknown as Query;
+  let result = resolveSubQueryCallbackV2(
+    arg as Query,
+    cb as never,
+  ) as unknown as Query;
 
   if (relation) {
     result = relation.relationConfig.joinQuery(
@@ -290,18 +277,50 @@ export const _joinLateral = <
     ) as unknown as Query;
   }
 
-  const joinKey = as || result.q.as || result.table;
+  return result;
+};
+
+/**
+ * Generic function to construct all JOIN LATERAL queries.
+ * Adds a shape of the joined table into `joinedShapes`.
+ * Adds column parsers of the joined table into `joinedParsers`.
+ * Adds join data into `join` of the query data.
+ *
+ * @param self - query object to join to
+ * @param type - SQL of the JOIN kind: JOIN or LEFT JOIN
+ * @param arg - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
+ * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
+ */
+export const _joinLateral = <
+  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  Table extends string,
+  Meta extends QueryMetaBase,
+  Result extends QueryColumns,
+  RequireJoined extends boolean,
+>(
+  self: T,
+  type: string,
+  arg: Query,
+  as?: string,
+): JoinLateralResult<T, Table, Meta, Result, RequireJoined> => {
+  const q = self as unknown as Query;
+
+  arg.q.joinTo = q;
+  const joinedAs = getQueryAs(q);
+  (arg.q.joinedShapes ??= {})[joinedAs] = q.q.shape;
+
+  const joinKey = as || arg.q.as || arg.table;
   if (joinKey) {
-    const shape = getShapeFromSelect(result, true);
+    const shape = getShapeFromSelect(arg, true);
     setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
-    setQueryObjectValue(q, 'joinedParsers', joinKey, result.q.parsers);
-    if (result.q.batchParsers) {
-      (q.q.joinedBatchParsers ??= {})[joinKey] = result.q.batchParsers;
+    setQueryObjectValue(q, 'joinedParsers', joinKey, arg.q.parsers);
+    if (arg.q.batchParsers) {
+      (q.q.joinedBatchParsers ??= {})[joinKey] = arg.q.batchParsers;
     }
   }
 
-  as ||= getQueryAs(result);
-  (q.q.joinedComputeds ??= {})[as] = result.q.computeds as ComputedColumns;
+  as ||= getQueryAs(arg);
+  (q.q.joinedComputeds ??= {})[as] = arg.q.computeds as ComputedColumns;
 
-  return pushQueryValue(q, 'join', [type, result, as]) as never;
+  return pushQueryValue(q, 'join', [type, arg, as]) as never;
 };

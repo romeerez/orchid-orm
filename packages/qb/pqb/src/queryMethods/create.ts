@@ -41,7 +41,7 @@ import {
   QueryColumns,
 } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
-import { resolveSubQueryCallback } from '../common/utils';
+import { resolveSubQueryCallbackV2 } from '../common/utils';
 import { _clone } from '../query/queryUtils';
 
 export interface CreateSelf
@@ -405,7 +405,7 @@ const processCreateItem = (
       );
     } else {
       if (typeof item[key] === 'function') {
-        item[key] = resolveSubQueryCallback(
+        item[key] = resolveSubQueryCallbackV2(
           q as unknown as ToSQLQuery,
           item[key] as (q: ToSQLQuery) => ToSQLQuery,
         );

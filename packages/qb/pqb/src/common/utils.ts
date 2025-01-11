@@ -56,19 +56,19 @@ export const makeRegexToFindInSql = (value: string) => {
  * @param q - main query object to pass to a callback as argument
  * @param cb - sub-query callback
  */
-export const resolveSubQueryCallback = (
+export const resolveSubQueryCallbackV2 = (
   q: ToSQLQuery,
   cb: (q: ToSQLQuery) => ToSQLQuery,
 ): ToSQLQuery => {
-  let arg;
+  let base;
   // `with` can pass a generic `queryBuilder` here, it has no table.
   // Do not memoize anything into `internal` of a common `queryBuilder`,
   // because it is common and will be re-used.
   if (q.table) {
-    if (!q.internal.callbackArg) {
-      const base = Object.create(q.baseQuery);
+    base = q.internal.callbackArg;
+    if (!base) {
+      base = Object.create(q.baseQuery) as Query;
       base.baseQuery = base;
-      q.internal.callbackArg = base;
 
       const { relations } = q;
       for (const key in relations) {
@@ -79,25 +79,21 @@ export const resolveSubQueryCallback = (
           },
         });
       }
-    }
 
-    arg = Object.create(q.internal.callbackArg!);
-    arg.q = q.q;
+      q.internal.callbackArg = base;
+    }
   } else {
-    arg = q;
+    base = q;
   }
 
-  const { subQuery, relChain, outerAliases } = q.q;
-  q.q.subQuery = 1;
-  q.q.relChain = undefined;
-  q.q.outerAliases = q.q.aliases;
+  const arg = Object.create(base);
 
-  const result = cb(arg as Query);
+  arg.q = getClonedQueryData(q.q);
+  arg.q.subQuery = 1;
+  arg.q.relChain = undefined;
+  arg.q.outerAliases = q.q.aliases;
 
-  q.q.subQuery = subQuery;
-  q.q.relChain = relChain;
-  q.q.outerAliases = outerAliases;
-  return result;
+  return cb(arg as Query);
 };
 
 /**
