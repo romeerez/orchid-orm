@@ -986,8 +986,9 @@ describe('queryMethods', () => {
 
   describe('modify', () => {
     it('should modify a query', () => {
-      const modifier = (q: typeof User) =>
-        q.select('name').where({ name: 'name' });
+      const modifier = User.makeHelper((q) =>
+        q.select('name').where({ name: 'name' }),
+      );
 
       const q = User.select('id').modify(modifier);
 
@@ -1006,21 +1007,19 @@ describe('queryMethods', () => {
     });
 
     it('should be able to return a union type of query', async () => {
-      const param = true;
-
-      const modifier = (q: typeof User) => {
+      const modifier = User.makeHelper((q, param: boolean) => {
         if (param) {
           return q.select('name');
         } else {
           return q.select('age');
         }
-      };
+      });
 
-      const q = User.select('id').modify(modifier);
+      const q = User.select('id').modify(modifier, true);
 
       assertType<
         Awaited<typeof q>,
-        { id: number; name: string }[] | { id: number; age: number | null }[]
+        ({ id: number; name: string } | { id: number; age: number | null })[]
       >();
 
       expectSql(

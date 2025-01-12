@@ -838,50 +838,6 @@ Main info such as table name, and column types, will not be overridden by `.merg
 but all other query data will be merged if possible (`select`, `where`, `join`, `with`, and many others),
 or will be used from provided query argument if not possible to merge (`as`, `onConflict`, returning one or many).
 
-## modify
-
-[//]: # 'has JSDoc'
-
-`modify` allows modifying the query with your function:
-
-```ts
-const doSomethingWithQuery = (q: typeof db.table) => {
-  // can use all query methods
-  return q.select('name').where({ active: true }).order({ createdAt: 'DESC' });
-};
-
-const record = await db.table.select('id').modify(doSomethingWithQuery).find(1);
-
-record.id; // id was selected before `modify`
-record.name; // name was selected by the function
-```
-
-It's possible to apply different `select`s inside the function, and then the result type will be a union of all possibilities:
-
-Use this sparingly as it complicates dealing with the result.
-
-```ts
-const doSomethingWithQuery = (q: typeof db.table) => {
-  if (Math.random() > 0.5) {
-    return q.select('one');
-  } else {
-    return q.select('two');
-  }
-};
-
-const record = await db.table.modify(doSomethingWithQuery).find(1);
-
-// TS error: we don't know for sure if the `one` was selected.
-record.one;
-
-// use `in` operator to disambiguate the result type
-if ('one' in record) {
-  record.one;
-} else {
-  record.two;
-}
-```
-
 ## makeHelper
 
 [//]: # 'has JSDoc'
@@ -932,6 +888,63 @@ type SelectQuery = QueryHelperResult<typeof selectHelper>;
 
 // Await to get result, the type is `{ id: number, name: string }[]`
 type Result = Awaited<QueryHelperResult<typeof selectHelper>>;
+```
+
+## modify
+
+[//]: # 'has JSDoc'
+
+`modify` allows modifying the query with helpers defined with [makeHelper](#makehelper):
+
+```ts
+const helper = db.table.makeHelper((q) => {
+  // all query methods are available
+  return q.select('name').where({ active: true }).order({ createdAt: 'DESC' });
+});
+
+const record = await db.table.select('id').modify(helper).find(1);
+
+record.id; // id was selected before `modify`
+record.name; // name was selected by the function
+```
+
+When the helper result isn't certain, it will result in a union of all possibilities.
+Use this sparingly as it complicates dealing with the result.
+
+```ts
+const helper = db.table.helper((q) => {
+  if (Math.random() > 0.5) {
+    return q.select('one');
+  } else {
+    return q.select('two');
+  }
+};
+
+const record = await db.table.modify(helper).find(1);
+
+// TS error: we don't know for sure if the `one` was selected.
+record.one;
+
+// use `in` operator to disambiguate the result type
+if ('one' in record) {
+  record.one;
+} else {
+  record.two;
+}
+```
+
+You can define and pass parameters:
+
+```ts
+const helper = db.table.makeHelper((q, select: 'id' | 'name') => {
+  return q.select(select);
+});
+
+const record = await db.table.modify(helper, 'id').find(1);
+// record has type { id: number } | { name: string }
+if ('id' in record) {
+  record.id;
+}
 ```
 
 ## toSQL

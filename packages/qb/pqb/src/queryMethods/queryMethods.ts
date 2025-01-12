@@ -1,7 +1,6 @@
 import {
   PickQueryMetaRelations,
   PickQueryMetaResultReturnTypeWithDataWindows,
-  PickQueryMetaResultReturnTypeWithDataWindowsTable,
   PickQueryQ,
   PickQueryRelations,
   PickQueryShapeResultSinglePrimaryKey,
@@ -175,33 +174,40 @@ export type GroupArgs<T extends PickQueryResult> = (
   | Expression
 )[];
 
+interface QueryHelperQuery<T extends PickQueryMetaShape> {
+  returnType: QueryReturnType;
+  meta: QueryMetaBase & {
+    // Omit is optimal
+    selectable: Omit<
+      T['meta']['selectable'],
+      `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
+    >;
+  };
+  result: QueryColumns;
+  windows: EmptyObject;
+  withData: WithDataItems;
+}
+
+interface IsQueryHelper {
+  isQueryHelper: true;
+  args: unknown[];
+  result: unknown;
+}
+
 interface QueryHelper<
   T extends PickQueryMetaShape,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Args extends any[],
   Result,
-> {
-  <
-    Q extends {
-      returnType: QueryReturnType;
-      meta: QueryMetaBase & {
-        // Omit is optimal
-        selectable: Omit<
-          T['meta']['selectable'],
-          `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
-        >;
-      };
-      result: QueryColumns;
-      windows: EmptyObject;
-      withData: WithDataItems;
-    },
-  >(
+> extends IsQueryHelper {
+  <Q extends QueryHelperQuery<T>>(
     q: Q,
     ...args: Args
   ): Result extends PickQueryMetaResultReturnTypeWithDataWindows
     ? MergeQuery<Q, Result>
     : Result;
 
+  args: Args;
   result: Result;
 }
 
@@ -943,64 +949,6 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * `modify` allows modifying the query with your function:
-   *
-   * ```ts
-   * const doSomethingWithQuery = (q: typeof db.table) => {
-   *   // can use all query methods
-   *   return q.select('name').where({ active: true }).order({ createdAt: 'DESC' });
-   * };
-   *
-   * const record = await db.table.select('id').modify(doSomethingWithQuery).find(1);
-   *
-   * record.id; // id was selected before `modify`
-   * record.name; // name was selected by the function
-   * ```
-   *
-   * It's possible to apply different `select`s inside the function, and then the result type will be a union of all possibilities:
-   *
-   * Use this sparingly as it complicates dealing with the result.
-   *
-   * ```ts
-   * const doSomethingWithQuery = (q: typeof db.table) => {
-   *   if (Math.random() > 0.5) {
-   *     return q.select('one');
-   *   } else {
-   *     return q.select('two');
-   *   }
-   * };
-   *
-   * const record = await db.table.modify(doSomethingWithQuery).find(1);
-   *
-   * // TS error: we don't know for sure if the `one` was selected.
-   * record.one;
-   *
-   * // use `in` operator to disambiguate the result type
-   * if ('one' in record) {
-   *   record.one;
-   * } else {
-   *   record.two;
-   * }
-   * ```
-   *
-   * @param fn - function to modify the query with. The result type will be merged with the main query as if the `merge` method was used.
-   */
-  modify<
-    T extends PickQueryMetaResultReturnTypeWithDataWindowsTable<
-      string | undefined
-    >,
-    Arg extends PickQueryMetaResultReturnTypeWithDataWindowsTable<T['table']>,
-    Result,
-  >(
-    this: T,
-    fn: (q: Arg) => Result,
-  ): Result extends PickQueryMetaResultReturnTypeWithDataWindows
-    ? MergeQuery<T, Result>
-    : Result {
-    return fn(this as unknown as Arg) as never;
-  }
-
-  /**
    * Use `makeHelper` to make a query helper - a function where you can modify the query, and reuse this function across different places.
    *
    * ```ts
@@ -1067,6 +1015,76 @@ export class QueryMethods<ColumnTypes> {
       }
       return fn(q as never, ...args);
     }) as never;
+  }
+
+  /**
+   * `modify` allows modifying the query with helpers defined with {@link makeHelper}:
+   *
+   * ```ts
+   * const helper = db.table.makeHelper((q) => {
+   *   // all query methods are available
+   *   return q.select('name').where({ active: true }).order({ createdAt: 'DESC' });
+   * });
+   *
+   * const record = await db.table.select('id').modify(helper).find(1);
+   *
+   * record.id; // id was selected before `modify`
+   * record.name; // name was selected by the function
+   * ```
+   *
+   * When the helper result isn't certain, it will result in a union of all possibilities.
+   * Use this sparingly as it complicates dealing with the result.
+   *
+   * ```ts
+   * const helper = db.table((q) => {
+   *   if (Math.random() > 0.5) {
+   *     return q.select('one');
+   *   } else {
+   *     return q.select('two');
+   *   }
+   * });
+   *
+   * const record = await db.table.modify(helper).find(1);
+   *
+   * // TS error: we don't know for sure if the `one` was selected.
+   * record.one;
+   *
+   * // use `in` operator to disambiguate the result type
+   * if ('one' in record) {
+   *   record.one;
+   * } else {
+   *   record.two;
+   * }
+   * ```
+   *
+   * You can define and pass parameters:
+   *
+   * ```ts
+   * const helper = db.table.makeHelper((q, select: 'id' | 'name') => {
+   *   return q.select(select);
+   * });
+   *
+   * const record = await db.table.modify(helper, 'id').find(1);
+   * // record has type { id: number } | { name: string }
+   * if ('id' in record) {
+   *   record.id;
+   * }
+   * ```
+   *
+   * @param fn - function to modify the query with. The result type will be merged with the main query as if the `merge` method was used.
+   */
+  modify<
+    T extends PickQueryMetaResultReturnTypeWithDataWindows,
+    Fn extends IsQueryHelper,
+  >(
+    this: T,
+    fn: Fn,
+    ...args: Fn['args']
+  ): Fn['result'] extends PickQueryMetaResultReturnTypeWithDataWindows
+    ? MergeQuery<T, Fn['result']>
+    : Fn['result'] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (fn as any)(this as never, ...args);
   }
 
   /**

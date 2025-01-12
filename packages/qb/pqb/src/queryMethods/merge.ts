@@ -48,13 +48,7 @@ type MergeQueryResult<
   Q extends PickQueryMetaResult,
 > = T['meta']['hasSelect'] extends true
   ? Q['meta']['hasSelect'] extends true
-    ? {
-        [K in
-          | keyof T['result']
-          | keyof Q['result']]: K extends keyof Q['result']
-          ? Q['result'][K]
-          : T['result'][K];
-      }
+    ? Omit<T['result'], keyof Q['result']> & Q['result']
     : T['result']
   : Q['result'];
 

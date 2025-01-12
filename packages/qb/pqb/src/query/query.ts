@@ -233,14 +233,6 @@ export interface PickQueryMetaResultReturnTypeWithDataWindows
     PickQueryWithData,
     PickQueryWindows {}
 
-export interface PickQueryMetaResultReturnTypeWithDataWindowsTable<
-  Table extends string | undefined,
-> extends PickQueryMetaResultReturnType,
-    PickQueryWithData,
-    PickQueryWindows {
-  table: Table;
-}
-
 export interface PickQueryQAndInternal extends PickQueryQ, PickQueryInternal {}
 
 export interface PickQueryQAndBaseQuery

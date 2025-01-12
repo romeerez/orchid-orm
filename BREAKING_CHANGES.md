@@ -1,5 +1,13 @@
 # Breaking changes
 
+## orchid-orm 1.40
+
+Previously, `modify` could accept an arbitrary function.
+
+Now, it only accepts functions created with `db.table.makeHelper`.
+
+And now it can accept arguments.
+
 ## orchid-orm 1.39
 
 Due to type collisions with `unknown` typed json columns, it's no longer supported to use sub-queries in `update` in this way:
