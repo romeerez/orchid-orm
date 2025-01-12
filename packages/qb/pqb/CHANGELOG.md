@@ -1,5 +1,11 @@
 # pqb
 
+## 0.45.1
+
+### Patch Changes
+
+- 8a3d1bc: Improve makeHelper types for update query case (#449)
+
 ## 0.45.0
 
 ### Minor Changes
