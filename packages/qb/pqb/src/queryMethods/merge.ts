@@ -1,5 +1,5 @@
 import {
-  PickQueryMetaResultReturnTypeWithDataWindows,
+  PickQueryMetaResultReturnTypeWithDataWindowsThen,
   PickQueryQ,
 } from '../query/query';
 import { UnionSet } from '../sql';
@@ -11,8 +11,8 @@ import {
 import { _clone } from '../query/queryUtils';
 
 export type MergeQuery<
-  T extends PickQueryMetaResultReturnTypeWithDataWindows,
-  Q extends PickQueryMetaResultReturnTypeWithDataWindows,
+  T extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
+  Q extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
 > = {
   [K in keyof T]: K extends 'meta'
     ? {
@@ -32,10 +32,17 @@ export type MergeQuery<
       ? T['returnType']
       : Q['returnType']
     : K extends 'then'
-    ? QueryThenByQuery<
-        Q['returnType'] extends undefined ? T : Q,
-        MergeQueryResult<T, Q>
-      >
+    ? // Q may be an update query that returns count by default,
+      // and whether it returns count or not depends on if the T query had selected anything.
+      Q['returnType'] extends undefined
+      ? QueryThenByQuery<T, MergeQueryResult<T, Q>>
+      : Q['returnType'] extends 'all' | 'one' | 'oneOrThrow' | 'rows'
+      ? QueryThenByQuery<Q, MergeQueryResult<T, Q>>
+      : Q['meta']['hasSelect'] extends true
+      ? Q['then']
+      : T['meta']['hasSelect'] extends true
+      ? T['then']
+      : Q['then']
     : K extends 'windows'
     ? Q['windows'] & Omit<T['windows'], keyof Q['windows']>
     : K extends 'withData'
@@ -67,8 +74,8 @@ const dontMergeArrays = new Set(['selectAllColumns', 'selectAllKeys']);
 
 export class MergeQueryMethods {
   merge<
-    T extends PickQueryMetaResultReturnTypeWithDataWindows,
-    Q extends PickQueryMetaResultReturnTypeWithDataWindows,
+    T extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
+    Q extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
   >(this: T, q: Q): MergeQuery<T, Q> {
     const query = _clone(this);
     const a = query.q as never as RecordUnknown;
