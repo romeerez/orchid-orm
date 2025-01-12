@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.40.0
+
+### Minor Changes
+
+- 0dd0051: Change `modify` to accept `makeHelper` functions (#446)
+
+### Patch Changes
+
+- Updated dependencies [0dd0051]
+  - pqb@0.45.0
+  - rake-db@2.23.27
+
 ## 1.39.0
 
 ### Minor Changes

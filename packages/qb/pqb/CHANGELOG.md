@@ -1,5 +1,11 @@
 # pqb
 
+## 0.45.0
+
+### Minor Changes
+
+- 0dd0051: Change `modify` to accept `makeHelper` functions (#446)
+
 ## 0.44.0
 
 ### Minor Changes
