@@ -1,4 +1,4 @@
-import { cloneQuery, QueryData, toSQLCacheKey, ToSQLQuery } from '../sql';
+import { cloneQuery, QueryData, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
 import { PickQueryMetaTable } from '../query/query';
 import { Expression, PickQueryMeta, QueryColumn } from 'orchid-core';
@@ -36,7 +36,7 @@ export type ExpressionOutput<
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };
-  delete cloned[toSQLCacheKey];
+  delete cloned.sqlCache;
   cloneQuery(cloned);
   return cloned as QueryData;
 };

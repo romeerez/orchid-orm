@@ -71,6 +71,23 @@ export const pushQueryValue = <T extends PickQueryQ>(
 };
 
 /**
+ * Push new element into array in the query data - immutable version
+ *
+ * @param q - query
+ * @param key - key to get the array
+ * @param value - new element to push
+ */
+export const pushQueryValueImmutable = <T extends PickQueryQ>(
+  q: T,
+  key: string,
+  value: unknown,
+): T => {
+  const arr = (q.q as unknown as RecordUnknown)[key] as unknown[];
+  (q.q as unknown as RecordUnknown)[key] = arr ? [...arr, value] : [value];
+  return q;
+};
+
+/**
  * Set value into the object in query data, create the object if it doesn't yet exist.
  *
  * @param q - query

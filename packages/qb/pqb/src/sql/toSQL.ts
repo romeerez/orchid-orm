@@ -29,9 +29,6 @@ export interface ToSQLCtx {
   aliasValue?: true;
 }
 
-export type toSQLCacheKey = typeof toSQLCacheKey;
-export const toSQLCacheKey = Symbol('toSQLCache');
-
 export interface ToSQLOptions {
   clearCache?: boolean;
   values?: unknown[];
@@ -58,8 +55,8 @@ export interface ToSQLQuery {
 }
 
 export const toSQL = (table: ToSQLQuery, options?: ToSQLOptions): Sql => {
-  if (table.q[toSQLCacheKey] && !options?.clearCache) {
-    const cached = table.q[toSQLCacheKey];
+  if (table.q.sqlCache && !options?.clearCache) {
+    const cached = table.q.sqlCache;
     if (
       options?.values &&
       'values' in cached &&
@@ -71,7 +68,7 @@ export const toSQL = (table: ToSQLQuery, options?: ToSQLOptions): Sql => {
     return cached;
   }
 
-  return (table.q[toSQLCacheKey] = makeSQL(table, options));
+  return (table.q.sqlCache = makeSQL(table, options));
 };
 
 export const makeSQL = (

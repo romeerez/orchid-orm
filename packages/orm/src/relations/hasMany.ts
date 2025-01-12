@@ -6,7 +6,6 @@ import {
 import {
   CreateData,
   Query,
-  toSQLCacheKey,
   WhereArg,
   WhereResult,
   InsertQueryData,
@@ -467,7 +466,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         })),
       );
 
-      delete t.q[toSQLCacheKey];
+      delete t.q.sqlCache;
     }
 
     if (params.disconnect || params.set) {
@@ -493,7 +492,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
           ? params.set.length
           : objectHasValues(params.set))
       ) {
-        delete t.q[toSQLCacheKey];
+        delete t.q.sqlCache;
 
         const obj: RecordUnknown = {};
         for (let i = 0; i < len; i++) {
@@ -514,7 +513,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
     }
 
     if (params.delete || params.update) {
-      delete t.q[toSQLCacheKey];
+      delete t.q.sqlCache;
 
       const q = getWhereForNestedUpdate(
         t,

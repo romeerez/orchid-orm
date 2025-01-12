@@ -760,7 +760,7 @@ export const setParserForSelectedString = (
     const computeds = q.q.joinedComputeds?.[table];
     if (computeds?.[column]) {
       const computed = computeds[column];
-      const map: HookSelect = (q.q.hookSelect ??= new Map());
+      const map: HookSelect = (q.q.hookSelect = new Map(q.q.hookSelect));
       for (const column of computed.deps) {
         map.set(column, { select: `${table}.${column}` });
       }
@@ -790,7 +790,7 @@ const handleComputed = (
 ) => {
   if (computeds?.[column]) {
     const computed = computeds[column];
-    const map: HookSelect = (q.q.hookSelect ??= new Map());
+    const map: HookSelect = (q.q.hookSelect = new Map(q.q.hookSelect));
     for (const column of computed.deps) {
       map.set(column, { select: column });
     }

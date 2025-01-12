@@ -64,7 +64,7 @@ function orCreate<T extends PickQueryMetaResult>(
     return created ? result : handleResult(q, t, r, s);
   };
 
-  q.hookSelect ??= new Map();
+  q.hookSelect = new Map(q.hookSelect);
   q.patchResult = async (q, hookSelect, queryResult) => {
     if (queryResult.rowCount === 0) {
       if (typeof data === 'function') {

@@ -1,4 +1,4 @@
-import { _clone, pushQueryValue } from '../query/queryUtils';
+import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
 import { PickQueryShape, QueryColumns } from 'orchid-core';
 import { QueryAfterHook, QueryBeforeHook } from '../sql';
 import { PickQueryQ } from '../query/query';
@@ -25,39 +25,40 @@ export type HookAction = 'Create' | 'Update' | 'Delete';
 
 // Save `before` hook into the query.
 const before = <T>(q: T, key: HookAction, cb: QueryBeforeHook): T =>
-  pushQueryValue(q as PickQueryQ, `before${key}`, cb) as never;
+  pushQueryValueImmutable(q as PickQueryQ, `before${key}`, cb) as never;
 
 // Save `after` hook into the query: this saves the function and the hook selection into the query data.
 const after = <T extends PickQueryShape, S extends HookSelectArg<T>>(
-  q: T,
+  query: T,
   key: HookAction,
   select: S,
   cb: AfterHook<S, T['shape']>,
   commit?: boolean,
 ): T => {
-  pushQueryValue(q as never, `after${key}${commit ? 'Commit' : ''}`, cb);
+  const q = query as unknown as PickQueryQ;
+  pushQueryValueImmutable(q, `after${key}${commit ? 'Commit' : ''}`, cb);
 
-  const set = ((q as unknown as PickQueryQ).q[`after${key}Select`] ??=
-    new Set());
+  const prop = `after${key}Select` as const;
+  const set = (q.q[prop] = new Set(q.q[prop]));
   for (const column of select) {
     set.add(column);
   }
 
-  return q;
+  return query;
 };
 
 export const _queryHookBeforeQuery = <T extends PickQueryShape>(
   q: T,
   cb: QueryBeforeHook,
 ): T => {
-  return pushQueryValue(q as never, 'before', cb);
+  return pushQueryValueImmutable(q as never, 'before', cb);
 };
 
 export const _queryHookAfterQuery = <T extends PickQueryShape>(
   q: T,
   cb: QueryAfterHook,
 ): T => {
-  return pushQueryValue(q as never, 'after', cb);
+  return pushQueryValueImmutable(q as never, 'after', cb);
 };
 
 export const _queryHookBeforeCreate = <T extends PickQueryShape>(

@@ -28,7 +28,6 @@ import {
   RelationJoinQuery,
   SelectableFromShape,
   TableData,
-  toSQLCacheKey,
   UpdateArg,
   UpdateCtx,
   UpdateData,
@@ -764,7 +763,7 @@ const nestedUpdate = (state: State) => {
     if (params.set) {
       const j = queryJoinTable(state, data);
       await _queryDelete(j);
-      delete j.q[toSQLCacheKey];
+      delete j.q.sqlCache;
 
       if (
         Array.isArray(params.set)

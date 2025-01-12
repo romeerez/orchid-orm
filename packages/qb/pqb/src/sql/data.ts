@@ -1,6 +1,5 @@
 import { PickQueryQ, Query } from '../query/query';
 import { Adapter, QueryResult } from '../adapter';
-import { toSQLCacheKey } from './toSQL';
 import {
   HavingItem,
   JoinItem,
@@ -178,7 +177,7 @@ export interface CommonQueryData {
   // convert query into prepared statement automatically as an optimization
   autoPreparedStatements?: boolean;
   // cache `toSQL` output
-  [toSQLCacheKey]?: Sql;
+  sqlCache?: Sql;
   // functions to transform query result after loading data
   transform?: QueryDataTransform[];
   // default language for the full text search
@@ -335,11 +334,8 @@ export interface PickQueryDataShapeAndJoinedShapes {
 export const cloneQuery = (q: QueryData) => {
   if (q.with) q.with = q.with.slice(0);
   if (q.select) q.select = q.select.slice(0);
-  if (q.hookSelect) q.hookSelect = new Map(q.hookSelect);
   if (q.and) q.and = q.and.slice(0);
   if (q.or) q.or = q.or.slice(0);
-  if (q.before) q.before = q.before.slice(0);
-  if (q.after) q.after = q.after.slice(0);
   if (q.joinedShapes) q.joinedShapes = { ...q.joinedShapes };
   if (q.joinedComputeds) q.joinedComputeds = { ...q.joinedComputeds };
   if (q.batchParsers) q.batchParsers = [...q.batchParsers];
@@ -367,28 +363,5 @@ export const cloneQuery = (q: QueryData) => {
     q.values = Array.isArray(q.values) ? q.values.slice(0) : q.values;
     if (q.using) q.using = q.using.slice(0);
     if (q.join) q.join = q.join.slice(0);
-    if (q.beforeCreate) q.beforeCreate = q.beforeCreate.slice(0);
-    if (q.afterCreate) {
-      q.afterCreate = q.afterCreate.slice(0);
-      if (q.afterCreateSelect) {
-        q.afterCreateSelect = new Set(q.afterCreateSelect);
-      }
-    }
-  } else if (q.type === 'update') {
-    if (q.beforeUpdate) q.beforeUpdate = q.beforeUpdate.slice(0);
-    if (q.afterUpdate) {
-      q.afterUpdate = q.afterUpdate.slice(0);
-      if (q.afterUpdateSelect) {
-        q.afterUpdateSelect = new Set(q.afterUpdateSelect);
-      }
-    }
-  } else if (q.type === 'delete') {
-    if (q.beforeDelete) q.beforeDelete = q.beforeDelete.slice(0);
-    if (q.afterDelete) {
-      q.afterDelete = q.afterDelete.slice(0);
-      if (q.afterDeleteSelect) {
-        q.afterDeleteSelect = new Set(q.afterDeleteSelect);
-      }
-    }
   }
 };
