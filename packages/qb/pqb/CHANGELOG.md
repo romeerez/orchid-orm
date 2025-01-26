@@ -1,5 +1,11 @@
 # pqb
 
+## 0.45.2
+
+### Patch Changes
+
+- f773d96: Add `add` to `update` of `hasMany` and `hasAndBelongsToMany`; add `joinData` (#451)
+
 ## 0.45.1
 
 ### Patch Changes

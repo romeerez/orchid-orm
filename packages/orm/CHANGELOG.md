@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.40.2
+
+### Patch Changes
+
+- f773d96: Add `add` to `update` of `hasMany` and `hasAndBelongsToMany`; add `joinData` (#451)
+- Updated dependencies [f773d96]
+  - pqb@0.45.2
+  - rake-db@2.23.29
+
 ## 1.40.1
 
 ### Patch Changes
