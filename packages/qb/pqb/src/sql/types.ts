@@ -3,6 +3,7 @@ import { RelationQueryBase } from '../relations';
 import { SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from './data';
 import {
+  ColumnTypesBase,
   Expression,
   IsQuery,
   MaybeArray,
@@ -136,7 +137,7 @@ export type JoinItemArgs =
   | {
       // relation query from `relationConfig.joinQuery`
       j: IsQuery;
-      // join sub query, is not applicable in whereExists
+      // join a sub query, is not applicable in whereExists
       s: boolean;
       // callback result, if callback is present
       r?: IsQuery;
@@ -146,7 +147,7 @@ export type JoinItemArgs =
       w: string;
       // callback result
       r: IsQuery;
-      // join sub query, is not applicable in whereExists
+      // join a sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
@@ -158,7 +159,7 @@ export type JoinItemArgs =
   | {
       // joining query
       q: IsQuery;
-      // join sub query, is not applicable in whereExists
+      // join a sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
@@ -166,7 +167,7 @@ export type JoinItemArgs =
       q: IsQuery;
       // callback result
       r: IsQuery;
-      // join sub query, is not applicable in whereExists
+      // join a sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
@@ -174,8 +175,16 @@ export type JoinItemArgs =
       q: IsQuery;
       // join arguments
       a: SimpleJoinItemNonSubQueryArgs;
-      // join sub query, is not applicable in whereExists
+      // join a sub query, is not applicable in whereExists
       s: boolean;
+    }
+  | {
+      // alias
+      a: string;
+      // array of values, item is a record
+      d: RecordUnknown[];
+      // column types
+      c: ColumnTypesBase;
     };
 
 export interface SimpleJoinItem {

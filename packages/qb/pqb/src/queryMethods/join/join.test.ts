@@ -8,12 +8,13 @@ import {
   snakeSelectAll,
   snakeSelectAllWithTable,
   User,
+  userData,
   userTableColumnsSql,
 } from '../../test-utils/test-utils';
 import { _join } from './_join';
 import { testWhere, testWhereExists } from '../where/testWhere';
 import { testJoin } from './testJoin';
-import { asMock, assertType, expectSql } from 'test-utils';
+import { asMock, assertType, expectSql, useTestDatabase } from 'test-utils';
 import { isQueryNone } from '../none';
 
 jest.mock('./_join', () => {
@@ -734,6 +735,50 @@ describe('implicit lateral joins', () => {
         WHERE "snake"."snakeName" = $1
       `,
       ['name'],
+    );
+  });
+});
+
+describe('joinData', () => {
+  useTestDatabase();
+
+  it('should join a on-the-fly constructed table containing user-provided data', async () => {
+    const userId = await User.get('id').insert(userData);
+
+    const now = new Date();
+
+    const q = User.joinData(
+      'data',
+      (t) => ({
+        foo: t.integer().name('f'),
+        bar: t.timestamp().asDate().name('b').nullable(),
+      }),
+      [{ foo: 1, bar: now.getTime() }, { foo: 2 }],
+    )
+      .where({ 'data.foo': { gte: 1 } })
+      .select('id', 'data.foo', 'data.bar');
+
+    const result = await q;
+
+    assertType<
+      typeof result,
+      { id: number; foo: number; bar: Date | null }[]
+    >();
+
+    expect(result).toEqual([
+      { id: userId, foo: 1, bar: now },
+      { id: userId, foo: 2, bar: null },
+    ]);
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id", "data"."f" "foo", "data"."b" "bar"
+        FROM "user"
+        JOIN (VALUES ($1::int4, $2::timestamptz), ($3::int4, $4::timestamptz)) "data"("f", "b") ON true
+        WHERE "data"."f" >= $5
+      `,
+      [1, now, 2, null, 1],
     );
   });
 });

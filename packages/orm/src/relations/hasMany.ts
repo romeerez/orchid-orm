@@ -24,6 +24,7 @@ import {
   PickQueryMetaRelations,
   RelationConfigBase,
   PickQueryQ,
+  OrchidOrmInternalError,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -93,9 +94,9 @@ export interface HasManyInfo<
   };
   dataForCreate: never;
   // `hasMany` relation data available for update. It supports:
-  // - `disconnect` to nullify foreign keys of the related records
-  // - `delete` to delete related record found by conditions
-  // - `update` to update related records found by conditions with a provided data
+  // - `disconnect` nullifies foreign keys of the related records
+  // - `delete` deletes related record found by conditions
+  // - `update` updates related records found by conditions with a provided data
   dataForUpdate: {
     disconnect?: MaybeArray<WhereArg<Q>>;
     delete?: MaybeArray<WhereArg<Q>>;
@@ -104,9 +105,10 @@ export interface HasManyInfo<
       data: UpdateData<Q>;
     };
   };
-  // Only for records that updates a single record:
-  // - `set` to update foreign keys of related records found by conditions
-  // - `create` to create related records
+  // Only for records that update a single record:
+  // - `set` updates foreign keys of related records found by conditions, nullifies previously connected
+  // - `add` updates foreign keys of related records found by conditions, doesn't nullify previously connected
+  // - `create` creates related records
   dataForUpdateOne: {
     disconnect?: MaybeArray<WhereArg<Q>>;
     delete?: MaybeArray<WhereArg<Q>>;
@@ -115,6 +117,7 @@ export interface HasManyInfo<
       data: UpdateData<Q>;
     };
     set?: MaybeArray<WhereArg<Q>>;
+    add?: MaybeArray<WhereArg<Q>>;
     create?: CreateData<
       T['relations'][Name]['options'] extends RelationThroughOptions
         ? Q
@@ -467,6 +470,34 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
       );
 
       delete t.q.sqlCache;
+    }
+
+    if (params.add) {
+      if (data.length > 1) {
+        throw new OrchidOrmInternalError(
+          query,
+          '`connect` is not available when updating multiple records, it is only applicable for a single record update',
+        );
+      }
+
+      const obj: RecordUnknown = {};
+      for (let i = 0; i < len; i++) {
+        obj[foreignKeys[i]] = data[0][primaryKeys[i]];
+      }
+
+      const relatedWheres = toArray(params.add);
+
+      const count = await _queryUpdate(
+        t.orWhere(...relatedWheres) as Query,
+        obj as never,
+      );
+
+      if (count < relatedWheres.length) {
+        throw new OrchidOrmInternalError(
+          query,
+          `Expected to find at least ${relatedWheres.length} record(s) based on \`add\` conditions, but found ${count}`,
+        );
+      }
     }
 
     if (params.disconnect || params.set) {

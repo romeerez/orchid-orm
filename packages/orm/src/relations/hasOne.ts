@@ -166,7 +166,7 @@ export interface HasOneInfo<
     | { disconnect: boolean }
     | { delete: boolean }
     | { update: UpdateData<Q> };
-  // Only for records that updates a single record:
+  // Only for records that update a single record:
   // - `set` to update the foreign key of related record found by condition
   // - `upsert` to update or create the related record
   // - `create` to create a related record

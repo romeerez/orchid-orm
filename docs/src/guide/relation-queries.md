@@ -1,26 +1,28 @@
+---
+outline: deep
+---
+
 # Relation queries
 
-Here is how to load related records by using a record object (supported by all kinds of relations):
+## queryRelated
 
-The resulting record of the `belongsTo` and `hasOne` relation can be undefined if the `required` option was not set in the table class.
+Use `queryRelated` to load related records for an already loaded record.
+
+For `belongsTo` and `hasOne` the result may be undefined if `required: true` is not set in their configuration,
+it's a default.
 
 ```ts
 const book = await db.book.find(1);
 
-// type of `db.book.author` argument is { authorId: number }
+// second argument requires `authorId` of a book
 const author = await db.book.queryRelated('author', book);
 
-// type of `db.author.books` argument is { id: number }
+// second argument requires id of an author
 const books = await db.author.queryRelated('books', author);
 
-// additional query methods can be applied:
-const partialAuthor = await db.book
-  .queryRelated('author', book)
-  .select('id', 'name');
-
+// additional query methods may be applied:
 const countBooks: number = await db.author
   .queryRelated('books', author)
-  .where({ title: 'Kobzar' })
   .count();
 
 const authorHasBooks: boolean = await db.author
@@ -28,17 +30,15 @@ const authorHasBooks: boolean = await db.author
   .exists();
 ```
 
-It's possible to chain relations query without providing a loaded record (supported by all kinds of relations).
+## chain
 
-Each chained relation can have own `where` conditions and all query methods are applicable here.
-No limits on chaining.
+Use `chain` to "switch" a query chain to its relation.
 
 ```ts
-// load author by book id, in a one query:
+// load an author by a book id:
 const author = await db.book.find(1).chain('author');
 
-// imagine an author has many awards,
-// load awards for an author by book id, in a one query:
+// load awards for an author by book id, in a single query:
 const authorAwards = await db.book.find(1).chain('author').chain('awards');
 
 // find many books and load their authors:
@@ -74,7 +74,9 @@ const filteredBooks = await db.author
   .where({ booksCondition: '...' });
 ```
 
-The relation can be used in `.whereExists` (supported by all kinds of relations):
+## whereExist
+
+Any relation can be used in [whereExists](/guide/where.html#whereexists):
 
 ```ts
 // load books which have author
@@ -85,13 +87,16 @@ await db.authors.whereExists('book');
 
 // additional query methods can be applied in a callback:
 await db.book.whereExists('author', (q) =>
-  q.where({ 'author.name': 'Uladzimir' }),
+  q.where({ 'author.name': 'Uladzimir Karatkievich' }),
 );
 ```
 
-The relation can be used in `.join`.
+## join
 
-Supported by all kinds of relations, but it is not suggested for `hasMany` and `hasAndBelongsToMany` because data will be duplicated.
+Any relation can be used in [join](/guide/join.html#join-1).
+
+Not recommended for `hasMany` and `hasAndBelongsToMany` relations,
+because joining multiple records lead to duplicating the main table values.
 
 ```ts
 await db.book.join('author').select(
@@ -101,27 +106,29 @@ await db.book.join('author').select(
   'author.name',
 );
 
-// author name will be repeated for each book title:
+// author name will be repeated for every book title:
 await db.author.join('books').select('name', 'books.title');
 
 // additional query methods can be applied in a callback:
 await db.book
-  .join('author', (q) => q.where({ 'author.name': 'Olexiy' }))
+  .join('author', (q) => q.where({ 'author.name': 'Ayzek Asimov' }))
   .select('title', 'author.name');
 ```
 
-The relation can be loaded by placing a callback in `.select`, related records will be added to each record.
+## select
 
-`belongsTo` and `hasOne` will add an object (can be `null` if not found).
+Any relation can be loaded with a callback in `select`, related records will be added to each record.
+
+`belongsTo` and `hasOne` will add an object (can be `null` if not found, the type is configured by `required` option in the relation config).
 
 `hasMany` and `hasAndBelongsToMany` will add an array of objects.
 
-For `hasMany` and `hasAndBelongsToMany` this works better than `join` because it won't lead to duplicative data.
+For `hasMany` and `hasAndBelongsToMany` this works better than `join` because it won't lead to data duplication.
 
 Inside the callback, you can set `select`, `where`, `order`, `limit`, and other methods for the relation.
 
 ```ts
-// type will be inferred, it is here for demonstration.
+// type will be inferred, this is for demonstration.
 type BookResult = {
   id: number;
   title: string;
@@ -184,7 +191,7 @@ const result: BookResult = await db.book
   .take();
 ```
 
-All relations are supporting `exists` in select (get a boolean to know whether related records exist or not):
+Use `exists()` to load a boolean to know whether the related record exists.
 
 ```ts
 type Result = {
@@ -219,10 +226,10 @@ const result: Result = await db.post
   .take();
 ```
 
-### select relation with a strict join
+### inner-joined relation
 
 As described in [join: select relation](/guide/join#select-relation),
-you can set empty `.join` on the relation
+you can set empty `join` on the relation
 if you want to filter out main table records that don't have a matching relation:
 
 ```ts
@@ -239,8 +246,10 @@ assert(author.books.length > 0);
 
 ### selecting the same table
 
-It's possible to make such a nested select where the same table is being referenced twice on different levels.
-For example, posts has and belongs to many tags. For some reason, we want to select posts, their tags, the posts of the tags, and the tags of those posts.
+Relation selects can be deeply nested and load records from the same table multiple times, without name collisions.
+
+For example, posts have and belong to many tags.
+For some reason, we want to select posts, their tags, the posts of the tags, and the tags of those posts.
 
 ```ts
 // select posts
@@ -259,29 +268,33 @@ await db.post.select('*', {
 ```
 
 Internally, the deeper tags are joined as `tags2`, and the deeper posts are joined as `posts2` to avoid naming collisions,
-but this is resolved internally, and you don't have to worry about it.
+this is resolved internally and is completely hidden.
 
-You can add `where` conditions for the selected relation after selecting it,
-but this is only available for `belongsTo` and `hasOne` relation.
+You can add `where` conditions for the relation _after_ selecting it,
+this is only available for `belongsTo` and `hasOne` relation.
 
-Because in `hasMany` and `hasAndBelongsToMany` relation is loaded as a JSON array, it can't accept conditions after being selected.
+Because `hasMany` and `hasAndBelongsToMany` relations are loaded as a JSON array,
+they cannot accept `where` conditions after being selected.
 
-In the following example, inner author table internally is aliased as `author2`, and the condition `author.name` is automatically replaced with `author2.name`.
+In the following example, the inner author table is internally aliased as `author2`,
+and the condition `author.name` is automatically replaced with `author2.name`.
 
 ```ts
 await db.author.select('*', {
   books: (q) =>
     q.books
       .select({
+        // internally selected as author2
         author: (q) => q.author,
       })
+      // refers to author2, not the top-level author
       .where({ 'author.name': 'Jack London' }),
 });
 ```
 
 ## create update delete
 
-`Orchid ORM` makes it very easy to do modifications of related records,
+`Orchid ORM` makes it straightforward to do modifications of related records,
 it allows building a query chain to modify related records,
 it supports nested creates and updates.
 
@@ -290,9 +303,9 @@ For instance, create an author while creating a book, or connect the book to the
 But not create and connect at the same time.
 
 For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relation:
-while updating the author you can create new books, connect some books, and delete books by conditions.
+while updating the author, you can create new books, connect some books, and delete books by conditions.
 
-## create from relation query
+## create from a relation query
 
 It is possible to chain querying of the table with the creating of its relation, in a such way:
 
@@ -309,7 +322,8 @@ await db.post.find(1).chain('tags').create({
 
 This is possible for `hasOne`, `hasMany`, and `hasAndBelongsToMany`, but this is disabled for `belongsTo` and `hasOne`/`hasMany` with the `through` option.
 
-This is only allowed to perform create based on a query that returns one record, so you have to use methods `find`, `findBy`, `take`, or similar.
+This is only allowed to perform creation based on a query that returns one record,
+so you have to use methods `find`, `findBy`, `take`, or similar.
 
 `db.post.tags.create` or `db.post.where(...).tags.create` won't work because multiple posts are returned in these queries.
 
@@ -504,13 +518,17 @@ await db.book.where({ id: { in: [1, 2, 3] } }).update({
 });
 ```
 
-## connect related records
+## connecting and disconnecting
 
-Connect records when creating:
+Any relation supports `connect` and `connectOrCreate` to connect related records when creating,
+and varying interfaces when updating.
 
-This will search a record by provided where condition, throw `NotFoundError` if not found, and update the referring column.
+### when creating
 
-Supported when creating multiple records as well.
+#### connect
+
+For any kind of relation, `connect` searches for records by given conditions and connects them.
+Throws `NotFoundError` if no record found.
 
 ```ts
 const book = await db.book.create({
@@ -537,13 +555,12 @@ const author = await db.author.create({
 });
 ```
 
-## connect or create
+#### connectOrCreate
 
-The `connectOrCreate` option will try to find a record to connect with, and it will create the record if not found.
+The `connectOrCreate` option searches for a record by given conditions,
+creates a new record if not found.
 
-This is also supported when creating multiple records.
-
-`belongsTo` and `hasOne` relations are accepting object `{ where: ..., create ... }`:
+`belongsTo` and `hasOne` are accepting a single `{ where: ..., create ... }`:
 
 ```ts
 const result = await db.book.create({
@@ -561,7 +578,7 @@ const result = await db.book.create({
 });
 ```
 
-`hasMany` and `hasAndBelongsToMany` relations are accepting an array of `{ where: ..., create ... }`:
+`hasMany` and `hasAndBelongsToMany` are accepting an array of `{ where: ..., create ... }`:
 
 ```ts
 const result = await db.author.create({
@@ -581,56 +598,26 @@ const result = await db.author.create({
 });
 ```
 
-## disconnect related records
+### when updating
 
-This will delete join table records for `hasAndBelongsToMany`, and nullify the `foreignKey` column for the other kinds (the column has to be nullable).
+#### set
 
-Also supported when creating multiple records.
+`set` disconnects existing related records and connects new ones.
 
-For `belongsTo` and `hasOne` relations write `disconnect: true`:
+For `hasOne` and `hasMany` it is available only when updating one record,
+the query must have `find`, `findBy`, or `take` before the update.
 
-```ts
-await db.book.where({ title: 'book title' }).update({
-  author: {
-    disconnect: true,
-  },
-});
-```
+`hasOne` and `hasMany` disconnect existing records by nullifying their referencing columns, so the column has to be nullable.
 
-`hasMany` and `hasAndBelongsToMany` relations are accepting filter conditions.
+`hasAndBelongsToMany` deletes existing joining records and creates new ones.
 
-```ts
-await db.post.where({ title: 'post title' }).update({
-  tags: {
-    disconnect: {
-      name: 'some tag',
-    },
-  },
-});
-```
+All relations kinds support `set` when updating a single record,
+only `belongsTo` and `hasAndBelongsToMany` support `set` in a batch update.
 
-It may be an array of conditions:
+`belongsTo` and `hasOne` expect a single objects for searching,
+`hasMany` and `hasAndBelongsToMany` expect a single object or an array.
 
-Each provided condition may match 0 or more related records, there is no check to find exactly one.
-
-```ts
-await db.post.where({ title: 'post title' }).update({
-  tags: {
-    disconnect: [{ id: 1 }, { id: 2 }],
-  },
-});
-```
-
-## set related records
-
-Set related records when updating.
-
-For `hasOne` and `hasMany` it is available only when updating one record, so the query should have `find`, `findBy`, or `take` before the update.
-
-For `hasOne` and `hasMany`, if there was a related record before the update, its `foreignKey` column will be updated to `NULL`, so it has to be nullable.
-
-For `hasAndBelongsToMany` relation this will delete all previous rows of the join table and create new ones.
-When empty array or empty object is given, this is going to delete all relevant join table rows, without creating new ones.
+Setting an empty array to `hasMany` or `hasAndBelongsToMany` relation will disconnect all records.
 
 ```ts
 const author = await db.author.find(1);
@@ -675,6 +662,76 @@ await db.author.find(1).update({
 await db.author.find(1).update({
   books: {
     set: [],
+  },
+});
+```
+
+#### add
+
+Use `add` to connect more records in `hasMany` and `hasAndBelongsToMany`, without disconnecting already connected ones.
+
+For `hasMany` it is only available when updating a single record,
+in `hasAndBelongsToMany` it works for batch updates as well.
+
+```ts
+await db.author.find(1).update({
+  books: {
+    add: { id: 1 },
+    // or an array:
+    add: [{ id: 1 }, { id: 2 }],
+  },
+});
+```
+
+In the following example, two tags are added to all posts having a certain title.
+
+- if multiple tags are found by the same condition (2 tags by name 'javascript'), all of them will be connected.
+- if less than array length (2 in the example) tags are found, an error shall be thrown.
+
+```ts
+await db.post.where({ title: { contains: 'node.js' } }).update({
+  tags: {
+    add: [{ name: 'javascript' }, { name: 'programming' }],
+  },
+});
+```
+
+#### disconnect related records
+
+This will delete join table records for `hasAndBelongsToMany`, and nullify the `foreignKey` column for the other kinds (the column has to be nullable).
+
+Also supported when creating multiple records.
+
+For `belongsTo` and `hasOne` relations write `disconnect: true`:
+
+```ts
+await db.book.where({ title: 'book title' }).update({
+  author: {
+    disconnect: true,
+  },
+});
+```
+
+`hasMany` and `hasAndBelongsToMany` relations are accepting filter conditions.
+
+```ts
+await db.post.where({ title: 'post title' }).update({
+  tags: {
+    disconnect: {
+      name: 'some tag',
+    },
+  },
+});
+```
+
+It may be an array of conditions:
+
+Each provided condition may match 0 or more related records, there is no check to find exactly one.
+
+```ts
+await db.post.where({ title: 'post title' }).update({
+  tags: {
+    disconnect: [{ id: 1 }, { id: 2 }],
   },
 });
 ```

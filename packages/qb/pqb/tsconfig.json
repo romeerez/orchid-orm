@@ -4,7 +4,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "pqb": ["./src"],
       "orchid-core": ["../../core/src"],
+      "orchid-orm": ["../../orm/src"],
       "test-utils": ["../../test-utils/src"],
       "schema-to-zod": ["../../schemaConfigs/zod/src"]
     },

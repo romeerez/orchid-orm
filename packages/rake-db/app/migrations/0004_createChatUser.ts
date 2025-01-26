@@ -4,10 +4,16 @@ change(async (db) => {
   await db.createTable(
     'chatUser',
     (t) => ({
-      chatId: t.integer().foreignKey('chat', 'idOfChat'),
-      userId: t.integer().foreignKey('user', 'id'),
+      userId: t.integer(),
+      userKey: t.text(),
+      chatId: t.integer(),
+      chatKey: t.text(),
       ...t.timestamps(),
     }),
-    (t) => t.primaryKey(['chatId', 'userId']),
+    (t) => [
+      t.primaryKey(['userId', 'userKey', 'chatId', 'chatKey']),
+      t.foreignKey(['userId'], 'user', ['id']),
+      t.foreignKey(['chatId'], 'chat', ['idOfChat']),
+    ],
   );
 });

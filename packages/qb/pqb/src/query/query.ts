@@ -175,6 +175,10 @@ export interface PickQueryColumnTypes {
   columnTypes: unknown;
 }
 
+export interface PickQueryMetaColumnTypes
+  extends PickQueryMeta,
+    PickQueryColumnTypes {}
+
 export interface PickQueryMetaResultRelationsWindowsColumnTypes
   extends PickQueryMetaResultRelationsWindows,
     PickQueryColumnTypes {}

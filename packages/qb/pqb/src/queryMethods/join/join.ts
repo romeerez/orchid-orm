@@ -1,4 +1,5 @@
 import {
+  PickQueryMetaColumnTypes,
   PickQueryMetaResultRelationsWithDataReturnType,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaShapeRelationsWithData,
@@ -13,6 +14,8 @@ import {
   setQueryObjectValue,
 } from '../../query/queryUtils';
 import {
+  ColumnShapeInput,
+  ColumnTypesBase,
   EmptyTuple,
   Expression,
   PickQueryMeta,
@@ -1078,6 +1081,83 @@ export class Join {
       'LEFT JOIN',
       _joinLateralProcessArg(q, arg, cb as never),
     ) as never;
+  }
+
+  /**
+   * This method may be useful
+   * for combining with [createManyFrom](/guide/create-update-delete.html#createmanyfrom-insertmanyfrom).
+   *
+   * `createManyFrom` creates multiple record based on a selecting query:
+   *
+   * ```sql
+   * INSERT INTO t1(c1, c2)
+   * SELECT c1, c2 FROM t2
+   * ```
+   *
+   * Such a query inserts one record per one selected record.
+   *
+   * Use `joinData` to insert a multiplication of selected records and the provided data.
+   *
+   * ```ts
+   * const data = [{ column2: 'one' }, { column2: 'two' }, { column2: 'three' }];
+   *
+   * await db.table.createManyFrom(
+   *   db.otherTable
+   *     .joinData('data', (t) => ({ column2: t.text() }), data)
+   *     .select('otherTable.column1', 'data.column2'),
+   * );
+   * ```
+   *
+   * If the query on the other table returns 2 records,
+   * and the data array contains 3 records, then 2 \* 3 = 6 will be inserted - every combination.
+   *
+   * Joined data values are available in `where` just as usual.
+   *
+   * @param as - alias to reference joined columns
+   * @param fn - declare column types
+   * @param data - array of data to join
+   */
+  joinData<
+    T extends PickQueryMetaColumnTypes,
+    As extends string,
+    RecordType extends ColumnTypesBase,
+    Item extends ColumnShapeInput<RecordType>,
+  >(
+    this: T,
+    as: As,
+    fn: (types: T['columnTypes']) => RecordType,
+    data: Item[],
+  ): {
+    [K in keyof T]: K extends 'meta'
+      ? {
+          [K in keyof T['meta']]: K extends 'selectable'
+            ? T['meta']['selectable'] & {
+                [K in keyof RecordType & string as `${As}.${K}`]: {
+                  as: K;
+                  column: RecordType[K];
+                };
+              }
+            : T['meta'][K];
+        }
+      : T[K];
+  } {
+    const shape = fn(this.columnTypes);
+
+    const q = _clone(this);
+
+    setQueryObjectValue(q, 'joinedShapes', as, shape);
+
+    const parsers = Object.fromEntries(
+      Object.entries(shape).map(([key, column]) => [key, column._parse]),
+    );
+    setQueryObjectValue(q, 'joinedParsers', as, parsers);
+
+    pushQueryValue(q, 'join', {
+      type: 'JOIN',
+      args: { a: as, c: shape, d: data },
+    });
+
+    return q as never;
   }
 }
 

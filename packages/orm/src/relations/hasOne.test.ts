@@ -572,294 +572,181 @@ describe('hasOne', () => {
         );
       });
     });
+  });
 
-    describe('create', () => {
-      const checkUserAndProfile = ({
-        user,
-        profile,
+  describe('create', () => {
+    const checkUserAndProfile = ({
+      user,
+      profile,
+      Name,
+      Bio,
+    }: {
+      user: User;
+      profile: Profile;
+      Name: string;
+      Bio: string;
+    }) => {
+      expect(user).toEqual({
+        ...omit(userData, ['Password']),
+        Id: user.Id,
         Name,
+        Active: null,
+        Age: null,
+        Data: null,
+        Picture: null,
+      });
+
+      expect(profile).toMatchObject({
+        Id: profile.Id,
         Bio,
-      }: {
-        user: User;
-        profile: Profile;
-        Name: string;
-        Bio: string;
-      }) => {
-        expect(user).toEqual({
-          ...omit(userData, ['Password']),
-          Id: user.Id,
-          Name,
-          Active: null,
-          Age: null,
-          Data: null,
-          Picture: null,
+        UserId: user.Id,
+      });
+    };
+
+    describe('nested create', () => {
+      it('should support create', async () => {
+        const q = db.user.create({
+          ...userData,
+          Name: 'user',
+          profile: {
+            create: {
+              ...profileData,
+              Bio: 'profile',
+            },
+          },
         });
 
-        expect(profile).toMatchObject({
-          Id: profile.Id,
-          Bio,
-          UserId: user.Id,
-        });
-      };
+        const user = await q;
+        const profile = await db.profile.findBy({ UserId: user.Id });
 
-      describe('nested create', () => {
-        it('should support create', async () => {
-          const q = db.user.create({
+        checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
+      });
+
+      it('should support create many', async () => {
+        const query = db.user.createMany([
+          {
             ...userData,
-            Name: 'user',
+            Name: 'user 1',
             profile: {
               create: {
                 ...profileData,
-                Bio: 'profile',
+                Bio: 'profile 1',
               },
             },
-          });
-
-          const user = await q;
-          const profile = await db.profile.findBy({ UserId: user.Id });
-
-          checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
-        });
-
-        it('should support create many', async () => {
-          const query = db.user.createMany([
-            {
-              ...userData,
-              Name: 'user 1',
-              profile: {
-                create: {
-                  ...profileData,
-                  Bio: 'profile 1',
-                },
-              },
-            },
-            {
-              ...userData,
-              Name: 'user 2',
-              profile: {
-                create: {
-                  ...profileData,
-                  Bio: 'profile 2',
-                },
-              },
-            },
-          ]);
-
-          const users = await query;
-          const profiles = await db.profile
-            .where({
-              UserId: { in: users.map((user) => user.Id) },
-            })
-            .order('Id');
-
-          checkUserAndProfile({
-            user: users[0],
-            profile: profiles[0],
-            Name: 'user 1',
-            Bio: 'profile 1',
-          });
-
-          checkUserAndProfile({
-            user: users[1],
-            profile: profiles[1],
+          },
+          {
+            ...userData,
             Name: 'user 2',
-            Bio: 'profile 2',
-          });
+            profile: {
+              create: {
+                ...profileData,
+                Bio: 'profile 2',
+              },
+            },
+          },
+        ]);
+
+        const users = await query;
+        const profiles = await db.profile
+          .where({
+            UserId: { in: users.map((user) => user.Id) },
+          })
+          .order('Id');
+
+        checkUserAndProfile({
+          user: users[0],
+          profile: profiles[0],
+          Name: 'user 1',
+          Bio: 'profile 1',
         });
 
-        describe('relation callbacks', () => {
-          const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
-            db.user.relations.profile,
-            ['Id'],
-          );
+        checkUserAndProfile({
+          user: users[1],
+          profile: profiles[1],
+          Name: 'user 2',
+          Bio: 'profile 2',
+        });
+      });
 
-          it('should invoke callbacks', async () => {
-            await db.user.create({
+      describe('relation callbacks', () => {
+        const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
+          db.user.relations.profile,
+          ['Id'],
+        );
+
+        it('should invoke callbacks', async () => {
+          await db.user.create({
+            ...userData,
+            profile: {
+              create: profileData,
+            },
+          });
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith(
+            [{ Id: expect.any(Number) }],
+            expect.any(Db),
+          );
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          resetMocks();
+
+          await db.user.createMany([
+            {
               ...userData,
               profile: {
                 create: profileData,
               },
-            });
-
-            expect(beforeCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toBeCalledWith(
-              [{ Id: expect.any(Number) }],
-              expect.any(Db),
-            );
-          });
-
-          it('should invoke callbacks in a batch create', async () => {
-            resetMocks();
-
-            await db.user.createMany([
-              {
-                ...userData,
-                profile: {
-                  create: profileData,
-                },
-              },
-              {
-                ...userData,
-                profile: {
-                  create: profileData,
-                },
-              },
-            ]);
-
-            expect(beforeCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toBeCalledWith(
-              [{ Id: expect.any(Number) }, { Id: expect.any(Number) }],
-              expect.any(Db),
-            );
-          });
-        });
-      });
-
-      describe('nested connect', () => {
-        it('should support connect', async () => {
-          await db.profile.create({
-            Bio: 'profile',
-            user: {
-              create: {
-                ...userData,
-                Name: 'tmp',
-              },
-            },
-          });
-
-          const query = db.user.create({
-            ...userData,
-            Name: 'user',
-            profile: {
-              connect: { Bio: 'profile' },
-            },
-          });
-
-          const user = await query;
-          const profile = await db.user.queryRelated('profile', user);
-
-          checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
-        });
-
-        it('should support connect many', async () => {
-          await db.profile.createMany([
-            {
-              Bio: 'profile 1',
-              user: {
-                create: {
-                  ...userData,
-                  Name: 'tmp',
-                },
-              },
             },
             {
-              Bio: 'profile 2',
-              user: {
-                connect: { Name: 'tmp' },
+              ...userData,
+              profile: {
+                create: profileData,
               },
             },
           ]);
 
-          const query = db.user.createMany([
-            {
-              ...userData,
-              Name: 'user 1',
-              profile: {
-                connect: { Bio: 'profile 1' },
-              },
-            },
-            {
-              ...userData,
-              Name: 'user 2',
-              profile: {
-                connect: { Bio: 'profile 2' },
-              },
-            },
-          ]);
-
-          const users = await query;
-          const profiles = await db.profile
-            .where({
-              UserId: { in: users.map((user) => user.Id) },
-            })
-            .order('Id');
-
-          checkUserAndProfile({
-            user: users[0],
-            profile: profiles[0],
-            Name: 'user 1',
-            Bio: 'profile 1',
-          });
-
-          checkUserAndProfile({
-            user: users[1],
-            profile: profiles[1],
-            Name: 'user 2',
-            Bio: 'profile 2',
-          });
-        });
-
-        describe('relation callbacks', () => {
-          const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
-            db.user.relations.profile,
-            ['Id'],
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith(
+            [{ Id: expect.any(Number) }, { Id: expect.any(Number) }],
+            expect.any(Db),
           );
-
-          it('should invoke callbacks', async () => {
-            const profileId = await db.profile.get('Id').create(profileData);
-
-            await db.user.insert({
-              ...userData,
-              profile: {
-                connect: { Id: profileId },
-              },
-            });
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toBeCalledWith(
-              [{ Id: profileId }],
-              expect.any(Db),
-            );
-          });
-
-          it('should invoke callbacks in a batch create', async () => {
-            resetMocks();
-
-            const ids = await db.profile
-              .pluck('Id')
-              .createMany([profileData, profileData]);
-
-            await db.user.createMany([
-              {
-                ...userData,
-                profile: {
-                  connect: { Id: ids[0] },
-                },
-              },
-              {
-                ...userData,
-                profile: {
-                  connect: { Id: ids[1] },
-                },
-              },
-            ]);
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(2);
-            expect(afterUpdate).toHaveBeenCalledTimes(2);
-            expect(afterUpdate.mock.calls).toEqual([
-              [[{ Id: ids[0] }], expect.any(Db)],
-              [[{ Id: ids[1] }], expect.any(Db)],
-            ]);
-          });
         });
       });
+    });
 
-      describe('connect or create', () => {
-        it('should support connect or create', async () => {
-          const profileId = await db.profile.get('Id').create({
+    describe('nested connect', () => {
+      it('should support connect', async () => {
+        await db.profile.create({
+          Bio: 'profile',
+          user: {
+            create: {
+              ...userData,
+              Name: 'tmp',
+            },
+          },
+        });
+
+        const query = db.user.create({
+          ...userData,
+          Name: 'user',
+          profile: {
+            connect: { Bio: 'profile' },
+          },
+        });
+
+        const user = await query;
+        const profile = await db.user.queryRelated('profile', user);
+
+        checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
+      });
+
+      it('should support connect many', async () => {
+        await db.profile.createMany([
+          {
             Bio: 'profile 1',
             user: {
               create: {
@@ -867,9 +754,175 @@ describe('hasOne', () => {
                 Name: 'tmp',
               },
             },
+          },
+          {
+            Bio: 'profile 2',
+            user: {
+              connect: { Name: 'tmp' },
+            },
+          },
+        ]);
+
+        const query = db.user.createMany([
+          {
+            ...userData,
+            Name: 'user 1',
+            profile: {
+              connect: { Bio: 'profile 1' },
+            },
+          },
+          {
+            ...userData,
+            Name: 'user 2',
+            profile: {
+              connect: { Bio: 'profile 2' },
+            },
+          },
+        ]);
+
+        const users = await query;
+        const profiles = await db.profile
+          .where({
+            UserId: { in: users.map((user) => user.Id) },
+          })
+          .order('Id');
+
+        checkUserAndProfile({
+          user: users[0],
+          profile: profiles[0],
+          Name: 'user 1',
+          Bio: 'profile 1',
+        });
+
+        checkUserAndProfile({
+          user: users[1],
+          profile: profiles[1],
+          Name: 'user 2',
+          Bio: 'profile 2',
+        });
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
+          db.user.relations.profile,
+          ['Id'],
+        );
+
+        it('should invoke callbacks', async () => {
+          const profileId = await db.profile.get('Id').create(profileData);
+
+          await db.user.insert({
+            ...userData,
+            profile: {
+              connect: { Id: profileId },
+            },
           });
 
-          const user1 = await db.user.create({
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id: profileId }],
+            expect.any(Db),
+          );
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          resetMocks();
+
+          const ids = await db.profile
+            .pluck('Id')
+            .createMany([profileData, profileData]);
+
+          await db.user.createMany([
+            {
+              ...userData,
+              profile: {
+                connect: { Id: ids[0] },
+              },
+            },
+            {
+              ...userData,
+              profile: {
+                connect: { Id: ids[1] },
+              },
+            },
+          ]);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate.mock.calls).toEqual([
+            [[{ Id: ids[0] }], expect.any(Db)],
+            [[{ Id: ids[1] }], expect.any(Db)],
+          ]);
+        });
+      });
+    });
+
+    describe('connect or create', () => {
+      it('should support connect or create', async () => {
+        const profileId = await db.profile.get('Id').create({
+          Bio: 'profile 1',
+          user: {
+            create: {
+              ...userData,
+              Name: 'tmp',
+            },
+          },
+        });
+
+        const user1 = await db.user.create({
+          ...userData,
+          Name: 'user 1',
+          profile: {
+            connectOrCreate: {
+              where: { Bio: 'profile 1' },
+              create: { ...profileData, Bio: 'profile 1' },
+            },
+          },
+        });
+
+        const user2 = await db.user.create({
+          ...userData,
+          Name: 'user 2',
+          profile: {
+            connectOrCreate: {
+              where: { Bio: 'profile 2' },
+              create: { ...profileData, Bio: 'profile 2' },
+            },
+          },
+        });
+
+        const profile1 = await db.user.queryRelated('profile', user1);
+        expect(profile1.Id).toBe(profileId);
+        checkUserAndProfile({
+          user: user1,
+          profile: profile1,
+          Name: 'user 1',
+          Bio: 'profile 1',
+        });
+
+        const profile2 = await db.user.queryRelated('profile', user2);
+        checkUserAndProfile({
+          user: user2,
+          profile: profile2,
+          Name: 'user 2',
+          Bio: 'profile 2',
+        });
+      });
+
+      it('should support connect or create many', async () => {
+        const profileId = await db.profile.get('Id').create({
+          Bio: 'profile 1',
+          user: {
+            create: {
+              ...userData,
+              Name: 'tmp',
+            },
+          },
+        });
+
+        const [user1, user2] = await db.user.createMany([
+          {
             ...userData,
             Name: 'user 1',
             profile: {
@@ -878,9 +931,8 @@ describe('hasOne', () => {
                 create: { ...profileData, Bio: 'profile 1' },
               },
             },
-          });
-
-          const user2 = await db.user.create({
+          },
+          {
             ...userData,
             Name: 'user 2',
             profile: {
@@ -889,77 +941,530 @@ describe('hasOne', () => {
                 create: { ...profileData, Bio: 'profile 2' },
               },
             },
-          });
+          },
+        ]);
 
-          const profile1 = await db.user.queryRelated('profile', user1);
-          expect(profile1.Id).toBe(profileId);
-          checkUserAndProfile({
-            user: user1,
-            profile: profile1,
-            Name: 'user 1',
-            Bio: 'profile 1',
-          });
-
-          const profile2 = await db.user.queryRelated('profile', user2);
-          checkUserAndProfile({
-            user: user2,
-            profile: profile2,
-            Name: 'user 2',
-            Bio: 'profile 2',
-          });
+        const profile1 = await db.user.queryRelated('profile', user1);
+        expect(profile1.Id).toBe(profileId);
+        checkUserAndProfile({
+          user: user1,
+          profile: profile1,
+          Name: 'user 1',
+          Bio: 'profile 1',
         });
 
-        it('should support connect or create many', async () => {
-          const profileId = await db.profile.get('Id').create({
-            Bio: 'profile 1',
-            user: {
-              create: {
-                ...userData,
-                Name: 'tmp',
+        const profile2 = await db.user.queryRelated('profile', user2);
+        checkUserAndProfile({
+          user: user2,
+          profile: profile2,
+          Name: 'user 2',
+          Bio: 'profile 2',
+        });
+      });
+    });
+
+    describe('relation callbacks', () => {
+      const {
+        beforeUpdate,
+        afterUpdate,
+        beforeCreate,
+        afterCreate,
+        resetMocks,
+      } = useRelationCallback(db.user.relations.profile, ['Id']);
+
+      it('should invoke callbacks when connecting', async () => {
+        const Id = await db.profile.get('Id').create(profileData);
+
+        await db.user.create({
+          ...userData,
+          profile: {
+            connectOrCreate: {
+              where: { Id },
+              create: profileData,
+            },
+          },
+        });
+
+        expect(beforeUpdate).toHaveBeenCalledTimes(1);
+        expect(afterUpdate).toHaveBeenCalledTimes(1);
+        expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
+      });
+
+      it('should invoke callbacks when creating', async () => {
+        await db.user.create({
+          ...userData,
+          profile: {
+            connectOrCreate: {
+              where: { Id: 0 },
+              create: profileData,
+            },
+          },
+        });
+
+        const Id = await db.profile.take().get('Id');
+
+        expect(beforeCreate).toHaveBeenCalledTimes(1);
+        expect(afterCreate).toHaveBeenCalledTimes(1);
+        expect(afterCreate).toBeCalledWith([{ Id }], expect.any(Db));
+      });
+
+      it('should invoke callbacks in a batch create', async () => {
+        resetMocks();
+
+        const Id = await db.profile.get('Id').create(profileData);
+
+        await db.user.createMany([
+          {
+            ...userData,
+            profile: {
+              connectOrCreate: {
+                where: { Id: 0 },
+                create: profileData,
               },
+            },
+          },
+          {
+            ...userData,
+            profile: {
+              connectOrCreate: {
+                where: { Id },
+                create: profileData,
+              },
+            },
+          },
+        ]);
+
+        const ids = await db.profile.pluck('Id');
+
+        expect(beforeUpdate).toHaveBeenCalledTimes(2);
+        expect(afterUpdate).toHaveBeenCalledTimes(1);
+        expect(afterUpdate).toBeCalledWith([{ Id: ids[0] }], expect.any(Db));
+
+        expect(beforeCreate).toHaveBeenCalledTimes(1);
+        expect(afterCreate).toHaveBeenCalledTimes(1);
+        expect(afterCreate).toBeCalledWith([{ Id: ids[1] }], expect.any(Db));
+      });
+    });
+  });
+
+  describe('update', () => {
+    describe('disconnect', () => {
+      it('should nullify foreignKey', async () => {
+        const user = await db.user.create({
+          ...userData,
+          profile: { create: profileData },
+        });
+
+        const { Id: profileId } = await db.user.queryRelated('profile', user);
+
+        const Id = await db.user
+          .get('Id')
+          .where(user)
+          .update({
+            profile: {
+              disconnect: true,
             },
           });
 
-          const [user1, user2] = await db.user.createMany([
+        expect(Id).toBe(user.Id);
+
+        const profile = await db.profile.find(profileId);
+        expect(profile.UserId).toBe(null);
+      });
+
+      it('should nullify foreignKey in batch update', async () => {
+        const userIds = await db.user.pluck('Id').createMany([
+          { ...userData, profile: { create: profileData } },
+          { ...userData, profile: { create: profileData } },
+        ]);
+
+        const profileIds = await db.profile.pluck('Id').where({
+          UserId: { in: userIds },
+        });
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          profile: {
+            disconnect: true,
+          },
+        });
+
+        const updatedUserIds = await db.profile
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } });
+        expect(updatedUserIds).toEqual([null, null]);
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
+          db.user.relations.profile,
+          ['Id'],
+        );
+
+        it('should invoke callbacks', async () => {
+          const { Id, UserId } = await db.profile
+            .select('Id', 'UserId')
+            .create({
+              user: { create: userData },
+            });
+
+          await db.user.find(UserId as number).update({
+            profile: {
+              disconnect: true,
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith([{ Id: Id }], expect.any(Db));
+        });
+
+        it('should invoke callbacks in a batch update', async () => {
+          resetMocks();
+
+          const userIds = await db.user.pluck('Id').createMany([
             {
               ...userData,
-              Name: 'user 1',
-              profile: {
-                connectOrCreate: {
-                  where: { Bio: 'profile 1' },
-                  create: { ...profileData, Bio: 'profile 1' },
-                },
-              },
+              profile: { create: profileData },
             },
             {
               ...userData,
-              Name: 'user 2',
-              profile: {
-                connectOrCreate: {
-                  where: { Bio: 'profile 2' },
-                  create: { ...profileData, Bio: 'profile 2' },
-                },
-              },
+              profile: { create: profileData },
             },
           ]);
 
-          const profile1 = await db.user.queryRelated('profile', user1);
-          expect(profile1.Id).toBe(profileId);
-          checkUserAndProfile({
-            user: user1,
-            profile: profile1,
-            Name: 'user 1',
-            Bio: 'profile 1',
+          await db.user.where({ Id: { in: userIds } }).update({
+            profile: {
+              disconnect: true,
+            },
           });
 
-          const profile2 = await db.user.queryRelated('profile', user2);
-          checkUserAndProfile({
-            user: user2,
-            profile: profile2,
-            Name: 'user 2',
-            Bio: 'profile 2',
-          });
+          const ids = await db.profile.pluck('Id');
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id: ids[0] }, { Id: ids[1] }],
+            expect.any(Db),
+          );
         });
+      });
+    });
+
+    describe('set', () => {
+      it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
+        const Id = await db.user.get('Id').create(userData);
+
+        const [{ Id: profile1Id }, { Id: profile2Id }] = await db.profile
+          .select('Id')
+          .createMany([{ ...profileData, UserId: Id }, { ...profileData }]);
+
+        await db.user.find(Id).update({
+          profile: {
+            set: { Id: profile2Id },
+          },
+        });
+
+        const profile1 = await db.profile.find(profile1Id);
+        expect(profile1.UserId).toBe(null);
+
+        const profile2 = await db.profile.find(profile2Id);
+        expect(profile2.UserId).toBe(Id);
+      });
+
+      it('should throw in batch update', async () => {
+        expect(() =>
+          db.user.where({ Id: { in: [1, 2, 3] } }).update({
+            profile: {
+              // @ts-expect-error not allows in batch update
+              set: { Id: 1 },
+            },
+          }),
+        ).toThrow('`set` option is not allowed in a batch update');
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate } = useRelationCallback(
+          db.user.relations.profile,
+          ['Id'],
+        );
+
+        it('should invoke callbacks', async () => {
+          const { Id: prevId, UserId } = await db.profile
+            .select('Id', 'UserId')
+            .create({ Bio: 'bio', user: { create: userData } });
+
+          const newId = await db.profile.get('Id').create(profileData);
+
+          await db.user.find(UserId as number).update({
+            profile: {
+              set: { Id: newId },
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate).toBeCalledWith([{ Id: prevId }], expect.any(Db));
+          expect(afterUpdate).toBeCalledWith([{ Id: newId }], expect.any(Db));
+        });
+      });
+    });
+
+    describe('delete', () => {
+      it('should delete related record', async () => {
+        const Id = await db.user
+          .get('Id')
+          .create({ ...userData, profile: { create: profileData } });
+
+        const { Id: profileId } = await db.user
+          .queryRelated('profile', { Id, UserKey: 'key' })
+          .select('Id')
+          .take();
+
+        await db.user.find(Id).update({
+          profile: {
+            delete: true,
+          },
+        });
+
+        const profile = await db.profile.findByOptional({ Id: profileId });
+        expect(profile).toBe(undefined);
+      });
+
+      it('should delete related record in batch update', async () => {
+        const userIds = await db.user.pluck('Id').createMany([
+          { ...userData, profile: { create: profileData } },
+          { ...userData, profile: { create: profileData } },
+        ]);
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          profile: {
+            delete: true,
+          },
+        });
+
+        const count = await db.profile.count();
+        expect(count).toBe(0);
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeDelete, afterDelete, resetMocks } = useRelationCallback(
+          db.user.relations.profile,
+          ['Id'],
+        );
+
+        it('should invoke callbacks', async () => {
+          const { Id, UserId } = await db.profile
+            .select('Id', 'UserId')
+            .create({ Bio: 'bio', user: { create: userData } });
+
+          await db.user.find(UserId as number).update({
+            profile: {
+              delete: true,
+            },
+          });
+
+          expect(beforeDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toBeCalledWith([{ Id }], expect.any(Db));
+        });
+
+        it('should invoke callbacks in a batch update', async () => {
+          resetMocks();
+
+          const data = await db.profile.select('Id', 'UserId').createMany([
+            { Bio: 'bio', user: { create: userData } },
+            { Bio: 'bio', user: { create: userData } },
+          ]);
+
+          await db.user
+            .where({ Id: { in: data.map((p) => p.UserId as number) } })
+            .update({
+              profile: {
+                delete: true,
+              },
+            });
+
+          expect(beforeDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toBeCalledWith(
+            [{ Id: data[0].Id }, { Id: data[1].Id }],
+            expect.any(Db),
+          );
+        });
+      });
+    });
+
+    describe('nested update', () => {
+      it('should update related record', async () => {
+        const Id = await db.user
+          .get('Id')
+          .create({ ...userData, profile: { create: profileData } });
+
+        await db.user.find(Id).update({
+          profile: {
+            update: {
+              Bio: 'updated',
+            },
+          },
+        });
+
+        const profile = await db.user
+          .queryRelated('profile', { Id, UserKey: 'key' })
+          .take();
+        expect(profile.Bio).toBe('updated');
+      });
+
+      it('should update related record in batch update', async () => {
+        const userIds = await db.user.pluck('Id').createMany([
+          { ...userData, profile: { create: profileData } },
+          { ...userData, profile: { create: profileData } },
+        ]);
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          profile: {
+            update: {
+              Bio: 'updated',
+            },
+          },
+        });
+
+        const bios = await db.profile.pluck('Bio');
+        expect(bios).toEqual(['updated', 'updated']);
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
+          db.user.relations.profile,
+          ['Id'],
+        );
+
+        it('should invoke callbacks', async () => {
+          const { Id, UserId } = await db.profile
+            .select('Id', 'UserId')
+            .create({ Bio: 'bio', user: { create: userData } });
+
+          await db.user.find(UserId as number).update({
+            profile: {
+              update: {
+                Bio: 'updated',
+              },
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
+        });
+
+        it('should invoke callbacks in a batch update', async () => {
+          resetMocks();
+
+          const data = await db.profile.select('Id', 'UserId').createMany([
+            { Bio: 'bio', user: { create: userData } },
+            { Bio: 'bio', user: { create: userData } },
+          ]);
+
+          await db.user
+            .where({ Id: { in: data.map((p) => p.UserId as number) } })
+            .update({
+              profile: {
+                update: {
+                  Bio: 'updated',
+                },
+              },
+            });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id: data[0].Id }, { Id: data[1].Id }],
+            expect.any(Db),
+          );
+        });
+      });
+    });
+
+    describe('nested upsert', () => {
+      it('should update related record if it exists', async () => {
+        const user = await db.user.create({
+          ...userData,
+          profile: { create: profileData },
+        });
+
+        await db.user.find(user.Id).update({
+          profile: {
+            upsert: {
+              update: {
+                Bio: 'updated',
+              },
+              create: profileData,
+            },
+          },
+        });
+
+        const profile = await db.user.queryRelated('profile', user);
+        expect(profile.Bio).toBe('updated');
+      });
+
+      it('should create related record if it does not exists', async () => {
+        const user = await db.user.create(userData);
+
+        await db.user.find(user.Id).update({
+          profile: {
+            upsert: {
+              update: {
+                Bio: 'updated',
+              },
+              create: {
+                ...profileData,
+                Bio: 'created',
+              },
+            },
+          },
+        });
+
+        const profile = await db.user.queryRelated('profile', user);
+        expect(profile.Bio).toBe('created');
+      });
+
+      it('should create related record if it does not exists with a data from a callback', async () => {
+        const user = await db.user.create(userData);
+
+        await db.user.find(user.Id).update({
+          profile: {
+            upsert: {
+              update: {
+                Bio: 'updated',
+              },
+              create: () => ({
+                ...profileData,
+                Bio: 'created',
+              }),
+            },
+          },
+        });
+
+        const profile = await db.user.queryRelated('profile', user);
+        expect(profile.Bio).toBe('created');
+      });
+
+      it('should throw in batch update', async () => {
+        expect(() =>
+          db.user.where({ Id: { in: [1, 2, 3] } }).update({
+            profile: {
+              // @ts-expect-error not allows in batch update
+              upsert: {
+                update: {
+                  Bio: 'updated',
+                },
+                create: {
+                  ...profileData,
+                  Bio: 'created',
+                },
+              },
+            },
+          }),
+        ).toThrow('`upsert` option is not allowed in a batch update');
       });
 
       describe('relation callbacks', () => {
@@ -972,13 +1477,16 @@ describe('hasOne', () => {
         } = useRelationCallback(db.user.relations.profile, ['Id']);
 
         it('should invoke callbacks when connecting', async () => {
-          const Id = await db.profile.get('Id').create(profileData);
+          const { Id, UserId } = await db.profile
+            .select('Id', 'UserId')
+            .create({ Bio: 'bio', user: { create: userData } });
 
-          await db.user.create({
-            ...userData,
+          await db.user.find(UserId as number).update({
             profile: {
-              connectOrCreate: {
-                where: { Id },
+              upsert: {
+                update: {
+                  Bio: 'updated',
+                },
                 create: profileData,
               },
             },
@@ -986,617 +1494,108 @@ describe('hasOne', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id, UserId, ProfileKey: 'key' }],
+            expect.any(Db),
+          );
         });
 
         it('should invoke callbacks when creating', async () => {
-          await db.user.create({
-            ...userData,
+          resetMocks();
+
+          const userId = await db.user.get('Id').create(userData);
+
+          await db.user.find(userId).update({
             profile: {
-              connectOrCreate: {
-                where: { Id: 0 },
+              upsert: {
+                update: {
+                  Bio: 'updated',
+                },
                 create: profileData,
               },
             },
           });
 
-          const Id = await db.profile.take().get('Id');
+          const profile = await db.profile.take();
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith([{ Id }], expect.any(Db));
-        });
-
-        it('should invoke callbacks in a batch create', async () => {
-          resetMocks();
-
-          const Id = await db.profile.get('Id').create(profileData);
-
-          await db.user.createMany([
-            {
-              ...userData,
-              profile: {
-                connectOrCreate: {
-                  where: { Id: 0 },
-                  create: profileData,
-                },
-              },
-            },
-            {
-              ...userData,
-              profile: {
-                connectOrCreate: {
-                  where: { Id },
-                  create: profileData,
-                },
-              },
-            },
-          ]);
-
-          const ids = await db.profile.pluck('Id');
-
-          expect(beforeUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ Id: ids[0] }], expect.any(Db));
-
-          expect(beforeCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith([{ Id: ids[1] }], expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith([profile], expect.any(Db));
         });
       });
     });
 
-    describe('update', () => {
-      describe('disconnect', () => {
-        it('should nullify foreignKey', async () => {
-          const user = await db.user
-            .selectAll()
-            .create({ ...userData, profile: { create: profileData } });
-          const { Id: profileId } = await db.user.queryRelated('profile', user);
+    describe('nested create', () => {
+      it('should create new related record', async () => {
+        const userId = await db.user
+          .get('Id')
+          .create({ ...userData, profile: { create: profileData } });
 
-          const Id = await db.user
-            .get('Id')
-            .where(user)
-            .update({
-              profile: {
-                disconnect: true,
-              },
-            });
+        const previousProfileId = await db.user
+          .queryRelated('profile', { Id: userId, UserKey: 'key' })
+          .get('Id');
 
-          expect(Id).toBe(user.Id);
-
-          const profile = await db.profile.find(profileId);
-          expect(profile.UserId).toBe(null);
-        });
-
-        it('should nullify foreignKey in batch update', async () => {
-          const userIds = await db.user.pluck('Id').createMany([
-            { ...userData, profile: { create: profileData } },
-            { ...userData, profile: { create: profileData } },
-          ]);
-
-          const profileIds = await db.profile.pluck('Id').where({
-            UserId: { in: userIds },
-          });
-
-          await db.user.where({ Id: { in: userIds } }).update({
+        const updated = await db.user
+          .selectAll()
+          .find(userId)
+          .update({
             profile: {
-              disconnect: true,
+              create: { ...profileData, Bio: 'created' },
             },
           });
 
-          const updatedUserIds = await db.profile
-            .pluck('UserId')
-            .where({ Id: { in: profileIds } });
-          expect(updatedUserIds).toEqual([null, null]);
-        });
+        const previousProfile = await db.profile.find(previousProfileId);
+        expect(previousProfile.UserId).toBe(null);
 
-        describe('relation callbacks', () => {
-          const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
-            db.user.relations.profile,
-            ['Id'],
-          );
-
-          it('should invoke callbacks', async () => {
-            const { Id, UserId } = await db.profile
-              .select('Id', 'UserId')
-              .create({
-                user: { create: userData },
-              });
-
-            await db.user.find(UserId as number).update({
-              profile: {
-                disconnect: true,
-              },
-            });
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toBeCalledWith([{ Id: Id }], expect.any(Db));
-          });
-
-          it('should invoke callbacks in a batch update', async () => {
-            resetMocks();
-
-            const userIds = await db.user.pluck('Id').createMany([
-              {
-                ...userData,
-                profile: { create: profileData },
-              },
-              {
-                ...userData,
-                profile: { create: profileData },
-              },
-            ]);
-
-            await db.user.where({ Id: { in: userIds } }).update({
-              profile: {
-                disconnect: true,
-              },
-            });
-
-            const ids = await db.profile.pluck('Id');
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toBeCalledWith(
-              [{ Id: ids[0] }, { Id: ids[1] }],
-              expect.any(Db),
-            );
-          });
-        });
+        const profile = await db.user.queryRelated('profile', updated);
+        expect(profile.Bio).toBe('created');
       });
 
-      describe('set', () => {
-        it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-          const Id = await db.user.get('Id').create(userData);
-
-          const [{ Id: profile1Id }, { Id: profile2Id }] = await db.profile
-            .select('Id')
-            .createMany([{ ...profileData, UserId: Id }, { ...profileData }]);
-
-          await db.user.find(Id).update({
+      it('should throw in batch update', async () => {
+        expect(() =>
+          db.user.where({ Id: { in: [1, 2, 3] } }).update({
             profile: {
-              set: { Id: profile2Id },
+              // @ts-expect-error not allows in batch update
+              create: {
+                ...profileData,
+                Bio: 'created',
+              },
             },
-          });
-
-          const profile1 = await db.profile.find(profile1Id);
-          expect(profile1.UserId).toBe(null);
-
-          const profile2 = await db.profile.find(profile2Id);
-          expect(profile2.UserId).toBe(Id);
-        });
-
-        it('should throw in batch update', async () => {
-          expect(() =>
-            db.user.where({ Id: { in: [1, 2, 3] } }).update({
-              profile: {
-                // @ts-expect-error not allows in batch update
-                set: { Id: 1 },
-              },
-            }),
-          ).toThrow('`set` option is not allowed in a batch update');
-        });
-
-        describe('relation callbacks', () => {
-          const { beforeUpdate, afterUpdate } = useRelationCallback(
-            db.user.relations.profile,
-            ['Id'],
-          );
-
-          it('should invoke callbacks', async () => {
-            const { Id: prevId, UserId } = await db.profile
-              .select('Id', 'UserId')
-              .create({ Bio: 'bio', user: { create: userData } });
-
-            const newId = await db.profile.get('Id').create(profileData);
-
-            await db.user.find(UserId as number).update({
-              profile: {
-                set: { Id: newId },
-              },
-            });
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(2);
-            expect(afterUpdate).toHaveBeenCalledTimes(2);
-            expect(afterUpdate).toBeCalledWith(
-              [{ Id: prevId }],
-              expect.any(Db),
-            );
-            expect(afterUpdate).toBeCalledWith([{ Id: newId }], expect.any(Db));
-          });
-        });
+          }),
+        ).toThrow('`create` option is not allowed in a batch update');
       });
 
-      describe('delete', () => {
-        it('should delete related record', async () => {
-          const Id = await db.user
-            .get('Id')
-            .create({ ...userData, profile: { create: profileData } });
+      describe('relation callbacks', () => {
+        const {
+          beforeUpdate,
+          afterUpdate,
+          beforeCreate,
+          afterCreate,
+          resetMocks,
+        } = useRelationCallback(db.user.relations.profile, ['Id']);
 
-          const { Id: profileId } = await db.user
-            .queryRelated('profile', { Id, UserKey: 'key' })
-            .select('Id')
-            .take();
+        it('should invoke callbacks to disconnect previous and create new', async () => {
+          const { Id, UserId } = await db.profile
+            .select('Id', 'UserId')
+            .create({ Bio: 'bio', user: { create: userData } });
 
-          await db.user.find(Id).update({
+          resetMocks();
+
+          await db.user.find(UserId as number).update({
             profile: {
-              delete: true,
+              create: profileData,
             },
           });
 
-          const profile = await db.profile.findByOptional({ Id: profileId });
-          expect(profile).toBe(undefined);
-        });
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledWith([{ Id }], expect.any(Db));
 
-        it('should delete related record in batch update', async () => {
-          const userIds = await db.user.pluck('Id').createMany([
-            { ...userData, profile: { create: profileData } },
-            { ...userData, profile: { create: profileData } },
-          ]);
+          const newId = await db.profile.findBy({ UserId }).get('Id');
 
-          await db.user.where({ Id: { in: userIds } }).update({
-            profile: {
-              delete: true,
-            },
-          });
-
-          const count = await db.profile.count();
-          expect(count).toBe(0);
-        });
-
-        describe('relation callbacks', () => {
-          const { beforeDelete, afterDelete, resetMocks } = useRelationCallback(
-            db.user.relations.profile,
-            ['Id'],
-          );
-
-          it('should invoke callbacks', async () => {
-            const { Id, UserId } = await db.profile
-              .select('Id', 'UserId')
-              .create({ Bio: 'bio', user: { create: userData } });
-
-            await db.user.find(UserId as number).update({
-              profile: {
-                delete: true,
-              },
-            });
-
-            expect(beforeDelete).toHaveBeenCalledTimes(1);
-            expect(afterDelete).toHaveBeenCalledTimes(1);
-            expect(afterDelete).toBeCalledWith([{ Id }], expect.any(Db));
-          });
-
-          it('should invoke callbacks in a batch update', async () => {
-            resetMocks();
-
-            const data = await db.profile.select('Id', 'UserId').createMany([
-              { Bio: 'bio', user: { create: userData } },
-              { Bio: 'bio', user: { create: userData } },
-            ]);
-
-            await db.user
-              .where({ Id: { in: data.map((p) => p.UserId as number) } })
-              .update({
-                profile: {
-                  delete: true,
-                },
-              });
-
-            expect(beforeDelete).toHaveBeenCalledTimes(1);
-            expect(afterDelete).toHaveBeenCalledTimes(1);
-            expect(afterDelete).toBeCalledWith(
-              [{ Id: data[0].Id }, { Id: data[1].Id }],
-              expect.any(Db),
-            );
-          });
-        });
-      });
-
-      describe('nested update', () => {
-        it('should update related record', async () => {
-          const Id = await db.user
-            .get('Id')
-            .create({ ...userData, profile: { create: profileData } });
-
-          await db.user.find(Id).update({
-            profile: {
-              update: {
-                Bio: 'updated',
-              },
-            },
-          });
-
-          const profile = await db.user
-            .queryRelated('profile', { Id, UserKey: 'key' })
-            .take();
-          expect(profile.Bio).toBe('updated');
-        });
-
-        it('should update related record in batch update', async () => {
-          const userIds = await db.user.pluck('Id').createMany([
-            { ...userData, profile: { create: profileData } },
-            { ...userData, profile: { create: profileData } },
-          ]);
-
-          await db.user.where({ Id: { in: userIds } }).update({
-            profile: {
-              update: {
-                Bio: 'updated',
-              },
-            },
-          });
-
-          const bios = await db.profile.pluck('Bio');
-          expect(bios).toEqual(['updated', 'updated']);
-        });
-
-        describe('relation callbacks', () => {
-          const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
-            db.user.relations.profile,
-            ['Id'],
-          );
-
-          it('should invoke callbacks', async () => {
-            const { Id, UserId } = await db.profile
-              .select('Id', 'UserId')
-              .create({ Bio: 'bio', user: { create: userData } });
-
-            await db.user.find(UserId as number).update({
-              profile: {
-                update: {
-                  Bio: 'updated',
-                },
-              },
-            });
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
-          });
-
-          it('should invoke callbacks in a batch update', async () => {
-            resetMocks();
-
-            const data = await db.profile.select('Id', 'UserId').createMany([
-              { Bio: 'bio', user: { create: userData } },
-              { Bio: 'bio', user: { create: userData } },
-            ]);
-
-            await db.user
-              .where({ Id: { in: data.map((p) => p.UserId as number) } })
-              .update({
-                profile: {
-                  update: {
-                    Bio: 'updated',
-                  },
-                },
-              });
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toBeCalledWith(
-              [{ Id: data[0].Id }, { Id: data[1].Id }],
-              expect.any(Db),
-            );
-          });
-        });
-      });
-
-      describe('nested upsert', () => {
-        it('should update related record if it exists', async () => {
-          const user = await db.user.create({
-            ...userData,
-            profile: { create: profileData },
-          });
-
-          await db.user.find(user.Id).update({
-            profile: {
-              upsert: {
-                update: {
-                  Bio: 'updated',
-                },
-                create: profileData,
-              },
-            },
-          });
-
-          const profile = await db.user.queryRelated('profile', user);
-          expect(profile.Bio).toBe('updated');
-        });
-
-        it('should create related record if it does not exists', async () => {
-          const user = await db.user.create(userData);
-
-          await db.user.find(user.Id).update({
-            profile: {
-              upsert: {
-                update: {
-                  Bio: 'updated',
-                },
-                create: {
-                  ...profileData,
-                  Bio: 'created',
-                },
-              },
-            },
-          });
-
-          const profile = await db.user.queryRelated('profile', user);
-          expect(profile.Bio).toBe('created');
-        });
-
-        it('should create related record if it does not exists with a data from a callback', async () => {
-          const user = await db.user.create(userData);
-
-          await db.user.find(user.Id).update({
-            profile: {
-              upsert: {
-                update: {
-                  Bio: 'updated',
-                },
-                create: () => ({
-                  ...profileData,
-                  Bio: 'created',
-                }),
-              },
-            },
-          });
-
-          const profile = await db.user.queryRelated('profile', user);
-          expect(profile.Bio).toBe('created');
-        });
-
-        it('should throw in batch update', async () => {
-          expect(() =>
-            db.user.where({ Id: { in: [1, 2, 3] } }).update({
-              profile: {
-                // @ts-expect-error not allows in batch update
-                upsert: {
-                  update: {
-                    Bio: 'updated',
-                  },
-                  create: {
-                    ...profileData,
-                    Bio: 'created',
-                  },
-                },
-              },
-            }),
-          ).toThrow('`upsert` option is not allowed in a batch update');
-        });
-
-        describe('relation callbacks', () => {
-          const {
-            beforeUpdate,
-            afterUpdate,
-            beforeCreate,
-            afterCreate,
-            resetMocks,
-          } = useRelationCallback(db.user.relations.profile, ['Id']);
-
-          it('should invoke callbacks when connecting', async () => {
-            const { Id, UserId } = await db.profile
-              .select('Id', 'UserId')
-              .create({ Bio: 'bio', user: { create: userData } });
-
-            await db.user.find(UserId as number).update({
-              profile: {
-                upsert: {
-                  update: {
-                    Bio: 'updated',
-                  },
-                  create: profileData,
-                },
-              },
-            });
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toBeCalledWith(
-              [{ Id, UserId, ProfileKey: 'key' }],
-              expect.any(Db),
-            );
-          });
-
-          it('should invoke callbacks when creating', async () => {
-            resetMocks();
-
-            const userId = await db.user.get('Id').create(userData);
-
-            await db.user.find(userId).update({
-              profile: {
-                upsert: {
-                  update: {
-                    Bio: 'updated',
-                  },
-                  create: profileData,
-                },
-              },
-            });
-
-            const profile = await db.profile.take();
-
-            expect(beforeCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toHaveBeenCalledWith([profile], expect.any(Db));
-          });
-        });
-      });
-
-      describe('nested create', () => {
-        it('should create new related record', async () => {
-          const userId = await db.user
-            .get('Id')
-            .create({ ...userData, profile: { create: profileData } });
-
-          const previousProfileId = await db.user
-            .queryRelated('profile', { Id: userId, UserKey: 'key' })
-            .get('Id');
-
-          const updated = await db.user
-            .selectAll()
-            .find(userId)
-            .update({
-              profile: {
-                create: { ...profileData, Bio: 'created' },
-              },
-            });
-
-          const previousProfile = await db.profile.find(previousProfileId);
-          expect(previousProfile.UserId).toBe(null);
-
-          const profile = await db.user.queryRelated('profile', updated);
-          expect(profile.Bio).toBe('created');
-        });
-
-        it('should throw in batch update', async () => {
-          expect(() =>
-            db.user.where({ Id: { in: [1, 2, 3] } }).update({
-              profile: {
-                // @ts-expect-error not allows in batch update
-                create: {
-                  ...profileData,
-                  Bio: 'created',
-                },
-              },
-            }),
-          ).toThrow('`create` option is not allowed in a batch update');
-        });
-
-        describe('relation callbacks', () => {
-          const {
-            beforeUpdate,
-            afterUpdate,
-            beforeCreate,
-            afterCreate,
-            resetMocks,
-          } = useRelationCallback(db.user.relations.profile, ['Id']);
-
-          it('should invoke callbacks to disconnect previous and create new', async () => {
-            const { Id, UserId } = await db.profile
-              .select('Id', 'UserId')
-              .create({ Bio: 'bio', user: { create: userData } });
-
-            resetMocks();
-
-            await db.user.find(UserId as number).update({
-              profile: {
-                create: profileData,
-              },
-            });
-
-            expect(beforeUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledTimes(1);
-            expect(afterUpdate).toHaveBeenCalledWith([{ Id }], expect.any(Db));
-
-            const newId = await db.profile.findBy({ UserId }).get('Id');
-
-            expect(beforeCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toHaveBeenCalledTimes(1);
-            expect(afterCreate).toBeCalledWith([{ Id: newId }], expect.any(Db));
-          });
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith([{ Id: newId }], expect.any(Db));
         });
       });
     });

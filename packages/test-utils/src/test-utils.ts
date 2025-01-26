@@ -5,7 +5,7 @@ import {
   testTransaction,
   defaultSchemaConfig,
   QueryData,
-} from '../../qb/pqb/src';
+} from 'pqb';
 import {
   ColumnTypeBase,
   MaybeArray,

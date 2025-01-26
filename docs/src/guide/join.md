@@ -581,3 +581,34 @@ db.table.join(db.otherTable, (q) =>
   q.onJsonPathEquals('otherTable.data', '$.key', 'table.data', '$.key'),
 );
 ```
+
+## joinData
+
+This method may be useful
+for combining with [createManyFrom](/guide/create-update-delete.html#createmanyfrom-insertmanyfrom).
+
+`createManyFrom` creates multiple record based on a selecting query:
+
+```sql
+INSERT INTO t1(c1, c2)
+SELECT c1, c2 FROM t2
+```
+
+Such a query inserts one record per one selected record.
+
+Use `joinData` to insert a multiplication of selected records and the provided data.
+
+```ts
+const data = [{ column2: 'one' }, { column2: 'two' }, { column2: 'three' }];
+
+await db.table.createManyFrom(
+  db.otherTable
+    .joinData('data', (t) => ({ column2: t.text() }), data)
+    .select('otherTable.column1', 'data.column2'),
+);
+```
+
+If the query on the other table returns 2 records,
+and the data array contains 3 records, then 2 \* 3 = 6 will be inserted - every combination.
+
+Joined data values are available in `where` just as usual.

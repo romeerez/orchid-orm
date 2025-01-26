@@ -107,7 +107,7 @@ export const _join = <
       // TODO batchParsers
 
       if (shape) {
-        // clone the shape to mutate it below, in other cases the shape is newly created
+        // clone the shape to mutate it below; in other cases the shape is newly created
         if (!require) shape = { ...shape };
 
         const arg = { parsers: {} as ColumnsParsers };

@@ -40,8 +40,10 @@ import {
   ColumnTypeBase,
   MaybeArray,
   objectHasValues,
+  pick,
   RecordString,
   RecordUnknown,
+  toArray,
   toSnakeCase,
 } from 'orchid-core';
 import {
@@ -127,14 +129,16 @@ export interface HasAndBelongsToManyInfo<
   };
   dataForCreate: never;
   // `hasAndBelongsToMany` relation data available for update. It supports:
-  // - `disconnect` to delete join table records for related records found by conditions
-  // - `set` to create join table records for related records found by conditions, deletes previous connects
-  // - `delete` to delete join table records and related records found by conditions
-  // - `update` to update related records found by conditions with a provided data
-  // - `create` to create related records and a join table records
+  // - `disconnect` deletes join table records for related records found by conditions
+  // - `set` creates join table records for related records found by conditions, deletes previous connects
+  // - `add` creates join table records for related records found by conditions, does not delete previous connects
+  // - `delete` deletes join table records and related records found by conditions
+  // - `update` updates related records found by conditions with a provided data
+  // - `create` creates related records and a join table records
   dataForUpdate: {
     disconnect?: MaybeArray<WhereArg<Q>>;
     set?: MaybeArray<WhereArg<Q>>;
+    add?: MaybeArray<WhereArg<Q>>;
     delete?: MaybeArray<WhereArg<Q>>;
     update?: {
       where: MaybeArray<WhereArg<Q>>;
@@ -145,6 +149,7 @@ export interface HasAndBelongsToManyInfo<
   dataForUpdateOne: {
     disconnect?: MaybeArray<WhereArg<Q>>;
     set?: MaybeArray<WhereArg<Q>>;
+    add?: MaybeArray<WhereArg<Q>>;
     delete?: MaybeArray<WhereArg<Q>>;
     update?: {
       where: MaybeArray<WhereArg<Q>>;
@@ -164,6 +169,7 @@ interface State {
   foreignKeysFull: string[];
   throughForeignKeysFull: string[];
   throughPrimaryKeysFull: string[];
+  primaryKeysShape: ColumnsShapeBase;
 }
 
 class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
@@ -255,10 +261,14 @@ export const makeHasAndBelongsToManyMethod = (
   baseQuery.table = joinTable;
 
   const shape: ColumnsShapeBase = {};
+  const primaryKeysShape: ColumnsShapeBase = {};
+
   for (let i = 0; i < len; i++) {
-    shape[foreignKeys[i]] = removeColumnName(
-      table.shape[primaryKeys[i]] as ColumnTypeBase,
-    );
+    const pk = primaryKeys[i];
+
+    shape[foreignKeys[i]] = removeColumnName(table.shape[pk] as ColumnTypeBase);
+
+    primaryKeysShape[pk] = table.shape[pk] as ColumnTypeBase;
   }
   for (let i = 0; i < throughLen; i++) {
     shape[throughForeignKeys[i]] = removeColumnName(
@@ -301,6 +311,7 @@ export const makeHasAndBelongsToManyMethod = (
     foreignKeysFull,
     throughForeignKeysFull,
     throughPrimaryKeysFull,
+    primaryKeysShape,
   };
 
   const joinQuery = (
@@ -681,7 +692,7 @@ const nestedUpdate = (state: State) => {
   const len = state.primaryKeys.length;
   const throughLen = state.throughPrimaryKeys.length;
 
-  return (async (_, data, params) => {
+  return (async (query, data, params) => {
     if (params.create) {
       const idsRows: unknown[][] = await _queryCreateMany(
         _queryRows(state.relatedTableQuery.select(...state.throughPrimaryKeys)),
@@ -735,6 +746,77 @@ const nestedUpdate = (state: State) => {
         ),
         params.update.data as UpdateArg<Query>,
       );
+    }
+
+    /**
+     * Performs `insertManyFrom` on the joining table,
+     * based on a query to the related table with applied filters of `params.connect`,
+     * joins the main table data using `joinData`.
+     */
+    if (params.add) {
+      const as = query.table as string;
+      const relatedWheres = toArray(params.add);
+      const joinTableColumns = [
+        ...state.foreignKeys,
+        ...state.throughForeignKeys,
+      ];
+
+      try {
+        const count = await state.joinTableQuery
+          .insertManyFrom(
+            _querySelect(
+              state.relatedTableQuery.orWhere(...relatedWheres) as Query,
+              [
+                Object.fromEntries([
+                  ...state.primaryKeys.map((key, i) => [
+                    state.foreignKeys[i],
+                    as + '.' + (state.primaryKeysShape[key].data.name || key),
+                  ]),
+                  ...state.throughForeignKeys.map((key, i) => [
+                    key,
+                    state.throughPrimaryKeys[i],
+                  ]),
+                ]),
+              ],
+            ).joinData(
+              as,
+              () =>
+                Object.fromEntries(
+                  state.primaryKeys.map((key) => [
+                    key,
+                    state.primaryKeysShape[key],
+                  ]),
+                ),
+              data.map((x) => pick(x, state.primaryKeys)),
+            ),
+          )
+          // do update on conflict to increase the resulting counter
+          .onConflict(joinTableColumns)
+          .merge([state.foreignKeys[0]]);
+
+        if (count < data.length * relatedWheres.length) {
+          throw new OrchidOrmInternalError(
+            query,
+            `Expected to find at least ${
+              relatedWheres.length
+            } record(s) based on \`connect\` conditions, but found ${
+              count / data.length
+            }`,
+          );
+        }
+      } catch (err) {
+        if ((err as RecordUnknown).code === '42P10') {
+          throw new OrchidOrmInternalError(
+            query,
+            `"${
+              state.joinTableQuery.table
+            }" must have a primary key or a unique index on columns (${joinTableColumns.join(
+              ', ',
+            )}) for this kind of query.`,
+          );
+        }
+        throw err;
+      }
     }
 
     if (params.disconnect) {

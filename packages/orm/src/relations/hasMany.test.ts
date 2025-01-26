@@ -1323,6 +1323,64 @@ describe('hasMany', () => {
   });
 
   describe('update', () => {
+    describe('add', () => {
+      it('should connect many related records to one', async () => {
+        const chatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const [user1, user2] = await db.user.createMany([userData, userData]);
+
+        const createdMessages = await db.message.createMany([
+          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
+          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
+        ]);
+
+        await db.user.find(user2.Id).update({
+          messages: {
+            add: createdMessages.map((message) => ({ Id: message.Id })),
+          },
+        });
+
+        const user1Messages = await db.user
+          .queryRelated('messages', user1)
+          .pluck('Id');
+        const user2Messages = await db.user
+          .queryRelated('messages', user2)
+          .pluck('Id');
+
+        expect(user1Messages).toEqual([]);
+        expect(user2Messages).toEqual(createdMessages.map((x) => x.Id));
+      });
+
+      it('should not support connecting many related records to many', async () => {
+        db.user.where({ Name: 'name' }).update({
+          messages: {
+            // @ts-expect-error not supported in a batch update
+            add: { Id: 1 },
+          },
+        });
+      });
+
+      it('should throw when no related records were found by a condition', async () => {
+        const user = await db.user.create(userData);
+
+        const result = await db.user
+          .find(user.Id)
+          .update({
+            messages: {
+              add: { Id: 123 },
+            },
+          })
+          .catch((err) => ({ err }));
+
+        expect(result).toEqual({
+          err: expect.objectContaining({
+            message:
+              'Expected to find at least 1 record(s) based on `add` conditions, but found 0',
+          }),
+        });
+      });
+    });
+
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
         const ChatId = await db.chat

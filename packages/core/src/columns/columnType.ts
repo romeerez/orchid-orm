@@ -23,7 +23,7 @@ export type ColumnShapeInputPartial<Shape extends QueryColumnsInit> = {
   [K in keyof Shape]?: Shape[K]['inputType'];
 };
 
-// output of a shape of columns
+// output of the shape of columns
 export type ColumnShapeOutput<Shape extends QueryColumns> = {
   [K in keyof Shape]: Shape[K]['outputType'];
 };

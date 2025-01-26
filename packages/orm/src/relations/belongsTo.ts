@@ -142,7 +142,7 @@ export interface BelongsToInfo<
     | {
         create: CreateData<Q, CreateBelongsToData<Q>>;
       };
-  // Only for records that updates a single record:
+  // Only for records that update a single record:
   // - `upsert` to update or create the related record
   dataForUpdateOne:
     | { disconnect: boolean }

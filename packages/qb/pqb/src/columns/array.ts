@@ -22,7 +22,8 @@ export interface ArrayColumnValue {
   outputType: unknown;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   outputSchema: any;
-  queryType: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  queryType: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   querySchema: any;
   toSQL(): string;

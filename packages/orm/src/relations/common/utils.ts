@@ -58,6 +58,7 @@ export type NestedInsertManyConnectOrCreate =
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
 export interface NestedUpdateOneItem {
+  add?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
   disconnect?: boolean;
   set?: WhereArg<PickQueryMetaRelations>;
   delete?: boolean;
@@ -70,6 +71,7 @@ export interface NestedUpdateOneItem {
 }
 
 export interface NestedUpdateManyItems {
+  add?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
   disconnect?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
   set?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
   delete?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
@@ -160,6 +162,7 @@ export const hasRelationHandleUpdate = (
   if (
     !value.set &&
     !('upsert' in value) &&
+    (!value.add || (Array.isArray(value.add) && value.add.length === 0)) &&
     (!value.disconnect ||
       (Array.isArray(value.disconnect) && value.disconnect.length === 0)) &&
     (!value.delete ||

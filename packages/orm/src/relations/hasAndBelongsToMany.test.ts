@@ -1356,6 +1356,90 @@ describe('hasAndBelongsToMany', () => {
   });
 
   describe('update', () => {
+    describe('add', () => {
+      it('should connect many related records to one', async () => {
+        const userId = await db.user.get('Id').create(userData);
+
+        const createdChats = await db.chat.createMany([chatData, chatData]);
+
+        await db.user.find(userId).update({
+          chats: {
+            add: createdChats.map((chat) => ({ IdOfChat: chat.IdOfChat })),
+          },
+        });
+
+        const chats = await db.user.queryRelated('chats', {
+          Id: userId,
+          UserKey: 'key',
+        });
+
+        expect(chats).toEqual(createdChats);
+      });
+
+      it('should connect many related records to many', async () => {
+        const [userId1, userId2] = await db.user
+          .get('Id')
+          .createMany([userData, userData]);
+
+        const createdChats = await db.chat.createMany([chatData, chatData]);
+
+        await db.user.whereIn('Id', [userId1, userId2]).update({
+          chats: {
+            add: createdChats.map((chat) => ({ IdOfChat: chat.IdOfChat })),
+          },
+        });
+
+        const [chats1, chats2] = await Promise.all([
+          db.user.queryRelated('chats', {
+            Id: userId1,
+            UserKey: 'key',
+          }),
+          db.user.queryRelated('chats', {
+            Id: userId1,
+            UserKey: 'key',
+          }),
+        ]);
+
+        expect(chats1).toEqual(createdChats);
+        expect(chats2).toEqual(createdChats);
+      });
+
+      it('should throw when no related records were found by a condition', async () => {
+        const userId = await db.user.get('Id').create(userData);
+
+        const result = await db.user
+          .find(userId)
+          .update({
+            chats: {
+              add: { IdOfChat: 123 },
+            },
+          })
+          .catch((err) => ({ err }));
+
+        expect(result).toEqual({
+          err: expect.objectContaining({
+            message:
+              'Expected to find at least 1 record(s) based on `connect` conditions, but found 0',
+          }),
+        });
+      });
+
+      it('should not throw when adding a record that was already connected', async () => {
+        const userId = await db.user.get('Id').create({
+          ...userData,
+          chats: {
+            create: [chatData],
+          },
+        });
+
+        await db.user.find(userId).update({
+          chats: {
+            add: { Title: chatData.Title },
+          },
+        });
+      });
+    });
+
     describe('disconnect', () => {
       it('should delete join table rows', async () => {
         const userId = await db.user.get('Id').create({

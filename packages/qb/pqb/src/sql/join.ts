@@ -9,6 +9,7 @@ import {
   QueryData,
 } from './data';
 import {
+  addValue,
   Expression,
   isExpression,
   QueryColumns,
@@ -91,6 +92,37 @@ export const processJoinItem = (
         quotedAs,
       );
     }
+  } else if ('d' in args) {
+    const shape = args.c;
+    const { values } = ctx;
+
+    target = `(VALUES ${args.d
+      .map((x) => {
+        return (
+          '(' +
+          Object.entries(shape)
+            .map(([key, column]) => {
+              const value = x[key];
+              return (
+                addValue(
+                  values,
+                  value === null || value === undefined
+                    ? null
+                    : column.data.encode
+                    ? column.data.encode(value)
+                    : value,
+                ) +
+                '::' +
+                column.dataType
+              );
+            })
+            .join(', ') +
+          ')'
+        );
+      })
+      .join(', ')}) "${args.a}"(${Object.entries(shape)
+      .map(([key, column]) => `"${column.data.name || key}"`)
+      .join(', ')})`;
   } else {
     const { q, s } = args as {
       q: Query;
