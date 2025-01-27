@@ -122,7 +122,7 @@ export type QuerySourceItem = {
       }
   );
 
-export type JoinItem = SimpleJoinItem;
+export type JoinItem = SimpleJoinItem | JoinLateralItem;
 
 export type SimpleJoinItemNonSubQueryArgs =
   | [{ [K: string]: string | Expression } | Expression | true]

@@ -1,12 +1,21 @@
 import {
   PickQueryMetaRelations,
+  PickQueryMetaRelationsResult,
   PickQueryMetaShapeRelationsWithData,
   PickQueryQ,
   PickQueryRelations,
   Query,
   QueryOrExpressionBooleanOrNullResult,
+  SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
 } from '../../query/query';
-import { _clone, pushQueryArray, pushQueryValue } from '../../query/queryUtils';
+import {
+  _clone,
+  _queryTake,
+  _queryTakeOptional,
+  pushQueryArrayImmutable,
+  pushQueryValueImmutable,
+} from '../../query/queryUtils';
 import { JoinArgs, JoinFirstArg } from '../join/join';
 import {
   EmptyObject,
@@ -208,14 +217,32 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
 ): WhereResult<T> => {
   resolveCallbacksInArgs(q, args);
 
-  return pushQueryArray(q as unknown as PickQueryQ, 'and', args) as never;
+  return pushQueryArrayImmutable(
+    q as unknown as PickQueryQ,
+    'and',
+    args,
+  ) as never;
+};
+
+export const _queryFindBy = <T extends PickQueryMetaRelationsResult>(
+  q: T,
+  args: WhereArgs<T>,
+): SetQueryReturnsOne<WhereResult<T>> => {
+  return _queryTake(_queryWhere(q, args));
+};
+
+export const _queryFindByOptional = <T extends PickQueryMetaRelationsResult>(
+  q: T,
+  args: WhereArgs<T>,
+): SetQueryReturnsOneOptional<WhereResult<T>> => {
+  return _queryTakeOptional(_queryWhere(q, args));
 };
 
 /**
  * Mutative {@link Where.prototype.whereSql}
  */
 export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
-  return pushQueryValue(
+  return pushQueryValueImmutable(
     q as unknown as PickQueryQ,
     'and',
     sqlQueryArgsToExpression(args),
@@ -231,7 +258,7 @@ export const _queryWhereNot = <T extends PickQueryMetaRelations>(
 ): WhereResult<T> => {
   resolveCallbacksInArgs(q, args);
 
-  return pushQueryValue(q as unknown as PickQueryQ, 'and', {
+  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'and', {
     NOT: args,
   }) as never;
 };
@@ -240,7 +267,7 @@ export const _queryWhereNot = <T extends PickQueryMetaRelations>(
  * Mutative {@link Where.prototype.whereNotSql}
  */
 export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
-  return pushQueryValue(q as unknown as PickQueryQ, 'and', {
+  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'and', {
     NOT: sqlQueryArgsToExpression(args),
   }) as never;
 };
@@ -251,7 +278,7 @@ export const _queryWhereOneOf = <T extends PickQueryMetaRelations>(
 ): T => {
   resolveCallbacksInArgs(q, args);
 
-  return pushQueryValue(q as unknown as PickQueryQ, 'and', {
+  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'and', {
     OR: args,
   }) as never;
 };
@@ -262,7 +289,7 @@ export const _queryWhereNotOneOf = <T extends PickQueryMetaRelations>(
 ): T => {
   resolveCallbacksInArgs(q, args);
 
-  return pushQueryValue(q as unknown as PickQueryQ, 'and', {
+  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'and', {
     NOT: { OR: args },
   }) as never;
 };
@@ -276,7 +303,7 @@ export const _queryOr = <T extends PickQueryMetaRelations>(
 ): WhereResult<T> => {
   resolveCallbacksInArgs(q, args);
 
-  return pushQueryArray(
+  return pushQueryArrayImmutable(
     q as unknown as PickQueryQ,
     'or',
     args.map((item) => [item]),
@@ -292,7 +319,7 @@ export const _queryOrNot = <T extends PickQueryMetaRelations>(
 ): WhereResult<T> => {
   resolveCallbacksInArgs(q, args);
 
-  return pushQueryArray(
+  return pushQueryArrayImmutable(
     q as unknown as PickQueryQ,
     'or',
     args.map((item) => {
@@ -342,9 +369,9 @@ export const _queryWhereIn = <T>(
   if (not) item = { NOT: item };
 
   if (and) {
-    pushQueryValue(q as unknown as PickQueryQ, 'and', item);
+    pushQueryValueImmutable(q as unknown as PickQueryQ, 'and', item);
   } else {
-    pushQueryValue(q as unknown as PickQueryQ, 'or', [item]);
+    pushQueryValueImmutable(q as unknown as PickQueryQ, 'or', [item]);
   }
 
   return q as never;

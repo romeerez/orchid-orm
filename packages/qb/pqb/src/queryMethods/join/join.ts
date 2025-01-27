@@ -8,11 +8,7 @@ import {
   SelectableFromShape,
   WithDataItem,
 } from '../../query/query';
-import {
-  _clone,
-  pushQueryValue,
-  setQueryObjectValue,
-} from '../../query/queryUtils';
+import { _clone, pushQueryValueImmutable } from '../../query/queryUtils';
 import {
   ColumnShapeInput,
   ColumnTypesBase,
@@ -24,11 +20,13 @@ import {
   PickQueryTable,
   PickQueryTableMetaResult,
   PickQueryTableMetaResultShape,
+  pushOrNewArrayToObjectImmutable,
   QueryColumns,
   QueryColumnToNullable,
   QueryMetaBase,
   QueryThenByQuery,
   SelectableBase,
+  setObjectValueImmutable,
 } from 'orchid-core';
 import { _join, _joinLateral, _joinLateralProcessArg } from './_join';
 import { AliasOrTable } from '../../common/utils';
@@ -36,6 +34,7 @@ import {
   ColumnsShapeToNullableObject,
   ColumnsShapeToObject,
 } from '../../columns';
+import { SelectQueryData } from '../../sql';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.
@@ -1143,21 +1142,22 @@ export class Join {
   } {
     const shape = fn(this.columnTypes);
 
-    const q = _clone(this);
-
-    setQueryObjectValue(q, 'joinedShapes', as, shape);
+    const query = _clone(this);
 
     const parsers = Object.fromEntries(
       Object.entries(shape).map(([key, column]) => [key, column._parse]),
     );
-    setQueryObjectValue(q, 'joinedParsers', as, parsers);
 
-    pushQueryValue(q, 'join', {
+    const { q } = query;
+    setObjectValueImmutable(q, 'joinedShapes', as, shape);
+    setObjectValueImmutable(q, 'joinedParsers', as, parsers);
+
+    pushOrNewArrayToObjectImmutable(q as SelectQueryData, 'join', {
       type: 'JOIN',
       args: { a: as, c: shape, d: data },
     });
 
-    return q as never;
+    return query as never;
   }
 }
 
@@ -1189,7 +1189,7 @@ export const pushQueryOnForOuter = <T extends PickQueryMeta>(
   joinTo: PickQueryMeta,
   ...on: OnArgs<SelectableBase>
 ): T => {
-  return pushQueryValue(q as never, 'and', {
+  return pushQueryValueImmutable(q as never, 'and', {
     ON: {
       joinFrom: joinTo,
       from: on[0],
@@ -1208,7 +1208,7 @@ export const pushQueryOn = <T extends PickQueryMeta>(
   joinTo: PickQueryMeta,
   ...on: OnArgs<SelectableBase>
 ): T => {
-  return pushQueryValue(
+  return pushQueryValueImmutable(
     q as never,
     'and',
     makeOnItem(joinFrom, joinTo, on),
@@ -1222,7 +1222,7 @@ export const pushQueryOrOn = <T extends PickQueryMeta>(
   joinTo: PickQueryMeta,
   ...on: OnArgs<SelectableBase>
 ) => {
-  return pushQueryValue(q as unknown as PickQueryQ, 'or', [
+  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'or', [
     makeOnItem(joinFrom, joinTo, on),
   ]);
 };
@@ -1230,19 +1230,23 @@ export const pushQueryOrOn = <T extends PickQueryMeta>(
 // Used by the ORM to join relations.
 // Adds a shape of relation to the `joinedShapes`, and adds an `on` statement.
 export const addQueryOn = <T extends PickQueryMeta>(
-  q: T,
+  query: T,
   joinFrom: PickQueryMeta,
   joinTo: PickQueryMeta,
   ...args: OnArgs<SelectableBase>
 ): T => {
-  const cloned = _clone(q);
-  setQueryObjectValue(
-    cloned,
+  const cloned = _clone(query);
+
+  const { q } = cloned;
+
+  setObjectValueImmutable(
+    q,
     'joinedShapes',
     ((joinFrom as unknown as PickQueryQ).q.as ||
       (joinFrom as PickQueryTable).table) as string,
     (joinFrom as unknown as PickQueryQ).q.shape,
   );
+
   return pushQueryOn(cloned, joinFrom, joinTo, ...args) as never;
 };
 
@@ -1291,7 +1295,7 @@ export const _queryJoinOnJsonPathEquals = <T extends PickQueryMeta>(
   q: T,
   args: OnJsonPathEqualsArgs<T['meta']['selectable']>,
 ): T => {
-  return pushQueryValue(q as unknown as PickQueryQ, 'and', {
+  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'and', {
     ON: args,
   }) as unknown as T;
 };

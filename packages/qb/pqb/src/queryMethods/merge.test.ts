@@ -394,8 +394,6 @@ describe('merge queries', () => {
       i2.columns = ['name'];
       i1.values = [[1]];
       i2.values = [['name']];
-      i1.using = [{ type: 'a', args: { w: 'a', a: [emptyObject] } }];
-      i2.using = [{ type: 'b', args: { w: 'b', a: [emptyObject] } }];
       i1.join = [{ type: 'a', args: { w: 'a', a: [emptyObject] } }];
       i2.join = [{ type: 'b', args: { w: 'b', a: [emptyObject] } }];
       i1.onConflict = {};
@@ -498,7 +496,6 @@ describe('merge queries', () => {
       const i = q as InsertQueryData;
       expect(i.columns).toEqual([...i1.columns, ...i2.columns]);
       expect(i.values).toEqual([...i1.values, ...i2.values]);
-      expect(i.using).toEqual([...i1.using, ...i2.using]);
       expect(i.join).toEqual([...i1.join, ...i2.join]);
       expect(i.onConflict).toEqual(i2.onConflict);
       expect(i.beforeCreate).toEqual([...i1.beforeCreate, ...i2.beforeCreate]);

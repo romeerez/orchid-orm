@@ -55,7 +55,7 @@ export type JoinedShapes = RecordOfColumnsShapeBase;
 
 // Column parsers of joined tables. Used to parse the columns when selecting the column of joined tables.
 export interface JoinedParsers {
-  [K: string]: ColumnsParsers;
+  [K: string]: ColumnsParsers | undefined;
 }
 
 export type QueryBeforeHook = (query: Query) => void | Promise<void>;
@@ -107,7 +107,7 @@ export interface CommonQueryData {
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
   joinedBatchParsers?: { [K: string]: BatchParsers };
-  joinedComputeds?: { [K: string]: ComputedColumns };
+  joinedComputeds?: { [K: string]: ComputedColumns | undefined };
   joinedForSelect?: string;
   innerJoinLateral?: true;
   // stores `aliases` of the parent query object when the current query object is withing a query callback.
@@ -136,7 +136,7 @@ export interface CommonQueryData {
   defaults?: RecordUnknown;
   // for runtime computed dependencies
   hookSelect?: HookSelect;
-  // available computed columns, can be set when selecting from a `with` expression
+  // available computed columns, this can be set when selecting from a `with` expression
   computeds?: ComputedColumns;
   // selected computed columns
   selectedComputeds?: ComputedColumns;
@@ -246,7 +246,6 @@ export interface InsertQueryData extends CommonQueryData {
         from: Query;
         values?: unknown[][];
       };
-  using?: JoinItem[];
   join?: JoinItem[];
   onConflict?: {
     target?: OnConflictTarget;
@@ -329,39 +328,3 @@ export interface PickQueryDataShapeAndJoinedShapes {
   shape: ColumnsShapeBase;
   joinedShapes?: JoinedShapes;
 }
-
-// TODO: what if destructure when setting instead of when cloning?
-export const cloneQuery = (q: QueryData) => {
-  if (q.with) q.with = q.with.slice(0);
-  if (q.select) q.select = q.select.slice(0);
-  if (q.and) q.and = q.and.slice(0);
-  if (q.or) q.or = q.or.slice(0);
-  if (q.joinedShapes) q.joinedShapes = { ...q.joinedShapes };
-  if (q.joinedComputeds) q.joinedComputeds = { ...q.joinedComputeds };
-  if (q.batchParsers) q.batchParsers = [...q.batchParsers];
-  if (q.joinedBatchParsers) q.joinedBatchParsers = { ...q.joinedBatchParsers };
-  if (q.scopes) q.scopes = { ...q.scopes };
-  if (q.parsers) q.parsers = { ...q.parsers };
-
-  // may have data for updating timestamps on any kind of query
-  if ((q as UpdateQueryData).updateData) {
-    (q as UpdateQueryData).updateData = (q as UpdateQueryData).updateData.slice(
-      0,
-    );
-  }
-
-  if (q.type === undefined) {
-    if (q.distinct) q.distinct = q.distinct.slice(0);
-    if (q.join) q.join = q.join.slice(0);
-    if (q.group) q.group = q.group.slice(0);
-    if (q.having) q.having = q.having.slice(0);
-    if (q.window) q.window = q.window.slice(0);
-    if (q.union) q.union = { b: q.union.b, u: q.union.u.slice(0) };
-    if (q.order) q.order = q.order.slice(0);
-  } else if (q.type === 'insert') {
-    q.columns = q.columns.slice(0);
-    q.values = Array.isArray(q.values) ? q.values.slice(0) : q.values;
-    if (q.using) q.using = q.using.slice(0);
-    if (q.join) q.join = q.join.slice(0);
-  }
-};

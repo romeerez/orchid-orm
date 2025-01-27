@@ -34,14 +34,12 @@ import {
   _clone,
   _queryAll,
   _queryExec,
-  _queryFindBy,
-  _queryFindByOptional,
   _queryRows,
   _queryTake,
   _queryTakeOptional,
-  pushQueryArray,
-  pushQueryValue,
-  setQueryObjectValue,
+  pushQueryArrayImmutable,
+  pushQueryValueImmutable,
+  setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
@@ -57,6 +55,8 @@ import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
 import {
+  _queryFindBy,
+  _queryFindByOptional,
   _queryWhere,
   _queryWhereSql,
   QueryMetaHasWhere,
@@ -510,7 +510,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     ...columns: SelectableOrExpressions<T>
   ): T {
-    return pushQueryArray(
+    return pushQueryArrayImmutable(
       _clone(this),
       'distinct',
       columns as string[],
@@ -716,7 +716,7 @@ export class QueryMethods<ColumnTypes> {
       ? GroupArgs<T>
       : { error: 'select is required for group' }[]
   ): T {
-    return pushQueryArray(_clone(this), 'group', columns) as never;
+    return pushQueryArrayImmutable(_clone(this), 'group', columns) as never;
   }
 
   /**
@@ -749,7 +749,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     arg: W,
   ): WindowResult<T, W> {
-    return pushQueryValue(_clone(this), 'window', arg) as never;
+    return pushQueryValueImmutable(_clone(this), 'window', arg) as never;
   }
 
   wrap<
@@ -796,7 +796,7 @@ export class QueryMethods<ColumnTypes> {
    * @param args - column name(s) or an object with column names and sort directions.
    */
   order<T extends OrderArgSelf>(this: T, ...args: OrderArgs<T>): T {
-    return pushQueryArray(_clone(this), 'order', args) as never;
+    return pushQueryArrayImmutable(_clone(this), 'order', args) as never;
   }
 
   /**
@@ -811,7 +811,7 @@ export class QueryMethods<ColumnTypes> {
    * @param args - SQL expression
    */
   orderSql<T>(this: T, ...args: SQLQueryArgs): T {
-    return pushQueryValue(
+    return pushQueryValueImmutable(
       _clone(this),
       'order',
       sqlQueryArgsToExpression(args),
@@ -1012,7 +1012,7 @@ export class QueryMethods<ColumnTypes> {
       const q = _clone(query);
       // alias the original table name inside the makeHelper with dynamic table name from the invoking code
       if (q.q.as) {
-        setQueryObjectValue(q, 'aliases', as, q.q.as);
+        setQueryObjectValueImmutable(q, 'aliases', as, q.q.as);
       }
       return fn(q as never, ...args);
     }) as never;

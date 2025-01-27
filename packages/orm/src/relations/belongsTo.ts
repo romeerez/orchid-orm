@@ -17,14 +17,14 @@ import {
   InsertQueryData,
   isQueryReturnsAll,
   pushQueryOnForOuter,
-  pushQueryValue,
+  pushQueryValueImmutable,
   Query,
   QueryResult,
   RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
   SelectQueryData,
-  setQueryObjectValue,
+  setQueryObjectValueImmutable,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
   UpdateArg,
@@ -231,7 +231,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     store.belongsTo[key] = relationData;
     q.q.wrapInTransaction = true;
 
-    pushQueryValue(q, 'beforeCreate', async (q: Query) => {
+    pushQueryValueImmutable(q, 'beforeCreate', async (q: Query) => {
       const inserted = await this.nestedInsert(
         q,
         relationData.map(([, , data]) => data as NestedInsertOneItem),
@@ -287,7 +287,7 @@ export const makeBelongsToMethod = (
     foreignKeys: string[],
   ) => {
     const q = joiningQuery.clone();
-    setQueryObjectValue(
+    setQueryObjectValueImmutable(
       q,
       'joinedShapes',
       (baseQuery.q.as || baseQuery.table) as string,

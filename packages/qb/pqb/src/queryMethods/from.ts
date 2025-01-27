@@ -128,6 +128,7 @@ export function queryFrom<
     data.as ||= 't';
   } else if (Array.isArray(arg)) {
     const { shape } = data;
+    let clonedParsers = false;
     // TODO: batchParsers
     for (const item of arg) {
       if (typeof item === 'string') {
@@ -145,7 +146,13 @@ export function queryFrom<
         }
       } else if (!isExpression(item)) {
         Object.assign(shape, getShapeFromSelect(item, true));
-        Object.assign((data.parsers ??= {}), item.q.parsers);
+
+        if (!clonedParsers) {
+          data.parsers = { ...data.parsers };
+          clonedParsers = true;
+        }
+
+        Object.assign(data.parsers!, item.q.parsers);
       }
     }
   } else {

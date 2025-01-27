@@ -24,32 +24,32 @@ export const _queryUnion = <T extends PickQueryResult>(
   p?: boolean,
   m?: boolean,
 ): T => {
-  const q = (base as unknown as Query).baseQuery.clone();
+  const query = (base as unknown as Query).baseQuery.clone();
 
   const u = args.map(
     (a) =>
       ({
-        a: typeof a === 'function' ? a(q as never) : a,
+        a: typeof a === 'function' ? a(query as never) : a,
         k,
         m,
       } as UnionItem),
   );
 
-  const union = ((q.q as SelectQueryData).union = (
-    (base as unknown as PickQueryQ).q as SelectQueryData
-  ).union);
+  const q = query.q as SelectQueryData;
+  const baseQ = (base as unknown as PickQueryQ).q as SelectQueryData;
 
-  if (union) {
-    union.u.push(...u);
-  } else {
-    (q.q as SelectQueryData).union = {
-      b: base as never,
-      u,
-      p,
-    };
-  }
+  q.union = baseQ.union
+    ? {
+        ...baseQ.union,
+        u: [...baseQ.union.u, ...u],
+      }
+    : {
+        b: base as never,
+        u,
+        p,
+      };
 
-  return q as never;
+  return query as never;
 };
 
 export class Union {

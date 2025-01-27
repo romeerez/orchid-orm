@@ -32,7 +32,7 @@ export const pushUpdateSql = (
   const set: string[] = [];
   processData(ctx, table, set, query.updateData, quotedAs);
 
-  // if no values to set, make an `SELECT` query
+  // if no values to set, make a `SELECT` query
   if (!set.length) {
     if (!query.select) {
       query.select = countSelect;

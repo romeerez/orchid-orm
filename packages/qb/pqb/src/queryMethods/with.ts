@@ -6,8 +6,8 @@ import {
 } from '../query/query';
 import {
   _clone,
-  pushQueryValue,
-  setQueryObjectValue,
+  pushQueryValueImmutable,
+  setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import {
   Expression,
@@ -219,12 +219,15 @@ export class WithMethods {
       };
     }
 
-    pushQueryValue(q, 'with', { n: name, o: options, q: query });
+    pushQueryValueImmutable(q, 'with', {
+      n: name,
+      o: options,
+      q: query,
+    });
 
     const shape = getShapeFromSelect(query, true);
-
-    return setQueryObjectValue(q, 'withShapes', name, {
-      shape,
+    return setQueryObjectValueImmutable(q, 'withShapes', name, {
+      shape: shape as ColumnsShapeBase,
       computeds: query.q.computeds,
     });
   }
@@ -370,9 +373,13 @@ export class WithMethods {
       };
     }
 
-    pushQueryValue(q, 'with', { n: name, o: options, q: query });
+    pushQueryValueImmutable(q, 'with', {
+      n: name,
+      o: options,
+      q: query,
+    });
 
-    return setQueryObjectValue(q, 'withShapes', name, withConfig);
+    return setQueryObjectValueImmutable(q, 'withShapes', name, withConfig);
   }
 
   /**
@@ -456,14 +463,14 @@ export class WithMethods {
     const [options, shape, sql] =
       args.length === 2 ? [undefined, args[0], args[1]] : args;
 
-    pushQueryValue(q, 'with', {
+    pushQueryValueImmutable(q, 'with', {
       n: name,
       o: options,
       s: sql(q),
     });
 
-    return setQueryObjectValue(q, 'withShapes', name, {
+    return setQueryObjectValueImmutable(q, 'withShapes', name, {
       shape: shape(this.columnTypes),
-    }) as never;
+    });
   }
 }

@@ -2,7 +2,6 @@ import { pushWhereStatementSql } from './where';
 import { Query } from '../query/query';
 import { selectToSql } from './select';
 import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
-import { pushQueryValue } from '../query/queryUtils';
 import { InsertQueryData, QueryData } from './data';
 import {
   addValue,
@@ -21,6 +20,7 @@ import { RawSQL } from './rawSql';
 import { OnConflictTarget } from './types';
 import { getSqlText } from './utils';
 import { MAX_BINDING_PARAMS } from './constants';
+import { pushQueryValueImmutable } from '../query/queryUtils';
 
 // reuse array for the columns list
 const quotedColumns: string[] = [];
@@ -255,7 +255,7 @@ export const makeInsertSql = (
     const q = from.clone();
 
     if (v) {
-      pushQueryValue(
+      pushQueryValueImmutable(
         q,
         'select',
         new RawSQL(

@@ -3,8 +3,9 @@ import { makeReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { DeleteQueryData } from './data';
-
 import { HookSelect } from 'orchid-core';
+import { OrchidOrmInternalError } from '../errors';
+import { Query } from '../query/query';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
@@ -27,6 +28,13 @@ export const pushDeleteSql = (
     const joinSet = query.join.length > 1 ? new Set<string>() : null;
 
     for (const item of query.join) {
+      if (Array.isArray(item)) {
+        throw new OrchidOrmInternalError(
+          table as Query,
+          'Join lateral is not supported in delete',
+        );
+      }
+
       const join = processJoinItem(ctx, table, query, item.args, quotedAs);
 
       const key = `${join.target}${join.on}`;

@@ -8,7 +8,7 @@ import {
 } from '../query/query';
 import {
   _clone,
-  pushQueryValue,
+  pushQueryValueImmutable,
   saveSearchAlias,
   throwIfNoWhere,
 } from '../query/queryUtils';
@@ -159,7 +159,7 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
     map = { [data as string]: { op, arg: 1 } };
   }
 
-  pushQueryValue(self as unknown as Query, 'updateData', map);
+  pushQueryValueImmutable(self as unknown as Query, 'updateData', map);
   return self as never;
 };
 
@@ -186,7 +186,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
   const { q } = query as unknown as Query;
 
   const set: RecordUnknown = { ...arg };
-  pushQueryValue(query as unknown as Query, 'updateData', set);
+  pushQueryValueImmutable(query as unknown as Query, 'updateData', set);
 
   const { shape } = q;
 
@@ -229,7 +229,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
               'q',
               'withShapes',
             );
-            pushQueryValue(query as unknown as Query, 'with', {
+            pushQueryValueImmutable(query as unknown as Query, 'with', {
               n: as,
               q: value,
             });
@@ -285,7 +285,7 @@ export const _queryUpdateRaw = <T extends UpdateSelf>(
   q: T,
   sql: Expression,
 ): UpdateResult<T> => {
-  pushQueryValue(q as unknown as Query, 'updateData', sql);
+  pushQueryValueImmutable(q as unknown as Query, 'updateData', sql);
 
   (q as unknown as Query).q.type = 'update';
 

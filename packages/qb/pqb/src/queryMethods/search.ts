@@ -21,9 +21,9 @@ import {
 } from '../sql';
 import {
   _clone,
-  pushQueryValue,
+  pushQueryValueImmutable,
   saveSearchAlias,
-  setQueryObjectValue,
+  setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
@@ -443,11 +443,11 @@ export class SearchMethods {
       };
     }
 
-    setQueryObjectValue(q, 'sources', arg.as as string, arg);
+    setQueryObjectValueImmutable(q, 'sources', arg.as as string, arg);
     if (arg.order) {
-      pushQueryValue(q, 'order', arg.as);
+      pushQueryValueImmutable(q, 'order', arg.as);
     }
 
-    return pushQueryValue(q, 'and', { SEARCH: arg }) as never;
+    return pushQueryValueImmutable(q, 'and', { SEARCH: arg }) as never;
   }
 }

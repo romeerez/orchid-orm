@@ -1,5 +1,5 @@
 import { IsQuery, QueryColumn, QueryThen } from 'orchid-core';
-import { _clone, pushQueryValue } from '../query/queryUtils';
+import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
 
 export class TransformMethods {
   /**
@@ -69,6 +69,6 @@ export class TransformMethods {
       ? QueryThen<Result>
       : T[K];
   } {
-    return pushQueryValue(_clone(this), 'transform', fn) as never;
+    return pushQueryValueImmutable(_clone(this), 'transform', fn) as never;
   }
 }

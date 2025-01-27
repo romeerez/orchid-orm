@@ -1,6 +1,6 @@
 import { PickQueryQ } from '../query/query';
 import { FnUnknownToUnknown, SQLQueryArgs } from 'orchid-core';
-import { _clone, pushQueryValue } from '../query/queryUtils';
+import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
 
 // Function argument of `having`:
 // the same query builder as in `select` is passed in, boolean expression is expected to be returned.
@@ -63,7 +63,7 @@ export class Having {
    */
   having<T>(this: T, ...args: HavingArgFn<T>[]): T {
     const q = _clone(this);
-    return pushQueryValue(
+    return pushQueryValueImmutable(
       q,
       'having',
       args.map((arg) => ((arg as FnUnknownToUnknown)(q) as PickQueryQ).q.expr),
@@ -80,6 +80,6 @@ export class Having {
    * @param args - SQL expression
    */
   havingSql<T>(this: T, ...args: SQLQueryArgs): T {
-    return pushQueryValue(_clone(this), 'having', args) as never;
+    return pushQueryValueImmutable(_clone(this), 'having', args) as never;
   }
 }

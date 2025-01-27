@@ -1,4 +1,4 @@
-import { cloneQuery, QueryData, ToSQLQuery } from '../sql';
+import { QueryData, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
 import { PickQueryMetaTable } from '../query/query';
 import { Expression, PickQueryMeta, QueryColumn } from 'orchid-core';
@@ -35,10 +35,7 @@ export type ExpressionOutput<
   : never;
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
-  const cloned = { ...query };
-  delete cloned.sqlCache;
-  cloneQuery(cloned);
-  return cloned as QueryData;
+  return { ...query, sqlCache: undefined };
 };
 
 export const getQueryAs = (q: { table?: string; q: { as?: string } }) => {
@@ -51,7 +48,7 @@ export const makeRegexToFindInSql = (value: string) => {
 
 /**
  * In `select`, `update`, `create` it's possible to pass a callback with a sub-query.
- * This function resolves such sub-query.
+ * This function resolves such a sub-query.
  *
  * @param q - main query object to pass to a callback as argument
  * @param cb - sub-query callback

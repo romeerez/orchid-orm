@@ -15,11 +15,12 @@ import { JSONTextColumn } from '../columns/json';
 import {
   _clone,
   getFullColumnTable,
-  pushQueryArray,
+  pushQueryArrayImmutable,
+  pushQueryValueImmutable,
 } from '../query/queryUtils';
 import { SelectAsValue, SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
 import {
-  ColumnsParsers,
+  BatchParser,
   ColumnTypeBase,
   EmptyObject,
   Expression,
@@ -37,6 +38,7 @@ import {
   RecordString,
   RecordUnknown,
   setColumnData,
+  setObjectValueImmutable,
   setParserToQuery,
   UnionToIntersection,
 } from 'orchid-core';
@@ -353,8 +355,10 @@ const addParsersForSelectJoined = (
 
   const batchParsers = q.q.joinedBatchParsers?.[arg];
   if (batchParsers) {
-    (q.q.batchParsers ??= []).push(
-      ...batchParsers.map((x) => ({
+    pushQueryArrayImmutable(
+      q,
+      'batchParsers',
+      batchParsers.map((x) => ({
         path: [as as string, ...x.path],
         fn: x.fn,
       })),
@@ -382,16 +386,18 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
     const { q: query } = arg as Query;
 
     if (query.batchParsers) {
-      const batchParsers = ((q as unknown as Query).q.batchParsers ??= []);
-      for (const bp of query.batchParsers) {
-        batchParsers.push({ path: [key, ...bp.path], fn: bp.fn });
-      }
+      pushQueryArrayImmutable(
+        q as unknown as Query,
+        'batchParsers',
+        query.batchParsers.map((bp) => ({
+          path: [key, ...bp.path],
+          fn: bp.fn,
+        })),
+      );
     }
 
     if (query.hookSelect || query.parsers || query.transform) {
-      const batchParsers = ((q as unknown as Query).q.batchParsers ??= []);
-
-      batchParsers.push({
+      pushQueryValueImmutable(q as unknown as Query, 'batchParsers', {
         path: [key],
         fn: (path, queryResult) => {
           const { rows } = queryResult;
@@ -556,7 +562,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
           applyBatchTransforms(query, batches);
           return;
         },
-      });
+      } as BatchParser);
     }
 
     if (!joinQuery && (arg as Query).q?.subQuery && arg.q.expr) {
@@ -720,66 +726,74 @@ export const processSelectArg = <T extends SelectSelf>(
 // adds a column parser for a column
 // when table.* string is provided, sets a parser for a joined table
 export const setParserForSelectedString = (
-  q: PickQueryQAndInternal,
+  query: PickQueryQAndInternal,
   arg: string,
   as: string | getValueKey | undefined,
   columnAs?: string | getValueKey,
 ): string | undefined => {
+  const { q } = query;
   const index = arg.indexOf('.');
   if (index !== -1) {
-    const table = getFullColumnTable(q as unknown as IsQuery, arg, index, as);
+    const table = getFullColumnTable(
+      query as unknown as IsQuery,
+      arg,
+      index,
+      as,
+    );
     const column = arg.slice(index + 1);
 
     // 'table.*' is selecting a full joined record (without computeds)
     if (column === '*') {
-      addParsersForSelectJoined(q, table, columnAs);
+      addParsersForSelectJoined(query, table, columnAs);
       return table === as ? column : arg;
     }
 
     if (table === as) {
-      if (columnAs) {
-        const parser = q.q.parsers?.[column];
-        if (parser) (q.q.parsers as ColumnsParsers)[columnAs] = parser;
+      if (columnAs && q.parsers) {
+        const parser = q.parsers[column];
+        if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
       }
 
-      return handleComputed(q, q.q.computeds, column);
+      return handleComputed(query, q.computeds, column);
     }
 
-    const parser = q.q.joinedParsers?.[table]?.[column];
-    if (parser) setParserToQuery(q.q, columnAs || column, parser);
+    const parser = q.joinedParsers?.[table]?.[column];
+    if (parser) setParserToQuery(q, columnAs || column, parser);
 
-    const batchParsers = q.q.joinedBatchParsers?.[table];
+    const batchParsers = q.joinedBatchParsers?.[table];
     if (batchParsers) {
+      let cloned = false;
       for (const bp of batchParsers) {
         if (bp.path[0] === column) {
-          (q.q.batchParsers ??= []).push(bp);
+          if (!cloned) {
+            q.batchParsers = [...(q.batchParsers || [])];
+            cloned = true;
+          }
+          q.batchParsers!.push(bp);
         }
       }
     }
 
-    const computeds = q.q.joinedComputeds?.[table];
+    const computeds = q.joinedComputeds?.[table];
     if (computeds?.[column]) {
       const computed = computeds[column];
-      const map: HookSelect = (q.q.hookSelect = new Map(q.q.hookSelect));
+      const map: HookSelect = (q.hookSelect = new Map(q.hookSelect));
       for (const column of computed.deps) {
         map.set(column, { select: `${table}.${column}` });
       }
 
-      q.q.selectedComputeds = {
-        ...q.q.selectedComputeds,
-        [column]: computed,
-      };
+      setObjectValueImmutable(q, 'selectedComputeds', column, computed);
       return;
     }
 
     return arg;
   } else {
-    if (columnAs) {
-      const parser = q.q.parsers?.[arg];
-      if (parser) (q.q.parsers as ColumnsParsers)[columnAs] = parser;
+    if (columnAs && q.parsers) {
+      const parser = q.parsers?.[arg];
+      if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
     }
 
-    return handleComputed(q, q.q.computeds, arg);
+    return handleComputed(query, q.computeds, arg);
   }
 };
 
@@ -946,7 +960,7 @@ export function _querySelect(q: Query, args: any[]): any {
     else if (item === false) return _queryNone(q);
   }
 
-  return pushQueryArray(q, 'select', selectArgs);
+  return pushQueryArrayImmutable(q, 'select', selectArgs);
 }
 
 export class Select {

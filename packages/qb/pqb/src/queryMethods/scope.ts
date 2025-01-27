@@ -1,6 +1,11 @@
-import { PickQueryMeta, QueryColumns, QueryMetaBase } from 'orchid-core';
+import {
+  PickQueryMeta,
+  QueryColumns,
+  QueryMetaBase,
+  setObjectValueImmutable,
+} from 'orchid-core';
 import { QueryScopes } from '../sql';
-import { _clone, setQueryObjectValue } from '../query/queryUtils';
+import { _clone } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
 import {
   PickQueryMetaShapeRelationsWithData,
@@ -82,7 +87,7 @@ export class ScopeMethods {
 
       if (!s) throw new Error(`Scope ${scope as string} is not defined`);
 
-      setQueryObjectValue(q, 'scopes', scope as string, s);
+      setObjectValueImmutable(q.q, 'scopes', scope, s);
     }
 
     return q as never;
@@ -107,6 +112,7 @@ export class ScopeMethods {
     const q = _clone(this);
 
     if (q.q.scopes) {
+      q.q.scopes = { ...q.q.scopes };
       delete q.q.scopes[scope as string];
       for (const _ in q.q.scopes) {
         return q as never;

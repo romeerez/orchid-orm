@@ -5,6 +5,7 @@ import {
   QueryColumnsInit,
   QueryMetaBase,
   RecordUnknown,
+  setObjectValueImmutable,
 } from 'orchid-core';
 import { QueryScopes } from '../sql';
 import {
@@ -20,7 +21,7 @@ import { _clone } from '../query/queryUtils';
 export type SoftDeleteOption<Shape extends QueryColumns> = true | keyof Shape;
 
 export function enableSoftDelete(
-  q: IsQuery,
+  query: IsQuery,
   table: string | undefined,
   shape: QueryColumnsInit,
   softDelete: true | PropertyKey,
@@ -41,13 +42,14 @@ export function enableSoftDelete(
   };
 
   (scopes as RecordUnknown).deleted = scope;
-  ((q as unknown as PickQueryQ).q.scopes ??= {}).nonDeleted = scope;
+  const { q } = query as unknown as PickQueryQ;
+  setObjectValueImmutable(q, 'scopes', 'nonDeleted', scope);
 
   const _del = _softDelete(
     column,
-    (q as unknown as PickQueryInternal).internal.nowSQL,
+    (query as unknown as PickQueryInternal).internal.nowSQL,
   );
-  (q as unknown as PickQueryBaseQuery).baseQuery.delete = function (
+  (query as unknown as PickQueryBaseQuery).baseQuery.delete = function (
     this: unknown,
   ) {
     return _del.call(_clone(this));

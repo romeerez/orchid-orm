@@ -1,7 +1,7 @@
 import { Query } from '../query/query';
 import { noop } from 'orchid-core';
 import { NotFoundError } from '../errors';
-import { extendQuery, pushQueryValue } from '../query/queryUtils';
+import { extendQuery, pushQueryValueImmutable } from '../query/queryUtils';
 import { RawSQL } from '../sql/rawSql';
 
 /**
@@ -30,7 +30,7 @@ export const _queryNone = <T>(q: T): T => {
   if (isQueryNone(q)) return q;
 
   q = extendQuery(q as Query, noneMethods) as T;
-  pushQueryValue(q as Query, 'and', new RawSQL('false'));
+  pushQueryValueImmutable(q as Query, 'and', new RawSQL('false'));
   return q;
 };
 

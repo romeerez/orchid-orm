@@ -8,9 +8,9 @@ import {
   SimpleJoinItemNonSubQueryArgs,
 } from '../../sql';
 import { RelationJoinQuery } from '../../relations';
-import { pushQueryArray } from '../../query/queryUtils';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { IsQuery, returnArg } from 'orchid-core';
+import { pushQueryArrayImmutable } from '../../query/queryUtils';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.
@@ -112,10 +112,10 @@ export const processJoinArgs = (
         joinTo,
       ) as unknown as PickQueryQ;
       if (query.and) {
-        pushQueryArray(q, 'and', query.and);
+        pushQueryArrayImmutable(q, 'and', query.and);
       }
       if (query.or) {
-        pushQueryArray(q, 'or', query.or);
+        pushQueryArrayImmutable(q, 'or', query.or);
       }
       if (query.scopes) {
         q.q.scopes = { ...q.q.scopes, ...query.scopes };

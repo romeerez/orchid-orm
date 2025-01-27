@@ -13,7 +13,7 @@ import {
   Query,
   RelationConfigBase,
   RelationJoinQuery,
-  setQueryObjectValue,
+  setQueryObjectValueImmutable,
   UpdateData,
   WhereArg,
 } from 'pqb';
@@ -237,7 +237,7 @@ export function joinHasRelation(
 ) {
   const q = joiningQuery.clone();
 
-  setQueryObjectValue(
+  setQueryObjectValueImmutable(
     q,
     'joinedShapes',
     (baseQuery.q.as || baseQuery.table) as string,

@@ -4,7 +4,6 @@ import { Query } from '../query/query';
 import { _queryWhere } from './where/where';
 import { _queryResolveAlias } from './as';
 import { getQueryAs } from '../common/utils';
-
 import { _queryAll } from '../query/queryUtils';
 
 export const _chain = (

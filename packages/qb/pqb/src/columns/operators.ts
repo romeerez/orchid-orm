@@ -20,6 +20,7 @@ import {
   PickQueryResult,
   QueryColumn,
   RecordUnknown,
+  setObjectValueImmutable,
 } from 'orchid-core';
 import { BooleanQueryColumn } from '../queryMethods';
 import { addColumnParserToQuery } from './column.utils';
@@ -69,11 +70,12 @@ const make = (
   return Object.assign(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (this: PickQueryQ, value: any) {
-      (this.q.chain ??= []).push(_op, value);
+      const { q } = this;
+      (q.chain ??= []).push(_op, value);
 
       // parser might be set by a previous type, but is not needed for boolean
-      if (this.q.parsers?.[getValueKey]) {
-        this.q.parsers[getValueKey] = undefined;
+      if (q.parsers?.[getValueKey]) {
+        setObjectValueImmutable(q, 'parsers', getValueKey, undefined);
       }
 
       return setQueryOperators(this as never, boolean as never);
@@ -94,11 +96,12 @@ const makeVarArg = (
   return Object.assign(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (this: PickQueryQ, ...args: any[]) {
-      (this.q.chain ??= []).push(_op, args);
+      const { q } = this;
+      (q.chain ??= []).push(_op, args);
 
       // parser might be set by a previous type, but is not needed for boolean
-      if (this.q.parsers?.[getValueKey]) {
-        this.q.parsers[getValueKey] = undefined;
+      if (q.parsers?.[getValueKey]) {
+        setObjectValueImmutable(q, 'parsers', getValueKey, undefined);
       }
 
       return setQueryOperators(this as never, boolean as never);
@@ -534,7 +537,7 @@ const json = {
       chain.push(jsonPathQueryOp, [path, options]);
 
       if (q.parsers?.[getValueKey]) {
-        q.parsers[getValueKey] = undefined;
+        setObjectValueImmutable(q, 'parsers', getValueKey, undefined);
       }
 
       if (options?.type) {

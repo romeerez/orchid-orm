@@ -188,13 +188,13 @@ export const makeSQL = (
 
     if (query.window) {
       const window: string[] = [];
-      query.window.forEach((item) => {
+      for (const item of query.window) {
         for (const key in item) {
           window.push(
             `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
           );
         }
-      });
+      }
       sql.push(`WINDOW ${window.join(', ')}`);
     }
   }

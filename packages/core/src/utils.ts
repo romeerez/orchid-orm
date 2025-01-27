@@ -114,7 +114,47 @@ export const pushOrNewArrayToObject = <
 };
 
 /**
- * Push value into array if it's defined, or return a new array with a single value.
+ * Push a value into an array in the object if it's defined, or set a new array with a single value into the object.
+ * Does not mutate the array.
+ *
+ * @param obj - object that can contain the array by the key
+ * @param key - key to access an array in the object
+ * @param value - value to push into the array
+ */
+export const pushOrNewArrayToObjectImmutable = (
+  obj: object,
+  key: string,
+  value: unknown,
+) => {
+  (obj as RecordUnknown)[key] = (obj as RecordUnknown)[key]
+    ? [...((obj as RecordUnknown)[key] as unknown[]), value]
+    : [value];
+};
+
+/**
+ * Set value into the object in data, create the object if it doesn't yet exist.
+ * Does not mutate the object.
+ *
+ * @param q - object
+ * @param object - query data key to get the object
+ * @param key - object key to set the value into
+ * @param value - value to set by the key
+ */
+export const setObjectValueImmutable = <T>(
+  q: T,
+  object: string,
+  key: PropertyKey,
+  value: unknown,
+): T => {
+  (q as RecordUnknown)[object] = {
+    ...((q as RecordUnknown)[object] as RecordUnknown),
+    [key]: value,
+  };
+  return q;
+};
+
+/**
+ * Push value into an array if it's defined, or return a new array with a single value.
  * @param arr - array to push into, or `undefined`
  * @param value - value to push into the array
  */

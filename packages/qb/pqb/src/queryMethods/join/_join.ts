@@ -12,14 +12,14 @@ import {
   PickQueryTableMetaResult,
   QueryColumns,
   QueryMetaBase,
+  setObjectValueImmutable,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { RelationQueryBase } from '../../relations';
 import {
   _clone,
-  pushQueryValue,
-  setQueryObjectValue,
+  pushQueryValueImmutable,
   throwIfJoinLateral,
 } from '../../query/queryUtils';
 import {
@@ -33,15 +33,14 @@ import {
 import { getQueryAs, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
-
 import { ComputedColumns } from '../../modules/computed';
 import { addColumnParserToQuery } from '../../columns';
 
 /**
  * Generic function to construct all JOIN queries.
- * Adds a shape of the joined table into `joinedShapes`.
- * Adds column parsers of the joined table into `joinedParsers`.
- * Adds join data into `join` of the query data.
+ * Add a shape of the joined table into `joinedShapes`.
+ * Add column parsers of the joined table into `joinedParsers`.
+ * Add join data into `join` of the query data.
  *
  * @param query - query object to join to
  * @param require - true for INNER kind of JOIN
@@ -133,37 +132,24 @@ export const _join = <
         ? joinArgs.r
         : joinArgs.q;
 
-    if (
-      (j as unknown as PickQueryQ).q.select ||
-      !(j as unknown as PickQueryQ).q.selectAllColumns
-    ) {
+    const jq = (j as unknown as PickQueryQ).q;
+    if (jq.select || !jq.selectAllColumns) {
+      const { q } = query as unknown as PickQueryQ;
       const shape = getShapeFromSelect(j, true);
-      setQueryObjectValue(
-        query as unknown as PickQueryQ,
-        'joinedShapes',
-        joinKey,
-        shape,
-      );
+      setObjectValueImmutable(q, 'joinedShapes', joinKey, shape);
 
-      setQueryObjectValue(
-        query as unknown as PickQueryQ,
-        'joinedParsers',
-        joinKey,
-        (j as unknown as PickQueryQ).q.parsers,
-      );
+      setObjectValueImmutable(q, 'joinedParsers', joinKey, jq.parsers);
 
-      if ((j as unknown as PickQueryQ).q.batchParsers) {
-        ((query as unknown as PickQueryQ).q.joinedBatchParsers ??= {})[
-          joinKey
-        ] = (j as unknown as PickQueryQ).q.batchParsers as BatchParsers;
+      if (jq.batchParsers) {
+        setObjectValueImmutable(
+          jq,
+          'joinedBatchParsers',
+          joinKey,
+          jq.batchParsers,
+        );
       }
 
-      setQueryObjectValue(
-        query as unknown as PickQueryQ,
-        'joinedComputeds',
-        joinKey,
-        (j as unknown as PickQueryQ).q.computeds,
-      );
+      setObjectValueImmutable(q, 'joinedComputeds', joinKey, jq.computeds);
     } else {
       addAllShapesAndParsers(
         query,
@@ -187,16 +173,19 @@ export const _join = <
     );
   }
 
-  const q = pushQueryValue(query as unknown as PickQueryQ, 'join', {
+  pushQueryValueImmutable(query as never, 'join', {
     type,
     args: joinArgs,
   });
 
   if ((query as unknown as PickQueryQ).q.type === 'delete') {
-    throwIfJoinLateral(q, (query as unknown as PickQueryQ).q.type as string);
+    throwIfJoinLateral(
+      query as never,
+      (query as unknown as PickQueryQ).q.type as string,
+    );
   }
 
-  return q as never;
+  return query as never;
 };
 
 const addAllShapesAndParsers = (
@@ -209,20 +198,17 @@ const addAllShapesAndParsers = (
 ) => {
   if (!joinKey) return;
 
-  setQueryObjectValue(query as PickQueryQ, 'joinedShapes', joinKey, shape);
+  const { q } = query as PickQueryQ;
 
-  setQueryObjectValue(query as PickQueryQ, 'joinedParsers', joinKey, parsers);
+  setObjectValueImmutable(q, 'joinedShapes', joinKey, shape);
+
+  setObjectValueImmutable(q, 'joinedParsers', joinKey, parsers);
 
   if (batchParsers) {
-    ((query as PickQueryQ).q.joinedBatchParsers ??= {})[joinKey] = batchParsers;
+    setObjectValueImmutable(q, 'joinedBatchParsers', joinKey, batchParsers);
   }
 
-  setQueryObjectValue(
-    query as PickQueryQ,
-    'joinedComputeds',
-    joinKey,
-    computeds,
-  );
+  setObjectValueImmutable(q, 'joinedComputeds', joinKey, computeds);
 };
 
 export const _joinLateralProcessArg = (
@@ -307,20 +293,29 @@ export const _joinLateral = <
 
   arg.q.joinTo = q;
   const joinedAs = getQueryAs(q);
-  (arg.q.joinedShapes ??= {})[joinedAs] = q.q.shape;
+  setObjectValueImmutable(arg.q, 'joinedShapes', joinedAs, q.q.shape);
 
   const joinKey = as || arg.q.as || arg.table;
   if (joinKey) {
     const shape = getShapeFromSelect(arg, true);
-    setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
-    setQueryObjectValue(q, 'joinedParsers', joinKey, arg.q.parsers);
+    setObjectValueImmutable(q.q, 'joinedShapes', joinKey, shape);
+
+    setObjectValueImmutable(q.q, 'joinedParsers', joinKey, arg.q.parsers);
+
     if (arg.q.batchParsers) {
-      (q.q.joinedBatchParsers ??= {})[joinKey] = arg.q.batchParsers;
+      setObjectValueImmutable(
+        q.q,
+        'joinedBatchParsers',
+        joinKey,
+        arg.q.batchParsers,
+      );
     }
   }
 
   as ||= getQueryAs(arg);
-  (q.q.joinedComputeds ??= {})[as] = arg.q.computeds as ComputedColumns;
+  setObjectValueImmutable(q.q, 'joinedComputeds', as, arg.q.computeds);
 
-  return pushQueryValue(q, 'join', [type, arg, as]) as never;
+  pushQueryValueImmutable(q, 'join', [type, arg, as]);
+
+  return q as never;
 };

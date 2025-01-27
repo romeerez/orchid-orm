@@ -4,7 +4,7 @@ import {
   QueryThen,
   RecordUnknown,
 } from 'orchid-core';
-import { _clone, pushQueryValue } from '../query/queryUtils';
+import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
 
 export class QueryMap {
   /**
@@ -93,6 +93,8 @@ export class QueryMap {
             >
           : T[K];
       } {
-    return pushQueryValue(_clone(this), 'transform', { map: fn }) as never;
+    return pushQueryValueImmutable(_clone(this), 'transform', {
+      map: fn,
+    }) as never;
   }
 }

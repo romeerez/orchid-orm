@@ -3,6 +3,7 @@ import {
   ColumnTypeBase,
   getValueKey,
   QueryColumn,
+  setObjectValueImmutable,
 } from 'orchid-core';
 
 export const addColumnParserToQuery = (
@@ -11,7 +12,12 @@ export const addColumnParserToQuery = (
   column: QueryColumn,
 ) => {
   if ((column as ColumnTypeBase)._parse) {
-    (q.parsers ??= {})[key] = (column as ColumnTypeBase)._parse;
+    setObjectValueImmutable(
+      q,
+      'parsers',
+      key,
+      (column as ColumnTypeBase)._parse,
+    );
   }
 };
 

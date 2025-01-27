@@ -3,7 +3,7 @@ import {
   ColumnWithDefault,
   getDefaultNowFn,
 } from './columnType';
-import { pushOrNewArrayToObject, RecordUnknown } from '../utils';
+import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../utils';
 import { isRawSQL, RawSQLBase } from '../raw';
 
 // Column types returned by `...t.timestamps()` and variations.
@@ -88,8 +88,12 @@ export const makeTimestampsHelpers = (
       }
 
       // push a function to the query to search for existing timestamp and add a new timestamp value if it's not set in the update.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pushOrNewArrayToObject((q as any).q, 'updateData', updatedAtInjector);
+      pushOrNewArrayToObjectImmutable(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (q as any).q,
+        'updateData',
+        updatedAtInjector,
+      );
     };
     updatedAt.data.defaultTimestamp = 'updatedAt';
 
