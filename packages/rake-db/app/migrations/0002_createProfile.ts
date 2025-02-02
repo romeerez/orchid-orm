@@ -6,6 +6,7 @@ change(async (db) => {
     profileKey: t.text().nullable(),
     userId: t.integer().foreignKey('user', 'id').nullable(),
     bio: t.text().nullable(),
+    active: t.boolean().nullable(),
     ...t.timestamps(),
   }));
 });

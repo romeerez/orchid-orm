@@ -18,6 +18,7 @@ import {
 } from 'orchid-core';
 import { RawSQL } from './rawSql';
 import { getSqlText } from './utils';
+import { getQueryAs } from '../common/utils';
 
 type ItemOf2Or3Length =
   | [leftColumn: string | Expression, rightColumn: string | Expression]
@@ -142,7 +143,7 @@ export const processJoinItem = (
       joinAs = res.joinAs;
 
       if (!s) {
-        on = whereToSql(ctx, r, r.q, joinAs);
+        on = whereToSql(ctx, r, r.q, `"${getQueryAs(r)}"`);
       }
     } else {
       const res = getArgQueryTarget(ctx, q, s);
@@ -365,6 +366,7 @@ const skipQueryKeysForSubQuery: RecordBoolean = {
   returnsOne: true,
   aliases: true,
   sqlCache: true,
+  defaults: true,
 };
 
 export const getIsJoinSubQuery = (query: PickQueryQAndBaseQuery) => {

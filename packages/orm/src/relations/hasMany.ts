@@ -25,6 +25,7 @@ import {
   RelationConfigBase,
   PickQueryQ,
   OrchidOrmInternalError,
+  _queryWhere,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -130,6 +131,7 @@ interface State {
   query: Query;
   primaryKeys: string[];
   foreignKeys: string[];
+  on?: RecordUnknown;
 }
 
 export type HasManyNestedUpdate = (
@@ -243,6 +245,13 @@ export const makeHasManyMethod = (
 
   const primaryKeys = relation.options.columns as string[];
   const foreignKeys = relation.options.references as string[];
+  const { on } = relation.options;
+
+  if (on) {
+    _queryWhere(query, [on]);
+    _queryDefaults(query, on);
+  }
+
   addAutoForeignKey(
     tableConfig,
     query,
@@ -252,7 +261,7 @@ export const makeHasManyMethod = (
     relation.options,
   );
 
-  const state: State = { query, primaryKeys, foreignKeys };
+  const state: State = { query, primaryKeys, foreignKeys, on };
   const len = primaryKeys.length;
 
   const reversedOn: RecordString = {};
@@ -279,7 +288,8 @@ export const makeHasManyMethod = (
       for (let i = 0; i < len; i++) {
         values[foreignKeys[i]] = params[primaryKeys[i]];
       }
-      return _queryDefaults(query.where(values as never), values);
+
+      return _queryDefaults(query.where(values as never), { ...on, ...values });
     },
     virtualColumn: new HasManyVirtualColumn(
       defaultSchemaConfig,
@@ -351,7 +361,7 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         }
 
         items[i] = _queryUpdateOrThrow(
-          t.orWhere<Query>(...(connect as never[])),
+          t.where<Query>({ OR: connect as never[] }),
           obj as never,
         );
       }
@@ -488,7 +498,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
       const relatedWheres = toArray(params.add);
 
       const count = await _queryUpdate(
-        t.orWhere(...relatedWheres) as Query,
+        t.where({ OR: relatedWheres }) as Query,
         obj as never,
       );
 

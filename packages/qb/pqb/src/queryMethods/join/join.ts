@@ -1187,16 +1187,16 @@ export const pushQueryOnForOuter = <T extends PickQueryMeta>(
   q: T,
   joinFrom: PickQueryMeta,
   joinTo: PickQueryMeta,
-  ...on: OnArgs<SelectableBase>
+  leftColumn: string,
+  rightColumn: string,
 ): T => {
   return pushQueryValueImmutable(q as never, 'and', {
     ON: {
       joinFrom: joinTo,
-      from: on[0],
+      from: leftColumn,
       joinTo: joinFrom,
-      to: on.length === 2 ? on[1] : on[2],
+      to: rightColumn,
       useOuterAliases: true,
-      op: on.length === 2 ? undefined : on[1],
     },
   }) as never;
 };

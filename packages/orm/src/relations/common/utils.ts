@@ -199,16 +199,6 @@ export const selectIfNotSelected = (q: Query, columns: string[]) => {
   }
 };
 
-export const relationWhere =
-  (len: number, keys: string[], valueKeys: string[]) =>
-  (params: RecordUnknown) => {
-    const obj: RecordUnknown = {};
-    for (let i = 0; i < len; i++) {
-      obj[keys[i]] = params[valueKeys[i]];
-    }
-    return obj;
-  };
-
 export function joinHasThrough(
   q: Query,
   baseQuery: Query,
@@ -235,16 +225,11 @@ export function joinHasRelation(
   foreignKeys: string[],
   len: number,
 ) {
-  const q = joiningQuery.clone();
-
-  setQueryObjectValueImmutable(
-    q,
-    'joinedShapes',
-    (baseQuery.q.as || baseQuery.table) as string,
-    baseQuery.q.shape,
-  );
-
   const baseAs = getQueryAs(baseQuery);
+
+  const q = joiningQuery.clone();
+  setQueryObjectValueImmutable(q, 'joinedShapes', baseAs, baseQuery.q.shape);
+
   for (let i = 0; i < len; i++) {
     pushQueryOnForOuter(
       q,
@@ -286,7 +271,7 @@ export const addAutoForeignKey = (
   to: Query,
   primaryKeys: string[],
   foreignKeys: string[],
-  options: RelationRefsOptions<PropertyKey, PropertyKey>,
+  options: RelationRefsOptions<PropertyKey>,
 ) => {
   const toTable = to.table as string;
 

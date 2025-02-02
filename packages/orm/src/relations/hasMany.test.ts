@@ -29,6 +29,8 @@ const ormParams = {
   db: db.$queryBuilder,
 };
 
+const activeMessageData = { ...messageData, Active: true };
+
 describe('hasMany', () => {
   useTestORM();
 
@@ -95,8 +97,8 @@ describe('hasMany', () => {
     ]);
   });
 
-  describe('querying', () => {
-    it('should support `queryRelated` to query related data', async () => {
+  describe('queryRelated', () => {
+    it('should query related records', async () => {
       const userId = await db.user.get('Id').create(userData);
       const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
@@ -111,10 +113,10 @@ describe('hasMany', () => {
       expectSql(
         query.toSQL(),
         `
-        SELECT ${messageSelectAll} FROM "message" "messages"
-        WHERE "messages"."author_id" = $1
-          AND "messages"."message_key" = $2
-      `,
+          SELECT ${messageSelectAll} FROM "message" "messages"
+          WHERE "messages"."author_id" = $1
+            AND "messages"."message_key" = $2
+        `,
         [userId, 'key'],
       );
 
@@ -123,6 +125,70 @@ describe('hasMany', () => {
       expect(messages).toMatchObject([messageData, messageData]);
     });
 
+    it('should query related records using `on`', async () => {
+      const userId = await db.user.get('Id').create(userData);
+      const ChatId = await db.chat.get('IdOfChat').create(chatData);
+
+      await db.message.createMany([
+        { ...messageData, AuthorId: userId, ChatId },
+        { ...activeMessageData, AuthorId: userId, ChatId },
+      ]);
+
+      const user = await db.user.find(userId);
+      const query = db.user.queryRelated('activeMessages', user);
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message" "activeMessages"
+          WHERE "activeMessages"."active" = $1
+            AND "activeMessages"."author_id" = $2
+            AND "activeMessages"."message_key" = $3
+        `,
+        [true, userId, 'key'],
+      );
+
+      const messages = await query;
+
+      expect(messages).toMatchObject([activeMessageData]);
+    });
+
+    it('should have create with defaults of provided id', () => {
+      const user = { Id: 1, UserKey: 'key' };
+      const query = db.user.queryRelated('messages', user).insert({
+        ChatId: 2,
+        Text: 'text',
+      });
+
+      expectSql(
+        query.toSQL(),
+        `
+          INSERT INTO "message"("author_id", "message_key", "chat_id", "text")
+          VALUES ($1, $2, $3, $4)
+        `,
+        [1, 'key', 2, 'text'],
+      );
+    });
+
+    it('should have create with defaults of provided id using `on`', () => {
+      const user = { Id: 1, UserKey: 'key' };
+      const query = db.user.queryRelated('activeMessages', user).insert({
+        ChatId: 2,
+        Text: 'text',
+      });
+
+      expectSql(
+        query.toSQL(),
+        `
+          INSERT INTO "message"("active", "author_id", "message_key", "chat_id", "text")
+          VALUES ($1, $2, $3, $4, $5)
+        `,
+        [true, 1, 'key', 2, 'text'],
+      );
+    });
+  });
+
+  describe('chain', () => {
     it('should handle chained query', () => {
       const query = db.user
         .where({ Name: 'name' })
@@ -143,6 +209,29 @@ describe('hasMany', () => {
             AND "messages"."text" = $2
         `,
         ['name', 'text'],
+      );
+    });
+
+    it('should handle chained query using `on`', () => {
+      const query = db.user
+        .where({ Name: 'name' })
+        .chain('activeMessages')
+        .where({ Text: 'text' });
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message" "activeMessages"
+          WHERE "activeMessages"."active" = $1
+            AND EXISTS (
+              SELECT 1 FROM "user"
+              WHERE "user"."name" = $2
+                AND "user"."id" = "activeMessages"."author_id"
+                AND "user"."user_key" = "activeMessages"."message_key"
+            )
+            AND "activeMessages"."text" = $3
+        `,
+        [true, 'name', 'text'],
       );
     });
 
@@ -182,20 +271,39 @@ describe('hasMany', () => {
       );
     });
 
-    it('should have create with defaults of provided id', () => {
-      const user = { Id: 1, UserKey: 'key' };
-      const query = db.user.queryRelated('messages', user).insert({
-        ChatId: 2,
-        Text: 'text',
-      });
+    it('should handle long chained query using `on`', () => {
+      const q = db.user
+        .where({ Name: 'name' })
+        .chain('activePosts')
+        .where({ Body: 'body' })
+        .chain('activePostTags')
+        .where({ Tag: 'tag' });
+
+      assertType<Awaited<typeof q>, PostTag[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
-          INSERT INTO "message"("author_id", "message_key", "chat_id", "text")
-          VALUES ($1, $2, $3, $4)
-        `,
-        [1, 'key', 2, 'text'],
+        SELECT ${postTagSelectAll}
+        FROM "postTag" "activePostTags"
+        WHERE "activePostTags"."active" = $1
+          AND EXISTS (
+            SELECT 1
+            FROM "post" AS "activePosts"
+            WHERE "activePosts"."active" = $2
+              AND EXISTS (
+                SELECT 1
+                FROM "user"
+                WHERE "user"."name" = $3
+                  AND "user"."id" = "activePosts"."user_id"
+                  AND "user"."user_key" = "activePosts"."title"
+              )
+              AND "activePosts"."body" = $4
+              AND "activePosts"."id" = "activePostTags"."post_id"
+          )
+          AND "activePostTags"."tag" = $5
+      `,
+        [true, true, 'name', 'body', 'tag'],
       );
     });
 
@@ -216,6 +324,25 @@ describe('hasMany', () => {
             RETURNING ${messageSelectAll}
           `,
           ['text', 1],
+        );
+      });
+
+      it('should have create based on a query', () => {
+        const query = db.chat.find(1).chain('activeMessages').create({
+          Text: 'text',
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
+            INSERT INTO "message"("chat_id", "message_key", "active", "text")
+            SELECT "chat"."id_of_chat" "ChatId", "chat"."chat_key" "MessageKey", $1, $2
+            FROM "chat"
+            WHERE "chat"."id_of_chat" = $3
+            LIMIT 1
+            RETURNING ${messageSelectAll}
+          `,
+          [true, 'text', 1],
         );
       });
 
@@ -268,22 +395,6 @@ describe('hasMany', () => {
       );
     });
 
-    it('should have proper joinQuery', () => {
-      expectSql(
-        (
-          db.user.relations.messages.relationConfig.joinQuery(
-            db.message.as('m'),
-            db.user.as('u'),
-          ) as Query
-        ).toSQL(),
-        `
-        SELECT ${messageSelectAll} FROM "message" "m"
-        WHERE "m"."author_id" = "u"."id"
-          AND "m"."message_key" = "u"."user_key"
-      `,
-      );
-    });
-
     it('should be supported in whereExists', () => {
       expectSql(
         db.user.whereExists('messages').toSQL(),
@@ -332,6 +443,60 @@ describe('hasMany', () => {
       );
     });
 
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.user.whereExists('activeMessages').toSQL(),
+        `
+          SELECT ${userSelectAll} FROM "user"
+          WHERE EXISTS (
+            SELECT 1 FROM "message" AS "activeMessages"
+            WHERE "activeMessages"."active" = $1
+              AND "activeMessages"."author_id" = "user"."id"
+              AND "activeMessages"."message_key" = "user"."user_key"
+          )
+        `,
+        [true],
+      );
+
+      expectSql(
+        db.user
+          .as('u')
+          .whereExists((q) => q.activeMessages.where({ Text: 'text' }))
+          .toSQL(),
+        `
+          SELECT ${userSelectAll} FROM "user" "u"
+          WHERE EXISTS (
+            SELECT 1 FROM "message" AS "activeMessages"
+            WHERE "activeMessages"."active" = $1
+              AND "activeMessages"."text" = $2
+              AND "activeMessages"."author_id" = "u"."id"
+              AND "activeMessages"."message_key" = "u"."user_key"
+          )
+        `,
+        [true, 'text'],
+      );
+
+      expectSql(
+        db.user
+          .as('u')
+          .whereExists('activeMessages', (q) =>
+            q.where({ 'activeMessages.Text': 'text' }),
+          )
+          .toSQL(),
+        `
+          SELECT ${userSelectAll} FROM "user" "u"
+          WHERE EXISTS (
+            SELECT 1 FROM "message" AS "activeMessages"
+            WHERE "activeMessages"."active" = $1
+              AND "activeMessages"."author_id" = "u"."id"
+              AND "activeMessages"."message_key" = "u"."user_key"
+              AND "activeMessages"."text" = $2
+          )
+        `,
+        [true, 'text'],
+      );
+    });
+
     it('should support nested where with exists', () => {
       // @ts-expect-error sub query must return a boolean
       db.user.where((q) => q.messages);
@@ -341,19 +506,58 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-        SELECT ${userSelectAll}
-        FROM "user"
-        WHERE (
-          SELECT true
-          FROM "message" "messages"
-          WHERE "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
-          LIMIT 1
-        )
+          SELECT ${userSelectAll}
+          FROM "user"
+          WHERE (
+            SELECT true
+            FROM "message" "messages"
+            WHERE "messages"."author_id" = "user"."id"
+              AND "messages"."message_key" = "user"."user_key"
+            LIMIT 1
+          )
         `,
       );
     });
 
+    it('should support nested where with exists using `on`', () => {
+      const q = db.user.where((q) => q.activeMessages.exists());
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${userSelectAll}
+          FROM "user"
+          WHERE (
+            SELECT true
+            FROM "message" "activeMessages"
+            WHERE "activeMessages"."active" = $1
+              AND "activeMessages"."author_id" = "user"."id"
+              AND "activeMessages"."message_key" = "user"."user_key"
+            LIMIT 1
+          )
+        `,
+        [true],
+      );
+    });
+  });
+
+  it('should have proper joinQuery', () => {
+    expectSql(
+      (
+        db.user.relations.messages.relationConfig.joinQuery(
+          db.message.as('m'),
+          db.user.as('u'),
+        ) as Query
+      ).toSQL(),
+      `
+        SELECT ${messageSelectAll} FROM "message" "m"
+        WHERE "m"."author_id" = "u"."id"
+          AND "m"."message_key" = "u"."user_key"
+      `,
+    );
+  });
+
+  describe('join', () => {
     it('should be supported in join', () => {
       const query = db.user
         .as('u')
@@ -373,6 +577,29 @@ describe('hasMany', () => {
          AND "messages"."text" = $1
       `,
         ['text'],
+      );
+    });
+
+    it('should be supported in join using `on`', () => {
+      const query = db.user
+        .as('u')
+        .join('activeMessages', (q) => q.where({ Text: 'text' }))
+        .select('Name', 'activeMessages.Text');
+
+      assertType<Awaited<typeof query>, { Name: string; Text: string }[]>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "u"."name" "Name", "activeMessages"."text" "Text"
+          FROM "user" "u"
+          JOIN "message" AS "activeMessages"
+            ON "activeMessages"."active" = $1
+           AND "activeMessages"."author_id" = "u"."id"
+           AND "activeMessages"."message_key" = "u"."user_key"
+           AND "activeMessages"."text" = $2
+        `,
+        [true, 'text'],
       );
     });
 
@@ -402,6 +629,33 @@ describe('hasMany', () => {
       );
     });
 
+    it('should be supported in join with a callback using `on`', () => {
+      const query = db.user
+        .as('u')
+        .join(
+          (q) => q.activeMessages.as('m').where({ ChatId: 123 }),
+          (q) => q.where({ Text: 'text' }),
+        )
+        .select('Name', 'm.Text');
+
+      assertType<Awaited<typeof query>, { Name: string; Text: string }[]>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "u"."name" "Name", "m"."text" "Text"
+          FROM "user" "u"
+          JOIN "message" AS "m"
+            ON "m"."text" = $1
+           AND "m"."active" = $2
+           AND "m"."chat_id" = $3
+           AND "m"."author_id" = "u"."id"
+           AND "m"."message_key" = "u"."user_key"
+        `,
+        ['text', true, 123],
+      );
+    });
+
     it('should be supported in joinLateral', () => {
       const q = db.user
         .joinLateral('messages', (q) => q.as('m').where({ Text: 'one' }))
@@ -428,93 +682,212 @@ describe('hasMany', () => {
       );
     });
 
-    describe('select', () => {
-      it('should be selectable', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
-        const AuthorId = await db.user.get('Id').create(userData);
-        const messageId = await db.message.get('Id').create({
-          ChatId,
-          AuthorId,
-          ...messageData,
-        });
+    it('should be supported in joinLateral', () => {
+      const q = db.user
+        .joinLateral('activeMessages', (q) => q.as('m').where({ Text: 'one' }))
+        .where({ 'm.Text': 'two' })
+        .select('Name', { message: 'm.*' });
 
-        const query = db.user.as('u').select('Id', {
-          messages: (q) => q.messages.where({ Text: 'text' }),
-        });
+      assertType<Awaited<typeof q>, { Name: string; message: Message }[]>();
 
-        const result = await query;
-        expect(result).toEqual([
-          {
-            Id: AuthorId,
-            messages: [
-              {
-                Id: messageId,
-                AuthorId,
-                ChatId,
-                ...messageData,
-                createdAt: expect.any(Date),
-                updatedAt: expect.any(Date),
-              },
-            ],
-          },
-        ]);
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name" "Name", row_to_json("m".*) "message"
+          FROM "user"
+          JOIN LATERAL (
+            SELECT ${messageSelectAll}
+            FROM "message" "m"
+            WHERE "m"."active" = $1
+              AND "m"."text" = $2
+              AND "m"."author_id" = "user"."id"
+              AND "m"."message_key" = "user"."user_key"
+          ) "m" ON true
+          WHERE "m"."Text" = $3
+        `,
+        [true, 'one', 'two'],
+      );
+    });
+  });
 
-        assertType<
-          Awaited<typeof query>,
-          { Id: number; messages: Message[] }[]
-        >();
-
-        expectSql(
-          query.toSQL(),
-          `
-            SELECT
-              "u"."id" "Id",
-              COALESCE("messages".r, '[]') "messages"
-            FROM "user" "u"
-            LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
-              FROM (
-                SELECT ${messageSelectAll}
-                FROM "message" "messages"
-                WHERE "messages"."text" = $1
-                  AND "messages"."author_id" = "u"."id"
-                  AND "messages"."message_key" = "u"."user_key"
-              ) "t"
-            ) "messages" ON true
-          `,
-          ['text'],
-        );
+  describe('select', () => {
+    it('should be selectable', async () => {
+      const ChatId = await db.chat.get('IdOfChat').create(chatData);
+      const AuthorId = await db.user.get('Id').create(userData);
+      const messageId = await db.message.get('Id').create({
+        ChatId,
+        AuthorId,
+        ...messageData,
       });
 
-      it('should support chained select', () => {
-        const q = db.user.select({
-          items: (q) => q.posts.chain('postTags'),
-        });
+      const query = db.user.as('u').select('Id', {
+        messages: (q) => q.messages.where({ Text: 'text' }),
+      });
 
-        assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+      const result = await query;
+      expect(result).toEqual([
+        {
+          Id: AuthorId,
+          messages: [
+            {
+              Id: messageId,
+              AuthorId,
+              ChatId,
+              Active: null,
+              ...messageData,
+              createdAt: expect.any(Date),
+              updatedAt: expect.any(Date),
+            },
+          ],
+        },
+      ]);
 
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT COALESCE("items".r, '[]') "items"
-            FROM "user"
-            LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
-              FROM (
-                SELECT ${postTagSelectAll}
-                FROM "postTag" "postTags"
-                WHERE EXISTS (
-                  SELECT 1
-                  FROM "post" AS "posts"
-                  WHERE "posts"."user_id" = "user"."id"
-                    AND "posts"."title" = "user"."user_key"
-                    AND "posts"."id" = "postTags"."post_id"
-                )
-              ) "t"
+      assertType<
+        Awaited<typeof query>,
+        { Id: number; messages: Message[] }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT
+            "u"."id" "Id",
+            COALESCE("messages".r, '[]') "messages"
+          FROM "user" "u"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT ${messageSelectAll}
+              FROM "message" "messages"
+              WHERE "messages"."text" = $1
+                AND "messages"."author_id" = "u"."id"
+                AND "messages"."message_key" = "u"."user_key"
+            ) "t"
+          ) "messages" ON true
+        `,
+        ['text'],
+      );
+    });
+
+    it('should be selectable', async () => {
+      const ChatId = await db.chat.get('IdOfChat').create(chatData);
+      const AuthorId = await db.user.get('Id').create(userData);
+      const messageId = await db.message.get('Id').create({
+        ChatId,
+        AuthorId,
+        ...activeMessageData,
+      });
+
+      const query = db.user.as('u').select('Id', {
+        messages: (q) => q.activeMessages.where({ Text: 'text' }),
+      });
+
+      const result = await query;
+      expect(result).toEqual([
+        {
+          Id: AuthorId,
+          messages: [
+            {
+              Id: messageId,
+              AuthorId,
+              ChatId,
+              ...activeMessageData,
+              createdAt: expect.any(Date),
+              updatedAt: expect.any(Date),
+            },
+          ],
+        },
+      ]);
+
+      assertType<
+        Awaited<typeof query>,
+        { Id: number; messages: Message[] }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT
+            "u"."id" "Id",
+            COALESCE("messages".r, '[]') "messages"
+          FROM "user" "u"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT ${messageSelectAll}
+              FROM "message" "activeMessages"
+              WHERE "activeMessages"."active" = $1
+                AND "activeMessages"."text" = $2
+                AND "activeMessages"."author_id" = "u"."id"
+                AND "activeMessages"."message_key" = "u"."user_key"
+            ) "t"
+          ) "messages" ON true
+        `,
+        [true, 'text'],
+      );
+    });
+
+    it('should support chained select', () => {
+      const q = db.user.select({
+        items: (q) => q.posts.chain('postTags'),
+      });
+
+      assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "user"
+                 LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+                   SELECT ${postTagSelectAll}
+                   FROM "postTag" "postTags"
+                   WHERE EXISTS (
+                     SELECT 1
+                     FROM "post" AS "posts"
+                     WHERE "posts"."user_id" = "user"."id"
+                       AND "posts"."title" = "user"."user_key"
+                       AND "posts"."id" = "postTags"."post_id"
+                   )
+                 ) "t"
             ) "items" ON true
-          `,
-        );
+        `,
+      );
+    });
+
+    it('should support chained select', () => {
+      const q = db.user.select({
+        items: (q) => q.activePosts.chain('activePostTags'),
       });
+
+      assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT ${postTagSelectAll}
+              FROM "postTag" "activePostTags"
+              WHERE "activePostTags"."active" = $1
+                AND EXISTS (
+                  SELECT 1
+                  FROM "post" AS "activePosts"
+                  WHERE "activePosts"."active" = $2
+                    AND "activePosts"."user_id" = "user"."id"
+                    AND "activePosts"."title" = "user"."user_key"
+                    AND "activePosts"."id" = "activePostTags"."post_id"
+                )
+            ) "t"
+          ) "items" ON true
+        `,
+        [true, true],
+      );
     });
 
     it('should allow to select count', () => {
@@ -541,6 +914,35 @@ describe('hasMany', () => {
               AND "messages"."message_key" = "u"."user_key"
           ) "messagesCount" ON true
         `,
+      );
+    });
+
+    it('should allow to select count using `on`', () => {
+      const query = db.user.as('u').select('Id', {
+        messagesCount: (q) => q.activeMessages.count(),
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { Id: number; messagesCount: number }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT
+            "u"."id" "Id",
+            "messagesCount".r "messagesCount"
+          FROM "user" "u"
+          LEFT JOIN LATERAL (
+            SELECT count(*) r
+            FROM "message" "activeMessages"
+            WHERE "activeMessages"."active" = $1
+              AND "activeMessages"."author_id" = "u"."id"
+              AND "activeMessages"."message_key" = "u"."user_key"
+          ) "messagesCount" ON true
+        `,
+        [true],
       );
     });
 
@@ -571,6 +973,35 @@ describe('hasMany', () => {
       );
     });
 
+    it('should allow to pluck values', () => {
+      const query = db.user.as('u').select('Id', {
+        texts: (q) => q.activeMessages.pluck('Text'),
+      });
+
+      assertType<Awaited<typeof query>, { Id: number; texts: string[] }[]>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT
+            "u"."id" "Id",
+            COALESCE("texts".r, '[]') "texts"
+          FROM "user" "u"
+          LEFT JOIN LATERAL (
+            SELECT json_agg("t"."Text") r
+            FROM (
+              SELECT "activeMessages"."text" "Text"
+              FROM "message" "activeMessages"
+              WHERE "activeMessages"."active" = $1
+                AND "activeMessages"."author_id" = "u"."id"
+                AND "activeMessages"."message_key" = "u"."user_key"
+            ) "t"
+          ) "texts" ON true
+        `,
+        [true],
+      );
+    });
+
     it('should handle exists sub query', () => {
       const query = db.user.as('u').select('Id', {
         hasMessages: (q) => q.messages.exists(),
@@ -596,6 +1027,36 @@ describe('hasMany', () => {
             LIMIT 1
           ) "hasMessages" ON true
         `,
+      );
+    });
+
+    it('should handle exists sub query using `on`', () => {
+      const query = db.user.as('u').select('Id', {
+        hasMessages: (q) => q.activeMessages.exists(),
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { Id: number; hasMessages: boolean }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT
+            "u"."id" "Id",
+            COALESCE("hasMessages".r, false) "hasMessages"
+          FROM "user" "u"
+          LEFT JOIN LATERAL (
+            SELECT true r
+            FROM "message" "activeMessages"
+            WHERE "activeMessages"."active" = $1
+              AND "activeMessages"."author_id" = "u"."id"
+              AND "activeMessages"."message_key" = "u"."user_key"
+            LIMIT 1
+          ) "hasMessages" ON true
+        `,
+        [true],
       );
     });
 
@@ -642,48 +1103,112 @@ describe('hasMany', () => {
         `,
       );
     });
+
+    it('should support recurring select using `on`', () => {
+      const q = db.user.as('activeSender').select({
+        activeMessages: (q) =>
+          q.activeMessages.select({
+            activeSender: (q) =>
+              q.activeSender.select({
+                activeMessages: (q) => q.activeMessages,
+              }),
+          }),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("activeMessages".r, '[]') "activeMessages"
+          FROM "user" "activeSender"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT row_to_json("activeSender2".*) "activeSender"
+              FROM "message" "activeMessages"
+              LEFT JOIN LATERAL (
+                SELECT COALESCE("activeMessages2".r, '[]') "activeMessages"
+                FROM "user" "activeSender2"
+                LEFT JOIN LATERAL (
+                  SELECT json_agg(row_to_json("t".*)) r
+                  FROM (
+                    SELECT ${messageSelectAll}
+                    FROM "message" "activeMessages2"
+                    WHERE "activeMessages2"."active" = $1
+                      AND "activeMessages2"."author_id" = "activeSender2"."id"
+                      AND "activeMessages2"."message_key" = "activeSender2"."user_key"
+                  ) "t"
+                ) "activeMessages2" ON true
+                WHERE "activeSender2"."active" = $2
+                  AND "activeSender2"."id" = "activeMessages"."author_id"
+                  AND "activeSender2"."user_key" = "activeMessages"."message_key"
+              ) "activeSender2" ON true
+              WHERE "activeMessages"."active" = $3
+                AND "activeMessages"."author_id" = "activeSender"."id"
+                AND "activeMessages"."message_key" = "activeSender"."user_key"
+            ) "t"
+          ) "activeMessages" ON true
+        `,
+        [true, true, true],
+      );
+    });
   });
 
   describe('create', () => {
-    const checkUser = (user: User, Name: string) => {
-      expect(user).toEqual({
-        ...omit(userData, ['Password']),
-        Id: user.Id,
-        Name,
-        Active: null,
-        Age: null,
-        Data: null,
-        Picture: null,
-      });
-    };
+    const assert = {
+      user(user: User, Name: string, Active: boolean | null = null) {
+        expect(user).toEqual({
+          ...omit(userData, ['Password']),
+          Id: user.Id,
+          Name,
+          Active,
+          Age: null,
+          Data: null,
+          Picture: null,
+        });
+      },
 
-    const checkMessages = ({
-      messages,
-      UserId,
-      ChatId,
-      text1,
-      text2,
-    }: {
-      messages: Message[];
-      UserId: number;
-      ChatId: number;
-      text1: string;
-      text2: string;
-    }) => {
-      expect(messages).toMatchObject([
-        {
-          Id: messages[0].Id,
-          AuthorId: UserId,
-          Text: text1,
-          ChatId,
-        },
-        {
-          Id: messages[1].Id,
-          AuthorId: UserId,
-          Text: text2,
-          ChatId,
-        },
-      ]);
+      messages({
+        messages,
+        UserId,
+        ChatId,
+        text1,
+        text2,
+        Active = null,
+      }: {
+        messages: Message[];
+        UserId: number;
+        ChatId: number;
+        text1: string;
+        text2: string;
+        Active?: boolean | null;
+      }) {
+        expect(messages).toMatchObject([
+          {
+            Id: messages[0].Id,
+            AuthorId: UserId,
+            Text: text1,
+            ChatId,
+            Active,
+          },
+          {
+            Id: messages[1].Id,
+            AuthorId: UserId,
+            Text: text2,
+            ChatId,
+            Active,
+          },
+        ]);
+      },
+
+      activeMessages(params: {
+        messages: Message[];
+        UserId: number;
+        ChatId: number;
+        text1: string;
+        text2: string;
+      }) {
+        return this.messages({ ...params, Active: true });
+      },
     };
 
     describe('nested create', () => {
@@ -709,10 +1234,44 @@ describe('hasMany', () => {
           },
         });
 
-        checkUser(user, 'user 1');
+        assert.user(user, 'user 1');
 
         const messages = await db.message.order('Text');
-        checkMessages({
+        assert.messages({
+          messages,
+          UserId: user.Id,
+          ChatId,
+          text1: 'message 1',
+          text2: 'message 2',
+        });
+      });
+
+      it('should support create using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const user = await db.user.create({
+          ...userData,
+          Name: 'user 1',
+          activeMessages: {
+            create: [
+              {
+                ...messageData,
+                Text: 'message 1',
+                ChatId,
+              },
+              {
+                ...messageData,
+                Text: 'message 2',
+                ChatId,
+              },
+            ],
+          },
+        });
+
+        assert.user(user, 'user 1');
+
+        const messages = await db.message.order('Text');
+        assert.activeMessages({
           messages,
           UserId: user.Id,
           ChatId,
@@ -763,11 +1322,11 @@ describe('hasMany', () => {
           },
         ]);
 
-        checkUser(user[0], 'user 1');
-        checkUser(user[1], 'user 2');
+        assert.user(user[0], 'user 1');
+        assert.user(user[1], 'user 2');
 
         const messages = await db.message.order('Text');
-        checkMessages({
+        assert.messages({
           messages: messages.slice(0, 2),
           UserId: user[0].Id,
           ChatId,
@@ -775,7 +1334,70 @@ describe('hasMany', () => {
           text2: 'message 2',
         });
 
-        checkMessages({
+        assert.messages({
+          messages: messages.slice(2, 4),
+          UserId: user[1].Id,
+          ChatId,
+          text1: 'message 3',
+          text2: 'message 4',
+        });
+      });
+
+      it('should support create in batch create using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const user = await db.user.createMany([
+          {
+            ...userData,
+            Name: 'user 1',
+            activeMessages: {
+              create: [
+                {
+                  ...messageData,
+                  Text: 'message 1',
+                  ChatId,
+                },
+                {
+                  ...messageData,
+                  Text: 'message 2',
+                  ChatId,
+                },
+              ],
+            },
+          },
+          {
+            ...userData,
+            Name: 'user 2',
+            activeMessages: {
+              create: [
+                {
+                  ...messageData,
+                  Text: 'message 3',
+                  ChatId,
+                },
+                {
+                  ...messageData,
+                  Text: 'message 4',
+                  ChatId,
+                },
+              ],
+            },
+          },
+        ]);
+
+        assert.user(user[0], 'user 1');
+        assert.user(user[1], 'user 2');
+
+        const messages = await db.message.order('Text');
+        assert.activeMessages({
+          messages: messages.slice(0, 2),
+          UserId: user[0].Id,
+          ChatId,
+          text1: 'message 1',
+          text2: 'message 2',
+        });
+
+        assert.activeMessages({
           messages: messages.slice(2, 4),
           UserId: user[1].Id,
           ChatId,
@@ -793,7 +1415,7 @@ describe('hasMany', () => {
           },
         });
 
-        checkUser(user, 'user 1');
+        assert.user(user, 'user 1');
       });
 
       describe('relation callbacks', () => {
@@ -888,10 +1510,54 @@ describe('hasMany', () => {
           },
         });
 
-        checkUser(user, 'user 1');
+        assert.user(user, 'user 1');
 
         const messages = await db.message.order('Text');
-        checkMessages({
+        assert.messages({
+          messages,
+          UserId: user.Id,
+          ChatId,
+          text1: 'message 1',
+          text2: 'message 2',
+        });
+      });
+
+      it('should support connect using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        await db.message.createMany([
+          {
+            ChatId,
+            sender: { create: { ...userData, Name: 'tmp' } },
+            Text: 'message 1',
+            Active: true,
+          },
+          {
+            ChatId,
+            sender: { connect: { Name: 'tmp' } },
+            Text: 'message 2',
+            Active: true,
+          },
+        ]);
+
+        const user = await db.user.create({
+          ...userData,
+          Name: 'user 1',
+          activeMessages: {
+            connect: [
+              {
+                Text: 'message 1',
+              },
+              {
+                Text: 'message 2',
+              },
+            ],
+          },
+        });
+
+        assert.user(user, 'user 1');
+
+        const messages = await db.message.order('Text');
+        assert.activeMessages({
           messages,
           UserId: user.Id,
           ChatId,
@@ -956,11 +1622,11 @@ describe('hasMany', () => {
           },
         ]);
 
-        checkUser(user[0], 'user 1');
-        checkUser(user[1], 'user 2');
+        assert.user(user[0], 'user 1');
+        assert.user(user[1], 'user 2');
 
         const messages = await db.message.order('Text');
-        checkMessages({
+        assert.messages({
           messages: messages.slice(0, 2),
           UserId: user[0].Id,
           ChatId,
@@ -968,7 +1634,88 @@ describe('hasMany', () => {
           text2: 'message 2',
         });
 
-        checkMessages({
+        assert.messages({
+          messages: messages.slice(2, 4),
+          UserId: user[1].Id,
+          ChatId,
+          text1: 'message 3',
+          text2: 'message 4',
+        });
+      });
+
+      it('should support connect in batch create using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        await db.message.createMany([
+          {
+            ChatId,
+            sender: { create: { ...userData, Name: 'tmp' } },
+            Text: 'message 1',
+            Active: true,
+          },
+          {
+            ChatId,
+            sender: { connect: { Name: 'tmp' } },
+            Text: 'message 2',
+            Active: true,
+          },
+          {
+            ChatId,
+            sender: { connect: { Name: 'tmp' } },
+            Text: 'message 3',
+            Active: true,
+          },
+          {
+            ChatId,
+            sender: { connect: { Name: 'tmp' } },
+            Text: 'message 4',
+            Active: true,
+          },
+        ]);
+
+        const user = await db.user.createMany([
+          {
+            ...userData,
+            Name: 'user 1',
+            activeMessages: {
+              connect: [
+                {
+                  Text: 'message 1',
+                },
+                {
+                  Text: 'message 2',
+                },
+              ],
+            },
+          },
+          {
+            ...userData,
+            Name: 'user 2',
+            activeMessages: {
+              connect: [
+                {
+                  Text: 'message 3',
+                },
+                {
+                  Text: 'message 4',
+                },
+              ],
+            },
+          },
+        ]);
+
+        assert.user(user[0], 'user 1');
+        assert.user(user[1], 'user 2');
+
+        const messages = await db.message.order('Id');
+        assert.activeMessages({
+          messages: messages.slice(0, 2),
+          UserId: user[0].Id,
+          ChatId,
+          text1: 'message 1',
+          text2: 'message 2',
+        });
+
+        assert.activeMessages({
           messages: messages.slice(2, 4),
           UserId: user[1].Id,
           ChatId,
@@ -986,7 +1733,7 @@ describe('hasMany', () => {
           },
         });
 
-        checkUser(user, 'user 1');
+        assert.user(user, 'user 1');
       });
 
       describe('relation callbacks', () => {
@@ -1084,12 +1831,12 @@ describe('hasMany', () => {
           },
         });
 
-        checkUser(user, 'user 1');
+        assert.user(user, 'user 1');
 
         const messages = await db.message.order('Text');
         expect(messages[0].Id).toBe(messageId);
 
-        checkMessages({
+        assert.messages({
           messages,
           UserId: user.Id,
           ChatId,
@@ -1150,14 +1897,14 @@ describe('hasMany', () => {
           },
         ]);
 
-        checkUser(users[0], 'user 1');
-        checkUser(users[1], 'user 2');
+        assert.user(users[0], 'user 1');
+        assert.user(users[1], 'user 2');
 
         const messages = await db.message.order('Text');
         expect(messages[0].Id).toBe(message1Id);
         expect(messages[3].Id).toBe(message4Id);
 
-        checkMessages({
+        assert.messages({
           messages: messages.slice(0, 2),
           UserId: users[0].Id,
           ChatId,
@@ -1165,12 +1912,61 @@ describe('hasMany', () => {
           text2: 'message 2',
         });
 
-        checkMessages({
+        assert.messages({
           messages: messages.slice(2, 4),
           UserId: users[1].Id,
           ChatId,
           text1: 'message 3',
           text2: 'message 4',
+        });
+      });
+
+      it('should connect or create using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const messageIds = await db.message.get('Id').createMany([
+          {
+            ChatId,
+            sender: { create: { ...userData, Name: 'tmp' } },
+            Text: 'message 1',
+            Active: true,
+          },
+          {
+            ChatId,
+            sender: { create: { ...userData, Name: 'tmp' } },
+            Text: 'message 2',
+          },
+        ]);
+
+        const user = await db.user.create({
+          ...userData,
+          Name: 'user 1',
+          activeMessages: {
+            connectOrCreate: [
+              {
+                where: { Text: 'message 1' },
+                create: { ...messageData, ChatId, Text: 'created 1' },
+              },
+              {
+                where: { Text: 'message 2' },
+                create: { ...messageData, ChatId, Text: 'created 2' },
+              },
+            ],
+          },
+        });
+
+        assert.user(user, 'user 1');
+
+        const messages = await db.user
+          .queryRelated('activeMessages', user)
+          .order('Id');
+        expect(messages[0].Id).toBe(messageIds[0]);
+
+        assert.activeMessages({
+          messages,
+          UserId: user.Id,
+          ChatId,
+          text1: 'message 1',
+          text2: 'created 2',
         });
       });
 
@@ -1183,7 +1979,7 @@ describe('hasMany', () => {
           },
         });
 
-        checkUser(user, 'user 1');
+        assert.user(user, 'user 1');
       });
 
       describe('relation callbacks', () => {
@@ -1351,6 +2147,27 @@ describe('hasMany', () => {
         expect(user2Messages).toEqual(createdMessages.map((x) => x.Id));
       });
 
+      it('should fail to connect many related records to one when `on` condition does not match', async () => {
+        const chatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const [user1, user2] = await db.user.createMany([userData, userData]);
+
+        const createdMessages = await db.message.createMany([
+          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
+          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
+        ]);
+
+        const q = db.user.find(user2.Id).update({
+          activeMessages: {
+            add: createdMessages.map((message) => ({ Id: message.Id })),
+          },
+        });
+
+        await expect(q).rejects.toThrow(
+          'Expected to find at least 2 record(s) based on `add` conditions, but found 0',
+        );
+      });
+
       it('should not support connecting many related records to many', async () => {
         db.user.where({ Name: 'name' }).update({
           messages: {
@@ -1410,6 +2227,34 @@ describe('hasMany', () => {
         expect(messages[2].AuthorId).toBe(UserId);
       });
 
+      it('should nullify foreignKey for matching records using `on`', async () => {
+        const ChatId = await db.chat
+          .get('IdOfChat')
+          .create({ ...chatData, Title: 'chat 1' });
+
+        const UserId = await db.user.get('Id').create({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, ChatId: ChatId, Text: 'message 1' },
+              { ...activeMessageData, ChatId: ChatId, Text: 'message 2' },
+              { ...messageData, ChatId: ChatId, Text: 'message 3' },
+            ],
+          },
+        });
+
+        await db.user.find(UserId).update({
+          activeMessages: {
+            disconnect: [{ Text: 'message 1' }, { Text: 'message 2' }],
+          },
+        });
+
+        const messages = await db.message.order('Text');
+        expect(messages[0].AuthorId).toBe(UserId);
+        expect(messages[1].AuthorId).toBe(null);
+        expect(messages[2].AuthorId).toBe(UserId);
+      });
+
       it('should nullify foreignKey in batch update', async () => {
         const ChatId = await db.chat
           .get('IdOfChat')
@@ -1441,6 +2286,41 @@ describe('hasMany', () => {
 
         const messages = await db.message.order('Text');
         expect(messages[0].AuthorId).toBe(null);
+        expect(messages[1].AuthorId).toBe(null);
+        expect(messages[2].AuthorId).toBe(userIds[1]);
+      });
+
+      it('should nullify foreignKey in batch update for matching records using `on`', async () => {
+        const ChatId = await db.chat
+          .get('IdOfChat')
+          .create({ ...chatData, Title: 'chat 1' });
+
+        const userIds = await db.user.pluck('Id').createMany([
+          {
+            ...userData,
+            messages: {
+              create: [{ ...messageData, ChatId: ChatId, Text: 'message 1' }],
+            },
+          },
+          {
+            ...userData,
+            messages: {
+              create: [
+                { ...activeMessageData, ChatId: ChatId, Text: 'message 2' },
+                { ...messageData, ChatId: ChatId, Text: 'message 3' },
+              ],
+            },
+          },
+        ]);
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          activeMessages: {
+            disconnect: [{ Text: 'message 1' }, { Text: 'message 2' }],
+          },
+        });
+
+        const messages = await db.message.order('Text');
+        expect(messages[0].AuthorId).toBe(userIds[0]);
         expect(messages[1].AuthorId).toBe(null);
         expect(messages[2].AuthorId).toBe(userIds[1]);
       });
@@ -1582,6 +2462,41 @@ describe('hasMany', () => {
         expect(message3.AuthorId).toBe(id);
       });
 
+      it('should nullify foreignKey of previous related record and set foreignKey to new related record using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const id = await db.user.get('Id').create({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, ChatId, Text: 'message 1' },
+              { ...activeMessageData, ChatId, Text: 'message 2' },
+              { ...activeMessageData, ChatId, Text: 'message 3' },
+            ],
+          },
+        });
+
+        await db.message.create({
+          ...activeMessageData,
+          ChatId,
+          Text: 'message 4',
+        });
+
+        await db.user.find(id).update({
+          activeMessages: {
+            set: { Text: { in: ['message 3', 'message 4'] } },
+          },
+        });
+
+        const messages = await db.message.order({
+          Text: 'ASC',
+        });
+
+        expect(messages[0].AuthorId).toBe(id);
+        expect(messages[1].AuthorId).toBe(null);
+        expect(messages[2].AuthorId).toBe(id);
+        expect(messages[3].AuthorId).toBe(id);
+      });
+
       it('should nullify all related records foreign keys when giving empty array', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const id = await db.user.get('Id').create({
@@ -1603,6 +2518,29 @@ describe('hasMany', () => {
         const messages = await db.message;
 
         expect(messages.map((m) => m.AuthorId)).toEqual([null, null]);
+      });
+
+      it('should nullify matching related records foreign keys when giving empty array using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const id = await db.user.get('Id').create({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, ChatId, Text: 'message 1' },
+              { ...activeMessageData, ChatId, Text: 'message 2' },
+            ],
+          },
+        });
+
+        await db.user.find(id).update({
+          activeMessages: {
+            set: [],
+          },
+        });
+
+        const messages = await db.message;
+
+        expect(messages.map((m) => m.AuthorId)).toEqual([id, null]);
       });
 
       it('should throw in batch update', async () => {
@@ -1693,6 +2631,39 @@ describe('hasMany', () => {
         expect(messages).toEqual([{ Text: 'message 3' }]);
       });
 
+      it('should delete matching related records using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const Id = await db.user.get('Id').create({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, ChatId, Text: 'message 1' },
+              { ...activeMessageData, ChatId, Text: 'message 2' },
+              { ...messageData, ChatId, Text: 'message 3' },
+            ],
+          },
+        });
+
+        await db.user.find(Id).update({
+          activeMessages: {
+            delete: {
+              Text: { in: ['message 1', 'message 2'] },
+            },
+          },
+        });
+
+        expect(await db.message.count()).toBe(2);
+
+        const messages = await db.user
+          .queryRelated('messages', { Id, UserKey: 'key' })
+          .select('Text');
+        expect(messages).toEqual([
+          { Text: 'message 1' },
+          { Text: 'message 3' },
+        ]);
+      });
+
       it('should delete related records in batch update', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
@@ -1726,6 +2697,46 @@ describe('hasMany', () => {
           .queryRelated('messages', { Id: userIds[1], UserKey: 'key' })
           .select('Text');
         expect(messages).toEqual([{ Text: 'message 3' }]);
+      });
+
+      it('should delete matching related records in batch update using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const userIds = await db.user.pluck('Id').createMany([
+          {
+            ...userData,
+            messages: {
+              create: [
+                { ...messageData, ChatId, Text: 'message 1' },
+                { ...activeMessageData, ChatId, Text: 'message 2' },
+              ],
+            },
+          },
+          {
+            ...userData,
+            messages: {
+              create: [
+                { ...activeMessageData, ChatId, Text: 'message 3' },
+                { ...messageData, ChatId, Text: 'message 4' },
+              ],
+            },
+          },
+        ]);
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          activeMessages: {
+            delete: [
+              { Text: 'message 1' },
+              { Text: 'message 2' },
+              { Text: 'message 3' },
+            ],
+          },
+        });
+
+        expect(await db.message.count()).toBe(2);
+
+        const messages = await db.message.pluck('Text');
+        expect(messages).toEqual(['message 1', 'message 4']);
       });
 
       it('should ignore empty delete list', async () => {
@@ -1870,6 +2881,37 @@ describe('hasMany', () => {
         expect(messages).toEqual(['updated', 'message 2', 'updated']);
       });
 
+      it('should update matching related records using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const Id = await db.user.get('Id').create({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, ChatId, Text: 'message 1' },
+              { ...messageData, ChatId, Text: 'message 2' },
+              { ...activeMessageData, ChatId, Text: 'message 3' },
+            ],
+          },
+        });
+
+        await db.user.find(Id).update({
+          activeMessages: {
+            update: {
+              where: {
+                Text: { in: ['message 1', 'message 3'] },
+              },
+              data: {
+                Text: 'updated',
+              },
+            },
+          },
+        });
+
+        const messages = await db.message.pluck('Text');
+        expect(messages).toEqual(['message 1', 'message 2', 'updated']);
+      });
+
       it('should update related records in batch update', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
@@ -1906,6 +2948,44 @@ describe('hasMany', () => {
 
         const messages = await db.message.order('Id').pluck('Text');
         expect(messages).toEqual(['updated', 'message 2', 'updated']);
+      });
+
+      it('should update matching related records in batch update using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+
+        const userIds = await db.user.pluck('Id').createMany([
+          {
+            ...userData,
+            messages: {
+              create: [{ ...messageData, ChatId, Text: 'message 1' }],
+            },
+          },
+          {
+            ...userData,
+            messages: {
+              create: [
+                { ...messageData, ChatId, Text: 'message 2' },
+                { ...activeMessageData, ChatId, Text: 'message 3' },
+              ],
+            },
+          },
+        ]);
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          activeMessages: {
+            update: {
+              where: {
+                Text: { in: ['message 1', 'message 3'] },
+              },
+              data: {
+                Text: 'updated',
+              },
+            },
+          },
+        });
+
+        const messages = await db.message.pluck('Text');
+        expect(messages).toEqual(['message 1', 'message 2', 'updated']);
       });
 
       it('should ignore empty update where list', async () => {
@@ -2054,6 +3134,35 @@ describe('hasMany', () => {
         expect(texts).toEqual(['created 1', 'created 2']);
       });
 
+      it('should create new related records using `on`', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const user = await db.user.create({ ...userData, Age: 1 });
+
+        const updated = await db.user
+          .select('Age')
+          .find(user.Id)
+          .increment('Age')
+          .update({
+            activeMessages: {
+              create: [
+                { ...messageData, ChatId, Text: 'created 1' },
+                { ...messageData, ChatId, Text: 'created 2' },
+              ],
+            },
+          });
+
+        expect(updated.Age).toBe(2);
+
+        const texts = await db.user
+          .queryRelated('messages', user)
+          .order('Text');
+
+        expect(texts).toMatchObject([
+          { Text: 'created 1', Active: true },
+          { Text: 'created 2', Active: true },
+        ]);
+      });
+
       it('should throw in batch update', async () => {
         expect(() =>
           db.user.where({ Id: { in: [1, 2, 3] } }).update({
@@ -2127,6 +3236,27 @@ describe('hasMany', () => {
           )
         `,
       [10, 'a', 'b'],
+    );
+  });
+
+  it('should be supported in a `where` callback using `on`', () => {
+    const q = db.user.where((q) =>
+      q.activeMessages.whereIn('Text', ['a', 'b']).count().equals(10),
+    );
+
+    expectSql(
+      q.toSQL(),
+      `
+          SELECT ${userSelectAll} FROM "user" WHERE (
+            SELECT count(*) = $1
+            FROM "message" "activeMessages"
+            WHERE "activeMessages"."active" = $2
+              AND "activeMessages"."text" IN ($3, $4)
+              AND "activeMessages"."author_id" = "user"."id"
+              AND "activeMessages"."message_key" = "user"."user_key"
+          )
+        `,
+      [10, true, 'a', 'b'],
     );
   });
 });
@@ -2286,131 +3416,76 @@ describe('hasMany through', () => {
   });
 
   describe('through hasMany', () => {
-    it('should support `queryRelated` to query related data', async () => {
-      const query = db.profile.queryRelated('chats', {
-        UserId: 1,
-        ProfileKey: 'key',
-      });
-      expectSql(
-        query.toSQL(),
-        `
-        SELECT ${chatSelectAll} FROM "chat" "chats"
-        WHERE EXISTS (
-          SELECT 1 FROM "user"
-          WHERE EXISTS (
-            SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-              AND "chatUser"."chat_key" = "chats"."chat_key"
-              AND "chatUser"."user_id" = "user"."id"
-              AND "chatUser"."user_key" = "user"."user_key"
-          )
-          AND "user"."id" = $1
-          AND "user"."user_key" = $2
-        )
-      `,
-        [1, 'key'],
-      );
-    });
-
-    it('should handle chained query', () => {
-      const query = db.profile
-        .where({ Bio: 'bio' })
-        .chain('chats')
-        .where({ Title: 'title' });
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT ${chatSelectAll} FROM "chat" "chats"
-          WHERE EXISTS (
-            SELECT 1 FROM "profile"
-            WHERE "profile"."bio" = $1
-              AND EXISTS (
-                SELECT 1 FROM "user"
-                WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                      AND "chatUser"."chat_key" = "chats"."chat_key"
-                      AND "chatUser"."user_id" = "user"."id"
-                  AND "chatUser"."user_key" = "user"."user_key"
-                  )
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
-              )
-          )
-          AND "chats"."title" = $2
-        `,
-        ['bio', 'title'],
-      );
-    });
-
-    it('should handle long chained query', () => {
-      const q = db.message
-        .where({ Text: 'text' })
-        .chain('profiles')
-        .where({ Bio: 'bio' })
-        .chain('posts')
-        .where({ Body: 'body' });
-
-      assertType<Awaited<typeof q>, Post[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-        SELECT ${postSelectAll}
-        FROM "post" "posts"
-        WHERE
-          EXISTS (
-            SELECT 1
-            FROM "profile" AS "profiles"
-            WHERE
-              EXISTS (
-                SELECT 1
-                FROM "message"
-                WHERE "message"."text" = $1
-                  AND EXISTS (
-                    SELECT 1
-                    FROM "user" AS "sender"
-                    WHERE "profiles"."user_id" = "sender"."id"
-                      AND "profiles"."profile_key" = "sender"."user_key"
-                      AND "sender"."id" = "message"."author_id"
-                      AND "sender"."user_key" = "message"."message_key"
-                  )
-              )
-              AND "profiles"."bio" = $2
-              AND EXISTS (
-                SELECT 1
-                FROM "user"
-                WHERE "posts"."user_id" = "user"."id"
-                  AND "posts"."title" = "user"."user_key"
-                  AND "user"."id" = "profiles"."user_id"
-                  AND "user"."user_key" = "profiles"."profile_key"
-              )
-          )
-          AND "posts"."body" = $3
-      `,
-        ['text', 'bio', 'body'],
-      );
-    });
-
-    it('should disable create', () => {
-      // @ts-expect-error hasMany with through option should not have chained create
-      db.profile.chain('chats').create(chatData);
-    });
-
-    describe('chained delete', () => {
-      it('should have chained delete', () => {
-        const query = db.profile
-          .where({ Bio: 'bio' })
-          .chain('chats')
-          .where({ Title: 'title' })
-          .delete();
+    describe('queryRelated', () => {
+      it('should support `queryRelated` to query related data', async () => {
+        const query = db.profile.queryRelated('chats', {
+          UserId: 1,
+          ProfileKey: 'key',
+        });
 
         expectSql(
           query.toSQL(),
           `
-          DELETE FROM "chat" AS "chats"
-          WHERE EXISTS (
+            SELECT ${chatSelectAll} FROM "chat" "chats"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                  AND "chatUser"."chat_key" = "chats"."chat_key"
+                  AND "chatUser"."user_id" = "user"."id"
+                  AND "chatUser"."user_key" = "user"."user_key"
+              )
+              AND "user"."id" = $1
+              AND "user"."user_key" = $2
+            )
+          `,
+          [1, 'key'],
+        );
+      });
+
+      it('should support `queryRelated` to query related data using `on`', async () => {
+        const query = db.profile.queryRelated('activeChats', {
+          UserId: 1,
+          ProfileKey: 'key',
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" "activeChats"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "activeUser"
+              WHERE "activeChats"."active" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                    AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                    AND "chatUser"."user_id" = "activeUser"."id"
+                    AND "chatUser"."user_key" = "activeUser"."user_key"
+                )
+                AND "activeUser"."active" = $2
+                AND "activeUser"."id" = $3
+                AND "activeUser"."user_key" = $4
+            )
+          `,
+          [true, true, 1, 'key'],
+        );
+      });
+    });
+
+    describe('chain', () => {
+      it('should handle chained query', () => {
+        const query = db.profile
+          .where({ Bio: 'bio' })
+          .chain('chats')
+          .where({ Title: 'title' });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" "chats"
+            WHERE EXISTS (
               SELECT 1 FROM "profile"
               WHERE "profile"."bio" = $1
                 AND EXISTS (
@@ -2420,16 +3495,227 @@ describe('hasMany through', () => {
                       WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                         AND "chatUser"."chat_key" = "chats"."chat_key"
                         AND "chatUser"."user_id" = "user"."id"
-                    AND "chatUser"."user_key" = "user"."user_key"
+                        AND "chatUser"."user_key" = "user"."user_key"
                     )
                     AND "user"."id" = "profile"."user_id"
                     AND "user"."user_key" = "profile"."profile_key"
                 )
             )
             AND "chats"."title" = $2
-        `,
+          `,
           ['bio', 'title'],
         );
+      });
+
+      it('should handle chained query using `on`', () => {
+        const query = db.profile
+          .where({ Bio: 'bio' })
+          .chain('activeChats')
+          .where({ Title: 'title' });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" "activeChats"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile"
+              WHERE "profile"."bio" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeUser"
+                  WHERE "activeChats"."active" = $2
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                        AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $3
+                    AND "activeUser"."id" = "profile"."user_id"
+                    AND "activeUser"."user_key" = "profile"."profile_key"
+                )
+            )
+            AND "activeChats"."title" = $4
+          `,
+          ['bio', true, true, 'title'],
+        );
+      });
+
+      it('should handle long chained query', () => {
+        const q = db.message
+          .where({ Text: 'text' })
+          .chain('profiles')
+          .where({ Bio: 'bio' })
+          .chain('posts')
+          .where({ Body: 'body' });
+
+        assertType<Awaited<typeof q>, Post[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${postSelectAll}
+            FROM "post" "posts"
+            WHERE
+              EXISTS (
+                SELECT 1
+                FROM "profile" AS "profiles"
+                WHERE
+                  EXISTS (
+                    SELECT 1
+                    FROM "message"
+                    WHERE "message"."text" = $1
+                      AND EXISTS (
+                        SELECT 1
+                        FROM "user" AS "sender"
+                        WHERE "profiles"."user_id" = "sender"."id"
+                          AND "profiles"."profile_key" = "sender"."user_key"
+                          AND "sender"."id" = "message"."author_id"
+                          AND "sender"."user_key" = "message"."message_key"
+                      )
+                  )
+                  AND "profiles"."bio" = $2
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE "posts"."user_id" = "user"."id"
+                      AND "posts"."title" = "user"."user_key"
+                      AND "user"."id" = "profiles"."user_id"
+                      AND "user"."user_key" = "profiles"."profile_key"
+                  )
+              )
+              AND "posts"."body" = $3
+          `,
+          ['text', 'bio', 'body'],
+        );
+      });
+
+      it('should handle long chained query using `on`', () => {
+        const q = db.message
+          .where({ Text: 'text' })
+          .chain('activeProfiles')
+          .where({ Bio: 'bio' })
+          .chain('activePosts')
+          .where({ Body: 'body' });
+
+        assertType<Awaited<typeof q>, Post[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${postSelectAll}
+            FROM "post" "activePosts"
+            WHERE
+              EXISTS (
+                SELECT 1
+                FROM "profile" AS "activeProfiles"
+                WHERE
+                  EXISTS (
+                    SELECT 1
+                    FROM "message"
+                    WHERE "message"."text" = $1
+                      AND EXISTS (
+                        SELECT 1
+                        FROM "user" AS "activeSender"
+                        WHERE "activeProfiles"."active" = $2
+                          AND "activeProfiles"."user_id" = "activeSender"."id"
+                          AND "activeProfiles"."profile_key" = "activeSender"."user_key"
+                          AND "activeSender"."active" = $3
+                          AND "activeSender"."id" = "message"."author_id"
+                          AND "activeSender"."user_key" = "message"."message_key"
+                      )
+                  )
+                  AND "activeProfiles"."bio" = $4
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "user" AS "activeUser"
+                    WHERE "activePosts"."active" = $5
+                      AND "activePosts"."user_id" = "activeUser"."id"
+                      AND "activePosts"."title" = "activeUser"."user_key"
+                      AND "activeUser"."active" = $6
+                      AND "activeUser"."id" = "activeProfiles"."user_id"
+                      AND "activeUser"."user_key" = "activeProfiles"."profile_key"
+                  )
+              )
+              AND "activePosts"."body" = $7
+          `,
+          ['text', true, true, 'bio', true, true, 'body'],
+        );
+      });
+
+      it('should disable create', () => {
+        // @ts-expect-error hasMany with through option should not have chained create
+        db.profile.chain('chats').create(chatData);
+      });
+
+      describe('chained delete', () => {
+        it('should have chained delete', () => {
+          const query = db.profile
+            .where({ Bio: 'bio' })
+            .chain('chats')
+            .where({ Title: 'title' })
+            .delete();
+
+          expectSql(
+            query.toSQL(),
+            `
+              DELETE FROM "chat" AS "chats"
+              WHERE EXISTS (
+                  SELECT 1 FROM "profile"
+                  WHERE "profile"."bio" = $1
+                    AND EXISTS (
+                      SELECT 1 FROM "user"
+                      WHERE EXISTS (
+                          SELECT 1 FROM "chatUser"
+                          WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                            AND "chatUser"."chat_key" = "chats"."chat_key"
+                            AND "chatUser"."user_id" = "user"."id"
+                            AND "chatUser"."user_key" = "user"."user_key"
+                        )
+                        AND "user"."id" = "profile"."user_id"
+                        AND "user"."user_key" = "profile"."profile_key"
+                    )
+                )
+                AND "chats"."title" = $2
+            `,
+            ['bio', 'title'],
+          );
+        });
+
+        it('should have chained delete using `on`', () => {
+          const query = db.profile
+            .where({ Bio: 'bio' })
+            .chain('activeChats')
+            .where({ Title: 'title' })
+            .delete();
+
+          expectSql(
+            query.toSQL(),
+            `
+              DELETE FROM "chat" AS "activeChats"
+              WHERE EXISTS (
+                  SELECT 1 FROM "profile"
+                  WHERE "profile"."bio" = $1
+                    AND EXISTS (
+                      SELECT 1 FROM "user" AS "activeUser"
+                      WHERE "activeChats"."active" = $2
+                        AND EXISTS (
+                          SELECT 1 FROM "chatUser"
+                          WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                            AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                            AND "chatUser"."user_id" = "activeUser"."id"
+                            AND "chatUser"."user_key" = "activeUser"."user_key"
+                        )
+                        AND "activeUser"."active" = $3
+                        AND "activeUser"."id" = "profile"."user_id"
+                        AND "activeUser"."user_key" = "profile"."profile_key"
+                    )
+                )
+                AND "activeChats"."title" = $4
+            `,
+            ['bio', true, true, 'title'],
+          );
+        });
       });
     });
 
@@ -2443,56 +3729,85 @@ describe('hasMany through', () => {
         ).toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" "c"
-          WHERE EXISTS (
-            SELECT 1 FROM "user"
-            WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chat_id" = "c"."id_of_chat"
-                      AND "chatUser"."chat_key" = "c"."chat_key"
-                  AND "chatUser"."user_id" = "user"."id"
-              AND "chatUser"."user_key" = "user"."user_key"
-              )
-              AND "user"."id" = "p"."user_id"
-            AND "user"."user_key" = "p"."profile_key"
-          )
+          WHERE
+            EXISTS (
+              SELECT 1 FROM "user"
+              WHERE
+                EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chat_id" = "c"."id_of_chat"
+                    AND "chatUser"."chat_key" = "c"."chat_key"
+                    AND "chatUser"."user_id" = "user"."id"
+                    AND "chatUser"."user_key" = "user"."user_key"
+                )
+                AND "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
+            )
         `,
       );
     });
 
-    it('should be supported in whereExists', () => {
-      expectSql(
-        db.profile.whereExists('chats').toSQL(),
-        `
-        SELECT ${profileSelectAll} FROM "profile"
-        WHERE EXISTS (
-          SELECT 1 FROM "chat" AS "chats"
-          WHERE EXISTS (
-            SELECT 1 FROM "user"
-            WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                  AND "chatUser"."chat_key" = "chats"."chat_key"
-                  AND "chatUser"."user_id" = "user"."id"
-              AND "chatUser"."user_key" = "user"."user_key"
-              )
-              AND "user"."id" = "profile"."user_id"
-              AND "user"."user_key" = "profile"."profile_key"
-          )
-        )
-      `,
-      );
-
-      expectSql(
-        db.profile
-          .as('p')
-          .whereExists((q) => q.chats.where({ Title: 'title' }))
-          .toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile" "p"
+    describe('whereExists', () => {
+      it('should be supported in whereExists', () => {
+        expectSql(
+          db.profile.whereExists('chats').toSQL(),
+          `
+          SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
             SELECT 1 FROM "chat" AS "chats"
-            WHERE "chats"."title" = $1
-              AND EXISTS (
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                    AND "chatUser"."chat_key" = "chats"."chat_key"
+                    AND "chatUser"."user_id" = "user"."id"
+                AND "chatUser"."user_key" = "user"."user_key"
+                )
+                AND "user"."id" = "profile"."user_id"
+                AND "user"."user_key" = "profile"."profile_key"
+            )
+          )
+        `,
+        );
+
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists((q) => q.chats.where({ Title: 'title' }))
+            .toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "p"
+            WHERE EXISTS (
+              SELECT 1 FROM "chat" AS "chats"
+              WHERE "chats"."title" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chats"."chat_key"
+                      AND "chatUser"."user_id" = "user"."id"
+                      AND "chatUser"."user_key" = "user"."user_key"
+                  )
+                  AND "user"."id" = "p"."user_id"
+                  AND "user"."user_key" = "p"."profile_key"
+                )
+            )
+          `,
+          ['title'],
+        );
+
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists('chats', (q) => q.where({ 'chats.Title': 'title' }))
+            .toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "p"
+            WHERE EXISTS (
+              SELECT 1 FROM "chat" AS "chats"
+              WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
@@ -2504,152 +3819,339 @@ describe('hasMany through', () => {
                 AND "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
               )
-          )
-        `,
-        ['title'],
-      );
+              AND "chats"."title" = $1
+            )
+          `,
+          ['title'],
+        );
+      });
 
-      expectSql(
-        db.profile
-          .as('p')
-          .whereExists('chats', (q) => q.where({ 'chats.Title': 'title' }))
-          .toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile" "p"
-          WHERE EXISTS (
-            SELECT 1 FROM "chat" AS "chats"
+      it('should be supported in whereExists using `on`', () => {
+        expectSql(
+          db.profile.whereExists('activeChats').toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user"
+              SELECT 1 FROM "chat" AS "activeChats"
               WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                  AND "chatUser"."chat_key" = "chats"."chat_key"
-                  AND "chatUser"."user_id" = "user"."id"
-                  AND "chatUser"."user_key" = "user"."user_key"
+                SELECT 1 FROM "user" AS "activeUser"
+                WHERE "activeChats"."active" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                      AND "chatUser"."user_id" = "activeUser"."id"
+                      AND "chatUser"."user_key" = "activeUser"."user_key"
+                  )
+                  AND "activeUser"."active" = $2
+                  AND "activeUser"."id" = "profile"."user_id"
+                  AND "activeUser"."user_key" = "profile"."profile_key"
               )
-              AND "user"."id" = "p"."user_id"
-              AND "user"."user_key" = "p"."profile_key"
             )
-            AND "chats"."title" = $1
+          `,
+          [true, true],
+        );
+
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists((q) => q.activeChats.where({ Title: 'title' }))
+            .toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "p"
+            WHERE EXISTS (
+              SELECT 1 FROM "chat" AS "activeChats"
+              WHERE "activeChats"."title" = $1
+                AND EXISTS (
+                    SELECT 1 FROM "user" AS "activeUser"
+                    WHERE "activeChats"."active" = $2
+                      AND EXISTS (
+                          SELECT 1 FROM "chatUser"
+                          WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                            AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                            AND "chatUser"."user_id" = "activeUser"."id"
+                            AND "chatUser"."user_key" = "activeUser"."user_key"
+                      )
+                      AND "activeUser"."active" = $3
+                      AND "activeUser"."id" = "p"."user_id"
+                      AND "activeUser"."user_key" = "p"."profile_key"
+                )
+            )
+          `,
+          ['title', true, true],
+        );
+
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists('activeChats', (q) =>
+              q.where({ 'activeChats.Title': 'title' }),
+            )
+            .toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "p"
+            WHERE EXISTS (
+              SELECT 1 FROM "chat" AS "activeChats"
+              WHERE
+                EXISTS (
+                  SELECT 1 FROM "user" AS "activeUser"
+                  WHERE "activeChats"."active" = $1
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                        AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $2
+                    AND "activeUser"."id" = "p"."user_id"
+                    AND "activeUser"."user_key" = "p"."profile_key"
+                )
+                AND "activeChats"."title" = $3
+            )
+          `,
+          [true, true, 'title'],
+        );
+      });
+    });
+
+    describe('join', () => {
+      it('should be supported in join', () => {
+        const query = db.profile
+          .as('p')
+          .join('chats', (q) => q.where({ Title: 'title' }))
+          .select('Bio', 'chats.Title');
+
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Title: string }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "chats"."title" "Title"
+            FROM "profile" "p"
+            JOIN "chat" AS "chats"
+              ON EXISTS (
+                SELECT 1 FROM "user"
+                WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chats"."chat_key"
+                      AND "chatUser"."user_id" = "user"."id"
+                  AND "chatUser"."user_key" = "user"."user_key"
+                  )
+                  AND "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
+              )
+              AND "chats"."title" = $1
+          `,
+          ['title'],
+        );
+      });
+
+      it('should be supported in join using `on`', () => {
+        const query = db.profile
+          .as('p')
+          .join('activeChats', (q) => q.where({ Title: 'title' }))
+          .select('Bio', 'activeChats.Title');
+
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Title: string }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "activeChats"."title" "Title"
+            FROM "profile" "p"
+            JOIN "chat" AS "activeChats"
+              ON
+                EXISTS (
+                  SELECT 1 FROM "user" AS "activeUser"
+                  WHERE "activeChats"."active" = $1
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                        AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $2
+                    AND "activeUser"."id" = "p"."user_id"
+                    AND "activeUser"."user_key" = "p"."profile_key"
+                )
+             AND "activeChats"."title" = $3
+          `,
+          [true, true, 'title'],
+        );
+      });
+
+      it('should be supported in join with a callback', () => {
+        const now = new Date();
+
+        const query = db.profile
+          .as('p')
+          .join(
+            (q) => q.chats.as('c').where({ updatedAt: now }),
+            (q) => q.where({ Title: 'title' }),
           )
-        `,
-        ['title'],
-      );
-    });
+          .select('Bio', 'c.Title');
 
-    it('should be supported in join', () => {
-      const query = db.profile
-        .as('p')
-        .join('chats', (q) => q.where({ Title: 'title' }))
-        .select('Bio', 'chats.Title');
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Title: string }[]
+        >();
 
-      assertType<
-        Awaited<typeof query>,
-        { Bio: string | null; Title: string }[]
-      >();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT "p"."bio" "Bio", "chats"."title" "Title"
-          FROM "profile" "p"
-          JOIN "chat" AS "chats"
-            ON EXISTS (
-              SELECT 1 FROM "user"
-              WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chats"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                AND "chatUser"."user_key" = "user"."user_key"
-                )
-                AND "user"."id" = "p"."user_id"
-              AND "user"."user_key" = "p"."profile_key"
-            )
-            AND "chats"."title" = $1
-        `,
-        ['title'],
-      );
-    });
-
-    it('should be supported in join with a callback', () => {
-      const now = new Date();
-
-      const query = db.profile
-        .as('p')
-        .join(
-          (q) => q.chats.as('c').where({ updatedAt: now }),
-          (q) => q.where({ Title: 'title' }),
-        )
-        .select('Bio', 'c.Title');
-
-      assertType<
-        Awaited<typeof query>,
-        { Bio: string | null; Title: string }[]
-      >();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT "p"."bio" "Bio", "c"."title" "Title"
-          FROM "profile" "p"
-          JOIN "chat" AS "c"
-            ON "c"."title" = $1
-            AND "c"."updated_at" = $2
-            AND EXISTS (
-              SELECT 1 FROM "user"
-              WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chat_id" = "c"."id_of_chat"
-                        AND "chatUser"."chat_key" = "c"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                AND "chatUser"."user_key" = "user"."user_key"
-                )
-                AND "user"."id" = "p"."user_id"
-              AND "user"."user_key" = "p"."profile_key"
-            )
-        `,
-        ['title', now],
-      );
-    });
-
-    it('should be supported in joinLateral', () => {
-      const q = db.profile
-        .joinLateral('chats', (q) => q.as('c').where({ Title: 'one' }))
-        .where({ 'c.Title': 'two' })
-        .select('Bio', { chat: 'c.*' });
-
-      assertType<Awaited<typeof q>, { Bio: string | null; chat: Chat }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
-          FROM "profile"
-          JOIN LATERAL (
-            SELECT ${chatSelectAll}
-            FROM "chat" "c"
-            WHERE "c"."title" = $1
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "c"."title" "Title"
+            FROM "profile" "p"
+            JOIN "chat" AS "c"
+              ON "c"."title" = $1
+              AND "c"."updated_at" = $2
               AND EXISTS (
-                SELECT 1
-                FROM "user"
-                WHERE 
-                  EXISTS (
-                    SELECT 1
-                    FROM "chatUser"
+                SELECT 1 FROM "user"
+                WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                           AND "chatUser"."chat_key" = "c"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
-                    AND "chatUser"."user_key" = "user"."user_key"
+                  AND "chatUser"."user_key" = "user"."user_key"
                   )
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
+                  AND "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
               )
-          ) "c" ON true
-          WHERE "c"."Title" = $2
-        `,
-        ['one', 'two'],
-      );
+          `,
+          ['title', now],
+        );
+      });
+
+      it('should be supported in join with a callback using `on`', () => {
+        const now = new Date();
+
+        const query = db.profile
+          .as('p')
+          .join(
+            (q) => q.activeChats.as('c').where({ updatedAt: now }),
+            (q) => q.where({ Title: 'title' }),
+          )
+          .select('Bio', 'c.Title');
+
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Title: string }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "c"."title" "Title"
+            FROM "profile" "p"
+            JOIN "chat" AS "c"
+              ON "c"."title" = $1
+             AND "c"."updated_at" = $2
+             AND
+               EXISTS (
+                 SELECT 1 FROM "user" AS "activeUser"
+                 WHERE "c"."active" = $3
+                   AND EXISTS (
+                     SELECT 1 FROM "chatUser"
+                     WHERE "chatUser"."chat_id" = "c"."id_of_chat"
+                       AND "chatUser"."chat_key" = "c"."chat_key"
+                       AND "chatUser"."user_id" = "activeUser"."id"
+                       AND "chatUser"."user_key" = "activeUser"."user_key"
+                   )
+                   AND "activeUser"."active" = $4
+                   AND "activeUser"."id" = "p"."user_id"
+                   AND "activeUser"."user_key" = "p"."profile_key"
+               )
+          `,
+          ['title', now, true, true],
+        );
+      });
+
+      it('should be supported in joinLateral', () => {
+        const q = db.profile
+          .joinLateral('chats', (q) => q.as('c').where({ Title: 'one' }))
+          .where({ 'c.Title': 'two' })
+          .select('Bio', { chat: 'c.*' });
+
+        assertType<Awaited<typeof q>, { Bio: string | null; chat: Chat }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
+            FROM "profile"
+            JOIN LATERAL (
+              SELECT ${chatSelectAll}
+              FROM "chat" "c"
+              WHERE "c"."title" = $1
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user"
+                  WHERE 
+                    EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "c"."id_of_chat"
+                            AND "chatUser"."chat_key" = "c"."chat_key"
+                        AND "chatUser"."user_id" = "user"."id"
+                      AND "chatUser"."user_key" = "user"."user_key"
+                    )
+                    AND "user"."id" = "profile"."user_id"
+                    AND "user"."user_key" = "profile"."profile_key"
+                )
+            ) "c" ON true
+            WHERE "c"."Title" = $2
+          `,
+          ['one', 'two'],
+        );
+      });
+
+      it('should be supported in joinLateral', () => {
+        const q = db.profile
+          .joinLateral('activeChats', (q) => q.as('c').where({ Title: 'one' }))
+          .where({ 'c.Title': 'two' })
+          .select('Bio', { chat: 'c.*' });
+
+        assertType<Awaited<typeof q>, { Bio: string | null; chat: Chat }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
+            FROM "profile"
+            JOIN LATERAL (
+              SELECT ${chatSelectAll}
+              FROM "chat" "c"
+              WHERE "c"."title" = $1
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user" AS "activeUser"
+                  WHERE "c"."active" = $2
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "c"."id_of_chat"
+                            AND "chatUser"."chat_key" = "c"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                      AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $3
+                    AND "activeUser"."id" = "profile"."user_id"
+                    AND "activeUser"."user_key" = "profile"."profile_key"
+                )
+            ) "c" ON true
+            WHERE "c"."Title" = $4
+          `,
+          ['one', true, true, 'two'],
+        );
+      });
     });
 
     describe('select', () => {
@@ -2691,60 +4193,67 @@ describe('hasMany through', () => {
           ['title'],
         );
       });
-    });
 
-    it('should allow to select count', () => {
-      const query = db.profile.as('p').select('Id', {
-        chatsCount: (q) => q.chats.count(),
+      it('should be selectable using `on`', () => {
+        const query = db.profile.as('p').select('Id', {
+          chats: (q) => q.activeChats.where({ Title: 'title' }),
+        });
+
+        assertType<Awaited<typeof query>, { Id: number; chats: Chat[] }[]>();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              COALESCE("chats".r, '[]') "chats"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${chatSelectAll}
+                FROM "chat" "activeChats"
+                WHERE "activeChats"."title" = $1
+                  AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeUser"
+                  WHERE "activeChats"."active" = $2
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                        AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $3
+                    AND "activeUser"."id" = "p"."user_id"
+                    AND "activeUser"."user_key" = "p"."profile_key"
+                )
+              ) "t"
+            ) "chats" ON true
+          `,
+          ['title', true, true],
+        );
       });
 
-      assertType<Awaited<typeof query>, { Id: number; chatsCount: number }[]>();
+      it('should allow to select count', () => {
+        const query = db.profile.as('p').select('Id', {
+          chatsCount: (q) => q.chats.count(),
+        });
 
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT
-            "p"."id" "Id",
-            "chatsCount".r "chatsCount"
-          FROM "profile" "p"
-          LEFT JOIN LATERAL (
-            SELECT count(*) r
-            FROM "chat" "chats"
-            WHERE EXISTS (
-              SELECT 1 FROM "user"
-              WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                  AND "chatUser"."chat_key" = "chats"."chat_key"
-                  AND "chatUser"."user_id" = "user"."id"
-                AND "chatUser"."user_key" = "user"."user_key"
-              )
-              AND "user"."id" = "p"."user_id"
-              AND "user"."user_key" = "p"."profile_key"
-            )
-          ) "chatsCount" ON true
-        `,
-      );
-    });
+        assertType<
+          Awaited<typeof query>,
+          { Id: number; chatsCount: number }[]
+        >();
 
-    it('should allow to pluck values', () => {
-      const query = db.profile.as('p').select('Id', {
-        titles: (q) => q.chats.pluck('Title'),
-      });
-
-      assertType<Awaited<typeof query>, { Id: number; titles: string[] }[]>();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT
-            "p"."id" "Id",
-            COALESCE("titles".r, '[]') "titles"
-          FROM "profile" "p"
-          LEFT JOIN LATERAL (
-            SELECT json_agg("t"."Title") r
-            FROM (
-              SELECT "chats"."title" "Title"
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              "chatsCount".r "chatsCount"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT count(*) r
               FROM "chat" "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "user"
@@ -2758,240 +4267,522 @@ describe('hasMany through', () => {
                 AND "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
               )
-            ) "t"
-          ) "titles" ON true
-        `,
-      );
-    });
-
-    it('should handle exists sub query', () => {
-      const query = db.profile.as('p').select('Id', {
-        hasChats: (q) => q.chats.exists(),
+            ) "chatsCount" ON true
+          `,
+        );
       });
 
-      assertType<Awaited<typeof query>, { Id: number; hasChats: boolean }[]>();
+      it('should allow to select count using `on`', () => {
+        const query = db.profile.as('p').select('Id', {
+          chatsCount: (q) => q.activeChats.count(),
+        });
 
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT
-            "p"."id" "Id",
-            COALESCE("hasChats".r, false) "hasChats"
-          FROM "profile" "p"
-          LEFT JOIN LATERAL (
-            SELECT true r
-            FROM "chat" "chats"
-            WHERE EXISTS (
-                SELECT 1 FROM "user"
-                WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chats"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                  AND "chatUser"."user_key" = "user"."user_key"
-              )
-              AND "user"."id" = "p"."user_id"
-              AND "user"."user_key" = "p"."profile_key"
-            )
-            LIMIT 1
-          ) "hasChats" ON true
-        `,
-      );
-    });
+        assertType<
+          Awaited<typeof query>,
+          { Id: number; chatsCount: number }[]
+        >();
 
-    it('should support recurring select', () => {
-      const q = db.profile.select({
-        chats: (q) =>
-          q.chats.select({
-            profiles: (q) =>
-              q.profiles.select({
-                chats: (q) => q.chats,
-              }),
-          }),
-      });
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT COALESCE("chats".r, '[]') "chats"
-          FROM "profile"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
-            FROM (
-              SELECT COALESCE("profiles".r, '[]') "profiles"
-              FROM "chat" "chats"
-              LEFT JOIN LATERAL (
-                SELECT json_agg(row_to_json("t".*)) r
-                FROM (
-                  SELECT COALESCE("chats2".r, '[]') "chats"
-                  FROM "profile" "profiles"
-                  LEFT JOIN LATERAL (
-                    SELECT json_agg(row_to_json("t".*)) r
-                    FROM (
-                      SELECT ${chatSelectAll}
-                      FROM "chat" "chats2"
-                      WHERE EXISTS (
-                        SELECT 1
-                        FROM "user"
-                        WHERE
-                          EXISTS (
-                            SELECT 1
-                            FROM "chatUser"
-                            WHERE "chatUser"."chat_id" = "chats2"."id_of_chat"
-                              AND "chatUser"."chat_key" = "chats2"."chat_key"
-                              AND "chatUser"."user_id" = "user"."id"
-                            AND "chatUser"."user_key" = "user"."user_key"
-                          )
-                          AND "user"."id" = "profiles"."user_id"
-                          AND "user"."user_key" = "profiles"."profile_key"
-                      )
-                    ) "t"
-                  ) "chats2" ON true
-                  WHERE EXISTS (
-                    SELECT 1
-                    FROM "user" AS "users"
-                    WHERE "profiles"."user_id" = "users"."id"
-                      AND "profiles"."profile_key" = "users"."user_key"
-                      AND EXISTS (
-                        SELECT 1
-                        FROM "chatUser"
-                        WHERE "chatUser"."user_id" = "users"."id"
-                          AND "chatUser"."user_key" = "users"."user_key"
-                          AND "chatUser"."chat_id" = "chats"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chats"."chat_key"
-                      )
-                  )
-                ) "t"
-              ) "profiles" ON true
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              "chatsCount".r "chatsCount"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT count(*) r
+              FROM "chat" "activeChats"
               WHERE EXISTS (
-                SELECT 1
-                FROM "user"
+                SELECT 1 FROM "user" AS "activeUser"
+                WHERE "activeChats"."active" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                      AND "chatUser"."user_id" = "activeUser"."id"
+                      AND "chatUser"."user_key" = "activeUser"."user_key"
+                  )
+                  AND "activeUser"."active" = $2
+                  AND "activeUser"."id" = "p"."user_id"
+                  AND "activeUser"."user_key" = "p"."profile_key"
+              )
+              ) "chatsCount" ON true
+          `,
+          [true, true],
+        );
+      });
+
+      it('should allow to pluck values', () => {
+        const query = db.profile.as('p').select('Id', {
+          titles: (q) => q.chats.pluck('Title'),
+        });
+
+        assertType<Awaited<typeof query>, { Id: number; titles: string[] }[]>();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              COALESCE("titles".r, '[]') "titles"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT json_agg("t"."Title") r
+              FROM (
+                SELECT "chats"."title" "Title"
+                FROM "chat" "chats"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chats"."chat_key"
+                      AND "chatUser"."user_id" = "user"."id"
+                    AND "chatUser"."user_key" = "user"."user_key"
+                  )
+                  AND "user"."id" = "p"."user_id"
+                  AND "user"."user_key" = "p"."profile_key"
+                )
+              ) "t"
+            ) "titles" ON true
+          `,
+        );
+      });
+
+      it('should allow to pluck values using `on`', () => {
+        const query = db.profile.as('p').select('Id', {
+          titles: (q) => q.activeChats.pluck('Title'),
+        });
+
+        assertType<Awaited<typeof query>, { Id: number; titles: string[] }[]>();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              COALESCE("titles".r, '[]') "titles"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT json_agg("t"."Title") r
+              FROM (
+                 SELECT "activeChats"."title" "Title"
+                 FROM "chat" "activeChats"
+                 WHERE EXISTS (
+                   SELECT 1 FROM "user" AS "activeUser"
+                   WHERE "activeChats"."active" = $1
+                     AND EXISTS (
+                       SELECT 1 FROM "chatUser"
+                       WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                         AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                         AND "chatUser"."user_id" = "activeUser"."id"
+                         AND "chatUser"."user_key" = "activeUser"."user_key"
+                     )
+                     AND "activeUser"."active" = $2
+                     AND "activeUser"."id" = "p"."user_id"
+                     AND "activeUser"."user_key" = "p"."profile_key"
+                 )
+              ) "t"
+            ) "titles" ON true
+          `,
+          [true, true],
+        );
+      });
+
+      it('should handle exists sub query', () => {
+        const query = db.profile.as('p').select('Id', {
+          hasChats: (q) => q.chats.exists(),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { Id: number; hasChats: boolean }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              COALESCE("hasChats".r, false) "hasChats"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "chat" "chats"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chats"."chat_key"
+                      AND "chatUser"."user_id" = "user"."id"
+                    AND "chatUser"."user_key" = "user"."user_key"
+                )
+                AND "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
+              )
+              LIMIT 1
+            ) "hasChats" ON true
+          `,
+        );
+      });
+
+      it('should handle exists sub query using `on`', () => {
+        const query = db.profile.as('p').select('Id', {
+          hasChats: (q) => q.activeChats.exists(),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { Id: number; hasChats: boolean }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              COALESCE("hasChats".r, false) "hasChats"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "chat" "activeChats"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "activeUser"
+                  WHERE "activeChats"."active" = $1
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                      AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $2
+                    AND "activeUser"."id" = "p"."user_id"
+                    AND "activeUser"."user_key" = "p"."profile_key"
+              )
+              LIMIT 1
+            ) "hasChats" ON true
+          `,
+          [true, true],
+        );
+      });
+
+      it('should support recurring select', () => {
+        const q = db.profile.select({
+          chats: (q) =>
+            q.chats.select({
+              profiles: (q) =>
+                q.profiles.select({
+                  chats: (q) => q.chats,
+                }),
+            }),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("chats".r, '[]') "chats"
+            FROM "profile"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT COALESCE("profiles".r, '[]') "profiles"
+                FROM "chat" "chats"
+                LEFT JOIN LATERAL (
+                  SELECT json_agg(row_to_json("t".*)) r
+                  FROM (
+                    SELECT COALESCE("chats2".r, '[]') "chats"
+                    FROM "profile" "profiles"
+                    LEFT JOIN LATERAL (
+                      SELECT json_agg(row_to_json("t".*)) r
+                      FROM (
+                        SELECT ${chatSelectAll}
+                        FROM "chat" "chats2"
+                        WHERE EXISTS (
+                          SELECT 1
+                          FROM "user"
+                          WHERE
+                            EXISTS (
+                              SELECT 1
+                              FROM "chatUser"
+                              WHERE "chatUser"."chat_id" = "chats2"."id_of_chat"
+                                AND "chatUser"."chat_key" = "chats2"."chat_key"
+                                AND "chatUser"."user_id" = "user"."id"
+                              AND "chatUser"."user_key" = "user"."user_key"
+                            )
+                            AND "user"."id" = "profiles"."user_id"
+                            AND "user"."user_key" = "profiles"."profile_key"
+                        )
+                      ) "t"
+                    ) "chats2" ON true
+                    WHERE EXISTS (
+                      SELECT 1
+                      FROM "user" AS "users"
+                      WHERE "profiles"."user_id" = "users"."id"
+                        AND "profiles"."profile_key" = "users"."user_key"
+                        AND EXISTS (
+                          SELECT 1
+                          FROM "chatUser"
+                          WHERE "chatUser"."user_id" = "users"."id"
+                            AND "chatUser"."user_key" = "users"."user_key"
+                            AND "chatUser"."chat_id" = "chats"."id_of_chat"
+                          AND "chatUser"."chat_key" = "chats"."chat_key"
+                        )
+                    )
+                  ) "t"
+                ) "profiles" ON true
                 WHERE EXISTS (
                   SELECT 1
-                  FROM "chatUser"
-                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chats"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                  AND "chatUser"."user_key" = "user"."user_key"
-                ) AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
-              )
-            ) "t"
-          ) "chats" ON true
-        `,
-      );
-    });
-
-    it('should be supported in a `where` callback', () => {
-      const q = db.profile.where((q) =>
-        q.chats.whereIn('Title', ['a', 'b']).count().equals(10),
-      );
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile" WHERE (
-            SELECT count(*) = $1
-            FROM "chat" "chats"
-            WHERE "chats"."title" IN ($2, $3)
-              AND EXISTS (
-                SELECT 1
-                FROM "user"
-                WHERE
-                  EXISTS (
+                  FROM "user"
+                  WHERE EXISTS (
                     SELECT 1
                     FROM "chatUser"
                     WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                       AND "chatUser"."chat_key" = "chats"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
                     AND "chatUser"."user_key" = "user"."user_key"
-                  )
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
-              )
-          )
-        `,
-        [10, 'a', 'b'],
-      );
+                  ) AND "user"."id" = "profile"."user_id"
+                    AND "user"."user_key" = "profile"."profile_key"
+                )
+              ) "t"
+            ) "chats" ON true
+          `,
+        );
+      });
+
+      it('should support recurring select using `on`', () => {
+        const q = db.profile.as('activeProfiles').select({
+          activeChats: (q) =>
+            q.activeChats.select({
+              activeProfiles: (q) =>
+                q.activeProfiles.select({
+                  chats: (q) => q.activeChats,
+                }),
+            }),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("activeChats".r, '[]') "activeChats"
+            FROM "profile" "activeProfiles"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT COALESCE("activeProfiles2".r, '[]') "activeProfiles"
+                FROM "chat" "activeChats"
+                LEFT JOIN LATERAL (
+                  SELECT json_agg(row_to_json("t".*)) r
+                  FROM (
+                    SELECT COALESCE("chats".r, '[]') "chats"
+                    FROM "profile" "activeProfiles2"
+                    LEFT JOIN LATERAL (
+                      SELECT json_agg(row_to_json("t".*)) r
+                      FROM (
+                        SELECT ${chatSelectAll}
+                        FROM "chat" "activeChats2"
+                        WHERE EXISTS (
+                          SELECT 1
+                          FROM "user" AS "activeUser"
+                          WHERE "activeChats2"."active" = $1
+                            AND EXISTS (
+                              SELECT 1
+                              FROM "chatUser"
+                              WHERE "chatUser"."chat_id" = "activeChats2"."id_of_chat"
+                                AND "chatUser"."chat_key" = "activeChats2"."chat_key"
+                                AND "chatUser"."user_id" = "activeUser"."id"
+                                AND "chatUser"."user_key" = "activeUser"."user_key"
+                            )
+                            AND "activeUser"."active" = $2
+                            AND "activeUser"."id" = "activeProfiles2"."user_id"
+                            AND "activeUser"."user_key" = "activeProfiles2"."profile_key"
+                        )
+                      ) "t"
+                    ) "chats" ON true
+                    WHERE EXISTS (
+                      SELECT 1
+                      FROM "user" AS "activeUsers"
+                      WHERE "activeProfiles2"."active" = $3
+                        AND "activeProfiles2"."user_id" = "activeUsers"."id"
+                        AND "activeProfiles2"."profile_key" = "activeUsers"."user_key"
+                        AND "activeUsers"."active" = $4
+                        AND EXISTS (
+                          SELECT 1
+                          FROM "chatUser"
+                          WHERE "chatUser"."user_id" = "activeUsers"."id"
+                            AND "chatUser"."user_key" = "activeUsers"."user_key"
+                            AND "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                            AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        )
+                    )
+                  ) "t"
+                ) "activeProfiles2" ON true
+                WHERE EXISTS (
+                  SELECT 1
+                  FROM "user" AS "activeUser"
+                  WHERE "activeChats"."active" = $5
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                      AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $6
+                    AND "activeUser"."id" = "activeProfiles"."user_id"
+                    AND "activeUser"."user_key" = "activeProfiles"."profile_key"
+                )
+              ) "t"
+            ) "activeChats" ON true
+          `,
+          [true, true, true, true, true, true],
+        );
+      });
+    });
+
+    describe('where', () => {
+      it('should be supported in a `where` callback', () => {
+        const q = db.profile.where((q) =>
+          q.chats.whereIn('Title', ['a', 'b']).count().equals(10),
+        );
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" WHERE (
+              SELECT count(*) = $1
+              FROM "chat" "chats"
+              WHERE "chats"."title" IN ($2, $3)
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user"
+                  WHERE
+                    EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "chats"."chat_key"
+                        AND "chatUser"."user_id" = "user"."id"
+                      AND "chatUser"."user_key" = "user"."user_key"
+                    )
+                    AND "user"."id" = "profile"."user_id"
+                    AND "user"."user_key" = "profile"."profile_key"
+                )
+            )
+          `,
+          [10, 'a', 'b'],
+        );
+      });
+
+      it('should be supported in a `where` callback using `on`', () => {
+        const q = db.profile.where((q) =>
+          q.activeChats.whereIn('Title', ['a', 'b']).count().equals(10),
+        );
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" WHERE (
+              SELECT count(*) = $1
+              FROM "chat" "activeChats"
+              WHERE "activeChats"."title" IN ($2, $3)
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user" AS "activeUser"
+                  WHERE "activeChats"."active" = $4
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                        AND "chatUser"."user_id" = "activeUser"."id"
+                        AND "chatUser"."user_key" = "activeUser"."user_key"
+                    )
+                    AND "activeUser"."active" = $5
+                    AND "activeUser"."id" = "profile"."user_id"
+                    AND "activeUser"."user_key" = "profile"."profile_key"
+                )
+            )
+          `,
+          [10, 'a', 'b', true, true],
+        );
+      });
     });
   });
 
   describe('through hasOne', () => {
-    it('should support `queryRelated` to query related data', () => {
-      const query = db.chat.queryRelated('profiles', {
-        IdOfChat: 1,
-        ChatKey: 'key',
-      });
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile" "profiles"
-          WHERE EXISTS (
-            SELECT 1 FROM "user" AS "users"
-            WHERE "profiles"."user_id" = "users"."id"
-              AND "profiles"."profile_key" = "users"."user_key"
-            AND EXISTS (
-              SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."user_id" = "users"."id"
-                AND "chatUser"."user_key" = "users"."user_key"
-                AND "chatUser"."chat_id" = $1
-                AND "chatUser"."chat_key" = $2
-            )
-          )
-        `,
-        [1, 'key'],
-      );
-    });
+    describe('queryRelated', () => {
+      it('should support `queryRelated` to query related data', () => {
+        const query = db.chat.queryRelated('profiles', {
+          IdOfChat: 1,
+          ChatKey: 'key',
+        });
 
-    it('should handle chained query', () => {
-      const query = db.chat
-        .where({ Title: 'title' })
-        .chain('profiles')
-        .where({ Bio: 'bio' });
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile" "profiles"
-          WHERE EXISTS (
-            SELECT 1 FROM "chat"
-            WHERE "chat"."title" = $1
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "profiles"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "users"
+              WHERE "profiles"."user_id" = "users"."id"
+                AND "profiles"."profile_key" = "users"."user_key"
               AND EXISTS (
-                SELECT 1 FROM "user" AS "users"
-                WHERE "profiles"."user_id" = "users"."id"
-                  AND "profiles"."profile_key" = "users"."user_key"
-                  AND EXISTS (
-                    SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."user_id" = "users"."id"
-                      AND "chatUser"."user_key" = "users"."user_key"
-                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chat"."chat_key"
-                  )
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."user_id" = "users"."id"
+                  AND "chatUser"."user_key" = "users"."user_key"
+                  AND "chatUser"."chat_id" = $1
+                  AND "chatUser"."chat_key" = $2
               )
-          )
-          AND "profiles"."bio" = $2
-        `,
-        ['title', 'bio'],
-      );
+            )
+          `,
+          [1, 'key'],
+        );
+      });
+
+      it('should support `queryRelated` to query related data using `on`', () => {
+        const query = db.chat.queryRelated('activeProfiles', {
+          IdOfChat: 1,
+          ChatKey: 'key',
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "activeProfiles"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "activeUsers"
+              WHERE "activeProfiles"."active" = $1
+                AND "activeProfiles"."user_id" = "activeUsers"."id"
+                AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                AND "activeUsers"."active" = $2
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."user_id" = "activeUsers"."id"
+                    AND "chatUser"."user_key" = "activeUsers"."user_key"
+                    AND "chatUser"."chat_id" = $3
+                    AND "chatUser"."chat_key" = $4
+                )
+            )
+          `,
+          [true, true, 1, 'key'],
+        );
+      });
     });
 
-    it('should disable create', () => {
-      // @ts-expect-error hasMany with through option should not have chained create
-      db.chat.chain('profiles').create(chatData);
-    });
+    describe('chain', () => {
+      it('should handle chained query', () => {
+        const query = db.chat
+          .where({ Title: 'title' })
+          .chain('profiles')
+          .where({ Bio: 'bio' });
 
-    it('should have chained delete', () => {
-      const query = db.chat
-        .where({ Title: 'title' })
-        .chain('profiles')
-        .where({ Bio: 'bio' })
-        .delete();
-
-      expectSql(
-        query.toSQL(),
-        `
-          DELETE FROM "profile" AS "profiles"
-          WHERE EXISTS (
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "profiles"
+            WHERE EXISTS (
               SELECT 1 FROM "chat"
               WHERE "chat"."title" = $1
                 AND EXISTS (
@@ -3008,9 +4799,117 @@ describe('hasMany through', () => {
                 )
             )
             AND "profiles"."bio" = $2
-        `,
-        ['title', 'bio'],
-      );
+          `,
+          ['title', 'bio'],
+        );
+      });
+
+      it('should handle chained query using `on`', () => {
+        const query = db.chat
+          .where({ Title: 'title' })
+          .chain('activeProfiles')
+          .where({ Bio: 'bio' });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "activeProfiles"
+            WHERE EXISTS (
+              SELECT 1 FROM "chat"
+              WHERE "chat"."title" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeUsers"
+                  WHERE "activeProfiles"."active" = $2
+                    AND "activeProfiles"."user_id" = "activeUsers"."id"
+                    AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                    AND "activeUsers"."active" = $3
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "activeUsers"."id"
+                        AND "chatUser"."user_key" = "activeUsers"."user_key"
+                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                    )
+                )
+            )
+            AND "activeProfiles"."bio" = $4
+          `,
+          ['title', true, true, 'bio'],
+        );
+      });
+
+      it('should disable create', () => {
+        // @ts-expect-error hasMany with through option should not have chained create
+        db.chat.chain('profiles').create(chatData);
+      });
+
+      it('should have chained delete', () => {
+        const query = db.chat
+          .where({ Title: 'title' })
+          .chain('profiles')
+          .where({ Bio: 'bio' })
+          .delete();
+
+        expectSql(
+          query.toSQL(),
+          `
+            DELETE FROM "profile" AS "profiles"
+            WHERE EXISTS (
+                SELECT 1 FROM "chat"
+                WHERE "chat"."title" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "user" AS "users"
+                    WHERE "profiles"."user_id" = "users"."id"
+                      AND "profiles"."profile_key" = "users"."user_key"
+                      AND EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."user_id" = "users"."id"
+                          AND "chatUser"."user_key" = "users"."user_key"
+                          AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                      )
+                  )
+              )
+              AND "profiles"."bio" = $2
+          `,
+          ['title', 'bio'],
+        );
+      });
+
+      it('should have chained delete using `on`', () => {
+        const query = db.chat
+          .where({ Title: 'title' })
+          .chain('activeProfiles')
+          .where({ Bio: 'bio' })
+          .delete();
+
+        expectSql(
+          query.toSQL(),
+          `
+            DELETE FROM "profile" AS "activeProfiles"
+            WHERE EXISTS (
+                SELECT 1 FROM "chat"
+                WHERE "chat"."title" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "user" AS "activeUsers"
+                    WHERE "activeProfiles"."active" = $2
+                      AND "activeProfiles"."user_id" = "activeUsers"."id"
+                      AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                      AND "activeUsers"."active" = $3
+                      AND EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."user_id" = "activeUsers"."id"
+                          AND "chatUser"."user_key" = "activeUsers"."user_key"
+                          AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                      )
+                  )
+              )
+              AND "activeProfiles"."bio" = $4
+          `,
+          ['title', true, true, 'bio'],
+        );
+      });
     });
 
     it('should have proper joinQuery', () => {
@@ -3039,40 +4938,67 @@ describe('hasMany through', () => {
       );
     });
 
-    it('should be supported in whereExists', () => {
-      expectSql(
-        db.chat.whereExists('profiles').toSQL(),
-        `
-          SELECT ${chatSelectAll} FROM "chat"
-          WHERE EXISTS (
-            SELECT 1 FROM "profile" AS "profiles"
+    describe('whereExists', () => {
+      it('should be supported in whereExists', () => {
+        expectSql(
+          db.chat.whereExists('profiles').toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "users"
-              WHERE "profiles"."user_id" = "users"."id"
-                AND "profiles"."profile_key" = "users"."user_key"
+              SELECT 1 FROM "profile" AS "profiles"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "profiles"."user_id" = "users"."id"
+                  AND "profiles"."profile_key" = "users"."user_key"
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "users"."id"
+                      AND "chatUser"."user_key" = "users"."user_key"
+                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                    AND "chatUser"."chat_key" = "chat"."chat_key"
+                  )
+              )
+            )
+          `,
+        );
+
+        expectSql(
+          db.chat
+            .as('c')
+            .whereExists((q) => q.profiles.where({ Bio: 'bio' }))
+            .toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" "c"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile" AS "profiles"
+              WHERE "profiles"."bio" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."user_id" = "users"."id"
-                    AND "chatUser"."user_key" = "users"."user_key"
-                    AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                  AND "chatUser"."chat_key" = "chat"."chat_key"
+                  SELECT 1 FROM "user" AS "users"
+                  WHERE "profiles"."user_id" = "users"."id"
+                    AND "profiles"."profile_key" = "users"."user_key"
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "users"."id"
+                        AND "chatUser"."user_key" = "users"."user_key"
+                        AND "chatUser"."chat_id" = "c"."id_of_chat"
+                          AND "chatUser"."chat_key" = "c"."chat_key"
+                    )
                 )
             )
-          )
-        `,
-      );
+          `,
+          ['bio'],
+        );
 
-      expectSql(
-        db.chat
-          .as('c')
-          .whereExists((q) => q.profiles.where({ Bio: 'bio' }))
-          .toSQL(),
-        `
-          SELECT ${chatSelectAll} FROM "chat" "c"
-          WHERE EXISTS (
-            SELECT 1 FROM "profile" AS "profiles"
-            WHERE "profiles"."bio" = $1
-              AND EXISTS (
+        expectSql(
+          db.chat
+            .as('c')
+            .whereExists('profiles', (q) => q.where({ 'profiles.Bio': 'bio' }))
+            .toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" "c"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile" AS "profiles"
+              WHERE EXISTS (
                 SELECT 1 FROM "user" AS "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
@@ -3084,149 +5010,331 @@ describe('hasMany through', () => {
                         AND "chatUser"."chat_key" = "c"."chat_key"
                   )
               )
-          )
-        `,
-        ['bio'],
-      );
+              AND "profiles"."bio" = $1
+            )
+          `,
+          ['bio'],
+        );
+      });
 
-      expectSql(
-        db.chat
-          .as('c')
-          .whereExists('profiles', (q) => q.where({ 'profiles.Bio': 'bio' }))
-          .toSQL(),
-        `
-          SELECT ${chatSelectAll} FROM "chat" "c"
-          WHERE EXISTS (
-            SELECT 1 FROM "profile" AS "profiles"
+      it('should be supported in whereExists using `on`', () => {
+        expectSql(
+          db.chat.whereExists('activeProfiles').toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "users"
-              WHERE "profiles"."user_id" = "users"."id"
-                AND "profiles"."profile_key" = "users"."user_key"
-                AND EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."user_id" = "users"."id"
-                    AND "chatUser"."user_key" = "users"."user_key"
-                    AND "chatUser"."chat_id" = "c"."id_of_chat"
-                      AND "chatUser"."chat_key" = "c"."chat_key"
-                )
-            )
-            AND "profiles"."bio" = $1
-          )
-        `,
-        ['bio'],
-      );
-    });
-
-    it('should be supported in join', () => {
-      const query = db.chat
-        .as('c')
-        .join('profiles', (q) => q.where({ Bio: 'bio' }))
-        .select('Title', 'profiles.Bio');
-
-      assertType<
-        Awaited<typeof query>,
-        { Title: string; Bio: string | null }[]
-      >();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT "c"."title" "Title", "profiles"."bio" "Bio"
-          FROM "chat" "c"
-          JOIN "profile" AS "profiles"
-            ON EXISTS (
-              SELECT 1 FROM "user" AS "users"
-              WHERE "profiles"."user_id" = "users"."id"
-                AND "profiles"."profile_key" = "users"."user_key"
-                AND EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."user_id" = "users"."id"
-                    AND "chatUser"."user_key" = "users"."user_key"
-                    AND "chatUser"."chat_id" = "c"."id_of_chat"
-                      AND "chatUser"."chat_key" = "c"."chat_key"
-                )
-            )
-            AND "profiles"."bio" = $1
-        `,
-        ['bio'],
-      );
-    });
-
-    it('should be supported in join with a callback', () => {
-      const query = db.chat
-        .as('c')
-        .join(
-          (q) => q.profiles.as('p').where({ UserId: 123 }),
-          (q) => q.where({ Bio: 'bio' }),
-        )
-        .select('Title', 'p.Bio');
-
-      assertType<
-        Awaited<typeof query>,
-        { Title: string; Bio: string | null }[]
-      >();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT "c"."title" "Title", "p"."bio" "Bio"
-          FROM "chat" "c"
-          JOIN "profile" AS "p"
-            ON "p"."bio" = $1
-            AND "p"."user_id" = $2
-            AND EXISTS (
-              SELECT 1 FROM "user" AS "users"
-              WHERE "p"."user_id" = "users"."id"
-                AND "p"."profile_key" = "users"."user_key"
-                AND EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."user_id" = "users"."id"
-                    AND "chatUser"."user_key" = "users"."user_key"
-                    AND "chatUser"."chat_id" = "c"."id_of_chat"
-                      AND "chatUser"."chat_key" = "c"."chat_key"
-                )
-            )
-        `,
-        ['bio', 123],
-      );
-    });
-
-    it('should be supported in joinLateral', () => {
-      const q = db.chat
-        .joinLateral('profiles', (q) => q.as('p').where({ Bio: 'one' }))
-        .where({ 'p.Bio': 'two' })
-        .select('Title', { profile: 'p.*' });
-
-      assertType<Awaited<typeof q>, { Title: string; profile: Profile }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
-          FROM "chat"
-          JOIN LATERAL (
-            SELECT ${profileSelectAll}
-            FROM "profile" "p"
-            WHERE "p"."bio" = $1
-              AND EXISTS (
-                SELECT 1
-                FROM "user" AS "users"
-                WHERE "p"."user_id" = "users"."id"
-                  AND "p"."profile_key" = "users"."user_key"
+              SELECT 1 FROM "profile" AS "activeProfiles"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "activeUsers"
+                WHERE "activeProfiles"."active" = $1
+                  AND "activeProfiles"."user_id" = "activeUsers"."id"
+                  AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                  AND "activeUsers"."active" = $2
                   AND EXISTS (
-                    SELECT 1
-                    FROM "chatUser"
-                    WHERE "chatUser"."user_id" = "users"."id"
-                      AND "chatUser"."user_key" = "users"."user_key"
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "activeUsers"."id"
+                      AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "chat"."id_of_chat"
                     AND "chatUser"."chat_key" = "chat"."chat_key"
                   )
               )
-          ) "p" ON true
-          WHERE "p"."Bio" = $2
-        `,
-        ['one', 'two'],
-      );
+            )
+          `,
+          [true, true],
+        );
+
+        expectSql(
+          db.chat
+            .as('c')
+            .whereExists((q) => q.activeProfiles.where({ Bio: 'bio' }))
+            .toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" "c"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile" AS "activeProfiles"
+              WHERE "activeProfiles"."bio" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeUsers"
+                  WHERE "activeProfiles"."active" = $2
+                    AND "activeProfiles"."user_id" = "activeUsers"."id"
+                    AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                    AND "activeUsers"."active" = $3
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "activeUsers"."id"
+                        AND "chatUser"."user_key" = "activeUsers"."user_key"
+                        AND "chatUser"."chat_id" = "c"."id_of_chat"
+                          AND "chatUser"."chat_key" = "c"."chat_key"
+                    )
+                )
+            )
+          `,
+          ['bio', true, true],
+        );
+
+        expectSql(
+          db.chat
+            .as('c')
+            .whereExists('activeProfiles', (q) =>
+              q.where({ 'activeProfiles.Bio': 'bio' }),
+            )
+            .toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" "c"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile" AS "activeProfiles"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "activeUsers"
+                WHERE "activeProfiles"."active" = $1
+                  AND "activeProfiles"."user_id" = "activeUsers"."id"
+                  AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                  AND "activeUsers"."active" = $2
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "activeUsers"."id"
+                      AND "chatUser"."user_key" = "activeUsers"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                        AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+              )
+              AND "activeProfiles"."bio" = $3
+            )
+          `,
+          [true, true, 'bio'],
+        );
+      });
+    });
+
+    describe('join', () => {
+      it('should be supported in join', () => {
+        const query = db.chat
+          .as('c')
+          .join('profiles', (q) => q.where({ Bio: 'bio' }))
+          .select('Title', 'profiles.Bio');
+
+        assertType<
+          Awaited<typeof query>,
+          { Title: string; Bio: string | null }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "c"."title" "Title", "profiles"."bio" "Bio"
+            FROM "chat" "c"
+            JOIN "profile" AS "profiles"
+              ON EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "profiles"."user_id" = "users"."id"
+                  AND "profiles"."profile_key" = "users"."user_key"
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "users"."id"
+                      AND "chatUser"."user_key" = "users"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                        AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+              )
+              AND "profiles"."bio" = $1
+          `,
+          ['bio'],
+        );
+      });
+
+      it('should be supported in join', () => {
+        const query = db.chat
+          .as('c')
+          .join('activeProfiles', (q) => q.where({ Bio: 'bio' }))
+          .select('Title', 'activeProfiles.Bio');
+
+        assertType<
+          Awaited<typeof query>,
+          { Title: string; Bio: string | null }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "c"."title" "Title", "activeProfiles"."bio" "Bio"
+            FROM "chat" "c"
+            JOIN "profile" AS "activeProfiles"
+              ON EXISTS (
+                SELECT 1 FROM "user" AS "activeUsers"
+                WHERE "activeProfiles"."active" = $1
+                  AND "activeProfiles"."user_id" = "activeUsers"."id"
+                  AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                  AND "activeUsers"."active" = $2
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "activeUsers"."id"
+                      AND "chatUser"."user_key" = "activeUsers"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                        AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+              )
+              AND "activeProfiles"."bio" = $3
+          `,
+          [true, true, 'bio'],
+        );
+      });
+
+      it('should be supported in join with a callback', () => {
+        const query = db.chat
+          .as('c')
+          .join(
+            (q) => q.profiles.as('p').where({ UserId: 123 }),
+            (q) => q.where({ Bio: 'bio' }),
+          )
+          .select('Title', 'p.Bio');
+
+        assertType<
+          Awaited<typeof query>,
+          { Title: string; Bio: string | null }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "c"."title" "Title", "p"."bio" "Bio"
+            FROM "chat" "c"
+            JOIN "profile" AS "p"
+              ON "p"."bio" = $1
+              AND "p"."user_id" = $2
+              AND EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "p"."user_id" = "users"."id"
+                  AND "p"."profile_key" = "users"."user_key"
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "users"."id"
+                      AND "chatUser"."user_key" = "users"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                        AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+              )
+          `,
+          ['bio', 123],
+        );
+      });
+
+      it('should be supported in join with a callback using `on`', () => {
+        const query = db.chat
+          .as('c')
+          .join(
+            (q) => q.activeProfiles.as('p').where({ UserId: 123 }),
+            (q) => q.where({ Bio: 'bio' }),
+          )
+          .select('Title', 'p.Bio');
+
+        assertType<
+          Awaited<typeof query>,
+          { Title: string; Bio: string | null }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "c"."title" "Title", "p"."bio" "Bio"
+            FROM "chat" "c"
+            JOIN "profile" AS "p"
+              ON "p"."bio" = $1
+              AND "p"."user_id" = $2
+              AND EXISTS (
+                SELECT 1 FROM "user" AS "activeUsers"
+                WHERE "p"."active" = $3
+                  AND "p"."user_id" = "activeUsers"."id"
+                  AND "p"."profile_key" = "activeUsers"."user_key"
+                  AND "activeUsers"."active" = $4
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "activeUsers"."id"
+                      AND "chatUser"."user_key" = "activeUsers"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                        AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+              )
+          `,
+          ['bio', 123, true, true],
+        );
+      });
+
+      it('should be supported in joinLateral', () => {
+        const q = db.chat
+          .joinLateral('profiles', (q) => q.as('p').where({ Bio: 'one' }))
+          .where({ 'p.Bio': 'two' })
+          .select('Title', { profile: 'p.*' });
+
+        assertType<Awaited<typeof q>, { Title: string; profile: Profile }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
+            FROM "chat"
+            JOIN LATERAL (
+              SELECT ${profileSelectAll}
+              FROM "profile" "p"
+              WHERE "p"."bio" = $1
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user" AS "users"
+                  WHERE "p"."user_id" = "users"."id"
+                    AND "p"."profile_key" = "users"."user_key"
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "users"."id"
+                        AND "chatUser"."user_key" = "users"."user_key"
+                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chat"."chat_key"
+                    )
+                )
+            ) "p" ON true
+            WHERE "p"."Bio" = $2
+          `,
+          ['one', 'two'],
+        );
+      });
+
+      it('should be supported in joinLateral', () => {
+        const q = db.chat
+          .joinLateral('activeProfiles', (q) => q.as('p').where({ Bio: 'one' }))
+          .where({ 'p.Bio': 'two' })
+          .select('Title', { profile: 'p.*' });
+
+        assertType<Awaited<typeof q>, { Title: string; profile: Profile }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
+            FROM "chat"
+            JOIN LATERAL (
+              SELECT ${profileSelectAll}
+              FROM "profile" "p"
+              WHERE "p"."bio" = $1
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user" AS "activeUsers"
+                  WHERE "p"."active" = $2
+                    AND "p"."user_id" = "activeUsers"."id"
+                    AND "p"."profile_key" = "activeUsers"."user_key"
+                    AND "activeUsers"."active" = $3
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "activeUsers"."id"
+                        AND "chatUser"."user_key" = "activeUsers"."user_key"
+                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chat"."chat_key"
+                    )
+                )
+            ) "p" ON true
+            WHERE "p"."Bio" = $4
+          `,
+          ['one', true, true, 'two'],
+        );
+      });
     });
 
     describe('select', () => {
@@ -3272,6 +5380,50 @@ describe('hasMany through', () => {
         );
       });
 
+      it('should be selectable using `on`', () => {
+        const query = db.chat.as('c').select('IdOfChat', {
+          profiles: (q) => q.activeProfiles.where({ Bio: 'bio' }),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { IdOfChat: number; profiles: Profile[] }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "c"."id_of_chat" "IdOfChat",
+              COALESCE("profiles".r, '[]') "profiles"
+            FROM "chat" "c"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${profileSelectAll}
+                FROM "profile" "activeProfiles"
+                WHERE "activeProfiles"."bio" = $1
+                  AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeUsers"
+                  WHERE "activeProfiles"."active" = $2
+                    AND "activeProfiles"."user_id" = "activeUsers"."id"
+                    AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                    AND "activeUsers"."active" = $3
+                    AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "activeUsers"."id"
+                      AND "chatUser"."user_key" = "activeUsers"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                      AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+                )
+              ) "t"
+            ) "profiles" ON true
+          `,
+          ['bio', true, true],
+        );
+      });
+
       it('should support chained select', () => {
         const q = db.message.select({
           items: (q) => q.profiles.chain('posts'),
@@ -3282,32 +5434,76 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-          SELECT COALESCE("items".r, '[]') "items"
-          FROM "message"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
-            FROM (
-              SELECT ${postSelectAll}
-              FROM "post" "posts"
-              WHERE EXISTS (
-                SELECT 1 FROM "profile" AS "profiles"
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "message"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${postSelectAll}
+                FROM "post" "posts"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "sender"
-                  WHERE "profiles"."user_id" = "sender"."id"
-                    AND "profiles"."profile_key" = "sender"."user_key"
-                    AND "sender"."id" = "message"."author_id"
-                    AND "sender"."user_key" = "message"."message_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE "posts"."user_id" = "user"."id"
-                    AND "posts"."title" = "user"."user_key"
-                    AND "user"."id" = "profiles"."user_id"
-                    AND "user"."user_key" = "profiles"."profile_key"
+                  SELECT 1 FROM "profile" AS "profiles"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "user" AS "sender"
+                    WHERE "profiles"."user_id" = "sender"."id"
+                      AND "profiles"."profile_key" = "sender"."user_key"
+                      AND "sender"."id" = "message"."author_id"
+                      AND "sender"."user_key" = "message"."message_key"
+                  ) AND EXISTS (
+                    SELECT 1 FROM "user"
+                    WHERE "posts"."user_id" = "user"."id"
+                      AND "posts"."title" = "user"."user_key"
+                      AND "user"."id" = "profiles"."user_id"
+                      AND "user"."user_key" = "profiles"."profile_key"
+                  )
                 )
-              )
-            ) "t"
-          ) "items" ON true
-        `,
+              ) "t"
+            ) "items" ON true
+          `,
+        );
+      });
+
+      it('should support chained select', () => {
+        const q = db.message.select({
+          items: (q) => q.activeProfiles.chain('activePosts'),
+        });
+
+        assertType<Awaited<typeof q>, { items: Post[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "message"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${postSelectAll}
+                FROM "post" "activePosts"
+                WHERE EXISTS (
+                  SELECT 1 FROM "profile" AS "activeProfiles"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "user" AS "activeSender"
+                    WHERE "activeProfiles"."active" = $1
+                      AND "activeProfiles"."user_id" = "activeSender"."id"
+                      AND "activeProfiles"."profile_key" = "activeSender"."user_key"
+                      AND "activeSender"."active" = $2
+                      AND "activeSender"."id" = "message"."author_id"
+                      AND "activeSender"."user_key" = "message"."message_key"
+                  ) AND EXISTS (
+                    SELECT 1 FROM "user" AS "activeUser"
+                    WHERE "activePosts"."active" = $3
+                      AND "activePosts"."user_id" = "activeUser"."id"
+                      AND "activePosts"."title" = "activeUser"."user_key"
+                      AND "activeUser"."active" = $4
+                      AND "activeUser"."id" = "activeProfiles"."user_id"
+                      AND "activeUser"."user_key" = "activeProfiles"."profile_key"
+                  )
+                )
+              ) "t"
+            ) "items" ON true
+          `,
+          [true, true, true, true],
         );
       });
 
@@ -3346,6 +5542,46 @@ describe('hasMany through', () => {
             ) "profilesCount" ON true
           `,
           [],
+        );
+      });
+
+      it('should allow to select count using `on`', () => {
+        const query = db.chat.as('c').select('IdOfChat', {
+          profilesCount: (q) => q.activeProfiles.count(),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { IdOfChat: number; profilesCount: number }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "c"."id_of_chat" "IdOfChat",
+              "profilesCount".r "profilesCount"
+            FROM "chat" "c"
+            LEFT JOIN LATERAL (
+              SELECT count(*) r
+              FROM "profile" "activeProfiles"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "activeUsers"
+                WHERE "activeProfiles"."active" = $1
+                  AND "activeProfiles"."user_id" = "activeUsers"."id"
+                  AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                  AND "activeUsers"."active" = $2
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "activeUsers"."id"
+                      AND "chatUser"."user_key" = "activeUsers"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                      AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+              )
+              ) "profilesCount" ON true
+          `,
+          [true, true],
         );
       });
 
@@ -3389,6 +5625,49 @@ describe('hasMany through', () => {
         );
       });
 
+      it('should allow to pluck values using `on`', () => {
+        const query = db.chat.as('c').select('IdOfChat', {
+          bios: (q) => q.activeProfiles.pluck('Bio'),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { IdOfChat: number; bios: (string | null)[] }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "c"."id_of_chat" "IdOfChat",
+              COALESCE("bios".r, '[]') "bios"
+            FROM "chat" "c"
+            LEFT JOIN LATERAL (
+              SELECT json_agg("t"."Bio") r
+              FROM (
+                SELECT "activeProfiles"."bio" "Bio"
+                FROM "profile" "activeProfiles"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "activeUsers"
+                  WHERE "activeProfiles"."active" = $1
+                    AND "activeProfiles"."user_id" = "activeUsers"."id"
+                    AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                    AND "activeUsers"."active" = $2
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "activeUsers"."id"
+                        AND "chatUser"."user_key" = "activeUsers"."user_key"
+                        AND "chatUser"."chat_id" = "c"."id_of_chat"
+                        AND "chatUser"."chat_key" = "c"."chat_key"
+                    )
+                )
+              ) "t"
+            ) "bios" ON true
+          `,
+          [true, true],
+        );
+      });
+
       it('should handle exists sub query', () => {
         const query = db.chat.as('c').select('IdOfChat', {
           hasProfiles: (q) => q.profiles.exists(),
@@ -3425,6 +5704,48 @@ describe('hasMany through', () => {
               LIMIT 1
             ) "hasProfiles" ON true
           `,
+        );
+      });
+
+      it('should handle exists sub query using `on`', () => {
+        const query = db.chat.as('c').select('IdOfChat', {
+          hasProfiles: (q) => q.activeProfiles.exists(),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { IdOfChat: number; hasProfiles: boolean }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "c"."id_of_chat" "IdOfChat",
+              COALESCE("hasProfiles".r, false) "hasProfiles"
+            FROM "chat" "c"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "profile" "activeProfiles"
+              WHERE EXISTS (
+                SELECT 1
+                FROM "user" AS "activeUsers"
+                WHERE "activeProfiles"."active" = $1
+                  AND "activeProfiles"."user_id" = "activeUsers"."id"
+                  AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                  AND "activeUsers"."active" = $2
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "activeUsers"."id"
+                      AND "chatUser"."user_key" = "activeUsers"."user_key"
+                      AND "chatUser"."chat_id" = "c"."id_of_chat"
+                        AND "chatUser"."chat_key" = "c"."chat_key"
+                  )
+              )
+              LIMIT 1
+            ) "hasProfiles" ON true
+          `,
+          [true, true],
         );
       });
 
@@ -3511,16 +5832,108 @@ describe('hasMany through', () => {
           `,
         );
       });
+
+      it('should support recurring select using `on`', () => {
+        const q = db.chat.as('activeChats').select({
+          activeProfiles: (q) =>
+            q.activeProfiles.select({
+              activeChats: (q) =>
+                q.activeChats.select({
+                  activeProfiles: (q) => q.activeProfiles,
+                }),
+            }),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("activeProfiles".r, '[]') "activeProfiles"
+            FROM "chat" "activeChats"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT COALESCE("activeChats2".r, '[]') "activeChats"
+                FROM "profile" "activeProfiles"
+                LEFT JOIN LATERAL (
+                  SELECT json_agg(row_to_json("t".*)) r
+                  FROM (
+                    SELECT COALESCE("activeProfiles2".r, '[]') "activeProfiles"
+                    FROM "chat" "activeChats2"
+                    LEFT JOIN LATERAL (
+                      SELECT json_agg(row_to_json("t".*)) r
+                      FROM (
+                        SELECT ${profileSelectAll}
+                        FROM "profile" "activeProfiles2"
+                        WHERE EXISTS (
+                          SELECT 1
+                          FROM "user" AS "activeUsers"
+                          WHERE "activeProfiles2"."active" = $1
+                            AND "activeProfiles2"."user_id" = "activeUsers"."id"
+                            AND "activeProfiles2"."profile_key" = "activeUsers"."user_key"
+                            AND "activeUsers"."active" = $2
+                            AND EXISTS (
+                              SELECT 1
+                              FROM "chatUser"
+                              WHERE "chatUser"."user_id" = "activeUsers"."id"
+                                AND "chatUser"."user_key" = "activeUsers"."user_key"
+                                AND "chatUser"."chat_id" = "activeChats2"."id_of_chat"
+                              AND "chatUser"."chat_key" = "activeChats2"."chat_key"
+                            )
+                      )
+                    ) "t"
+                  ) "activeProfiles2" ON true
+                  WHERE EXISTS (
+                    SELECT 1
+                    FROM "user" AS "activeUser"
+                    WHERE "activeChats2"."active" = $3
+                      AND EXISTS (
+                        SELECT 1
+                        FROM "chatUser"
+                        WHERE "chatUser"."chat_id" = "activeChats2"."id_of_chat"
+                          AND "chatUser"."chat_key" = "activeChats2"."chat_key"
+                          AND "chatUser"."user_id" = "activeUser"."id"
+                          AND "chatUser"."user_key" = "activeUser"."user_key"
+                      )
+                      AND "activeUser"."active" = $4
+                      AND "activeUser"."id" = "activeProfiles"."user_id"
+                      AND "activeUser"."user_key" = "activeProfiles"."profile_key"
+                  )
+                ) "t"
+              ) "activeChats2" ON true
+              WHERE
+                EXISTS (
+                  SELECT 1
+                  FROM "user" AS "activeUsers"
+                  WHERE "activeProfiles"."active" = $5
+                    AND "activeProfiles"."user_id" = "activeUsers"."id"
+                    AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                    AND "activeUsers"."active" = $6
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "activeUsers"."id"
+                        AND "chatUser"."user_key" = "activeUsers"."user_key"
+                        AND "chatUser"."chat_id" = "activeChats"."id_of_chat"
+                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
+                    )
+                )
+              ) "t"
+            ) "activeProfiles" ON true
+          `,
+          [true, true, true, true, true, true],
+        );
+      });
     });
 
-    it('should be supported in a `where` callback', () => {
-      const q = db.chat.where((q) =>
-        q.profiles.whereIn('Bio', ['a', 'b']).count().equals(10),
-      );
+    describe('where', () => {
+      it('should be supported in a `where` callback', () => {
+        const q = db.chat.where((q) =>
+          q.profiles.whereIn('Bio', ['a', 'b']).count().equals(10),
+        );
 
-      expectSql(
-        q.toSQL(),
-        `
+        expectSql(
+          q.toSQL(),
+          `
             SELECT ${chatSelectAll} FROM "chat" WHERE (
               SELECT count(*) = $1
               FROM "profile" "profiles"
@@ -3541,8 +5954,43 @@ describe('hasMany through', () => {
                 )
             )
           `,
-        [10, 'a', 'b'],
-      );
+          [10, 'a', 'b'],
+        );
+      });
+
+      it('should be supported in a `where` callback using `on`', () => {
+        const q = db.chat.where((q) =>
+          q.activeProfiles.whereIn('Bio', ['a', 'b']).count().equals(10),
+        );
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${chatSelectAll} FROM "chat" WHERE (
+              SELECT count(*) = $1
+              FROM "profile" "activeProfiles"
+              WHERE "activeProfiles"."bio" IN ($2, $3)
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user" AS "activeUsers"
+                  WHERE "activeProfiles"."active" = $4
+                    AND "activeProfiles"."user_id" = "activeUsers"."id"
+                    AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
+                    AND "activeUsers"."active" = $5
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "activeUsers"."id"
+                        AND "chatUser"."user_key" = "activeUsers"."user_key"
+                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                    )
+                )
+            )
+          `,
+          [10, 'a', 'b', true, true],
+        );
+      });
     });
   });
 });

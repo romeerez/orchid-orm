@@ -77,7 +77,7 @@ export type HasOneOptions<
 > =
   | RelationRefsOptions<
       keyof Columns,
-      keyof InstanceType<Related>['columns']['shape']
+      InstanceType<Related>['columns']['shape']
     >
   | RelationHasOneThroughOptions<Through, Source>;
 
@@ -190,6 +190,7 @@ interface State {
   query: Query;
   primaryKeys: string[];
   foreignKeys: string[];
+  on?: RecordUnknown;
 }
 
 export type HasOneNestedInsert = (
@@ -261,12 +262,13 @@ export const makeHasOneMethod = (
 
     const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
-    const sourceQuery = (
-      sourceRelation.joinQuery(
-        sourceRelation.query,
-        throughRelation.query,
-      ) as Query
-    ).as(relationName);
+    const sourceRelationQuery = (sourceRelation.query as Query).as(
+      relationName,
+    );
+    const sourceQuery = sourceRelation.joinQuery(
+      sourceRelationQuery,
+      throughRelation.query,
+    ) as Query;
 
     const whereExistsCallback = () => sourceQuery;
 
@@ -302,6 +304,13 @@ export const makeHasOneMethod = (
 
   const primaryKeys = relation.options.columns as string[];
   const foreignKeys = relation.options.references as string[];
+  const { on } = relation.options;
+
+  if (on) {
+    _queryWhere(query, [on]);
+    _queryDefaults(query, on);
+  }
+
   addAutoForeignKey(
     tableConfig,
     query,
@@ -311,7 +320,7 @@ export const makeHasOneMethod = (
     relation.options,
   );
 
-  const state: State = { query, primaryKeys, foreignKeys };
+  const state: State = { query, primaryKeys, foreignKeys, on };
   const len = primaryKeys.length;
 
   const reversedOn: RecordString = {};
@@ -338,7 +347,8 @@ export const makeHasOneMethod = (
       for (let i = 0; i < len; i++) {
         values[foreignKeys[i]] = params[primaryKeys[i]];
       }
-      return _queryDefaults(query.where(values as never), values);
+
+      return _queryDefaults(query.where(values as never), { ...on, ...values });
     },
     virtualColumn: new HasOneVirtualColumn(
       defaultSchemaConfig,
@@ -490,7 +500,9 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
     } else if (params.update) {
       await _queryUpdate(currentRelationsQuery, params.update as never);
     } else if (params.delete) {
-      await _queryDelete(currentRelationsQuery);
+      const q = _queryDelete(currentRelationsQuery);
+      q.q.returnType = 'value'; // do not throw
+      await q;
     } else if (params.upsert) {
       const { update, create } = params.upsert;
       currentRelationsQuery.q.select = foreignKeys;

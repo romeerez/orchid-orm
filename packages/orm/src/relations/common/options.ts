@@ -1,13 +1,15 @@
 import { TableData } from 'pqb';
+import { ColumnShapeInputPartial, ColumnsShapeBase } from 'orchid-core';
 
 export interface RelationRefsOptions<
   Column extends PropertyKey = string,
-  Ref extends PropertyKey = string,
+  Shape extends ColumnsShapeBase = ColumnsShapeBase,
 > {
   required?: boolean;
   columns: Column[];
-  references: Ref[];
+  references: (keyof Shape)[];
   foreignKey?: boolean | TableData.References.Options;
+  on?: ColumnShapeInputPartial<Shape>;
 }
 
 export interface RelationThroughOptions<

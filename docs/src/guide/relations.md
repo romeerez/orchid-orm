@@ -1,53 +1,36 @@
 # Relations
 
-Different kinds of relations are available: `belongsTo`, `hasOne`, `hasMany`, and `hasAndBelongsToMany`.
+Available relations are:
 
-Each defined relation adds methods and additional abilities for the table to simplify building queries and creating related data.
+- [belongsTo](#belongsTo): a one belongs to another, the belonging one includes a referencing column.<br />
+  **Example**: a payment containing `user_id` and `order_id` belongs to a user and an order.
 
-Two tables can have a relation with each other without circular dependency problems:
+- [hasOne](#hasOne): is similar to "belongs to," but the referencing column is on the other side.<br />
+  **Example**: an order has one payment, the `order_id` column is on the payment side.
 
-```ts
-// user.table.ts
-import { BaseTable } from './baseTable';
-import { ProfileTable } from './profile.table';
+  - **through**: when many tables are connected using `belongsTo` or `hasOne`,
+    the first of them can connect to the last by using `hasOne: though`.<br />
+    **Example**: a user has one profile, an order belongs to a user, an order can have one profile through a user.<br />
+    `through` can stack many levels, so a payment that belongs to an order can also have a profile through the order.
 
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-  }));
+- [hasMany](#hasMany): a one has many others, the others include a column referencing the one.<br />
+  Example: a user has many orders and payments.
 
-  relations = {
-    profile: this.hasOne(() => ProfileTable, {
-      required: true,
-      columns: ['id'],
-      references: ['userId'],
-    }),
-  };
-}
-```
+  - **through**: when many tables are connected, and at least one of the connection is `hasMany` or `hasAndBelongsToMany`,<br />
+    the first of them can connect to the last by using `hasMany: though`.<br />
+    **Example**: an order has many products, a user has many orders, a user can have multiple ordered products though orders.<br />
+    A payment belongs to an order, it also can have many ordered products though the related order.<br />
 
-```ts
-// profile.table.ts
-import { BaseTable } from './baseTable';
-import { UserTable } from './user.table';
+- [hasAndBelongsToMany](#hasAndBelongsToMany): a many-to-many relation,
+  it is maintained by having an additional table where a single row is pointing to both parties.<br />
+  **Examples**: movies and actors, products and categories.
 
-export class ProfileTable extends BaseTable {
-  readonly table = 'profile';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    userId: t.integer(),
-  }));
-
-  relations = {
-    profile: this.belongsTo(() => UserTable, {
-      required: true,
-      columns: ['userId'],
-      references: ['id'],
-    }),
-  };
-}
-```
+  - vs. `hasMany: though`: we can say `hasAndBelongsToMany` is a simple case of `hasMany: though`,
+    where the join table is managed automatically, you don't have to store any additional info in it.
+    You can use `hasAndBelongsToMany` between products and categories,
+    but later if there is a need to store, let's say,
+    info about who assigned the category to the product in the joining row,
+    then it should be handled with `hasMany: through`.
 
 ## belongsTo
 
@@ -404,4 +387,59 @@ export class TagTable extends BaseTable {
     }),
   };
 }
+```
+
+## on - relation with a condition
+
+All relation kinds support the `on` option to specify conditions.
+
+Adding `on` affects two things:
+
+- all\* the queries of the relation are using the condition to filter records.
+- when creating a related record, it automatically includes the values of `on`.
+
+* - except `disconnect` in belongs, the record that belongs to another record will be disconnected even if the related record doesn't match the `on` conditions.
+
+```ts
+export class UserTable extends BaseTable {
+  readonly table = 'user';
+  // ...snip
+
+  relations = {
+    posts: this.hasMany(() => PostTable, {
+      columns: ['id'],
+      references: ['user_id'],
+    }),
+
+    draftPosts: this.hasMany(() => PostTable, {
+      columns: ['id'],
+      references: ['user_id'],
+      on: {
+        status: 'draft',
+      },
+    }),
+  };
+}
+
+// later in the code:
+
+// select draft posts:
+await db.user.select({
+  draftPosts: (q) => q.draftPosts,
+  equivalent: (q) => q.posts.where({ status: 'draft' }),
+});
+
+// the created post is populated with `on` values automatically:
+await db.user.find(id).update({
+  draftPosts: {
+    create: [{ title: '...', body: '...' }],
+  },
+});
+
+// equivalent without `on`:
+await db.user.find(id).update({
+  posts: {
+    create: [{ title: '...', body: '...', status: 'draft' }],
+  },
+});
 ```

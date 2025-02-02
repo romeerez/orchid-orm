@@ -17,7 +17,7 @@ import {
   Post,
   postSelectAll,
 } from '../test-utils/orm.test-utils';
-import { Db, Query } from 'pqb';
+import { Db, NotFoundError, Query } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { omit } from 'orchid-core';
@@ -28,6 +28,8 @@ const ormParams = {
 };
 
 useTestORM();
+
+const activeProfileData = { ...profileData, Active: true };
 
 describe('hasOne', () => {
   it('should define foreign keys under autoForeignKeys option', () => {
@@ -94,176 +96,103 @@ describe('hasOne', () => {
   });
 
   describe('querying', () => {
-    it('should support `queryRelated` to query related data', async () => {
-      const UserId = await db.user.get('Id').create(userData);
+    describe('queryRelated', () => {
+      it('should support `queryRelated` to query related data', async () => {
+        const UserId = await db.user.get('Id').create(userData);
+        await db.profile.create({ ...profileData, UserId });
+        const user = await db.user.find(UserId);
 
-      await db.profile.create({ ...profileData, UserId });
+        const query = db.user.queryRelated('profile', user);
 
-      const user = await db.user.find(UserId);
-      const query = db.user.queryRelated('profile', user);
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile"
+            WHERE "profile"."user_id" = $1
+              AND "profile"."profile_key" = $2
+          `,
+          [UserId, 'key'],
+        );
 
-      expectSql(
-        query.toSQL(),
-        `
-        SELECT ${profileSelectAll} FROM "profile"
-        WHERE "profile"."user_id" = $1
-          AND "profile"."profile_key" = $2
-      `,
-        [UserId, 'key'],
-      );
+        const profile = await query;
 
-      const profile = await query;
-
-      expect(profile).toMatchObject(profileData);
-    });
-
-    it('should handle chained query', () => {
-      const query = db.user
-        .where({ Name: 'name' })
-        .chain('profile')
-        .where({ Bio: 'bio' });
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile"
-          WHERE EXISTS (
-              SELECT 1 FROM "user"
-              WHERE "user"."name" = $1
-                AND "user"."id" = "profile"."user_id"
-            AND "user"."user_key" = "profile"."profile_key"
-            )
-            AND "profile"."bio" = $2
-        `,
-        ['name', 'bio'],
-      );
-    });
-
-    it('should handle long chained query', () => {
-      const q = db.user
-        .where({ Name: 'name' })
-        .chain('onePost')
-        .where({ Body: 'body' })
-        .chain('onePostTag')
-        .where({ Tag: 'tag' });
-
-      assertType<Awaited<typeof q>, PostTag[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${postTagSelectAll}
-          FROM "postTag" "onePostTag"
-          WHERE
-            EXISTS (
-              SELECT 1
-              FROM "post" AS "onePost"
-              WHERE
-                EXISTS (
-                  SELECT 1
-                  FROM "user"
-                  WHERE "user"."name" = $1
-                    AND "user"."id" = "onePost"."user_id"
-                    AND "user"."user_key" = "onePost"."title"
-                )
-                AND "onePost"."body" = $2
-                AND "onePost"."id" = "onePostTag"."post_id"
-            )
-            AND "onePostTag"."tag" = $3
-        `,
-        ['name', 'body', 'tag'],
-      );
-    });
-
-    it('should have create with defaults of provided id', () => {
-      const user = { Id: 1, UserKey: 'key' };
-      const now = new Date();
-
-      const query = db.user.queryRelated('profile', user).insert({
-        Bio: 'bio',
-        updatedAt: now,
-        createdAt: now,
+        expect(profile).toMatchObject(profileData);
       });
 
-      expectSql(
-        query.toSQL(),
-        `
-        INSERT INTO "profile"("user_id", "profile_key", "bio", "updated_at", "created_at")
-        VALUES ($1, $2, $3, $4, $5)
-      `,
-        [1, 'key', 'bio', now, now],
-      );
-    });
+      it('should query related data using `on`', async () => {
+        const UserId = await db.user.get('Id').create(userData);
+        await db.profile.create({ ...activeProfileData, UserId });
+        const user = await db.user.find(UserId);
 
-    it('can create after calling `queryRelated`', async () => {
-      const Id = await db.user.get('Id').create(userData);
-      const now = new Date();
-      await db.user.queryRelated('profile', { Id, UserKey: 'key' }).create({
-        UserId: Id,
-        Bio: 'bio',
-        updatedAt: now,
-        createdAt: now,
+        const query = db.user.queryRelated('activeProfile', user);
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+            WHERE "activeProfile"."active" = $1
+              AND "activeProfile"."user_id" = $2
+              AND "activeProfile"."profile_key" = $3
+          `,
+          [true, UserId, 'key'],
+        );
+
+        const profile = await query;
+        expect(profile).toMatchObject(profileData);
       });
-    });
 
-    describe('chained create', () => {
-      it('should have create based on find query', () => {
-        const query = db.user.find(1).chain('profile').create({
+      it('should create with defaults of provided id', () => {
+        const user = { Id: 1, UserKey: 'key' };
+        const now = new Date();
+
+        const query = db.user.queryRelated('profile', user).insert({
           Bio: 'bio',
+          updatedAt: now,
+          createdAt: now,
         });
 
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "profile"("user_id", "profile_key", "bio")
-            SELECT "user"."id" "UserId", "user"."user_key" "ProfileKey", $1
-            FROM "user"
-            WHERE "user"."id" = $2
-            LIMIT 1
-            RETURNING ${profileSelectAll}
+            INSERT INTO "profile"("user_id", "profile_key", "bio", "updated_at", "created_at")
+            VALUES ($1, $2, $3, $4, $5)
           `,
-          ['bio', 1],
+          [1, 'key', 'bio', now, now],
         );
       });
 
-      it('should throw when the main query returns many records', async () => {
-        await expect(
-          async () =>
-            await db.user.chain('profile').create({
-              Bio: 'bio',
-            }),
-        ).rejects.toThrow(
-          'Cannot create based on a query which returns multiple records',
+      it('should create with defaults of provided id using `on`', () => {
+        const user = { Id: 1, UserKey: 'key' };
+        const now = new Date();
+
+        const query = db.user.queryRelated('activeProfile', user).insert({
+          Bio: 'bio',
+          updatedAt: now,
+          createdAt: now,
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
+            INSERT INTO "profile"("active", "user_id", "profile_key", "bio", "updated_at", "created_at")
+            VALUES ($1, $2, $3, $4, $5, $6)
+          `,
+          [true, 1, 'key', 'bio', now, now],
         );
-      });
-
-      it('should throw when main record is not found', async () => {
-        const q = db.user.find(1).chain('profile').create({
-          Bio: 'bio',
-        });
-
-        await expect(q).rejects.toThrow('Record is not found');
-      });
-
-      it('should not throw when searching with findOptional', async () => {
-        await db.user.findOptional(1).chain('profile').takeOptional().create({
-          Bio: 'bio',
-        });
       });
     });
 
-    describe('chained delete', () => {
-      it('should delete relation records', () => {
+    describe('chain', () => {
+      it('should handle chained query', () => {
         const query = db.user
           .where({ Name: 'name' })
           .chain('profile')
-          .where({ Bio: 'bio' })
-          .delete();
+          .where({ Bio: 'bio' });
 
         expectSql(
           query.toSQL(),
           `
-            DELETE FROM "profile"
+            SELECT ${profileSelectAll} FROM "profile"
             WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE "user"."name" = $1
@@ -274,6 +203,215 @@ describe('hasOne', () => {
           `,
           ['name', 'bio'],
         );
+      });
+
+      it('should handle chained query using `on`', () => {
+        const query = db.user
+          .where({ Name: 'name' })
+          .chain('activeProfile')
+          .where({ Bio: 'bio' });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+            WHERE "activeProfile"."active" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "user"."name" = $2
+                  AND "user"."id" = "activeProfile"."user_id"
+              AND "user"."user_key" = "activeProfile"."profile_key"
+              )
+              AND "activeProfile"."bio" = $3
+          `,
+          [true, 'name', 'bio'],
+        );
+      });
+
+      it('should handle long chained query', () => {
+        const q = db.user
+          .where({ Name: 'name' })
+          .chain('onePost')
+          .where({ Body: 'body' })
+          .chain('onePostTag')
+          .where({ Tag: 'tag' });
+
+        assertType<Awaited<typeof q>, PostTag[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${postTagSelectAll}
+            FROM "postTag" "onePostTag"
+            WHERE
+              EXISTS (
+                SELECT 1
+                FROM "post" AS "onePost"
+                WHERE
+                  EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE "user"."name" = $1
+                      AND "user"."id" = "onePost"."user_id"
+                      AND "user"."user_key" = "onePost"."title"
+                  )
+                  AND "onePost"."body" = $2
+                  AND "onePost"."id" = "onePostTag"."post_id"
+              )
+              AND "onePostTag"."tag" = $3
+          `,
+          ['name', 'body', 'tag'],
+        );
+      });
+
+      it('should handle long chained query using `on`', () => {
+        const q = db.user
+          .where({ Name: 'name' })
+          .chain('activeOnePost')
+          .where({ Body: 'body' })
+          .chain('activeOnePostTag')
+          .where({ Tag: 'tag' });
+
+        assertType<Awaited<typeof q>, PostTag[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${postTagSelectAll}
+            FROM "postTag" "activeOnePostTag"
+            WHERE "activeOnePostTag"."active" = $1
+              AND EXISTS (
+                SELECT 1
+                FROM "post" AS "activeOnePost"
+                WHERE "activeOnePost"."active" = $2
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE "user"."name" = $3
+                      AND "user"."id" = "activeOnePost"."user_id"
+                      AND "user"."user_key" = "activeOnePost"."title"
+                  )
+                  AND "activeOnePost"."body" = $4
+                  AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
+              )
+              AND "activeOnePostTag"."tag" = $5
+          `,
+          [true, true, 'name', 'body', 'tag'],
+        );
+      });
+
+      describe('chained create', () => {
+        it('should create based on find query', () => {
+          const query = db.user.find(1).chain('profile').create({
+            Bio: 'bio',
+          });
+
+          expectSql(
+            query.toSQL(),
+            `
+              INSERT INTO "profile"("user_id", "profile_key", "bio")
+              SELECT "user"."id" "UserId", "user"."user_key" "ProfileKey", $1
+              FROM "user"
+              WHERE "user"."id" = $2
+              LIMIT 1
+              RETURNING ${profileSelectAll}
+            `,
+            ['bio', 1],
+          );
+        });
+
+        it('should create based on find query using `on`', () => {
+          const query = db.user.find(1).chain('activeProfile').create({
+            Bio: 'bio',
+          });
+
+          expectSql(
+            query.toSQL(),
+            `
+              INSERT INTO "profile"("user_id", "profile_key", "active", "bio")
+              SELECT "user"."id" "UserId", "user"."user_key" "ProfileKey", $1, $2
+              FROM "user"
+              WHERE "user"."id" = $3
+              LIMIT 1
+              RETURNING ${profileSelectAll}
+            `,
+            [true, 'bio', 1],
+          );
+        });
+
+        it('should throw when the main query returns many records', async () => {
+          await expect(
+            async () =>
+              await db.user.chain('profile').create({
+                Bio: 'bio',
+              }),
+          ).rejects.toThrow(
+            'Cannot create based on a query which returns multiple records',
+          );
+        });
+
+        it('should throw when main record is not found', async () => {
+          const q = db.user.find(1).chain('profile').create({
+            Bio: 'bio',
+          });
+
+          await expect(q).rejects.toThrow('Record is not found');
+        });
+
+        it('should not throw when searching with findOptional', async () => {
+          await db.user.findOptional(1).chain('profile').takeOptional().create({
+            Bio: 'bio',
+          });
+        });
+      });
+
+      describe('chained delete', () => {
+        it('should delete relation records', () => {
+          const query = db.user
+            .where({ Name: 'name' })
+            .chain('profile')
+            .where({ Bio: 'bio' })
+            .delete();
+
+          expectSql(
+            query.toSQL(),
+            `
+              DELETE FROM "profile"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE "user"."name" = $1
+                    AND "user"."id" = "profile"."user_id"
+                AND "user"."user_key" = "profile"."profile_key"
+                )
+                AND "profile"."bio" = $2
+            `,
+            ['name', 'bio'],
+          );
+        });
+
+        it('should delete relation records using `on`', () => {
+          const query = db.user
+            .where({ Name: 'name' })
+            .chain('activeProfile')
+            .where({ Bio: 'bio' })
+            .delete();
+
+          expectSql(
+            query.toSQL(),
+            `
+              DELETE FROM "profile" AS "activeProfile"
+              WHERE "activeProfile"."active" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE "user"."name" = $2
+                    AND "user"."id" = "activeProfile"."user_id"
+                AND "user"."user_key" = "activeProfile"."profile_key"
+                )
+                AND "activeProfile"."bio" = $3
+            `,
+            [true, 'name', 'bio'],
+          );
+        });
       });
     });
 
@@ -293,132 +431,273 @@ describe('hasOne', () => {
       );
     });
 
-    it('should be supported in whereExists', () => {
-      expectSql(
-        db.user.as('u').whereExists('profile').toSQL(),
-        `
-        SELECT ${userSelectAll} FROM "user" "u"
-        WHERE EXISTS (
-          SELECT 1 FROM "profile"
-          WHERE "profile"."user_id" = "u"."id"
-          AND "profile"."profile_key" = "u"."user_key"
-        )
-      `,
-      );
-
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists((q) => q.profile.where({ Bio: 'bio' }))
-          .toSQL(),
-        `
-            SELECT ${userSelectAll} FROM "user" "u"
-            WHERE EXISTS (
-              SELECT 1 FROM "profile"
-              WHERE "profile"."bio" = $1
-                AND "profile"."user_id" = "u"."id"
-                AND "profile"."profile_key" = "u"."user_key"
-            )
-          `,
-        ['bio'],
-      );
-
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
-          .toSQL(),
-        `
+    describe('whereExists', () => {
+      it('should be supported in whereExists', () => {
+        expectSql(
+          db.user.as('u').whereExists('profile').toSQL(),
+          `
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
             SELECT 1 FROM "profile"
             WHERE "profile"."user_id" = "u"."id"
-              AND "profile"."profile_key" = "u"."user_key"
-              AND "profile"."bio" = $1
+            AND "profile"."profile_key" = "u"."user_key"
           )
         `,
-        ['bio'],
-      );
+        );
+
+        expectSql(
+          db.user
+            .as('u')
+            .whereExists((q) => q.profile.where({ Bio: 'bio' }))
+            .toSQL(),
+          `
+              SELECT ${userSelectAll} FROM "user" "u"
+              WHERE EXISTS (
+                SELECT 1 FROM "profile"
+                WHERE "profile"."bio" = $1
+                  AND "profile"."user_id" = "u"."id"
+                  AND "profile"."profile_key" = "u"."user_key"
+              )
+            `,
+          ['bio'],
+        );
+
+        expectSql(
+          db.user
+            .as('u')
+            .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
+            .toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user" "u"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile"
+              WHERE "profile"."user_id" = "u"."id"
+                AND "profile"."profile_key" = "u"."user_key"
+                AND "profile"."bio" = $1
+            )
+          `,
+          ['bio'],
+        );
+      });
+
+      it('should be supported in whereExists using `on`', () => {
+        expectSql(
+          db.user.as('u').whereExists('activeProfile').toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user" "u"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile" AS "activeProfile"
+              WHERE "activeProfile"."active" = $1
+                AND "activeProfile"."user_id" = "u"."id"
+                AND "activeProfile"."profile_key" = "u"."user_key"
+            )
+          `,
+          [true],
+        );
+
+        expectSql(
+          db.user
+            .as('u')
+            .whereExists((q) => q.activeProfile.where({ Bio: 'bio' }))
+            .toSQL(),
+          `
+              SELECT ${userSelectAll} FROM "user" "u"
+              WHERE EXISTS (
+                SELECT 1 FROM "profile" AS "activeProfile"
+                WHERE "activeProfile"."active" = $1
+                  AND "activeProfile"."bio" = $2
+                  AND "activeProfile"."user_id" = "u"."id"
+                  AND "activeProfile"."profile_key" = "u"."user_key"
+              )
+            `,
+          [true, 'bio'],
+        );
+
+        expectSql(
+          db.user
+            .as('u')
+            .whereExists('activeProfile', (q) =>
+              q.where({ 'activeProfile.Bio': 'bio' }),
+            )
+            .toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user" "u"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile" AS "activeProfile"
+              WHERE "activeProfile"."active" = $1
+                AND "activeProfile"."user_id" = "u"."id"
+                AND "activeProfile"."profile_key" = "u"."user_key"
+                AND "activeProfile"."bio" = $2
+            )
+          `,
+          [true, 'bio'],
+        );
+      });
     });
 
-    it('should be supported in join', () => {
-      const query = db.user
-        .as('u')
-        .join('profile', (q) => q.where({ Bio: 'bio' }))
-        .select('Name', 'profile.Bio');
+    describe('join', () => {
+      it('should be supported in join', () => {
+        const query = db.user
+          .as('u')
+          .join('profile', (q) => q.where({ Bio: 'bio' }))
+          .select('Name', 'profile.Bio');
 
-      assertType<
-        Awaited<typeof query>,
-        { Name: string; Bio: string | null }[]
-      >();
+        assertType<
+          Awaited<typeof query>,
+          { Name: string; Bio: string | null }[]
+        >();
 
-      expectSql(
-        query.toSQL(),
-        `
-        SELECT "u"."name" "Name", "profile"."bio" "Bio"
-        FROM "user" "u"
-        JOIN "profile"
-          ON "profile"."user_id" = "u"."id"
-               AND "profile"."profile_key" = "u"."user_key"
-         AND "profile"."bio" = $1
-      `,
-        ['bio'],
-      );
-    });
-
-    it('should be supported in join with a callback', () => {
-      const query = db.user
-        .as('u')
-        .join(
-          (q) => q.profile.as('p').where({ UserId: 123 }),
-          (q) => q.where({ Bio: 'bio' }),
-        )
-        .select('Name', 'p.Bio');
-
-      assertType<
-        Awaited<typeof query>,
-        { Name: string; Bio: string | null }[]
-      >();
-
-      expectSql(
-        query.toSQL(),
-        `
-        SELECT "u"."name" "Name", "p"."bio" "Bio"
-        FROM "user" "u"
-        JOIN "profile" AS "p"
-          ON "p"."bio" = $1
-          AND "p"."user_id" = $2
-          AND "p"."user_id" = "u"."id"
-          AND "p"."profile_key" = "u"."user_key"
-      `,
-        ['bio', 123],
-      );
-    });
-
-    it('should be supported in joinLateral', () => {
-      const q = db.user
-        .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
-        .where({ 'p.Bio': 'two' })
-        .select('Name', 'p.*');
-
-      assertType<Awaited<typeof q>, { Name: string; p: Profile }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."name" "Name", row_to_json("p".*) "p"
-          FROM "user"
-          JOIN LATERAL (
-            SELECT ${profileSelectAll}
-            FROM "profile" "p"
-            WHERE "p"."bio" = $1
-              AND "p"."user_id" = "user"."id"
-              AND "p"."profile_key" = "user"."user_key"
-          ) "p" ON true
-          WHERE "p"."Bio" = $2
+        expectSql(
+          query.toSQL(),
+          `
+          SELECT "u"."name" "Name", "profile"."bio" "Bio"
+          FROM "user" "u"
+          JOIN "profile"
+            ON "profile"."user_id" = "u"."id"
+                 AND "profile"."profile_key" = "u"."user_key"
+           AND "profile"."bio" = $1
         `,
-        ['one', 'two'],
-      );
+          ['bio'],
+        );
+      });
+
+      it('should be supported in join using `on`', () => {
+        const query = db.user
+          .as('u')
+          .join('activeProfile', (q) => q.where({ Bio: 'bio' }))
+          .select('Name', 'activeProfile.Bio');
+
+        assertType<
+          Awaited<typeof query>,
+          { Name: string; Bio: string | null }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "u"."name" "Name", "activeProfile"."bio" "Bio"
+            FROM "user" "u"
+            JOIN "profile" AS "activeProfile"
+              ON "activeProfile"."active" = $1
+             AND "activeProfile"."user_id" = "u"."id"
+             AND "activeProfile"."profile_key" = "u"."user_key"
+             AND "activeProfile"."bio" = $2
+          `,
+          [true, 'bio'],
+        );
+      });
+
+      it('should be supported in join with a callback', () => {
+        const query = db.user
+          .as('u')
+          .join(
+            (q) => q.profile.as('p').where({ UserId: 123 }),
+            (q) => q.where({ Bio: 'bio' }),
+          )
+          .select('Name', 'p.Bio');
+
+        assertType<
+          Awaited<typeof query>,
+          { Name: string; Bio: string | null }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+          SELECT "u"."name" "Name", "p"."bio" "Bio"
+          FROM "user" "u"
+          JOIN "profile" AS "p"
+            ON "p"."bio" = $1
+            AND "p"."user_id" = $2
+            AND "p"."user_id" = "u"."id"
+            AND "p"."profile_key" = "u"."user_key"
+        `,
+          ['bio', 123],
+        );
+      });
+
+      it('should be supported in join with a callback', () => {
+        const query = db.user
+          .as('u')
+          .join(
+            (q) => q.activeProfile.as('p').where({ UserId: 123 }),
+            (q) => q.where({ Bio: 'bio' }),
+          )
+          .select('Name', 'p.Bio');
+
+        assertType<
+          Awaited<typeof query>,
+          { Name: string; Bio: string | null }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "u"."name" "Name", "p"."bio" "Bio"
+            FROM "user" "u"
+            JOIN "profile" AS "p"
+              ON "p"."bio" = $1
+             AND "p"."active" = $2
+             AND "p"."user_id" = $3
+             AND "p"."user_id" = "u"."id"
+             AND "p"."profile_key" = "u"."user_key"
+          `,
+          ['bio', true, 123],
+        );
+      });
+
+      it('should be supported in joinLateral', () => {
+        const q = db.user
+          .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
+          .where({ 'p.Bio': 'two' })
+          .select('Name', 'p.*');
+
+        assertType<Awaited<typeof q>, { Name: string; p: Profile }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "user"."name" "Name", row_to_json("p".*) "p"
+            FROM "user"
+            JOIN LATERAL (
+              SELECT ${profileSelectAll}
+              FROM "profile" "p"
+              WHERE "p"."bio" = $1
+                AND "p"."user_id" = "user"."id"
+                AND "p"."profile_key" = "user"."user_key"
+            ) "p" ON true
+            WHERE "p"."Bio" = $2
+          `,
+          ['one', 'two'],
+        );
+      });
+
+      it('should be supported in joinLateral', () => {
+        const q = db.user
+          .joinLateral('activeProfile', (q) => q.as('p').where({ Bio: 'one' }))
+          .where({ 'p.Bio': 'two' })
+          .select('Name', 'p.*');
+
+        assertType<Awaited<typeof q>, { Name: string; p: Profile }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "user"."name" "Name", row_to_json("p".*) "p"
+            FROM "user"
+            JOIN LATERAL (
+              SELECT ${profileSelectAll}
+              FROM "profile" "p"
+              WHERE "p"."active" = $1
+                AND "p"."bio" = $2
+                AND "p"."user_id" = "user"."id"
+                AND "p"."profile_key" = "user"."user_key"
+            ) "p" ON true
+            WHERE "p"."Bio" = $3
+          `,
+          [true, 'one', 'two'],
+        );
+      });
     });
 
     describe('select', () => {
@@ -452,6 +731,37 @@ describe('hasOne', () => {
         );
       });
 
+      it('should be selectable using `on`', () => {
+        const query = db.user
+          .as('u')
+          .select('Id', {
+            profile: (q) => q.activeProfile.where({ Bio: 'bio' }),
+          })
+          .order('profile.Bio');
+
+        assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "u"."id" "Id",
+              row_to_json("profile".*) "profile"
+            FROM "user" "u"
+                   LEFT JOIN LATERAL (
+              SELECT ${profileSelectAll}
+              FROM "profile" "activeProfile"
+              WHERE "activeProfile"."active" = $1
+                AND "activeProfile"."bio" = $2
+                AND "activeProfile"."user_id" = "u"."id"
+                AND "activeProfile"."profile_key" = "u"."user_key"
+              ) "profile" ON true
+            ORDER BY "profile"."Bio" ASC
+          `,
+          [true, 'bio'],
+        );
+      });
+
       it('should support chained select', () => {
         const q = db.user.select({
           items: (q) => q.onePost.chain('onePostTag'),
@@ -482,6 +792,39 @@ describe('hasOne', () => {
         );
       });
 
+      it('should support chained select using `on`', () => {
+        const q = db.user.select({
+          items: (q) => q.activeOnePost.chain('activeOnePostTag'),
+        });
+
+        assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "user"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${postTagSelectAll}
+                FROM "postTag" "activeOnePostTag"
+                WHERE "activeOnePostTag"."active" = $1
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "post" AS "activeOnePost"
+                    WHERE "activeOnePost"."active" = $2
+                      AND "activeOnePost"."user_id" = "user"."id"
+                      AND "activeOnePost"."title" = "user"."user_key"
+                      AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
+                  )
+             ) "t"
+            ) "items" ON true
+          `,
+          [true, true],
+        );
+      });
+
       it('should handle exists sub query', () => {
         const query = db.user.as('u').select('Id', {
           hasProfile: (q) => q.profile.exists(),
@@ -503,9 +846,38 @@ describe('hasOne', () => {
               SELECT true r
               FROM "profile"
               WHERE "profile"."user_id" = "u"."id"
-              AND "profile"."profile_key" = "u"."user_key"
+                AND "profile"."profile_key" = "u"."user_key"
             ) "hasProfile" ON true
           `,
+        );
+      });
+
+      it('should handle exists sub query using `on`', () => {
+        const query = db.user.as('u').select('Id', {
+          hasProfile: (q) => q.activeProfile.exists(),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { Id: number; hasProfile: boolean }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "u"."id" "Id",
+              COALESCE("hasProfile".r, false) "hasProfile"
+            FROM "user" "u"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "profile" "activeProfile"
+              WHERE "activeProfile"."active" = $1
+                AND "activeProfile"."user_id" = "u"."id"
+                AND "activeProfile"."profile_key" = "u"."user_key"
+            ) "hasProfile" ON true
+          `,
+          [true],
         );
       });
 
@@ -551,6 +923,51 @@ describe('hasOne', () => {
         );
       });
 
+      it('should support recurring select', () => {
+        const q = db.user.as('activeUser').select({
+          activeProfile: (q) =>
+            q.activeProfile.select({
+              activeUser: (q) =>
+                q.activeUser
+                  .select({
+                    activeProfile: (q) => q.activeProfile,
+                  })
+                  .where({ 'activeProfile.Bio': 'bio' }),
+            }),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT row_to_json("activeProfile".*) "activeProfile"
+            FROM "user" "activeUser"
+            LEFT JOIN LATERAL (
+              SELECT row_to_json("activeUser2".*) "activeUser"
+              FROM "profile" "activeProfile"
+              LEFT JOIN LATERAL (
+                SELECT row_to_json("activeProfile2".*) "activeProfile"
+                FROM "user" "activeUser2"
+                LEFT JOIN LATERAL (
+                  SELECT ${profileSelectAll}
+                  FROM "profile" "activeProfile2"
+                  WHERE "activeProfile2"."active" = $1
+                    AND "activeProfile2"."user_id" = "activeUser2"."id"
+                    AND "activeProfile2"."profile_key" = "activeUser2"."user_key"
+                ) "activeProfile2" ON true
+                WHERE "activeUser2"."active" = $2
+                  AND "activeProfile2"."Bio" = $3
+                  AND "activeUser2"."id" = "activeProfile"."user_id"
+                  AND "activeUser2"."user_key" = "activeProfile"."profile_key"
+              ) "activeUser2" ON true
+              WHERE "activeProfile"."active" = $4
+                AND "activeProfile"."user_id" = "activeUser"."id"
+                AND "activeProfile"."profile_key" = "activeUser"."user_key"
+            ) "activeProfile" ON true
+          `,
+          [true, true, 'bio', true],
+        );
+      });
+
       it('should be selectable for update', () => {
         const q = db.profile.all().update({
           Bio: (q) => q.user.get('Name'),
@@ -571,36 +988,69 @@ describe('hasOne', () => {
           `,
         );
       });
+
+      it('should be selectable for update using `on`', () => {
+        const q = db.profile.all().update({
+          Bio: (q) => q.activeUser.get('Name'),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            UPDATE "profile"
+            SET
+              "bio" = (
+                SELECT "activeUser"."name"
+                FROM "user" "activeUser"
+                WHERE "activeUser"."active" = $1
+                  AND "activeUser"."id" = "profile"."user_id"
+                  AND "activeUser"."user_key" = "profile"."profile_key"
+              ),
+              "updated_at" = now()
+          `,
+          [true],
+        );
+      });
     });
   });
 
   describe('create', () => {
-    const checkUserAndProfile = ({
-      user,
-      profile,
-      Name,
-      Bio,
-    }: {
-      user: User;
-      profile: Profile;
-      Name: string;
-      Bio: string;
-    }) => {
-      expect(user).toEqual({
-        ...omit(userData, ['Password']),
-        Id: user.Id,
-        Name,
-        Active: null,
-        Age: null,
-        Data: null,
-        Picture: null,
-      });
+    const assert = {
+      user({ user, Name }: { user: User; Name: string }) {
+        expect(user).toEqual({
+          ...omit(userData, ['Password']),
+          Id: user.Id,
+          Name,
+          Active: null,
+          Age: null,
+          Data: null,
+          Picture: null,
+        });
+      },
 
-      expect(profile).toMatchObject({
-        Id: profile.Id,
+      profile({
+        profile,
         Bio,
-        UserId: user.Id,
-      });
+        Active,
+      }: {
+        profile: Profile;
+        Bio: string;
+        Active?: boolean;
+      }) {
+        expect(profile).toMatchObject({
+          ...profileData,
+          Id: profile.Id,
+          UserId: profile.UserId,
+          updatedAt: profile.updatedAt,
+          createdAt: profile.createdAt,
+          Bio,
+          Active: Active || null,
+        });
+      },
+
+      activeProfile(params: { profile: Profile; Bio: string }) {
+        return this.profile({ ...params, Active: true });
+      },
     };
 
     describe('nested create', () => {
@@ -619,7 +1069,27 @@ describe('hasOne', () => {
         const user = await q;
         const profile = await db.profile.findBy({ UserId: user.Id });
 
-        checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
+        assert.user({ user, Name: 'user' });
+        assert.profile({ profile, Bio: 'profile' });
+      });
+
+      it('should support create using `on`', async () => {
+        const q = db.user.create({
+          ...userData,
+          Name: 'user',
+          activeProfile: {
+            create: {
+              ...profileData,
+              Bio: 'profile',
+            },
+          },
+        });
+
+        const user = await q;
+        const profile = await db.profile.findBy({ UserId: user.Id });
+
+        assert.user({ user, Name: 'user' });
+        assert.activeProfile({ profile, Bio: 'profile' });
       });
 
       it('should support create many', async () => {
@@ -653,19 +1123,49 @@ describe('hasOne', () => {
           })
           .order('Id');
 
-        checkUserAndProfile({
-          user: users[0],
-          profile: profiles[0],
-          Name: 'user 1',
-          Bio: 'profile 1',
-        });
+        assert.user({ user: users[0], Name: 'user 1' });
+        assert.profile({ profile: profiles[0], Bio: 'profile 1' });
 
-        checkUserAndProfile({
-          user: users[1],
-          profile: profiles[1],
-          Name: 'user 2',
-          Bio: 'profile 2',
-        });
+        assert.user({ user: users[1], Name: 'user 2' });
+        assert.profile({ profile: profiles[1], Bio: 'profile 2' });
+      });
+
+      it('should create many using `on`', async () => {
+        const query = db.user.createMany([
+          {
+            ...userData,
+            Name: 'user 1',
+            activeProfile: {
+              create: {
+                ...profileData,
+                Bio: 'profile 1',
+              },
+            },
+          },
+          {
+            ...userData,
+            Name: 'user 2',
+            activeProfile: {
+              create: {
+                ...profileData,
+                Bio: 'profile 2',
+              },
+            },
+          },
+        ]);
+
+        const users = await query;
+        const profiles = await db.profile
+          .where({
+            UserId: { in: users.map((user) => user.Id) },
+          })
+          .order('Id');
+
+        assert.user({ user: users[0], Name: 'user 1' });
+        assert.activeProfile({ profile: profiles[0], Bio: 'profile 1' });
+
+        assert.user({ user: users[1], Name: 'user 2' });
+        assert.activeProfile({ profile: profiles[1], Bio: 'profile 2' });
       });
 
       describe('relation callbacks', () => {
@@ -741,10 +1241,35 @@ describe('hasOne', () => {
         const user = await query;
         const profile = await db.user.queryRelated('profile', user);
 
-        checkUserAndProfile({ user, profile, Name: 'user', Bio: 'profile' });
+        assert.user({ user, Name: 'user' });
+        assert.profile({ profile, Bio: 'profile' });
       });
 
-      it('should support connect many', async () => {
+      it('should fail to connect when `on` condition does not match', async () => {
+        await db.profile.create({
+          Bio: 'profile',
+          user: {
+            create: {
+              ...userData,
+              Name: 'tmp',
+            },
+          },
+        });
+
+        const query = db.user.create({
+          ...userData,
+          Name: 'user',
+          activeProfile: {
+            connect: { Bio: 'profile' },
+          },
+        });
+
+        const res = await query.catch((err) => err);
+
+        expect(res).toEqual(expect.any(NotFoundError));
+      });
+
+      it('should support connect in batch create', async () => {
         await db.profile.createMany([
           {
             Bio: 'profile 1',
@@ -787,19 +1312,36 @@ describe('hasOne', () => {
           })
           .order('Id');
 
-        checkUserAndProfile({
-          user: users[0],
-          profile: profiles[0],
-          Name: 'user 1',
-          Bio: 'profile 1',
+        assert.user({ user: users[0], Name: 'user 1' });
+        assert.profile({ profile: profiles[0], Bio: 'profile 1' });
+
+        assert.user({ user: users[1], Name: 'user 2' });
+        assert.profile({ profile: profiles[1], Bio: 'profile 2' });
+      });
+
+      it('should fail to connect when `on` condition does not match', async () => {
+        await db.profile.create({
+          Bio: 'profile',
+          user: {
+            create: {
+              ...userData,
+              Name: 'tmp',
+            },
+          },
         });
 
-        checkUserAndProfile({
-          user: users[1],
-          profile: profiles[1],
-          Name: 'user 2',
-          Bio: 'profile 2',
-        });
+        const query = db.user.createMany([
+          {
+            ...userData,
+            activeProfile: {
+              connect: { Bio: 'profile' },
+            },
+          },
+        ]);
+
+        const res = await query.catch((err) => err);
+
+        expect(res).toEqual(expect.any(NotFoundError));
       });
 
       describe('relation callbacks', () => {
@@ -893,21 +1435,73 @@ describe('hasOne', () => {
         });
 
         const profile1 = await db.user.queryRelated('profile', user1);
+        const profile2 = await db.user.queryRelated('profile', user2);
+
         expect(profile1.Id).toBe(profileId);
-        checkUserAndProfile({
-          user: user1,
-          profile: profile1,
+        assert.user({ user: user1, Name: 'user 1' });
+        assert.profile({ profile: profile1, Bio: 'profile 1' });
+
+        assert.user({ user: user2, Name: 'user 2' });
+        assert.profile({ profile: profile2, Bio: 'profile 2' });
+      });
+
+      it('should support connect or create using `on`', async () => {
+        const [profile1Id, profile2Id] = await db.profile
+          .pluck('Id')
+          .createMany([
+            {
+              Bio: 'profile 1',
+              Active: true,
+              user: {
+                create: {
+                  ...userData,
+                  Name: 'tmp',
+                },
+              },
+            },
+            {
+              Bio: 'profile 2',
+              user: {
+                create: {
+                  ...userData,
+                  Name: 'tmp',
+                },
+              },
+            },
+          ]);
+
+        const user1 = await db.user.create({
+          ...userData,
           Name: 'user 1',
-          Bio: 'profile 1',
+          activeProfile: {
+            connectOrCreate: {
+              where: { Bio: 'profile 1' },
+              create: { ...profileData, Bio: 'profile 1' },
+            },
+          },
         });
 
-        const profile2 = await db.user.queryRelated('profile', user2);
-        checkUserAndProfile({
-          user: user2,
-          profile: profile2,
+        const user2 = await db.user.create({
+          ...userData,
           Name: 'user 2',
-          Bio: 'profile 2',
+          activeProfile: {
+            connectOrCreate: {
+              where: { Bio: 'profile 2' },
+              create: { ...profileData, Bio: 'profile 2' },
+            },
+          },
         });
+
+        const profile1 = await db.user.queryRelated('activeProfile', user1);
+        const profile2 = await db.user.queryRelated('activeProfile', user2);
+
+        expect(profile1.Id).toBe(profile1Id);
+        assert.user({ user: user1, Name: 'user 1' });
+        assert.activeProfile({ profile: profile1, Bio: 'profile 1' });
+
+        expect(profile2.Id).not.toBe(profile2Id);
+        assert.user({ user: user2, Name: 'user 2' });
+        assert.activeProfile({ profile: profile2, Bio: 'profile 2' });
       });
 
       it('should support connect or create many', async () => {
@@ -945,21 +1539,74 @@ describe('hasOne', () => {
         ]);
 
         const profile1 = await db.user.queryRelated('profile', user1);
-        expect(profile1.Id).toBe(profileId);
-        checkUserAndProfile({
-          user: user1,
-          profile: profile1,
-          Name: 'user 1',
-          Bio: 'profile 1',
-        });
-
         const profile2 = await db.user.queryRelated('profile', user2);
-        checkUserAndProfile({
-          user: user2,
-          profile: profile2,
-          Name: 'user 2',
-          Bio: 'profile 2',
-        });
+
+        expect(profile1.Id).toBe(profileId);
+        assert.user({ user: user1, Name: 'user 1' });
+        assert.profile({ profile: profile1, Bio: 'profile 1' });
+
+        assert.user({ user: user2, Name: 'user 2' });
+        assert.profile({ profile: profile2, Bio: 'profile 2' });
+      });
+
+      it('should connect or create in batch create using `on`', async () => {
+        const [profile1Id, profile2Id] = await db.profile
+          .pluck('Id')
+          .createMany([
+            {
+              Bio: 'profile 1',
+              Active: true,
+              user: {
+                create: {
+                  ...userData,
+                  Name: 'tmp',
+                },
+              },
+            },
+            {
+              Bio: 'profile 2',
+              user: {
+                create: {
+                  ...userData,
+                  Name: 'tmp',
+                },
+              },
+            },
+          ]);
+
+        const [user1, user2] = await db.user.createMany([
+          {
+            ...userData,
+            Name: 'user 1',
+            activeProfile: {
+              connectOrCreate: {
+                where: { Bio: 'profile 1' },
+                create: { ...profileData, Bio: 'profile 1' },
+              },
+            },
+          },
+          {
+            ...userData,
+            Name: 'user 2',
+            activeProfile: {
+              connectOrCreate: {
+                where: { Bio: 'profile 2' },
+                create: { ...profileData, Bio: 'profile 2' },
+              },
+            },
+          },
+        ]);
+
+        const profile1 = await db.user.queryRelated('activeProfile', user1);
+        const profile2 = await db.user.queryRelated('activeProfile', user2);
+
+        expect(profile1.Id).toBe(profile1Id);
+        assert.user({ user: user1, Name: 'user 1' });
+        assert.activeProfile({ profile: profile1, Bio: 'profile 1' });
+
+        expect(profile2.Id).not.toBe(profile2Id);
+        assert.user({ user: user2, Name: 'user 2' });
+        assert.activeProfile({ profile: profile2, Bio: 'profile 2' });
       });
     });
 
@@ -1072,6 +1719,29 @@ describe('hasOne', () => {
         expect(profile.UserId).toBe(null);
       });
 
+      it('should not nullify foreignKey when `on` condition does not match', async () => {
+        const user = await db.user.create({
+          ...userData,
+          profile: { create: profileData },
+        });
+
+        const { Id: profileId } = await db.user.queryRelated('profile', user);
+
+        const Id = await db.user
+          .get('Id')
+          .where(user)
+          .update({
+            activeProfile: {
+              disconnect: true,
+            },
+          });
+
+        expect(Id).toBe(user.Id);
+
+        const profile = await db.profile.find(profileId);
+        expect(profile.UserId).toBe(user.Id);
+      });
+
       it('should nullify foreignKey in batch update', async () => {
         const userIds = await db.user.pluck('Id').createMany([
           { ...userData, profile: { create: profileData } },
@@ -1092,6 +1762,28 @@ describe('hasOne', () => {
           .pluck('UserId')
           .where({ Id: { in: profileIds } });
         expect(updatedUserIds).toEqual([null, null]);
+      });
+
+      it('should not nullify foreignKey in batch update when `on` condition does not match', async () => {
+        const userIds = await db.user
+          .pluck('Id')
+          .createMany([{ ...userData, profile: { create: profileData } }]);
+
+        const profileIds = await db.profile.pluck('Id').where({
+          UserId: { in: userIds },
+        });
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          activeProfile: {
+            disconnect: true,
+          },
+        });
+
+        const updatedUserIds = await db.profile
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } });
+
+        expect(updatedUserIds).toEqual(userIds);
       });
 
       describe('relation callbacks', () => {
@@ -1171,6 +1863,29 @@ describe('hasOne', () => {
         expect(profile2.UserId).toBe(Id);
       });
 
+      it('should not nullify when `on` condition does not match, and update foreignKey of the new record', async () => {
+        const Id = await db.user.get('Id').create(userData);
+
+        const [{ Id: profile1Id }, { Id: profile2Id }] = await db.profile
+          .select('Id')
+          .createMany([
+            { ...profileData, UserId: Id },
+            { ...profileData, Active: true },
+          ]);
+
+        await db.user.find(Id).update({
+          activeProfile: {
+            set: { Id: profile2Id },
+          },
+        });
+
+        const profile1 = await db.profile.find(profile1Id);
+        expect(profile1.UserId).toBe(Id);
+
+        const profile2 = await db.profile.find(profile2Id);
+        expect(profile2.UserId).toBe(Id);
+      });
+
       it('should throw in batch update', async () => {
         expect(() =>
           db.user.where({ Id: { in: [1, 2, 3] } }).update({
@@ -1230,6 +1945,22 @@ describe('hasOne', () => {
         expect(profile).toBe(undefined);
       });
 
+      it('should not delete when `on` condition does not match', async () => {
+        const Id = await db.user
+          .get('Id')
+          .create({ ...userData, profile: { create: profileData } });
+
+        await db.user.find(Id).update({
+          activeProfile: {
+            delete: true,
+          },
+        });
+
+        const profiles = await db.profile;
+
+        expect(profiles.length).toBe(1);
+      });
+
       it('should delete related record in batch update', async () => {
         const userIds = await db.user.pluck('Id').createMany([
           { ...userData, profile: { create: profileData } },
@@ -1244,6 +1975,23 @@ describe('hasOne', () => {
 
         const count = await db.profile.count();
         expect(count).toBe(0);
+      });
+
+      it('should not to delete in batch update when `on` condition does not match', async () => {
+        const userIds = await db.user.pluck('Id').createMany([
+          { ...userData, profile: { create: profileData } },
+          { ...userData, profile: { create: profileData } },
+        ]);
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          activeProfile: {
+            delete: true,
+          },
+        });
+
+        const profiles = await db.profile;
+
+        expect(profiles.length).toBe(2);
       });
 
       describe('relation callbacks', () => {
@@ -1311,7 +2059,28 @@ describe('hasOne', () => {
         const profile = await db.user
           .queryRelated('profile', { Id, UserKey: 'key' })
           .take();
+
         expect(profile.Bio).toBe('updated');
+      });
+
+      it('should not update when `on` condition does not match', async () => {
+        const Id = await db.user
+          .get('Id')
+          .create({ ...userData, profile: { create: profileData } });
+
+        await db.user.find(Id).update({
+          activeProfile: {
+            update: {
+              Bio: 'updated',
+            },
+          },
+        });
+
+        const profile = await db.user
+          .queryRelated('profile', { Id, UserKey: 'key' })
+          .take();
+
+        expect(profile.Bio).not.toBe('updated');
       });
 
       it('should update related record in batch update', async () => {
@@ -1330,6 +2099,24 @@ describe('hasOne', () => {
 
         const bios = await db.profile.pluck('Bio');
         expect(bios).toEqual(['updated', 'updated']);
+      });
+
+      it('should update records in batch update only where `on` condition does match', async () => {
+        const userIds = await db.user.pluck('Id').createMany([
+          { ...userData, profile: { create: profileData } },
+          { ...userData, profile: { create: activeProfileData } },
+        ]);
+
+        await db.user.where({ Id: { in: userIds } }).update({
+          activeProfile: {
+            update: {
+              Bio: 'updated',
+            },
+          },
+        });
+
+        const bios = await db.profile.pluck('Bio');
+        expect(bios).toEqual(['bio', 'updated']);
       });
 
       describe('relation callbacks', () => {
@@ -1448,6 +2235,30 @@ describe('hasOne', () => {
         expect(profile.Bio).toBe('created');
       });
 
+      it('should create a related record `when` on condition does not match for the update', async () => {
+        const user = await db.user.create({
+          ...userData,
+          profile: { create: profileData },
+        });
+
+        await db.user.find(user.Id).update({
+          activeProfile: {
+            upsert: {
+              update: {
+                Bio: 'updated',
+              },
+              create: {
+                ...profileData,
+                Bio: 'created',
+              },
+            },
+          },
+        });
+
+        const profile = await db.user.queryRelated('activeProfile', user);
+        expect(profile.Bio).toBe('created');
+      });
+
       it('should throw in batch update', async () => {
         expect(() =>
           db.user.where({ Id: { in: [1, 2, 3] } }).update({
@@ -1548,6 +2359,31 @@ describe('hasOne', () => {
         expect(previousProfile.UserId).toBe(null);
 
         const profile = await db.user.queryRelated('profile', updated);
+        expect(profile.Bio).toBe('created');
+      });
+
+      it('should create new related record using `on`', async () => {
+        const userId = await db.user
+          .get('Id')
+          .create({ ...userData, profile: { create: profileData } });
+
+        const previousProfileId = await db.user
+          .queryRelated('profile', { Id: userId, UserKey: 'key' })
+          .get('Id');
+
+        const updated = await db.user
+          .selectAll()
+          .find(userId)
+          .update({
+            activeProfile: {
+              create: { ...profileData, Bio: 'created' },
+            },
+          });
+
+        const previousProfile = await db.profile.find(previousProfileId);
+        expect(previousProfile.UserId).toBe(userId);
+
+        const profile = await db.user.queryRelated('activeProfile', updated);
         expect(profile.Bio).toBe('created');
       });
 
@@ -1839,134 +2675,275 @@ describe('hasOne through', () => {
     );
   });
 
-  it('should support `queryRelated` to query related data', async () => {
-    const query = db.message.queryRelated('profile', {
-      AuthorId: 1,
-      MessageKey: 'key',
+  describe('queryRelated', () => {
+    it('should query related record', async () => {
+      const query = db.message.queryRelated('profile', {
+        AuthorId: 1,
+        MessageKey: 'key',
+      });
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT ${profileSelectAll} FROM "profile"
+          WHERE EXISTS (
+            SELECT 1 FROM "user" AS "sender"
+            WHERE "profile"."user_id" = "sender"."id"
+              AND "profile"."profile_key" = "sender"."user_key"
+              AND "sender"."id" = $1
+              AND "sender"."user_key" = $2
+          )
+        `,
+        [1, 'key'],
+      );
     });
-    expectSql(
-      query.toSQL(),
-      `
-        SELECT ${profileSelectAll} FROM "profile"
-        WHERE EXISTS (
-          SELECT 1 FROM "user" AS "sender"
-          WHERE "profile"."user_id" = "sender"."id"
-            AND "profile"."profile_key" = "sender"."user_key"
-            AND "sender"."id" = $1
-            AND "sender"."user_key" = $2
-        )
-      `,
-      [1, 'key'],
-    );
-  });
 
-  it('should handle chained query', () => {
-    const query = db.message
-      .where({ Text: 'text' })
-      .chain('profile')
-      .where({ Bio: 'bio' });
+    it('should query related record using `on`', async () => {
+      const query = db.message.queryRelated('activeProfile', {
+        AuthorId: 1,
+        MessageKey: 'key',
+      });
 
-    expectSql(
-      query.toSQL(),
-      `
-        SELECT ${profileSelectAll} FROM "profile"
-        WHERE EXISTS (
-            SELECT 1 FROM "message"
-            WHERE "message"."text" = $1
-              AND EXISTS (
-                SELECT 1 FROM "user" AS "sender"
-                WHERE "profile"."user_id" = "sender"."id"
-                  AND "profile"."profile_key" = "sender"."user_key"
-                  AND "sender"."id" = "message"."author_id"
-                  AND "sender"."user_key" = "message"."message_key"
-              )
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+          WHERE EXISTS (
+            SELECT 1 FROM "user" AS "activeSender"
+            WHERE "activeProfile"."active" = $1
+              AND "activeProfile"."user_id" = "activeSender"."id"
+              AND "activeProfile"."profile_key" = "activeSender"."user_key"
+              AND "activeSender"."active" = $2
+              AND "activeSender"."id" = $3
+              AND "activeSender"."user_key" = $4
           )
-          AND "profile"."bio" = $2
-      `,
-      ['text', 'bio'],
-    );
+        `,
+        [true, true, 1, 'key'],
+      );
+    });
   });
 
-  it('should handle long chained query', () => {
-    const q = db.message
-      .where({ Text: 'text' })
-      .chain('profile')
-      .where({ Bio: 'bio' })
-      .chain('onePost')
-      .where({ Body: 'body' });
+  describe('chain', () => {
+    it('should handle chained query', () => {
+      const query = db.message
+        .where({ Text: 'text' })
+        .chain('profile')
+        .where({ Bio: 'bio' });
 
-    assertType<Awaited<typeof q>, Post[]>();
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT ${profileSelectAll} FROM "profile"
+          WHERE EXISTS (
+              SELECT 1 FROM "message"
+              WHERE "message"."text" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "sender"
+                  WHERE "profile"."user_id" = "sender"."id"
+                    AND "profile"."profile_key" = "sender"."user_key"
+                    AND "sender"."id" = "message"."author_id"
+                    AND "sender"."user_key" = "message"."message_key"
+                )
+            )
+            AND "profile"."bio" = $2
+        `,
+        ['text', 'bio'],
+      );
+    });
 
-    expectSql(
-      q.toSQL(),
-      `
-        SELECT ${postSelectAll}
-        FROM "post" "onePost"
-        WHERE
-          EXISTS (
-            SELECT 1
-            FROM "profile"
-            WHERE
-              EXISTS (
-                SELECT 1
-                FROM "message"
-                WHERE "message"."text" = $1
-                  AND EXISTS (
-                    SELECT 1
-                    FROM "user" AS "sender"
-                    WHERE "profile"."user_id" = "sender"."id"
-                      AND "profile"."profile_key" = "sender"."user_key"
-                      AND "sender"."id" = "message"."author_id"
-                      AND "sender"."user_key" = "message"."message_key"
-                  )
-              )
-              AND "profile"."bio" = $2
-              AND EXISTS (
-                SELECT 1
-                FROM "user"
-                WHERE "onePost"."user_id" = "user"."id"
-                  AND "onePost"."title" = "user"."user_key"
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
-              )
-          )
-          AND "onePost"."body" = $3
-      `,
-      ['text', 'bio', 'body'],
-    );
-  });
+    it('should handle chained query using `on`', () => {
+      const query = db.message
+        .where({ Text: 'text' })
+        .chain('activeProfile')
+        .where({ Bio: 'bio' });
 
-  it('should disable create', () => {
-    // @ts-expect-error hasOne with through option should not have chained create
-    db.message.chain('profile').create(chatData);
-  });
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+          WHERE EXISTS (
+              SELECT 1 FROM "message"
+              WHERE "message"."text" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeSender"
+                  WHERE "activeProfile"."active" = $2
+                    AND "activeProfile"."user_id" = "activeSender"."id"
+                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                    AND "activeSender"."active" = $3
+                    AND "activeSender"."id" = "message"."author_id"
+                    AND "activeSender"."user_key" = "message"."message_key"
+                )
+            )
+            AND "activeProfile"."bio" = $4
+        `,
+        ['text', true, true, 'bio'],
+      );
+    });
 
-  it('should support chained delete', () => {
-    const query = db.message
-      .where({ Text: 'text' })
-      .chain('profile')
-      .where({ Bio: 'bio' })
-      .delete();
+    it('should handle long chained query', () => {
+      const q = db.message
+        .where({ Text: 'text' })
+        .chain('profile')
+        .where({ Bio: 'bio' })
+        .chain('onePost')
+        .where({ Body: 'body' });
 
-    expectSql(
-      query.toSQL(),
-      `
-        DELETE FROM "profile"
-        WHERE EXISTS (
-            SELECT 1 FROM "message"
-            WHERE "message"."text" = $1
-              AND EXISTS (
-                SELECT 1 FROM "user" AS "sender"
-                WHERE "profile"."user_id" = "sender"."id"
-                  AND "profile"."profile_key" = "sender"."user_key"
-                  AND "sender"."id" = "message"."author_id"
-                  AND "sender"."user_key" = "message"."message_key"
-              )
-          )
-          AND "profile"."bio" = $2
-      `,
-      ['text', 'bio'],
-    );
+      assertType<Awaited<typeof q>, Post[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${postSelectAll}
+          FROM "post" "onePost"
+          WHERE
+            EXISTS (
+              SELECT 1
+              FROM "profile"
+              WHERE
+                EXISTS (
+                  SELECT 1
+                  FROM "message"
+                  WHERE "message"."text" = $1
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "user" AS "sender"
+                      WHERE "profile"."user_id" = "sender"."id"
+                        AND "profile"."profile_key" = "sender"."user_key"
+                        AND "sender"."id" = "message"."author_id"
+                        AND "sender"."user_key" = "message"."message_key"
+                    )
+                )
+                AND "profile"."bio" = $2
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user"
+                  WHERE "onePost"."user_id" = "user"."id"
+                    AND "onePost"."title" = "user"."user_key"
+                    AND "user"."id" = "profile"."user_id"
+                    AND "user"."user_key" = "profile"."profile_key"
+                )
+            )
+            AND "onePost"."body" = $3
+        `,
+        ['text', 'bio', 'body'],
+      );
+    });
+
+    it('should handle long chained query using `on`', () => {
+      const q = db.message
+        .where({ Text: 'text' })
+        .chain('activeProfile')
+        .where({ Bio: 'bio' })
+        .chain('activeOnePost')
+        .where({ Body: 'body' });
+
+      assertType<Awaited<typeof q>, Post[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${postSelectAll}
+          FROM "post" "activeOnePost"
+          WHERE
+            EXISTS (
+              SELECT 1
+              FROM "profile" AS "activeProfile"
+              WHERE
+                EXISTS (
+                  SELECT 1
+                  FROM "message"
+                  WHERE "message"."text" = $1
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "user" AS "activeSender"
+                      WHERE "activeProfile"."active" = $2
+                        AND "activeProfile"."user_id" = "activeSender"."id"
+                        AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                        AND "activeSender"."active" = $3
+                        AND "activeSender"."id" = "message"."author_id"
+                        AND "activeSender"."user_key" = "message"."message_key"
+                    )
+                )
+                AND "activeProfile"."bio" = $4
+                AND EXISTS (
+                  SELECT 1
+                  FROM "user" AS "activeUser"
+                  WHERE "activeOnePost"."active" = $5
+                    AND "activeOnePost"."user_id" = "activeUser"."id"
+                    AND "activeOnePost"."title" = "activeUser"."user_key"
+                    AND "activeUser"."active" = $6
+                    AND "activeUser"."id" = "activeProfile"."user_id"
+                    AND "activeUser"."user_key" = "activeProfile"."profile_key"
+                )
+            )
+            AND "activeOnePost"."body" = $7
+        `,
+        ['text', true, true, 'bio', true, true, 'body'],
+      );
+    });
+
+    it('should disable create', () => {
+      // @ts-expect-error hasOne with through option should not have chained create
+      db.message.chain('profile').create(chatData);
+    });
+
+    it('should support chained delete', () => {
+      const query = db.message
+        .where({ Text: 'text' })
+        .chain('profile')
+        .where({ Bio: 'bio' })
+        .delete();
+
+      expectSql(
+        query.toSQL(),
+        `
+          DELETE FROM "profile"
+          WHERE EXISTS (
+              SELECT 1 FROM "message"
+              WHERE "message"."text" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "sender"
+                  WHERE "profile"."user_id" = "sender"."id"
+                    AND "profile"."profile_key" = "sender"."user_key"
+                    AND "sender"."id" = "message"."author_id"
+                    AND "sender"."user_key" = "message"."message_key"
+                )
+            )
+            AND "profile"."bio" = $2
+        `,
+        ['text', 'bio'],
+      );
+    });
+
+    it('should support chained delete using `on`', () => {
+      const query = db.message
+        .where({ Text: 'text' })
+        .chain('activeProfile')
+        .where({ Bio: 'bio' })
+        .delete();
+
+      expectSql(
+        query.toSQL(),
+        `
+          DELETE FROM "profile" AS "activeProfile"
+          WHERE EXISTS (
+              SELECT 1 FROM "message"
+              WHERE "message"."text" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeSender"
+                  WHERE "activeProfile"."active" = $2
+                    AND "activeProfile"."user_id" = "activeSender"."id"
+                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                    AND "activeSender"."active" = $3
+                    AND "activeSender"."id" = "message"."author_id"
+                    AND "activeSender"."user_key" = "message"."message_key"
+                )
+            )
+            AND "activeProfile"."bio" = $4
+        `,
+        ['text', true, true, 'bio'],
+      );
+    });
   });
 
   it('should have proper joinQuery', () => {
@@ -1990,157 +2967,341 @@ describe('hasOne through', () => {
     );
   });
 
-  it('should be supported in whereExists', () => {
-    expectSql(
-      db.message.whereExists('profile').toSQL(),
-      `
-        SELECT ${messageSelectAll} FROM "message"
-        WHERE EXISTS (
-          SELECT 1 FROM "profile"
+  describe('whereExists', () => {
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.message.whereExists('profile').toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message"
           WHERE EXISTS (
-            SELECT 1 FROM "user" AS "sender"
-            WHERE "profile"."user_id" = "sender"."id"
-              AND "profile"."profile_key" = "sender"."user_key"
-              AND "sender"."id" = "message"."author_id"
-              AND "sender"."user_key" = "message"."message_key"
+            SELECT 1 FROM "profile"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "sender"
+              WHERE "profile"."user_id" = "sender"."id"
+                AND "profile"."profile_key" = "sender"."user_key"
+                AND "sender"."id" = "message"."author_id"
+                AND "sender"."user_key" = "message"."message_key"
+            )
           )
-        )
-      `,
-    );
+        `,
+      );
 
-    expectSql(
-      db.message
-        .as('m')
-        .whereExists((q) => q.profile.where({ Bio: 'bio' }))
-        .toSQL(),
-      `
-        SELECT ${messageSelectAll} FROM "message" "m"
-        WHERE EXISTS (
-          SELECT 1 FROM "profile"
-          WHERE "profile"."bio" = $1
-            AND EXISTS (
+      expectSql(
+        db.message
+          .as('m')
+          .whereExists((q) => q.profile.where({ Bio: 'bio' }))
+          .toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message" "m"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile"
+            WHERE "profile"."bio" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user" AS "sender"
+                WHERE "profile"."user_id" = "sender"."id"
+                  AND "profile"."profile_key" = "sender"."user_key"
+                  AND "sender"."id" = "m"."author_id"
+                  AND "sender"."user_key" = "m"."message_key"
+              )
+          )
+        `,
+        ['bio'],
+      );
+
+      expectSql(
+        db.message
+          .as('m')
+          .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
+          .toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message" "m"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile"
+            WHERE EXISTS (
               SELECT 1 FROM "user" AS "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
                 AND "sender"."user_key" = "m"."message_key"
             )
-        )
-      `,
-      ['bio'],
-    );
+            AND "profile"."bio" = $1
+          )
+        `,
+        ['bio'],
+      );
+    });
 
-    expectSql(
-      db.message
-        .as('m')
-        .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
-        .toSQL(),
-      `
-        SELECT ${messageSelectAll} FROM "message" "m"
-        WHERE EXISTS (
-          SELECT 1 FROM "profile"
+    it('should be supported in whereExists using `on`', () => {
+      expectSql(
+        db.message.whereExists('activeProfile').toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message"
           WHERE EXISTS (
-            SELECT 1 FROM "user" AS "sender"
-            WHERE "profile"."user_id" = "sender"."id"
-              AND "profile"."profile_key" = "sender"."user_key"
-              AND "sender"."id" = "m"."author_id"
-              AND "sender"."user_key" = "m"."message_key"
+            SELECT 1 FROM "profile" AS "activeProfile"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "activeSender"
+              WHERE "activeProfile"."active" = $1
+                AND "activeProfile"."user_id" = "activeSender"."id"
+                AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                AND "activeSender"."active" = $2
+                AND "activeSender"."id" = "message"."author_id"
+                AND "activeSender"."user_key" = "message"."message_key"
+            )
           )
-          AND "profile"."bio" = $1
+        `,
+        [true, true],
+      );
+
+      expectSql(
+        db.message
+          .as('m')
+          .whereExists((q) => q.activeProfile.where({ Bio: 'bio' }))
+          .toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message" "m"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile" AS "activeProfile"
+            WHERE "activeProfile"."bio" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user" AS "activeSender"
+                WHERE "activeProfile"."active" = $2
+                  AND "activeProfile"."user_id" = "activeSender"."id"
+                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                  AND "activeSender"."active" = $3
+                  AND "activeSender"."id" = "m"."author_id"
+                  AND "activeSender"."user_key" = "m"."message_key"
+              )
+          )
+        `,
+        ['bio', true, true],
+      );
+
+      expectSql(
+        db.message
+          .as('m')
+          .whereExists('activeProfile', (q) =>
+            q.where({ 'activeProfile.Bio': 'bio' }),
+          )
+          .toSQL(),
+        `
+          SELECT ${messageSelectAll} FROM "message" "m"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile" AS "activeProfile"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "activeSender"
+              WHERE "activeProfile"."active" = $1
+                AND "activeProfile"."user_id" = "activeSender"."id"
+                AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                AND "activeSender"."active" = $2
+                AND "activeSender"."id" = "m"."author_id"
+                AND "activeSender"."user_key" = "m"."message_key"
+            )
+            AND "activeProfile"."bio" = $3
+          )
+        `,
+        [true, true, 'bio'],
+      );
+    });
+  });
+
+  describe('join', () => {
+    it('should be supported in join', () => {
+      const query = db.message
+        .as('m')
+        .join('profile', (q) => q.where({ Bio: 'bio' }))
+        .select('Text', 'profile.Bio');
+
+      assertType<
+        Awaited<typeof query>,
+        { Text: string; Bio: string | null }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "m"."text" "Text", "profile"."bio" "Bio"
+          FROM "message" "m"
+          JOIN "profile"
+            ON EXISTS (
+              SELECT 1 FROM "user" AS "sender"
+              WHERE "profile"."user_id" = "sender"."id"
+                AND "profile"."profile_key" = "sender"."user_key"
+                AND "sender"."id" = "m"."author_id"
+                AND "sender"."user_key" = "m"."message_key"
+            )
+            AND "profile"."bio" = $1
+        `,
+        ['bio'],
+      );
+    });
+
+    it('should be supported in join using `on`', () => {
+      const query = db.message
+        .as('m')
+        .join('activeProfile', (q) => q.where({ Bio: 'bio' }))
+        .select('Text', 'activeProfile.Bio');
+
+      assertType<
+        Awaited<typeof query>,
+        { Text: string; Bio: string | null }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "m"."text" "Text", "activeProfile"."bio" "Bio"
+          FROM "message" "m"
+          JOIN "profile" AS "activeProfile"
+            ON EXISTS (
+              SELECT 1 FROM "user" AS "activeSender"
+              WHERE "activeProfile"."active" = $1
+                AND "activeProfile"."user_id" = "activeSender"."id"
+                AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                AND "activeSender"."active" = $2
+                AND "activeSender"."id" = "m"."author_id"
+                AND "activeSender"."user_key" = "m"."message_key"
+            )
+            AND "activeProfile"."bio" = $3
+        `,
+        [true, true, 'bio'],
+      );
+    });
+
+    it('should be supported in join with a callback', () => {
+      const query = db.message
+        .as('m')
+        .join(
+          (q) => q.profile.as('p').where({ UserId: 123 }),
+          (q) => q.where({ Bio: 'bio' }),
         )
-      `,
-      ['bio'],
-    );
-  });
+        .select('Text', 'p.Bio');
 
-  it('should be supported in join', () => {
-    const query = db.message
-      .as('m')
-      .join('profile', (q) => q.where({ Bio: 'bio' }))
-      .select('Text', 'profile.Bio');
+      assertType<
+        Awaited<typeof query>,
+        { Text: string; Bio: string | null }[]
+      >();
 
-    assertType<Awaited<typeof query>, { Text: string; Bio: string | null }[]>();
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "m"."text" "Text", "p"."bio" "Bio"
+          FROM "message" "m"
+          JOIN "profile" AS "p"
+            ON "p"."bio" = $1
+           AND "p"."user_id" = $2
+           AND EXISTS (
+              SELECT 1 FROM "user" AS "sender"
+              WHERE "p"."user_id" = "sender"."id"
+                AND "p"."profile_key" = "sender"."user_key"
+                AND "sender"."id" = "m"."author_id"
+                AND "sender"."user_key" = "m"."message_key"
+            )
+        `,
+        ['bio', 123],
+      );
+    });
 
-    expectSql(
-      query.toSQL(),
-      `
-        SELECT "m"."text" "Text", "profile"."bio" "Bio"
-        FROM "message" "m"
-        JOIN "profile"
-          ON EXISTS (
-            SELECT 1 FROM "user" AS "sender"
-            WHERE "profile"."user_id" = "sender"."id"
-              AND "profile"."profile_key" = "sender"."user_key"
-              AND "sender"."id" = "m"."author_id"
-              AND "sender"."user_key" = "m"."message_key"
-          )
-          AND "profile"."bio" = $1
-      `,
-      ['bio'],
-    );
-  });
+    it('should be supported in join with a callback using `on`', () => {
+      const query = db.message
+        .as('m')
+        .join(
+          (q) => q.activeProfile.as('p').where({ UserId: 123 }),
+          (q) => q.where({ Bio: 'bio' }),
+        )
+        .select('Text', 'p.Bio');
 
-  it('should be supported in join with a callback', () => {
-    const query = db.message
-      .as('m')
-      .join(
-        (q) => q.profile.as('p').where({ UserId: 123 }),
-        (q) => q.where({ Bio: 'bio' }),
-      )
-      .select('Text', 'p.Bio');
+      assertType<
+        Awaited<typeof query>,
+        { Text: string; Bio: string | null }[]
+      >();
 
-    assertType<Awaited<typeof query>, { Text: string; Bio: string | null }[]>();
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "m"."text" "Text", "p"."bio" "Bio"
+          FROM "message" "m"
+          JOIN "profile" AS "p"
+            ON "p"."bio" = $1
+           AND "p"."user_id" = $2
+           AND EXISTS (
+              SELECT 1 FROM "user" AS "activeSender"
+              WHERE "p"."active" = $3
+                AND "p"."user_id" = "activeSender"."id"
+                AND "p"."profile_key" = "activeSender"."user_key"
+                AND "activeSender"."active" = $4
+                AND "activeSender"."id" = "m"."author_id"
+                AND "activeSender"."user_key" = "m"."message_key"
+            )
+        `,
+        ['bio', 123, true, true],
+      );
+    });
 
-    expectSql(
-      query.toSQL(),
-      `
-        SELECT "m"."text" "Text", "p"."bio" "Bio"
-        FROM "message" "m"
-        JOIN "profile" AS "p"
-          ON "p"."bio" = $1
-         AND "p"."user_id" = $2
-         AND EXISTS (
-            SELECT 1 FROM "user" AS "sender"
-            WHERE "p"."user_id" = "sender"."id"
-              AND "p"."profile_key" = "sender"."user_key"
-              AND "sender"."id" = "m"."author_id"
-              AND "sender"."user_key" = "m"."message_key"
-          )
-      `,
-      ['bio', 123],
-    );
-  });
+    it('should be supported in joinLateral', () => {
+      const q = db.message
+        .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
+        .where({ 'p.Bio': 'two' })
+        .select('Text', 'p.*');
 
-  it('should be supported in joinLateral', () => {
-    const q = db.message
-      .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
-      .where({ 'p.Bio': 'two' })
-      .select('Text', 'p.*');
+      assertType<Awaited<typeof q>, { Text: string; p: Profile }[]>();
 
-    assertType<Awaited<typeof q>, { Text: string; p: Profile }[]>();
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "message"."text" "Text", row_to_json("p".*) "p"
+          FROM "message"
+          JOIN LATERAL (
+            SELECT ${profileSelectAll}
+            FROM "profile" "p"
+            WHERE "p"."bio" = $1
+              AND EXISTS (
+              SELECT 1
+              FROM "user" AS "sender"
+              WHERE "p"."user_id" = "sender"."id"
+                AND "p"."profile_key" = "sender"."user_key"
+                AND "sender"."id" = "message"."author_id"
+                AND "sender"."user_key" = "message"."message_key"
+            )
+          ) "p" ON true
+          WHERE "p"."Bio" = $2
+        `,
+        ['one', 'two'],
+      );
+    });
 
-    expectSql(
-      q.toSQL(),
-      `
-        SELECT "message"."text" "Text", row_to_json("p".*) "p"
-        FROM "message"
-        JOIN LATERAL (
-          SELECT ${profileSelectAll}
-          FROM "profile" "p"
-          WHERE "p"."bio" = $1
-            AND EXISTS (
-            SELECT 1
-            FROM "user" AS "sender"
-            WHERE "p"."user_id" = "sender"."id"
-              AND "p"."profile_key" = "sender"."user_key"
-              AND "sender"."id" = "message"."author_id"
-              AND "sender"."user_key" = "message"."message_key"
-          )
-        ) "p" ON true
-        WHERE "p"."Bio" = $2
-      `,
-      ['one', 'two'],
-    );
+    it('should be supported in joinLateral using `on`', () => {
+      const q = db.message
+        .joinLateral('activeProfile', (q) => q.as('p').where({ Bio: 'one' }))
+        .where({ 'p.Bio': 'two' })
+        .select('Text', 'p.*');
+
+      assertType<Awaited<typeof q>, { Text: string; p: Profile }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "message"."text" "Text", row_to_json("p".*) "p"
+          FROM "message"
+          JOIN LATERAL (
+            SELECT ${profileSelectAll}
+            FROM "profile" "p"
+            WHERE "p"."bio" = $1
+              AND EXISTS (
+              SELECT 1
+              FROM "user" AS "activeSender"
+              WHERE "p"."active" = $2
+                AND "p"."user_id" = "activeSender"."id"
+                AND "p"."profile_key" = "activeSender"."user_key"
+                AND "activeSender"."active" = $3
+                AND "activeSender"."id" = "message"."author_id"
+                AND "activeSender"."user_key" = "message"."message_key"
+            )
+          ) "p" ON true
+          WHERE "p"."Bio" = $4
+        `,
+        ['one', true, true, 'two'],
+      );
+    });
   });
 
   describe('select', () => {
@@ -2171,6 +3332,38 @@ describe('hasOne through', () => {
           ) "profile" ON true
         `,
         ['bio'],
+      );
+    });
+
+    it('should be selectable using `on`', () => {
+      const query = db.message.as('m').select('Id', {
+        profile: (q) => q.activeProfile.where({ Bio: 'bio' }),
+      });
+
+      assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT
+            "m"."id" "Id",
+            row_to_json("profile".*) "profile"
+          FROM "message" "m"
+                 LEFT JOIN LATERAL (
+            SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+            WHERE "activeProfile"."bio" = $1
+              AND EXISTS (
+              SELECT 1 FROM "user" AS "activeSender"
+              WHERE "activeProfile"."active" = $2
+                AND "activeProfile"."user_id" = "activeSender"."id"
+                AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                AND "activeSender"."active" = $3
+                AND "activeSender"."id" = "m"."author_id"
+                AND "activeSender"."user_key" = "m"."message_key"
+            )
+            ) "profile" ON true
+        `,
+        ['bio', true, true],
       );
     });
 
@@ -2213,6 +3406,50 @@ describe('hasOne through', () => {
       );
     });
 
+    it('should support chained select using `on`', () => {
+      const q = db.message.select({
+        items: (q) => q.activeProfile.chain('activeOnePost'),
+      });
+
+      assertType<Awaited<typeof q>, { items: Post[] }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+                   SELECT ${postSelectAll}
+                   FROM "post" "activeOnePost"
+                   WHERE EXISTS (
+                     SELECT 1 FROM "profile" AS "activeProfile"
+                     WHERE EXISTS (
+                       SELECT 1 FROM "user" AS "activeSender"
+                       WHERE "activeProfile"."active" = $1
+                         AND "activeProfile"."user_id" = "activeSender"."id"
+                         AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                         AND "activeSender"."active" = $2
+                         AND "activeSender"."id" = "message"."author_id"
+                         AND "activeSender"."user_key" = "message"."message_key"
+                     ) AND EXISTS (
+                       SELECT 1 FROM "user" AS "activeUser"
+                       WHERE "activeOnePost"."active" = $3
+                         AND "activeOnePost"."user_id" = "activeUser"."id"
+                         AND "activeOnePost"."title" = "activeUser"."user_key"
+                         AND "activeUser"."active" = $4
+                         AND "activeUser"."id" = "activeProfile"."user_id"
+                         AND "activeUser"."user_key" = "activeProfile"."profile_key"
+                     )
+                   )
+                 ) "t"
+            ) "items" ON true
+        `,
+        [true, true, true, true],
+      );
+    });
+
     it('should handle exists sub query', () => {
       const query = db.message.as('m').select('Id', {
         hasProfile: (q) => q.profile.exists(),
@@ -2242,6 +3479,50 @@ describe('hasOne through', () => {
             )
           ) "hasProfile" ON true
         `,
+      );
+    });
+
+    it('should support chained select using `on`', () => {
+      const q = db.message.select({
+        items: (q) => q.activeProfile.chain('activeOnePost'),
+      });
+
+      assertType<Awaited<typeof q>, { items: Post[] }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT ${postSelectAll}
+              FROM "post" "activeOnePost"
+              WHERE EXISTS (
+                SELECT 1 FROM "profile" AS "activeProfile"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "activeSender"
+                  WHERE "activeProfile"."active" = $1
+                    AND "activeProfile"."user_id" = "activeSender"."id"
+                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                    AND "activeSender"."active" = $2
+                    AND "activeSender"."id" = "message"."author_id"
+                    AND "activeSender"."user_key" = "message"."message_key"
+                ) AND EXISTS (
+                  SELECT 1 FROM "user" AS "activeUser"
+                  WHERE "activeOnePost"."active" = $3
+                    AND "activeOnePost"."user_id" = "activeUser"."id"
+                    AND "activeOnePost"."title" = "activeUser"."user_key"
+                    AND "activeUser"."active" = $4
+                    AND "activeUser"."id" = "activeProfile"."user_id"
+                    AND "activeUser"."user_key" = "activeProfile"."profile_key"
+                )
+              )
+            ) "t"
+          ) "items" ON true
+        `,
+        [true, true, true, true],
       );
     });
 
@@ -2305,6 +3586,73 @@ describe('hasOne through', () => {
           ) "profile" ON true
         `,
         ['bio'],
+      );
+    });
+
+    it('should support recurring select using `on`', async () => {
+      const q = db.message.select({
+        profile: (q) =>
+          q.activeProfile.select({
+            messages: (q) =>
+              q.messages
+                .select({
+                  profile: (q) => q.activeProfile,
+                })
+                .where({ 'profile.Bio': 'bio' }),
+          }),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT row_to_json("profile".*) "profile"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT COALESCE("messages".r, '[]') "messages"
+            FROM "profile" "activeProfile"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT row_to_json("profile".*) "profile"
+                FROM "message" "messages"
+                LEFT JOIN LATERAL (
+                  SELECT ${profileSelectAll}
+                  FROM "profile" "activeProfile2"
+                  WHERE EXISTS (
+                    SELECT 1
+                    FROM "user" AS "activeSender"
+                    WHERE "activeProfile2"."active" = $1
+                      AND "activeProfile2"."user_id" = "activeSender"."id"
+                      AND "activeProfile2"."profile_key" = "activeSender"."user_key"
+                      AND "activeSender"."active" = $2
+                      AND "activeSender"."id" = "messages"."author_id"
+                      AND "activeSender"."user_key" = "messages"."message_key"
+                  )
+                ) "profile" ON true
+                WHERE "profile"."Bio" = $3
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE "messages"."author_id" = "user"."id"
+                      AND "messages"."message_key" = "user"."user_key"
+                      AND "user"."id" = "activeProfile"."user_id"
+                      AND "user"."user_key" = "activeProfile"."profile_key"
+                  )
+              ) "t"
+            ) "messages" ON true
+            WHERE EXISTS (
+              SELECT 1
+              FROM "user" AS "activeSender"
+              WHERE "activeProfile"."active" = $4
+                AND "activeProfile"."user_id" = "activeSender"."id"
+                AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                AND "activeSender"."active" = $5
+                AND "activeSender"."id" = "message"."author_id"
+                AND "activeSender"."user_key" = "message"."message_key"
+            )
+          ) "profile" ON true
+        `,
+        [true, true, 'bio', true, true],
       );
     });
   });

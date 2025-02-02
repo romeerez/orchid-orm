@@ -7,6 +7,7 @@ import { ORMTableInput, TableClass } from '../baseTable';
 import {
   _queryCreateFrom,
   _queryCreateMany,
+  _queryDefaults,
   _queryDelete,
   _queryFindBy,
   _queryFindByOptional,
@@ -36,6 +37,7 @@ import {
 } from 'pqb';
 import {
   ColumnSchemaConfig,
+  ColumnShapeInputPartial,
   ColumnsShapeBase,
   ColumnTypeBase,
   MaybeArray,
@@ -78,6 +80,7 @@ export interface HasAndBelongsToManyOptions<
     references: (keyof InstanceType<Related>['columns']['shape'])[];
     foreignKey?: boolean | TableData.References.Options;
   };
+  on?: ColumnShapeInputPartial<InstanceType<Related>['columns']['shape']>;
 }
 
 export type HasAndBelongsToManyParams<
@@ -168,6 +171,7 @@ interface State {
   throughForeignKeysFull: string[];
   throughPrimaryKeysFull: string[];
   primaryKeysShape: ColumnsShapeBase;
+  on?: RecordUnknown;
 }
 
 class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
@@ -231,6 +235,12 @@ export const makeHasAndBelongsToManyMethod = (
   const joinTable = options.through.table;
   const throughForeignKeys = options.through.columns;
   const throughPrimaryKeys = options.through.references as string[];
+  const { on } = options;
+
+  if (on) {
+    _queryWhere(query, [on]);
+    _queryDefaults(query, on);
+  }
 
   const { snakeCase } = table.internal;
 
@@ -268,6 +278,7 @@ export const makeHasAndBelongsToManyMethod = (
 
     primaryKeysShape[pk] = table.shape[pk] as ColumnTypeBase;
   }
+
   for (let i = 0; i < throughLen; i++) {
     shape[throughForeignKeys[i]] = removeColumnName(
       query.shape[throughPrimaryKeys[i]] as ColumnTypeBase,
@@ -310,6 +321,7 @@ export const makeHasAndBelongsToManyMethod = (
     throughForeignKeysFull,
     throughPrimaryKeysFull,
     primaryKeysShape,
+    on,
   };
 
   const joinQuery = (
@@ -360,7 +372,7 @@ export const makeHasAndBelongsToManyMethod = (
   return {
     returns: 'many',
     queryRelated(params: RecordUnknown) {
-      return query.whereExists(subQuery, (q) => {
+      const q = query.whereExists(subQuery, (q) => {
         q = q.clone();
 
         const where: RecordUnknown = {};
@@ -377,6 +389,8 @@ export const makeHasAndBelongsToManyMethod = (
 
         return _queryWhere(q, [where as never]);
       });
+
+      return on ? _queryDefaults(q, on) : q;
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(
       subQuery,
@@ -464,6 +478,20 @@ const queryJoinTable = (
             state.throughPrimaryKeys,
           ),
         },
+      },
+    ]);
+  }
+
+  if (state.on) {
+    _queryWhereExists(t, state.relatedTableQuery, [
+      (q) => {
+        for (let i = 0; i < state.throughPrimaryKeys.length; i++) {
+          _queryJoinOn(q, [
+            state.throughPrimaryKeysFull[i],
+            state.throughForeignKeysFull[i],
+          ]);
+        }
+        return q;
       },
     ]);
   }
@@ -763,7 +791,7 @@ const nestedUpdate = (state: State) => {
         const count = await state.joinTableQuery
           .insertManyFrom(
             _querySelect(
-              state.relatedTableQuery.orWhere(...relatedWheres) as Query,
+              state.relatedTableQuery.whereOneOf(...relatedWheres) as Query,
               [
                 Object.fromEntries([
                   ...state.primaryKeys.map((key, i) => [
@@ -797,7 +825,7 @@ const nestedUpdate = (state: State) => {
             query,
             `Expected to find at least ${
               relatedWheres.length
-            } record(s) based on \`connect\` conditions, but found ${
+            } record(s) based on \`add\` conditions, but found ${
               count / data.length
             }`,
           );

@@ -2,12 +2,14 @@ import { ORMTableInput, TableClass } from '../baseTable';
 import {
   _queryCreate,
   _queryCreateMany,
+  _queryDefaults,
   _queryDelete,
   _queryFindBy,
   _queryHookAfterUpdate,
   _queryHookBeforeUpdate,
   _queryRows,
   _queryUpdate,
+  _queryWhere,
   CreateBelongsToData,
   CreateCtx,
   CreateData,
@@ -47,7 +49,6 @@ import {
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
-  relationWhere,
   RelJoin,
   selectIfNotSelected,
 } from './common/utils';
@@ -71,7 +72,7 @@ export type BelongsToOptions<
   Related extends TableClass = TableClass,
 > = RelationRefsOptions<
   keyof Columns,
-  keyof InstanceType<Related>['columns']['shape']
+  InstanceType<Related>['columns']['shape']
 >;
 
 export type BelongsToFKey<Relation extends RelationThunkBase> =
@@ -163,6 +164,7 @@ interface State {
   primaryKeys: string[];
   foreignKeys: string[];
   len: number;
+  on?: RecordUnknown;
 }
 
 type BelongsToNestedInsert = (
@@ -264,10 +266,15 @@ export const makeBelongsToMethod = (
 ): RelationData => {
   const primaryKeys = relation.options.references as string[];
   const foreignKeys = relation.options.columns as string[];
+  const { on } = relation.options;
+
+  if (on) {
+    _queryWhere(query, [on]);
+    _queryDefaults(query, on);
+  }
 
   const len = primaryKeys.length;
-  const state: State = { query, primaryKeys, foreignKeys, len };
-  const makeWhere = relationWhere(len, primaryKeys, foreignKeys);
+  const state: State = { query, primaryKeys, foreignKeys, len, on };
 
   addAutoForeignKey(
     tableConfig,
@@ -284,15 +291,11 @@ export const makeBelongsToMethod = (
     primaryKeys: string[],
     foreignKeys: string[],
   ) => {
-    const q = joiningQuery.clone();
-    setQueryObjectValueImmutable(
-      q,
-      'joinedShapes',
-      (baseQuery.q.as || baseQuery.table) as string,
-      baseQuery.q.shape,
-    );
-
     const baseAs = getQueryAs(baseQuery);
+
+    const q = joiningQuery.clone();
+    setQueryObjectValueImmutable(q, 'joinedShapes', baseAs, baseQuery.q.shape);
+
     for (let i = 0; i < len; i++) {
       pushQueryOnForOuter(
         q,
@@ -318,7 +321,11 @@ export const makeBelongsToMethod = (
   return {
     returns: 'one',
     queryRelated(params: RecordUnknown) {
-      return query.where(makeWhere(params) as never);
+      const obj: RecordUnknown = {};
+      for (let i = 0; i < len; i++) {
+        obj[primaryKeys[i]] = params[foreignKeys[i]];
+      }
+      return query.where(obj as never);
     },
     virtualColumn: new BelongsToVirtualColumn(
       defaultSchemaConfig,
@@ -332,7 +339,7 @@ export const makeBelongsToMethod = (
   };
 };
 
-const nestedInsert = ({ query, primaryKeys }: State) => {
+const nestedInsert = ({ query, primaryKeys, on }: State) => {
   return (async (_, data) => {
     const t = query.clone();
 
@@ -340,7 +347,17 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
     const items: NestedInsertOneItem[] = [];
     for (const item of data) {
       if (item.connectOrCreate) {
-        items.push(item);
+        items.push(
+          on
+            ? {
+                ...item,
+                connectOrCreate: {
+                  ...item.connectOrCreate,
+                  where: { ...item.connectOrCreate.where, ...on },
+                },
+              }
+            : item,
+        );
       }
     }
 
@@ -389,7 +406,9 @@ const nestedInsert = ({ query, primaryKeys }: State) => {
     items.length = 0;
     for (const item of data) {
       if (item.connect) {
-        items.push(item);
+        items.push(
+          on ? { ...item, connect: { ...item.connect, ...on } } : item,
+        );
       }
     }
 
@@ -496,12 +515,14 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           obj[primaryKeys[i]] = id;
         }
 
-        if (obj) {
-          await _queryUpdate(
-            query.findBy(obj as never),
-            upsert.update as UpdateArg<Query>,
-          );
-        } else {
+        const count = obj
+          ? await _queryUpdate(
+              query.findBy(obj as never),
+              upsert.update as UpdateArg<Query>,
+            )
+          : 0;
+
+        if (!count) {
           const data =
             typeof upsert.create === 'function'
               ? upsert.create()

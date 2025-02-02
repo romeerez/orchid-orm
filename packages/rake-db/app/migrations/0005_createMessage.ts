@@ -8,6 +8,7 @@ change(async (db) => {
     authorId: t.integer().foreignKey('user', 'id').nullable().index(),
     text: t.text(),
     meta: t.json().nullable(),
+    active: t.boolean().nullable(),
     ...t.timestamps(),
   }));
 });

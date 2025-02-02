@@ -6,6 +6,7 @@ change(async (db) => {
     idOfChat: t.id(),
     chatKey: t.text().nullable(),
     title: t.text(),
+    active: t.boolean().nullable(),
     ...t.timestamps(),
   }));
 });

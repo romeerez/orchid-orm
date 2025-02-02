@@ -32,9 +32,26 @@ export class UserTable extends BaseTable {
       references: ['UserId', 'ProfileKey'],
     }),
 
+    activeProfile: this.hasOne(() => ProfileTable, {
+      required: true,
+      columns: ['Id', 'UserKey'],
+      references: ['UserId', 'ProfileKey'],
+      on: {
+        Active: true,
+      },
+    }),
+
     messages: this.hasMany(() => MessageTable, {
       columns: ['Id', 'UserKey'],
       references: ['AuthorId', 'MessageKey'],
+    }),
+
+    activeMessages: this.hasMany(() => MessageTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['AuthorId', 'MessageKey'],
+      on: {
+        Active: true,
+      },
     }),
 
     chats: this.hasAndBelongsToMany(() => ChatTable, {
@@ -47,14 +64,43 @@ export class UserTable extends BaseTable {
       },
     }),
 
+    activeChats: this.hasAndBelongsToMany(() => ChatTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['userId', 'userKey'],
+      through: {
+        table: 'chatUser',
+        columns: ['chatId', 'chatKey'],
+        references: ['IdOfChat', 'ChatKey'],
+      },
+      on: {
+        Active: true,
+      },
+    }),
+
     posts: this.hasMany(() => PostTable, {
       columns: ['Id', 'UserKey'],
       references: ['UserId', 'Title'],
     }),
 
+    activePosts: this.hasMany(() => PostTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['UserId', 'Title'],
+      on: {
+        Active: true,
+      },
+    }),
+
     onePost: this.hasOne(() => PostTable, {
       columns: ['Id', 'UserKey'],
       references: ['UserId', 'Title'],
+    }),
+
+    activeOnePost: this.hasOne(() => PostTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['UserId', 'Title'],
+      on: {
+        Active: true,
+      },
     }),
 
     postTags: this.hasAndBelongsToMany(() => PostTagTable, {
@@ -64,6 +110,19 @@ export class UserTable extends BaseTable {
         table: 'post',
         columns: ['id'],
         references: ['PostId'],
+      },
+    }),
+
+    activePostTags: this.hasAndBelongsToMany(() => PostTagTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['userId', 'title'],
+      through: {
+        table: 'post',
+        columns: ['id'],
+        references: ['PostId'],
+      },
+      on: {
+        Active: true,
       },
     }),
   };
@@ -82,6 +141,7 @@ export class ProfileTable extends BaseTable {
       .unique()
       .foreignKey(() => UserTable, 'Id'),
     Bio: t.name('bio').text().nullable(),
+    Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
   }));
 
@@ -91,9 +151,25 @@ export class ProfileTable extends BaseTable {
       references: ['Id', 'UserKey'],
     }),
 
+    activeUser: this.belongsTo(() => UserTable, {
+      columns: ['UserId', 'ProfileKey'],
+      references: ['Id', 'UserKey'],
+      on: {
+        Active: true,
+      },
+    }),
+
     chats: this.hasMany(() => ChatTable, {
       through: 'user',
       source: 'chats',
+    }),
+
+    activeChats: this.hasMany(() => ChatTable, {
+      through: 'activeUser',
+      source: 'activeChats',
+      on: {
+        Active: true,
+      },
     }),
 
     messages: this.hasMany(() => MessageTable, {
@@ -106,9 +182,22 @@ export class ProfileTable extends BaseTable {
       source: 'posts',
     }),
 
+    activePosts: this.hasMany(() => PostTable, {
+      through: 'activeUser',
+      source: 'activePosts',
+      on: {
+        Active: true,
+      },
+    }),
+
     onePost: this.hasOne(() => PostTable, {
       through: 'user',
       source: 'onePost',
+    }),
+
+    activeOnePost: this.hasOne(() => PostTable, {
+      through: 'activeUser',
+      source: 'activeOnePost',
     }),
   };
 }
@@ -121,6 +210,7 @@ export class ChatTable extends BaseTable {
     IdOfChat: t.name('id_of_chat').identity().primaryKey(),
     ChatKey: t.name('chat_key').text(),
     Title: t.name('title').text(),
+    Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
   }));
 
@@ -135,14 +225,40 @@ export class ChatTable extends BaseTable {
       },
     }),
 
+    activeUsers: this.hasAndBelongsToMany(() => UserTable, {
+      columns: ['IdOfChat', 'ChatKey'],
+      references: ['chatId', 'chatKey'],
+      through: {
+        table: 'chatUser',
+        columns: ['userId', 'userKey'],
+        references: ['Id', 'UserKey'],
+      },
+      on: {
+        Active: true,
+      },
+    }),
+
     profiles: this.hasMany(() => ProfileTable, {
       through: 'users',
       source: 'profile',
     }),
 
+    activeProfiles: this.hasMany(() => ProfileTable, {
+      through: 'activeUsers',
+      source: 'activeProfile',
+    }),
+
     messages: this.hasMany(() => MessageTable, {
       columns: ['IdOfChat', 'ChatKey'],
       references: ['ChatId', 'MessageKey'],
+    }),
+
+    activeMessages: this.hasMany(() => MessageTable, {
+      columns: ['IdOfChat', 'ChatKey'],
+      references: ['ChatId', 'MessageKey'],
+      on: {
+        Active: true,
+      },
     }),
   };
 }
@@ -163,6 +279,7 @@ export class MessageTable extends BaseTable {
       .nullable()
       .foreignKey(() => UserTable, 'Id'),
     Text: t.name('text').text(),
+    Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
   }));
 
@@ -172,9 +289,25 @@ export class MessageTable extends BaseTable {
       references: ['Id', 'UserKey'],
     }),
 
+    activeSender: this.belongsTo(() => UserTable, {
+      columns: ['AuthorId', 'MessageKey'],
+      references: ['Id', 'UserKey'],
+      on: {
+        Active: true,
+      },
+    }),
+
     chat: this.belongsTo(() => ChatTable, {
       columns: ['ChatId', 'MessageKey'],
       references: ['IdOfChat', 'ChatKey'],
+    }),
+
+    activeChat: this.belongsTo(() => ChatTable, {
+      columns: ['ChatId', 'MessageKey'],
+      references: ['IdOfChat', 'ChatKey'],
+      on: {
+        Active: true,
+      },
     }),
 
     profile: this.hasOne(() => ProfileTable, {
@@ -183,10 +316,25 @@ export class MessageTable extends BaseTable {
       source: 'profile',
     }),
 
+    activeProfile: this.hasOne(() => ProfileTable, {
+      required: true,
+      through: 'activeSender',
+      source: 'activeProfile',
+      on: {
+        Active: true,
+      },
+    }),
+
     profiles: this.hasMany(() => ProfileTable, {
       required: true,
       through: 'sender',
       source: 'profile',
+    }),
+
+    activeProfiles: this.hasMany(() => ProfileTable, {
+      required: true,
+      through: 'activeSender',
+      source: 'activeProfile',
     }),
   };
 }
@@ -200,6 +348,7 @@ export class PostTable extends BaseTable {
       .name('user_id')
       .integer()
       .foreignKey(() => UserTable, 'Id'),
+    Active: t.name('active').boolean().nullable(),
     Body: t.name('body').text(),
     Title: t.name('title').text(),
     ...t.timestamps(),
@@ -211,14 +360,38 @@ export class PostTable extends BaseTable {
       references: ['Id', 'UserKey'],
     }),
 
+    activeUser: this.belongsTo(() => UserTable, {
+      columns: ['UserId', 'Title'],
+      references: ['Id', 'UserKey'],
+      on: {
+        Active: true,
+      },
+    }),
+
     postTags: this.hasMany(() => PostTagTable, {
       columns: ['Id'],
       references: ['PostId'],
     }),
 
+    activePostTags: this.hasMany(() => PostTagTable, {
+      columns: ['Id'],
+      references: ['PostId'],
+      on: {
+        Active: true,
+      },
+    }),
+
     onePostTag: this.hasOne(() => PostTagTable, {
       columns: ['Id'],
       references: ['PostId'],
+    }),
+
+    activeOnePostTag: this.hasOne(() => PostTagTable, {
+      columns: ['Id'],
+      references: ['PostId'],
+      on: {
+        Active: true,
+      },
     }),
 
     tags: this.hasMany(() => TagTable, {
@@ -241,6 +414,7 @@ export class PostTagTable extends BaseTable {
         .name('tag')
         .text()
         .foreignKey(() => TagTable, 'Tag'),
+      Active: t.name('active').boolean().nullable(),
     }),
     (t) => t.primaryKey(['PostId', 'Tag']),
   );
@@ -249,6 +423,14 @@ export class PostTagTable extends BaseTable {
     post: this.belongsTo(() => PostTable, {
       columns: ['PostId'],
       references: ['Id'],
+    }),
+
+    activePost: this.belongsTo(() => PostTable, {
+      columns: ['PostId'],
+      references: ['Id'],
+      on: {
+        Active: true,
+      },
     }),
 
     tag: this.belongsTo(() => TagTable, {

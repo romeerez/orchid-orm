@@ -305,17 +305,19 @@ But not create and connect at the same time.
 For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relation:
 while updating the author, you can create new books, connect some books, and delete books by conditions.
 
-## create from a relation query
+### create
+
+#### create in a chain
 
 It is possible to chain querying of the table with the creating of its relation, in a such way:
 
 ```ts
-await db.author.find(1).chain('books').create({
+await db.author.find(id).chain('books').create({
   title: 'Book title',
 });
 
 // post hasAndBelongsToMany tags
-await db.post.find(1).chain('tags').create({
+await db.post.find(id).chain('tags').create({
   name: 'tag name',
 });
 ```
@@ -376,29 +378,7 @@ await db.post
   .create({ name: 'tag name' });
 ```
 
-## delete from relation query
-
-Delete related records from a relation query chain.
-
-This is supported for all kinds of relations only except `belongsTo`.
-
-```ts
-// delete all books of the author
-await db.author.find(1).books.all().delete();
-
-// delete specific books of specific authors
-await db.author
-  .where({ name: 'author name' })
-  .chain('books')
-  .where({ title: 'book title' })
-  .delete();
-
-// TypeScript will highlight the `delete` method
-// because deleting a `belongsTo` relation is not allowed
-await db.book.find(1).chain('author').delete();
-```
-
-## nested create
+#### nested create
 
 Create a record with related records all at once:
 
@@ -469,7 +449,7 @@ const books = await db.book.createMany([
 ]);
 ```
 
-## create from update
+#### create from update
 
 Create related records when doing an update:
 
@@ -518,7 +498,163 @@ await db.book.where({ id: { in: [1, 2, 3] } }).update({
 });
 ```
 
-## connecting and disconnecting
+### update
+
+#### nested update
+
+Update related records.
+
+`belongsTo` and `hasOne` accept objects with data for the update.
+
+`hasMany` and `hasAndBelongsToMany` accepts `where` conditions and `data` objects. `where` can be an object or an array of objects.
+
+```ts
+await db.book.find(1).update({
+  author: {
+    update: {
+      name: 'new name',
+    },
+  },
+});
+
+await db.author.find(1).update({
+  books: {
+    update: {
+      where: {
+        title: 'old book title',
+      },
+      data: {
+        title: 'new book title',
+      },
+    },
+  },
+});
+```
+
+When updating multiple records, all their related records will be updated:
+
+```ts
+await db.book.where({ id: { in: [1, 2, 3] } }).update({
+  author: {
+    update: {
+      name: 'new name',
+    },
+  },
+});
+
+await db.author.where({ id: [1, 2, 3] }).update({
+  books: {
+    update: {
+      where: {
+        title: 'old book title',
+      },
+      data: {
+        title: 'new book title',
+      },
+    },
+  },
+});
+```
+
+### upsert: update or insert
+
+Update related record if exists, and create if it doesn't.
+
+Only available for `belongsTo` and `hasOne` relations.
+
+Supported when updating multiple records for `belongsTo`.
+
+```ts
+await db.book.find(1).update({
+  author: {
+    upsert: {
+      update: {
+        name: 'new name',
+      },
+      create: {
+        name: 'new name',
+        email: 'some@email.com',
+      },
+    },
+  },
+});
+```
+
+`create` data may return from a callback, it will be called only if related record wasn't found for update:
+
+```ts
+await db.book.find(1).update({
+  author: {
+    upsert: {
+      update: {
+        name: 'new name',
+      },
+      create: () => ({
+        name: 'new name',
+        email: 'some@email.com',
+      }),
+    },
+  },
+});
+```
+
+### delete
+
+#### delete in a chain
+
+Delete related records from a relation query chain.
+
+This is supported for all kinds of relations only except `belongsTo`.
+
+```ts
+// delete all books of the author
+await db.author.find(1).books.all().delete();
+
+// delete specific books of specific authors
+await db.author
+  .where({ name: 'author name' })
+  .chain('books')
+  .where({ title: 'book title' })
+  .delete();
+
+// TypeScript will highlight the `delete` method
+// because deleting a `belongsTo` relation is not allowed
+await db.book.find(1).chain('author').delete();
+```
+
+### delete in update
+
+Deletes related records.
+
+For the `belongsTo` relation it will update `foreignKey` to `NULL` before deleting.
+
+`hasMany` and `hasAndBelongsToMany` are accepting the same conditions as the `.where` method to delete only matching records, as an object or as an array of objects.
+
+Empty `{}` or `[]` will delete all related records.
+
+```ts
+await db.book.find(1).update({
+  author: {
+    delete: true,
+  },
+});
+
+await db.author.find(1).update({
+  account: {
+    // delete author book by conditions
+    delete: { title: 'book title' },
+  },
+});
+
+await db.author.find(1).update({
+  account: {
+    // array of conditions:
+    delete: [{ id: 1 }, { id: 2 }],
+  },
+});
+```
+
+## connect and disconnect
 
 Any relation supports `connect` and `connectOrCreate` to connect related records when creating,
 and varying interfaces when updating.
@@ -732,136 +868,6 @@ Each provided condition may match 0 or more related records, there is no check t
 await db.post.where({ title: 'post title' }).update({
   tags: {
     disconnect: [{ id: 1 }, { id: 2 }],
-  },
-});
-```
-
-## delete related records
-
-Deletes related records.
-
-For the `belongsTo` relation it will update `foreignKey` to `NULL` before deleting.
-
-`hasMany` and `hasAndBelongsToMany` are accepting the same conditions as the `.where` method to delete only matching records, as an object or as an array of objects.
-
-Empty `{}` or `[]` will delete all related records.
-
-```ts
-await db.book.find(1).update({
-  author: {
-    delete: true,
-  },
-});
-
-await db.author.find(1).update({
-  account: {
-    // delete author book by conditions
-    delete: { title: 'book title' },
-  },
-});
-
-await db.author.find(1).update({
-  account: {
-    // array of conditions:
-    delete: [{ id: 1 }, { id: 2 }],
-  },
-});
-```
-
-## nested update
-
-Update related records.
-
-`belongsTo` and `hasOne` accept objects with data for the update.
-
-`hasMany` and `hasAndBelongsToMany` accepts `where` conditions and `data` objects. `where` can be an object or an array of objects.
-
-```ts
-await db.book.find(1).update({
-  author: {
-    update: {
-      name: 'new name',
-    },
-  },
-});
-
-await db.author.find(1).update({
-  books: {
-    update: {
-      where: {
-        title: 'old book title',
-      },
-      data: {
-        title: 'new book title',
-      },
-    },
-  },
-});
-```
-
-When updating multiple records, all their related records will be updated:
-
-```ts
-await db.book.where({ id: { in: [1, 2, 3] } }).update({
-  author: {
-    update: {
-      name: 'new name',
-    },
-  },
-});
-
-await db.author.where({ id: [1, 2, 3] }).update({
-  books: {
-    update: {
-      where: {
-        title: 'old book title',
-      },
-      data: {
-        title: 'new book title',
-      },
-    },
-  },
-});
-```
-
-## upsert: update or insert
-
-Update related record if exists, and create if it doesn't.
-
-Only available for `belongsTo` and `hasOne` relations.
-
-Supported when updating multiple records for `belongsTo`.
-
-```ts
-await db.book.find(1).update({
-  author: {
-    upsert: {
-      update: {
-        name: 'new name',
-      },
-      create: {
-        name: 'new name',
-        email: 'some@email.com',
-      },
-    },
-  },
-});
-```
-
-`create` data may return from a callback, it will be called only if related record wasn't found for update:
-
-```ts
-await db.book.find(1).update({
-  author: {
-    upsert: {
-      update: {
-        name: 'new name',
-      },
-      create: () => ({
-        name: 'new name',
-        email: 'some@email.com',
-      }),
-    },
   },
 });
 ```

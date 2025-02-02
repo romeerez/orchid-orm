@@ -1,4 +1,4 @@
-import { Db, Query } from 'pqb';
+import { Db, NotFoundError, Query } from 'pqb';
 import {
   BaseTable,
   chatData,
@@ -20,6 +20,8 @@ import { omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = { db: db.$queryBuilder };
+
+const activeUserData = { ...userData, Active: true };
 
 describe('belongsTo', () => {
   useTestORM();
@@ -88,117 +90,222 @@ describe('belongsTo', () => {
   });
 
   describe('querying', () => {
-    it('should support `queryRelated` to query related data', async () => {
-      const UserId = await db.user.get('Id').create(userData);
-      const profileId = await db.profile
-        .get('Id')
-        .create({ ...profileData, UserId });
+    describe('queryRelated', () => {
+      it('should query related data', async () => {
+        const user = await db.user.create(userData);
+        const profile = await db.profile.create({
+          ...profileData,
+          UserId: user.Id,
+        });
 
-      const profile = await db.profile.find(profileId);
-      const query = db.profile.queryRelated('user', profile);
+        const query = db.profile.queryRelated('user', profile);
 
-      expectSql(
-        query.toSQL(),
-        `
-        SELECT ${userSelectAll} FROM "user"
-        WHERE "user"."id" = $1
-          AND "user"."user_key" = $2
-      `,
-        [UserId, 'key'],
-      );
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user"
+            WHERE "user"."id" = $1
+              AND "user"."user_key" = $2
+          `,
+          [user.Id, 'key'],
+        );
 
-      const user = await query;
+        const loaded = await query;
+        expect(loaded).toMatchObject(user);
+      });
 
-      expect(user).toMatchObject(omit(userData, ['Password']));
+      it('should query related data using `on`', async () => {
+        const user = await db.user.create(activeUserData);
+        const profile = await db.profile.create({
+          ...profileData,
+          UserId: user.Id,
+        });
+
+        const query = db.profile.queryRelated('activeUser', profile);
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user" "activeUser"
+            WHERE "activeUser"."active" = $1
+              AND "activeUser"."id" = $2
+              AND "activeUser"."user_key" = $3
+          `,
+          [true, user.Id, 'key'],
+        );
+
+        const loaded = await query;
+        expect(loaded).toMatchObject(user);
+      });
     });
 
-    it('should handle chained query', async () => {
-      const [oneId, twoId] = await db.user
-        .pluck('Id')
-        .createMany([userData, userData]);
+    describe('chain', () => {
+      it('should handle chained query', async () => {
+        const userIds = await db.user
+          .pluck('Id')
+          .createMany([userData, userData]);
 
-      await db.profile.createMany([
-        {
-          UserId: oneId,
-          ProfileKey: userData.UserKey,
-          Bio: 'bio',
-        },
-        {
-          UserId: twoId,
-          ProfileKey: userData.UserKey,
-          Bio: 'bio',
-        },
-      ]);
+        await db.profile.createMany(
+          userIds.map((UserId) => ({
+            UserId,
+            ProfileKey: userData.UserKey,
+            Bio: 'bio',
+          })),
+        );
 
-      const query = db.profile
-        .where({ Bio: 'bio' })
-        .chain('user')
-        .where({ Name: userData.Name });
+        const query = db.profile
+          .where({ Bio: 'bio' })
+          .chain('user')
+          .where({ Name: userData.Name });
 
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT ${userSelectAll} FROM "user"
-          WHERE EXISTS (
-              SELECT 1 FROM "profile"
-              WHERE "profile"."bio" = $1
-                AND "profile"."user_id" = "user"."id"
-                AND "profile"."profile_key" = "user"."user_key"
-            )
-            AND "user"."name" = $2
-        `,
-        ['bio', 'name'],
-      );
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user"
+            WHERE EXISTS (
+                SELECT 1 FROM "profile"
+                WHERE "profile"."bio" = $1
+                  AND "profile"."user_id" = "user"."id"
+                  AND "profile"."profile_key" = "user"."user_key"
+              )
+              AND "user"."name" = $2
+          `,
+          ['bio', 'name'],
+        );
 
-      const res = await query;
+        const res = await query;
 
-      assertType<typeof res, User[]>();
+        assertType<typeof res, User[]>();
 
-      expect(res.length).toBe(2);
-    });
+        expect(res.length).toBe(2);
+      });
 
-    it('should handle long chained query', () => {
-      const q = db.postTag
-        .where({ Tag: 'tag' })
-        .chain('post')
-        .where({ Body: 'body' })
-        .chain('user')
-        .where({ Name: 'name' });
+      it('should handle chained query using `on`', async () => {
+        const userIds = await db.user
+          .pluck('Id')
+          .createMany([activeUserData, activeUserData]);
 
-      assertType<Awaited<typeof q>, User[]>();
+        await db.profile.createMany(
+          userIds.map((UserId) => ({
+            UserId,
+            ProfileKey: userData.UserKey,
+            Bio: 'bio',
+          })),
+        );
 
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${userSelectAll}
-          FROM "user"
-          WHERE
-            EXISTS (
-              SELECT 1
-              FROM "post"
-              WHERE
-                EXISTS (
-                  SELECT 1
-                  FROM "postTag"
-                  WHERE "postTag"."tag" = $1
-                    AND "postTag"."post_id" = "post"."id"
-                )
-                AND "post"."body" = $2
-                AND "post"."user_id" = "user"."id"
-                AND "post"."title" = "user"."user_key"
-            )
-            AND "user"."name" = $3
-        `,
-        ['tag', 'body', 'name'],
-      );
-    });
+        const query = db.profile
+          .where({ Bio: 'bio' })
+          .chain('activeUser')
+          .where({ Name: userData.Name });
 
-    it('should disable create and delete', () => {
-      // @ts-expect-error belongsTo should not have chained create
-      db.profile.chain('user').create(userData);
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user" "activeUser"
+            WHERE "activeUser"."active" = $1
+              AND EXISTS (
+                SELECT 1 FROM "profile"
+                WHERE "profile"."bio" = $2
+                  AND "profile"."user_id" = "activeUser"."id"
+                  AND "profile"."profile_key" = "activeUser"."user_key"
+              )
+              AND "activeUser"."name" = $3
+          `,
+          [true, 'bio', 'name'],
+        );
 
-      // @ts-expect-error belongsTo should not have chained create
-      db.profile.chain('user').find(1).delete();
+        const res = await query;
+
+        assertType<typeof res, User[]>();
+
+        expect(res.length).toBe(2);
+      });
+
+      it('should handle long chained query', () => {
+        const q = db.postTag
+          .where({ Tag: 'tag' })
+          .chain('post')
+          .where({ Body: 'body' })
+          .chain('user')
+          .where({ Name: 'name' });
+
+        assertType<Awaited<typeof q>, User[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${userSelectAll}
+            FROM "user"
+            WHERE
+              EXISTS (
+                SELECT 1
+                FROM "post"
+                WHERE
+                  EXISTS (
+                    SELECT 1
+                    FROM "postTag"
+                    WHERE "postTag"."tag" = $1
+                      AND "postTag"."post_id" = "post"."id"
+                  )
+                  AND "post"."body" = $2
+                  AND "post"."user_id" = "user"."id"
+                  AND "post"."title" = "user"."user_key"
+              )
+              AND "user"."name" = $3
+          `,
+          ['tag', 'body', 'name'],
+        );
+      });
+
+      it('should handle long chained query with `on`', () => {
+        const q = db.postTag
+          .where({ Tag: 'tag' })
+          .chain('activePost')
+          .where({ Body: 'body' })
+          .chain('activeUser')
+          .where({ Name: 'name' });
+
+        assertType<Awaited<typeof q>, User[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${userSelectAll}
+            FROM "user" "activeUser"
+            WHERE "activeUser"."active" = $1
+              AND EXISTS (
+                SELECT 1
+                FROM "post" AS "activePost"
+                WHERE "activePost"."active" = $2
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "postTag"
+                    WHERE "postTag"."tag" = $3
+                      AND "postTag"."post_id" = "activePost"."id"
+                  )
+                  AND "activePost"."body" = $4
+                  AND "activePost"."user_id" = "activeUser"."id"
+                  AND "activePost"."title" = "activeUser"."user_key"
+              )
+              AND "activeUser"."name" = $5
+          `,
+          [true, true, 'tag', 'body', 'name'],
+        );
+      });
+
+      it('should disable create and delete, for `on` as well', () => {
+        // @ts-expect-error belongsTo should not have chained create
+        db.profile.chain('user').create(userData);
+
+        // @ts-expect-error belongsTo should not have chained create
+        db.profile.chain('user').find(1).delete();
+
+        // @ts-expect-error belongsTo should not have chained create
+        db.profile.chain('activeUser').create(userData);
+
+        // @ts-expect-error belongsTo should not have chained create
+        db.profile.chain('activeUser').find(1).delete();
+      });
     });
 
     it('should have proper joinQuery', () => {
@@ -217,30 +324,31 @@ describe('belongsTo', () => {
       );
     });
 
-    it('should be supported in whereExists', () => {
-      expectSql(
-        db.profile
-          .as('p')
-          .whereExists((q) => q.user.where({ Name: 'name' }))
-          .toSQL(),
-        `
-          SELECT ${profileSelectAll} FROM "profile" "p"
-          WHERE EXISTS (
-            SELECT 1 FROM "user"
-            WHERE "user"."name" = $1
-              AND "user"."id" = "p"."user_id"
-              AND "user"."user_key" = "p"."profile_key"
-          )
-        `,
-        ['name'],
-      );
+    describe('whereExists', () => {
+      it('should be supported in whereExists', () => {
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists((q) => q.user.where({ Name: 'name' }))
+            .toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "p"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE "user"."name" = $1
+                AND "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
+            )
+          `,
+          ['name'],
+        );
 
-      expectSql(
-        db.profile
-          .as('p')
-          .whereExists('user', (q) => q.where({ 'user.Name': 'name' }))
-          .toSQL(),
-        `
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists('user', (q) => q.where({ 'user.Name': 'name' }))
+            .toSQL(),
+          `
           SELECT ${profileSelectAll} FROM "profile" "p"
           WHERE EXISTS (
             SELECT 1 FROM "user"
@@ -249,138 +357,271 @@ describe('belongsTo', () => {
               AND "user"."name" = $1
           )
         `,
-        ['name'],
-      );
-    });
+          ['name'],
+        );
+      });
 
-    it('should support nested whereExists', () => {
-      expectSql(
-        db.message
-          .as('m')
-          .whereExists((q) =>
-            q.sender.whereExists('profile', (q) => q.where({ Bio: 'bio' })),
-          )
-          .toSQL(),
-        `
-            SELECT ${messageSelectAll} FROM "message" "m"
+      it('should be supported in whereExists using `on`', () => {
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists((q) => q.activeUser.where({ Name: 'name' }))
+            .toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "sender"
+              SELECT 1 FROM "user" AS "activeUser"
+              WHERE "activeUser"."active" = $1
+                AND "activeUser"."name" = $2
+                AND "activeUser"."id" = "p"."user_id"
+                AND "activeUser"."user_key" = "p"."profile_key"
+            )
+          `,
+          [true, 'name'],
+        );
+
+        expectSql(
+          db.profile
+            .as('p')
+            .whereExists('activeUser', (q) =>
+              q.where({ 'activeUser.Name': 'name' }),
+            )
+            .toSQL(),
+          `
+            SELECT ${profileSelectAll} FROM "profile" "p"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "activeUser"
+              WHERE "activeUser"."active" = $1
+                AND "activeUser"."id" = "p"."user_id"
+                AND "activeUser"."user_key" = "p"."profile_key"
+                AND "activeUser"."name" = $2
+            )
+          `,
+          [true, 'name'],
+        );
+      });
+
+      it('should support nested whereExists using `on`', () => {
+        expectSql(
+          db.message
+            .as('m')
+            .whereExists((q) =>
+              q.activeSender.whereExists('profile', (q) =>
+                q.where({ Bio: 'bio' }),
+              ),
+            )
+            .toSQL(),
+          `
+              SELECT ${messageSelectAll} FROM "message" "m"
               WHERE EXISTS (
-                  SELECT 1 FROM "profile"
-                  WHERE "profile"."user_id" = "sender"."id"
-                    AND "profile"."profile_key" = "sender"."user_key"
-                    AND "profile"."bio" = $1
-                )
-                AND "sender"."id" = "m"."author_id"
-                AND "sender"."user_key" = "m"."message_key"
-            )
-          `,
-        ['bio'],
-      );
-
-      expectSql(
-        db.message
-          .as('m')
-          .whereExists('sender', (q) =>
-            q.whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' })),
-          )
-          .toSQL(),
-        `
-            SELECT ${messageSelectAll} FROM "message" "m"
-            WHERE EXISTS (
-              SELECT 1 FROM "user" AS "sender"
-              WHERE "sender"."id" = "m"."author_id"
-                AND "sender"."user_key" = "m"."message_key"
-                AND EXISTS (
-                SELECT 1 FROM "profile"
-                WHERE "profile"."user_id" = "sender"."id"
-                  AND "profile"."profile_key" = "sender"."user_key"
-                  AND "profile"."bio" = $1
+                SELECT 1 FROM "user" AS "activeSender"
+                WHERE "activeSender"."active" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "profile"
+                    WHERE "profile"."user_id" = "activeSender"."id"
+                      AND "profile"."profile_key" = "activeSender"."user_key"
+                      AND "profile"."bio" = $2
+                  )
+                  AND "activeSender"."id" = "m"."author_id"
+                  AND "activeSender"."user_key" = "m"."message_key"
               )
+            `,
+          [true, 'bio'],
+        );
+
+        expectSql(
+          db.message
+            .as('m')
+            .whereExists('activeSender', (q) =>
+              q.whereExists('activeProfile', (q) =>
+                q.where({ 'activeProfile.Bio': 'bio' }),
+              ),
             )
+            .toSQL(),
+          `
+              SELECT ${messageSelectAll} FROM "message" "m"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "activeSender"
+                WHERE "activeSender"."active" = $1
+                  AND "activeSender"."id" = "m"."author_id"
+                  AND "activeSender"."user_key" = "m"."message_key"
+                  AND EXISTS (
+                    SELECT 1 FROM "profile" AS "activeProfile"
+                    WHERE "activeProfile"."active" = $2
+                      AND "activeProfile"."user_id" = "activeSender"."id"
+                      AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                      AND "activeProfile"."bio" = $3
+                  )
+              )
+            `,
+          [true, true, 'bio'],
+        );
+      });
+    });
+
+    describe('join', () => {
+      it('should be supported in join', () => {
+        const query = db.profile
+          .as('p')
+          .join('user', (q) => q.where({ Name: 'name' }))
+          .select('Bio', 'user.Name');
+
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Name: string }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "user"."name" "Name"
+            FROM "profile" "p"
+            JOIN "user"
+              ON "user"."id" = "p"."user_id"
+             AND "user"."user_key" = "p"."profile_key"
+             AND "user"."name" = $1
           `,
-        ['bio'],
-      );
-    });
+          ['name'],
+        );
+      });
 
-    it('should be supported in join', () => {
-      const query = db.profile
-        .as('p')
-        .join('user', (q) => q.where({ Name: 'name' }))
-        .select('Bio', 'user.Name');
+      it('should be supported in join using `on`', () => {
+        const query = db.profile
+          .as('p')
+          .join('activeUser', (q) => q.where({ Name: 'name' }))
+          .select('Bio', 'activeUser.Name');
 
-      assertType<
-        Awaited<typeof query>,
-        { Bio: string | null; Name: string }[]
-      >();
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Name: string }[]
+        >();
 
-      expectSql(
-        query.toSQL(),
-        `
-        SELECT "p"."bio" "Bio", "user"."name" "Name"
-        FROM "profile" "p"
-        JOIN "user"
-          ON "user"."id" = "p"."user_id"
-         AND "user"."user_key" = "p"."profile_key"
-         AND "user"."name" = $1
-      `,
-        ['name'],
-      );
-    });
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "activeUser"."name" "Name"
+            FROM "profile" "p"
+            JOIN "user" AS "activeUser"
+              ON "activeUser"."active" = $1
+             AND "activeUser"."id" = "p"."user_id"
+             AND "activeUser"."user_key" = "p"."profile_key"
+             AND "activeUser"."name" = $2
+          `,
+          [true, 'name'],
+        );
+      });
 
-    it('should be supported in join with a callback', () => {
-      const query = db.profile
-        .as('p')
-        .join(
-          (q) => q.user.as('u').where({ Age: 20 }),
-          (q) => q.where({ Name: 'name' }),
-        )
-        .select('Bio', 'u.Name');
+      it('should be supported in join with a callback', () => {
+        const query = db.profile
+          .as('p')
+          .join(
+            (q) => q.user.as('u').where({ Age: 20 }),
+            (q) => q.where({ Name: 'name' }),
+          )
+          .select('Bio', 'u.Name');
 
-      assertType<
-        Awaited<typeof query>,
-        { Bio: string | null; Name: string }[]
-      >();
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Name: string }[]
+        >();
 
-      expectSql(
-        query.toSQL(),
-        `
-        SELECT "p"."bio" "Bio", "u"."name" "Name"
-        FROM "profile" "p"
-        JOIN "user" AS "u"
-          ON "u"."name" = $1
-         AND "u"."age" = $2
-         AND "u"."id" = "p"."user_id"
-         AND "u"."user_key" = "p"."profile_key"
-      `,
-        ['name', 20],
-      );
-    });
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "u"."name" "Name"
+            FROM "profile" "p"
+            JOIN "user" AS "u"
+              ON "u"."name" = $1
+             AND "u"."age" = $2
+             AND "u"."id" = "p"."user_id"
+             AND "u"."user_key" = "p"."profile_key"
+          `,
+          ['name', 20],
+        );
+      });
 
-    it('should be supported in joinLateral', () => {
-      const q = db.profile
-        .joinLateral('user', (q) => q.as('u').where({ Name: 'one' }))
-        .where({ 'u.Name': 'two' })
-        .select('Bio', 'u.*');
+      it('should be supported in join with a callback using `on`', () => {
+        const query = db.profile
+          .as('p')
+          .join(
+            (q) => q.activeUser.as('u').where({ Age: 20 }),
+            (q) => q.where({ Name: 'name' }),
+          )
+          .select('Bio', 'u.Name');
 
-      assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
+        assertType<
+          Awaited<typeof query>,
+          { Bio: string | null; Name: string }[]
+        >();
 
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "profile"."bio" "Bio", row_to_json("u".*) "u"
-          FROM "profile"
-          JOIN LATERAL (
-            SELECT ${userSelectAll}
-            FROM "user" "u"
-            WHERE "u"."name" = $1 
-              AND "u"."id" = "profile"."user_id"
-              AND "u"."user_key" = "profile"."profile_key"
-          ) "u" ON true
-          WHERE "u"."Name" = $2
-        `,
-        ['one', 'two'],
-      );
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT "p"."bio" "Bio", "u"."name" "Name"
+            FROM "profile" "p"
+            JOIN "user" AS "u"
+              ON "u"."name" = $1
+             AND "u"."active" = $2
+             AND "u"."age" = $3
+             AND "u"."id" = "p"."user_id"
+             AND "u"."user_key" = "p"."profile_key"
+          `,
+          ['name', true, 20],
+        );
+      });
+
+      it('should be supported in joinLateral', () => {
+        const q = db.profile
+          .joinLateral('user', (q) => q.as('u').where({ Name: 'one' }))
+          .where({ 'u.Name': 'two' })
+          .select('Bio', 'u.*');
+
+        assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "profile"."bio" "Bio", row_to_json("u".*) "u"
+            FROM "profile"
+            JOIN LATERAL (
+              SELECT ${userSelectAll}
+              FROM "user" "u"
+              WHERE "u"."name" = $1 
+                AND "u"."id" = "profile"."user_id"
+                AND "u"."user_key" = "profile"."profile_key"
+            ) "u" ON true
+            WHERE "u"."Name" = $2
+          `,
+          ['one', 'two'],
+        );
+      });
+
+      it('should be supported in joinLateral using `on`', () => {
+        const q = db.profile
+          .joinLateral('activeUser', (q) => q.as('u').where({ Name: 'one' }))
+          .where({ 'u.Name': 'two' })
+          .select('Bio', 'u.*');
+
+        assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "profile"."bio" "Bio", row_to_json("u".*) "u"
+            FROM "profile"
+            JOIN LATERAL (
+              SELECT ${userSelectAll}
+              FROM "user" "u"
+              WHERE "u"."active" = $1
+                AND "u"."name" = $2
+                AND "u"."id" = "profile"."user_id"
+                AND "u"."user_key" = "profile"."profile_key"
+            ) "u" ON true
+            WHERE "u"."Name" = $3
+          `,
+          [true, 'one', 'two'],
+        );
+      });
     });
 
     describe('select', () => {
@@ -417,6 +658,41 @@ describe('belongsTo', () => {
         );
       });
 
+      it('should be selectable using `on`', () => {
+        const query = db.profile
+          .as('p')
+          .select('Id', {
+            user: (q) =>
+              q.activeUser.select('Id', 'Name').where({ Name: 'name' }),
+          })
+          .order('user.Name');
+
+        assertType<
+          Awaited<typeof query>,
+          { Id: number; user: { Id: number; Name: string } | undefined }[]
+        >();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              row_to_json("user".*) "user"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT "activeUser"."id" "Id", "activeUser"."name" "Name"
+              FROM "user" "activeUser"
+              WHERE "activeUser"."active" = $1
+                AND "activeUser"."name" = $2
+                AND "activeUser"."id" = "p"."user_id"
+                AND "activeUser"."user_key" = "p"."profile_key"
+              ) "user" ON true
+            ORDER BY "user"."Name" ASC
+          `,
+          [true, 'name'],
+        );
+      });
+
       it('should support chained select', () => {
         const q = db.postTag.select({
           items: (q) => q.post.chain('user'),
@@ -446,6 +722,37 @@ describe('belongsTo', () => {
         );
       });
 
+      it('should support chained select using `on`', () => {
+        const q = db.postTag.select({
+          items: (q) => q.post.chain('activeUser'),
+        });
+
+        assertType<Awaited<typeof q>, { items: User[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "postTag"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${userSelectAll}
+                FROM "user" "activeUser"
+                WHERE "activeUser"."active" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "post"
+                    WHERE "post"."id" = "postTag"."post_id"
+                      AND "post"."user_id" = "activeUser"."id"
+                      AND "post"."title" = "activeUser"."user_key"
+                  )
+              ) "t"
+            ) "items" ON true
+          `,
+          [true],
+        );
+      });
+
       it('should handle exists sub query', () => {
         const query = db.profile.as('p').select('Id', {
           hasUser: (q) => q.user.exists(),
@@ -467,6 +774,32 @@ describe('belongsTo', () => {
                 AND "user"."user_key" = "p"."profile_key"
             ) "hasUser" ON true
           `,
+        );
+      });
+
+      it('should handle exists sub query using `on`', () => {
+        const query = db.profile.as('p').select('Id', {
+          hasUser: (q) => q.activeUser.exists(),
+        });
+
+        assertType<Awaited<typeof query>, { Id: number; hasUser: boolean }[]>();
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              COALESCE("hasUser".r, false) "hasUser"
+            FROM "profile" "p"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "user" "activeUser"
+              WHERE "activeUser"."active" = $1
+                AND "activeUser"."id" = "p"."user_id"
+                AND "activeUser"."user_key" = "p"."profile_key"
+            ) "hasUser" ON true
+          `,
+          [true],
         );
       });
 
@@ -511,52 +844,150 @@ describe('belongsTo', () => {
           ['name'],
         );
       });
+
+      it('should support recurring select using `on`', () => {
+        const q = db.profile.select({
+          activeUser: (q) =>
+            q.activeUser.select({
+              profile: (q) =>
+                q.profile
+                  .select({
+                    activeUser: (q) => q.activeUser,
+                  })
+                  .where({ 'activeUser.Name': 'name' }),
+            }),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT row_to_json("activeUser".*) "activeUser"
+            FROM "profile"
+            LEFT JOIN LATERAL (
+              SELECT row_to_json("profile2".*) "profile"
+              FROM "user" "activeUser"
+              LEFT JOIN LATERAL (
+                SELECT row_to_json("activeUser2".*) "activeUser"
+                FROM "profile" "profile2"
+                LEFT JOIN LATERAL (
+                  SELECT ${userSelectAll}
+                  FROM "user" "activeUser2"
+                  WHERE "activeUser2"."active" = $1
+                    AND "activeUser2"."id" = "profile2"."user_id"
+                    AND "activeUser2"."user_key" = "profile2"."profile_key"
+                ) "activeUser2" ON true
+                WHERE "activeUser2"."Name" = $2
+                  AND "profile2"."user_id" = "activeUser"."id"
+                  AND "profile2"."profile_key" = "activeUser"."user_key"
+              ) "profile2" ON true
+              WHERE "activeUser"."active" = $3
+                AND "activeUser"."id" = "profile"."user_id"
+                AND "activeUser"."user_key" = "profile"."profile_key"
+            ) "activeUser" ON true
+          `,
+          [true, 'name', true],
+        );
+      });
     });
   });
 
   describe('create', () => {
-    const checkCreatedResults = async ({
-      messageId,
-      ChatId,
-      AuthorId,
-      Text,
-      Title,
-      Name,
-    }: {
-      messageId: number;
-      ChatId: number;
-      AuthorId: number | null;
-      Text: string;
-      Title: string;
-      Name: string;
-    }) => {
-      const message = await db.message.find(messageId);
-      expect(message).toEqual({
-        ...message,
-        ...messageData,
+    const testData = {
+      createMessageChat: (Title = 'chat') => ({
+        create: {
+          ...chatData,
+          Title,
+        },
+      }),
+      createOrConnectMessageChat: (Title = 'chat') => ({
+        connectOrCreate: {
+          where: { Title },
+          create: { ...chatData, Title },
+        },
+      }),
+      createMessageSender: (Name = 'user') => ({
+        create: {
+          ...userData,
+          Name,
+        },
+      }),
+      createOrConnectMessageSender: (Name = 'user') => ({
+        connectOrCreate: {
+          where: { Name },
+          create: { ...userData, Name },
+        },
+      }),
+    };
+
+    const assert = {
+      async message({
+        messageId,
         ChatId,
         AuthorId,
         Text,
-      });
+      }: {
+        messageId: number;
+        ChatId: number;
+        AuthorId: number | null;
+        Text: string;
+      }) {
+        const message = await db.message.find(messageId);
+        expect(message).toEqual({
+          ...message,
+          ...messageData,
+          ChatId,
+          AuthorId,
+          Text,
+        });
+      },
 
-      const chat = await db.chat.find(ChatId);
-      expect(chat).toEqual({
-        ...chat,
-        ...chatData,
-        Title,
-      });
+      async chat({
+        ChatId,
+        ...data
+      }: {
+        ChatId: number;
+        Title: string;
+        Active?: boolean;
+      }) {
+        const chat = await db.chat.find(ChatId);
+        expect(chat).toEqual({
+          ...chat,
+          ...chatData,
+          ...data,
+        });
+      },
 
-      if (!AuthorId) return;
-      const user = await db.user.find(AuthorId);
-      expect(user).toEqual({
-        ...user,
-        ...omit(userData, ['Password']),
-        Active: null,
-        Age: null,
-        Data: null,
-        Picture: null,
-        Name,
-      });
+      activeChat(params: { ChatId: number; Title: string }) {
+        return this.chat({ ...params, Active: true });
+      },
+
+      async sender({
+        AuthorId,
+        ...data
+      }: {
+        AuthorId: number;
+        Name: string;
+        Active?: boolean;
+      }) {
+        const user = await db.user.find(AuthorId);
+        expect(user).toEqual({
+          ...user,
+          ...omit(userData, ['Password']),
+          Age: null,
+          Data: null,
+          Picture: null,
+          Active: null,
+          ...data,
+        });
+      },
+
+      activeSender(params: {
+        AuthorId: number;
+        Name: string;
+        Active?: boolean;
+      }) {
+        return this.sender({ ...params, Active: true });
+      },
     };
 
     describe('nested create', () => {
@@ -569,85 +1000,96 @@ describe('belongsTo', () => {
           createdAt: messageData.createdAt,
           updatedAt: messageData.updatedAt,
           Text: 'message',
-          chat: {
-            create: {
-              ...chatData,
-              Title: 'chat',
-            },
-          },
-          user: {
-            create: {
-              ...userData,
-              Name: 'user',
-            },
-          },
+          chat: testData.createMessageChat(),
+          sender: testData.createMessageSender(),
         });
 
-        await checkCreatedResults({
-          messageId,
+        await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
+        await assert.chat({ ChatId, Title: 'chat' });
+        await assert.sender({ AuthorId, Name: 'user' });
+      });
+
+      it('should support create using `on`', async () => {
+        const {
+          Id: messageId,
           ChatId,
           AuthorId,
+        } = await db.message.select('Id', 'ChatId', 'AuthorId').create({
+          createdAt: messageData.createdAt,
+          updatedAt: messageData.updatedAt,
           Text: 'message',
-          Title: 'chat',
-          Name: 'user',
+          activeChat: testData.createMessageChat(),
+          activeSender: testData.createMessageSender(),
         });
+
+        await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
+        await assert.activeChat({ ChatId, Title: 'chat' });
+        await assert.activeSender({ AuthorId, Name: 'user' });
       });
 
       it('should support create in batch create', async () => {
-        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany([
-          {
+        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
+          Array.from({ length: 2 }, (_, i) => ({
             createdAt: messageData.createdAt,
             updatedAt: messageData.updatedAt,
-            Text: 'message 1',
-            chat: {
-              create: {
-                ...chatData,
-                Title: 'chat 1',
-              },
-            },
-            sender: {
-              create: {
-                ...userData,
-                Name: 'user 1',
-              },
-            },
-          },
-          {
-            createdAt: messageData.createdAt,
-            updatedAt: messageData.updatedAt,
-            Text: 'message 2',
-            chat: {
-              create: {
-                ...chatData,
-                Title: 'chat 2',
-              },
-            },
-            sender: {
-              create: {
-                ...userData,
-                Name: 'user 2',
-              },
-            },
-          },
-        ]);
+            Text: `message ${i + 1}`,
+            chat: testData.createMessageChat(`chat ${i + 1}`),
+            sender: testData.createMessageSender(`user ${i + 1}`),
+          })),
+        );
 
         const [first, second] = await query;
 
-        await checkCreatedResults({
+        await assert.message({
           messageId: first.Id,
           ChatId: first.ChatId,
           AuthorId: first.AuthorId,
           Text: 'message 1',
-          Title: 'chat 1',
-          Name: 'user 1',
         });
+        await assert.chat({ ChatId: first.ChatId, Title: 'chat 1' });
+        await assert.sender({ AuthorId: first.AuthorId, Name: 'user 1' });
 
-        await checkCreatedResults({
+        await assert.message({
           messageId: second.Id,
           ChatId: second.ChatId,
           AuthorId: second.AuthorId,
           Text: 'message 2',
-          Title: 'chat 2',
+        });
+        await assert.chat({ ChatId: second.ChatId, Title: 'chat 2' });
+        await assert.sender({ AuthorId: second.AuthorId, Name: 'user 2' });
+      });
+
+      it('should support create in batch create using `on`', async () => {
+        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
+          Array.from({ length: 2 }, (_, i) => ({
+            createdAt: messageData.createdAt,
+            updatedAt: messageData.updatedAt,
+            Text: `message ${i + 1}`,
+            activeChat: testData.createMessageChat(`chat ${i + 1}`),
+            activeSender: testData.createMessageSender(`user ${i + 1}`),
+          })),
+        );
+
+        const [first, second] = await query;
+
+        await assert.message({
+          messageId: first.Id,
+          ChatId: first.ChatId,
+          AuthorId: first.AuthorId,
+          Text: 'message 1',
+        });
+        await assert.activeChat({ ChatId: first.ChatId, Title: 'chat 1' });
+        await assert.activeSender({ AuthorId: first.AuthorId, Name: 'user 1' });
+
+        await assert.message({
+          messageId: second.Id,
+          ChatId: second.ChatId,
+          AuthorId: second.AuthorId,
+          Text: 'message 2',
+        });
+        await assert.activeChat({ ChatId: second.ChatId, Title: 'chat 2' });
+        await assert.activeSender({
+          AuthorId: second.AuthorId,
           Name: 'user 2',
         });
       });
@@ -664,6 +1106,29 @@ describe('belongsTo', () => {
           .from('profile');
 
         assertType<Awaited<typeof q>, Profile[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            WITH "user" AS (
+              INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+              VALUES ($1, $2, $3, $4, $5)
+              RETURNING ${userSelectAll}
+            ),
+            "profile" AS (
+              INSERT INTO "profile"("bio", "profile_key", "updated_at", "created_at", "user_id")
+              VALUES (
+                $6, $7, $8, $9,
+                (
+                  SELECT "user"."Id" FROM "user" LIMIT 1
+                )
+              )
+              RETURNING ${profileSelectAll}
+            )
+            SELECT * FROM "profile"
+          `,
+          [...Object.values(userData), ...Object.values(profileData)],
+        );
       });
 
       describe('id has no default', () => {
@@ -690,6 +1155,7 @@ describe('belongsTo', () => {
                 .nullable()
                 .foreignKey(() => UserTable, 'Id'),
               Bio: t.name('bio').text().nullable(),
+              Active: t.name('active').boolean().nullable(),
               ...t.timestamps(),
             }));
 
@@ -790,21 +1256,39 @@ describe('belongsTo', () => {
           chat: {
             connect: { Title: 'chat' },
           },
-          user: {
+          sender: {
             connect: { Name: 'user' },
           },
         });
 
         const { Id: messageId, ChatId, AuthorId } = await query;
 
-        await checkCreatedResults({
-          messageId,
-          ChatId,
-          AuthorId,
+        await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
+        await assert.chat({ ChatId, Title: 'chat' });
+        await assert.sender({ AuthorId, Name: 'user' });
+      });
+
+      it('should not connect when `on` condition does not match', async () => {
+        await db.chat.create({ ...chatData, Title: 'chat' });
+        await db.user.create({ ...userData, Name: 'user' });
+
+        const query = db.message.select('Id', 'ChatId', 'AuthorId').create({
+          createdAt: messageData.createdAt,
+          updatedAt: messageData.updatedAt,
           Text: 'message',
-          Title: 'chat',
-          Name: 'user',
+          // ok
+          chat: {
+            connect: { Title: 'chat' },
+          },
+          // should fail
+          activeSender: {
+            connect: { Name: 'user' },
+          },
         });
+
+        const res = await query.catch((err) => err);
+
+        expect(res).toEqual(expect.any(NotFoundError));
       });
 
       it('should support connect in batch create', async () => {
@@ -825,7 +1309,7 @@ describe('belongsTo', () => {
             chat: {
               connect: { Title: 'chat 1' },
             },
-            user: {
+            sender: {
               connect: { Name: 'user 1' },
             },
           },
@@ -836,7 +1320,7 @@ describe('belongsTo', () => {
             chat: {
               connect: { Title: 'chat 2' },
             },
-            user: {
+            sender: {
               connect: { Name: 'user 2' },
             },
           },
@@ -844,23 +1328,44 @@ describe('belongsTo', () => {
 
         const [first, second] = await query;
 
-        await checkCreatedResults({
+        await assert.message({
           messageId: first.Id,
           ChatId: first.ChatId,
           AuthorId: first.AuthorId,
           Text: 'message 1',
-          Title: 'chat 1',
-          Name: 'user 1',
         });
+        await assert.chat({ ChatId: first.ChatId, Title: 'chat 1' });
+        await assert.sender({ AuthorId: first.AuthorId, Name: 'user 1' });
 
-        await checkCreatedResults({
+        await assert.message({
           messageId: second.Id,
           ChatId: second.ChatId,
           AuthorId: second.AuthorId,
           Text: 'message 2',
-          Title: 'chat 2',
-          Name: 'user 2',
         });
+        await assert.chat({ ChatId: second.ChatId, Title: 'chat 2' });
+        await assert.sender({ AuthorId: second.AuthorId, Name: 'user 2' });
+      });
+
+      it('should not connect in batch create if `on` condition does not match', async () => {
+        await db.chat.create(chatData);
+        await db.user.create(userData);
+
+        const query = db.message.createMany([
+          {
+            ...messageData,
+            chat: {
+              connect: { Title: chatData.Title },
+            },
+            activeSender: {
+              connect: { Name: userData.Name },
+            },
+          },
+        ]);
+
+        const res = await query.catch((err) => err);
+
+        expect(res).toEqual(expect.any(NotFoundError));
       });
     });
 
@@ -877,32 +1382,48 @@ describe('belongsTo', () => {
             updatedAt: messageData.updatedAt,
             createdAt: messageData.createdAt,
             Text: 'message',
-            chat: {
-              connectOrCreate: {
-                where: { Title: 'chat' },
-                create: { ...chatData, Title: 'chat' },
-              },
-            },
-            user: {
-              connectOrCreate: {
-                where: { Name: 'user' },
-                create: { ...userData, Name: 'user' },
-              },
-            },
+            chat: testData.createOrConnectMessageChat(),
+            sender: testData.createOrConnectMessageSender(),
           });
 
         const { Id: messageId, ChatId, AuthorId } = await query;
 
         expect(ChatId).toBe(chat.IdOfChat);
 
-        await checkCreatedResults({
-          messageId,
-          ChatId,
-          AuthorId,
-          Text: 'message',
+        await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
+        await assert.chat({ ChatId, Title: 'chat' });
+        await assert.sender({ AuthorId, Name: 'user' });
+      });
+
+      it('should connect and create using `on`', async () => {
+        const activeChat = await db.chat.select('IdOfChat').create({
+          ...chatData,
           Title: 'chat',
-          Name: 'user',
+          Active: true,
         });
+        const user = await db.user.select('Id').create({
+          ...userData,
+          Name: 'name',
+        });
+
+        const query = await db.message
+          .select('Id', 'ChatId', 'AuthorId')
+          .create({
+            updatedAt: messageData.updatedAt,
+            createdAt: messageData.createdAt,
+            Text: 'message',
+            activeChat: testData.createOrConnectMessageChat(),
+            activeSender: testData.createOrConnectMessageSender(),
+          });
+
+        const { Id: messageId, ChatId, AuthorId } = await query;
+
+        expect(ChatId).toBe(activeChat.IdOfChat);
+        expect(AuthorId).not.toBe(user.Id);
+
+        await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
+        await assert.activeChat({ ChatId, Title: 'chat' });
+        await assert.activeSender({ AuthorId, Name: 'user' });
       });
 
       it('should support connect or create in batch create', async () => {
@@ -922,35 +1443,15 @@ describe('belongsTo', () => {
               updatedAt: messageData.updatedAt,
               createdAt: messageData.createdAt,
               Text: 'message 1',
-              chat: {
-                connectOrCreate: {
-                  where: { Title: 'chat 1' },
-                  create: { ...chatData, Title: 'chat 1' },
-                },
-              },
-              sender: {
-                connectOrCreate: {
-                  where: { Name: 'user 1' },
-                  create: { ...userData, Name: 'user 1' },
-                },
-              },
+              chat: testData.createOrConnectMessageChat('chat 1'),
+              sender: testData.createOrConnectMessageSender('user 1'),
             },
             {
               updatedAt: messageData.updatedAt,
               createdAt: messageData.createdAt,
               Text: 'message 2',
-              chat: {
-                connectOrCreate: {
-                  where: { Title: 'chat 2' },
-                  create: { ...chatData, Title: 'chat 2' },
-                },
-              },
-              sender: {
-                connectOrCreate: {
-                  where: { Name: 'user 2' },
-                  create: { ...userData, Name: 'user 2' },
-                },
-              },
+              chat: testData.createOrConnectMessageChat('chat 2'),
+              sender: testData.createOrConnectMessageSender('user 2'),
             },
           ]);
 
@@ -959,23 +1460,56 @@ describe('belongsTo', () => {
         expect(first.ChatId).toBe(chat.IdOfChat);
         expect(second.AuthorId).toBe(user.Id);
 
-        await checkCreatedResults({
+        await assert.message({
           messageId: first.Id,
           ChatId: first.ChatId,
           AuthorId: first.AuthorId,
           Text: 'message 1',
-          Title: 'chat 1',
-          Name: 'user 1',
         });
+        await assert.chat({ ChatId: first.ChatId, Title: 'chat 1' });
+        await assert.sender({ AuthorId: first.AuthorId, Name: 'user 1' });
 
-        await checkCreatedResults({
+        await assert.message({
           messageId: second.Id,
           ChatId: second.ChatId,
           AuthorId: second.AuthorId,
           Text: 'message 2',
-          Title: 'chat 2',
-          Name: 'user 2',
         });
+        await assert.chat({ ChatId: second.ChatId, Title: 'chat 2' });
+        await assert.sender({ AuthorId: second.AuthorId, Name: 'user 2' });
+      });
+
+      it('should connect and create in batch using `on`', async () => {
+        const activeChat = await db.chat.select('IdOfChat').create({
+          ...chatData,
+          Title: 'chat',
+          Active: true,
+        });
+        const user = await db.user.select('Id').create({
+          ...userData,
+          Name: 'user',
+        });
+
+        const query = await db.message
+          .select('Id', 'ChatId', 'AuthorId')
+          .createMany([
+            {
+              updatedAt: messageData.updatedAt,
+              createdAt: messageData.createdAt,
+              Text: 'message',
+              activeChat: testData.createOrConnectMessageChat(),
+              activeSender: testData.createOrConnectMessageSender(),
+            },
+          ]);
+
+        const [{ Id: messageId, ChatId, AuthorId }] = await query;
+
+        expect(ChatId).toBe(activeChat.IdOfChat);
+        expect(AuthorId).not.toBe(user.Id);
+
+        await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
+        await assert.chat({ ChatId, Title: 'chat' });
+        await assert.activeSender({ AuthorId, Name: 'user' });
       });
 
       describe('relation callbacks', () => {
@@ -1042,7 +1576,23 @@ describe('belongsTo', () => {
         expect(profile.UserId).toBe(null);
       });
 
-      it('should nullify foreignKey in batch update', async () => {
+      it('should nullify even if `on` condition does not match, the will of disconnect prevails over `on`', async () => {
+        const id = await db.profile
+          .get('Id')
+          .create({ Bio: 'bio', user: { create: userData } });
+
+        const profile = await db.profile
+          .select('UserId')
+          .find(id)
+          .update({
+            Bio: 'string',
+            activeUser: { disconnect: true },
+          });
+
+        expect(profile.UserId).toBe(null);
+      });
+
+      it('should nullify foreignKey in batch update using `on`', async () => {
         const ids = await db.profile.pluck('Id').createMany([
           { Bio: 'bio', user: { create: userData } },
           { Bio: 'bio', user: { create: userData } },
@@ -1053,7 +1603,7 @@ describe('belongsTo', () => {
           .where({ Id: { in: ids } })
           .update({
             Bio: 'string',
-            user: { disconnect: true },
+            activeUser: { disconnect: true },
           });
 
         expect(userIds).toEqual([null, null]);
@@ -1080,6 +1630,24 @@ describe('belongsTo', () => {
         expect(profile.UserId).toBe(user.Id);
       });
 
+      it('should fail to set when `on` condition does not match', async () => {
+        const firstUserId = await db.user.get('Id').create(userData);
+        const id = await db.profile
+          .get('Id')
+          .create({ ...profileData, UserId: firstUserId });
+        const user = await db.user.select('Id').create(userData);
+
+        const query = db.profile.find(id).update({
+          activeUser: {
+            set: user,
+          },
+        });
+
+        const res = await query.catch((err) => err);
+
+        expect(res).toEqual(expect.any(NotFoundError));
+      });
+
       it('should set foreignKey of current record from found related record', async () => {
         const firstUserId = await db.user.get('Id').create(userData);
         const id = await db.profile
@@ -1091,7 +1659,7 @@ describe('belongsTo', () => {
         });
 
         const profile = await db.profile
-          .selectAll()
+          .select('UserId')
           .find(id)
           .update({
             user: {
@@ -1100,6 +1668,27 @@ describe('belongsTo', () => {
           });
 
         expect(profile.UserId).toBe(user.Id);
+      });
+
+      it('should fail to set foreignKey of current record from found record if `on` condition does not match', async () => {
+        const firstUserId = await db.user.get('Id').create(userData);
+        const id = await db.profile
+          .get('Id')
+          .create({ ...profileData, UserId: firstUserId });
+        await db.user.select('Id').create({
+          ...userData,
+          Name: 'user',
+        });
+
+        const query = db.profile.find(id).update({
+          activeUser: {
+            set: { Name: 'user' },
+          },
+        });
+
+        const res = await query.catch((err) => err);
+
+        expect(res).toEqual(expect.any(NotFoundError));
       });
 
       it('should set foreignKey of current record with provided primaryKey in batch update', async () => {
@@ -1120,6 +1709,25 @@ describe('belongsTo', () => {
           });
 
         expect(updatedUserIds).toEqual([user.Id, user.Id]);
+      });
+
+      it('should fail to set foreignKey of current record in a batch update when `on` condition does not match', async () => {
+        const UserId = await db.user.get('Id').create(userData);
+        const profileIds = await db.profile.pluck('Id').createMany([
+          { ...profileData, UserId },
+          { ...profileData, UserId },
+        ]);
+        const user = await db.user.select('Id').create(userData);
+
+        const query = db.profile.where({ Id: { in: profileIds } }).update({
+          activeUser: {
+            set: user,
+          },
+        });
+
+        const res = await query.catch((err) => err);
+
+        expect(res).toEqual(expect.any(NotFoundError));
       });
 
       it('should set foreignKey of current record from found related record in batch update', async () => {
@@ -1144,6 +1752,27 @@ describe('belongsTo', () => {
 
         expect(updatedUserIds).toEqual([user.Id, user.Id]);
       });
+
+      it('should fail to set foreignKey of current record in a batch update when `on` condition does not match', async () => {
+        const firstUserId = await db.user.get('Id').create(userData);
+        const profileIds = await db.profile.pluck('Id').createMany([
+          { ...profileData, UserId: firstUserId },
+          { ...profileData, UserId: firstUserId },
+        ]);
+        await db.user.select('Id').create({
+          ...userData,
+          Name: 'user',
+        });
+
+        const query = db.profile.where({ Id: { in: profileIds } }).update({
+          activeUser: {
+            set: { Name: 'user' },
+          },
+        });
+
+        const res = await query.catch((err) => err);
+        expect(res).toEqual(expect.any(NotFoundError));
+      });
     });
 
     describe('delete', () => {
@@ -1167,6 +1796,26 @@ describe('belongsTo', () => {
         expect(user).toBe(undefined);
       });
 
+      it('should nullify but not delete related record when `on` condition does not match', async () => {
+        const { Id, UserId } = await db.profile
+          .select('Id', 'UserId')
+          .create({ Bio: 'bio', user: { create: userData } });
+
+        const profile = await db.profile
+          .select('UserId')
+          .find(Id)
+          .update({
+            activeUser: {
+              delete: true,
+            },
+          });
+
+        expect(profile.UserId).toBe(null);
+
+        const exists = await db.user.findByOptional({ Id: UserId }).exists();
+        expect(exists).toBe(true);
+      });
+
       it('should nullify foreignKey and delete related record in batch update', async () => {
         const user = await db.user.selectAll().create(userData);
         const profileIds = await db.profile.pluck('Id').createMany([
@@ -1187,6 +1836,28 @@ describe('belongsTo', () => {
 
         const deletedUser = await db.user.findOptional(user.Id);
         expect(deletedUser).toBe(undefined);
+      });
+
+      it('should nullify but not delete related record in batch update when `on` condition does not match', async () => {
+        const user = await db.user.selectAll().create(userData);
+        const profileIds = await db.profile.pluck('Id').createMany([
+          { ...profileData, UserId: user.Id, Active: true },
+          { ...profileData, UserId: user.Id },
+        ]);
+
+        const updatedUserIds = await db.profile
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } })
+          .update({
+            activeUser: {
+              delete: true,
+            },
+          });
+
+        expect(updatedUserIds).toEqual([null, null]);
+
+        const exists = await db.user.findOptional(user.Id).exists();
+        expect(exists).toBe(true);
       });
 
       describe('relation callbacks', () => {
@@ -1263,6 +1934,26 @@ describe('belongsTo', () => {
         expect(user.Name).toBe('new name');
       });
 
+      it('should not update related records when `on` condition does not match', async () => {
+        const { Id, UserId } = await db.profile
+          .select('Id', 'UserId')
+          .create({ Bio: 'bio', user: { create: userData } });
+
+        await db.profile
+          .select('UserId')
+          .find(Id)
+          .update({
+            activeUser: {
+              update: {
+                Name: 'new name',
+              },
+            },
+          });
+
+        const user = await db.user.findBy({ Id: UserId });
+        expect(user.Name).toBe(userData.Name);
+      });
+
       it('should update related records in batch update', async () => {
         const profiles = await db.profile.select('Id', 'UserId').createMany([
           { Bio: 'bio', user: { create: userData } },
@@ -1283,6 +1974,32 @@ describe('belongsTo', () => {
           Id: { in: profiles.map((profile) => profile.UserId) },
         });
         expect(updatedNames).toEqual(['new name', 'new name']);
+      });
+
+      it('should update only matching by `on` condition records in a batch update', async () => {
+        const profiles = await db.profile.select('Id', 'UserId').createMany([
+          { Bio: 'bio', user: { create: { ...userData, Active: true } } },
+          { Bio: 'bio', user: { create: userData } },
+        ]);
+
+        await db.profile
+          .where({ Id: { in: profiles.map((profile) => profile.Id) } })
+          .update({
+            activeUser: {
+              update: {
+                Name: 'new name',
+              },
+            },
+          });
+
+        const updatedNames = await db.user
+          .pluck('Name')
+          .where({
+            Id: { in: profiles.map((profile) => profile.UserId) },
+          })
+          .order('Id');
+
+        expect(updatedNames).toEqual(['new name', userData.Name]);
       });
 
       describe('relation callbacks', () => {
@@ -1411,6 +2128,35 @@ describe('belongsTo', () => {
         expect(user?.Name).toBe('created');
       });
 
+      it('should create a related record when `on` condition does not match for the update', async () => {
+        const profile = await db.profile.create({
+          Bio: 'bio',
+          user: {
+            create: userData,
+          },
+        });
+
+        const updated = await db.profile
+          .selectAll()
+          .find(profile.Id)
+          .update({
+            activeUser: {
+              upsert: {
+                update: {
+                  Name: 'updated',
+                },
+                create: {
+                  ...userData,
+                  Name: 'created',
+                },
+              },
+            },
+          });
+
+        const user = await db.profile.queryRelated('user', updated);
+        expect(user?.Name).toBe('created');
+      });
+
       it('should throw in batch update', () => {
         expect(() =>
           db.profile.where({ Id: 1 }).update({
@@ -1509,7 +2255,25 @@ describe('belongsTo', () => {
         expect(user?.Name).toBe('created');
       });
 
-      it('should create new related record and update foreignKey in batch update', async () => {
+      it('should create new related record using `on` conditions and update foreignKey', async () => {
+        const profileId = await db.profile
+          .get('Id')
+          .create({ Bio: 'bio', user: { create: userData } });
+
+        const updated = await db.profile
+          .selectAll()
+          .find(profileId)
+          .update({
+            activeUser: {
+              create: { ...userData, Name: 'created' },
+            },
+          });
+
+        const user = await db.profile.queryRelated('user', updated);
+        expect(user).toMatchObject({ Name: 'created', Active: true });
+      });
+
+      it('should create a new related record and update foreignKey in batch update', async () => {
         const UserId = await db.user.get('Id').create(userData);
         const profileIds = await db.profile.pluck('Id').createMany([
           { ...profileData, UserId },
@@ -1529,6 +2293,28 @@ describe('belongsTo', () => {
 
         const user = await db.user.find(updatedUserIds[0] as number);
         expect(user.Name).toBe('created');
+      });
+
+      it('should create a new related record with `on` conditions and update foreignKey in batch update', async () => {
+        const UserId = await db.user.get('Id').create(userData);
+        const profileIds = await db.profile.pluck('Id').createMany([
+          { ...profileData, UserId },
+          { ...profileData, UserId },
+        ]);
+
+        const updatedUserIds = await db.profile
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } })
+          .update({
+            activeUser: {
+              create: { ...userData, Name: 'created' },
+            },
+          });
+
+        expect(updatedUserIds[0]).toBe(updatedUserIds[1]);
+
+        const user = await db.user.find(updatedUserIds[0] as number);
+        expect(user).toMatchObject({ Name: 'created', Active: true });
       });
 
       describe('relation callbacks', () => {
