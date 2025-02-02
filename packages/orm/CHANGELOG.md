@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.41.0
+
+### Minor Changes
+
+- bc09b32: Support `on` option for relations (#336)
+
+### Patch Changes
+
+- Updated dependencies [bc09b32]
+  - pqb@0.45.3
+  - rake-db@2.23.30
+
 ## 1.40.2
 
 ### Patch Changes

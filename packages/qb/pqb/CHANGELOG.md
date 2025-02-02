@@ -1,5 +1,11 @@
 # pqb
 
+## 0.45.3
+
+### Patch Changes
+
+- bc09b32: Support `on` option for relations (#336)
+
 ## 0.45.2
 
 ### Patch Changes
