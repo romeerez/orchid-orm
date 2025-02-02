@@ -45,7 +45,6 @@ import {
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './common/utils';
-import { RelationCommonOptions } from './common/options';
 
 // `belongsTo` and `hasOne` relation data available for create. It supports:
 // - `create` to create a related record
@@ -96,7 +95,7 @@ export type RelationToOneDataForCreateSameQuery<Q extends Query> =
 export interface RelationThunkBase {
   type: string;
   fn(): TableClass;
-  options: RelationCommonOptions;
+  options: unknown;
 }
 
 export type RelationThunk = BelongsTo | HasOne | HasMany | HasAndBelongsToMany;
@@ -114,10 +113,8 @@ export interface RelationData {
   modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
 }
 
-export type RelationScopeOrTable<Relation extends RelationThunkBase> =
-  Relation['options']['scope'] extends (q: Query) => Query
-    ? ReturnType<Relation['options']['scope']>
-    : ORMTableInputToQueryBuilder<InstanceType<ReturnType<Relation['fn']>>>;
+export type RelationTableToQuery<Relation extends RelationThunkBase> =
+  ORMTableInputToQueryBuilder<InstanceType<ReturnType<Relation['fn']>>>;
 
 export interface RelationConfigSelf {
   columns: { shape: ColumnsShapeBase };
@@ -146,7 +143,7 @@ export type MapRelation<
         T['relations'][K],
         T['relations'][K]['options']['columns'][number] & string,
         T['relations'][K]['options']['required'],
-        BelongsToQuery<RelationScopeOrTable<T['relations'][K]>, K>
+        BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
       >;
     }
   : T['relations'][K] extends HasOne
@@ -155,7 +152,7 @@ export type MapRelation<
         T,
         K,
         T['relations'][K],
-        HasOneQuery<T, K, RelationScopeOrTable<T['relations'][K]>>
+        HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
       >;
     }
   : T['relations'][K] extends HasMany
@@ -164,7 +161,7 @@ export type MapRelation<
         T,
         K,
         T['relations'][K],
-        HasOneQuery<T, K, RelationScopeOrTable<T['relations'][K]>>
+        HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
       >;
     }
   : T['relations'][K] extends HasAndBelongsToMany
@@ -173,7 +170,7 @@ export type MapRelation<
         T,
         K,
         T['relations'][K],
-        HasAndBelongsToManyQuery<K, RelationScopeOrTable<T['relations'][K]>>
+        HasAndBelongsToManyQuery<K, RelationTableToQuery<T['relations'][K]>>
       >;
     }
   : never;
@@ -329,9 +326,7 @@ const applyRelation = (
   const baseQuery = Object.create(otherDbTable);
   baseQuery.baseQuery = baseQuery;
 
-  const query = (
-    relation.options.scope ? relation.options.scope(baseQuery) : baseQuery
-  ).as(relationName);
+  const query = baseQuery.as(relationName);
 
   const definedAs = (query as unknown as { definedAs?: string }).definedAs;
   if (!definedAs) {

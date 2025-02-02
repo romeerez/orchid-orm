@@ -58,7 +58,7 @@ import {
   EmptyObject,
   RecordUnknown,
 } from 'orchid-core';
-import { RelationCommonOptions, RelationRefsOptions } from './common/options';
+import { RelationRefsOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 
 export interface BelongsTo extends RelationThunkBase {
@@ -66,15 +66,13 @@ export interface BelongsTo extends RelationThunkBase {
   options: BelongsToOptions;
 }
 
-export interface BelongsToOptions<
+export type BelongsToOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
-  Scope extends Query = Query,
-> extends RelationCommonOptions<Related, Scope>,
-    RelationRefsOptions<
-      keyof Columns,
-      keyof InstanceType<Related>['columns']['shape']
-    > {}
+> = RelationRefsOptions<
+  keyof Columns,
+  keyof InstanceType<Related>['columns']['shape']
+>;
 
 export type BelongsToFKey<Relation extends RelationThunkBase> =
   Relation['options'] extends RelationRefsOptions

@@ -121,12 +121,6 @@ export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
     ? TableToDb<T, MapRelations<T>>
     : TableToDb<T, EmptyObject>;
 
-// `columns` property of table has a shape and an output type of the columns
-// callback with a query of relation, to use as a default scope
-export type ScopeFn<Related extends TableClass, Scope extends Query> = (
-  q: ORMTableInputToQueryBuilder<InstanceType<Related>>,
-) => Scope;
-
 // type of table instance created by a table class
 // is used only in `orchidORM` constructor to accept proper classes
 export interface ORMTableInput {
@@ -339,8 +333,7 @@ export interface BaseTableInstance<ColumnTypes> {
   belongsTo<
     Columns extends ColumnsShapeBase,
     Related extends TableClass,
-    Scope extends Query,
-    Options extends BelongsToOptions<Columns, Related, Scope>,
+    Options extends BelongsToOptions<Columns, Related>,
   >(
     this: { columns: { shape: Columns } },
     fn: () => Related,
@@ -354,10 +347,9 @@ export interface BaseTableInstance<ColumnTypes> {
   hasOne<
     Columns extends ColumnsShapeBase,
     Related extends TableClass,
-    Scope extends Query,
     Through extends string,
     Source extends string,
-    Options extends HasOneOptions<Columns, Related, Scope, Through, Source>,
+    Options extends HasOneOptions<Columns, Related, Through, Source>,
   >(
     this: { columns: { shape: Columns } },
     fn: () => Related,
@@ -371,10 +363,9 @@ export interface BaseTableInstance<ColumnTypes> {
   hasMany<
     Columns extends ColumnsShapeBase,
     Related extends TableClass,
-    Scope extends Query,
     Through extends string,
     Source extends string,
-    Options extends HasOneOptions<Columns, Related, Scope, Through, Source>,
+    Options extends HasOneOptions<Columns, Related, Through, Source>,
   >(
     this: { columns: { shape: Columns } },
     fn: () => Related,
@@ -388,8 +379,7 @@ export interface BaseTableInstance<ColumnTypes> {
   hasAndBelongsToMany<
     Columns extends ColumnsShapeBase,
     Related extends TableClass,
-    Scope extends Query,
-    Options extends HasAndBelongsToManyOptions<Columns, Related, Scope>,
+    Options extends HasAndBelongsToManyOptions<Columns, Related>,
   >(
     this: { columns: { shape: Columns } },
     fn: () => Related,

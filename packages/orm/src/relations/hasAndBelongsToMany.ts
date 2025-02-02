@@ -3,7 +3,7 @@ import {
   RelationData,
   RelationThunkBase,
 } from './relations';
-import { ORMTableInput, ScopeFn, TableClass } from '../baseTable';
+import { ORMTableInput, TableClass } from '../baseTable';
 import {
   _queryCreateFrom,
   _queryCreateMany,
@@ -67,9 +67,7 @@ export interface HasAndBelongsToMany extends RelationThunkBase {
 export interface HasAndBelongsToManyOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
-  Scope extends Query = Query,
 > {
-  scope?: ScopeFn<Related, Scope>;
   required?: boolean;
   columns: (keyof Columns)[];
   references: string[];

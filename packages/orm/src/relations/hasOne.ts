@@ -54,11 +54,7 @@ import {
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
-import {
-  RelationCommonOptions,
-  RelationRefsOptions,
-  RelationThroughOptions,
-} from './common/options';
+import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 
 export interface HasOne extends RelationThunkBase {
@@ -66,20 +62,24 @@ export interface HasOne extends RelationThunkBase {
   options: HasOneOptions;
 }
 
+interface RelationHasOneThroughOptions<
+  Through extends string,
+  Source extends string,
+> extends RelationThroughOptions<Through, Source> {
+  required?: boolean;
+}
+
 export type HasOneOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
-  Scope extends Query = Query,
   Through extends string = string,
   Source extends string = string,
-> = RelationCommonOptions<Related, Scope> &
-  (
-    | RelationRefsOptions<
-        keyof Columns,
-        keyof InstanceType<Related>['columns']['shape']
-      >
-    | RelationThroughOptions<Through, Source>
-  );
+> =
+  | RelationRefsOptions<
+      keyof Columns,
+      keyof InstanceType<Related>['columns']['shape']
+    >
+  | RelationHasOneThroughOptions<Through, Source>;
 
 export type HasOneParams<
   T extends RelationConfigSelf,

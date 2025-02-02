@@ -1,18 +1,10 @@
-import { ScopeFn, TableClass } from '../../baseTable';
-import { Query, TableData } from 'pqb';
-
-export interface RelationCommonOptions<
-  Related extends TableClass = TableClass,
-  Scope extends Query = Query,
-> {
-  scope?: ScopeFn<Related, Scope>;
-  required?: boolean;
-}
+import { TableData } from 'pqb';
 
 export interface RelationRefsOptions<
   Column extends PropertyKey = string,
   Ref extends PropertyKey = string,
 > {
+  required?: boolean;
   columns: Column[];
   references: Ref[];
   foreignKey?: boolean | TableData.References.Options;
