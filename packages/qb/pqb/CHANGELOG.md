@@ -1,5 +1,11 @@
 # pqb
 
+## 0.45.5
+
+### Patch Changes
+
+- babd3a8: Fix using comparison operators (equals, not, in, notIn) on jsonb values (#344)
+
 ## 0.45.4
 
 ### Patch Changes
