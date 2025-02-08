@@ -524,8 +524,52 @@ const jsonPathQueryOp = (
       : ''
   })`;
 
+const quoteJsonValue = (
+  arg: unknown,
+  ctx: ToSQLCtx,
+  quotedAs: string | undefined,
+  IN?: boolean,
+): string => {
+  if (arg && typeof arg === 'object') {
+    if (IN && Array.isArray(arg)) {
+      return `(${arg
+        .map((value) => addValue(ctx.values, JSON.stringify(value)) + '::jsonb')
+        .join(', ')})`;
+    }
+
+    if (isExpression(arg)) {
+      return 'to_jsonb(' + arg.toSQL(ctx, quotedAs) + ')';
+    }
+
+    if ('toSQL' in arg) {
+      return `to_jsonb((${getSqlText(
+        (arg as Query).toSQL({ values: ctx.values }),
+      )}))`;
+    }
+  }
+
+  return addValue(ctx.values, JSON.stringify(arg)) + '::jsonb';
+};
+
 const json = {
-  ...base,
+  equals: make((key, value, ctx, quotedAs) =>
+    value === null
+      ? `nullif(${key}, 'null'::jsonb) IS NULL`
+      : `${key} = ${quoteJsonValue(value, ctx, quotedAs)}`,
+  ),
+  not: make((key, value, ctx, quotedAs) =>
+    value === null
+      ? `nullif(${key}, 'null'::jsonb) IS NOT NULL`
+      : `${key} != ${quoteJsonValue(value, ctx, quotedAs)}`,
+  ),
+  in: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} IN ${quoteJsonValue(value, ctx, quotedAs, true)}`,
+  ),
+  notIn: make(
+    (key, value, ctx, quotedAs) =>
+      `NOT ${key} IN ${quoteJsonValue(value, ctx, quotedAs, true)}`,
+  ),
   jsonPathQueryFirst: Object.assign(
     function (
       this: IsQuery,

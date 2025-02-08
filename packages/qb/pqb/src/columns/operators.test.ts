@@ -834,24 +834,9 @@ describe('operators', () => {
           q.toSQL(),
           `
             SELECT ${snakeSelectAll} FROM "snake"
-            WHERE jsonb_path_query_first("snake"."snake_data", $1) = $2
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) = $2::jsonb
           `,
-          ['$.name', 'name'],
-        );
-      });
-
-      it('should be usable in where with null value', () => {
-        const q = Snake.where((q) =>
-          q.get('snakeData').jsonPathQueryFirst('$.name').equals(null),
-        );
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT ${snakeSelectAll} FROM "snake"
-            WHERE jsonb_path_query_first("snake"."snake_data", $1) IS NULL
-          `,
-          ['$.name'],
+          ['$.name', '"name"'],
         );
       });
 
@@ -867,9 +852,9 @@ describe('operators', () => {
           q.toSQL(),
           `
             SELECT ${snakeSelectAll} FROM "snake"
-            WHERE jsonb_path_query_first("snake"."snake_data", $1) = (
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) = to_jsonb((
               SELECT "snake"."snake_name" FROM "snake" LIMIT 1
-            )
+            ))
           `,
           ['$.name'],
         );
@@ -887,7 +872,7 @@ describe('operators', () => {
           q.toSQL(),
           `
             SELECT ${snakeSelectAll} FROM "snake"
-            WHERE jsonb_path_query_first("snake"."snake_data", $1) = 'name'
+            WHERE jsonb_path_query_first("snake"."snake_data", $1) = to_jsonb('name')
           `,
           ['$.name'],
         );
@@ -909,6 +894,112 @@ describe('operators', () => {
           `,
           ['$.name', 'string'],
         );
+      });
+    });
+
+    describe('operators on json', () => {
+      describe('equals', () => {
+        it('should cast param to jsonb', () => {
+          const q = Snake.get('snakeData')
+            .jsonPathQueryFirst('$.name')
+            .equals('name');
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT jsonb_path_query_first("snake"."snake_data", $1) = $2::jsonb
+                FROM "snake"
+                LIMIT 1
+              `,
+            ['$.name', '"name"'],
+          );
+        });
+
+        it('should account for json null and "not set" when comparing with null', () => {
+          const q = Snake.get('snakeData')
+            .jsonPathQueryFirst('$.name')
+            .equals(null);
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT nullif(jsonb_path_query_first("snake"."snake_data", $1), 'null'::jsonb) IS NULL
+                FROM "snake"
+                LIMIT 1
+              `,
+            ['$.name'],
+          );
+        });
+      });
+
+      describe('not', () => {
+        it('should cast param to jsonb', () => {
+          const q = Snake.get('snakeData')
+            .jsonPathQueryFirst('$.name')
+            .not('name');
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT jsonb_path_query_first("snake"."snake_data", $1) != $2::jsonb
+                FROM "snake"
+                LIMIT 1
+              `,
+            ['$.name', '"name"'],
+          );
+        });
+
+        it('should account for json null and "not set" when comparing with null', () => {
+          const q = Snake.get('snakeData')
+            .jsonPathQueryFirst('$.name')
+            .not(null);
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT nullif(jsonb_path_query_first("snake"."snake_data", $1), 'null'::jsonb) IS NOT NULL
+                FROM "snake"
+                LIMIT 1
+              `,
+            ['$.name'],
+          );
+        });
+      });
+
+      describe('in', () => {
+        it('should cast params to jsonb', () => {
+          const q = Snake.get('snakeData')
+            .jsonPathQueryFirst('$.name')
+            .in(['name']);
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT jsonb_path_query_first("snake"."snake_data", $1) IN ($2::jsonb)
+                FROM "snake"
+                LIMIT 1
+              `,
+            ['$.name', '"name"'],
+          );
+        });
+      });
+
+      describe('notIn', () => {
+        it('should cast params to jsonb', () => {
+          const q = Snake.get('snakeData')
+            .jsonPathQueryFirst('$.name')
+            .notIn(['name']);
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT NOT jsonb_path_query_first("snake"."snake_data", $1) IN ($2::jsonb)
+                FROM "snake"
+                LIMIT 1
+              `,
+            ['$.name', '"name"'],
+          );
+        });
       });
     });
 
