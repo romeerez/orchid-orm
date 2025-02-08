@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.21.6
+
+### Patch Changes
+
+- ccc26bc: Minor internal changes
+
 ## 0.21.5
 
 ### Patch Changes
