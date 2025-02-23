@@ -1,5 +1,13 @@
 # pqb
 
+## 0.46.2
+
+### Patch Changes
+
+- dc4b453: Fix decimal, bigint, and similar columns loosing precision when returned in records from sub-selects (#459)
+- Updated dependencies [dc4b453]
+  - orchid-core@0.22.1
+
 ## 0.46.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.23.35
+
+### Patch Changes
+
+- dc4b453: Fix decimal, bigint, and similar columns loosing precision when returned in records from sub-selects (#459)
+- Updated dependencies [dc4b453]
+  - pqb@0.46.2
+  - orchid-core@0.22.1
+
 ## 2.23.34
 
 ### Patch Changes
