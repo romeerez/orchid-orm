@@ -3,17 +3,17 @@ import {
   PickQueryMetaResultReturnTypeWithDataWindowsThen,
   PickQueryQ,
   PickQueryRelations,
-  PickQueryShapeResultSinglePrimaryKey,
   Query,
   SetQueryReturnsAll,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
+  QueryTake,
+  QueryTakeOptional,
   SetQueryReturnsPluck,
   SetQueryReturnsRows,
   SetQueryReturnsVoid,
   SetQueryReturnsVoidKind,
   SetQueryTableAlias,
   WithDataItems,
+  PickQueryShapeResultReturnTypeSinglePrimaryKey,
 } from '../query/query';
 import {
   AliasOrTable,
@@ -81,7 +81,8 @@ import {
   PickQueryMetaResultReturnType,
   PickQueryMetaShape,
   PickQueryResult,
-  PickQueryResultUniqueColumns,
+  PickQueryResultReturnType,
+  PickQueryResultReturnTypeUniqueColumns,
   PickQueryTableMetaResult,
   QueryColumns,
   QueryMetaBase,
@@ -373,30 +374,36 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * Takes a single record, adds `LIMIT 1`.
-   * Throws when not found.
+   * Use `take` to "take" a single record. It adds `LIMIT 1`, throws a `NotFoundError` when not found.
    *
    * ```ts
-   * const result: TableType = await db.table.where({ key: 'value' }).take();
+   * const taken: TableType = await db.table.where({ key: 'value' }).take();
    * ```
+   *
+   * Makes no effect if the query previously has `get`, `pluck`, `exec`.
+   *
+   * Changes `getOptional` to `get`.
    */
-  take<T extends PickQueryResult>(this: T): SetQueryReturnsOne<T> {
+  take<T extends PickQueryResultReturnType>(this: T): QueryTake<T> {
     return _queryTake(_clone(this)) as never;
   }
 
   /**
-   * Takes a single record, adds `LIMIT 1`.
-   * Returns `undefined` when not found.
+   * Use `takeOptional` to "take" a single record. It adds `LIMIT 1`, returns `undefined` when not found.
    *
    * ```ts
-   * const result: TableType | undefined = await db.table
+   * const takenOptional: TableType | undefined = await db.table
    *   .where({ key: 'value' })
    *   .takeOptional();
    * ```
+   *
+   * Makes no effect if the query previously has `getOptional`, `pluck`, `exec`.
+   *
+   * Changes `get` to `getOptional`.
    */
-  takeOptional<T extends PickQueryResult>(
+  takeOptional<T extends PickQueryResultReturnType>(
     this: T,
-  ): SetQueryReturnsOneOptional<T> {
+  ): QueryTakeOptional<T> {
     return _queryTakeOptional(_clone(this)) as never;
   }
 
@@ -527,10 +534,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param value - primary key value to find by
    */
-  find<T extends PickQueryShapeResultSinglePrimaryKey>(
+  find<T extends PickQueryShapeResultReturnTypeSinglePrimaryKey>(
     this: T,
     value: T['internal']['singlePrimaryKey'] | Expression,
-  ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
+  ): QueryTake<T> & QueryMetaHasWhere {
     const q = _clone(this);
 
     if (value === null || value === undefined) {
@@ -561,10 +568,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - SQL expression
    */
-  findBySql<T extends PickQueryResult>(
+  findBySql<T extends PickQueryResultReturnType>(
     this: T,
     ...args: SQLQueryArgs
-  ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
+  ): QueryTake<T> & QueryMetaHasWhere {
     const q = _clone(this);
     return _queryTake(_queryWhereSql(q, args)) as never;
   }
@@ -579,10 +586,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param value - primary key value to find by, or a raw SQL
    */
-  findOptional<T extends PickQueryShapeResultSinglePrimaryKey>(
+  findOptional<T extends PickQueryShapeResultReturnTypeSinglePrimaryKey>(
     this: T,
     value: T['internal']['singlePrimaryKey'] | Expression,
-  ): SetQueryReturnsOneOptional<T> & QueryMetaHasWhere {
+  ): QueryTakeOptional<T> & QueryMetaHasWhere {
     return _queryTakeOptional((this as unknown as Query).find(value)) as never;
   }
 
@@ -599,10 +606,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param args - SQL expression
    */
-  findBySqlOptional<T extends PickQueryResult>(
+  findBySqlOptional<T extends PickQueryResultReturnType>(
     this: T,
     ...args: SQLQueryArgs
-  ): SetQueryReturnsOneOptional<T> & QueryMetaHasWhere {
+  ): QueryTakeOptional<T> & QueryMetaHasWhere {
     return _queryTakeOptional(
       (this as unknown as Query).findBySql(...args),
     ) as never;
@@ -621,10 +628,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param uniqueColumnValues - is derived from primary keys and unique indexes in the table
    */
-  findBy<T extends PickQueryResultUniqueColumns>(
+  findBy<T extends PickQueryResultReturnTypeUniqueColumns>(
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
-  ): SetQueryReturnsOne<T> & QueryMetaHasWhere {
+  ): QueryTake<T> & QueryMetaHasWhere {
     return _queryFindBy(_clone(this), [uniqueColumnValues] as never) as never;
   }
 
@@ -641,10 +648,10 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param uniqueColumnValues - is derived from primary keys and unique indexes in the table
    */
-  findByOptional<T extends PickQueryResultUniqueColumns>(
+  findByOptional<T extends PickQueryResultReturnTypeUniqueColumns>(
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
-  ): SetQueryReturnsOneOptional<T> & QueryMetaHasWhere {
+  ): QueryTakeOptional<T> & QueryMetaHasWhere {
     return _queryFindByOptional(_clone(this), [
       uniqueColumnValues,
     ] as never) as never;

@@ -17,8 +17,8 @@ import {
   RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
+  QueryTake,
+  QueryTakeOptional,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
@@ -146,8 +146,8 @@ export interface HasOneInfo<
   query: Q;
   params: HasOneParams<T, Rel>;
   maybeSingle: T['relations'][Name]['options']['required'] extends true
-    ? SetQueryReturnsOne<Q>
-    : SetQueryReturnsOneOptional<Q>;
+    ? QueryTake<Q>
+    : QueryTakeOptional<Q>;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: T['relations'][Name]['options'] extends RelationThroughOptions
     ? EmptyObject

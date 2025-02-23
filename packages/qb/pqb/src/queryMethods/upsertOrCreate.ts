@@ -11,9 +11,9 @@ import {
   FnUnknownToUnknown,
   isObjectEmpty,
   PickQueryMetaResult,
+  QueryMetaBase,
   RecordUnknown,
 } from 'orchid-core';
-import { QueryMetaHasWhere } from './where/where';
 import { _clone } from '../query/queryUtils';
 import { queryFrom } from './from';
 import { _queryUnion } from './union';
@@ -37,11 +37,14 @@ export type UpsertResult<T extends PickQueryMetaResult> =
 
 // Require type of query object to query only one record
 // because upserting multiple isn't possible
-export type UpsertThis = UpdateSelf &
-  CreateSelf &
-  QueryMetaHasWhere & {
-    returnType: 'one' | 'oneOrThrow';
-  };
+export interface UpsertThis extends UpdateSelf, CreateSelf {
+  meta: MetaPropHasWhere;
+  returnType: 'one' | 'oneOrThrow' | 'value' | 'valueOrThrow' | 'void';
+}
+
+interface MetaPropHasWhere extends QueryMetaBase {
+  hasWhere: true;
+}
 
 // this is used by `upsert` and `orCreate` methods.
 // `updateData` and `mergeData` args are passed only by `upsert`.

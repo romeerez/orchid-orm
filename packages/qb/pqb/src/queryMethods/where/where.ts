@@ -1,13 +1,13 @@
 import {
   PickQueryMetaRelations,
-  PickQueryMetaRelationsResult,
+  PickQueryMetaRelationsResultReturnType,
   PickQueryMetaShapeRelationsWithData,
   PickQueryQ,
   PickQueryRelations,
   Query,
   QueryOrExpressionBooleanOrNullResult,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
+  QueryTake,
+  QueryTakeOptional,
 } from '../../query/query';
 import {
   _clone,
@@ -224,17 +224,19 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
   ) as never;
 };
 
-export const _queryFindBy = <T extends PickQueryMetaRelationsResult>(
+export const _queryFindBy = <T extends PickQueryMetaRelationsResultReturnType>(
   q: T,
   args: WhereArgs<T>,
-): SetQueryReturnsOne<WhereResult<T>> => {
+): QueryTake<WhereResult<T>> => {
   return _queryTake(_queryWhere(q, args));
 };
 
-export const _queryFindByOptional = <T extends PickQueryMetaRelationsResult>(
+export const _queryFindByOptional = <
+  T extends PickQueryMetaRelationsResultReturnType,
+>(
   q: T,
   args: WhereArgs<T>,
-): SetQueryReturnsOneOptional<WhereResult<T>> => {
+): QueryTakeOptional<WhereResult<T>> => {
   return _queryTakeOptional(_queryWhere(q, args));
 };
 

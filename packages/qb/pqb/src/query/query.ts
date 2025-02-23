@@ -15,6 +15,7 @@ import {
   PickQueryMetaResultReturnType,
   PickQueryMetaReturnType,
   PickQueryResult,
+  PickQueryResultReturnType,
   PickQueryReturnType,
   PickQueryShape,
   PickQueryTable,
@@ -162,6 +163,10 @@ export interface PickQueryMetaRelationsResult
   extends PickQueryMetaRelations,
     PickQueryResult {}
 
+export interface PickQueryMetaRelationsResultReturnType
+  extends PickQueryMetaRelationsResult,
+    PickQueryResultReturnType {}
+
 export interface PickQueryMetaResultRelations
   extends PickQueryResult,
     PickQueryMeta,
@@ -262,6 +267,10 @@ export interface PickQueryShapeResultSinglePrimaryKey
   extends PickQueryShapeSinglePrimaryKey,
     PickQueryResult {}
 
+export interface PickQueryShapeResultReturnTypeSinglePrimaryKey
+  extends PickQueryShapeResultSinglePrimaryKey,
+    PickQueryReturnType {}
+
 export type SelectableOfType<T extends PickQueryMeta, Type> = {
   [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends Type | null
     ? K
@@ -333,21 +342,43 @@ export type SetQueryReturnsAllKindResult<
     : T[K];
 } & QueryMetaHasWhere;
 
-export type SetQueryReturnsOneOptional<T extends PickQueryResult> = {
-  [K in keyof T]: K extends 'returnType'
-    ? 'one'
-    : K extends 'then'
-    ? QueryThenShallowSimplifyOptional<ColumnShapeOutput<T['result']>>
-    : T[K];
-};
+export type QueryTakeOptional<T extends PickQueryResultReturnType> =
+  T['returnType'] extends 'value' | 'pluck' | 'void'
+    ? T
+    : T['returnType'] extends 'valueOrThrow'
+    ? {
+        [K in keyof T]: K extends 'returnType'
+          ? 'value'
+          : K extends 'then'
+          ? QueryThen<T['result']['value']['outputType'] | undefined>
+          : T[K];
+      }
+    : {
+        [K in keyof T]: K extends 'returnType'
+          ? 'one'
+          : K extends 'then'
+          ? QueryThenShallowSimplifyOptional<ColumnShapeOutput<T['result']>>
+          : T[K];
+      };
 
-export type SetQueryReturnsOne<T extends PickQueryResult> = {
-  [K in keyof T]: K extends 'returnType'
-    ? 'oneOrThrow'
-    : K extends 'then'
-    ? QueryThenShallowSimplify<ColumnShapeOutput<T['result']>>
-    : T[K];
-};
+export type QueryTake<T extends PickQueryResultReturnType> =
+  T['returnType'] extends 'valueOrThrow' | 'pluck' | 'void'
+    ? T
+    : T['returnType'] extends 'value'
+    ? {
+        [K in keyof T]: K extends 'returnType'
+          ? 'valueOrThrow'
+          : K extends 'then'
+          ? QueryThen<Exclude<T['result']['value']['outputType'], undefined>>
+          : T[K];
+      }
+    : {
+        [K in keyof T]: K extends 'returnType'
+          ? 'oneOrThrow'
+          : K extends 'then'
+          ? QueryThenShallowSimplify<ColumnShapeOutput<T['result']>>
+          : T[K];
+      };
 
 export type SetQueryReturnsOneKind<
   T extends PickQueryMetaResult,

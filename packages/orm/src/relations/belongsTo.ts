@@ -27,8 +27,8 @@ import {
   SelectableFromShape,
   SelectQueryData,
   setQueryObjectValueImmutable,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
+  QueryTake,
+  QueryTakeOptional,
   UpdateArg,
   UpdateCtx,
   UpdateCtxCollect,
@@ -113,8 +113,8 @@ export interface BelongsToInfo<
   query: Q;
   params: BelongsToParams<T, Rel>;
   maybeSingle: Required extends true
-    ? SetQueryReturnsOne<Q>
-    : SetQueryReturnsOneOptional<Q>;
+    ? QueryTake<Q>
+    : QueryTakeOptional<Q>;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: FK;

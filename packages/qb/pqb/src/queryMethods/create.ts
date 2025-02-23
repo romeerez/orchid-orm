@@ -13,7 +13,7 @@ import {
   SetQueryReturnsColumnOptional,
   SetQueryReturnsOneKind,
   SetQueryReturnsOneKindResult,
-  SetQueryReturnsOneOptional,
+  QueryTakeOptional,
   SetQueryReturnsPluckColumnKind,
   SetQueryReturnsPluckColumnKindResult,
   SetQueryReturnsRowCount,
@@ -286,7 +286,7 @@ type NarrowCreateResult<
 // overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',
 // because `ignore` won't return any data in case of a conflict.
 type IgnoreResult<T extends CreateSelf> = T['returnType'] extends 'oneOrThrow'
-  ? SetQueryReturnsOneOptional<T>
+  ? QueryTakeOptional<T>
   : T['returnType'] extends 'valueOrThrow'
   ? SetQueryReturnsColumnOptional<T, T['result']['value']>
   : T;

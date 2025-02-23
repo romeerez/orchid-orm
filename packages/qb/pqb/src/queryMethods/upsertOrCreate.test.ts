@@ -376,6 +376,19 @@ describe('upsertOrCreate', () => {
       expect(user.name).toBe(userData.name);
     });
 
+    it('should not create record if exists using `get`', async () => {
+      const { id } = await User.create(userData);
+
+      const created = await User.get('id')
+        .find(id)
+        .orCreate({
+          ...userData,
+          name: 'created',
+        });
+
+      expect(created).toBe(id);
+    });
+
     it('should create record if not exists', async () => {
       const user = await User.selectAll()
         .find(123)

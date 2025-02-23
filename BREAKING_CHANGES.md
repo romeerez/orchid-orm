@@ -1,5 +1,47 @@
 # Breaking changes
 
+## orchid-orm 1.42
+
+`take`, `find`, `findBySql`, `findBy`: previously, these always changed return type to return a single record and throw if not found.
+
+Now, these methods won't have an effect on `get`, `pluck`, `exec` results.
+`getOptional().take()` becomes an equivalent to `get()`.
+
+```ts
+// equivalent:
+db.table.getOptional('id').take()
+db.table.get('id')
+
+// no effect:
+db.table.get('id').take()
+db.table.pluck('id').take()
+db.table.exec().take()
+// same as:
+db.table.get('id')
+db.table.pluck('id')
+db.table.exec()
+```
+
+`takeOptional`, `findOptional`, `findBySqlOptional`, `findByOptional`: previously, these always changed return type to return a single record or undefined if not found.
+
+Now, `getOptional`, `pluck`, `exec` results are preserved.
+`get().takeOptional()` becomes an equivalent to `getOptional()`.
+
+```ts
+// equivalent:
+db.table.get('id').takeOptional()
+db.table.getOptional('id')
+
+// no effect:
+db.table.getOptional('id').takeOptional()
+db.table.pluck('id').takeOptional()
+db.table.exec().takeOptional()
+// same as:
+db.table.getOptional('id')
+db.table.pluck('id')
+db.table.exec()
+```
+
 ## orchid-orm 1.40
 
 Previously, `modify` could accept an arbitrary function.

@@ -110,6 +110,10 @@ export interface PickQueryReturnType {
   returnType: QueryReturnType;
 }
 
+export interface PickQueryResultReturnType
+  extends PickQueryResult,
+    PickQueryReturnType {}
+
 export interface PickQueryMetaShape extends PickQueryMeta, PickQueryShape {}
 
 export interface PickQueryMetaResult extends PickQueryMeta, PickQueryResult {}
@@ -119,6 +123,10 @@ export interface PickQueryResultUniqueColumns extends PickQueryResult {
     uniqueColumns: unknown;
   };
 }
+
+export interface PickQueryResultReturnTypeUniqueColumns
+  extends PickQueryResultUniqueColumns,
+    PickQueryReturnType {}
 
 export interface PickQueryUniqueProperties {
   internal: {

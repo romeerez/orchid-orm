@@ -48,21 +48,35 @@ It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/m
 
 If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
 
-## take and takeOptional
+## take
 
 [//]: # 'has JSDoc'
 
-Takes a single record, adds `LIMIT 1`.
-
-`take` throws a `NotFoundError` when not found, and `takeOptional` returns `undefined`.
+Use `take` to "take" a single record. It adds `LIMIT 1`, throws a `NotFoundError` when not found.
 
 ```ts
 const taken: TableType = await db.table.where({ key: 'value' }).take();
+```
 
+Makes no effect if the query previously has [get](#get-and-getoptional), [pluck](#pluck), [exec](#exec).
+
+Changes [getOptional](#get-and-getoptional) to [get](#get-and-getoptional).
+
+## takeOptional
+
+[//]: # 'has JSDoc'
+
+Use `takeOptional` to "take" a single record. It adds `LIMIT 1`, returns `undefined` when not found.
+
+```ts
 const takenOptional: TableType | undefined = await db.table
   .where({ key: 'value' })
   .takeOptional();
 ```
+
+Makes no effect if the query previously has [getOptional](#get-and-getoptional), [pluck](#pluck), [exec](#exec).
+
+Changes [get](#get-and-getoptional) to [getOptional](#get-and-getoptional).
 
 ## find
 
@@ -145,7 +159,7 @@ await db.user.findBySqlOptional`
 
 [//]: # 'has JSDoc'
 
-`.get` returns a single value, adds `LIMIT 1` to the query, and accepts a column name or a raw SQL expression.
+`get` returns a single value, adds `LIMIT 1` to the query, and accepts a column name or a raw SQL expression.
 
 `get` throws a `NotFoundError` when not found, and `getOptional` returns `undefined`.
 

@@ -81,6 +81,50 @@ describe('queryMethods', () => {
     it('should throw if not found', async () => {
       await expect(() => User.take()).rejects.toThrowError(NotFoundError);
     });
+
+    it('should change value to valueOrThrow', async () => {
+      await User.insert(userData);
+
+      const q = User.getOptional('id').take();
+      const result = await q;
+
+      assertType<typeof result, number>();
+
+      expect(result).toEqual(expect.any(Number));
+    });
+
+    it('should leave valueOrThrow as is', async () => {
+      await User.insert(userData);
+
+      const q = User.get('id').take();
+      const result = await q;
+
+      assertType<typeof result, number>();
+
+      expect(result).toEqual(expect.any(Number));
+    });
+
+    it('should change rows to oneOrThrow', async () => {
+      await User.insert(userData);
+
+      const q = User.select('id', 'name').rows().take();
+      const result = await q;
+
+      assertType<typeof result, { id: number; name: string }>();
+
+      expect(result).toEqual({ id: expect.any(Number), name: 'name' });
+    });
+
+    it('should leave void as is', async () => {
+      await User.insert(userData);
+
+      const q = User.select('id', 'name').exec().take();
+      const result = await q;
+
+      assertType<typeof result, void>();
+
+      expect(result).toBe(undefined);
+    });
   });
 
   describe('takeOptional', () => {
@@ -115,6 +159,42 @@ describe('queryMethods', () => {
       assertType<typeof user, UserRecord | undefined>();
 
       expect(user).toBe(undefined);
+    });
+
+    it('should change valueOrThrow to value', async () => {
+      const q = User.get('id').takeOptional();
+      const result = await q;
+
+      assertType<typeof result, number | undefined>();
+
+      expect(result).toBe(undefined);
+    });
+
+    it('should leave value as is', async () => {
+      const q = User.getOptional('id').takeOptional();
+      const result = await q;
+
+      assertType<typeof result, number | undefined>();
+
+      expect(result).toBe(undefined);
+    });
+
+    it('should change rows to one', async () => {
+      const q = User.select('id', 'name').rows().takeOptional();
+      const result = await q;
+
+      assertType<typeof result, { id: number; name: string } | undefined>();
+
+      expect(result).toBe(undefined);
+    });
+
+    it('should leave void as is', async () => {
+      const q = User.select('id', 'name').exec().takeOptional();
+      const result = await q;
+
+      assertType<typeof result, void>();
+
+      expect(result).toBe(undefined);
     });
   });
 

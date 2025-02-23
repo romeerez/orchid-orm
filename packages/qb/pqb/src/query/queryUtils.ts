@@ -4,6 +4,7 @@ import {
   getValueKey,
   IsQuery,
   PickQueryResult,
+  PickQueryResultReturnType,
   pushOrNewArrayToObjectImmutable,
   RecordUnknown,
 } from 'orchid-core';
@@ -13,8 +14,8 @@ import {
   PickQueryQAndBaseQuery,
   Query,
   SetQueryReturnsAll,
-  SetQueryReturnsOne,
-  SetQueryReturnsOneOptional,
+  QueryTake,
+  QueryTakeOptional,
   SetQueryReturnsRows,
 } from './query';
 import { getClonedQueryData } from '../common/utils';
@@ -183,18 +184,44 @@ export const _queryAll = <T extends PickQueryResult>(
   return q as never;
 };
 
-export const _queryTake = <T extends PickQueryResult>(
-  q: T,
-): SetQueryReturnsOne<T> => {
-  (q as unknown as PickQueryQ).q.returnType = 'oneOrThrow';
-  return q as never;
+export const _queryTake = <T extends PickQueryResultReturnType>(
+  query: T,
+): QueryTake<T> => {
+  const q = (query as unknown as PickQueryQ).q;
+  switch (q.returnType) {
+    case 'valueOrThrow':
+    case 'pluck':
+    case 'void':
+      break;
+    case 'value': {
+      q.returnType = 'valueOrThrow';
+      break;
+    }
+    default: {
+      q.returnType = 'oneOrThrow';
+    }
+  }
+  return query as never;
 };
 
-export const _queryTakeOptional = <T extends PickQueryResult>(
-  q: T,
-): SetQueryReturnsOneOptional<T> => {
-  (q as unknown as PickQueryQ).q.returnType = 'one';
-  return q as never;
+export const _queryTakeOptional = <T extends PickQueryResultReturnType>(
+  query: T,
+): QueryTakeOptional<T> => {
+  const q = (query as unknown as PickQueryQ).q;
+  switch (q.returnType) {
+    case 'value':
+    case 'pluck':
+    case 'void':
+      break;
+    case 'valueOrThrow': {
+      q.returnType = 'value';
+      break;
+    }
+    default: {
+      q.returnType = 'one';
+    }
+  }
+  return query as never;
 };
 
 export const _queryExec = <T extends IsQuery>(q: T) => {
