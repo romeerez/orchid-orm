@@ -124,7 +124,9 @@ export const _join = <
     joinSubQuery,
   );
 
-  if (joinKey && 's' in joinArgs && joinArgs.s) {
+  if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
+    return _queryNone(query) as never;
+  } else if (joinKey && 's' in joinArgs && joinArgs.s) {
     const j =
       'j' in joinArgs
         ? joinArgs.r ?? joinArgs.j
@@ -160,8 +162,6 @@ export const _join = <
         computeds,
       );
     }
-  } else if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
-    return _queryNone(query) as never;
   } else {
     addAllShapesAndParsers(
       query,

@@ -1,6 +1,7 @@
 import { User, userData } from '../test-utils/test-utils';
 import { Adapter } from '../adapter';
 import { NotFoundError } from '../errors';
+import { assertType, useTestDatabase } from 'test-utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const query = jest.fn<any, any>(() => Promise.resolve({ rows: [] }));
@@ -59,5 +60,29 @@ describe('none', () => {
       { status: 'rejected', reason: expect.any(NotFoundError) },
     ]);
     expect(query).not.toBeCalled();
+  });
+
+  it('should return false for exists', async () => {
+    const result = await User.none().exists();
+
+    assertType<typeof result, boolean>();
+
+    expect(result).toBe(false);
+  });
+
+  describe('with db', () => {
+    useTestDatabase();
+
+    it('should return false for exists in a sub-select', async () => {
+      await User.insert(userData);
+
+      const result = await User.select({
+        exists: () => User.none().exists(),
+      }).take();
+
+      assertType<typeof result, { exists: boolean }>();
+
+      expect(result).toEqual({ exists: false });
+    });
   });
 });

@@ -209,8 +209,12 @@ export type BatchParsers = BatchParser[];
 
 // result transformer: function for `transform`, object for `map`
 export type QueryDataTransform =
-  | FnUnknownToUnknown
+  | QueryDataTransformFn
   | { map: FnUnknownToUnknown };
+
+interface QueryDataTransformFn {
+  (data: unknown, queryData: unknown): unknown;
+}
 
 /**
  * generic utility to add a parser to the query object
@@ -252,11 +256,13 @@ export const overrideParserInQuery = (
  * See `transform` query method.
  * This helper applies all transform functions to a result.
  *
+ * @param queryData - query data
  * @param returnType - return type of the query, for proper `map` handling
  * @param fns - array of transform functions, can be undefined
  * @param result - query result to transform
  */
 export const applyTransforms = (
+  queryData: unknown,
   returnType: QueryReturnType,
   fns: QueryDataTransform[],
   result: unknown,
@@ -269,7 +275,7 @@ export const applyTransforms = (
         result = fn.map(result);
       }
     } else {
-      result = fn(result);
+      result = fn(result, queryData);
     }
   }
   return result;

@@ -1,5 +1,6 @@
 import { IsQuery, QueryColumn, QueryThen } from 'orchid-core';
 import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
+import { QueryData } from '../sql';
 
 export class TransformMethods {
   /**
@@ -59,6 +60,7 @@ export class TransformMethods {
     this: T,
     fn: (
       input: T extends { then: QueryThen<infer Data> } ? Data : never,
+      queryData: QueryData,
     ) => Result,
   ): {
     [K in keyof T]: K extends 'returnType'

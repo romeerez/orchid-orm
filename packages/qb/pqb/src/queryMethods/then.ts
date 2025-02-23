@@ -405,7 +405,7 @@ const then = async (
     }
 
     if (query.transform) {
-      result = applyTransforms(returnType, query.transform, result);
+      result = applyTransforms(query, returnType, query.transform, result);
     }
 
     return resolve?.(result);

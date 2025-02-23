@@ -3,14 +3,15 @@ import { applyTransforms, QueryReturnType, RecordString } from 'orchid-core';
 import { QueryBatchResult } from '../queryMethods';
 
 export const applyBatchTransforms = (
-  query: QueryData,
+  q: QueryData,
   batches: QueryBatchResult[],
 ) => {
-  if (query.transform) {
+  if (q.transform) {
     for (const item of batches) {
       item.parent[item.key] = applyTransforms(
-        query.returnType,
-        query.transform,
+        q,
+        q.returnType,
+        q.transform,
         item.data,
       );
     }
