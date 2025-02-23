@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.22.0
+
+### Minor Changes
+
+- 78576b8: Change `take(Optional)`, `find(Optional)` and similar to handle `get(Optional)`, `pluck`, `exec` better (#457)
+
 ## 0.21.6
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.42.0
+
+### Minor Changes
+
+- 78576b8: Change `take(Optional)`, `find(Optional)` and similar to handle `get(Optional)`, `pluck`, `exec` better (#457)
+
+### Patch Changes
+
+- Updated dependencies [78576b8]
+- Updated dependencies [5a21d14]
+  - pqb@0.46.0
+  - orchid-core@0.22.0
+  - rake-db@2.23.33
+
 ## 1.41.2
 
 ### Patch Changes
