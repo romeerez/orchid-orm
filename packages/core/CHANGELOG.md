@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.22.2
+
+### Patch Changes
+
+- 9a09788: Make generated columns read-only (#460)
+
 ## 0.22.1
 
 ### Patch Changes
