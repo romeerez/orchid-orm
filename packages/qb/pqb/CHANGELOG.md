@@ -1,5 +1,11 @@
 # pqb
 
+## 0.46.1
+
+### Patch Changes
+
+- 62751d6: Support `modify` inside `where` function (#458)
+
 ## 0.46.0
 
 ### Minor Changes
