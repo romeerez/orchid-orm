@@ -23,6 +23,7 @@ import { getSqlText } from './utils';
 
 export interface ToSQLCtx {
   queryBuilder: Db;
+  q: QueryData;
   sql: string[];
   values: unknown[];
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
@@ -80,6 +81,7 @@ export const makeSQL = (
   const values = options?.values || [];
   const ctx: ToSQLCtx = {
     queryBuilder: table.queryBuilder,
+    q: query,
     sql,
     values,
     aliasValue: options?.aliasValue,

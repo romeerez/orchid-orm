@@ -114,6 +114,7 @@ export interface CommonQueryData {
   outerAliases?: RecordString;
   schema?: string;
   select?: SelectItem[];
+  selectCache?: { sql: string; aliases: string[] };
   selectAllColumns?: string[];
   selectAllKeys?: RecordUnknown;
   /**

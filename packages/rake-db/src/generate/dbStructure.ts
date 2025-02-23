@@ -552,14 +552,14 @@ JOIN pg_catalog.pg_type t
 JOIN pg_catalog.pg_namespace s ON s.oid = t.typnamespace
 WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`;
 
-const collationsSql = `SELECT
+const collationsSql = (version: number) => `SELECT
   nspname "schemaName",
   collname "name",
   CASE WHEN collprovider = 'i' THEN 'icu' WHEN collprovider = 'c' THEN 'libc' ELSE collprovider::text END "provider",
   collisdeterministic "deterministic",
   collcollate "lcCollate",
   collctype "lcCType",
-  colliculocale "locale",
+  ${version >= 17 ? 'colllocale' : 'colliculocale'} "locale",
   collversion "version"
 FROM pg_collation
 JOIN pg_namespace n on pg_collation.collnamespace = n.oid
@@ -591,19 +591,23 @@ WHERE ${filterSchema('n.nspname')}`;
 // JOIN pg_namespace n ON p.pronamespace = n.oid
 // WHERE ${filterSchema('n.nspname')}`
 
-const sql = `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
-  tablesSql,
-  'tables',
-)}, ${jsonAgg(viewsSql, 'views')}, ${jsonAgg(indexesSql, 'indexes')}, ${jsonAgg(
-  constraintsSql,
-  'constraints',
-)}, ${jsonAgg(triggersSql, 'triggers')}, ${jsonAgg(
-  extensionsSql,
-  'extensions',
-)}, ${jsonAgg(enumsSql, 'enums')}, ${jsonAgg(domainsSql, 'domains')}, ${jsonAgg(
-  collationsSql,
-  'collations',
-)}`;
+const sql = (version: number) =>
+  `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
+    tablesSql,
+    'tables',
+  )}, ${jsonAgg(viewsSql, 'views')}, ${jsonAgg(
+    indexesSql,
+    'indexes',
+  )}, ${jsonAgg(constraintsSql, 'constraints')}, ${jsonAgg(
+    triggersSql,
+    'triggers',
+  )}, ${jsonAgg(extensionsSql, 'extensions')}, ${jsonAgg(
+    enumsSql,
+    'enums',
+  )}, ${jsonAgg(domainsSql, 'domains')}, ${jsonAgg(
+    collationsSql(version),
+    'collations',
+  )}`;
 
 export interface IntrospectedStructure {
   schemas: string[];
@@ -622,7 +626,13 @@ export interface IntrospectedStructure {
 export async function introspectDbSchema(
   db: Adapter,
 ): Promise<IntrospectedStructure> {
-  const data = await db.query<IntrospectedStructure>(sql);
+  const {
+    rows: [{ version: versionString }],
+  } = await db.query<{ version: string }>('SELECT version()');
+
+  const version = +(versionString.match(/\d+/) as string[])[0];
+
+  const data = await db.query<IntrospectedStructure>(sql(version));
   const result = data.rows[0];
 
   for (const domain of result.domains) {

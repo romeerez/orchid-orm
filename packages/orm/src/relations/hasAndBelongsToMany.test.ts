@@ -818,7 +818,7 @@ describe('hasAndBelongsToMany', () => {
             COALESCE("chats".r, '[]') "chats"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT
                 "chats"."id_of_chat" "IdOfChat",
@@ -858,7 +858,7 @@ describe('hasAndBelongsToMany', () => {
             COALESCE("chats".r, '[]') "chats"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT
                 "activeChats"."id_of_chat" "IdOfChat",
@@ -893,7 +893,7 @@ describe('hasAndBelongsToMany', () => {
           SELECT COALESCE("items".r, '[]') "items"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT ${postTagSelectAll}
               FROM "postTag" "postTags"
@@ -931,7 +931,7 @@ describe('hasAndBelongsToMany', () => {
           SELECT COALESCE("items".r, '[]') "items"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT ${postTagSelectAll}
               FROM "postTag" "activePostTags"
@@ -1164,17 +1164,17 @@ describe('hasAndBelongsToMany', () => {
           SELECT COALESCE("chats".r, '[]') "chats"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT COALESCE("users".r, '[]') "users"
               FROM "chat" "chats"
               LEFT JOIN LATERAL (
-                SELECT json_agg(row_to_json("t".*)) r
+                SELECT json_agg(row_to_json(t.*)) r
                 FROM (
                   SELECT COALESCE("chats2".r, '[]') "chats"
                   FROM "user" "users"
                   LEFT JOIN LATERAL (
-                    SELECT json_agg(row_to_json("t".*)) r
+                    SELECT json_agg(row_to_json(t.*)) r
                     FROM (
                       SELECT ${chatSelectAll}
                       FROM "chat" "chats2"
@@ -1229,17 +1229,17 @@ describe('hasAndBelongsToMany', () => {
           SELECT COALESCE("activeChats".r, '[]') "activeChats"
           FROM "user" "activeUsers"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT COALESCE("activeUsers2".r, '[]') "activeUsers"
               FROM "chat" "activeChats"
               LEFT JOIN LATERAL (
-                SELECT json_agg(row_to_json("t".*)) r
+                SELECT json_agg(row_to_json(t.*)) r
                 FROM (
                   SELECT COALESCE("activeChats2".r, '[]') "activeChats"
                   FROM "user" "activeUsers2"
                   LEFT JOIN LATERAL (
-                    SELECT json_agg(row_to_json("t".*)) r
+                    SELECT json_agg(row_to_json(t.*)) r
                     FROM (
                       SELECT ${chatSelectAll}
                       FROM "chat" "activeChats2"
@@ -3246,7 +3246,7 @@ describe('hasAndBelongsToMany', () => {
         SELECT COALESCE("tags".r, '[]') "tags"
         FROM "post"
         LEFT JOIN LATERAL (
-          SELECT json_agg(row_to_json("t".*)) r
+          SELECT json_agg(row_to_json(t.*)) r
           FROM (
             SELECT "tag_id" AS "tagId"
             FROM "tag" "tags"

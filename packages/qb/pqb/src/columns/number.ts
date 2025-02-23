@@ -58,6 +58,7 @@ export abstract class NumberAsStringBaseColumn<
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
+    this.data.jsonCast = 'text';
   }
 }
 

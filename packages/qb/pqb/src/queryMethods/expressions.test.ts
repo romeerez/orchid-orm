@@ -48,7 +48,7 @@ describe('expressions', () => {
         q.toSQL(),
         `
           SELECT (
-            SELECT row_to_json("t".*)
+            SELECT row_to_json(t.*)
             FROM (
               SELECT ${userColumnsSql}
               FROM "user" "u"
@@ -92,7 +92,7 @@ describe('expressions', () => {
         `
           SELECT
             (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+              SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
               FROM (
                 SELECT "user"."id" FROM "user" WHERE "user"."name" = "profile"."bio"
               ) "t"

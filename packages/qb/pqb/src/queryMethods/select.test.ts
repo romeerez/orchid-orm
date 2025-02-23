@@ -1,6 +1,7 @@
 import {
   expectQueryNotMutated,
   Message,
+  Product,
   Profile,
   profileData,
   ProfileRecord,
@@ -841,7 +842,7 @@ describe('select', () => {
         `
           SELECT
             (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+              SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
               FROM (SELECT ${userColumnsSql} FROM "user") "t"
             ) "subquery"
           FROM "user"
@@ -860,7 +861,7 @@ describe('select', () => {
         `
           SELECT
             (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+              SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
               FROM (
                 SELECT ${snakeSelectAll}
                 FROM "snake"
@@ -1050,6 +1051,34 @@ describe('select', () => {
         expect((await q.all())[0].dates[0] instanceof Date).toBe(true);
         expect((await q.take()).dates[0] instanceof Date).toBe(true);
         expect((await q.rows())[0][0][0] instanceof Date).toBe(true);
+      });
+
+      it('should cast decimal to text for a sub-selected record', () => {
+        const q = User.select({
+          product: () => Product.take(),
+        }).take();
+
+        expectSql(
+          q.toSQL(),
+          `SELECT (
+            SELECT json_build_object('id', t.id, 'price', t.price::text)
+            FROM (SELECT * FROM "product" LIMIT 1) "t"
+          ) "product" FROM "user" LIMIT 1`,
+        );
+      });
+
+      it('should cast decimal to text for sub-selected records', () => {
+        const q = User.select({
+          products: () => Product,
+        }).take();
+
+        expectSql(
+          q.toSQL(),
+          `SELECT (
+            SELECT COALESCE(json_agg(json_build_object('id', t.id, 'price', t.price::text)), '[]')
+            FROM "product" "t"
+          ) "products" FROM "user" LIMIT 1`,
+        );
       });
     });
   });

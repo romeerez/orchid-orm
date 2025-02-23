@@ -755,7 +755,7 @@ describe('hasMany', () => {
             COALESCE("messages".r, '[]') "messages"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT ${messageSelectAll}
               FROM "message" "messages"
@@ -812,7 +812,7 @@ describe('hasMany', () => {
             COALESCE("messages".r, '[]') "messages"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT ${messageSelectAll}
               FROM "message" "activeMessages"
@@ -840,7 +840,7 @@ describe('hasMany', () => {
           SELECT COALESCE("items".r, '[]') "items"
           FROM "user"
                  LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
                    SELECT ${postTagSelectAll}
                    FROM "postTag" "postTags"
@@ -870,7 +870,7 @@ describe('hasMany', () => {
           SELECT COALESCE("items".r, '[]') "items"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT ${postTagSelectAll}
               FROM "postTag" "activePostTags"
@@ -1077,7 +1077,7 @@ describe('hasMany', () => {
           SELECT COALESCE("messages".r, '[]') "messages"
           FROM "user" "sender"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT row_to_json("sender2".*) "sender"
               FROM "message" "messages"
@@ -1085,7 +1085,7 @@ describe('hasMany', () => {
                 SELECT COALESCE("messages2".r, '[]') "messages"
                 FROM "user" "sender2"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json("t".*)) r
+                  SELECT json_agg(row_to_json(t.*)) r
                   FROM (
                     SELECT ${messageSelectAll}
                     FROM "message" "messages2"
@@ -1121,7 +1121,7 @@ describe('hasMany', () => {
           SELECT COALESCE("activeMessages".r, '[]') "activeMessages"
           FROM "user" "activeSender"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT row_to_json("activeSender2".*) "activeSender"
               FROM "message" "activeMessages"
@@ -1129,7 +1129,7 @@ describe('hasMany', () => {
                 SELECT COALESCE("activeMessages2".r, '[]') "activeMessages"
                 FROM "user" "activeSender2"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json("t".*)) r
+                  SELECT json_agg(row_to_json(t.*)) r
                   FROM (
                     SELECT ${messageSelectAll}
                     FROM "message" "activeMessages2"
@@ -4170,7 +4170,7 @@ describe('hasMany through', () => {
               COALESCE("chats".r, '[]') "chats"
             FROM "profile" "p"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${chatSelectAll}
                 FROM "chat" "chats"
@@ -4209,7 +4209,7 @@ describe('hasMany through', () => {
               COALESCE("chats".r, '[]') "chats"
             FROM "profile" "p"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${chatSelectAll}
                 FROM "chat" "activeChats"
@@ -4485,17 +4485,17 @@ describe('hasMany through', () => {
             SELECT COALESCE("chats".r, '[]') "chats"
             FROM "profile"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT COALESCE("profiles".r, '[]') "profiles"
                 FROM "chat" "chats"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json("t".*)) r
+                  SELECT json_agg(row_to_json(t.*)) r
                   FROM (
                     SELECT COALESCE("chats2".r, '[]') "chats"
                     FROM "profile" "profiles"
                     LEFT JOIN LATERAL (
-                      SELECT json_agg(row_to_json("t".*)) r
+                      SELECT json_agg(row_to_json(t.*)) r
                       FROM (
                         SELECT ${chatSelectAll}
                         FROM "chat" "chats2"
@@ -4568,17 +4568,17 @@ describe('hasMany through', () => {
             SELECT COALESCE("activeChats".r, '[]') "activeChats"
             FROM "profile" "activeProfiles"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT COALESCE("activeProfiles2".r, '[]') "activeProfiles"
                 FROM "chat" "activeChats"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json("t".*)) r
+                  SELECT json_agg(row_to_json(t.*)) r
                   FROM (
                     SELECT COALESCE("chats".r, '[]') "chats"
                     FROM "profile" "activeProfiles2"
                     LEFT JOIN LATERAL (
-                      SELECT json_agg(row_to_json("t".*)) r
+                      SELECT json_agg(row_to_json(t.*)) r
                       FROM (
                         SELECT ${chatSelectAll}
                         FROM "chat" "activeChats2"
@@ -5356,7 +5356,7 @@ describe('hasMany through', () => {
               COALESCE("profiles".r, '[]') "profiles"
             FROM "chat" "c"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${profileSelectAll}
                 FROM "profile" "profiles"
@@ -5398,7 +5398,7 @@ describe('hasMany through', () => {
               COALESCE("profiles".r, '[]') "profiles"
             FROM "chat" "c"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${profileSelectAll}
                 FROM "profile" "activeProfiles"
@@ -5437,7 +5437,7 @@ describe('hasMany through', () => {
             SELECT COALESCE("items".r, '[]') "items"
             FROM "message"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${postSelectAll}
                 FROM "post" "posts"
@@ -5476,7 +5476,7 @@ describe('hasMany through', () => {
             SELECT COALESCE("items".r, '[]') "items"
             FROM "message"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${postSelectAll}
                 FROM "post" "activePosts"
@@ -5766,17 +5766,17 @@ describe('hasMany through', () => {
             SELECT COALESCE("profiles".r, '[]') "profiles"
             FROM "chat"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT COALESCE("chats".r, '[]') "chats"
                 FROM "profile" "profiles"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json("t".*)) r
+                  SELECT json_agg(row_to_json(t.*)) r
                   FROM (
                     SELECT COALESCE("profiles2".r, '[]') "profiles"
                     FROM "chat" "chats"
                     LEFT JOIN LATERAL (
-                      SELECT json_agg(row_to_json("t".*)) r
+                      SELECT json_agg(row_to_json(t.*)) r
                       FROM (
                         SELECT ${profileSelectAll}
                         FROM "profile" "profiles2"
@@ -5850,17 +5850,17 @@ describe('hasMany through', () => {
             SELECT COALESCE("activeProfiles".r, '[]') "activeProfiles"
             FROM "chat" "activeChats"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT COALESCE("activeChats2".r, '[]') "activeChats"
                 FROM "profile" "activeProfiles"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json("t".*)) r
+                  SELECT json_agg(row_to_json(t.*)) r
                   FROM (
                     SELECT COALESCE("activeProfiles2".r, '[]') "activeProfiles"
                     FROM "chat" "activeChats2"
                     LEFT JOIN LATERAL (
-                      SELECT json_agg(row_to_json("t".*)) r
+                      SELECT json_agg(row_to_json(t.*)) r
                       FROM (
                         SELECT ${profileSelectAll}
                         FROM "profile" "activeProfiles2"

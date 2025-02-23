@@ -45,7 +45,7 @@ describe('relations', () => {
             AND "profile"."profile_key" = "user"."user_key"
         ) "profile" ON true
         LEFT JOIN LATERAL (
-          SELECT json_agg(row_to_json("t".*)) r
+          SELECT json_agg(row_to_json(t.*)) r
           FROM (
             SELECT ${messageSelectAll} FROM "message" "messages"
             WHERE "messages"."text" = $2
@@ -496,7 +496,7 @@ describe('relations', () => {
         SELECT COALESCE("posts".r, '[]') "posts"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT json_agg(row_to_json("t".*)) r
+          SELECT json_agg(row_to_json(t.*)) r
           FROM (
             SELECT "posts"."id" "Id", "posts"."title" "Title"
             FROM "post" "posts"

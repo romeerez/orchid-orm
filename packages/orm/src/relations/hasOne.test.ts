@@ -775,7 +775,7 @@ describe('hasOne', () => {
             SELECT COALESCE("items".r, '[]') "items"
             FROM "user"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${postTagSelectAll}
                 FROM "postTag" "onePostTag"
@@ -805,7 +805,7 @@ describe('hasOne', () => {
             SELECT COALESCE("items".r, '[]') "items"
             FROM "user"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${postTagSelectAll}
                 FROM "postTag" "activeOnePostTag"
@@ -3380,7 +3380,7 @@ describe('hasOne through', () => {
           SELECT COALESCE("items".r, '[]') "items"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT ${postSelectAll}
               FROM "post" "onePost"
@@ -3419,7 +3419,7 @@ describe('hasOne through', () => {
           SELECT COALESCE("items".r, '[]') "items"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
                    SELECT ${postSelectAll}
                    FROM "post" "activeOnePost"
@@ -3495,7 +3495,7 @@ describe('hasOne through', () => {
           SELECT COALESCE("items".r, '[]') "items"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json("t".*)) r
+            SELECT json_agg(row_to_json(t.*)) r
             FROM (
               SELECT ${postSelectAll}
               FROM "post" "activeOnePost"
@@ -3548,7 +3548,7 @@ describe('hasOne through', () => {
             SELECT COALESCE("messages".r, '[]') "messages"
             FROM "profile"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT row_to_json("profile2".*) "profile"
                 FROM "message" "messages"
@@ -3611,7 +3611,7 @@ describe('hasOne through', () => {
             SELECT COALESCE("messages".r, '[]') "messages"
             FROM "profile" "activeProfile"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT row_to_json("profile".*) "profile"
                 FROM "message" "messages"

@@ -3,6 +3,7 @@ import { PickQueryDataShapeAndJoinedShapes, QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
 import {
   ColumnsParsers,
+  ColumnsShapeBase,
   ColumnTypeBase,
   Expression,
   QueryColumn,
@@ -138,9 +139,10 @@ const columnWithDotToSql = (
   const table = column.slice(0, index);
   const key = column.slice(index + 1);
   if (key === '*') {
-    return data.joinedShapes?.[table]
+    const shape = data.joinedShapes?.[table];
+    return shape
       ? select
-        ? `row_to_json("${table}".*)`
+        ? makeRowToJson(table, shape, true)
         : `"${table}".*`
       : column;
   }
@@ -174,6 +176,7 @@ export const columnToSqlWithAs = (
   as: string,
   quotedAs?: string,
   select?: true,
+  jsonList?: { [K: string]: ColumnTypeBase | undefined },
 ) => {
   const index = column.indexOf('.');
   return index !== -1
@@ -186,8 +189,9 @@ export const columnToSqlWithAs = (
         as,
         quotedAs,
         select,
+        jsonList,
       )
-    : ownColumnToSqlWithAs(ctx, data, column, as, quotedAs, select);
+    : ownColumnToSqlWithAs(ctx, data, column, as, quotedAs, select, jsonList);
 };
 
 export const tableColumnToSqlWithAs = (
@@ -199,36 +203,20 @@ export const tableColumnToSqlWithAs = (
   as: string,
   quotedAs?: string,
   select?: true,
+  jsonList?: { [K: string]: ColumnTypeBase | undefined },
 ) => {
   if (key === '*') {
+    if (jsonList) jsonList[as] = undefined;
+
     const shape = data.joinedShapes?.[table];
     if (shape) {
       if (select) {
-        let isSimple = true;
-        const list: string[] = [];
-
-        for (const key in shape) {
-          const column = shape[key];
-          if (column.data.explicitSelect || column instanceof VirtualColumn) {
-            continue;
-          }
-
-          if (column.data.name) {
-            isSimple = false;
-          }
-
-          list.push(`'${key}'`, `"${table}"."${column.data.name || key}"`);
-        }
-
-        return (
-          (isSimple
-            ? `row_to_json("${table}".*)`
-            : 'json_build_object(' + list.join(', ') + ')') + ` "${as}"`
-        );
+        return makeRowToJson(table, shape, true) + ` "${as}"`;
       }
 
       return `"${table}".r "${as}"`;
     }
+
     return column;
   }
 
@@ -253,6 +241,8 @@ export const tableColumnToSqlWithAs = (
     }
   }
 
+  if (jsonList) jsonList[as] = col;
+
   return `"${tableName}"."${key}"${key === as ? '' : ` "${as}"`}`;
 };
 
@@ -263,11 +253,12 @@ export const ownColumnToSqlWithAs = (
   as: string,
   quotedAs?: string,
   select?: true,
+  jsonList?: { [K: string]: ColumnTypeBase | undefined },
 ) => {
   if (!select && data.joinedShapes?.[column]) {
-    return select
-      ? `row_to_json("${column}".*) "${as}"`
-      : `"${column}".r "${as}"`;
+    if (jsonList) jsonList[as] = undefined;
+
+    return `"${column}".r "${as}"`;
   }
 
   const col = data.shape[column];
@@ -288,6 +279,8 @@ export const ownColumnToSqlWithAs = (
       )} "${as}"`;
     }
   }
+
+  if (jsonList) jsonList[as] = col;
 
   return `${quotedAs ? `${quotedAs}.` : ''}"${column}"${
     column === as ? '' : ` "${as}"`
@@ -323,4 +316,34 @@ export const quoteSchemaAndTable = (
   table: string,
 ) => {
   return schema ? `"${schema}"."${table}"` : `"${table}"`;
+};
+
+export const makeRowToJson = (
+  table: string,
+  shape: ColumnsShapeBase,
+  aliasName: boolean,
+) => {
+  let isSimple = true;
+  const list: string[] = [];
+
+  for (const key in shape) {
+    const column = shape[key];
+    if (column.data.explicitSelect || column instanceof VirtualColumn) {
+      continue;
+    }
+
+    if ((aliasName && column.data.name) || column.data.jsonCast) {
+      isSimple = false;
+    }
+
+    list.push(
+      `'${key}', "${table}"."${(aliasName && column.data.name) || key}"${
+        column.data.jsonCast ? `::${column.data.jsonCast}` : ''
+      }`,
+    );
+  }
+
+  return isSimple
+    ? `row_to_json("${table}".*)`
+    : 'json_build_object(' + list.join(', ') + ')';
 };

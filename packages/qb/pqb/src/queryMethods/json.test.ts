@@ -19,7 +19,7 @@ describe('json methods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+          SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
           FROM (
             SELECT ${userColumnsSql} FROM "user"
             WHERE "user"."id" = $1
@@ -40,7 +40,7 @@ describe('json methods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT row_to_json("t".*)
+          SELECT row_to_json(t.*)
           FROM (
             SELECT ${userColumnsSql} FROM "user"
             WHERE "user"."id" = $1
@@ -59,7 +59,7 @@ describe('json methods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+          SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
           FROM (
             SELECT "id", "name", "active", "deleted_at" AS "deletedAt"
             FROM "user"

@@ -706,7 +706,7 @@ describe('belongsTo', () => {
             SELECT COALESCE("items".r, '[]') "items"
             FROM "postTag"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${userSelectAll}
                 FROM "user"
@@ -735,7 +735,7 @@ describe('belongsTo', () => {
             SELECT COALESCE("items".r, '[]') "items"
             FROM "postTag"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json("t".*)) r
+              SELECT json_agg(row_to_json(t.*)) r
               FROM (
                 SELECT ${userSelectAll}
                 FROM "user" "activeUser"

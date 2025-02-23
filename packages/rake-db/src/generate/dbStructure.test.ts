@@ -8,19 +8,27 @@ const adapter = new Adapter({
 });
 
 const mockQueryResult = (data: Partial<StructureToAstTableData>) => {
-  jest.spyOn(adapter, 'query').mockImplementation(() =>
-    Promise.resolve({
-      rowCount: 1,
-      fields: [],
-      rows: [
-        {
-          tables: [],
-          domains: [],
-          ...data,
-        },
-      ],
-    }),
-  );
+  jest.spyOn(adapter, 'query').mockResolvedValueOnce({
+    rowCount: 1,
+    fields: [],
+    rows: [
+      {
+        version: 'PostgreSQL 17.2',
+      },
+    ],
+  });
+
+  jest.spyOn(adapter, 'query').mockResolvedValueOnce({
+    rowCount: 1,
+    fields: [],
+    rows: [
+      {
+        tables: [],
+        domains: [],
+        ...data,
+      },
+    ],
+  });
 };
 
 describe('dbStructure', () => {
