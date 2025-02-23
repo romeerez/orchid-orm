@@ -38,6 +38,7 @@ import { RelationQueryBase } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitError } from '../queryMethods';
+import { ColumnsShape } from '../columns';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: ColumnsShapeBase;
@@ -89,7 +90,7 @@ export interface HandleResult {
 
 export interface CommonQueryData {
   adapter: Adapter;
-  shape: ColumnsShapeBase;
+  shape: ColumnsShape;
   patchResult?(
     q: Query,
     hookSelect: HookSelect | undefined,

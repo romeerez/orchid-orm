@@ -198,7 +198,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
       item.update(query, ctx, set);
       delete set[key];
     } else if (
-      (!shape[key] || shape[key].data.computed) &&
+      (!shape[key] || shape[key].data.readonly) &&
       shape !== anyShape
     ) {
       delete set[key];

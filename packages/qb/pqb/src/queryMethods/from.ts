@@ -9,7 +9,6 @@ import {
 import { SelectQueryData, WithConfigs } from '../sql';
 import { AliasOrTable } from '../common/utils';
 import {
-  ColumnsShapeBase,
   PickQueryTableMetaResult,
   SQLQueryArgs,
   isExpression,
@@ -23,7 +22,7 @@ import {
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
-import { addColumnParserToQuery } from '../columns';
+import { addColumnParserToQuery, ColumnsShape } from '../columns';
 import { _clone } from '../query/queryUtils';
 
 export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
@@ -158,7 +157,7 @@ export function queryFrom<
   } else {
     const q = arg as Query;
     data.as ||= q.q.as || q.table || 't';
-    data.shape = getShapeFromSelect(q, true) as ColumnsShapeBase;
+    data.shape = getShapeFromSelect(q, true) as ColumnsShape;
     data.parsers = q.q.parsers;
     data.batchParsers = q.q.batchParsers;
   }

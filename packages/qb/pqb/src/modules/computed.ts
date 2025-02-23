@@ -125,6 +125,7 @@ export const applyComputedColumns = (
       ).data;
       data.computed = item as Expression;
       data.explicitSelect = true;
+      data.readonly = true;
     }
   }
 

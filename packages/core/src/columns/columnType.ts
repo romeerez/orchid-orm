@@ -197,6 +197,12 @@ export type ColumnDefaultSelect<
     : T[K];
 };
 
+export interface ColumnDataReadonly {
+  data: {
+    readonly: true;
+  };
+}
+
 export type ColumnTypesBase = { [K in string]: ColumnTypeBase }; // converting to interface harms
 
 // type of columns selected by default, `hidden` columns are omitted
@@ -380,6 +386,9 @@ export interface ColumnDataBase {
   // this is used to cast column types in SQL when wrapping rows as JSON.
   // decimal and similar columns have to be casted to text to not loose precision.
   jsonCast?: string;
+
+  // hides the column from create and update.
+  readonly?: boolean;
 }
 
 export interface ColumnDataCheckBase {
@@ -488,6 +497,7 @@ export interface QueryColumnInit extends QueryColumn {
     isNullable?: true;
     default?: unknown;
     name?: string;
+    readonly?: boolean;
   };
 }
 

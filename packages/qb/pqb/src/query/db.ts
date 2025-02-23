@@ -565,6 +565,7 @@ const performQuery = async <Result>(
     sql = {
       text: templateLiteralToSQL(args as TemplateLiteralArgs, {
         queryBuilder: q.queryBuilder,
+        q: q.q,
         sql: [],
         values,
       }),

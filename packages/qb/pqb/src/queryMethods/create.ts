@@ -413,7 +413,7 @@ const processCreateItem = (
 
       if (
         !ctx.columns.has(key) &&
-        ((shape[key] && !shape[key].data.computed) || shape === anyShape) &&
+        ((shape[key] && !shape[key].data.readonly) || shape === anyShape) &&
         item[key] !== undefined
       ) {
         ctx.columns.set(key, ctx.columns.size);

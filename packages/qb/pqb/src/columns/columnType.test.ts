@@ -753,5 +753,31 @@ describe('column type', () => {
         '.generated({ raw: \'raw\', values: {"num":123} })',
       );
     });
+
+    const table = testDb('table', (t) => ({
+      id: t.identity().primaryKey(),
+      col: t.integer().generated`123`,
+    }));
+
+    it('should not be allowed in create', () => {
+      const q = table.create({
+        // @ts-expect-error not allowed
+        col: 123,
+      });
+
+      expectSql(
+        q.toSQL(),
+        `INSERT INTO "table"("id") VALUES (DEFAULT) RETURNING *`,
+      );
+    });
+
+    it('should not be allowed in update', () => {
+      const q = table.all().update({
+        // @ts-expect-error not allowed
+        col: 123,
+      });
+
+      expectSql(q.toSQL(), `SELECT count(*) FROM "table"`);
+    });
   });
 });

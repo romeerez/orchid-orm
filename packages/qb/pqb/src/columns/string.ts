@@ -2,6 +2,7 @@ import {
   ColumnData,
   ColumnDataGenerated,
   ColumnType,
+  GeneratedColumn,
   PickColumnData,
 } from './columnType';
 import { NumberColumnData } from './number';
@@ -538,7 +539,7 @@ export class TsVectorColumn<
       | StaticSQLArgs
       | [language: string, columns: TsVectorGeneratedColumns]
       | [columns: TsVectorGeneratedColumns]
-  ): T {
+  ): GeneratedColumn<T> {
     const arg = args[0];
     // early return on StaticSQLArgs case
     if (typeof arg === 'object' && 'raw' in arg) {
@@ -617,10 +618,12 @@ export class TsVectorColumn<
       return code + ')';
     };
 
-    return setColumnData(this, 'generated', {
+    const column = setColumnData(this, 'generated', {
       toSQL,
       toCode,
     });
+    column.data.readonly = true;
+    return column as never;
   }
 }
 

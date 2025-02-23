@@ -36,7 +36,19 @@ export interface ColumnData extends ColumnDataBase {
   identity?: TableData.Identity;
   // raw SQL for generated columns
   generated?: ColumnDataGenerated;
+  // computed and generated columns are readonly
+  readonly?: boolean;
 }
+
+export type GeneratedColumn<T extends PickColumnData> = {
+  [K in keyof T]: K extends 'data'
+    ? {
+        [K in keyof T['data']]: K extends 'default' ? true : T['data'][K];
+      }
+    : K extends 'inputType'
+    ? never
+    : T[K];
+};
 
 export interface ColumnDataGenerated {
   toSQL(
@@ -513,9 +525,12 @@ export abstract class ColumnType<
    *
    * @param args - raw SQL
    */
-  generated<T extends PickColumnData>(this: T, ...args: StaticSQLArgs): T {
+  generated<T extends PickColumnData>(
+    this: T,
+    ...args: StaticSQLArgs
+  ): GeneratedColumn<T> {
     const sql = raw(...args);
-    return setColumnData(this, 'generated', {
+    const column = setColumnData(this, 'generated', {
       toSQL(ctx, quoted) {
         return sql.toSQL(ctx, quoted);
       },
@@ -538,5 +553,7 @@ export abstract class ColumnType<
         return sql;
       },
     });
+    column.data.readonly = true;
+    return column as never;
   }
 }
