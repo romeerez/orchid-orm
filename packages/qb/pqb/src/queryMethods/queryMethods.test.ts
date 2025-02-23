@@ -1110,6 +1110,23 @@ describe('queryMethods', () => {
         `,
       );
     });
+
+    it('should work inside a where function', async () => {
+      const a = User.makeHelper((q) => q.where({ id: 1 }));
+      const b = User.makeHelper((q) => q.where({ name: 'name' }));
+
+      const q = a(User.select('id')).where((q) => q.modify(b));
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id"
+          FROM "user"
+          WHERE "user"."id" = $1 AND ("user"."name" = $2)
+        `,
+        [1, 'name'],
+      );
+    });
   });
 
   describe('makeHelper', () => {

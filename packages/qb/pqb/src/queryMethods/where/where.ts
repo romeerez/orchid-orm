@@ -116,6 +116,13 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
           | 'columnTypes'
           | 'meta'
           | 'relations'
+          | 'modify'
+          // rest are required by `modify`
+          | 'result'
+          | 'returnType'
+          | 'withData'
+          | 'windows'
+          | 'then'
           ? T[K]
           : never;
       }
@@ -130,6 +137,13 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
                 | 'columnTypes'
                 | 'meta'
                 | 'relations'
+                | 'modify'
+                // rest are required by `modify`
+                | 'result'
+                | 'returnType'
+                | 'withData'
+                | 'windows'
+                | 'then'
               )
           ? T[K]
           : never;
