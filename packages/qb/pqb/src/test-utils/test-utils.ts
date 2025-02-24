@@ -152,7 +152,7 @@ export const Tag = testDb('tag', (t) => ({
 
 export const Product = testDb('product', (t) => ({
   id: t.identity().primaryKey(),
-  price: t.decimal(),
+  priceAmount: t.decimal(),
 }));
 
 export const expectQueryNotMutated = (q: Query) => {

@@ -810,13 +810,13 @@ describe('update', () => {
     });
 
     it(`should ${action} decimal column by 1`, () => {
-      const q = Product[action]('price');
+      const q = Product[action]('priceAmount');
 
       expectSql(
         q.toSQL(),
         `
           UPDATE "product"
-          SET "price" = "price" ${sign} $1
+          SET "price_amount" = "price_amount" ${sign} $1
         `,
         [1],
       );
@@ -837,13 +837,13 @@ describe('update', () => {
     });
 
     it(`should ${action} decimal column by provided amount`, () => {
-      const q = Product[action]({ price: '1' });
+      const q = Product[action]({ priceAmount: '1' });
 
       expectSql(
         q.toSQL(),
         `
           UPDATE "product"
-          SET "price" = "price" ${sign} $1
+          SET "price_amount" = "price_amount" ${sign} $1
         `,
         ['1'],
       );

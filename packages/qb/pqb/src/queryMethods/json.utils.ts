@@ -50,7 +50,7 @@ class RowToJsonExpression extends Expression {
       rowToJson = `json_build_object(${Object.entries(jsonList)
         .map(
           ([key, column]) =>
-            `'${key}', t.${key}${
+            `'${key}', t."${key}"${
               column?.data.jsonCast ? `::${column.data.jsonCast}` : ''
             }`,
         )

@@ -254,7 +254,7 @@ describe('aggregate', () => {
 
   describe('numeric aggregations', () => {
     it('should return number for numeric types returning a number', async () => {
-      await Product.insertMany([{ price: '1' }, { price: '2' }]);
+      await Product.insertMany([{ priceAmount: '1' }, { priceAmount: '2' }]);
 
       const value = await Product.sum('id');
 
@@ -265,11 +265,11 @@ describe('aggregate', () => {
 
     it('should return string for precise numeric types', async () => {
       await Product.insertMany([
-        { price: '111111111111111.111111111111111' },
-        { price: '222222222222222.222222222222222' },
+        { priceAmount: '111111111111111.111111111111111' },
+        { priceAmount: '222222222222222.222222222222222' },
       ]);
 
-      const value = await Product.sum('price');
+      const value = await Product.sum('priceAmount');
 
       assertType<typeof value, string | null>();
 

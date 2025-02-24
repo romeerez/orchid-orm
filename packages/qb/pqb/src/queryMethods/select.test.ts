@@ -1061,8 +1061,8 @@ describe('select', () => {
         expectSql(
           q.toSQL(),
           `SELECT (
-            SELECT json_build_object('id', t.id, 'price', t.price::text)
-            FROM (SELECT * FROM "product" LIMIT 1) "t"
+            SELECT json_build_object('id', t."id", 'priceAmount', t."priceAmount"::text)
+            FROM (SELECT "id", "price_amount" AS "priceAmount" FROM "product" LIMIT 1) "t"
           ) "product" FROM "user" LIMIT 1`,
         );
       });
@@ -1075,8 +1075,8 @@ describe('select', () => {
         expectSql(
           q.toSQL(),
           `SELECT (
-            SELECT COALESCE(json_agg(json_build_object('id', t.id, 'price', t.price::text)), '[]')
-            FROM "product" "t"
+            SELECT COALESCE(json_agg(json_build_object('id', t."id", 'priceAmount', t."priceAmount"::text)), '[]')
+            FROM (SELECT "id", "price_amount" AS "priceAmount" FROM "product") "t"
           ) "products" FROM "user" LIMIT 1`,
         );
       });
