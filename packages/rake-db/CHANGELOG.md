@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.23.37
+
+### Patch Changes
+
+- ef23f10: Fix camelCasing columns problem in nested select (#466)
+- Updated dependencies [ef23f10]
+  - pqb@0.46.4
+
 ## 2.23.36
 
 ### Patch Changes

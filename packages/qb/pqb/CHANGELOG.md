@@ -1,5 +1,11 @@
 # pqb
 
+## 0.46.4
+
+### Patch Changes
+
+- ef23f10: Fix camelCasing columns problem in nested select (#466)
+
 ## 0.46.3
 
 ### Patch Changes
