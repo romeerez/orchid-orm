@@ -345,5 +345,7 @@ export const makeRowToJson = (
 
   return isSimple
     ? `row_to_json("${table}".*)`
-    : 'json_build_object(' + list.join(', ') + ')';
+    : `CASE WHEN "${table}".* IS NULL THEN NULL ELSE json_build_object(` +
+        list.join(', ') +
+        ') END';
 };

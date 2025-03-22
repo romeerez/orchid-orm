@@ -71,7 +71,7 @@ export const jsonBuildObjectAllSql = (
   table: { q: QueryData; shape: QueryColumns },
   as: string,
 ) =>
-  'json_build_object(' +
+  `CASE WHEN "${as}".* IS NULL THEN NULL ELSE json_build_object(` +
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   Object.keys(table.q.selectAllKeys!)
     .map(
@@ -82,7 +82,7 @@ export const jsonBuildObjectAllSql = (
         }"`,
     )
     .join(', ') +
-  ')';
+  ') END';
 
 export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
