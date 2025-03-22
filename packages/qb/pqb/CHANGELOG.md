@@ -1,5 +1,11 @@
 # pqb
 
+## 0.47.1
+
+### Patch Changes
+
+- c9ff49b: Fix selecting null for a single sub-json record which is not found (#468)
+
 ## 0.47.0
 
 ### Minor Changes
