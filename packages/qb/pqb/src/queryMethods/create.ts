@@ -456,7 +456,7 @@ const handleOneData = (
   const values = [
     columns.map((key) =>
       // undefined values were stripped and no need to check for them
-      encoders[key] && !isExpression(data[key])
+      encoders[key] && !isExpression(data[key]) && data[key] !== null
         ? encoders[key](data[key])
         : data[key],
     ),

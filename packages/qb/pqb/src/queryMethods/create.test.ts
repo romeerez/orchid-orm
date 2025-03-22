@@ -632,6 +632,24 @@ describe('create functions', () => {
         ['key'],
       );
     });
+
+    it('should not call `encode` with undefined', () => {
+      const table = testDb('table', (t) => ({
+        id: t.identity().primaryKey(),
+        value: t
+          .integer()
+          .encode(() => 'encoded')
+          .nullable(),
+      }));
+
+      const q = table.create({ value: null });
+
+      expectSql(
+        q.toSQL(),
+        `INSERT INTO "table"("value") VALUES ($1) RETURNING *`,
+        [null],
+      );
+    });
   });
 
   describe('insert', () => {
