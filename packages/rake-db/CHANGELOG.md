@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.23.38
+
+### Patch Changes
+
+- 2000a95: Forbid top-level `default`, `nullable`, `comment` in the `changeTable` (#463)
+- Updated dependencies [b383ae6]
+- Updated dependencies [e9f8a5c]
+  - pqb@0.47.0
+
 ## 2.23.37
 
 ### Patch Changes

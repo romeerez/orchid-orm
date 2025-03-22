@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.43.0
+
+### Minor Changes
+
+- e9f8a5c: `null` is not longer passed to column `encode` (#464)
+
+### Patch Changes
+
+- Updated dependencies [b383ae6]
+- Updated dependencies [2000a95]
+- Updated dependencies [e9f8a5c]
+  - pqb@0.47.0
+  - rake-db@2.23.38
+
 ## 1.42.4
 
 ### Patch Changes

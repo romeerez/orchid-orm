@@ -1,5 +1,15 @@
 # pqb
 
+## 0.47.0
+
+### Minor Changes
+
+- e9f8a5c: `null` is not longer passed to column `encode` (#464)
+
+### Patch Changes
+
+- b383ae6: Fix join without conditions (#462)
+
 ## 0.46.4
 
 ### Patch Changes
