@@ -1552,6 +1552,25 @@ describe('changeTable', () => {
             `),
         );
       });
+
+      it('should change the default from null', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(t.default(null), t.default(123)),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ALTER COLUMN "col_umn" SET DEFAULT 123
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ALTER COLUMN "col_umn" DROP DEFAULT
+            `),
+        );
+      });
     });
 
     it('should change column null', async () => {
@@ -1592,24 +1611,43 @@ describe('changeTable', () => {
       );
     });
 
-    it('should change column comment', async () => {
-      await testUpAndDown(
-        () =>
-          db.changeTable('table', (t) => ({
-            changeComment: t.change(
-              t.comment('comment 1'),
-              t.comment('comment 2'),
-            ),
-          })),
-        () =>
-          expectSql(`
+    describe('comment', () => {
+      it('should change column comment', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              changeComment: t.change(
+                t.comment('comment 1'),
+                t.comment('comment 2'),
+              ),
+            })),
+          () =>
+            expectSql(`
             COMMENT ON COLUMN "table"."change_comment" IS 'comment 2'
           `),
-        () =>
-          expectSql(`
+          () =>
+            expectSql(`
             COMMENT ON COLUMN "table"."change_comment" IS 'comment 1'
           `),
-      );
+        );
+      });
+
+      it('should change column comment from null', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              changeComment: t.change(t.comment(null), t.comment('comment 2')),
+            })),
+          () =>
+            expectSql(`
+              COMMENT ON COLUMN "table"."change_comment" IS 'comment 2'
+            `),
+          () =>
+            expectSql(`
+              COMMENT ON COLUMN "table"."change_comment" IS NULL
+            `),
+        );
+      });
     });
 
     it('should change column compression', async () => {

@@ -78,9 +78,12 @@ const resetChangeTableData = () => {
 const addOrDropChanges: RakeDbAst.ChangeTableItem.Column[] = [];
 
 // add column
-function add(item: ColumnType, options?: { dropMode?: DropMode }): EmptyObject;
+function add(
+  item: ColumnType,
+  options?: { dropMode?: DropMode },
+): SpecialChange;
 // add primary key, index, etc
-function add(emptyObject: EmptyObject): EmptyObject;
+function add(emptyObject: EmptyObject): SpecialChange;
 // add timestamps
 function add(
   items: Record<string, ColumnType>,
@@ -169,12 +172,10 @@ const addOrDrop = (
   if (item instanceof UnknownColumn) {
     const empty = columnTypeToColumnChange({
       type: 'change',
-      from: {},
       to: {},
     });
     const add = columnTypeToColumnChange({
       type: 'change',
-      from: {},
       to: {
         checks: item.data.checks,
       },
@@ -195,12 +196,23 @@ const addOrDrop = (
   };
 };
 
-type Change = RakeDbAst.ChangeTableItem.Change & ChangeOptions;
+interface Change extends RakeDbAst.ChangeTableItem.Change, ChangeOptions {}
 
 type ChangeOptions = RakeDbAst.ChangeTableItem.ChangeUsing;
 
+interface SpecialChange {
+  type: SpecialChange;
+}
+
+interface OneWayChange {
+  type: 'change';
+  name?: string;
+  to: RakeDbAst.ColumnChange;
+  using?: RakeDbAst.ChangeTableItem.ChangeUsing;
+}
+
 const columnTypeToColumnChange = (
-  item: ColumnType | Change,
+  item: ColumnType | OneWayChange,
   name?: string,
 ): RakeDbAst.ColumnChange => {
   if (item instanceof ColumnType) {
@@ -260,8 +272,8 @@ const tableChangeMethods = {
   add,
   drop,
   change(
-    from: ColumnType | Change,
-    to: ColumnType | Change,
+    from: ColumnType | OneWayChange,
+    to: ColumnType | OneWayChange,
     using?: ChangeOptions,
   ): Change {
     consumeColumnName();
@@ -279,25 +291,23 @@ const tableChangeMethods = {
       using,
     };
   },
-  default(value: unknown | RawSQLBase): Change {
-    return { type: 'change', from: { default: null }, to: { default: value } };
+  default(value: unknown | RawSQLBase): OneWayChange {
+    return { type: 'change', to: { default: value } };
   },
-  nullable(): Change {
+  nullable(): OneWayChange {
     return {
       type: 'change',
-      from: { nullable: false },
       to: { nullable: true },
     };
   },
-  nonNullable(): Change {
+  nonNullable(): OneWayChange {
     return {
       type: 'change',
-      from: { nullable: true },
       to: { nullable: false },
     };
   },
-  comment(comment: string | null): Change {
-    return { type: 'change', from: { comment: null }, to: { comment } };
+  comment(comment: string | null): OneWayChange {
+    return { type: 'change', to: { comment } };
   },
   /**
    * Rename a column:
@@ -330,7 +340,8 @@ export type TableChangeData = Record<
   | RakeDbAst.ChangeTableItem.Column
   | RakeDbAst.ChangeTableItem.Rename
   | Change
-  | EmptyObject
+  | SpecialChange
+  | ColumnTypeBase
 >;
 
 export const changeTable = async <CT>(
@@ -379,7 +390,11 @@ const makeAst = (
   const shape: RakeDbAst.ChangeTableShape = {};
   const consumedChanges: RecordKeyTrue = {};
   for (const key in changeData) {
-    let item = changeData[key];
+    let item = changeData[key] as
+      | Change
+      | RakeDbAst.ChangeTableItem.Rename
+      | RakeDbAst.ChangeTableItem.Column;
+
     if (typeof item === 'number') {
       consumedChanges[item] = true;
       item = addOrDropChanges[item];
