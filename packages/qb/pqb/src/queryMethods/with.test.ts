@@ -288,4 +288,24 @@ describe('withSql', () => {
       expectSql(q.toSQL(), s);
     }
   });
+
+  it('should work in join', () => {
+    const q = User.withSql(
+      'test',
+      (t) => ({ id: t.integer() }),
+      () => sql`select 1 as id`,
+    )
+      .join('test')
+      .select('test.id');
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "test" AS (select 1 as id)
+        SELECT "test"."id"
+        FROM "user"
+        JOIN "test" ON true
+      `,
+    );
+  });
 });

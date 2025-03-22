@@ -239,17 +239,26 @@ const processArgs = (
   joinAs: string,
   joinShape: QueryColumns,
   quotedAs?: string,
-): string => {
-  return args.length === 1
-    ? getObjectOrRawConditions(ctx, query, args[0], quotedAs, joinAs, joinShape)
-    : getConditionsFor3Or4LengthItem(
-        ctx,
-        query,
-        joinAs,
-        quotedAs,
-        args as ItemOf2Or3Length,
-        joinShape,
-      );
+): string | undefined => {
+  return args.length
+    ? args.length === 1
+      ? getObjectOrRawConditions(
+          ctx,
+          query,
+          args[0],
+          quotedAs,
+          joinAs,
+          joinShape,
+        )
+      : getConditionsFor3Or4LengthItem(
+          ctx,
+          query,
+          joinAs,
+          quotedAs,
+          args as ItemOf2Or3Length,
+          joinShape,
+        )
+    : undefined;
 };
 
 const getConditionsFor3Or4LengthItem = (
