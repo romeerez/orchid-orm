@@ -1,5 +1,6 @@
 import {
   createBaseTable,
+  DefaultSelect,
   Insertable,
   Queryable,
   Selectable,
@@ -517,15 +518,55 @@ describe('baseTable', () => {
     });
   });
 
+  describe('DefaultSelect', () => {
+    it('should have a columns shape type returned from database and parsed, should ignore `select(false)`', () => {
+      class SomeTable extends BaseTable {
+        columns = this.setColumns((t) => ({
+          foo: t.text().parse(() => true),
+          bar: t.text().select(false),
+        }));
+      }
+
+      assertType<DefaultSelect<SomeTable>, { foo: boolean }>();
+    });
+  });
+
   describe('Selectable', () => {
-    it('should have a columns shape type returned from database and parsed', () => {
+    it('should have a columns shape type returned from database and parsed, should not ignore `select(false)`', () => {
+      class SomeTable extends BaseTable {
+        columns = this.setColumns((t) => ({
+          foo: t.text().parse(() => true),
+          bar: t.text().select(false),
+        }));
+      }
+
+      assertType<Selectable<SomeTable>, { foo: boolean; bar: string }>();
+    });
+
+    it('should include computed columns', () => {
       class SomeTable extends BaseTable {
         columns = this.setColumns((t) => ({
           foo: t.text().parse(() => true),
         }));
+
+        computed = this.setComputed((q) => ({
+          sqlComputed: sql``.type((t) => t.string()),
+          jsComputed: q.computeAtRuntime([], () => true),
+          batchComputed: q.computeBatchAtRuntime([], async () => {
+            return [123];
+          }),
+        }));
       }
 
-      assertType<Selectable<SomeTable>, { foo: boolean }>();
+      assertType<
+        Selectable<SomeTable>,
+        {
+          foo: boolean;
+          sqlComputed: string;
+          jsComputed: boolean;
+          batchComputed: number;
+        }
+      >();
     });
   });
 

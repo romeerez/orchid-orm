@@ -2,7 +2,6 @@ import {
   MaybeArray,
   pathToLog,
   pushOrNewArray,
-  pushOrNewArrayToObject,
   quoteObjectKey,
   singleQuote,
 } from './utils';
@@ -13,28 +12,6 @@ describe('utils', () => {
   describe('MaybeArray', () => {
     it('should turn a type into union of T | T[]', () => {
       assertType<MaybeArray<number>, number | number[]>();
-    });
-  });
-
-  describe('pushOrNewArrayToObject', () => {
-    it('should define new array with value when object has no array by provided key', () => {
-      const obj: { ko?: number[] } = {};
-
-      pushOrNewArrayToObject(obj, 'ko', 123);
-
-      expect(obj).toEqual({
-        ko: [123],
-      });
-    });
-
-    it('should push value to array when obj has array by provided key', () => {
-      const obj = { ko: [] as number[] };
-
-      pushOrNewArrayToObject(obj, 'ko', 123);
-
-      expect(obj).toEqual({
-        ko: [123],
-      });
     });
   });
 

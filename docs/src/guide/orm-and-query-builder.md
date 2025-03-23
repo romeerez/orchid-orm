@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # ORM and query builder
 
 `OrchidORM` consists of a query builder (such as [Knex](https://knexjs.org/) or [Kysely](https://www.kysely.dev/docs/intro)) + layer on top of it for defining, querying and utilizing relations (as in [Prisma](https://www.prisma.io/docs/concepts/components/prisma-schema/relations)).
@@ -130,12 +134,13 @@ Tables are defined as classes `table` and `columns` required properties:
 Note that the `table` property is marked as `readonly`, this is needed for TypeScript to check the usage of the table in queries.
 
 ```ts
-import { Selectable, Insertable, Updatable } from 'orchid-orm';
+import { Selectable, DefaultSelect, Insertable, Updatable } from 'orchid-orm';
 // import BaseTable from a file from the previous step:
 import { BaseTable } from './baseTable';
 
 // export types of User for various use-cases:
 export type User = Selectable<UserTable>;
+export type UserDefault = DefaultSelect<UserTable>;
 export type UserNew = Insertable<UserTable>;
 export type UserUpdate = Updateable<UserTable>;
 
@@ -423,31 +428,68 @@ export const db = orchidORM(
 
 ## table utility types
 
-Utility types available for tables:
+### Selectable
 
-- `Selectable`: record type returned from a database and parsed with [column parsers](/guide/common-column-methods#parse).
-  For instance, when using `asDate` for a [timestamp](/guide/columns-types#date-and-time) column, `Selectable` will have `Date` type for this column.
-- `Insertable`: type of object you can create a new record with.
-  Column type may be changed by [encode](/guide/common-column-methods#encode) function. `Insertable` type for timestamp column is a union `string | number | Date`.
-- `Updatable`: the same as `Insertable` but all fields are optional.
-- `Queryable`: disregarding if [parse](/guide/common-column-methods#parse) or [encode](/guide/common-column-methods#encode) functions are specified for the column,
-  types that are accepted by `where` and other query methods remains the same. Use this type to accept data to query the table with.
+`Selectable` represents a record type returned from a database and parsed with [column parsers](/guide/common-column-methods#parse).
+
+For instance, when using `asDate` for a [timestamp](/guide/columns-types#date-and-time) column, `Selectable` will have `Date` type for this column.
+
+It contains all the columns including the ones marked with [select(false)](/guide/common-column-methods.html#exclude-from-select),
+as well as [Computed columns](/guide/computed-columns).
 
 ```ts
-import { Selectable, Insertable, Updatable, Queryable } from 'orchid-orm';
-import { BaseTable } from './baseTable';
+import { Selectable } from 'orchid-orm';
 
 export type User = Selectable<UserTable>;
-export type UserNew = Insertable<UserTable>;
-export type UserUpdate = Updatable<UserTable>;
-export type UserQueryable = Queryable<UserTable>;
+```
 
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    ...userColumns,
-  }));
-}
+### DefaultSelect
+
+`DefaultSelect` is for table types returned from a database, with respect for column parsers, limited only to columns selected by default.
+
+It does not include [select(false)](/guide/common-column-methods.html#exclude-from-select) columns, as well as [Computed columns](/guide/computed-columns).
+
+```ts
+import { DefaultSelect } from 'orchid-orm';
+
+export type UserDefault = DefaultSelect<UserTable>;
+```
+
+### Insertable
+
+`Insertable` types an object you can create a new record with.
+
+Column type may be changed by [encode](/guide/common-column-methods#encode) function.
+
+`Insertable` type for timestamp column is a union `string | number | Date`.
+
+```ts
+import { Insertable } from 'orchid-orm';
+
+export type UserNew = Insertable<UserTable>;
+```
+
+### Updatable
+
+`Updatable` is the same as `Insertable` but all fields are optional.
+
+```ts
+import { Updatable } from 'orchid-orm';
+
+export type UserUpdate = Updatable<UserTable>;
+```
+
+### Queryable
+
+`Queryable`: disregarding if [parse](/guide/common-column-methods#parse) or [encode](/guide/common-column-methods#encode) functions are specified for the column,
+types that are accepted by `where` and other query methods remains the same.
+
+Use this type to accept data for querying a table.
+
+```ts
+import { Queryable } from 'orchid-orm';
+
+export type UserQueryable = Queryable<UserTable>;
 ```
 
 ## createDb

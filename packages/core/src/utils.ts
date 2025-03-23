@@ -94,26 +94,6 @@ export type EmptyTuple = [];
 export const emptyArray = [];
 
 /**
- * Push value into array in the object if it's defined, or set a new array with a single value into the object.
- * @param obj - object that can contain the array by the key
- * @param key - key to access array in the object
- * @param value - value to push into the array
- */
-export const pushOrNewArrayToObject = <
-  Obj extends EmptyObject,
-  Key extends keyof Obj,
->(
-  obj: Obj,
-  key: Key,
-  value: Exclude<Obj[Key], undefined> extends unknown[]
-    ? Exclude<Obj[Key], undefined>[number]
-    : never,
-) => {
-  if (obj[key]) (obj[key] as unknown as unknown[]).push(value);
-  else (obj[key] as unknown as unknown[]) = [value];
-};
-
-/**
  * Push a value into an array in the object if it's defined, or set a new array with a single value into the object.
  * Does not mutate the array.
  *

@@ -1,5 +1,11 @@
 # Breaking changes
 
+## orchid-orm 1.44
+
+Change `Selectable` type utility to include hidden columns (`select(false)`) and computed columns.
+
+Use `DefaultSelect` instead to have only columns selected by default.
+
 ## orchid-orm 1.43
 
 Column's `encode` previously did handle `null` values, this wasn't intentional.

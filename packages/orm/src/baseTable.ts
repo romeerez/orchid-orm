@@ -157,13 +157,24 @@ export type Queryable<T extends ORMTableInput> = ShallowSimplify<{
   [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['queryType'];
 }>;
 
-// Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends ORMTableInput> = ShallowSimplify<
+export type DefaultSelect<T extends ORMTableInput> = ShallowSimplify<
   Pick<
     ColumnShapeOutput<T['columns']['shape']>,
     DefaultSelectColumns<T['columns']['shape']>
   >
 >;
+
+// Object type of table's record that's returned from database and is parsed.
+export type Selectable<T extends ORMTableInput> =
+  T['computed'] extends ComputedOptionsFactory<never, never>
+    ? ShallowSimplify<
+        ColumnShapeOutput<T['columns']['shape']> & {
+          [K in keyof ReturnType<T['computed']>]: ReturnType<
+            T['computed']
+          >[K]['result']['value']['outputType'];
+        }
+      >
+    : ShallowSimplify<ColumnShapeOutput<T['columns']['shape']>>;
 
 // Object type that conforms `create` method of the table.
 export type Insertable<T extends ORMTableInput> = ShallowSimplify<
