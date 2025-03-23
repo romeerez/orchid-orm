@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.23.0
+
+### Minor Changes
+
+- 98c8c12: Change `Selectable` to include all selectable columns, add `DefaultSelect` to include only ones selected by default (#470)
+
 ## 0.22.2
 
 ### Patch Changes

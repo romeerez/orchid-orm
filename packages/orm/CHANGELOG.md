@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.44.0
+
+### Minor Changes
+
+- 98c8c12: Change `Selectable` to include all selectable columns, add `DefaultSelect` to include only ones selected by default (#470)
+
+### Patch Changes
+
+- Updated dependencies [98c8c12]
+  - orchid-core@0.23.0
+  - pqb@0.47.2
+  - rake-db@2.23.40
+
 ## 1.43.1
 
 ### Patch Changes
