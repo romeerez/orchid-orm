@@ -9,7 +9,7 @@ import {
   Statement,
   VariableStatement,
 } from 'typescript';
-import { getImportPath, quoteObjectKey } from 'orchid-core';
+import { getImportPath, quoteObjectKey, singleQuote } from 'orchid-core';
 import { AppCodeGenTables } from './tables.appCodeGenerator';
 import { DbExtension } from 'pqb';
 import { RakeDbAst } from 'rake-db';
@@ -49,7 +49,9 @@ export const appCodeGenUpdateDbFile = async (
     if (extensions.length) {
       code += `\n  extensions: [${extensions
         .map((ext) =>
-          ext.version ? `{ ${ext.name}: '${ext.version}' }` : `'${ext.name}'`,
+          ext.version
+            ? `{ ${quoteObjectKey(ext.name)}: '${ext.version}' }`
+            : singleQuote(ext.name),
         )
         .join(', ')}],`;
     }

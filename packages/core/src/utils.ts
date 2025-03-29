@@ -180,7 +180,7 @@ export const singleQuoteArray = (arr: string[]) => {
  * @param key - object key to quote
  */
 export const quoteObjectKey = (key: string) => {
-  return /[A-z_]\w*/.test(key) ? key : singleQuote(key);
+  return /^[a-zA-Z_$][\w$]*$/.test(key) ? key : singleQuote(key);
 };
 
 /**

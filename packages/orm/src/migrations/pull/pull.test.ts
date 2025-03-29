@@ -447,11 +447,11 @@ export const db = custom({ databaseURL: 'url' }, {
       it('should add db extension', async () => {
         await arrange({
           async prepareDb(db) {
-            await db.createExtension('cube', { version: '1.5' });
+            await db.createExtension('public.cube', { version: '1.5' });
           },
         });
 
-        await act();
+        await pull([{ ...options, schema: 'custom' }], testConfig);
 
         assert.dbFile([
           [
@@ -460,7 +460,7 @@ export const db = custom({ databaseURL: 'url' }, {
 
 export const db = orchidORM({
   databaseURL: 'url',
-  extensions: [{ cube: '1.5' }],
+  extensions: [{ 'public.cube': '1.5' }],
 }, {});
 `,
           ],
