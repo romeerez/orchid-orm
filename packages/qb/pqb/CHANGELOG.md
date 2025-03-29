@@ -1,5 +1,11 @@
 # pqb
 
+## 0.47.4
+
+### Patch Changes
+
+- 68ef9f7: Fix `map` incorrectly being called on a non-found record of a relation inside `select` callback (#475)
+
 ## 0.47.3
 
 ### Patch Changes

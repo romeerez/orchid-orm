@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.44.2
+
+### Patch Changes
+
+- 68ef9f7: Fix `map` incorrectly being called on a non-found record of a relation inside `select` callback (#475)
+- Updated dependencies [68ef9f7]
+  - pqb@0.47.4
+  - rake-db@2.23.42
+
 ## 1.44.1
 
 ### Patch Changes
