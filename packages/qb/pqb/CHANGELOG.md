@@ -1,5 +1,11 @@
 # pqb
 
+## 0.48.2
+
+### Patch Changes
+
+- b2c4f66: Fix selecting camelCased columns from a nested select when also having a decimal column for select (#480)
+
 ## 0.48.1
 
 ### Patch Changes
