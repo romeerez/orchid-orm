@@ -303,7 +303,7 @@ describe('relations', () => {
       `
         SELECT "user"."id" "Id"
         FROM "user"
-        JOIN "post" AS "posts"
+        JOIN "post"  "posts"
           ON "posts"."user_id" = "user"."id"
          AND "posts"."title" = "user"."user_key"
       `,
@@ -390,7 +390,7 @@ describe('relations', () => {
       `
         SELECT "user"."id" "Id"
         FROM "user"
-        JOIN "profile" AS "p"
+        JOIN "profile"  "p"
           ON "p"."user_id" = "user"."id"
          AND "p"."profile_key" = "user"."user_key"
       `,

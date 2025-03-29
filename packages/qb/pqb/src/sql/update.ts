@@ -56,7 +56,7 @@ export const pushUpdateSql = (
   ctx.sql.push(`UPDATE ${quotedTable}`);
 
   if (quotedTable !== quotedAs) {
-    ctx.sql.push(`AS ${quotedAs}`);
+    ctx.sql.push(quotedAs);
   }
 
   ctx.sql.push('SET');

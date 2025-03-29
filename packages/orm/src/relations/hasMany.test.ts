@@ -253,7 +253,7 @@ describe('hasMany', () => {
         WHERE
           EXISTS (
             SELECT 1
-            FROM "post" AS "posts"
+            FROM "post"  "posts"
             WHERE
               EXISTS (
                 SELECT 1
@@ -289,7 +289,7 @@ describe('hasMany', () => {
         WHERE "activePostTags"."active" = $1
           AND EXISTS (
             SELECT 1
-            FROM "post" AS "activePosts"
+            FROM "post"  "activePosts"
             WHERE "activePosts"."active" = $2
               AND EXISTS (
                 SELECT 1
@@ -382,7 +382,7 @@ describe('hasMany', () => {
       expectSql(
         query.toSQL(),
         `
-          DELETE FROM "message" AS "messages"
+          DELETE FROM "message"  "messages"
           WHERE EXISTS (
               SELECT 1 FROM "chat"
               WHERE "chat"."title" = $1
@@ -401,7 +401,7 @@ describe('hasMany', () => {
         `
         SELECT ${userSelectAll} FROM "user"
         WHERE EXISTS (
-          SELECT 1 FROM "message" AS "messages"
+          SELECT 1 FROM "message"  "messages"
           WHERE "messages"."author_id" = "user"."id"
             AND "messages"."message_key" = "user"."user_key"
         )
@@ -416,7 +416,7 @@ describe('hasMany', () => {
         `
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "message" AS "messages"
+            SELECT 1 FROM "message"  "messages"
             WHERE "messages"."text" = $1
               AND "messages"."author_id" = "u"."id"
               AND "messages"."message_key" = "u"."user_key"
@@ -433,7 +433,7 @@ describe('hasMany', () => {
         `
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "message" AS "messages"
+            SELECT 1 FROM "message"  "messages"
             WHERE "messages"."author_id" = "u"."id"
               AND "messages"."message_key" = "u"."user_key"
               AND "messages"."text" = $1
@@ -449,7 +449,7 @@ describe('hasMany', () => {
         `
           SELECT ${userSelectAll} FROM "user"
           WHERE EXISTS (
-            SELECT 1 FROM "message" AS "activeMessages"
+            SELECT 1 FROM "message"  "activeMessages"
             WHERE "activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "user"."id"
               AND "activeMessages"."message_key" = "user"."user_key"
@@ -466,7 +466,7 @@ describe('hasMany', () => {
         `
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "message" AS "activeMessages"
+            SELECT 1 FROM "message"  "activeMessages"
             WHERE "activeMessages"."active" = $1
               AND "activeMessages"."text" = $2
               AND "activeMessages"."author_id" = "u"."id"
@@ -486,7 +486,7 @@ describe('hasMany', () => {
         `
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "message" AS "activeMessages"
+            SELECT 1 FROM "message"  "activeMessages"
             WHERE "activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "u"."id"
               AND "activeMessages"."message_key" = "u"."user_key"
@@ -571,7 +571,7 @@ describe('hasMany', () => {
         `
         SELECT "u"."name" "Name", "messages"."text" "Text"
         FROM "user" "u"
-        JOIN "message" AS "messages"
+        JOIN "message"  "messages"
           ON "messages"."author_id" = "u"."id"
          AND "messages"."message_key" = "u"."user_key"
          AND "messages"."text" = $1
@@ -593,7 +593,7 @@ describe('hasMany', () => {
         `
           SELECT "u"."name" "Name", "activeMessages"."text" "Text"
           FROM "user" "u"
-          JOIN "message" AS "activeMessages"
+          JOIN "message"  "activeMessages"
             ON "activeMessages"."active" = $1
            AND "activeMessages"."author_id" = "u"."id"
            AND "activeMessages"."message_key" = "u"."user_key"
@@ -619,7 +619,7 @@ describe('hasMany', () => {
         `
         SELECT "u"."name" "Name", "m"."text" "Text"
         FROM "user" "u"
-        JOIN "message" AS "m"
+        JOIN "message"  "m"
           ON "m"."text" = $1
          AND "m"."chat_id" = $2
          AND "m"."author_id" = "u"."id"
@@ -645,7 +645,7 @@ describe('hasMany', () => {
         `
           SELECT "u"."name" "Name", "m"."text" "Text"
           FROM "user" "u"
-          JOIN "message" AS "m"
+          JOIN "message"  "m"
             ON "m"."text" = $1
            AND "m"."active" = $2
            AND "m"."chat_id" = $3
@@ -846,7 +846,7 @@ describe('hasMany', () => {
                    FROM "postTag" "postTags"
                    WHERE EXISTS (
                      SELECT 1
-                     FROM "post" AS "posts"
+                     FROM "post"  "posts"
                      WHERE "posts"."user_id" = "user"."id"
                        AND "posts"."title" = "user"."user_key"
                        AND "posts"."id" = "postTags"."post_id"
@@ -877,7 +877,7 @@ describe('hasMany', () => {
               WHERE "activePostTags"."active" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "post" AS "activePosts"
+                  FROM "post"  "activePosts"
                   WHERE "activePosts"."active" = $2
                     AND "activePosts"."user_id" = "user"."id"
                     AND "activePosts"."title" = "user"."user_key"
@@ -3455,7 +3455,7 @@ describe('hasMany through', () => {
           `
             SELECT ${chatSelectAll} FROM "chat" "activeChats"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "activeUser"
+              SELECT 1 FROM "user"  "activeUser"
               WHERE "activeChats"."active" = $1
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
@@ -3521,7 +3521,7 @@ describe('hasMany through', () => {
               SELECT 1 FROM "profile"
               WHERE "profile"."bio" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeUser"
+                  SELECT 1 FROM "user"  "activeUser"
                   WHERE "activeChats"."active" = $2
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
@@ -3559,7 +3559,7 @@ describe('hasMany through', () => {
             WHERE
               EXISTS (
                 SELECT 1
-                FROM "profile" AS "profiles"
+                FROM "profile"  "profiles"
                 WHERE
                   EXISTS (
                     SELECT 1
@@ -3567,7 +3567,7 @@ describe('hasMany through', () => {
                     WHERE "message"."text" = $1
                       AND EXISTS (
                         SELECT 1
-                        FROM "user" AS "sender"
+                        FROM "user"  "sender"
                         WHERE "profiles"."user_id" = "sender"."id"
                           AND "profiles"."profile_key" = "sender"."user_key"
                           AND "sender"."id" = "message"."author_id"
@@ -3608,7 +3608,7 @@ describe('hasMany through', () => {
             WHERE
               EXISTS (
                 SELECT 1
-                FROM "profile" AS "activeProfiles"
+                FROM "profile"  "activeProfiles"
                 WHERE
                   EXISTS (
                     SELECT 1
@@ -3616,7 +3616,7 @@ describe('hasMany through', () => {
                     WHERE "message"."text" = $1
                       AND EXISTS (
                         SELECT 1
-                        FROM "user" AS "activeSender"
+                        FROM "user"  "activeSender"
                         WHERE "activeProfiles"."active" = $2
                           AND "activeProfiles"."user_id" = "activeSender"."id"
                           AND "activeProfiles"."profile_key" = "activeSender"."user_key"
@@ -3628,7 +3628,7 @@ describe('hasMany through', () => {
                   AND "activeProfiles"."bio" = $4
                   AND EXISTS (
                     SELECT 1
-                    FROM "user" AS "activeUser"
+                    FROM "user"  "activeUser"
                     WHERE "activePosts"."active" = $5
                       AND "activePosts"."user_id" = "activeUser"."id"
                       AND "activePosts"."title" = "activeUser"."user_key"
@@ -3659,7 +3659,7 @@ describe('hasMany through', () => {
           expectSql(
             query.toSQL(),
             `
-              DELETE FROM "chat" AS "chats"
+              DELETE FROM "chat"  "chats"
               WHERE EXISTS (
                   SELECT 1 FROM "profile"
                   WHERE "profile"."bio" = $1
@@ -3692,12 +3692,12 @@ describe('hasMany through', () => {
           expectSql(
             query.toSQL(),
             `
-              DELETE FROM "chat" AS "activeChats"
+              DELETE FROM "chat"  "activeChats"
               WHERE EXISTS (
                   SELECT 1 FROM "profile"
                   WHERE "profile"."bio" = $1
                     AND EXISTS (
-                      SELECT 1 FROM "user" AS "activeUser"
+                      SELECT 1 FROM "user"  "activeUser"
                       WHERE "activeChats"."active" = $2
                         AND EXISTS (
                           SELECT 1 FROM "chatUser"
@@ -3754,7 +3754,7 @@ describe('hasMany through', () => {
           `
           SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
-            SELECT 1 FROM "chat" AS "chats"
+            SELECT 1 FROM "chat"  "chats"
             WHERE EXISTS (
               SELECT 1 FROM "user"
               WHERE EXISTS (
@@ -3779,7 +3779,7 @@ describe('hasMany through', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat" AS "chats"
+              SELECT 1 FROM "chat"  "chats"
               WHERE "chats"."title" = $1
                 AND EXISTS (
                   SELECT 1 FROM "user"
@@ -3806,7 +3806,7 @@ describe('hasMany through', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat" AS "chats"
+              SELECT 1 FROM "chat"  "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
@@ -3832,9 +3832,9 @@ describe('hasMany through', () => {
           `
             SELECT ${profileSelectAll} FROM "profile"
             WHERE EXISTS (
-              SELECT 1 FROM "chat" AS "activeChats"
+              SELECT 1 FROM "chat"  "activeChats"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "activeUser"
+                SELECT 1 FROM "user"  "activeUser"
                 WHERE "activeChats"."active" = $1
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
@@ -3860,10 +3860,10 @@ describe('hasMany through', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat" AS "activeChats"
+              SELECT 1 FROM "chat"  "activeChats"
               WHERE "activeChats"."title" = $1
                 AND EXISTS (
-                    SELECT 1 FROM "user" AS "activeUser"
+                    SELECT 1 FROM "user"  "activeUser"
                     WHERE "activeChats"."active" = $2
                       AND EXISTS (
                           SELECT 1 FROM "chatUser"
@@ -3891,10 +3891,10 @@ describe('hasMany through', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat" AS "activeChats"
+              SELECT 1 FROM "chat"  "activeChats"
               WHERE
                 EXISTS (
-                  SELECT 1 FROM "user" AS "activeUser"
+                  SELECT 1 FROM "user"  "activeUser"
                   WHERE "activeChats"."active" = $1
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
@@ -3932,7 +3932,7 @@ describe('hasMany through', () => {
           `
             SELECT "p"."bio" "Bio", "chats"."title" "Title"
             FROM "profile" "p"
-            JOIN "chat" AS "chats"
+            JOIN "chat"  "chats"
               ON EXISTS (
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
@@ -3967,10 +3967,10 @@ describe('hasMany through', () => {
           `
             SELECT "p"."bio" "Bio", "activeChats"."title" "Title"
             FROM "profile" "p"
-            JOIN "chat" AS "activeChats"
+            JOIN "chat"  "activeChats"
               ON
                 EXISTS (
-                  SELECT 1 FROM "user" AS "activeUser"
+                  SELECT 1 FROM "user"  "activeUser"
                   WHERE "activeChats"."active" = $1
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
@@ -4010,7 +4010,7 @@ describe('hasMany through', () => {
           `
             SELECT "p"."bio" "Bio", "c"."title" "Title"
             FROM "profile" "p"
-            JOIN "chat" AS "c"
+            JOIN "chat"  "c"
               ON "c"."title" = $1
               AND "c"."updated_at" = $2
               AND EXISTS (
@@ -4051,12 +4051,12 @@ describe('hasMany through', () => {
           `
             SELECT "p"."bio" "Bio", "c"."title" "Title"
             FROM "profile" "p"
-            JOIN "chat" AS "c"
+            JOIN "chat"  "c"
               ON "c"."title" = $1
              AND "c"."updated_at" = $2
              AND
                EXISTS (
-                 SELECT 1 FROM "user" AS "activeUser"
+                 SELECT 1 FROM "user"  "activeUser"
                  WHERE "c"."active" = $3
                    AND EXISTS (
                      SELECT 1 FROM "chatUser"
@@ -4132,7 +4132,7 @@ describe('hasMany through', () => {
               WHERE "c"."title" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "user" AS "activeUser"
+                  FROM "user"  "activeUser"
                   WHERE "c"."active" = $2
                     AND EXISTS (
                       SELECT 1
@@ -4215,7 +4215,7 @@ describe('hasMany through', () => {
                 FROM "chat" "activeChats"
                 WHERE "activeChats"."title" = $1
                   AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeUser"
+                  SELECT 1 FROM "user"  "activeUser"
                   WHERE "activeChats"."active" = $2
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
@@ -4293,7 +4293,7 @@ describe('hasMany through', () => {
               SELECT count(*) r
               FROM "chat" "activeChats"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "activeUser"
+                SELECT 1 FROM "user"  "activeUser"
                 WHERE "activeChats"."active" = $1
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
@@ -4369,7 +4369,7 @@ describe('hasMany through', () => {
                  SELECT "activeChats"."title" "Title"
                  FROM "chat" "activeChats"
                  WHERE EXISTS (
-                   SELECT 1 FROM "user" AS "activeUser"
+                   SELECT 1 FROM "user"  "activeUser"
                    WHERE "activeChats"."active" = $1
                      AND EXISTS (
                        SELECT 1 FROM "chatUser"
@@ -4448,7 +4448,7 @@ describe('hasMany through', () => {
               SELECT true r
               FROM "chat" "activeChats"
               WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "activeUser"
+                  SELECT 1 FROM "user"  "activeUser"
                   WHERE "activeChats"."active" = $1
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
@@ -4518,7 +4518,7 @@ describe('hasMany through', () => {
                     ) "chats2" ON true
                     WHERE EXISTS (
                       SELECT 1
-                      FROM "user" AS "users"
+                      FROM "user"  "users"
                       WHERE "profiles"."user_id" = "users"."id"
                         AND "profiles"."profile_key" = "users"."user_key"
                         AND EXISTS (
@@ -4584,7 +4584,7 @@ describe('hasMany through', () => {
                         FROM "chat" "activeChats2"
                         WHERE EXISTS (
                           SELECT 1
-                          FROM "user" AS "activeUser"
+                          FROM "user"  "activeUser"
                           WHERE "activeChats2"."active" = $1
                             AND EXISTS (
                               SELECT 1
@@ -4602,7 +4602,7 @@ describe('hasMany through', () => {
                     ) "chats" ON true
                     WHERE EXISTS (
                       SELECT 1
-                      FROM "user" AS "activeUsers"
+                      FROM "user"  "activeUsers"
                       WHERE "activeProfiles2"."active" = $3
                         AND "activeProfiles2"."user_id" = "activeUsers"."id"
                         AND "activeProfiles2"."profile_key" = "activeUsers"."user_key"
@@ -4620,7 +4620,7 @@ describe('hasMany through', () => {
                 ) "activeProfiles2" ON true
                 WHERE EXISTS (
                   SELECT 1
-                  FROM "user" AS "activeUser"
+                  FROM "user"  "activeUser"
                   WHERE "activeChats"."active" = $5
                     AND EXISTS (
                       SELECT 1
@@ -4690,7 +4690,7 @@ describe('hasMany through', () => {
               WHERE "activeChats"."title" IN ($2, $3)
                 AND EXISTS (
                   SELECT 1
-                  FROM "user" AS "activeUser"
+                  FROM "user"  "activeUser"
                   WHERE "activeChats"."active" = $4
                     AND EXISTS (
                       SELECT 1
@@ -4725,7 +4725,7 @@ describe('hasMany through', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "profiles"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "users"
+              SELECT 1 FROM "user"  "users"
               WHERE "profiles"."user_id" = "users"."id"
                 AND "profiles"."profile_key" = "users"."user_key"
               AND EXISTS (
@@ -4752,7 +4752,7 @@ describe('hasMany through', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "activeProfiles"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "activeUsers"
+              SELECT 1 FROM "user"  "activeUsers"
               WHERE "activeProfiles"."active" = $1
                 AND "activeProfiles"."user_id" = "activeUsers"."id"
                 AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -4786,7 +4786,7 @@ describe('hasMany through', () => {
               SELECT 1 FROM "chat"
               WHERE "chat"."title" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "users"
+                  SELECT 1 FROM "user"  "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
@@ -4818,7 +4818,7 @@ describe('hasMany through', () => {
               SELECT 1 FROM "chat"
               WHERE "chat"."title" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeUsers"
+                  SELECT 1 FROM "user"  "activeUsers"
                   WHERE "activeProfiles"."active" = $2
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -4853,12 +4853,12 @@ describe('hasMany through', () => {
         expectSql(
           query.toSQL(),
           `
-            DELETE FROM "profile" AS "profiles"
+            DELETE FROM "profile"  "profiles"
             WHERE EXISTS (
                 SELECT 1 FROM "chat"
                 WHERE "chat"."title" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "user" AS "users"
+                    SELECT 1 FROM "user"  "users"
                     WHERE "profiles"."user_id" = "users"."id"
                       AND "profiles"."profile_key" = "users"."user_key"
                       AND EXISTS (
@@ -4886,12 +4886,12 @@ describe('hasMany through', () => {
         expectSql(
           query.toSQL(),
           `
-            DELETE FROM "profile" AS "activeProfiles"
+            DELETE FROM "profile"  "activeProfiles"
             WHERE EXISTS (
                 SELECT 1 FROM "chat"
                 WHERE "chat"."title" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "user" AS "activeUsers"
+                    SELECT 1 FROM "user"  "activeUsers"
                     WHERE "activeProfiles"."active" = $2
                       AND "activeProfiles"."user_id" = "activeUsers"."id"
                       AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -4923,7 +4923,7 @@ describe('hasMany through', () => {
         `
           SELECT ${profileSelectAll} FROM "profile" "p"
           WHERE EXISTS (
-            SELECT 1 FROM "user" AS "users"
+            SELECT 1 FROM "user"  "users"
             WHERE "p"."user_id" = "users"."id"
               AND "p"."profile_key" = "users"."user_key"
               AND EXISTS (
@@ -4945,9 +4945,9 @@ describe('hasMany through', () => {
           `
             SELECT ${chatSelectAll} FROM "chat"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "profiles"
+              SELECT 1 FROM "profile"  "profiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "users"
+                SELECT 1 FROM "user"  "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
@@ -4970,10 +4970,10 @@ describe('hasMany through', () => {
           `
             SELECT ${chatSelectAll} FROM "chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "profiles"
+              SELECT 1 FROM "profile"  "profiles"
               WHERE "profiles"."bio" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "users"
+                  SELECT 1 FROM "user"  "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
@@ -4997,9 +4997,9 @@ describe('hasMany through', () => {
           `
             SELECT ${chatSelectAll} FROM "chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "profiles"
+              SELECT 1 FROM "profile"  "profiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "users"
+                SELECT 1 FROM "user"  "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
@@ -5023,9 +5023,9 @@ describe('hasMany through', () => {
           `
             SELECT ${chatSelectAll} FROM "chat"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "activeProfiles"
+              SELECT 1 FROM "profile"  "activeProfiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "activeUsers"
+                SELECT 1 FROM "user"  "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5051,10 +5051,10 @@ describe('hasMany through', () => {
           `
             SELECT ${chatSelectAll} FROM "chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "activeProfiles"
+              SELECT 1 FROM "profile"  "activeProfiles"
               WHERE "activeProfiles"."bio" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeUsers"
+                  SELECT 1 FROM "user"  "activeUsers"
                   WHERE "activeProfiles"."active" = $2
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5082,9 +5082,9 @@ describe('hasMany through', () => {
           `
             SELECT ${chatSelectAll} FROM "chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "activeProfiles"
+              SELECT 1 FROM "profile"  "activeProfiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "activeUsers"
+                SELECT 1 FROM "user"  "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5122,9 +5122,9 @@ describe('hasMany through', () => {
           `
             SELECT "c"."title" "Title", "profiles"."bio" "Bio"
             FROM "chat" "c"
-            JOIN "profile" AS "profiles"
+            JOIN "profile"  "profiles"
               ON EXISTS (
-                SELECT 1 FROM "user" AS "users"
+                SELECT 1 FROM "user"  "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
@@ -5157,9 +5157,9 @@ describe('hasMany through', () => {
           `
             SELECT "c"."title" "Title", "activeProfiles"."bio" "Bio"
             FROM "chat" "c"
-            JOIN "profile" AS "activeProfiles"
+            JOIN "profile"  "activeProfiles"
               ON EXISTS (
-                SELECT 1 FROM "user" AS "activeUsers"
+                SELECT 1 FROM "user"  "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5197,11 +5197,11 @@ describe('hasMany through', () => {
           `
             SELECT "c"."title" "Title", "p"."bio" "Bio"
             FROM "chat" "c"
-            JOIN "profile" AS "p"
+            JOIN "profile"  "p"
               ON "p"."bio" = $1
               AND "p"."user_id" = $2
               AND EXISTS (
-                SELECT 1 FROM "user" AS "users"
+                SELECT 1 FROM "user"  "users"
                 WHERE "p"."user_id" = "users"."id"
                   AND "p"."profile_key" = "users"."user_key"
                   AND EXISTS (
@@ -5236,11 +5236,11 @@ describe('hasMany through', () => {
           `
             SELECT "c"."title" "Title", "p"."bio" "Bio"
             FROM "chat" "c"
-            JOIN "profile" AS "p"
+            JOIN "profile"  "p"
               ON "p"."bio" = $1
               AND "p"."user_id" = $2
               AND EXISTS (
-                SELECT 1 FROM "user" AS "activeUsers"
+                SELECT 1 FROM "user"  "activeUsers"
                 WHERE "p"."active" = $3
                   AND "p"."user_id" = "activeUsers"."id"
                   AND "p"."profile_key" = "activeUsers"."user_key"
@@ -5277,7 +5277,7 @@ describe('hasMany through', () => {
               WHERE "p"."bio" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "user" AS "users"
+                  FROM "user"  "users"
                   WHERE "p"."user_id" = "users"."id"
                     AND "p"."profile_key" = "users"."user_key"
                     AND EXISTS (
@@ -5315,7 +5315,7 @@ describe('hasMany through', () => {
               WHERE "p"."bio" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "user" AS "activeUsers"
+                  FROM "user"  "activeUsers"
                   WHERE "p"."active" = $2
                     AND "p"."user_id" = "activeUsers"."id"
                     AND "p"."profile_key" = "activeUsers"."user_key"
@@ -5362,7 +5362,7 @@ describe('hasMany through', () => {
                 FROM "profile" "profiles"
                 WHERE "profiles"."bio" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "user" AS "users"
+                    SELECT 1 FROM "user"  "users"
                     WHERE "profiles"."user_id" = "users"."id"
                       AND "profiles"."profile_key" = "users"."user_key"
                       AND EXISTS (
@@ -5404,7 +5404,7 @@ describe('hasMany through', () => {
                 FROM "profile" "activeProfiles"
                 WHERE "activeProfiles"."bio" = $1
                   AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeUsers"
+                  SELECT 1 FROM "user"  "activeUsers"
                   WHERE "activeProfiles"."active" = $2
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5442,9 +5442,9 @@ describe('hasMany through', () => {
                 SELECT ${postSelectAll}
                 FROM "post" "posts"
                 WHERE EXISTS (
-                  SELECT 1 FROM "profile" AS "profiles"
+                  SELECT 1 FROM "profile"  "profiles"
                   WHERE EXISTS (
-                    SELECT 1 FROM "user" AS "sender"
+                    SELECT 1 FROM "user"  "sender"
                     WHERE "profiles"."user_id" = "sender"."id"
                       AND "profiles"."profile_key" = "sender"."user_key"
                       AND "sender"."id" = "message"."author_id"
@@ -5481,9 +5481,9 @@ describe('hasMany through', () => {
                 SELECT ${postSelectAll}
                 FROM "post" "activePosts"
                 WHERE EXISTS (
-                  SELECT 1 FROM "profile" AS "activeProfiles"
+                  SELECT 1 FROM "profile"  "activeProfiles"
                   WHERE EXISTS (
-                    SELECT 1 FROM "user" AS "activeSender"
+                    SELECT 1 FROM "user"  "activeSender"
                     WHERE "activeProfiles"."active" = $1
                       AND "activeProfiles"."user_id" = "activeSender"."id"
                       AND "activeProfiles"."profile_key" = "activeSender"."user_key"
@@ -5491,7 +5491,7 @@ describe('hasMany through', () => {
                       AND "activeSender"."id" = "message"."author_id"
                       AND "activeSender"."user_key" = "message"."message_key"
                   ) AND EXISTS (
-                    SELECT 1 FROM "user" AS "activeUser"
+                    SELECT 1 FROM "user"  "activeUser"
                     WHERE "activePosts"."active" = $3
                       AND "activePosts"."user_id" = "activeUser"."id"
                       AND "activePosts"."title" = "activeUser"."user_key"
@@ -5528,7 +5528,7 @@ describe('hasMany through', () => {
               SELECT count(*) r
               FROM "profile" "profiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "users"
+                SELECT 1 FROM "user"  "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
@@ -5566,7 +5566,7 @@ describe('hasMany through', () => {
               SELECT count(*) r
               FROM "profile" "activeProfiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "activeUsers"
+                SELECT 1 FROM "user"  "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5608,7 +5608,7 @@ describe('hasMany through', () => {
                 SELECT "profiles"."bio" "Bio"
                 FROM "profile" "profiles"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "users"
+                  SELECT 1 FROM "user"  "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
@@ -5648,7 +5648,7 @@ describe('hasMany through', () => {
                 SELECT "activeProfiles"."bio" "Bio"
                 FROM "profile" "activeProfiles"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "activeUsers"
+                  SELECT 1 FROM "user"  "activeUsers"
                   WHERE "activeProfiles"."active" = $1
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5690,7 +5690,7 @@ describe('hasMany through', () => {
               FROM "profile" "profiles"
               WHERE EXISTS (
                 SELECT 1
-                FROM "user" AS "users"
+                FROM "user"  "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
@@ -5729,7 +5729,7 @@ describe('hasMany through', () => {
               FROM "profile" "activeProfiles"
               WHERE EXISTS (
                 SELECT 1
-                FROM "user" AS "activeUsers"
+                FROM "user"  "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5782,7 +5782,7 @@ describe('hasMany through', () => {
                         FROM "profile" "profiles2"
                         WHERE EXISTS (
                           SELECT 1
-                          FROM "user" AS "users"
+                          FROM "user"  "users"
                           WHERE "profiles2"."user_id" = "users"."id"
                             AND "profiles2"."profile_key" = "users"."user_key"
                           AND EXISTS (
@@ -5815,7 +5815,7 @@ describe('hasMany through', () => {
               ) "chats" ON true
                 WHERE EXISTS (
                   SELECT 1
-                  FROM "user" AS "users"
+                  FROM "user"  "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
@@ -5866,7 +5866,7 @@ describe('hasMany through', () => {
                         FROM "profile" "activeProfiles2"
                         WHERE EXISTS (
                           SELECT 1
-                          FROM "user" AS "activeUsers"
+                          FROM "user"  "activeUsers"
                           WHERE "activeProfiles2"."active" = $1
                             AND "activeProfiles2"."user_id" = "activeUsers"."id"
                             AND "activeProfiles2"."profile_key" = "activeUsers"."user_key"
@@ -5884,7 +5884,7 @@ describe('hasMany through', () => {
                   ) "activeProfiles2" ON true
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "user" AS "activeUser"
+                    FROM "user"  "activeUser"
                     WHERE "activeChats2"."active" = $3
                       AND EXISTS (
                         SELECT 1
@@ -5903,7 +5903,7 @@ describe('hasMany through', () => {
               WHERE
                 EXISTS (
                   SELECT 1
-                  FROM "user" AS "activeUsers"
+                  FROM "user"  "activeUsers"
                   WHERE "activeProfiles"."active" = $5
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
@@ -5940,7 +5940,7 @@ describe('hasMany through', () => {
               WHERE "profiles"."bio" IN ($2, $3)
                 AND EXISTS (
                   SELECT 1
-                  FROM "user" AS "users"
+                  FROM "user"  "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
@@ -5972,7 +5972,7 @@ describe('hasMany through', () => {
               WHERE "activeProfiles"."bio" IN ($2, $3)
                 AND EXISTS (
                   SELECT 1
-                  FROM "user" AS "activeUsers"
+                  FROM "user"  "activeUsers"
                   WHERE "activeProfiles"."active" = $4
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"

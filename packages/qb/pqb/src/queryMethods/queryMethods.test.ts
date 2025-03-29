@@ -333,7 +333,7 @@ describe('queryMethods', () => {
         `
           SELECT DISTINCT ON ("user"."id", "p"."user_id") ${userTableColumnsSql}
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -351,7 +351,7 @@ describe('queryMethods', () => {
         `
           SELECT DISTINCT ON ("user"."id", "s"."tail_length") ${userTableColumnsSql}
           FROM "user"
-          JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
+          JOIN "snake" "s" ON "s"."tail_length" = "user"."id"
         `,
       );
     });

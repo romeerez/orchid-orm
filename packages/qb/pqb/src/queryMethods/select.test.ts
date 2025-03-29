@@ -305,7 +305,7 @@ describe('select', () => {
         query.toSQL(),
         `
           SELECT "user"."id", "p"."user_id" "userId" FROM "user"
-          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -330,7 +330,7 @@ describe('select', () => {
         `
           SELECT "user"."id", "s"."snake_name" "snakeName"
           FROM "user"
-          JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
+          JOIN "snake" "s" ON "s"."tail_length" = "user"."id"
         `,
       );
     });
@@ -351,7 +351,7 @@ describe('select', () => {
         `
           SELECT ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -389,7 +389,7 @@ describe('select', () => {
         `
           SELECT ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -423,7 +423,7 @@ describe('select', () => {
         `
           SELECT ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          LEFT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -455,7 +455,7 @@ describe('select', () => {
         `
           SELECT ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          LEFT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -489,7 +489,7 @@ describe('select', () => {
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          RIGHT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -510,7 +510,7 @@ describe('select', () => {
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          RIGHT JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -531,7 +531,7 @@ describe('select', () => {
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
           FROM "user"
-          FULL JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -552,7 +552,7 @@ describe('select', () => {
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
           FROM "user"
-          FULL JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
     });
@@ -769,7 +769,7 @@ describe('select', () => {
         `
           SELECT "user"."id" "aliasedId", "p"."user_id" "aliasedUserId"
           FROM "user"
-          JOIN "profile" AS "p" ON "p"."user_id" = "user"."id"
+          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
       expectQueryNotMutated(q);
@@ -788,7 +788,7 @@ describe('select', () => {
         `
           SELECT "user"."id" "userId", "s"."tail_length" "length"
           FROM "user"
-          JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
+          JOIN "snake" "s" ON "s"."tail_length" = "user"."id"
         `,
       );
     });
@@ -1062,7 +1062,7 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)
-            FROM (SELECT "id", "camel_case" AS "camelCase", "price_amount" AS "priceAmount" FROM "product" LIMIT 1) "t"
+            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "product" LIMIT 1) "t"
           ) "product" FROM "user" LIMIT 1`,
         );
       });
@@ -1076,7 +1076,7 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT COALESCE(json_agg(json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)), '[]')
-            FROM (SELECT "id", "camel_case" AS "camelCase", "price_amount" AS "priceAmount" FROM "product") "t"
+            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "product") "t"
           ) "products" FROM "user" LIMIT 1`,
         );
       });

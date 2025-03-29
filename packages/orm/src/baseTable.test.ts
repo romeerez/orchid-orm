@@ -651,14 +651,14 @@ describe('baseTable', () => {
       expectSql(
         local.user.toSQL(),
         `
-          SELECT "id", "deleted_at" AS "deletedAt" FROM "user" WHERE ("user"."deleted_at" IS NULL)
+          SELECT "id", "deleted_at"  "deletedAt" FROM "user" WHERE ("user"."deleted_at" IS NULL)
         `,
       );
 
       expectSql(
         local.user.includeDeleted().toSQL(),
         `
-          SELECT "id", "deleted_at" AS "deletedAt" FROM "user"
+          SELECT "id", "deleted_at"  "deletedAt" FROM "user"
         `,
       );
 

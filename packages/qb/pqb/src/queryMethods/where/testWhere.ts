@@ -1768,7 +1768,7 @@ export const testWhereExistsCase = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, pkey).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1784,7 +1784,7 @@ export const testWhereExistsCase = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, '=', pkey).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1808,7 +1808,7 @@ export const testWhereExistsCase = ({
         testDb.sql({ raw: `${asFkeySql}` }),
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1834,7 +1834,7 @@ export const testWhereExistsCase = ({
         '=',
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1850,7 +1850,7 @@ export const testWhereExistsCase = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), { [fkey]: pkey }).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1870,7 +1870,7 @@ export const testWhereExistsCase = ({
       joinTo[join](joinTarget.as('as'), {
         [fkey]: testDb.sql({ raw: `${pkeySql}` }),
       }).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1892,7 +1892,7 @@ export const testWhereExistsCase = ({
         joinTarget.as('as'),
         testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
       ).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `"${fkeySql}" = "${table}".${pkey}`),
+      sql(`"${joinTable}" "as"`, `"${fkeySql}" = "${table}".${pkey}`),
       values,
     );
 
@@ -1940,7 +1940,7 @@ export const testWhereExistsCase = ({
           q.toSQL(),
           makeSql({
             select: `SELECT "as"."one" "id", "as"."two" "text" FROM "${table}"`,
-            target: `"${joinTable}" AS "as"`,
+            target: `"${joinTable}" "as"`,
             conditions: `"one" = ${pkeySql} AND "as"."${fkeyColumn}" = $${
               values.length + (or ? 2 : 1)
             }`,

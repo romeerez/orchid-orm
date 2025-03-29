@@ -61,7 +61,7 @@ describe('json methods', () => {
         `
           SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
           FROM (
-            SELECT "id", "name", "active", "deleted_at" AS "deletedAt"
+            SELECT "id", "name", "active", "deleted_at" "deletedAt"
             FROM "user"
             WHERE ("user"."deleted_at" IS NULL)
           ) "t"

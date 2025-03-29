@@ -17,7 +17,7 @@ export const pushDeleteSql = (
   ctx.sql.push(`DELETE FROM ${from}`);
 
   if (from !== quotedAs) {
-    ctx.sql.push(`AS ${quotedAs}`);
+    ctx.sql.push(quotedAs);
   }
 
   let conditions: string | undefined;

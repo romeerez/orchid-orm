@@ -408,7 +408,7 @@ export class Db<
         const column = shape[key] as unknown as ColumnTypeBase;
         if (!column.data.explicitSelect) {
           list.push(
-            column.data.name ? `"${column.data.name}" AS "${key}"` : `"${key}"`,
+            column.data.name ? `"${column.data.name}" "${key}"` : `"${key}"`,
           );
           keys[key] = column;
         }

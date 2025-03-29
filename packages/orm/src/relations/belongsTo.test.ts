@@ -275,7 +275,7 @@ describe('belongsTo', () => {
             WHERE "activeUser"."active" = $1
               AND EXISTS (
                 SELECT 1
-                FROM "post" AS "activePost"
+                FROM "post"  "activePost"
                 WHERE "activePost"."active" = $2
                   AND EXISTS (
                     SELECT 1
@@ -370,7 +370,7 @@ describe('belongsTo', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "activeUser"
+              SELECT 1 FROM "user"  "activeUser"
               WHERE "activeUser"."active" = $1
                 AND "activeUser"."name" = $2
                 AND "activeUser"."id" = "p"."user_id"
@@ -390,7 +390,7 @@ describe('belongsTo', () => {
           `
             SELECT ${profileSelectAll} FROM "profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "activeUser"
+              SELECT 1 FROM "user"  "activeUser"
               WHERE "activeUser"."active" = $1
                 AND "activeUser"."id" = "p"."user_id"
                 AND "activeUser"."user_key" = "p"."profile_key"
@@ -414,7 +414,7 @@ describe('belongsTo', () => {
           `
               SELECT ${messageSelectAll} FROM "message" "m"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "activeSender"
+                SELECT 1 FROM "user"  "activeSender"
                 WHERE "activeSender"."active" = $1
                   AND EXISTS (
                     SELECT 1 FROM "profile"
@@ -441,12 +441,12 @@ describe('belongsTo', () => {
           `
               SELECT ${messageSelectAll} FROM "message" "m"
               WHERE EXISTS (
-                SELECT 1 FROM "user" AS "activeSender"
+                SELECT 1 FROM "user"  "activeSender"
                 WHERE "activeSender"."active" = $1
                   AND "activeSender"."id" = "m"."author_id"
                   AND "activeSender"."user_key" = "m"."message_key"
                   AND EXISTS (
-                    SELECT 1 FROM "profile" AS "activeProfile"
+                    SELECT 1 FROM "profile"  "activeProfile"
                     WHERE "activeProfile"."active" = $2
                       AND "activeProfile"."user_id" = "activeSender"."id"
                       AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -501,7 +501,7 @@ describe('belongsTo', () => {
           `
             SELECT "p"."bio" "Bio", "activeUser"."name" "Name"
             FROM "profile" "p"
-            JOIN "user" AS "activeUser"
+            JOIN "user"  "activeUser"
               ON "activeUser"."active" = $1
              AND "activeUser"."id" = "p"."user_id"
              AND "activeUser"."user_key" = "p"."profile_key"
@@ -530,7 +530,7 @@ describe('belongsTo', () => {
           `
             SELECT "p"."bio" "Bio", "u"."name" "Name"
             FROM "profile" "p"
-            JOIN "user" AS "u"
+            JOIN "user"  "u"
               ON "u"."name" = $1
              AND "u"."age" = $2
              AND "u"."id" = "p"."user_id"
@@ -559,7 +559,7 @@ describe('belongsTo', () => {
           `
             SELECT "p"."bio" "Bio", "u"."name" "Name"
             FROM "profile" "p"
-            JOIN "user" AS "u"
+            JOIN "user"  "u"
               ON "u"."name" = $1
              AND "u"."active" = $2
              AND "u"."age" = $3

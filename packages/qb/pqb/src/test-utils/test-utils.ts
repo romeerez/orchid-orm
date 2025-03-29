@@ -124,12 +124,12 @@ export const Snake = testDb(
 );
 
 const snakeAllColumns = [
-  '"snake_id" AS "snakeId"',
-  '"snake_name" AS "snakeName"',
-  '"tail_length" AS "tailLength"',
-  '"snake_data" AS "snakeData"',
-  '"created_at" AS "createdAt"',
-  '"updated_at" AS "updatedAt"',
+  '"snake_id" "snakeId"',
+  '"snake_name" "snakeName"',
+  '"tail_length" "tailLength"',
+  '"snake_data" "snakeData"',
+  '"created_at" "createdAt"',
+  '"updated_at" "updatedAt"',
 ];
 export const snakeSelectAll = snakeAllColumns.join(', ');
 export const snakeSelectAllWithTable = snakeAllColumns

@@ -68,7 +68,7 @@ export const testJoin = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, pkey).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -84,7 +84,7 @@ export const testJoin = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, '=', pkey).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -108,7 +108,7 @@ export const testJoin = ({
         testDb.sql({ raw: `${asFkeySql}` }),
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -134,7 +134,7 @@ export const testJoin = ({
         '=',
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -150,7 +150,7 @@ export const testJoin = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), { [fkey]: pkey }).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -170,7 +170,7 @@ export const testJoin = ({
       joinTo[join](joinTarget.as('as'), {
         [fkey]: testDb.sql({ raw: `${pkeySql}` }),
       }).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`"${joinTable}" "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -192,7 +192,7 @@ export const testJoin = ({
         joinTarget.as('as'),
         testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
       ).toSQL(),
-      sql(`"${joinTable}" AS "as"`, `"${fkeySql}" = "${table}".${pkey}`),
+      sql(`"${joinTable}" "as"`, `"${fkeySql}" = "${table}".${pkey}`),
       values,
     );
 

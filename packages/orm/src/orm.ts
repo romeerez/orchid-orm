@@ -62,7 +62,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    * const value = 1;
    *
    * // it is safe to interpolate inside the backticks (``):
-   * const result = await db.$query<{ one: number }>`SELECT ${value} AS one`;
+   * const result = await db.$query<{ one: number }>`SELECT ${value}  one`;
    * // data is inside `rows` array:
    * result.rows[0].one;
    * ```

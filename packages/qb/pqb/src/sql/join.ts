@@ -60,7 +60,7 @@ export const processJoinItem = (
     const as = j.q.as as string;
     const joinAs = `"${as}"`;
     if (as !== tableName) {
-      target += ` AS ${joinAs}`;
+      target += ` ${joinAs}`;
     }
 
     if (r && s) {
@@ -207,7 +207,7 @@ const getArgQueryTarget = (
       quoteSchemaAndTable(joinQuery.schema, first.table as string);
     if (addAs) {
       joinAs = qAs;
-      target += ` AS ${qAs}`;
+      target += ` ${qAs}`;
     }
     return { target, joinAs };
   }

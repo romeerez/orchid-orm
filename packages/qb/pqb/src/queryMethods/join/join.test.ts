@@ -201,7 +201,7 @@ describe('join callback with query builder', () => {
       ).toSQL(),
       `
         SELECT ${userTableColumnsSql} FROM "user"
-        JOIN "user" AS "otherUser"
+        JOIN "user" "otherUser"
           ON jsonb_path_query_first("otherUser"."data", $1) = jsonb_path_query_first("user"."data", $2)
       `,
       ['$.name', '$.name'],
@@ -220,7 +220,7 @@ describe('join callback with query builder', () => {
       ).toSQL(),
       `
         SELECT ${snakeSelectAllWithTable} FROM "snake"
-        JOIN "snake" AS "otherSnake"
+        JOIN "snake" "otherSnake"
           ON jsonb_path_query_first("otherSnake"."snake_data", $1) = jsonb_path_query_first("snake"."snake_data", $2)
       `,
       ['$.name', '$.name'],

@@ -246,7 +246,7 @@ describe('hasOne', () => {
             WHERE
               EXISTS (
                 SELECT 1
-                FROM "post" AS "onePost"
+                FROM "post"  "onePost"
                 WHERE
                   EXISTS (
                     SELECT 1
@@ -282,7 +282,7 @@ describe('hasOne', () => {
             WHERE "activeOnePostTag"."active" = $1
               AND EXISTS (
                 SELECT 1
-                FROM "post" AS "activeOnePost"
+                FROM "post"  "activeOnePost"
                 WHERE "activeOnePost"."active" = $2
                   AND EXISTS (
                     SELECT 1
@@ -399,7 +399,7 @@ describe('hasOne', () => {
           expectSql(
             query.toSQL(),
             `
-              DELETE FROM "profile" AS "activeProfile"
+              DELETE FROM "profile"  "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND EXISTS (
                   SELECT 1 FROM "user"
@@ -486,7 +486,7 @@ describe('hasOne', () => {
           `
             SELECT ${userSelectAll} FROM "user" "u"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "activeProfile"
+              SELECT 1 FROM "profile"  "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "u"."id"
                 AND "activeProfile"."profile_key" = "u"."user_key"
@@ -503,7 +503,7 @@ describe('hasOne', () => {
           `
               SELECT ${userSelectAll} FROM "user" "u"
               WHERE EXISTS (
-                SELECT 1 FROM "profile" AS "activeProfile"
+                SELECT 1 FROM "profile"  "activeProfile"
                 WHERE "activeProfile"."active" = $1
                   AND "activeProfile"."bio" = $2
                   AND "activeProfile"."user_id" = "u"."id"
@@ -523,7 +523,7 @@ describe('hasOne', () => {
           `
             SELECT ${userSelectAll} FROM "user" "u"
             WHERE EXISTS (
-              SELECT 1 FROM "profile" AS "activeProfile"
+              SELECT 1 FROM "profile"  "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "u"."id"
                 AND "activeProfile"."profile_key" = "u"."user_key"
@@ -577,7 +577,7 @@ describe('hasOne', () => {
           `
             SELECT "u"."name" "Name", "activeProfile"."bio" "Bio"
             FROM "user" "u"
-            JOIN "profile" AS "activeProfile"
+            JOIN "profile"  "activeProfile"
               ON "activeProfile"."active" = $1
              AND "activeProfile"."user_id" = "u"."id"
              AND "activeProfile"."profile_key" = "u"."user_key"
@@ -606,7 +606,7 @@ describe('hasOne', () => {
           `
           SELECT "u"."name" "Name", "p"."bio" "Bio"
           FROM "user" "u"
-          JOIN "profile" AS "p"
+          JOIN "profile"  "p"
             ON "p"."bio" = $1
             AND "p"."user_id" = $2
             AND "p"."user_id" = "u"."id"
@@ -635,7 +635,7 @@ describe('hasOne', () => {
           `
             SELECT "u"."name" "Name", "p"."bio" "Bio"
             FROM "user" "u"
-            JOIN "profile" AS "p"
+            JOIN "profile"  "p"
               ON "p"."bio" = $1
              AND "p"."active" = $2
              AND "p"."user_id" = $3
@@ -781,7 +781,7 @@ describe('hasOne', () => {
                 FROM "postTag" "onePostTag"
                 WHERE EXISTS (
                   SELECT 1
-                  FROM "post" AS "onePost"
+                  FROM "post"  "onePost"
                   WHERE "onePost"."user_id" = "user"."id"
                     AND "onePost"."title" = "user"."user_key"
                     AND "onePost"."id" = "onePostTag"."post_id"
@@ -812,7 +812,7 @@ describe('hasOne', () => {
                 WHERE "activeOnePostTag"."active" = $1
                   AND EXISTS (
                     SELECT 1
-                    FROM "post" AS "activeOnePost"
+                    FROM "post"  "activeOnePost"
                     WHERE "activeOnePost"."active" = $2
                       AND "activeOnePost"."user_id" = "user"."id"
                       AND "activeOnePost"."title" = "user"."user_key"
@@ -2687,7 +2687,7 @@ describe('hasOne through', () => {
         `
           SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
-            SELECT 1 FROM "user" AS "sender"
+            SELECT 1 FROM "user"  "sender"
             WHERE "profile"."user_id" = "sender"."id"
               AND "profile"."profile_key" = "sender"."user_key"
               AND "sender"."id" = $1
@@ -2709,7 +2709,7 @@ describe('hasOne through', () => {
         `
           SELECT ${profileSelectAll} FROM "profile" "activeProfile"
           WHERE EXISTS (
-            SELECT 1 FROM "user" AS "activeSender"
+            SELECT 1 FROM "user"  "activeSender"
             WHERE "activeProfile"."active" = $1
               AND "activeProfile"."user_id" = "activeSender"."id"
               AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2738,7 +2738,7 @@ describe('hasOne through', () => {
               SELECT 1 FROM "message"
               WHERE "message"."text" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "sender"
+                  SELECT 1 FROM "user"  "sender"
                   WHERE "profile"."user_id" = "sender"."id"
                     AND "profile"."profile_key" = "sender"."user_key"
                     AND "sender"."id" = "message"."author_id"
@@ -2765,7 +2765,7 @@ describe('hasOne through', () => {
               SELECT 1 FROM "message"
               WHERE "message"."text" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeSender"
+                  SELECT 1 FROM "user"  "activeSender"
                   WHERE "activeProfile"."active" = $2
                     AND "activeProfile"."user_id" = "activeSender"."id"
                     AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2806,7 +2806,7 @@ describe('hasOne through', () => {
                   WHERE "message"."text" = $1
                     AND EXISTS (
                       SELECT 1
-                      FROM "user" AS "sender"
+                      FROM "user"  "sender"
                       WHERE "profile"."user_id" = "sender"."id"
                         AND "profile"."profile_key" = "sender"."user_key"
                         AND "sender"."id" = "message"."author_id"
@@ -2847,7 +2847,7 @@ describe('hasOne through', () => {
           WHERE
             EXISTS (
               SELECT 1
-              FROM "profile" AS "activeProfile"
+              FROM "profile"  "activeProfile"
               WHERE
                 EXISTS (
                   SELECT 1
@@ -2855,7 +2855,7 @@ describe('hasOne through', () => {
                   WHERE "message"."text" = $1
                     AND EXISTS (
                       SELECT 1
-                      FROM "user" AS "activeSender"
+                      FROM "user"  "activeSender"
                       WHERE "activeProfile"."active" = $2
                         AND "activeProfile"."user_id" = "activeSender"."id"
                         AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2867,7 +2867,7 @@ describe('hasOne through', () => {
                 AND "activeProfile"."bio" = $4
                 AND EXISTS (
                   SELECT 1
-                  FROM "user" AS "activeUser"
+                  FROM "user"  "activeUser"
                   WHERE "activeOnePost"."active" = $5
                     AND "activeOnePost"."user_id" = "activeUser"."id"
                     AND "activeOnePost"."title" = "activeUser"."user_key"
@@ -2902,7 +2902,7 @@ describe('hasOne through', () => {
               SELECT 1 FROM "message"
               WHERE "message"."text" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "sender"
+                  SELECT 1 FROM "user"  "sender"
                   WHERE "profile"."user_id" = "sender"."id"
                     AND "profile"."profile_key" = "sender"."user_key"
                     AND "sender"."id" = "message"."author_id"
@@ -2925,12 +2925,12 @@ describe('hasOne through', () => {
       expectSql(
         query.toSQL(),
         `
-          DELETE FROM "profile" AS "activeProfile"
+          DELETE FROM "profile"  "activeProfile"
           WHERE EXISTS (
               SELECT 1 FROM "message"
               WHERE "message"."text" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeSender"
+                  SELECT 1 FROM "user"  "activeSender"
                   WHERE "activeProfile"."active" = $2
                     AND "activeProfile"."user_id" = "activeSender"."id"
                     AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2957,7 +2957,7 @@ describe('hasOne through', () => {
       `
         SELECT ${profileSelectAll} FROM "profile" "p"
         WHERE EXISTS (
-          SELECT 1 FROM "user" AS "sender"
+          SELECT 1 FROM "user"  "sender"
           WHERE "p"."user_id" = "sender"."id"
             AND "p"."profile_key" = "sender"."user_key"
             AND "sender"."id" = "m"."author_id"
@@ -2976,7 +2976,7 @@ describe('hasOne through', () => {
           WHERE EXISTS (
             SELECT 1 FROM "profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "sender"
+              SELECT 1 FROM "user"  "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"
@@ -2997,7 +2997,7 @@ describe('hasOne through', () => {
             SELECT 1 FROM "profile"
             WHERE "profile"."bio" = $1
               AND EXISTS (
-                SELECT 1 FROM "user" AS "sender"
+                SELECT 1 FROM "user"  "sender"
                 WHERE "profile"."user_id" = "sender"."id"
                   AND "profile"."profile_key" = "sender"."user_key"
                   AND "sender"."id" = "m"."author_id"
@@ -3018,7 +3018,7 @@ describe('hasOne through', () => {
           WHERE EXISTS (
             SELECT 1 FROM "profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "sender"
+              SELECT 1 FROM "user"  "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -3037,9 +3037,9 @@ describe('hasOne through', () => {
         `
           SELECT ${messageSelectAll} FROM "message"
           WHERE EXISTS (
-            SELECT 1 FROM "profile" AS "activeProfile"
+            SELECT 1 FROM "profile"  "activeProfile"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "activeSender"
+              SELECT 1 FROM "user"  "activeSender"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3060,10 +3060,10 @@ describe('hasOne through', () => {
         `
           SELECT ${messageSelectAll} FROM "message" "m"
           WHERE EXISTS (
-            SELECT 1 FROM "profile" AS "activeProfile"
+            SELECT 1 FROM "profile"  "activeProfile"
             WHERE "activeProfile"."bio" = $1
               AND EXISTS (
-                SELECT 1 FROM "user" AS "activeSender"
+                SELECT 1 FROM "user"  "activeSender"
                 WHERE "activeProfile"."active" = $2
                   AND "activeProfile"."user_id" = "activeSender"."id"
                   AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3086,9 +3086,9 @@ describe('hasOne through', () => {
         `
           SELECT ${messageSelectAll} FROM "message" "m"
           WHERE EXISTS (
-            SELECT 1 FROM "profile" AS "activeProfile"
+            SELECT 1 FROM "profile"  "activeProfile"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "activeSender"
+              SELECT 1 FROM "user"  "activeSender"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3123,7 +3123,7 @@ describe('hasOne through', () => {
           FROM "message" "m"
           JOIN "profile"
             ON EXISTS (
-              SELECT 1 FROM "user" AS "sender"
+              SELECT 1 FROM "user"  "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -3151,9 +3151,9 @@ describe('hasOne through', () => {
         `
           SELECT "m"."text" "Text", "activeProfile"."bio" "Bio"
           FROM "message" "m"
-          JOIN "profile" AS "activeProfile"
+          JOIN "profile"  "activeProfile"
             ON EXISTS (
-              SELECT 1 FROM "user" AS "activeSender"
+              SELECT 1 FROM "user"  "activeSender"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3186,11 +3186,11 @@ describe('hasOne through', () => {
         `
           SELECT "m"."text" "Text", "p"."bio" "Bio"
           FROM "message" "m"
-          JOIN "profile" AS "p"
+          JOIN "profile"  "p"
             ON "p"."bio" = $1
            AND "p"."user_id" = $2
            AND EXISTS (
-              SELECT 1 FROM "user" AS "sender"
+              SELECT 1 FROM "user"  "sender"
               WHERE "p"."user_id" = "sender"."id"
                 AND "p"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -3220,11 +3220,11 @@ describe('hasOne through', () => {
         `
           SELECT "m"."text" "Text", "p"."bio" "Bio"
           FROM "message" "m"
-          JOIN "profile" AS "p"
+          JOIN "profile"  "p"
             ON "p"."bio" = $1
            AND "p"."user_id" = $2
            AND EXISTS (
-              SELECT 1 FROM "user" AS "activeSender"
+              SELECT 1 FROM "user"  "activeSender"
               WHERE "p"."active" = $3
                 AND "p"."user_id" = "activeSender"."id"
                 AND "p"."profile_key" = "activeSender"."user_key"
@@ -3256,7 +3256,7 @@ describe('hasOne through', () => {
             WHERE "p"."bio" = $1
               AND EXISTS (
               SELECT 1
-              FROM "user" AS "sender"
+              FROM "user"  "sender"
               WHERE "p"."user_id" = "sender"."id"
                 AND "p"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"
@@ -3288,7 +3288,7 @@ describe('hasOne through', () => {
             WHERE "p"."bio" = $1
               AND EXISTS (
               SELECT 1
-              FROM "user" AS "activeSender"
+              FROM "user"  "activeSender"
               WHERE "p"."active" = $2
                 AND "p"."user_id" = "activeSender"."id"
                 AND "p"."profile_key" = "activeSender"."user_key"
@@ -3323,7 +3323,7 @@ describe('hasOne through', () => {
             SELECT ${profileSelectAll} FROM "profile"
             WHERE "profile"."bio" = $1
               AND EXISTS (
-                SELECT 1 FROM "user" AS "sender"
+                SELECT 1 FROM "user"  "sender"
                 WHERE "profile"."user_id" = "sender"."id"
                   AND "profile"."profile_key" = "sender"."user_key"
                   AND "sender"."id" = "m"."author_id"
@@ -3353,7 +3353,7 @@ describe('hasOne through', () => {
             SELECT ${profileSelectAll} FROM "profile" "activeProfile"
             WHERE "activeProfile"."bio" = $1
               AND EXISTS (
-              SELECT 1 FROM "user" AS "activeSender"
+              SELECT 1 FROM "user"  "activeSender"
               WHERE "activeProfile"."active" = $2
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3387,7 +3387,7 @@ describe('hasOne through', () => {
               WHERE EXISTS (
                 SELECT 1 FROM "profile"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "sender"
+                  SELECT 1 FROM "user"  "sender"
                   WHERE "profile"."user_id" = "sender"."id"
                     AND "profile"."profile_key" = "sender"."user_key"
                     AND "sender"."id" = "message"."author_id"
@@ -3424,9 +3424,9 @@ describe('hasOne through', () => {
                    SELECT ${postSelectAll}
                    FROM "post" "activeOnePost"
                    WHERE EXISTS (
-                     SELECT 1 FROM "profile" AS "activeProfile"
+                     SELECT 1 FROM "profile"  "activeProfile"
                      WHERE EXISTS (
-                       SELECT 1 FROM "user" AS "activeSender"
+                       SELECT 1 FROM "user"  "activeSender"
                        WHERE "activeProfile"."active" = $1
                          AND "activeProfile"."user_id" = "activeSender"."id"
                          AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3434,7 +3434,7 @@ describe('hasOne through', () => {
                          AND "activeSender"."id" = "message"."author_id"
                          AND "activeSender"."user_key" = "message"."message_key"
                      ) AND EXISTS (
-                       SELECT 1 FROM "user" AS "activeUser"
+                       SELECT 1 FROM "user"  "activeUser"
                        WHERE "activeOnePost"."active" = $3
                          AND "activeOnePost"."user_id" = "activeUser"."id"
                          AND "activeOnePost"."title" = "activeUser"."user_key"
@@ -3471,7 +3471,7 @@ describe('hasOne through', () => {
             SELECT true r
             FROM "profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user" AS "sender"
+              SELECT 1 FROM "user"  "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -3500,9 +3500,9 @@ describe('hasOne through', () => {
               SELECT ${postSelectAll}
               FROM "post" "activeOnePost"
               WHERE EXISTS (
-                SELECT 1 FROM "profile" AS "activeProfile"
+                SELECT 1 FROM "profile"  "activeProfile"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "activeSender"
+                  SELECT 1 FROM "user"  "activeSender"
                   WHERE "activeProfile"."active" = $1
                     AND "activeProfile"."user_id" = "activeSender"."id"
                     AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3510,7 +3510,7 @@ describe('hasOne through', () => {
                     AND "activeSender"."id" = "message"."author_id"
                     AND "activeSender"."user_key" = "message"."message_key"
                 ) AND EXISTS (
-                  SELECT 1 FROM "user" AS "activeUser"
+                  SELECT 1 FROM "user"  "activeUser"
                   WHERE "activeOnePost"."active" = $3
                     AND "activeOnePost"."user_id" = "activeUser"."id"
                     AND "activeOnePost"."title" = "activeUser"."user_key"
@@ -3557,7 +3557,7 @@ describe('hasOne through', () => {
                   FROM "profile" "profile2"
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "user" AS "sender"
+                    FROM "user"  "sender"
                     WHERE "profile2"."user_id" = "sender"."id"
                       AND "profile2"."profile_key" = "sender"."user_key"
                       AND "sender"."id" = "messages"."author_id"
@@ -3577,7 +3577,7 @@ describe('hasOne through', () => {
             ) "messages" ON true
             WHERE EXISTS (
               SELECT 1
-              FROM "user" AS "sender"
+              FROM "user"  "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"
@@ -3620,7 +3620,7 @@ describe('hasOne through', () => {
                   FROM "profile" "activeProfile2"
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "user" AS "activeSender"
+                    FROM "user"  "activeSender"
                     WHERE "activeProfile2"."active" = $1
                       AND "activeProfile2"."user_id" = "activeSender"."id"
                       AND "activeProfile2"."profile_key" = "activeSender"."user_key"
@@ -3642,7 +3642,7 @@ describe('hasOne through', () => {
             ) "messages" ON true
             WHERE EXISTS (
               SELECT 1
-              FROM "user" AS "activeSender"
+              FROM "user"  "activeSender"
               WHERE "activeProfile"."active" = $4
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3750,7 +3750,7 @@ describe('hasOne through', () => {
           WHERE "profile"."bio" IN ($2, $3)
             AND EXISTS (
               SELECT 1
-              FROM "user" AS "sender"
+              FROM "user"  "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"
