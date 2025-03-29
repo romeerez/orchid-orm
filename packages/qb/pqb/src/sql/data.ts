@@ -32,7 +32,6 @@ import {
   QueryReturnType,
   RecordString,
   RecordUnknown,
-  Sql,
 } from 'orchid-core';
 import { RelationQueryBase } from '../relations';
 
