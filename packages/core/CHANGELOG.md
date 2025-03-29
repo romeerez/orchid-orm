@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.23.1
+
+### Patch Changes
+
+- 4d508f1: Fix codegen for db extensions: quote extension names when needed (#478)
+
 ## 0.23.0
 
 ### Minor Changes

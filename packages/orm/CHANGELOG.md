@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.44.3
+
+### Patch Changes
+
+- 4aa3040: Fix codegen for index names (#477)
+- 4d508f1: Fix codegen for db extensions: quote extension names when needed (#478)
+- Updated dependencies [4aa3040]
+- Updated dependencies [ff3929c]
+- Updated dependencies [4d508f1]
+  - rake-db@2.23.43
+  - pqb@0.47.5
+  - orchid-core@0.23.1
+
 ## 1.44.2
 
 ### Patch Changes

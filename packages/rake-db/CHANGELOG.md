@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.23.43
+
+### Patch Changes
+
+- 4aa3040: Fix codegen for index names (#477)
+- ff3929c: Fix handling of `expression` option on a column index (#476)
+- Updated dependencies [4aa3040]
+- Updated dependencies [ff3929c]
+- Updated dependencies [4d508f1]
+  - pqb@0.47.5
+  - orchid-core@0.23.1
+
 ## 2.23.42
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # pqb
 
+## 0.47.5
+
+### Patch Changes
+
+- 4aa3040: Fix codegen for index names (#477)
+- ff3929c: Fix handling of `expression` option on a column index (#476)
+- Updated dependencies [4d508f1]
+  - orchid-core@0.23.1
+
 ## 0.47.4
 
 ### Patch Changes
