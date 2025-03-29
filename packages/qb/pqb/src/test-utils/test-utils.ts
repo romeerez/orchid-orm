@@ -152,6 +152,7 @@ export const Tag = testDb('tag', (t) => ({
 
 export const Product = testDb('product', (t) => ({
   id: t.identity().primaryKey(),
+  camelCase: t.text(),
   priceAmount: t.decimal(),
 }));
 

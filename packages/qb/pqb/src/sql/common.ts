@@ -225,6 +225,9 @@ export const tableColumnToSqlWithAs = (
 
   const col =
     quoted === quotedAs ? data.shape[key] : data.joinedShapes?.[tableName][key];
+
+  if (jsonList) jsonList[as] = col;
+
   if (col) {
     if (col.data.name && col.data.name !== key) {
       return `"${tableName}"."${col.data.name}" "${as}"`;
@@ -240,8 +243,6 @@ export const tableColumnToSqlWithAs = (
       )} "${as}"`;
     }
   }
-
-  if (jsonList) jsonList[as] = col;
 
   return `"${tableName}"."${key}"${key === as ? '' : ` "${as}"`}`;
 };
@@ -262,6 +263,9 @@ export const ownColumnToSqlWithAs = (
   }
 
   const col = data.shape[column];
+
+  if (jsonList) jsonList[as] = col;
+
   if (col) {
     if (col.data.name && col.data.name !== column) {
       return `${quotedAs ? `${quotedAs}.` : ''}"${col.data.name}"${
@@ -279,8 +283,6 @@ export const ownColumnToSqlWithAs = (
       )} "${as}"`;
     }
   }
-
-  if (jsonList) jsonList[as] = col;
 
   return `${quotedAs ? `${quotedAs}.` : ''}"${column}"${
     column === as ? '' : ` "${as}"`

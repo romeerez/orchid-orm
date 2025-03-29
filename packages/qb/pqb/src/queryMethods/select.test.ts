@@ -1061,8 +1061,8 @@ describe('select', () => {
         expectSql(
           q.toSQL(),
           `SELECT (
-            SELECT json_build_object('id', t."id", 'priceAmount', t."priceAmount"::text)
-            FROM (SELECT "id", "price_amount" AS "priceAmount" FROM "product" LIMIT 1) "t"
+            SELECT json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)
+            FROM (SELECT "id", "camel_case" AS "camelCase", "price_amount" AS "priceAmount" FROM "product" LIMIT 1) "t"
           ) "product" FROM "user" LIMIT 1`,
         );
       });
@@ -1075,8 +1075,22 @@ describe('select', () => {
         expectSql(
           q.toSQL(),
           `SELECT (
-            SELECT COALESCE(json_agg(json_build_object('id', t."id", 'priceAmount', t."priceAmount"::text)), '[]')
-            FROM (SELECT "id", "price_amount" AS "priceAmount" FROM "product") "t"
+            SELECT COALESCE(json_agg(json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)), '[]')
+            FROM (SELECT "id", "camel_case" AS "camelCase", "price_amount" AS "priceAmount" FROM "product") "t"
+          ) "products" FROM "user" LIMIT 1`,
+        );
+      });
+
+      it('should cast decimal to text for sub-selected records when selecting various columns', () => {
+        const q = User.select({
+          products: () => Product.select('id', 'camelCase', 'priceAmount'),
+        }).take();
+
+        expectSql(
+          q.toSQL(),
+          `SELECT (
+            SELECT COALESCE(json_agg(json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)), '[]')
+            FROM (SELECT "product"."id", "product"."camel_case" "camelCase", "product"."price_amount" "priceAmount" FROM "product") "t"
           ) "products" FROM "user" LIMIT 1`,
         );
       });
