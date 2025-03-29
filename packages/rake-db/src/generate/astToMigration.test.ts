@@ -301,8 +301,7 @@ change(async (db) => {
       match: 'FULL',
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
-    }).unique({
-      name: 'indexName',
+    }).unique('indexName', {
       nullsNotDistinct: true,
     }).exclude('=', {
       order: 'ASC',

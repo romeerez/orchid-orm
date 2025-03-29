@@ -478,13 +478,17 @@ export const columnIndexesToCode = (
 ): Codes => {
   const code: Codes = [];
   for (const { options, name } of items) {
-    addCode(code, `.${options.unique ? 'unique' : 'index'}(`);
+    addCode(
+      code,
+      `.${options.unique ? 'unique' : 'index'}(${
+        name ? `${singleQuote(name)}` : ''
+      }`,
+    );
 
     const arr = [
       options.collate && `collate: ${singleQuote(options.collate)},`,
       options.opclass && `opclass: ${singleQuote(options.opclass)},`,
       options.order && `order: ${singleQuote(options.order)},`,
-      name && `name: ${singleQuote(name)},`,
       options.using && `using: ${singleQuote(options.using)},`,
       options.include &&
         `include: ${
@@ -499,7 +503,7 @@ export const columnIndexesToCode = (
     ].filter((x): x is string => !!x);
 
     if (arr.length) {
-      addCode(code, '{');
+      addCode(code, name ? `, {` : '{');
       addCode(code, arr);
       addCode(code, '}');
     }

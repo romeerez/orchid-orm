@@ -614,12 +614,11 @@ describe('column type', () => {
           })
           .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
-        't.column().index({',
+        "t.column().index('name', {",
         [
           `collate: 'collate',`,
           `opclass: 'opclass',`,
           `order: 'order',`,
-          `name: 'name',`,
           `using: 'using',`,
           `include: 'include',`,
           `with: 'with',`,
@@ -653,12 +652,11 @@ describe('column type', () => {
           })
           .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
-        't.column().unique({',
+        "t.column().unique('name', {",
         [
           `collate: 'collate',`,
           `opclass: 'opclass',`,
           `order: 'order',`,
-          `name: 'name',`,
           `using: 'using',`,
           `include: 'include',`,
           `with: 'with',`,
