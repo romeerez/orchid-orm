@@ -172,13 +172,18 @@ export const processComputedBatches = (
 ) => {
   let promises: Promise<void>[] | undefined;
 
-  for (const key in query.selectedComputeds) {
-    const computed = query.selectedComputeds[key];
+  const plainValue =
+    originalReturnType === 'value' || originalReturnType === 'valueOrThrow';
+
+  for (const computedKey in query.selectedComputeds) {
+    const setAsKey = plainValue ? key : computedKey;
+
+    const computed = query.selectedComputeds[computedKey];
     if (computed.kind === 'one') {
       for (const { data } of batches) {
         for (const record of data) {
           if (record) {
-            record[key] = computed.fn(record);
+            record[setAsKey] = computed.fn(record);
           }
         }
       }
@@ -202,11 +207,11 @@ export const processComputedBatches = (
 
         const res = computed.fn(present);
         if (Array.isArray(res)) {
-          saveBatchComputed(key, data, res, blanks);
+          saveBatchComputed(setAsKey, data, res, blanks);
         } else {
           (promises ??= []).push(
             (res as Promise<unknown[]>).then((res) =>
-              saveBatchComputed(key, data, res, blanks),
+              saveBatchComputed(setAsKey, data, res, blanks),
             ),
           );
         }
