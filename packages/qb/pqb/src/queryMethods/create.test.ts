@@ -1698,7 +1698,7 @@ describe('create functions', () => {
             INSERT INTO "user"("name")
             VALUES ($1)
             ON CONFLICT ("name")
-            DO NOTHING
+            DO UPDATE SET "name" = excluded."name"
           `,
           ['name'],
         );

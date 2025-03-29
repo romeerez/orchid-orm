@@ -315,7 +315,9 @@ const mergeColumnsSql = (
     ? `DO UPDATE SET ${notExcluded
         .map((column) => `${column} = excluded.${column}`)
         .join(', ')}`
-    : 'DO NOTHING';
+    : // update whatever is the first column because DO NOTHING prevents RETURNING,
+      // and we might want to return data from the insert
+      `DO UPDATE SET ${quotedColumns[0]} = excluded.${quotedColumns[0]}`;
 };
 
 const encodeRow = (
