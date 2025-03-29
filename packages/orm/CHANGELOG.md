@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.44.1
+
+### Patch Changes
+
+- ce0cfb0: Fix using `get` for a computed column on a relation inside `select` callback (#474)
+- Updated dependencies [01cdcd5]
+- Updated dependencies [ce0cfb0]
+  - pqb@0.47.3
+  - rake-db@2.23.41
+
 ## 1.44.0
 
 ### Minor Changes

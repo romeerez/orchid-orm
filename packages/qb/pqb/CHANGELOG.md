@@ -1,5 +1,12 @@
 # pqb
 
+## 0.47.3
+
+### Patch Changes
+
+- 01cdcd5: Fix onConflict().merge returning, it could return nothing even though it was expected to return (#471)
+- ce0cfb0: Fix using `get` for a computed column on a relation inside `select` callback (#474)
+
 ## 0.47.2
 
 ### Patch Changes
