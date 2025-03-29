@@ -397,9 +397,9 @@ const indexesOrExcludesToAst = <T>(
       acc.push({
         columns: item.columns.map((it, i) => ({
           with: 'exclude' in item && item.exclude ? item.exclude[i] : undefined,
-          ...('column' in it
-            ? { column: toCamelCase(it.column) }
-            : { expression: it.expression }),
+          ...('expression' in it
+            ? { expression: it.expression }
+            : { column: toCamelCase(it.column) }),
           collate: it.collate,
           opclass: it.opclass,
           order: it.order,

@@ -483,6 +483,7 @@ describe('changeTable', () => {
                   with: 'fillfactor = 70',
                   tablespace: 'tablespace',
                   where: 'column = 123',
+                  expression: 'index expression',
                 }),
               ),
             })),
@@ -493,7 +494,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "indexName"
                   ON "table"
-                  USING gin ("with_index" COLLATE "schema"."collation" opclass ASC)
+                  USING gin ((index expression) COLLATE "schema"."collation" opclass ASC)
                   INCLUDE ("i_d")
                   NULLS NOT DISTINCT
                   WITH (fillfactor = 70)
@@ -1913,6 +1914,7 @@ describe('changeTable', () => {
                   tablespace: 'tablespace',
                   where: 'where',
                   dropMode: 'CASCADE',
+                  expression: 'index expression',
                 }),
               ),
             })),
@@ -1922,7 +1924,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "table_add_index_with_options_idx"
                   ON "table"
-                  USING using ("add_index_with_options" COLLATE "schema"."collation" opclass order)
+                  USING using ((index expression) COLLATE "schema"."collation" opclass order)
                   INCLUDE ("a_a", "b_b")
                   NULLS NOT DISTINCT
                   WITH (with)
@@ -1955,6 +1957,7 @@ describe('changeTable', () => {
                   tablespace: 'tablespace',
                   where: 'where',
                   dropMode: 'CASCADE',
+                  expression: 'index expression',
                 }),
                 t.integer(),
               ),
@@ -1970,7 +1973,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "table_remove_index_with_options_idx"
                   ON "table"
-                  USING using ("remove_index_with_options" COLLATE "schema"."collation" opclass order)
+                  USING using ((index expression) COLLATE "schema"."collation" opclass order)
                   INCLUDE ("a_a", "b_b")
                   NULLS NOT DISTINCT
                   WITH (with)
@@ -2009,6 +2012,7 @@ describe('changeTable', () => {
                   tablespace: 'to',
                   where: 'to',
                   dropMode: 'RESTRICT',
+                  expression: 'index expression',
                 }),
               ),
             })),
@@ -2018,7 +2022,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "to"
                   ON "table"
-                  USING to ("change_index" COLLATE "schema"."to" to to)
+                  USING to ((index expression) COLLATE "schema"."to" to to)
                   INCLUDE ("c_c", "d_d")
                   NULLS NOT DISTINCT
                   WITH (to)

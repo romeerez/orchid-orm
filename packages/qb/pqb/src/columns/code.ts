@@ -171,7 +171,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
     const objects: Codes = [];
 
     for (const column of index.columns) {
-      const expr = 'column' in column ? column.column : column.expression;
+      const expr = 'expression' in column ? column.expression : column.column;
 
       let hasOptions = false;
       for (const key in column) {
@@ -184,7 +184,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
         objects.push(`${singleQuote(expr)},`);
       } else {
         const props: Codes = [
-          `${'column' in column ? 'column' : 'expression'}: ${singleQuote(
+          `${'expression' in column ? 'expression' : 'column'}: ${singleQuote(
             expr,
           )},`,
         ];
@@ -283,10 +283,12 @@ export const excludeInnerToCode = (
   const objects: Codes = [];
 
   for (const column of item.columns) {
-    const expr = 'column' in column ? column.column : column.expression;
+    const expr = 'expression' in column ? column.expression : column.column;
 
     const props: Codes = [
-      `${'column' in column ? 'column' : 'expression'}: ${singleQuote(expr)},`,
+      `${'expression' in column ? 'expression' : 'column'}: ${singleQuote(
+        expr,
+      )},`,
     ];
     for (const key of columnOptions) {
       const value = column[key];

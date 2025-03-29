@@ -396,6 +396,7 @@ describe('create and drop table', () => {
               with: 'fillfactor = 70',
               tablespace: 'tablespace',
               where: 'column = 123',
+              expression: 'index expression',
             }),
             uniqueColumn: t.text().unique({ nullsNotDistinct: true }),
           })),
@@ -412,7 +413,7 @@ describe('create and drop table', () => {
               CREATE UNIQUE INDEX "indexName"
                 ON "table"
                 USING gin
-                ("with_index" COLLATE "schema"."collation" opclass ASC)
+                ((index expression) COLLATE "schema"."collation" opclass ASC)
                 INCLUDE ("i_d")
                 NULLS NOT DISTINCT
                 WITH (fillfactor = 70)

@@ -422,7 +422,9 @@ export const indexesToQuery = (
 
     const columnsSql = columns.map((column) => {
       let sql = [
-        'column' in column ? `"${column.column}"` : `(${column.expression})`,
+        'expression' in column
+          ? `(${column.expression})`
+          : `"${column.column}"`,
         column.collate && `COLLATE ${quoteNameFromString(column.collate)}`,
         column.opclass,
         column.order,
@@ -515,7 +517,9 @@ export const excludesToQuery = (
     const columnList = columns
       .map((column) =>
         [
-          'column' in column ? `"${column.column}"` : `(${column.expression})`,
+          'expression' in column
+            ? `(${column.expression})`
+            : `"${column.column}"`,
           column.collate && `COLLATE ${quoteNameFromString(column.collate)}`,
           column.opclass,
           column.order,

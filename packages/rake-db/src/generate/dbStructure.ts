@@ -636,6 +636,7 @@ export async function introspectDbSchema(
   const result = data.rows[0];
 
   for (const domain of result.domains) {
+    domain.checks = domain.checks?.filter((check) => check);
     nullsToUndefined(domain);
   }
 
