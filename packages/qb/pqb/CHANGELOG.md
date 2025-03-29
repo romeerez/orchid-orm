@@ -1,5 +1,11 @@
 # pqb
 
+## 0.48.1
+
+### Patch Changes
+
+- 2598f25: Publish a minor fix
+
 ## 0.48.0
 
 ### Minor Changes
