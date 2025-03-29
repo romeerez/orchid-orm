@@ -397,6 +397,16 @@ describe('relations', () => {
     );
   });
 
+  it('should not fail because of unexpected caching bug', async () => {
+    const q = db.user.select({
+      profile: (q) => q.profile.where({ Bio: 'bio' }),
+      messages: (q) => q.messages,
+    });
+
+    await q.count();
+    await q;
+  });
+
   describe('sub-select `none` queries', () => {
     it('should handle empty, undefined, null results', async () => {
       await db.user.create({ ...userData, posts: { create: [postData] } });

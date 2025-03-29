@@ -8,7 +8,7 @@ import {
   tableColumnToSqlWithAs,
 } from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
-import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
+import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { CommonQueryData, QueryData, SelectQueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
 import {
@@ -404,7 +404,7 @@ const pushSubQuerySql = (
     `${coalesce(
       ctx,
       query,
-      `(${getSqlText(makeSQL(query, ctx))})`,
+      `(${getSqlText(toSQL(query, ctx))})`,
       quotedAs,
     )} "${as}"`,
   );

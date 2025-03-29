@@ -1,6 +1,6 @@
 import { columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
-import { makeSQL, ToSQLCtx } from './toSQL';
+import { toSQL, ToSQLCtx } from './toSQL';
 import { QueryData, QueryDataFromItem, SelectQueryData } from './data';
 import {
   addValue,
@@ -100,11 +100,11 @@ const fromToSql = (
       only = (from.q as SelectQueryData).only;
 
       if (!from.table) {
-        sql = `(${getSqlText(makeSQL(from, ctx))})`;
+        sql = `(${getSqlText(toSQL(from, ctx))})`;
       }
       // if query contains more than just schema return (SELECT ...)
       else if (!checkIfASimpleQuery(from)) {
-        sql = `(${getSqlText(makeSQL(from, ctx))})`;
+        sql = `(${getSqlText(toSQL(from, ctx))})`;
       } else {
         sql = quoteSchemaAndTable(from.q.schema, from.table);
       }

@@ -478,8 +478,6 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
           ...obj,
         })),
       );
-
-      delete t.q.sqlCache;
     }
 
     if (params.add) {
@@ -533,8 +531,6 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
           ? params.set.length
           : objectHasValues(params.set))
       ) {
-        delete t.q.sqlCache;
-
         const obj: RecordUnknown = {};
         for (let i = 0; i < len; i++) {
           obj[foreignKeys[i]] = data[0][primaryKeys[i]];
@@ -554,8 +550,6 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
     }
 
     if (params.delete || params.update) {
-      delete t.q.sqlCache;
-
       const q = getWhereForNestedUpdate(
         t,
         data,

@@ -225,11 +225,7 @@ const subJoinToSql = (
     jq.q.select = [new RawSQL(`${innerAs}.*`)];
   }
 
-  return `(${getSqlText(
-    jq.toSQL({
-      values: ctx.values,
-    }),
-  )}) ${outerAs || innerAs}`;
+  return `(${getSqlText(jq.toSQL(ctx))}) ${outerAs || innerAs}`;
 };
 
 const processArgs = (
@@ -374,7 +370,6 @@ const skipQueryKeysForSubQuery: RecordBoolean = {
   joinedShapes: true,
   returnsOne: true,
   aliases: true,
-  sqlCache: true,
   defaults: true,
   transform: true,
 };

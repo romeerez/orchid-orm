@@ -871,7 +871,6 @@ const nestedUpdate = (state: State) => {
     if (params.set) {
       const j = queryJoinTable(state, data);
       await _queryDelete(j);
-      delete j.q.sqlCache;
 
       if (
         Array.isArray(params.set)

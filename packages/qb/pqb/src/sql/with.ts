@@ -1,4 +1,4 @@
-import { makeSQL, ToSQLCtx } from './toSQL';
+import { toSQL, ToSQLCtx } from './toSQL';
 import { WithItem, WithOptions } from './types';
 import { emptyObject, Expression } from 'orchid-core';
 import { getSqlText } from './utils';
@@ -12,7 +12,7 @@ export const pushWithSql = (ctx: ToSQLCtx, items: WithItem[]) => {
       .map((item) => {
         let inner: string;
         if (item.q) {
-          inner = getSqlText(makeSQL(item.q, ctx));
+          inner = getSqlText(toSQL(item.q, ctx));
         } else {
           inner = (item.s as Expression).toSQL(ctx, `"${item.n}"`);
         }

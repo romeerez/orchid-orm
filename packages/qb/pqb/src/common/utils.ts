@@ -35,7 +35,7 @@ export type ExpressionOutput<
   : never;
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
-  return { ...query, sqlCache: undefined };
+  return { ...query };
 };
 
 export const getQueryAs = (q: { table?: string; q: { as?: string } }) => {

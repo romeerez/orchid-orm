@@ -1,7 +1,7 @@
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query/query';
 import { selectToSql } from './select';
-import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
+import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { InsertQueryData, QueryData } from './data';
 import {
   addValue,
@@ -272,7 +272,7 @@ export const makeInsertSql = (
       );
     }
 
-    ctx.sql[1] = getSqlText(makeSQL(q, { values: ctx.values }));
+    ctx.sql[1] = getSqlText(toSQL(q, { values: ctx.values }));
   }
 
   return {

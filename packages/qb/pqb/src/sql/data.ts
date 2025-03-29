@@ -178,8 +178,6 @@ export interface CommonQueryData {
   logger: QueryLogger;
   // convert query into prepared statement automatically as an optimization
   autoPreparedStatements?: boolean;
-  // cache `toSQL` output
-  sqlCache?: Sql;
   // functions to transform query result after loading data
   transform?: QueryDataTransform[];
   // default language for the full text search

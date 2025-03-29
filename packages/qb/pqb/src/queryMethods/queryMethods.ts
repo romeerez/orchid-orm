@@ -486,7 +486,6 @@ export class QueryMethods<ColumnTypes> {
    *
    * ```ts
    * type ToSqlOptions = {
-   *   clearCache?: true;
    *   values?: [];
    * };
    * ```

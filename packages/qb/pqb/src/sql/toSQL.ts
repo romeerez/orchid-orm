@@ -31,7 +31,6 @@ export interface ToSQLCtx {
 }
 
 export interface ToSQLOptions {
-  clearCache?: boolean;
   values?: unknown[];
 }
 
@@ -55,24 +54,7 @@ export interface ToSQLQuery {
   shape: Query['shape'];
 }
 
-export const toSQL = (table: ToSQLQuery, options?: ToSQLOptions): Sql => {
-  if (table.q.sqlCache && !options?.clearCache) {
-    const cached = table.q.sqlCache;
-    if (
-      options?.values &&
-      'values' in cached &&
-      cached.values &&
-      options.values !== cached.values
-    ) {
-      options.values.push(...cached.values);
-    }
-    return cached;
-  }
-
-  return (table.q.sqlCache = makeSQL(table, options));
-};
-
-export const makeSQL = (
+export const toSQL = (
   table: ToSQLQuery,
   options?: ToSqlOptionsInternal,
 ): Sql => {
@@ -136,13 +118,13 @@ export const makeSQL = (
   const quotedAs = (query.as || table.table) && `"${query.as || table.table}"`;
 
   if (query.union) {
-    const s = getSqlText(makeSQL(query.union.b, { values }));
+    const s = getSqlText(toSQL(query.union.b, { values }));
     sql.push(query.union.p ? s : `(${s})`);
 
     for (const u of query.union.u) {
       const s = isExpression(u.a)
         ? u.a.toSQL(ctx, quotedAs)
-        : getSqlText(makeSQL(u.a, { values }));
+        : getSqlText(toSQL(u.a, { values }));
       sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
     }
   } else {

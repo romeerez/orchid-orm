@@ -15,7 +15,7 @@ import {
 } from './common';
 import { getQueryAs, joinSubQuery } from '../common/utils';
 import { processJoinItem } from './join';
-import { makeSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
+import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
   CommonQueryData,
   PickQueryDataShapeAndJoinedShapes,
@@ -157,7 +157,7 @@ const processWhere = (
       } else {
         const q = joinSubQuery(table, query);
         q.q.select = [query.q.expr];
-        ands.push(`(${getSqlText(makeSQL(q as Query, ctx))})`);
+        ands.push(`(${getSqlText(toSQL(q as Query, ctx))})`);
       }
     } else {
       pushWhereToSql(
@@ -417,7 +417,7 @@ const pushIn = (
   } else if (isExpression(arg.values)) {
     value = arg.values.toSQL(ctx, quotedAs);
   } else {
-    value = `(${getSqlText(makeSQL(arg.values as never, ctx))})`;
+    value = `(${getSqlText(toSQL(arg.values as never, ctx))})`;
   }
 
   const columnsSql = arg.columns

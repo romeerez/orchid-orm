@@ -132,7 +132,7 @@ const quoteValue = (
     }
 
     if ('toSQL' in arg) {
-      return `(${getSqlText((arg as Query).toSQL({ values: ctx.values }))})`;
+      return `(${getSqlText((arg as Query).toSQL(ctx))})`;
     }
   }
 
@@ -156,7 +156,7 @@ const quoteLikeValue = (
 
     if ('toSQL' in arg) {
       return `replace(replace((${getSqlText(
-        (arg as Query).toSQL({ values: ctx.values }),
+        (arg as Query).toSQL(ctx),
       )}), '%', '\\\\%'), '_', '\\\\_')`;
     }
   }
@@ -542,9 +542,7 @@ const quoteJsonValue = (
     }
 
     if ('toSQL' in arg) {
-      return `to_jsonb((${getSqlText(
-        (arg as Query).toSQL({ values: ctx.values }),
-      )}))`;
+      return `to_jsonb((${getSqlText((arg as Query).toSQL(ctx))}))`;
     }
   }
 
