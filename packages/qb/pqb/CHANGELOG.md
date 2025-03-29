@@ -1,5 +1,11 @@
 # pqb
 
+## 0.48.0
+
+### Minor Changes
+
+- e88a883: Remove SQL queries caching to avoid cache-related bugs (#479)
+
 ## 0.47.5
 
 ### Patch Changes

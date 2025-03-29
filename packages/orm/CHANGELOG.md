@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.45.0
+
+### Minor Changes
+
+- e88a883: Remove SQL queries caching to avoid cache-related bugs (#479)
+
+### Patch Changes
+
+- Updated dependencies [e88a883]
+  - pqb@0.48.0
+  - rake-db@2.23.44
+
 ## 1.44.3
 
 ### Patch Changes
