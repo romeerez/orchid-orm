@@ -604,4 +604,18 @@ describe('relations', () => {
       ]);
     });
   });
+
+  describe('map', () => {
+    it('should not be called for a non-found relation', async () => {
+      await db.post.create({ ...postData, user: { create: userData } });
+
+      const res = await db.post.select({
+        userName: (q) => q.user.where({ Id: 0 }).map((s) => s.Name),
+      });
+
+      assertType<typeof res, { userName: string | undefined }[]>();
+
+      expect(res).toEqual([{ userName: undefined }]);
+    });
+  });
 });

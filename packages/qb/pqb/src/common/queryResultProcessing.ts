@@ -8,12 +8,10 @@ export const applyBatchTransforms = (
 ) => {
   if (q.transform) {
     for (const item of batches) {
-      item.parent[item.key] = applyTransforms(
-        q,
-        q.returnType,
-        q.transform,
-        item.data,
-      );
+      item.parent[item.key] =
+        item.data === null
+          ? undefined
+          : applyTransforms(q, q.returnType, q.transform, item.data);
     }
   }
 };
