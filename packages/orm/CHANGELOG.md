@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.45.3
+
+### Patch Changes
+
+- 5ad0d69: Support using CTEs on relations inside select (#482)
+- 9721b81: Fix handling self-referencing foreign keys in the migration codegen (#482)
+- Updated dependencies [5ad0d69]
+- Updated dependencies [9721b81]
+  - pqb@0.48.3
+  - rake-db@2.23.47
+
 ## 1.45.2
 
 ### Patch Changes

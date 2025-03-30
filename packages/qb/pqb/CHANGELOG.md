@@ -1,5 +1,11 @@
 # pqb
 
+## 0.48.3
+
+### Patch Changes
+
+- 5ad0d69: Support using CTEs on relations inside select (#482)
+
 ## 0.48.2
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.23.47
+
+### Patch Changes
+
+- 9721b81: Fix handling self-referencing foreign keys in the migration codegen (#482)
+- Updated dependencies [5ad0d69]
+  - pqb@0.48.3
+
 ## 2.23.46
 
 ### Patch Changes
