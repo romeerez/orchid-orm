@@ -72,6 +72,47 @@ change(async (db) => {
   ${green('+ add foreign key')} on (someId) to some(iD)`);
   });
 
+  it('should create a self-referencing column foreign key', async () => {
+    class Table extends BaseTable {
+      table = 'table';
+      // @ts-expect-error what can I do
+      columns = this.setColumns((t) => ({
+        iD: t.integer().primaryKey(),
+        someId: t.integer().foreignKey(() => Table, 'iD'),
+      }));
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', (t) => ({
+          iD: t.integer().primaryKey(),
+          someId: t.integer(),
+        }));
+      },
+      tables: [Table],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.foreignKey(
+        ['someId'],
+        'table',
+        ['iD'],
+      ),
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add foreign key')} on (someId) to table(iD)`);
+  });
+
   it('should drop a column foreign key', async () => {
     await arrange({
       async prepareDb(db) {
@@ -299,6 +340,54 @@ change(async (db) => {
 
     assert.report(`${yellow('~ change table')} table:
   ${green('+ add foreign key')} on (aA, bB) to some(fA, fB)`);
+  });
+
+  it('should create a composite self-referencing foreign key', async () => {
+    class Table extends BaseTable {
+      table = 'table';
+      // @ts-expect-error what can I do
+      columns = this.setColumns(
+        (t) => ({
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
+          aA: t.text(),
+          bB: t.text(),
+        }),
+        (t) => t.foreignKey(['aA', 'bB'], () => Table, ['fA', 'fB']),
+      );
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', (t) => ({
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
+          aA: t.text(),
+          bB: t.text(),
+        }));
+      },
+      tables: [Table],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.foreignKey(
+        ['aA', 'bB'],
+        'table',
+        ['fA', 'fB'],
+      ),
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add foreign key')} on (aA, bB) to table(fA, fB)`);
   });
 
   it('should drop a composite foreign key', async () => {
@@ -537,6 +626,42 @@ change(async (db) => {
     );
   });
 
+  it('should add a self-referencing foreign key together with a column', async () => {
+    class Table extends BaseTable {
+      table = 'table';
+      // @ts-expect-error what can I do
+      columns = this.setColumns((t) => ({
+        iD: t.integer().primaryKey(),
+        someId: t.integer().foreignKey(() => Table, 'iD'),
+      }));
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', (t) => ({
+          iD: t.integer().primaryKey(),
+        }));
+      },
+      tables: [Table],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    someId: t.add(t.integer().foreignKey('table', 'iD')),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${green('+ add column')} someId integer references table(iD)`,
+    );
+  });
+
   it('should be dropped together with a column', async () => {
     await arrange({
       async prepareDb(db) {
@@ -603,6 +728,45 @@ change(async (db) => {
   ${yellow('~ change column')} someId:
     ${yellow('from')}: t.integer().nullable()
       ${yellow('to')}: t.integer().foreignKey('some', 'iD')`,
+    );
+  });
+
+  it('should add a self-referencing foreign key in a column change', async () => {
+    class Table extends BaseTable {
+      table = 'table';
+      // @ts-expect-error what can I do
+      columns = this.setColumns((t) => ({
+        iD: t.integer().primaryKey(),
+        someId: t.integer().foreignKey(() => Table, 'iD'),
+      }));
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer().primaryKey(),
+          someId: t.integer().nullable(),
+        }));
+      },
+      tables: [Table],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    someId: t.change(t.integer().nullable(), t.integer().foreignKey('table', 'iD')),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${yellow('~ change column')} someId:
+    ${yellow('from')}: t.integer().nullable()
+      ${yellow('to')}: t.integer().foreignKey('table', 'iD')`,
     );
   });
 
@@ -916,6 +1080,38 @@ change(async (db) => {
       `${green(
         '+ create table',
       )} reallyLongTableNameConsistingOfSeveralWords (2 columns, 1 foreign key, no primary key)`,
+    );
+  });
+
+  // https://github.com/romeerez/orchid-orm/issues/482
+  it('should create a table with a self-referencing column foreign key', async () => {
+    class Table extends BaseTable {
+      table = 'table';
+      // @ts-expect-error what can I do
+      columns = this.setColumns((t) => ({
+        iD: t.integer().primaryKey(),
+        someId: t.integer().foreignKey(() => Table, 'iD'),
+      }));
+    }
+
+    await arrange({
+      tables: [Table],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    iD: t.integer().primaryKey(),
+    someId: t.integer().foreignKey('table', 'iD'),
+  }));
+});
+`);
+
+    assert.report(
+      `${green('+ create table')} table (2 columns, 1 foreign key)`,
     );
   });
 });

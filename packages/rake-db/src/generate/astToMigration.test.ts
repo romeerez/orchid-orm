@@ -862,6 +862,51 @@ change(async (db) => {
   );`),
       );
     });
+
+    it('should create a table with a self-referencing foreign key', () => {
+      const result = act([
+        {
+          ...table,
+          shape: {
+            id: t.uuid().primaryKey(),
+            selfId: t
+              .integer()
+              .foreignKey(`${table.schema}.${table.name}`, 'id'),
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(`  await db.createTable('schema.table', (t) => ({
+    id: t.uuid().primaryKey(),
+    selfId: t.integer().foreignKey('schema.table', 'id'),
+  }));`),
+      );
+    });
+
+    it('should drop a table with a self-referencing foreign key', () => {
+      const result = act([
+        {
+          ...table,
+          action: 'drop',
+          shape: {
+            id: t.uuid().primaryKey(),
+            selfId: t
+              .integer()
+              .foreignKey(`${table.schema}.${table.name}`, 'id'),
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(`  await db.dropTable('schema.table', (t) => ({
+    id: t.uuid().primaryKey(),
+    selfId: t.integer().foreignKey('schema.table', 'id'),
+  }));`),
+      );
+    });
   });
 
   describe('check', () => {

@@ -278,7 +278,10 @@ const analyzeTableColumns = (
         );
 
         const [s = currentSchema, t] = getForeignKeyTable(fkey.fnOrTable);
-        deps.push(`${s}.${t}`);
+        const foreignTable = `${s}.${t}`;
+        if (foreignTable !== table) {
+          deps.push(foreignTable);
+        }
       }
     }
   }
