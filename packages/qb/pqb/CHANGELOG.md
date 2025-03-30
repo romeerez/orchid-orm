@@ -1,5 +1,11 @@
 # pqb
 
+## 0.48.4
+
+### Patch Changes
+
+- 7aae879: Fix pluck of selected relation that has softDelete (#483)
+
 ## 0.48.3
 
 ### Patch Changes

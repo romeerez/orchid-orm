@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.23.48
+
+### Patch Changes
+
+- 7aae879: Fix pluck of selected relation that has softDelete (#483)
+- Updated dependencies [7aae879]
+  - pqb@0.48.4
+
 ## 2.23.47
 
 ### Patch Changes

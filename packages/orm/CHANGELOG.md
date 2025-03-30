@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.45.4
+
+### Patch Changes
+
+- 28d6e25: Fix codegen for foreign key on a column with a custom name (#485)
+- 7aae879: Fix pluck of selected relation that has softDelete (#483)
+- Updated dependencies [7aae879]
+  - rake-db@2.23.48
+  - pqb@0.48.4
+
 ## 1.45.3
 
 ### Patch Changes
