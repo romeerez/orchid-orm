@@ -266,6 +266,7 @@ export class ChatTable extends BaseTable {
 export type Message = DefaultSelect<MessageTable>;
 export class MessageTable extends BaseTable {
   readonly table = 'message';
+
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     MessageKey: t.name('message_key').text(),
@@ -280,8 +281,11 @@ export class MessageTable extends BaseTable {
       .foreignKey(() => UserTable, 'Id'),
     Text: t.name('text').text(),
     Active: t.name('active').boolean().nullable(),
+    DeletedAt: t.name('deleted_at').timestamp().nullable(),
     ...t.timestamps(),
   }));
+
+  readonly softDelete = 'DeletedAt';
 
   relations = {
     sender: this.belongsTo(() => UserTable, {

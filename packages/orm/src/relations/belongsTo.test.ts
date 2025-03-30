@@ -413,7 +413,7 @@ describe('belongsTo', () => {
             .toSQL(),
           `
               SELECT ${messageSelectAll} FROM "message" "m"
-              WHERE EXISTS (
+              WHERE (EXISTS (
                 SELECT 1 FROM "user"  "activeSender"
                 WHERE "activeSender"."active" = $1
                   AND EXISTS (
@@ -424,7 +424,8 @@ describe('belongsTo', () => {
                   )
                   AND "activeSender"."id" = "m"."author_id"
                   AND "activeSender"."user_key" = "m"."message_key"
-              )
+              ))
+                AND ("m"."deleted_at" IS NULL)
             `,
           [true, 'bio'],
         );
@@ -440,7 +441,7 @@ describe('belongsTo', () => {
             .toSQL(),
           `
               SELECT ${messageSelectAll} FROM "message" "m"
-              WHERE EXISTS (
+              WHERE (EXISTS (
                 SELECT 1 FROM "user"  "activeSender"
                 WHERE "activeSender"."active" = $1
                   AND "activeSender"."id" = "m"."author_id"
@@ -452,7 +453,8 @@ describe('belongsTo', () => {
                       AND "activeProfile"."profile_key" = "activeSender"."user_key"
                       AND "activeProfile"."bio" = $3
                   )
-              )
+              ))
+                AND ("m"."deleted_at" IS NULL)
             `,
           [true, true, 'bio'],
         );

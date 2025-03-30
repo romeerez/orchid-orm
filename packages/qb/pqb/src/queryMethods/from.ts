@@ -163,7 +163,7 @@ export function queryFrom<
   }
 
   data.from = arg as Query;
-  data.selectAllColumns = data.selectAllKeys = undefined;
+  data.selectAllColumns = data.selectAllKeys = data.scopes = undefined;
 
   return self as never;
 }

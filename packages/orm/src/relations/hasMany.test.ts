@@ -114,8 +114,9 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "messages"
-          WHERE "messages"."author_id" = $1
-            AND "messages"."message_key" = $2
+          WHERE ("messages"."author_id" = $1
+            AND "messages"."message_key" = $2)
+            AND ("messages"."deleted_at" IS NULL)
         `,
         [userId, 'key'],
       );
@@ -141,9 +142,10 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "activeMessages"
-          WHERE "activeMessages"."active" = $1
+          WHERE ("activeMessages"."active" = $1
             AND "activeMessages"."author_id" = $2
-            AND "activeMessages"."message_key" = $3
+            AND "activeMessages"."message_key" = $3)
+            AND ("activeMessages"."deleted_at" IS NULL)
         `,
         [true, userId, 'key'],
       );
@@ -199,14 +201,15 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "messages"
-          WHERE
+          WHERE (
             EXISTS (
               SELECT 1 FROM "user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "messages"."author_id"
                 AND "user"."user_key" = "messages"."message_key"
             )
-            AND "messages"."text" = $2
+            AND "messages"."text" = $2)
+            AND ("messages"."deleted_at" IS NULL)
         `,
         ['name', 'text'],
       );
@@ -222,14 +225,15 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "activeMessages"
-          WHERE "activeMessages"."active" = $1
+          WHERE ("activeMessages"."active" = $1
             AND EXISTS (
               SELECT 1 FROM "user"
               WHERE "user"."name" = $2
                 AND "user"."id" = "activeMessages"."author_id"
                 AND "user"."user_key" = "activeMessages"."message_key"
             )
-            AND "activeMessages"."text" = $3
+            AND "activeMessages"."text" = $3)
+            AND ("activeMessages"."deleted_at" IS NULL)
         `,
         [true, 'name', 'text'],
       );
@@ -377,7 +381,7 @@ describe('hasMany', () => {
         .where({ Title: 'title' })
         .chain('messages')
         .where({ Text: 'text' })
-        .delete();
+        .hardDelete();
 
       expectSql(
         query.toSQL(),
@@ -402,12 +406,14 @@ describe('hasMany', () => {
         SELECT ${userSelectAll} FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "message"  "messages"
-          WHERE "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+          WHERE ("messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
         )
       `,
       );
 
+      // TODO: redundant deleted at scope
       expectSql(
         db.user
           .as('u')
@@ -417,9 +423,11 @@ describe('hasMany', () => {
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
             SELECT 1 FROM "message"  "messages"
-            WHERE "messages"."text" = $1
+            WHERE ("messages"."deleted_at" IS NULL)
+              AND ("messages"."text" = $1
               AND "messages"."author_id" = "u"."id"
-              AND "messages"."message_key" = "u"."user_key"
+              AND "messages"."message_key" = "u"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
           )
         `,
         ['text'],
@@ -434,9 +442,10 @@ describe('hasMany', () => {
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
             SELECT 1 FROM "message"  "messages"
-            WHERE "messages"."author_id" = "u"."id"
+            WHERE ("messages"."author_id" = "u"."id"
               AND "messages"."message_key" = "u"."user_key"
-              AND "messages"."text" = $1
+              AND "messages"."text" = $1)
+              AND ("messages"."deleted_at" IS NULL)
           )
         `,
         ['text'],
@@ -450,14 +459,16 @@ describe('hasMany', () => {
           SELECT ${userSelectAll} FROM "user"
           WHERE EXISTS (
             SELECT 1 FROM "message"  "activeMessages"
-            WHERE "activeMessages"."active" = $1
+            WHERE ("activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "user"."id"
-              AND "activeMessages"."message_key" = "user"."user_key"
+              AND "activeMessages"."message_key" = "user"."user_key")
+              AND ("activeMessages"."deleted_at" IS NULL)
           )
         `,
         [true],
       );
 
+      // TODO: redundant deleted at scope
       expectSql(
         db.user
           .as('u')
@@ -466,11 +477,13 @@ describe('hasMany', () => {
         `
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "message"  "activeMessages"
-            WHERE "activeMessages"."active" = $1
+            SELECT 1 FROM "message" "activeMessages"
+            WHERE ("activeMessages"."deleted_at" IS NULL)
+              AND ("activeMessages"."active" = $1
               AND "activeMessages"."text" = $2
               AND "activeMessages"."author_id" = "u"."id"
-              AND "activeMessages"."message_key" = "u"."user_key"
+              AND "activeMessages"."message_key" = "u"."user_key")
+              AND ("activeMessages"."deleted_at" IS NULL)
           )
         `,
         [true, 'text'],
@@ -487,10 +500,11 @@ describe('hasMany', () => {
           SELECT ${userSelectAll} FROM "user" "u"
           WHERE EXISTS (
             SELECT 1 FROM "message"  "activeMessages"
-            WHERE "activeMessages"."active" = $1
+            WHERE ("activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "u"."id"
               AND "activeMessages"."message_key" = "u"."user_key"
-              AND "activeMessages"."text" = $2
+              AND "activeMessages"."text" = $2)
+              AND ("activeMessages"."deleted_at" IS NULL)
           )
         `,
         [true, 'text'],
@@ -511,8 +525,9 @@ describe('hasMany', () => {
           WHERE (
             SELECT true
             FROM "message" "messages"
-            WHERE "messages"."author_id" = "user"."id"
-              AND "messages"."message_key" = "user"."user_key"
+            WHERE ("messages"."author_id" = "user"."id"
+              AND "messages"."message_key" = "user"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
             LIMIT 1
           )
         `,
@@ -530,9 +545,10 @@ describe('hasMany', () => {
           WHERE (
             SELECT true
             FROM "message" "activeMessages"
-            WHERE "activeMessages"."active" = $1
+            WHERE ("activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "user"."id"
-              AND "activeMessages"."message_key" = "user"."user_key"
+              AND "activeMessages"."message_key" = "user"."user_key")
+              AND ("activeMessages"."deleted_at" IS NULL)
             LIMIT 1
           )
         `,
@@ -551,8 +567,9 @@ describe('hasMany', () => {
       ).toSQL(),
       `
         SELECT ${messageSelectAll} FROM "message" "m"
-        WHERE "m"."author_id" = "u"."id"
-          AND "m"."message_key" = "u"."user_key"
+        WHERE ("m"."author_id" = "u"."id"
+          AND "m"."message_key" = "u"."user_key")
+          AND ("m"."deleted_at" IS NULL)
       `,
     );
   });
@@ -572,9 +589,10 @@ describe('hasMany', () => {
         SELECT "u"."name" "Name", "messages"."text" "Text"
         FROM "user" "u"
         JOIN "message"  "messages"
-          ON "messages"."author_id" = "u"."id"
+          ON ("messages"."author_id" = "u"."id"
          AND "messages"."message_key" = "u"."user_key"
-         AND "messages"."text" = $1
+         AND "messages"."text" = $1)
+         AND ("messages"."deleted_at" IS NULL)
       `,
         ['text'],
       );
@@ -594,10 +612,11 @@ describe('hasMany', () => {
           SELECT "u"."name" "Name", "activeMessages"."text" "Text"
           FROM "user" "u"
           JOIN "message"  "activeMessages"
-            ON "activeMessages"."active" = $1
+            ON ("activeMessages"."active" = $1
            AND "activeMessages"."author_id" = "u"."id"
            AND "activeMessages"."message_key" = "u"."user_key"
-           AND "activeMessages"."text" = $2
+           AND "activeMessages"."text" = $2)
+           AND ("activeMessages"."deleted_at" IS NULL)
         `,
         [true, 'text'],
       );
@@ -614,17 +633,20 @@ describe('hasMany', () => {
 
       assertType<Awaited<typeof query>, { Name: string; Text: string }[]>();
 
+      // TODO: redundant deleted at scope
       expectSql(
         query.toSQL(),
         `
-        SELECT "u"."name" "Name", "m"."text" "Text"
-        FROM "user" "u"
-        JOIN "message"  "m"
-          ON "m"."text" = $1
-         AND "m"."chat_id" = $2
-         AND "m"."author_id" = "u"."id"
-         AND "m"."message_key" = "u"."user_key"
-      `,
+          SELECT "u"."name" "Name", "m"."text" "Text"
+          FROM "user" "u"
+          JOIN "message"  "m"
+            ON ("m"."text" = $1)
+           AND ("m"."deleted_at" IS NULL)
+           AND ("m"."chat_id" = $2
+           AND "m"."author_id" = "u"."id"
+           AND "m"."message_key" = "u"."user_key")
+           AND ("m"."deleted_at" IS NULL)
+        `,
         ['text', 123],
       );
     });
@@ -640,17 +662,20 @@ describe('hasMany', () => {
 
       assertType<Awaited<typeof query>, { Name: string; Text: string }[]>();
 
+      // TODO: redundant deleted at scope
       expectSql(
         query.toSQL(),
         `
           SELECT "u"."name" "Name", "m"."text" "Text"
           FROM "user" "u"
           JOIN "message"  "m"
-            ON "m"."text" = $1
-           AND "m"."active" = $2
+            ON ("m"."text" = $1)
+           AND ("m"."deleted_at" IS NULL)
+           AND ("m"."active" = $2
            AND "m"."chat_id" = $3
            AND "m"."author_id" = "u"."id"
-           AND "m"."message_key" = "u"."user_key"
+           AND "m"."message_key" = "u"."user_key")
+           AND ("m"."deleted_at" IS NULL)
         `,
         ['text', true, 123],
       );
@@ -672,9 +697,10 @@ describe('hasMany', () => {
           JOIN LATERAL (
             SELECT ${messageSelectAll}
             FROM "message" "m"
-            WHERE "m"."text" = $1
+            WHERE ("m"."text" = $1
               AND "m"."author_id" = "user"."id"
-              AND "m"."message_key" = "user"."user_key"
+              AND "m"."message_key" = "user"."user_key")
+              AND ("m"."deleted_at" IS NULL)
           ) "m" ON true
           WHERE "m"."Text" = $2
         `,
@@ -698,10 +724,11 @@ describe('hasMany', () => {
           JOIN LATERAL (
             SELECT ${messageSelectAll}
             FROM "message" "m"
-            WHERE "m"."active" = $1
+            WHERE ("m"."active" = $1
               AND "m"."text" = $2
               AND "m"."author_id" = "user"."id"
-              AND "m"."message_key" = "user"."user_key"
+              AND "m"."message_key" = "user"."user_key")
+              AND ("m"."deleted_at" IS NULL)
           ) "m" ON true
           WHERE "m"."Text" = $3
         `,
@@ -733,6 +760,7 @@ describe('hasMany', () => {
               Id: messageId,
               AuthorId,
               ChatId,
+              DeletedAt: null,
               Active: null,
               ...messageData,
               createdAt: expect.any(Date),
@@ -759,9 +787,10 @@ describe('hasMany', () => {
             FROM (
               SELECT ${messageSelectAll}
               FROM "message" "messages"
-              WHERE "messages"."text" = $1
+              WHERE ("messages"."text" = $1
                 AND "messages"."author_id" = "u"."id"
-                AND "messages"."message_key" = "u"."user_key"
+                AND "messages"."message_key" = "u"."user_key")
+                AND ("messages"."deleted_at" IS NULL)
             ) "t"
           ) "messages" ON true
         `,
@@ -791,6 +820,7 @@ describe('hasMany', () => {
               Id: messageId,
               AuthorId,
               ChatId,
+              DeletedAt: null,
               ...activeMessageData,
               createdAt: expect.any(Date),
               updatedAt: expect.any(Date),
@@ -816,10 +846,11 @@ describe('hasMany', () => {
             FROM (
               SELECT ${messageSelectAll}
               FROM "message" "activeMessages"
-              WHERE "activeMessages"."active" = $1
+              WHERE ("activeMessages"."active" = $1
                 AND "activeMessages"."text" = $2
                 AND "activeMessages"."author_id" = "u"."id"
-                AND "activeMessages"."message_key" = "u"."user_key"
+                AND "activeMessages"."message_key" = "u"."user_key")
+                AND ("activeMessages"."deleted_at" IS NULL)
             ) "t"
           ) "messages" ON true
         `,
@@ -910,8 +941,9 @@ describe('hasMany', () => {
           LEFT JOIN LATERAL (
             SELECT count(*) r
             FROM "message" "messages"
-            WHERE "messages"."author_id" = "u"."id"
-              AND "messages"."message_key" = "u"."user_key"
+            WHERE ("messages"."author_id" = "u"."id"
+              AND "messages"."message_key" = "u"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
           ) "messagesCount" ON true
         `,
       );
@@ -937,9 +969,10 @@ describe('hasMany', () => {
           LEFT JOIN LATERAL (
             SELECT count(*) r
             FROM "message" "activeMessages"
-            WHERE "activeMessages"."active" = $1
+            WHERE ("activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "u"."id"
-              AND "activeMessages"."message_key" = "u"."user_key"
+              AND "activeMessages"."message_key" = "u"."user_key")
+              AND ("activeMessages"."deleted_at" IS NULL)
           ) "messagesCount" ON true
         `,
         [true],
@@ -965,8 +998,9 @@ describe('hasMany', () => {
             FROM (
               SELECT "messages"."text" "Text"
               FROM "message" "messages"
-              WHERE "messages"."author_id" = "u"."id"
-                AND "messages"."message_key" = "u"."user_key"
+              WHERE ("messages"."author_id" = "u"."id"
+                AND "messages"."message_key" = "u"."user_key")
+                AND ("messages"."deleted_at" IS NULL)
             ) "t"
           ) "texts" ON true
         `,
@@ -992,9 +1026,10 @@ describe('hasMany', () => {
             FROM (
               SELECT "activeMessages"."text" "Text"
               FROM "message" "activeMessages"
-              WHERE "activeMessages"."active" = $1
+              WHERE ("activeMessages"."active" = $1
                 AND "activeMessages"."author_id" = "u"."id"
-                AND "activeMessages"."message_key" = "u"."user_key"
+                AND "activeMessages"."message_key" = "u"."user_key")
+                AND ("activeMessages"."deleted_at" IS NULL)
             ) "t"
           ) "texts" ON true
         `,
@@ -1022,8 +1057,9 @@ describe('hasMany', () => {
           LEFT JOIN LATERAL (
             SELECT true r
             FROM "message" "messages"
-            WHERE "messages"."author_id" = "u"."id"
-              AND "messages"."message_key" = "u"."user_key"
+            WHERE ("messages"."author_id" = "u"."id"
+              AND "messages"."message_key" = "u"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
             LIMIT 1
           ) "hasMessages" ON true
         `,
@@ -1050,9 +1086,10 @@ describe('hasMany', () => {
           LEFT JOIN LATERAL (
             SELECT true r
             FROM "message" "activeMessages"
-            WHERE "activeMessages"."active" = $1
+            WHERE ("activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "u"."id"
-              AND "activeMessages"."message_key" = "u"."user_key"
+              AND "activeMessages"."message_key" = "u"."user_key")
+              AND ("activeMessages"."deleted_at" IS NULL)
             LIMIT 1
           ) "hasMessages" ON true
         `,
@@ -1089,15 +1126,17 @@ describe('hasMany', () => {
                   FROM (
                     SELECT ${messageSelectAll}
                     FROM "message" "messages2"
-                    WHERE "messages2"."author_id" = "sender2"."id"
-                      AND "messages2"."message_key" = "sender2"."user_key"
+                    WHERE ("messages2"."author_id" = "sender2"."id"
+                      AND "messages2"."message_key" = "sender2"."user_key")
+                      AND ("messages2"."deleted_at" IS NULL)
                   ) "t"
                 ) "messages2" ON true
                 WHERE "sender2"."id" = "messages"."author_id"
                   AND "sender2"."user_key" = "messages"."message_key"
               ) "sender2" ON true
-              WHERE "messages"."author_id" = "sender"."id"
-                AND "messages"."message_key" = "sender"."user_key"
+              WHERE ("messages"."author_id" = "sender"."id"
+                AND "messages"."message_key" = "sender"."user_key")
+                AND ("messages"."deleted_at" IS NULL)
             ) "t"
           ) "messages" ON true
         `,
@@ -1133,18 +1172,20 @@ describe('hasMany', () => {
                   FROM (
                     SELECT ${messageSelectAll}
                     FROM "message" "activeMessages2"
-                    WHERE "activeMessages2"."active" = $1
+                    WHERE ("activeMessages2"."active" = $1
                       AND "activeMessages2"."author_id" = "activeSender2"."id"
-                      AND "activeMessages2"."message_key" = "activeSender2"."user_key"
+                      AND "activeMessages2"."message_key" = "activeSender2"."user_key")
+                      AND ("activeMessages2"."deleted_at" IS NULL)
                   ) "t"
                 ) "activeMessages2" ON true
                 WHERE "activeSender2"."active" = $2
                   AND "activeSender2"."id" = "activeMessages"."author_id"
                   AND "activeSender2"."user_key" = "activeMessages"."message_key"
               ) "activeSender2" ON true
-              WHERE "activeMessages"."active" = $3
+              WHERE ("activeMessages"."active" = $3
                 AND "activeMessages"."author_id" = "activeSender"."id"
-                AND "activeMessages"."message_key" = "activeSender"."user_key"
+                AND "activeMessages"."message_key" = "activeSender"."user_key")
+                AND ("activeMessages"."deleted_at" IS NULL)
             ) "t"
           ) "activeMessages" ON true
         `,
@@ -3230,9 +3271,10 @@ describe('hasMany', () => {
           SELECT ${userSelectAll} FROM "user" WHERE (
             SELECT count(*) = $1
             FROM "message" "messages"
-            WHERE "messages"."text" IN ($2, $3)
+            WHERE ("messages"."text" IN ($2, $3)
               AND "messages"."author_id" = "user"."id"
-              AND "messages"."message_key" = "user"."user_key"
+              AND "messages"."message_key" = "user"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
           )
         `,
       [10, 'a', 'b'],
@@ -3250,10 +3292,11 @@ describe('hasMany', () => {
           SELECT ${userSelectAll} FROM "user" WHERE (
             SELECT count(*) = $1
             FROM "message" "activeMessages"
-            WHERE "activeMessages"."active" = $2
+            WHERE ("activeMessages"."active" = $2
               AND "activeMessages"."text" IN ($3, $4)
               AND "activeMessages"."author_id" = "user"."id"
-              AND "activeMessages"."message_key" = "user"."user_key"
+              AND "activeMessages"."message_key" = "user"."user_key")
+              AND ("activeMessages"."deleted_at" IS NULL)
           )
         `,
       [10, true, 'a', 'b'],
@@ -3564,7 +3607,7 @@ describe('hasMany through', () => {
                   EXISTS (
                     SELECT 1
                     FROM "message"
-                    WHERE "message"."text" = $1
+                    WHERE ("message"."text" = $1
                       AND EXISTS (
                         SELECT 1
                         FROM "user"  "sender"
@@ -3572,7 +3615,8 @@ describe('hasMany through', () => {
                           AND "profiles"."profile_key" = "sender"."user_key"
                           AND "sender"."id" = "message"."author_id"
                           AND "sender"."user_key" = "message"."message_key"
-                      )
+                      ))
+                      AND ("message"."deleted_at" IS NULL)
                   )
                   AND "profiles"."bio" = $2
                   AND EXISTS (
@@ -3613,7 +3657,7 @@ describe('hasMany through', () => {
                   EXISTS (
                     SELECT 1
                     FROM "message"
-                    WHERE "message"."text" = $1
+                    WHERE ("message"."text" = $1
                       AND EXISTS (
                         SELECT 1
                         FROM "user"  "activeSender"
@@ -3622,8 +3666,9 @@ describe('hasMany through', () => {
                           AND "activeProfiles"."profile_key" = "activeSender"."user_key"
                           AND "activeSender"."active" = $3
                           AND "activeSender"."id" = "message"."author_id"
-                          AND "activeSender"."user_key" = "message"."message_key"
+                          AND "activeSender"."user_key" = "message"."message_key")
                       )
+                        AND ("message"."deleted_at" IS NULL)
                   )
                   AND "activeProfiles"."bio" = $4
                   AND EXISTS (
@@ -5459,6 +5504,7 @@ describe('hasMany through', () => {
                 )
               ) "t"
             ) "items" ON true
+            WHERE ("message"."deleted_at" IS NULL)
           `,
         );
       });
@@ -5502,6 +5548,7 @@ describe('hasMany through', () => {
                 )
               ) "t"
             ) "items" ON true
+            WHERE ("message"."deleted_at" IS NULL)
           `,
           [true, true, true, true],
         );

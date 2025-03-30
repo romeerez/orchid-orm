@@ -184,8 +184,8 @@ describe('orm', () => {
         LEFT JOIN LATERAL (
           SELECT count(*) r
           FROM "message" "messages"
-          WHERE "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
         ) "messagesCount" ON true
       ) "user"
       WHERE "user"."messagesCount" >= $1`,

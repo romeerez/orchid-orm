@@ -48,9 +48,8 @@ describe('relations', () => {
           SELECT json_agg(row_to_json(t.*)) r
           FROM (
             SELECT ${messageSelectAll} FROM "message" "messages"
-            WHERE "messages"."text" = $2
-              AND "messages"."author_id" = "user"."id"
-              AND "messages"."message_key" = "user"."user_key"
+            WHERE ("messages"."text" = $2 AND "messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
           ) "t"
         ) "messages" ON true
       `,
@@ -78,15 +77,45 @@ describe('relations', () => {
 
     const ids = await db.message.pluck('Id').createMany([data, data]);
 
-    const query = db.user
+    const q = db.user
       .select({
         ids: (q) => q.messages.pluck('Id'),
         dates: (q) => q.messages.pluck('createdAt'),
       })
       .take();
 
-    const result = await query;
-    expect(result).toEqual({
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT
+          COALESCE("ids".r, '[]') "ids",
+          COALESCE("dates".r, '[]') "dates"
+        FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT json_agg("t"."Id") r
+          FROM (
+            SELECT "messages"."id" "Id"
+            FROM "message" "messages"
+            WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
+          ) "t"
+        ) "ids" ON true
+        LEFT JOIN LATERAL (
+          SELECT json_agg("t"."createdAt") r
+          FROM (
+            SELECT "messages"."created_at" "createdAt"
+            FROM "message" "messages"
+            WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
+          ) "t"
+        ) "dates" ON true
+        LIMIT 1
+      `,
+    );
+
+    const res = await q;
+
+    expect(res).toEqual({
       ids,
       dates: [expect.any(Date), expect.any(Date)],
     });
@@ -152,6 +181,7 @@ describe('relations', () => {
           WHERE "sender"."id" = "message"."author_id"
             AND "sender"."user_key" = "message"."message_key"
         ) "chatUser" ON true
+        WHERE ("message"."deleted_at" IS NULL)
       `,
       ['bio'],
     );
@@ -206,8 +236,8 @@ describe('relations', () => {
         LEFT JOIN LATERAL (
           SELECT count(*) r
           FROM "message" "messages"
-          WHERE "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
         ) "messagesCount" ON true
         ORDER BY "messagesCount".r DESC
       `,
@@ -324,8 +354,8 @@ describe('relations', () => {
         JOIN LATERAL (
           SELECT "message".*
           FROM "message" "messages"
-          WHERE "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
           LIMIT $1
         ) "messages" ON true
         WHERE "messages"."text" = $2
@@ -348,8 +378,8 @@ describe('relations', () => {
         JOIN LATERAL (
           SELECT "messages"."text" "Text"
           FROM "message" "messages"
-          WHERE "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
         ) "messages" ON true
         WHERE "messages"."Text" = $1
       `,

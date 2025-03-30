@@ -2736,14 +2736,15 @@ describe('hasOne through', () => {
           SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
               SELECT 1 FROM "message"
-              WHERE "message"."text" = $1
+              WHERE ("message"."text" = $1
                 AND EXISTS (
                   SELECT 1 FROM "user"  "sender"
                   WHERE "profile"."user_id" = "sender"."id"
                     AND "profile"."profile_key" = "sender"."user_key"
                     AND "sender"."id" = "message"."author_id"
                     AND "sender"."user_key" = "message"."message_key"
-                )
+                ))
+                AND ("message"."deleted_at" IS NULL)
             )
             AND "profile"."bio" = $2
         `,
@@ -2763,7 +2764,7 @@ describe('hasOne through', () => {
           SELECT ${profileSelectAll} FROM "profile" "activeProfile"
           WHERE EXISTS (
               SELECT 1 FROM "message"
-              WHERE "message"."text" = $1
+              WHERE ("message"."text" = $1
                 AND EXISTS (
                   SELECT 1 FROM "user"  "activeSender"
                   WHERE "activeProfile"."active" = $2
@@ -2772,7 +2773,8 @@ describe('hasOne through', () => {
                     AND "activeSender"."active" = $3
                     AND "activeSender"."id" = "message"."author_id"
                     AND "activeSender"."user_key" = "message"."message_key"
-                )
+                ))
+                AND ("message"."deleted_at" IS NULL)
             )
             AND "activeProfile"."bio" = $4
         `,
@@ -2803,7 +2805,7 @@ describe('hasOne through', () => {
                 EXISTS (
                   SELECT 1
                   FROM "message"
-                  WHERE "message"."text" = $1
+                  WHERE ("message"."text" = $1
                     AND EXISTS (
                       SELECT 1
                       FROM "user"  "sender"
@@ -2811,7 +2813,8 @@ describe('hasOne through', () => {
                         AND "profile"."profile_key" = "sender"."user_key"
                         AND "sender"."id" = "message"."author_id"
                         AND "sender"."user_key" = "message"."message_key"
-                    )
+                    ))
+                    AND ("message"."deleted_at" IS NULL)
                 )
                 AND "profile"."bio" = $2
                 AND EXISTS (
@@ -2852,7 +2855,7 @@ describe('hasOne through', () => {
                 EXISTS (
                   SELECT 1
                   FROM "message"
-                  WHERE "message"."text" = $1
+                  WHERE ("message"."text" = $1
                     AND EXISTS (
                       SELECT 1
                       FROM "user"  "activeSender"
@@ -2862,7 +2865,8 @@ describe('hasOne through', () => {
                         AND "activeSender"."active" = $3
                         AND "activeSender"."id" = "message"."author_id"
                         AND "activeSender"."user_key" = "message"."message_key"
-                    )
+                    ))
+                    AND ("message"."deleted_at" IS NULL)
                 )
                 AND "activeProfile"."bio" = $4
                 AND EXISTS (
@@ -2900,14 +2904,15 @@ describe('hasOne through', () => {
           DELETE FROM "profile"
           WHERE EXISTS (
               SELECT 1 FROM "message"
-              WHERE "message"."text" = $1
+              WHERE ("message"."text" = $1
                 AND EXISTS (
                   SELECT 1 FROM "user"  "sender"
                   WHERE "profile"."user_id" = "sender"."id"
                     AND "profile"."profile_key" = "sender"."user_key"
                     AND "sender"."id" = "message"."author_id"
                     AND "sender"."user_key" = "message"."message_key"
-                )
+                ))
+                AND ("message"."deleted_at" IS NULL)
             )
             AND "profile"."bio" = $2
         `,
@@ -2928,7 +2933,7 @@ describe('hasOne through', () => {
           DELETE FROM "profile"  "activeProfile"
           WHERE EXISTS (
               SELECT 1 FROM "message"
-              WHERE "message"."text" = $1
+              WHERE ("message"."text" = $1
                 AND EXISTS (
                   SELECT 1 FROM "user"  "activeSender"
                   WHERE "activeProfile"."active" = $2
@@ -2937,7 +2942,8 @@ describe('hasOne through', () => {
                     AND "activeSender"."active" = $3
                     AND "activeSender"."id" = "message"."author_id"
                     AND "activeSender"."user_key" = "message"."message_key"
-                )
+                ))
+                AND ("message"."deleted_at" IS NULL)
             )
             AND "activeProfile"."bio" = $4
         `,
@@ -2973,7 +2979,7 @@ describe('hasOne through', () => {
         db.message.whereExists('profile').toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message"
-          WHERE EXISTS (
+          WHERE (EXISTS (
             SELECT 1 FROM "profile"
             WHERE EXISTS (
               SELECT 1 FROM "user"  "sender"
@@ -2982,7 +2988,8 @@ describe('hasOne through', () => {
                 AND "sender"."id" = "message"."author_id"
                 AND "sender"."user_key" = "message"."message_key"
             )
-          )
+          ))
+            AND ("message"."deleted_at" IS NULL)
         `,
       );
 
@@ -2993,7 +3000,7 @@ describe('hasOne through', () => {
           .toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "m"
-          WHERE EXISTS (
+          WHERE (EXISTS (
             SELECT 1 FROM "profile"
             WHERE "profile"."bio" = $1
               AND EXISTS (
@@ -3003,7 +3010,8 @@ describe('hasOne through', () => {
                   AND "sender"."id" = "m"."author_id"
                   AND "sender"."user_key" = "m"."message_key"
               )
-          )
+          ))
+            AND ("m"."deleted_at" IS NULL)
         `,
         ['bio'],
       );
@@ -3015,7 +3023,7 @@ describe('hasOne through', () => {
           .toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "m"
-          WHERE EXISTS (
+          WHERE (EXISTS (
             SELECT 1 FROM "profile"
             WHERE EXISTS (
               SELECT 1 FROM "user"  "sender"
@@ -3025,7 +3033,8 @@ describe('hasOne through', () => {
                 AND "sender"."user_key" = "m"."message_key"
             )
             AND "profile"."bio" = $1
-          )
+          ))
+            AND ("m"."deleted_at" IS NULL)
         `,
         ['bio'],
       );
@@ -3036,7 +3045,7 @@ describe('hasOne through', () => {
         db.message.whereExists('activeProfile').toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message"
-          WHERE EXISTS (
+          WHERE (EXISTS (
             SELECT 1 FROM "profile"  "activeProfile"
             WHERE EXISTS (
               SELECT 1 FROM "user"  "activeSender"
@@ -3047,7 +3056,8 @@ describe('hasOne through', () => {
                 AND "activeSender"."id" = "message"."author_id"
                 AND "activeSender"."user_key" = "message"."message_key"
             )
-          )
+          ))
+            AND ("message"."deleted_at" IS NULL)
         `,
         [true, true],
       );
@@ -3059,7 +3069,7 @@ describe('hasOne through', () => {
           .toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "m"
-          WHERE EXISTS (
+          WHERE (EXISTS (
             SELECT 1 FROM "profile"  "activeProfile"
             WHERE "activeProfile"."bio" = $1
               AND EXISTS (
@@ -3071,7 +3081,8 @@ describe('hasOne through', () => {
                   AND "activeSender"."id" = "m"."author_id"
                   AND "activeSender"."user_key" = "m"."message_key"
               )
-          )
+          ))
+            AND ("m"."deleted_at" IS NULL)
         `,
         ['bio', true, true],
       );
@@ -3085,7 +3096,7 @@ describe('hasOne through', () => {
           .toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" "m"
-          WHERE EXISTS (
+          WHERE (EXISTS (
             SELECT 1 FROM "profile"  "activeProfile"
             WHERE EXISTS (
               SELECT 1 FROM "user"  "activeSender"
@@ -3097,7 +3108,8 @@ describe('hasOne through', () => {
                 AND "activeSender"."user_key" = "m"."message_key"
             )
             AND "activeProfile"."bio" = $3
-          )
+          ))
+            AND ("m"."deleted_at" IS NULL)
         `,
         [true, true, 'bio'],
       );
@@ -3130,6 +3142,7 @@ describe('hasOne through', () => {
                 AND "sender"."user_key" = "m"."message_key"
             )
             AND "profile"."bio" = $1
+          WHERE ("m"."deleted_at" IS NULL)
         `,
         ['bio'],
       );
@@ -3162,6 +3175,7 @@ describe('hasOne through', () => {
                 AND "activeSender"."user_key" = "m"."message_key"
             )
             AND "activeProfile"."bio" = $3
+          WHERE ("m"."deleted_at" IS NULL)
         `,
         [true, true, 'bio'],
       );
@@ -3196,6 +3210,7 @@ describe('hasOne through', () => {
                 AND "sender"."id" = "m"."author_id"
                 AND "sender"."user_key" = "m"."message_key"
             )
+          WHERE ("m"."deleted_at" IS NULL)
         `,
         ['bio', 123],
       );
@@ -3232,6 +3247,7 @@ describe('hasOne through', () => {
                 AND "activeSender"."id" = "m"."author_id"
                 AND "activeSender"."user_key" = "m"."message_key"
             )
+          WHERE ("m"."deleted_at" IS NULL)
         `,
         ['bio', 123, true, true],
       );
@@ -3263,7 +3279,8 @@ describe('hasOne through', () => {
                 AND "sender"."user_key" = "message"."message_key"
             )
           ) "p" ON true
-          WHERE "p"."Bio" = $2
+          WHERE ("p"."Bio" = $2)
+            AND ("message"."deleted_at" IS NULL)
         `,
         ['one', 'two'],
       );
@@ -3297,7 +3314,8 @@ describe('hasOne through', () => {
                 AND "activeSender"."user_key" = "message"."message_key"
             )
           ) "p" ON true
-          WHERE "p"."Bio" = $4
+          WHERE ("p"."Bio" = $4)
+            AND ("message"."deleted_at" IS NULL)
         `,
         ['one', true, true, 'two'],
       );
@@ -3330,6 +3348,7 @@ describe('hasOne through', () => {
                   AND "sender"."user_key" = "m"."message_key"
               )
           ) "profile" ON true
+          WHERE ("m"."deleted_at" IS NULL)
         `,
         ['bio'],
       );
@@ -3349,7 +3368,7 @@ describe('hasOne through', () => {
             "m"."id" "Id",
             row_to_json("profile".*) "profile"
           FROM "message" "m"
-                 LEFT JOIN LATERAL (
+          LEFT JOIN LATERAL (
             SELECT ${profileSelectAll} FROM "profile" "activeProfile"
             WHERE "activeProfile"."bio" = $1
               AND EXISTS (
@@ -3361,7 +3380,8 @@ describe('hasOne through', () => {
                 AND "activeSender"."id" = "m"."author_id"
                 AND "activeSender"."user_key" = "m"."message_key"
             )
-            ) "profile" ON true
+          ) "profile" ON true
+          WHERE ("m"."deleted_at" IS NULL)
         `,
         ['bio', true, true],
       );
@@ -3402,82 +3422,7 @@ describe('hasOne through', () => {
               )
             ) "t"
           ) "items" ON true
-        `,
-      );
-    });
-
-    it('should support chained select using `on`', () => {
-      const q = db.message.select({
-        items: (q) => q.activeProfile.chain('activeOnePost'),
-      });
-
-      assertType<Awaited<typeof q>, { items: Post[] }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT COALESCE("items".r, '[]') "items"
-          FROM "message"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-                   SELECT ${postSelectAll}
-                   FROM "post" "activeOnePost"
-                   WHERE EXISTS (
-                     SELECT 1 FROM "profile"  "activeProfile"
-                     WHERE EXISTS (
-                       SELECT 1 FROM "user"  "activeSender"
-                       WHERE "activeProfile"."active" = $1
-                         AND "activeProfile"."user_id" = "activeSender"."id"
-                         AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                         AND "activeSender"."active" = $2
-                         AND "activeSender"."id" = "message"."author_id"
-                         AND "activeSender"."user_key" = "message"."message_key"
-                     ) AND EXISTS (
-                       SELECT 1 FROM "user"  "activeUser"
-                       WHERE "activeOnePost"."active" = $3
-                         AND "activeOnePost"."user_id" = "activeUser"."id"
-                         AND "activeOnePost"."title" = "activeUser"."user_key"
-                         AND "activeUser"."active" = $4
-                         AND "activeUser"."id" = "activeProfile"."user_id"
-                         AND "activeUser"."user_key" = "activeProfile"."profile_key"
-                     )
-                   )
-                 ) "t"
-            ) "items" ON true
-        `,
-        [true, true, true, true],
-      );
-    });
-
-    it('should handle exists sub query', () => {
-      const query = db.message.as('m').select('Id', {
-        hasProfile: (q) => q.profile.exists(),
-      });
-
-      assertType<
-        Awaited<typeof query>,
-        { Id: number; hasProfile: boolean }[]
-      >();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT
-            "m"."id" "Id",
-            COALESCE("hasProfile".r, false) "hasProfile"
-          FROM "message" "m"
-          LEFT JOIN LATERAL (
-            SELECT true r
-            FROM "profile"
-            WHERE EXISTS (
-              SELECT 1 FROM "user"  "sender"
-              WHERE "profile"."user_id" = "sender"."id"
-                AND "profile"."profile_key" = "sender"."user_key"
-                AND "sender"."id" = "m"."author_id"
-                AND "sender"."user_key" = "m"."message_key"
-            )
-          ) "hasProfile" ON true
+          WHERE ("message"."deleted_at" IS NULL)
         `,
       );
     });
@@ -3521,6 +3466,85 @@ describe('hasOne through', () => {
               )
             ) "t"
           ) "items" ON true
+          WHERE ("message"."deleted_at" IS NULL)
+        `,
+        [true, true, true, true],
+      );
+    });
+
+    it('should handle exists sub query', () => {
+      const query = db.message.as('m').select('Id', {
+        hasProfile: (q) => q.profile.exists(),
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { Id: number; hasProfile: boolean }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT
+            "m"."id" "Id",
+            COALESCE("hasProfile".r, false) "hasProfile"
+          FROM "message" "m"
+          LEFT JOIN LATERAL (
+            SELECT true r
+            FROM "profile"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"  "sender"
+              WHERE "profile"."user_id" = "sender"."id"
+                AND "profile"."profile_key" = "sender"."user_key"
+                AND "sender"."id" = "m"."author_id"
+                AND "sender"."user_key" = "m"."message_key"
+            )
+          ) "hasProfile" ON true
+          WHERE ("m"."deleted_at" IS NULL)
+        `,
+      );
+    });
+
+    it('should support chained select using `on`', () => {
+      const q = db.message.select({
+        items: (q) => q.activeProfile.chain('activeOnePost'),
+      });
+
+      assertType<Awaited<typeof q>, { items: Post[] }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json(t.*)) r
+            FROM (
+              SELECT ${postSelectAll}
+              FROM "post" "activeOnePost"
+              WHERE EXISTS (
+                SELECT 1 FROM "profile"  "activeProfile"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user"  "activeSender"
+                  WHERE "activeProfile"."active" = $1
+                    AND "activeProfile"."user_id" = "activeSender"."id"
+                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                    AND "activeSender"."active" = $2
+                    AND "activeSender"."id" = "message"."author_id"
+                    AND "activeSender"."user_key" = "message"."message_key"
+                ) AND EXISTS (
+                  SELECT 1 FROM "user"  "activeUser"
+                  WHERE "activeOnePost"."active" = $3
+                    AND "activeOnePost"."user_id" = "activeUser"."id"
+                    AND "activeOnePost"."title" = "activeUser"."user_key"
+                    AND "activeUser"."active" = $4
+                    AND "activeUser"."id" = "activeProfile"."user_id"
+                    AND "activeUser"."user_key" = "activeProfile"."profile_key"
+                )
+              )
+            ) "t"
+          ) "items" ON true
+          WHERE ("message"."deleted_at" IS NULL)
         `,
         [true, true, true, true],
       );
@@ -3564,15 +3588,17 @@ describe('hasOne through', () => {
                       AND "sender"."user_key" = "messages"."message_key"
                   )
                 ) "profile2" ON true
-                WHERE "profile2"."Bio" = $1
+                WHERE ("profile2"."Bio" = $1
                   AND EXISTS (
                     SELECT 1
                     FROM "user"
-                    WHERE "messages"."author_id" = "user"."id"
-                      AND "messages"."message_key" = "user"."user_key"
+                    WHERE ("messages"."author_id" = "user"."id"
+                      AND "messages"."message_key" = "user"."user_key")
+                      AND ("messages"."deleted_at" IS NULL)
                       AND "user"."id" = "profile"."user_id"
                       AND "user"."user_key" = "profile"."profile_key"
                   )
+                ) AND ("messages"."deleted_at" IS NULL)
               ) "t"
             ) "messages" ON true
             WHERE EXISTS (
@@ -3584,6 +3610,7 @@ describe('hasOne through', () => {
                 AND "sender"."user_key" = "message"."message_key"
             )
           ) "profile" ON true
+          WHERE ("message"."deleted_at" IS NULL)
         `,
         ['bio'],
       );
@@ -3629,20 +3656,21 @@ describe('hasOne through', () => {
                       AND "activeSender"."user_key" = "messages"."message_key"
                   )
                 ) "profile" ON true
-                WHERE "profile"."Bio" = $3
+                WHERE ("profile"."Bio" = $3
                   AND EXISTS (
                     SELECT 1
                     FROM "user"
-                    WHERE "messages"."author_id" = "user"."id"
-                      AND "messages"."message_key" = "user"."user_key"
+                    WHERE ("messages"."author_id" = "user"."id"
+                      AND "messages"."message_key" = "user"."user_key")
+                      AND ("messages"."deleted_at" IS NULL)
                       AND "user"."id" = "activeProfile"."user_id"
-                      AND "user"."user_key" = "activeProfile"."profile_key"
-                  )
+                      AND "user"."user_key" = "activeProfile"."profile_key")
+                ) AND ("messages"."deleted_at" IS NULL)
               ) "t"
             ) "messages" ON true
             WHERE EXISTS (
               SELECT 1
-              FROM "user"  "activeSender"
+              FROM "user" "activeSender"
               WHERE "activeProfile"."active" = $4
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3651,6 +3679,7 @@ describe('hasOne through', () => {
                 AND "activeSender"."user_key" = "message"."message_key"
             )
           ) "profile" ON true
+          WHERE ("message"."deleted_at" IS NULL)
         `,
         [true, true, 'bio', true, true],
       );
@@ -3744,7 +3773,7 @@ describe('hasOne through', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${messageSelectAll} FROM "message" WHERE (
+        SELECT ${messageSelectAll} FROM "message" WHERE ((
           SELECT count(*) = $1
           FROM "profile"
           WHERE "profile"."bio" IN ($2, $3)
@@ -3756,7 +3785,7 @@ describe('hasOne through', () => {
                 AND "sender"."id" = "message"."author_id"
                 AND "sender"."user_key" = "message"."message_key"
             )
-        )
+        )) AND ("message"."deleted_at" IS NULL)
       `,
       [1, 'a', 'b'],
     );

@@ -9,6 +9,7 @@ change(async (db) => {
     text: t.text(),
     meta: t.json().nullable(),
     active: t.boolean().nullable(),
+    deletedAt: t.timestamp().nullable(),
     ...t.timestamps(),
   }));
 });
