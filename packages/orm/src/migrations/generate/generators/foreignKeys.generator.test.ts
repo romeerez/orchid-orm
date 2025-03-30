@@ -32,7 +32,7 @@ describe('foreignKeys', () => {
     }));
   };
 
-  it('should create a column foreign key', async () => {
+  it('should create a foreign key on a column with a custom name', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('some', (t) => ({
@@ -40,13 +40,16 @@ describe('foreignKeys', () => {
         }));
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          someId: t.integer(),
+          someId: t.name('custom_name').integer(),
         }));
       },
       tables: [
         someTable,
         table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'iD'),
+          someId: t
+            .name('custom_name')
+            .integer()
+            .foreignKey(() => someTable, 'iD'),
         })),
       ],
     });
@@ -59,7 +62,7 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.add(
       t.foreignKey(
-        ['someId'],
+        ['custom_name'],
         'some',
         ['iD'],
       ),
@@ -69,7 +72,7 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add foreign key')} on (someId) to some(iD)`);
+  ${green('+ add foreign key')} on (custom_name) to some(iD)`);
   });
 
   it('should create a self-referencing column foreign key', async () => {
@@ -100,7 +103,7 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     ...t.add(
       t.foreignKey(
-        ['someId'],
+        ['some_id'],
         'table',
         ['iD'],
       ),
@@ -110,7 +113,7 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${green('+ add foreign key')} on (someId) to table(iD)`);
+  ${green('+ add foreign key')} on (some_id) to table(iD)`);
   });
 
   it('should drop a column foreign key', async () => {
@@ -275,7 +278,7 @@ change(async (db) => {
     ),
     ...t.add(
       t.foreignKey(
-        ['someId'],
+        ['some_id'],
         'some',
         ['iD'],
         {
@@ -292,7 +295,7 @@ change(async (db) => {
 
     assert.report(`${yellow('~ change table')} table:
   ${red('- drop foreign key')} on (some_id) to some(i_d)
-  ${green('+ add foreign key')} on (someId) to some(iD)`);
+  ${green('+ add foreign key')} on (some_id) to some(iD)`);
   });
 
   it('should create a composite foreign key', async () => {

@@ -213,7 +213,7 @@ const collectCodeFkeys = (
           {
             name: x.options?.name,
             references: {
-              columns: [key],
+              columns: [name],
               fnOrTable,
               foreignColumns: x.foreignColumns,
               options: x.options,
