@@ -72,7 +72,9 @@ export const resolveSubQueryCallbackV2 = (
         Object.defineProperty(base, key, {
           get() {
             const rel = relations[key as string].relationConfig;
-            return _chain(this, _clone(rel.query), rel);
+            const relQuery = _clone(rel.query);
+            relQuery.q.withShapes = this.q.withShapes;
+            return _chain(this, relQuery, rel);
           },
         });
       }

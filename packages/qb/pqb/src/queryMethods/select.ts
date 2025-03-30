@@ -93,7 +93,9 @@ interface SelectAsArg<T extends SelectSelf> {
               [K in
                 | keyof T['relations']
                 | keyof T]: K extends keyof T['relations']
-                ? T['relations'][K]['relationConfig']['maybeSingle']
+                ? T['relations'][K]['relationConfig']['maybeSingle'] & {
+                    withData: T['withData']; // to refer to the outside `.with` from a relation query
+                  }
                 : K extends keyof T
                 ? T[K]
                 : never;

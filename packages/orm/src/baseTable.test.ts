@@ -670,4 +670,34 @@ describe('baseTable', () => {
       );
     });
   });
+
+  describe('with', () => {
+    it('should support accessing cte on selected relations', async () => {
+      const q = db.user.with('cte', db.user.select('Id', 'Name')).select({
+        rel: (q) =>
+          q.profile
+            .join('cte', 'cte.Id', 'profile.Id')
+            .select('Id', 'cte.Name'),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "cte" AS (
+            SELECT "user"."id" "Id", "user"."name" "Name"
+            FROM "user"
+          )
+          SELECT row_to_json("rel".*) "rel"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT "profile"."id" "Id", "cte"."Name"
+            FROM "profile"
+            JOIN "cte" ON "cte"."Id" = "profile"."id"
+            WHERE "profile"."user_id" = "user"."id"
+              AND "profile"."profile_key" = "user"."user_key"
+          ) "rel" ON true
+        `,
+      );
+    });
+  });
 });
