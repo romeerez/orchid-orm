@@ -22,6 +22,7 @@ import {
   DefaultColumnTypes,
   getColumnTypes,
   makeColumnTypes,
+  VirtualColumn,
 } from '../columns';
 import { QueryError, QueryErrorName } from '../errors';
 import {
@@ -401,21 +402,26 @@ export class Db<
 
     if (options.computed) applyComputedColumns(this, options.computed);
 
+    const selectableShape: RecordUnknown = (this.q.selectableShape = {});
     if (prepareSelectAll) {
       const list: string[] = [];
-      const keys: RecordUnknown = {};
       for (const key in shape) {
         const column = shape[key] as unknown as ColumnTypeBase;
-        if (!column.data.explicitSelect) {
+        if (!column.data.explicitSelect && !(column instanceof VirtualColumn)) {
           list.push(
             column.data.name ? `"${column.data.name}" "${key}"` : `"${key}"`,
           );
-          keys[key] = column;
+          selectableShape[key] = column;
         }
       }
       this.q.selectAllColumns = list;
-      // destructuring shape because it's going to be extended with computed columns
-      this.q.selectAllKeys = keys;
+    } else {
+      for (const key in shape) {
+        const column = shape[key] as unknown as ColumnTypeBase;
+        if (column instanceof VirtualColumn) {
+          selectableShape[key] = column;
+        }
+      }
     }
 
     if (modifyQuery) {

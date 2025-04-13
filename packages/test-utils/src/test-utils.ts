@@ -73,7 +73,7 @@ export const jsonBuildObjectAllSql = (
 ) =>
   `CASE WHEN "${as}".* IS NULL THEN NULL ELSE json_build_object(` +
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  Object.keys(table.q.selectAllKeys!)
+  Object.keys(table.q.selectableShape)
     .map(
       (c) =>
         `'${c}', "${as}"."${

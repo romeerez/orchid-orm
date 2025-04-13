@@ -69,7 +69,7 @@ describe('computed', () => {
 
   describe('sql computed', () => {
     it('should not be included into the table columns', () => {
-      expect('nameAndKey' in User.q.selectAllKeys!).toBe(false);
+      expect('nameAndKey' in User.q.selectableShape).toBe(false);
     });
 
     describe('select', () => {

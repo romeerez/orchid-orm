@@ -70,7 +70,7 @@ const mergableObjects = new Set([
   'selectedComputeds',
 ]);
 
-const dontMergeArrays = new Set(['selectAllColumns', 'selectAllKeys']);
+const dontMergeArrays = new Set(['selectAllColumns']);
 
 export class MergeQueryMethods {
   merge<

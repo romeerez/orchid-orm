@@ -116,7 +116,7 @@ export interface CommonQueryData {
   select?: SelectItem[];
   selectCache?: { sql: string; aliases: string[] };
   selectAllColumns?: string[];
-  selectAllKeys?: RecordUnknown;
+  selectableShape: RecordUnknown;
   /**
    * column type for query with 'value' or 'valueOrThrow' return type
    * Is needed in {@link getShapeFromSelect} to get shape of sub-select that returns a single value.

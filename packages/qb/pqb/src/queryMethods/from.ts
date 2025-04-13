@@ -163,7 +163,7 @@ export function queryFrom<
   }
 
   data.from = arg as Query;
-  data.selectAllColumns = data.selectAllKeys = data.scopes = undefined;
+  data.selectAllColumns = data.scopes = undefined;
 
   return self as never;
 }
@@ -175,7 +175,7 @@ export function queryFromSql<T extends FromQuerySelf>(
   const data = (self as unknown as PickQueryQ).q;
   data.as ||= 't';
   data.from = sqlQueryArgsToExpression(args);
-  data.selectAllColumns = data.selectAllKeys = undefined;
+  data.selectAllColumns = undefined;
   return self;
 }
 
