@@ -33,6 +33,7 @@ import {
   QueryColumn,
   QueryColumns,
   QueryMetaBase,
+  QueryMetaIsSubQuery,
   QueryReturnType,
   QueryThenByReturnType,
   RecordString,
@@ -79,6 +80,10 @@ export type SelectArgs<T extends SelectSelf> = (
   | keyof T['meta']['selectable']
 )[];
 
+interface SubQueryAddition<T extends SelectSelf> extends QueryMetaIsSubQuery {
+  withData: T['withData']; // to refer to the outside `.with` from a relation query
+}
+
 // .select method object argument.
 // Key is alias for selected item,
 // value can be a column, raw, or a function returning query or raw.
@@ -93,9 +98,8 @@ interface SelectAsArg<T extends SelectSelf> {
               [K in
                 | keyof T['relations']
                 | keyof T]: K extends keyof T['relations']
-                ? T['relations'][K]['relationConfig']['maybeSingle'] & {
-                    withData: T['withData']; // to refer to the outside `.with` from a relation query
-                  }
+                ? T['relations'][K]['relationConfig']['maybeSingle'] &
+                    SubQueryAddition<T>
                 : K extends keyof T
                 ? T[K]
                 : never;

@@ -195,6 +195,7 @@ describe('hasMany', () => {
       const query = db.user
         .where({ Name: 'name' })
         .chain('messages')
+        .limit(1)
         .where({ Text: 'text' });
 
       expectSql(
@@ -210,8 +211,9 @@ describe('hasMany', () => {
             )
             AND "messages"."text" = $2)
             AND ("messages"."deleted_at" IS NULL)
+          LIMIT $3
         `,
-        ['name', 'text'],
+        ['name', 'text', 1],
       );
     });
 

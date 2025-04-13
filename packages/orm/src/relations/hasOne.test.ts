@@ -764,62 +764,56 @@ describe('hasOne', () => {
 
       it('should support chained select', () => {
         const q = db.user.select({
-          items: (q) => q.onePost.chain('onePostTag'),
+          item: (q) => q.onePost.chain('onePostTag'),
         });
 
-        assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+        assertType<Awaited<typeof q>, { item: PostTag | undefined }[]>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT COALESCE("items".r, '[]') "items"
+            SELECT row_to_json("item".*) "item"
             FROM "user"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
-              FROM (
-                SELECT ${postTagSelectAll}
-                FROM "postTag" "onePostTag"
-                WHERE EXISTS (
-                  SELECT 1
-                  FROM "post"  "onePost"
-                  WHERE "onePost"."user_id" = "user"."id"
-                    AND "onePost"."title" = "user"."user_key"
-                    AND "onePost"."id" = "onePostTag"."post_id"
-                )
-              ) "t"
-            ) "items" ON true
+              SELECT ${postTagSelectAll}
+              FROM "postTag" "onePostTag"
+              WHERE EXISTS (
+                SELECT 1
+                FROM "post"  "onePost"
+                WHERE "onePost"."user_id" = "user"."id"
+                  AND "onePost"."title" = "user"."user_key"
+                  AND "onePost"."id" = "onePostTag"."post_id"
+              )
+            ) "item" ON true
           `,
         );
       });
 
       it('should support chained select using `on`', () => {
         const q = db.user.select({
-          items: (q) => q.activeOnePost.chain('activeOnePostTag'),
+          item: (q) => q.activeOnePost.chain('activeOnePostTag'),
         });
 
-        assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
+        assertType<Awaited<typeof q>, { item: PostTag | undefined }[]>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT COALESCE("items".r, '[]') "items"
+            SELECT row_to_json("item".*) "item"
             FROM "user"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
-              FROM (
-                SELECT ${postTagSelectAll}
-                FROM "postTag" "activeOnePostTag"
-                WHERE "activeOnePostTag"."active" = $1
-                  AND EXISTS (
-                    SELECT 1
-                    FROM "post"  "activeOnePost"
-                    WHERE "activeOnePost"."active" = $2
-                      AND "activeOnePost"."user_id" = "user"."id"
-                      AND "activeOnePost"."title" = "user"."user_key"
-                      AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
-                  )
-             ) "t"
-            ) "items" ON true
+              SELECT ${postTagSelectAll}
+              FROM "postTag" "activeOnePostTag"
+              WHERE "activeOnePostTag"."active" = $1
+                AND EXISTS (
+                  SELECT 1
+                  FROM "post"  "activeOnePost"
+                  WHERE "activeOnePost"."active" = $2
+                    AND "activeOnePost"."user_id" = "user"."id"
+                    AND "activeOnePost"."title" = "user"."user_key"
+                    AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
+                )
+            ) "item" ON true
           `,
           [true, true],
         );
@@ -3389,39 +3383,36 @@ describe('hasOne through', () => {
 
     it('should support chained select', () => {
       const q = db.message.select({
-        items: (q) => q.profile.chain('onePost'),
+        item: (q) => q.profile.chain('onePost'),
       });
 
-      assertType<Awaited<typeof q>, { items: Post[] }[]>();
+      assertType<Awaited<typeof q>, { item: Post | undefined }[]>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT row_to_json("item".*) "item"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-              SELECT ${postSelectAll}
-              FROM "post" "onePost"
+            SELECT ${postSelectAll}
+            FROM "post" "onePost"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile"
               WHERE EXISTS (
-                SELECT 1 FROM "profile"
-                WHERE EXISTS (
-                  SELECT 1 FROM "user"  "sender"
-                  WHERE "profile"."user_id" = "sender"."id"
-                    AND "profile"."profile_key" = "sender"."user_key"
-                    AND "sender"."id" = "message"."author_id"
-                    AND "sender"."user_key" = "message"."message_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE "onePost"."user_id" = "user"."id"
-                    AND "onePost"."title" = "user"."user_key"
-                    AND "user"."id" = "profile"."user_id"
-                    AND "user"."user_key" = "profile"."profile_key"
-                )
+                SELECT 1 FROM "user"  "sender"
+                WHERE "profile"."user_id" = "sender"."id"
+                  AND "profile"."profile_key" = "sender"."user_key"
+                  AND "sender"."id" = "message"."author_id"
+                  AND "sender"."user_key" = "message"."message_key"
+              ) AND EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "onePost"."user_id" = "user"."id"
+                  AND "onePost"."title" = "user"."user_key"
+                  AND "user"."id" = "profile"."user_id"
+                  AND "user"."user_key" = "profile"."profile_key"
               )
-            ) "t"
-          ) "items" ON true
+            )
+          ) "item" ON true
           WHERE ("message"."deleted_at" IS NULL)
         `,
       );
@@ -3429,43 +3420,40 @@ describe('hasOne through', () => {
 
     it('should support chained select using `on`', () => {
       const q = db.message.select({
-        items: (q) => q.activeProfile.chain('activeOnePost'),
+        item: (q) => q.activeProfile.chain('activeOnePost'),
       });
 
-      assertType<Awaited<typeof q>, { items: Post[] }[]>();
+      assertType<Awaited<typeof q>, { item: Post | undefined }[]>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT row_to_json("item".*) "item"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-              SELECT ${postSelectAll}
-              FROM "post" "activeOnePost"
+            SELECT ${postSelectAll}
+            FROM "post" "activeOnePost"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile"  "activeProfile"
               WHERE EXISTS (
-                SELECT 1 FROM "profile"  "activeProfile"
-                WHERE EXISTS (
-                  SELECT 1 FROM "user"  "activeSender"
-                  WHERE "activeProfile"."active" = $1
-                    AND "activeProfile"."user_id" = "activeSender"."id"
-                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                    AND "activeSender"."active" = $2
-                    AND "activeSender"."id" = "message"."author_id"
-                    AND "activeSender"."user_key" = "message"."message_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "user"  "activeUser"
-                  WHERE "activeOnePost"."active" = $3
-                    AND "activeOnePost"."user_id" = "activeUser"."id"
-                    AND "activeOnePost"."title" = "activeUser"."user_key"
-                    AND "activeUser"."active" = $4
-                    AND "activeUser"."id" = "activeProfile"."user_id"
-                    AND "activeUser"."user_key" = "activeProfile"."profile_key"
-                )
+                SELECT 1 FROM "user"  "activeSender"
+                WHERE "activeProfile"."active" = $1
+                  AND "activeProfile"."user_id" = "activeSender"."id"
+                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                  AND "activeSender"."active" = $2
+                  AND "activeSender"."id" = "message"."author_id"
+                  AND "activeSender"."user_key" = "message"."message_key"
+              ) AND EXISTS (
+                SELECT 1 FROM "user"  "activeUser"
+                WHERE "activeOnePost"."active" = $3
+                  AND "activeOnePost"."user_id" = "activeUser"."id"
+                  AND "activeOnePost"."title" = "activeUser"."user_key"
+                  AND "activeUser"."active" = $4
+                  AND "activeUser"."id" = "activeProfile"."user_id"
+                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
               )
-            ) "t"
-          ) "items" ON true
+            )
+          ) "item" ON true
           WHERE ("message"."deleted_at" IS NULL)
         `,
         [true, true, true, true],
@@ -3507,43 +3495,40 @@ describe('hasOne through', () => {
 
     it('should support chained select using `on`', () => {
       const q = db.message.select({
-        items: (q) => q.activeProfile.chain('activeOnePost'),
+        item: (q) => q.activeProfile.chain('activeOnePost'),
       });
 
-      assertType<Awaited<typeof q>, { items: Post[] }[]>();
+      assertType<Awaited<typeof q>, { item: Post | undefined }[]>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT row_to_json("item".*) "item"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-              SELECT ${postSelectAll}
-              FROM "post" "activeOnePost"
+            SELECT ${postSelectAll}
+            FROM "post" "activeOnePost"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile"  "activeProfile"
               WHERE EXISTS (
-                SELECT 1 FROM "profile"  "activeProfile"
-                WHERE EXISTS (
-                  SELECT 1 FROM "user"  "activeSender"
-                  WHERE "activeProfile"."active" = $1
-                    AND "activeProfile"."user_id" = "activeSender"."id"
-                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                    AND "activeSender"."active" = $2
-                    AND "activeSender"."id" = "message"."author_id"
-                    AND "activeSender"."user_key" = "message"."message_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "user"  "activeUser"
-                  WHERE "activeOnePost"."active" = $3
-                    AND "activeOnePost"."user_id" = "activeUser"."id"
-                    AND "activeOnePost"."title" = "activeUser"."user_key"
-                    AND "activeUser"."active" = $4
-                    AND "activeUser"."id" = "activeProfile"."user_id"
-                    AND "activeUser"."user_key" = "activeProfile"."profile_key"
-                )
+                SELECT 1 FROM "user"  "activeSender"
+                WHERE "activeProfile"."active" = $1
+                  AND "activeProfile"."user_id" = "activeSender"."id"
+                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                  AND "activeSender"."active" = $2
+                  AND "activeSender"."id" = "message"."author_id"
+                  AND "activeSender"."user_key" = "message"."message_key"
+              ) AND EXISTS (
+                SELECT 1 FROM "user"  "activeUser"
+                WHERE "activeOnePost"."active" = $3
+                  AND "activeOnePost"."user_id" = "activeUser"."id"
+                  AND "activeOnePost"."title" = "activeUser"."user_key"
+                  AND "activeUser"."active" = $4
+                  AND "activeUser"."id" = "activeProfile"."user_id"
+                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
               )
-            ) "t"
-          ) "items" ON true
+            )
+          ) "item" ON true
           WHERE ("message"."deleted_at" IS NULL)
         `,
         [true, true, true, true],

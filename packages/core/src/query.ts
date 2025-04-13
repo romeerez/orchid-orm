@@ -59,6 +59,13 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
   defaultSelect: PropertyKey;
 }
 
+// affects on typing of `chain`
+export interface QueryMetaIsSubQuery {
+  meta: {
+    subQuery: true;
+  };
+}
+
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
 export interface QueryInternalBase {

@@ -186,6 +186,9 @@ export interface CommonQueryData {
   // the join will be applied after callback is resolved.
   // 1 for the same query, 2 for relation queries returned from the callback.
   subQuery?: number;
+  // once there is a hasMany or hasAndBelongsToMany in the chain,
+  // the following belongTo and hasOne must also return multiple
+  chainMultiple?: boolean;
   // Chained relations, such as `db.user.messages.chat` are stored into array.
   relChain?: (Query | RelationQueryBase)[];
   /**

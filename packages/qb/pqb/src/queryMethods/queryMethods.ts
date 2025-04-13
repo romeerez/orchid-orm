@@ -1,5 +1,4 @@
 import {
-  PickQueryMetaRelations,
   PickQueryMetaResultReturnTypeWithDataWindowsThen,
   PickQueryQ,
   PickQueryRelations,
@@ -14,6 +13,7 @@ import {
   SetQueryTableAlias,
   WithDataItems,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
+  PickQueryMetaRelationsReturnType,
 } from '../query/query';
 import {
   AliasOrTable,
@@ -86,6 +86,7 @@ import {
   PickQueryTableMetaResult,
   QueryColumns,
   QueryMetaBase,
+  QueryMetaIsSubQuery,
   QueryReturnType,
   QueryThen,
   QueryThenByQuery,
@@ -315,6 +316,10 @@ export type QueryIfResultThen<
       )[]
     >
   : QueryThen<void>;
+
+interface SubQueryReturningSingle extends QueryMetaIsSubQuery {
+  returnType: 'one' | 'oneOrThrow';
+}
 
 export interface QueryMethods<ColumnTypes>
   extends AsMethods,
@@ -833,9 +838,14 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param arg - limit number
    */
-  limit<T>(this: T, arg: number | undefined): T {
+  limit<T>(
+    this: T,
+    arg: T extends SubQueryReturningSingle
+      ? 'Cannot apply limit on the query returning a single record'
+      : number | undefined,
+  ): T {
     const q = _clone(this);
-    (q.q as SelectQueryData).limit = arg;
+    (q.q as SelectQueryData).limit = arg as number;
     return q as T;
   }
 
@@ -1149,18 +1159,29 @@ export class QueryMethods<ColumnTypes> {
   ): T['relations'][RelName]['relationConfig']['maybeSingle'] {
     return this.relations[relName as string].relationConfig.queryRelated(
       params,
-    );
+    ) as never;
   }
 
-  chain<T extends PickQueryMetaRelations, RelName extends keyof T['relations']>(
+  chain<
+    T extends PickQueryMetaRelationsReturnType,
+    RelName extends keyof T['relations'],
+  >(
     this: T,
     relName: RelName,
   ): T['meta']['subQuery'] extends true
-    ? T['relations'][RelName]['relationConfig']['maybeSingle']
+    ? T['returnType'] extends 'one' | 'oneOrThrow'
+      ? T['relations'][RelName]['relationConfig']['maybeSingle']['returnType'] extends
+          | 'one'
+          | 'oneOrThrow'
+        ? T['relations'][RelName]['relationConfig']['maybeSingle'] & {
+            meta: { subQuery: true };
+          }
+        : T['relations'][RelName]['relationConfig']['query']
+      : T['relations'][RelName]['relationConfig']['maybeSingle']
     : T['relations'][RelName]['relationConfig']['query'] {
     const rel = this.relations[relName as string].relationConfig;
 
-    return _chain(this as unknown as IsQuery, _clone(rel.query), rel);
+    return _chain(this as unknown as IsQuery, _clone(rel.query), rel) as never;
   }
 }
 

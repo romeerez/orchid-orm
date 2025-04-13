@@ -1,5 +1,22 @@
 # Breaking changes
 
+## orchid-orm 1.46
+
+`belongsTo` and `hasOne` relations in a sub-query when chained were incorrectly returning an array of records.
+This will return a single record from now.
+
+```ts
+// comment belongs to post, post belongs to author.
+const result = await db.comment
+  .select({
+    postAuthor: (q) => q.post.chain('author'),
+  })
+  .take();
+
+// it was an array, becomes a single record
+result.postAuthor;
+```
+
 ## orchid-orm 1.44
 
 Change `Selectable` type utility to include hidden columns (`select(false)`) and computed columns.

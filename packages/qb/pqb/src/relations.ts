@@ -1,5 +1,5 @@
 import { Query } from './query/query';
-import { IsQuery, RecordUnknown } from 'orchid-core';
+import { IsQuery, PickQueryReturnType, RecordUnknown } from 'orchid-core';
 
 export interface RelationJoinQuery {
   (joiningQuery: IsQuery, baseQuery: IsQuery): IsQuery;
@@ -12,7 +12,7 @@ export interface RelationConfigBase {
   params: unknown;
   queryRelated(params: unknown): unknown;
   modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
-  maybeSingle: unknown;
+  maybeSingle: PickQueryReturnType;
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
   // or with `db.book.create({ author: authorData })`.

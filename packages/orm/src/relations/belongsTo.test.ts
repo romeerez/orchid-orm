@@ -180,6 +180,48 @@ describe('belongsTo', () => {
         expect(res.length).toBe(2);
       });
 
+      it('should handle chained query with limit', async () => {
+        const userIds = await db.user
+          .pluck('Id')
+          .createMany([userData, userData]);
+
+        await db.profile.createMany(
+          userIds.map((UserId) => ({
+            UserId,
+            ProfileKey: userData.UserKey,
+            Bio: 'bio',
+          })),
+        );
+
+        const query = db.profile
+          .where({ Bio: 'bio' })
+          .chain('user')
+          .limit(3)
+          .where({ Name: userData.Name });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT ${userSelectAll} FROM "user"
+            WHERE EXISTS (
+              SELECT 1 FROM "profile"
+              WHERE "profile"."bio" = $1
+                AND "profile"."user_id" = "user"."id"
+                AND "profile"."profile_key" = "user"."user_key"
+            )
+              AND "user"."name" = $2
+            LIMIT $3
+          `,
+          ['bio', 'name', 3],
+        );
+
+        const res = await query;
+
+        assertType<typeof res, User[]>();
+
+        expect(res.length).toBe(2);
+      });
+
       it('should handle chained query using `on`', async () => {
         const userIds = await db.user
           .pluck('Id')
@@ -227,7 +269,8 @@ describe('belongsTo', () => {
           .chain('post')
           .where({ Body: 'body' })
           .chain('user')
-          .where({ Name: 'name' });
+          .where({ Name: 'name' })
+          .limit(3);
 
         assertType<Awaited<typeof q>, User[]>();
 
@@ -252,8 +295,9 @@ describe('belongsTo', () => {
                   AND "post"."title" = "user"."user_key"
               )
               AND "user"."name" = $3
+            LIMIT $4
           `,
-          ['tag', 'body', 'name'],
+          ['tag', 'body', 'name', 3],
         );
       });
 
@@ -695,61 +739,62 @@ describe('belongsTo', () => {
         );
       });
 
-      it('should support chained select', () => {
+      it('should forbid limit on belongsTo or hasOne relations', () => {
+        db.postTag.select({
+          // @ts-expect-error cannot apply limit here
+          items: (q) => q.post.chain('user').limit(3),
+        });
+      });
+
+      it('should support chained select', async () => {
         const q = db.postTag.select({
-          items: (q) => q.post.chain('user'),
+          item: (q) => q.post.chain('user'),
         });
 
-        assertType<Awaited<typeof q>, { items: User[] }[]>();
+        assertType<Awaited<typeof q>, { item: User | undefined }[]>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT COALESCE("items".r, '[]') "items"
+            SELECT row_to_json("item".*) "item"
             FROM "postTag"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
-              FROM (
-                SELECT ${userSelectAll}
-                FROM "user"
-                WHERE EXISTS (
-                  SELECT 1 FROM "post"
-                  WHERE "post"."id" = "postTag"."post_id"
-                    AND "post"."user_id" = "user"."id"
-                    AND "post"."title" = "user"."user_key"
-                )
-              ) "t"
-            ) "items" ON true
+              SELECT ${userSelectAll}
+              FROM "user"
+              WHERE EXISTS (
+                SELECT 1 FROM "post"
+                WHERE "post"."id" = "postTag"."post_id"
+                  AND "post"."user_id" = "user"."id"
+                  AND "post"."title" = "user"."user_key"
+              )
+            ) "item" ON true
           `,
         );
       });
 
       it('should support chained select using `on`', () => {
         const q = db.postTag.select({
-          items: (q) => q.post.chain('activeUser'),
+          item: (q) => q.post.chain('activeUser'),
         });
 
-        assertType<Awaited<typeof q>, { items: User[] }[]>();
+        assertType<Awaited<typeof q>, { item: User | undefined }[]>();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT COALESCE("items".r, '[]') "items"
+            SELECT row_to_json("item".*) "item"
             FROM "postTag"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
-              FROM (
-                SELECT ${userSelectAll}
-                FROM "user" "activeUser"
-                WHERE "activeUser"."active" = $1
-                  AND EXISTS (
-                    SELECT 1 FROM "post"
-                    WHERE "post"."id" = "postTag"."post_id"
-                      AND "post"."user_id" = "activeUser"."id"
-                      AND "post"."title" = "activeUser"."user_key"
-                  )
-              ) "t"
-            ) "items" ON true
+              SELECT ${userSelectAll}
+              FROM "user" "activeUser"
+              WHERE "activeUser"."active" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "post"
+                  WHERE "post"."id" = "postTag"."post_id"
+                    AND "post"."user_id" = "activeUser"."id"
+                    AND "post"."title" = "activeUser"."user_key"
+                )
+            ) "item" ON true
           `,
           [true],
         );
