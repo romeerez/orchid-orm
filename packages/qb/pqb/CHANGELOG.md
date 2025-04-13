@@ -1,5 +1,13 @@
 # pqb
 
+## 0.48.5
+
+### Patch Changes
+
+- cbeb8a5: Return a single record for chained belongsTo and hasOne relations in sub queries with chaining (see an example in BREAKING_CHANGES)
+- Updated dependencies [cbeb8a5]
+  - orchid-core@0.23.2
+
 ## 0.48.4
 
 ### Patch Changes

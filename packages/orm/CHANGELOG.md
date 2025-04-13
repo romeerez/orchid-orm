@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.46.0
+
+### Minor Changes
+
+- cbeb8a5: Return a single record for chained belongsTo and hasOne relations in sub queries with chaining (see an example in BREAKING_CHANGES)
+
+### Patch Changes
+
+- Updated dependencies [cbeb8a5]
+  - pqb@0.48.5
+  - orchid-core@0.23.2
+  - rake-db@2.23.49
+
 ## 1.45.4
 
 ### Patch Changes
