@@ -87,8 +87,7 @@ export type CoreQueryScopes<Keys extends string> = {
 };
 
 export type QueryReturnType =
-  | undefined
-  | 'all'
+  | QueryReturnTypeAll
   | 'one'
   | 'oneOrThrow'
   | 'rows'
@@ -96,6 +95,10 @@ export type QueryReturnType =
   | 'value'
   | 'valueOrThrow'
   | 'void';
+
+export type QueryReturnTypeAll = undefined | 'all';
+
+export type QueryReturnTypeOptional = 'one' | 'value';
 
 export interface PickQueryTable {
   table?: string;
@@ -287,7 +290,7 @@ export const applyTransforms = (
       if (!returnType || returnType === 'all' || returnType === 'pluck') {
         result = (result as unknown[]).map(fn.map);
       } else if (result !== undefined) {
-        result = fn.map(result);
+        result = result === null ? null : fn.map(result);
       }
     } else {
       result = fn(result, queryData);

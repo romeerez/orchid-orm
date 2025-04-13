@@ -1,5 +1,18 @@
 # Breaking changes
 
+## orchid-orm 1.47
+
+In sub queries, a single not found record was returned as `null` despite having a type `X | undefined`,
+now it is returned as `undefined`.
+
+```ts
+const obj = db.table.select({
+  thing: (q) => q.relatedThing,
+});
+
+obj.thing; // is undefined in both TS and runtime
+```
+
 ## orchid-orm 1.46
 
 `belongsTo` and `hasOne` relations in a sub-query when chained were incorrectly returning an array of records.

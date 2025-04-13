@@ -446,8 +446,9 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
               const { parsers } = query;
               if (parsers) {
                 if (returnType === 'one') {
-                  for (const { data } of batches) {
-                    if (data) parseRecord(parsers, data);
+                  for (const batch of batches) {
+                    if (batch.data) parseRecord(parsers, batch.data);
+                    else batch.data = undefined; // null to undefined
                   }
                 } else {
                   for (const { data } of batches) {
@@ -455,7 +456,11 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
                     parseRecord(parsers, data);
                   }
                 }
-              } else if (returnType !== 'one') {
+              } else if (returnType === 'one') {
+                for (const batch of batches) {
+                  if (!batch.data) batch.data = undefined; // null to undefined
+                }
+              } else {
                 for (const { data } of batches) {
                   if (!data) throw new NotFoundError(arg as Query);
                 }

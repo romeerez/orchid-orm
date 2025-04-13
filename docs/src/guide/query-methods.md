@@ -682,7 +682,11 @@ Use `map` to transform individual records of a query result. If the query return
 
 For an optional query result (`findOptional`, `getOptional`, etc.), `map` is **not** called for empty results.
 
-For transforming the result of a query as a whole, consider using [transform](#transform) instead.
+The same for aggregations such as `sum`, `avg`:
+the `map` is **not** called in cases when `sum` and `avg` return `null` (no records).
+
+For transforming the full result of a query or a sub-query,
+and to handle `null` values, consider using [transform](#transform) instead.
 
 The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
 
@@ -723,9 +727,18 @@ Transform the result of the query right after loading it.
 
 `transform` method should be called in the last order, other methods can't be chained after calling it.
 
-It is meant to transform the whole result of a query, for transforming individual records consider using [map](#map).
+It is meant to transform a full result of a query or a sub query,
+for transforming individual records consider using [map](#map).
+
+`transform` processes `null` values, unlike [map](#map).
 
 The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
+
+`avg`, `sum`, and similar aggregation results in `null` when there are no rows, you can use `transform` to return 0 in such a case.
+
+```ts
+await db.order.sum('amount').transform((sum) => sum ?? 0);
+```
 
 Consider the following example of a cursor-based pagination by `id`:
 
