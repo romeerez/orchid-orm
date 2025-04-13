@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.23.50
+
+### Patch Changes
+
+- Updated dependencies [afc3fce]
+  - pqb@0.48.6
+
 ## 2.23.49
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.48.6
+
+### Patch Changes
+
+- afc3fce: Fix sub query chaining when selecting table with a number column represented as string (#489)
+
 ## 0.48.5
 
 ### Patch Changes
