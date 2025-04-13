@@ -1,5 +1,16 @@
 # pqb
 
+## 0.49.0
+
+### Minor Changes
+
+- 381d3bd: Change query `map` and `transform` null handling (#490)
+
+### Patch Changes
+
+- Updated dependencies [381d3bd]
+  - orchid-core@0.23.3
+
 ## 0.48.6
 
 ### Patch Changes

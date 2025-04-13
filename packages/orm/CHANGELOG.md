@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.47.0
+
+### Minor Changes
+
+- 381d3bd: Change query `map` and `transform` null handling (#490)
+
+### Patch Changes
+
+- Updated dependencies [381d3bd]
+  - pqb@0.49.0
+  - orchid-core@0.23.3
+  - rake-db@2.23.51
+
 ## 1.46.1
 
 ### Patch Changes

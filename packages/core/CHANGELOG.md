@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.23.3
+
+### Patch Changes
+
+- 381d3bd: Change query `map` and `transform` null handling (#490)
+
 ## 0.23.2
 
 ### Patch Changes
