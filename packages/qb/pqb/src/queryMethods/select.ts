@@ -30,7 +30,6 @@ import {
   IsQuery,
   PickQueryMeta,
   PickQueryReturnType,
-  QueryColumn,
   QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
@@ -827,15 +826,26 @@ const handleComputed = (
   return column;
 };
 
-// is mapping result of a query into a columns shape
-// in this way, result of a sub query becomes available outside of it for using in WHERE and other methods
+// is mapping the result of a query into a columns shape
+// in this way, the result of a sub query becomes available outside of it for using in WHERE and other methods
 //
 // when isSubQuery is true, it will remove data.name of columns,
 // so that outside of the sub-query the columns are named with app-side names,
 // while db column names are encapsulated inside the sub-query
 export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
   const query = (q as Query).q as SelectQueryData;
-  const { select, shape } = query;
+  const { shape } = query;
+  let select: SelectItem[] | undefined;
+
+  if (query.selectedComputeds) {
+    select = query.select ? [...query.select] : [];
+    for (const key in query.selectedComputeds) {
+      select.push(...query.selectedComputeds[key].deps);
+    }
+  } else {
+    select = query.select;
+  }
+
   let result: QueryColumns;
   if (!select) {
     // when no select, and it is a sub-query, return the table shape with unnamed columns
@@ -909,23 +919,41 @@ const addColumnToShapeFromSelect = (
       result[key || column] = shape[column];
     } else {
       const it = query.joinedShapes?.[table]?.[column];
-      if (it) result[key || column] = maybeUnNameColumn(it, isSubQuery);
+      if (it)
+        result[key || column] = mapSubSelectColumn(
+          it as ColumnTypeBase,
+          isSubQuery,
+        );
     }
   } else if (arg === '*') {
     for (const key in shape) {
-      result[key] = maybeUnNameColumn(shape[key], isSubQuery);
+      result[key] = mapSubSelectColumn(
+        shape[key] as ColumnTypeBase,
+        isSubQuery,
+      );
     }
   } else {
-    result[key || arg] = maybeUnNameColumn(shape[arg], isSubQuery);
+    result[key || arg] = mapSubSelectColumn(
+      shape[arg] as ColumnTypeBase,
+      isSubQuery,
+    );
   }
 };
 
 // un-name a column if `isSubQuery` is true
-const maybeUnNameColumn = (column: QueryColumn, isSubQuery?: boolean) => {
-  // `?` is needed for case when wrong column is passed to subquery (see issue #236)
-  return isSubQuery && (column as ColumnTypeBase)?.data.name
-    ? setColumnData(column as ColumnTypeBase, 'name', undefined)
-    : column;
+const mapSubSelectColumn = (column: ColumnTypeBase, isSubQuery?: boolean) => {
+  // `!column` is needed for case when wrong column is passed to subquery (see issue #236)
+  if (
+    !isSubQuery ||
+    !column ||
+    (!column.data.name && !column.data.explicitSelect)
+  ) {
+    return column;
+  }
+
+  const cloned = Object.create(column);
+  cloned.data = { ...column.data, name: undefined, explicitSelect: undefined };
+  return cloned;
 };
 
 export function _querySelect<

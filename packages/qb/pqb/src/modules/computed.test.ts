@@ -677,7 +677,7 @@ describe('computed', () => {
               SELECT "user"."id", "user"."name"
               FROM "user"
             )
-            SELECT "id", "name" FROM "u"
+            SELECT "u"."id", "u"."name" FROM "u"
           `,
         );
 

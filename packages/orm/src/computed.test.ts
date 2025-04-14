@@ -22,21 +22,14 @@ describe('computed', () => {
       UserKey: t.name('user_key').text().nullable(),
     }));
 
-    computed = this.setComputed((q) => ({
-      sqlComputed: sql`${q.column('Name')} || ' ' || ${q.column(
-        'UserKey',
-      )}`.type((t) => t.text()),
-      runtimeComputed: q.computeAtRuntime(
-        ['Id', 'Name'],
-        (record) => `${record.Id} ${record.Name}`,
-      ),
-      batchComputed: q.computeBatchAtRuntime(['Id', 'Name'], (records) =>
-        Promise.all(records.map((record) => `${record.Id} ${record.Name}`)),
-      ),
-    }));
-
     relations = {
       profile: this.hasOne(() => ProfileTable, {
+        required: true,
+        columns: ['Id', 'UserKey'],
+        references: ['UserId', 'ProfileKey'],
+      }),
+
+      profiles: this.hasMany(() => ProfileTable, {
         required: true,
         columns: ['Id', 'UserKey'],
         references: ['UserId', 'ProfileKey'],
@@ -47,9 +40,23 @@ describe('computed', () => {
   class ProfileTable extends BaseTable {
     readonly table = 'profile';
     columns = this.setColumns((t) => ({
-      Id: t.name('id').identity().primaryKey(),
+      Id: t.name('id').bigSerial().primaryKey(),
+      Bio: t.name('bio').text(),
       ProfileKey: t.name('profile_key').text(),
-      UserId: t.name('user_id').integer().nullable(),
+      UserId: t.name('user_id').bigint().nullable(),
+    }));
+
+    computed = this.setComputed((q) => ({
+      sqlComputed: sql`${q.column('Bio')} || ' ' || ${q.column(
+        'ProfileKey',
+      )}`.type((t) => t.text()),
+      runtimeComputed: q.computeAtRuntime(
+        ['Id', 'Bio'],
+        (record) => `${record.Id} ${record.Bio}`,
+      ),
+      batchComputed: q.computeBatchAtRuntime(['Id', 'Bio'], (records) =>
+        Promise.all(records.map((record) => `${record.Id} ${record.Bio}`)),
+      ),
     }));
 
     relations = {
@@ -68,23 +75,33 @@ describe('computed', () => {
     },
   );
 
-  let userId = 0;
+  let profileId = '';
   beforeAll(async () => {
-    userId = await local.user
-      .get('Id')
-      .insert(pick(userData, ['Name', 'Password', 'UserKey']));
+    const userId = String(
+      await local.user
+        .get('Id')
+        .insert(pick(userData, ['Name', 'Password', 'UserKey'])),
+    );
 
-    await local.profile.insert({
-      ProfileKey: profileData.ProfileKey,
-      UserId: userId,
-    });
+    profileId = String(
+      await local.profile.get('Id').insert({
+        ProfileKey: profileData.ProfileKey,
+        UserId: userId,
+        Bio: 'bio',
+      }),
+    );
   });
 
   describe('select', () => {
     it('should select record with computed', async () => {
-      const q = local.profile.select({
-        user: (q) =>
-          q.user.select('sqlComputed', 'runtimeComputed', 'batchComputed'),
+      const q = local.user.select({
+        record: (q) =>
+          q.profile.select(
+            'Id',
+            'sqlComputed',
+            'runtimeComputed',
+            'batchComputed',
+          ),
       });
 
       const res = await q;
@@ -92,32 +109,72 @@ describe('computed', () => {
       assertType<
         typeof res,
         {
-          user:
-            | {
-                sqlComputed: string;
-                runtimeComputed: string;
-                batchComputed: string;
-              }
-            | undefined;
+          record: {
+            Id: string;
+            sqlComputed: string;
+            runtimeComputed: string;
+            batchComputed: string;
+          };
         }[]
       >();
 
       expect(res).toEqual([
         {
-          user: {
-            sqlComputed: `${userData.Name} ${userData.UserKey}`,
-            runtimeComputed: `${userId} ${userData.Name}`,
-            batchComputed: `${userId} ${userData.Name}`,
+          record: {
+            Id: profileId,
+            sqlComputed: `bio ${userData.UserKey}`,
+            runtimeComputed: `${profileId} bio`,
+            batchComputed: `${profileId} bio`,
           },
         },
       ]);
     });
 
+    it('should select multiple records with computed', async () => {
+      const q = local.user.select({
+        records: (q) =>
+          q.profiles.select(
+            'Id',
+            'sqlComputed',
+            'runtimeComputed',
+            'batchComputed',
+          ),
+      });
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        {
+          records:
+            | {
+                Id: string;
+                sqlComputed: string;
+                runtimeComputed: string;
+                batchComputed: string;
+              }[];
+        }[]
+      >();
+
+      expect(res).toEqual([
+        {
+          records: [
+            {
+              Id: profileId,
+              sqlComputed: `bio ${userData.UserKey}`,
+              runtimeComputed: `${profileId} bio`,
+              batchComputed: `${profileId} bio`,
+            },
+          ],
+        },
+      ]);
+    });
+
     it('should get computed fields of a relation', async () => {
-      const res = await local.profile.select({
-        sc: (q) => q.user.get('sqlComputed'),
-        rc: (q) => q.user.get('runtimeComputed'),
-        bc: (q) => q.user.get('batchComputed'),
+      const res = await local.user.select({
+        sc: (q) => q.profile.get('sqlComputed'),
+        rc: (q) => q.profile.get('runtimeComputed'),
+        bc: (q) => q.profile.get('batchComputed'),
       });
 
       assertType<
@@ -131,9 +188,9 @@ describe('computed', () => {
 
       expect(res).toEqual([
         {
-          sc: `${userData.Name} ${userData.UserKey}`,
-          rc: `${userId} ${userData.Name}`,
-          bc: `${userId} ${userData.Name}`,
+          sc: `bio ${userData.UserKey}`,
+          rc: `${profileId} bio`,
+          bc: `${profileId} bio`,
         },
       ]);
     });
