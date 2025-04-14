@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.47.1
+
+### Patch Changes
+
+- 52cbced: Fix selecting computed column from a relation with decimal column in a sub select (#491)
+- Updated dependencies [52cbced]
+  - pqb@0.49.1
+  - rake-db@2.23.52
+
 ## 1.47.0
 
 ### Minor Changes

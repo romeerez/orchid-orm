@@ -1,5 +1,11 @@
 # pqb
 
+## 0.49.1
+
+### Patch Changes
+
+- 52cbced: Fix selecting computed column from a relation with decimal column in a sub select (#491)
+
 ## 0.49.0
 
 ### Minor Changes
