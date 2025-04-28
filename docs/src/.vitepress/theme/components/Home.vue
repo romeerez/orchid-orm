@@ -1,42 +1,35 @@
 <script setup>
+import { ref } from 'vue';
+import { useData } from 'vitepress';
+
 import VPButton from 'vitepress/dist/client/theme-default/components/VPButton.vue';
+
+const { theme } = useData();
 </script>
 
 <template>
   <div class="container">
-    <div class="title">Orchid ORM</div>
+    <div class="title">{{ theme.title }}</div>
 
-    <h1 class="text">
-      Postgres ORM, query builder, migration tool.<br />First-class TypeScript
-      support.
-    </h1>
+    <h1 class="text" v-html="theme.description" />
 
     <ul class="list">
-      <li>🚀️ productive way to work with models and relations</li>
-      <li>🧐️ full control over the database with powerful query builder</li>
-      <li>
-        😎️ <a href="https://github.com/colinhacks/zod" target="_blank" class="link"
-          >Zod</a
-        >
-        or
-        <a href="https://valibot.dev/" target="_blank" class="link"
-        >Valibot</a
-        >
-        validation schemas can be derived from your tables
-      </li>
-      <li>⚡ generate table files from an existing database</li>
-      <li>🛳️ generate migrations from the code changes</li>
-      <li>
-        💯 100% TypeScript, define a schema and everything else will be inferred
-      </li>
+      <li
+        v-for="(feature, index) in theme.features"
+        :key="index"
+        v-html="feature"
+      ></li>
     </ul>
 
     <div class="buttons">
-      <VPButton text="Get Started" href="/guide/" />
+      <VPButton
+        :text="theme.buttons.getStarted.text"
+        :href="theme.buttons.getStarted.link"
+      />
       <VPButton
         theme="alt"
-        text="⭐ Star on GitHub"
-        href="https://github.com/romeerez/orchid-orm"
+        :text="theme.buttons.starOnGitHub.text"
+        :href="theme.buttons.starOnGitHub.link"
       />
     </div>
   </div>
