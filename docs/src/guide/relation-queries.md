@@ -34,6 +34,95 @@ const authorHasBooks: boolean = await db.author
 
 Use `chain` to "switch" a query chain to its relation.
 
+### chain in select
+
+Note that `chain` is similar to `join`, but it has one important distinction:
+
+- `chain` will always return unique records by their primary key.
+- `join` may return duplicates, depending on the relation types.
+
+Imagine having an order for several pizzas, every pizza can have multiple ingredients,
+and we want to query ingredients needed for the order.
+
+```ts
+db.order.select({
+  chainedIngredients: (q) =>
+    q.pizzas.order('hasPineapples').chain('ingredients').limit(10),
+  joinedIngredients: (q) =>
+    q.pizzas
+      .order('hasPineapples')
+      .join('ingredients')
+      .select('ingredients.*')
+      .limit(10),
+});
+```
+
+`chainedIngredients` does what is expected: takes 10 ingredients for pizzas ordered by pizza column.
+
+But `joinedIngredients` can return duplicated ingredients in a case
+when the same ingredient is used for more than one pizza.
+
+`chain` relies on a table primary key to de-duplicate records, so the table must have a primary key.
+
+You can use `chain` in conjunction with all other query methods such as `order`, `limit`, `offset`, `where`.
+
+`order` and `where` support columns of all the tables referenced before.
+
+```ts
+db.order.select({
+  chainedIngredients: (q) =>
+    q.pizzas
+      .chain('ingredients')
+      .order(
+        'pizzas.name', // column of pizza must be prefixed with the table name
+        'name', // column of the current `ingredients` table doesn't have to be prefixed
+      )
+      .where({
+        // same in `where`: current table's columns doesn't have to be prefixed,
+        // other columns must be prefixed with the table namm
+        'pizza.price': { gt: 100 },
+        inStock: true,
+      }),
+});
+```
+
+When chaining only `belongsTo` or `hasOne` relations, it will result in a single record.
+When chaining `hasMany` or `hasAndBelongsToMany` with `belongsTo` or `hasOne`, it will load an array of records.
+
+```ts
+// a pizza has many orders, an order has a single customer.
+db.pizza.select({
+  // querying pizza customers will return an array.
+  customers: (q) => q.orders.chain('customer'),
+});
+
+// an order has a single customer, a customer has a single delivery address.
+db.order.select({
+  // returns a single object.
+  // using `order`, `limit`, `offset` makes no sense here as this is querying only a single record.
+  deliveryAddress: (q) => q.customer.chain('deliveryAddress'),
+});
+```
+
+If `order` is applied both before and after the `chain`, it's written to SQL in the same order as it was applied.
+
+```ts
+db.table.select({
+  x: (q) => q.one.order('a').chain('two').order('one.b', 'c'),
+});
+```
+
+```sql
+ORDER BY "one"."a", "one"."b", "two"."c"
+```
+
+### chain out of select
+
+When using `chain` out of `select` it is similar to `whereExists` but the other way around.
+
+"find a book where certain authors exist"
+is equivalent to "find certain authors, and let's chain (switch to) their books."
+
 ```ts
 // load an author by a book id:
 const author = await db.book.find(1).chain('author');

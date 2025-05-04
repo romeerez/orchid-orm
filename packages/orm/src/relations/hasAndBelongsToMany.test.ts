@@ -451,6 +451,104 @@ describe('hasAndBelongsToMany', () => {
         [true, 'Name', 'title'],
       );
     });
+
+    it('should support chained select', () => {
+      const q = db.chat.select({
+        items: (q) => q.users.chain('postTags').select('Tag', 'users.Name'),
+      });
+
+      assertType<
+        Awaited<typeof q>,
+        { items: { Tag: string; Name: string }[] }[]
+      >();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "chat"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json(t.*)) r
+            FROM (
+              SELECT "t"."Tag", "t"."Name"
+              FROM (
+                SELECT
+                  "postTags"."tag" "Tag",
+                  "users"."name" "Name",
+                  row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r"
+                FROM "postTag" "postTags"
+                JOIN "user" "users"
+                  ON EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."user_id" = "users"."id"
+                      AND "chatUser"."user_key" = "users"."user_key"
+                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                      AND "chatUser"."chat_key" = "chat"."chat_key"
+                  ) AND EXISTS (
+                    SELECT 1 FROM "post"
+                    WHERE "post"."id" = "postTags"."post_id"
+                      AND "post"."user_id" = "users"."id"
+                      AND "post"."title" = "users"."user_key"
+                  )
+              ) "t"
+              WHERE (r = 1)
+            ) "t"
+          ) "items" ON true
+        `,
+      );
+    });
+
+    it('should support chained select', () => {
+      const q = db.chat.select({
+        items: (q) =>
+          q.activeUsers
+            .chain('activePostTags')
+            .select('Tag', 'activeUsers.Name'),
+      });
+
+      assertType<
+        Awaited<typeof q>,
+        { items: { Tag: string; Name: string }[] }[]
+      >();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "chat"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json(t.*)) r
+            FROM (
+              SELECT "t"."Tag", "t"."Name"
+              FROM (
+                SELECT
+                  "activePostTags"."tag" "Tag",
+                  "activeUsers"."name" "Name",
+                  row_number() OVER (PARTITION BY "activePostTags"."post_id", "activePostTags"."tag") "r"
+                FROM "postTag" "activePostTags"
+                JOIN "user" "activeUsers"
+                  ON "activeUsers"."active" = $1
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."user_id" = "activeUsers"."id"
+                        AND "chatUser"."user_key" = "activeUsers"."user_key"
+                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
+                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                    ) AND EXISTS (
+                      SELECT 1 FROM "post"
+                      WHERE "post"."id" = "activePostTags"."post_id"
+                        AND "post"."user_id" = "activeUsers"."id"
+                        AND "post"."title" = "activeUsers"."user_key"
+                    )
+                WHERE "activePostTags"."active" = $2
+              ) "t"
+              WHERE (r = 1)
+            ) "t"
+          ) "items" ON true
+        `,
+        [true, true],
+      );
+    });
   });
 
   it('should have proper joinQuery', () => {
@@ -877,85 +975,6 @@ describe('hasAndBelongsToMany', () => {
           ) "chats" ON true
         `,
         [true, 'title'],
-      );
-    });
-
-    it('should support chained select', () => {
-      const q = db.chat.select({
-        items: (q) => q.users.chain('postTags'),
-      });
-
-      assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT COALESCE("items".r, '[]') "items"
-          FROM "chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-              SELECT ${postTagSelectAll}
-              FROM "postTag" "postTags"
-              WHERE EXISTS (
-                SELECT 1 FROM "user"  "users"
-                WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."user_id" = "users"."id"
-                    AND "chatUser"."user_key" = "users"."user_key"
-                    AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chat"."chat_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "post"
-                  WHERE "post"."id" = "postTags"."post_id"
-                    AND "post"."user_id" = "users"."id"
-                    AND "post"."title" = "users"."user_key"
-                )
-              )
-            ) "t"
-          ) "items" ON true
-        `,
-      );
-    });
-
-    it('should support chained select', () => {
-      const q = db.chat.select({
-        items: (q) => q.activeUsers.chain('activePostTags'),
-      });
-
-      assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT COALESCE("items".r, '[]') "items"
-          FROM "chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-              SELECT ${postTagSelectAll}
-              FROM "postTag" "activePostTags"
-              WHERE "activePostTags"."active" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "user"  "activeUsers"
-                  WHERE "activeUsers"."active" = $2
-                    AND EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."user_id" = "activeUsers"."id"
-                        AND "chatUser"."user_key" = "activeUsers"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
-                    ) AND EXISTS (
-                      SELECT 1 FROM "post"
-                      WHERE "post"."id" = "activePostTags"."post_id"
-                        AND "post"."user_id" = "activeUsers"."id"
-                        AND "post"."title" = "activeUsers"."user_key"
-                    )
-                )
-            ) "t"
-          ) "items" ON true
-        `,
-        [true, true],
       );
     });
 

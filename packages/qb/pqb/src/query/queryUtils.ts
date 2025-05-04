@@ -168,9 +168,9 @@ const collectPrimaryKeys = (q: IsQuery): string[] => {
     }
   }
 
-  const pKeys = (q as Query).internal.primaryKeys;
-  if (pKeys) {
-    primaryKeys.push(...pKeys);
+  const pkey = (q as Query).internal.tableData.primaryKey;
+  if (pkey) {
+    primaryKeys.push(...pkey.columns);
   }
 
   return primaryKeys;

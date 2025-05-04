@@ -5,6 +5,7 @@ import {
   chatData,
   db,
   messageData,
+  messageJSONBuildObject,
   messageSelectAll,
   postData,
   Profile,
@@ -45,7 +46,7 @@ describe('relations', () => {
             AND "profile"."profile_key" = "user"."user_key"
         ) "profile" ON true
         LEFT JOIN LATERAL (
-          SELECT json_agg(row_to_json(t.*)) r
+          SELECT json_agg(${messageJSONBuildObject('t')}) r
           FROM (
             SELECT ${messageSelectAll} FROM "message" "messages"
             WHERE ("messages"."text" = $2 AND "messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")

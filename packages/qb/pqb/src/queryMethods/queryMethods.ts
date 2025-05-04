@@ -13,7 +13,7 @@ import {
   SetQueryTableAlias,
   WithDataItems,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
-  PickQueryMetaRelationsReturnType,
+  PickQueryMetaShapeRelationsReturnType,
 } from '../query/query';
 import {
   AliasOrTable,
@@ -45,7 +45,7 @@ import { Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { FromMethods, FromQuerySelf } from './from';
-import { Join, OnMethods } from './join/join';
+import { Join, JoinResultRequireMain, OnMethods } from './join/join';
 import { WithMethods } from './with';
 import { Union } from './union';
 import { JsonMethods } from './json';
@@ -1163,22 +1163,32 @@ export class QueryMethods<ColumnTypes> {
   }
 
   chain<
-    T extends PickQueryMetaRelationsReturnType,
+    T extends PickQueryMetaShapeRelationsReturnType,
     RelName extends keyof T['relations'],
   >(
     this: T,
     relName: RelName,
-  ): T['meta']['subQuery'] extends true
-    ? T['returnType'] extends 'one' | 'oneOrThrow'
-      ? T['relations'][RelName]['relationConfig']['maybeSingle']['returnType'] extends
-          | 'one'
-          | 'oneOrThrow'
-        ? T['relations'][RelName]['relationConfig']['maybeSingle'] & {
-            meta: { subQuery: true };
-          }
-        : T['relations'][RelName]['relationConfig']['query']
-      : T['relations'][RelName]['relationConfig']['maybeSingle']
-    : T['relations'][RelName]['relationConfig']['query'] {
+  ): [
+    T['meta']['subQuery'],
+    T['returnType'],
+    T['relations'][RelName]['relationConfig']['returnsOne'],
+  ] extends [true, 'one' | 'oneOrThrow', true]
+    ? {
+        [K in keyof T['relations'][RelName]['relationConfig']['maybeSingle']]: K extends 'meta'
+          ? {
+              [K in keyof T['relations'][RelName]['relationConfig']['maybeSingle']['meta']]: K extends 'selectable'
+                ? T['relations'][RelName]['relationConfig']['maybeSingle']['meta']['selectable'] &
+                    Omit<T['meta']['selectable'], keyof T['shape']>
+                : K extends 'subQuery'
+                ? true
+                : T['relations'][RelName]['relationConfig']['maybeSingle']['meta'][K];
+            }
+          : T['relations'][RelName]['relationConfig']['maybeSingle'][K];
+      }
+    : JoinResultRequireMain<
+        T['relations'][RelName]['relationConfig']['query'],
+        Omit<T['meta']['selectable'], keyof T['shape']>
+      > {
     const rel = this.relations[relName as string].relationConfig;
 
     return _chain(this as unknown as IsQuery, _clone(rel.query), rel) as never;

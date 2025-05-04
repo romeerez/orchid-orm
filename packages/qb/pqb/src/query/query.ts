@@ -167,6 +167,10 @@ export interface PickQueryMetaRelationsReturnType
   extends PickQueryMetaRelationsResult,
     PickQueryResultReturnType {}
 
+export interface PickQueryMetaShapeRelationsReturnType
+  extends PickQueryMetaRelationsReturnType,
+    PickQueryShape {}
+
 export interface PickQueryMetaRelationsResultReturnType
   extends PickQueryMetaRelationsReturnType,
     PickQueryResult {}

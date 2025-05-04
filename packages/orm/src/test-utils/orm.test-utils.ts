@@ -1,7 +1,7 @@
 import { createBaseTable, DefaultSelect } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
-import { Query, testTransaction } from 'pqb';
+import { ColumnsShape, Query, testTransaction } from 'pqb';
 
 export const BaseTable = createBaseTable({
   snakeCase: true,
@@ -20,7 +20,7 @@ export class UserTable extends BaseTable {
     Password: t.name('password').text().select(false),
     Picture: t.name('picture').text().nullable(),
     Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
-    Age: t.name('age').integer().nullable(),
+    Age: t.name('age').decimal().nullable(),
     Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
   }));
@@ -280,6 +280,7 @@ export class MessageTable extends BaseTable {
       .nullable()
       .foreignKey(() => UserTable, 'Id'),
     Text: t.name('text').text(),
+    Decimal: t.name('decimal').decimal().nullable(),
     Active: t.name('active').boolean().nullable(),
     DeletedAt: t.name('deleted_at').timestamp().nullable(),
     ...t.timestamps(),
@@ -402,6 +403,11 @@ export class PostTable extends BaseTable {
       through: 'postTags',
       source: 'tag',
     }),
+
+    oneTag: this.hasOne(() => TagTable, {
+      through: 'onePostTag',
+      source: 'tag',
+    }),
   };
 }
 
@@ -450,6 +456,13 @@ export class TagTable extends BaseTable {
   columns = this.setColumns((t) => ({
     Tag: t.name('tag').text().primaryKey(),
   }));
+
+  relations = {
+    postTags: this.hasMany(() => PostTagTable, {
+      columns: ['Tag'],
+      references: ['Tag'],
+    }),
+  };
 }
 
 export class ActiveUserWithProfile extends BaseTable {
@@ -501,17 +514,50 @@ export const db = orchidORM(
   },
 );
 
+const tableJsonBuildObject = (table: Query) => {
+  const cache: { [key: string]: string } = {};
+  return (t: string) =>
+    (cache[t] ??= `json_build_object(${table.q
+      .selectAllColumns!.map((c) => {
+        const [, name] = c.split(' ');
+        return `${name.replaceAll('"', "'")}, ${t}.${name}${
+          (table.shape as ColumnsShape)[name.slice(1, -1)]?.data.jsonCast
+            ? '::text'
+            : ''
+        }`;
+      })
+      .join(', ')})`);
+};
+
+const tableRowToJSON = (table: Query) => {
+  const cache: { [key: string]: string } = {};
+  const jsonBuildObject = tableJsonBuildObject(table);
+  return (t: string) =>
+    (cache[t] ??= `CASE WHEN "${t}".* IS NULL THEN NULL ELSE ${jsonBuildObject(
+      `"${t}"`,
+    )} END`);
+};
+
 export const userSelectAll = db.user.q.selectAllColumns!.join(', ');
+
+export const userRowToJSON = tableRowToJSON(db.user);
 
 export const profileSelectAll = db.profile.q.selectAllColumns!.join(', ');
 
 export const messageSelectAll = db.message.q.selectAllColumns!.join(', ');
+
+export const messageRowToJSON = tableRowToJSON(db.message);
+
+export const messageJSONBuildObject = tableJsonBuildObject(db.message);
 
 export const chatSelectAll = db.chat.q.selectAllColumns!.join(', ');
 
 export const postSelectAll = db.post.q.selectAllColumns!.join(', ');
 
 export const postTagSelectAll = db.postTag.q.selectAllColumns!.join(', ');
+
+export const postTagSelectTableAll = (t: string) =>
+  db.postTag.q.selectAllColumns!.map((c) => `"${t}".${c}`).join(', ');
 
 export const categorySelectAll = db.category.q.selectAllColumns!.join(', ');
 
@@ -547,6 +593,14 @@ export const messageData = {
 export const postData = {
   Body: 'body',
   Title: 'title',
+};
+
+export const postTagData = {
+  Tag: 'tag',
+};
+
+export const tagData = {
+  Tag: 'tag',
 };
 
 export const useRelationCallback = <T extends Query>(

@@ -20,6 +20,7 @@ import {
   _queryWhereExists,
   CreateCtx,
   CreateData,
+  getPrimaryKeys,
   getQueryAs,
   JoinedShapes,
   NotFoundError,
@@ -52,7 +53,6 @@ import {
   addAutoForeignKey,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
-  joinQueryChainingHOF,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
@@ -60,6 +60,7 @@ import {
 } from './common/utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 import { defaultSchemaConfig } from 'pqb';
+import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
@@ -111,6 +112,7 @@ export interface HasAndBelongsToManyInfo<
   Rel extends HasAndBelongsToMany,
   Q extends Query,
 > extends RelationConfigBase {
+  returnsOne: false;
   query: Q;
   params: HasAndBelongsToManyParams<T, Rel>;
   maybeSingle: Q;
@@ -398,17 +400,21 @@ export const makeHasAndBelongsToManyMethod = (
       relationName,
       state,
     ),
-    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-      joinQuery(
-        joiningQuery as Query,
-        getQueryAs(baseQuery as Query),
-        getQueryAs(joiningQuery as Query),
-        {
-          ...(joiningQuery as Query).q.joinedShapes,
-          [((baseQuery as Query).q.as || (baseQuery as Query).table) as string]:
-            (baseQuery as Query).q.shape,
-        },
-      ),
+    joinQuery: joinQueryChainHOF(
+      getPrimaryKeys(query),
+      reverseJoin,
+      (joiningQuery, baseQuery) =>
+        joinQuery(
+          joiningQuery as Query,
+          getQueryAs(baseQuery as Query),
+          getQueryAs(joiningQuery as Query),
+          {
+            ...(joiningQuery as Query).q.joinedShapes,
+            [((baseQuery as Query).q.as ||
+              (baseQuery as Query).table) as string]: (baseQuery as Query).q
+              .shape,
+          },
+        ),
     ),
     reverseJoin,
     modifyRelatedQuery(relationQuery) {

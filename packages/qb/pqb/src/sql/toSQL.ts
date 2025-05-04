@@ -73,6 +73,7 @@ export const toSQL = (
     pushWithSql(ctx, query.with);
   }
 
+  let fromQuery: Query | undefined;
   if (query.type && query.type !== 'upsert') {
     const tableName = table.table ?? query.as;
     if (!tableName) throw new Error(`Table is missing for ${query.type}`);
@@ -137,9 +138,10 @@ export const toSQL = (
     const aliases = query.group ? [] : undefined;
     pushSelectSql(ctx, table, query, quotedAs, aliases);
 
-    if (table.table || query.from) {
-      pushFromAndAs(ctx, table, query, quotedAs);
-    }
+    fromQuery =
+      ((table.table || query.from) &&
+        pushFromAndAs(ctx, table, query, quotedAs)) ||
+      undefined;
 
     if (query.join) {
       pushJoinSql(
@@ -187,10 +189,20 @@ export const toSQL = (
     pushOrderBySql(ctx, query, quotedAs, query.order);
   }
 
-  pushLimitSQL(sql, values, query);
+  if (query.useFromLimitOffset) {
+    const q = fromQuery?.q as SelectQueryData;
+    if (q.limit) {
+      sql.push(`LIMIT ${addValue(values, q.limit)}`);
+    }
+    if (q.offset) {
+      sql.push(`OFFSET ${addValue(values, q.offset)}`);
+    }
+  } else {
+    pushLimitSQL(sql, values, query);
 
-  if (query.offset) {
-    sql.push(`OFFSET ${addValue(values, query.offset)}`);
+    if (query.offset && !query.returnsOne) {
+      sql.push(`OFFSET ${addValue(values, query.offset)}`);
+    }
   }
 
   if (query.for) {

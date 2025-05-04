@@ -35,6 +35,7 @@ import {
   UpdateData,
   VirtualColumn,
   WhereArg,
+  getPrimaryKeys,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -44,7 +45,6 @@ import {
 } from './relations';
 import {
   addAutoForeignKey,
-  joinQueryChainingHOF,
   NestedInsertOneItem,
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
@@ -61,6 +61,7 @@ import {
 } from 'orchid-core';
 import { RelationRefsOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
+import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';
@@ -110,11 +111,10 @@ export interface BelongsToInfo<
   Required,
   Q extends Query,
 > extends RelationConfigBase {
+  returnsOne: true;
   query: Q;
   params: BelongsToParams<T, Rel>;
-  maybeSingle: Required extends true
-    ? QueryTake<Q>
-    : QueryTakeOptional<Q>;
+  maybeSingle: Required extends true ? QueryTake<Q> : QueryTakeOptional<Q>;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: FK;
@@ -332,8 +332,16 @@ export const makeBelongsToMethod = (
       relationName,
       state,
     ),
-    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-      join(baseQuery as Query, joiningQuery as Query, primaryKeys, foreignKeys),
+    joinQuery: joinQueryChainHOF(
+      getPrimaryKeys(query),
+      reverseJoin,
+      (joiningQuery, baseQuery) =>
+        join(
+          baseQuery as Query,
+          joiningQuery as Query,
+          primaryKeys,
+          foreignKeys,
+        ),
     ),
     reverseJoin,
   };

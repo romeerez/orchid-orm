@@ -19,6 +19,7 @@ import {
   ColumnTypesBase,
   Expression,
   HookSelect,
+  HookSelectValue,
   isExpression,
   QueryColumns,
   RecordUnknown,
@@ -201,28 +202,34 @@ export const selectToSql = (
 
   if (hookSelect) {
     for (const column of hookSelect.keys()) {
-      const item = hookSelect.get(column) as { select: string; as?: string };
+      const item = hookSelect.get(column) as HookSelectValue;
       const { select } = item;
       let sql;
       let quotedTable;
       let columnName;
       let col;
-      const index = select.indexOf('.');
-      if (index !== -1) {
-        const tableName = select.slice(0, index);
-        quotedTable = `"${tableName}"`;
-        columnName = select.slice(index + 1);
-        col = table.q.joinedShapes?.[tableName]?.[columnName] as
-          | ColumnType
-          | undefined;
-        sql = col?.data.computed
-          ? col.data.computed.toSQL(ctx, `"${tableName}"`)
-          : `"${tableName}"."${col?.data.name || columnName}"`;
+
+      if (typeof select === 'string') {
+        const index = select.indexOf('.');
+        if (index !== -1) {
+          const tableName = select.slice(0, index);
+          quotedTable = `"${tableName}"`;
+          columnName = select.slice(index + 1);
+          col = table.q.joinedShapes?.[tableName]?.[columnName] as
+            | ColumnType
+            | undefined;
+          sql = col?.data.computed
+            ? col.data.computed.toSQL(ctx, `"${tableName}"`)
+            : `"${tableName}"."${col?.data.name || columnName}"`;
+        } else {
+          quotedTable = quotedAs;
+          columnName = select;
+          col = query.shape[select] as ColumnType | undefined;
+          sql = simpleColumnToSQL(ctx, query, select, col, quotedAs);
+        }
       } else {
-        quotedTable = quotedAs;
-        columnName = select;
-        col = query.shape[select] as ColumnType | undefined;
-        sql = simpleColumnToSQL(ctx, query, select, col, quotedAs);
+        columnName = column;
+        sql = select.sql;
       }
 
       let name = columnName;
@@ -238,7 +245,7 @@ export const selectToSql = (
 
         item.as = name;
         sql += ` "${name}"`;
-      } else if (col?.data.name) {
+      } else if (col?.data.name || typeof select === 'object') {
         sql += ` "${columnName}"`;
       }
 

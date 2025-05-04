@@ -73,10 +73,7 @@ export function queryJson<T>(
 ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
   const inner = (self as Query).clone();
 
-  const q = queryWrap(
-    inner,
-    cloneQueryBaseUnscoped(self as Query),
-  ) as unknown as Query;
+  const q = queryWrap(inner, cloneQueryBaseUnscoped(inner)) as unknown as Query;
   // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
   _queryGetOptional(
     q,

@@ -57,7 +57,10 @@ export const _join = <
   query: T,
   require: RequireJoined,
   type: string,
-  first: JoinFirstArg<never>,
+  first:
+    | JoinFirstArg<never>
+    // is used by `joinQueryChainHOF` in ORM
+    | { _internalJoin: Query },
   args: JoinArgs<Query, JoinFirstArg<Query>>,
 ): JoinResult<T, R, RequireMain> => {
   let joinKey: string | undefined;
@@ -67,15 +70,23 @@ export const _join = <
   let computeds: ComputedColumns | undefined;
   let joinSubQuery = false;
 
-  first = preprocessJoinArg(query, first);
+  first = preprocessJoinArg(query, first as JoinFirstArg<never>);
 
   if (typeof first === 'object') {
+    let isInternalJoin;
+    if ('_internalJoin' in first) {
+      isInternalJoin = true;
+      first = first._internalJoin as JoinFirstArg<never>;
+    }
+
     if (require && isQueryNone(first)) {
       return _queryNone(query) as never;
     }
 
     const q = first as Query;
-    joinSubQuery = getIsJoinSubQuery(q);
+    if (!isInternalJoin) {
+      joinSubQuery = getIsJoinSubQuery(q);
+    }
 
     joinKey = q.q.as || q.table;
     if (joinKey) {
@@ -94,7 +105,7 @@ export const _join = <
 
     const relation = query.relations[joinKey];
     if (relation) {
-      shape = getShapeFromSelect(relation.relationConfig.query);
+      shape = getShapeFromSelect(relation.relationConfig.query as never);
       const r = relation.relationConfig.query as Query;
       parsers = r.q.parsers;
       batchParsers = r.q.batchParsers;

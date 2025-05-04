@@ -35,7 +35,7 @@ export const processJoinArgs = (
       const { query: toQuery, joinQuery } =
         joinTo.relations[first].relationConfig;
 
-      const j = joinQuery(toQuery, joinTo) as Query;
+      const j = joinQuery(toQuery as never, joinTo) as Query;
       if (typeof args[0] === 'function') {
         const r = args[0](
           makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo),

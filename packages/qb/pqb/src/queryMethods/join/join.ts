@@ -137,6 +137,17 @@ type JoinWithArgs<T extends PickQueryMeta, W extends WithDataItem> =
       rightColumn: keyof T['meta']['selectable'] | Expression,
     ];
 
+export type JoinResultRequireMain<T extends PickQueryMeta, JoinedSelectable> = {
+  // is optimal
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'selectable'
+          ? T['meta']['selectable'] & JoinedSelectable
+          : T['meta'][K];
+      }
+    : T[K];
+};
+
 /**
  * Result of all `join` methods, not `joinLateral`.
  * Adds joined table columns from its 'result' to the 'selectable' of the query.
@@ -152,7 +163,7 @@ export type JoinResult<
   RequireMain,
 > = RequireMain extends true
   ? {
-      // is optimal
+      // is optimal, same as JoinResultRequireMain above, inlined for fewer instantiations.
       [K in keyof T]: K extends 'meta'
         ? {
             [K in keyof T['meta']]: K extends 'selectable'

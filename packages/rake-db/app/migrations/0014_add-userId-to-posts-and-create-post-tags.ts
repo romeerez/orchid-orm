@@ -18,6 +18,7 @@ change(async (db) => {
     (t) => ({
       postId: t.integer().foreignKey('post', 'id'),
       tag: t.text().foreignKey('tag', 'tag'),
+      active: t.boolean().nullable(),
     }),
     (t) => t.primaryKey(['postId', 'tag']),
   );

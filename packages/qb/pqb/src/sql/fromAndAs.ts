@@ -12,12 +12,14 @@ import {
 import { getSqlText } from './utils';
 import { Query } from '../query/query';
 
+let fromQuery: Query | undefined;
+
 export const pushFromAndAs = (
   ctx: ToSQLCtx,
   table: IsQuery,
   data: SelectQueryData,
   quotedAs?: string,
-) => {
+): Query | undefined => {
   let sql = 'FROM ';
 
   const from = getFrom(ctx, table, data, quotedAs);
@@ -61,6 +63,13 @@ export const pushFromAndAs = (
   }
 
   ctx.sql.push(sql);
+
+  if (fromQuery) {
+    const fq = fromQuery;
+    fromQuery = undefined;
+    return fq;
+  }
+  return;
 };
 
 const getFrom = (
@@ -69,6 +78,8 @@ const getFrom = (
   data: SelectQueryData,
   quotedAs?: string,
 ) => {
+  fromQuery = undefined;
+
   if (data.from) {
     const { from } = data;
     if (Array.isArray(from)) {
@@ -102,12 +113,14 @@ const fromToSql = (
       if (!from.table) {
         sql = `(${getSqlText(toSQL(from, ctx))})`;
       }
-      // if query contains more than just schema return (SELECT ...)
+      // if the query contains more than just schema return (SELECT ...)
       else if (!checkIfASimpleQuery(from)) {
         sql = `(${getSqlText(toSQL(from, ctx))})`;
       } else {
         sql = quoteSchemaAndTable(from.q.schema, from.table);
       }
+
+      fromQuery = from;
     }
   } else {
     sql = quoteSchemaAndTable(data.schema, from);

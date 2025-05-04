@@ -9,7 +9,12 @@ import {
 } from './utils';
 import { QueryColumn, QueryColumns } from './columns';
 
-export type HookSelect = Map<string, { select: string; as?: string }>;
+export type HookSelect = Map<string, HookSelectValue>;
+
+export interface HookSelectValue {
+  select: string | { sql: string };
+  as?: string;
+}
 
 export interface SqlCommonOptions {
   // additional columns to select for `after` hooks
@@ -41,7 +46,7 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
   // table alias
   as?: string;
   // single relations (belongsTo, hasOne) returns one when subQuery is true, returns many otherwise
-  subQuery?: boolean;
+  subQuery: boolean;
   // return type of `create`, `update`, `delete` depends on whether the query has select
   hasSelect?: true;
   // `update` and `delete` require the query to have `where`.

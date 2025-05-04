@@ -19,6 +19,9 @@ import {
   postTagSelectAll,
   Post,
   postSelectAll,
+  messageRowToJSON,
+  messageJSONBuildObject,
+  userRowToJSON,
 } from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
@@ -557,6 +560,86 @@ describe('hasMany', () => {
         [true],
       );
     });
+
+    it('should support chained select', () => {
+      const q = db.user.select({
+        items: (q) => q.posts.chain('postTags').select('Tag', 'posts.Body'),
+      });
+
+      assertType<
+        Awaited<typeof q>,
+        { items: { Tag: string; Body: string }[] }[]
+      >();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json(t.*)) r
+            FROM (
+              SELECT "t"."Tag", "t"."Body"
+              FROM (
+                SELECT
+                  "postTags"."tag" "Tag",
+                  "posts"."body" "Body",
+                  row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r"
+                FROM "postTag" "postTags"
+                JOIN "post" "posts"
+                  ON "posts"."user_id" = "user"."id"
+                 AND "posts"."title" = "user"."user_key"
+                 AND "posts"."id" = "postTags"."post_id"
+              ) "t"
+              WHERE (r = 1)
+            ) "t"
+          ) "items" ON true
+        `,
+      );
+    });
+
+    it('should support chained select respecting `on` conditions', () => {
+      const q = db.user.select({
+        items: (q) =>
+          q.activePosts
+            .chain('activePostTags')
+            .select('Tag', 'activePosts.Body'),
+      });
+
+      assertType<
+        Awaited<typeof q>,
+        { items: { Tag: string; Body: string }[] }[]
+      >();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("items".r, '[]') "items"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json(t.*)) r
+            FROM (
+              SELECT "t"."Tag", "t"."Body"
+              FROM (
+                SELECT
+                  "activePostTags"."tag" "Tag",
+                  "activePosts"."body" "Body",
+                  row_number() OVER (PARTITION BY "activePostTags"."post_id", "activePostTags"."tag") "r"
+                FROM "postTag" "activePostTags"
+                JOIN "post" "activePosts"
+                  ON "activePosts"."active" = $1
+                 AND "activePosts"."user_id" = "user"."id"
+                 AND "activePosts"."title" = "user"."user_key"
+                 AND "activePosts"."id" = "activePostTags"."post_id"
+                WHERE "activePostTags"."active" = $2
+              ) "t"
+              WHERE (r = 1)
+            ) "t"
+          ) "items" ON true
+        `,
+        [true, true],
+      );
+    });
   });
 
   it('should have proper joinQuery', () => {
@@ -694,7 +777,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" "Name", row_to_json("m".*) "message"
+          SELECT "user"."name" "Name", ${messageRowToJSON('m')} "message"
           FROM "user"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
@@ -721,7 +804,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" "Name", row_to_json("m".*) "message"
+          SELECT "user"."name" "Name", ${messageRowToJSON('m')} "message"
           FROM "user"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
@@ -762,6 +845,7 @@ describe('hasMany', () => {
               Id: messageId,
               AuthorId,
               ChatId,
+              Decimal: null,
               DeletedAt: null,
               Active: null,
               ...messageData,
@@ -785,7 +869,7 @@ describe('hasMany', () => {
             COALESCE("messages".r, '[]') "messages"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(${messageJSONBuildObject('t')}) r
             FROM (
               SELECT ${messageSelectAll}
               FROM "message" "messages"
@@ -822,6 +906,7 @@ describe('hasMany', () => {
               Id: messageId,
               AuthorId,
               ChatId,
+              Decimal: null,
               DeletedAt: null,
               ...activeMessageData,
               createdAt: expect.any(Date),
@@ -844,7 +929,7 @@ describe('hasMany', () => {
             COALESCE("messages".r, '[]') "messages"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(${messageJSONBuildObject('t')}) r
             FROM (
               SELECT ${messageSelectAll}
               FROM "message" "activeMessages"
@@ -857,69 +942,6 @@ describe('hasMany', () => {
           ) "messages" ON true
         `,
         [true, 'text'],
-      );
-    });
-
-    it('should support chained select', () => {
-      const q = db.user.select({
-        items: (q) => q.posts.chain('postTags'),
-      });
-
-      assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT COALESCE("items".r, '[]') "items"
-          FROM "user"
-                 LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-                   SELECT ${postTagSelectAll}
-                   FROM "postTag" "postTags"
-                   WHERE EXISTS (
-                     SELECT 1
-                     FROM "post"  "posts"
-                     WHERE "posts"."user_id" = "user"."id"
-                       AND "posts"."title" = "user"."user_key"
-                       AND "posts"."id" = "postTags"."post_id"
-                   )
-                 ) "t"
-            ) "items" ON true
-        `,
-      );
-    });
-
-    it('should support chained select', () => {
-      const q = db.user.select({
-        items: (q) => q.activePosts.chain('activePostTags'),
-      });
-
-      assertType<Awaited<typeof q>, { items: PostTag[] }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT COALESCE("items".r, '[]') "items"
-          FROM "user"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
-            FROM (
-              SELECT ${postTagSelectAll}
-              FROM "postTag" "activePostTags"
-              WHERE "activePostTags"."active" = $1
-                AND EXISTS (
-                  SELECT 1
-                  FROM "post"  "activePosts"
-                  WHERE "activePosts"."active" = $2
-                    AND "activePosts"."user_id" = "user"."id"
-                    AND "activePosts"."title" = "user"."user_key"
-                    AND "activePosts"."id" = "activePostTags"."post_id"
-                )
-            ) "t"
-          ) "items" ON true
-        `,
-        [true, true],
       );
     });
 
@@ -1118,13 +1140,13 @@ describe('hasMany', () => {
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) r
             FROM (
-              SELECT row_to_json("sender2".*) "sender"
+              SELECT ${userRowToJSON('sender2')} "sender"
               FROM "message" "messages"
               LEFT JOIN LATERAL (
                 SELECT COALESCE("messages2".r, '[]') "messages"
                 FROM "user" "sender2"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json(t.*)) r
+                  SELECT json_agg(${messageJSONBuildObject('t')}) r
                   FROM (
                     SELECT ${messageSelectAll}
                     FROM "message" "messages2"
@@ -1164,13 +1186,13 @@ describe('hasMany', () => {
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) r
             FROM (
-              SELECT row_to_json("activeSender2".*) "activeSender"
+              SELECT ${userRowToJSON('activeSender2')} "activeSender"
               FROM "message" "activeMessages"
               LEFT JOIN LATERAL (
                 SELECT COALESCE("activeMessages2".r, '[]') "activeMessages"
                 FROM "user" "activeSender2"
                 LEFT JOIN LATERAL (
-                  SELECT json_agg(row_to_json(t.*)) r
+                  SELECT json_agg(${messageJSONBuildObject('t')}) r
                   FROM (
                     SELECT ${messageSelectAll}
                     FROM "message" "activeMessages2"
@@ -4957,6 +4979,111 @@ describe('hasMany through', () => {
           ['title', true, true, 'bio'],
         );
       });
+
+      it('should support chained select', () => {
+        const q = db.message.select({
+          items: (q) =>
+            q.profiles.chain('posts').select('Body', 'profiles.Bio'),
+        });
+
+        assertType<
+          Awaited<typeof q>,
+          { items: { Body: string; Bio: string | null }[] }[]
+        >();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "message"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json(t.*)) r
+              FROM (
+                SELECT "t"."Body", "t"."Bio"
+                FROM (
+                  SELECT
+                    "posts"."body" "Body",
+                    "profiles"."bio" "Bio",
+                    row_number() OVER (PARTITION BY "posts"."id") "r"
+                  FROM "post" "posts"
+                  JOIN "profile" "profiles"
+                    ON EXISTS (
+                      SELECT 1 FROM "user"  "sender"
+                      WHERE "profiles"."user_id" = "sender"."id"
+                        AND "profiles"."profile_key" = "sender"."user_key"
+                        AND "sender"."id" = "message"."author_id"
+                        AND "sender"."user_key" = "message"."message_key"
+                    ) AND EXISTS (
+                      SELECT 1 FROM "user"
+                      WHERE "posts"."user_id" = "user"."id"
+                        AND "posts"."title" = "user"."user_key"
+                        AND "user"."id" = "profiles"."user_id"
+                        AND "user"."user_key" = "profiles"."profile_key"
+                    )
+                ) "t"
+                WHERE (r = 1)
+              ) "t"
+            ) "items" ON true
+            WHERE ("message"."deleted_at" IS NULL)
+          `,
+        );
+      });
+
+      it('should support chained select respecting `on` conditions', () => {
+        const q = db.message.select({
+          items: (q) =>
+            q.activeProfiles
+              .chain('activePosts')
+              .select('Body', 'activeProfiles.Bio'),
+        });
+
+        assertType<
+          Awaited<typeof q>,
+          { items: { Body: string; Bio: string | null }[] }[]
+        >();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("items".r, '[]') "items"
+            FROM "message"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json(t.*)) r
+              FROM (
+                SELECT "t"."Body", "t"."Bio"
+                FROM (
+                  SELECT
+                    "activePosts"."body" "Body",
+                    "activeProfiles"."bio" "Bio",
+                    row_number() OVER (PARTITION BY "activePosts"."id") "r"
+                  FROM "post" "activePosts"
+                  JOIN "profile" "activeProfiles"
+                    ON EXISTS (
+                      SELECT 1 FROM "user"  "activeSender"
+                      WHERE "activeProfiles"."active" = $1
+                        AND "activeProfiles"."user_id" = "activeSender"."id"
+                        AND "activeProfiles"."profile_key" = "activeSender"."user_key"
+                        AND "activeSender"."active" = $2
+                        AND "activeSender"."id" = "message"."author_id"
+                        AND "activeSender"."user_key" = "message"."message_key"
+                    ) AND EXISTS (
+                      SELECT 1 FROM "user"  "activeUser"
+                      WHERE "activePosts"."active" = $3
+                        AND "activePosts"."user_id" = "activeUser"."id"
+                        AND "activePosts"."title" = "activeUser"."user_key"
+                        AND "activeUser"."active" = $4
+                        AND "activeUser"."id" = "activeProfiles"."user_id"
+                        AND "activeUser"."user_key" = "activeProfiles"."profile_key"
+                    )
+                ) "t"
+                WHERE (r = 1)
+              ) "t"
+            ) "items" ON true
+            WHERE ("message"."deleted_at" IS NULL)
+          `,
+          [true, true, true, true],
+        );
+      });
     });
 
     it('should have proper joinQuery', () => {
@@ -5468,91 +5595,6 @@ describe('hasMany through', () => {
             ) "profiles" ON true
           `,
           ['bio', true, true],
-        );
-      });
-
-      it('should support chained select', () => {
-        const q = db.message.select({
-          items: (q) => q.profiles.chain('posts'),
-        });
-
-        assertType<Awaited<typeof q>, { items: Post[] }[]>();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT COALESCE("items".r, '[]') "items"
-            FROM "message"
-            LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
-              FROM (
-                SELECT ${postSelectAll}
-                FROM "post" "posts"
-                WHERE EXISTS (
-                  SELECT 1 FROM "profile"  "profiles"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "user"  "sender"
-                    WHERE "profiles"."user_id" = "sender"."id"
-                      AND "profiles"."profile_key" = "sender"."user_key"
-                      AND "sender"."id" = "message"."author_id"
-                      AND "sender"."user_key" = "message"."message_key"
-                  ) AND EXISTS (
-                    SELECT 1 FROM "user"
-                    WHERE "posts"."user_id" = "user"."id"
-                      AND "posts"."title" = "user"."user_key"
-                      AND "user"."id" = "profiles"."user_id"
-                      AND "user"."user_key" = "profiles"."profile_key"
-                  )
-                )
-              ) "t"
-            ) "items" ON true
-            WHERE ("message"."deleted_at" IS NULL)
-          `,
-        );
-      });
-
-      it('should support chained select', () => {
-        const q = db.message.select({
-          items: (q) => q.activeProfiles.chain('activePosts'),
-        });
-
-        assertType<Awaited<typeof q>, { items: Post[] }[]>();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT COALESCE("items".r, '[]') "items"
-            FROM "message"
-            LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
-              FROM (
-                SELECT ${postSelectAll}
-                FROM "post" "activePosts"
-                WHERE EXISTS (
-                  SELECT 1 FROM "profile"  "activeProfiles"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "user"  "activeSender"
-                    WHERE "activeProfiles"."active" = $1
-                      AND "activeProfiles"."user_id" = "activeSender"."id"
-                      AND "activeProfiles"."profile_key" = "activeSender"."user_key"
-                      AND "activeSender"."active" = $2
-                      AND "activeSender"."id" = "message"."author_id"
-                      AND "activeSender"."user_key" = "message"."message_key"
-                  ) AND EXISTS (
-                    SELECT 1 FROM "user"  "activeUser"
-                    WHERE "activePosts"."active" = $3
-                      AND "activePosts"."user_id" = "activeUser"."id"
-                      AND "activePosts"."title" = "activeUser"."user_key"
-                      AND "activeUser"."active" = $4
-                      AND "activeUser"."id" = "activeProfiles"."user_id"
-                      AND "activeUser"."user_key" = "activeProfiles"."profile_key"
-                  )
-                )
-              ) "t"
-            ) "items" ON true
-            WHERE ("message"."deleted_at" IS NULL)
-          `,
-          [true, true, true, true],
         );
       });
 

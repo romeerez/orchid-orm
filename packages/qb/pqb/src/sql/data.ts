@@ -130,6 +130,13 @@ export interface CommonQueryData {
   sources?: { [K: string]: QuerySourceItem };
   and?: WhereItem[];
   or?: WhereItem[][];
+  order?: OrderItem[];
+  // It is used for ORM relations that are known to return a single record to omit `LIMIT` and `OFFSET` from SQL.
+  returnsOne?: true;
+  // It is used by `joinQueryChainHOF`
+  // to remove `LIMIT` and `OFFSET`
+  // from the inner query and apply it to the outer query for grouping-ordering reasons.
+  useFromLimitOffset?: true;
   coalesceValue?: unknown | Expression;
   parsers?: ColumnsParsers;
   batchParsers?: BatchParsers;
@@ -208,6 +215,9 @@ export interface CommonQueryData {
     returning?: { select?: string; hookSelect?: HookSelect };
     targetHookSelect: HookSelect;
   };
+
+  // It is used by `joinQueryChainHOF` to customize the outer query of a chained relation.
+  outerQuery?: Query;
 }
 
 export interface SelectQueryData extends CommonQueryData {
@@ -224,8 +234,6 @@ export interface SelectQueryData extends CommonQueryData {
     // true to not wrap the first union query into parens.
     p?: boolean;
   };
-  order?: OrderItem[];
-  returnsOne?: true;
   limit?: number;
   offset?: number;
   for?: {

@@ -7,12 +7,10 @@ import {
   JoinCallback,
   JoinQueryMethod,
   PickQueryMetaRelations,
-  PickQueryQ,
   PickQueryRelations,
   pushQueryOnForOuter,
   Query,
   RelationConfigBase,
-  RelationJoinQuery,
   setQueryObjectValueImmutable,
   UpdateData,
   WhereArg,
@@ -207,12 +205,15 @@ export function joinHasThrough(
   sourceRelation: RelationConfigBase,
 ): Query {
   return q.whereExists(
-    throughRelation.joinQuery(throughRelation.query, baseQuery) as never,
+    throughRelation.joinQuery(
+      throughRelation.query as never,
+      baseQuery as never,
+    ) as never,
     (() => {
       const as = getQueryAs(joiningQuery);
       return sourceRelation.joinQuery(
         (sourceRelation.query as Query).as(as),
-        throughRelation.query,
+        throughRelation.query as never,
       );
     }) as unknown as JoinCallback<Query, Query>,
   );
@@ -242,28 +243,6 @@ export function joinHasRelation(
 
   return q;
 }
-
-export const joinQueryChainingHOF =
-  (
-    reverseJoin: RelationJoinQuery,
-    joinQuery: RelationJoinQuery,
-  ): RelationJoinQuery =>
-  (joiningQuery, baseQuery) => {
-    const chain = (joiningQuery as unknown as PickQueryQ).q.relChain;
-    if (!chain || chain.length === 1) {
-      return joinQuery(joiningQuery, baseQuery);
-    }
-
-    const last = chain[chain.length - 1];
-    const query =
-      'relationConfig' in last
-        ? last.relationConfig.joinQuery(last as never, baseQuery)
-        : last;
-
-    return (joiningQuery as Query).where({
-      EXISTS: { q: reverseJoin(query, joiningQuery) },
-    });
-  };
 
 export const addAutoForeignKey = (
   tableConfig: ORMTableInput,

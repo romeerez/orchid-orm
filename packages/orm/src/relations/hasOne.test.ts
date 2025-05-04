@@ -16,6 +16,11 @@ import {
   postTagSelectAll,
   Post,
   postSelectAll,
+  postTagSelectTableAll,
+  postData,
+  tagData,
+  postTagData,
+  userRowToJSON,
 } from '../test-utils/orm.test-utils';
 import { Db, NotFoundError, Query } from 'pqb';
 import { orchidORM } from '../orm';
@@ -413,6 +418,208 @@ describe('hasOne', () => {
           );
         });
       });
+
+      it('should support chained select returning multiple', async () => {
+        await db.user.create({
+          ...userData,
+          posts: {
+            create: [
+              {
+                ...postData,
+                Body: 'post 2',
+                postTags: {
+                  create: [
+                    {
+                      ...postTagData,
+                      Tag: 'tag 1',
+                      tag: {
+                        create: { Tag: 'tag 1' },
+                      },
+                    },
+                  ],
+                },
+              },
+              {
+                ...postData,
+                Body: 'post 1',
+                postTags: {
+                  create: [
+                    {
+                      ...postTagData,
+                      Tag: 'tag 2',
+                      tag: {
+                        create: { Tag: 'tag 2' },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        });
+
+        const q = db.user
+          .select({
+            item: (q) =>
+              q.posts
+                .chain('onePostTag')
+                .select('Tag', 'posts.Body')
+                .order('posts.Body', 'Tag'),
+          })
+          .take();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("item".r, '[]') "item"
+            FROM "user"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json(t.*)) r
+              FROM (
+                SELECT "t"."Tag", "t"."Body"
+                FROM (
+                  SELECT
+                    "onePostTag"."tag" "Tag",
+                    "posts"."body" "Body",
+                    row_number() OVER (PARTITION BY "onePostTag"."post_id", "onePostTag"."tag") "r"
+                  FROM "postTag" "onePostTag"
+                  JOIN "post" "posts"
+                    ON "posts"."user_id" = "user"."id"
+                   AND "posts"."title" = "user"."user_key"
+                   AND "posts"."id" = "onePostTag"."post_id"
+                  ORDER BY "posts"."body" ASC, "onePostTag"."tag" ASC
+                ) "t"
+                WHERE (r = 1)
+              ) "t"
+            ) "item" ON true
+            LIMIT 1
+          `,
+        );
+
+        const result = await q;
+
+        assertType<typeof result, { item: { Tag: string; Body: string }[] }>();
+
+        expect(result).toEqual({
+          item: [
+            { Tag: 'tag 2', Body: 'post 1' },
+            { Tag: 'tag 1', Body: 'post 2' },
+          ],
+        });
+      });
+
+      it('should support chained select returning single', async () => {
+        await db.user.create({
+          ...userData,
+          onePost: {
+            create: {
+              ...postData,
+              postTags: {
+                create: [
+                  {
+                    ...postTagData,
+                    tag: {
+                      create: tagData,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        });
+
+        const q = db.user
+          .select({
+            item: (q) =>
+              q.onePost.chain('onePostTag').select('Tag', 'onePost.Body'),
+          })
+          .take();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT row_to_json("item".*) "item"
+            FROM "user"
+            LEFT JOIN LATERAL (
+              SELECT "onePostTag"."tag" "Tag", "onePost"."body" "Body"
+              FROM "postTag" "onePostTag"
+              JOIN "post" "onePost"
+                ON "onePost"."user_id" = "user"."id"
+               AND "onePost"."title" = "user"."user_key"
+               AND "onePost"."id" = "onePostTag"."post_id"
+            ) "item" ON true
+            LIMIT 1
+          `,
+        );
+
+        const result = await q;
+
+        assertType<
+          typeof result,
+          { item: { Tag: string; Body: string } | undefined }
+        >();
+
+        expect(result).toEqual({
+          item: { Tag: 'tag', Body: 'body' },
+        });
+      });
+
+      it('should support chained select using `on`', async () => {
+        await db.user.create({
+          ...userData,
+          onePost: {
+            create: {
+              ...postData,
+              Active: true,
+              postTags: {
+                create: [
+                  {
+                    ...postTagData,
+                    Active: true,
+                    tag: {
+                      create: tagData,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        });
+
+        const q = db.user
+          .select({
+            item: (q) => q.activeOnePost.chain('activeOnePostTag'),
+          })
+          .take();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT row_to_json("item".*) "item"
+            FROM "user"
+            LEFT JOIN LATERAL (
+              SELECT ${postTagSelectTableAll('activeOnePostTag')}
+              FROM "postTag" "activeOnePostTag"
+              JOIN "post" "activeOnePost"
+                ON "activeOnePost"."active" = $1
+               AND "activeOnePost"."user_id" = "user"."id"
+               AND "activeOnePost"."title" = "user"."user_key"
+               AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
+              WHERE "activeOnePostTag"."active" = $2
+            ) "item" ON true
+            LIMIT 1
+          `,
+          [true, true],
+        );
+
+        const result = await q;
+
+        assertType<typeof result, { item: PostTag | undefined }>();
+
+        expect(result).toEqual({
+          item: { PostId: expect.any(Number), Tag: 'tag', Active: true },
+        });
+      });
     });
 
     it('should have proper joinQuery', () => {
@@ -762,63 +969,6 @@ describe('hasOne', () => {
         );
       });
 
-      it('should support chained select', () => {
-        const q = db.user.select({
-          item: (q) => q.onePost.chain('onePostTag'),
-        });
-
-        assertType<Awaited<typeof q>, { item: PostTag | undefined }[]>();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT row_to_json("item".*) "item"
-            FROM "user"
-            LEFT JOIN LATERAL (
-              SELECT ${postTagSelectAll}
-              FROM "postTag" "onePostTag"
-              WHERE EXISTS (
-                SELECT 1
-                FROM "post"  "onePost"
-                WHERE "onePost"."user_id" = "user"."id"
-                  AND "onePost"."title" = "user"."user_key"
-                  AND "onePost"."id" = "onePostTag"."post_id"
-              )
-            ) "item" ON true
-          `,
-        );
-      });
-
-      it('should support chained select using `on`', () => {
-        const q = db.user.select({
-          item: (q) => q.activeOnePost.chain('activeOnePostTag'),
-        });
-
-        assertType<Awaited<typeof q>, { item: PostTag | undefined }[]>();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT row_to_json("item".*) "item"
-            FROM "user"
-            LEFT JOIN LATERAL (
-              SELECT ${postTagSelectAll}
-              FROM "postTag" "activeOnePostTag"
-              WHERE "activeOnePostTag"."active" = $1
-                AND EXISTS (
-                  SELECT 1
-                  FROM "post"  "activeOnePost"
-                  WHERE "activeOnePost"."active" = $2
-                    AND "activeOnePost"."user_id" = "user"."id"
-                    AND "activeOnePost"."title" = "user"."user_key"
-                    AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
-                )
-            ) "item" ON true
-          `,
-          [true, true],
-        );
-      });
-
       it('should handle exists sub query', () => {
         const query = db.user.as('u').select('Id', {
           hasProfile: (q) => q.profile.exists(),
@@ -894,7 +1044,7 @@ describe('hasOne', () => {
             SELECT row_to_json("profile".*) "profile"
             FROM "user"
             LEFT JOIN LATERAL (
-              SELECT row_to_json("user2".*) "user"
+              SELECT ${userRowToJSON('user2')} "user"
               FROM "profile"
               LEFT JOIN LATERAL (
                 SELECT row_to_json("profile2".*) "profile"
@@ -936,7 +1086,7 @@ describe('hasOne', () => {
             SELECT row_to_json("activeProfile".*) "activeProfile"
             FROM "user" "activeUser"
             LEFT JOIN LATERAL (
-              SELECT row_to_json("activeUser2".*) "activeUser"
+              SELECT ${userRowToJSON('activeUser2')} "activeUser"
               FROM "profile" "activeProfile"
               LEFT JOIN LATERAL (
                 SELECT row_to_json("activeProfile2".*) "activeProfile"
@@ -2944,6 +3094,263 @@ describe('hasOne through', () => {
         ['text', true, true, 'bio'],
       );
     });
+
+    it('should support chained select returning multiple', async () => {
+      await db.user.create({
+        ...userData,
+        posts: {
+          create: [
+            {
+              ...postData,
+              Body: 'post 2',
+              onePostTag: {
+                create: {
+                  ...postTagData,
+                  Tag: 'tag 1',
+                  tag: {
+                    create: { Tag: 'tag 1' },
+                  },
+                },
+              },
+            },
+            {
+              ...postData,
+              Body: 'post 1',
+              onePostTag: {
+                create: {
+                  ...postTagData,
+                  Tag: 'tag 2',
+                  tag: {
+                    create: { Tag: 'tag 2' },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      const q = db.user
+        .select({
+          tags: (q) =>
+            q.posts
+              .chain('onePostTag')
+              .select('Tag', 'posts.Body')
+              .order('posts.Body', 'Tag'),
+        })
+        .take();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT COALESCE("tags".r, '[]') "tags"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json(t.*)) r
+            FROM (
+              SELECT "t"."Tag", "t"."Body"
+              FROM (
+                SELECT
+                  "onePostTag"."tag" "Tag",
+                  "posts"."body" "Body",
+                  row_number() OVER (PARTITION BY "onePostTag"."post_id", "onePostTag"."tag") "r"
+                FROM "postTag" "onePostTag"
+                JOIN "post" "posts"
+                  ON "posts"."user_id" = "user"."id"
+                 AND "posts"."title" = "user"."user_key"
+                 AND "posts"."id" = "onePostTag"."post_id"
+                ORDER BY "posts"."body" ASC, "onePostTag"."tag" ASC
+              ) "t"
+              WHERE (r = 1)
+            ) "t"
+          ) "tags" ON true
+          LIMIT 1
+        `,
+      );
+
+      const result = await q;
+
+      assertType<typeof result, { tags: { Tag: string; Body: string }[] }>();
+
+      expect(result).toEqual({
+        tags: [
+          { Tag: 'tag 2', Body: 'post 1' },
+          { Tag: 'tag 1', Body: 'post 2' },
+        ],
+      });
+    });
+
+    it('should support chained select returning single', async () => {
+      await db.message.create({
+        ...messageData,
+        chat: { create: chatData },
+        sender: {
+          create: {
+            ...userData,
+            profile: { create: profileData },
+            posts: { create: [postData] },
+          },
+        },
+      });
+
+      const q = db.message
+        .select({
+          item: (q) => q.profile.chain('onePost').select('Body'),
+        })
+        .take();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT row_to_json("item".*) "item"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT "onePost"."body" "Body"
+            FROM "post" "onePost"
+            JOIN "profile" ON EXISTS (
+                SELECT 1 FROM "user"  "sender"
+                WHERE "profile"."user_id" = "sender"."id"
+                  AND "profile"."profile_key" = "sender"."user_key"
+                  AND "sender"."id" = "message"."author_id"
+                  AND "sender"."user_key" = "message"."message_key"
+              ) AND EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "onePost"."user_id" = "user"."id"
+                  AND "onePost"."title" = "user"."user_key"
+                  AND "user"."id" = "profile"."user_id"
+                  AND "user"."user_key" = "profile"."profile_key"
+              )
+          ) "item" ON true
+          WHERE ("message"."deleted_at" IS NULL)
+          LIMIT 1
+        `,
+      );
+
+      const result = await q;
+
+      assertType<typeof result, { item: { Body: string } | undefined }>();
+
+      expect(result).toEqual({ item: { Body: postData.Body } });
+    });
+
+    it('should support chained select using `on`', async () => {
+      await db.message.create({
+        ...messageData,
+        chat: { create: chatData },
+        sender: {
+          create: {
+            ...userData,
+            Active: true,
+            profile: { create: { ...profileData, Active: true } },
+            posts: { create: [{ ...postData, Active: true }] },
+          },
+        },
+      });
+
+      const q = db.message
+        .select({
+          item: (q) => q.activeProfile.chain('activeOnePost').select('Body'),
+        })
+        .take();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT row_to_json("item".*) "item"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT "activeOnePost"."body" "Body"
+            FROM "post" "activeOnePost"
+            JOIN "profile" "activeProfile" ON EXISTS (
+                SELECT 1 FROM "user"  "activeSender"
+                WHERE "activeProfile"."active" = $1
+                  AND "activeProfile"."user_id" = "activeSender"."id"
+                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                  AND "activeSender"."active" = $2
+                  AND "activeSender"."id" = "message"."author_id"
+                  AND "activeSender"."user_key" = "message"."message_key"
+              ) AND EXISTS (
+                SELECT 1 FROM "user" "activeUser"
+                WHERE "activeOnePost"."active" = $3
+                  AND "activeOnePost"."user_id" = "activeUser"."id"
+                  AND "activeOnePost"."title" = "activeUser"."user_key"
+                  AND "activeUser"."active" = $4
+                  AND "activeUser"."id" = "activeProfile"."user_id"
+                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
+              )
+          ) "item" ON true
+          WHERE ("message"."deleted_at" IS NULL)
+          LIMIT 1
+        `,
+        [true, true, true, true],
+      );
+
+      const result = await q;
+
+      assertType<typeof result, { item: { Body: string } | undefined }>();
+
+      expect(result).toEqual({ item: { Body: postData.Body } });
+    });
+
+    it('should support chained select using `on`', async () => {
+      await db.message.create({
+        ...messageData,
+        chat: { create: chatData },
+        sender: {
+          create: {
+            ...userData,
+            Active: true,
+            profile: { create: { ...profileData, Active: true } },
+            posts: { create: [{ ...postData, Active: true }] },
+          },
+        },
+      });
+
+      const q = db.message
+        .select({
+          item: (q) => q.activeProfile.chain('activeOnePost').select('Body'),
+        })
+        .take();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT row_to_json("item".*) "item"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT "activeOnePost"."body" "Body"
+            FROM "post" "activeOnePost"
+            JOIN "profile" "activeProfile" ON
+              EXISTS (
+                SELECT 1 FROM "user"  "activeSender"
+                WHERE "activeProfile"."active" = $1
+                  AND "activeProfile"."user_id" = "activeSender"."id"
+                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
+                  AND "activeSender"."active" = $2
+                  AND "activeSender"."id" = "message"."author_id"
+                  AND "activeSender"."user_key" = "message"."message_key"
+              ) AND EXISTS (
+                SELECT 1 FROM "user"  "activeUser"
+                WHERE "activeOnePost"."active" = $3
+                  AND "activeOnePost"."user_id" = "activeUser"."id"
+                  AND "activeOnePost"."title" = "activeUser"."user_key"
+                  AND "activeUser"."active" = $4
+                  AND "activeUser"."id" = "activeProfile"."user_id"
+                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
+              )
+          ) "item" ON true
+          WHERE ("message"."deleted_at" IS NULL)
+          LIMIT 1
+        `,
+        [true, true, true, true],
+      );
+
+      const result = await q;
+
+      assertType<typeof result, { item: { Body: string } | undefined }>();
+
+      expect(result).toEqual({ item: { Body: postData.Body } });
+    });
   });
 
   it('should have proper joinQuery', () => {
@@ -3381,85 +3788,6 @@ describe('hasOne through', () => {
       );
     });
 
-    it('should support chained select', () => {
-      const q = db.message.select({
-        item: (q) => q.profile.chain('onePost'),
-      });
-
-      assertType<Awaited<typeof q>, { item: Post | undefined }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "message"
-          LEFT JOIN LATERAL (
-            SELECT ${postSelectAll}
-            FROM "post" "onePost"
-            WHERE EXISTS (
-              SELECT 1 FROM "profile"
-              WHERE EXISTS (
-                SELECT 1 FROM "user"  "sender"
-                WHERE "profile"."user_id" = "sender"."id"
-                  AND "profile"."profile_key" = "sender"."user_key"
-                  AND "sender"."id" = "message"."author_id"
-                  AND "sender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "user"
-                WHERE "onePost"."user_id" = "user"."id"
-                  AND "onePost"."title" = "user"."user_key"
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
-              )
-            )
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-        `,
-      );
-    });
-
-    it('should support chained select using `on`', () => {
-      const q = db.message.select({
-        item: (q) => q.activeProfile.chain('activeOnePost'),
-      });
-
-      assertType<Awaited<typeof q>, { item: Post | undefined }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "message"
-          LEFT JOIN LATERAL (
-            SELECT ${postSelectAll}
-            FROM "post" "activeOnePost"
-            WHERE EXISTS (
-              SELECT 1 FROM "profile"  "activeProfile"
-              WHERE EXISTS (
-                SELECT 1 FROM "user"  "activeSender"
-                WHERE "activeProfile"."active" = $1
-                  AND "activeProfile"."user_id" = "activeSender"."id"
-                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                  AND "activeSender"."active" = $2
-                  AND "activeSender"."id" = "message"."author_id"
-                  AND "activeSender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "user"  "activeUser"
-                WHERE "activeOnePost"."active" = $3
-                  AND "activeOnePost"."user_id" = "activeUser"."id"
-                  AND "activeOnePost"."title" = "activeUser"."user_key"
-                  AND "activeUser"."active" = $4
-                  AND "activeUser"."id" = "activeProfile"."user_id"
-                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
-              )
-            )
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-        `,
-        [true, true, true, true],
-      );
-    });
-
     it('should handle exists sub query', () => {
       const query = db.message.as('m').select('Id', {
         hasProfile: (q) => q.profile.exists(),
@@ -3490,48 +3818,6 @@ describe('hasOne through', () => {
           ) "hasProfile" ON true
           WHERE ("m"."deleted_at" IS NULL)
         `,
-      );
-    });
-
-    it('should support chained select using `on`', () => {
-      const q = db.message.select({
-        item: (q) => q.activeProfile.chain('activeOnePost'),
-      });
-
-      assertType<Awaited<typeof q>, { item: Post | undefined }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "message"
-          LEFT JOIN LATERAL (
-            SELECT ${postSelectAll}
-            FROM "post" "activeOnePost"
-            WHERE EXISTS (
-              SELECT 1 FROM "profile"  "activeProfile"
-              WHERE EXISTS (
-                SELECT 1 FROM "user"  "activeSender"
-                WHERE "activeProfile"."active" = $1
-                  AND "activeProfile"."user_id" = "activeSender"."id"
-                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                  AND "activeSender"."active" = $2
-                  AND "activeSender"."id" = "message"."author_id"
-                  AND "activeSender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "user"  "activeUser"
-                WHERE "activeOnePost"."active" = $3
-                  AND "activeOnePost"."user_id" = "activeUser"."id"
-                  AND "activeOnePost"."title" = "activeUser"."user_key"
-                  AND "activeUser"."active" = $4
-                  AND "activeUser"."id" = "activeProfile"."user_id"
-                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
-              )
-            )
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-        `,
-        [true, true, true, true],
       );
     });
 

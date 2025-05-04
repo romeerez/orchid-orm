@@ -26,6 +26,7 @@ import {
   PickQueryQ,
   OrchidOrmInternalError,
   _queryWhere,
+  getPrimaryKeys,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -44,7 +45,6 @@ import {
   hasRelationHandleUpdate,
   joinHasRelation,
   joinHasThrough,
-  joinQueryChainingHOF,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
@@ -54,6 +54,7 @@ import { RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 import { HasOneOptions, HasOneParams, HasOnePopulate } from './hasOne';
 import { ORMTableInput } from '../baseTable';
+import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -66,6 +67,7 @@ export interface HasManyInfo<
   Rel extends HasMany,
   Q extends Query,
 > extends RelationConfigBase {
+  returnsOne: false;
   query: Q;
   params: HasOneParams<T, Rel>;
   maybeSingle: Q;
@@ -195,6 +197,8 @@ export const makeHasManyMethod = (
   relationName: string,
   query: Query,
 ): RelationData => {
+  const relPKeys = getPrimaryKeys(query);
+
   if ('through' in relation.options) {
     const { through, source } = relation.options;
 
@@ -205,7 +209,7 @@ export const makeHasManyMethod = (
     );
     const sourceQuery = sourceRelation.joinQuery(
       sourceRelationQuery,
-      throughRelation.query,
+      throughRelation.query as never,
     );
 
     const whereExistsCallback = () => sourceQuery;
@@ -230,14 +234,17 @@ export const makeHasManyMethod = (
           whereExistsCallback as never,
         ) as never;
       },
-      joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-        joinHasThrough(
-          joiningQuery as Query,
-          baseQuery as Query,
-          joiningQuery as Query,
-          throughRelation,
-          sourceRelation,
-        ),
+      joinQuery: joinQueryChainHOF(
+        relPKeys,
+        reverseJoin,
+        (joiningQuery, baseQuery) =>
+          joinHasThrough(
+            joiningQuery as Query,
+            baseQuery as Query,
+            joiningQuery as Query,
+            throughRelation,
+            sourceRelation,
+          ),
       ),
       reverseJoin,
     };
@@ -296,14 +303,17 @@ export const makeHasManyMethod = (
       relationName,
       state,
     ),
-    joinQuery: joinQueryChainingHOF(reverseJoin, (joiningQuery, baseQuery) =>
-      joinHasRelation(
-        baseQuery as Query,
-        joiningQuery as Query,
-        primaryKeys,
-        foreignKeys,
-        len,
-      ),
+    joinQuery: joinQueryChainHOF(
+      relPKeys,
+      reverseJoin,
+      (joiningQuery, baseQuery) =>
+        joinHasRelation(
+          baseQuery as Query,
+          joiningQuery as Query,
+          primaryKeys,
+          foreignKeys,
+          len,
+        ),
     ),
     reverseJoin,
     modifyRelatedQuery(relationQuery) {

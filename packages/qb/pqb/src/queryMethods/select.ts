@@ -59,6 +59,7 @@ import {
   applyBatchTransforms,
   finalizeNestedHookSelect,
 } from '../common/queryResultProcessing';
+import { cloneQueryBaseUnscoped } from './queryMethods.utils';
 
 interface SelectSelf {
   shape: QueryColumns;
@@ -126,40 +127,30 @@ type SelectReturnType<T extends PickQueryReturnType> =
 // Result type of select without the ending object argument.
 type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
   [K in keyof T]: K extends 'result'
-    ? ('*' extends Columns[number]
-        ? {
-            [K in Columns[number] | T['meta']['defaultSelect'] as K extends '*'
-              ? never
-              : T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-          }
-        : {
-            [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-          }) &
-        (T['meta']['hasSelect'] extends (
-          T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
-        )
-          ? Omit<T['result'], Columns[number]> // Omit is optimal
-          : unknown)
+    ? {
+        [K in '*' extends Columns[number]
+          ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
+          : Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+      } & (T['meta']['hasSelect'] extends (
+        T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+      )
+        ? Omit<T['result'], Columns[number]> // Omit is optimal
+        : unknown)
     : K extends 'returnType'
     ? SelectReturnType<T>
     : K extends 'then'
     ? QueryThenByReturnType<
         SelectReturnType<T>,
-        // result is copy-pasted to save on TS instantiations
-        ('*' extends Columns[number]
-          ? {
-              [K in
-                | Exclude<Columns[number], '*'>
-                | T['meta']['defaultSelect'] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-            }
-          : {
-              [K in Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
-            }) &
-          (T['meta']['hasSelect'] extends (
-            T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
-          )
-            ? Omit<T['result'], Columns[number]>
-            : unknown)
+        // the result is copy-pasted to save on TS instantiations
+        {
+          [K in '*' extends Columns[number]
+            ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
+            : Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+        } & (T['meta']['hasSelect'] extends (
+          T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+        )
+          ? Omit<T['result'], Columns[number]>
+          : unknown)
       >
     : T[K];
 } & QueryMetaHasSelect;
@@ -678,7 +669,9 @@ export const processSelectArg = <T extends SelectSelf>(
         } else if (returnType === 'pluck') {
           // no select in case of plucking a computed
           query = value.q.select
-            ? value.wrap(value.baseQuery.clone()).jsonAgg(value.q.select[0])
+            ? value
+                .wrap(cloneQueryBaseUnscoped(value))
+                .jsonAgg(value.q.select[0])
             : value.json(false);
 
           value.q.coalesceValue = emptyArrSQL;

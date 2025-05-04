@@ -5,12 +5,16 @@ import {
   db,
   messageData,
   messageSelectAll,
+  postData,
+  postTagData,
   Profile,
   profileData,
   profileSelectAll,
+  tagData,
   User,
   userData,
   useRelationCallback,
+  userRowToJSON,
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
@@ -141,15 +145,15 @@ describe('belongsTo', () => {
 
     describe('chain', () => {
       it('should handle chained query', async () => {
-        const userIds = await db.user
-          .pluck('Id')
-          .createMany([userData, userData]);
-
-        await db.profile.createMany(
-          userIds.map((UserId) => ({
-            UserId,
-            ProfileKey: userData.UserKey,
-            Bio: 'bio',
+        await db.user.pluck('Id').createMany(
+          [userData, userData].map((data) => ({
+            ...data,
+            profile: {
+              create: {
+                ProfileKey: data.UserKey,
+                Bio: 'bio',
+              },
+            },
           })),
         );
 
@@ -181,15 +185,15 @@ describe('belongsTo', () => {
       });
 
       it('should handle chained query with limit', async () => {
-        const userIds = await db.user
-          .pluck('Id')
-          .createMany([userData, userData]);
-
-        await db.profile.createMany(
-          userIds.map((UserId) => ({
-            UserId,
-            ProfileKey: userData.UserKey,
-            Bio: 'bio',
+        await db.user.pluck('Id').createMany(
+          [userData, userData].map((data) => ({
+            ...data,
+            profile: {
+              create: {
+                ProfileKey: data.UserKey,
+                Bio: 'bio',
+              },
+            },
           })),
         );
 
@@ -223,15 +227,15 @@ describe('belongsTo', () => {
       });
 
       it('should handle chained query using `on`', async () => {
-        const userIds = await db.user
-          .pluck('Id')
-          .createMany([activeUserData, activeUserData]);
-
-        await db.profile.createMany(
-          userIds.map((UserId) => ({
-            UserId,
-            ProfileKey: userData.UserKey,
-            Bio: 'bio',
+        await db.user.pluck('Id').createMany(
+          [activeUserData, activeUserData].map((data) => ({
+            ...data,
+            profile: {
+              create: {
+                ProfileKey: data.UserKey,
+                Bio: 'bio',
+              },
+            },
           })),
         );
 
@@ -349,6 +353,278 @@ describe('belongsTo', () => {
 
         // @ts-expect-error belongsTo should not have chained create
         db.profile.chain('activeUser').find(1).delete();
+      });
+
+      it('should forbid limit on belongsTo or hasOne relations', () => {
+        db.postTag.select({
+          // @ts-expect-error cannot apply limit here
+          items: (q) => q.post.chain('user').limit(3),
+        });
+      });
+
+      it('should support chaining with query features', async () => {
+        const chatId = await db.chat.get('IdOfChat').create(chatData);
+        await db.message.createMany([
+          {
+            ...messageData,
+            Text: 'message c',
+            Decimal: 1,
+            sender: {
+              create: { ...userData, Name: 'user a' },
+            },
+            ChatId: chatId,
+          },
+          {
+            ...messageData,
+            Text: 'message c',
+            Decimal: 2,
+            sender: {
+              create: { ...userData, Name: 'user b' },
+            },
+            ChatId: chatId,
+          },
+          {
+            ...messageData,
+            Text: 'message b',
+            Decimal: 3,
+            sender: {
+              connect: { Name: 'user b' },
+            },
+            ChatId: chatId,
+          },
+          {
+            ...messageData,
+            Text: 'message a',
+            Decimal: 4,
+            sender: {
+              create: { ...userData, Name: 'user c' },
+            },
+            ChatId: chatId,
+          },
+        ]);
+
+        const q = db.chat
+          .select({
+            users: (q) =>
+              q.messages
+                .where({ Active: null })
+                .order({ Text: 'ASC' })
+                .chain('sender')
+                .select({
+                  r: 'Name',
+                  t: 'messages.Text',
+                  d: 'messages.Decimal',
+                })
+                .where({
+                  'messages.MessageKey': messageData.MessageKey,
+                  Name: { not: userData.Name },
+                })
+                .order({ Name: 'ASC', 'messages.createdAt': 'DESC' })
+                .limit(2)
+                .offset(1),
+          })
+          .take();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT COALESCE("users".r, '[]') "users"
+            FROM "chat"
+            LEFT JOIN LATERAL (
+              SELECT
+                json_agg(json_build_object(
+                  'r', t."r",
+                  't', t."t",
+                  'd', t."d"::text
+                )) r
+              FROM (
+                SELECT "t"."r", "t"."t", "t"."d"
+                FROM (
+                  SELECT
+                    "sender"."name" "r",
+                    "messages"."text" "t",
+                    "messages"."decimal" "d",
+                    row_number() OVER (PARTITION BY "sender"."id") "r2"
+                  FROM "user" "sender"
+                  JOIN "message" "messages" ON (
+                    "messages"."active" IS NULL AND
+                    "messages"."chat_id" = "chat"."id_of_chat" AND
+                    "messages"."message_key" = "chat"."chat_key" AND
+                    "messages"."author_id" = "sender"."id" AND
+                    "messages"."message_key" = "sender"."user_key"
+                  ) AND (
+                    "messages"."deleted_at" IS NULL
+                  )
+                  WHERE "messages"."message_key" = $1 AND "sender"."name" <> $2
+                  ORDER BY "messages"."text" ASC, "sender"."name" ASC, "messages"."created_at" DESC
+                ) "t"
+                WHERE (r2 = 1)
+                LIMIT $3
+                OFFSET $4
+              ) "t"
+            ) "users" ON true
+            LIMIT 1
+          `,
+          [messageData.MessageKey, userData.Name, 2, 1],
+        );
+
+        const result = await q;
+
+        assertType<
+          typeof result,
+          { users: { r: string; t: string; d: string | null }[] }
+        >();
+
+        expect(result).toEqual({
+          users: [
+            { r: 'user a', t: 'message c', d: '1' },
+            { r: 'user b', t: 'message c', d: '2' },
+          ],
+        });
+      });
+
+      it('should support chained select of a single record', async () => {
+        await db.tag.create({
+          ...tagData,
+          postTags: {
+            create: [
+              {
+                ...postTagData,
+                post: {
+                  create: {
+                    ...postData,
+                    user: {
+                      create: userData,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        });
+
+        const q = db.postTag
+          .select({
+            item: (q) =>
+              q.post.chain('user').select('Name', 'Age', 'post.Title'),
+          })
+          .take();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT
+              CASE WHEN "item".* IS NULL THEN NULL
+              ELSE
+                json_build_object(
+                  'Name', "item"."Name",
+                  'Age', "item"."Age"::text,
+                  'Title', "item"."Title"
+                )
+              END "item"
+            FROM "postTag"
+            LEFT JOIN LATERAL (
+              SELECT
+                "user"."name" "Name",
+                "user"."age" "Age",
+                "post"."title" "Title"
+              FROM "user"
+              JOIN "post"
+                ON "post"."id" = "postTag"."post_id"
+               AND "post"."user_id" = "user"."id"
+               AND "post"."title" = "user"."user_key"
+            ) "item" ON true
+            LIMIT 1
+          `,
+        );
+
+        const result = await q;
+
+        assertType<
+          typeof result,
+          {
+            item:
+              | { Name: string; Age: string | null; Title: string }
+              | undefined;
+          }
+        >();
+
+        expect(result).toEqual({
+          item: { Name: 'name', Age: null, Title: 'key' },
+        });
+      });
+
+      it('should support chained select using `on`', async () => {
+        await db.tag.create({
+          ...tagData,
+          postTags: {
+            create: [
+              {
+                ...postTagData,
+                post: {
+                  create: {
+                    ...postData,
+                    user: {
+                      create: { ...userData, Active: true },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        });
+
+        const q = db.postTag
+          .select({
+            item: (q) =>
+              q.post.chain('activeUser').select('Name', 'Age', 'post.Title'),
+          })
+          .take();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT
+              CASE WHEN "item".* IS NULL THEN NULL
+              ELSE
+                json_build_object(
+                  'Name', "item"."Name",
+                  'Age', "item"."Age"::text,
+                  'Title', "item"."Title"
+                )
+              END "item"
+            FROM "postTag"
+            LEFT JOIN LATERAL (
+              SELECT
+                "activeUser"."name" "Name",
+                "activeUser"."age" "Age",
+                "post"."title" "Title"
+              FROM "user" "activeUser"
+              JOIN "post"
+                ON "post"."id" = "postTag"."post_id"
+               AND "post"."user_id" = "activeUser"."id"
+               AND "post"."title" = "activeUser"."user_key"
+              WHERE "activeUser"."active" = $1
+            ) "item" ON true
+            LIMIT 1
+          `,
+          [true],
+        );
+
+        const result = await q;
+
+        assertType<
+          typeof result,
+          {
+            item:
+              | { Name: string; Age: string | null; Title: string }
+              | undefined;
+          }
+        >();
+
+        expect(result).toEqual({
+          item: { Name: 'name', Age: null, Title: 'key' },
+        });
       });
     });
 
@@ -627,12 +903,12 @@ describe('belongsTo', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile"."bio" "Bio", row_to_json("u".*) "u"
+            SELECT "profile"."bio" "Bio", ${userRowToJSON('u')} "u"
             FROM "profile"
             JOIN LATERAL (
               SELECT ${userSelectAll}
               FROM "user" "u"
-              WHERE "u"."name" = $1 
+              WHERE "u"."name" = $1
                 AND "u"."id" = "profile"."user_id"
                 AND "u"."user_key" = "profile"."profile_key"
             ) "u" ON true
@@ -653,7 +929,7 @@ describe('belongsTo', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile"."bio" "Bio", row_to_json("u".*) "u"
+            SELECT "profile"."bio" "Bio", ${userRowToJSON('u')} "u"
             FROM "profile"
             JOIN LATERAL (
               SELECT ${userSelectAll}
@@ -739,67 +1015,6 @@ describe('belongsTo', () => {
         );
       });
 
-      it('should forbid limit on belongsTo or hasOne relations', () => {
-        db.postTag.select({
-          // @ts-expect-error cannot apply limit here
-          items: (q) => q.post.chain('user').limit(3),
-        });
-      });
-
-      it('should support chained select', async () => {
-        const q = db.postTag.select({
-          item: (q) => q.post.chain('user'),
-        });
-
-        assertType<Awaited<typeof q>, { item: User | undefined }[]>();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT row_to_json("item".*) "item"
-            FROM "postTag"
-            LEFT JOIN LATERAL (
-              SELECT ${userSelectAll}
-              FROM "user"
-              WHERE EXISTS (
-                SELECT 1 FROM "post"
-                WHERE "post"."id" = "postTag"."post_id"
-                  AND "post"."user_id" = "user"."id"
-                  AND "post"."title" = "user"."user_key"
-              )
-            ) "item" ON true
-          `,
-        );
-      });
-
-      it('should support chained select using `on`', () => {
-        const q = db.postTag.select({
-          item: (q) => q.post.chain('activeUser'),
-        });
-
-        assertType<Awaited<typeof q>, { item: User | undefined }[]>();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT row_to_json("item".*) "item"
-            FROM "postTag"
-            LEFT JOIN LATERAL (
-              SELECT ${userSelectAll}
-              FROM "user" "activeUser"
-              WHERE "activeUser"."active" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "post"
-                  WHERE "post"."id" = "postTag"."post_id"
-                    AND "post"."user_id" = "activeUser"."id"
-                    AND "post"."title" = "activeUser"."user_key"
-                )
-            ) "item" ON true
-          `,
-          [true],
-        );
-      });
-
       it('should handle exists sub query', () => {
         const query = db.profile.as('p').select('Id', {
           hasUser: (q) => q.user.exists(),
@@ -872,7 +1087,7 @@ describe('belongsTo', () => {
               SELECT row_to_json("profile2".*) "profile"
               FROM "user"
               LEFT JOIN LATERAL (
-                SELECT row_to_json("user2".*) "user"
+                SELECT ${userRowToJSON('user2')} "user"
                 FROM "profile" "profile2"
                 LEFT JOIN LATERAL (
                   SELECT ${userSelectAll}
@@ -914,7 +1129,7 @@ describe('belongsTo', () => {
               SELECT row_to_json("profile2".*) "profile"
               FROM "user" "activeUser"
               LEFT JOIN LATERAL (
-                SELECT row_to_json("activeUser2".*) "activeUser"
+                SELECT ${userRowToJSON('activeUser2')} "activeUser"
                 FROM "profile" "profile2"
                 LEFT JOIN LATERAL (
                   SELECT ${userSelectAll}

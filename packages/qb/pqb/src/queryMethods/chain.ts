@@ -29,7 +29,7 @@ export const _chain = (
       self.q.subQuery > 1 &&
       self.q.chainMultiple
     ) {
-      // q.returnType = q.returnsOne = q.limit = undefined;
+      q.returnType = q.returnsOne = q.limit = undefined;
     } else if (!((rel.query as Query).q as SelectQueryData).returnsOne) {
       q.chainMultiple = true;
     }

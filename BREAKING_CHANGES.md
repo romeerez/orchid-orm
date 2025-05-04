@@ -1,5 +1,18 @@
 # Breaking changes
 
+## orchid-orm 1.48
+
+`chain` is re-implemented, see the documentation.
+
+Previously it was relying on `WHERE EXISTS` statement,
+did not support selecting columns of the table prior to the `chain`,
+did not support filtering by that table, ordering by its columns.
+
+Now it is implemented with `JOIN`, sub-queries, and a hacky `row_number` for de-duplication.
+Supports selecting and filtering by columns of the table prior to the `chain`.
+Unlike a simple `join` method, it guarantees de-duplication: only unique records are returned,
+even when chaining over many-to-many relations.
+
 ## orchid-orm 1.47
 
 In sub queries, a single not found record was returned as `null` despite having a type `X | undefined`,
