@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.24.0
+
+### Minor Changes
+
+- 9f32798: Re-implement `chain` to make it much more flexible (#488)
+
 ## 0.23.3
 
 ### Patch Changes

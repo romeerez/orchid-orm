@@ -1,5 +1,16 @@
 # pqb
 
+## 0.50.0
+
+### Minor Changes
+
+- 9f32798: Re-implement `chain` to make it much more flexible (#488)
+
+### Patch Changes
+
+- Updated dependencies [9f32798]
+  - orchid-core@0.24.0
+
 ## 0.49.1
 
 ### Patch Changes
