@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.25.0
+
+### Minor Changes
+
+- b691361: Support various db entities in `generatorIgnore`, fix bug in generator when dropping multiple inter-dependent entities at once (#493)
+
+### Patch Changes
+
+- Updated dependencies [b691361]
+  - pqb@0.51.0
+
 ## 2.24.0
 
 ### Minor Changes

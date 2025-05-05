@@ -1,5 +1,11 @@
 # pqb
 
+## 0.51.0
+
+### Minor Changes
+
+- b691361: Support various db entities in `generatorIgnore`, fix bug in generator when dropping multiple inter-dependent entities at once (#493)
+
 ## 0.50.0
 
 ### Minor Changes
