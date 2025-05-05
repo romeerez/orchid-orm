@@ -17,6 +17,52 @@ const { green, red, yellow } = colors;
 describe('checks', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should not be dropped in ignored tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createTable(
+          'schema.inSchemaTable',
+          { noPrimaryKey: true },
+          (t) => ({
+            colUmn: t.integer().check(t.sql`"col_umn" = 42`),
+          }),
+        );
+
+        await db.createTable('publicTable', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.integer().check(t.sql`"col_umn" = 42`),
+        }));
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['schema'],
+          tables: ['publicTable'],
+        },
+      },
+      tables: [
+        table(
+          (t) => ({
+            colUmn: t.integer(),
+          }),
+          undefined,
+          { name: 'schema.inSchemaTable' },
+        ),
+        table(
+          (t) => ({
+            colUmn: t.integer(),
+          }),
+          undefined,
+          { name: 'publicTable' },
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should create a column check', async () => {
     await arrange({
       async prepareDb(db) {

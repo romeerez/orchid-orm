@@ -43,6 +43,10 @@ export interface DbExtension {
 }
 
 export interface GeneratorIgnore {
+  schemas?: string[];
+  enums?: string[];
+  domains?: string[];
+  extensions?: string[];
   tables?: string[];
 }
 

@@ -40,9 +40,6 @@ export const astToMigration = (
   const added = new Set<string>();
   const dropped = new Set<string>();
   const groups: RakeDbAst[][] = [[]];
-  const cycleAdd = new Set<string>();
-  const cycleDrop = new Set<string>();
-  const cycleDeps = new Map<string, number>();
 
   for (const item of items) {
     for (const add of item.add) {
@@ -66,6 +63,10 @@ export const astToMigration = (
   if (!len) return;
 
   for (;;) {
+    const cycleAdd = new Set<string>();
+    const cycleDrop = new Set<string>();
+    const cycleDeps = new Map<string, number>();
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 

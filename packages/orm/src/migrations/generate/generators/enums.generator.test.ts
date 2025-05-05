@@ -18,6 +18,26 @@ const { green, red, yellow } = colors;
 describe('enums', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should not be dropped when ignored', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+        await db.createEnum('schema.numbers', ['one', 'two', 'three']);
+        await db.createEnum('strings', ['foo', 'bar']);
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['schema'],
+          enums: ['strings'],
+        },
+      },
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should create enum when creating a table', async () => {
     await arrange({
       tables: [

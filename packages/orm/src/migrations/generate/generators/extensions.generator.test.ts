@@ -17,6 +17,26 @@ const { green, red, pale } = colors;
 describe('extensions', () => {
   const { arrange, act, assert } = useGeneratorsTestUtils();
 
+  it('should not be dropped when ignored', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+        await db.createExtension('schema.cube');
+        await db.createExtension('seg');
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['schema'],
+          extensions: ['seg'],
+        },
+      },
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should create extension', async () => {
     await arrange({
       dbOptions: {

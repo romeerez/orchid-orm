@@ -33,6 +33,7 @@ import {
 import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
+import { ComposeMigrationParams } from '../composeMigration';
 
 export interface CompareSql {
   values: unknown[];
@@ -72,15 +73,17 @@ export interface TableShapes {
 
 export const processTables = async (
   ast: RakeDbAst[],
-  structureToAstCtx: StructureToAstCtx,
   domainsMap: DbStructureDomainsMap,
   adapter: Adapter,
-  tables: CodeTable[],
   dbStructure: IntrospectedStructure,
-  currentSchema: string,
   config: AnyRakeDbConfig,
-  generatorIgnore: GeneratorIgnore | undefined,
-  verifying: boolean | undefined,
+  {
+    structureToAstCtx,
+    codeItems: { tables },
+    currentSchema,
+    internal: { generatorIgnore },
+    verifying,
+  }: ComposeMigrationParams,
 ): Promise<void> => {
   const createTables: CodeTable[] = collectCreateTables(
     tables,
@@ -182,6 +185,7 @@ const collectChangeAndDropTables = (
   for (const dbTable of dbStructure.tables) {
     if (
       dbTable.name === config.migrationsTable ||
+      generatorIgnore?.schemas?.includes(dbTable.schemaName) ||
       ignoreTables?.some(
         ({ schema, table }) =>
           table === dbTable.name && schema === dbTable.schemaName,

@@ -17,6 +17,26 @@ const { green, red, yellow } = colors;
 describe('domains', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should not be dropped when ignored', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+        await db.createDomain('schema.domain', (t) => t.text());
+        await db.createDomain('publicDomain', (t) => t.integer());
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['schema'],
+          domains: ['publicDomain'],
+        },
+      },
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should create a domain', async () => {
     await arrange({
       async prepareDb(db) {

@@ -6,7 +6,6 @@ import {
   IntrospectedStructure,
   DbStructureDomainsMap,
   instantiateDbColumn,
-  StructureToAstCtx,
 } from 'rake-db';
 import {
   ColumnDataCheckBase,
@@ -20,6 +19,7 @@ import {
   compareSqlExpressions,
   TableExpression,
 } from './generators.utils';
+import { ComposeMigrationParams } from '../composeMigration';
 
 interface ComparableDomainCompare
   extends Omit<DbStructure.Domain, 'schemaName' | 'name'> {
@@ -43,11 +43,14 @@ export interface CodeDomain {
 export const processDomains = async (
   ast: RakeDbAst[],
   adapter: Adapter,
-  structureToAstCtx: StructureToAstCtx,
   domainsMap: DbStructureDomainsMap,
   dbStructure: IntrospectedStructure,
-  currentSchema: string,
-  domains: CodeDomain[],
+  {
+    codeItems: { domains },
+    structureToAstCtx,
+    currentSchema,
+    internal: { generatorIgnore },
+  }: ComposeMigrationParams,
 ) => {
   const codeDomains: ComparableDomain[] = [];
   if (domains) {
@@ -62,6 +65,13 @@ export const processDomains = async (
   const holdCodeDomains = new Set<ComparableDomain>();
 
   for (const domain of dbStructure.domains) {
+    if (
+      generatorIgnore?.schemas?.includes(domain.schemaName) ||
+      generatorIgnore?.domains?.includes(domain.name)
+    ) {
+      continue;
+    }
+
     const dbColumn = instantiateDbColumn(
       structureToAstCtx,
       dbStructure,

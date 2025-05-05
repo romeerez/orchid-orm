@@ -54,6 +54,52 @@ describe('indexes', () => {
     '\n  ',
   );
 
+  it('should not be dropped in ignored tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createTable(
+          'schema.inSchemaTable',
+          { noPrimaryKey: true },
+          (t) => ({
+            naMe: t.text().index(indexOptions).exclude('=', excludeOptions),
+          }),
+        );
+
+        await db.createTable('publicTable', { noPrimaryKey: true }, (t) => ({
+          naMe: t.text().index(indexOptions).exclude('=', excludeOptions),
+        }));
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['schema'],
+          tables: ['publicTable'],
+        },
+      },
+      tables: [
+        table(
+          (t) => ({
+            naMe: t.text(),
+          }),
+          undefined,
+          { name: 'schema.inSchemaTable' },
+        ),
+        table(
+          (t) => ({
+            naMe: t.text(),
+          }),
+          undefined,
+          { name: 'publicTable' },
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should create a column index and exclude', async () => {
     await arrange({
       async prepareDb(db) {

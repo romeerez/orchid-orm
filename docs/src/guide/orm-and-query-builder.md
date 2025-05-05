@@ -356,6 +356,35 @@ tables, columns, schemas, enums, primary keys, foreign keys, indexes, database c
 
 Please let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
 
+### generatorIgnore
+
+`db g` command attempts to drop all the database entities that it cannot find in the code.
+
+Use `generatorIgnore` option to preserve db entities that are needed but not reflected in the code.
+Such as when using certain extensions, or libraries, they can create schemas, tables, types, etc.
+
+Ignoring a schema also ignores all its tables, domains, enums.
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    extensions: ['postgis'],
+    generatorIgnore: {
+      // pgboss library keeps all its db objects in the `pgboss` schema.
+      schemas: ['pgboss'],
+      // spatial_ref_sys is automatically created by postgis
+      tables: ['spatial_ref_sys'],
+      // you can ignore individual enums, domains, extensions.
+      enums: [],
+      domains: [],
+      extensions: [],
+    },
+  },
+  { ...tables },
+);
+```
+
 ## Postgres extensions
 
 To enable a postgres extension such as `citext`, list it in the `extensions` config in the `orchidORM` call:
@@ -380,24 +409,6 @@ export const db = orchidORM(
 ```
 
 Run the migration generator (`npm run g`) and apply the migration (`npm run db up`).
-
-In the case when the extension automatically creates a table, which is the case for the `postgis`,
-list its tables in `generatorIgnore` config,
-so the migration generator won't consider it to be redundant and won't drop it:
-
-```ts
-export const db = orchidORM(
-  {
-    databaseURL: process.env.DATABASE_URL,
-    extensions: ['postgis'],
-    generatorIgnore: {
-      // spatial_ref_sys is automatically created by postgis
-      tables: ['spatial_ref_sys'],
-    },
-  },
-  { ...tables },
-);
-```
 
 ## Postgres domains
 

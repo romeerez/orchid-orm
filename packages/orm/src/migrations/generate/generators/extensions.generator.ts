@@ -3,7 +3,7 @@ import {
   IntrospectedStructure,
   getSchemaAndTableFromName,
 } from 'rake-db';
-import { DbExtension } from 'pqb';
+import { ComposeMigrationParams } from '../composeMigration';
 
 interface Extension {
   schema?: string;
@@ -14,8 +14,10 @@ interface Extension {
 export const processExtensions = (
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,
-  currentSchema: string,
-  extensions?: DbExtension[],
+  {
+    currentSchema,
+    internal: { extensions, generatorIgnore },
+  }: ComposeMigrationParams,
 ) => {
   const codeExtensions = extensions?.map((ext): Extension => {
     const [schema, name] = getSchemaAndTableFromName(ext.name);
@@ -23,6 +25,13 @@ export const processExtensions = (
   });
 
   for (const dbExt of dbStructure.extensions) {
+    if (
+      generatorIgnore?.schemas?.includes(dbExt.schemaName) ||
+      generatorIgnore?.extensions?.includes(dbExt.name)
+    ) {
+      continue;
+    }
+
     if (codeExtensions) {
       let found = false;
       for (let i = 0; i < codeExtensions.length; i++) {

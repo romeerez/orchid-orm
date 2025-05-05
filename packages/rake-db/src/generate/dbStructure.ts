@@ -265,6 +265,7 @@ const schemasSql = `SELECT coalesce(json_agg(nspname ORDER BY nspname), '[]')
 FROM pg_catalog.pg_namespace n
 WHERE ${filterSchema('nspname')}`;
 
+// `relkind` r = regular table, p = partitioned table.
 const tablesSql = `SELECT
   nspname AS "schemaName",
   relname AS "name",
@@ -276,7 +277,7 @@ const tablesSql = `SELECT
   })}) t) AS "columns"
 FROM pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
-WHERE relkind = 'r'
+WHERE (relkind = 'r' OR relkind = 'p')
   AND ${filterSchema('nspname')}
 ORDER BY relname`;
 

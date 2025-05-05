@@ -32,6 +32,57 @@ describe('foreignKeys', () => {
     }));
   };
 
+  it('should not be dropped in ignored tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          iD: t.integer().primaryKey(),
+        }));
+
+        await db.createSchema('schema');
+
+        await db.createTable(
+          'schema.inSchemaTable',
+          { noPrimaryKey: true },
+          (t) => ({
+            someId: t.integer().foreignKey('some', 'iD', { name: 'fkey' }),
+          }),
+        );
+
+        await db.createTable('publicTable', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'iD', { name: 'fkey' }),
+        }));
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['schema'],
+          tables: ['publicTable'],
+        },
+      },
+      tables: [
+        someTable,
+        table(
+          (t) => ({
+            someId: t.integer(),
+          }),
+          undefined,
+          { name: 'schema.inSchemaTable' },
+        ),
+        table(
+          (t) => ({
+            someId: t.integer(),
+          }),
+          undefined,
+          { name: 'publicTable' },
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should create a foreign key on a column with a custom name', async () => {
     await arrange({
       async prepareDb(db) {

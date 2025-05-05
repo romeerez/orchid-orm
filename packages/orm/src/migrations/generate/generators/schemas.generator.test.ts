@@ -17,6 +17,23 @@ const { green, red, yellow } = colors;
 describe('schemas', () => {
   const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
 
+  it('should not drop ignored schemas', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('s');
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['s'],
+        },
+      },
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should create db schemas and set tables schemas', async () => {
     await arrange({
       async prepareDb(db) {

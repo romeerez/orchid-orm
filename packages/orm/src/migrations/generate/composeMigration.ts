@@ -27,40 +27,17 @@ export const composeMigration = async (
   config: AnyRakeDbConfig,
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,
-  {
-    structureToAstCtx,
-    codeItems: { schemas, enums, tables, domains },
-    currentSchema,
-    internal,
-    verifying,
-  }: ComposeMigrationParams,
+  params: ComposeMigrationParams,
 ): Promise<string | undefined> => {
+  const { structureToAstCtx, currentSchema } = params;
+
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 
-  await processSchemas(ast, schemas, dbStructure, verifying);
-  processExtensions(ast, dbStructure, currentSchema, internal.extensions);
-  await processDomains(
-    ast,
-    adapter,
-    structureToAstCtx,
-    domainsMap,
-    dbStructure,
-    currentSchema,
-    domains,
-  );
-  await processEnums(ast, enums, dbStructure, currentSchema, verifying);
-  await processTables(
-    ast,
-    structureToAstCtx,
-    domainsMap,
-    adapter,
-    tables,
-    dbStructure,
-    currentSchema,
-    config,
-    internal.generatorIgnore,
-    verifying,
-  );
+  await processSchemas(ast, dbStructure, params);
+  processExtensions(ast, dbStructure, params);
+  await processDomains(ast, adapter, domainsMap, dbStructure, params);
+  await processEnums(ast, dbStructure, params);
+  await processTables(ast, domainsMap, adapter, dbStructure, config, params);
 
   return astToMigration(currentSchema, config, ast);
 };

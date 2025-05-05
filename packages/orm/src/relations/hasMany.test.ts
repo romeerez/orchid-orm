@@ -22,6 +22,9 @@ import {
   messageRowToJSON,
   messageJSONBuildObject,
   userRowToJSON,
+  postData,
+  postTagData,
+  tagData,
 } from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
@@ -404,172 +407,33 @@ describe('hasMany', () => {
       );
     });
 
-    it('should be supported in whereExists', () => {
-      expectSql(
-        db.user.whereExists('messages').toSQL(),
-        `
-        SELECT ${userSelectAll} FROM "user"
-        WHERE EXISTS (
-          SELECT 1 FROM "message"  "messages"
-          WHERE ("messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key")
-            AND ("messages"."deleted_at" IS NULL)
-        )
-      `,
-      );
-
-      // TODO: redundant deleted at scope
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists((q) => q.messages.where({ Text: 'text' }))
-          .toSQL(),
-        `
-          SELECT ${userSelectAll} FROM "user" "u"
-          WHERE EXISTS (
-            SELECT 1 FROM "message"  "messages"
-            WHERE ("messages"."deleted_at" IS NULL)
-              AND ("messages"."text" = $1
-              AND "messages"."author_id" = "u"."id"
-              AND "messages"."message_key" = "u"."user_key")
-              AND ("messages"."deleted_at" IS NULL)
-          )
-        `,
-        ['text'],
-      );
-
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists('messages', (q) => q.where({ 'messages.Text': 'text' }))
-          .toSQL(),
-        `
-          SELECT ${userSelectAll} FROM "user" "u"
-          WHERE EXISTS (
-            SELECT 1 FROM "message"  "messages"
-            WHERE ("messages"."author_id" = "u"."id"
-              AND "messages"."message_key" = "u"."user_key"
-              AND "messages"."text" = $1)
-              AND ("messages"."deleted_at" IS NULL)
-          )
-        `,
-        ['text'],
-      );
-    });
-
-    it('should be supported in whereExists', () => {
-      expectSql(
-        db.user.whereExists('activeMessages').toSQL(),
-        `
-          SELECT ${userSelectAll} FROM "user"
-          WHERE EXISTS (
-            SELECT 1 FROM "message"  "activeMessages"
-            WHERE ("activeMessages"."active" = $1
-              AND "activeMessages"."author_id" = "user"."id"
-              AND "activeMessages"."message_key" = "user"."user_key")
-              AND ("activeMessages"."deleted_at" IS NULL)
-          )
-        `,
-        [true],
-      );
-
-      // TODO: redundant deleted at scope
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists((q) => q.activeMessages.where({ Text: 'text' }))
-          .toSQL(),
-        `
-          SELECT ${userSelectAll} FROM "user" "u"
-          WHERE EXISTS (
-            SELECT 1 FROM "message" "activeMessages"
-            WHERE ("activeMessages"."deleted_at" IS NULL)
-              AND ("activeMessages"."active" = $1
-              AND "activeMessages"."text" = $2
-              AND "activeMessages"."author_id" = "u"."id"
-              AND "activeMessages"."message_key" = "u"."user_key")
-              AND ("activeMessages"."deleted_at" IS NULL)
-          )
-        `,
-        [true, 'text'],
-      );
-
-      expectSql(
-        db.user
-          .as('u')
-          .whereExists('activeMessages', (q) =>
-            q.where({ 'activeMessages.Text': 'text' }),
-          )
-          .toSQL(),
-        `
-          SELECT ${userSelectAll} FROM "user" "u"
-          WHERE EXISTS (
-            SELECT 1 FROM "message"  "activeMessages"
-            WHERE ("activeMessages"."active" = $1
-              AND "activeMessages"."author_id" = "u"."id"
-              AND "activeMessages"."message_key" = "u"."user_key"
-              AND "activeMessages"."text" = $2)
-              AND ("activeMessages"."deleted_at" IS NULL)
-          )
-        `,
-        [true, 'text'],
-      );
-    });
-
-    it('should support nested where with exists', () => {
-      // @ts-expect-error sub query must return a boolean
-      db.user.where((q) => q.messages);
-
-      const q = db.user.where((q) => q.messages.exists());
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${userSelectAll}
-          FROM "user"
-          WHERE (
-            SELECT true
-            FROM "message" "messages"
-            WHERE ("messages"."author_id" = "user"."id"
-              AND "messages"."message_key" = "user"."user_key")
-              AND ("messages"."deleted_at" IS NULL)
-            LIMIT 1
-          )
-        `,
-      );
-    });
-
-    it('should support nested where with exists using `on`', () => {
-      const q = db.user.where((q) => q.activeMessages.exists());
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${userSelectAll}
-          FROM "user"
-          WHERE (
-            SELECT true
-            FROM "message" "activeMessages"
-            WHERE ("activeMessages"."active" = $1
-              AND "activeMessages"."author_id" = "user"."id"
-              AND "activeMessages"."message_key" = "user"."user_key")
-              AND ("activeMessages"."deleted_at" IS NULL)
-            LIMIT 1
-          )
-        `,
-        [true],
-      );
-    });
-
-    it('should support chained select', () => {
-      const q = db.user.select({
-        items: (q) => q.posts.chain('postTags').select('Tag', 'posts.Body'),
+    it('should support chained select', async () => {
+      await db.user.create({
+        ...userData,
+        posts: {
+          create: [
+            {
+              ...postData,
+              postTags: {
+                create: [
+                  {
+                    ...postTagData,
+                    tag: {
+                      create: tagData,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
       });
 
-      assertType<
-        Awaited<typeof q>,
-        { items: { Tag: string; Body: string }[] }[]
-      >();
+      const q = db.user
+        .select({
+          items: (q) => q.posts.chain('postTags').select('Tag', 'posts.Body'),
+        })
+        .take();
 
       expectSql(
         q.toSQL(),
@@ -594,22 +458,49 @@ describe('hasMany', () => {
               WHERE (r = 1)
             ) "t"
           ) "items" ON true
+          LIMIT 1
         `,
       );
+
+      const result = await q;
+
+      assertType<typeof result, { items: { Tag: string; Body: string }[] }>();
+
+      expect(result).toEqual({
+        items: [{ Tag: postTagData.Tag, Body: postData.Body }],
+      });
     });
 
-    it('should support chained select respecting `on` conditions', () => {
-      const q = db.user.select({
-        items: (q) =>
-          q.activePosts
-            .chain('activePostTags')
-            .select('Tag', 'activePosts.Body'),
+    it('should support chained select respecting `on` conditions', async () => {
+      await db.user.create({
+        ...userData,
+        activePosts: {
+          create: [
+            {
+              ...postData,
+              activePostTags: {
+                create: [
+                  {
+                    ...postTagData,
+                    tag: {
+                      create: tagData,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
       });
 
-      assertType<
-        Awaited<typeof q>,
-        { items: { Tag: string; Body: string }[] }[]
-      >();
+      const q = db.user
+        .select({
+          items: (q) =>
+            q.activePosts
+              .chain('activePostTags')
+              .select('Tag', 'activePosts.Body'),
+        })
+        .take();
 
       expectSql(
         q.toSQL(),
@@ -636,10 +527,176 @@ describe('hasMany', () => {
               WHERE (r = 1)
             ) "t"
           ) "items" ON true
+          LIMIT 1
         `,
         [true, true],
       );
+
+      const result = await q;
+
+      assertType<typeof result, { items: { Tag: string; Body: string }[] }>();
+
+      expect(result).toEqual({
+        items: [{ Tag: postTagData.Tag, Body: postData.Body }],
+      });
     });
+  });
+
+  it('should be supported in whereExists', () => {
+    expectSql(
+      db.user.whereExists('messages').toSQL(),
+      `
+        SELECT ${userSelectAll} FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM "message"  "messages"
+          WHERE ("messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
+        )
+      `,
+    );
+
+    // TODO: redundant deleted at scope
+    expectSql(
+      db.user
+        .as('u')
+        .whereExists((q) => q.messages.where({ Text: 'text' }))
+        .toSQL(),
+      `
+        SELECT ${userSelectAll} FROM "user" "u"
+        WHERE EXISTS (
+          SELECT 1 FROM "message"  "messages"
+          WHERE ("messages"."deleted_at" IS NULL)
+            AND ("messages"."text" = $1
+            AND "messages"."author_id" = "u"."id"
+            AND "messages"."message_key" = "u"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
+        )
+      `,
+      ['text'],
+    );
+
+    expectSql(
+      db.user
+        .as('u')
+        .whereExists('messages', (q) => q.where({ 'messages.Text': 'text' }))
+        .toSQL(),
+      `
+        SELECT ${userSelectAll} FROM "user" "u"
+        WHERE EXISTS (
+          SELECT 1 FROM "message"  "messages"
+          WHERE ("messages"."author_id" = "u"."id"
+            AND "messages"."message_key" = "u"."user_key"
+            AND "messages"."text" = $1)
+            AND ("messages"."deleted_at" IS NULL)
+        )
+      `,
+      ['text'],
+    );
+  });
+
+  it('should be supported in whereExists', () => {
+    expectSql(
+      db.user.whereExists('activeMessages').toSQL(),
+      `
+        SELECT ${userSelectAll} FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM "message"  "activeMessages"
+          WHERE ("activeMessages"."active" = $1
+            AND "activeMessages"."author_id" = "user"."id"
+            AND "activeMessages"."message_key" = "user"."user_key")
+            AND ("activeMessages"."deleted_at" IS NULL)
+        )
+      `,
+      [true],
+    );
+
+    // TODO: redundant deleted at scope
+    expectSql(
+      db.user
+        .as('u')
+        .whereExists((q) => q.activeMessages.where({ Text: 'text' }))
+        .toSQL(),
+      `
+        SELECT ${userSelectAll} FROM "user" "u"
+        WHERE EXISTS (
+          SELECT 1 FROM "message" "activeMessages"
+          WHERE ("activeMessages"."deleted_at" IS NULL)
+            AND ("activeMessages"."active" = $1
+            AND "activeMessages"."text" = $2
+            AND "activeMessages"."author_id" = "u"."id"
+            AND "activeMessages"."message_key" = "u"."user_key")
+            AND ("activeMessages"."deleted_at" IS NULL)
+        )
+      `,
+      [true, 'text'],
+    );
+
+    expectSql(
+      db.user
+        .as('u')
+        .whereExists('activeMessages', (q) =>
+          q.where({ 'activeMessages.Text': 'text' }),
+        )
+        .toSQL(),
+      `
+        SELECT ${userSelectAll} FROM "user" "u"
+        WHERE EXISTS (
+          SELECT 1 FROM "message"  "activeMessages"
+          WHERE ("activeMessages"."active" = $1
+            AND "activeMessages"."author_id" = "u"."id"
+            AND "activeMessages"."message_key" = "u"."user_key"
+            AND "activeMessages"."text" = $2)
+            AND ("activeMessages"."deleted_at" IS NULL)
+        )
+      `,
+      [true, 'text'],
+    );
+  });
+
+  it('should support nested where with exists', () => {
+    // @ts-expect-error sub query must return a boolean
+    db.user.where((q) => q.messages);
+
+    const q = db.user.where((q) => q.messages.exists());
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT ${userSelectAll}
+        FROM "user"
+        WHERE (
+          SELECT true
+          FROM "message" "messages"
+          WHERE ("messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
+          LIMIT 1
+        )
+      `,
+    );
+  });
+
+  it('should support nested where with exists using `on`', () => {
+    const q = db.user.where((q) => q.activeMessages.exists());
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT ${userSelectAll}
+        FROM "user"
+        WHERE (
+          SELECT true
+          FROM "message" "activeMessages"
+          WHERE ("activeMessages"."active" = $1
+            AND "activeMessages"."author_id" = "user"."id"
+            AND "activeMessages"."message_key" = "user"."user_key")
+            AND ("activeMessages"."deleted_at" IS NULL)
+          LIMIT 1
+        )
+      `,
+      [true],
+    );
   });
 
   it('should have proper joinQuery', () => {

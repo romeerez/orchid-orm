@@ -23,16 +23,23 @@ const { green, red, yellow } = colors;
 describe('tables', () => {
   const { arrange, act, assert, BaseTable, table } = useGeneratorsTestUtils();
 
-  it('should not drop tables specified in generatorIgnore config', async () => {
+  it('should not drop ignored tables', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createTable('table', (t) => ({
+        await db.createSchema('schema');
+
+        await db.createTable('schema.inSchemaTable', (t) => ({
+          id: t.identity().primaryKey(),
+        }));
+
+        await db.createTable('publicTable', (t) => ({
           id: t.identity().primaryKey(),
         }));
       },
       dbOptions: {
         generatorIgnore: {
-          tables: ['table'],
+          schemas: ['schema'],
+          tables: ['publicTable'],
         },
       },
     });

@@ -17,6 +17,48 @@ const { green, red, yellow } = colors;
 describe('primaryKey', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should not be dropped in ignored tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('schema');
+
+        await db.createTable('schema.inSchemaTable', (t) => ({
+          iD: t.identity().primaryKey('custom'),
+        }));
+
+        await db.createTable('publicTable', (t) => ({
+          iD: t.identity().primaryKey('custom'),
+        }));
+      },
+      dbOptions: {
+        generatorIgnore: {
+          schemas: ['schema'],
+          tables: ['publicTable'],
+        },
+      },
+      tables: [
+        table(
+          (t) => ({
+            iD: t.identity(),
+          }),
+          undefined,
+          { name: 'schema.inSchemaTable' },
+        ),
+        table(
+          (t) => ({
+            iD: t.identity(),
+          }),
+          undefined,
+          { name: 'publicTable' },
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
+
   it('should add a column primary key', async () => {
     await arrange({
       async prepareDb(db) {

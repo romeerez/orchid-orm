@@ -1,5 +1,6 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
+import { ComposeMigrationParams } from '../composeMigration';
 
 export interface EnumItem {
   schema?: string;
@@ -9,10 +10,13 @@ export interface EnumItem {
 
 export const processEnums = async (
   ast: RakeDbAst[],
-  enums: Map<string, EnumItem>,
   dbStructure: IntrospectedStructure,
-  currentSchema: string,
-  verifying: boolean | undefined,
+  {
+    codeItems: { enums },
+    currentSchema,
+    verifying,
+    internal: { generatorIgnore },
+  }: ComposeMigrationParams,
 ): Promise<void> => {
   const createEnums: EnumItem[] = [];
   const dropEnums: DbStructure.Enum[] = [];
@@ -28,6 +32,13 @@ export const processEnums = async (
   }
 
   for (const dbEnum of dbStructure.enums) {
+    if (
+      generatorIgnore?.schemas?.includes(dbEnum.schemaName) ||
+      generatorIgnore?.enums?.includes(dbEnum.name)
+    ) {
+      continue;
+    }
+
     const codeEnum = enums.get(`${dbEnum.schemaName}.${dbEnum.name}`);
     if (codeEnum) {
       changeEnum(ast, dbEnum, codeEnum);

@@ -1,11 +1,15 @@
 import { RakeDbAst, IntrospectedStructure } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
+import { ComposeMigrationParams } from '../composeMigration';
 
 export const processSchemas = async (
   ast: RakeDbAst[],
-  schemas: Set<string>,
   dbStructure: IntrospectedStructure,
-  verifying: boolean | undefined,
+  {
+    codeItems: { schemas },
+    verifying,
+    internal: { generatorIgnore },
+  }: ComposeMigrationParams,
 ): Promise<void> => {
   const createSchemas: string[] = [];
   const dropSchemas: string[] = [];
@@ -17,7 +21,11 @@ export const processSchemas = async (
   }
 
   for (const schema of dbStructure.schemas) {
-    if (!schemas.has(schema) && schema !== 'public') {
+    if (
+      !schemas.has(schema) &&
+      schema !== 'public' &&
+      !generatorIgnore?.schemas?.includes(schema)
+    ) {
       dropSchemas.push(schema);
     }
   }
