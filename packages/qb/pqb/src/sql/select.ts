@@ -225,7 +225,7 @@ export const selectToSql = (
           quotedTable = quotedAs;
           columnName = select;
           col = query.shape[select] as ColumnType | undefined;
-          sql = simpleColumnToSQL(ctx, query, select, col, quotedAs);
+          sql = simpleColumnToSQL(ctx, select, col, quotedAs);
         }
       } else {
         columnName = column;

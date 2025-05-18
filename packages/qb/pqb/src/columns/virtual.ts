@@ -15,6 +15,8 @@ export abstract class VirtualColumn<
     inputSchema: InputSchema = schema.never() as InputSchema,
   ) {
     super(schema, inputSchema);
+    // to omit it from selection when selecting *
+    this.data.explicitSelect = true;
   }
 
   toCode(): never {

@@ -10,25 +10,12 @@ import {
   QueryColumns,
   RecordString,
 } from 'orchid-core';
-import { addColumnParserToQuery, VirtualColumn } from '../columns';
-
-const applySqlComputed = (
-  ctx: ToSQLCtx,
-  q: { parsers?: ColumnsParsers },
-  computed: Expression,
-  as: string,
-  quotedAs?: string,
-) => {
-  addColumnParserToQuery(q, as, computed.result.value);
-  return computed.toSQL(ctx, quotedAs);
-};
 
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
  */
 export function simpleColumnToSQL(
   ctx: ToSQLCtx,
-  q: { parsers?: ColumnsParsers },
   key: string,
   column?: QueryColumn,
   quotedAs?: string,
@@ -37,22 +24,21 @@ export function simpleColumnToSQL(
 
   const { data } = column as ColumnTypeBase;
   return data.computed
-    ? applySqlComputed(ctx, q, data.computed, key, quotedAs)
+    ? data.computed.toSQL(ctx, quotedAs)
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
-// Takes a column name without dot, and the optional column object.
+// Takes a column name without a dot and the optional column object.
 // Handles computed column, uses column.data.name when set, prefixes regular column with `quotedAs`.
 export function simpleExistingColumnToSQL(
   ctx: ToSQLCtx,
-  q: { parsers?: ColumnsParsers },
   key: string,
   column: QueryColumn,
   quotedAs?: string,
 ): string {
   const { data } = column as ColumnTypeBase;
   return data.computed
-    ? applySqlComputed(ctx, q, data.computed, key, quotedAs)
+    ? data.computed.toSQL(ctx, quotedAs)
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
@@ -85,7 +71,7 @@ export const columnToSql = (
     return `"${column}".r`;
   }
 
-  return simpleColumnToSQL(ctx, data, column, shape[column], quotedAs);
+  return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
 };
 
 /**
@@ -113,13 +99,13 @@ export const maybeSelectedColumnToSql = (
       for (const s of data.select) {
         if (typeof s === 'object' && 'selectAs' in s) {
           if (column in s.selectAs) {
-            return simpleColumnToSQL(ctx, data, column, data.shape[column]);
+            return simpleColumnToSQL(ctx, column, data.shape[column]);
           }
         }
       }
     }
 
-    return simpleColumnToSQL(ctx, data, column, data.shape[column], quotedAs);
+    return simpleColumnToSQL(ctx, column, data.shape[column], quotedAs);
   }
 };
 
@@ -160,7 +146,7 @@ const columnWithDotToSql = (
     }
 
     if (col.data.computed) {
-      return applySqlComputed(ctx, data, col.data.computed, column, quoted);
+      return col.data.computed.toSQL(ctx, quoted);
     }
 
     return `"${tableName}"."${key}"`;
@@ -234,13 +220,7 @@ export const tableColumnToSqlWithAs = (
     }
 
     if (col.data.computed) {
-      return `${applySqlComputed(
-        ctx,
-        data,
-        col.data.computed,
-        as,
-        quoted,
-      )} "${as}"`;
+      return `${col.data.computed.toSQL(ctx, quoted)} "${as}"`;
     }
   }
 
@@ -274,13 +254,7 @@ export const ownColumnToSqlWithAs = (
     }
 
     if (col.data.computed) {
-      return `${applySqlComputed(
-        ctx,
-        data,
-        col.data.computed,
-        as,
-        quotedAs,
-      )} "${as}"`;
+      return `${col.data.computed.toSQL(ctx, quotedAs)} "${as}"`;
     }
   }
 
@@ -330,7 +304,7 @@ export const makeRowToJson = (
 
   for (const key in shape) {
     const column = shape[key];
-    if (column.data.explicitSelect || column instanceof VirtualColumn) {
+    if (column.data.explicitSelect) {
       continue;
     }
 

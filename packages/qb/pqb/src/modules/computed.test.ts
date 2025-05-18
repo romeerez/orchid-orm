@@ -27,9 +27,10 @@ const User = testDb(
   undefined,
   {
     computed: (q) => ({
-      nameAndKey: q
-        .sql(() => sql`${q.column('name')} || ' ' || ${q.column('userKey')}`)
-        .type((t) => t.string().parse((s) => s + ' parsed')),
+      nameAndKey: q.sql(
+        () => sql<string>`${q.column('name')} || ' ' || ${q.column('userKey')}`,
+      ),
+      decimal: sql`1::decimal`.type((t) => t.decimal().parse(parseFloat)),
       runtimeComputed: q.computeAtRuntime(
         ['id', 'name'],
         (record) => `${record.id} ${record.name}`,
@@ -44,7 +45,7 @@ const User = testDb(
 const userColumnsSql = User.q.selectAllColumns!.join(', ');
 
 const userData = { ...partialUserData, userKey: 'key' };
-const nameAndKey = `${userData.name} ${userData.userKey} parsed`;
+const nameAndKey = `${userData.name} ${userData.userKey}`;
 
 const joinQuery = User.as('user').whereSql`"profile"."user_id" = "user"."id"`;
 
@@ -70,16 +71,17 @@ describe('computed', () => {
   describe('sql computed', () => {
     it('should not be included into the table columns', () => {
       expect('nameAndKey' in User.q.selectableShape).toBe(false);
+      expect('decimal' in User.q.selectableShape).toBe(false);
     });
 
     describe('select', () => {
       it('should select computed column', async () => {
-        const q = User.select('name', 'nameAndKey').take();
+        const q = User.select('name', 'nameAndKey', 'decimal').take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "nameAndKey"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "nameAndKey", 1::decimal "decimal"
             FROM "user"
             LIMIT 1
           `,
@@ -87,18 +89,21 @@ describe('computed', () => {
 
         const res = await q;
 
-        assertType<typeof res, { name: string; nameAndKey: string }>();
+        assertType<
+          typeof res,
+          { name: string; nameAndKey: string; decimal: number }
+        >();
 
-        expect(res).toEqual({ name: userData.name, nameAndKey });
+        expect(res).toEqual({ name: userData.name, nameAndKey, decimal: 1 });
       });
 
       it('should select computed column with dot', async () => {
-        const q = User.select('name', 'user.nameAndKey').take();
+        const q = User.select('name', 'user.nameAndKey', 'user.decimal').take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "nameAndKey"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "nameAndKey", 1::decimal "decimal"
             FROM "user"
             LIMIT 1
           `,
@@ -106,18 +111,24 @@ describe('computed', () => {
 
         const res = await q;
 
-        assertType<typeof res, { name: string; nameAndKey: string }>();
+        assertType<
+          typeof res,
+          { name: string; nameAndKey: string; decimal: number }
+        >();
 
-        expect(res).toEqual({ name: userData.name, nameAndKey });
+        expect(res).toEqual({ name: userData.name, nameAndKey, decimal: 1 });
       });
 
       it('should select computed column with alias', async () => {
-        const q = User.select('name', { as: 'nameAndKey' }).take();
+        const q = User.select('name', {
+          as: 'nameAndKey',
+          dec: 'decimal',
+        }).take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "as"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "as", 1::decimal "dec"
             FROM "user"
             LIMIT 1
           `,
@@ -125,18 +136,21 @@ describe('computed', () => {
 
         const res = await q;
 
-        assertType<typeof res, { name: string; as: string }>();
+        assertType<typeof res, { name: string; as: string; dec: number }>();
 
-        expect(res).toEqual({ name: userData.name, as: nameAndKey });
+        expect(res).toEqual({ name: userData.name, as: nameAndKey, dec: 1 });
       });
 
       it('should select computed column with alias and dot', async () => {
-        const q = User.select('name', { as: 'user.nameAndKey' }).take();
+        const q = User.select('name', {
+          as: 'user.nameAndKey',
+          dec: 'user.decimal',
+        }).take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "as"
+            SELECT "user"."name", "user"."name" || ' ' || "user"."user_key" "as", 1::decimal "dec"
             FROM "user"
             LIMIT 1
           `,
@@ -144,20 +158,20 @@ describe('computed', () => {
 
         const res = await q;
 
-        assertType<typeof res, { name: string; as: string }>();
+        assertType<typeof res, { name: string; as: string; dec: number }>();
 
-        expect(res).toEqual({ name: userData.name, as: nameAndKey });
+        expect(res).toEqual({ name: userData.name, as: nameAndKey, dec: 1 });
       });
 
       it('should select joined computed column', async () => {
         const q = Profile.join(User, 'id', 'userId')
-          .select('user.nameAndKey')
+          .select('user.nameAndKey', 'user.decimal')
           .take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name" || ' ' || "user"."user_key" "nameAndKey"
+            SELECT "user"."name" || ' ' || "user"."user_key" "nameAndKey", 1::decimal "decimal"
             FROM "profile"
             JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
@@ -166,20 +180,20 @@ describe('computed', () => {
 
         const res = await q;
 
-        assertType<typeof res, { nameAndKey: string }>();
+        assertType<typeof res, { nameAndKey: string; decimal: number }>();
 
-        expect(res).toEqual({ nameAndKey });
+        expect(res).toEqual({ nameAndKey, decimal: 1 });
       });
 
       it('should select joined computed column with alias', async () => {
         const q = Profile.join(User, 'id', 'userId')
-          .select({ as: 'user.nameAndKey' })
+          .select({ as: 'user.nameAndKey', dec: 'user.decimal' })
           .take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name" || ' ' || "user"."user_key" "as"
+            SELECT "user"."name" || ' ' || "user"."user_key" "as", 1::decimal "dec"
             FROM "profile"
             JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
@@ -188,74 +202,78 @@ describe('computed', () => {
 
         const res = await q;
 
-        assertType<typeof res, { as: string }>();
+        assertType<typeof res, { as: string; dec: number }>();
 
-        expect(res).toEqual({ as: nameAndKey });
+        expect(res).toEqual({ as: nameAndKey, dec: 1 });
       });
     });
 
     describe('where', () => {
       it('should support computed columns', () => {
-        const q = User.where({ nameAndKey: 'value' });
+        const q = User.where({ nameAndKey: 'value', decimal: 1 });
 
         expectSql(
           q.toSQL(),
           `
             SELECT ${userColumnsSql} FROM "user"
-            WHERE "user"."name" || ' ' || "user"."user_key" = $1
+            WHERE "user"."name" || ' ' || "user"."user_key" = $1 AND 1::decimal = $2
           `,
-          ['value'],
+          ['value', 1],
         );
       });
 
       it('should support where operators', () => {
-        const q = User.where({ nameAndKey: { startsWith: 'value' } });
+        const q = User.where({
+          decimal: { gt: 0 },
+        });
 
         expectSql(
           q.toSQL(),
           `
             SELECT ${userColumnsSql} FROM "user"
-            WHERE "user"."name" || ' ' || "user"."user_key" ILIKE $1 || '%'
+            WHERE 1::decimal > $1
           `,
-          ['value'],
+          [0],
         );
       });
 
       it('should support where operators with dot', () => {
-        const q = User.where({ 'user.nameAndKey': { startsWith: 'value' } });
+        const q = User.where({
+          'user.decimal': { gt: 0 },
+        });
 
         expectSql(
           q.toSQL(),
           `
             SELECT ${userColumnsSql} FROM "user"
-            WHERE "user"."name" || ' ' || "user"."user_key" ILIKE $1 || '%'
+            WHERE 1::decimal > $1
           `,
-          ['value'],
+          [0],
         );
       });
     });
 
     describe('order', () => {
       it('should support computed column', () => {
-        const q = User.order('nameAndKey');
+        const q = User.order('nameAndKey', 'decimal');
 
         expectSql(
           q.toSQL(),
           `
             SELECT ${userColumnsSql} FROM "user"
-            ORDER BY "user"."name" || ' ' || "user"."user_key" ASC
+            ORDER BY "user"."name" || ' ' || "user"."user_key" ASC, 1::decimal ASC
           `,
         );
       });
 
       it('should support computed column for object', () => {
-        const q = User.order({ nameAndKey: 'DESC' });
+        const q = User.order({ nameAndKey: 'DESC', decimal: 'DESC' });
 
         expectSql(
           q.toSQL(),
           `
             SELECT ${userColumnsSql} FROM "user"
-            ORDER BY "user"."name" || ' ' || "user"."user_key" DESC
+            ORDER BY "user"."name" || ' ' || "user"."user_key" DESC, 1::decimal DESC
           `,
         );
       });

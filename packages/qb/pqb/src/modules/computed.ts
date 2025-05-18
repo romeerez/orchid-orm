@@ -19,7 +19,7 @@ import {
   SqlMethod,
 } from '../queryMethods';
 import { RelationsBase } from '../relations';
-import { ColumnType, UnknownColumn } from '../columns';
+import { addColumnParserToQuery, ColumnType, UnknownColumn } from '../columns';
 import { QueryData } from '../sql';
 import {
   applyBatchTransforms,
@@ -36,9 +36,11 @@ declare module 'orchid-core' {
 export type ComputedColumnsFromOptions<
   T extends ComputedOptionsFactory<never, never> | undefined,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-> = T extends (...args: any[]) => any
+> = T extends ((
+  ...args: any[]
+) => infer R extends { [K: string]: QueryOrExpression<unknown> })
   ? {
-      [K in keyof ReturnType<T>]: ReturnType<T>[K]['result']['value'];
+      [K in keyof R]: R[K]['result']['value'];
     }
   : EmptyObject;
 
@@ -119,13 +121,26 @@ export const applyComputedColumns = (
         [key]: item,
       };
     } else {
-      const data = (
-        (((q as unknown as PickQueryShape).shape as QueryColumns)[key] =
-          item.result.value || UnknownColumn.instance) as ColumnType
-      ).data;
+      let col = item.result.value as ColumnType | undefined;
+      if (!col) {
+        item.result.value = col = Object.create(
+          UnknownColumn.instance,
+        ) as ColumnType;
+        col.data = { ...col.data };
+      }
+
+      ((q as unknown as PickQueryShape).shape as QueryColumns)[key] = col;
+
+      const { data } = col;
       data.computed = item as Expression;
       data.explicitSelect = true;
       data.readonly = true;
+
+      addColumnParserToQuery(
+        (q as unknown as PickQueryQ).q,
+        key,
+        item.result.value,
+      );
     }
   }
 

@@ -47,9 +47,12 @@ describe('computed', () => {
     }));
 
     computed = this.setComputed((q) => ({
-      sqlComputed: sql`${q.column('Bio')} || ' ' || ${q.column(
+      sqlComputed: sql<string>`${q.column('Bio')} || ' ' || ${q.column(
         'ProfileKey',
-      )}`.type((t) => t.text()),
+      )}`,
+      sqlComputedDecimal: sql`1::decimal`.type((t) =>
+        t.decimal().parse(parseFloat),
+      ),
       runtimeComputed: q.computeAtRuntime(
         ['Id', 'Bio'],
         (record) => `${record.Id} ${record.Bio}`,
@@ -99,6 +102,7 @@ describe('computed', () => {
           q.profile.select(
             'Id',
             'sqlComputed',
+            'sqlComputedDecimal',
             'runtimeComputed',
             'batchComputed',
           ),
@@ -112,6 +116,7 @@ describe('computed', () => {
           record: {
             Id: string;
             sqlComputed: string;
+            sqlComputedDecimal: number;
             runtimeComputed: string;
             batchComputed: string;
           };
@@ -123,6 +128,7 @@ describe('computed', () => {
           record: {
             Id: profileId,
             sqlComputed: `bio ${userData.UserKey}`,
+            sqlComputedDecimal: 1,
             runtimeComputed: `${profileId} bio`,
             batchComputed: `${profileId} bio`,
           },
@@ -136,6 +142,7 @@ describe('computed', () => {
           q.profiles.select(
             'Id',
             'sqlComputed',
+            'sqlComputedDecimal',
             'runtimeComputed',
             'batchComputed',
           ),
@@ -150,6 +157,7 @@ describe('computed', () => {
             | {
                 Id: string;
                 sqlComputed: string;
+                sqlComputedDecimal: number;
                 runtimeComputed: string;
                 batchComputed: string;
               }[];
@@ -162,6 +170,7 @@ describe('computed', () => {
             {
               Id: profileId,
               sqlComputed: `bio ${userData.UserKey}`,
+              sqlComputedDecimal: 1,
               runtimeComputed: `${profileId} bio`,
               batchComputed: `${profileId} bio`,
             },
@@ -173,6 +182,7 @@ describe('computed', () => {
     it('should get computed fields of a relation', async () => {
       const res = await local.user.select({
         sc: (q) => q.profile.get('sqlComputed'),
+        scd: (q) => q.profile.get('sqlComputedDecimal'),
         rc: (q) => q.profile.get('runtimeComputed'),
         bc: (q) => q.profile.get('batchComputed'),
       });
@@ -181,6 +191,7 @@ describe('computed', () => {
         typeof res,
         {
           sc: string;
+          scd: number;
           rc: string;
           bc: string;
         }[]
@@ -189,6 +200,7 @@ describe('computed', () => {
       expect(res).toEqual([
         {
           sc: `bio ${userData.UserKey}`,
+          scd: 1,
           rc: `${profileId} bio`,
           bc: `${profileId} bio`,
         },

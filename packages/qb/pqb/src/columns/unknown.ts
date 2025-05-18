@@ -9,8 +9,12 @@ export class UnknownColumn<
 > extends VirtualColumn<Schema> {
   static instance = new UnknownColumn(defaultSchemaConfig);
 
+  selectable = true;
+
   constructor(schema: Schema) {
     super(schema, schema.unknown() as never);
+    // include this column when selecting *, unlike the parent VirtualColumn
+    this.data.explicitSelect = undefined;
   }
 }
 

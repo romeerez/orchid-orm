@@ -18,7 +18,13 @@ import {
   pushQueryArrayImmutable,
   pushQueryValueImmutable,
 } from '../query/queryUtils';
-import { SelectAsValue, SelectItem, SelectQueryData, ToSQLQuery } from '../sql';
+import {
+  QueryData,
+  SelectAsValue,
+  SelectItem,
+  SelectQueryData,
+  ToSQLQuery,
+} from '../sql';
 import {
   BatchParser,
   ColumnTypeBase,
@@ -736,68 +742,65 @@ export const setParserForSelectedString = (
 ): string | undefined => {
   const { q } = query;
   const index = arg.indexOf('.');
-  if (index !== -1) {
-    const table = getFullColumnTable(
-      query as unknown as IsQuery,
-      arg,
-      index,
-      as,
-    );
-    const column = arg.slice(index + 1);
+  if (index === -1) return selectColumn(query, q, arg, columnAs);
 
-    // 'table.*' is selecting a full joined record (without computeds)
-    if (column === '*') {
-      addParsersForSelectJoined(query, table, columnAs);
-      return table === as ? column : arg;
-    }
+  const table = getFullColumnTable(query as unknown as IsQuery, arg, index, as);
+  const column = arg.slice(index + 1);
 
-    if (table === as) {
-      if (columnAs && q.parsers) {
-        const parser = q.parsers[column];
-        if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
-      }
-
-      return handleComputed(query, q.computeds, column);
-    }
-
-    const parser = q.joinedParsers?.[table]?.[column];
-    if (parser) setParserToQuery(q, columnAs || column, parser);
-
-    const batchParsers = q.joinedBatchParsers?.[table];
-    if (batchParsers) {
-      let cloned = false;
-      for (const bp of batchParsers) {
-        if (bp.path[0] === column) {
-          if (!cloned) {
-            q.batchParsers = [...(q.batchParsers || [])];
-            cloned = true;
-          }
-          q.batchParsers!.push(bp);
-        }
-      }
-    }
-
-    const computeds = q.joinedComputeds?.[table];
-    if (computeds?.[column]) {
-      const computed = computeds[column];
-      const map: HookSelect = (q.hookSelect = new Map(q.hookSelect));
-      for (const column of computed.deps) {
-        map.set(column, { select: `${table}.${column}` });
-      }
-
-      setObjectValueImmutable(q, 'selectedComputeds', column, computed);
-      return;
-    }
-
-    return arg;
-  } else {
-    if (columnAs && q.parsers) {
-      const parser = q.parsers?.[arg];
-      if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
-    }
-
-    return handleComputed(query, q.computeds, arg);
+  // 'table.*' is selecting a full joined record (without computeds)
+  if (column === '*') {
+    addParsersForSelectJoined(query, table, columnAs);
+    return table === as ? column : arg;
   }
+
+  if (table === as) {
+    return selectColumn(query, q, column, columnAs);
+  }
+
+  const parser = q.joinedParsers?.[table]?.[column];
+  if (parser) setParserToQuery(q, columnAs || column, parser);
+
+  const batchParsers = q.joinedBatchParsers?.[table];
+  if (batchParsers) {
+    let cloned = false;
+    for (const bp of batchParsers) {
+      if (bp.path[0] === column) {
+        if (!cloned) {
+          q.batchParsers = [...(q.batchParsers || [])];
+          cloned = true;
+        }
+        q.batchParsers!.push(bp);
+      }
+    }
+  }
+
+  const computeds = q.joinedComputeds?.[table];
+  if (computeds?.[column]) {
+    const computed = computeds[column];
+    const map: HookSelect = (q.hookSelect = new Map(q.hookSelect));
+    for (const column of computed.deps) {
+      map.set(column, { select: `${table}.${column}` });
+    }
+
+    setObjectValueImmutable(q, 'selectedComputeds', column, computed);
+    return;
+  }
+
+  return arg;
+};
+
+const selectColumn = (
+  query: PickQueryQAndInternal,
+  q: QueryData,
+  key: string,
+  columnAs?: string | getValueKey,
+) => {
+  if (columnAs && q.parsers) {
+    const parser = q.parsers[key];
+    if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
+  }
+
+  return handleComputed(query, q.computeds, key);
 };
 
 const handleComputed = (
