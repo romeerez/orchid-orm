@@ -1065,6 +1065,13 @@ describe('queryMethods', () => {
   });
 
   describe('modify', () => {
+    it('should have type error when applying a function for a wrong table', async () => {
+      const modifier = User.makeHelper((q) => q.select('name'));
+
+      // @ts-expect-error wrong table
+      Profile.modify(modifier);
+    });
+
     it('should modify a query', () => {
       const modifier = User.makeHelper((q) =>
         q.select('name').where({ name: 'name' }),

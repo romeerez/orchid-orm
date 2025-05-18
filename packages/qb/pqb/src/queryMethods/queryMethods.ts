@@ -14,6 +14,7 @@ import {
   WithDataItems,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
   PickQueryMetaShapeRelationsReturnType,
+  PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
 } from '../query/query';
 import {
   AliasOrTable,
@@ -84,6 +85,7 @@ import {
   PickQueryResultReturnType,
   PickQueryResultReturnTypeUniqueColumns,
   PickQueryTableMetaResult,
+  PickQueryTableMetaShape,
   QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
@@ -193,12 +195,18 @@ interface QueryHelperQuery<T extends PickQueryMetaShape> {
 
 interface IsQueryHelper {
   isQueryHelper: true;
+  table: string | undefined;
   args: unknown[];
   result: unknown;
 }
 
+interface IsQueryHelperForTable<Table extends string | undefined>
+  extends IsQueryHelper {
+  table: Table;
+}
+
 interface QueryHelper<
-  T extends PickQueryMetaShape,
+  T extends PickQueryTableMetaShape,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Args extends any[],
   Result,
@@ -210,6 +218,7 @@ interface QueryHelper<
     ? MergeQuery<Q, Result>
     : Result;
 
+  table: T['table'];
   args: Args;
   result: Result;
 }
@@ -1091,8 +1100,8 @@ export class QueryMethods<ColumnTypes> {
    * @param fn - function to modify the query with. The result type will be merged with the main query as if the `merge` method was used.
    */
   modify<
-    T extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
-    Fn extends IsQueryHelper,
+    T extends PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
+    Fn extends IsQueryHelperForTable<T['table']>,
   >(
     this: T,
     fn: Fn,

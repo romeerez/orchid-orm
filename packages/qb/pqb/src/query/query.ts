@@ -259,6 +259,10 @@ export interface PickQueryMetaResultReturnTypeWithDataWindowsThen
   then: unknown;
 }
 
+export interface PickQueryTableMetaResultReturnTypeWithDataWindowsThen
+  extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
+    PickQueryTable {}
+
 export interface PickQueryQAndInternal extends PickQueryQ, PickQueryInternal {}
 
 export interface PickQueryQAndBaseQuery
