@@ -1,5 +1,12 @@
 # pqb
 
+## 0.51.1
+
+### Patch Changes
+
+- 89ed3bb: Change `modify` typing to forbid applying functions created for a different table (#496)
+- 5cefa64: Allow omitting `.type(` in SQL computed columns (#497)
+
 ## 0.51.0
 
 ### Minor Changes

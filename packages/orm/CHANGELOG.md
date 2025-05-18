@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.49.1
+
+### Patch Changes
+
+- 5cefa64: Allow omitting `.type(` in SQL computed columns (#497)
+- Updated dependencies [89ed3bb]
+- Updated dependencies [5cefa64]
+  - pqb@0.51.1
+  - rake-db@2.25.1
+
 ## 1.49.0
 
 ### Minor Changes
