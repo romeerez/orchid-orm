@@ -12,7 +12,7 @@ import {
   CustomTypeColumn,
   DomainColumn,
   EnumColumn,
-  instantiateColumn,
+  assignDbDataToColumn,
   raw,
   ColumnsByType,
   Adapter,
@@ -277,6 +277,8 @@ export const instantiateDbColumn = (
           }.${dbColumn.name}`,
         );
       }
+
+      assignDbDataToColumn(column, dbColumn);
     }
   }
 
@@ -302,7 +304,7 @@ const instantiateColumnByDbType = (
   type: string,
   isSerial: boolean,
   params: ColumnFromDbParams,
-) => {
+): ColumnType | undefined => {
   let columnFn =
     ctx.columnsByType[
       !isSerial
@@ -324,7 +326,7 @@ const instantiateColumnByDbType = (
   }
 
   return columnFn
-    ? (instantiateColumn(columnFn, params) as ColumnType)
+    ? (assignDbDataToColumn(columnFn(), params) as ColumnType)
     : undefined;
 };
 

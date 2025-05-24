@@ -22,7 +22,7 @@ import {
 import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
 import { z, ZodLiteral, ZodNumber } from 'zod';
-import { instantiateColumn } from './columnType.utils';
+import { assignDbDataToColumn } from './columnType.utils';
 import { zodSchemaConfig } from 'schema-to-zod';
 
 describe('column type', () => {
@@ -709,10 +709,7 @@ describe('column type', () => {
         dateTimePrecision: 4,
         typmod: -1,
       };
-      const column = instantiateColumn(
-        () => new Column(testSchemaConfig),
-        params,
-      );
+      const column = assignDbDataToColumn(new Column(testSchemaConfig), params);
       expect(column).toBeInstanceOf(Column);
       expect(column.data).toMatchObject(params);
     });

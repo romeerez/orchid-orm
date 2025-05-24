@@ -16,12 +16,10 @@ export const simplifyColumnDefault = (value?: string) => {
   return;
 };
 
-export const instantiateColumn = (
-  typeFn: () => ColumnTypeBase,
+export const assignDbDataToColumn = (
+  column: ColumnTypeBase,
   params: ColumnFromDbParams,
 ): ColumnTypeBase => {
-  const column = typeFn();
-
   const { dateTimePrecision } = params;
 
   Object.assign(column.data, {
@@ -35,5 +33,5 @@ export const instantiateColumn = (
     default: simplifyColumnDefault(params.default),
   });
 
-  return column as unknown as ColumnTypeBase;
+  return column;
 };

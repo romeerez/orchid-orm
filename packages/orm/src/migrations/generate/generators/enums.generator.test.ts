@@ -521,4 +521,25 @@ ${green('+ add values to enum')} numbers: three, four`,
       assert.migration();
     });
   });
+
+  it('should recognize nullable column', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('x', ['one']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          col: t.enum('x').nullable(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          col: t.enum('x', ['one']).nullable(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+  });
 });
