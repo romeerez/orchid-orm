@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Computed columns
 
 OrchidORM supports defining columns that are calculated on the fly,
@@ -66,6 +70,30 @@ db.post.join('author').select('author.fullName')
 
 // can be returned from `insert`, `create`, `update`, `delete`, `upsert`
 db.user.select('fullName').insert(data)
+```
+
+### Reuse SQL computed
+
+You can reuse a SQL computed column in a definition of a new SQL computed column
+by defining the new one as a function and referencing the other column by `this.columnName`.
+
+```ts
+import { BaseTable, sql } from './baseTable';
+
+export class MyTable extends BaseTable {
+  // ...snip
+  computed = this.setComputed((q) => ({
+    hello: sql`'hello'`.type((t) => t.string()),
+    // can be "dynamic", the callback is executed for every query.
+    world: sql(() => sql`'world'`.type((t) => t.string())),
+    // use `one` and `two` to define a new SQL computed column:
+    greet() {
+      return sql`${this.one} || ' ' || ${this.two} || '!'`.type(() =>
+        t.string(),
+      );
+    },
+  }));
+}
 ```
 
 ## JS runtime computed

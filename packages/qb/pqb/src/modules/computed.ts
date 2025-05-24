@@ -12,7 +12,11 @@ import {
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
-import { PickQueryQ, QueryOrExpression } from '../query/query';
+import {
+  PickQueryQ,
+  QueryOrExpression,
+  ReturnsQueryOrExpression,
+} from '../query/query';
 import {
   ExpressionMethods,
   QueryBatchResult,
@@ -36,17 +40,25 @@ declare module 'orchid-core' {
 export type ComputedColumnsFromOptions<
   T extends ComputedOptionsFactory<never, never> | undefined,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-> = T extends ((
-  ...args: any[]
-) => infer R extends { [K: string]: QueryOrExpression<unknown> })
+> = T extends ((...args: any[]) => infer R extends ComputedOptionsConfig)
   ? {
-      [K in keyof R]: R[K]['result']['value'];
+      [K in keyof R]: R[K] extends QueryOrExpression<unknown>
+        ? R[K]['result']['value']
+        : R[K] extends () => {
+            result: { value: infer Value extends QueryColumn };
+          }
+        ? Value
+        : never;
     }
   : EmptyObject;
 
+export interface ComputedOptionsConfig {
+  [K: string]: QueryOrExpression<unknown> | ReturnsQueryOrExpression<unknown>;
+}
+
 export type ComputedOptionsFactory<ColumnTypes, Shape extends QueryColumns> = (
   t: ComputedMethods<ColumnTypes, Shape>,
-) => { [K: string]: QueryOrExpression<unknown> };
+) => ComputedOptionsConfig;
 
 export interface RuntimeComputedQueryColumn<OutputType> extends QueryColumn {
   dataType: 'runtimeComputed';
@@ -114,7 +126,9 @@ export const applyComputedColumns = (
 
   const computed = fn(q as never);
   for (const key in computed) {
-    const item = computed[key];
+    let item = computed[key];
+    if (typeof item === 'function') item = item.call(computed);
+
     if (item instanceof ComputedColumn) {
       (q as unknown as PickQueryQ).q.computeds = {
         ...(q as unknown as PickQueryQ).q.computeds,

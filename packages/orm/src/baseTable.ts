@@ -29,6 +29,8 @@ import {
   TableDataItemsUniqueConstraints,
   UniqueConstraints,
   raw,
+  ComputedOptionsConfig,
+  QueryOrExpression,
 } from 'pqb';
 import {
   applyMixins,
@@ -165,16 +167,21 @@ export type DefaultSelect<T extends ORMTableInput> = ShallowSimplify<
 >;
 
 // Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends ORMTableInput> =
-  T['computed'] extends ComputedOptionsFactory<never, never>
-    ? ShallowSimplify<
-        ColumnShapeOutput<T['columns']['shape']> & {
-          [K in keyof ReturnType<T['computed']>]: ReturnType<
-            T['computed']
-          >[K]['result']['value']['outputType'];
-        }
-      >
-    : ShallowSimplify<ColumnShapeOutput<T['columns']['shape']>>;
+export type Selectable<T extends ORMTableInput> = T['computed'] extends ((
+  t: never,
+) => infer R extends ComputedOptionsConfig)
+  ? ShallowSimplify<
+      ColumnShapeOutput<T['columns']['shape']> & {
+        [K in keyof R]: R[K] extends QueryOrExpression<unknown>
+          ? R[K]['result']['value']['outputType']
+          : R[K] extends () => {
+              result: { value: infer Value extends QueryColumn };
+            }
+          ? Value['outputType']
+          : never;
+      }
+    >
+  : ShallowSimplify<ColumnShapeOutput<T['columns']['shape']>>;
 
 // Object type that conforms `create` method of the table.
 export type Insertable<T extends ORMTableInput> = ShallowSimplify<

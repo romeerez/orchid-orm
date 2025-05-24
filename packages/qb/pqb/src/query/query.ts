@@ -683,6 +683,10 @@ export interface QueryOrExpression<T> {
   result: { value: QueryColumn<T> };
 }
 
+export interface ReturnsQueryOrExpression<T> {
+  (): QueryOrExpression<T>;
+}
+
 export interface QueryOrExpressionBooleanOrNullResult {
   result: { value: QueryColumn<boolean | null> };
 }
