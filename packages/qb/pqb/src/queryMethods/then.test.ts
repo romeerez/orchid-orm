@@ -1,7 +1,7 @@
 import { User } from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
 import { assertType, testAdapter, testDb, useTestDatabase } from 'test-utils';
-import { TransactionState } from 'orchid-core';
+import { noop, TransactionState } from 'orchid-core';
 
 jest.mock('../sql/constants', () => ({
   MAX_BINDING_PARAMS: 2,
@@ -49,6 +49,22 @@ describe('then', () => {
 
     expect(isThenCalled).toBe(true);
     expect(len).toBe(0);
+  });
+
+  it('should throw when there is no `.catch`', async () => {
+    // @ts-expect-error wrong column
+    expect(User.select('wrong').then(noop)).rejects.toThrow(
+      'column user.wrong does not exist',
+    );
+  });
+
+  it('should not throw when there is `onrejected` callback', async () => {
+    let error: Error | undefined;
+
+    // @ts-expect-error wrong column
+    await User.select('wrong').then(noop, (err) => (error = err));
+
+    expect(error?.message).toEqual('column user.wrong does not exist');
   });
 });
 

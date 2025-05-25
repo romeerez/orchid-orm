@@ -438,7 +438,9 @@ const then = async (
       log.onError(error as Error, sql as SingleSqlItem, logData);
     }
 
-    return reject?.(error);
+    if (reject) return reject(error);
+
+    throw error;
   }
 };
 
