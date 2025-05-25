@@ -229,18 +229,44 @@ export type QueryHelperResult<
   T extends QueryHelper<PickQueryMetaShape, any[], unknown>,
 > = T['result'];
 
-type NarrowTypeResult<T extends PickQueryMetaResultReturnType, Narrow> = {
-  [K in keyof T['result']]: K extends keyof Narrow
-    ? {
-        [P in keyof T['result'][K]]: P extends 'outputType'
-          ? Narrow[K] extends T['result'][K]['outputType']
-            ? Narrow[K]
-            : `narrowType() error: passed type does not exist in '${K &
-                string}'s type union`
-          : T['result'][K][P];
-      }
-    : T['result'][K];
-};
+interface NarrowTypeSelf extends PickQueryMetaResultReturnType {
+  returnType:
+    | undefined
+    | 'all'
+    | 'one'
+    | 'oneOrThrow'
+    | 'value'
+    | 'valueOrThrow'
+    | 'pluck';
+}
+
+type NarrowInvalidKeys<T extends PickQueryResult, Narrow> = {
+  [K in keyof Narrow]: K extends keyof T['result']
+    ? Narrow[K] extends T['result'][K]['outputType']
+      ? never
+      : K
+    : K;
+}[keyof Narrow];
+
+interface NarrowValueTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
+  extends QueryColumns {
+  value: {
+    [K in keyof T['result']['value']]: K extends 'outputType'
+      ? Narrow
+      : T['result']['value'][K];
+  };
+}
+
+interface NarrowPluckTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
+  extends QueryColumns {
+  pluck: {
+    [K in keyof T['result']['pluck']]: K extends 'outputType'
+      ? Narrow extends unknown[]
+        ? Narrow[number]
+        : Narrow
+      : T['result']['pluck'][K];
+  };
+}
 
 type QueryIfResult<
   T extends PickQueryMetaResultReturnType,
@@ -1138,15 +1164,63 @@ export class QueryMethods<ColumnTypes> {
    *   .narrowType()<{ kind: 'first', approved: true }>();
    * ```
    */
-  narrowType<T extends PickQueryMetaResultReturnType>(
+  narrowType<T extends NarrowTypeSelf>(
     this: T,
-  ): <Narrow>() => {
-    [K in keyof T]: K extends 'result'
-      ? NarrowTypeResult<T, Narrow>
-      : K extends 'then'
-      ? QueryThenByQuery<T, NarrowTypeResult<T, Narrow>>
-      : T[K];
-  } {
+  ): <Narrow>() => T['returnType'] extends
+    | undefined
+    | 'all'
+    | 'one'
+    | 'oneOrThrow'
+    ? [NarrowInvalidKeys<T, Narrow>] extends [never]
+      ? {
+          [K in keyof T]: K extends 'result'
+            ? T['result'] & {
+                [K in keyof Narrow]: {
+                  outputType: Narrow[K];
+                };
+              }
+            : K extends 'then'
+            ? QueryThenByQuery<
+                T,
+                T['result'] & {
+                  [K in keyof Narrow]: {
+                    outputType: Narrow[K];
+                  };
+                }
+              >
+            : T[K];
+        }
+      : `narrowType() error: provided type does not extend the '${NarrowInvalidKeys<
+          T,
+          Narrow
+        > &
+          string}' column type`
+    : (
+        T['returnType'] extends 'pluck'
+          ? Narrow extends unknown[]
+            ? Narrow[number]
+            : Narrow
+          : Narrow
+      ) extends (
+        T['returnType'] extends 'pluck'
+          ? T['result']['pluck']['outputType']
+          : T['result']['value']['outputType']
+      )
+    ? {
+        [K in keyof T]: K extends 'result'
+          ? T['returnType'] extends 'value' | 'valueOrThrow'
+            ? NarrowValueTypeResult<T, Narrow>
+            : NarrowPluckTypeResult<T, Narrow>
+          : K extends 'then'
+          ? QueryThenByQuery<
+              T,
+              T['returnType'] extends 'value' | 'valueOrThrow'
+                ? NarrowValueTypeResult<T, Narrow>
+                : NarrowPluckTypeResult<T, Narrow>
+            >
+          : T[K];
+      }
+    : 'narrowType() error: provided type does not extend the returning column column type' {
     return () => this as never;
   }
 

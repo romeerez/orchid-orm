@@ -1136,6 +1136,54 @@ describe('queryMethods', () => {
     });
   });
 
+  describe('narrowType', () => {
+    it('should narrow the type of selection', () => {
+      const q = User.select('name').narrowType()<{ name: 'name' }>();
+
+      assertType<Awaited<typeof q>, { name: 'name' }[]>();
+    });
+
+    it('should fail to narrow if the type does not match', () => {
+      const q = User.select('name').narrowType()<{ id: 1; name: 2 }>();
+
+      assertType<
+        typeof q,
+        | `narrowType() error: provided type does not extend the 'name' column type`
+        | `narrowType() error: provided type does not extend the 'id' column type`
+      >();
+    });
+
+    it('should narrow the type of `get`', () => {
+      const q = User.get('name').narrowType()<'name'>();
+
+      assertType<Awaited<typeof q>, 'name'>();
+    });
+
+    it('should fail to narrow `get` if the type does not match', () => {
+      const q = User.get('name').narrowType()<1>();
+
+      assertType<
+        Awaited<typeof q>,
+        'narrowType() error: provided type does not extend the returning column column type'
+      >();
+    });
+
+    it('should narrow the type of `pluck`', () => {
+      const q = User.pluck('name').narrowType()<'name'[]>();
+
+      assertType<Awaited<typeof q>, 'name'[]>();
+    });
+
+    it('should fail to narrow `get` if the type does not match', () => {
+      const q = User.pluck('name').narrowType()<1[]>();
+
+      assertType<
+        Awaited<typeof q>,
+        'narrowType() error: provided type does not extend the returning column column type'
+      >();
+    });
+  });
+
   describe('makeHelper', () => {
     it('should make a query helper', () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
