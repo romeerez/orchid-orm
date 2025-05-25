@@ -11,7 +11,7 @@ import {
   QueryThen,
   ValExpression,
 } from 'orchid-core';
-import { getSqlText, JoinedShapes, QueryData, ToSQLCtx } from '../sql';
+import { getSqlText, QueryData, ToSQLCtx } from '../sql';
 import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import {
   PickQueryColumnTypes,
@@ -25,6 +25,7 @@ import { AggregateOptions, makeFnExpression } from '../common/fn';
 import { BooleanQueryColumn } from './aggregate';
 import { Operators, OperatorsBoolean } from '../columns/operators';
 import { _clone, getFullColumnTable } from '../query/queryUtils';
+import { UnknownColumn } from '../columns';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
@@ -156,7 +157,7 @@ export class ExpressionMethods {
   ): ColumnRefExpression<T['shape'][K]> & T['shape'][K]['operators'] {
     const column = (this.shape as { [K: PropertyKey]: ColumnTypeBase })[name];
     return new ColumnRefExpression(
-      column as T['shape'][K],
+      (column || UnknownColumn.instance) as T['shape'][K],
       name as string,
     ) as never;
   }
@@ -198,7 +199,7 @@ export class ExpressionMethods {
     const q = _clone(this);
 
     const { shape } = q.q;
-    let column: QueryColumn;
+    let column: QueryColumn | undefined;
 
     const index = arg.indexOf('.');
     if (index !== -1) {
@@ -208,13 +209,13 @@ export class ExpressionMethods {
       if (table === as) {
         column = shape[col];
       } else {
-        column = (q.q.joinedShapes as JoinedShapes)[table][col];
+        column = q.q.joinedShapes?.[table][col];
       }
     } else {
       column = shape[arg];
     }
 
-    return new RefExpression(column, q, arg) as never;
+    return new RefExpression(column || UnknownColumn.instance, q, arg) as never;
   }
 
   val(value: unknown): ValExpression {

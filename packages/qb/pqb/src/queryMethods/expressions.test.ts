@@ -1,11 +1,19 @@
 import { Post, Profile, User, userColumnsSql } from '../test-utils/test-utils';
 import { assertType, expectSql, sql, testDb } from 'test-utils';
+import { Expression } from 'orchid-core';
 
 describe('expressions', () => {
   describe('column', () => {
+    it('should be available on the base query builder', () => {
+      const column = (testDb.column('column') as Expression).toSQL({
+        values: [],
+      });
+      expect(column).toBe(`"column"`);
+    });
+
     it('should make SQL where given column is prefixed with a table name', () => {
       const q = User.get(
-        User.sql`${User.column('name')} || ' ' || ${User.column('password')}`,
+        sql`${User.column('name')} || ' ' || ${User.column('password')}`,
       );
 
       expectSql(
@@ -33,6 +41,16 @@ describe('expressions', () => {
   });
 
   describe('ref', () => {
+    it('should be available on the base query builder', () => {
+      const tableColumn = (testDb.ref('table.column') as Expression).toSQL({
+        values: [],
+      });
+      expect(tableColumn).toBe(`"table"."column"`);
+
+      const column = (testDb.ref('column') as Expression).toSQL({ values: [] });
+      expect(column).toBe(`"column"`);
+    });
+
     it('should reference selectable columns', () => {
       const q = User.join(Post, 'post.title', 'user.id').select({
         alias: (q) =>
