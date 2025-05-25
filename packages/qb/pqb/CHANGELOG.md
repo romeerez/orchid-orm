@@ -1,5 +1,17 @@
 # pqb
 
+## 0.51.2
+
+### Patch Changes
+
+- f46f61c: Fix selecting runtime computeds with aliases (#507)
+- 59b2b80: Support reusing SQL computed columns (#508)
+- 1ea2b92: Support `narrowType` for `get` and `pluck` (#500)
+- 84c0694: Fix `then` behavior to throw error if no 2nd callback (#506)
+- de6d1e4: Fix nullable enum column migration (#498)
+- Updated dependencies [f46f61c]
+  - orchid-core@0.24.1
+
 ## 0.51.1
 
 ### Patch Changes

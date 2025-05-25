@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.24.1
+
+### Patch Changes
+
+- f46f61c: Fix selecting runtime computeds with aliases (#507)
+
 ## 0.24.0
 
 ### Minor Changes

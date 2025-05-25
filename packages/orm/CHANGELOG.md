@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.49.2
+
+### Patch Changes
+
+- 59b2b80: Support reusing SQL computed columns (#508)
+- de6d1e4: Fix nullable enum column migration (#498)
+- Updated dependencies [f46f61c]
+- Updated dependencies [59b2b80]
+- Updated dependencies [1ea2b92]
+- Updated dependencies [84c0694]
+- Updated dependencies [de6d1e4]
+  - pqb@0.51.2
+  - orchid-core@0.24.1
+  - rake-db@2.25.2
+
 ## 1.49.1
 
 ### Patch Changes
