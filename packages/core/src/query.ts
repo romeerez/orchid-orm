@@ -14,6 +14,7 @@ export type HookSelect = Map<string, HookSelectValue>;
 export interface HookSelectValue {
   select: string | { sql: string };
   as?: string;
+  temp?: string;
 }
 
 export interface SqlCommonOptions {

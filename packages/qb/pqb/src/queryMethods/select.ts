@@ -60,7 +60,7 @@ import { parseRecord } from './then';
 import { _queryNone, isQueryNone } from './none';
 import { NotFoundError } from '../errors';
 
-import { ComputedColumns, processComputedBatches } from '../modules/computed';
+import { processComputedBatches } from '../modules/computed';
 import {
   applyBatchTransforms,
   finalizeNestedHookSelect,
@@ -382,6 +382,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
   as: string | getValueKey | undefined,
   key: string,
   arg: SelectableOrExpression<T> | Query,
+  columnAlias?: string,
   joinQuery?: boolean,
 ): string | Expression | Query | undefined => {
   if (typeof arg === 'object' || typeof arg === 'function') {
@@ -584,7 +585,13 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
     return arg;
   }
 
-  return setParserForSelectedString(q as never, arg as string, as, key);
+  return setParserForSelectedString(
+    q as never,
+    arg as string,
+    as,
+    key,
+    columnAlias,
+  );
 };
 
 const collectNestedSelectBatches = (
@@ -724,6 +731,7 @@ export const processSelectArg = <T extends SelectSelf>(
       as,
       key,
       value,
+      key,
       joinQuery,
     );
   }
@@ -739,10 +747,13 @@ export const setParserForSelectedString = (
   arg: string,
   as: string | getValueKey | undefined,
   columnAs?: string | getValueKey,
+  columnAlias?: string,
 ): string | undefined => {
   const { q } = query;
   const index = arg.indexOf('.');
-  if (index === -1) return selectColumn(query, q, arg, columnAs);
+  if (index === -1) {
+    return selectColumn(query, q, arg, columnAs, columnAlias);
+  }
 
   const table = getFullColumnTable(query as unknown as IsQuery, arg, index, as);
   const column = arg.slice(index + 1);
@@ -754,7 +765,7 @@ export const setParserForSelectedString = (
   }
 
   if (table === as) {
-    return selectColumn(query, q, column, columnAs);
+    return selectColumn(query, q, column, columnAs, columnAlias);
   }
 
   const parser = q.joinedParsers?.[table]?.[column];
@@ -794,32 +805,31 @@ const selectColumn = (
   q: QueryData,
   key: string,
   columnAs?: string | getValueKey,
+  columnAlias?: string,
 ) => {
+  if (columnAlias === 'pluck') {
+    throw new Error('?');
+  }
   if (columnAs && q.parsers) {
     const parser = q.parsers[key];
     if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
   }
 
-  return handleComputed(query, q.computeds, key);
-};
-
-const handleComputed = (
-  q: PickQueryQAndInternal,
-  computeds: ComputedColumns | undefined,
-  column: string,
-) => {
-  if (computeds?.[column]) {
-    const computed = computeds[column];
-    const map: HookSelect = (q.q.hookSelect = new Map(q.q.hookSelect));
-    for (const column of computed.deps) {
-      map.set(column, { select: column });
+  if (q.computeds?.[key]) {
+    const computed = q.computeds[key];
+    const map: HookSelect = (query.q.hookSelect = new Map(query.q.hookSelect));
+    for (const key of computed.deps) {
+      map.set(key, { select: key });
     }
 
-    q.q.selectedComputeds = { ...q.q.selectedComputeds, [column]: computed };
+    query.q.selectedComputeds = {
+      ...query.q.selectedComputeds,
+      [columnAlias || key]: computed,
+    };
     return;
   }
 
-  return column;
+  return key;
 };
 
 // is mapping the result of a query into a columns shape

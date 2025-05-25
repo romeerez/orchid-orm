@@ -22,6 +22,7 @@ import {
   HookSelectValue,
   isExpression,
   QueryColumns,
+  RecordString,
   RecordUnknown,
 } from 'orchid-core';
 import { Query } from '../query/query';
@@ -96,6 +97,7 @@ export const selectToSql = (
   }
 
   let selected: RecordUnknown | undefined;
+  let selectedAs: RecordString | undefined;
 
   const list: string[] = [];
 
@@ -106,8 +108,10 @@ export const selectToSql = (
         if (item === '*') {
           if (hookSelect) {
             selected ??= {};
+            selectedAs ??= {};
             for (const key in query.selectableShape) {
               selected[key] = quotedAs;
+              selectedAs[key] = key;
             }
           }
 
@@ -120,6 +124,7 @@ export const selectToSql = (
 
             if (hookSelect?.get(key)) {
               (selected ??= {})[key] = `"${tableName}"`;
+              (selectedAs ??= {})[key] = key;
             }
 
             sql = tableColumnToSqlWithAs(
@@ -134,7 +139,10 @@ export const selectToSql = (
               jsonList,
             );
           } else {
-            if (hookSelect?.get(item)) (selected ??= {})[item] = quotedAs;
+            if (hookSelect?.get(item)) {
+              (selected ??= {})[item] = quotedAs;
+              (selectedAs ??= {})[item] = item;
+            }
 
             sql = ownColumnToSqlWithAs(
               ctx,
@@ -156,7 +164,9 @@ export const selectToSql = (
             [K: string]: SelectableOrExpression | ToSQLQuery;
           };
           for (const as in obj) {
-            if (hookSelect) (selected ??= {})[as] = true;
+            if (hookSelect) {
+              (selected ??= {})[as] = true;
+            }
 
             const value = obj[as];
             if (typeof value === 'object') {
@@ -178,6 +188,10 @@ export const selectToSql = (
                 }
               }
             } else if (value) {
+              if (hookSelect) {
+                (selectedAs ??= {})[value as string] = as;
+              }
+
               list.push(
                 columnToSqlWithAs(
                   ctx,
@@ -244,9 +258,17 @@ export const selectToSql = (
         while (selected[(name = `${column}${i}`)]) i++;
 
         item.as = name;
+        item.temp = name;
         sql += ` "${name}"`;
-      } else if (col?.data.name || typeof select === 'object') {
-        sql += ` "${columnName}"`;
+      } else if (selectedAs?.[columnName]) {
+        item.as = selectedAs[columnName];
+        item.temp = columnName;
+        continue;
+      } else {
+        if (col?.data.name || typeof select === 'object') {
+          sql += ` "${columnName}"`;
+        }
+        item.temp = columnName;
       }
 
       if (jsonList) jsonList[name] = col;

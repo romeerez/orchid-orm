@@ -302,10 +302,14 @@ const then = async (
     if (hookSelect) {
       for (const column of hookSelect.keys()) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const as = hookSelect!.get(column)!.as;
-        if (as) (renames ??= {})[column] = as;
+        const { as, temp } = hookSelect!.get(column)!;
+        if (as) {
+          (renames ??= {})[column] = as;
+        }
 
-        (tempColumns ??= new Set())?.add(as || column);
+        if (temp) {
+          (tempColumns ??= new Set())?.add(temp);
+        }
       }
 
       if (renames) {
@@ -386,9 +390,12 @@ const then = async (
     // can be set by hooks or by computed columns
     if (hookSelect || tempReturnType !== returnType) {
       if (renames) {
-        for (const record of result as RecordUnknown[]) {
-          for (const a in renames) {
+        for (const a in renames) {
+          for (const record of result as RecordUnknown[]) {
+            // TODO: no need to assign if the one or another is in `tempColumns`
+            const value = record[a];
             record[a] = record[renames[a]];
+            record[renames[a]] = value;
           }
         }
       }

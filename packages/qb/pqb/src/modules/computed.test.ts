@@ -464,6 +464,24 @@ describe('computed', () => {
         },
       );
 
+      it.each(['runtimeComputed', 'batchComputed'] as const)(
+        '%s should select computed column and its dependency under aliases',
+        async (column) => {
+          const q = User.select({
+            n: 'name',
+            b: column,
+          });
+
+          expectSql(
+            q.toSQL(),
+            `SELECT "user"."name" "n", "user"."id" FROM "user"`,
+          );
+
+          const result = await q;
+          expect(result).toEqual([{ n: 'name', b: `${userId} name` }]);
+        },
+      );
+
       it('should select computed column', async () => {
         const q = User.select('name', 'password', 'runtimeComputed').take();
 
@@ -554,7 +572,7 @@ describe('computed', () => {
         expect(res).toEqual({
           name: userData.name,
           password: userData.password,
-          runtimeComputed: `${userId} ${userData.name}`,
+          as: `${userId} ${userData.name}`,
         });
       });
 
@@ -578,7 +596,7 @@ describe('computed', () => {
         expect(res).toEqual({
           name: userData.name,
           password: userData.password,
-          runtimeComputed: `${userId} ${userData.name}`,
+          as: `${userId} ${userData.name}`,
         });
       });
 
