@@ -47,7 +47,7 @@ These methods are: `whereSql`, `whereNotSql`, `orderSql`, `havingSql`, `fromSql`
 await db.table.whereSql`"someValue" = random() * 100`;
 ```
 
-Interpolating values in template literals is completely safe:
+Interpolating values in template literals is safe from SQL injections:
 
 ```ts
 // get value from user-provided params
@@ -105,6 +105,26 @@ await db.table.where(
   }),
 );
 ```
+
+::: warning
+Values can be cast to strings.
+
+[node-postgres](https://github.com/brianc/node-postgres/issues/2674#issuecomment-1001540072) issue.
+
+```ts
+// The database can understand it's a number from the context.
+await sql`SELECT * FROM t WHERE id = ${1}`;
+
+// No context, it is treated as a string.
+const rows = await sql`SELECT ${1} AS one`;
+rows[0].one; // is a string
+
+// Cast explicitly to an integer:
+const rows = await sql`SELECT ${1}::int AS one`;
+rows[0].one; // is a number
+```
+
+:::
 
 Summarizing:
 

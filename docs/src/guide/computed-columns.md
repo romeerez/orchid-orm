@@ -86,7 +86,7 @@ export class MyTable extends BaseTable {
     hello: sql`'hello'`.type((t) => t.string()),
     // can be "dynamic", the callback is executed for every query.
     world: sql(() => sql`'world'`.type((t) => t.string())),
-    // use `one` and `two` to define a new SQL computed column:
+    // reuse `hello` and `world` to define a new SQL computed column:
     greet() {
       return sql`${this.one} || ' ' || ${this.two} || '!'`.type(() =>
         t.string(),
