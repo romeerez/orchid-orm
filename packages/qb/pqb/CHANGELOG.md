@@ -1,5 +1,14 @@
 # pqb
 
+## 0.51.3
+
+### Patch Changes
+
+- 5d88c9b: Support arbitrary columns in `ref` and `column` helpers for a base query builder (#510)
+- 91f621f: Fix migration generation for foreignKey option in hasAndBelongsToMany and belongsTo (#511)
+- 8e16646: Fix selecting all in a nested select and after chain in sub select (#512)
+  - orchid-core@0.24.1
+
 ## 0.51.2
 
 ### Patch Changes

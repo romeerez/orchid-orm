@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.3.3
+
+### Patch Changes
+
+- 8e16646: Fix selecting all in a nested select and after chain in sub select (#512)
+
 ## 0.3.2
 
 ### Patch Changes
