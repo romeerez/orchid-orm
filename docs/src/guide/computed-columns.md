@@ -88,7 +88,7 @@ export class MyTable extends BaseTable {
     world: sql(() => sql`'world'`.type((t) => t.string())),
     // reuse `hello` and `world` to define a new SQL computed column:
     greet() {
-      return sql`${this.one} || ' ' || ${this.two} || '!'`.type(() =>
+      return sql`${this.hello} || ' ' || ${this.world} || '!'`.type(() =>
         t.string(),
       );
     },

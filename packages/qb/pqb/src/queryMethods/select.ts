@@ -807,9 +807,6 @@ const selectColumn = (
   columnAs?: string | getValueKey,
   columnAlias?: string,
 ) => {
-  if (columnAlias === 'pluck') {
-    throw new Error('?');
-  }
   if (columnAs && q.parsers) {
     const parser = q.parsers[key];
     if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
@@ -859,9 +856,11 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
       result = {};
       for (const key in shape) {
         const column = shape[key];
-        result[key] = column.data.name
-          ? setColumnData(column, 'name', undefined)
-          : column;
+        if (!column.data.explicitSelect) {
+          result[key] = column.data.name
+            ? setColumnData(column, 'name', undefined)
+            : column;
+        }
       }
     } else {
       result = shape;
@@ -933,10 +932,12 @@ const addColumnToShapeFromSelect = (
     }
   } else if (arg === '*') {
     for (const key in shape) {
-      result[key] = mapSubSelectColumn(
-        shape[key] as ColumnTypeBase,
-        isSubQuery,
-      );
+      if (!(shape[key] as ColumnTypeBase).data.explicitSelect) {
+        result[key] = mapSubSelectColumn(
+          shape[key] as ColumnTypeBase,
+          isSubQuery,
+        );
+      }
     }
   } else {
     result[key || arg] = mapSubSelectColumn(

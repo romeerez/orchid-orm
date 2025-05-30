@@ -68,7 +68,7 @@ export const selectToSql = (
     inCTE?: SelectQueryData['inCTE'];
     select?: SelectQueryData['select'];
     selectAllColumns?: string[];
-    selectableShape?: RecordUnknown;
+    selectAllShape?: RecordUnknown;
     join?: SelectQueryData['join'];
     hookSelect?: HookSelect;
     shape: QueryColumns;
@@ -109,7 +109,7 @@ export const selectToSql = (
           if (hookSelect) {
             selected ??= {};
             selectedAs ??= {};
-            for (const key in query.selectableShape) {
+            for (const key in query.selectAllShape) {
               selected[key] = quotedAs;
               selectedAs[key] = key;
             }
@@ -296,14 +296,14 @@ export const selectAllSql = (
   query: {
     join?: SelectQueryData['join'];
     selectAllColumns?: string[];
-    selectableShape?: RecordUnknown;
+    selectAllShape?: RecordUnknown;
     shape?: QueryColumns;
   },
   quotedAs?: string,
   jsonList?: { [K: string]: ColumnTypeBase | undefined },
 ) => {
   if (jsonList) {
-    Object.assign(jsonList, query.selectableShape as ColumnTypesBase);
+    Object.assign(jsonList, query.selectAllShape as ColumnTypesBase);
   }
 
   return query.join?.length

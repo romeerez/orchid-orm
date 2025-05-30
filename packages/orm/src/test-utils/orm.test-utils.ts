@@ -542,6 +542,16 @@ export const userSelectAll = db.user.q.selectAllColumns!.join(', ');
 
 export const userRowToJSON = tableRowToJSON(db.user);
 
+export const userJsonBuildObject = tableJsonBuildObject(db.user);
+
+export const userSelectAliasedAs = (t: string) =>
+  Object.keys(db.user.q.selectAllShape)
+    .map((c) => `"${t}"."${c}"`)
+    .join(', ');
+
+export const userSelectAs = (t: string) =>
+  `"${t}".${db.user.q.selectAllColumns!.join(`, "${t}".`)}`;
+
 export const profileSelectAll = db.profile.q.selectAllColumns!.join(', ');
 
 export const messageSelectAll = db.message.q.selectAllColumns!.join(', ');

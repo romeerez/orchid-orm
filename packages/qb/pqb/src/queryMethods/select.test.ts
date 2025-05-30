@@ -15,7 +15,14 @@ import {
   UserRecord,
   userTableColumnsSql,
 } from '../test-utils/test-utils';
-import { DateColumn, IntegerColumn, JSONTextColumn } from '../columns';
+import {
+  DateColumn,
+  defaultSchemaConfig,
+  DefaultSchemaConfig,
+  IntegerColumn,
+  JSONTextColumn,
+  VirtualColumn,
+} from '../columns';
 import { getShapeFromSelect } from './select';
 import {
   assertType,
@@ -103,7 +110,9 @@ describe('select', () => {
 
       assertType<Awaited<typeof query>, UserRecord[]>();
 
-      expect(getShapeFromSelect(query)).toEqual(User.shape);
+      expect(Object.keys(getShapeFromSelect(query))).toEqual(
+        Object.keys(User.q.selectAllShape),
+      );
 
       expectSql(
         query.toSQL(),
@@ -111,6 +120,20 @@ describe('select', () => {
           SELECT ${userTableColumnsSql} FROM "user"
           JOIN "message" ON "message"."author_id" = "user"."id"
         `,
+      );
+    });
+
+    it('should omit virtual columns from getShapeFromSelect when selecting *', () => {
+      class Virtual extends VirtualColumn<DefaultSchemaConfig> {}
+
+      const Table = Object.create(User);
+      Table.q = {
+        shape: { ...Table.shape, virtual: new Virtual(defaultSchemaConfig) },
+      };
+
+      const q = Table.select('*');
+      expect(Object.keys(getShapeFromSelect(q))).toEqual(
+        Object.keys(User.q.selectAllShape),
       );
     });
 
@@ -898,7 +921,9 @@ describe('select', () => {
 
       assertType<Awaited<typeof query>, UserRecord[]>();
 
-      expect(getShapeFromSelect(query)).toEqual(User.shape);
+      expect(Object.keys(getShapeFromSelect(query))).toEqual(
+        Object.keys(User.q.selectAllShape),
+      );
 
       expectSql(query.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
     });

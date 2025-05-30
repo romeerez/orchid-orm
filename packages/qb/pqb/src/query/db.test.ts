@@ -2,6 +2,7 @@ import { User, userData } from '../test-utils/test-utils';
 import { createDb } from './db';
 import {
   assertType,
+  columnTypes,
   expectSql,
   testAdapter,
   testDb,
@@ -10,6 +11,11 @@ import {
 } from 'test-utils';
 import { QueryLogger, RecordUnknown, TransactionState } from 'orchid-core';
 import { raw } from '../sql/rawSql';
+import {
+  DefaultSchemaConfig,
+  defaultSchemaConfig,
+  VirtualColumn,
+} from '../columns';
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {
@@ -51,6 +57,19 @@ describe('db connection', () => {
 
 describe('db', () => {
   useTestDatabase();
+
+  it('should define `selectAllShape` to ignore virtual columns', () => {
+    class Virtual extends VirtualColumn<DefaultSchemaConfig> {}
+
+    const Table = testDb('table', () => ({
+      id: columnTypes.identity().primaryKey(),
+      virtual: new Virtual(defaultSchemaConfig),
+    }));
+
+    expect(Table.q.selectAllShape).toEqual({
+      id: Table.q.shape.id,
+    });
+  });
 
   it('should have `sql` method bound to column types', () => {
     const { sql } = testDb;

@@ -74,9 +74,9 @@ describe('computed', () => {
 
   describe('sql computed', () => {
     it('should not be included into the table columns', () => {
-      expect('nameAndKey' in User.q.selectableShape).toBe(false);
-      expect('decimal' in User.q.selectableShape).toBe(false);
-      expect('depSql' in User.q.selectableShape).toBe(false);
+      expect('nameAndKey' in User.q.selectAllShape).toBe(false);
+      expect('decimal' in User.q.selectAllShape).toBe(false);
+      expect('depSql' in User.q.selectAllShape).toBe(false);
     });
 
     describe('select', () => {

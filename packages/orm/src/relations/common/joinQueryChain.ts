@@ -40,6 +40,7 @@ export const joinQueryChainHOF =
 
     const item = selectRowNumber(result, relPKeys);
     combineOrdering(result, query);
+    if (!result.q.select) result.q.select = ['*'];
     return wrapQuery(jq, result, item);
   };
 
