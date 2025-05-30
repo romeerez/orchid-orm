@@ -447,6 +447,7 @@ const processHasAndBelongsToManyColumn = (
   joinTable.internal = {
     ...joinTable.internal,
     tableData: {
+      ...joinTable.internal.tableData,
       primaryKey: {
         columns: Object.keys(shape),
       },

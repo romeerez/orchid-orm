@@ -410,6 +410,8 @@ const addChangeTable = (
 
 const cloneCodeTableForChange = (codeTable: CodeTable) => ({
   ...codeTable,
+  // codeTable is a class instance and not all props can be cloned with `...`
+  table: codeTable.table,
   shape: Object.fromEntries(
     Object.entries(codeTable.shape).map(([key, column]) => {
       const cloned = Object.create(column as ColumnType);

@@ -280,7 +280,7 @@ export class Db<
     public columnTypes: ColumnTypes,
     transactionStorage: AsyncLocalStorage<TransactionState>,
     options: DbTableOptions<ColumnTypes, Table, ShapeWithComputed>,
-    tableData: TableData = emptyObject,
+    tableData: TableData = {},
   ) {
     super();
 

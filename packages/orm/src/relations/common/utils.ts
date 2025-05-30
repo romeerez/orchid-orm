@@ -251,6 +251,8 @@ export const addAutoForeignKey = (
   primaryKeys: string[],
   foreignKeys: string[],
   options: RelationRefsOptions<PropertyKey>,
+  // non-snake-cased
+  originalForeignKeys?: string[],
 ) => {
   const toTable = to.table as string;
 
@@ -313,7 +315,7 @@ export const addAutoForeignKey = (
 
   (from.internal.tableData.constraints ??= []).push({
     references: {
-      columns: foreignKeys,
+      columns: originalForeignKeys || foreignKeys,
       fnOrTable: toTable,
       foreignColumns: primaryKeys,
       options: fkeyOptions,

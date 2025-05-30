@@ -232,10 +232,15 @@ export const makeHasAndBelongsToManyMethod = (
   query: Query,
 ): RelationData => {
   const { options } = relation;
+  const { snakeCase } = table.internal;
   const primaryKeys = options.columns as string[];
   const foreignKeys = options.references;
+  const originalForeignKeys = snakeCase ? [...foreignKeys] : foreignKeys;
   const joinTable = options.through.table;
   const throughForeignKeys = options.through.columns;
+  const originalThroughForeignKeys = snakeCase
+    ? [...throughForeignKeys]
+    : throughForeignKeys;
   const throughPrimaryKeys = options.through.references as string[];
   const { on } = options;
 
@@ -243,8 +248,6 @@ export const makeHasAndBelongsToManyMethod = (
     _queryWhere(query, [on]);
     _queryDefaults(query, on);
   }
-
-  const { snakeCase } = table.internal;
 
   const foreignKeysFull = foreignKeys.map((key, i) => {
     if (snakeCase) key = foreignKeys[i] = toSnakeCase(key);
@@ -301,6 +304,7 @@ export const makeHasAndBelongsToManyMethod = (
     primaryKeys,
     foreignKeys,
     relation.options,
+    originalForeignKeys,
   );
 
   addAutoForeignKey(
@@ -310,6 +314,7 @@ export const makeHasAndBelongsToManyMethod = (
     throughPrimaryKeys,
     throughForeignKeys,
     relation.options.through,
+    originalThroughForeignKeys,
   );
 
   const state: State = {

@@ -26,7 +26,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
-  emptyObject,
   MaybeArray,
   QueryLogOptions,
   RecordUnknown,
@@ -221,7 +220,7 @@ export const orchidORM = <T extends TableClasses>(
       table.types,
       transactionStorage,
       options,
-      table.constructor.prototype.tableData ?? emptyObject,
+      table.constructor.prototype.tableData ?? {},
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;

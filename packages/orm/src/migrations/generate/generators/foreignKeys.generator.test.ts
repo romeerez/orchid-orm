@@ -1168,4 +1168,134 @@ change(async (db) => {
       `${green('+ create table')} table (2 columns, 1 foreign key)`,
     );
   });
+
+  describe('auto foreign keys', () => {
+    it('should create a table with a foreign key for a belongsTo foreignKey option', async () => {
+      class A extends BaseTable {
+        table = 'a';
+        columns = this.setColumns((t) => ({
+          iD: t.integer().primaryKey(),
+        }));
+      }
+
+      class B extends BaseTable {
+        table = 'b';
+        columns = this.setColumns((t) => ({
+          iD: t.integer().primaryKey(),
+          aId: t.integer(),
+        }));
+
+        relations = {
+          a: this.belongsTo(() => A, {
+            columns: ['aId'],
+            references: ['iD'],
+            foreignKey: true,
+          }),
+        };
+      }
+
+      await arrange({
+        tables: [A, B],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable('a', (t) => ({
+    iD: t.integer().primaryKey(),
+  }));
+});
+
+change(async (db) => {
+  await db.createTable(
+    'b',
+    (t) => ({
+      iD: t.integer().primaryKey(),
+      aId: t.integer(),
+    }),
+    (t) => 
+      t.foreignKey(
+        ['aId'],
+        'a',
+        ['iD'],
+      ),
+  );
+});
+`);
+    });
+
+    it('should create a join table with foreign keys for a hasAndBelongsToTable with foreignKey options', async () => {
+      class A extends BaseTable {
+        table = 'a';
+        columns = this.setColumns((t) => ({
+          iD: t.integer().primaryKey(),
+        }));
+
+        relations = {
+          b: this.hasAndBelongsToMany(() => B, {
+            columns: ['iD'],
+            references: ['aId'],
+            foreignKey: true,
+            through: {
+              table: 'c',
+              columns: ['bId'],
+              references: ['iD'],
+              foreignKey: true,
+            },
+          }),
+        };
+      }
+
+      class B extends BaseTable {
+        table = 'b';
+        columns = this.setColumns((t) => ({
+          iD: t.integer().primaryKey(),
+        }));
+      }
+
+      await arrange({
+        tables: [A, B],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable('a', (t) => ({
+    iD: t.integer().primaryKey(),
+  }));
+
+  await db.createTable('b', (t) => ({
+    iD: t.integer().primaryKey(),
+  }));
+});
+
+change(async (db) => {
+  await db.createTable(
+    'c',
+    (t) => ({
+      aId: t.integer(),
+      bId: t.integer(),
+    }),
+    (t) => [
+      t.primaryKey(['aId', 'bId']),
+      t.foreignKey(
+        ['aId'],
+        'a',
+        ['iD'],
+      ),
+      t.foreignKey(
+        ['bId'],
+        'b',
+        ['iD'],
+      ),
+    ],
+  );
+});
+`);
+    });
+  });
 });
