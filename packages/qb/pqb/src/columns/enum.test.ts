@@ -8,11 +8,11 @@ describe('enum column', () => {
 
   beforeAll(async () => {
     await testDb.adapter.query(`
-          DROP TYPE IF EXISTS mood
-        `);
+      DROP TYPE IF EXISTS mood
+    `);
     await testDb.adapter.query(`
-          CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
-        `);
+      CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+    `);
   });
 
   type MoodUnion = 'sad' | 'ok' | 'happy';

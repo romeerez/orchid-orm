@@ -15,7 +15,7 @@ import {
   ZodType,
   ZodTypeAny,
   ZodUnion,
-} from 'zod';
+} from 'zod/v4';
 import { AssertEqual, assertType } from 'test-utils';
 
 const t = makeColumnTypes(zodSchemaConfig);
@@ -49,10 +49,19 @@ function expectAllParse(type: TypeBase, input: unknown, expected: unknown) {
   });
 }
 
+function expectError(type: ZodTypeAny, input: unknown, message: string) {
+  const flat = z.flattenError(type.safeParse(input).error!);
+
+  expect([
+    ...flat.formErrors,
+    ...Object.values(flat.fieldErrors).flat(),
+  ]).toContain(message);
+}
+
 function expectAllThrow(type: TypeBase, input: unknown, message: string) {
-  expect(() => type.inputSchema.parse(input)).toThrow(message);
-  expect(() => type.outputSchema.parse(input)).toThrow(message);
-  expect(() => type.querySchema.parse(input)).toThrow(message);
+  for (const key of ['inputSchema', 'outputSchema', 'querySchema'] as const) {
+    expectError(type[key], input, message);
+  }
 }
 
 function expectInputQueryThrow(
@@ -60,25 +69,28 @@ function expectInputQueryThrow(
   input: unknown,
   message: string,
 ) {
-  expect(() => type.inputSchema.parse(input)).toThrow(message);
-  expect(() => type.querySchema.parse(input)).toThrow(message);
+  expectError(type.inputSchema, input, message);
+  expectError(type.querySchema, input, message);
 }
 
 function testTypeMethod(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  type: any,
+  type: () => any,
   method: string,
   value: unknown,
   error: string,
-  ...args: unknown[]
+  args: unknown[] = [],
+  opts?: { noCustom?: boolean },
 ) {
-  const a = type[method](...args);
-  expect(() => a.inputSchema.parse(value)).toThrow(error);
-  expect(() => a.querySchema.parse(value)).toThrow(error);
+  const a = type()[method](...args);
+  expectError(a.inputSchema, value, error);
+  expectError(a.querySchema, value, error);
 
-  const b = type[method](...args, { message: 'custom' });
-  expect(() => b.inputSchema.parse(value)).toThrow('custom');
-  expect(() => b.querySchema.parse(value)).toThrow('custom');
+  if (!opts?.noCustom) {
+    const b = type()[method](...args, { error: 'custom' });
+    expectError(b.inputSchema, value, 'custom');
+    expectError(b.querySchema, value, 'custom');
+  }
 }
 
 describe('zod schema config', () => {
@@ -112,7 +124,11 @@ describe('zod schema config', () => {
 
     expectAllParse(type, { id: 1, name: 'name' }, { id: 1, name: 'name' });
 
-    expectAllThrow(type, { id: '1' }, 'Expected number, received string');
+    expectAllThrow(
+      type,
+      { id: '1', name: 'name' },
+      'Invalid input: expected number, received string',
+    );
   });
 
   describe('querySchema', () => {
@@ -145,7 +161,7 @@ describe('zod schema config', () => {
       });
 
       expect(() => schema.parse({ id: '1' })).toThrow(
-        'Expected number, received string',
+        'Invalid input: expected number, received string',
       );
     });
   });
@@ -243,7 +259,11 @@ describe('zod schema config', () => {
         name: 'name',
       });
 
-      expect(() => pkeySchema.parse({})).toThrow('Required');
+      expectError(
+        pkeySchema,
+        {},
+        'Invalid input: expected number, received undefined',
+      );
     });
   });
 
@@ -276,84 +296,100 @@ describe('zod schema config', () => {
     '%s',
     (method) => {
       it('should convert to number', () => {
-        const type = t[method as 'integer']();
+        const type = () => t[method as 'integer']();
 
-        expectAllParse(type, 123, 123);
+        expectAllParse(type(), 123, 123);
 
-        expectAllThrow(type, 's', 'Expected number');
+        expectAllThrow(
+          type(),
+          's',
+          'Invalid input: expected number, received string',
+        );
 
         const isInt = method !== 'real' && method !== 'money';
 
         if (isInt) {
-          expectAllThrow(type, 1.5, 'Expected integer, received float');
+          expectAllThrow(
+            type(),
+            1.5,
+            'Invalid input: expected int, received number',
+          );
         }
 
-        testTypeMethod(type, 'lt', 10, 'Number must be less than 5', 5);
+        testTypeMethod(type, 'lt', 10, 'Too big: expected number to be <5', [
+          5,
+        ]);
+
+        testTypeMethod(type, 'lte', 10, 'Too big: expected number to be <=5', [
+          5,
+        ]);
+
+        testTypeMethod(type, 'max', 10, 'Too big: expected number to be <=5', [
+          5,
+        ]);
+
+        testTypeMethod(type, 'gt', 0, 'Too small: expected number to be >5', [
+          5,
+        ]);
+
+        testTypeMethod(type, 'gte', 0, 'Too small: expected number to be >=5', [
+          5,
+        ]);
+
+        testTypeMethod(type, 'min', 0, 'Too small: expected number to be >=5', [
+          5,
+        ]);
 
         testTypeMethod(
           type,
-          'lte',
-          10,
-          'Number must be less than or equal to 5',
-          5,
+          'positive',
+          -1,
+          'Too small: expected number to be >0',
         );
-
-        testTypeMethod(
-          type,
-          'max',
-          10,
-          'Number must be less than or equal to 5',
-          5,
-        );
-
-        testTypeMethod(type, 'gt', 0, 'Number must be greater than 5', 5);
-
-        testTypeMethod(
-          type,
-          'gte',
-          0,
-          'Number must be greater than or equal to 5',
-          5,
-        );
-
-        testTypeMethod(
-          type,
-          'min',
-          0,
-          'Number must be greater than or equal to 5',
-          5,
-        );
-
-        testTypeMethod(type, 'positive', -1, 'Number must be greater than 0');
 
         testTypeMethod(
           type,
           'nonNegative',
           -1,
-          'Number must be greater than or equal to 0',
+          'Too small: expected number to be >=0',
         );
 
-        testTypeMethod(type, 'negative', 0, 'Number must be less than 0');
+        testTypeMethod(
+          type,
+          'negative',
+          0,
+          'Too big: expected number to be <0',
+        );
 
         testTypeMethod(
           type,
           'nonPositive',
           1,
-          'Number must be less than or equal to 0',
+          'Too big: expected number to be <=0',
         );
 
-        testTypeMethod(type, 'step', 3, 'Number must be a multiple of 5', 5);
+        testTypeMethod(
+          type,
+          'step',
+          3,
+          'Invalid number: must be a multiple of 5',
+          [5],
+        );
 
-        // remove int check before checking for infinity
-        (type.data as { int?: boolean }).int = undefined;
-
-        testTypeMethod(type, 'finite', Infinity, 'Number must be finite');
+        testTypeMethod(
+          type,
+          'finite',
+          Infinity,
+          'Invalid input: expected number, received number',
+          [],
+          { noCustom: true },
+        );
 
         testTypeMethod(
           type,
           'safe',
           Number.MAX_SAFE_INTEGER + 1,
-          `Number must be less than or equal to ${Number.MAX_SAFE_INTEGER}`,
+          `Too big: expected int to be <${Number.MAX_SAFE_INTEGER}`,
         );
       });
     },
@@ -395,70 +431,100 @@ describe('zod schema config', () => {
 
       expectAllParse(type(), 's', 's');
 
-      expectAllThrow(type(), 1, 'Expected string');
+      expectAllThrow(
+        type(),
+        1,
+        'Invalid input: expected string, received number',
+      );
 
       testTypeMethod(
-        type(),
+        type,
         'min',
         '',
-        'String must contain at least 1 character(s)',
-        1,
+        'Too small: expected string to have >1 characters',
+        [1],
       );
 
       testTypeMethod(
-        type(),
+        type,
         'max',
         '123',
-        'String must contain at most 1 character(s)',
-        1,
+        'Too big: expected string to have <1 characters',
+        [1],
       );
 
       testTypeMethod(
-        type(),
+        type,
         'length',
         '',
-        'String must contain exactly 1 character(s)',
-        1,
+        'Too small: expected string to have >1 characters',
+        [1],
       );
 
       testTypeMethod(
-        type(),
+        type,
         'length',
         '123',
-        'String must contain exactly 1 character(s)',
-        1,
+        'Too big: expected string to have <1 characters',
+        [1],
       );
 
-      testTypeMethod(type(), 'email', 'invalid', 'Invalid email');
+      testTypeMethod(type, 'email', 'invalid', 'Invalid email address');
 
-      testTypeMethod(type(), 'url', 'invalid', 'Invalid url');
+      testTypeMethod(type, 'url', 'invalid', 'Invalid URL');
 
-      testTypeMethod(type(), 'emoji', 'invalid', 'Invalid emoji');
+      testTypeMethod(type, 'emoji', 'invalid', 'Invalid emoji');
 
-      testTypeMethod(type(), 'uuid', 'invalid', 'Invalid uuid');
+      testTypeMethod(type, 'uuid', 'invalid', 'Invalid UUID');
 
-      testTypeMethod(type(), 'cuid', '', 'Invalid cuid');
+      testTypeMethod(type, 'cuid', '', 'Invalid cuid');
 
-      testTypeMethod(type(), 'ulid', 'invalid', 'Invalid ulid');
+      testTypeMethod(type, 'ulid', 'invalid', 'Invalid ULID');
 
       testTypeMethod(
-        type(),
+        type,
         'nonEmpty',
         '',
-        'String must contain at least 1 character(s)',
+        'Too small: expected string to have >1 characters',
       );
 
-      testTypeMethod(type(), 'regex', 'invalid', 'Invalid', /\d+/);
+      testTypeMethod(
+        type,
+        'regex',
+        'invalid',
+        'Invalid string: must match pattern /\\d+/',
+        [/\d+/],
+      );
 
-      testTypeMethod(type(), 'includes', 'invalid', 'Invalid', 'koko');
+      testTypeMethod(
+        type,
+        'includes',
+        'invalid',
+        'Invalid string: must include "koko"',
+        ['koko'],
+      );
 
-      testTypeMethod(type(), 'startsWith', 'invalid', 'Invalid', 'koko');
+      testTypeMethod(
+        type,
+        'startsWith',
+        'invalid',
+        'Invalid string: must start with "koko"',
+        ['koko'],
+      );
 
-      testTypeMethod(type(), 'endsWith', 'invalid', 'Invalid', 'koko');
+      testTypeMethod(
+        type,
+        'endsWith',
+        'invalid',
+        'Invalid string: must end with "koko"',
+        ['koko'],
+      );
 
-      testTypeMethod(type(), 'datetime', 'invalid', 'Invalid');
+      testTypeMethod(type, 'datetime', 'invalid', 'Invalid ISO datetime');
 
-      testTypeMethod(type(), 'ip', 'invalid', 'Invalid');
+      testTypeMethod(type, 'ipv4', 'invalid', 'Invalid IPv4 address');
+
+      testTypeMethod(type, 'ipv6', 'invalid', 'Invalid IPv6 address');
 
       expectAllParse(type().trim(), '  trimmed  ', 'trimmed');
 
@@ -470,12 +536,16 @@ describe('zod schema config', () => {
     it('should convert to string with limit', () => {
       const type = t[method as 'text']().length(3);
 
-      expectAllThrow(type, '', 'String must contain exactly 3 character(s)');
+      expectAllThrow(
+        type,
+        '',
+        'Too small: expected string to have >3 characters',
+      );
 
       expectAllThrow(
         type,
         '1234',
-        'String must contain exactly 3 character(s)',
+        'Too big: expected string to have <3 characters',
       );
     });
   });
@@ -484,8 +554,10 @@ describe('zod schema config', () => {
     it('should accept max as argument', () => {
       const type = t[method as 'varchar'](3);
 
-      expect(() => type.inputSchema.parse('asdf')).toThrow(
-        'String must contain at most 3 character(s)',
+      expectError(
+        type.inputSchema,
+        'asdf',
+        'Too big: expected string to have <3 characters',
       );
     });
   });
@@ -494,12 +566,16 @@ describe('zod schema config', () => {
     it('should accept min and max as arguments', () => {
       const type = t[method as 'text']().min(2).max(3);
 
-      expect(() => type.inputSchema.parse('a')).toThrow(
-        'String must contain at least 2 character(s)',
+      expectError(
+        type.inputSchema,
+        'a',
+        'Too small: expected string to have >2 characters',
       );
 
-      expect(() => type.inputSchema.parse('asdf')).toThrow(
-        'String must contain at most 3 character(s)',
+      expectError(
+        type.inputSchema,
+        'asdf',
+        'Too big: expected string to have <3 characters',
       );
     });
   });
@@ -556,7 +632,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, date.toISOString(), date);
 
-      expectInputQueryThrow(type, 'malformed', 'Invalid date');
+      expectInputQueryThrow(
+        type,
+        'malformed',
+        'Invalid input: expected date, received Date',
+      );
     });
 
     it('should parse from number to a Date', () => {
@@ -564,7 +644,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, date.getTime(), date);
 
-      expectInputQueryThrow(type, new Date(NaN), 'Invalid date');
+      expectInputQueryThrow(
+        type,
+        new Date(NaN),
+        'Invalid input: expected date, received Date',
+      );
     });
 
     it('should parse from Date to a Date', () => {
@@ -572,35 +656,33 @@ describe('zod schema config', () => {
 
       expectAllParse(type, date, date);
 
-      expectInputQueryThrow(type, new Date(NaN), 'Invalid date');
+      expectInputQueryThrow(
+        type,
+        new Date(NaN),
+        'Invalid input: expected date, received Date',
+      );
     });
 
     it('should support date methods', () => {
       const now = new Date();
+      const min = new Date(now.getTime() + 100);
+      const max = new Date(now.getTime() - 100);
 
       expectInputQueryThrow(
-        type.min(new Date(now.getTime() + 100)),
+        type.min(min),
         now,
-        'Date must be greater than or equal to',
+        `Too small: expected date to be >=${min}`,
       );
 
-      expectInputQueryThrow(
-        type.min(new Date(now.getTime() + 100), 'custom'),
-        now,
-        'custom',
-      );
+      expectInputQueryThrow(type.min(min, 'custom'), now, 'custom');
 
       expectInputQueryThrow(
-        type.max(new Date(now.getTime() - 100)),
+        type.max(max),
         now,
-        'Date must be smaller than or equal to',
+        `Too big: expected date to be <=${max}`,
       );
 
-      expectInputQueryThrow(
-        type.max(new Date(now.getTime() - 100), 'custom'),
-        now,
-        'custom',
-      );
+      expectInputQueryThrow(type.max(max, 'custom'), now, 'custom');
     });
   });
 
@@ -636,7 +718,7 @@ describe('zod schema config', () => {
       expectAllThrow(
         type,
         { years: 'string' },
-        'Expected number, received string',
+        'Invalid input: expected number, received string',
       );
     });
   });
@@ -649,7 +731,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, true, true);
 
-      expectAllThrow(type, 123, 'Expected boolean, received number');
+      expectAllThrow(
+        type,
+        123,
+        'Invalid input: expected boolean, received number',
+      );
     });
   });
 
@@ -658,11 +744,11 @@ describe('zod schema config', () => {
       const values = ['a', 'b', 'c'] as const;
       const type = t.enum('name', values);
 
-      assertAllTypes<typeof type, ZodEnum<['a', 'b', 'c']>>();
+      assertAllTypes<typeof type, ZodEnum<{ a: 'a'; b: 'b'; c: 'c' }>>();
 
       expectAllParse(type, 'a', 'a');
 
-      expectAllThrow(type, 'd', 'Invalid enum value');
+      expectAllThrow(type, 'd', 'Invalid option: expected one of "a"|"b"|"c"');
     });
   });
 
@@ -692,7 +778,11 @@ describe('zod schema config', () => {
 
         expectAllParse(type, 'string', 'string');
 
-        expectAllThrow(type, 123, 'Expected string, received number');
+        expectAllThrow(
+          type,
+          123,
+          'Invalid input: expected string, received number',
+        );
       });
     },
   );
@@ -712,7 +802,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, 'string', 'string');
 
-      expectAllThrow(type, 123, 'Expected string, received number');
+      expectAllThrow(
+        type,
+        123,
+        'Invalid input: expected string, received number',
+      );
     });
   });
 
@@ -726,12 +820,12 @@ describe('zod schema config', () => {
 
       expectAllParse(type, '10101', '10101');
 
-      expectAllThrow(type, '2', 'Invalid');
+      expectAllThrow(type, '2', 'Invalid string: must match pattern /[10]/g');
 
       expectAllThrow(
         type,
         '101010',
-        'String must contain at most 5 character(s)',
+        'Too big: expected string to have <5 characters',
       );
     });
   });
@@ -746,7 +840,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, 'string', 'string');
 
-      expectAllThrow(type, 123, 'Expected string, received number');
+      expectAllThrow(
+        type,
+        123,
+        'Invalid input: expected string, received number',
+      );
     });
   });
 
@@ -757,7 +855,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, 123, 123);
 
-      expectAllThrow(type, '123', 'Expected number, received string');
+      expectAllThrow(
+        type,
+        '123',
+        'Invalid input: expected number, received string',
+      );
     });
   });
 
@@ -771,7 +873,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, 'string', 'string');
 
-      expectAllThrow(type, 123, 'Expected string, received number');
+      expectAllThrow(
+        type,
+        123,
+        'Invalid input: expected string, received number',
+      );
     });
   });
 
@@ -784,59 +890,67 @@ describe('zod schema config', () => {
       const uuid = '123e4567-e89b-12d3-a456-426614174000';
       expectAllParse(type, uuid, uuid);
 
-      expectAllThrow(type, '1234', 'Invalid uuid');
+      expectAllThrow(type, '1234', 'Invalid UUID');
     });
   });
 
   describe('array', () => {
     it('should validate and parse array', () => {
-      const type = t.array(t.integer());
+      const type = () => t.array(t.integer());
 
-      assertAllTypes<typeof type, ZodArray<ZodNumber>>();
+      assertAllTypes<ReturnType<typeof type>, ZodArray<ZodNumber>>();
 
-      expectAllParse(type, [1, 2, 3], [1, 2, 3]);
+      expectAllParse(type(), [1, 2, 3], [1, 2, 3]);
 
-      expectAllThrow(type, 123, 'Expected array, received number');
+      expectAllThrow(
+        type(),
+        123,
+        'Invalid input: expected array, received number',
+      );
 
-      expectAllThrow(type, 's', 'Expected array, received string');
+      expectAllThrow(
+        type(),
+        's',
+        'Invalid input: expected array, received string',
+      );
 
       testTypeMethod(
         type,
         'min',
         [],
-        'Array must contain at least 1 element(s)',
-        1,
+        'Too small: expected array to have >1 items',
+        [1],
       );
 
       testTypeMethod(
         type,
         'max',
         [1, 2],
-        'Array must contain at most 1 element(s)',
-        1,
+        'Too big: expected array to have <1 items',
+        [1],
       );
 
       testTypeMethod(
         type,
         'length',
         [],
-        'Array must contain exactly 1 element(s)',
-        1,
+        'Too small: expected array to have >1 items',
+        [1],
       );
 
       testTypeMethod(
         type,
         'length',
         [1, 2],
-        'Array must contain exactly 1 element(s)',
-        1,
+        'Too big: expected array to have <1 items',
+        [1],
       );
 
       testTypeMethod(
         type,
         'nonEmpty',
         [],
-        'Array must contain at least 1 element(s)',
+        'Too small: expected array to have >1 items',
       );
     });
   });
@@ -907,7 +1021,11 @@ describe('zod schema config', () => {
 
       assertAllTypes<typeof type, ZodNever>();
 
-      expectAllThrow(type, 123, 'Expected never, received number');
+      expectAllThrow(
+        type,
+        123,
+        'Invalid input: expected never, received number',
+      );
     });
   });
 
@@ -919,7 +1037,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, 123, 123);
 
-      expectAllThrow(type, 'string', 'Expected number, received string');
+      expectAllThrow(
+        type,
+        'string',
+        'Invalid input: expected number, received string',
+      );
     });
   });
 
@@ -933,7 +1055,11 @@ describe('zod schema config', () => {
 
       expectAllParse(type, 123, 123);
 
-      expectAllThrow(type, 'string', 'Expected number, received string');
+      expectAllThrow(
+        type,
+        'string',
+        'Invalid input: expected number, received string',
+      );
     });
   });
 
@@ -964,7 +1090,11 @@ describe('zod schema config', () => {
         { srid: 1, lon: 2, lat: 3 },
       );
 
-      expectAllThrow(type, '123', 'Expected object, received string');
+      expectAllThrow(
+        type,
+        '123',
+        'Invalid input: expected object, received string',
+      );
     });
   });
 
@@ -980,9 +1110,12 @@ describe('zod schema config', () => {
 
       expect(type.outputSchema.parse(123)).toBe(123);
       expect(type.outputSchema.parse(true)).toBe(true);
-      expect(() => type.outputSchema.parse(null)).toThrow(
-        'Expected number, received null',
-      );
+      expect(z.treeifyError(type.outputSchema.safeParse(null).error!)).toEqual({
+        errors: [
+          'Invalid input: expected number, received null',
+          'Invalid input: expected boolean, received null',
+        ],
+      });
     });
   });
 });

@@ -42,6 +42,9 @@ export class PostgisGeographyPointColumn<
   dataType = 'geography(Point)';
   operators = Operators.any;
 
+  // It is used by test-factory
+  static encode = encode;
+
   static isDefaultPoint(typmod: number) {
     return typmodType(typmod) === 'Point' && typmodSrid(typmod) === defaultSrid;
   }

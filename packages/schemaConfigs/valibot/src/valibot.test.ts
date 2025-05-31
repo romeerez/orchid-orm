@@ -442,7 +442,9 @@ describe('valibot schema config', () => {
 
       testTypeMethod(type, 'datetime', 'invalid', 'Invalid date-time');
 
-      testTypeMethod(type, 'ip', 'invalid', 'Invalid IP');
+      testTypeMethod(type, 'ipv4', 'invalid', 'Invalid IP');
+
+      testTypeMethod(type, 'ipv6', 'invalid', 'Invalid IP');
 
       expectAllParse(type().trim(), '  trimmed  ', 'trimmed');
 

@@ -1,6 +1,6 @@
 import { FactoryConfig, ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable, Profile } from './test-utils';
-import { z, ZodObject, ZodRawShape } from 'zod';
+import { z, ZodObject, ZodRawShape } from 'zod/v4';
 import { orchidORM } from 'orchid-orm';
 import { ColumnsShape, makeColumnTypes, DefaultColumnTypes } from 'pqb';
 import { assertType, testAdapter, useTestDatabase } from 'test-utils';
@@ -703,7 +703,6 @@ describe('factory', () => {
       };
     };
 
-    const min = 29;
     const max = 1;
     const gt = 10;
     const gte = 10;
@@ -722,7 +721,7 @@ describe('factory', () => {
           name: t.text().min(3).max(100).url().unique(),
         })),
         max: makeTable((t) => ({
-          name: t.text().min(3).max(100).min(min).max(max).unique(),
+          name: t.text().max(max).unique(),
         })),
         length: makeTable((t) => ({
           name: t.text().min(3).max(100).length(max).unique(),

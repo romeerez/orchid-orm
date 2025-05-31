@@ -32,7 +32,7 @@ import {
   testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { EmptyObject } from 'orchid-core';
 
 const insertUserAndProfile = async () => {

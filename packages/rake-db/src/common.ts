@@ -104,14 +104,14 @@ export const concatSchemaAndName = ({
 };
 
 export const makePopulateEnumQuery = (
-  item: EnumColumn<ColumnSchemaConfig, unknown>,
+  item: EnumColumn<ColumnSchemaConfig, unknown, readonly string[]>,
 ): TableQuery => {
   const [schema, name] = getSchemaAndTableFromName(item.enumName);
   return {
     text: `SELECT unnest(enum_range(NULL::${quoteTable(schema, name)}))::text`,
     then(result) {
       // populate empty options array with values from db
-      item.options.push(...result.rows.map(([value]) => value));
+      (item.options as string[]).push(...result.rows.map(([value]) => value));
     },
   };
 };

@@ -25,7 +25,7 @@ import {
   testColumnTypes,
 } from 'test-utils';
 import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'schema-to-zod';
 
 jest.mock('orchid-core', () => {

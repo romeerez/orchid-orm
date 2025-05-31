@@ -75,10 +75,10 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   dateAsNumber<T extends ColumnType>(this: T): ParseColumn<T, unknown, number>;
   dateAsDate<T extends ColumnType>(this: T): ParseColumn<T, unknown, Date>;
 
-  enum<U extends string, T extends readonly [U, ...U[]]>(
+  enum<T extends readonly string[]>(
     dataType: string,
     type: T,
-  ): EnumColumn<DefaultSchemaConfig, unknown, U, T>;
+  ): EnumColumn<DefaultSchemaConfig, unknown, T>;
 
   array<Item extends ArrayColumnValue>(
     item: Item,

@@ -59,7 +59,7 @@
     "@types/prompts": "^2.4.2",
     "orchid-orm-schema-to-zod": "workspace:*",
     "test-utils": "workspace:*",
-    "zod": "^3.22.4"
+    "zod": "^3.25.42"
   },
   "peerDependencies": {
     "typescript": "*"

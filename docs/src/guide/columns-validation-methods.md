@@ -7,9 +7,9 @@ ORM and query builder do not perform validation because it's expected that data 
 You can convert the column schema into a validation schema with the use of an additional package.
 
 Column methods described in this section have **no** effect on parsing, or encoding values, or tables schema in migrations,
-they only have affect on the validation schema exposed by `Table.createSchema()`, `Table.updateSchema()`, and others.
+they only have effect on the validation schema exposed by `Table.createSchema()`, `Table.updateSchema()`, and others.
 
-[Zod](https://github.com/colinhacks/zod) and [Valibot](https://valibot.dev/) are supported.
+[Zod](https://github.com/colinhacks/zod) (v4, not mini) and [Valibot](https://valibot.dev/) are supported.
 
 :::warning
 This approach isn't suitable for sharing schemas with frontend in monorepo setup.
@@ -141,8 +141,8 @@ class SomeTable extends BaseTable {
 }
 ```
 
-Only for zod: `text().datetime()` and `text().ip()` methods can have their own parameters,
-so the error message is being passed via object.
+Only for zod: `text().datetime()` method can have own parameters,
+so the error message is being passed via an object.
 
 ```ts
 class SomeTable extends BaseTable {
@@ -152,7 +152,6 @@ class SomeTable extends BaseTable {
       message: 'Invalid datetime string! Must be UTC.',
       offset: true,
     }),
-    ipAddress: t.text().ip({ message: 'Invalid IP address', version: 'v4' }),
   }));
 }
 ```
@@ -231,8 +230,8 @@ class SomeTable extends BaseTable {
       .ulid()
       // see Zod docs for datetime params, Valibot doesn't support params
       .datetime({ offset: true, precision: 5 })
-      // params for Zod only: v4, v6 or don't pass the parameter for both
-      .ip({ version: 'v4' })
+      .ipv4()
+      .ipv6()
       .regex(/regex/)
       .includes('str')
       .startsWith('str')

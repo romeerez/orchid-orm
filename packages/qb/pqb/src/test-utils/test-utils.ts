@@ -1,7 +1,7 @@
 import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
 import { expectSql, testDb, testDbZodTypes } from 'test-utils';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { RecordUnknown } from 'orchid-core';
 
 export type UserRecord = typeof User.outputType;

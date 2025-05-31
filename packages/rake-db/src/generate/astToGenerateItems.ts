@@ -241,7 +241,9 @@ const analyzeTableColumns = (
 
       let type: string;
       if (c.dataType === 'enum') {
-        type = (c as EnumColumn<ColumnTypeSchemaArg, unknown>).enumName;
+        type = (
+          c as EnumColumn<ColumnTypeSchemaArg, unknown, readonly string[]>
+        ).enumName;
       } else {
         type = c.dataType;
       }

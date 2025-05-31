@@ -66,7 +66,9 @@ export type TableOptions = {
 
 // Overridden column types to simplify and adapt some column types for a migration.
 export type MigrationColumnTypes<CT> = Omit<CT, 'enum'> & {
-  enum: (name: string) => EnumColumn<ColumnSchemaConfig, unknown>;
+  enum: (
+    name: string,
+  ) => EnumColumn<ColumnSchemaConfig, unknown, readonly string[]>;
 };
 
 // Create table callback

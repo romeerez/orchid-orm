@@ -134,8 +134,8 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: ^3.22.4
-        version: 3.23.8
+        specifier: ^3.25.42
+        version: 3.25.42
 
   packages/qb/myqb:
     dependencies:
@@ -169,8 +169,8 @@ importers:
         specifier: workspace:*
         version: link:../../test-utils
       zod:
-        specifier: ^3.22.4
-        version: 3.23.8
+        specifier: ^3.25.42
+        version: 3.25.42
 
   packages/rake-db:
     dependencies:
@@ -219,8 +219,8 @@ importers:
         specifier: workspace:*
         version: link:../../qb/pqb
       zod:
-        specifier: ^3.23.8
-        version: 3.23.8
+        specifier: ^3.25.42
+        version: 3.25.42
     devDependencies:
       test-utils:
         specifier: workspace:*
@@ -248,8 +248,8 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: ^3.23.8
-        version: 3.23.8
+        specifier: ^3.25.42
+        version: 3.25.42
 
   packages/test-utils:
     devDependencies:
@@ -3093,6 +3093,9 @@ packages:
 
   zod@3.23.8:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
+
+  zod@3.25.42:
+    resolution: {integrity: sha512-PcALTLskaucbeHc41tU/xfjfhcz8z0GdhhDcSgrCTmSazUuqnYqiXO63M0QUBVwpBlsLsNVn5qHSC5Dw3KZvaQ==}
 
 snapshots:
 
@@ -6378,3 +6381,5 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zod@3.23.8: {}
+
+  zod@3.25.42: {}

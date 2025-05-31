@@ -61,7 +61,8 @@ import {
   instance,
   InstanceSchema,
   integer,
-  ip,
+  ipv4,
+  ipv6,
   isoDateTime,
   length,
   maxLength,
@@ -561,10 +562,16 @@ interface StringMethods extends ArrayMethods<number> {
     params?: StringTypeData['datetime'] & Exclude<ErrorMessage, string>,
   ): T;
 
-  // Check a value to be a valid ip address
-  ip<T extends ColumnTypeBase>(
+  // Check a value to be a valid ipv4 address
+  ipv4<T extends ColumnTypeBase>(
     this: T,
-    params?: StringTypeData['ip'] & Exclude<ErrorMessage, string>,
+    params?: Exclude<ErrorMessage, string>,
+  ): T;
+
+  // Check a value to be a valid ipv6 address
+  ipv6<T extends ColumnTypeBase>(
+    this: T,
+    params?: Exclude<ErrorMessage, string>,
   ): T;
 
   // Trim the value during a validation
@@ -624,8 +631,12 @@ const stringMethods: StringMethods = {
     return applySimpleMethod(this, 'datetime', isoDateTime, params);
   },
 
-  ip(params = {}) {
-    return applySimpleMethod(this, 'ip', ip, params);
+  ipv4(params = {}) {
+    return applySimpleMethod(this, 'ipv4', ipv4, params);
+  },
+
+  ipv6(params = {}) {
+    return applySimpleMethod(this, 'ipv6', ipv6, params);
   },
 
   trim(params) {
@@ -831,10 +842,10 @@ export interface ValibotSchemaConfig {
     this: T,
   ): ParseColumn<T, DateSchema, Date>;
 
-  enum<U extends string, T extends readonly [U, ...U[]]>(
+  enum<T extends readonly string[]>(
     dataType: string,
     type: T,
-  ): EnumColumn<ValibotSchemaConfig, PicklistSchema<T>, U, T>;
+  ): EnumColumn<ValibotSchemaConfig, PicklistSchema<T>, T>;
 
   array<Item extends ArrayColumnValue>(item: Item): ValibotArrayColumn<Item>;
 

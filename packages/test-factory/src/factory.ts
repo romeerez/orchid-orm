@@ -624,14 +624,10 @@ const makeGeneratorForColumn = (
       gen = () => faker.string.uuid();
     } else if (data.datetime) {
       gen = (sequence) => isoTime(c, sequence);
-    } else if (data.ip) {
-      if (data.ip.version === 'v4') {
-        gen = () => faker.internet.ipv4();
-      } else if (data.ip.version === 'v6') {
-        gen = () => faker.internet.ipv6();
-      } else {
-        gen = () => faker.internet.ip();
-      }
+    } else if (data.ipv4) {
+      gen = () => faker.internet.ipv4();
+    } else if (data.ipv6) {
+      gen = () => faker.internet.ipv6();
     } else if (data.regex) {
       const generator = new randexp(data.regex);
 

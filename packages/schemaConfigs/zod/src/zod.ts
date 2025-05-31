@@ -14,6 +14,7 @@ import {
   setColumnData,
   ColumnDataBase,
   ParseNullColumn,
+  RecordUnknown,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -59,8 +60,15 @@ import {
   ZodTypeAny,
   ZodUnion,
   ZodUnknown,
-} from 'zod';
-import { ZodErrorMap } from 'zod/lib/ZodError';
+  optional,
+  core,
+} from 'zod/v4';
+import { $ZodErrorMap, $ZodType } from 'zod/dist/types/v4/core';
+import { ToEnum } from 'zod/dist/types/v4/core/util';
+
+interface ZodShape {
+  [K: string]: $ZodType;
+}
 
 class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends JSONColumn<
   ZodSchema['_output'],
@@ -89,9 +97,14 @@ function applyMethod<
   },
 >(column: T, key: Key, value: unknown, params?: ErrorMessage) {
   const cloned = setDataValue(column, key, value, params);
-  cloned.inputSchema = column.inputSchema[key](value, params);
-  cloned.outputSchema = column.outputSchema[key](value, params);
-  cloned.querySchema = column.querySchema[key](value, params);
+
+  // Prevent zod from mutating `value` and `params`. It overwrites `message` to `error`.
+  const p = typeof params === 'object' ? { ...params } : params;
+  const v = value === params ? p : value;
+
+  cloned.inputSchema = column.inputSchema[key](v, p);
+  cloned.outputSchema = column.outputSchema[key](v, p);
+  cloned.querySchema = column.querySchema[key](v, p);
   return cloned;
 }
 
@@ -390,10 +403,16 @@ interface StringMethods extends ArrayMethods<number> {
     params?: StringTypeData['datetime'] & Exclude<ErrorMessage, string>,
   ): T;
 
-  // Check a value to be a valid ip address
-  ip<T extends ColumnTypeBase>(
+  // Check a value to be a valid ipv4 address
+  ipv4<T extends ColumnTypeBase>(
     this: T,
-    params?: StringTypeData['ip'] & Exclude<ErrorMessage, string>,
+    params?: Exclude<ErrorMessage, string>,
+  ): T;
+
+  // Check a value to be a valid ipv6 address
+  ipv6<T extends ColumnTypeBase>(
+    this: T,
+    params?: Exclude<ErrorMessage, string>,
   ): T;
 
   // Trim the value during a validation
@@ -457,8 +476,12 @@ const stringMethods: StringMethods = {
     return applyMethod(this, 'datetime', params, params);
   },
 
-  ip(params = {}) {
-    return applyMethod(this, 'ip', params, params);
+  ipv4(params) {
+    return applyMethod(this, 'ipv4', params, params);
+  },
+
+  ipv6(params) {
+    return applyMethod(this, 'ipv6', params, params);
   },
 
   trim(params) {
@@ -658,18 +681,10 @@ export interface ZodSchemaConfig {
     this: T,
   ): ParseColumn<T, ZodDate, Date>;
 
-  enum<U extends string, T extends readonly [U, ...U[]]>(
+  enum<T extends readonly string[]>(
     dataType: string,
     type: T,
-  ): EnumColumn<
-    ZodSchemaConfig,
-    // remove readonly flag for Zod
-    ZodEnum<{
-      -readonly [P in keyof T]: T[P];
-    }>,
-    U,
-    T
-  >;
+  ): EnumColumn<ZodSchemaConfig, ZodEnum<ToEnum<T[number]>>, T>;
 
   array<Item extends ArrayColumnValue>(item: Item): ZodArrayColumn<Item>;
 
@@ -779,7 +794,12 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     return this.parse(z.date(), parseDateToDate) as never;
   },
   enum(dataType, type) {
-    return new EnumColumn(zodSchemaConfig, dataType, type, z.enum(type));
+    return new EnumColumn(
+      zodSchemaConfig,
+      dataType,
+      Object.values(type),
+      z.enum(type),
+    ) as never;
   },
   array(item) {
     return new ZodArrayColumn(item);
@@ -840,7 +860,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
 
   querySchema() {
-    const shape: ZodRawShape = {};
+    const shape: RecordUnknown = {};
     const { shape: columns } = this.prototype.columns;
 
     for (const key in columns) {
@@ -855,7 +875,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
     const input = this.inputSchema() as ZodObject<ZodRawShape>;
 
-    const shape: ZodRawShape = {};
+    const shape: ZodShape = {};
     const { shape: columns } = this.prototype.columns;
 
     for (const key in columns) {
@@ -864,18 +884,16 @@ export const zodSchemaConfig: ZodSchemaConfig = {
         shape[key] = input.shape[key];
 
         if (column.data.isNullable || column.data.default !== undefined) {
-          shape[key] = shape[key].optional();
+          shape[key] = optional(shape[key]);
         }
       }
     }
 
-    return z.object(shape) as CreateSchema<T>;
+    return z.object(shape) as unknown as CreateSchema<T>;
   },
 
   updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    return (
-      this.createSchema() as ZodObject<ZodRawShape>
-    ).partial() as UpdateSchema<T>;
+    return (this.createSchema() as ZodObject<ZodRawShape>).partial() as never;
   },
 
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
@@ -892,7 +910,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
 
     return (this.querySchema() as ZodObject<ZodRawShape>)
       .pick(pkeys)
-      .required() as PkeySchema<T>;
+      .required() as never;
   },
 
   /**
@@ -963,17 +981,18 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     const newErrors = old ? { ...old, ...errors } : errors;
     const { required, invalidType } = newErrors;
 
-    const errorMap: ZodErrorMap = (iss, ctx) => {
-      if (iss.code !== 'invalid_type') return { message: ctx.defaultError };
-      if (typeof ctx.data === 'undefined') {
-        return { message: required ?? ctx.defaultError };
+    const errorMap: $ZodErrorMap = (iss) => {
+      if (iss.code === 'invalid_type') {
+        return iss.input === undefined ? required : invalidType;
       }
-      return { message: invalidType ?? ctx.defaultError };
+      // not sure if this is correct to return undefined for other errors,
+      // let's wait for an issue.
+      return;
     };
 
-    (this.inputSchema as ZodTypeAny)._def.errorMap =
-      (this.outputSchema as ZodTypeAny)._def.errorMap =
-      (this.querySchema as ZodTypeAny)._def.errorMap =
+    (this.inputSchema as ZodTypeAny).def.error =
+      (this.outputSchema as ZodTypeAny).def.error =
+      (this.querySchema as ZodTypeAny).def.error =
         errorMap;
 
     return setColumnData(this, 'errors', newErrors);
@@ -1016,7 +1035,7 @@ type MapSchema<
   {
     [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
   },
-  'strip'
+  core.$strict
 >;
 
 type QuerySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
@@ -1025,7 +1044,7 @@ type QuerySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
       ColumnSchemaGetterColumns<T>[K]['querySchema']
     >;
   },
-  'strip'
+  core.$strict
 >;
 
 type CreateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
@@ -1038,7 +1057,7 @@ type CreateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
       ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
       : ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
   },
-  'strip'
+  core.$strict
 >;
 
 type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
@@ -1047,7 +1066,7 @@ type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
       ? never
       : K]: ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
   },
-  'strip'
+  core.$strict
 >;
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
@@ -1056,14 +1075,14 @@ type PkeySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
       ? K
       : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
   },
-  'strip'
+  core.$strict
 >;
 
 function mapSchema<
   T extends ColumnSchemaGetterTableClass,
   Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
 >(klass: T, schemaKey: Key): MapSchema<T, Key> {
-  const shape: ZodRawShape = {};
+  const shape: ZodShape = {};
   const { shape: columns } = klass.prototype.columns;
 
   for (const key in columns) {

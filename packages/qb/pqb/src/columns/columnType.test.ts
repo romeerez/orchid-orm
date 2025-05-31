@@ -21,7 +21,7 @@ import {
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
-import { z, ZodLiteral, ZodNumber } from 'zod';
+import { z, ZodLiteral, ZodNumber } from 'zod/v4';
 import { assignDbDataToColumn } from './columnType.utils';
 import { zodSchemaConfig } from 'schema-to-zod';
 

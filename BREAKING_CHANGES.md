@@ -1,5 +1,17 @@
 # Breaking changes
 
+## orchid-orm-schema-to-zod 1.0.0
+
+Upgrade to use zod v4 from v3.25.42 zod package.
+
+`string().ip()` was changed to `string().ipv4()` and `string().ipv6()`.
+
+Other than that, no visible changes in the integration with OrchidORM.
+
+Error messages thrown by Zod were changed.
+
+I can confirm types became more lightweight after this upgrade.
+
 ## orchid-orm 1.48
 
 `chain` is re-implemented, see the documentation.

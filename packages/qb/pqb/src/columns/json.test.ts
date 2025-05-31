@@ -1,6 +1,6 @@
 import { codeToString, ColumnToCodeCtx } from 'orchid-core';
 import { testZodColumnTypes as t } from 'test-utils';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 

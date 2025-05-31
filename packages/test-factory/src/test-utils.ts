@@ -1,7 +1,7 @@
 import { createBaseTable, orchidORM, Selectable } from 'orchid-orm';
 import { testAdapter } from 'test-utils';
 import { zodSchemaConfig } from 'schema-to-zod';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 export const BaseTable = createBaseTable({
   snakeCase: true,

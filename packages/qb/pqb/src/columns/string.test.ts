@@ -41,7 +41,8 @@ const testStringColumnMethods = (
       .cuid2('cuid2 message')
       .ulid('ulid message')
       .datetime({ offset: true, precision: 5, message: 'datetime message' })
-      .ip({ version: 'v4', message: 'ip message' })
+      .ipv4({ message: 'ipv4 message' })
+      .ipv6({ message: 'ipv6 message' })
       .regex(/\d+/g, 'regex message')
       .includes('includes', 'includes message')
       .startsWith('start', 'startsWith message')
@@ -67,7 +68,8 @@ const testStringColumnMethods = (
       ".startsWith('start', 'startsWith message')" +
       ".endsWith('end', 'endsWith message')" +
       `.datetime({ offset: true, precision: 5, message: 'datetime message' })` +
-      `.ip({ version: 'v4', message: 'ip message' })` +
+      `.ipv4({ message: 'ipv4 message' })` +
+      `.ipv6({ message: 'ipv6 message' })` +
       '.trim()' +
       '.toLowerCase()' +
       '.toUpperCase()',

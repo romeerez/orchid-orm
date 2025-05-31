@@ -39,7 +39,8 @@ export const stringMethodNames: Exclude<
   'startsWith',
   'endsWith',
   'datetime',
-  'ip',
+  'ipv4',
+  'ipv6',
   'trim',
   'toLowerCase',
   'toUpperCase',
@@ -65,9 +66,8 @@ export interface StringTypeData extends ColumnDataBase {
     offset?: boolean;
     precision?: number;
   };
-  ip?: {
-    version?: 'v4' | 'v6';
-  };
+  ipv4?: true;
+  ipv6?: true;
   nonEmpty?: boolean;
   trim?: boolean;
   toLowerCase?: boolean;
