@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 1.0.44
+
+### Patch Changes
+
+- c92d760: Upgrade to Zod v4 (#514)
+- Updated dependencies [c92d760]
+- Updated dependencies [d1e3937]
+  - pqb@0.51.4
+  - orchid-core@0.24.2
+
 ## 1.0.43
 
 ### Patch Changes

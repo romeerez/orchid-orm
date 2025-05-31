@@ -1,5 +1,15 @@
 # rake-db
 
+## 2.25.4
+
+### Patch Changes
+
+- c92d760: Upgrade to Zod v4 (#514)
+- Updated dependencies [c92d760]
+- Updated dependencies [d1e3937]
+  - pqb@0.51.4
+  - orchid-core@0.24.2
+
 ## 2.25.3
 
 ### Patch Changes

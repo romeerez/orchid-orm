@@ -1,5 +1,15 @@
 # pqb
 
+## 0.51.4
+
+### Patch Changes
+
+- c92d760: Upgrade to Zod v4 (#514)
+- d1e3937: Remove `parse`, `parseNull`, `encode` from the generated migration code as it is no needed in migrations (#513)
+- Updated dependencies [c92d760]
+- Updated dependencies [d1e3937]
+  - orchid-core@0.24.2
+
 ## 0.51.3
 
 ### Patch Changes

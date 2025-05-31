@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.49.4
+
+### Patch Changes
+
+- c92d760: Upgrade to Zod v4 (#514)
+- d1e3937: Remove `parse`, `parseNull`, `encode` from the generated migration code as it is no needed in migrations (#513)
+- Updated dependencies [c92d760]
+- Updated dependencies [d1e3937]
+  - rake-db@2.25.4
+  - pqb@0.51.4
+  - orchid-core@0.24.2
+
 ## 1.49.3
 
 ### Patch Changes
