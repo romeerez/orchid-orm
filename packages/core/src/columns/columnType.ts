@@ -377,12 +377,6 @@ export interface ColumnDataBase {
   // replaces selected nulls with custom values
   parseNull?(): unknown;
 
-  // to hide encode from generated code
-  defaultEncode?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-  // to hide the parse from generated code
-  defaultParse?(input: any): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
-
   // this is used to cast column types in SQL when wrapping rows as JSON.
   // decimal and similar columns have to be casted to text to not loose precision.
   jsonCast?: string;

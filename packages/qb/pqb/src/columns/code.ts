@@ -643,15 +643,6 @@ export const columnCode = (
 
   if (data.isNullable) addCode(code, '.nullable()');
 
-  if (data.encode && data.encode !== data.defaultEncode)
-    addCode(code, `.encode(${data.encode.toString()})`);
-
-  if (data.parse && data.parse !== data.defaultParse)
-    addCode(code, `.parse(${data.parse.toString()})`);
-
-  if (type.data.parseNull)
-    addCode(code, `.parseNull(${type.data.parseNull.toString()})`);
-
   if (data.as) addCode(code, `.as(${data.as.toCode(ctx, key)})`);
 
   if (

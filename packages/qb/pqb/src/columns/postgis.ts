@@ -12,11 +12,7 @@ export interface PostgisPoint {
   srid?: number;
 }
 
-const defaultEncode = ({
-  srid = defaultSrid,
-  lon,
-  lat,
-}: PostgisPoint): string => {
+const encode = ({ srid = defaultSrid, lon, lat }: PostgisPoint): string => {
   const arr = new Uint8Array(25);
   const view = new DataView(arr.buffer);
 
@@ -46,16 +42,14 @@ export class PostgisGeographyPointColumn<
   dataType = 'geography(Point)';
   operators = Operators.any;
 
-  static encode = defaultEncode;
-
   static isDefaultPoint(typmod: number) {
     return typmodType(typmod) === 'Point' && typmodSrid(typmod) === defaultSrid;
   }
 
   constructor(schema: Schema) {
     super(schema, schema.geographyPointSchema() as never);
-    setColumnDefaultParse(this, defaultParse);
-    this.data.encode = this.data.defaultEncode = defaultEncode;
+    setColumnDefaultParse(this, parse);
+    this.data.encode = encode;
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
@@ -63,7 +57,7 @@ export class PostgisGeographyPointColumn<
   }
 }
 
-const defaultParse = (input: string): PostgisPoint => {
+const parse = (input: string): PostgisPoint => {
   const bytes = new Uint8Array(20);
   for (let i = 0; i < 40; i += 2) {
     bytes[i / 2] = parseInt(input.slice(10 + i, 12 + i), 16);

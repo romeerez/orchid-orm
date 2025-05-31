@@ -44,7 +44,7 @@ export abstract class DateBaseColumn<
     );
     this.asNumber = schema.dateAsNumber;
     this.asDate = schema.dateAsDate;
-    this.data.encode = this.data.defaultEncode = dateTimeEncode;
+    this.data.encode = dateTimeEncode;
   }
 }
 

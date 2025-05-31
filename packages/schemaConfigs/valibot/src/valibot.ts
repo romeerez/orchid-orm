@@ -941,14 +941,10 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
     return this as never;
   },
   dateAsNumber() {
-    const c = this.parse(number([]), Date.parse as never) as ColumnTypeBase;
-    c.data.defaultParse = Date.parse;
-    return c as never;
+    return this.parse(number([]), Date.parse as never);
   },
   dateAsDate() {
-    const c = this.parse(date([]), parseDateToDate) as ColumnTypeBase;
-    c.data.defaultParse = parseDateToDate;
-    return c as never;
+    return this.parse(date([]), parseDateToDate);
   },
   enum(dataType, type) {
     return new EnumColumn(valibotSchemaConfig, dataType, type, picklist(type));

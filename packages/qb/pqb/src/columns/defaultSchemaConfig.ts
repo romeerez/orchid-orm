@@ -140,14 +140,10 @@ export const defaultSchemaConfig = {
     return this as never;
   },
   dateAsNumber(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {
-    const c = this.parse(Date.parse) as ColumnTypeBase;
-    c.data.defaultParse = Date.parse;
-    return c;
+    return this.parse(Date.parse) as ColumnTypeBase;
   },
   dateAsDate(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {
-    const c = this.parse(parseDateToDate) as ColumnTypeBase;
-    c.data.defaultParse = parseDateToDate;
-    return c;
+    return this.parse(parseDateToDate) as ColumnTypeBase;
   },
   enum<T extends readonly [string, ...string[]]>(dataType: string, type: T) {
     return new EnumColumn(defaultSchemaConfig, dataType, type, undefined);

@@ -25,7 +25,7 @@ export const setColumnDefaultParse = (
   column: ColumnTypeBase,
   parse: (input: any) => unknown, // eslint-disable-line @typescript-eslint/no-explicit-any
 ) => {
-  column.data.parse = column.data.defaultParse = parse;
+  column.data.parse = parse;
   column._parse = (input: unknown) => (input === null ? null : parse(input));
 };
 

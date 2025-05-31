@@ -21,6 +21,40 @@ const { green, red, yellow } = colors;
 describe('columns', () => {
   const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
 
+  it('should ignore `parse` and `encode`', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.identity(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          iD: t.identity(),
+          naMe: t
+            .text()
+            .parse(() => 1)
+            .parseNull(() => 2)
+            .encode(() => 3),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    naMe: t.add(t.text()),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} naMe text`);
+  });
+
   it('should not be dropped in ignored tables', async () => {
     await arrange({
       async prepareDb(db) {

@@ -773,14 +773,10 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     return this as never;
   },
   dateAsNumber() {
-    const c = this.parse(z.number(), Date.parse as never) as ColumnTypeBase;
-    c.data.defaultParse = Date.parse;
-    return c as never;
+    return this.parse(z.number(), Date.parse as never) as never;
   },
   dateAsDate() {
-    const c = this.parse(z.date(), parseDateToDate) as ColumnTypeBase;
-    c.data.defaultParse = parseDateToDate;
-    return c as never;
+    return this.parse(z.date(), parseDateToDate) as never;
   },
   enum(dataType, type) {
     return new EnumColumn(zodSchemaConfig, dataType, type, z.enum(type));
