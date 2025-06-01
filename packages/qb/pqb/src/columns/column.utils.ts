@@ -5,6 +5,13 @@ import {
   QueryColumn,
   setObjectValueImmutable,
 } from 'orchid-core';
+import { ColumnType } from './columnType';
+import { DomainColumn } from './customType';
+import { EnumColumn } from './enum';
+
+export interface DbStructureDomainsMap {
+  [K: string]: ColumnType;
+}
 
 export const addColumnParserToQuery = (
   q: { parsers?: ColumnsParsers },
@@ -75,4 +82,16 @@ export const setColumnEncode = (
   c.inputSchema = inputSchema;
   c.data = { ...column.data, encode: fn };
   return c;
+};
+
+export const getColumnBaseType = (
+  column: ColumnTypeBase,
+  domainsMap: DbStructureDomainsMap,
+  type: string,
+) => {
+  return column instanceof EnumColumn
+    ? 'text'
+    : column instanceof DomainColumn
+    ? domainsMap[column.dataType]?.dataType
+    : type;
 };

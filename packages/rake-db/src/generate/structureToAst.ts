@@ -5,21 +5,22 @@ import {
 } from './dbStructure';
 import { RakeDbAst } from '../ast';
 import {
+  Adapter,
   ArrayColumn,
+  assignDbDataToColumn,
   ColumnFromDbParams,
+  ColumnsByType,
   ColumnsShape,
   ColumnType,
   CustomTypeColumn,
+  DbStructureDomainsMap,
   DomainColumn,
   EnumColumn,
-  assignDbDataToColumn,
-  raw,
-  ColumnsByType,
-  Adapter,
   makeColumnsByType,
+  PostgisGeographyPointColumn,
+  raw,
   RawSQL,
   TableData,
-  PostgisGeographyPointColumn,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -30,8 +31,8 @@ import {
 } from 'orchid-core';
 import {
   getConstraintName,
-  getIndexName,
   getExcludeName,
+  getIndexName,
 } from '../migration/migration.utils';
 import { AnyRakeDbConfig } from '../config';
 
@@ -48,10 +49,6 @@ const fkeyActionMap: Record<string, undefined | TableData.References.Action> = {
   n: 'SET NULL',
   d: 'SET DEFAULT',
 };
-
-export interface DbStructureDomainsMap {
-  [K: string]: ColumnType;
-}
 
 export interface StructureToAstCtx {
   snakeCase?: boolean;

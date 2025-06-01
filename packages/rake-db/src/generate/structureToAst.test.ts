@@ -216,10 +216,12 @@ describe('structureToAst', () => {
 
       expect(ast.shape.column).toBeInstanceOf(EnumColumn);
       expect(
-        (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).enumName,
+        (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown, string[]>)
+          .enumName,
       ).toBe(`${structure.enums[0].schemaName}.${structure.enums[0].name}`);
       expect(
-        (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown>).options,
+        (ast.shape.column as EnumColumn<DefaultSchemaConfig, unknown, string[]>)
+          .options,
       ).toBe(structure.enums[0].values);
     });
 

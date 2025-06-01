@@ -1,10 +1,15 @@
-import { Adapter, ArrayColumn, ColumnType, RawSQL } from 'pqb';
+import {
+  Adapter,
+  ArrayColumn,
+  ColumnType,
+  DbStructureDomainsMap,
+  RawSQL,
+} from 'pqb';
 import {
   RakeDbAst,
   getSchemaAndTableFromName,
   DbStructure,
   IntrospectedStructure,
-  DbStructureDomainsMap,
   instantiateDbColumn,
 } from 'rake-db';
 import {

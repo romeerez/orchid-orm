@@ -4,13 +4,13 @@ import {
   ColumnType,
   GeneratorIgnore,
   VirtualColumn,
+  DbStructureDomainsMap,
 } from 'pqb';
 import {
   DbStructure,
   IntrospectedStructure,
   AnyRakeDbConfig,
   RakeDbAst,
-  DbStructureDomainsMap,
   getDbStructureTableData,
   StructureToAstCtx,
   StructureToAstTableData,

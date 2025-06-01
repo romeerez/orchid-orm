@@ -18,6 +18,38 @@ const { green, red, yellow } = colors;
 describe('enums', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should be able to change enum column to a text column without recreating it', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('numbers', ['one', 'two', 'three']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          numBers: t.enum('numbers'),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          numBers: t.text(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    numBers: t.change(t.enum('public.numbers'), t.text()),
+  }));
+});
+
+change(async (db) => {
+  await db.dropEnum('public.numbers', ['one', 'two', 'three']);
+});
+`);
+  });
+
   it('should not be dropped when ignored', async () => {
     await arrange({
       async prepareDb(db) {

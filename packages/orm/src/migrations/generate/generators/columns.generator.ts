@@ -1,7 +1,6 @@
 import {
   RakeDbAst,
   dbColumnToAst,
-  DbStructureDomainsMap,
   getDbTableColumnsChecks,
   instantiateDbColumn,
   StructureToAstCtx,
@@ -18,8 +17,9 @@ import {
   Adapter,
   ArrayColumn,
   ColumnType,
-  DomainColumn,
+  DbStructureDomainsMap,
   EnumColumn,
+  getColumnBaseType,
 } from 'pqb';
 import { promptCreateOrRename } from './generators.utils';
 import {
@@ -387,15 +387,8 @@ JOIN pg_type AS t ON t.oid = casttarget`);
       typeCastsCache.value = typeCasts;
     }
 
-    const dbBaseType =
-      dbColumn instanceof DomainColumn
-        ? domainsMap[dbColumn.dataType]?.dataType
-        : dbType;
-
-    const codeBaseType =
-      codeColumn instanceof DomainColumn
-        ? domainsMap[codeColumn.dataType]?.dataType
-        : codeType;
+    const dbBaseType = getColumnBaseType(dbColumn, domainsMap, dbType);
+    const codeBaseType = getColumnBaseType(codeColumn, domainsMap, codeType);
 
     if (!typeCasts.get(dbBaseType)?.has(codeBaseType)) {
       if (
