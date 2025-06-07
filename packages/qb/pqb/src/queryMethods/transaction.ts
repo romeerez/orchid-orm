@@ -335,10 +335,9 @@ export class Transaction {
         // transactionId is trx.testTransactionCount when only the test transactions are left,
         // and it's time to execute after commit hooks, because they won't be executed for test transactions.
         if (transactionId === trx.testTransactionCount) {
-          await runAfterCommit(
-            (trx as unknown as TransactionState).afterCommit,
-            result,
-          );
+          const { afterCommit } = trx as unknown as TransactionState;
+          (trx as unknown as TransactionState).afterCommit = undefined;
+          await runAfterCommit(afterCommit, result);
         }
 
         return result;
