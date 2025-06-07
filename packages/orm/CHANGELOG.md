@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.49.5
+
+### Patch Changes
+
+- 6f24d3c: Support migration to change column from enum to text without recreating it (#516)
+- Updated dependencies [6f24d3c]
+  - rake-db@2.25.5
+  - pqb@0.51.5
+
 ## 1.49.4
 
 ### Patch Changes

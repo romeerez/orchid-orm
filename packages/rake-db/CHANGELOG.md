@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.25.5
+
+### Patch Changes
+
+- 6f24d3c: Support migration to change column from enum to text without recreating it (#516)
+- Updated dependencies [6f24d3c]
+  - pqb@0.51.5
+
 ## 2.25.4
 
 ### Patch Changes
