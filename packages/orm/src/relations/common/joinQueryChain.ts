@@ -29,6 +29,58 @@ export const joinQueryChainHOF =
         : last
     ) as Query;
 
+    let useWhereExist = true;
+
+    // It does not make sense to return a single value not from the target table,
+    // so in this case skip guessing by order and select contains.
+    if (jq.q.returnType !== 'value' && jq.q.returnType !== 'valueOrThrow') {
+      let tablePrefix: string | undefined;
+      if (jq.q.order) {
+        const prefix = (tablePrefix = getQueryAs(jq) + '.');
+        useWhereExist = jq.q.order.every((o) => {
+          if (typeof o === 'string') {
+            return isOwnColumn(prefix, o);
+          } else if (isExpression(o)) {
+            return false;
+          } else {
+            for (const key in o) {
+              if (!isOwnColumn(prefix, key)) {
+                return false;
+              }
+            }
+            return true;
+          }
+        });
+      }
+
+      if (useWhereExist && jq.q.select) {
+        const prefix = tablePrefix || getQueryAs(jq) + '.';
+        useWhereExist = jq.q.select.every((s) => {
+          if (typeof s === 'string') {
+            return isOwnColumn(prefix, s);
+          } else if (isExpression(s)) {
+            return false;
+          } else if (!s) {
+            return false;
+          } else {
+            for (const key in s.selectAs) {
+              const value = s.selectAs[key];
+              if (typeof value !== 'string' || !isOwnColumn(prefix, value)) {
+                return false;
+              }
+            }
+            return true;
+          }
+        });
+      }
+    }
+
+    if (useWhereExist) {
+      return jq.where({
+        EXISTS: { q: reverseJoin(query, jq) },
+      });
+    }
+
     const result = jq.join(
       { _internalJoin: reverseJoin(query, jq) } as never,
       undefined,
@@ -43,6 +95,48 @@ export const joinQueryChainHOF =
     if (!result.q.select) result.q.select = ['*'];
     return wrapQuery(jq, result, item);
   };
+
+const isOwnColumn = (prefix: string, column: string) =>
+  !column.includes('.') || column.startsWith(prefix);
+
+// TODO: support second strategy DISTINCT ON only when there are no ORDER BY columns referencing other tables than the target one
+//
+//   const items = selectColumnsForDistinct(result, relPKeys);
+//   combineOrdering(result, query);
+//   if (!result.q.select) result.q.select = ['*'];
+//
+//   const wrapped = wrapQuery(jq, result);
+//   selectDistinct(wrapped, relPKeys, items);
+//   return wrapped;
+// };
+//
+// const selectColumnsForDistinct = (
+//   result: Query,
+//   relPKeys: string[],
+// ): HookSelectValue[] => {
+//   const hookSelect = (result.q.hookSelect = new Map(
+//     result.q.hookSelect && [...result.q.hookSelect],
+//   ));
+//
+//   return relPKeys.map((key) => {
+//     const item = { select: key };
+//     hookSelect.set(key, item);
+//     return item;
+//   });
+// };
+//
+// const selectDistinct = (
+//   result: Query,
+//   relPKeys: string[],
+//   items: HookSelectValue[],
+// ) => {
+//   const as = getQueryAs(result);
+//
+//   // TODO: use dynamic sql to get column names
+//   (result.q as SelectQueryData).distinct = relPKeys.map(
+//     (key) => `${as}.${key}`,
+//   );
+// };
 
 const selectRowNumber = (
   result: Query,
