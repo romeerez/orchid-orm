@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.49.6
+
+### Patch Changes
+
+- 54e7014: Support aggregation in sub-select `chain` queries (#519)
+
 ## 1.49.5
 
 ### Patch Changes
