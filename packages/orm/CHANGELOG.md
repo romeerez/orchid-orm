@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.49.7
+
+### Patch Changes
+
+- 2d29f1e: Fix `set` in update in hasMany and hasOne when setting to the same record when the foreign key column is not nullable (#520)
+
 ## 1.49.6
 
 ### Patch Changes
