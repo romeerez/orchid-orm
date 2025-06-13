@@ -18,6 +18,7 @@ import {
   messageRowToJSON,
   messageJSONBuildObject,
   userRowToJSON,
+  postData,
 } from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
@@ -2323,6 +2324,25 @@ describe('hasMany', () => {
         ).toThrow('`set` option is not allowed in a batch update');
       });
 
+      it('should not nullify the previous record when setting to the exact same record', async () => {
+        const user = await db.user.create({
+          ...userData,
+          posts: {
+            create: [postData],
+          },
+        });
+
+        // It would fail if tried to nullify post's UserId because it's non-nullable.
+        await db.user.find(user.Id).update({
+          posts: {
+            set: [{ Title: user.UserKey }],
+          },
+        });
+
+        const posts = await db.post;
+        expect(posts).toMatchObject([{ UserId: user.Id, Title: user.UserKey }]);
+      });
+
       describe('relation callbacks', () => {
         const { beforeUpdate, afterUpdate } = useRelationCallback(
           db.user.relations.messages,
@@ -2357,10 +2377,7 @@ describe('hasMany', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(2);
           expect(afterUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toBeCalledWith(
-            [{ Id: ids[0] }, { Id: ids[2] }],
-            expect.any(Db),
-          );
+          expect(afterUpdate).toBeCalledWith([{ Id: ids[0] }], expect.any(Db));
           expect(afterUpdate).toBeCalledWith(
             [{ Id: ids[1] }, { Id: ids[2] }],
             expect.any(Db),

@@ -524,36 +524,40 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         obj[foreignKey] = null;
       }
 
-      await _queryUpdate(
-        getWhereForNestedUpdate(
-          t,
-          data,
-          params.disconnect,
-          primaryKeys,
-          foreignKeys,
-        ),
-        obj as never,
-      );
-
-      if (
+      const setConditions =
         params.set &&
         (Array.isArray(params.set)
           ? params.set.length
-          : objectHasValues(params.set))
-      ) {
+          : objectHasValues(params.set)) &&
+        (Array.isArray(params.set)
+          ? {
+              OR: params.set,
+            }
+          : params.set);
+
+      let queryToDisconnect = getWhereForNestedUpdate(
+        t,
+        data,
+        params.disconnect,
+        primaryKeys,
+        foreignKeys,
+      );
+
+      // do not nullify those records that are going to be set, because the column may non-nullable.
+      if (setConditions) {
+        queryToDisconnect = queryToDisconnect.whereNot(setConditions) as never;
+      }
+
+      await _queryUpdate(queryToDisconnect, obj as never);
+
+      if (setConditions) {
         const obj: RecordUnknown = {};
         for (let i = 0; i < len; i++) {
           obj[foreignKeys[i]] = data[0][primaryKeys[i]];
         }
 
         await _queryUpdate(
-          t.where<Query>(
-            (Array.isArray(params.set)
-              ? {
-                  OR: params.set,
-                }
-              : params.set) as never,
-          ),
+          t.where<Query>(setConditions as never),
           obj as never,
         );
       }

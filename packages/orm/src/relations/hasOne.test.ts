@@ -1599,10 +1599,31 @@ describe('hasOne', () => {
       });
 
       describe('relation callbacks', () => {
-        const { beforeUpdate, afterUpdate } = useRelationCallback(
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
           db.user.relations.profile,
           ['Id'],
         );
+
+        beforeEach(resetMocks);
+
+        it('should not fire update twice for the same record that was set before and is set again', async () => {
+          const { Id: profileId, UserId } = await db.profile
+            .select('Id', 'UserId')
+            .create({ Bio: 'bio', user: { create: userData } });
+
+          await db.user.find(UserId as number).update({
+            profile: {
+              set: { Id: profileId },
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id: profileId }],
+            expect.any(Db),
+          );
+        });
 
         it('should invoke callbacks', async () => {
           const { Id: prevId, UserId } = await db.profile

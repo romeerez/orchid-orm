@@ -483,7 +483,13 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
     );
 
     if (params.create || params.disconnect || params.set) {
-      await _queryUpdate(currentRelationsQuery, setNulls as never);
+      let queryToDisconnect = currentRelationsQuery;
+      // do not nullify the record that is going to be set, because the column may non-nullable.
+      if (params.set) {
+        queryToDisconnect = queryToDisconnect.whereNot(params.set) as never;
+      }
+
+      await _queryUpdate(queryToDisconnect, setNulls as never);
 
       const record = data[0];
 
