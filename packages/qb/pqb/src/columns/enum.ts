@@ -6,7 +6,7 @@ import { Operators, OperatorsAny } from './operators';
 export class EnumColumn<
   Schema extends ColumnTypeSchemaArg,
   SchemaType extends Schema['type'],
-  T extends readonly string[],
+  const T extends readonly string[],
 > extends ColumnType<Schema, T[number], SchemaType, OperatorsAny> {
   operators = Operators.any;
   dataType = 'enum';

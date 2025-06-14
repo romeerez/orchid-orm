@@ -1,5 +1,6 @@
 import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
 import { ColumnToCodeCtx } from 'orchid-core';
+import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 
 const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
 
@@ -32,5 +33,13 @@ describe('enum column', () => {
     expect(t.enum('mood', ['sad', 'ok', 'happy']).toCode(ctx, 'key')).toBe(
       `t.enum('mood', ['sad', 'ok', 'happy'])`,
     );
+  });
+
+  it('should have string literal union output and input type', () => {
+    const t = makeColumnTypes(defaultSchemaConfig);
+    const column = t.enum('mood', ['sad', 'ok', 'happy']);
+
+    assertType<typeof column.outputType, 'sad' | 'ok' | 'happy'>();
+    assertType<typeof column.inputType, 'sad' | 'ok' | 'happy'>();
   });
 });
