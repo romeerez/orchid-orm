@@ -45,7 +45,7 @@ export const verifyMigration = async (
       let code: string | undefined;
       try {
         code = await composeMigration(
-          adapter,
+          trx,
           config,
           [],
           dbStructure,

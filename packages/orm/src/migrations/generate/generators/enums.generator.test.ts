@@ -18,6 +18,40 @@ const { green, red, yellow } = colors;
 describe('enums', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should create a table with enum and a default value', async () => {
+    await arrange({
+      tables: [
+        table((t) => ({
+          numBers: t.enum('numbers', ['one', 'two', 'three']).default('one'),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createEnum('public.numbers', ['one', 'two', 'three']);
+});
+
+change(async (db) => {
+  await db.createTable(
+    'table',
+    {
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      numBers: t.enum('numbers').default('one'),
+    }),
+  );
+});
+`);
+
+    assert.report(`${green('+ create enum')} numbers: (one, two, three)
+${green('+ create table')} table (1 column, no primary key)`);
+  });
+
   it('should be able to change enum column to a text column without recreating it', async () => {
     await arrange({
       async prepareDb(db) {
