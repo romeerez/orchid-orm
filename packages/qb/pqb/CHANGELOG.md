@@ -1,5 +1,11 @@
 # pqb
 
+## 0.51.6
+
+### Patch Changes
+
+- ccaca1e: Fix TS type of enum column to be literal (#521)
+
 ## 0.51.5
 
 ### Patch Changes

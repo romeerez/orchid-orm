@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.49.8
+
+### Patch Changes
+
+- 55af920: Fix migration generator logic for the case of creating enum and a enum column with a default value (#525)
+- Updated dependencies [ccaca1e]
+  - pqb@0.51.6
+  - rake-db@2.25.6
+
 ## 1.49.7
 
 ### Patch Changes
