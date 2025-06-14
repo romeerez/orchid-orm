@@ -43,7 +43,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
 
   parseNull<T extends ColumnTypeBase, Output>(
     this: T,
-    fn: (input: T['type']) => Output,
+    fn: () => Output,
   ): ParseNullColumn<T, unknown, Output>;
 
   encode<T extends { type: unknown }, Input>(
