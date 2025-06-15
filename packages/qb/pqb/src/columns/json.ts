@@ -7,6 +7,10 @@ import {
   ColumnToCodeCtx,
   ColumnTypeSchemaArg,
 } from 'orchid-core';
+import {
+  defaultSchemaConfig,
+  DefaultSchemaConfig,
+} from './defaultSchemaConfig';
 
 const encode = (x: unknown) => (x === null ? x : JSON.stringify(x));
 
@@ -41,6 +45,11 @@ export class JSONTextColumn<
 > {
   dataType = 'json' as const;
   operators = Operators.text;
+
+  private static _instance: JSONTextColumn<DefaultSchemaConfig> | undefined;
+  static get instance() {
+    return (this._instance ??= new JSONTextColumn(defaultSchemaConfig));
+  }
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);

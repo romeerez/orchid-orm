@@ -8,7 +8,6 @@ import {
 import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
 import {
   emptyArray,
-  emptyObject,
   Expression,
   PickQueryMeta,
   QueryColumn,
@@ -29,12 +28,16 @@ import {
 } from '../columns/operators';
 import { RawSQL } from '../sql/rawSql';
 import {
+  BooleanColumn,
   ColumnType,
   DecimalColumn,
   IntegerColumn,
+  JSONTextColumn,
   NumberAsStringBaseColumn,
   NumberBaseColumn,
   RealColumn,
+  TextColumn,
+  XMLColumn,
 } from '../columns';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
 import {
@@ -489,7 +492,7 @@ export class AggregateMethods {
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
       this,
-      emptyObject as QueryColumn,
+      BooleanColumn.instance,
       'bool_and',
       [arg],
       options,
@@ -523,7 +526,7 @@ export class AggregateMethods {
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
       this,
-      emptyObject as QueryColumn,
+      BooleanColumn.instance,
       'bool_or',
       [arg],
       options,
@@ -540,7 +543,7 @@ export class AggregateMethods {
   ): NullableBooleanReturn<T> {
     return makeFnExpression(
       this,
-      emptyObject as QueryColumn,
+      BooleanColumn.instance,
       'every',
       [arg],
       options,
@@ -581,11 +584,11 @@ export class AggregateMethods {
   ): NullableJSONAggReturn<T, Arg> {
     return makeFnExpression(
       this,
-      emptyObject as never,
+      JSONTextColumn.instance,
       'json_agg',
       [arg],
       options,
-    );
+    ) as never;
   }
 
   /**
@@ -601,11 +604,11 @@ export class AggregateMethods {
   ): NullableJSONAggReturn<T, Arg> {
     return makeFnExpression(
       this,
-      emptyObject as never,
+      JSONTextColumn.instance,
       'jsonb_agg',
       [arg],
       options,
-    );
+    ) as never;
   }
 
   /**
@@ -650,11 +653,11 @@ export class AggregateMethods {
   ): NullableJSONObjectReturn<T, Obj> {
     return makeFnExpression(
       this,
-      emptyObject as never,
+      JSONTextColumn.instance,
       'json_object_agg',
       [{ pairs: arg }],
       options,
-    );
+    ) as never;
   }
 
   /**
@@ -670,11 +673,11 @@ export class AggregateMethods {
   ): NullableJSONObjectReturn<T, Obj> {
     return makeFnExpression(
       this,
-      emptyObject as never,
+      JSONTextColumn.instance,
       'jsonb_object_agg',
       [{ pairs: arg }],
       options,
-    );
+    ) as never;
   }
 
   /**
@@ -707,7 +710,7 @@ export class AggregateMethods {
   ): NullableStringReturn<T> {
     return makeFnExpression(
       this,
-      emptyObject as QueryColumn,
+      TextColumn.instance,
       'string_agg',
       [arg, { value: delimiter }],
       options,
@@ -738,7 +741,7 @@ export class AggregateMethods {
   ): NullableStringReturn<T> {
     return makeFnExpression(
       this,
-      emptyObject as QueryColumn,
+      XMLColumn.instance,
       'xmlagg',
       [arg],
       options,

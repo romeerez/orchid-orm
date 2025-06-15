@@ -7,6 +7,14 @@ import {
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 import { Operators } from '../columns/operators';
+import {
+  BooleanColumn,
+  IntegerColumn,
+  JSONTextColumn,
+  RealColumn,
+  TextColumn,
+  XMLColumn,
+} from 'pqb';
 
 describe('aggregate', () => {
   useTestDatabase();
@@ -464,6 +472,28 @@ describe('aggregate', () => {
       return `SELECT ${select} FROM "user"`;
     };
 
+    it('should have a column type', () => {
+      const q = User[method as 'avg']('id');
+
+      const columnType =
+        method === 'count'
+          ? IntegerColumn
+          : ['avg', 'min', 'max', 'sum', 'bitAnd', 'bitOr'].includes(method)
+          ? RealColumn
+          : ['boolAnd', 'boolOr', 'every'].includes(method)
+          ? BooleanColumn
+          : ['jsonAgg', 'jsonbAgg'].includes(method)
+          ? JSONTextColumn
+          : method === 'xmlAgg'
+          ? XMLColumn
+          : undefined;
+      if (!columnType) {
+        throw new Error(`Unhandled type for ${method}`);
+      }
+
+      expect(q.q.getColumn).toBeInstanceOf(columnType);
+    });
+
     it(`should perform ${method} query for a column`, () => {
       const q = User.clone();
 
@@ -508,6 +538,12 @@ describe('aggregate', () => {
     ${'jsonObjectAgg'}  | ${'json_object_agg'}
     ${'jsonbObjectAgg'} | ${'jsonb_object_agg'}
   `('$method', ({ method, functionName }) => {
+    it('should have a column type', () => {
+      const q = User[method as 'jsonObjectAgg']({ alias: 'name' });
+
+      expect(q.q.getColumn).toBeInstanceOf(JSONTextColumn);
+    });
+
     it('should return null when no records', async () => {
       const value = await User[method as 'jsonObjectAgg']({ alias: 'name' });
 
@@ -605,6 +641,12 @@ describe('aggregate', () => {
   });
 
   describe('stringAgg', () => {
+    it('should have a column type', () => {
+      const q = User.stringAgg('name', ', ');
+
+      expect(q.q.getColumn).toBeInstanceOf(TextColumn);
+    });
+
     it('should return null when no records', async () => {
       const value = await User.stringAgg('name', ', ');
 

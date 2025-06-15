@@ -28,6 +28,10 @@ import { RawSQL } from '../sql/rawSql';
 import { SearchWeightRecord } from '../sql';
 import { Operators, OperatorsNumber, OperatorsText } from './operators';
 import { setColumnDefaultParse } from './column.utils';
+import {
+  defaultSchemaConfig,
+  DefaultSchemaConfig,
+} from './defaultSchemaConfig';
 
 export type TextColumnData = StringTypeData;
 
@@ -146,6 +150,11 @@ export class TextColumn<
 > extends TextBaseColumn<Schema> {
   dataType = 'text' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
+
+  private static _instance: TextColumn<DefaultSchemaConfig> | undefined;
+  static get instance() {
+    return (this._instance ??= new TextColumn(defaultSchemaConfig));
+  }
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
@@ -693,6 +702,11 @@ export class XMLColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 > {
   dataType = 'xml' as const;
   operators = Operators.text;
+
+  private static _instance: XMLColumn<DefaultSchemaConfig> | undefined;
+  static get instance() {
+    return (this._instance ??= new XMLColumn(defaultSchemaConfig));
+  }
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);

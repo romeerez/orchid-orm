@@ -10,6 +10,7 @@ import {
   ColumnsShapeToObject,
   ColumnsShapeToObjectArray,
   ColumnsShapeToPluck,
+  UnknownColumn,
 } from '../columns';
 import { JSONTextColumn } from '../columns/json';
 import {
@@ -891,7 +892,7 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
             const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
               const type = it.q.getColumn;
-              if (type) result[key] = type;
+              result[key] = type || UnknownColumn.instance;
             } else {
               result[key] = new JSONTextColumn(defaultSchemaConfig);
             }
