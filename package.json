@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "author": "Roman K",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@9.15.3",
   "scripts": {
     "check": "turbo run check",
     "types": "turbo run types",
@@ -50,6 +50,5 @@
     "rollup-plugin-dts": "^6.1.1",
     "rollup-plugin-esbuild": "^6.1.1",
     "esbuild": "^0.24.0"
-  },
-  "packageManager": "pnpm@9.15.3+sha512.1f79bc245a66eb0b07c5d4d83131240774642caaa86ef7d0434ab47c0d16f66b04e21e0c086eb61e62c77efc4d7f7ec071afad3796af64892fae66509173893a"
+  }
 }
