@@ -1,5 +1,11 @@
 # pqb
 
+## 0.52.1
+
+### Patch Changes
+
+- e39cc7b: Fix jsonAgg inside nested select (#522)
+
 ## 0.52.0
 
 ### Minor Changes
