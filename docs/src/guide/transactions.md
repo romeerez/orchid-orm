@@ -1,6 +1,9 @@
 # Transactions
 
-All queries within a transaction are executed on the same database connection and run the entire set of queries as a single unit of work. Any failure will mean the database will rollback any queries executed on that connection to the pre-transaction state.
+All queries within a transaction are executed on the same database connection and run the entire set of queries as a single unit of work.
+Any failure will mean the database will rollback any queries executed on that connection to the pre-transaction state.
+
+You can define a code to be run on commit, see [after-commit hooks](/guide/hooks.html#after-commit-hooks) and a standalone [$afterCommit](#aftercommit).
 
 ## transaction
 
@@ -143,6 +146,34 @@ db.$transaction(async () => {
   db.$isInTransaction(); // -> true
 });
 ```
+
+## $afterCommit
+
+[//]: # (has JSDoc)
+
+Schedules a hook to run after the outermost transaction commits:
+
+```ts
+await db.$transaction(async () => {
+  await db.table.create(data)
+  await db.table.where({ ...conditions }).update({ key: 'value' })
+ 
+  db.$afterCommit(() => { // can be sync or async
+    console.log('after commit')
+  })
+})
+```
+
+If used outside the transaction, the hook will be executed almost immediately, on the next microtask:
+
+```ts
+db.$afterCommit(async () => { // can be sync or async
+  console.log('after commit')
+})
+```
+
+If the callback has no `try/catch` and throws an error,
+this will cause `uncaughtException` if the callback is sync and `unhandledRejection` if it is async.
 
 ## testTransaction
 

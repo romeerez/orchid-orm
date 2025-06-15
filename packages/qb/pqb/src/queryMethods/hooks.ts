@@ -2,7 +2,7 @@ import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
 import { PickQueryShape, QueryColumns } from 'orchid-core';
 import { QueryAfterHook, QueryBeforeHook } from '../sql';
 import { PickQueryQ } from '../query/query';
-import { AfterCommitError } from './transaction';
+import { AfterCommitErrorHandler } from './transaction';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
 export type AfterHook<
@@ -401,15 +401,17 @@ export abstract class QueryHooks {
    *   })
    *   .catchAfterCommitError((err) => {
    *     // err is instance of AfterCommitError (see below)
-   *   });
+   *   })
+   *   // can be added multiple times, all catchers will be executed
+   *   .catchAfterCommitError((err) => {});
    *
    * // result is available even if an after commit hook has failed
    * result.id;
    * ```
    */
-  catchAfterCommitError<T>(this: T, fn: (error: AfterCommitError) => void): T {
+  catchAfterCommitError<T>(this: T, fn: AfterCommitErrorHandler): T {
     const q = _clone(this);
-    q.q.catchAfterCommitError = fn;
+    pushQueryValueImmutable(q, 'catchAfterCommitErrors', fn);
     return q as T;
   }
 }

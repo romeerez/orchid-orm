@@ -1,6 +1,7 @@
 import { PickQueryQAndInternal, Query } from '../query/query';
 import {
   AfterCommitHook,
+  AfterCommitStandaloneHook,
   emptyArray,
   emptyObject,
   SingleSqlItem,
@@ -102,18 +103,46 @@ export class AfterCommitError extends OrchidOrmError {
   }
 }
 
-export const _afterCommitError = (
+export type AfterCommitErrorHandler = (
+  error: AfterCommitError,
+) => void | Promise<void>;
+
+export const _runAfterCommitHooks = async (
   result: unknown,
-  hookResults: AfterCommitErrorResult[],
-  catchAfterCommitError: ((error: AfterCommitError) => void) | undefined,
+  promises: unknown[],
+  getHookNames: () => string[],
+  catchAfterCommitErrors: AfterCommitErrorHandler[] | undefined,
 ) => {
-  const err = new AfterCommitError(result, hookResults);
-  if (catchAfterCommitError) {
-    catchAfterCommitError(err);
-  } else {
-    throw err;
+  const hookResults = await Promise.allSettled(promises);
+  if (hookResults.some((result) => result.status === 'rejected')) {
+    const hookNames = getHookNames();
+
+    for (const [i, r] of hookResults.entries()) {
+      (r as AfterCommitErrorResult).name = hookNames[i];
+    }
+
+    const err = new AfterCommitError(result, hookResults);
+    if (!catchAfterCommitErrors) throw err;
+
+    for (const fn of catchAfterCommitErrors) {
+      try {
+        fn(err);
+      } catch {}
+    }
   }
 };
+
+/**
+ * Check if inside transaction started by user (not test transaction).
+ */
+export const isInUserTransaction = (
+  trx: TransactionState | undefined,
+): trx is TransactionState =>
+  !!(
+    trx &&
+    // when inside test transactions, compare transaction counts to ensure there is a user transaction.
+    (!trx.testTransactionCount || trx.transactionId >= trx.testTransactionCount)
+  );
 
 export class Transaction {
   /**
@@ -301,11 +330,7 @@ export class Transaction {
       if (log) log.afterQuery(commitSql, logData);
 
       // trx was defined in the callback above;
-      // `runAfterCommit` cannot throw because it's using `Promise.allSettled`.
-      await runAfterCommit(
-        (trx as unknown as TransactionState).afterCommit,
-        result,
-      );
+      runAfterCommit((trx as unknown as TransactionState).afterCommit, result);
 
       return result;
     } else {
@@ -337,7 +362,7 @@ export class Transaction {
         if (transactionId === trx.testTransactionCount) {
           const { afterCommit } = trx as unknown as TransactionState;
           (trx as unknown as TransactionState).afterCommit = undefined;
-          await runAfterCommit(afterCommit, result);
+          runAfterCommit(afterCommit, result);
         }
 
         return result;
@@ -383,52 +408,105 @@ export class Transaction {
     const trx = (
       this as unknown as Query
     ).internal.transactionStorage.getStore();
-    return !!(
-      trx &&
-      (!trx.testTransactionCount ||
-        trx.transactionId >= trx.testTransactionCount)
-    );
+
+    return isInUserTransaction(trx);
+  }
+
+  /**
+   * Schedules a hook to run after the outermost transaction commits:
+   *
+   * ```ts
+   * await db.$transaction(async () => {
+   *   await db.table.create(data)
+   *   await db.table.where({ ...conditions }).update({ key: 'value' })
+   *
+   *   db.$afterCommit(() => { // can be sync or async
+   *     console.log('after commit')
+   *   })
+   * })
+   * ```
+   *
+   * If used outside the transaction, the hook will be executed almost immediately, on the next microtask:
+   *
+   * ```ts
+   * db.$afterCommit(async () => { // can be sync or async
+   *   console.log('after commit')
+   * })
+   * ```
+   *
+   * If the callback has no `try/catch` and throws an error,
+   * this will cause `uncaughtException` if the callback is sync and `unhandledRejection` if it is async.
+   */
+  afterCommit(this: Query, hook: AfterCommitStandaloneHook): void {
+    const trx = this.internal.transactionStorage.getStore();
+    if (isInUserTransaction(trx)) {
+      (trx.afterCommit ??= []).push(hook);
+    } else {
+      queueMicrotask(hook);
+    }
   }
 }
 
-const runAfterCommit = async (
+// `afterCommit` hooks are detached from the main flow, this function won't throw.
+const runAfterCommit = (
   afterCommit: TransactionAfterCommitHook[] | undefined,
   result: unknown,
 ) => {
-  if (afterCommit) {
-    const promises = [];
-    let catchAfterCommitError: ((error: AfterCommitError) => void) | undefined;
-    for (let i = 0, len = afterCommit.length; i < len; i += 3) {
-      const result = afterCommit[i] as unknown[];
-      const q = afterCommit[i + 1] as Query;
-      if (q.q.catchAfterCommitError) {
-        catchAfterCommitError = q.q.catchAfterCommitError;
-      }
+  // to suppress throws of sync afterCommit hooks.
+  queueMicrotask(async () => {
+    if (afterCommit) {
+      const promises = [];
 
-      for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
-        try {
-          promises.push(fn(result, q));
-        } catch (err) {
-          promises.push(Promise.reject(err));
+      let catchAfterCommitErrors: AfterCommitErrorHandler[] | undefined;
+      for (let i = 0, len = afterCommit.length; i < len; ) {
+        const first = afterCommit[i];
+        if (typeof first === 'function') {
+          try {
+            promises.push(first());
+          } catch (err) {
+            promises.push(Promise.reject(err));
+          }
+          i++;
+        } else {
+          const q = afterCommit[i + 1] as Query;
+          if (q.q.catchAfterCommitErrors) {
+            (catchAfterCommitErrors ??= []).push(...q.q.catchAfterCommitErrors);
+          }
+
+          for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
+            try {
+              promises.push(fn(first as unknown[], q));
+            } catch (err) {
+              promises.push(Promise.reject(err));
+            }
+          }
+          i += 3;
         }
       }
-    }
 
-    const hookResults = await Promise.allSettled(promises);
-    if (hookResults.some((result) => result.status === 'rejected')) {
-      const resultsWithNames: AfterCommitErrorResult[] = [];
-
-      let r = 0;
-      for (let i = 0, len = afterCommit.length; i < len; i += 3) {
-        for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
-          resultsWithNames.push({
-            ...hookResults[r++],
-            name: fn.name,
-          });
+      const getHookNames = () => {
+        const hookNames = [];
+        for (let i = 0, len = afterCommit.length; i < len; ) {
+          const first = afterCommit[i];
+          if (typeof first === 'function') {
+            hookNames.push(first.name);
+            i++;
+          } else {
+            for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
+              hookNames.push(fn.name);
+            }
+            i += 3;
+          }
         }
-      }
+        return hookNames;
+      };
 
-      _afterCommitError(result, resultsWithNames, catchAfterCommitError);
+      await _runAfterCommitHooks(
+        result,
+        promises,
+        getHookNames,
+        catchAfterCommitErrors,
+      );
     }
-  }
+  });
 };

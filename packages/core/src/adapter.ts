@@ -136,11 +136,16 @@ export interface TransactionState {
 export type TransactionAfterCommitHook =
   | unknown[]
   | QueryBaseCommon
-  | AfterCommitHook[];
+  | AfterCommitHook[]
+  | AfterCommitStandaloneHook;
 
 // Function to call after transaction commit.
 export interface AfterCommitHook {
   (data: unknown[], q: QueryBaseCommon): unknown | Promise<unknown>;
+}
+
+export interface AfterCommitStandaloneHook {
+  (): unknown | Promise<unknown>;
 }
 
 export const setAdapterConnectRetry = <Result>(

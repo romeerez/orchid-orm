@@ -145,6 +145,8 @@ class CommentTable extends BaseTable {
 
 After-commit hooks are similar to [after hook](#after-hooks): they also can access the records data with the specified columns.
 
+Note there is a standalone [$afterCommit](/guide/transactions#aftercommit) that executes after the current transaction, disregarding of what tables and queries are involved.
+
 If the query was wrapped into a transaction, these hooks will run after the commit. For a single query without a transaction, these hooks will run after the query.
 
 Regular [after hooks](#after-hooks) will run before the transaction commit, and it's possible that some of the following queries inside a transaction will fail and the transaction will be rolled back.
@@ -152,8 +154,15 @@ After-commit hooks have a guarantee that the transaction, or a single query, fin
 
 If no records were updated or deleted, the `afterUpdateCommit` and `afterDeleteCommit` hooks **won't** run.
 
-If at least one of the after commit hooks fails, the whole transaction (even though it is committed) throws a special [AfterCommitError](#AfterCommitError) error.
-Consider [catchAfterCommitError](#catchAfterCommitError) for catching such errors.
+`afterCommit` hooks run **after** transaction, even if they are synchronous. Transaction logic does not wait for `afterCommit` hook to finish.
+
+If you'd like to handle `afterCommit` function errors, use try/catch inside the hooks,
+or consider [catchAfterCommitError](#catchAfterCommitError) that will catch an error for any of the `afterCommit` hooks attached to the current query.
+
+If the hook throws and the error isn't handled,
+this will cause `uncaughtException` if the callback is sync and `unhandledRejection` if it is async.
+
+`afterCommit` hooks execution is detached from the main query flow, and it cannot cause queries or transactions to fail.
 
 **after-commit** hooks are a better option for performing side effects outside of transaction, but beware that if a side effect, such as sending an email, fails, the transaction is not rolled back.
 Third-party services can fail, leaving the side effect non-applied, even though the transaction data was persisted.
@@ -161,10 +170,11 @@ It's better to send such actions to a persistent message queue, where actions ca
 
 Even with a message queue in place, there is still a chance that the message queue itself will fail to accept the message, causing a loss of the needed action.
 To have a 100% guarantee that the side effect is going to eventually happen, you need to apply some of distributed transaction techniques, such as Outbox Pattern.
+Read [Pattern: Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html) for a general idea.
 
 In the case of sending emails upon user registration, you could save "send a registration email" action to a special table from the `afterCreate` hook,
 then in `afterCreateCommit` send it to a message queue, then delete it from the special table.
-If the message queue fails, the action is still saved in a db table, the table could be periodically scanned in a cron job and sent to the queue.
+If the message queue fails, the action is still saved in a db table, the table could be periodically scanned and sent to the queue by a cron job.
 
 ```ts
 class SomeTable extends BaseTable {
@@ -259,7 +269,9 @@ const result = await db
   })
   .catchAfterCommitError((err) => {
     // err is instance of AfterCommitError (see below)
-  });
+  })
+  // can be added multiple times, all catchers will be executed
+  .catchAfterCommitError((err) => {});
 
 // result is available even if an after commit hook has failed
 result.id;
@@ -309,7 +321,7 @@ class SomeTable extends BaseTable {
     });
 
     // named function
-    this.afterCreateCommit([], function myHook() => {
+    this.afterCreateCommit([], function myHook() {
       // ...
     });
   }

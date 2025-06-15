@@ -36,7 +36,7 @@ import {
 import { RelationQueryBase } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
-import { AfterCommitError } from '../queryMethods';
+import { AfterCommitErrorHandler } from '../queryMethods';
 import { ColumnsShape } from '../columns';
 
 export interface RecordOfColumnsShapeBase {
@@ -180,7 +180,7 @@ export interface CommonQueryData {
   // additional select for afterDelete hooks
   afterDeleteSelect?: Set<string>;
   // catch after commit hooks errors, letting query to return its result
-  catchAfterCommitError?(error: AfterCommitError): void;
+  catchAfterCommitErrors?: AfterCommitErrorHandler[];
   // log settings
   log?: QueryLogObject;
   // logger with `log`, `warn`, `error`

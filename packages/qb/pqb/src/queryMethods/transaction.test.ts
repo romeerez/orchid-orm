@@ -1,7 +1,25 @@
 import pg, { Client } from 'pg';
 import { assertType, testDb, useTestDatabase } from 'test-utils';
-import { User, userColumnsSql } from '../test-utils/test-utils';
+import { User, userColumnsSql, userData } from '../test-utils/test-utils';
 import { noop } from 'orchid-core';
+import { AfterCommitError } from './transaction';
+
+const afterCommitSampleError = {
+  hookResults: [
+    {
+      name: 'one',
+      status: 'fulfilled',
+      value: 'hook ok',
+    },
+    {
+      name: 'two',
+      status: 'rejected',
+      reason: expect.objectContaining({
+        message: 'error',
+      }),
+    },
+  ],
+};
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -235,6 +253,175 @@ describe('transaction', () => {
           expect(testDb.isInTransaction()).toBe(true);
         });
       });
+    });
+  });
+
+  describe('afterCommit hooks', () => {
+    useTestDatabase();
+
+    it('should not make the transaction wait for afterCommit hook to finish', async () => {
+      let hookCalled = false;
+      let hookAwaited = false;
+
+      const result = await User.transaction(async () => {
+        await User.insert(userData).afterCreateCommit([], async () => {
+          hookCalled = true;
+          await new Promise((resolve) => process.nextTick(resolve));
+          hookAwaited = true;
+        });
+
+        return 'ok';
+      });
+
+      expect(result).toBe('ok');
+      expect(hookCalled).toBe(true);
+      expect(hookAwaited).toBe(false);
+    });
+
+    it('should catch afterCommit errors with catchAfterCommitError, should call all catches even if any of them fails', async () => {
+      const catcher1 = jest.fn(() => {
+        throw new Error('catcher error');
+      });
+      const catcher2 = jest.fn();
+
+      const result = await User.transaction(async () => {
+        await User.insert(userData)
+          .afterCreateCommit([], function one() {
+            return 'hook ok';
+          })
+          .afterCreateCommit([], function two() {
+            throw new Error('error');
+          })
+          .catchAfterCommitError(catcher1)
+          .catchAfterCommitError(catcher2);
+
+        return 'ok';
+      });
+
+      expect(result).toBe('ok');
+
+      await new Promise(queueMicrotask);
+
+      expect(catcher1).toBeCalledTimes(1);
+      expect(catcher2).toBeCalledTimes(1);
+
+      const err = (catcher1.mock.calls[0] as unknown as [unknown])[0];
+      expect(err).toBeInstanceOf(AfterCommitError);
+      expect(err).toMatchObject({
+        ...afterCommitSampleError,
+        result: 'ok',
+      });
+    });
+  });
+
+  describe('afterCommit standalone hook', () => {
+    it('should run all afterCommit hook after the outermost transaction commit', async () => {
+      const hook1 = jest.fn();
+      const hook2 = jest.fn();
+      const hook3 = jest.fn();
+
+      await User.transaction(async () => {
+        await User.transaction(async () => {
+          testDb.afterCommit(hook1);
+          testDb.afterCommit(hook2);
+        });
+        testDb.afterCommit(hook3);
+
+        expect(hook1).not.toHaveBeenCalled();
+        expect(hook2).not.toHaveBeenCalled();
+        expect(hook3).not.toHaveBeenCalled();
+      });
+
+      expect(hook1).toHaveBeenCalled();
+      expect(hook2).toHaveBeenCalled();
+      expect(hook3).toHaveBeenCalled();
+    });
+
+    it('should not run if the transaction fails', async () => {
+      const hook1 = jest.fn();
+      const hook2 = jest.fn();
+
+      await User.transaction(async () => {
+        await User.transaction(async () => {
+          testDb.afterCommit(hook1);
+        });
+        testDb.afterCommit(hook2);
+
+        throw new Error('error');
+      }).catch(() => {});
+
+      expect(hook1).not.toHaveBeenCalled();
+      expect(hook2).not.toHaveBeenCalled();
+    });
+
+    it('should run in next microtask when not in transaction', async () => {
+      const hook = jest.fn();
+
+      testDb.afterCommit(hook);
+
+      expect(hook).not.toHaveBeenCalled();
+
+      await new Promise(queueMicrotask);
+
+      expect(hook).toHaveBeenCalled();
+    });
+  });
+});
+
+describe('hooks with no test transaction', () => {
+  beforeEach(() => {
+    jest
+      .spyOn(User.adapter, 'query')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] } as any);
+  });
+
+  it('should not make the transaction wait for afterCommit hook to finish', async () => {
+    let hookCalled = false;
+    let hookAwaited = false;
+
+    const result = await User.all()
+      .delete()
+      .afterDeleteCommit([], async () => {
+        hookCalled = true;
+        await new Promise((resolve) => process.nextTick(resolve));
+        hookAwaited = true;
+      });
+
+    expect(result).toBe(1);
+    expect(hookCalled).toBe(true);
+    expect(hookAwaited).toBe(false);
+  });
+
+  it('should catch afterCommit errors with catchAfterCommitError, should call all catchers even if any of them fails', async () => {
+    const catcher1 = jest.fn(() => {
+      throw new Error('catcher error');
+    });
+    const catcher2 = jest.fn();
+
+    const result = await User.all()
+      .delete()
+      .afterDeleteCommit([], function one() {
+        return 'hook ok';
+      })
+      .afterDeleteCommit([], function two() {
+        throw new Error('error');
+      })
+      .catchAfterCommitError(catcher1)
+      .catchAfterCommitError(catcher2);
+
+    expect(result).toBe(1);
+
+    await new Promise(queueMicrotask);
+
+    expect(catcher1).toBeCalledTimes(1);
+    expect(catcher2).toBeCalledTimes(1);
+
+    const err = (catcher1.mock.calls[0] as unknown as [unknown])[0];
+    expect(err).toBeInstanceOf(AfterCommitError);
+    expect(err).toMatchObject({
+      ...afterCommitSampleError,
+      result: [{}],
     });
   });
 });

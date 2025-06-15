@@ -1,6 +1,5 @@
 import { expectSql, sql, useTestDatabase } from 'test-utils';
 import { User as UserTable, userData } from '../test-utils/test-utils';
-import { AfterCommitError } from './transaction';
 import { Create } from './create';
 import { Update } from './update';
 import { QueryUpsertOrCreate } from './upsertOrCreate';
@@ -43,22 +42,6 @@ for (const k in hookMap) {
     User = User[key as keyof typeof hooksWithNoDeps](hook.fn);
   }
 }
-
-const afterCommitSampleError = {
-  hookResults: [
-    {
-      status: 'fulfilled',
-      value: 'ok',
-      name: 'one',
-    },
-    {
-      status: 'rejected',
-      reason: expect.objectContaining({
-        message: 'error',
-      }),
-    },
-  ],
-};
 
 const assert = {
   hooksBeingCalled({
@@ -233,49 +216,6 @@ describe('hooks', () => {
 
         assert.createHooksBeingCalled({ data: [depData] });
       }
-    });
-
-    describe('AfterCommitError', () => {
-      it('should throw AfterCommitError with transaction result and hook results from Promise.allSettled', async () => {
-        const err = await UserTable.transaction(async () => {
-          await UserTable.afterCreateCommit([], function one() {
-            return 'ok';
-          })
-            .afterCreateCommit([], function two() {
-              throw new Error('error');
-            })
-            .insert(userData);
-
-          return 'transaction result';
-        }).catch((err) => err);
-
-        expect(err).toBeInstanceOf(AfterCommitError);
-        expect(err).toMatchObject({
-          ...afterCommitSampleError,
-          result: 'transaction result',
-        });
-      });
-
-      it('should catch error with `catchAfterCommitError', async () => {
-        let err;
-
-        const res = await UserTable.transaction(async () => {
-          return UserTable.afterCreateCommit([], function one() {
-            return 'ok';
-          })
-            .afterCreateCommit([], function two() {
-              throw new Error('error');
-            })
-            .insert(userData)
-            .catchAfterCommitError((error) => {
-              err = error;
-            });
-        });
-
-        expect(res).toBe(1);
-        expect(err).toBeInstanceOf(AfterCommitError);
-        expect(err).toMatchObject({ ...afterCommitSampleError, result: 1 });
-      });
     });
 
     it.each(['create', 'insert'] as const)(
@@ -544,49 +484,5 @@ describe('hooks', () => {
         ),
       ].sort(),
     );
-  });
-});
-
-describe('hooks with no test transaction', () => {
-  beforeEach(() => {
-    jest
-      .spyOn(User.adapter, 'query')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] } as any);
-  });
-
-  it('should throw AfterCommitError with transaction result and hook results from Promise.allSettled', async () => {
-    const err = await UserTable.afterDeleteCommit([], function one() {
-      return 'ok';
-    })
-      .afterDeleteCommit([], function two() {
-        throw new Error('error');
-      })
-      .all()
-      .delete()
-      .catch((err) => err);
-
-    expect(err).toBeInstanceOf(AfterCommitError);
-    expect(err).toMatchObject({ ...afterCommitSampleError, result: [{}] });
-  });
-
-  it('should catch error with `catchAfterCommitError', async () => {
-    let err;
-
-    const res = await UserTable.afterDeleteCommit([], function one() {
-      return 'ok';
-    })
-      .afterDeleteCommit([], function two() {
-        throw new Error('error');
-      })
-      .all()
-      .delete()
-      .catchAfterCommitError((error) => {
-        err = error;
-      });
-
-    expect(res).toBe(1);
-    expect(err).toBeInstanceOf(AfterCommitError);
-    expect(err).toMatchObject({ ...afterCommitSampleError, result: [{}] });
   });
 });

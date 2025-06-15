@@ -21,7 +21,11 @@ import {
   Sql,
   TransactionState,
 } from 'orchid-core';
-import { _afterCommitError, commitSql } from './transaction';
+import {
+  isInUserTransaction,
+  _runAfterCommitHooks,
+  commitSql,
+} from './transaction';
 import { processComputedResult } from '../modules/computed';
 
 export const queryMethodByReturnType: {
@@ -345,40 +349,35 @@ const then = async (
         // afterCommitHooks are executed later after transaction commit,
         // or, if we don't have transaction, they are executed intentionally after other after hooks
         if (afterCommitHooks) {
-          if (
-            trx &&
-            // when inside test transactions, push to a transaction only unless it's the outer user transaction.
-            (!trx.testTransactionCount ||
-              trx.transactionId + 1 > trx.testTransactionCount)
-          ) {
+          if (isInUserTransaction(trx)) {
             (trx.afterCommit ??= []).push(
               result as unknown[],
               q,
               afterCommitHooks,
             );
           } else {
-            const promises: (unknown | Promise<unknown>)[] = [];
-            for (const fn of afterCommitHooks) {
-              try {
-                promises.push(
-                  (fn as unknown as AfterCommitHook)(result as unknown[], q),
-                );
-              } catch (err) {
-                promises.push(Promise.reject(err));
+            // result can be transformed later, reference the current form to use it in hook.
+            const localResult = result as unknown[];
+            // to suppress throws of sync afterCommit hooks.
+            queueMicrotask(async () => {
+              const promises: (unknown | Promise<unknown>)[] = [];
+              for (const fn of afterCommitHooks) {
+                try {
+                  promises.push(
+                    (fn as unknown as AfterCommitHook)(localResult, q),
+                  );
+                } catch (err) {
+                  promises.push(Promise.reject(err));
+                }
               }
-            }
 
-            const hookResults = await Promise.allSettled(promises);
-            if (hookResults.some((result) => result.status === 'rejected')) {
-              _afterCommitError(
-                result,
-                hookResults.map((result, i) => ({
-                  ...result,
-                  name: afterCommitHooks[i].name,
-                })),
-                q.q.catchAfterCommitError,
+              await _runAfterCommitHooks(
+                localResult,
+                promises,
+                () => afterCommitHooks.map((h) => h.name),
+                q.q.catchAfterCommitErrors,
               );
-            }
+            });
           }
         }
       } else if (query.after) {

@@ -48,4 +48,12 @@ describe('transaction', () => {
       ]);
     },
   );
+
+  it('should delegate $afterCommit to the query builder', () => {
+    const spy = jest.spyOn(db.$queryBuilder, 'afterCommit');
+
+    db.$afterCommit(noop);
+
+    expect(spy).toHaveBeenCalledWith(noop);
+  });
 });

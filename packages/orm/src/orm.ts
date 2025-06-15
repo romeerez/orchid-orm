@@ -21,7 +21,12 @@ import {
   BaseTableClass,
 } from './baseTable';
 import { applyRelations } from './relations/relations';
-import { transaction, ensureTransaction, isInTransaction } from './transaction';
+import {
+  transaction,
+  ensureTransaction,
+  isInTransaction,
+  afterCommit,
+} from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   ColumnSchemaConfig,
@@ -48,9 +53,13 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    */
   $ensureTransaction: typeof ensureTransaction;
   /**
-   * @see import('pqb').Transaction.prototype.ensureTransaction
+   * @see import('pqb').Transaction.prototype.isInTransaction
    */
   $isInTransaction: typeof isInTransaction;
+  /**
+   * @see import('pqb').Transaction.prototype.afterCommit
+   */
+  $afterCommit: typeof afterCommit;
   $adapter: Adapter;
   $queryBuilder: Db;
 
@@ -173,6 +182,7 @@ export const orchidORM = <T extends TableClasses>(
     $transaction: transaction,
     $ensureTransaction: ensureTransaction,
     $isInTransaction: isInTransaction,
+    $afterCommit: afterCommit,
     $adapter: adapter,
     $queryBuilder: qb,
     $query: ((...args) => qb.query(...args)) as typeof qb.query,
