@@ -1,5 +1,26 @@
 # orchid-orm
 
+## 1.50.0
+
+### Minor Changes
+
+- bffa246: Add standalone $afterCommit (#354)
+
+  `afterCommit` hooks used to be awaited when awaiting a transaction or a query,
+  now they become detached, won't be awaited by the main flow.
+  Make sure to handle their errors inside the hooks or by using `catchAfterCommitError`,
+  without error handling the hooks will cause unhandled exception errors.
+
+  `catchAfterCommitError` can be added multiple times now.
+
+### Patch Changes
+
+- Updated dependencies [bffa246]
+- Updated dependencies [53dc5f7]
+  - pqb@0.52.0
+  - orchid-core@0.25.0
+  - rake-db@2.25.7
+
 ## 1.49.8
 
 ### Patch Changes

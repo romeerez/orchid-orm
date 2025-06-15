@@ -1,5 +1,24 @@
 # pqb
 
+## 0.52.0
+
+### Minor Changes
+
+- bffa246: Add standalone $afterCommit (#354)
+
+  `afterCommit` hooks used to be awaited when awaiting a transaction or a query,
+  now they become detached, won't be awaited by the main flow.
+  Make sure to handle their errors inside the hooks or by using `catchAfterCommitError`,
+  without error handling the hooks will cause unhandled exception errors.
+
+  `catchAfterCommitError` can be added multiple times now.
+
+### Patch Changes
+
+- 53dc5f7: Remove `parseNull` argument because it is not needed in `parseNull`
+- Updated dependencies [bffa246]
+  - orchid-core@0.25.0
+
 ## 0.51.6
 
 ### Patch Changes
