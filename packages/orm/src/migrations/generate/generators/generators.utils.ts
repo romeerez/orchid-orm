@@ -34,7 +34,7 @@ export const compareSqlExpressions = async (
             text: [
               `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
                 .map(
-                  ({ inDb, inCode }, i) =>
+                  ({ inDb, inCode }, i): string =>
                     `${inDb} AS "*inDb-${i}*", ${inCode
                       .map(
                         (s, j) =>
@@ -58,34 +58,53 @@ export const compareSqlExpressions = async (
           return;
         }
 
-        const v: string = result.rows[0].v;
-
-        let pos = 7;
-        const rgx = /\s+AS\s+"\*(inDb-\d+|inCode-\d+-\d+)\*",?/g;
-        let match;
-        let inDb = '';
-        let codeI = 0;
-        const matches = compare[0].inCode.map(() => true);
-        while ((match = rgx.exec(v))) {
-          const sql = v.slice(pos, rgx.lastIndex - match[0].length).trim();
-          const arr = match[1].split('-');
-          if (arr.length === 2) {
-            inDb = sql;
-            codeI = 0;
-          } else {
-            if (inDb !== sql) {
-              matches[codeI] = false;
-            }
-            codeI++;
-          }
-          pos = rgx.lastIndex;
-        }
-
-        const firstMatching = matches.indexOf(true);
-        handle(firstMatching === -1 ? undefined : firstMatching);
+        const match = compareSqlExpressionResult(
+          result.rows[0].v,
+          compare[0].inCode,
+        );
+        handle(match);
       }),
     );
   }
+};
+
+export const compareSqlExpressionResult = (
+  resultSql: string,
+  inCode: unknown[],
+) => {
+  let pos = 7;
+  const rgx = /\s+AS\s+"\*(inDb-\d+|inCode-\d+-\d+)\*",?/g;
+  let match;
+  let inDb = '';
+  let codeI = 0;
+  const matches = inCode.map(() => true);
+  while ((match = rgx.exec(resultSql))) {
+    const sql = resultSql.slice(pos, rgx.lastIndex - match[0].length).trim();
+    const arr = match[1].split('-');
+    if (arr.length === 2) {
+      inDb = sql;
+      codeI = 0;
+    } else {
+      if (
+        inDb !== sql &&
+        // Comparing `(sql) = sql` and `sql = (sql)` below.
+        // Could not reproduce this case in integration tests, but it was reported in #494.
+        !(
+          inDb.startsWith('(') &&
+          inDb.endsWith(')') &&
+          inDb.slice(1, -1) === sql
+        ) &&
+        !(sql.startsWith('(') && sql.endsWith(')') && sql.slice(1, -1) === inDb)
+      ) {
+        matches[codeI] = false;
+      }
+      codeI++;
+    }
+    pos = rgx.lastIndex;
+  }
+
+  const firstMatching = matches.indexOf(true);
+  return firstMatching === -1 ? undefined : firstMatching;
 };
 
 export const promptCreateOrRename = (
