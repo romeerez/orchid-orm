@@ -1890,6 +1890,7 @@ const recreateEnum = async (
   const defaultSchema = migration.adapter.schema;
   const quotedName = quoteTable(schema, name);
 
+  const relKinds = ['r', 'm']; // r is for table, m is for materialized views, TODO: not sure if materialized views are needed here.
   const { rows: tables } = await migration.adapter.query<{
     schema: string;
     table: string;
@@ -1905,6 +1906,7 @@ JOIN pg_type t ON a.atttypid = t.oid AND t.typname = ${singleQuote(name)}
 JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = ${singleQuote(
       schema ?? defaultSchema,
     )}
+WHERE c.relkind IN (${relKinds.map((c) => `'${c}'`).join(', ')})
 GROUP BY n.nspname, c.relname`,
   );
 
