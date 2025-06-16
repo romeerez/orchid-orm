@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.25.9
+
+### Patch Changes
+
+- 52aab98: Fix `dropEnumValues` in migrations when there is a primary key column using the enum type (#516)
+- 261f5b1: Fix creating and dropping a table with a self-referencing foreign key (#524)
+
 ## 2.25.8
 
 ### Patch Changes

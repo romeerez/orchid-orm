@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.50.3
+
+### Patch Changes
+
+- 52aab98: Fix `dropEnumValues` in migrations when there is a primary key column using the enum type (#516)
+- Updated dependencies [52aab98]
+- Updated dependencies [261f5b1]
+  - rake-db@2.25.9
+
 ## 1.50.2
 
 ### Patch Changes
