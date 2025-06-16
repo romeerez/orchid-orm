@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.50.2
+
+### Patch Changes
+
+- a65a15b: Fix comparing sql in migration generator when it is wrapped in `()` on when side but is not wrapped on the other side (#494)
+
 ## 1.50.1
 
 ### Patch Changes
