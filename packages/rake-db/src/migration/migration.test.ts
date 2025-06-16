@@ -491,6 +491,7 @@ JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
 JOIN pg_attribute a ON a.attrelid = c.oid
 JOIN pg_type t ON a.atttypid = t.oid AND t.typname = 'enumName'
 JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = 'schemaName'
+WHERE c.relkind IN ('r', 'm')
 GROUP BY n.nspname, c.relname`,
       `ALTER TABLE "public"."one"
   ALTER COLUMN "columnOne" TYPE text,

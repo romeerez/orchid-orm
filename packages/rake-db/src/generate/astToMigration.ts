@@ -72,15 +72,17 @@ export const astToMigration = (
 
       let satisfied = true;
       for (const dep of item.deps) {
-        if (toBeAdded.has(dep) && !added.has(dep)) {
+        if (toBeAdded.has(dep) && !added.has(dep) && !item.add.has(dep)) {
           satisfied = false;
           break;
         }
       }
 
       if (satisfied) {
-        for (const key of item.drop) {
-          if (remainingDeps.has(key)) {
+        for (const dep of item.drop) {
+          const selfRef = item.deps.has(dep);
+          const depsLeft = remainingDeps.get(dep);
+          if (depsLeft && depsLeft > (selfRef ? 1 : 0)) {
             satisfied = false;
             break;
           }

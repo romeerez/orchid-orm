@@ -885,6 +885,47 @@ change(async (db) => {
       );
     });
 
+    it('should create a table with a self-referencing composite foreign key', () => {
+      const result = act([
+        {
+          ...table,
+          shape: {
+            id: t.identity(),
+            name: t.text(),
+          },
+          primaryKey: { columns: ['id', 'name'] },
+          constraints: [
+            {
+              references: {
+                columns: ['id', 'name'],
+                fnOrTable: 'schema.table',
+                foreignColumns: ['id', 'name'],
+              },
+            },
+          ],
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(`  await db.createTable(
+    'schema.table',
+    (t) => ({
+      id: t.identity(),
+      name: t.text(),
+    }),
+    (t) => [
+      t.primaryKey(['id', 'name']),
+      t.foreignKey(
+        ['id', 'name'],
+        'schema.table',
+        ['id', 'name'],
+      ),
+    ],
+  );`),
+      );
+    });
+
     it('should drop a table with a self-referencing foreign key', () => {
       const result = act([
         {
@@ -907,6 +948,48 @@ change(async (db) => {
   }));`),
       );
     });
+  });
+
+  it('should drop a table with a self-referencing composite foreign key', () => {
+    const result = act([
+      {
+        ...table,
+        action: 'drop',
+        shape: {
+          id: t.identity(),
+          name: t.text(),
+        },
+        primaryKey: { columns: ['id', 'name'] },
+        constraints: [
+          {
+            references: {
+              columns: ['id', 'name'],
+              fnOrTable: 'schema.table',
+              foreignColumns: ['id', 'name'],
+            },
+          },
+        ],
+      },
+    ]);
+
+    expectResult(
+      result,
+      template(`  await db.dropTable(
+    'schema.table',
+    (t) => ({
+      id: t.identity(),
+      name: t.text(),
+    }),
+    (t) => [
+      t.primaryKey(['id', 'name']),
+      t.foreignKey(
+        ['id', 'name'],
+        'schema.table',
+        ['id', 'name'],
+      ),
+    ],
+  );`),
+    );
   });
 
   describe('check', () => {
