@@ -66,6 +66,7 @@ export const pull = async (
           ast,
           baseTablePath,
           baseTableExportedAs,
+          currentSchema,
         );
         tables[table.key] = table;
         if (!firstTable) firstTable = table;
@@ -102,6 +103,7 @@ export const pull = async (
     tables,
     extensions,
     domains,
+    currentSchema,
   );
   if (content) pendingFileWrites.push([dbPath, content]);
 

@@ -13,7 +13,11 @@ describe('postgis columns', () => {
   const lon = 35.0462;
   const lat = 48.4647;
   const customSrid = 4267;
-  const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+  const ctx: ColumnToCodeCtx = {
+    t: 't',
+    table: 'table',
+    currentSchema: 'public',
+  };
 
   describe('geography.point', () => {
     const pointColumn = new PostgisGeographyPointColumn(defaultSchemaConfig);

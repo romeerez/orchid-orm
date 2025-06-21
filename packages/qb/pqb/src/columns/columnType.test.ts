@@ -46,7 +46,11 @@ describe('column type', () => {
   }
   const column = new Column(testSchemaConfig);
 
-  const columnToCodeCtx: ColumnToCodeCtx = { t: 't', table: 'table' };
+  const columnToCodeCtx: ColumnToCodeCtx = {
+    t: 't',
+    table: 'table',
+    currentSchema: 'public',
+  };
 
   describe('.primaryKey', () => {
     it('should mark column as a primary key', () => {

@@ -13,8 +13,8 @@ describe('boolean column', () => {
   it('should have toCode', () => {
     const column = t.boolean();
 
-    expect(column.toCode({ t: 't', table: 'table' }, 'key')).toBe(
-      't.boolean()',
-    );
+    expect(
+      column.toCode({ t: 't', table: 'table', currentSchema: 'public' }, 'key'),
+    ).toBe('t.boolean()');
   });
 });

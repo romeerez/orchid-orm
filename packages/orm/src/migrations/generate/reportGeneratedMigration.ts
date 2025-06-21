@@ -106,6 +106,7 @@ export const report = (
         const toCodeCtx: ColumnToCodeCtx = {
           t: 't',
           table: a.name,
+          currentSchema,
           migration: true,
           snakeCase: config.snakeCase,
         };

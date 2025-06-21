@@ -12,7 +12,11 @@ import {
 import { ColumnToCodeCtx, ColumnTypeBase, TimeInterval } from 'orchid-core';
 import { z } from 'zod/v4';
 
-const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+const ctx: ColumnToCodeCtx = {
+  t: 't',
+  table: 'table',
+  currentSchema: 'public',
+};
 
 const testTimestampInput = (column: ColumnTypeBase) => {
   const date = new Date();

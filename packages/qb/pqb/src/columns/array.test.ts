@@ -68,7 +68,11 @@ describe('array column', () => {
   });
 
   it('should have toCode', async () => {
-    const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+    const ctx: ColumnToCodeCtx = {
+      t: 't',
+      table: 'table',
+      currentSchema: 'public',
+    };
 
     const column = t.array(t.integer());
     expect(column.toCode(ctx, 'key')).toBe('t.array(t.integer())');

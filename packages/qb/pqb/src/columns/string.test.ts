@@ -10,7 +10,11 @@ import { raw } from '../sql/rawSql';
 import { ColumnToCodeCtx } from 'orchid-core';
 import { User, userData } from '../test-utils/test-utils';
 
-const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+const ctx: ColumnToCodeCtx = {
+  t: 't',
+  table: 'table',
+  currentSchema: 'public',
+};
 
 const testStringColumnMethods = (
   type: ReturnType<

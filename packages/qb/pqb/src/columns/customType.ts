@@ -21,20 +21,44 @@ export class CustomTypeColumn<
   OperatorsAny
 > {
   operators = Operators.any;
+  public dataType: string;
 
-  constructor(schema: Schema, public dataType: string, extension?: string) {
+  constructor(
+    schema: Schema,
+    public typeName: string,
+    public typeSchema?: string,
+    extension?: string,
+  ) {
     super(
       schema,
       schema.unknown() as never,
       schema.unknown() as never,
       schema.unknown() as never,
     );
+    this.dataType = typeSchema ? typeSchema + '.' + typeName : typeName;
     this.data.isOfCustomType = true;
     this.data.extension = extension;
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {
-    return columnCode(this, ctx, key, `type(${singleQuote(this.dataType)})`);
+    const {
+      dataType,
+      data: { typmod },
+    } = this;
+
+    return columnCode(
+      this,
+      ctx,
+      key,
+      `type(${singleQuote(
+        (dataType.startsWith(ctx.currentSchema)
+          ? dataType.slice(ctx.currentSchema.length + 1)
+          : dataType) +
+          (typmod !== undefined && typmod !== -1 && !dataType.includes('(')
+            ? `(${typmod})`
+            : ''),
+      )})`,
+    );
   }
 
   as<

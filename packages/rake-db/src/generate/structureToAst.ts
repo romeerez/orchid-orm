@@ -247,7 +247,8 @@ export const instantiateDbColumn = (
     if (domainColumn) {
       column = new DomainColumn(
         ctx.columnSchemaConfig,
-        typeId,
+        typeName,
+        typeSchema,
         dbColumn.extension,
       ).as(domainColumn);
     } else {
@@ -264,7 +265,8 @@ export const instantiateDbColumn = (
       } else {
         column = new CustomTypeColumn(
           ctx.columnSchemaConfig,
-          typeId,
+          typeName,
+          typeSchema === 'pg_catalog' ? undefined : typeSchema,
           dbColumn.extension,
         );
 

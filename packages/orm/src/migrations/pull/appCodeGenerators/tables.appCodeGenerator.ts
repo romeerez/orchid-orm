@@ -85,6 +85,7 @@ export const appCodeGenTable = (
   ast: RakeDbAst.Table,
   baseTablePath: string,
   baseTableExportedAs: string,
+  currentSchema: string,
 ): AppCodeGenTable => {
   const tableInfo =
     tableInfos[ast.schema ? `${ast.schema}.${ast.name}` : ast.name];
@@ -117,7 +118,10 @@ export const appCodeGenTable = (
       ast.constraints?.length,
   );
 
-  const shapeCode = columnsShapeToCode({ t: 't', table: ast.name }, ast.shape);
+  const shapeCode = columnsShapeToCode(
+    { t: 't', table: ast.name, currentSchema },
+    ast.shape,
+  );
 
   props.push(
     `columns = this.setColumns(${hasTableData ? '\n    ' : ''}(t) => ({`,

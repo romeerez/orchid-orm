@@ -7,7 +7,11 @@ import {
 } from 'test-utils';
 import { ColumnToCodeCtx } from 'orchid-core';
 
-const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+const ctx: ColumnToCodeCtx = {
+  t: 't',
+  table: 'table',
+  currentSchema: 'public',
+};
 
 describe('custom type column', () => {
   it('should output value of `as` type', () => {

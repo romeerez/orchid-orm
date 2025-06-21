@@ -2,7 +2,11 @@ import { columnsShapeToCode } from './code';
 import { codeToString, ColumnToCodeCtx } from 'orchid-core';
 import { testZodColumnTypes as t } from 'test-utils';
 
-const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+const ctx: ColumnToCodeCtx = {
+  t: 't',
+  table: 'table',
+  currentSchema: 'public',
+};
 
 describe('code', () => {
   describe('codeToString', () => {

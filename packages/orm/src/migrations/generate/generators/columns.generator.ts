@@ -446,6 +446,16 @@ JOIN pg_type AS t ON t.oid = casttarget`);
     }
   }
 
+  if (dbColumn.data.isOfCustomType) {
+    const { typmod } = dbColumn.data;
+    if (typmod !== undefined && typmod !== -1) {
+      const i = codeColumn.dataType.indexOf('(');
+      if (i === -1 || codeColumn.dataType.slice(i + 1, -1) !== `${typmod}`) {
+        return 'change';
+      }
+    }
+  }
+
   if (
     !deepCompare(
       dbData.identity,
@@ -552,6 +562,15 @@ export const getColumnDbType = (
     return (column.enumName = `${schema}.${name}`);
   } else if (column instanceof ArrayColumn) {
     return column.data.item.dataType + '[]'.repeat(column.data.arrayDims);
+  } else if (column.data.isOfCustomType) {
+    let type = column.dataType;
+
+    const i = type.indexOf('(');
+    if (i !== -1) {
+      type = type.slice(0, i);
+    }
+
+    return type.includes('.') ? type : currentSchema + '.' + type;
   } else {
     return column.dataType;
   }

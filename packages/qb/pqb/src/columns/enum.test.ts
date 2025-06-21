@@ -2,7 +2,11 @@ import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
 import { ColumnToCodeCtx } from 'orchid-core';
 import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 
-const ctx: ColumnToCodeCtx = { t: 't', table: 'table' };
+const ctx: ColumnToCodeCtx = {
+  t: 't',
+  table: 'table',
+  currentSchema: 'public',
+};
 
 describe('enum column', () => {
   afterAll(testDb.close);

@@ -193,7 +193,7 @@ const astEncoders: {
     currentSchema: string,
   ) => Code;
 } = {
-  table(ast, config) {
+  table(ast, config, currentSchema) {
     let code: Code[] = [];
     const result = code;
 
@@ -238,6 +238,7 @@ const astEncoders: {
     const toCodeCtx: ColumnToCodeCtx = {
       t: 't',
       table: ast.name,
+      currentSchema,
       migration: true,
       snakeCase: config.snakeCase,
     };
@@ -317,6 +318,7 @@ const astEncoders: {
     const toCodeCtx: ColumnToCodeCtx = {
       t: 't',
       table: ast.name,
+      currentSchema,
       migration: true,
       snakeCase: config.snakeCase,
     };
@@ -363,6 +365,7 @@ const astEncoders: {
             {
               t: 't',
               table: ast.name,
+              currentSchema,
               migration: true,
               snakeCase: config.snakeCase,
             },
@@ -521,11 +524,11 @@ const astEncoders: {
       .map(singleQuote)
       .join(', ')}]);`;
   },
-  domain(ast) {
+  domain(ast, _, currentSchema) {
     return `await db.${ast.action}Domain(${quoteSchemaTable(
       ast,
     )}, (t) => ${ast.baseType.toCode(
-      { t: 't', table: ast.name },
+      { t: 't', table: ast.name, currentSchema },
       ast.baseType.data.name ?? '',
     )});`;
   },

@@ -383,6 +383,9 @@ export interface ColumnDataBase {
 
   // hides the column from create and update.
   readonly?: boolean;
+
+  // postgres internal number modifier, it can be present on custom types.
+  typmod?: number;
 }
 
 export interface ColumnDataCheckBase {
@@ -510,6 +513,7 @@ export type QueryColumnToNullable<C extends QueryColumn> = {
 export interface ColumnToCodeCtx {
   t: string;
   table: string;
+  currentSchema: string;
   migration?: boolean;
   snakeCase?: boolean;
 }

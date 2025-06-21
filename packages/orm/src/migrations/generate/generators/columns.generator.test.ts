@@ -812,4 +812,83 @@ change(async (db) => {
       assert.migration();
     });
   });
+
+  describe('custom column type', () => {
+    it('should create a column with a custom type', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createExtension('vector');
+        },
+        dbOptions: {
+          generatorIgnore: {
+            extensions: ['vector'],
+          },
+        },
+        tables: [
+          table((t) => ({
+            colUmn: t.type('vector(123)'),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createTable(
+    'table',
+    {
+      noPrimaryKey: true,
+    },
+    (t) => ({
+      colUmn: t.type('vector(123)'),
+    }),
+  );
+});
+`);
+
+      assert.report(
+        `${green('+ create table')} table (1 column, no primary key)`,
+      );
+    });
+
+    it('should change a column with a custom type', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createExtension('vector');
+
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            colUmn: t.type('vector(123)'),
+          }));
+        },
+        dbOptions: {
+          generatorIgnore: {
+            extensions: ['vector'],
+          },
+        },
+        tables: [
+          table((t) => ({
+            colUmn: t.type('vector(456)'),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    colUmn: t.change(t.type('vector(123)'), t.type('vector(456)')),
+  }));
+});
+`);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} colUmn:
+    ${yellow('from')}: t.type('vector(123)')
+      ${yellow('to')}: t.type('vector(456)')`);
+    });
+  });
 });

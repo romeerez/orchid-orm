@@ -25,6 +25,7 @@ export const appCodeGenUpdateDbFile = async (
   tables: AppCodeGenTables,
   extensions: DbExtension[],
   domains: RakeDbAst.Domain[],
+  currentSchema: string,
 ): Promise<string | undefined> => {
   const content = await fs.readFile(dbPath, 'utf-8');
   const statements = getTsStatements(content);
@@ -64,7 +65,7 @@ export const appCodeGenUpdateDbFile = async (
             `${quoteObjectKey(
               ast.schema ? `${ast.schema}.${ast.name}` : ast.name,
             )}: (t) => ${ast.baseType.toCode(
-              { t: 't', table: ast.name },
+              { t: 't', table: ast.name, currentSchema },
               ast.baseType.data.name ?? '',
             )},`,
         )

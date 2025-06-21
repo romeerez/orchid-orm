@@ -1,6 +1,7 @@
 import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
+  emptyArray,
   MaybeArray,
   noop,
 } from 'orchid-core';
@@ -57,7 +58,17 @@ const arrange = async (arg: {
     import: () =>
       Promise.resolve({
         db: orchidORM(
-          { noPrimaryKey: 'ignore', ...arg.dbOptions },
+          {
+            noPrimaryKey: 'ignore',
+            ...arg.dbOptions,
+            generatorIgnore: {
+              ...arg.dbOptions?.generatorIgnore,
+              extensions: [
+                ...(arg.dbOptions?.generatorIgnore?.extensions || emptyArray),
+                'vector',
+              ],
+            },
+          },
           arg.tables
             ? Object.fromEntries(arg.tables.map((klass) => [klass.name, klass]))
             : {},
