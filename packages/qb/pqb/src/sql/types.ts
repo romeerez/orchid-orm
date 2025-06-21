@@ -122,8 +122,6 @@ export type QuerySourceItem = {
       }
   );
 
-export type JoinItem = SimpleJoinItem | JoinLateralItem;
-
 export type SimpleJoinItemNonSubQueryArgs =
   | [{ [K: string]: string | Expression } | Expression | true]
   | [leftColumn: string | Expression, rightColumn: string | Expression]
@@ -134,6 +132,14 @@ export type SimpleJoinItemNonSubQueryArgs =
     ];
 
 export type JoinItemArgs =
+  | {
+      // lateral join query
+      l: Query;
+      // as
+      a: string;
+      // "inner join" by checking `IS NOT NULL` in the `ON`
+      i?: boolean;
+    }
   | {
       // relation query from `relationConfig.joinQuery`
       j: IsQuery;
@@ -187,12 +193,10 @@ export type JoinItemArgs =
       c: ColumnTypesBase;
     };
 
-export interface SimpleJoinItem {
+export interface JoinItem {
   type: string;
   args: JoinItemArgs;
 }
-
-export type JoinLateralItem = [type: string, joined: Query, as: string];
 
 export type WhereItem =
   | {

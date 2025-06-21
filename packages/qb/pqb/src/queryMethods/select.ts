@@ -676,10 +676,14 @@ export const processSelectArg = <T extends SelectSelf>(
         value = value.joinQuery(value, q);
 
         let query;
-        const returnType = value.q.returnType;
+        const { returnType, innerJoinLateral } = value.q;
         if (!returnType || returnType === 'all') {
           query = value.json(false);
-          value.q.coalesceValue = emptyArrSQL;
+
+          // no need to coalesce in case of inner lateral join.
+          if (!innerJoinLateral) {
+            value.q.coalesceValue = emptyArrSQL;
+          }
         } else if (returnType === 'pluck') {
           // no select in case of plucking a computed
           query = value.q.select
@@ -718,9 +722,14 @@ export const processSelectArg = <T extends SelectSelf>(
 
         _joinLateral(
           q,
-          value.q.innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
+          innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
           query,
           key,
+          // no need for `ON p.r IS NOT NULL` check when joining a single record,
+          // `JOIN` will handle it on itself.
+          innerJoinLateral &&
+            returnType !== 'one' &&
+            returnType !== 'oneOrThrow',
         );
       }
     }

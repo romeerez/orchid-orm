@@ -6,6 +6,7 @@ import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
   JoinedShapes,
   PickQueryDataShapeAndJoinedShapes,
+  PickQueryDataShapeAndJoinedShapesAndAliases,
   QueryData,
 } from './data';
 import {
@@ -36,14 +37,26 @@ interface SqlJoinItem {
 export const processJoinItem = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: PickQueryDataShapeAndJoinedShapes,
+  query: PickQueryDataShapeAndJoinedShapesAndAliases,
   args: JoinItemArgs,
   quotedAs: string | undefined,
 ): SqlJoinItem => {
   let target: string;
   let on: string | undefined;
 
-  if ('j' in args) {
+  // lateral
+  if ('l' in args) {
+    const { aliasValue } = ctx;
+    ctx.aliasValue = true;
+
+    target = `(${getSqlText(args.l.toSQL(ctx))}) "${
+      query.aliases?.[args.a] || args.a
+    }"`;
+
+    on = `${args.i ? `"${args.a}".r IS NOT NULL` : 'true'}`;
+
+    ctx.aliasValue = aliasValue;
+  } else if ('j' in args) {
     const { j, s, r } = args as {
       j: Query;
       s: boolean;
@@ -324,31 +337,15 @@ export const pushJoinSql = (
   const joinSet = query.join.length > 1 ? new Set<string>() : null;
 
   for (const item of query.join) {
-    let sql;
-    if (Array.isArray(item)) {
-      const q = item[1];
+    const { target, on = 'true' } = processJoinItem(
+      ctx,
+      table,
+      query,
+      item.args,
+      quotedAs,
+    );
 
-      const { aliasValue } = ctx;
-      ctx.aliasValue = true;
-
-      const as = item[2];
-
-      sql = `${item[0]} LATERAL (${getSqlText(q.toSQL(ctx))}) "${
-        query.aliases?.[as] || as
-      }" ON true`;
-
-      ctx.aliasValue = aliasValue;
-    } else {
-      const { target, on = 'true' } = processJoinItem(
-        ctx,
-        table,
-        query,
-        item.args,
-        quotedAs,
-      );
-
-      sql = `${item.type} ${target} ON ${on}`;
-    }
+    const sql = `${item.type} ${target} ON ${on}`;
 
     if (joinSet) {
       if (joinSet.has(sql)) continue;

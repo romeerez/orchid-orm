@@ -341,3 +341,8 @@ export interface PickQueryDataShapeAndJoinedShapes {
   shape: ColumnsShapeBase;
   joinedShapes?: JoinedShapes;
 }
+
+export interface PickQueryDataShapeAndJoinedShapesAndAliases
+  extends PickQueryDataShapeAndJoinedShapes {
+  aliases?: RecordString;
+}

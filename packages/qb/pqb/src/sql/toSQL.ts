@@ -144,6 +144,7 @@ export const toSQL = (
       undefined;
 
     if (query.join) {
+      // console.log(query.joinedForSelect);
       pushJoinSql(
         ctx,
         table,

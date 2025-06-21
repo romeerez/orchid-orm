@@ -99,10 +99,10 @@ describe('hasOne', () => {
         await db.profile.create({ ...profileData, UserId });
         const user = await db.user.find(UserId);
 
-        const query = db.user.queryRelated('profile', user);
+        const q = db.user.queryRelated('profile', user);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT ${profileSelectAll} FROM "profile"
             WHERE "profile"."user_id" = $1
@@ -111,7 +111,7 @@ describe('hasOne', () => {
           [UserId, 'key'],
         );
 
-        const profile = await query;
+        const profile = await q;
 
         expect(profile).toMatchObject(profileData);
       });
@@ -121,10 +121,10 @@ describe('hasOne', () => {
         await db.profile.create({ ...activeProfileData, UserId });
         const user = await db.user.find(UserId);
 
-        const query = db.user.queryRelated('activeProfile', user);
+        const q = db.user.queryRelated('activeProfile', user);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT ${profileSelectAll} FROM "profile" "activeProfile"
             WHERE "activeProfile"."active" = $1
@@ -134,7 +134,7 @@ describe('hasOne', () => {
           [true, UserId, 'key'],
         );
 
-        const profile = await query;
+        const profile = await q;
         expect(profile).toMatchObject(profileData);
       });
 
@@ -142,14 +142,14 @@ describe('hasOne', () => {
         const user = { Id: 1, UserKey: 'key' };
         const now = new Date();
 
-        const query = db.user.queryRelated('profile', user).insert({
+        const q = db.user.queryRelated('profile', user).insert({
           Bio: 'bio',
           updatedAt: now,
           createdAt: now,
         });
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             INSERT INTO "profile"("user_id", "profile_key", "bio", "updated_at", "created_at")
             VALUES ($1, $2, $3, $4, $5)
@@ -162,14 +162,14 @@ describe('hasOne', () => {
         const user = { Id: 1, UserKey: 'key' };
         const now = new Date();
 
-        const query = db.user.queryRelated('activeProfile', user).insert({
+        const q = db.user.queryRelated('activeProfile', user).insert({
           Bio: 'bio',
           updatedAt: now,
           createdAt: now,
         });
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             INSERT INTO "profile"("active", "user_id", "profile_key", "bio", "updated_at", "created_at")
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -301,18 +301,15 @@ describe('hasOne', () => {
 
     describe('join', () => {
       it('should be supported in join', () => {
-        const query = db.user
+        const q = db.user
           .as('u')
           .join('profile', (q) => q.where({ Bio: 'bio' }))
           .select('Name', 'profile.Bio');
 
-        assertType<
-          Awaited<typeof query>,
-          { Name: string; Bio: string | null }[]
-        >();
+        assertType<Awaited<typeof q>, { Name: string; Bio: string | null }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
           SELECT "u"."name" "Name", "profile"."bio" "Bio"
           FROM "user" "u"
@@ -326,18 +323,15 @@ describe('hasOne', () => {
       });
 
       it('should be supported in join using `on`', () => {
-        const query = db.user
+        const q = db.user
           .as('u')
           .join('activeProfile', (q) => q.where({ Bio: 'bio' }))
           .select('Name', 'activeProfile.Bio');
 
-        assertType<
-          Awaited<typeof query>,
-          { Name: string; Bio: string | null }[]
-        >();
+        assertType<Awaited<typeof q>, { Name: string; Bio: string | null }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT "u"."name" "Name", "activeProfile"."bio" "Bio"
             FROM "user" "u"
@@ -352,7 +346,7 @@ describe('hasOne', () => {
       });
 
       it('should be supported in join with a callback', () => {
-        const query = db.user
+        const q = db.user
           .as('u')
           .join(
             (q) => q.profile.as('p').where({ UserId: 123 }),
@@ -360,13 +354,10 @@ describe('hasOne', () => {
           )
           .select('Name', 'p.Bio');
 
-        assertType<
-          Awaited<typeof query>,
-          { Name: string; Bio: string | null }[]
-        >();
+        assertType<Awaited<typeof q>, { Name: string; Bio: string | null }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
           SELECT "u"."name" "Name", "p"."bio" "Bio"
           FROM "user" "u"
@@ -381,7 +372,7 @@ describe('hasOne', () => {
       });
 
       it('should be supported in join with a callback', () => {
-        const query = db.user
+        const q = db.user
           .as('u')
           .join(
             (q) => q.activeProfile.as('p').where({ UserId: 123 }),
@@ -389,13 +380,10 @@ describe('hasOne', () => {
           )
           .select('Name', 'p.Bio');
 
-        assertType<
-          Awaited<typeof query>,
-          { Name: string; Bio: string | null }[]
-        >();
+        assertType<Awaited<typeof q>, { Name: string; Bio: string | null }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT "u"."name" "Name", "p"."bio" "Bio"
             FROM "user" "u"
@@ -466,17 +454,17 @@ describe('hasOne', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.user
+        const q = db.user
           .as('u')
           .select('Id', {
             profile: (q) => q.profile.where({ Bio: 'bio' }),
           })
           .order('profile.Bio');
 
-        assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+        assertType<Awaited<typeof q>, { Id: number; profile: Profile }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "u"."id" "Id",
@@ -496,17 +484,17 @@ describe('hasOne', () => {
       });
 
       it('should be selectable using `on`', () => {
-        const query = db.user
+        const q = db.user
           .as('u')
           .select('Id', {
             profile: (q) => q.activeProfile.where({ Bio: 'bio' }),
           })
           .order('profile.Bio');
 
-        assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+        assertType<Awaited<typeof q>, { Id: number; profile: Profile }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "u"."id" "Id",
@@ -526,18 +514,37 @@ describe('hasOne', () => {
         );
       });
 
+      it('should support join() for inner join', () => {
+        const q = db.user.as('u').select('Id', {
+          profile: (q) => q.profile.join().select('Id'),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT
+              "u"."id" "Id",
+              row_to_json("profile".*) "profile"
+            FROM "user" "u"
+            JOIN LATERAL (
+              SELECT "profile"."id" "Id"
+              FROM "profile"
+              WHERE "profile"."user_id" = "u"."id"
+                AND "profile"."profile_key" = "u"."user_key"
+            ) "profile" ON true
+          `,
+        );
+      });
+
       it('should handle exists sub query', () => {
-        const query = db.user.as('u').select('Id', {
+        const q = db.user.as('u').select('Id', {
           hasProfile: (q) => q.profile.exists(),
         });
 
-        assertType<
-          Awaited<typeof query>,
-          { Id: number; hasProfile: boolean }[]
-        >();
+        assertType<Awaited<typeof q>, { Id: number; hasProfile: boolean }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "u"."id" "Id",
@@ -554,17 +561,14 @@ describe('hasOne', () => {
       });
 
       it('should handle exists sub query using `on`', () => {
-        const query = db.user.as('u').select('Id', {
+        const q = db.user.as('u').select('Id', {
           hasProfile: (q) => q.activeProfile.exists(),
         });
 
-        assertType<
-          Awaited<typeof query>,
-          { Id: number; hasProfile: boolean }[]
-        >();
+        assertType<Awaited<typeof q>, { Id: number; hasProfile: boolean }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "u"."id" "Id",
@@ -794,7 +798,7 @@ describe('hasOne', () => {
       });
 
       it('should support create many', async () => {
-        const query = db.user.createMany([
+        const q = db.user.createMany([
           {
             ...userData,
             Name: 'user 1',
@@ -817,7 +821,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        const users = await query;
+        const users = await q;
         const profiles = await db.profile
           .where({
             UserId: { in: users.map((user) => user.Id) },
@@ -832,7 +836,7 @@ describe('hasOne', () => {
       });
 
       it('should create many using `on`', async () => {
-        const query = db.user.createMany([
+        const q = db.user.createMany([
           {
             ...userData,
             Name: 'user 1',
@@ -855,7 +859,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        const users = await query;
+        const users = await q;
         const profiles = await db.profile
           .where({
             UserId: { in: users.map((user) => user.Id) },
@@ -931,7 +935,7 @@ describe('hasOne', () => {
           },
         });
 
-        const query = db.user.create({
+        const q = db.user.create({
           ...userData,
           Name: 'user',
           profile: {
@@ -939,7 +943,7 @@ describe('hasOne', () => {
           },
         });
 
-        const user = await query;
+        const user = await q;
         const profile = await db.user.queryRelated('profile', user);
 
         assert.user({ user, Name: 'user' });
@@ -957,7 +961,7 @@ describe('hasOne', () => {
           },
         });
 
-        const query = db.user.create({
+        const q = db.user.create({
           ...userData,
           Name: 'user',
           activeProfile: {
@@ -965,7 +969,7 @@ describe('hasOne', () => {
           },
         });
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -989,7 +993,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        const query = db.user.createMany([
+        const q = db.user.createMany([
           {
             ...userData,
             Name: 'user 1',
@@ -1006,7 +1010,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        const users = await query;
+        const users = await q;
         const profiles = await db.profile
           .where({
             UserId: { in: users.map((user) => user.Id) },
@@ -1031,7 +1035,7 @@ describe('hasOne', () => {
           },
         });
 
-        const query = db.user.createMany([
+        const q = db.user.createMany([
           {
             ...userData,
             activeProfile: {
@@ -1040,7 +1044,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -2399,13 +2403,13 @@ describe('hasOne through', () => {
 
   describe('queryRelated', () => {
     it('should query related record', async () => {
-      const query = db.message.queryRelated('profile', {
+      const q = db.message.queryRelated('profile', {
         AuthorId: 1,
         MessageKey: 'key',
       });
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
@@ -2421,13 +2425,13 @@ describe('hasOne through', () => {
     });
 
     it('should query related record using `on`', async () => {
-      const query = db.message.queryRelated('activeProfile', {
+      const q = db.message.queryRelated('activeProfile', {
         AuthorId: 1,
         MessageKey: 'key',
       });
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" "activeProfile"
           WHERE EXISTS (
@@ -2611,18 +2615,15 @@ describe('hasOne through', () => {
 
   describe('join', () => {
     it('should be supported in join', () => {
-      const query = db.message
+      const q = db.message
         .as('m')
         .join('profile', (q) => q.where({ Bio: 'bio' }))
         .select('Text', 'profile.Bio');
 
-      assertType<
-        Awaited<typeof query>,
-        { Text: string; Bio: string | null }[]
-      >();
+      assertType<Awaited<typeof q>, { Text: string; Bio: string | null }[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT "m"."text" "Text", "profile"."bio" "Bio"
           FROM "message" "m"
@@ -2642,18 +2643,15 @@ describe('hasOne through', () => {
     });
 
     it('should be supported in join using `on`', () => {
-      const query = db.message
+      const q = db.message
         .as('m')
         .join('activeProfile', (q) => q.where({ Bio: 'bio' }))
         .select('Text', 'activeProfile.Bio');
 
-      assertType<
-        Awaited<typeof query>,
-        { Text: string; Bio: string | null }[]
-      >();
+      assertType<Awaited<typeof q>, { Text: string; Bio: string | null }[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT "m"."text" "Text", "activeProfile"."bio" "Bio"
           FROM "message" "m"
@@ -2675,7 +2673,7 @@ describe('hasOne through', () => {
     });
 
     it('should be supported in join with a callback', () => {
-      const query = db.message
+      const q = db.message
         .as('m')
         .join(
           (q) => q.profile.as('p').where({ UserId: 123 }),
@@ -2683,13 +2681,10 @@ describe('hasOne through', () => {
         )
         .select('Text', 'p.Bio');
 
-      assertType<
-        Awaited<typeof query>,
-        { Text: string; Bio: string | null }[]
-      >();
+      assertType<Awaited<typeof q>, { Text: string; Bio: string | null }[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT "m"."text" "Text", "p"."bio" "Bio"
           FROM "message" "m"
@@ -2710,7 +2705,7 @@ describe('hasOne through', () => {
     });
 
     it('should be supported in join with a callback using `on`', () => {
-      const query = db.message
+      const q = db.message
         .as('m')
         .join(
           (q) => q.activeProfile.as('p').where({ UserId: 123 }),
@@ -2718,13 +2713,10 @@ describe('hasOne through', () => {
         )
         .select('Text', 'p.Bio');
 
-      assertType<
-        Awaited<typeof query>,
-        { Text: string; Bio: string | null }[]
-      >();
+      assertType<Awaited<typeof q>, { Text: string; Bio: string | null }[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT "m"."text" "Text", "p"."bio" "Bio"
           FROM "message" "m"
@@ -2817,14 +2809,14 @@ describe('hasOne through', () => {
 
   describe('select', () => {
     it('should be selectable', () => {
-      const query = db.message.as('m').select('Id', {
+      const q = db.message.as('m').select('Id', {
         profile: (q) => q.profile.where({ Bio: 'bio' }),
       });
 
-      assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+      assertType<Awaited<typeof q>, { Id: number; profile: Profile }[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT
             "m"."id" "Id",
@@ -2834,7 +2826,7 @@ describe('hasOne through', () => {
             SELECT ${profileSelectAll} FROM "profile"
             WHERE "profile"."bio" = $1
               AND EXISTS (
-                SELECT 1 FROM "user"  "sender"
+                SELECT 1 FROM "user" "sender"
                 WHERE "profile"."user_id" = "sender"."id"
                   AND "profile"."profile_key" = "sender"."user_key"
                   AND "sender"."id" = "m"."author_id"
@@ -2848,14 +2840,14 @@ describe('hasOne through', () => {
     });
 
     it('should be selectable using `on`', () => {
-      const query = db.message.as('m').select('Id', {
+      const q = db.message.as('m').select('Id', {
         profile: (q) => q.activeProfile.where({ Bio: 'bio' }),
       });
 
-      assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+      assertType<Awaited<typeof q>, { Id: number; profile: Profile }[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT
             "m"."id" "Id",
@@ -2880,18 +2872,42 @@ describe('hasOne through', () => {
       );
     });
 
+    it('should support join() for inner join', () => {
+      const q = db.message.as('m').select('Id', {
+        profile: (q) => q.profile.join(),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT
+            "m"."id" "Id",
+            row_to_json("profile".*) "profile"
+          FROM "message" "m"
+          JOIN LATERAL (
+            SELECT ${profileSelectAll} FROM "profile"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" "sender"
+              WHERE "profile"."user_id" = "sender"."id"
+                AND "profile"."profile_key" = "sender"."user_key"
+                AND "sender"."id" = "m"."author_id"
+                AND "sender"."user_key" = "m"."message_key"
+            )
+          ) "profile" ON true
+          WHERE ("m"."deleted_at" IS NULL)
+        `,
+      );
+    });
+
     it('should handle exists sub query', () => {
-      const query = db.message.as('m').select('Id', {
+      const q = db.message.as('m').select('Id', {
         hasProfile: (q) => q.profile.exists(),
       });
 
-      assertType<
-        Awaited<typeof query>,
-        { Id: number; hasProfile: boolean }[]
-      >();
+      assertType<Awaited<typeof q>, { Id: number; hasProfile: boolean }[]>();
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT
             "m"."id" "Id",

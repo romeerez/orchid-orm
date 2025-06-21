@@ -287,6 +287,7 @@ export const _joinLateralProcessArg = (
  * @param type - SQL of the JOIN kind: JOIN or LEFT JOIN
  * @param arg - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
  * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
+ * @param innerJoinLateral - add `ON p.r IS NOT NULL` check to have INNER JOIN like experience when sub-selecting arrays.
  */
 export const _joinLateral = <
   T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -299,6 +300,7 @@ export const _joinLateral = <
   type: string,
   arg: Query,
   as?: string,
+  innerJoinLateral?: boolean,
 ): JoinLateralResult<T, Table, Meta, Result, RequireJoined> => {
   const q = self as unknown as Query;
 
@@ -326,7 +328,10 @@ export const _joinLateral = <
   as ||= getQueryAs(arg);
   setObjectValueImmutable(q.q, 'joinedComputeds', as, arg.q.computeds);
 
-  pushQueryValueImmutable(q, 'join', [type, arg, as]);
+  pushQueryValueImmutable(q, 'join', {
+    type: `${type} LATERAL`,
+    args: { l: arg, a: as, i: innerJoinLateral },
+  });
 
   return q as never;
 };

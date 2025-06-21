@@ -32,6 +32,7 @@ import {
   MaybeArray,
   OperatorToSQL,
   QueryColumns,
+  RecordString,
   RecordUnknown,
   toArray,
 } from 'orchid-core';
@@ -46,6 +47,7 @@ interface QueryDataForWhere {
   scopes?: { [K: string]: QueryScopeData };
   outerAliases?: CommonQueryData['outerAliases'];
   parsers?: ColumnsParsers;
+  aliases?: RecordString;
 }
 
 interface QueryDataWithLanguage extends QueryDataForWhere {

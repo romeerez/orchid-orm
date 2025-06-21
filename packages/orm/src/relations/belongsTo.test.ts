@@ -99,10 +99,10 @@ describe('belongsTo', () => {
           UserId: user.Id,
         });
 
-        const query = db.profile.queryRelated('user', profile);
+        const q = db.profile.queryRelated('user', profile);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT ${userSelectAll} FROM "user"
             WHERE "user"."id" = $1
@@ -111,7 +111,7 @@ describe('belongsTo', () => {
           [user.Id, 'key'],
         );
 
-        const loaded = await query;
+        const loaded = await q;
         expect(loaded).toMatchObject(user);
       });
 
@@ -122,10 +122,10 @@ describe('belongsTo', () => {
           UserId: user.Id,
         });
 
-        const query = db.profile.queryRelated('activeUser', profile);
+        const q = db.profile.queryRelated('activeUser', profile);
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT ${userSelectAll} FROM "user" "activeUser"
             WHERE "activeUser"."active" = $1
@@ -135,7 +135,7 @@ describe('belongsTo', () => {
           [true, user.Id, 'key'],
         );
 
-        const loaded = await query;
+        const loaded = await q;
         expect(loaded).toMatchObject(user);
       });
     });
@@ -295,18 +295,15 @@ describe('belongsTo', () => {
 
     describe('join', () => {
       it('should be supported in join', () => {
-        const query = db.profile
+        const q = db.profile
           .as('p')
           .join('user', (q) => q.where({ Name: 'name' }))
           .select('Bio', 'user.Name');
 
-        assertType<
-          Awaited<typeof query>,
-          { Bio: string | null; Name: string }[]
-        >();
+        assertType<Awaited<typeof q>, { Bio: string | null; Name: string }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "user"."name" "Name"
             FROM "profile" "p"
@@ -320,18 +317,15 @@ describe('belongsTo', () => {
       });
 
       it('should be supported in join using `on`', () => {
-        const query = db.profile
+        const q = db.profile
           .as('p')
           .join('activeUser', (q) => q.where({ Name: 'name' }))
           .select('Bio', 'activeUser.Name');
 
-        assertType<
-          Awaited<typeof query>,
-          { Bio: string | null; Name: string }[]
-        >();
+        assertType<Awaited<typeof q>, { Bio: string | null; Name: string }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "activeUser"."name" "Name"
             FROM "profile" "p"
@@ -346,7 +340,7 @@ describe('belongsTo', () => {
       });
 
       it('should be supported in join with a callback', () => {
-        const query = db.profile
+        const q = db.profile
           .as('p')
           .join(
             (q) => q.user.as('u').where({ Age: 20 }),
@@ -354,13 +348,10 @@ describe('belongsTo', () => {
           )
           .select('Bio', 'u.Name');
 
-        assertType<
-          Awaited<typeof query>,
-          { Bio: string | null; Name: string }[]
-        >();
+        assertType<Awaited<typeof q>, { Bio: string | null; Name: string }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "u"."name" "Name"
             FROM "profile" "p"
@@ -375,7 +366,7 @@ describe('belongsTo', () => {
       });
 
       it('should be supported in join with a callback using `on`', () => {
-        const query = db.profile
+        const q = db.profile
           .as('p')
           .join(
             (q) => q.activeUser.as('u').where({ Age: 20 }),
@@ -383,13 +374,10 @@ describe('belongsTo', () => {
           )
           .select('Bio', 'u.Name');
 
-        assertType<
-          Awaited<typeof query>,
-          { Bio: string | null; Name: string }[]
-        >();
+        assertType<Awaited<typeof q>, { Bio: string | null; Name: string }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "u"."name" "Name"
             FROM "profile" "p"
@@ -460,7 +448,7 @@ describe('belongsTo', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.profile
+        const q = db.profile
           .as('p')
           .select('Id', {
             user: (q) => q.user.select('Id', 'Name').where({ Name: 'name' }),
@@ -468,12 +456,12 @@ describe('belongsTo', () => {
           .order('user.Name');
 
         assertType<
-          Awaited<typeof query>,
+          Awaited<typeof q>,
           { Id: number; user: { Id: number; Name: string } | undefined }[]
         >();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "p"."id" "Id",
@@ -493,7 +481,7 @@ describe('belongsTo', () => {
       });
 
       it('should be selectable using `on`', () => {
-        const query = db.profile
+        const q = db.profile
           .as('p')
           .select('Id', {
             user: (q) =>
@@ -502,12 +490,12 @@ describe('belongsTo', () => {
           .order('user.Name');
 
         assertType<
-          Awaited<typeof query>,
+          Awaited<typeof q>,
           { Id: number; user: { Id: number; Name: string } | undefined }[]
         >();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "p"."id" "Id",
@@ -527,15 +515,37 @@ describe('belongsTo', () => {
         );
       });
 
+      it('should support join() for inner join', () => {
+        const q = db.profile.as('p').select('Id', {
+          u: (q) => q.user.join().select('Id'),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT
+              "p"."id" "Id",
+              row_to_json("u".*) "u"
+            FROM "profile" "p"
+            JOIN LATERAL (
+              SELECT "user"."id" "Id"
+              FROM "user"
+              WHERE "user"."id" = "p"."user_id"
+                AND "user"."user_key" = "p"."profile_key"
+            ) "u" ON true
+          `,
+        );
+      });
+
       it('should handle exists sub query', () => {
-        const query = db.profile.as('p').select('Id', {
+        const q = db.profile.as('p').select('Id', {
           hasUser: (q) => q.user.exists(),
         });
 
-        assertType<Awaited<typeof query>, { Id: number; hasUser: boolean }[]>();
+        assertType<Awaited<typeof q>, { Id: number; hasUser: boolean }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "p"."id" "Id",
@@ -552,14 +562,14 @@ describe('belongsTo', () => {
       });
 
       it('should handle exists sub query using `on`', () => {
-        const query = db.profile.as('p').select('Id', {
+        const q = db.profile.as('p').select('Id', {
           hasUser: (q) => q.activeUser.exists(),
         });
 
-        assertType<Awaited<typeof query>, { Id: number; hasUser: boolean }[]>();
+        assertType<Awaited<typeof q>, { Id: number; hasUser: boolean }[]>();
 
         expectSql(
-          query.toSQL(),
+          q.toSQL(),
           `
             SELECT
               "p"."id" "Id",
@@ -802,7 +812,7 @@ describe('belongsTo', () => {
       });
 
       it('should support create in batch create', async () => {
-        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
+        const q = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
           Array.from({ length: 2 }, (_, i) => ({
             createdAt: messageData.createdAt,
             updatedAt: messageData.updatedAt,
@@ -812,7 +822,7 @@ describe('belongsTo', () => {
           })),
         );
 
-        const [first, second] = await query;
+        const [first, second] = await q;
 
         await assert.message({
           messageId: first.Id,
@@ -834,7 +844,7 @@ describe('belongsTo', () => {
       });
 
       it('should support create in batch create using `on`', async () => {
-        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
+        const q = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
           Array.from({ length: 2 }, (_, i) => ({
             createdAt: messageData.createdAt,
             updatedAt: messageData.updatedAt,
@@ -844,7 +854,7 @@ describe('belongsTo', () => {
           })),
         );
 
-        const [first, second] = await query;
+        const [first, second] = await q;
 
         await assert.message({
           messageId: first.Id,
@@ -1023,7 +1033,7 @@ describe('belongsTo', () => {
         await db.chat.create({ ...chatData, Title: 'chat' });
         await db.user.create({ ...userData, Name: 'user' });
 
-        const query = db.message.select('Id', 'ChatId', 'AuthorId').create({
+        const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
           createdAt: messageData.createdAt,
           updatedAt: messageData.updatedAt,
           Text: 'message',
@@ -1035,7 +1045,7 @@ describe('belongsTo', () => {
           },
         });
 
-        const { Id: messageId, ChatId, AuthorId } = await query;
+        const { Id: messageId, ChatId, AuthorId } = await q;
 
         await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
         await assert.chat({ ChatId, Title: 'chat' });
@@ -1046,7 +1056,7 @@ describe('belongsTo', () => {
         await db.chat.create({ ...chatData, Title: 'chat' });
         await db.user.create({ ...userData, Name: 'user' });
 
-        const query = db.message.select('Id', 'ChatId', 'AuthorId').create({
+        const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
           createdAt: messageData.createdAt,
           updatedAt: messageData.updatedAt,
           Text: 'message',
@@ -1060,7 +1070,7 @@ describe('belongsTo', () => {
           },
         });
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1075,7 +1085,7 @@ describe('belongsTo', () => {
           { ...userData, Name: 'user 2' },
         ]);
 
-        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany([
+        const q = db.message.select('Id', 'ChatId', 'AuthorId').createMany([
           {
             createdAt: messageData.createdAt,
             updatedAt: messageData.updatedAt,
@@ -1100,7 +1110,7 @@ describe('belongsTo', () => {
           },
         ]);
 
-        const [first, second] = await query;
+        const [first, second] = await q;
 
         await assert.message({
           messageId: first.Id,
@@ -1125,7 +1135,7 @@ describe('belongsTo', () => {
         await db.chat.create(chatData);
         await db.user.create(userData);
 
-        const query = db.message.createMany([
+        const q = db.message.createMany([
           {
             ...messageData,
             chat: {
@@ -1137,7 +1147,7 @@ describe('belongsTo', () => {
           },
         ]);
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1150,17 +1160,15 @@ describe('belongsTo', () => {
           Title: 'chat',
         });
 
-        const query = await db.message
-          .select('Id', 'ChatId', 'AuthorId')
-          .create({
-            updatedAt: messageData.updatedAt,
-            createdAt: messageData.createdAt,
-            Text: 'message',
-            chat: testData.createOrConnectMessageChat(),
-            sender: testData.createOrConnectMessageSender(),
-          });
+        const q = await db.message.select('Id', 'ChatId', 'AuthorId').create({
+          updatedAt: messageData.updatedAt,
+          createdAt: messageData.createdAt,
+          Text: 'message',
+          chat: testData.createOrConnectMessageChat(),
+          sender: testData.createOrConnectMessageSender(),
+        });
 
-        const { Id: messageId, ChatId, AuthorId } = await query;
+        const { Id: messageId, ChatId, AuthorId } = await q;
 
         expect(ChatId).toBe(chat.IdOfChat);
 
@@ -1180,17 +1188,15 @@ describe('belongsTo', () => {
           Name: 'name',
         });
 
-        const query = await db.message
-          .select('Id', 'ChatId', 'AuthorId')
-          .create({
-            updatedAt: messageData.updatedAt,
-            createdAt: messageData.createdAt,
-            Text: 'message',
-            activeChat: testData.createOrConnectMessageChat(),
-            activeSender: testData.createOrConnectMessageSender(),
-          });
+        const q = await db.message.select('Id', 'ChatId', 'AuthorId').create({
+          updatedAt: messageData.updatedAt,
+          createdAt: messageData.createdAt,
+          Text: 'message',
+          activeChat: testData.createOrConnectMessageChat(),
+          activeSender: testData.createOrConnectMessageSender(),
+        });
 
-        const { Id: messageId, ChatId, AuthorId } = await query;
+        const { Id: messageId, ChatId, AuthorId } = await q;
 
         expect(ChatId).toBe(activeChat.IdOfChat);
         expect(AuthorId).not.toBe(user.Id);
@@ -1210,7 +1216,7 @@ describe('belongsTo', () => {
           Name: 'user 2',
         });
 
-        const query = await db.message
+        const q = await db.message
           .select('Id', 'ChatId', 'AuthorId')
           .createMany([
             {
@@ -1229,7 +1235,7 @@ describe('belongsTo', () => {
             },
           ]);
 
-        const [first, second] = await query;
+        const [first, second] = await q;
 
         expect(first.ChatId).toBe(chat.IdOfChat);
         expect(second.AuthorId).toBe(user.Id);
@@ -1264,7 +1270,7 @@ describe('belongsTo', () => {
           Name: 'user',
         });
 
-        const query = await db.message
+        const q = await db.message
           .select('Id', 'ChatId', 'AuthorId')
           .createMany([
             {
@@ -1276,7 +1282,7 @@ describe('belongsTo', () => {
             },
           ]);
 
-        const [{ Id: messageId, ChatId, AuthorId }] = await query;
+        const [{ Id: messageId, ChatId, AuthorId }] = await q;
 
         expect(ChatId).toBe(activeChat.IdOfChat);
         expect(AuthorId).not.toBe(user.Id);
@@ -1411,13 +1417,13 @@ describe('belongsTo', () => {
           .create({ ...profileData, UserId: firstUserId });
         const user = await db.user.select('Id').create(userData);
 
-        const query = db.profile.find(id).update({
+        const q = db.profile.find(id).update({
           activeUser: {
             set: user,
           },
         });
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1454,13 +1460,13 @@ describe('belongsTo', () => {
           Name: 'user',
         });
 
-        const query = db.profile.find(id).update({
+        const q = db.profile.find(id).update({
           activeUser: {
             set: { Name: 'user' },
           },
         });
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1493,13 +1499,13 @@ describe('belongsTo', () => {
         ]);
         const user = await db.user.select('Id').create(userData);
 
-        const query = db.profile.where({ Id: { in: profileIds } }).update({
+        const q = db.profile.where({ Id: { in: profileIds } }).update({
           activeUser: {
             set: user,
           },
         });
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1538,13 +1544,13 @@ describe('belongsTo', () => {
           Name: 'user',
         });
 
-        const query = db.profile.where({ Id: { in: profileIds } }).update({
+        const q = db.profile.where({ Id: { in: profileIds } }).update({
           activeUser: {
             set: { Name: 'user' },
           },
         });
 
-        const res = await query.catch((err) => err);
+        const res = await q.catch((err) => err);
         expect(res).toEqual(expect.any(NotFoundError));
       });
     });
