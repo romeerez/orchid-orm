@@ -78,6 +78,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Install db extensions
+        run: |
+          docker exec $(docker ps -q --filter ancestor=postgis/postgis:16-3.4) sh -c "apt-get update && apt-get install -y postgresql-16-pgvector"
+
       - name: Create database
         working-directory: packages/rake-db
         run: pnpm db create
