@@ -1,5 +1,14 @@
 # pqb
 
+## 0.52.2
+
+### Patch Changes
+
+- 10dcbeb: Improve custom column types handling in migration generator (#528)
+- 640a9d7: Fix empty `join()` to filter out records with selected empty arrays (#527)
+- Updated dependencies [10dcbeb]
+  - orchid-core@0.25.1
+
 ## 0.52.1
 
 ### Patch Changes

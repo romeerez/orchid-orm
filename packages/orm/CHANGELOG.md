@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.50.4
+
+### Patch Changes
+
+- 10dcbeb: Improve custom column types handling in migration generator (#528)
+- ebfc47f: Support migration generation handling of enum arrays (#529)
+- 640a9d7: Fix empty `join()` to filter out records with selected empty arrays (#527)
+- Updated dependencies [10dcbeb]
+- Updated dependencies [ebfc47f]
+- Updated dependencies [640a9d7]
+  - rake-db@2.25.10
+  - pqb@0.52.2
+  - orchid-core@0.25.1
+
 ## 1.50.3
 
 ### Patch Changes

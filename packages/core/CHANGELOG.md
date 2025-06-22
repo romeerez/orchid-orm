@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.25.1
+
+### Patch Changes
+
+- 10dcbeb: Improve custom column types handling in migration generator (#528)
+
 ## 0.25.0
 
 ### Minor Changes
