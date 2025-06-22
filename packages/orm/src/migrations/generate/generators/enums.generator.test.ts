@@ -23,6 +23,9 @@ describe('enums', () => {
       tables: [
         table((t) => ({
           numBers: t.enum('numbers', ['one', 'two', 'three']).default('one'),
+          numBersArr: t
+            .array(t.enum('numbers', ['one', 'two', 'three']))
+            .default(['one']),
         })),
       ],
     });
@@ -43,13 +46,14 @@ change(async (db) => {
     },
     (t) => ({
       numBers: t.enum('numbers').default('one'),
+      numBersArr: t.array(t.enum('numbers')).default(["one"]),
     }),
   );
 });
 `);
 
     assert.report(`${green('+ create enum')} numbers: (one, two, three)
-${green('+ create table')} table (1 column, no primary key)`);
+${green('+ create table')} table (2 columns, no primary key)`);
   });
 
   it('should be able to change enum column to a text column without recreating it', async () => {
@@ -59,11 +63,13 @@ ${green('+ create table')} table (1 column, no primary key)`);
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           numBers: t.enum('numbers'),
+          numBersArr: t.array(t.enum('numbers')),
         }));
       },
       tables: [
         table((t) => ({
           numBers: t.text(),
+          numBersArr: t.array(t.text()),
         })),
       ],
     });
@@ -75,6 +81,7 @@ ${green('+ create table')} table (1 column, no primary key)`);
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     numBers: t.change(t.enum('public.numbers'), t.text()),
+    numBersArr: t.change(t.array(t.enum('public.numbers')), t.array(t.text())),
   }));
 });
 
@@ -82,6 +89,15 @@ change(async (db) => {
   await db.dropEnum('public.numbers', ['one', 'two', 'three']);
 });
 `);
+
+    assert.report(`${red('- drop enum')} numbers: (one, two, three)
+${yellow('~ change table')} table:
+  ${yellow('~ change column')} numBers:
+    ${yellow('from')}: t.enum('public.numbers')
+      ${yellow('to')}: t.text()
+  ${yellow('~ change column')} numBersArr:
+    ${yellow('from')}: t.array(t.enum('public.numbers'))
+      ${yellow('to')}: t.array(t.text())`);
   });
 
   it('should not be dropped when ignored', async () => {
@@ -111,6 +127,7 @@ change(async (db) => {
           (t) => ({
             iD: t.identity().primaryKey(),
             numBers: t.enum('numbers', ['one', 'two', 'three']),
+            numBersArr: t.array(t.enum('numbers', ['one', 'two', 'three'])),
           }),
           undefined,
           { noPrimaryKey: false },
@@ -130,12 +147,13 @@ change(async (db) => {
   await db.createTable('table', (t) => ({
     iD: t.identity().primaryKey(),
     numBers: t.enum('numbers'),
+    numBersArr: t.array(t.enum('numbers')),
   }));
 });
 `);
 
     assert.report(`${green('+ create enum')} numbers: (one, two, three)
-${green('+ create table')} table (2 columns)`);
+${green('+ create table')} table (3 columns)`);
   });
 
   it('should drop unused enum', async () => {
@@ -145,6 +163,7 @@ ${green('+ create table')} table (2 columns)`);
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           numBers: t.enum('numbers'),
+          numBersArr: t.array(t.enum('numbers')),
         }));
       },
       tables: [table()],
@@ -157,6 +176,7 @@ ${green('+ create table')} table (2 columns)`);
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     numBers: t.drop(t.enum('public.numbers')),
+    numBersArr: t.drop(t.array(t.enum('public.numbers'))),
   }));
 });
 
@@ -167,7 +187,8 @@ change(async (db) => {
 
     assert.report(`${red('- drop enum')} numbers: (one, two, three)
 ${yellow('~ change table')} table:
-  ${red('- drop column')} numBers public.numbers`);
+  ${red('- drop column')} numBers public.numbers
+  ${red('- drop column')} numBersArr numbers[]`);
   });
 
   it('should change enum schema', async () => {
@@ -179,11 +200,15 @@ ${yellow('~ change table')} table:
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           numBers: t.enum('numbers'),
+          numBersArr: t.array(t.enum('numbers')),
         }));
       },
       tables: [
         table((t) => ({
           numBers: t.enum('schema.numbers', ['one', 'two', 'three']),
+          numBersArr: t.array(
+            t.enum('schema.numbers', ['one', 'two', 'three']),
+          ),
         })),
       ],
     });
@@ -211,11 +236,13 @@ change(async (db) => {
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('from'),
+          colUmnArr: t.array(t.enum('from')),
         }));
       },
       tables: [
         table((t) => ({
           colUmn: t.enum('to', ['one', 'two', 'three']),
+          colUmnArr: t.array(t.enum('to', ['one', 'two', 'three'])),
         })),
       ],
       selects: [0],
@@ -232,6 +259,7 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     colUmn: t.change(t.enum('public.from'), t.enum('public.to')),
+    colUmnArr: t.change(t.array(t.enum('public.from')), t.array(t.enum('public.to'))),
   }));
 });
 
@@ -245,7 +273,10 @@ ${red('- drop enum')} from: (one, two, three)
 ${yellow('~ change table')} table:
   ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.enum('public.from')
-      ${yellow('to')}: t.enum('public.to')`);
+      ${yellow('to')}: t.enum('public.to')
+  ${yellow('~ change column')} colUmnArr:
+    ${yellow('from')}: t.array(t.enum('public.from'))
+      ${yellow('to')}: t.array(t.enum('public.to'))`);
   });
 
   it('should rename enum after prompt', async () => {
@@ -255,11 +286,13 @@ ${yellow('~ change table')} table:
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('from'),
+          colUmnArr: t.array(t.enum('from')),
         }));
       },
       tables: [
         table((t) => ({
           colUmn: t.enum('to', ['one', 'two', 'three']),
+          colUmnArr: t.array(t.enum('to', ['one', 'two', 'three'])),
         })),
       ],
       selects: [1],
@@ -284,11 +317,13 @@ change(async (db) => {
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('from'),
+          colUmnArr: t.array(t.enum('from')),
         }));
       },
       tables: [
         table((t) => ({
           colUmn: t.enum('to', ['one', 'two', 'three', 'four']),
+          colUmnArr: t.array(t.enum('to', ['one', 'two', 'three', 'four'])),
         })),
       ],
       selects: [1],
@@ -322,11 +357,13 @@ change(async (db) => {
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('from.enum'),
+          colUmnArr: t.array(t.enum('from.enum')),
         }));
       },
       tables: [
         table((t) => ({
           colUmn: t.enum('to.enum', ['one', 'two', 'three']),
+          colUmnArr: t.array(t.enum('to.enum', ['one', 'two', 'three'])),
         })),
       ],
       selects: [1],
@@ -355,11 +392,15 @@ change(async (db) => {
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('fromSchema.fromEnum'),
+          colUmnArr: t.array(t.enum('fromSchema.fromEnum')),
         }));
       },
       tables: [
         table((t) => ({
           colUmn: t.enum('toSchema.toEnum', ['one', 'two', 'three']),
+          colUmnArr: t.array(
+            t.enum('toSchema.toEnum', ['one', 'two', 'three']),
+          ),
         })),
       ],
     });
@@ -385,6 +426,7 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     colUmn: t.change(t.enum('fromSchema.fromEnum'), t.enum('toSchema.toEnum')),
+    colUmnArr: t.change(t.array(t.enum('fromSchema.fromEnum')), t.array(t.enum('toSchema.toEnum'))),
   }));
 });
 
@@ -404,7 +446,10 @@ ${red('- drop enum')} fromSchema.fromEnum: (one, two, three)
 ${yellow('~ change table')} table:
   ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.enum('fromSchema.fromEnum')
-      ${yellow('to')}: t.enum('toSchema.toEnum')`);
+      ${yellow('to')}: t.enum('toSchema.toEnum')
+  ${yellow('~ change column')} colUmnArr:
+    ${yellow('from')}: t.array(t.enum('fromSchema.fromEnum'))
+      ${yellow('to')}: t.array(t.enum('toSchema.toEnum'))`);
     });
 
     it('should recreate schema and rename enum', async () => {
@@ -458,6 +503,7 @@ change(async (db) => {
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     colUmn: t.change(t.enum('toSchema.fromEnum'), t.enum('toSchema.toEnum')),
+    colUmnArr: t.change(t.array(t.enum('toSchema.fromEnum')), t.array(t.enum('toSchema.toEnum'))),
   }));
 });
 
@@ -474,7 +520,10 @@ ${red('- drop enum')} toSchema.fromEnum: (one, two, three)
 ${yellow('~ change table')} table:
   ${yellow('~ change column')} colUmn:
     ${yellow('from')}: t.enum('toSchema.fromEnum')
-      ${yellow('to')}: t.enum('toSchema.toEnum')`);
+      ${yellow('to')}: t.enum('toSchema.toEnum')
+  ${yellow('~ change column')} colUmnArr:
+    ${yellow('from')}: t.array(t.enum('toSchema.fromEnum'))
+      ${yellow('to')}: t.array(t.enum('toSchema.toEnum'))`);
     });
 
     it('should rename schema and enum', async () => {
@@ -507,6 +556,7 @@ ${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
     const tableWithEnum = (values: [string, ...string[]]) =>
       table((t) => ({
         numBers: t.enum('numbers', values),
+        numBersArr: t.array(t.enum('numbers', values)),
       }));
 
     const prepareDb =
@@ -516,6 +566,7 @@ ${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
 
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
           numBers: t.enum('numbers'),
+          numBersArr: t.array(t.enum('numbers')),
         }));
       };
 

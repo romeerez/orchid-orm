@@ -469,9 +469,16 @@ describe('migration', () => {
               {
                 schema: 'public',
                 table: 'one',
-                columns: ['columnOne', 'columnTwo'],
+                columns: [
+                  { name: 'columnOne', arrayDims: 0 },
+                  { name: 'columnTwo', arrayDims: 0 },
+                ],
               },
-              { schema: 'custom', table: 'two', columns: ['columnThree'] },
+              {
+                schema: 'custom',
+                table: 'two',
+                columns: [{ name: 'columnThree', arrayDims: 0 }],
+              },
             ],
           };
         }
@@ -485,11 +492,15 @@ describe('migration', () => {
     const changeEnumTemplateSql = (values: string[]) => [
       `SELECT n.nspname AS "schema",
   c.relname AS "table",
-  json_agg(a.attname ORDER BY a.attnum) AS "columns"
+  json_agg(
+    json_build_object('name', a.attname, 'arrayDims', a.attndims)
+    ORDER BY a.attnum
+  ) AS "columns"
 FROM pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
-JOIN pg_attribute a ON a.attrelid = c.oid
-JOIN pg_type t ON a.atttypid = t.oid AND t.typname = 'enumName'
+JOIN pg_type bt ON bt.typname = 'enumName'
+JOIN pg_type t ON t.oid = bt.oid OR t.typelem = bt.oid
+JOIN pg_attribute a ON a.attrelid = c.oid AND a.atttypid = t.oid
 JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = 'schemaName'
 WHERE c.relkind IN ('r', 'm')
 GROUP BY n.nspname, c.relname`,

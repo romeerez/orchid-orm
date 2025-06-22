@@ -8,6 +8,7 @@ import {
   tableDataMethods,
   UnknownColumn,
   DomainColumn,
+  ArrayColumn,
 } from 'pqb';
 import {
   ColumnTypeBase,
@@ -790,16 +791,18 @@ const handleTableItemChange = (
             : quoteCustomType(to.type)
           : to.type;
 
+      const using = item.using?.usingUp
+        ? ` USING ${item.using.usingUp.toSQL({ values })}`
+        : to.column instanceof EnumColumn
+        ? ` USING "${name}"::text::${type}`
+        : to.column instanceof ArrayColumn
+        ? ` USING "${name}"::text[]::${type}`
+        : '';
+
       alterTable.push(
         `ALTER COLUMN "${name}" TYPE ${type}${
           to.collate ? ` COLLATE ${quoteNameFromString(to.collate)}` : ''
-        }${
-          item.using?.usingUp
-            ? ` USING ${item.using.usingUp.toSQL({ values })}`
-            : to.column instanceof EnumColumn
-            ? ` USING "${name}"::text::${type}`
-            : ''
-        }`,
+        }${using}`,
       );
     }
 

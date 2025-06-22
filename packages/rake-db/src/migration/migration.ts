@@ -1894,15 +1894,19 @@ const recreateEnum = async (
   const { rows: tables } = await migration.adapter.query<{
     schema: string;
     table: string;
-    columns: string[];
+    columns: { name: string; arrayDims: number }[];
   }>(
     `SELECT n.nspname AS "schema",
   c.relname AS "table",
-  json_agg(a.attname ORDER BY a.attnum) AS "columns"
+  json_agg(
+    json_build_object('name', a.attname, 'arrayDims', a.attndims)
+    ORDER BY a.attnum
+  ) AS "columns"
 FROM pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
-JOIN pg_attribute a ON a.attrelid = c.oid
-JOIN pg_type t ON a.atttypid = t.oid AND t.typname = ${singleQuote(name)}
+JOIN pg_type bt ON bt.typname = ${singleQuote(name)}
+JOIN pg_type t ON t.oid = bt.oid OR t.typelem = bt.oid
+JOIN pg_attribute a ON a.attrelid = c.oid AND a.atttypid = t.oid
 JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = ${singleQuote(
       schema ?? defaultSchema,
     )}
@@ -1913,7 +1917,12 @@ GROUP BY n.nspname, c.relname`,
   const sql = tables.map(
     (t) =>
       `ALTER TABLE ${quoteTable(t.schema, t.table)}
-        ${t.columns.map((c) => `  ALTER COLUMN "${c}" TYPE text`).join(',\n')}`,
+        ${t.columns
+          .map(
+            (c) =>
+              `  ALTER COLUMN "${c.name}" TYPE text${'[]'.repeat(c.arrayDims)}`,
+          )
+          .join(',\n')}`,
   );
 
   sql.push(
@@ -1926,14 +1935,18 @@ GROUP BY n.nspname, c.relname`,
   for (const t of tables) {
     const table = quoteTable(t.schema, t.table);
     for (const c of t.columns) {
+      const type = quotedName + '[]'.repeat(c.arrayDims);
+
       try {
         await migration.adapter.query(
           `ALTER TABLE ${table}
-  ALTER COLUMN "${c}" TYPE ${quotedName} USING "${c}"::${quotedName}`,
+  ALTER COLUMN "${c.name}" TYPE ${type} USING "${c.name}"::${type}`,
         );
       } catch (err) {
         if ((err as { code: string }).code === '22P02') {
-          throw new Error(errorMessage(quotedName, table, c), { cause: err });
+          throw new Error(errorMessage(quotedName, table, c.name), {
+            cause: err,
+          });
         }
         throw err;
       }

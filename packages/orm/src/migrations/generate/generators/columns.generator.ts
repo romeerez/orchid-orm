@@ -343,49 +343,16 @@ const compareColumns = async (
   dbColumn: ColumnType,
   codeColumn: ColumnType,
 ): Promise<'change' | 'recreate' | undefined> => {
-  const dbType = getColumnDbType(dbColumn, currentSchema);
-  const codeType = getColumnDbType(codeColumn, currentSchema);
-
   if (dbColumn instanceof ArrayColumn && codeColumn instanceof ArrayColumn) {
     dbColumn = dbColumn.data.item;
     codeColumn = codeColumn.data.item;
   }
 
+  const dbType = getColumnDbType(dbColumn, currentSchema);
+  const codeType = getColumnDbType(codeColumn, currentSchema);
+
   if (dbType !== codeType) {
-    let typeCasts = typeCastsCache.value;
-    if (!typeCasts) {
-      const { rows } = await adapter.arrays(`SELECT s.typname, t.typname
-FROM pg_cast
-JOIN pg_type AS s ON s.oid = castsource
-JOIN pg_type AS t ON t.oid = casttarget`);
-
-      const directTypeCasts = new Map<string, Set<string>>();
-      for (const [source, target] of rows) {
-        const set = directTypeCasts.get(source);
-        if (set) {
-          set.add(target);
-        } else {
-          directTypeCasts.set(source, new Set([target]));
-        }
-      }
-
-      typeCasts = new Map<string, Set<string>>();
-      for (const [type, directSet] of directTypeCasts.entries()) {
-        const set = new Set<string>(directSet);
-        typeCasts.set(type, set);
-
-        for (const subtype of directSet) {
-          const subset = directTypeCasts.get(subtype);
-          if (subset) {
-            for (const type of subset) {
-              set.add(type);
-            }
-          }
-        }
-      }
-
-      typeCastsCache.value = typeCasts;
-    }
+    const typeCasts = await getTypeCasts(adapter, typeCastsCache);
 
     const dbBaseType = getColumnBaseType(dbColumn, domainsMap, dbType);
     const codeBaseType = getColumnBaseType(codeColumn, domainsMap, codeType);
@@ -520,6 +487,48 @@ JOIN pg_type AS t ON t.oid = casttarget`);
   return;
 };
 
+const getTypeCasts = async (
+  adapter: Adapter,
+  typeCastsCache: TypeCastsCache,
+) => {
+  let typeCasts = typeCastsCache.value;
+  if (!typeCasts) {
+    const { rows } = await adapter.arrays(`SELECT s.typname, t.typname
+FROM pg_cast
+JOIN pg_type AS s ON s.oid = castsource
+JOIN pg_type AS t ON t.oid = casttarget`);
+
+    const directTypeCasts = new Map<string, Set<string>>();
+    for (const [source, target] of rows) {
+      const set = directTypeCasts.get(source);
+      if (set) {
+        set.add(target);
+      } else {
+        directTypeCasts.set(source, new Set([target]));
+      }
+    }
+
+    typeCasts = new Map<string, Set<string>>();
+    for (const [type, directSet] of directTypeCasts.entries()) {
+      const set = new Set<string>(directSet);
+      typeCasts.set(type, set);
+
+      for (const subtype of directSet) {
+        const subset = directTypeCasts.get(subtype);
+        if (subset) {
+          for (const type of subset) {
+            set.add(type);
+          }
+        }
+      }
+    }
+
+    typeCastsCache.value = typeCasts;
+  }
+
+  return typeCasts;
+};
+
 const changeColumn = (
   changeTableData: ChangeTableData,
   key: string,
@@ -561,7 +570,14 @@ export const getColumnDbType = (
     );
     return (column.enumName = `${schema}.${name}`);
   } else if (column instanceof ArrayColumn) {
-    return column.data.item.dataType + '[]'.repeat(column.data.arrayDims);
+    const { item } = column.data;
+    let type = item instanceof EnumColumn ? item.enumName : item.dataType;
+
+    type = type.startsWith(currentSchema + '.')
+      ? type.slice(currentSchema.length + 1)
+      : type;
+
+    return type + '[]'.repeat(column.data.arrayDims);
   } else if (column.data.isOfCustomType) {
     let type = column.dataType;
 

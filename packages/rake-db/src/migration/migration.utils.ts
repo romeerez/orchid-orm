@@ -1,4 +1,10 @@
-import { ColumnType, DomainColumn, escapeForMigration, TableData } from 'pqb';
+import {
+  ArrayColumn,
+  ColumnType,
+  DomainColumn,
+  escapeForMigration,
+  TableData,
+} from 'pqb';
 import {
   ColumnDataCheckBase,
   ColumnTypeBase,
@@ -127,7 +133,16 @@ export const encodeColumnDefault = (
       return def.toSQL({ values });
     } else {
       return escapeForMigration(
-        column?.data.encode ? column.data.encode(def) : def,
+        column instanceof ArrayColumn && Array.isArray(def)
+          ? '{' +
+              (column.data.item.data.encode
+                ? def.map((x) => column.data.item.data.encode(x))
+                : def
+              ).join(',') +
+              '}'
+          : column?.data.encode
+          ? column.data.encode(def)
+          : def,
       );
     }
   }

@@ -2,6 +2,7 @@ import { PickQueryShape, QueryColumn, toCamelCase } from 'orchid-core';
 import {
   Adapter,
   AdapterOptions,
+  ArrayColumn,
   ColumnsShape,
   ColumnType,
   defaultSchemaConfig,
@@ -355,8 +356,18 @@ const getActualItems = async (
           column: (column.data.as ??
             new UnknownColumn(defaultSchemaConfig)) as ColumnType,
         });
-      } else if (column.dataType === 'enum') {
-        processEnumColumn(column, currentSchema, codeItems);
+      } else {
+        const en =
+          column.dataType === 'enum'
+            ? column
+            : column instanceof ArrayColumn &&
+              column.data.item.dataType === 'enum'
+            ? column.data.item
+            : undefined;
+
+        if (en) {
+          processEnumColumn(en, currentSchema, codeItems);
+        }
       }
     }
   }

@@ -1385,6 +1385,10 @@ describe('changeTable', () => {
         () =>
           db.changeTable('table', (t) => ({
             changeEnum: t.change(t.enum('one'), t.enum('two')),
+            changeEnumArr: t.change(
+              t.array(t.enum('one')),
+              t.array(t.enum('two')),
+            ),
           })),
         () => {
           expectSql([
@@ -1392,8 +1396,9 @@ describe('changeTable', () => {
             'SELECT unnest(enum_range(NULL::"two"))::text',
             `
             ALTER TABLE "table"
-              ALTER COLUMN "change_enum" TYPE "two" USING "change_enum"::text::"two"
-          `,
+              ALTER COLUMN "change_enum" TYPE "two" USING "change_enum"::text::"two",
+              ALTER COLUMN "change_enum_arr" TYPE "two"[] USING "change_enum_arr"::text[]::"two"[]
+            `,
           ]);
 
           asMock(queryMock).mockResolvedValueOnce({
@@ -1409,7 +1414,8 @@ describe('changeTable', () => {
             'SELECT unnest(enum_range(NULL::"one"))::text',
             `
             ALTER TABLE "table"
-              ALTER COLUMN "change_enum" TYPE "one" USING "change_enum"::text::"one"
+              ALTER COLUMN "change_enum" TYPE "one" USING "change_enum"::text::"one",
+              ALTER COLUMN "change_enum_arr" TYPE "one"[] USING "change_enum_arr"::text[]::"one"[]
           `,
           ]);
         },
