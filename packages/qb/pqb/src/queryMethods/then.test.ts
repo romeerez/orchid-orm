@@ -1,4 +1,4 @@
-import { User } from '../test-utils/test-utils';
+import { User, userData } from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
 import { assertType, testAdapter, testDb, useTestDatabase } from 'test-utils';
 import { noop, TransactionState } from 'orchid-core';
@@ -12,16 +12,27 @@ describe('then', () => {
   afterAll(testDb.close);
 
   describe('catch', () => {
-    it('should catch error', (done) => {
-      const q = User.select({
+    it('should catch error', async () => {
+      const err = await User.select({
         column: testDb.sql`koko`.type((t) => t.boolean()),
       }).catch((err) => {
         expect(err.message).toBe(`column "koko" does not exist`);
         expect(err.cause.stack).toContain('then.test.ts');
-        done();
+        return 'err' as const;
       });
 
-      assertType<Awaited<typeof q>, { column: boolean }[] | void>();
+      assertType<typeof err, { column: boolean }[] | 'err'>();
+
+      expect(err).toBe('err');
+    });
+
+    it('should not prevent the query from executing', async () => {
+      const fn = jest.fn();
+
+      const user = await User.create(userData).catch(fn);
+
+      expect(user.name).toBe(userData.name);
+      expect(fn).not.toHaveBeenCalled();
     });
   });
 

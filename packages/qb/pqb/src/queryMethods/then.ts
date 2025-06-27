@@ -414,7 +414,7 @@ const then = async (
       result = applyTransforms(query, returnType, query.transform, result);
     }
 
-    return resolve?.(result);
+    return resolve ? resolve(result) : result;
   } catch (err) {
     let error;
     if (err instanceof pg.DatabaseError) {
