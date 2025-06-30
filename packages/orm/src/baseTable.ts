@@ -606,7 +606,6 @@ export function createBaseTable<
 
     table!: string;
     columns = defaultColumns;
-    tableData!: TableData;
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
@@ -645,8 +644,7 @@ export function createBaseTable<
         this.snakeCase;
 
       const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
-      const tableData = (this.constructor.prototype.tableData =
-        parseTableData(dataFn));
+      const tableData = parseTableData(dataFn);
 
       if (this.snakeCase) {
         for (const key in shape) {
