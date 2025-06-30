@@ -21,7 +21,9 @@ jest.mock('fs/promises', () => ({
 jest.mock('../generate/generate');
 
 const options: AdapterOptions[] = [
-  { databaseURL: process.env.PG_GENERATE_URL },
+  {
+    databaseURL: `${process.env.PG_GENERATE_URL}-${process.env.JEST_WORKER_ID}`,
+  },
 ];
 
 let prepareDbTransactionPromise: Promise<void> | undefined;

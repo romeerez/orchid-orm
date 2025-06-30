@@ -34,7 +34,10 @@ export const BaseTable = createBaseTable({
 });
 
 const defaultOptions: AdapterOptions[] = [
-  { databaseURL: process.env.PG_GENERATE_URL },
+  {
+    // use a separate db for every jest worker because schema changes in one test can block other tests
+    databaseURL: `${process.env.PG_GENERATE_URL}-${process.env.JEST_WORKER_ID}`,
+  },
 ];
 let options = defaultOptions;
 

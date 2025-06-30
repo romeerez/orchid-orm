@@ -3,6 +3,7 @@ import path from 'path';
 import { rakeDb } from 'orchid-orm/migrations';
 import { AdapterOptions } from 'pqb';
 import { BaseTable } from './baseTable';
+import os from 'os';
 
 config({ path: path.resolve('..', '..', '.env') });
 
@@ -19,7 +20,14 @@ const command = process.argv[2];
 if (['create', 'drop'].includes(command)) {
   const databaseURLGenerate = process.env.PG_GENERATE_URL;
   if (databaseURLGenerate) {
-    options.push({ databaseURL: databaseURLGenerate, connectRetry: true });
+    const jestWorkersCount = os.cpus().length;
+
+    options.push(
+      ...Array.from({ length: jestWorkersCount }, (_, i) => ({
+        databaseURL: `${databaseURLGenerate}-${i + 1}`,
+        connectRetry: true as const,
+      })),
+    );
   }
 }
 
