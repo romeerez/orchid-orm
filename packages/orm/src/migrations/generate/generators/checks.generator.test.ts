@@ -329,7 +329,7 @@ change(async (db) => {
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ change column')} i_d:
+  ${yellow('~ change column')} iD:
     ${yellow(
       'from',
     )}: t.integer().nullable().check(t.sql\`(i_d = 5)\`, 'table_i_d_check')
@@ -357,13 +357,13 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    fr_om: t.rename('tO'),
+    frOm: t.rename('tO'),
   }));
 });
 `);
 
     assert.report(`${yellow('~ change table')} table:
-  ${yellow('~ rename column')} fr_om ${yellow('=>')} tO`);
+  ${yellow('~ rename column')} frOm ${yellow('=>')} tO`);
   });
 
   it('should not be added during unrelated column change', async () => {

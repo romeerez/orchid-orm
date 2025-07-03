@@ -618,7 +618,7 @@ export class TsVectorColumn<
         const pairs: string[] = [];
         for (const key in target as RecordString) {
           pairs.push(
-            `${quoteObjectKey(key)}: '${(target as RecordString)[key]}'`,
+            `${quoteObjectKey(key, false)}: '${(target as RecordString)[key]}'`,
           );
         }
         code += `{ ${pairs.join(', ')} }`;

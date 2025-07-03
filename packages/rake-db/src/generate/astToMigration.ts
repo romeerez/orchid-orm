@@ -250,7 +250,7 @@ const astEncoders: {
       )
         continue;
 
-      const line: Code[] = [`${quoteObjectKey(key)}: `];
+      const line: Code[] = [`${quoteObjectKey(key, config.snakeCase)}: `];
       const columnCode = ast.shape[key].toCode(toCodeCtx, key);
       for (const part of columnCode) {
         addCode(line, part);
@@ -340,7 +340,7 @@ const astEncoders: {
               ? `...t.${change.type}(t.name(${singleQuote(
                   change.item.data.name ?? key,
                 )})`
-              : `${quoteObjectKey(key)}: t.${change.type}(`,
+              : `${quoteObjectKey(key, config.snakeCase)}: t.${change.type}(`,
           ];
 
           const columnCode = change.item.toCode(toCodeCtx, key);
@@ -356,7 +356,7 @@ const astEncoders: {
           if (!change.from.column || !change.to.column) continue;
 
           const line: Code[] = [
-            `${quoteObjectKey(key)}: t${
+            `${quoteObjectKey(key, config.snakeCase)}: t${
               change.name ? `.name(${singleQuote(change.name)})` : ''
             }.change(`,
           ];
@@ -399,7 +399,9 @@ const astEncoders: {
           code.push(line);
         } else if (change.type === 'rename') {
           code.push([
-            `${quoteObjectKey(key)}: t.rename(${singleQuote(change.name)}),`,
+            `${quoteObjectKey(key, config.snakeCase)}: t.rename(${singleQuote(
+              change.name,
+            )}),`,
           ]);
         } else {
           exhaustive(change.type);
@@ -510,11 +512,14 @@ const astEncoders: {
       ast,
     )}, [${ast.values.map(singleQuote).join(', ')}]);`;
   },
-  renameEnumValues(ast) {
+  renameEnumValues(ast, config) {
     return `await db.renameEnumValues(${quoteSchemaTable(
       ast,
     )}, { ${Object.entries(ast.values)
-      .map(([from, to]) => `${quoteObjectKey(from)}: ${singleQuote(to)}`)
+      .map(
+        ([from, to]) =>
+          `${quoteObjectKey(from, config.snakeCase)}: ${singleQuote(to)}`,
+      )
       .join(', ')} });`;
   },
   changeEnumValues(ast) {

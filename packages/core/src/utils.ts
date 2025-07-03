@@ -178,8 +178,10 @@ export const singleQuoteArray = (arr: string[]) => {
  * For code generation: some strings must be quoted when used as an object key.
  * This function quotes the strings when needed.
  * @param key - object key to quote
+ * @param toCamel - change to camel case
  */
-export const quoteObjectKey = (key: string) => {
+export const quoteObjectKey = (key: string, toCamel: boolean | undefined) => {
+  if (toCamel) key = toCamelCase(key);
   return /^[a-zA-Z_$][\w$]*$/.test(key) ? key : singleQuote(key);
 };
 

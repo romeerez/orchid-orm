@@ -72,7 +72,7 @@ export const columnsShapeToCode = (
 
     code.push(
       ...combineCodeElements([
-        `${quoteObjectKey(key)}: `,
+        `${quoteObjectKey(key, ctx.snakeCase)}: `,
         ...toArray(shape[key].toCode(ctx, key)),
         ',',
       ]),

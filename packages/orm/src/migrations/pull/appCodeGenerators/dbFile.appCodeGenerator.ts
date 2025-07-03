@@ -51,7 +51,7 @@ export const appCodeGenUpdateDbFile = async (
       code += `\n  extensions: [${extensions
         .map((ext) =>
           ext.version
-            ? `{ ${quoteObjectKey(ext.name)}: '${ext.version}' }`
+            ? `{ ${quoteObjectKey(ext.name, false)}: '${ext.version}' }`
             : singleQuote(ext.name),
         )
         .join(', ')}],`;
@@ -64,6 +64,7 @@ export const appCodeGenUpdateDbFile = async (
           (ast) =>
             `${quoteObjectKey(
               ast.schema ? `${ast.schema}.${ast.name}` : ast.name,
+              false,
             )}: (t) => ${ast.baseType.toCode(
               { t: 't', table: ast.name, currentSchema },
               ast.baseType.data.name ?? '',

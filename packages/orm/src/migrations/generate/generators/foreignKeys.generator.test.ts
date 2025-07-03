@@ -900,7 +900,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    b_b: t.rename('cC'),
+    bB: t.rename('cC'),
   }));
 
   await db.renameConstraint('public.table', 'table_a_a_b_b_fkey', 'table_a_a_c_c_fkey');
@@ -909,7 +909,7 @@ change(async (db) => {
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${yellow('~ rename column')} b_b ${yellow('=>')} cC
+  ${yellow('~ rename column')} bB ${yellow('=>')} cC
 ${yellow('~ rename constraint')} on table table: table_a_a_b_b_fkey ${yellow(
         '=>',
       )} table_a_a_c_c_fkey`,
@@ -961,14 +961,14 @@ ${yellow('~ rename constraint')} on table table: table_a_a_b_b_fkey ${yellow(
 
 change(async (db) => {
   await db.changeTable('some', (t) => ({
-    f_b: t.rename('fC'),
+    fB: t.rename('fC'),
   }));
 });
 `);
 
     assert.report(
       `${yellow('~ change table')} some:
-  ${yellow('~ rename column')} f_b ${yellow('=>')} fC`,
+  ${yellow('~ rename column')} fB ${yellow('=>')} fC`,
     );
   });
 

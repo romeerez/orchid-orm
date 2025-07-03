@@ -12,6 +12,7 @@ import {
   codeToString,
   ColumnToCodeCtx,
   toArray,
+  toCamelCase,
 } from 'orchid-core';
 import { getColumnDbType } from './generators/columns.generator';
 import { fnOrTableToString } from './generators/foreignKeys.generator';
@@ -159,7 +160,9 @@ export const report = (
                 }`,
               );
             } else if (change.type === 'change') {
-              const name = change.from.column?.data.name ?? key;
+              let name = change.from.column?.data.name ?? key;
+              if (config.snakeCase) name = toCamelCase(name);
+
               const changes: Code[] = [];
               inner.push(`${yellow('~ change column')} ${name}:`, changes);
               changes.push(`${yellow('from')}: `);
@@ -177,9 +180,9 @@ export const report = (
               }
             } else if (change.type === 'rename') {
               inner.push(
-                `${yellow('~ rename column')} ${key} ${yellow('=>')} ${
-                  change.name
-                }`,
+                `${yellow('~ rename column')} ${
+                  config.snakeCase ? toCamelCase(key) : key
+                } ${yellow('=>')} ${change.name}`,
               );
             } else {
               exhaustive(change.type);

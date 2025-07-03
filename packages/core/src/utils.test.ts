@@ -39,13 +39,17 @@ describe('utils', () => {
 
   describe('quoteObjectKey', () => {
     it('should leave simple key unquoted', () => {
-      expect(quoteObjectKey('Abc123')).toBe('Abc123');
-      expect(quoteObjectKey('_')).toBe('_');
+      expect(quoteObjectKey('Abc123', false)).toBe('Abc123');
+      expect(quoteObjectKey('_', false)).toBe('_');
     });
 
     it('should surround a key with special characters with single quotes', () => {
-      expect(quoteObjectKey('123')).toBe(`'123'`);
-      expect(quoteObjectKey('&')).toBe(`'&'`);
+      expect(quoteObjectKey('123', false)).toBe(`'123'`);
+      expect(quoteObjectKey('&', false)).toBe(`'&'`);
+    });
+
+    it('should change key to camelCase when needed', () => {
+      expect(quoteObjectKey('a_b_c', true)).toBe(`aBC`);
     });
   });
 

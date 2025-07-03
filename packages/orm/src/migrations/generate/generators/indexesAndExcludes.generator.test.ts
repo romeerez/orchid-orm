@@ -969,7 +969,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    fr_om: t.rename('tO'),
+    frOm: t.rename('tO'),
   }));
 
   await db.renameIndex('public.table', 'table_fr_om_idx', 'table_t_o_idx');
@@ -980,7 +980,7 @@ change(async (db) => {
 
     assert.report(
       `${yellow('~ change table')} table:
-  ${yellow('~ rename column')} fr_om ${yellow('=>')} tO
+  ${yellow('~ rename column')} frOm ${yellow('=>')} tO
 ${yellow('~ rename index')} on table table: table_fr_om_idx ${yellow(
         '=>',
       )} table_t_o_idx
