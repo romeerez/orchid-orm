@@ -53,7 +53,7 @@ interface AfterPull {
 }
 
 export interface DbInstance {
-  $queryBuilder: Query;
+  $qb: Query;
 }
 
 export class AbortSignal extends Error {}
@@ -89,7 +89,7 @@ export const generate = async (
   const currentSchema = adapter.schema ?? 'public';
 
   const db = await getDbFromConfig(config, dbPath);
-  const { columnTypes, internal } = db.$queryBuilder;
+  const { columnTypes, internal } = db.$qb;
 
   const codeItems = await getActualItems(
     db,
@@ -197,7 +197,7 @@ const getDbFromConfig = async (
   const db = (module as { [K: string]: DbInstance })[
     config.dbExportedAs ?? 'db'
   ];
-  if (!db?.$queryBuilder) {
+  if (!db?.$qb) {
     throw new Error(
       `Unable to import OrchidORM instance as ${
         config.dbExportedAs ?? 'db'

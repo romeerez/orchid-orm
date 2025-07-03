@@ -109,9 +109,7 @@ describe('transaction', () => {
 
     const result = await testDb.transaction(
       async () =>
-        await testDb.transaction(async () =>
-          testDb.queryBuilder.get(testDb.sql`123`),
-        ),
+        await testDb.transaction(async () => testDb.qb.get(testDb.sql`123`)),
     );
 
     expect(result).toBe(123);

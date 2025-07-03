@@ -1,5 +1,9 @@
 # Breaking changes
 
+## orchid-orm 1.51
+
+Rename `db.$queryBuilder` to `db.$qb` for conciseness.
+
 ## orchid-orm 1.50
 
 `afterCommit` hooks used to be awaited when awaiting a transaction or a query,

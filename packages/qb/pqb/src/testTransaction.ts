@@ -29,12 +29,11 @@ interface Internal {
   [trxForTest]?: TrxData[];
 }
 
-// Argument of the transaction, $queryBuilder is to use ORM instance, Query to use any other queryable instance.
-type Arg = { $queryBuilder: Query } | Query;
+// Argument of the transaction, $qb is to use ORM instance, Query to use any other queryable instance.
+type Arg = { $qb: Query } | Query;
 
 // Get queryable instance from the transaction argument.
-const argToDb = (arg: Arg): Query =>
-  '$queryBuilder' in arg ? arg.$queryBuilder : arg;
+const argToDb = (arg: Arg): Query => ('$qb' in arg ? arg.$qb : arg);
 
 // Methods of a test transaction.
 export const testTransaction = {

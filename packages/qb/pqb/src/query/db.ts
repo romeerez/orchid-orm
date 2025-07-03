@@ -8,22 +8,18 @@ import {
 } from './query';
 import {
   handleResult,
-  QueryMethods,
   logParamToLogObject,
+  QueryMethods,
 } from '../queryMethods';
 import { QueryData, QueryScopes } from '../sql';
+import { Adapter, AdapterOptions, QueryArraysResult } from '../adapter';
 import {
-  Adapter,
-  AdapterOptions,
-  QueryArraysResult,
-  QueryResult,
-} from '../adapter';
-import {
+  anyShape,
   DefaultColumnTypes,
   getColumnTypes,
   makeColumnTypes,
 } from '../columns';
-import { QueryError, QueryErrorName } from '../errors';
+import { NotFoundError, QueryError, QueryErrorName } from '../errors';
 import {
   applyMixins,
   ColumnSchemaConfig,
@@ -37,7 +33,6 @@ import {
   EmptyObject,
   emptyObject,
   IsQuery,
-  isRawSQL,
   MaybeArray,
   pushOrNewArray,
   QueryCatch,
@@ -46,26 +41,18 @@ import {
   QueryColumnsInit,
   QueryLogOptions,
   QueryMetaBase,
-  QueryResultRow,
   QueryThenShallowSimplifyArr,
   RecordString,
   RecordUnknown,
   snakeCaseKey,
-  Sql,
   SQLQueryArgs,
   StaticSQLArgs,
-  TemplateLiteralArgs,
   toSnakeCase,
   TransactionState,
 } from 'orchid-core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import {
-  DynamicRawSQL,
-  raw,
-  RawSQL,
-  templateLiteralToSQL,
-} from '../sql/rawSql';
+import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';
 import { ScopeArgumentQuery } from '../queryMethods/scope';
 import {
   defaultSchemaConfig,
@@ -87,6 +74,7 @@ import {
   ComputedColumnsFromOptions,
   ComputedOptionsFactory,
 } from '../modules/computed';
+import { DbSqlQuery, performQuery } from './dbSqlQuery';
 
 export type ShapeColumnPrimaryKeys<Shape extends QueryColumnsInit> = {
   [K in {
@@ -217,7 +205,10 @@ interface TableMeta<
   selectable: SelectableFromShape<ShapeWithComputed, Table>;
   defaultSelect: DefaultSelectColumns<Shape>;
 }
-export const anyShape = {} as QueryColumnsInit;
+
+export interface QueryBuilder extends Query {
+  returnType: undefined;
+}
 
 export class Db<
     Table extends string | undefined = undefined,
@@ -274,7 +265,7 @@ export class Db<
 
   constructor(
     public adapter: Adapter,
-    public queryBuilder: Db,
+    public qb: QueryBuilder,
     public table: Table = undefined as Table,
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
     public columnTypes: ColumnTypes,
@@ -496,14 +487,57 @@ export class Db<
    *
    * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
    */
-  query<T extends QueryResultRow = QueryResultRow>(
-    ...args: SQLQueryArgs
-  ): Promise<QueryResult<T>> {
-    return performQuery<QueryResult<T>>(this, args, 'query');
+  get query(): DbSqlQuery {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const q = this;
+    let query = q._query;
+    if (!query) {
+      q._query = query = Object.assign(
+        (...args: SQLQueryArgs) => performQuery(q, args, 'query'),
+        {
+          async records(...args: SQLQueryArgs) {
+            const { rows } = await performQuery(q, args, 'query');
+            return rows;
+          },
+          async take(...args: SQLQueryArgs) {
+            const {
+              rows: [row],
+            } = await performQuery(q, args, 'query');
+            if (!row) throw new NotFoundError(q);
+            return row;
+          },
+          async takeOptional(...args: SQLQueryArgs) {
+            const { rows } = await performQuery(q, args, 'query');
+            return rows[0];
+          },
+          async rows(...args: SQLQueryArgs) {
+            const { rows } = await performQuery(q, args, 'arrays');
+            return rows;
+          },
+          async pluck(...args: SQLQueryArgs) {
+            const { rows } = await performQuery(q, args, 'arrays');
+            return rows.map((row) => row[0]);
+          },
+          async get(...args: SQLQueryArgs) {
+            const {
+              rows: [row],
+            } = await performQuery(q, args, 'arrays');
+            if (!row) throw new NotFoundError(q);
+            return row[0];
+          },
+          async getOptional(...args: SQLQueryArgs) {
+            const { rows } = await performQuery(q, args, 'arrays');
+            return rows[0]?.[0];
+          },
+        },
+      ) as never;
+    }
+    return query;
   }
+  private _query?: DbSqlQuery;
 
   /**
-   * The same as the {@link query}, but returns an array of arrays instead of objects:
+   * Performs a SQL query, returns a db result with array of arrays instead of objects:
    *
    * ```ts
    * const value = 1;
@@ -543,58 +577,6 @@ export class Db<
     return map.get(name);
   }
 }
-
-const performQuery = async <Result>(
-  q: {
-    queryBuilder: Db;
-    internal: QueryInternal;
-    adapter: Adapter;
-    q: QueryData;
-  },
-  args: SQLQueryArgs,
-  method: 'query' | 'arrays',
-): Promise<Result> => {
-  const trx = q.internal.transactionStorage.getStore();
-  let sql: Sql;
-  if (isRawSQL(args[0])) {
-    const values: unknown[] = [];
-    sql = {
-      text: args[0].toSQL({ values }),
-      values,
-    };
-  } else {
-    const values: unknown[] = [];
-    sql = {
-      text: templateLiteralToSQL(args as TemplateLiteralArgs, {
-        queryBuilder: q.queryBuilder,
-        q: q.q,
-        sql: [],
-        values,
-      }),
-      values,
-    };
-  }
-
-  const log = trx?.log ?? q.q.log;
-  let logData: unknown | undefined;
-  if (log) logData = log.beforeQuery(sql);
-
-  try {
-    const result = (await (trx?.adapter || q.adapter)[method as 'query'](
-      sql,
-    )) as Promise<Result>;
-
-    if (log) log.afterQuery(sql, logData);
-
-    return result;
-  } catch (err) {
-    if (log) {
-      log.onError(err as Error, sql, logData);
-    }
-
-    throw err;
-  }
-};
 
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
@@ -793,11 +775,7 @@ export const createDb = <
     close: () => adapter.close(),
   });
 
-  // Set all methods from prototype to the db instance (needed for transaction at least):
-  for (const name of Object.getOwnPropertyNames(Db.prototype)) {
-    (db as unknown as RecordUnknown)[name] =
-      Db.prototype[name as keyof typeof Db.prototype];
-  }
+  Object.setPrototypeOf(db, Db.prototype);
 
   // bind column types to the `sql` method
   db.sql = (...args: unknown[]) => {
@@ -818,7 +796,7 @@ export const _initQueryBuilder = (
 ): Db => {
   const qb = new Db(
     adapter,
-    undefined as unknown as Db,
+    undefined as unknown as QueryBuilder,
     undefined,
     anyShape,
     columnTypes,
@@ -843,5 +821,5 @@ export const _initQueryBuilder = (
   qb.internal.domains = options.domains;
   qb.internal.generatorIgnore = options.generatorIgnore;
 
-  return (qb.queryBuilder = qb as never);
+  return (qb.qb = qb as never);
 };

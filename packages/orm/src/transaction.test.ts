@@ -50,7 +50,7 @@ describe('transaction', () => {
   );
 
   it('should delegate $afterCommit to the query builder', () => {
-    const spy = jest.spyOn(db.$queryBuilder, 'afterCommit');
+    const spy = jest.spyOn(db.$qb, 'afterCommit');
 
     db.$afterCommit(noop);
 

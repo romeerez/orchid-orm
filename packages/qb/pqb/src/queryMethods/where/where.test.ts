@@ -166,13 +166,12 @@ describe('where joined named columns', () => {
 
 describe('where sub query', () => {
   it('should handle boolean operator on aggregate sub query', () => {
-    const messageRelation = Object.assign(Object.create(Message), {
+    const messageRelation = {
       query: Message,
       joinQuery(q: Query, _baseQuery: Query) {
         return q;
       },
-    });
-    messageRelation.baseQuery = messageRelation;
+    };
 
     const User = testDb('user', (t) => ({
       id: t.identity().primaryKey(),

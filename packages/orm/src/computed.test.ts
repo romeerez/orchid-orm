@@ -74,7 +74,7 @@ describe('computed', () => {
   }
 
   const local = orchidORM(
-    { db: db.$queryBuilder },
+    { db: db.$qb },
     {
       user: UserTable,
       profile: ProfileTable,

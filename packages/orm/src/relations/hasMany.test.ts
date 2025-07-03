@@ -26,7 +26,7 @@ import { omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = {
-  db: db.$queryBuilder,
+  db: db.$qb,
 };
 
 const activeMessageData = { ...messageData, Active: true };

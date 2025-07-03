@@ -58,8 +58,8 @@ export const resolveSubQueryCallbackV2 = (
   cb: (q: ToSQLQuery) => ToSQLQuery,
 ): ToSQLQuery => {
   let base;
-  // `with` can pass a generic `queryBuilder` here, it has no table.
-  // Do not memoize anything into `internal` of a common `queryBuilder`,
+  // `with` can pass a generic `qb` here, it has no table.
+  // Do not memoize anything into `internal` of a common `qb`,
   // because it is common and will be re-used.
   if (q.table) {
     base = q.internal.callbackArg;

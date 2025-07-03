@@ -18,7 +18,7 @@ import { orchidORM } from '../orm';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = {
-  db: db.$queryBuilder,
+  db: db.$qb,
 };
 
 describe('relations', () => {
@@ -511,7 +511,7 @@ describe('relations', () => {
       }));
     }
 
-    const local = orchidORM({ db: db.$queryBuilder }, { user: UserTable });
+    const local = orchidORM({ db: db.$qb }, { user: UserTable });
 
     local.user.find(1).update({
       data: (q) => q.get('data').jsonSet('key', 'value'),

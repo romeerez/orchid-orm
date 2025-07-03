@@ -18,11 +18,11 @@ import { pushOrderBySql } from './orderBy';
 import { QueryData, SelectQueryData } from './data';
 import { pushCopySql } from './copy';
 import { addValue, isExpression, Sql } from 'orchid-core';
-import { Db } from '../query/db';
+import { QueryBuilder } from '../query/db';
 import { getSqlText } from './utils';
 
 export interface ToSQLCtx {
-  queryBuilder: Db;
+  qb: QueryBuilder;
   q: QueryData;
   sql: string[];
   values: unknown[];
@@ -41,7 +41,7 @@ interface ToSqlOptionsInternal extends ToSQLOptions {
 export interface ToSQLQuery {
   __isQuery: Query['__isQuery'];
   q: Query['q'];
-  queryBuilder: Query['queryBuilder'];
+  qb: Query['qb'];
   table?: Query['table'];
   internal: QueryInternal;
   relations: Query['relations'];
@@ -62,7 +62,7 @@ export const toSQL = (
   const sql: string[] = [];
   const values = options?.values || [];
   const ctx: ToSQLCtx = {
-    queryBuilder: table.queryBuilder,
+    qb: table.qb,
     q: query,
     sql,
     values,

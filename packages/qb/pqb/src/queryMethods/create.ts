@@ -26,8 +26,7 @@ import {
   OnConflictMerge,
   ToSQLQuery,
 } from '../sql';
-import { VirtualColumn } from '../columns';
-import { anyShape } from '../query/db';
+import { anyShape, VirtualColumn } from '../columns';
 import {
   Expression,
   ColumnSchemaConfig,
@@ -396,14 +395,7 @@ const processCreateItem = (
 ) => {
   const { shape } = (q as Query).q;
   for (const key in item) {
-    if (shape[key] instanceof VirtualColumn) {
-      (shape[key] as VirtualColumn<ColumnSchemaConfig>).create?.(
-        q,
-        ctx,
-        item,
-        rowIndex,
-      );
-    } else {
+    if (shape[key]?.data.insertable !== false) {
       if (typeof item[key] === 'function') {
         item[key] = resolveSubQueryCallbackV2(
           q as unknown as ToSQLQuery,
@@ -419,6 +411,13 @@ const processCreateItem = (
         ctx.columns.set(key, ctx.columns.size);
         encoders[key] = shape[key]?.data.encode as FnUnknownToUnknown;
       }
+    } else if (shape[key] instanceof VirtualColumn) {
+      (shape[key] as VirtualColumn<ColumnSchemaConfig>).create?.(
+        q,
+        ctx,
+        item,
+        rowIndex,
+      );
     }
   }
 };
@@ -844,7 +843,7 @@ export class Create {
    * `create` and `insert` can be used in {@link WithMethods.with} expressions:
    *
    * ```ts
-   * db.$queryBuilder
+   * db.$qb
    *   // create a record in one table
    *   .with('a', db.table.select('id').create(data))
    *   // create a record in other table using the first table record id

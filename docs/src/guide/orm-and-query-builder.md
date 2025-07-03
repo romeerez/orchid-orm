@@ -1146,9 +1146,68 @@ const result = await db.$query<{ one: number }>(
 result.rows[0].one;
 ```
 
+### $query.records
+
+Returns an array of records:
+
+```ts
+const array: T[] = await db.$query.records<T>`SELECT * FROM table`;
+```
+
+### $query.take
+
+Returns a single record, throws [NotFoundError](/guide/error-handling) if not found.
+
+```ts
+const one: T = await db.$query.take<T>`SELECT * FROM table LIMIT 1`;
+```
+
+### $query.takeOptional
+
+Returns a single record or `undefined` when not found.
+
+```ts
+const maybeOne: T | undefined = await db.$query
+  .takeOptional<T>`SELECT * FROM table LIMIT 1`;
+```
+
+### $query.rows
+
+Returns array of tuples of the values:
+
+```ts
+const arrayOfTuples: [number, string][] = await db.$query.rows<
+  [number, string]
+>`SELECT id, name FROM table`;
+```
+
+### $query.pluck
+
+Returns a flat array of values for a single column:
+
+```ts
+const strings: string[] = await db.$query.pluck<string>`SELECT name FROM table`;
+```
+
+### $query.get
+
+Returns a single value, throws [NotFoundError](/guide/error-handling) if not found.
+
+```ts
+const value: number = await db.$query.get<number>`SELECT 1`;
+```
+
+### $query.getOptional
+
+Returns a single value or `undefined` when not found.
+
+```ts
+const value: number | undefined = await db.$query.getOptional<number>`SELECT 1`;
+```
+
 ## $queryArrays
 
-The same as the `$query`, but returns an array of arrays instead of objects:
+Performs a SQL query, returns a db result with array of arrays instead of objects:
 
 ```ts
 const value = 1;

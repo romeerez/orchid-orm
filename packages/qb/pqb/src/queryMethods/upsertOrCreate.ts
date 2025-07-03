@@ -96,13 +96,13 @@ function orCreate<T extends PickQueryMetaResult>(
       const c = q.create(data as CreateData<Query>);
       c.q.select = q.q.select;
 
-      let q2 = q.queryBuilder.with('f', q).with('c', c);
+      let q2 = q.qb.with('f', q).with('c', c);
 
       (q2.q as SelectQueryData).returnsOne = true;
       queryFrom(q2, 'f');
       q2 = _queryUnion(
         q2,
-        [q.queryBuilder.from('c' as never)],
+        [q.qb.from('c' as never)],
         'UNION ALL',
         true,
         true,

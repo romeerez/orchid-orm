@@ -91,7 +91,7 @@ export class WithMethods {
   /**
    * Use `with` to add a Common Table Expression (CTE) to the query.
    *
-   * `with` can be chained to any table on `db` instance, or to `db.$queryBuilder`,
+   * `with` can be chained to any table on `db` instance, or to `db.$qb`,
    * note that in the latter case it won't have customized column types to use for typing SQL.
    *
    * ```ts
@@ -102,8 +102,8 @@ export class WithMethods {
    *   q.select({ column: (q) => sql`123`.type((t) => t.customColumn()) }),
    * );
    *
-   * // only default columns are available when using off `$queryBuilder`
-   * db.$queryBuilder.with('x', (q) =>
+   * // only default columns are available when using off `$qb`
+   * db.$qb.with('x', (q) =>
    *   q.select({ column: (q) => sql`123`.type((t) => t.integer()) }),
    * );
    * ```
@@ -150,7 +150,7 @@ export class WithMethods {
    * One `WITH` expression can reference the other:
    *
    * ```ts
-   * db.$queryBuilder
+   * db.$qb
    *   .with('a', db.table.select('id', 'name'))
    *   .with('b', (q) => q.from('a').where({ key: 'value' }))
    *   .from('b');
@@ -205,7 +205,7 @@ export class WithMethods {
 
     let query: Query;
     if (typeof queryArg === 'function') {
-      const arg = q.queryBuilder.clone();
+      const arg = q.qb.clone();
       arg.q.withShapes = q.q.withShapes;
       query = queryArg(arg) as Query;
     } else {
@@ -237,7 +237,7 @@ export class WithMethods {
    *
    * For example, it is useful for loading a tree of categories, where one category can include many other categories.
    *
-   * Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$queryBuilder`.
+   * Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$qb`.
    *
    * For the first example, consider the employee table, an employee may or may not have a manager.
    *
@@ -255,7 +255,7 @@ export class WithMethods {
    * The task is to load all subordinates of the manager with the id 1.
    *
    * ```ts
-   * db.$queryBuilder
+   * db.$qb
    *   .withRecursive(
    *     'subordinates',
    *     // the base, anchor query: find the manager to begin recursion with
@@ -278,7 +278,7 @@ export class WithMethods {
    * You can customize it by passing options after the name.
    *
    * ```ts
-   * db.$queryBuilder
+   * db.$qb
    *   .withRecursive(
    *     'subordinates',
    *     {
@@ -298,7 +298,7 @@ export class WithMethods {
    * ```ts
    * import { sql } from './baseTable';
    *
-   * db.$queryBuilder
+   * db.$qb
    *   .withRecursive(
    *     't',
    *     // select `1 AS n` for the base query
@@ -354,7 +354,7 @@ export class WithMethods {
       recursive: (q: unknown) => Query,
     ];
 
-    const arg = q.queryBuilder.clone();
+    const arg = q.qb.clone();
     arg.q.withShapes = q.q.withShapes;
     let query = typeof baseFn === 'function' ? baseFn(arg) : baseFn;
     const shape = getShapeFromSelect(query, true) as ColumnsShapeBase;
@@ -385,7 +385,7 @@ export class WithMethods {
   /**
    * Use `withSql` to add a Common Table Expression (CTE) based on a custom SQL.
    *
-   * Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$queryBuilder`.
+   * Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$qb`.
    *
    * ```ts
    * import { sql } from './baseTable';

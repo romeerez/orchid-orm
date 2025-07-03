@@ -16,7 +16,7 @@ import { createBaseTable } from '../baseTable';
 import { orchidORM } from '../orm';
 
 const ormParams = {
-  db: db.$queryBuilder,
+  db: db.$qb,
 };
 
 const activeChatData = { ...chatData, Active: true };
@@ -2915,7 +2915,7 @@ describe('hasAndBelongsToMany', () => {
     }
 
     const local = orchidORM(
-      { db: db.$queryBuilder },
+      { db: db.$qb },
       {
         post: PostTable,
         tag: TagTable,

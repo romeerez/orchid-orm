@@ -440,7 +440,7 @@ describe('baseTable', () => {
 
     // need to instantiate tables so that the relations add special virtual columns
     orchidORM(
-      { db: db.$queryBuilder },
+      { db: db.$qb },
       {
         some: SomeTable,
         other: OtherTable,
@@ -617,7 +617,7 @@ describe('baseTable', () => {
       });
     }
 
-    const local = orchidORM({ db: db.$queryBuilder }, { user: UserTable });
+    const local = orchidORM({ db: db.$qb }, { user: UserTable });
 
     it('should have a default scope and be able to use defined scope', async () => {
       const q = local.user.scope('positiveId');
@@ -645,7 +645,7 @@ describe('baseTable', () => {
       readonly softDelete = true;
     }
 
-    const local = orchidORM({ db: db.$queryBuilder }, { user: UserTable });
+    const local = orchidORM({ db: db.$qb }, { user: UserTable });
 
     it('should filter records by `deletedAt`, add `includeDeleted` and `hardDelete`', () => {
       expectSql(

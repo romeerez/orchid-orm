@@ -52,22 +52,26 @@ export const makeInsertSql = (
   let values = query.values;
   if (quotedColumns.length === 0) {
     const key = Object.keys(q.shape)[0];
-    const column = q.shape[key] as ColumnTypeBase;
-    quotedColumns[0] = `"${column?.data.name || key}"`;
+    if (key) {
+      const column = q.shape[key] as ColumnTypeBase;
+      quotedColumns[0] = `"${column?.data.name || key}"`;
 
-    // for `create({})` case: `{}` is transformed into `[[]]`,
-    // we replace it with `[[undefined]]`, and it generates SQL `VALUES (DEFAULT)`
-    if (Array.isArray(values) && Array.isArray(values[0])) {
-      values = values.map(() => [undefined]);
+      // for `create({})` case: `{}` is transformed into `[[]]`,
+      // we replace it with `[[undefined]]`, and it generates SQL `VALUES (DEFAULT)`
+      if (Array.isArray(values) && Array.isArray(values[0])) {
+        values = values.map(() => [undefined]);
+      }
     }
   }
 
   ctx.sql.push(
-    `INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`,
+    `INSERT INTO ${quotedAs}${
+      quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''
+    }`,
     null as never,
   );
 
-  const QueryClass = ctx.queryBuilder.constructor as unknown as Db;
+  const QueryClass = ctx.qb.constructor as unknown as Db;
 
   if (query.onConflict) {
     ctx.sql.push('ON CONFLICT');

@@ -52,7 +52,7 @@ describe('orm', () => {
     }
 
     const local = orchidORM(
-      { db: db.$queryBuilder },
+      { db: db.$qb },
       {
         table: Table,
       },
@@ -69,7 +69,7 @@ describe('orm', () => {
 
   it('should return object with provided adapter, close and transaction method, tables', () => {
     const local = orchidORM(
-      { db: db.$queryBuilder },
+      { db: db.$qb },
       {
         user: UserTable,
         profile: ProfileTable,
@@ -86,7 +86,7 @@ describe('orm', () => {
 
   it('should return table which is a queryable interface', async () => {
     const local = orchidORM(
-      { db: db.$queryBuilder },
+      { db: db.$qb },
       {
         user: UserTable,
         profile: ProfileTable,
@@ -118,7 +118,7 @@ describe('orm', () => {
 
   it('should be able to turn on autoPreparedStatements', () => {
     const local = orchidORM(
-      { db: db.$queryBuilder, autoPreparedStatements: true },
+      { db: db.$qb, autoPreparedStatements: true },
       {
         user: UserTable,
         profile: ProfileTable,
@@ -130,7 +130,7 @@ describe('orm', () => {
 
   describe('query methods', () => {
     it('should perform a query with the $query method', async () => {
-      const spy = jest.spyOn(db.$queryBuilder as Db, 'query');
+      const spy = jest.spyOn(db.$qb as Db, 'query');
 
       await db.$query`SELECT 1`;
 
@@ -138,7 +138,7 @@ describe('orm', () => {
     });
 
     it('should query arrays with the $queryArrays method', async () => {
-      const spy = jest.spyOn(db.$queryBuilder as Db, 'queryArrays');
+      const spy = jest.spyOn(db.$qb as Db, 'queryArrays');
 
       await db.$queryArrays`SELECT 1`;
 

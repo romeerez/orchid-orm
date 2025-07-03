@@ -105,9 +105,9 @@ describe('query log', () => {
     expect(logger.error.mock.calls).toEqual([
       [
         `${logColors.boldMagenta('(1s 1.0ms)')} ${logColors.boldRed(
-          `SELECT * FROM "user" WHERE "wrongColumn" = $1`,
+          `SELECT * FROM "user" WHERE "user"."wrongColumn" = $1`,
         )} ${logColors.boldYellow(`['value']`)} ${logColors.boldRed(
-          'Error: column "wrongColumn" does not exist',
+          'Error: column user.wrongColumn does not exist',
         )}`,
       ],
     ]);
@@ -124,7 +124,7 @@ describe('query log', () => {
 
     expect(logger.error.mock.calls).toEqual([
       [
-        `(1s 1.0ms) SELECT * FROM "user" WHERE "wrongColumn" = $1 ['value'] Error: column "wrongColumn" does not exist`,
+        `(1s 1.0ms) SELECT * FROM "user" WHERE "user"."wrongColumn" = $1 ['value'] Error: column user.wrongColumn does not exist`,
       ],
     ]);
   });

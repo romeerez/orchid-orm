@@ -15,14 +15,13 @@ import {
   Expression,
   MaybeArray,
   PickQueryTableMetaResultInputType,
-  emptyObject,
   ColumnsParsers,
   QueryThenByQuery,
   UnionToIntersection,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
-import { addColumnParserToQuery, ColumnsShape } from '../columns';
+import { addColumnParserToQuery, anyShape, ColumnsShape } from '../columns';
 import { _clone } from '../query/queryUtils';
 
 export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
@@ -121,7 +120,7 @@ export function queryFrom<
   if (typeof arg === 'string') {
     data.as ||= arg;
     const w = data.withShapes?.[arg];
-    data.shape = w?.shape ?? emptyObject;
+    data.shape = (w?.shape ?? anyShape) as ColumnsShape;
     data.computeds = w?.computeds;
   } else if (isExpression(arg)) {
     data.as ||= 't';

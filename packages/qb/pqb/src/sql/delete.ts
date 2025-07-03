@@ -13,7 +13,7 @@ export const pushDeleteSql = (
   query: DeleteQueryData,
   quotedAs: string,
 ): HookSelect | undefined => {
-  const from = `"${table.table}"`;
+  const from = `"${table.table || query.from}"`;
   ctx.sql.push(`DELETE FROM ${from}`);
 
   if (from !== quotedAs) {

@@ -248,7 +248,7 @@ export const _joinLateralProcessArg = (
     } else {
       const w = q.q.withShapes?.[arg];
       if (w) {
-        const t = Object.create((q as unknown as Query).queryBuilder);
+        const t = Object.create((q as unknown as Query).qb);
         t.table = arg;
         t.shape = w.shape;
         t.computeds = w.computeds;

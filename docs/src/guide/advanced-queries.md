@@ -10,7 +10,7 @@ outline: deep
 
 Use `with` to add a Common Table Expression (CTE) to the query.
 
-`with` can be chained to any table on `db` instance, or to `db.$queryBuilder`,
+`with` can be chained to any table on `db` instance, or to `db.$qb`,
 note that in the latter case it won't have customized column types to use for typing SQL.
 
 ```ts
@@ -21,8 +21,8 @@ db.anyTable.with('x', (q) =>
   q.select({ column: (q) => sql`123`.type((t) => t.customColumn()) }),
 );
 
-// only default columns are available when using off `$queryBuilder`
-db.$queryBuilder.with('x', (q) =>
+// only default columns are available when using off `$qb`
+db.$qb.with('x', (q) =>
   q.select({ column: (q) => sql`123`.type((t) => t.integer()) }),
 );
 ```
@@ -69,7 +69,7 @@ db.table
 One `WITH` expression can reference the other:
 
 ```ts
-db.$queryBuilder
+db.$qb
   .with('a', db.table.select('id', 'name'))
   .with('b', (q) => q.from('a').where({ key: 'value' }))
   .from('b');
@@ -94,7 +94,7 @@ It is priceless for fetching tree-like structures, or any other recursive cases.
 
 For example, it is useful for loading a tree of categories, where one category can include many other categories.
 
-Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$queryBuilder`.
+Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$qb`.
 
 For the first example, consider the employee table, an employee may or may not have a manager.
 
@@ -112,7 +112,7 @@ class Employee extends BaseTable {
 The task is to load all subordinates of the manager with the id 1.
 
 ```ts
-db.$queryBuilder
+db.$qb
   .withRecursive(
     'subordinates',
     // the base, anchor query: find the manager to begin recursion with
@@ -135,7 +135,7 @@ These two queries are joined with `UNION ALL` by default.
 You can customize it by passing options after the name.
 
 ```ts
-db.$queryBuilder
+db.$qb
   .withRecursive(
     'subordinates',
     {
@@ -155,7 +155,7 @@ In the following example, we recursively select numbers from 1 to 100, and addit
 ```ts
 import { sql } from './baseTable';
 
-db.$queryBuilder
+db.$qb
   .withRecursive(
     't',
     // select `1 AS n` for the base query
@@ -178,7 +178,7 @@ db.$queryBuilder
 
 Use `withSql` to add a Common Table Expression (CTE) based on a custom SQL.
 
-Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$queryBuilder`.
+Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$qb`.
 
 ```ts
 import { sql } from './baseTable';

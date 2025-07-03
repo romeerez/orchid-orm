@@ -323,7 +323,7 @@ const processWhere = (
           }
         }
 
-        if (value instanceof ctx.queryBuilder.constructor) {
+        if (value instanceof ctx.qb.constructor) {
           ands.push(
             `${quotedColumn} = (${getSqlText((value as Query).toSQL(ctx))})`,
           );

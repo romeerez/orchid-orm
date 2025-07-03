@@ -386,6 +386,11 @@ export interface ColumnDataBase {
 
   // postgres internal number modifier, it can be present on custom types.
   typmod?: number;
+
+  // true | undefined for yes, false for no
+  insertable?: boolean;
+  // true | undefined for yes, false for no
+  updatable?: boolean;
 }
 
 export interface ColumnDataCheckBase {

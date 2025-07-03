@@ -20,7 +20,7 @@ import { assertType, expectSql } from 'test-utils';
 import { omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
-const ormParams = { db: db.$queryBuilder };
+const ormParams = { db: db.$qb };
 
 const activeUserData = { ...userData, Active: true };
 
@@ -879,7 +879,7 @@ describe('belongsTo', () => {
       });
 
       it('should support nested create with a value from `with`', () => {
-        const q = db.$queryBuilder
+        const q = db.$qb
           .with('user', db.user.create(userData))
           .with('profile', (q) =>
             db.profile.create({

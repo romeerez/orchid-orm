@@ -15,8 +15,8 @@ import {
 import { RelationConfigBase } from '../relations';
 import { _queryWhereIn, WhereResult } from './where/where';
 import { ToSQLQuery } from '../sql';
-import { VirtualColumn } from '../columns';
-import { anyShape, Db } from '../query/db';
+import { anyShape, VirtualColumn } from '../columns';
+import { Db } from '../query/db';
 import {
   isExpression,
   Expression,
@@ -428,7 +428,7 @@ export class Update {
    * `update` can be used in {@link WithMethods.with} expressions:
    *
    * ```ts
-   * db.$queryBuilder
+   * db.$qb
    *   // update record in one table
    *   .with('a', db.table.find(1).select('id').update(data))
    *   // update record in other table using the first table record id

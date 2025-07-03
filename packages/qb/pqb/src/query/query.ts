@@ -1,7 +1,7 @@
 import { GetStringArg, QueryMetaHasWhere, QueryMethods } from '../queryMethods';
 import { QueryData } from '../sql';
 import { AliasOrTable } from '../common/utils';
-import { Db } from './db';
+import { QueryBuilder } from './db';
 import { RelationsBase } from '../relations';
 import { QueryError, QueryErrorName } from '../errors';
 import {
@@ -122,7 +122,7 @@ export interface Query extends QueryMethods<unknown> {
   internal: QueryInternal;
   meta: QueryMetaBase<EmptyObject>;
   returnType: QueryReturnType;
-  queryBuilder: Db;
+  qb: QueryBuilder;
   columnTypes: unknown;
   shape: QueryColumns;
   inputType: RecordUnknown;

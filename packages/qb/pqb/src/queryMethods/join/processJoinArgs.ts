@@ -61,7 +61,7 @@ export const processJoinArgs = (
         throw new Error('Cannot find a `with` statement');
       }
 
-      const j = joinTo.queryBuilder.baseQuery.clone();
+      const j = joinTo.qb.baseQuery.clone();
       j.table = first;
       j.q = {
         shape: w.shape,

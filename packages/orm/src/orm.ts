@@ -61,7 +61,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    */
   $afterCommit: typeof afterCommit;
   $adapter: Adapter;
-  $queryBuilder: Db;
+  $qb: Db;
 
   /**
    * Use `$query` to perform raw SQL queries.
@@ -163,7 +163,7 @@ export const orchidORM = <T extends TableClasses>(
   if ('db' in options) {
     adapter = options.db.q.adapter;
     transactionStorage = options.db.internal.transactionStorage;
-    qb = options.db.queryBuilder;
+    qb = options.db.qb as Db;
   } else {
     adapter = 'adapter' in options ? options.adapter : new Adapter(options);
 
@@ -184,8 +184,10 @@ export const orchidORM = <T extends TableClasses>(
     $isInTransaction: isInTransaction,
     $afterCommit: afterCommit,
     $adapter: adapter,
-    $queryBuilder: qb,
-    $query: ((...args) => qb.query(...args)) as typeof qb.query,
+    $qb: qb,
+    get $query() {
+      return qb.query;
+    },
     $queryArrays: ((...args) =>
       qb.queryArrays(...args)) as typeof qb.queryArrays,
     $with: qb.with.bind(qb),

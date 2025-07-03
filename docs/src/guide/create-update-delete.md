@@ -70,7 +70,7 @@ await db.table.create({
 `create` and `insert` can be used in [with](/guide/advanced-queries#with) expressions:
 
 ```ts
-db.$queryBuilder
+db.$qb
   // create a record in one table
   .with('a', db.table.select('id').create(data))
   // create a record in other table using the first table record id
@@ -644,7 +644,7 @@ await db.table.find(1).update({
 `update` can be used in [with](/guide/advanced-queries#with) expressions:
 
 ```ts
-db.$queryBuilder
+db.$qb
   // update record in one table
   .with('a', db.table.find(1).select('id').update(data))
   // update record in other table using the first table record id
@@ -967,7 +967,7 @@ db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
 `delete` can be used in [with](/guide/advanced-queries#with) expressions:
 
 ```ts
-db.$queryBuilder
+db.$qb
   // delete a record in one table
   .with('a', db.table.find(1).select('id').delete())
   // delete a record in other table using the first table record id

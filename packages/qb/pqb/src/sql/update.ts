@@ -27,7 +27,10 @@ export const pushUpdateSql = (
   query: UpdateQueryData,
   quotedAs: string,
 ): HookSelect | undefined => {
-  const quotedTable = quoteSchemaAndTable(query.schema, table.table as string);
+  const quotedTable = quoteSchemaAndTable(
+    query.schema,
+    table.table || (query.from as string),
+  );
 
   const set: string[] = [];
   processData(ctx, table, set, query.updateData, quotedAs);
@@ -103,7 +106,7 @@ const processData = (
   quotedAs?: string,
 ) => {
   let append: UpdateQueryDataItem[] | undefined;
-  const QueryClass = ctx.queryBuilder.constructor as unknown as Db;
+  const QueryClass = ctx.qb.constructor as unknown as Db;
 
   for (const item of data) {
     if (typeof item === 'function') {
