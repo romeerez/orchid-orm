@@ -1,5 +1,18 @@
 # pqb
 
+## 0.53.0
+
+### Minor Changes
+
+- 51ac366: Rename `queryBuilder` to `qb` for conciseness.
+
+  Add `$query` modifiers such as `$query.records`, `$query.get`, others, see docs (#369)
+
+### Patch Changes
+
+- Updated dependencies [51ac366]
+  - orchid-core@0.26.0
+
 ## 0.52.3
 
 ### Patch Changes

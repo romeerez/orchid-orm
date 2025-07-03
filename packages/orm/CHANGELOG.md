@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.51.0
+
+### Minor Changes
+
+- 51ac366: Rename `queryBuilder` to `qb` for conciseness.
+
+  Add `$query` modifiers such as `$query.records`, `$query.get`, others, see docs (#369)
+
+### Patch Changes
+
+- Updated dependencies [51ac366]
+  - pqb@0.53.0
+  - orchid-core@0.26.0
+  - rake-db@2.25.12
+
 ## 1.50.5
 
 ### Patch Changes
