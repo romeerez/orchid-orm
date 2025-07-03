@@ -1,4 +1,9 @@
-import { PickQueryQ, PickQueryRelations, Query } from '../../query/query';
+import {
+  PickQueryQ,
+  PickQueryRelations,
+  PickQueryRelationQueries,
+  Query,
+} from '../../query/query';
 import { JoinArgs, JoinFirstArg, JoinQueryBuilder } from './join';
 import {
   JoinedShapes,
@@ -32,8 +37,7 @@ export const processJoinArgs = (
 ): JoinItemArgs => {
   if (typeof first === 'string') {
     if (first in joinTo.relations) {
-      const { query: toQuery, joinQuery } =
-        joinTo.relations[first].relationConfig;
+      const { query: toQuery, joinQuery } = joinTo.relations[first];
 
       const j = joinQuery(toQuery as never, joinTo) as Query;
       if (typeof args[0] === 'function') {
@@ -157,7 +161,9 @@ export const preprocessJoinArg = (
 ) => {
   if (typeof arg !== 'function') return arg;
 
-  arg = arg(q.relations as never);
+  arg = arg(
+    (q as unknown as PickQueryRelationQueries).relationQueries as never,
+  );
 
   (
     arg as unknown as { joinQueryAfterCallback: unknown }

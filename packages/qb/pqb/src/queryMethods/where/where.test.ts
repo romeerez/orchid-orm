@@ -9,7 +9,7 @@ import {
 } from '../../test-utils/test-utils';
 import { testWhere, testWhereExists } from './testWhere';
 import { assertType, expectSql, testDb } from 'test-utils';
-import { RelationQueryBase } from '../../relations';
+import { RelationConfigBase } from '../../relations';
 import { Query } from '../../query/query';
 
 describe('where', () => {
@@ -167,11 +167,9 @@ describe('where joined named columns', () => {
 describe('where sub query', () => {
   it('should handle boolean operator on aggregate sub query', () => {
     const messageRelation = Object.assign(Object.create(Message), {
-      relationConfig: {
-        query: Message,
-        joinQuery(q: Query, _baseQuery: Query) {
-          return q;
-        },
+      query: Message,
+      joinQuery(q: Query, _baseQuery: Query) {
+        return q;
       },
     });
     messageRelation.baseQuery = messageRelation;
@@ -180,14 +178,18 @@ describe('where sub query', () => {
       id: t.identity().primaryKey(),
     }));
 
+    interface Rel extends RelationConfigBase {
+      query: Query;
+    }
+
     const UserWithRelation = Object.assign(User, {
       relations: {
         messages: messageRelation,
       },
       messages: messageRelation,
     }) as unknown as typeof User & {
-      relations: { messages: RelationQueryBase };
-      messages: RelationQueryBase;
+      relations: { messages: Rel };
+      messages: Rel;
     };
 
     const q = UserWithRelation.where((q) =>

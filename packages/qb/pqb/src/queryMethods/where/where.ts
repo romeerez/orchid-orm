@@ -129,7 +129,7 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
       }
     : {
         [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
-          ? T['relations'][K]
+          ? T['relations'][K]['query']
           : K extends keyof T &
               (
                 | keyof Where

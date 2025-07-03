@@ -16,7 +16,7 @@ import {
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
-import { RelationQueryBase } from '../../relations';
+import { RelationConfigBase } from '../../relations';
 import {
   _clone,
   pushQueryValueImmutable,
@@ -105,8 +105,8 @@ export const _join = <
 
     const relation = query.relations[joinKey];
     if (relation) {
-      shape = getShapeFromSelect(relation.relationConfig.query as never);
-      const r = relation.relationConfig.query as Query;
+      shape = getShapeFromSelect(relation.query as never);
+      const r = relation.query as Query;
       parsers = r.q.parsers;
       batchParsers = r.q.batchParsers;
       computeds = r.q.computeds;
@@ -240,11 +240,11 @@ export const _joinLateralProcessArg = (
     result: QueryColumns;
   },
 ): Query => {
-  let relation: RelationQueryBase | undefined;
+  let relation: RelationConfigBase | undefined;
   if (typeof arg === 'string') {
     relation = q.relations[arg];
     if (relation) {
-      arg = _clone(relation.relationConfig.query);
+      arg = _clone(relation.query);
     } else {
       const w = q.q.withShapes?.[arg];
       if (w) {
@@ -268,7 +268,7 @@ export const _joinLateralProcessArg = (
   ) as unknown as Query;
 
   if (relation) {
-    result = relation.relationConfig.joinQuery(
+    result = relation.joinQuery(
       result as unknown as Query,
       q as unknown as Query,
     ) as unknown as Query;

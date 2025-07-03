@@ -105,8 +105,7 @@ interface SelectAsArg<T extends SelectSelf> {
               [K in
                 | keyof T['relations']
                 | keyof T]: K extends keyof T['relations']
-                ? T['relations'][K]['relationConfig']['maybeSingle'] &
-                    SubQueryAddition<T>
+                ? T['relations'][K]['maybeSingle'] & SubQueryAddition<T>
                 : K extends keyof T
                 ? T[K]
                 : never;

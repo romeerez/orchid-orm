@@ -1,5 +1,5 @@
 import { Query } from '../query/query';
-import { RelationQueryBase } from '../relations';
+import { RelationConfigBase } from '../relations';
 import { SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from './data';
 import {
@@ -141,7 +141,7 @@ export type JoinItemArgs =
       i?: boolean;
     }
   | {
-      // relation query from `relationConfig.joinQuery`
+      // relation query from `relation.joinQuery`
       j: IsQuery;
       // join a sub query, is not applicable in whereExists
       s: boolean;
@@ -213,7 +213,7 @@ export type WhereItem =
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
     }
-  | ((q: unknown) => RelationQueryBase | Expression)
+  | ((q: unknown) => RelationConfigBase | Expression)
   | Query
   | Expression;
 

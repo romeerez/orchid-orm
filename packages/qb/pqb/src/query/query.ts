@@ -109,6 +109,10 @@ export interface WithDataItems {
   [K: string]: WithDataItem;
 }
 
+export interface Queries {
+  [K: string]: Query;
+}
+
 export interface Query extends QueryMethods<unknown> {
   __isQuery: true;
   result: QueryColumns;
@@ -127,6 +131,7 @@ export interface Query extends QueryMethods<unknown> {
   catch: QueryCatch;
   windows: EmptyObject;
   relations: RelationsBase;
+  relationQueries: Queries;
   error: new (
     message: string,
     length: number,
@@ -145,6 +150,10 @@ export interface PickQueryWindows {
 
 export interface PickQueryRelations {
   relations: RelationsBase;
+}
+
+export interface PickQueryRelationQueries {
+  relationQueries: Queries;
 }
 
 export interface PickQueryQ {

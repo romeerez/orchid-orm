@@ -182,7 +182,7 @@ describe('hasOne', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         (
-          db.user.relations.profile.relationConfig.joinQuery(
+          db.user.relations.profile.joinQuery(
             db.profile.as('p'),
             db.user.as('u'),
           ) as Query
@@ -2452,7 +2452,7 @@ describe('hasOne through', () => {
   it('should have proper joinQuery', () => {
     expectSql(
       (
-        db.message.relations.profile.relationConfig.joinQuery(
+        db.message.relations.profile.joinQuery(
           db.profile.as('p'),
           db.message.as('m'),
         ) as Query

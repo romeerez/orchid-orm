@@ -244,6 +244,7 @@ export class Db<
   declare then: QueryThenShallowSimplifyArr<QueryDefaultReturnData<Shape>>;
   declare windows: EmptyObject;
   relations: EmptyObject;
+  relationQueries: EmptyObject;
   declare withData: EmptyObject;
   error: new (
     message: string,
@@ -303,6 +304,7 @@ export class Db<
 
     this.baseQuery = this as Query;
     this.relations = {};
+    this.relationQueries = {};
 
     const logger = options.logger || console;
 

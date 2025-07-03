@@ -108,22 +108,22 @@ export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
   CreateDataWithDefaultsForRelations<
     T,
     keyof T['meta']['defaults'],
-    T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']
+    T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
   > &
     ([BelongsToData] extends [never] ? EmptyObject : BelongsToData) &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
-    T['relations'][keyof T['relations']]['relationConfig']['optionalDataForCreate'];
+    T['relations'][keyof T['relations']]['optionalDataForCreate'];
 
 // Intersection of objects for `belongsTo` relations:
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
 export type CreateBelongsToData<T extends CreateSelf> = [
-  T['relations'][keyof T['relations']]['relationConfig']['dataForCreate'],
+  T['relations'][keyof T['relations']]['dataForCreate'],
 ] extends [never]
   ? never
   : CreateRelationsDataOmittingFKeys<
       T,
-      T['relations'][keyof T['relations']]['relationConfig']['dataForCreate']
+      T['relations'][keyof T['relations']]['dataForCreate']
     >;
 
 // Intersection of relations that may omit foreign key (belongsTo):
@@ -269,12 +269,12 @@ type NarrowCreateResult<
   ? T['result']
   : [
       {
-        [K in keyof T['relations']]: T['relations'][K]['relationConfig']['omitForeignKeyInCreate'];
+        [K in keyof T['relations']]: T['relations'][K]['omitForeignKeyInCreate'];
       }[keyof T['relations'] & keyof Bt],
     ] extends [never]
   ? T['result']
   : {
-      [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['relationConfig']['omitForeignKeyInCreate']
+      [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
         ? QueryColumn<
             Exclude<T['result'][K]['type'], null>,
             T['result'][K]['operators']

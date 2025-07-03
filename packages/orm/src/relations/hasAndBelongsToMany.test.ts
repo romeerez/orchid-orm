@@ -191,7 +191,7 @@ describe('hasAndBelongsToMany', () => {
   it('should have proper joinQuery', () => {
     expectSql(
       (
-        db.user.relations.chats.relationConfig.joinQuery(
+        db.user.relations.chats.joinQuery(
           db.chat.as('c'),
           db.user.as('u'),
         ) as Query

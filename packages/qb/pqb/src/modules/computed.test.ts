@@ -55,10 +55,8 @@ const joinQuery = User.as('user').whereSql`"profile"."user_id" = "user"."id"`;
 
 Object.assign(Profile.relations, {
   user: {
-    relationConfig: {
-      query: joinQuery,
-      joinQuery: () => joinQuery,
-    },
+    query: joinQuery,
+    joinQuery: () => joinQuery,
   },
 });
 

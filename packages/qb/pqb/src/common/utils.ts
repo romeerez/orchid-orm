@@ -2,7 +2,7 @@ import { QueryData, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
 import { PickQueryMetaTable } from '../query/query';
 import { Expression, PickQueryMeta, QueryColumn } from 'orchid-core';
-import { RelationQueryBase } from '../relations';
+import { RelationConfigBase } from '../relations';
 import { _clone } from '../query/queryUtils';
 import { _chain } from '../queryMethods/chain';
 
@@ -71,7 +71,7 @@ export const resolveSubQueryCallbackV2 = (
       for (const key in relations) {
         Object.defineProperty(base, key, {
           get() {
-            const rel = relations[key as string].relationConfig;
+            const rel = relations[key as string];
             const relQuery = _clone(rel.query);
             relQuery.q.withShapes = this.q.withShapes;
             return _chain(this, relQuery, rel);
@@ -105,10 +105,7 @@ export const resolveSubQueryCallbackV2 = (
  * @param sub - sub-query query object
  */
 export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): Query => {
-  if (!('relationConfig' in sub)) return sub as never;
+  if (!('joinQuery' in sub)) return sub as never;
 
-  return (sub as unknown as RelationQueryBase).relationConfig.joinQuery(
-    sub,
-    q,
-  ) as never;
+  return (sub as unknown as RelationConfigBase).joinQuery(sub, q) as never;
 };

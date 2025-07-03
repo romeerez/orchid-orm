@@ -50,7 +50,9 @@ export type JoinFirstArg<T extends PickQueryRelationsWithData> =
   | PickQueryTableMetaResult
   | keyof T['relations']
   | keyof T['withData']
-  | ((q: T['relations']) => PickQueryTableMetaResult);
+  | ((q: {
+      [K in keyof T['relations']]: T['relations'][K]['query'];
+    }) => PickQueryTableMetaResult);
 
 /**
  * Arguments of `join` methods (not `joinLateral`).
@@ -232,10 +234,10 @@ type JoinResultFromArgs<
         >
     : Arg extends keyof T['relations']
     ? JoinResultSelectable<
-        T['relations'][Arg]['shape'],
+        T['relations'][Arg]['query']['shape'],
         AliasOrTable<{
-          table: T['relations'][Arg]['table'];
-          meta: T['relations'][Arg]['meta'];
+          table: T['relations'][Arg]['query']['table'];
+          meta: T['relations'][Arg]['query']['meta'];
         }>,
         RequireJoined
       >
@@ -377,7 +379,7 @@ export type JoinArgToQuery<
   : Arg extends PickQueryTableMetaResult
   ? Arg
   : Arg extends keyof T['relations']
-  ? T['relations'][Arg]
+  ? T['relations'][Arg]['query']
   : Arg extends JoinArgToQueryCallback
   ? ReturnType<Arg>
   : never;
@@ -1051,7 +1053,7 @@ export class Join {
     return _joinLateral(
       q,
       'JOIN',
-      _joinLateralProcessArg(q, arg, cb as never),
+      _joinLateralProcessArg(q, arg as never, cb as never),
     ) as never;
   }
 
@@ -1089,7 +1091,7 @@ export class Join {
     return _joinLateral(
       _clone(this),
       'LEFT JOIN',
-      _joinLateralProcessArg(q, arg, cb as never),
+      _joinLateralProcessArg(q, arg as never, cb as never),
     ) as never;
   }
 

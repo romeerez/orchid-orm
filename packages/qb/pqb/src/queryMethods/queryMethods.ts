@@ -1238,11 +1238,9 @@ export class QueryMethods<ColumnTypes> {
   >(
     this: T,
     relName: RelName,
-    params: T['relations'][RelName]['relationConfig']['params'],
-  ): T['relations'][RelName]['relationConfig']['maybeSingle'] {
-    return this.relations[relName as string].relationConfig.queryRelated(
-      params,
-    ) as never;
+    params: T['relations'][RelName]['params'],
+  ): T['relations'][RelName]['maybeSingle'] {
+    return this.relations[relName as string].queryRelated(params) as never;
   }
 
   chain<
@@ -1254,25 +1252,25 @@ export class QueryMethods<ColumnTypes> {
   ): [
     T['meta']['subQuery'],
     T['returnType'],
-    T['relations'][RelName]['relationConfig']['returnsOne'],
+    T['relations'][RelName]['returnsOne'],
   ] extends [true, 'one' | 'oneOrThrow', true]
     ? {
-        [K in keyof T['relations'][RelName]['relationConfig']['maybeSingle']]: K extends 'meta'
+        [K in keyof T['relations'][RelName]['maybeSingle']]: K extends 'meta'
           ? {
-              [K in keyof T['relations'][RelName]['relationConfig']['maybeSingle']['meta']]: K extends 'selectable'
-                ? T['relations'][RelName]['relationConfig']['maybeSingle']['meta']['selectable'] &
+              [K in keyof T['relations'][RelName]['maybeSingle']['meta']]: K extends 'selectable'
+                ? T['relations'][RelName]['maybeSingle']['meta']['selectable'] &
                     Omit<T['meta']['selectable'], keyof T['shape']>
                 : K extends 'subQuery'
                 ? true
-                : T['relations'][RelName]['relationConfig']['maybeSingle']['meta'][K];
+                : T['relations'][RelName]['maybeSingle']['meta'][K];
             }
-          : T['relations'][RelName]['relationConfig']['maybeSingle'][K];
+          : T['relations'][RelName]['maybeSingle'][K];
       }
     : JoinResultRequireMain<
-        T['relations'][RelName]['relationConfig']['query'],
+        T['relations'][RelName]['query'],
         Omit<T['meta']['selectable'], keyof T['shape']>
       > {
-    const rel = this.relations[relName as string].relationConfig;
+    const rel = this.relations[relName as string];
 
     return _chain(this as unknown as IsQuery, _clone(rel.query), rel) as never;
   }

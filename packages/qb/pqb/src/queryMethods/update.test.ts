@@ -18,9 +18,10 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
-import { RelationQueryBase } from '../relations';
+import { RelationConfigBase } from '../relations';
 import { addQueryOn } from './join/join';
 import { PickQueryMeta } from 'orchid-core';
+import { Query } from 'pqb';
 
 describe('update', () => {
   useTestDatabase();
@@ -660,27 +661,23 @@ describe('update', () => {
 
   describe('update with relation query', () => {
     const user = Object.assign(Object.create(User), {
-      relationConfig: {
-        joinQuery(toQuery: PickQueryMeta, baseQuery: PickQueryMeta) {
-          return addQueryOn(
-            toQuery,
-            baseQuery,
-            toQuery,
-            'id',
-            'profile.userId',
-          );
-        },
+      joinQuery(toQuery: PickQueryMeta, baseQuery: PickQueryMeta) {
+        return addQueryOn(toQuery, baseQuery, toQuery, 'id', 'profile.userId');
       },
     });
     user.baseQuery = user;
+
+    interface Rel extends RelationConfigBase {
+      query: Query;
+    }
 
     const profile = Object.assign(Profile, {
       user,
     }) as unknown as Omit<typeof Profile, 'relations'> & {
       relations: {
-        user: RelationQueryBase;
+        user: Rel;
       };
-      user: RelationQueryBase;
+      user: Rel;
     };
 
     it('should update column with a sub query callback', () => {

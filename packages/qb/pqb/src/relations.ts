@@ -1,13 +1,24 @@
-import { Query } from './query/query';
-import { IsQuery, PickQueryMetaReturnType, RecordUnknown } from 'orchid-core';
+import {
+  IsQuery,
+  PickQueryMetaReturnType,
+  PickQueryShape,
+  PickQueryTable,
+  PickQueryTableMetaResult,
+  RecordUnknown,
+} from 'orchid-core';
 
 export interface RelationJoinQuery {
   (joiningQuery: IsQuery, baseQuery: IsQuery): IsQuery;
 }
 
+export interface RelationConfigQuery
+  extends PickQueryTableMetaResult,
+    PickQueryShape,
+    PickQueryTable {}
+
 export interface RelationConfigBase {
   returnsOne: boolean;
-  query: PickQueryMetaReturnType;
+  query: RelationConfigQuery;
   joinQuery: RelationJoinQuery;
   reverseJoin: RelationJoinQuery;
   params: unknown;
@@ -36,9 +47,5 @@ export interface RelationConfigDataForCreate {
 }
 
 export interface RelationsBase {
-  [K: string]: RelationQueryBase;
-}
-
-export interface RelationQueryBase extends Query {
-  relationConfig: RelationConfigBase;
+  [K: string]: RelationConfigBase;
 }

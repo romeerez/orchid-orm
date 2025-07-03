@@ -57,11 +57,30 @@ import {
   StaticSQLArgs,
   toSnakeCase,
 } from 'orchid-core';
-import { MapRelations, RelationConfigSelf } from './relations/relations';
+import {
+  RelationConfigSelf,
+  RelationTableToQuery,
+} from './relations/relations';
 import { OrchidORM } from './orm';
-import { BelongsToOptions } from './relations/belongsTo';
-import { HasOneOptions } from './relations/hasOne';
-import { HasAndBelongsToManyOptions } from './relations/hasAndBelongsToMany';
+import {
+  BelongsTo,
+  BelongsToInfo,
+  BelongsToOptions,
+  BelongsToQuery,
+} from './relations/belongsTo';
+import {
+  HasOne,
+  HasOneInfo,
+  HasOneOptions,
+  HasOneQuery,
+} from './relations/hasOne';
+import {
+  HasAndBelongsToMany,
+  HasAndBelongsToManyInfo,
+  HasAndBelongsToManyOptions,
+  HasAndBelongsToManyQuery,
+} from './relations/hasAndBelongsToMany';
+import { HasMany, HasManyInfo } from './relations/hasMany';
 
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {
@@ -111,16 +130,54 @@ export interface TableToDb<
       T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
       MapTableScopesOption<T>
     > {
-  relations: {
-    [K in keyof Relations]: Relations[K]['relationConfig']['query'] &
-      Relations[K];
-  };
+  relations: Relations;
 }
 
 // convert a table class type into queryable interface
 export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
   T extends RelationConfigSelf
-    ? TableToDb<T, MapRelations<T>>
+    ? TableToDb<
+        T,
+        T extends RelationConfigSelf
+          ? {
+              [K in keyof T['relations'] &
+                string]: T['relations'][K] extends BelongsTo
+                ? BelongsToInfo<
+                    T,
+                    K,
+                    T['relations'][K],
+                    T['relations'][K]['options']['columns'][number] & string,
+                    T['relations'][K]['options']['required'],
+                    BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
+                  >
+                : T['relations'][K] extends HasOne
+                ? HasOneInfo<
+                    T,
+                    K,
+                    T['relations'][K],
+                    HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+                  >
+                : T['relations'][K] extends HasMany
+                ? HasManyInfo<
+                    T,
+                    K,
+                    T['relations'][K],
+                    HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+                  >
+                : T['relations'][K] extends HasAndBelongsToMany
+                ? HasAndBelongsToManyInfo<
+                    T,
+                    K,
+                    T['relations'][K],
+                    HasAndBelongsToManyQuery<
+                      K,
+                      RelationTableToQuery<T['relations'][K]>
+                    >
+                  >
+                : never;
+            }
+          : EmptyObject
+      >
     : TableToDb<T, EmptyObject>;
 
 // type of table instance created by a table class

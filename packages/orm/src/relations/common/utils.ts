@@ -86,7 +86,7 @@ export const getThroughRelation = (
   table: Query,
   through: string,
 ): RelationConfigBase => {
-  return table.relations[through]?.relationConfig;
+  return table.relations[through];
 };
 
 export const getSourceRelation = (
@@ -95,7 +95,7 @@ export const getSourceRelation = (
 ): RelationConfigBase => {
   return (throughRelation.query as unknown as PickQueryRelations).relations[
     source
-  ]?.relationConfig;
+  ];
 };
 
 export const hasRelationHandleCreate = (

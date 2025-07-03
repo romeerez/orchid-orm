@@ -33,7 +33,7 @@ import {
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
-import { RelationQueryBase } from '../relations';
+import { RelationConfigBase } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
@@ -200,7 +200,7 @@ export interface CommonQueryData {
   // the following belongTo and hasOne must also return multiple
   chainMultiple?: boolean;
   // Chained relations, such as `db.user.messages.chat` are stored into array.
-  relChain?: (Query | RelationQueryBase)[];
+  relChain?: { query: Query; rel: RelationConfigBase }[];
   /**
    * Stores current operator functions available for the query.
    * Is needed to remove these operators from query object when changing the query type, see {@link setQueryOperators}.

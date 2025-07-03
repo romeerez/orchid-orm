@@ -1,17 +1,5 @@
-import {
-  BelongsTo,
-  BelongsToInfo,
-  BelongsToParams,
-  BelongsToQuery,
-  makeBelongsToMethod,
-} from './belongsTo';
-import {
-  HasOne,
-  HasOneInfo,
-  HasOneParams,
-  HasOneQuery,
-  makeHasOneMethod,
-} from './hasOne';
+import { BelongsTo, BelongsToParams, makeBelongsToMethod } from './belongsTo';
+import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
 import {
   ORMTableInputToQueryBuilder,
   ORMTableInput,
@@ -32,16 +20,13 @@ import {
 import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
-  EmptyObject,
   IsQuery,
   RecordUnknown,
 } from 'orchid-core';
-import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
+import { HasMany, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
-  HasAndBelongsToManyInfo,
   HasAndBelongsToManyParams,
-  HasAndBelongsToManyQuery,
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './common/utils';
@@ -131,55 +116,6 @@ export type RelationConfigParams<
   : Relation extends HasAndBelongsToMany
   ? HasAndBelongsToManyParams<T, Relation>
   : never;
-
-export type MapRelation<
-  T extends RelationConfigSelf,
-  K extends keyof T['relations'] & string,
-> = T['relations'][K] extends BelongsTo
-  ? {
-      relationConfig: BelongsToInfo<
-        T,
-        K,
-        T['relations'][K],
-        T['relations'][K]['options']['columns'][number] & string,
-        T['relations'][K]['options']['required'],
-        BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
-      >;
-    }
-  : T['relations'][K] extends HasOne
-  ? {
-      relationConfig: HasOneInfo<
-        T,
-        K,
-        T['relations'][K],
-        HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
-      >;
-    }
-  : T['relations'][K] extends HasMany
-  ? {
-      relationConfig: HasManyInfo<
-        T,
-        K,
-        T['relations'][K],
-        HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
-      >;
-    }
-  : T['relations'][K] extends HasAndBelongsToMany
-  ? {
-      relationConfig: HasAndBelongsToManyInfo<
-        T,
-        K,
-        T['relations'][K],
-        HasAndBelongsToManyQuery<K, RelationTableToQuery<T['relations'][K]>>
-      >;
-    }
-  : never;
-
-export type MapRelations<T> = T extends RelationConfigSelf
-  ? {
-      [K in keyof T['relations'] & string]: MapRelation<T, K>;
-    }
-  : EmptyObject;
 
 interface ApplyRelationData {
   relationName: string;
@@ -278,8 +214,9 @@ export const applyRelations = (
           through: string;
           source: string;
         };
-        const throughRel = (table.relations as RelationsBase)[through]
-          ?.relationConfig as unknown as { table: Query } | undefined;
+        const throughRel = (table.relations as RelationsBase)[
+          through
+        ] as unknown as { table: Query } | undefined;
 
         if (through && !throughRel) {
           message += `: cannot find \`${through}\` relation required by the \`through\` option`;
@@ -384,7 +321,7 @@ const applyRelation = (
     }
   };
 
-  baseQuery.relationConfig = {
+  (dbTable.relations as RecordUnknown)[relationName] = {
     table: otherDbTable,
     query,
     queryRelated: data.queryRelated,
@@ -393,7 +330,7 @@ const applyRelation = (
     modifyRelatedQuery: data.modifyRelatedQuery,
   };
 
-  (dbTable.relations as RecordUnknown)[relationName] = query;
+  (dbTable.relationQueries ??= {})[relationName] = query;
 
   const tableRelations = delayedRelations.get(dbTable);
   if (!tableRelations) return;

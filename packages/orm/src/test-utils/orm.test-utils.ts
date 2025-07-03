@@ -614,7 +614,7 @@ export const tagData = {
 };
 
 export const useRelationCallback = <T extends Query>(
-  rel: { relationConfig: { query: T } },
+  rel: { query: T },
   selectArr: (keyof T['shape'])[],
 ) => {
   const select = new Set(selectArr);
@@ -626,7 +626,7 @@ export const useRelationCallback = <T extends Query>(
   const beforeDelete = jest.fn();
   const afterDelete = jest.fn();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const q = rel.relationConfig.query.q as any;
+  const q = rel.query.q as any;
 
   beforeAll(() => {
     q.beforeCreate = [beforeCreate];

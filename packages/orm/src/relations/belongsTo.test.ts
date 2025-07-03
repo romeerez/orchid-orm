@@ -143,7 +143,7 @@ describe('belongsTo', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         (
-          db.profile.relations.user.relationConfig.joinQuery(
+          db.profile.relations.user.joinQuery(
             db.user.as('u'),
             db.profile.as('p'),
           ) as Query

@@ -54,7 +54,7 @@ export type UpdateData<T extends UpdateSelf> =
           | keyof T['inputType']
           | keyof T['relations']]?: K extends keyof T['inputType']
           ? UpdateColumn<T, K>
-          : UpdateRelationData<T, T['relations'][K]['relationConfig']>;
+          : UpdateRelationData<T, T['relations'][K]>;
       };
 
 // Type of available variants to provide for a specific column when updating.
@@ -65,7 +65,7 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
   | T['inputType'][Key]
   | ((q: {
       [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
-        ? T['relations'][K]
+        ? T['relations'][K]['query']
         : K extends keyof T
         ? T[K]
         : never;

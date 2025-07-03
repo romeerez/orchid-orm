@@ -23,11 +23,8 @@ export const joinQueryChainHOF =
     }
 
     const last = chain[chain.length - 1];
-    const query = (
-      'relationConfig' in last
-        ? last.relationConfig.joinQuery(last, baseQuery)
-        : last
-    ) as Query;
+    const prev = chain[chain.length - 2];
+    const query = prev.rel.joinQuery(last.query as never, baseQuery) as Query;
 
     let useWhereExist = true;
 

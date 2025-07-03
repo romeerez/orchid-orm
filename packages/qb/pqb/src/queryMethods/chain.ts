@@ -10,7 +10,7 @@ import { SelectQueryData } from 'pqb';
 export const _chain = (
   fromQuery: IsQuery,
   toQuery: IsQuery,
-  rel: Pick<RelationConfigBase, 'query' | 'reverseJoin' | 'modifyRelatedQuery'>,
+  rel: RelationConfigBase,
 ) => {
   const self = fromQuery as Query;
   const toTable = toQuery as Query;
@@ -48,9 +48,9 @@ export const _chain = (
   }
 
   if (self.q.relChain) {
-    q.relChain = [...self.q.relChain, self];
+    q.relChain = [...self.q.relChain, { query: self, rel }];
   } else {
-    q.relChain = [self];
+    q.relChain = [{ query: self, rel }];
   }
 
   const aliases = self.q.as

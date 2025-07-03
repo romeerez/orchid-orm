@@ -350,7 +350,7 @@ describe('hasMany', () => {
   it('should have proper joinQuery', () => {
     expectSql(
       (
-        db.user.relations.messages.relationConfig.joinQuery(
+        db.user.relations.messages.joinQuery(
           db.message.as('m'),
           db.user.as('u'),
         ) as Query
@@ -3270,7 +3270,7 @@ describe('hasMany through', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         (
-          db.profile.relations.chats.relationConfig.joinQuery(
+          db.profile.relations.chats.joinQuery(
             db.chat.as('c'),
             db.profile.as('p'),
           ) as Query
@@ -4347,7 +4347,7 @@ describe('hasMany through', () => {
     it('should have proper joinQuery', () => {
       expectSql(
         (
-          db.chat.relations.profiles.relationConfig.joinQuery(
+          db.chat.relations.profiles.joinQuery(
             db.profile.as('p'),
             db.chat.as('c'),
           ) as Query
