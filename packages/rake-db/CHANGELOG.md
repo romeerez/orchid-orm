@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.25.11
+
+### Patch Changes
+
+- 8e3430b: snake_case to camelCase in generated migrations (#532)
+- Updated dependencies [8e3430b]
+- Updated dependencies [dbcbb0e]
+- Updated dependencies [4e4548e]
+  - pqb@0.52.3
+  - orchid-core@0.25.2
+
 ## 2.25.10
 
 ### Patch Changes

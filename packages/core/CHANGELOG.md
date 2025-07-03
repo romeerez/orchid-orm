@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.25.2
+
+### Patch Changes
+
+- 8e3430b: snake_case to camelCase in generated migrations (#532)
+
 ## 0.25.1
 
 ### Patch Changes

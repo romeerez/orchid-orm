@@ -1,5 +1,15 @@
 # pqb
 
+## 0.52.3
+
+### Patch Changes
+
+- 8e3430b: snake_case to camelCase in generated migrations (#532)
+- dbcbb0e: Optimize relation types
+- 4e4548e: Fix `catch` preventing query to return a result (#530)
+- Updated dependencies [8e3430b]
+  - orchid-core@0.25.2
+
 ## 0.52.2
 
 ### Patch Changes
