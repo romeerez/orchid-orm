@@ -1,4 +1,4 @@
-import { WithOptions } from '../sql';
+import { WithItem, WithOptions } from '../sql';
 import {
   PickQueryMetaWithDataColumnTypes,
   PickQueryWithDataColumnTypes,
@@ -7,6 +7,7 @@ import {
 import {
   _clone,
   pushQueryValueImmutable,
+  saveAliasedShape,
   setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import {
@@ -15,10 +16,12 @@ import {
   EmptyObject,
   PickQueryResult,
   QueryColumns,
+  RecordUnknown,
 } from 'orchid-core';
 import { SqlMethod } from './sql';
 import { getShapeFromSelect } from './select';
 import { _queryUnion } from './union';
+import { RawSQL } from '../sql/rawSql';
 
 // `with` method options
 // - `columns`: true to get all columns from the query, or array of column names
@@ -85,6 +88,37 @@ export type WithSqlResult<
           : never;
       }
     : T[K];
+};
+
+const addWith = (q: Query, item: WithItem) => {
+  // WITH clause containing a data-modifying statement must be at the top level
+  item.q?.q.with?.forEach((item, i, arr) => {
+    if (item?.q?.q.type) {
+      pushQueryValueImmutable(q, 'with', item);
+      arr[i] = undefined;
+    }
+  });
+
+  pushQueryValueImmutable(q, 'with', item);
+};
+
+export const moveQueryValueToWith = (
+  q: Query,
+  value: Query,
+  set: RecordUnknown,
+  key: string,
+) => {
+  // if it is not a select query,
+  // move it into `WITH` statement and select from it with a raw SQL
+  if (value.q.type) {
+    const as = saveAliasedShape(q as Query, 'q', 'withShapes');
+    addWith(q, {
+      n: as,
+      q: value,
+    });
+
+    set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
+  }
 };
 
 export class WithMethods {
@@ -219,11 +253,7 @@ export class WithMethods {
       };
     }
 
-    pushQueryValueImmutable(q, 'with', {
-      n: name,
-      o: options,
-      q: query,
-    });
+    addWith(q, { n: name, o: options as WithOptions, q: query });
 
     const shape = getShapeFromSelect(query, true);
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
@@ -373,11 +403,7 @@ export class WithMethods {
       };
     }
 
-    pushQueryValueImmutable(q, 'with', {
-      n: name,
-      o: options,
-      q: query,
-    });
+    addWith(q, { n: name, o: options as WithOptions, q: query });
 
     return setQueryObjectValueImmutable(q, 'withShapes', name, withConfig);
   }

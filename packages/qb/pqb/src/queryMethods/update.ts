@@ -9,7 +9,6 @@ import {
 import {
   _clone,
   pushQueryValueImmutable,
-  saveSearchAlias,
   throwIfNoWhere,
 } from '../query/queryUtils';
 import { RelationConfigBase } from '../relations';
@@ -27,9 +26,10 @@ import {
   EmptyObject,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
-import { RawSQL, sqlQueryArgsToExpression } from '../sql/rawSql';
+import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { resolveSubQueryCallbackV2 } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
+import { moveQueryValueToWith } from './with';
 
 export interface UpdateSelf
   extends PickQueryMetaResultRelationsWithDataReturnTypeShape {
@@ -212,7 +212,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
         if (value instanceof Db && value.q.type && value.q.subQuery) {
           throw new OrchidOrmInternalError(
             value,
-            `Only selecting queries are allowed inside callback of update, ${value.q.type} is given instead.`,
+            `Only selecting queries are allowed inside a callback of update, ${value.q.type} is given instead.`,
           );
         }
 
@@ -221,21 +221,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
       if (value !== null && value !== undefined && !isExpression(value)) {
         if (value instanceof Db) {
-          // if it is not a select query,
-          // move it into `WITH` statement and select from it with a raw SQL
-          if (value.q.type) {
-            const as = saveSearchAlias(
-              query as unknown as Query,
-              'q',
-              'withShapes',
-            );
-            pushQueryValueImmutable(query as unknown as Query, 'with', {
-              n: as,
-              q: value,
-            });
-
-            set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
-          }
+          moveQueryValueToWith(query as unknown as Query, value, set, key);
         } else {
           // encode if not a query object
           const encode = shape[key].data.encode;
@@ -353,14 +339,14 @@ export class Update {
    *
    * await db.table.where({ ...conditions }).update({
    *   // set the column to a specific value
-   *   column1: 123,
+   *   value: 123,
    *
-   *   // use raw SQL to update the column
-   *   column2: () => sql`2 + 2`,
+   *   // use custom SQL to update the column
+   *   fromSql: () => sql`2 + 2`,
    *
    *   // use query that returns a single value
    *   // returning multiple values will result in Postgres error
-   *   column3: () => db.otherTable.get('someColumn'),
+   *   fromQuery: () => db.otherTable.get('someColumn'),
    *
    *   // select a single value from a related record
    *   fromRelation: (q) => q.relatedTable.get('someColumn'),
@@ -370,60 +356,23 @@ export class Update {
    * });
    * ```
    *
-   * ### sub-queries
-   *
-   * In addition to sub-queries that are simply selecting a single value, it's supported to update a column with a result of the provided `create`, `update`, or `delete` sub-query.
+   * `update` can be used in [with](/guide/advanced-queries#with) expressions:
    *
    * ```ts
-   * await db.table.where({ ...conditions }).update({
-   *   // `column` will be set to a value of the `otherColumn` of the created record.
-   *   column: () => db.otherTable.get('otherColumn').create({ ...data }),
-   *
-   *   // `column2` will be set to a value of the `otherColumn` of the updated record.
-   *   column2: () => db.otherTable
-   *     .get('otherColumn')
-   *     .findBy({ ...conditions })
-   *     .update({ key: 'value' }),
-   *
-   *   // `column3` will be set to a value of the `otherColumn` of the deleted record.
-   *   column3: () => db.otherTable
-   *     .get('otherColumn')
-   *     .findBy({ ...conditions })
-   *     .delete(),
-   * });
-   * ```
-   *
-   * This is achieved by defining a `WITH` clause under the hood, it produces such a query:
-   *
-   * ```sql
-   * WITH q AS (
-   *   INSERT INTO "otherTable"(col1, col2, col3)
-   *   VALUES ('val1', 'val2', 'val3')
-   *   RETURNING "otherTable"."selectedColumn"
-   * )
-   * UPDATE "table"
-   * SET "column" = (SELECT * FROM "q")
-   * ```
-   *
-   * The query is atomic, and if the sub-query fails, or the update part fails, or if multiple rows are returned from a sub-query, no changes will persist in the database.
-   *
-   * Though it's possible to select a single value from a callback for the column to update:
-   *
-   * ```ts
-   * await db.table.find(1).update({
-   *   // update column `one` with the value of column `two` of the related record.
-   *   one: (q) => q.relatedTable.get('two'),
-   * })
-   * ```
-   *
-   * It is **not** supported to use `create`, `update`, or `delete` kinds of sub-query on related tables:
-   *
-   * ```ts
-   * await db.table.find(1).update({
-   *   // TS error, this is not allowed:
-   *   one: (q) => q.relatedTable.get('two').create({ ...data }),
-   * })
-   * ```
+   * db.$qb
+   *   // update record in one table
+   *   .with('a', db.table.find(1).select('id').update(data))
+   *   // update record in other table using the first table record id
+   *   .with('b', (q) =>
+   *     db.otherTable
+   *       .find(1)
+   *       .select('id')
+   *       .update({
+   *         ...otherData,
+   *         aId: () => q.from('a').get('id'),
+   *       }),
+   *   )
+   *   .from('b');
    *
    * `update` can be used in {@link WithMethods.with} expressions:
    *
@@ -442,6 +391,62 @@ export class Update {
    *       }),
    *   )
    *   .from('b');
+   * ```
+   *
+   * ### sub-queries
+   *
+   * In all `create`, `update`, `upsert` methods,
+   * you can use sub queries that are either selecting a single value,
+   * or creating/updating/deleting a record and return a single value.
+   *
+   * ```ts
+   * await db.table.where({ ...conditions }).update({
+   *   // `column` will be set to a value of the `otherColumn` of the created record.
+   *   column: () => db.otherTable.get('otherColumn').create({ ...data }),
+   *
+   *   // `column2` will be set to a value of the `otherColumn` of the updated record.
+   *   column2: () =>
+   *     db.otherTable
+   *       .get('otherColumn')
+   *       .findBy({ ...conditions })
+   *       .update({ key: 'value' }),
+   *
+   *   // `column3` will be set to a value of the `otherColumn` of the deleted record.
+   *   column3: () =>
+   *     db.otherTable
+   *       .get('otherColumn')
+   *       .findBy({ ...conditions })
+   *       .delete(),
+   * });
+   * ```
+   *
+   * This is achieved by defining a `WITH` clause under the hood, it produces such a query:
+   *
+   * ```sql
+   * WITH q AS (
+   *   INSERT INTO "otherTable"(col1, col2, col3)
+   *   VALUES ('val1', 'val2', 'val3')
+   *   RETURNING "otherTable"."selectedColumn"
+   * )
+   * -- In a case of create
+   * INSERT INTO "table"("column") VALUES ((SELECT * FROM "q"))
+   * -- In a case of update
+   * UPDATE "table"
+   * SET "column" = (SELECT * FROM "q")
+   * ```
+   *
+   * The query is atomic.
+   * No changes will persist in the database if the sub-query fails, or if the top-level query fails, or if multiple rows are returned from a sub-query.
+   *
+   * [//]: # 'not supported in create because cannot query related records for a thing that is not created yet'
+   * [//]: # 'modificational sub queries are not allowed in update because it would be too hard to join a with statement to the update query'
+   *
+   * Only selective sub-queries are supported in `update` queries when the sub-query is using a relation:
+   *
+   * ```ts
+   * db.book.update({
+   *   authorName: (q) => q.author.get('name'),
+   * });
    * ```
    *
    * ### null, undefined, unknown columns

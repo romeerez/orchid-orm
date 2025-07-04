@@ -544,7 +544,7 @@ describe('create functions', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should create record with provided defaults', () => {
+    it('should a create record with provided defaults', () => {
       const q = User.defaults({
         name: 'name',
         password: 'password',
@@ -581,7 +581,7 @@ describe('create functions', () => {
       );
     });
 
-    it('should create record with runtime default', () => {
+    it('should a create record with runtime default', () => {
       const q = RuntimeDefaultTable.create({
         password: 'password',
       });
@@ -597,7 +597,7 @@ describe('create functions', () => {
       );
     });
 
-    it('should create record with a sub query result for the column value', () => {
+    it('should a create record with a sub query result for the column value', () => {
       const q = User.create({
         name: User.get('name'),
         password: 'password',
@@ -611,6 +611,28 @@ describe('create functions', () => {
           RETURNING ${userColumnsSql}
         `,
         ['password'],
+      );
+    });
+
+    it('should create a record with a sub query result from inserting', () => {
+      const q = User.create({
+        ...userData,
+        name: User.create(userData).get('name'),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "q" AS (
+            INSERT INTO "user"("name", "password")
+            VALUES ($1, $2)
+            RETURNING "user"."name"
+          )
+          INSERT INTO "user"("name", "password")
+          VALUES ((SELECT * FROM "q"), $3)
+          RETURNING ${userColumnsSql}
+        `,
+        ['name', 'password', 'password'],
       );
     });
 
@@ -961,6 +983,38 @@ describe('create functions', () => {
       );
     });
 
+    it('should create records with a sub query result from inserting', async () => {
+      setMaxBindingParams(100);
+
+      const q = User.createMany(
+        Array.from({ length: 2 }, () => ({
+          ...userData,
+          name: User.create(userData).get('name'),
+        })),
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "q" AS (
+            INSERT INTO "user"("name", "password")
+            VALUES ($1, $2)
+            RETURNING "user"."name"
+          ), "q2" AS (
+            INSERT INTO "user"("name", "password")
+            VALUES ($3, $4)
+            RETURNING "user"."name"
+          )
+          INSERT INTO "user"("name", "password")
+          VALUES
+            ((SELECT * FROM "q"), $5),
+            ((SELECT * FROM "q2"), $6)
+          RETURNING ${userColumnsSql}
+        `,
+        ['name', 'password', 'name', 'password', 'password', 'password'],
+      );
+    });
+
     it('should override value return type with pluck', () => {
       const q = User.get('name').createMany([userData]);
 
@@ -1121,7 +1175,7 @@ describe('create functions', () => {
       );
     });
 
-    it('should create record from select with additional data', () => {
+    it('should a create record from select with additional data', () => {
       const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
       const query = Message.createFrom(chat, {
@@ -1145,7 +1199,7 @@ describe('create functions', () => {
       );
     });
 
-    it('should create record from select with named columns', () => {
+    it('should a create record from select with named columns', () => {
       const user = User.find(1).select({ snakeName: 'name' });
 
       const query = Snake.createFrom(user, {
@@ -1215,6 +1269,35 @@ describe('create functions', () => {
       assertType<typeof result, { name: string }>();
 
       expect(result).toEqual({ name: userData.name });
+    });
+
+    it('should a create record from select with additional value returned from an insert sub query', () => {
+      const chat = Chat.find(1).select({ chatId: 'idOfChat' });
+
+      const query = Message.createFrom(chat, {
+        authorId: User.create(userData).get('id'),
+        text: raw`'text'`,
+      });
+
+      assertType<Awaited<typeof query>, MessageRecord>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          WITH "q" AS (
+            INSERT INTO "user"("name", "password")
+            VALUES ($1, $2)
+            RETURNING "user"."id"
+          )
+          INSERT INTO "message"("chat_id", "author_id", "text")
+          SELECT "chat"."id_of_chat" "chatId", (SELECT * FROM "q"), 'text'
+          FROM "chat"
+          WHERE "chat"."id_of_chat" = $3
+          LIMIT 1
+          RETURNING ${messageColumnsSql}
+        `,
+        ['name', 'password', 1],
+      );
     });
   });
 
@@ -1288,7 +1371,7 @@ describe('create functions', () => {
       );
     });
 
-    it('should create record from select with named columns', () => {
+    it('should a create record from select with named columns', () => {
       const sub = User.where({ name: 'name' }).select({ snakeName: 'name' });
       const query = Snake.createManyFrom(sub);
 

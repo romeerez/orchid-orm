@@ -110,9 +110,9 @@ export const throwIfJoinLateral = (q: PickQueryQ, method: string): void => {
   }
 };
 
-// Pick an alias for a search query to reference it later in WHERE, in ORDER BY, in headline.
-// If the alias is taken, it tries "@q", "@q1", "@q2" and so on.
-export const saveSearchAlias = (
+// Searches if a given name is already taken, if it is taken it suffixes it with an increment.
+// Stores an empty object under this key and this alias to the query data.
+export const saveAliasedShape = (
   q: IsQuery,
   as: string,
   key: 'joinedShapes' | 'withShapes',

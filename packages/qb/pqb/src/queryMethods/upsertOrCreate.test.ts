@@ -1,5 +1,5 @@
 import { User, userData } from '../test-utils/test-utils';
-import { assertType, testDb, useTestDatabase } from 'test-utils';
+import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
 import { TransactionAdapter } from '../adapter';
 import { QueryInput } from 'orchid-core';
 
@@ -30,32 +30,55 @@ describe('upsertOrCreate', () => {
       assertType<Awaited<typeof q>, void>();
     });
 
-    it('should update record if exists', async () => {
+    it('should update record if exists, should support sql and sub-queries', async () => {
       const { id } = await User.create(userData);
 
       const user = await User.selectAll()
         .find(id)
         .upsert({
           update: {
-            name: 'updated',
+            data: { name: 'updated', tags: ['tag'] },
+            age: () => sql`28`,
+            name: () =>
+              User.create({
+                ...userData,
+                name: 'updated',
+              }).get('name'),
           },
           create: userData,
         });
 
-      expect(user.name).toBe('updated');
+      expect(user).toMatchObject({
+        name: 'updated',
+        age: 28,
+        data: { name: 'updated', tags: ['tag'] },
+      });
     });
 
-    it('should create record if not exists', async () => {
+    it('should create record if not exists, should support sql and sub-queries', async () => {
       const user = await User.selectAll()
         .find(123)
         .upsert({
           update: {
             name: 'updated',
           },
-          create: { ...userData, name: 'created' },
+          create: {
+            data: { name: 'created', tags: ['tag'] },
+            password: 'password',
+            age: () => sql`28`,
+            name: () =>
+              User.create({
+                ...userData,
+                name: 'created',
+              }).get('name'),
+          },
         });
 
-      expect(user.name).toBe('created');
+      expect(user).toMatchObject({
+        data: { name: 'created', tags: ['tag'] },
+        age: 28,
+        name: 'created',
+      });
     });
 
     it('should create record and return a single value', async () => {
@@ -389,15 +412,16 @@ describe('upsertOrCreate', () => {
       expect(created).toBe(id);
     });
 
-    it('should create record if not exists', async () => {
+    it('should create record if not exists, should support sql and sub queries', async () => {
       const user = await User.selectAll()
         .find(123)
         .orCreate({
           ...userData,
-          name: 'created',
+          name: User.create({ ...userData, name: 'created' }).get('name'),
+          age: () => sql`28`,
         });
 
-      expect(user.name).toBe('created');
+      expect(user).toMatchObject({ name: 'created', age: 28 });
     });
 
     it('should create record if not exists with data from a callback', async () => {

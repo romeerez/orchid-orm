@@ -187,6 +187,14 @@ export class QueryUpsertOrCreate {
    *     data: {
    *       // update record's name
    *       name: 'new name',
+   *       // supports sql and nested queries
+   *       fromSQL: () => sql`*SQL expression*`,
+   *       fromQuery: () => db.someTable.create(data).get('column'),
+   *     },
+   *     create: {
+   *       // create a new record with this email and a name 'new name'
+   *       email: 'some@email.com',
+   *       // supports sql and nested queries as well
    *     },
    *     create: {
    *       // create a new record with this email and a name 'new name'
@@ -307,11 +315,16 @@ export class QueryUpsertOrCreate {
    * No result is returned by default, place `get`, `select`, or `selectAll` before `orCreate` to specify returning columns.
    *
    * ```ts
-   * const user = await User.selectAll()
+   * const user = await db.user
+   *   .selectAll()
    *   .findBy({ email: 'some@email.com' })
    *   .orCreate({
    *     email: 'some@email.com',
    *     name: 'created user',
+   *     // supports sql and nested queries
+   *     fromSQL: () => sql`*SQL expression*`,
+   *     fromQuery: () => db.someTable.create(data).get('column'),
+   *     fromRelated: (q) => q.relatedTable.update(data).get('column'),
    *   });
    * ```
    *

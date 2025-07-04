@@ -1,33 +1,37 @@
 import { toSQL, ToSQLCtx } from './toSQL';
-import { WithItem, WithOptions } from './types';
+import { WithOptions } from './types';
 import { emptyObject, Expression } from 'orchid-core';
 import { getSqlText } from './utils';
+import { WithItems } from 'pqb';
 
-export const pushWithSql = (ctx: ToSQLCtx, items: WithItem[]) => {
+export const pushWithSql = (ctx: ToSQLCtx, items: WithItems) => {
   if (!items.length) return;
 
-  ctx.sql.push(
-    'WITH',
-    items
-      .map((item) => {
-        let inner: string;
-        if (item.q) {
-          inner = getSqlText(toSQL(item.q, ctx));
-        } else {
-          inner = (item.s as Expression).toSQL(ctx, `"${item.n}"`);
-        }
+  const sqls: string[] = [];
 
-        const o = item.o ?? (emptyObject as WithOptions);
-        return `${o.recursive ? 'RECURSIVE ' : ''}"${item.n}"${
-          o.columns ? `(${o.columns.map((x) => `"${x}"`).join(', ')})` : ''
-        } AS ${
-          o.materialized
-            ? 'MATERIALIZED '
-            : o.notMaterialized
-            ? 'NOT MATERIALIZED '
-            : ''
-        }(${inner})`;
-      })
-      .join(', '),
-  );
+  for (const item of items) {
+    if (!item) continue;
+
+    let inner: string;
+    if (item.q) {
+      inner = getSqlText(toSQL(item.q, ctx));
+    } else {
+      inner = (item.s as Expression).toSQL(ctx, `"${item.n}"`);
+    }
+
+    const o = item.o ?? (emptyObject as WithOptions);
+    sqls.push(
+      `${o.recursive ? 'RECURSIVE ' : ''}"${item.n}"${
+        o.columns ? `(${o.columns.map((x) => `"${x}"`).join(', ')})` : ''
+      } AS ${
+        o.materialized
+          ? 'MATERIALIZED '
+          : o.notMaterialized
+          ? 'NOT MATERIALIZED '
+          : ''
+      }(${inner})`,
+    );
+  }
+
+  if (sqls.length) ctx.sql.push('WITH', sqls.join(', '));
 };

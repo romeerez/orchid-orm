@@ -22,7 +22,7 @@ import {
 import {
   _clone,
   pushQueryValueImmutable,
-  saveSearchAlias,
+  saveAliasedShape,
   setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
@@ -435,7 +435,7 @@ export class SearchMethods {
     const q = _clone(this);
 
     if (!arg.as) {
-      const as = saveSearchAlias(q, '@q', 'joinedShapes') as As;
+      const as = saveAliasedShape(q, '@q', 'joinedShapes') as As;
 
       arg = {
         ...arg,

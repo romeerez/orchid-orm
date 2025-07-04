@@ -87,6 +87,8 @@ export interface HandleResult {
   ): MaybePromise<unknown>;
 }
 
+export type WithItems = (WithItem | undefined)[];
+
 export interface CommonQueryData {
   adapter: Adapter;
   shape: ColumnsShape;
@@ -101,7 +103,7 @@ export interface CommonQueryData {
   returningMany?: boolean;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
-  with?: WithItem[];
+  with?: WithItems;
   withShapes?: WithConfigs;
   joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;

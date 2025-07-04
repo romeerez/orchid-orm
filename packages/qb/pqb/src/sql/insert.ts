@@ -64,6 +64,7 @@ export const makeInsertSql = (
     }
   }
 
+  const valuesPos = ctx.sql.length + 1;
   ctx.sql.push(
     `INSERT INTO ${quotedAs}${
       quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''
@@ -186,7 +187,8 @@ export const makeInsertSql = (
         }
 
         // save current batch
-        ctx.sql[1] = (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+        ctx.sql[valuesPos] =
+          (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
         ctxValues.length = currentValuesLen;
         batch = pushOrNewArray(batch, {
           text: ctx.sql.join(' '),
@@ -204,7 +206,8 @@ export const makeInsertSql = (
     }
 
     if (batch) {
-      ctx.sql[1] = (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+      ctx.sql[valuesPos] =
+        (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
       batch.push({
         text: ctx.sql.join(' '),
         values: ctxValues,
@@ -215,11 +218,12 @@ export const makeInsertSql = (
         batch,
       };
     } else {
-      ctx.sql[1] = (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+      ctx.sql[valuesPos] =
+        (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
     }
 
     if (inCTE) {
-      ctx.sql[1] += ' WHERE NOT EXISTS (SELECT 1 FROM "f")';
+      ctx.sql[valuesPos] += ' WHERE NOT EXISTS (SELECT 1 FROM "f")';
     }
   } else if (query.kind === 'raw') {
     if (isExpression(values)) {
@@ -231,7 +235,7 @@ export const makeInsertSql = (
           .join(', ')}`;
       }
 
-      ctx.sql[1] = `VALUES (${valuesSql})`;
+      ctx.sql[valuesPos] = `VALUES (${valuesSql})`;
     } else {
       let sql;
 
@@ -252,7 +256,7 @@ export const makeInsertSql = (
           .join(', ');
       }
 
-      ctx.sql[1] = `VALUES ${sql}`;
+      ctx.sql[valuesPos] = `VALUES ${sql}`;
     }
   } else {
     const { from, values: v } = values as { from: Query; values?: unknown[][] };
@@ -276,7 +280,7 @@ export const makeInsertSql = (
       );
     }
 
-    ctx.sql[1] = getSqlText(toSQL(q, { values: ctx.values }));
+    ctx.sql[valuesPos] = getSqlText(toSQL(q, { values: ctx.values }));
   }
 
   return {

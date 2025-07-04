@@ -42,6 +42,8 @@ import {
 import { isSelectingCount } from './aggregate';
 import { resolveSubQueryCallbackV2 } from '../common/utils';
 import { _clone } from '../query/queryUtils';
+import { Db } from '../query';
+import { moveQueryValueToWith } from './with';
 
 export interface CreateSelf
   extends IsQuery,
@@ -396,17 +398,23 @@ const processCreateItem = (
   const { shape } = (q as Query).q;
   for (const key in item) {
     if (shape[key]?.data.insertable !== false) {
-      if (typeof item[key] === 'function') {
-        item[key] = resolveSubQueryCallbackV2(
+      let value = item[key];
+
+      if (typeof value === 'function') {
+        value = item[key] = resolveSubQueryCallbackV2(
           q as unknown as ToSQLQuery,
-          item[key] as (q: ToSQLQuery) => ToSQLQuery,
+          value as (q: ToSQLQuery) => ToSQLQuery,
         );
+      }
+
+      if (value && typeof value === 'object' && value instanceof Db) {
+        moveQueryValueToWith(q as Query, value, item, key);
       }
 
       if (
         !ctx.columns.has(key) &&
         ((shape[key] && !shape[key].data.readonly) || shape === anyShape) &&
-        item[key] !== undefined
+        value !== undefined
       ) {
         ctx.columns.set(key, ctx.columns.size);
         encoders[key] = shape[key]?.data.encode as FnUnknownToUnknown;
@@ -814,7 +822,7 @@ export type CreateMethodsNames =
 
 export class Create {
   /**
-   * `create` and `insert` will create one record.
+   * `create` and `insert` create a single record.
    *
    * Each column may accept a specific value, a raw SQL, or a query that returns a single value.
    *
@@ -836,11 +844,15 @@ export class Create {
    *
    *   // query that returns a single value
    *   // returning multiple values will result in Postgres error
-   *   column2: db.otherTable.get('someColumn'),
+   *   column2: () => db.otherTable.get('someColumn'),
+   *
+   *   // nesting creates, updates, deletes produces a single SQL
+   *   column4: () => db.otherTable.create(data).get('someColumn'),
+   *   column5: (q) => q.relatedTable.find(id).update(data).get('someColumn'),
    * });
    * ```
    *
-   * `create` and `insert` can be used in {@link WithMethods.with} expressions:
+   * Creational methods can be used in {@link WithMethods.with} expressions:
    *
    * ```ts
    * db.$qb
@@ -894,8 +906,17 @@ export class Create {
    * const createdCount = await db.table.insertMany([data, data, data]);
    * ```
    *
+   * When nesting creates, a separate create query will be executed for every time it's used:
+   *
+   * ```ts
+   * // will be performed twice, even though it is defined once
+   * const nestedCreate = db.otherTable.create(data).get('column');
+   *
+   * await db.table.createMany([{ column: nestedCreate }, { column: nestedCreate }]);
+   * ```
+   *
    * Because of a limitation of Postgres protocol, queries having more than **65535** of values are going to fail in runtime.
-   * To solve this seamlessly, OrchidORM will automatically batch such queries, and wrap them into a transaction, unless they are already in a transaction.
+   * To solve this seamlessly, `OrchidORM` will automatically batch such queries, and wrap them into a transaction, unless they are already in a transaction.
    *
    * ```ts
    * // OK: executes 2 inserts wrapped into a transaction
@@ -1023,6 +1044,8 @@ export class Create {
    *   // optional argument:
    *   {
    *     key: 'value',
+   *     // supports nested select, create, update, delete queries
+   *     fromQuery: () => db.otherTable.find(id).update(data).get('column'),
    *   },
    * );
    * ```
