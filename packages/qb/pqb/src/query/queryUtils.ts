@@ -120,9 +120,11 @@ export const saveAliasedShape = (
   const shapes = (q as Query).q[key];
   if (shapes?.[as]) {
     let suffix = 2;
-    while (shapes[(as = `${as}${suffix}`)]) {
+    let name;
+    while (shapes[(name = `${as}${suffix}`)]) {
       suffix++;
     }
+    as = name;
   }
 
   setQueryObjectValueImmutable(q as Query, key, as, emptyObject);

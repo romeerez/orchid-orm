@@ -21,9 +21,7 @@ import { OnConflictTarget } from './types';
 import { getSqlText } from './utils';
 import { MAX_BINDING_PARAMS } from './constants';
 import { pushQueryValueImmutable } from '../query/queryUtils';
-
-// reuse array for the columns list
-const quotedColumns: string[] = [];
+import { pushWithSql, withToSql } from './with';
 
 export const makeInsertSql = (
   ctx: ToSQLCtx,
@@ -32,10 +30,9 @@ export const makeInsertSql = (
   quotedAs: string,
 ): Sql => {
   const { columns, shape, inCTE } = query;
-  quotedColumns.length = columns.length;
-  for (let i = 0, len = columns.length; i < len; i++) {
-    quotedColumns[i] = `"${shape[columns[i]]?.data.name || columns[i]}"`;
-  }
+  const quotedColumns = columns.map(
+    (column) => `"${shape[column]?.data.name || column}"`,
+  );
 
   let runtimeDefaults: (() => unknown)[] | undefined;
   if (q.internal.runtimeDefaultColumns) {
@@ -64,13 +61,16 @@ export const makeInsertSql = (
     }
   }
 
+  const insertSql = `INSERT INTO ${quotedAs}${
+    quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''
+  }`;
+
+  if (query.kind !== 'object' && query.insertWith) {
+    pushWithSql(ctx, Object.values(query.insertWith).flat());
+  }
+
   const valuesPos = ctx.sql.length + 1;
-  ctx.sql.push(
-    `INSERT INTO ${quotedAs}${
-      quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''
-    }`,
-    null as never,
-  );
+  ctx.sql.push(insertSql, null as never);
 
   const QueryClass = ctx.qb.constructor as unknown as Db;
 
@@ -165,8 +165,30 @@ export const makeInsertSql = (
     const restValuesLen = ctxValues.length;
     let currentValuesLen = restValuesLen;
     let batch: SingleSqlItem[] | undefined;
+    const { insertWith } = query;
+    const { skipBatchCheck } = ctx;
+    const withSqls: string[] = [];
 
     for (let i = 0; i < (values as unknown[][]).length; i++) {
+      const withes = insertWith?.[i];
+      if (withes) {
+        // console.log('start outer');
+      } else {
+        // console.log('inner');
+      }
+
+      ctx.skipBatchCheck = true;
+      const withSql = withes && withToSql(ctx, withes);
+      ctx.skipBatchCheck = skipBatchCheck;
+
+      if (withes) {
+        // console.log('end outer');
+      }
+      // if (query.insertWith) {
+      //   const sql = withToSql(ctx, Object.values(query.insertWith).flat());
+      //   if (sql) ctx.sql[valuesPos - 1] = sql + ' ' + ctx.sql[valuesPos - 1];
+      // }
+
       let encodedRow = encodeRow(
         ctx,
         ctxValues,
@@ -186,23 +208,36 @@ export const makeInsertSql = (
           );
         }
 
-        // save current batch
-        ctx.sql[valuesPos] =
-          (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
-        ctxValues.length = currentValuesLen;
-        batch = pushOrNewArray(batch, {
-          text: ctx.sql.join(' '),
-          values: ctxValues,
-        });
+        if (!skipBatchCheck) {
+          // save current batch
+          if (withSqls.length) {
+            ctx.sql[valuesPos - 1] =
+              'WITH ' + withSqls.join(', ') + ' ' + insertSql;
+            withSqls.length = 0;
+          }
+          ctx.sql[valuesPos] =
+            (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+          ctxValues.length = currentValuesLen;
+          batch = pushOrNewArray(batch, {
+            text: ctx.sql.join(' '),
+            values: ctxValues,
+          });
 
-        // reset sql and values for the next batch, repeat the last cycle
-        ctxValues = ctx.values = [];
-        valuesSql.length = 0;
-        i--;
-      } else {
-        currentValuesLen = ctxValues.length;
-        valuesSql.push(encodedRow);
+          // reset sql and values for the next batch, repeat the last cycle
+          ctxValues = ctx.values = [];
+          valuesSql.length = 0;
+          i--;
+          continue;
+        }
       }
+
+      currentValuesLen = ctxValues.length;
+      if (withSql) withSqls.push(withSql);
+      valuesSql.push(encodedRow);
+    }
+
+    if (withSqls.length) {
+      ctx.sql[valuesPos - 1] = 'WITH ' + withSqls.join(', ') + ' ' + insertSql;
     }
 
     if (batch) {

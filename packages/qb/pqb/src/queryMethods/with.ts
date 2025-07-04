@@ -17,6 +17,7 @@ import {
   PickQueryResult,
   QueryColumns,
   RecordUnknown,
+  pushOrNewArrayToObjectImmutable,
 } from 'orchid-core';
 import { SqlMethod } from './sql';
 import { getShapeFromSelect } from './select';
@@ -90,32 +91,53 @@ export type WithSqlResult<
     : T[K];
 };
 
-const addWith = (q: Query, item: WithItem) => {
+const addWith = (
+  q: Query,
+  withStore: object,
+  item: WithItem,
+  key: string | number = 'with',
+) => {
   // WITH clause containing a data-modifying statement must be at the top level
-  item.q?.q.with?.forEach((item, i, arr) => {
-    if (item?.q?.q.type) {
-      pushQueryValueImmutable(q, 'with', item);
-      arr[i] = undefined;
-    }
-  });
+  if (item.q) {
+    item.q.q.with?.forEach((item, i, arr) => {
+      if (item?.q?.q.type) {
+        pushOrNewArrayToObjectImmutable(withStore, key, item);
+        arr[i] = undefined;
+      }
+    });
 
-  pushQueryValueImmutable(q, 'with', item);
+    if (item.q.q.insertWith) {
+      const values = Object.values(item.q.q.insertWith).flat();
+      item.q.q.insertWith = undefined;
+      q.q.with = q.q.with ? [...q.q.with, ...values] : values;
+    }
+  }
+
+  pushOrNewArrayToObjectImmutable(withStore, key, item);
 };
 
 export const moveQueryValueToWith = (
   q: Query,
+  withStore: object,
   value: Query,
   set: RecordUnknown,
   key: string,
+  withKey: string | number,
 ) => {
   // if it is not a select query,
   // move it into `WITH` statement and select from it with a raw SQL
   if (value.q.type) {
     const as = saveAliasedShape(q as Query, 'q', 'withShapes');
-    addWith(q, {
-      n: as,
-      q: value,
-    });
+
+    addWith(
+      q,
+      withStore,
+      {
+        n: as,
+        q: value,
+      },
+      withKey,
+    );
 
     set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
   }
@@ -253,7 +275,7 @@ export class WithMethods {
       };
     }
 
-    addWith(q, { n: name, o: options as WithOptions, q: query });
+    addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
 
     const shape = getShapeFromSelect(query, true);
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
@@ -403,7 +425,7 @@ export class WithMethods {
       };
     }
 
-    addWith(q, { n: name, o: options as WithOptions, q: query });
+    addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
 
     return setQueryObjectValueImmutable(q, 'withShapes', name, withConfig);
   }

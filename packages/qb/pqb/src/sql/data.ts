@@ -104,6 +104,9 @@ export interface CommonQueryData {
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItems;
+  // Inserting lots of records may be automatically batched.
+  // For this case, the insert logic handles `with` statements on its own.
+  insertWith?: { [rowIndex: number]: WithItems };
   withShapes?: WithConfigs;
   joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;

@@ -21,21 +21,22 @@ import { addValue, isExpression, Sql } from 'orchid-core';
 import { QueryBuilder } from '../query/db';
 import { getSqlText } from './utils';
 
-export interface ToSQLCtx {
+interface ToSqlOptionsInternal extends ToSQLOptions {
+  // selected value in JOIN LATERAL will have an alias to reference it from SELECT
+  aliasValue?: true;
+  // for insert batching logic: skip a batch check when is inside a WITH subquery
+  skipBatchCheck?: true;
+}
+
+export interface ToSQLCtx extends ToSqlOptionsInternal {
   qb: QueryBuilder;
   q: QueryData;
   sql: string[];
   values: unknown[];
-  // selected value in JOIN LATERAL will have an alias to reference it from SELECT
-  aliasValue?: true;
 }
 
 export interface ToSQLOptions {
   values?: unknown[];
-}
-
-interface ToSqlOptionsInternal extends ToSQLOptions {
-  aliasValue?: true;
 }
 
 export interface ToSQLQuery {
@@ -67,6 +68,7 @@ export const toSQL = (
     sql,
     values,
     aliasValue: options?.aliasValue,
+    skipBatchCheck: options?.skipBatchCheck,
   };
 
   if (query.with) {

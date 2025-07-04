@@ -408,7 +408,14 @@ const processCreateItem = (
       }
 
       if (value && typeof value === 'object' && value instanceof Db) {
-        moveQueryValueToWith(q as Query, value, item, key);
+        moveQueryValueToWith(
+          q as Query,
+          ((q as Query).q.insertWith ??= {}),
+          value,
+          item,
+          key,
+          rowIndex,
+        );
       }
 
       if (

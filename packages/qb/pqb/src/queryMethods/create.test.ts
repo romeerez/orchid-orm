@@ -1002,16 +1002,16 @@ describe('create functions', () => {
             RETURNING "user"."name"
           ), "q2" AS (
             INSERT INTO "user"("name", "password")
-            VALUES ($3, $4)
+            VALUES ($4, $5)
             RETURNING "user"."name"
           )
           INSERT INTO "user"("name", "password")
           VALUES
-            ((SELECT * FROM "q"), $5),
+            ((SELECT * FROM "q"), $3),
             ((SELECT * FROM "q2"), $6)
           RETURNING ${userColumnsSql}
         `,
-        ['name', 'password', 'name', 'password', 'password', 'password'],
+        ['name', 'password', 'password', 'name', 'password', 'password'],
       );
     });
 
@@ -1086,6 +1086,40 @@ describe('create functions', () => {
             {
               text: `INSERT INTO "tag"("tag") VALUES ($1), ($2)`,
               values: ['10', '11'],
+            },
+          ],
+        });
+      });
+
+      it('should support batching inserts with `with` CTEs', () => {
+        const q = Tag.insertMany(
+          Array.from({ length: 6 }, (_, i) => ({
+            tag: Tag.create({ tag: `${i}` }).get('tag'),
+          })),
+        );
+
+        const sql = q.toSQL();
+        const insert = (i: number) =>
+          `INSERT INTO "tag"("tag") VALUES ($${i}) RETURNING "tag"."tag"`;
+        expect(sql).toEqual({
+          batch: [
+            {
+              text:
+                `WITH "q" AS (${insert(1)}), "q2" AS (${insert(
+                  2,
+                )}), "q3" AS (${insert(3)}), "q4" AS (${insert(
+                  4,
+                )}), "q5" AS (${insert(5)}) ` +
+                'INSERT INTO "tag"("tag") VALUES ' +
+                '((SELECT * FROM "q")), ((SELECT * FROM "q2")), ((SELECT * FROM "q3")), ' +
+                '((SELECT * FROM "q4")), ((SELECT * FROM "q5"))',
+              values: ['0', '1', '2', '3', '4'],
+            },
+            {
+              text: `WITH "q6" AS (${insert(
+                1,
+              )}) INSERT INTO "tag"("tag") VALUES ((SELECT * FROM "q6"))`,
+              values: ['5'],
             },
           ],
         });

@@ -4,7 +4,7 @@ import { emptyObject, Expression } from 'orchid-core';
 import { getSqlText } from './utils';
 import { WithItems } from 'pqb';
 
-export const pushWithSql = (ctx: ToSQLCtx, items: WithItems) => {
+export const withToSql = (ctx: ToSQLCtx, items: WithItems) => {
   if (!items.length) return;
 
   const sqls: string[] = [];
@@ -33,5 +33,12 @@ export const pushWithSql = (ctx: ToSQLCtx, items: WithItems) => {
     );
   }
 
-  if (sqls.length) ctx.sql.push('WITH', sqls.join(', '));
+  if (!sqls.length) return;
+
+  return sqls.join(', ');
+};
+
+export const pushWithSql = (ctx: ToSQLCtx, items: WithItems) => {
+  const sql = withToSql(ctx, items);
+  if (sql) ctx.sql.push('WITH', sql);
 };

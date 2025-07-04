@@ -221,7 +221,14 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
       if (value !== null && value !== undefined && !isExpression(value)) {
         if (value instanceof Db) {
-          moveQueryValueToWith(query as unknown as Query, value, set, key);
+          moveQueryValueToWith(
+            query as unknown as Query,
+            q,
+            value,
+            set,
+            key,
+            'with',
+          );
         } else {
           // encode if not a query object
           const encode = shape[key].data.encode;

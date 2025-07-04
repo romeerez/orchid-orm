@@ -103,7 +103,7 @@ export const emptyArray = [];
  */
 export const pushOrNewArrayToObjectImmutable = (
   obj: object,
-  key: string,
+  key: string | number,
   value: unknown,
 ) => {
   (obj as RecordUnknown)[key] = (obj as RecordUnknown)[key]
