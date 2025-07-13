@@ -61,12 +61,15 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').createMany([userData, userData]);
 
-    const query = User.orWhere(...users).updateSql(User.sql`name = 'name'`);
+    const query = User.orWhere(...users).update({
+      name: () => sql`'name'`,
+    });
+
     expectSql(
       query.toSQL(),
       `
         UPDATE "user"
-        SET name = 'name', "updated_at" = now()
+        SET "name" = 'name', "updated_at" = now()
         WHERE "user"."id" = $1 OR "user"."id" = $2
       `,
       [users[0].id, users[1].id],
@@ -76,18 +79,6 @@ describe('update', () => {
 
     const result = await query;
     expect(result).toBe(count);
-  });
-
-  it('should accept template string for `updateSql`', () => {
-    const q = User.all().updateSql`name = ${'name'}`;
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "user"
-        SET name = $1, "updated_at" = now()
-      `,
-      ['name'],
-    );
   });
 
   it('should update record, returning updated row count', async () => {

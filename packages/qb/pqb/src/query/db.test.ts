@@ -454,34 +454,6 @@ describe('db', () => {
       assertType<typeof insertedMany, number>();
       expect(insertedMany).toBe(2);
 
-      const createdRaw = await qb.from('user').createRaw({
-        columns: ['name', 'password'],
-        values: sql`'name', 'password'`,
-      });
-      assertType<typeof createdRaw, RecordUnknown>();
-      expect(createdRaw).toMatchObject(userData);
-
-      const insertedRaw = await qb.from('user').insertRaw({
-        columns: ['name', 'password'],
-        values: sql`'name', 'password'`,
-      });
-      assertType<typeof insertedRaw, number>();
-      expect(insertedRaw).toBe(1);
-
-      const createdManyRaw = await qb.from('user').createManyRaw({
-        columns: ['name', 'password'],
-        values: [sql`'name', 'password'`, sql`'name', 'password'`],
-      });
-      assertType<typeof createdManyRaw, RecordUnknown[]>();
-      expect(createdManyRaw).toMatchObject([userData, userData]);
-
-      const insertedManyRaw = await qb.from('user').insertManyRaw({
-        columns: ['name', 'password'],
-        values: [sql`'name', 'password'`, sql`'name', 'password'`],
-      });
-      assertType<typeof insertedManyRaw, number>();
-      expect(insertedManyRaw).toBe(2);
-
       const createdFrom = await qb
         .from('user')
         .createFrom(qb.from('user').select('name').take(), {
@@ -529,8 +501,10 @@ describe('db', () => {
       assertType<typeof updated, RecordUnknown>();
       expect(updated).toMatchObject(userData);
 
-      const updatedSql = await qb.from('user').findBy({ id: user.id })
-        .updateSql`name = ${'name'}`;
+      const updatedSql = await qb
+        .from('user')
+        .findBy({ id: user.id })
+        .update({ name: sql`${'name'}` });
       assertType<typeof updatedSql, number>();
       expect(updatedSql).toBe(1);
 

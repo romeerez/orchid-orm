@@ -24,14 +24,13 @@ import { BooleanColumn } from './boolean';
 import { JSONTextColumn } from './json';
 import {
   ColumnSchemaConfig,
-  makeTimestampsHelpers,
   QueryColumnsInit,
   setCurrentColumnName,
   setDefaultLanguage,
   setDefaultNowFn,
+  timestampHelpers,
   TimestampHelpers,
 } from 'orchid-core';
-import { makeRegexToFindInSql } from '../common/utils';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL, sqlFn, SqlFn } from '../sql/rawSql';
 import { TableData } from '../tableData';
@@ -229,7 +228,7 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       },
     },
 
-    ...makeTimestampsHelpers(makeRegexToFindInSql),
+    ...timestampHelpers,
   };
 };
 

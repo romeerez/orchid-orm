@@ -11,18 +11,23 @@ outline: deep
 - `null` value will set a column to `NULL`
 - `undefined` value will be ignored
 - unknown columns will be ignored
+- pass `sql` expressions and sub-queries via `() =>` functions
 
 ```ts
 db.table.create({
   name: null, // sets to null
   age: undefined, // skipped, no effect
   lalala: 123, // unknown columns are skipped
+  fromSql: () => sql`custom sql`,
+  fromSubQuery: () => db.otherTable.find(id).get('column'),
 });
 
 db.table.findBy({ id: 1 }).update({
   name: null, // updates to null
   age: undefined, // skipped, no effect
   lalala: 123, // unknown columns are skipped
+  fromSql: () => sql`custom sql`,
+  fromSubQuery: () => db.otherTable.find(id).get('column'),
 });
 ```
 
@@ -111,12 +116,6 @@ const objectWithId2: { id: number } = await db.table.create(data).select('id');
 const objects: { id: number }[] = await db.table
   .select('id')
   .createMany([one, two]);
-
-// returns an array of objects as well for raw SQL values:
-const objects2: { id: number }[] = await db.table.select('id').createRaw({
-  columns: ['name', 'password'],
-  values: sql`custom sql`,
-});
 ```
 
 ### create, insert
@@ -211,44 +210,6 @@ await db.table.createMany(
 However, this only works in the case shown above. This **won't** work if you're using the `createMany` in `with` statement,
 or if the insert is used as a sub-query in other query part.
 
-### createRaw, insertRaw
-
-[//]: # 'has JSDoc'
-
-`createRaw` and `insertRaw` are for creating one record with a raw SQL expression.
-
-Provided SQL will be wrapped into parens for a single `VALUES` record.
-
-If the table has a column with runtime defaults (defined with callbacks), the value will be appended to your SQL.
-
-`columns` are type-checked to contain all required columns.
-
-```ts
-const oneRecord = await db.table.createRaw({
-  columns: ['name', 'amount'],
-  values: sql`'name', random()`,
-});
-```
-
-### createManyRaw, insertManyRaw
-
-[//]: # 'has JSDoc'
-
-`createManyRaw` and `insertManyRaw` are for creating many record with raw SQL expressions.
-
-Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
-
-If the table has a column with runtime defaults (defined with callbacks), function will be called for each SQL and the value will be appended.
-
-`columns` are type-checked to contain all required columns.
-
-```ts
-const manyRecords = await db.table.createManyRaw({
-  columns: ['name', 'amount'],
-  values: [sql`'one', 2`, sql`'three', 4`],
-});
-```
-
 ### createFrom, insertFrom
 
 [//]: # 'has JSDoc'
@@ -273,7 +234,8 @@ const oneRecord = await db.table.createFrom(
   // optional argument:
   {
     key: 'value',
-    // supports nested select, create, update, delete queries
+    // supports sql, nested select, create, update, delete queries
+    fromSql: () => sql`custom sql`,
     fromQuery: () => db.otherTable.find(id).update(data).get('column'),
     fromRelated: (q) => q.relatedTable.create(data).get('column'),
   },
@@ -568,24 +530,15 @@ Available only after [onConflict](#onconflict).
 Updates the record with a given data when conflict occurs.
 
 ```ts
-db.table.create(data).onConflict('column').set({
-  description: 'setting different data on conflict',
-});
-```
-
-The `set` can take a raw SQL expression:
-
-```ts
-db.table
-  .create(data)
-  .onConflict()
-  .set(sql`raw SQL expression`);
-
-// update records only on certain conditions
 db.table
   .create(data)
   .onConflict('email')
-  .set({ key: 'value' })
+  .set({
+    // supports plain values and SQL expressions
+    key: 'value',
+    fromSql: () => sql`custom sql`,
+  })
+  // to update records only on certain conditions
   .where({ ...certainConditions });
 ```
 
@@ -722,27 +675,6 @@ const name = await db.table.find(1).get('name').update(data);
 ```
 
 If the table has `updatedAt` [timestamp](/guide/common-column-methods#timestamps), it will be updated even for an empty data.
-
-### updateSql
-
-[//]: # 'has JSDoc'
-
-`updateSql` is for updating records with raw SQL expression.
-
-The behavior is the same as a regular `update` method has:
-`find` or `where` must precede calling this method,
-it returns an updated count by default,
-you can customize returning data by using `select`.
-
-```ts
-const value = 'new name';
-
-// update with SQL template string
-const updatedCount = await db.table.find(1).updateSql`name = ${value}`;
-
-// or update with `sql` function:
-await db.table.find(1).updateSql(sql`name = ${value}`);
-```
 
 ### updateOrThrow
 

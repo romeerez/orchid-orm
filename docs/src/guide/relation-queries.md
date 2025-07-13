@@ -418,8 +418,6 @@ so you have to use methods `find`, `findBy`, `take`, or similar.
 
 `db.post.tags.create` or `db.post.where(...).tags.create` won't work because multiple posts are returned in these queries.
 
-Using `createMany` or `createRaw` in such chained queries is not implemented yet, but it's in the plans.
-
 Because the `create` method is designed to return a full record by default,
 in the case when a record is not found by the condition it will throw `NotFoundError`, even when using `findOptional`:
 

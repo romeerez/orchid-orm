@@ -42,10 +42,6 @@ export const getQueryAs = (q: { table?: string; q: { as?: string } }) => {
   return q.q.as || (q.table as string);
 };
 
-export const makeRegexToFindInSql = (value: string) => {
-  return new RegExp(`${value}(?=(?:[^']*'[^']*')*[^']*$)`, 'g');
-};
-
 /**
  * In `select`, `update`, `create` it's possible to pass a callback with a sub-query.
  * This function resolves such a sub-query.

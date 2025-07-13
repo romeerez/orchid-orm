@@ -18,15 +18,12 @@ import { anyShape, VirtualColumn } from '../columns';
 import { Db } from '../query/db';
 import {
   isExpression,
-  Expression,
   callWithThis,
   RecordUnknown,
   PickQueryShape,
-  SQLQueryArgs,
   EmptyObject,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
-import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { resolveSubQueryCallbackV2 } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
 import { moveQueryValueToWith } from './with';
@@ -83,12 +80,6 @@ type UpdateRelationData<
 // not available when there are no conditions on the query.
 export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
-  : never;
-
-// Type of argument for `updateSql`.
-// not available when there are no conditions on the query.
-type UpdateRawArgs<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
-  ? SQLQueryArgs
   : never;
 
 // `update` and `updateOrThrow` methods output type.
@@ -272,17 +263,6 @@ export const _queryUpdate = <T extends UpdateSelf>(
   }
 
   return update(query);
-};
-
-export const _queryUpdateRaw = <T extends UpdateSelf>(
-  q: T,
-  sql: Expression,
-): UpdateResult<T> => {
-  pushQueryValueImmutable(q as unknown as Query, 'updateData', sql);
-
-  (q as unknown as Query).q.type = 'update';
-
-  return update(q);
 };
 
 export const _queryUpdateOrThrow = <T extends UpdateSelf>(
@@ -494,35 +474,6 @@ export class Update {
    */
   update<T extends UpdateSelf>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     return _queryUpdate(_clone(this), arg as never) as never;
-  }
-
-  /**
-   * `updateSql` is for updating records with raw expression.
-   *
-   * The behavior is the same as a regular `update` method has:
-   * `find` or `where` must precede calling this method,
-   * it returns an updated count by default,
-   * you can customize returning data by using `select`.
-   *
-   * ```ts
-   * const value = 'new name';
-   *
-   * // update with SQL template string
-   * const updatedCount = await db.table.find(1).updateSql`name = ${value}`;
-   *
-   * // or update with `sql` function:
-   * await db.table.find(1).updateSql(sql`name = ${value}`);
-   * ```
-   * @param args - raw SQL via a template string or by using a `sql` method
-   */
-  updateSql<T extends UpdateSelf>(
-    this: T,
-    ...args: UpdateRawArgs<T>
-  ): UpdateResult<T> {
-    return _queryUpdateRaw(
-      _clone(this),
-      sqlQueryArgsToExpression(args),
-    ) as never;
   }
 
   /**

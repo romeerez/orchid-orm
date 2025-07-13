@@ -45,56 +45,6 @@ describe('timestamps methods', () => {
           [now],
         );
       });
-
-      it('should update updatedAt when updating with raw sql', () => {
-        const q = table
-          .where()
-          .updateSql(testDb.sql`name = $name`.values({ name: 'name' }));
-
-        expectSql(
-          q.toSQL(),
-          `
-            UPDATE "user"
-            SET name = $1, "${updatedAtName}" = (custom_now())
-          `,
-          ['name'],
-        );
-      });
-
-      it('should update updatedAt when updating with raw sql which has updatedAt somewhere but not in set', () => {
-        const q = table
-          .where()
-          .updateSql(
-            testDb.sql({ raw: `"${createdAtKey}" = "${updatedAtName}"` }),
-          );
-
-        expectSql(
-          q.toSQL(),
-          `
-            UPDATE "user"
-            SET "${createdAtKey}" = "${updatedAtName}", "${updatedAtName}" = (custom_now())
-          `,
-        );
-      });
-
-      it('should not update updatedAt column when updating with raw sql which contains `updatedAt = `', () => {
-        const q = table.where().updateSql(
-          testDb
-            .sql({
-              raw: `"${updatedAtName}" = $time`,
-            })
-            .values({ time: now }),
-        );
-
-        expectSql(
-          q.toSQL(),
-          `
-            UPDATE "user"
-            SET "${updatedAtName}" = $1
-          `,
-          [now],
-        );
-      });
     });
   });
 

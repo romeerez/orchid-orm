@@ -292,6 +292,6 @@ export type OnConflictTarget =
   | Expression
   | { constraint: string };
 
-export type OnConflictSet = RecordUnknown | Expression;
+export type OnConflictSet = RecordUnknown;
 
 export type OnConflictMerge = string | string[] | { except: string | string[] };

@@ -251,7 +251,7 @@ export interface SelectQueryData extends CommonQueryData {
   };
 }
 
-export type CreateKind = 'object' | 'raw' | 'from';
+export type CreateKind = 'object' | 'from';
 
 export interface InsertQueryData extends CommonQueryData {
   type: 'insert';
@@ -259,7 +259,6 @@ export interface InsertQueryData extends CommonQueryData {
   columns: string[];
   values:
     | unknown[][]
-    | MaybeArray<Expression>
     | {
         from: Query;
         values?: unknown[][];
@@ -280,10 +279,7 @@ export interface UpdatedAtDataInjector {
   (data: UpdateQueryDataItem[]): UpdateQueryDataItem | void;
 }
 
-export type UpdateQueryDataItem =
-  | UpdateQueryDataObject
-  | Expression
-  | UpdatedAtDataInjector;
+export type UpdateQueryDataItem = UpdateQueryDataObject | UpdatedAtDataInjector;
 
 export interface UpdateQueryData extends CommonQueryData {
   type: 'update';

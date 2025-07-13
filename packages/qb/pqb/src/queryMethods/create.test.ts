@@ -26,7 +26,6 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
-import { raw } from '../sql/rawSql';
 import { MAX_BINDING_PARAMS } from '../sql/constants';
 import { omit } from 'orchid-core';
 
@@ -55,246 +54,6 @@ describe('create functions', () => {
 
   beforeEach(() => {
     setMaxBindingParams(5);
-  });
-
-  describe('createRaw', () => {
-    it('should create with raw sql and list of columns', () => {
-      const q = User.all();
-
-      const query = q.createRaw({
-        columns: ['name', 'password'],
-        values: raw`raw sql`,
-      });
-
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "user"("name", "password")
-          VALUES (raw sql)
-          RETURNING ${userColumnsSql}
-        `,
-      );
-
-      assertType<Awaited<typeof query>, UserRecord>();
-
-      expectQueryNotMutated(q);
-    });
-
-    it('should add runtime default', () => {
-      const q = RuntimeDefaultTable.createRaw({
-        columns: ['password'],
-        values: raw`'password'`,
-      });
-
-      expectSql(
-        q.toSQL(),
-        `
-          INSERT INTO "user"("password", "name")
-          VALUES ('password', $1)
-          RETURNING *
-        `,
-        ['runtime text'],
-      );
-    });
-
-    it('should create with raw sql and list of columns with names', () => {
-      const query = Snake.createRaw({
-        columns: ['snakeName', 'tailLength'],
-        values: raw`raw sql`,
-      });
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "snake"("snake_name", "tail_length")
-          VALUES (raw sql)
-          RETURNING ${snakeSelectAll}
-        `,
-      );
-    });
-  });
-
-  describe('insertRaw', () => {
-    it('should return inserted row column by default', async () => {
-      const q = User.insertRaw({
-        columns: ['name', 'password'],
-        values: raw`'name', 'password'`,
-      });
-
-      const result = await q;
-
-      assertType<typeof result, number>();
-
-      expect(result).toBe(1);
-    });
-
-    it('should return selected columns', async () => {
-      const q = User.select('name').insertRaw({
-        columns: ['name', 'password'],
-        values: raw`'name', 'password'`,
-      });
-
-      const result = await q;
-
-      assertType<typeof result, { name: string }>();
-
-      expect(result).toEqual({ name: 'name' });
-    });
-
-    it('should return selected columns when appending select', async () => {
-      const q = User.insertRaw({
-        columns: ['name', 'password'],
-        values: raw`'name', 'password'`,
-      }).select('name');
-
-      const result = await q;
-
-      assertType<typeof result, { name: string }>();
-
-      expect(result).toEqual({ name: 'name' });
-    });
-
-    it('should override pluck to a single value', async () => {
-      const q = User.pluck('name').insertRaw({
-        columns: ['name', 'password'],
-        values: raw`'name', 'password'`,
-      });
-
-      const result = await q;
-
-      assertType<typeof result, string>();
-
-      expect(result).toEqual('name');
-    });
-  });
-
-  describe('createManyRaw', () => {
-    it('should create with raw sql and list of columns', () => {
-      const q = User.all();
-
-      const query = q.createManyRaw({
-        columns: ['name', 'password'],
-        values: [raw`sql1`, raw`sql2`],
-      });
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "user"("name", "password")
-          VALUES (sql1), (sql2)
-          RETURNING ${userColumnsSql}
-        `,
-      );
-
-      assertType<Awaited<typeof query>, UserRecord[]>();
-
-      expectQueryNotMutated(q);
-    });
-
-    it('should add runtime default', () => {
-      const q = RuntimeDefaultTable.createManyRaw({
-        columns: ['password'],
-        values: [raw`'pw1'`, raw`'pw2'`],
-      });
-
-      expectSql(
-        q.toSQL(),
-        `
-          INSERT INTO "user"("password", "name")
-          VALUES ('pw1', $1), ('pw2', $2)
-          RETURNING *
-        `,
-        ['runtime text', 'runtime text'],
-      );
-    });
-
-    it('should create with raw sql and list of columns with names', () => {
-      const query = Snake.createManyRaw({
-        columns: ['snakeName', 'tailLength'],
-        values: [raw`sql1`, raw`sql2`],
-      });
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "snake"("snake_name", "tail_length")
-          VALUES (sql1), (sql2)
-          RETURNING ${snakeSelectAll}
-        `,
-      );
-    });
-  });
-
-  describe('insertManyRaw', () => {
-    it('should return inserted row count by default', async () => {
-      const q = User.insertManyRaw({
-        columns: ['name', 'password'],
-        values: [raw`'name', 'password'`, raw`'name', 'password'`],
-      });
-
-      const result = await q;
-
-      assertType<Awaited<typeof q>, number>();
-
-      expect(result).toBe(2);
-    });
-
-    it('should return multiple records', async () => {
-      const q = User.take()
-        .select('name')
-        .insertManyRaw({
-          columns: ['name', 'password'],
-          values: [raw`'name', 'password'`, raw`'name', 'password'`],
-        });
-
-      const result = await q;
-
-      assertType<Awaited<typeof q>, { name: string }[]>();
-
-      expect(result).toEqual([{ name: 'name' }, { name: 'name' }]);
-    });
-
-    it('should return multiple records when appending select', async () => {
-      const q = User.take()
-        .insertManyRaw({
-          columns: ['name', 'password'],
-          values: [raw`'name', 'password'`, raw`'name', 'password'`],
-        })
-        .select('name');
-
-      const result = await q;
-
-      assertType<Awaited<typeof q>, { name: string }[]>();
-
-      expect(result).toEqual([{ name: 'name' }, { name: 'name' }]);
-    });
-
-    it('should override selected value with a pluck', async () => {
-      const q = User.take()
-        .get('name')
-        .insertManyRaw({
-          columns: ['name', 'password'],
-          values: [raw`'name', 'password'`, raw`'name', 'password'`],
-        });
-
-      const result = await q;
-
-      assertType<Awaited<typeof q>, string[]>();
-
-      expect(result).toEqual(['name', 'name']);
-    });
-
-    it('should support appending pluck', async () => {
-      const q = User.take()
-        .insertManyRaw({
-          columns: ['name', 'password'],
-          values: [raw`'name', 'password'`, raw`'name', 'password'`],
-        })
-        .pluck('name');
-
-      const result = await q;
-
-      assertType<Awaited<typeof q>, string[]>();
-
-      expect(result).toEqual(['name', 'name']);
-    });
   });
 
   describe('create', () => {
@@ -338,7 +97,7 @@ describe('create functions', () => {
     it('should use a sub query value', () => {
       const q = User.create({
         ...userData,
-        age: User.avg('age'),
+        age: () => User.avg('age'),
       });
 
       expectSql(
@@ -599,7 +358,7 @@ describe('create functions', () => {
 
     it('should a create record with a sub query result for the column value', () => {
       const q = User.create({
-        name: User.get('name'),
+        name: () => User.get('name'),
         password: 'password',
       });
 
@@ -617,7 +376,7 @@ describe('create functions', () => {
     it('should create a record with a sub query result from inserting', () => {
       const q = User.create({
         ...userData,
-        name: User.create(userData).get('name'),
+        name: () => User.create(userData).get('name'),
       });
 
       expectSql(
@@ -719,7 +478,10 @@ describe('create functions', () => {
 
     it('should not encode value when it is an expression', () => {
       // json column has an encoder, and it shouldn't run for a raw expression
-      const q = User.insert({ ...userData, data: raw`'{"key":"value"}'` });
+      const q = User.insert({
+        ...userData,
+        data: () => sql`'{"key":"value"}'`,
+      });
 
       expectSql(
         q.toSQL(),
@@ -967,7 +729,7 @@ describe('create functions', () => {
     it('should create records with a sub query result for the column value', () => {
       const q = User.createMany([
         {
-          name: User.get('name'),
+          name: () => User.get('name'),
           password: 'password',
         },
       ]);
@@ -989,7 +751,7 @@ describe('create functions', () => {
       const q = User.createMany(
         Array.from({ length: 2 }, () => ({
           ...userData,
-          name: User.create(userData).get('name'),
+          name: () => User.create(userData).get('name'),
         })),
       );
 
@@ -1094,7 +856,7 @@ describe('create functions', () => {
       it('should support batching inserts with `with` CTEs', () => {
         const q = Tag.insertMany(
           Array.from({ length: 6 }, (_, i) => ({
-            tag: Tag.create({ tag: `${i}` }).get('tag'),
+            tag: () => Tag.create({ tag: `${i}` }).get('tag'),
           })),
         );
 
@@ -1214,7 +976,7 @@ describe('create functions', () => {
 
       const query = Message.createFrom(chat, {
         authorId: 1,
-        text: raw`'text'`,
+        text: () => sql`'text'`,
       });
 
       assertType<Awaited<typeof query>, MessageRecord>();
@@ -1309,8 +1071,8 @@ describe('create functions', () => {
       const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
       const query = Message.createFrom(chat, {
-        authorId: User.create(userData).get('id'),
-        text: raw`'text'`,
+        authorId: () => User.create(userData).get('id'),
+        text: () => sql`'text'`,
       });
 
       assertType<Awaited<typeof query>, MessageRecord>();
@@ -1650,7 +1412,7 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflictDoNothing(raw`raw query`);
+          .onConflictDoNothing(sql`raw query`);
 
         expectSql(
           query.toSQL(),
@@ -1742,18 +1504,20 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(raw`on conflict raw`)
-          .set(raw`merge raw`);
+          .onConflict(sql`on conflict raw`)
+          .set({
+            name: () => sql`${'new name'}`,
+          });
 
         expectSql(
           query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
-            VALUES ($1, $2)
+            VALUES ($2, $3)
             ON CONFLICT on conflict raw
-            DO UPDATE SET merge raw
+            DO UPDATE SET "name" = $1
           `,
-          ['name', 'password'],
+          ['new name', 'name', 'password'],
         );
 
         expectQueryNotMutated(q);

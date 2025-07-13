@@ -1,4 +1,4 @@
-import { expectSql, sql, useTestDatabase } from 'test-utils';
+import { expectSql, useTestDatabase } from 'test-utils';
 import { User as UserTable, userData } from '../test-utils/test-utils';
 import { Create } from './create';
 import { Update } from './update';
@@ -240,36 +240,6 @@ describe('hooks', () => {
       },
     );
 
-    it.each(['createRaw', 'insertRaw'] as const)(
-      'should work for %s',
-      async (method) => {
-        tested[method] = true;
-
-        await User[method]({
-          columns: ['name', 'password'],
-          values: sql`'name', 'password'`,
-        });
-
-        assert.createHooksBeingCalled({ data: [depData] });
-      },
-    );
-
-    it.each(['createManyRaw', 'insertManyRaw'] as const)(
-      'should work for %s',
-      async (method) => {
-        tested[method] = true;
-
-        await User[method]({
-          columns: ['name', 'password'],
-          values: [sql`'one', 'password'`, sql`'two', 'password'`],
-        });
-
-        assert.createHooksBeingCalled({
-          data: [{ name: 'one' }, { name: 'two' }],
-        });
-      },
-    );
-
     it.each(['createFrom', 'insertFrom'] as const)(
       'should work for %s',
       async (method) => {
@@ -368,19 +338,6 @@ describe('hooks', () => {
         });
       },
     );
-
-    it('should work for updateSql', async () => {
-      tested.updateSql = true;
-
-      const id = await User.get('id').create(userData);
-      jest.clearAllMocks();
-
-      await User.find(id).updateSql`name = ${'new name'}`;
-
-      assert.updateHooksBeingCalled({
-        data: [{ name: 'new name' }],
-      });
-    });
 
     it.each(['increment', 'decrement'] as const)(
       'should work for %s',

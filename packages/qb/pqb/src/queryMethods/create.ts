@@ -98,10 +98,7 @@ type CreateDataWithDefaultsForRelations<
 export type CreateColumn<
   T extends CreateSelf,
   K extends keyof T['inputType'],
-> =
-  | T['inputType'][K]
-  | QueryOrExpression<T['inputType'][K]>
-  | ((q: T) => QueryOrExpression<T['inputType'][K]>);
+> = T['inputType'][K] | ((q: T) => QueryOrExpression<T['inputType'][K]>);
 
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
@@ -219,7 +216,7 @@ type CreateManyResult<T extends CreateSelf, BT> = T extends { isCount: true }
   ? SetQueryReturnsPluckColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>;
 
-type CreateManyRawOrFromResult<T extends CreateSelf> = T extends {
+type CreateManyFromResult<T extends CreateSelf> = T extends {
   isCount: true;
 }
   ? SetQueryKind<T, 'create'>
@@ -248,7 +245,7 @@ type InsertManyResult<
     : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : SetQueryReturnsRowCountMany<T, 'create'>;
 
-type InsertManyRawOrFromResult<T extends CreateSelf> =
+type InsertManyFromResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
     ? T['returnType'] extends 'one' | 'oneOrThrow'
       ? SetQueryReturnsAllKind<T, 'create'>
@@ -291,43 +288,6 @@ type IgnoreResult<T extends CreateSelf> = T['returnType'] extends 'oneOrThrow'
   : T['returnType'] extends 'valueOrThrow'
   ? SetQueryReturnsColumnOptional<T, T['result']['value']>
   : T;
-
-// `createRaw` method argument.
-// Contains array of columns and a raw SQL for values.
-interface CreateRawData<T extends CreateSelf> {
-  columns: (keyof T['shape'])[];
-  values: Expression;
-}
-
-// `createManyRaw` method argument.
-// Contains array of columns and an array of raw SQL for values.
-interface CreateManyRawData<T extends CreateSelf> {
-  columns: (keyof T['shape'])[];
-  values: Expression[];
-}
-
-// Record<(column name), true> where the column doesn't have a default, and it is not nullable.
-type RawRequiredColumns<T extends CreateSelf> = {
-  [K in keyof T['inputType'] as K extends keyof T['meta']['defaults']
-    ? never
-    : null | undefined extends T['inputType'][K]
-    ? never
-    : K]: true;
-};
-
-// Arguments of `createRaw` and `createManyRaw`.
-// TS error if not all required columns are specified.
-type CreateRawArgs<
-  T extends CreateSelf,
-  Arg extends { columns: (keyof T['shape'])[] },
-> = keyof RawRequiredColumns<T> extends Arg['columns'][number]
-  ? [data: Arg]
-  : [
-      `Missing required columns: ${Exclude<
-        keyof RawRequiredColumns<T> & string,
-        Arg['columns'][number]
-      >}`,
-    ];
 
 // Argument of `onConflict`, can be:
 // - a unique column name
@@ -405,17 +365,17 @@ const processCreateItem = (
           q as unknown as ToSQLQuery,
           value as (q: ToSQLQuery) => ToSQLQuery,
         );
-      }
 
-      if (value && typeof value === 'object' && value instanceof Db) {
-        moveQueryValueToWith(
-          q as Query,
-          ((q as Query).q.insertWith ??= {}),
-          value,
-          item,
-          key,
-          rowIndex,
-        );
+        if (value && typeof value === 'object' && value instanceof Db) {
+          moveQueryValueToWith(
+            q as Query,
+            ((q as Query).q.insertWith ??= {}),
+            value,
+            item,
+            key,
+            rowIndex,
+          );
+        }
       }
 
       if (
@@ -528,7 +488,7 @@ const handleManyData = (
  * @param self - query object.
  * @param columns - columns list of all values.
  * @param values - array of arrays matching columns, or can be an array of SQL expressions, or is a special object for `createFrom`.
- * @param kind - the kind of create query, can be 'object', 'raw', 'from'.
+ * @param kind - the kind of create query, can be 'object', 'from'.
  * @param many - whether it's for creating one or many.
  */
 const insert = (
@@ -713,49 +673,6 @@ export const _queryInsertMany = <
   return result;
 };
 
-export const _queryCreateRaw = <T extends CreateSelf>(
-  q: T,
-  args: CreateRawArgs<T, CreateRawData<T>>,
-): CreateRawOrFromResult<T> => {
-  createSelect(q as unknown as Query);
-  return insert(
-    q,
-    args[0] as { columns: string[]; values: Expression },
-    'raw',
-  ) as never;
-};
-
-export const _queryInsertRaw = <T extends CreateSelf>(
-  q: T,
-  args: CreateRawArgs<T, CreateRawData<T>>,
-): InsertRawOrFromResult<T> => {
-  return insert(
-    q,
-    args[0] as { columns: string[]; values: Expression },
-    'raw',
-  ) as never;
-};
-
-export const _queryCreateManyRaw = <T extends CreateSelf>(
-  q: T,
-  args: CreateRawArgs<T, CreateManyRawData<T>>,
-): CreateManyRawOrFromResult<T> => {
-  createSelect(q as unknown as Query);
-  return _queryInsertManyRaw(q, args as never) as never;
-};
-
-export const _queryInsertManyRaw = <T extends CreateSelf>(
-  q: T,
-  args: CreateRawArgs<T, CreateManyRawData<T>>,
-): InsertManyRawOrFromResult<T> => {
-  return insert(
-    q,
-    args[0] as { columns: string[]; values: Expression[] },
-    'raw',
-    true,
-  ) as never;
-};
-
 interface QueryReturningOne extends IsQuery {
   result: QueryColumns;
   returnType: 'one' | 'oneOrThrow';
@@ -787,7 +704,7 @@ export const _queryInsertFrom = <
 export const _queryCreateManyFrom = <T extends CreateSelf>(
   q: T,
   query: IsQuery,
-): CreateManyRawOrFromResult<T> => {
+): CreateManyFromResult<T> => {
   createSelect(q as unknown as Query);
   return insertFromQuery(q, query, true) as never;
 };
@@ -795,7 +712,7 @@ export const _queryCreateManyFrom = <T extends CreateSelf>(
 export const _queryInsertManyFrom = <T extends CreateSelf>(
   q: T,
   query: IsQuery,
-): InsertManyRawOrFromResult<T> => {
+): InsertManyFromResult<T> => {
   return insertFromQuery(q, query, true) as never;
 };
 
@@ -820,8 +737,6 @@ export type CreateMethodsNames =
   | 'insert'
   | 'createMany'
   | 'insertMany'
-  | 'createRaw'
-  | 'insertRaw'
   | 'createFrom'
   | 'insertFrom'
   | 'createManyFrom'
@@ -957,80 +872,6 @@ export class Create {
   }
 
   /**
-   * `createRaw` and `insertRaw` are for creating one record with a raw SQL expression.
-   *
-   * Provided SQL will be wrapped into parens for a single `VALUES` record.
-   *
-   * If the table has a column with runtime defaults (defined with callbacks), the value will be appended to your SQL.
-   *
-   * `columns` are type-checked to contain all required columns.
-   *
-   * ```ts
-   * const oneRecord = await db.table.createRaw({
-   *   columns: ['name', 'amount'],
-   *   values: sql`'name', random()`,
-   * });
-   * ```
-   *
-   * @param args - object with columns list and raw SQL for values
-   */
-  createRaw<T extends CreateSelf>(
-    this: T,
-    ...args: CreateRawArgs<T, CreateRawData<T>>
-  ): CreateRawOrFromResult<T> {
-    return _queryCreateRaw(_clone(this) as unknown as T, args);
-  }
-
-  /**
-   * Works exactly as {@link createRaw}, except that it returns inserted row count by default.
-   *
-   * @param args - object with columns list and raw SQL for values
-   */
-  insertRaw<T extends CreateSelf>(
-    this: T,
-    ...args: CreateRawArgs<T, CreateRawData<T>>
-  ): InsertRawOrFromResult<T> {
-    return _queryInsertRaw(_clone(this) as unknown as T, args);
-  }
-
-  /**
-   * `createManyRaw` and `insertManyRaw` are for creating many record with raw SQL expressions.
-   *
-   * Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
-   *
-   * If the table has a column with runtime defaults (defined with callbacks), function will be called for each SQL and the value will be appended.
-   *
-   * `columns` are type-checked to contain all required columns.
-   *
-   * ```ts
-   * const manyRecords = await db.table.createManyRaw({
-   *   columns: ['name', 'amount'],
-   *   values: [sql`'one', 2`, sql`'three', 4`],
-   * });
-   * ```
-   *
-   * @param args - object with columns list and array of raw SQL for values
-   */
-  createManyRaw<T extends CreateSelf>(
-    this: T,
-    ...args: CreateRawArgs<T, CreateManyRawData<T>>
-  ): CreateManyRawOrFromResult<T> {
-    return _queryCreateManyRaw(_clone(this) as unknown as T, args);
-  }
-
-  /**
-   * Works exactly as {@link createManyRaw}, except that it returns inserted row count by default.
-   *
-   * @param args - object with columns list and array of raw SQL for values
-   */
-  insertManyRaw<T extends CreateSelf>(
-    this: T,
-    ...args: CreateRawArgs<T, CreateManyRawData<T>>
-  ): InsertManyRawOrFromResult<T> {
-    return _queryInsertManyRaw(_clone(this) as unknown as T, args);
-  }
-
-  /**
    * These methods are for creating a single record, for batch creating see {@link createManyFrom}.
    *
    * `createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
@@ -1051,8 +892,10 @@ export class Create {
    *   // optional argument:
    *   {
    *     key: 'value',
-   *     // supports nested select, create, update, delete queries
+   *     // supports sql, nested select, create, update, delete queries
+   *     fromSql: () => sql`custom sql`,
    *     fromQuery: () => db.otherTable.find(id).update(data).get('column'),
+   *     fromRelated: (q) => q.relatedTable.create(data).get('column'),
    *   },
    * );
    * ```
@@ -1109,7 +952,7 @@ export class Create {
   createManyFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
-  ): CreateManyRawOrFromResult<T> {
+  ): CreateManyFromResult<T> {
     return _queryCreateManyFrom(_clone(this) as unknown as T, query);
   }
 
@@ -1121,7 +964,7 @@ export class Create {
   insertManyFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
-  ): InsertManyRawOrFromResult<T> {
+  ): InsertManyFromResult<T> {
     return _queryInsertManyFrom(_clone(this) as unknown as T, query);
   }
 
@@ -1323,6 +1166,12 @@ export class Create {
   }
 }
 
+type OnConflictSet<T extends CreateSelf> = {
+  [K in keyof T['inputType']]?:
+    | T['inputType'][K]
+    | (() => QueryOrExpression<T['inputType'][K]>);
+};
+
 export class OnConflictQueryBuilder<
   T extends CreateSelf,
   Arg extends OnConflictArg<T> | undefined,
@@ -1335,33 +1184,33 @@ export class OnConflictQueryBuilder<
    * Updates the record with a given data when conflict occurs.
    *
    * ```ts
-   * db.table.create(data).onConflict('column').set({
-   *   description: 'setting different data on conflict',
-   * });
-   * ```
-   *
-   * The `set` can take a raw SQL expression:
-   *
-   * ```ts
-   * db.table
-   *   .create(data)
-   *   .onConflict()
-   *   .set(sql`raw SQL expression`);
-   *
-   * // update records only on certain conditions
    * db.table
    *   .create(data)
    *   .onConflict('email')
-   *   .set({ key: 'value' })
+   *   .set({
+   *     // supports plain values and SQL expressions
+   *     key: 'value',
+   *     fromSql: () => sql`custom sql`,
+   *   })
+   *   // to update records only on certain conditions
    *   .where({ ...certainConditions });
    * ```
    *
-   * @param set - object containing new column values, or raw SQL
+   * @param set - object containing new column values
    */
-  set(set: Partial<T['inputType']> | Expression): T {
+  set(set: OnConflictSet<T>): T {
+    let resolved: RecordUnknown | undefined;
+    for (const key in set) {
+      if (typeof set[key] === 'function') {
+        if (!resolved) resolved = { ...set };
+
+        resolved[key] = (set[key] as () => unknown)();
+      }
+    }
+
     ((this.query as unknown as Query).q as InsertQueryData).onConflict = {
       target: this.onConflict as never,
-      set,
+      set: resolved || set,
     };
     return this.query;
   }

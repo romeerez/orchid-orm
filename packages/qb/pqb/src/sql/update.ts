@@ -112,8 +112,6 @@ const processData = (
     if (typeof item === 'function') {
       const result = item(data);
       if (result) append = pushOrNewArray(append, result);
-    } else if (isExpression(item)) {
-      set.push(item.toSQL(ctx, quotedAs));
     } else {
       const shape = table.q.shape;
       for (const key in item) {

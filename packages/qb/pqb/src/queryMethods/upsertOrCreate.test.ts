@@ -417,7 +417,7 @@ describe('upsertOrCreate', () => {
         .find(123)
         .orCreate({
           ...userData,
-          name: User.create({ ...userData, name: 'created' }).get('name'),
+          name: () => User.create({ ...userData, name: 'created' }).get('name'),
           age: () => sql`28`,
         });
 

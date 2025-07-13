@@ -1,5 +1,78 @@
 # Breaking changes
 
+## orchid-orm 1.52
+
+Dropped `updateSql`, `createRaw`, `insertRaw`, `createManyRaw`, `insertManyRaw`.
+
+Soon after, it will be possible to control and override values when creating or updating records.
+
+In SQL methods such as:
+
+```ts
+// no longer works
+db.table.find(id).updateSql`foo = 'bar'`;
+```
+
+it is hard to determine what columns are being updated, that's why this functionality was changed.
+
+```ts
+// instead of:
+db.table.find(id).updateSql`foo = 'bar'`;
+// explicitly define columns:
+db.table.find(id).update({ foo: () => sql`'bar'` });
+
+// instead of:
+db.table.createRaw(['column'], sql`value`);
+// do:
+db.table.create({ column: () => sql`value` });
+
+// instead of:
+db.table.createManyRaw(['column'], [sql`value1`, sql`value2`]);
+// do:
+db.table.createMany([
+  { column: () => sql`value1` },
+  { column: () => sql`value2` },
+]);
+
+// instead of:
+db.table
+  .create(data)
+  .onConflict()
+  .set(sql`foo = 'bar'`);
+// do:
+db.table
+  .create(data)
+  .onConflict()
+  .set({ foo: () => sql`'bar'` });
+```
+
+---
+
+You can have a json column with type `unknown`,
+but then it compromises a type safety when inserting a record raw values or sub-queries directly:
+
+```ts
+db.table.insert({
+  a: { unknown: { json: 'example' } },
+  b: sql`'bar'`,
+  c: db.otherTable.find(id).get('bar'),
+});
+```
+
+From ORM perspective, all three of these conform to the `unknown` type for JSON, so it cannot distinguish between them.
+
+That's why now you need to return sql or sub-queries from a callback instead:
+
+```ts
+db.table.insert({
+  // ORM can see it's a sub-query returning a number column
+  // and it would prevent from saving it to a string column
+  stringColumn: () => db.otherTable.find(id).get('numberColumn'),
+});
+```
+
+It is no longer supported to submit sql or sub-queries into `create` methods without `() =>` functions.
+
 ## orchid-orm 1.51
 
 Rename `db.$queryBuilder` to `db.$qb` for conciseness.

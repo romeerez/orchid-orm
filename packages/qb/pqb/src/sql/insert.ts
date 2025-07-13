@@ -119,25 +119,18 @@ export const makeInsertSql = (
 
       ctx.sql.push(sql);
     } else if (query.onConflict.set) {
-      let sql: string;
-
       const { set } = query.onConflict;
-      if (isExpression(set)) {
-        sql = set.toSQL(ctx, quotedAs);
-      } else {
-        const arr: string[] = [];
-        for (const key in set) {
-          arr.push(
-            `"${shape[key]?.data.name || key}" = ${addValue(
-              ctx.values,
-              set[key],
-            )}`,
-          );
-        }
-        sql = arr.join(', ');
+      const arr: string[] = [];
+      for (const key in set) {
+        const val = set[key];
+        const value = isExpression(val)
+          ? val.toSQL(ctx, quotedAs)
+          : addValue(ctx.values, val);
+
+        arr.push(`"${shape[key]?.data.name || key}" = ${value}`);
       }
 
-      ctx.sql.push('DO UPDATE SET', sql);
+      ctx.sql.push('DO UPDATE SET', arr.join(', '));
     } else {
       ctx.sql.push('DO NOTHING');
     }
@@ -259,39 +252,6 @@ export const makeInsertSql = (
 
     if (inCTE) {
       ctx.sql[valuesPos] += ' WHERE NOT EXISTS (SELECT 1 FROM "f")';
-    }
-  } else if (query.kind === 'raw') {
-    if (isExpression(values)) {
-      let valuesSql = values.toSQL(ctx, quotedAs);
-
-      if (runtimeDefaults) {
-        valuesSql += `, ${runtimeDefaults
-          .map((fn) => addValue(ctx.values, fn()))
-          .join(', ')}`;
-      }
-
-      ctx.sql[valuesPos] = `VALUES (${valuesSql})`;
-    } else {
-      let sql;
-
-      if (runtimeDefaults) {
-        const { values: v } = ctx;
-        sql = (values as Expression[])
-          .map(
-            (raw) =>
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              `(${raw.toSQL(ctx, quotedAs)}, ${runtimeDefaults!
-                .map((fn) => addValue(v, fn()))
-                .join(', ')})`,
-          )
-          .join(', ');
-      } else {
-        sql = (values as Expression[])
-          .map((raw) => `(${raw.toSQL(ctx, quotedAs)})`)
-          .join(', ');
-      }
-
-      ctx.sql[valuesPos] = `VALUES ${sql}`;
     }
   } else {
     const { from, values: v } = values as { from: Query; values?: unknown[][] };

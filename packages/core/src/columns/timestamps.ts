@@ -4,7 +4,7 @@ import {
   getDefaultNowFn,
 } from './columnType';
 import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../utils';
-import { isRawSQL, RawSQLBase } from '../raw';
+import { RawSQLBase } from '../raw';
 
 // Column types returned by `...t.timestamps()` and variations.
 export interface Timestamps<T extends ColumnTypeBase> {
@@ -42,81 +42,57 @@ export interface TimestampHelpers {
   }): Timestamps<T>;
 }
 
-// Build `timestamps`, `timestampsNoTZ`, and similar helpers.
-export const makeTimestampsHelpers = (
-  makeRegexToFindInSql: (s: string) => RegExp,
-): TimestampHelpers => {
-  const makeTimestamps = <T extends ColumnTypeBase>(timestamp: () => T) => {
-    const now = getDefaultNowFn();
-    const nowRaw = raw(now);
-    const updatedAt = timestamp().default(nowRaw);
-    let updatedAtInjector:
-      | ((
-          data: (RawSQLBase | RecordUnknown | (() => void))[],
-        ) => SimpleRawSQL | undefined)
-      | undefined;
+const makeTimestamps = <T extends ColumnTypeBase>(timestamp: () => T) => {
+  const now = getDefaultNowFn();
+  const nowRaw = raw(now);
+  const updatedAt = timestamp().default(nowRaw);
+  let updater:
+    | ((data: (RecordUnknown | (() => void))[]) => RecordUnknown | undefined)
+    | undefined;
 
-    updatedAt.data.modifyQuery = (q: unknown, column: ColumnTypeBase) => {
-      if (!updatedAtInjector) {
-        const key = column.data.key;
-        const name = column.data.name ?? key;
-        const nowSql = new SimpleRawSQL(`"${name}" = ${now}`);
+  updatedAt.data.modifyQuery = (q: unknown, column: ColumnTypeBase) => {
+    if (!updater) {
+      const key = column.data.key;
+      updater = (data) => {
+        if (
+          data.some((item) => {
+            return typeof item !== 'function' && item[key];
+          })
+        )
+          return;
 
-        const updatedAtRegex = makeRegexToFindInSql(`\\b${name}\\b"?\\s*=`);
+        return { [column.data.key]: nowRaw };
+      };
+    }
 
-        // A function which is triggered on every update of records.
-        // It tries to find if `updatedAt` column is being updated with a user-provided value.
-        // And if there is no value for `updatedAt`, it is setting the new value for it.
-        updatedAtInjector = (
-          data: (RawSQLBase | RecordUnknown | (() => void))[],
-        ) => {
-          const alreadyUpdatesUpdatedAt = data.some((item) => {
-            if (isRawSQL(item)) {
-              updatedAtRegex.lastIndex = 0;
-              return updatedAtRegex.test(
-                typeof item._sql === 'string'
-                  ? item._sql
-                  : (item._sql[0] as unknown as string[]).join(''),
-              );
-            } else {
-              return typeof item !== 'function' && item[key];
-            }
-          });
-
-          return alreadyUpdatesUpdatedAt ? undefined : nowSql;
-        };
-      }
-
-      // push a function to the query to search for existing timestamp and add a new timestamp value if it's not set in the update.
-      pushOrNewArrayToObjectImmutable(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (q as any).q,
-        'updateData',
-        updatedAtInjector,
-      );
-    };
-    updatedAt.data.defaultTimestamp = 'updatedAt';
-
-    const createdAt = timestamp().default(nowRaw);
-    createdAt.data.defaultTimestamp = 'createdAt';
-
-    return {
-      createdAt,
-      updatedAt,
-    };
+    pushOrNewArrayToObjectImmutable(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (q as any).q,
+      'updateData',
+      updater,
+    );
   };
+  updatedAt.data.defaultTimestamp = 'updatedAt';
+
+  const createdAt = timestamp().default(nowRaw);
+  createdAt.data.defaultTimestamp = 'createdAt';
 
   return {
-    timestamps<T extends ColumnTypeBase>(this: {
-      timestamp(): T;
-    }): Timestamps<T> {
-      return makeTimestamps(this.timestamp);
-    },
-
-    timestampsNoTZ<T extends ColumnTypeBase>(this: {
-      timestampNoTZ(): T;
-    }): Timestamps<T> {
-      return makeTimestamps(this.timestampNoTZ);
-    },
+    createdAt,
+    updatedAt,
   };
+};
+
+export const timestampHelpers: TimestampHelpers = {
+  timestamps<T extends ColumnTypeBase>(this: {
+    timestamp(): T;
+  }): Timestamps<T> {
+    return makeTimestamps(this.timestamp);
+  },
+
+  timestampsNoTZ<T extends ColumnTypeBase>(this: {
+    timestampNoTZ(): T;
+  }): Timestamps<T> {
+    return makeTimestamps(this.timestampNoTZ);
+  },
 };
