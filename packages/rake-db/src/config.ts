@@ -17,25 +17,23 @@ import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrationsSet';
 
-export type CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> = (
-  options: AdapterOptions[],
-  config: RakeDbConfig<SchemaConfig, CT>,
-  args: string[],
-) => void | Promise<void>;
+export interface CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> {
+  (
+    options: AdapterOptions[],
+    config: RakeDbConfig<SchemaConfig, CT>,
+    args: string[],
+  ): void | Promise<void>;
+}
 
-export interface RakeDbConfig<
+interface RakeDbBaseConfig<
   SchemaConfig extends ColumnSchemaConfig,
   CT = DefaultColumnTypes<DefaultSchemaConfig>,
 > extends QueryLogOptions {
   schemaConfig: SchemaConfig;
-  columnTypes: CT;
-  basePath: string;
-  dbScript: string;
   migrationsPath: string;
   migrationId: RakeDbMigrationId;
   migrations?: ModuleExportsRecord;
   renameMigrations?: RakeDbRenameMigrationsInput;
-  recurrentPath: string;
   migrationsTable: string;
   snakeCase: boolean;
   language?: string;
@@ -52,6 +50,16 @@ export interface RakeDbConfig<
   afterMigrate?: MigrationCallback;
   beforeRollback?: MigrationCallback;
   afterRollback?: MigrationCallback;
+}
+
+export interface RakeDbConfig<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT = DefaultColumnTypes<DefaultSchemaConfig>,
+> extends RakeDbBaseConfig<SchemaConfig, CT> {
+  columnTypes: CT;
+  basePath: string;
+  dbScript: string;
+  recurrentPath: string;
 }
 
 export interface InputRakeDbConfigBase<
@@ -73,10 +81,7 @@ export interface InputRakeDbConfigBase<
     string,
     (
       options: AdapterOptions[],
-      config: RakeDbConfig<
-        SchemaConfig,
-        CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
-      >,
+      config: RakeDbConfig<SchemaConfig, CT>,
       args: string[],
     ) => void | Promise<void>
   >;
@@ -141,52 +146,61 @@ export interface InputRakeDbConfigBase<
   afterRollback?: MigrationCallback;
 }
 
-export type InputRakeDbConfig<
+interface InputRakeDbConfigFileBased<
   SchemaConfig extends ColumnSchemaConfig,
   CT,
-> = InputRakeDbConfigBase<SchemaConfig, CT> &
-  // make `import` required only when not using `migrations`
-  (| {
-        /**
-         * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
-         */
-        import(path: string): Promise<unknown>;
-      }
-    | {
-        /**
-         * To specify array of migrations explicitly, without loading them from files.
-         */
-        migrations: ModuleExportsRecord;
-        renameMigrations?: RakeDbRenameMigrationsInput;
-        /**
-         * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
-         */
-        import?(path: string): Promise<unknown>;
-      }
-  );
+> extends InputRakeDbConfigBase<SchemaConfig, CT> {
+  /**
+   * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
+   */
+  import(path: string): Promise<unknown>;
+}
 
-type ChangeCallback = (arg: {
-  db: Db;
-  up: boolean;
-  redo: boolean;
-  migrations: MigrationItem[];
-}) => void | Promise<void>;
+interface InputRakeDbConfigCodeBased<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT,
+> extends InputRakeDbConfigBase<SchemaConfig, CT> {
+  /**
+   * To specify array of migrations explicitly, without loading them from files.
+   */
+  migrations: ModuleExportsRecord;
+  renameMigrations?: RakeDbRenameMigrationsInput;
+  /**
+   * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
+   */
+  import?(path: string): Promise<unknown>;
+}
 
-type ChangeCommitCallback = (arg: {
-  options: AdapterOptions;
-  up: boolean;
-  migrations: MigrationItem[];
-}) => void | Promise<void>;
+export type InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT> =
+  | InputRakeDbConfigFileBased<SchemaConfig, CT>
+  | InputRakeDbConfigCodeBased<SchemaConfig, CT>;
 
-type MigrationCallback = (arg: {
-  db: Db;
-  migrations: MigrationItem[];
-}) => void | Promise<void>;
+interface ChangeCallback {
+  (arg: {
+    db: DbResult<unknown>;
+    up: boolean;
+    redo: boolean;
+    migrations: MigrationItem[];
+  }): void | Promise<void>;
+}
+
+interface ChangeCommitCallback {
+  (arg: {
+    options: AdapterOptions;
+    up: boolean;
+    migrations: MigrationItem[];
+  }): void | Promise<void>;
+}
+
+interface MigrationCallback {
+  (arg: {
+    db: DbResult<unknown>;
+    migrations: MigrationItem[];
+  }): void | Promise<void>;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyRakeDbConfig = RakeDbConfig<any, any>;
-
-type Db = DbResult<unknown>;
 
 export interface RakeDbBaseTable<CT> {
   exportAs: string;
@@ -222,7 +236,7 @@ export interface RakeDbRenameMigrationsInput {
   map: RakeDbRenameMigrationsMap;
 }
 
-export const migrationConfigDefaults = {
+export const migrationConfigDefaults: RakeDbBaseConfig<ColumnSchemaConfig> = {
   schemaConfig: defaultSchemaConfig,
   migrationsPath: path.join('src', 'db', 'migrations'),
   migrationId: { serial: 4 },
@@ -234,10 +248,7 @@ export const migrationConfigDefaults = {
   import() {
     throw new Error('Please define the `import` setting in `rakeDb` config');
   },
-} satisfies Omit<
-  RakeDbConfig<ColumnSchemaConfig>,
-  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
->;
+};
 
 export const processRakeDbConfig = <
   SchemaConfig extends ColumnSchemaConfig,

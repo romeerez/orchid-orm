@@ -27,14 +27,16 @@ import { rebase } from './commands/rebase';
 /**
  * Type of {@link rakeDb} function
  */
-export type RakeDbFn = (<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT = undefined,
->(
-  options: MaybeArray<AdapterOptions>,
-  partialConfig: InputRakeDbConfig<SchemaConfig, CT>,
-  args?: string[],
-) => RakeDbFnReturns<CT>) & {
+export interface RakeDbFn {
+  <
+    SchemaConfig extends ColumnSchemaConfig,
+    CT = DefaultColumnTypes<DefaultSchemaConfig>,
+  >(
+    options: MaybeArray<AdapterOptions>,
+    partialConfig: InputRakeDbConfig<SchemaConfig, CT>,
+    args?: string[],
+  ): RakeDbChangeFnWithPromise<CT>;
+
   /**
    * Unlike the original `rakeDb` that executes immediately,
    * `rakeDb.lazy` returns the `run` function to be later called programmatically.
@@ -43,14 +45,20 @@ export type RakeDbFn = (<
    * @param config - {@link RakeDbConfig}
    * @returns `change` is to be used in migrations, `run` takes an array cli args to execute a command
    */
-  lazy: RakeDbLazyFn;
-};
-
-export type RakeDbFnReturns<CT> = RakeDbChangeFn<
-  CT extends undefined ? DefaultColumnTypes<DefaultSchemaConfig> : CT
-> & {
-  promise: Promise<RakeDbResult>;
-};
+  lazy<
+    SchemaConfig extends ColumnSchemaConfig,
+    CT = DefaultColumnTypes<DefaultSchemaConfig>,
+  >(
+    options: MaybeArray<AdapterOptions>,
+    config: InputRakeDbConfig<SchemaConfig, CT>,
+  ): {
+    change: RakeDbChangeFn<CT>;
+    run(
+      args: string[],
+      config?: Partial<RakeDbConfig<SchemaConfig, CT>>,
+    ): Promise<RakeDbResult>;
+  };
+}
 
 export interface RakeDbResult {
   // database connection options
@@ -62,25 +70,17 @@ export interface RakeDbResult {
 }
 
 /**
- * Type of {@link rakeDb.lazy} function
- */
-export type RakeDbLazyFn = <SchemaConfig extends ColumnSchemaConfig, CT>(
-  options: MaybeArray<AdapterOptions>,
-  partialConfig: InputRakeDbConfig<SchemaConfig, CT>,
-) => {
-  change: RakeDbChangeFn<CT>;
-  run(
-    args: string[],
-    config?: Partial<RakeDbConfig<SchemaConfig, CT>>,
-  ): Promise<RakeDbResult>;
-};
-
-/**
  * Function to use in migrations to wrap database changes
  * Saves the given callback to an internal queue,
  * and also returns the callback in case you want to export it from migration.
  */
-export type RakeDbChangeFn<CT> = (fn: ChangeCallback<CT>) => ChangeCallback<CT>;
+interface RakeDbChangeFn<CT> {
+  (fn: ChangeCallback<CT>): ChangeCallback<CT>;
+}
+
+interface RakeDbChangeFnWithPromise<CT> extends RakeDbChangeFn<CT> {
+  promise: Promise<RakeDbResult>;
+}
 
 /**
  * Function to configure and run `rakeDb`.
@@ -89,7 +89,7 @@ export type RakeDbChangeFn<CT> = (fn: ChangeCallback<CT>) => ChangeCallback<CT>;
  * @param config - {@link RakeDbConfig}
  * @param args - optionally provide an array of cli args. Default is `process.argv.slice(2)`.
  */
-export const rakeDb: RakeDbFn = ((
+export const rakeDb = ((
   options,
   partialConfig,
   args = process.argv.slice(2),
@@ -112,16 +112,22 @@ export const rakeDb: RakeDbFn = ((
   });
 }) as RakeDbFn;
 
-rakeDb.lazy = ((options, partialConfig) => {
+rakeDb.lazy = ((
+  options: MaybeArray<AdapterOptions>,
+  partialConfig: InputRakeDbConfig<ColumnSchemaConfig, unknown>,
+) => {
   const config = processRakeDbConfig(partialConfig);
 
   return {
     change,
-    run(args: string[], conf) {
+    run(
+      args: string[],
+      conf: Partial<RakeDbConfig<DefaultSchemaConfig, unknown>>,
+    ) {
       return runCommand(options, conf ? { ...config, ...conf } : config, args);
     },
   };
-}) as RakeDbLazyFn;
+}) as never;
 
 function change(fn: ChangeCallback<unknown>) {
   pushChange(fn);

@@ -5,10 +5,11 @@ import { newMigration } from './commands/newMigration';
 import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
 import { runRecurrentMigrations } from './commands/recurrent';
-import { asMock } from 'test-utils';
+import { asMock, assertType } from 'test-utils';
 import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
 import { processRakeDbConfig } from './config';
+import { DefaultSchemaConfig, IntegerColumn } from 'pqb';
 
 jest.mock('./commands/createOrDrop', () => ({
   createDb: jest.fn(() => Promise.resolve()),
@@ -181,6 +182,21 @@ describe('rakeDb', () => {
 
   describe('rakeDb.lazy', () => {
     beforeEach(clearChanges);
+
+    // for issue https://github.com/romeerez/orchid-orm/issues/538
+    it('should have proper types for columns', () => {
+      const { change } = rakeDb.lazy(options, {
+        migrations: {} as never,
+      });
+
+      change(async (db) => {
+        db.createTable('table', (t) => {
+          const column = t.integer();
+          assertType<typeof column, IntegerColumn<DefaultSchemaConfig>>();
+          return {};
+        });
+      });
+    });
 
     it('should return `change` and `run` functions', () => {
       const custom = jest.fn();
