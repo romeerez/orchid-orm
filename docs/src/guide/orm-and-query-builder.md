@@ -398,7 +398,7 @@ export const db = orchidORM(
       'citext',
 
       // you can specify a certain version
-      { name: 'citext', version: '1.2.3' },
+      { citext: '1.2.3' },
 
       // define extension only for specific schema:
       'mySchema.citext',
