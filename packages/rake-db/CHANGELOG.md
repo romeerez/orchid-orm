@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.25.13
+
+### Patch Changes
+
+- 1180964: Fix rakeDb.lazy typing (#538)
+- Updated dependencies [e0ae8d0]
+- Updated dependencies [90e810f]
+- Updated dependencies [428c638]
+  - pqb@0.54.0
+  - orchid-core@0.27.0
+
 ## 2.25.12
 
 ### Patch Changes

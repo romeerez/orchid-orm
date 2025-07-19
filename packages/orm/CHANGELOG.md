@@ -1,5 +1,29 @@
 # orchid-orm
 
+## 1.52.0
+
+### Minor Changes
+
+- 428c638: Change `create`, `update`, `onConflict().set` methods
+
+  Change `create` methods signature to forbid sql and sub-queries without a callback.
+
+  Drop `updateSql` in favor of supporting sql for values in a regular `update`.
+
+  Change `onConflict().set` accordingly to the update change.
+
+  Drop `createRaw`, `insertRaw`, `createManyRaw`, `insertManyRaw` in favor of regular `create` methods with SQL values.
+
+### Patch Changes
+
+- Updated dependencies [1180964]
+- Updated dependencies [e0ae8d0]
+- Updated dependencies [90e810f]
+- Updated dependencies [428c638]
+  - rake-db@2.25.13
+  - pqb@0.54.0
+  - orchid-core@0.27.0
+
 ## 1.51.0
 
 ### Minor Changes

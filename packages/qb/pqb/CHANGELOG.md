@@ -1,5 +1,27 @@
 # pqb
 
+## 0.54.0
+
+### Minor Changes
+
+- 428c638: Change `create`, `update`, `onConflict().set` methods
+
+  Change `create` methods signature to forbid sql and sub-queries without a callback.
+
+  Drop `updateSql` in favor of supporting sql for values in a regular `update`.
+
+  Change `onConflict().set` accordingly to the update change.
+
+  Drop `createRaw`, `insertRaw`, `createManyRaw`, `insertManyRaw` in favor of regular `create` methods with SQL values.
+
+### Patch Changes
+
+- e0ae8d0: Support auto-batching inserts that have nested inserts
+- 90e810f: Support create/update/delete sub-queries inside create and upsert
+- Updated dependencies [e0ae8d0]
+- Updated dependencies [428c638]
+  - orchid-core@0.27.0
+
 ## 0.53.0
 
 ### Minor Changes
