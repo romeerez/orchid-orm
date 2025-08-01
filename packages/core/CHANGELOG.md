@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.27.1
+
+### Patch Changes
+
+- 85babff: Support `set` in `beforeCreate`, `beforeUpdate`, `beforeSave` (#537)
+
 ## 0.27.0
 
 ### Minor Changes

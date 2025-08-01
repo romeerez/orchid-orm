@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.53.0
+
+### Minor Changes
+
+- 85babff: Support `set` in `beforeCreate`, `beforeUpdate`, `beforeSave` (#537)
+
+### Patch Changes
+
+- Updated dependencies [85babff]
+  - pqb@0.54.1
+  - orchid-core@0.27.1
+  - rake-db@2.25.14
+
 ## 1.52.0
 
 ### Minor Changes

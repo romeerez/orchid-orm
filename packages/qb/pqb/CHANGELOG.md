@@ -1,5 +1,13 @@
 # pqb
 
+## 0.54.1
+
+### Patch Changes
+
+- 85babff: Support `set` in `beforeCreate`, `beforeUpdate`, `beforeSave` (#537)
+- Updated dependencies [85babff]
+  - orchid-core@0.27.1
+
 ## 0.54.0
 
 ### Minor Changes
