@@ -10,9 +10,11 @@ import {
 } from './data';
 import {
   addValue,
+  emptyObject,
   HookSelect,
   isExpression,
   pushOrNewArray,
+  RecordUnknown,
 } from 'orchid-core';
 import { Db } from '../query/db';
 import { joinSubQuery } from '../common/utils';
@@ -32,8 +34,22 @@ export const pushUpdateSql = (
     table.table || (query.from as string),
   );
 
+  let hookSet: RecordUnknown;
+  if (query.hookUpdateSet) {
+    hookSet = {};
+    for (const item of query.hookUpdateSet) {
+      Object.assign(hookSet, item);
+    }
+  } else {
+    hookSet = emptyObject;
+  }
+
   const set: string[] = [];
-  processData(ctx, table, set, query.updateData, quotedAs);
+  processData(ctx, table, set, query.updateData, hookSet, quotedAs);
+
+  if (query.hookUpdateSet) {
+    applySet(ctx, table, set, hookSet, emptyObject, quotedAs);
+  }
 
   // if no values to set, make a `SELECT` query
   if (!set.length) {
@@ -103,36 +119,49 @@ const processData = (
   table: ToSQLQuery,
   set: string[],
   data: UpdateQueryDataItem[],
+  hookSet: RecordUnknown,
   quotedAs?: string,
 ) => {
   let append: UpdateQueryDataItem[] | undefined;
-  const QueryClass = ctx.qb.constructor as unknown as Db;
 
   for (const item of data) {
     if (typeof item === 'function') {
       const result = item(data);
       if (result) append = pushOrNewArray(append, result);
     } else {
-      const shape = table.q.shape;
-      for (const key in item) {
-        const value = item[key];
-        if (value === undefined) continue;
-
-        set.push(
-          `"${shape[key].data.name || key}" = ${processValue(
-            ctx,
-            table,
-            QueryClass,
-            key,
-            value,
-            quotedAs,
-          )}`,
-        );
-      }
+      applySet(ctx, table, set, item, hookSet, quotedAs);
     }
   }
 
-  if (append) processData(ctx, table, set, append, quotedAs);
+  if (append) processData(ctx, table, set, append, hookSet, quotedAs);
+};
+
+const applySet = (
+  ctx: ToSQLCtx,
+  table: ToSQLQuery,
+  set: string[],
+  item: UpdateQueryDataObject,
+  hookSet: RecordUnknown,
+  quotedAs?: string,
+) => {
+  const QueryClass = ctx.qb.constructor as unknown as Db;
+  const shape = table.q.shape;
+
+  for (const key in item) {
+    const value = item[key];
+    if (value === undefined || key in hookSet) continue;
+
+    set.push(
+      `"${shape[key].data.name || key}" = ${processValue(
+        ctx,
+        table,
+        QueryClass,
+        key,
+        value,
+        quotedAs,
+      )}`,
+    );
+  }
 };
 
 const processValue = (

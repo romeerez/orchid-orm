@@ -24,6 +24,7 @@ import {
   HookSelect,
   MaybeArray,
   MaybePromise,
+  PickQueryInputType,
   PickQueryTable,
   QueryColumn,
   QueryDataTransform,
@@ -36,7 +37,7 @@ import {
 import { RelationConfigBase } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
-import { AfterCommitErrorHandler } from '../queryMethods';
+import { AfterCommitErrorHandler, QueryHookUtils } from '../queryMethods';
 import { ColumnsShape } from '../columns';
 
 export interface RecordOfColumnsShapeBase {
@@ -58,7 +59,12 @@ export interface JoinedParsers {
   [K: string]: ColumnsParsers | undefined;
 }
 
-export type QueryBeforeHook = (query: Query) => void | Promise<void>;
+export type QueryBeforeHookInternal = (query: Query) => void | Promise<void>;
+
+export type QueryBeforeHook = (
+  utils: QueryHookUtils<PickQueryInputType>,
+) => void | Promise<void>;
+
 export type QueryAfterHook<Data = unknown> = (
   data: Data,
   query: Query,
@@ -157,11 +163,11 @@ export interface CommonQueryData {
   // selected computed columns
   selectedComputeds?: ComputedColumns;
   // run functions before any query
-  before?: QueryBeforeHook[];
+  before?: QueryBeforeHookInternal[];
   // run functions after any query
   after?: QueryAfterHook[];
   // run functions before create
-  beforeCreate?: QueryBeforeHook[];
+  beforeCreate?: QueryBeforeHookInternal[];
   // run functions after create in transaction
   afterCreate?: QueryAfterHook[];
   // run functions after create commit
@@ -169,7 +175,7 @@ export interface CommonQueryData {
   // additional select for afterCreate hooks
   afterCreateSelect?: Set<string>;
   // run functions before update
-  beforeUpdate?: QueryBeforeHook[];
+  beforeUpdate?: QueryBeforeHookInternal[];
   // run functions after update in transaction
   afterUpdate?: QueryAfterHook[];
   // run functions after update commit
@@ -177,7 +183,7 @@ export interface CommonQueryData {
   // additional select for afterUpdate hooks
   afterUpdateSelect?: Set<string>;
   // run functions before delete
-  beforeDelete?: QueryBeforeHook[];
+  beforeDelete?: QueryBeforeHookInternal[];
   // run functions after delete in transaction
   afterDelete?: QueryAfterHook[];
   // run functions after delete commit
@@ -226,6 +232,10 @@ export interface CommonQueryData {
 
   // It is used by `joinQueryChainHOF` to customize the outer query of a chained relation.
   outerQuery?: Query;
+
+  // `set` data for insert or update that was set from a `before*` hook
+  hookCreateSet?: RecordUnknown[];
+  hookUpdateSet?: RecordUnknown[];
 }
 
 export interface SelectQueryData extends CommonQueryData {
@@ -251,18 +261,10 @@ export interface SelectQueryData extends CommonQueryData {
   };
 }
 
-export type CreateKind = 'object' | 'from';
-
 export interface InsertQueryData extends CommonQueryData {
   type: 'insert';
-  kind: CreateKind;
   columns: string[];
-  values:
-    | unknown[][]
-    | {
-        from: Query;
-        values?: unknown[][];
-      };
+  values: InsertQueryDataObjectValues | InsertQueryDataFromValues;
   join?: JoinItem[];
   onConflict?: {
     target?: OnConflictTarget;
@@ -270,6 +272,12 @@ export interface InsertQueryData extends CommonQueryData {
     merge?: OnConflictMerge;
   };
 }
+
+export type InsertQueryDataObjectValues = unknown[][];
+export type InsertQueryDataFromValues = {
+  from: Query;
+  values?: unknown[];
+};
 
 export interface UpdateQueryDataObject {
   [K: string]: Expression | { op: string; arg: unknown } | unknown;

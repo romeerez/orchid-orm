@@ -884,13 +884,13 @@ describe('relations chain', () => {
         expectSql(
           query.toSQL(),
           `
-              INSERT INTO "profile"("user_id", "profile_key", "bio")
-              SELECT "user"."id" "UserId", "user"."user_key" "ProfileKey", $1
-              FROM "user"
-              WHERE "user"."id" = $2
-              LIMIT 1
-              RETURNING ${profileSelectAll}
-            `,
+            INSERT INTO "profile"("user_id", "profile_key", "bio")
+            SELECT "user"."id" "UserId", "user"."user_key" "ProfileKey", $1
+            FROM "user"
+            WHERE "user"."id" = $2
+            LIMIT 1
+            RETURNING ${profileSelectAll}
+          `,
           ['bio', 1],
         );
       });

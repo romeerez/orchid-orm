@@ -1,7 +1,16 @@
 import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
-import { PickQueryShape, QueryColumns } from 'orchid-core';
-import { QueryAfterHook, QueryBeforeHook } from '../sql';
-import { PickQueryQ } from '../query/query';
+import {
+  PickQueryInputType,
+  PickQueryShape,
+  QueryColumns,
+  RecordUnknown,
+} from 'orchid-core';
+import {
+  QueryAfterHook,
+  QueryBeforeHook,
+  QueryBeforeHookInternal,
+} from '../sql';
+import { PickQueryQ, Query, QueryOrExpression } from '../query/query';
 import { AfterCommitErrorHandler } from './transaction';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
@@ -24,7 +33,7 @@ export type HookSelectArg<T extends PickQueryShape> = (keyof T['shape'] &
 export type HookAction = 'Create' | 'Update' | 'Delete';
 
 // Save `before` hook into the query.
-const before = <T>(q: T, key: HookAction, cb: QueryBeforeHook): T =>
+const before = <T>(q: T, key: HookAction, cb: QueryBeforeHookInternal): T =>
   pushQueryValueImmutable(q as PickQueryQ, `before${key}`, cb) as never;
 
 // Save `after` hook into the query: this saves the function and the hook selection into the query data.
@@ -49,7 +58,7 @@ const after = <T extends PickQueryShape, S extends HookSelectArg<T>>(
 
 export const _queryHookBeforeQuery = <T extends PickQueryShape>(
   q: T,
-  cb: QueryBeforeHook,
+  cb: QueryBeforeHookInternal,
 ): T => {
   return pushQueryValueImmutable(q as never, 'before', cb);
 };
@@ -65,7 +74,7 @@ export const _queryHookBeforeCreate = <T extends PickQueryShape>(
   q: T,
   cb: QueryBeforeHook,
 ): T => {
-  return before(q, 'Create', cb);
+  return before(q, 'Create', (q) => cb(new QueryHookUtils(q, 'hookCreateSet')));
 };
 
 export const _queryHookAfterCreate = <
@@ -94,7 +103,7 @@ export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
   q: T,
   cb: QueryBeforeHook,
 ): T => {
-  return before(q, 'Update', cb);
+  return before(q, 'Update', (q) => cb(new QueryHookUtils(q, 'hookUpdateSet')));
 };
 
 export const _queryHookAfterUpdate = <
@@ -123,7 +132,11 @@ export const _queryHookBeforeSave = <T extends PickQueryShape>(
   q: T,
   cb: QueryBeforeHook,
 ): T => {
-  return before(before(q, 'Create', cb), 'Update', cb);
+  return before(
+    before(q, 'Create', (q) => cb(new QueryHookUtils(q, 'hookCreateSet'))),
+    'Update',
+    (q) => cb(new QueryHookUtils(q, 'hookUpdateSet')),
+  );
 };
 
 export const _queryHookAfterSave = <
@@ -156,7 +169,7 @@ export const _queryAfterSaveCommit = <
 
 export const _queryHookBeforeDelete = <T extends PickQueryShape>(
   q: T,
-  cb: QueryBeforeHook,
+  cb: QueryBeforeHookInternal,
 ): T => {
   return before(q, 'Delete', cb);
 };
@@ -183,13 +196,34 @@ export const _queryHookAfterDeleteCommit = <
   return after(q, 'Delete', select, cb, true);
 };
 
+export class QueryHookUtils<T extends PickQueryInputType> {
+  constructor(
+    public query: Query,
+    private key: 'hookCreateSet' | 'hookUpdateSet',
+  ) {}
+
+  set = (data: {
+    [K in keyof T['inputType']]?:
+      | T['inputType'][K]
+      | (() => QueryOrExpression<T['inputType'][K]>);
+  }) => {
+    const set: RecordUnknown = {};
+    for (const key in data) {
+      if (data[key] !== undefined) {
+        set[key] = data[key];
+      }
+    }
+    pushQueryValueImmutable(this.query, this.key, set);
+  };
+}
+
 export abstract class QueryHooks {
   /**
    * Run the function before any kind of query.
    *
    * @param cb - function to call, first argument is a query object
    */
-  beforeQuery<T>(this: T, cb: QueryBeforeHook): T {
+  beforeQuery<T>(this: T, cb: QueryBeforeHookInternal): T {
     return _queryHookBeforeQuery(_clone(this), cb) as T;
   }
 
@@ -344,7 +378,7 @@ export abstract class QueryHooks {
    *
    * @param cb - function to call, first argument is a query object
    */
-  beforeDelete<T>(this: T, cb: QueryBeforeHook): T {
+  beforeDelete<T>(this: T, cb: QueryBeforeHookInternal): T {
     return _queryHookBeforeDelete(_clone(this), cb) as T;
   }
 

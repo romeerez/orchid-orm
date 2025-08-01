@@ -380,7 +380,6 @@ export const makeHasOneMethod = (
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
         const q = (relationQuery as unknown as PickQueryQ).q as InsertQueryData;
-        q.kind = 'from';
         q.values = { from: baseQuery };
       };
     },

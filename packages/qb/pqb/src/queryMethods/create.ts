@@ -20,12 +20,7 @@ import {
   SetQueryReturnsRowCountMany,
 } from '../query/query';
 import { RelationConfigDataForCreate } from '../relations';
-import {
-  CreateKind,
-  InsertQueryData,
-  OnConflictMerge,
-  ToSQLQuery,
-} from '../sql';
+import { InsertQueryData, OnConflictMerge, ToSQLQuery } from '../sql';
 import { anyShape, VirtualColumn } from '../columns';
 import {
   Expression,
@@ -488,7 +483,6 @@ const handleManyData = (
  * @param self - query object.
  * @param columns - columns list of all values.
  * @param values - array of arrays matching columns, or can be an array of SQL expressions, or is a special object for `createFrom`.
- * @param kind - the kind of create query, can be 'object', 'from'.
  * @param many - whether it's for creating one or many.
  */
 const insert = (
@@ -500,7 +494,6 @@ const insert = (
     columns: string[];
     values: InsertQueryData['values'];
   },
-  kind: CreateKind,
   many?: boolean,
 ) => {
   const { q } = self as unknown as { q: InsertQueryData };
@@ -516,10 +509,6 @@ const insert = (
   q.type = 'insert';
   q.columns = columns;
   q.values = values;
-
-  // query kind may be already set by in the ORM
-  // so that author.books.create(data) will actually perform the `from` kind of create
-  if (!q.kind) q.kind = kind;
 
   const { select, returnType } = q;
 
@@ -608,9 +597,8 @@ const insertFromQuery = <
     q,
     {
       columns,
-      values: { from, values: obj?.values } as never,
+      values: { from, values: obj?.values[0] } as never,
     },
-    'from',
     many,
   );
 };
@@ -642,11 +630,11 @@ export const _queryInsert = <
   const values = ((q as unknown as Query).q as InsertQueryData).values;
   if (values && 'from' in values) {
     obj.columns = getFromSelectColumns(values.from, obj);
-    values.values = obj.values as unknown[][];
+    values.values = (obj.values as unknown[][])[0];
     obj.values = values;
   }
 
-  return insert(q, obj, 'object') as never;
+  return insert(q, obj) as never;
 };
 
 export const _queryCreateMany = <
@@ -668,7 +656,7 @@ export const _queryInsertMany = <
   data: CreateData<T, BT>[],
 ): InsertManyResult<T, BT> => {
   const ctx = createCtx();
-  let result = insert(q, handleManyData(q, data, ctx), 'object', true) as never;
+  let result = insert(q, handleManyData(q, data, ctx), true) as never;
   if (!data.length) result = (result as Query).none() as never;
   return result;
 };

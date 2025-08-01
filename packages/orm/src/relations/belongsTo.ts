@@ -452,7 +452,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
     let idsForDelete: [unknown, ...unknown[]][] | undefined;
 
-    _queryHookBeforeUpdate(q, async (q) => {
+    _queryHookBeforeUpdate(q, async ({ query: q }) => {
       if (params.disconnect) {
         for (const key of foreignKeys) {
           update[key] = null;

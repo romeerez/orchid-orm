@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Lifecycle hooks
 
 You can specify functions that will be called before or after a certain type of query executes for the table.
@@ -15,7 +19,7 @@ Functions may return a `Promise`, and all before hook promises will be awaited w
 
 The argument passed to a function is a query object that is going to be executed.
 
-If the query has both `beforeQuery` and `beforeCreate`, `beforeCreate` will run first.
+`beforeQuery` runs after other `before*` hooks.
 
 [orCreate](/guide/create-update-delete.html#orcreate) executes two queries: the first to find a record, and the second to find and create if not found.
 If the record is created by another process in between the two queries, `beforeCreate` hook will be triggerred, but no new data will be created.
@@ -31,18 +35,57 @@ class SomeTable extends BaseTable {
   }));
 
   init(orm: typeof db) {
-    // `before` hooks don't receive data, only a query object
-    this.beforeQuery((q) => console.log('before any query'));
-    this.beforeCreate((q) => console.log('before create'));
-    this.beforeUpdate((q) => console.log('before update'));
-    this.beforeSave((q) => console.log('before create or update'));
-    this.beforeDelete((q) => console.log('before delete'));
+    // `before` hooks don't receive data, unlike `after` hooks
+    this.beforeQuery(() => console.log('before any query'));
+    // `beforeCreate` and `beforeUpdate` have a parameter that can set data to records.
+    this.beforeCreate(({ set }) => console.log('before create'));
+    this.beforeUpdate(({ set }) => console.log('before update'));
+    this.beforeSave(() => console.log('before create or update'));
+    this.beforeDelete(() => console.log('before delete'));
 
     // the `orm` argument is to be used for making queries in the query callbacks
     this.beforeUpdate(async () => {
       const data = await orm.someTable.where(...).select(...)
       // ...performing logic with the data
     })
+  }
+}
+```
+
+### set values before create or update
+
+You can set one or multiple values to the records in the `beforeCreate`, `beforeUpdate`, `beforeSave` hooks.
+These values will override existing values that where set by the app code.
+
+This works for all update and create methods, including
+[createFrom](/guide/create-update-delete.html#orcreate),
+[createMany](/guide/create-update-delete.html#createmany-insertmany),
+[orCreate](/guide/create-update-delete.html#orcreate),
+[upsert](/guide/create-update-delete.html#upsert).
+
+In a case of batch create or update, the same value is set for all records.
+
+```ts
+class SomeTable extends BaseTable {
+  readonly table = 'someTable';
+  columns = this.setColumns((t) => ({
+    ...someColumns,
+  }));
+
+  init(orm: typeof db) {
+    this.beforeCreate(({ set }) => {
+      set({ one: 'value' });
+    });
+
+    this.beforeUpdate(({ set }) => {
+      // use a function for sql
+      set({ two: () => sql`value` });
+    });
+
+    // is set both when creating and updating.
+    this.beforeSave(({ set }) => {
+      set({ three: 'value' });
+    });
   }
 }
 ```

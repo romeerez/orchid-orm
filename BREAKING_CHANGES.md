@@ -1,5 +1,11 @@
 # Breaking changes
 
+## orchid-orm 1.53
+
+`beforeCreate`, `beforeUpdate`, `beforeSave` now can override record values!
+
+Instead of a query object, they now receive an object with the `set` function (see docs for details).
+
 ## orchid-orm 1.52
 
 Dropped `updateSql`, `createRaw`, `insertRaw`, `createManyRaw`, `insertManyRaw`.

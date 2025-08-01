@@ -999,6 +999,8 @@ export function _querySelect(q: Query, args: any[]): any {
     q.q.returnType = q.q.returningMany ? 'all' : 'oneOrThrow';
   } else if (returnType === 'value') {
     q.q.returnType = q.q.returningMany ? 'all' : 'one';
+  } else if (returnType === 'void') {
+    q.q.returnType = q.q.returningMany ? 'all' : 'oneOrThrow';
   }
 
   const len = args.length;

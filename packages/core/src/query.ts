@@ -160,10 +160,13 @@ export interface PickQueryTableMetaResult
   extends PickQueryTable,
     PickQueryMetaResult {}
 
-export interface PickQueryTableMetaResultInputType
-  extends PickQueryTableMetaResult {
+export interface PickQueryInputType {
   inputType: unknown;
 }
+
+export interface PickQueryTableMetaResultInputType
+  extends PickQueryTableMetaResult,
+    PickQueryInputType {}
 
 export interface PickQueryTableMetaShape
   extends PickQueryTable,

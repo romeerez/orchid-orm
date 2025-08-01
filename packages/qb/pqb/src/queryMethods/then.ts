@@ -1,7 +1,7 @@
 import { Query } from '../query/query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryResult } from '../adapter';
-import { HandleResult, QueryAfterHook, QueryBeforeHook } from '../sql';
+import { HandleResult, QueryAfterHook, QueryBeforeHookInternal } from '../sql';
 import pg from 'pg';
 import {
   AdapterBase,
@@ -107,7 +107,7 @@ function maybeWrappedThen(
 ): Promise<unknown> {
   const { q } = this;
 
-  let beforeHooks: QueryBeforeHook[] | undefined;
+  let beforeHooks: QueryBeforeHookInternal[] | undefined;
   let afterHooks: QueryAfterHook[] | undefined;
   let afterCommitHooks: QueryAfterHook[] | undefined;
   if (q.type) {
@@ -175,7 +175,7 @@ const then = async (
   q: Query,
   adapter: AdapterBase,
   trx?: TransactionState,
-  beforeHooks?: QueryBeforeHook[],
+  beforeHooks?: QueryBeforeHookInternal[],
   afterHooks?: QueryAfterHook[],
   afterCommitHooks?: QueryAfterHook[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

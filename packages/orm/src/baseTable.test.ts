@@ -7,7 +7,14 @@ import {
   Updatable,
 } from './baseTable';
 import { orchidORM } from './orm';
-import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
+import {
+  ColumnType,
+  makeColumnTypes,
+  Operators,
+  Query,
+  QueryHookUtils,
+  TextColumn,
+} from 'pqb';
 import {
   BaseTable,
   db,
@@ -331,20 +338,20 @@ describe('baseTable', () => {
   describe('hooks', () => {
     it('should set hooks in the init', async () => {
       const fns = {
-        beforeQuery: () => {},
-        afterQuery: () => {},
-        beforeCreate: () => {},
-        afterCreate: () => {},
-        afterCreateCommit: () => {},
-        beforeUpdate: () => {},
-        afterUpdate: () => {},
-        afterUpdateCommit: () => {},
-        beforeDelete: () => {},
-        afterDelete: () => {},
-        afterDeleteCommit: () => {},
-        beforeSave: () => {},
-        afterSave: () => {},
-        afterSaveCommit: () => {},
+        beforeQuery: jest.fn(),
+        afterQuery: jest.fn(),
+        beforeCreate: jest.fn(),
+        afterCreate: jest.fn(),
+        afterCreateCommit: jest.fn(),
+        beforeUpdate: jest.fn(),
+        afterUpdate: jest.fn(),
+        afterUpdateCommit: jest.fn(),
+        beforeDelete: jest.fn(),
+        afterDelete: jest.fn(),
+        afterDeleteCommit: jest.fn(),
+        beforeSave: jest.fn(),
+        afterSave: jest.fn(),
+        afterSaveCommit: jest.fn(),
       };
 
       let initArg: unknown | undefined;
@@ -395,11 +402,11 @@ describe('baseTable', () => {
       expect(db.table.baseQuery.q).toMatchObject({
         before: [fns.beforeQuery],
         after: [fns.afterQuery],
-        beforeCreate: [fns.beforeCreate, fns.beforeSave],
+        // beforeCreate: [fns.beforeCreate, fns.beforeSave],
         afterCreate: [fns.afterCreate, fns.afterSave],
         afterCreateCommit: [fns.afterCreateCommit, fns.afterSaveCommit],
         afterCreateSelect: new Set(['one', 'two', 'seven', 'eight']),
-        beforeUpdate: [fns.beforeUpdate, fns.beforeSave],
+        // beforeUpdate: [fns.beforeUpdate, fns.beforeSave],
         afterUpdate: [fns.afterUpdate, fns.afterSave],
         afterUpdateCommit: [fns.afterUpdateCommit, fns.afterSaveCommit],
         afterUpdateSelect: new Set(['three', 'four', 'seven', 'eight']),
@@ -408,6 +415,21 @@ describe('baseTable', () => {
         afterDeleteCommit: [fns.afterDeleteCommit],
         afterDeleteSelect: new Set(['five', 'six']),
       });
+
+      const { q } = db.table.baseQuery;
+      const query = {} as Query;
+
+      q.beforeCreate?.[0](query);
+      expect(fns.beforeCreate).toHaveBeenCalledTimes(1);
+      const beforeCreateArg = fns.beforeCreate.mock.calls[0][0];
+      expect(beforeCreateArg).toBeInstanceOf(QueryHookUtils);
+      expect(beforeCreateArg).toMatchObject({ key: 'hookCreateSet' });
+
+      q.beforeUpdate?.[0](query);
+      expect(fns.beforeUpdate).toHaveBeenCalledTimes(1);
+      const beforeUpdateArg = fns.beforeUpdate.mock.calls[0][0];
+      expect(beforeUpdateArg).toBeInstanceOf(QueryHookUtils);
+      expect(beforeUpdateArg).toMatchObject({ key: 'hookUpdateSet' });
     });
   });
 

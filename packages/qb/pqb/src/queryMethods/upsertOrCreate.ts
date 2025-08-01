@@ -133,7 +133,7 @@ function orCreate<T extends PickQueryMetaResult>(
       q2.q.logger = q.q.logger;
 
       q2.q.type = 'upsert';
-      q2.q.beforeCreate = q.q.beforeCreate;
+      q2.q.beforeCreate = q.q.beforeCreate?.map((cb) => () => cb(c));
 
       if (hasAfterCallback) {
         (q2.q.afterCreate ??= []).push(
