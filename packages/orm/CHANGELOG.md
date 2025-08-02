@@ -1,5 +1,22 @@
 # orchid-orm
 
+## 1.54.0
+
+### Minor Changes
+
+- 6b19c11: Support `readOnly` columns that can be only updated from the hooks (#537)
+
+### Patch Changes
+
+- fdfb0c8: Provide `columns` array to `beforeCreate`, `setOnCreate`, and to other such hooks (#537)
+- 8513275: Add `setOnCreate`, `setOnUpdate`, `setOnSave` hooks on columns (#537)
+- Updated dependencies [fdfb0c8]
+- Updated dependencies [6b19c11]
+- Updated dependencies [8513275]
+  - pqb@0.54.2
+  - orchid-core@0.27.2
+  - rake-db@2.25.15
+
 ## 1.53.0
 
 ### Minor Changes

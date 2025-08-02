@@ -1,5 +1,13 @@
 # orchid-core
 
+## 0.27.2
+
+### Patch Changes
+
+- fdfb0c8: Provide `columns` array to `beforeCreate`, `setOnCreate`, and to other such hooks (#537)
+- 6b19c11: Support `readOnly` columns that can be only updated from the hooks (#537)
+- 8513275: Add `setOnCreate`, `setOnUpdate`, `setOnSave` hooks on columns (#537)
+
 ## 0.27.1
 
 ### Patch Changes
