@@ -10,6 +10,7 @@ import {
   Expression,
   MaybeArray,
   PickQueryMeta,
+  pushQueryValueImmutable,
   QueryColumn,
 } from 'orchid-core';
 import {
@@ -21,7 +22,6 @@ import {
 } from '../sql';
 import {
   _clone,
-  pushQueryValueImmutable,
   saveAliasedShape,
   setQueryObjectValueImmutable,
 } from '../query/queryUtils';

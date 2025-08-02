@@ -5,7 +5,6 @@ import {
   IsQuery,
   PickQueryResult,
   PickQueryResultReturnType,
-  pushOrNewArrayToObjectImmutable,
   RecordUnknown,
 } from 'orchid-core';
 import { OrchidOrmInternalError } from '../errors';
@@ -13,9 +12,9 @@ import {
   PickQueryQ,
   PickQueryQAndBaseQuery,
   Query,
-  SetQueryReturnsAll,
   QueryTake,
   QueryTakeOptional,
+  SetQueryReturnsAll,
   SetQueryReturnsRows,
 } from './query';
 import { getClonedQueryData } from '../common/utils';
@@ -41,22 +40,6 @@ export const pushQueryArrayImmutable = <T extends PickQueryQ>(
 ): T => {
   const arr = (q.q as unknown as RecordUnknown)[key] as unknown[];
   (q.q as unknown as RecordUnknown)[key] = arr ? [...arr, ...value] : value;
-  return q;
-};
-
-/**
- * Push a new element into an array in the query data - immutable version
- *
- * @param q - query
- * @param key - key to get the array
- * @param value - new element to push
- */
-export const pushQueryValueImmutable = <T extends PickQueryQ>(
-  q: T,
-  key: string,
-  value: unknown,
-): T => {
-  pushOrNewArrayToObjectImmutable(q.q, key, value);
   return q;
 };
 

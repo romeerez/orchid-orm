@@ -1,16 +1,17 @@
-import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
+import { _clone } from '../query/queryUtils';
 import {
-  PickQueryInputType,
+  IsQuery,
   PickQueryShape,
+  pushQueryValueImmutable,
   QueryColumns,
-  RecordUnknown,
+  QueryHookUtils,
 } from 'orchid-core';
 import {
   QueryAfterHook,
   QueryBeforeHook,
   QueryBeforeHookInternal,
 } from '../sql';
-import { PickQueryQ, Query, QueryOrExpression } from '../query/query';
+import { PickQueryQ } from '../query/query';
 import { AfterCommitErrorHandler } from './transaction';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
@@ -34,7 +35,7 @@ export type HookAction = 'Create' | 'Update' | 'Delete';
 
 // Save `before` hook into the query.
 const before = <T>(q: T, key: HookAction, cb: QueryBeforeHookInternal): T =>
-  pushQueryValueImmutable(q as PickQueryQ, `before${key}`, cb) as never;
+  pushQueryValueImmutable(q as IsQuery, `before${key}`, cb) as never;
 
 // Save `after` hook into the query: this saves the function and the hook selection into the query data.
 const after = <T extends PickQueryShape, S extends HookSelectArg<T>>(
@@ -45,7 +46,11 @@ const after = <T extends PickQueryShape, S extends HookSelectArg<T>>(
   commit?: boolean,
 ): T => {
   const q = query as unknown as PickQueryQ;
-  pushQueryValueImmutable(q, `after${key}${commit ? 'Commit' : ''}`, cb);
+  pushQueryValueImmutable(
+    q as never,
+    `after${key}${commit ? 'Commit' : ''}`,
+    cb,
+  );
 
   const prop = `after${key}Select` as const;
   const set = (q.q[prop] = new Set(q.q[prop]));
@@ -195,27 +200,6 @@ export const _queryHookAfterDeleteCommit = <
 ): T => {
   return after(q, 'Delete', select, cb, true);
 };
-
-export class QueryHookUtils<T extends PickQueryInputType> {
-  constructor(
-    public query: Query,
-    private key: 'hookCreateSet' | 'hookUpdateSet',
-  ) {}
-
-  set = (data: {
-    [K in keyof T['inputType']]?:
-      | T['inputType'][K]
-      | (() => QueryOrExpression<T['inputType'][K]>);
-  }) => {
-    const set: RecordUnknown = {};
-    for (const key in data) {
-      if (data[key] !== undefined) {
-        set[key] = data[key];
-      }
-    }
-    pushQueryValueImmutable(this.query, this.key, set);
-  };
-}
 
 export abstract class QueryHooks {
   /**

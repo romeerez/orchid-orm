@@ -7,14 +7,7 @@ import {
   Updatable,
 } from './baseTable';
 import { orchidORM } from './orm';
-import {
-  ColumnType,
-  makeColumnTypes,
-  Operators,
-  Query,
-  QueryHookUtils,
-  TextColumn,
-} from 'pqb';
+import { ColumnType, makeColumnTypes, Operators, Query, TextColumn } from 'pqb';
 import {
   BaseTable,
   db,
@@ -23,7 +16,7 @@ import {
   useTestORM,
 } from './test-utils/orm.test-utils';
 import path from 'path';
-import { getCallerFilePath } from 'orchid-core';
+import { getCallerFilePath, QueryHookUtils } from 'orchid-core';
 import {
   asMock,
   assertType,

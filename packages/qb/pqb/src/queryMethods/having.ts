@@ -1,6 +1,10 @@
 import { PickQueryQ } from '../query/query';
-import { FnUnknownToUnknown, SQLQueryArgs } from 'orchid-core';
-import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
+import {
+  FnUnknownToUnknown,
+  pushQueryValueImmutable,
+  SQLQueryArgs,
+} from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 
 // Function argument of `having`:
 // the same query builder as in `select` is passed in, boolean expression is expected to be returned.

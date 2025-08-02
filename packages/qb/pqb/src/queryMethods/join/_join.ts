@@ -10,6 +10,7 @@ import {
   ColumnsShapeBase,
   PickQueryMetaShape,
   PickQueryTableMetaResult,
+  pushQueryValueImmutable,
   QueryColumns,
   QueryMetaBase,
   setObjectValueImmutable,
@@ -17,11 +18,7 @@ import {
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { RelationConfigBase } from '../../relations';
-import {
-  _clone,
-  pushQueryValueImmutable,
-  throwIfJoinLateral,
-} from '../../query/queryUtils';
+import { _clone, throwIfJoinLateral } from '../../query/queryUtils';
 import {
   JoinArgs,
   JoinArgToQuery,

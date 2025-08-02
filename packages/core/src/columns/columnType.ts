@@ -1,9 +1,11 @@
 import { Code } from './code';
 import { RawSQLBase } from '../raw';
-import { QueryBaseCommon } from '../query';
+import { PickQueryInputType, QueryBaseCommon } from '../query';
 import { OperatorBase } from './operators';
 import { ColumnTypeSchemaArg } from './columnSchema';
 import { RecordString } from '../utils';
+
+import { QueryHookUtils } from '../hooks';
 
 // get columns object type where nullable columns or columns with a default are optional
 export type ColumnShapeInput<
@@ -394,8 +396,21 @@ export interface ColumnDataBase {
   // removes the column from update and create, but it is still allowed to be set in the hooks
   appReadOnly: true | undefined;
 
+  // set a value on create
+  setOnCreate?(arg: QueryHookUtils<PickQueryInputType>): unknown;
+
+  // set a value on update
+  setOnUpdate?(arg: QueryHookUtils<PickQueryInputType>): unknown;
+
+  // set a value on save
+  setOnSave?(arg: QueryHookUtils<PickQueryInputType>): unknown;
+
   // postgres internal number modifier, it can be present on custom types.
   typmod?: number;
+
+  // virtual columns are read only, and they are ignored in update in create,
+  // unlike unknown column that is extending virtual
+  virtual?: true;
 }
 
 export interface ColumnDataCheckBase {
@@ -990,5 +1005,74 @@ export abstract class ColumnTypeBase<
    */
   readOnly<T extends PickColumnBaseData>(this: T): T & ColumnDataAppReadOnly {
     return setColumnData(this, 'appReadOnly', true) as never;
+  }
+
+  /**
+   * Set a column value when creating a record.
+   * This works for [readOnly](#readonly) columns as well.
+   *
+   * If no value or undefined is returned, the hook won't have any effect.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     id: t.identity().primaryKey(),
+   *     column: t.string().setOnCreate(() => 'value'),
+   *   }));
+   * }
+   * ```
+   */
+  setOnCreate<T extends QueryColumnInit>(
+    this: T,
+    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['inputType'] | void,
+  ): T {
+    return setColumnData(this as never, 'setOnCreate', fn as never) as never;
+  }
+
+  /**
+   * Set a column value when updating a record.
+   * This works for [readOnly](#readonly) columns as well.
+   *
+   * If no value or undefined is returned, the hook won't have any effect.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     id: t.identity().primaryKey(),
+   *     column: t.string().setOnUpdate(() => 'value'),
+   *   }));
+   * }
+   * ```
+   */
+  setOnUpdate<T extends QueryColumnInit>(
+    this: T,
+    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['inputType'] | void,
+  ): T {
+    return setColumnData(this as never, 'setOnUpdate', fn as never) as never;
+  }
+
+  /**
+   * Set a column value when creating or updating a record.
+   * This works for [readOnly](#readonly) columns as well.
+   *
+   * If no value or undefined is returned, the hook won't have any effect.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     id: t.identity().primaryKey(),
+   *     column: t.string().setOnSave(() => 'value'),
+   *   }));
+   * }
+   * ```
+   */
+  setOnSave<T extends QueryColumnInit>(
+    this: T,
+    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['inputType'] | void,
+  ): T {
+    return setColumnData(this as never, 'setOnSave', fn as never) as never;
   }
 }

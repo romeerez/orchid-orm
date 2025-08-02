@@ -8,7 +8,7 @@ import {
   SelectableFromShape,
   WithDataItem,
 } from '../../query/query';
-import { _clone, pushQueryValueImmutable } from '../../query/queryUtils';
+import { _clone } from '../../query/queryUtils';
 import {
   ColumnShapeInput,
   ColumnTypesBase,
@@ -21,6 +21,7 @@ import {
   PickQueryTableMetaResult,
   PickQueryTableMetaResultShape,
   pushOrNewArrayToObjectImmutable,
+  pushQueryValueImmutable,
   QueryColumns,
   QueryColumnToNullable,
   QueryMetaBase,
@@ -1235,7 +1236,7 @@ export const pushQueryOrOn = <T extends PickQueryMeta>(
   joinTo: PickQueryMeta,
   ...on: OnArgs<SelectableBase>
 ) => {
-  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'or', [
+  return pushQueryValueImmutable(q as never, 'or', [
     makeOnItem(joinFrom, joinTo, on),
   ]);
 };
@@ -1308,7 +1309,7 @@ export const _queryJoinOnJsonPathEquals = <T extends PickQueryMeta>(
   q: T,
   args: OnJsonPathEqualsArgs<T['meta']['selectable']>,
 ): T => {
-  return pushQueryValueImmutable(q as unknown as PickQueryQ, 'and', {
+  return pushQueryValueImmutable(q as never, 'and', {
     ON: args,
   }) as unknown as T;
 };

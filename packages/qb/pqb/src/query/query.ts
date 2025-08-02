@@ -25,6 +25,7 @@ import {
   QueryColumns,
   QueryInternalBase,
   QueryMetaBase,
+  QueryOrExpression,
   QueryReturnType,
   QueryThen,
   QueryThenByQuery,
@@ -687,10 +688,6 @@ export type SetQueryTableAlias<
       }
     : T[K];
 };
-
-export interface QueryOrExpression<T> {
-  result: { value: QueryColumn<T> };
-}
 
 export interface ReturnsQueryOrExpression<T> {
   (): QueryOrExpression<T>;

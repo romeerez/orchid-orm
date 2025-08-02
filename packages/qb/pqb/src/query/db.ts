@@ -7,6 +7,9 @@ import {
   SelectableFromShape,
 } from './query';
 import {
+  _queryHookBeforeCreate,
+  _queryHookBeforeSave,
+  _queryHookBeforeUpdate,
   handleResult,
   logParamToLogObject,
   QueryMethods,
@@ -306,6 +309,7 @@ export class Db<
     let hasParsers = false;
     let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
     let prepareSelectAll = false;
+    let hasHookSetters: true | undefined;
     const { snakeCase } = options;
     for (const key in shape) {
       const column = shape[key] as unknown as ColumnTypeBase;
@@ -349,6 +353,14 @@ export class Db<
             ? () => encode(def())
             : (def as () => unknown);
         }
+      }
+
+      if (
+        column.data.setOnCreate ||
+        column.data.setOnUpdate ||
+        column.data.setOnSave
+      ) {
+        hasHookSetters = true;
       }
     }
 
@@ -443,6 +455,30 @@ export class Db<
 
     if (softDelete) {
       enableSoftDelete(this, table, shape, softDelete, scopes);
+    }
+
+    if (hasHookSetters) {
+      const hooks = {
+        setOnCreate: _queryHookBeforeCreate,
+        setOnUpdate: _queryHookBeforeUpdate,
+        setOnSave: _queryHookBeforeSave,
+      };
+
+      for (const key in shape) {
+        const { data } = shape[key] as unknown as ColumnTypeBase;
+
+        for (const hookKey in hooks) {
+          const fn = data[hookKey as 'setOnCreate'];
+          if (fn) {
+            hooks[hookKey as 'setOnCreate'](this, (arg) => {
+              const value = fn(arg);
+              if (value !== undefined) {
+                arg.set({ [key]: value });
+              }
+            });
+          }
+        }
+      }
     }
   }
 

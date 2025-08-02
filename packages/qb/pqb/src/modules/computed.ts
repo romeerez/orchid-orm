@@ -8,15 +8,12 @@ import {
   QueryColumn,
   QueryColumns,
   QueryMetaBase,
+  QueryOrExpression,
   QueryReturnType,
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
-import {
-  PickQueryQ,
-  QueryOrExpression,
-  ReturnsQueryOrExpression,
-} from '../query/query';
+import { PickQueryQ, ReturnsQueryOrExpression } from '../query/query';
 import {
   ExpressionMethods,
   QueryBatchResult,

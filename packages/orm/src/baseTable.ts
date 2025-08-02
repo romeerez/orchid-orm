@@ -30,7 +30,6 @@ import {
   UniqueConstraints,
   raw,
   ComputedOptionsConfig,
-  QueryOrExpression,
 } from 'pqb';
 import {
   applyMixins,
@@ -51,6 +50,7 @@ import {
   MaybeArray,
   QueryColumn,
   QueryColumns,
+  QueryOrExpression,
   RecordUnknown,
   ShallowSimplify,
   snakeCaseKey,

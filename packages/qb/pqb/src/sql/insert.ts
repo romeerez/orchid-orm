@@ -16,6 +16,7 @@ import {
   isExpression,
   MaybeArray,
   pushOrNewArray,
+  pushQueryValueImmutable,
   RecordUnknown,
   SingleSqlItem,
   Sql,
@@ -26,7 +27,7 @@ import { RawSQL } from './rawSql';
 import { OnConflictTarget, SelectAsValue, SelectItem } from './types';
 import { getSqlText } from './utils';
 import { MAX_BINDING_PARAMS } from './constants';
-import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
+import { _clone } from '../query/queryUtils';
 import { pushWithSql, withToSql } from './with';
 
 export const makeInsertSql = (

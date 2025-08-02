@@ -19,7 +19,6 @@ import {
   InsertQueryData,
   isQueryReturnsAll,
   pushQueryOnForOuter,
-  pushQueryValueImmutable,
   Query,
   QueryResult,
   RelationConfigBase,
@@ -57,6 +56,7 @@ import {
   ColumnsShapeBase,
   emptyArray,
   EmptyObject,
+  pushQueryValueImmutable,
   RecordUnknown,
 } from 'orchid-core';
 import { RelationRefsOptions } from './common/options';
@@ -491,7 +491,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           update[foreignKeys[i]] = record[primaryKeys[i]];
         }
       } else if (params.delete) {
-        const selectQuery = q.clone();
+        const selectQuery = (q as Query).clone();
         selectQuery.q.type = undefined;
         (selectQuery.q as SelectQueryData).distinct = emptyArray;
         idsForDelete = (await _queryRows(selectQuery)) as [

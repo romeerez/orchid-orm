@@ -1,7 +1,7 @@
 import { Query } from '../query/query';
-import { noop, QueryReturnType } from 'orchid-core';
+import { noop, pushQueryValueImmutable, QueryReturnType } from 'orchid-core';
 import { NotFoundError } from '../errors';
-import { extendQuery, pushQueryValueImmutable } from '../query/queryUtils';
+import { extendQuery } from '../query/queryUtils';
 import { RawSQL } from '../sql/rawSql';
 import { QueryData } from '../sql';
 

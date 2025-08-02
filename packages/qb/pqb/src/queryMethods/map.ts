@@ -1,12 +1,13 @@
 import {
   PickQueryReturnType,
+  pushQueryValueImmutable,
   QueryColumn,
   QueryReturnTypeAll,
   QueryReturnTypeOptional,
   QueryThen,
   RecordUnknown,
 } from 'orchid-core';
-import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
+import { _clone } from '../query/queryUtils';
 
 export class QueryMap {
   /**

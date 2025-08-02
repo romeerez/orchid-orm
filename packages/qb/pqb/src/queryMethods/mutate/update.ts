@@ -1,16 +1,11 @@
 import {
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   Query,
-  QueryOrExpression,
   SetQueryKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
-import {
-  _clone,
-  pushQueryValueImmutable,
-  throwIfNoWhere,
-} from '../../query/queryUtils';
+import { _clone, throwIfNoWhere } from '../../query/queryUtils';
 import { RelationConfigBase } from '../../relations';
 import { _queryWhereIn, WhereResult } from '../where/where';
 import { ToSQLQuery } from '../../sql';
@@ -22,6 +17,9 @@ import {
   RecordUnknown,
   EmptyObject,
   ColumnTypeBase,
+  pushQueryValueImmutable,
+  QueryOrExpression,
+  ColumnSchemaConfig,
 } from 'orchid-core';
 import { QueryResult } from '../../adapter';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
@@ -205,10 +203,10 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
   for (const key in arg) {
     const item = shape[key];
-    if (item instanceof VirtualColumn && item.update) {
-      item.update(query, ctx, set);
+    if (!item && shape !== anyShape) {
       delete set[key];
-    } else if (!item && shape !== anyShape) {
+    } else if (item.data.virtual) {
+      (item as VirtualColumn<ColumnSchemaConfig>).update?.(query, ctx, set);
       delete set[key];
     } else {
       if (item) throwOnReadOnly(query, item, key);

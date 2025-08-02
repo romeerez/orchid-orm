@@ -4,6 +4,7 @@ import {
   EmptyObject,
   FnUnknownToUnknown,
   MaybePromise,
+  pushOrNewArrayToObjectImmutable,
   RecordKeyTrue,
   RecordUnknown,
 } from './utils';
@@ -307,3 +308,27 @@ export const applyTransforms = (
   }
   return result;
 };
+
+/**
+ * Push a new element into an array in the query data - immutable version
+ *
+ * @param q - query
+ * @param key - key to get the array
+ * @param value - new element to push
+ */
+export const pushQueryValueImmutable = <T extends IsQuery>(
+  q: T,
+  key: string,
+  value: unknown,
+): T => {
+  pushOrNewArrayToObjectImmutable(
+    (q as unknown as { q: object }).q,
+    key,
+    value,
+  );
+  return q;
+};
+
+export interface QueryOrExpression<T> {
+  result: { value: QueryColumn<T> };
+}

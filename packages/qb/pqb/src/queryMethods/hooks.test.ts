@@ -613,7 +613,7 @@ describe('hooks', () => {
 
     expect(Object.keys(tested).sort()).toEqual(
       [
-        ...Object.keys(QueryCreate).filter(
+        ...Object.getOwnPropertyNames(QueryCreate.prototype).filter(
           (key) => !createExclude.includes(key),
         ),
         ...Object.getOwnPropertyNames(Update.prototype).filter(

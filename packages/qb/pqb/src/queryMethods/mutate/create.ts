@@ -2,7 +2,6 @@ import {
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryQ,
   Query,
-  QueryOrExpression,
   queryTypeWithLimitOne,
   SetQueryKind,
   SetQueryKindResult,
@@ -34,6 +33,7 @@ import {
   IsQuery,
   QueryColumns,
   ColumnTypeBase,
+  QueryOrExpression,
 } from 'orchid-core';
 import { isSelectingCount } from '../aggregate';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
@@ -357,7 +357,7 @@ const processCreateItem = (
     const column = shape[key];
     if (!column) continue;
 
-    if (column instanceof VirtualColumn) {
+    if (column.data.virtual) {
       (column as VirtualColumn<ColumnSchemaConfig>).create?.(
         q,
         ctx,
@@ -755,7 +755,7 @@ export type CreateMethodsNames =
   | 'createManyFrom'
   | 'insertManyFrom';
 
-export interface QueryCreate {
+export class QueryCreate {
   /**
    * `create` and `insert` create a single record.
    *
@@ -808,7 +808,9 @@ export interface QueryCreate {
   create<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>,
-  ): CreateResult<T, BT>;
+  ): CreateResult<T, BT> {
+    return _queryCreate(_clone(this), data) as never;
+  }
 
   /**
    * Works exactly as {@link create}, except that it returns inserted row count by default.
@@ -818,7 +820,9 @@ export interface QueryCreate {
   insert<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>,
-  ): InsertResult<T, BT>;
+  ): InsertResult<T, BT> {
+    return _queryInsert(_clone(this), data) as never;
+  }
 
   /**
    * `createMany` and `insertMany` will create a batch of records.
@@ -864,7 +868,9 @@ export interface QueryCreate {
   createMany<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>[],
-  ): CreateManyResult<T, BT>;
+  ): CreateManyResult<T, BT> {
+    return _queryCreateMany(_clone(this), data) as never;
+  }
 
   /**
    * Works exactly as {@link createMany}, except that it returns inserted row count by default.
@@ -874,7 +880,9 @@ export interface QueryCreate {
   insertMany<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>[],
-  ): InsertManyResult<T, BT>;
+  ): InsertManyResult<T, BT> {
+    return _queryInsertMany(_clone(this), data) as never;
+  }
 
   /**
    * These methods are for creating a single record, for batch creating see {@link createManyFrom}.
@@ -923,7 +931,9 @@ export interface QueryCreate {
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-  ): CreateRawOrFromResult<T>;
+  ): CreateRawOrFromResult<T> {
+    return _queryCreateFrom(_clone(this) as never, query, data);
+  }
 
   /**
    * Works exactly as {@link createFrom}, except that it returns inserted row count by default.
@@ -935,7 +945,9 @@ export interface QueryCreate {
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-  ): InsertRawOrFromResult<T>;
+  ): InsertRawOrFromResult<T> {
+    return _queryInsertFrom(_clone(this) as never, query, data);
+  }
 
   /**
    * Similar to `createFrom`, but intended to create many records.
@@ -953,7 +965,9 @@ export interface QueryCreate {
   createManyFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
-  ): CreateManyFromResult<T>;
+  ): CreateManyFromResult<T> {
+    return _queryCreateManyFrom(_clone(this) as never, query);
+  }
 
   /**
    * Works exactly as {@link createManyFrom}, except that it returns inserted row count by default.
@@ -963,7 +977,9 @@ export interface QueryCreate {
   insertManyFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
-  ): InsertManyFromResult<T>;
+  ): InsertManyFromResult<T> {
+    return _queryInsertManyFrom(_clone(this) as never, query);
+  }
 
   /**
    * `defaults` allows setting values that will be used later in `create`.
@@ -990,10 +1006,9 @@ export interface QueryCreate {
   defaults<
     T extends CreateSelf,
     Data extends Partial<CreateData<T, CreateBelongsToData<T>>>,
-  >(
-    this: T,
-    data: Data,
-  ): AddQueryDefaults<T, { [K in keyof Data]: true }>;
+  >(this: T, data: Data): AddQueryDefaults<T, { [K in keyof Data]: true }> {
+    return _queryDefaults(_clone(this) as never, data as never);
+  }
 
   /**
    * By default, violating unique constraint will cause the creative query to throw,
@@ -1100,7 +1115,9 @@ export interface QueryCreate {
   onConflict<T extends CreateSelf, Arg extends OnConflictArg<T>>(
     this: T,
     arg: Arg,
-  ): OnConflictQueryBuilder<T, Arg>;
+  ): OnConflictQueryBuilder<T, Arg> {
+    return new OnConflictQueryBuilder(this, arg as never);
+  }
 
   /**
    * Use `onConflictDoNothing` to suppress unique constraint violation error when creating a record.
@@ -1146,51 +1163,7 @@ export interface QueryCreate {
   onConflictDoNothing<T extends CreateSelf, Arg extends OnConflictArg<T>>(
     this: T,
     arg?: Arg,
-  ): IgnoreResult<T>;
-}
-
-export const QueryCreate: QueryCreate = {
-  create(data) {
-    return _queryCreate(_clone(this), data) as never;
-  },
-
-  insert(data) {
-    return _queryInsert(_clone(this), data) as never;
-  },
-
-  createMany(data) {
-    return _queryCreateMany(_clone(this), data) as never;
-  },
-
-  insertMany(data) {
-    return _queryInsertMany(_clone(this), data) as never;
-  },
-
-  createFrom(query, data) {
-    return _queryCreateFrom(_clone(this) as never, query, data);
-  },
-
-  insertFrom(query, data) {
-    return _queryInsertFrom(_clone(this) as never, query, data);
-  },
-
-  createManyFrom(query) {
-    return _queryCreateManyFrom(_clone(this) as never, query);
-  },
-
-  insertManyFrom(query) {
-    return _queryInsertManyFrom(_clone(this) as never, query);
-  },
-
-  defaults(data) {
-    return _queryDefaults(_clone(this) as never, data as never);
-  },
-
-  onConflict(arg) {
-    return new OnConflictQueryBuilder(this, arg as never);
-  },
-
-  onConflictDoNothing(arg) {
+  ): IgnoreResult<T> {
     const q = _clone(this);
     (q.q as InsertQueryData).onConflict = {
       target: arg as never,
@@ -1203,8 +1176,8 @@ export const QueryCreate: QueryCreate = {
     }
 
     return q as never;
-  },
-};
+  }
+}
 
 type OnConflictSet<T extends CreateSelf> = {
   [K in keyof T['inputType']]?:

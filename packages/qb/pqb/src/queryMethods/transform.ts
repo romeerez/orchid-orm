@@ -1,5 +1,10 @@
-import { IsQuery, QueryColumn, QueryThen } from 'orchid-core';
-import { _clone, pushQueryValueImmutable } from '../query/queryUtils';
+import {
+  IsQuery,
+  pushQueryValueImmutable,
+  QueryColumn,
+  QueryThen,
+} from 'orchid-core';
+import { _clone } from '../query/queryUtils';
 import { QueryData } from '../sql';
 
 export class TransformMethods {

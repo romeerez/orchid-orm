@@ -139,7 +139,8 @@ type IdentityOptions = {
 
 Forbid the column to be used in [create](/guide/create-update-delete.html#create-insert) and [update](/guide/create-update-delete.html#update) methods.
 
-`readOnly` column is still can be set from a [hook](http://localhost:5173/guide/hooks.html#set-values-before-create-or-update).
+`readOnly` column is still can be set from a [hook](http://localhost:5173/guide/hooks.html#set-values-before-create-or-update),
+or in [setOnCreate](#setoncreate), [setOnUpdate](#setonupdate), [setOnSave](#setonsave).
 
 It can have a default.
 
@@ -161,6 +162,63 @@ export class Table extends BaseTable {
 
 // later in the code
 db.table.create({ column: 'value' }); // TS error, runtime error
+```
+
+## setOnCreate
+
+[//]: # 'has JSDoc'
+
+Set a column value when creating a record.
+This works for [readOnly](#readonly) columns as well.
+
+If no value or undefined is returned, the hook won't have any effect.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    column: t.string().setOnCreate(() => 'value'),
+  }));
+}
+```
+
+## setOnUpdate
+
+[//]: # 'has JSDoc'
+
+Set a column value when updating a record.
+This works for [readOnly](#readonly) columns as well.
+
+If no value or undefined is returned, the hook won't have any effect.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    column: t.string().setOnUpdate(() => 'value'),
+  }));
+}
+```
+
+## setOnSave
+
+[//]: # 'has JSDoc'
+
+Set a column value when creating or updating a record.
+This works for [readOnly](#readonly) columns as well.
+
+If no value or undefined is returned, the hook won't have any effect.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    column: t.string().setOnSave(() => 'value'),
+  }));
+}
 ```
 
 ## exclude from default select

@@ -61,12 +61,6 @@ export const testZodColumnTypes = {
   },
 };
 
-export const testDbZodTypes = createDb({
-  adapter: testAdapter,
-  schemaConfig: zodSchemaConfig,
-  columnTypes: testZodColumnTypes,
-});
-
 export const jsonBuildObjectAllSql = (
   table: { q: QueryData; shape: QueryColumns },
   as: string,

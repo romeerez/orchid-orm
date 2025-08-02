@@ -39,7 +39,6 @@ import {
   _queryTake,
   _queryTakeOptional,
   pushQueryArrayImmutable,
-  pushQueryValueImmutable,
   setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import { Then } from './then';
@@ -86,6 +85,7 @@ import {
   PickQueryResultReturnTypeUniqueColumns,
   PickQueryTableMetaResult,
   PickQueryTableMetaShape,
+  pushQueryValueImmutable,
   QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
@@ -1278,7 +1278,6 @@ export class QueryMethods<ColumnTypes> {
   }
 }
 
-Object.assign(QueryMethods.prototype, QueryCreate);
 Object.assign(QueryMethods.prototype, QueryUpsert);
 Object.assign(QueryMethods.prototype, QueryOrCreate);
 
@@ -1292,6 +1291,7 @@ applyMixins(QueryMethods, [
   WithMethods,
   Union,
   JsonMethods,
+  QueryCreate,
   Update,
   Delete,
   Transaction,

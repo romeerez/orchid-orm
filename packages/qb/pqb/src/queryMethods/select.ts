@@ -17,7 +17,6 @@ import {
   _clone,
   getFullColumnTable,
   pushQueryArrayImmutable,
-  pushQueryValueImmutable,
 } from '../query/queryUtils';
 import {
   QueryData,
@@ -37,6 +36,7 @@ import {
   IsQuery,
   PickQueryMeta,
   PickQueryReturnType,
+  pushQueryValueImmutable,
   QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,

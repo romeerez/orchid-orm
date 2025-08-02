@@ -28,6 +28,7 @@ import {
   PickQueryTable,
   QueryColumn,
   QueryDataTransform,
+  QueryHookUtils,
   QueryLogger,
   QueryLogObject,
   QueryReturnType,
@@ -37,7 +38,7 @@ import {
 import { RelationConfigBase } from '../relations';
 
 import { ComputedColumns } from '../modules/computed';
-import { AfterCommitErrorHandler, QueryHookUtils } from '../queryMethods';
+import { AfterCommitErrorHandler } from '../queryMethods';
 import { ColumnsShape } from '../columns';
 
 export interface RecordOfColumnsShapeBase {

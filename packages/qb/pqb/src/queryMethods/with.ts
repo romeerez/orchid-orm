@@ -6,7 +6,6 @@ import {
 } from '../query/query';
 import {
   _clone,
-  pushQueryValueImmutable,
   saveAliasedShape,
   setQueryObjectValueImmutable,
 } from '../query/queryUtils';
@@ -18,6 +17,7 @@ import {
   QueryColumns,
   RecordUnknown,
   pushOrNewArrayToObjectImmutable,
+  pushQueryValueImmutable,
 } from 'orchid-core';
 import { SqlMethod } from './sql';
 import { getShapeFromSelect } from './select';

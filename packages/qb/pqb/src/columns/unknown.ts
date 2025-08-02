@@ -14,8 +14,10 @@ export class UnknownColumn<
   constructor(schema: Schema) {
     super(schema, schema.unknown() as never);
     // include this column when selecting *, unlike the parent VirtualColumn
-    this.data.explicitSelect = undefined;
-    this.data.appReadOnly = undefined;
+    this.data.explicitSelect =
+      this.data.appReadOnly =
+      this.data.virtual =
+        undefined;
   }
 }
 

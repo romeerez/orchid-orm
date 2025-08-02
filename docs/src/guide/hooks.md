@@ -57,6 +57,11 @@ class SomeTable extends BaseTable {
 You can set one or multiple values to the records in the `beforeCreate`, `beforeUpdate`, `beforeSave` hooks.
 These values will override existing values that where set by the app code.
 
+When you only need to set a single value, consider
+[setOnCreate](/guide/common-column-methods.html#setoncreate),
+[setOnUpdate](/guide/common-column-methods.html#setonupdate),
+[setOnSave](/guide/common-column-methods.html#setonsave),
+
 You can mark columns as [readOnly](/guide/common-column-methods.html#readonly) so they cannot be created or updated from the app code,
 they can be only set in the hooks.
 
