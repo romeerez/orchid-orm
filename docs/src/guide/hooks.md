@@ -104,6 +104,47 @@ class SomeTable extends BaseTable {
 }
 ```
 
+You can use `AsyncLocalStorage` with any framework to store values earlier in the app flow,
+and later to access them anywhere in the app, including the `OrchidORM` hooks.
+
+In web frameworks, store values in middleware.
+[tRPC](https://github.com/trpc/trpc/issues/5817#issuecomment-2185268165),
+[Fastify](https://github.com/fastify/fastify-request-context),
+[Hono](https://hono.dev/docs/middleware/builtin/context-storage),
+[Express](https://github.com/trpc/trpc/issues/5817#issue-2367757568).
+
+For example, imagine you want to automatically store the id of a current user
+to the resource every time when it is created or updated:
+
+```ts
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+const storage = new AsyncLocalStorage<{ pw: string }>();
+
+// in the middleware
+const values = { userId: 123 };
+await storage.run(values, nextFunction);
+
+// table with hooks
+class SomeTable extends BaseTable {
+  readonly table = 'someTable';
+  columns = this.setColumns((t) => ({
+    userId: t.integer().readOnly(),
+  }));
+
+  init(orm: typeof db) {
+    this.beforeSave(({ columns, set }) => {
+      const userId = storage.getStore()?.userId;
+      if (!userId) {
+        throw new Error('Cannot access current user data');
+      }
+
+      set({ userId });
+    });
+  }
+}
+```
+
 ## after hooks
 
 `after*` hooks require listing what columns are needed for the function,

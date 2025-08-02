@@ -177,6 +177,11 @@ If no value or undefined is returned, the hook won't have any effect.
 
 The callback accepts `columns` of type `string[]` that you can use to see what columns are being inserted or updated by the app code.
 
+You can use `AsyncLocalStorage` to store values earlier in the app flow,
+and use them in these hooks.
+For this, see an example in [set values before create or update](/guide/hooks.html#set-values-before-create-or-update) section,
+the same approach is also applicable with `setOnCreate`, `setOnUpdate`, `setOnSave`.
+
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
