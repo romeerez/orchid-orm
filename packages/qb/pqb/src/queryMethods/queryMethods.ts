@@ -50,9 +50,9 @@ import { Join, JoinResultRequireMain, OnMethods } from './join/join';
 import { WithMethods } from './with';
 import { Union } from './union';
 import { JsonMethods } from './json';
-import { Create } from './create';
-import { Update } from './update';
-import { Delete } from './delete';
+import { QueryCreate } from './mutate/create';
+import { Update } from './mutate/update';
+import { Delete } from './mutate/delete';
 import { Transaction } from './transaction';
 import { For } from './for';
 import {
@@ -68,7 +68,7 @@ import { Clear } from './clear';
 import { Having } from './having';
 import { QueryLog } from './log';
 import { QueryHooks } from './hooks';
-import { QueryUpsertOrCreate } from './upsertOrCreate';
+import { QueryUpsert } from './mutate/upsert';
 import { QueryGet } from './get';
 import { MergeQuery, MergeQueryMethods } from './merge';
 import { SqlMethod } from './sql';
@@ -105,11 +105,12 @@ import { TransformMethods } from './transform';
 import { QueryMap } from './map';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { ScopeMethods } from './scope';
-import { SoftDeleteMethods } from './softDelete';
+import { SoftDeleteMethods } from './mutate/softDelete';
 import { queryWrap } from './queryMethods.utils';
 import { ExpressionMethods } from './expressions';
 import { _queryNone } from './none';
 import { _chain } from './chain';
+import { QueryOrCreate } from './mutate/orCreate';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -365,7 +366,7 @@ export interface QueryMethods<ColumnTypes>
     WithMethods,
     Union,
     JsonMethods,
-    Create,
+    QueryCreate,
     Update,
     Delete,
     Transaction,
@@ -376,7 +377,8 @@ export interface QueryMethods<ColumnTypes>
     Having,
     QueryLog,
     QueryHooks,
-    QueryUpsertOrCreate,
+    QueryUpsert,
+    QueryOrCreate,
     QueryGet,
     MergeQueryMethods,
     SqlMethod<ColumnTypes>,
@@ -1276,6 +1278,10 @@ export class QueryMethods<ColumnTypes> {
   }
 }
 
+Object.assign(QueryMethods.prototype, QueryCreate);
+Object.assign(QueryMethods.prototype, QueryUpsert);
+Object.assign(QueryMethods.prototype, QueryOrCreate);
+
 applyMixins(QueryMethods, [
   AsMethods,
   AggregateMethods,
@@ -1286,7 +1292,6 @@ applyMixins(QueryMethods, [
   WithMethods,
   Union,
   JsonMethods,
-  Create,
   Update,
   Delete,
   Transaction,
@@ -1298,7 +1303,6 @@ applyMixins(QueryMethods, [
   Then,
   QueryLog,
   QueryHooks,
-  QueryUpsertOrCreate,
   QueryGet,
   MergeQueryMethods,
   SqlMethod,

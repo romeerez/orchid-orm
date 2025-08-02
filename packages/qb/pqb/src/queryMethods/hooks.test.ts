@@ -1,10 +1,11 @@
-import { expectSql, useTestDatabase } from 'test-utils';
+import { expectSql, testDb, useTestDatabase } from 'test-utils';
 import { User as UserTable, userData } from '../test-utils/test-utils';
-import { Create } from './create';
-import { Update } from './update';
-import { QueryUpsertOrCreate } from './upsertOrCreate';
-import { Delete } from './delete';
+import { QueryCreate } from './mutate/create';
+import { Update } from './mutate/update';
+import { QueryUpsert } from './mutate/upsert';
+import { Delete } from './mutate/delete';
 import { noop } from 'orchid-core';
+import { QueryOrCreate } from './mutate/orCreate';
 
 const hookSet = {
   beforeCreate: {
@@ -241,6 +242,46 @@ describe('hooks', () => {
   });
 
   const tested: Record<string, boolean> = {};
+
+  describe('set values in before hooks', () => {
+    const User = testDb('user', (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text().unique(),
+      password: t
+        .text()
+        .readOnly()
+        .default(() => 'password'),
+    }));
+
+    it('should set a readonly value in beforeCreate', async () => {
+      const res = await User.beforeCreate(({ set }) => {
+        set({ password: 'from hook' });
+      }).create({ name: 'name' });
+
+      expect(res.password).toBe('from hook');
+    });
+
+    it('should set a readonly value in beforeUpdate', async () => {
+      const { id } = await User.create({ name: 'name' });
+
+      const res = await User.beforeUpdate(({ set }) => {
+        set({ password: 'from hook' });
+      })
+        .find(id)
+        .update({ name: 'name' })
+        .select('password');
+
+      expect(res.password).toBe('from hook');
+    });
+
+    it('should set a readonly value in beforeSave', async () => {
+      const res = await User.beforeSave(({ set }) => {
+        set({ password: 'from hook' });
+      }).create({ name: 'name' });
+
+      expect(res.password).toBe('from hook');
+    });
+  });
 
   describe('select', () => {
     it('should remove duplicated selects', async () => {
@@ -572,13 +613,16 @@ describe('hooks', () => {
 
     expect(Object.keys(tested).sort()).toEqual(
       [
-        ...Object.getOwnPropertyNames(Create.prototype).filter(
+        ...Object.keys(QueryCreate).filter(
           (key) => !createExclude.includes(key),
         ),
         ...Object.getOwnPropertyNames(Update.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),
-        ...Object.getOwnPropertyNames(QueryUpsertOrCreate.prototype).filter(
+        ...Object.keys(QueryUpsert).filter(
+          (key) => !constructorExclude.includes(key),
+        ),
+        ...Object.keys(QueryOrCreate).filter(
           (key) => !constructorExclude.includes(key),
         ),
         ...Object.getOwnPropertyNames(Delete.prototype).filter(

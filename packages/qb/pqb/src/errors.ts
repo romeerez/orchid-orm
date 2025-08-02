@@ -1,5 +1,5 @@
 import { Query } from './query/query';
-import { PickQueryShape } from 'orchid-core';
+import { PickQueryShape, RecordUnknown } from 'orchid-core';
 
 export abstract class OrchidOrmError extends Error {}
 
@@ -29,7 +29,7 @@ export class OrchidOrmInternalError extends Error {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
   readonly #query: Query;
 
-  constructor(query: Query, message?: string) {
+  constructor(query: Query, message?: string, public data?: RecordUnknown) {
     super(message);
     this.#query = query;
   }

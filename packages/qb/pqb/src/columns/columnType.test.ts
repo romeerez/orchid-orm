@@ -759,24 +759,21 @@ describe('column type', () => {
     }));
 
     it('should not be allowed in create', () => {
-      const q = table.create({
-        // @ts-expect-error not allowed
-        col: 123,
-      });
-
-      expectSql(
-        q.toSQL(),
-        `INSERT INTO "table"("id") VALUES (DEFAULT) RETURNING *`,
-      );
+      expect(() =>
+        table.create({
+          // @ts-expect-error not allowed
+          col: 123,
+        }),
+      ).toThrow('Trying to insert a readonly column');
     });
 
     it('should not be allowed in update', () => {
-      const q = table.all().update({
-        // @ts-expect-error not allowed
-        col: 123,
-      });
-
-      expectSql(q.toSQL(), `SELECT count(*) FROM "table"`);
+      expect(() =>
+        table.all().update({
+          // @ts-expect-error not allowed
+          col: 123,
+        }),
+      ).toThrow('Trying to update a readonly column');
     });
   });
 });

@@ -133,7 +133,37 @@ type IdentityOptions = {
 };
 ```
 
-## exclude from select
+## readOnly
+
+[//]: # 'has JSDoc'
+
+Forbid the column to be used in [create](/guide/create-update-delete.html#create-insert) and [update](/guide/create-update-delete.html#update) methods.
+
+`readOnly` column is still can be set from a [hook](http://localhost:5173/guide/hooks.html#set-values-before-create-or-update).
+
+It can have a default.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    column: t.string().default(() => 'default value'),
+    another: t.string().readOnly(),
+  }));
+
+  init(orm: typeof db) {
+    this.beforeSave(({ set }) => {
+      set({ another: 'value' });
+    });
+  }
+}
+
+// later in the code
+db.table.create({ column: 'value' }); // TS error, runtime error
+```
+
+## exclude from default select
 
 [//]: # 'has JSDoc'
 

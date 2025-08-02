@@ -2,8 +2,8 @@ import { expectSql, testAdapter, testColumnTypes } from 'test-utils';
 import {
   UserSoftDelete,
   userSoftDeleteColumnsSql,
-} from '../test-utils/test-utils';
-import { createDb } from '../query/db';
+} from '../../test-utils/test-utils';
+import { createDb } from '../../query/db';
 
 describe('softDelete', () => {
   it('should ignore empty where object', () => {

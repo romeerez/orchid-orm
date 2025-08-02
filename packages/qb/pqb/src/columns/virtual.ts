@@ -17,7 +17,7 @@ export abstract class VirtualColumn<
     super(schema, inputSchema);
     // to omit it from selection when selecting *
     this.data.explicitSelect = true;
-    this.data.insertable = this.data.updatable = false;
+    this.data.appReadOnly = true;
   }
 
   toCode(): never {

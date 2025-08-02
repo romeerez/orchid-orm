@@ -18,10 +18,10 @@ import {
   SetQueryReturnsPluckColumnKindResult,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
-} from '../query/query';
-import { RelationConfigDataForCreate } from '../relations';
-import { InsertQueryData, OnConflictMerge, ToSQLQuery } from '../sql';
-import { anyShape, VirtualColumn } from '../columns';
+} from '../../query/query';
+import { RelationConfigDataForCreate } from '../../relations';
+import { InsertQueryData, OnConflictMerge, ToSQLQuery } from '../../sql';
+import { anyShape, VirtualColumn } from '../../columns';
 import {
   Expression,
   ColumnSchemaConfig,
@@ -33,12 +33,14 @@ import {
   EmptyObject,
   IsQuery,
   QueryColumns,
+  ColumnTypeBase,
 } from 'orchid-core';
-import { isSelectingCount } from './aggregate';
-import { resolveSubQueryCallbackV2 } from '../common/utils';
-import { _clone } from '../query/queryUtils';
-import { Db } from '../query';
-import { moveQueryValueToWith } from './with';
+import { isSelectingCount } from '../aggregate';
+import { resolveSubQueryCallbackV2 } from '../../common/utils';
+import { _clone } from '../../query/queryUtils';
+import { Db } from '../../query';
+import { moveQueryValueToWith } from '../with';
+import { OrchidOrmInternalError } from '../../errors';
 
 export interface CreateSelf
   extends IsQuery,
@@ -352,43 +354,59 @@ const processCreateItem = (
 ) => {
   const { shape } = (q as Query).q;
   for (const key in item) {
-    if (shape[key]?.data.insertable !== false) {
-      let value = item[key];
+    const column = shape[key];
+    if (!column) continue;
 
-      if (typeof value === 'function') {
-        value = item[key] = resolveSubQueryCallbackV2(
-          q as unknown as ToSQLQuery,
-          value as (q: ToSQLQuery) => ToSQLQuery,
-        );
-
-        if (value && typeof value === 'object' && value instanceof Db) {
-          moveQueryValueToWith(
-            q as Query,
-            ((q as Query).q.insertWith ??= {}),
-            value,
-            item,
-            key,
-            rowIndex,
-          );
-        }
-      }
-
-      if (
-        !ctx.columns.has(key) &&
-        ((shape[key] && !shape[key].data.readonly) || shape === anyShape) &&
-        value !== undefined
-      ) {
-        ctx.columns.set(key, ctx.columns.size);
-        encoders[key] = shape[key]?.data.encode as FnUnknownToUnknown;
-      }
-    } else if (shape[key] instanceof VirtualColumn) {
-      (shape[key] as VirtualColumn<ColumnSchemaConfig>).create?.(
+    if (column instanceof VirtualColumn) {
+      (column as VirtualColumn<ColumnSchemaConfig>).create?.(
         q,
         ctx,
         item,
         rowIndex,
       );
+      continue;
     }
+
+    throwOnReadOnly(q, column, key);
+
+    let value = item[key];
+
+    if (typeof value === 'function') {
+      value = item[key] = resolveSubQueryCallbackV2(
+        q as unknown as ToSQLQuery,
+        value as (q: ToSQLQuery) => ToSQLQuery,
+      );
+
+      if (value && typeof value === 'object' && value instanceof Db) {
+        moveQueryValueToWith(
+          q as Query,
+          ((q as Query).q.insertWith ??= {}),
+          value,
+          item,
+          key,
+          rowIndex,
+        );
+      }
+    }
+
+    if (
+      !ctx.columns.has(key) &&
+      ((column && !column.data.readOnly) || shape === anyShape) &&
+      value !== undefined
+    ) {
+      ctx.columns.set(key, ctx.columns.size);
+      encoders[key] = column?.data.encode as FnUnknownToUnknown;
+    }
+  }
+};
+
+const throwOnReadOnly = (q: unknown, column: ColumnTypeBase, key: string) => {
+  if (column.data.appReadOnly || column.data.readOnly) {
+    throw new OrchidOrmInternalError(
+      q as Query,
+      'Trying to insert a readonly column',
+      { column: key },
+    );
   }
 };
 
@@ -535,11 +553,13 @@ const insert = (
 /**
  * Function to collect column names from the inner query of create `from` methods.
  *
+ * @param q - the creating query
  * @param from - inner query to grab the columns from.
  * @param obj - optionally passed object with specific data, only available when creating a single record.
  * @param many - whether it's for `createManyFrom`. If no, throws if the inner query returns multiple records.
  */
 const getFromSelectColumns = (
+  q: CreateSelf,
   from: CreateSelf,
   obj?: { columns: string[] },
   many?: boolean,
@@ -562,6 +582,11 @@ const getFromSelectColumns = (
 
   if (obj?.columns) {
     queryColumns.push(...obj.columns);
+  }
+
+  for (const key of queryColumns) {
+    const column = q.shape[key] as ColumnTypeBase;
+    if (column) throwOnReadOnly(from, column, key);
   }
 
   return queryColumns;
@@ -591,7 +616,7 @@ const insertFromQuery = <
 
   const obj = data && handleOneData(q, data, ctx);
 
-  const columns = getFromSelectColumns(from as never, obj, many);
+  const columns = getFromSelectColumns(q, from as never, obj, many);
 
   return insert(
     q,
@@ -629,7 +654,7 @@ export const _queryInsert = <
 
   const values = ((q as unknown as Query).q as InsertQueryData).values;
   if (values && 'from' in values) {
-    obj.columns = getFromSelectColumns(values.from, obj);
+    obj.columns = getFromSelectColumns(q, values.from, obj);
     values.values = (obj.values as unknown[][])[0];
     obj.values = values;
   }
@@ -717,7 +742,7 @@ export const _queryDefaults = <
 
 /**
  * Names of all create methods,
- * is used in {@link RelationQuery} to remove these methods if chained relation shouldn't have them,
+ * is used in relational query to remove these methods if chained relation shouldn't have them,
  * for the case of has one/many through.
  */
 export type CreateMethodsNames =
@@ -730,7 +755,7 @@ export type CreateMethodsNames =
   | 'createManyFrom'
   | 'insertManyFrom';
 
-export class Create {
+export interface QueryCreate {
   /**
    * `create` and `insert` create a single record.
    *
@@ -783,9 +808,7 @@ export class Create {
   create<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>,
-  ): CreateResult<T, BT> {
-    return _queryCreate(_clone(this), data) as never;
-  }
+  ): CreateResult<T, BT>;
 
   /**
    * Works exactly as {@link create}, except that it returns inserted row count by default.
@@ -795,9 +818,7 @@ export class Create {
   insert<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>,
-  ): InsertResult<T, BT> {
-    return _queryInsert(_clone(this), data) as never;
-  }
+  ): InsertResult<T, BT>;
 
   /**
    * `createMany` and `insertMany` will create a batch of records.
@@ -843,9 +864,7 @@ export class Create {
   createMany<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>[],
-  ): CreateManyResult<T, BT> {
-    return _queryCreateMany(_clone(this), data) as never;
-  }
+  ): CreateManyResult<T, BT>;
 
   /**
    * Works exactly as {@link createMany}, except that it returns inserted row count by default.
@@ -855,9 +874,7 @@ export class Create {
   insertMany<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
     this: T,
     data: CreateData<T, BT>[],
-  ): InsertManyResult<T, BT> {
-    return _queryInsertMany(_clone(this), data) as never;
-  }
+  ): InsertManyResult<T, BT>;
 
   /**
    * These methods are for creating a single record, for batch creating see {@link createManyFrom}.
@@ -906,9 +923,7 @@ export class Create {
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-  ): CreateRawOrFromResult<T> {
-    return _queryCreateFrom(_clone(this) as unknown as T, query, data);
-  }
+  ): CreateRawOrFromResult<T>;
 
   /**
    * Works exactly as {@link createFrom}, except that it returns inserted row count by default.
@@ -920,9 +935,7 @@ export class Create {
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-  ): InsertRawOrFromResult<T> {
-    return _queryInsertFrom(_clone(this) as unknown as T, query, data);
-  }
+  ): InsertRawOrFromResult<T>;
 
   /**
    * Similar to `createFrom`, but intended to create many records.
@@ -940,9 +953,7 @@ export class Create {
   createManyFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
-  ): CreateManyFromResult<T> {
-    return _queryCreateManyFrom(_clone(this) as unknown as T, query);
-  }
+  ): CreateManyFromResult<T>;
 
   /**
    * Works exactly as {@link createManyFrom}, except that it returns inserted row count by default.
@@ -952,9 +963,7 @@ export class Create {
   insertManyFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
-  ): InsertManyFromResult<T> {
-    return _queryInsertManyFrom(_clone(this) as unknown as T, query);
-  }
+  ): InsertManyFromResult<T>;
 
   /**
    * `defaults` allows setting values that will be used later in `create`.
@@ -981,9 +990,10 @@ export class Create {
   defaults<
     T extends CreateSelf,
     Data extends Partial<CreateData<T, CreateBelongsToData<T>>>,
-  >(this: T, data: Data): AddQueryDefaults<T, { [K in keyof Data]: true }> {
-    return _queryDefaults(_clone(this) as unknown as T, data);
-  }
+  >(
+    this: T,
+    data: Data,
+  ): AddQueryDefaults<T, { [K in keyof Data]: true }>;
 
   /**
    * By default, violating unique constraint will cause the creative query to throw,
@@ -1090,9 +1100,7 @@ export class Create {
   onConflict<T extends CreateSelf, Arg extends OnConflictArg<T>>(
     this: T,
     arg: Arg,
-  ): OnConflictQueryBuilder<T, Arg> {
-    return new OnConflictQueryBuilder(this, arg as Arg);
-  }
+  ): OnConflictQueryBuilder<T, Arg>;
 
   /**
    * Use `onConflictDoNothing` to suppress unique constraint violation error when creating a record.
@@ -1138,7 +1146,51 @@ export class Create {
   onConflictDoNothing<T extends CreateSelf, Arg extends OnConflictArg<T>>(
     this: T,
     arg?: Arg,
-  ): IgnoreResult<T> {
+  ): IgnoreResult<T>;
+}
+
+export const QueryCreate: QueryCreate = {
+  create(data) {
+    return _queryCreate(_clone(this), data) as never;
+  },
+
+  insert(data) {
+    return _queryInsert(_clone(this), data) as never;
+  },
+
+  createMany(data) {
+    return _queryCreateMany(_clone(this), data) as never;
+  },
+
+  insertMany(data) {
+    return _queryInsertMany(_clone(this), data) as never;
+  },
+
+  createFrom(query, data) {
+    return _queryCreateFrom(_clone(this) as never, query, data);
+  },
+
+  insertFrom(query, data) {
+    return _queryInsertFrom(_clone(this) as never, query, data);
+  },
+
+  createManyFrom(query) {
+    return _queryCreateManyFrom(_clone(this) as never, query);
+  },
+
+  insertManyFrom(query) {
+    return _queryInsertManyFrom(_clone(this) as never, query);
+  },
+
+  defaults(data) {
+    return _queryDefaults(_clone(this) as never, data as never);
+  },
+
+  onConflict(arg) {
+    return new OnConflictQueryBuilder(this, arg as never);
+  },
+
+  onConflictDoNothing(arg) {
     const q = _clone(this);
     (q.q as InsertQueryData).onConflict = {
       target: arg as never,
@@ -1151,8 +1203,8 @@ export class Create {
     }
 
     return q as never;
-  }
-}
+  },
+};
 
 type OnConflictSet<T extends CreateSelf> = {
   [K in keyof T['inputType']]?:
@@ -1189,6 +1241,9 @@ export class OnConflictQueryBuilder<
   set(set: OnConflictSet<T>): T {
     let resolved: RecordUnknown | undefined;
     for (const key in set) {
+      const column = this.query.shape[key] as ColumnTypeBase;
+      if (column) throwOnReadOnly(this.query, column, key);
+
       if (typeof set[key] === 'function') {
         if (!resolved) resolved = { ...set };
 

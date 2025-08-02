@@ -1,5 +1,12 @@
 # Breaking changes
 
+## orchid-orm 1.54
+
+If you previously were passing `generated` or `computed` column values into `update` or `create`,
+such columns were silently ignored, omitted from the query.
+
+Not this will throw an explicit error `Trying to update/insert a readonly column`.
+
 ## orchid-orm 1.53
 
 `beforeCreate`, `beforeUpdate`, `beforeSave` now can override record values!

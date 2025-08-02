@@ -7,16 +7,16 @@ import {
   RecordUnknown,
   setObjectValueImmutable,
 } from 'orchid-core';
-import { QueryScopes } from '../sql';
+import { QueryScopes } from '../../sql';
 import {
   PickQueryBaseQuery,
   PickQueryInternal,
   PickQueryQ,
   Query,
-} from '../query/query';
-import { RawSQL } from '../sql/rawSql';
-import { _queryDelete, _queryUpdate, DeleteArgs, DeleteResult } from './index';
-import { _clone } from '../query/queryUtils';
+} from '../../query/query';
+import { RawSQL } from '../../sql/rawSql';
+import { _queryDelete, _queryUpdate, DeleteArgs, DeleteResult } from '../index';
+import { _clone } from '../../query/queryUtils';
 
 export type SoftDeleteOption<Shape extends QueryColumns> = true | keyof Shape;
 

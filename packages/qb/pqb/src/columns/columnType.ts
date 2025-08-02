@@ -553,7 +553,7 @@ export abstract class ColumnType<
         return sql;
       },
     });
-    column.data.readonly = true;
+    column.data.readOnly = true;
     return column as never;
   }
 }

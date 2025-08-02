@@ -631,7 +631,7 @@ export class TsVectorColumn<
       toSQL,
       toCode,
     });
-    column.data.readonly = true;
+    column.data.readOnly = true;
     return column as never;
   }
 }

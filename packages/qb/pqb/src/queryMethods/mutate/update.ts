@@ -5,28 +5,28 @@ import {
   SetQueryKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
-} from '../query/query';
+} from '../../query/query';
 import {
   _clone,
   pushQueryValueImmutable,
   throwIfNoWhere,
-} from '../query/queryUtils';
-import { RelationConfigBase } from '../relations';
-import { _queryWhereIn, WhereResult } from './where/where';
-import { ToSQLQuery } from '../sql';
-import { anyShape, VirtualColumn } from '../columns';
-import { Db } from '../query/db';
+} from '../../query/queryUtils';
+import { RelationConfigBase } from '../../relations';
+import { _queryWhereIn, WhereResult } from '../where/where';
+import { ToSQLQuery } from '../../sql';
+import { anyShape, VirtualColumn } from '../../columns';
+import { Db } from '../../query/db';
 import {
   isExpression,
   callWithThis,
   RecordUnknown,
-  PickQueryShape,
   EmptyObject,
+  ColumnTypeBase,
 } from 'orchid-core';
-import { QueryResult } from '../adapter';
-import { resolveSubQueryCallbackV2 } from '../common/utils';
-import { OrchidOrmInternalError } from '../errors';
-import { moveQueryValueToWith } from './with';
+import { QueryResult } from '../../adapter';
+import { resolveSubQueryCallbackV2 } from '../../common/utils';
+import { OrchidOrmInternalError } from '../../errors';
+import { moveQueryValueToWith } from '../with';
 
 export interface UpdateSelf
   extends PickQueryMetaResultRelationsWithDataReturnTypeShape {
@@ -90,18 +90,18 @@ type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
   ? SetQueryReturnsRowCountMany<T, 'update'>
   : SetQueryReturnsRowCount<T, 'update'>;
 
-export type NumericColumns<T extends PickQueryShape> = {
-  [K in keyof T['shape']]: Exclude<T['shape'][K]['queryType'], string> extends
-    | number
-    | bigint
-    | null
+export type NumericColumns<T extends UpdateSelf> = {
+  [K in keyof T['inputType']]: Exclude<
+    T['shape'][K]['queryType'],
+    string
+  > extends number | bigint | null
     ? K
     : never;
-}[keyof T['shape']];
+}[keyof T['inputType']];
 
 // `increment` and `decrement` methods argument type.
 // Accepts a column name to change, or an object with column names and number values to increment or decrement with.
-export type ChangeCountArg<T extends PickQueryShape> =
+export type ChangeCountArg<T extends UpdateSelf> =
   | NumericColumns<T>
   | {
       [K in NumericColumns<T>]?: T['shape'][K]['type'] extends number | null
@@ -120,6 +120,16 @@ export interface UpdateCtxCollect {
   keys: string[];
   data: RecordUnknown;
 }
+
+const throwOnReadOnly = (q: unknown, column: ColumnTypeBase, key: string) => {
+  if (column.data.appReadOnly || column.data.readOnly) {
+    throw new OrchidOrmInternalError(
+      q as Query,
+      'Trying to update a readonly column',
+      { column: key },
+    );
+  }
+};
 
 // apply `increment` or a `decrement`,
 // mutates the `queryData` of a query.
@@ -145,9 +155,19 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
     map = {};
     for (const key in data) {
       map[key] = { op, arg: data[key as never] as number };
+
+      const column = self.shape[key];
+      if (column) {
+        throwOnReadOnly(self, column as ColumnTypeBase, key);
+      }
     }
   } else {
     map = { [data as string]: { op, arg: 1 } };
+
+    const column = self.shape[data as string];
+    if (column) {
+      throwOnReadOnly(self, column as ColumnTypeBase, data as string);
+    }
   }
 
   pushQueryValueImmutable(self as unknown as Query, 'updateData', map);
@@ -188,12 +208,11 @@ export const _queryUpdate = <T extends UpdateSelf>(
     if (item instanceof VirtualColumn && item.update) {
       item.update(query, ctx, set);
       delete set[key];
-    } else if (
-      (!shape[key] || shape[key].data.readonly) &&
-      shape !== anyShape
-    ) {
+    } else if (!item && shape !== anyShape) {
       delete set[key];
     } else {
+      if (item) throwOnReadOnly(query, item, key);
+
       let value = set[key];
       if (typeof value === 'function') {
         value = resolveSubQueryCallbackV2(
@@ -222,7 +241,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
           );
         } else {
           // encode if not a query object
-          const encode = shape[key].data.encode;
+          const encode = item?.data.encode;
           if (encode) set[key] = encode(value);
         }
       }

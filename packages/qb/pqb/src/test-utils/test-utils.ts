@@ -1,7 +1,6 @@
 import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
-import { expectSql, testDb, testDbZodTypes } from 'test-utils';
-import { z } from 'zod/v4';
+import { expectSql, testDb } from 'test-utils';
 import { RecordUnknown } from 'orchid-core';
 
 export type UserRecord = typeof User.outputType;
@@ -23,24 +22,6 @@ export const userColumnsSql = User.q.selectAllColumns!.join(', ');
 export const userTableColumnsSql = User.q
   .selectAllColumns!.map((c) => '"user".' + c)
   .join(', ');
-
-export const UserZodTypes = testDbZodTypes('user', (t) => ({
-  id: t.identity().primaryKey(),
-  name: t.text(),
-  password: t.text(),
-  picture: t.text().nullable(),
-  data: t
-    .json(
-      z.object({
-        name: z.string(),
-        tags: z.string().array(),
-      }),
-    )
-    .nullable(),
-  age: t.integer().nullable(),
-  active: t.boolean().nullable(),
-  ...t.timestamps(),
-}));
 
 export const UserSoftDelete = testDb(
   'user',

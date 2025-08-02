@@ -18,7 +18,7 @@ import {
   userData,
   UserInsert,
   UserRecord,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import {
   assertType,
   expectSql,
@@ -26,14 +26,14 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
-import { MAX_BINDING_PARAMS } from '../sql/constants';
+import { MAX_BINDING_PARAMS } from '../../sql/constants';
 import { omit } from 'orchid-core';
 
 const setMaxBindingParams = (value: number) => {
   (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;
 };
 
-jest.mock('../sql/constants', () => ({
+jest.mock('../../sql/constants', () => ({
   // Behold the power of JS coercions
   MAX_BINDING_PARAMS: {
     value: 5,
@@ -41,6 +41,12 @@ jest.mock('../sql/constants', () => ({
       return this.value;
     },
   },
+}));
+
+const TableWithReadOnly = testDb('table', (t) => ({
+  id: t.identity().primaryKey(),
+  key: t.string(),
+  value: t.integer().readOnly(),
 }));
 
 const RuntimeDefaultTable = testDb('user', (t) => ({
@@ -57,6 +63,16 @@ describe('create functions', () => {
   });
 
   describe('create', () => {
+    it('should not allow using appReadOnly columns', () => {
+      expect(() =>
+        TableWithReadOnly.create({
+          key: 'key',
+          // @ts-expect-error value is readOnly
+          value: 123,
+        }),
+      ).toThrow('Trying to insert a readonly column');
+    });
+
     it('should create one record with raw SQL for a column value', () => {
       const q = User.create({
         name: userData.name,
@@ -524,6 +540,18 @@ describe('create functions', () => {
   });
 
   describe('createMany', () => {
+    it('should not allow using appReadOnly columns', () => {
+      expect(() =>
+        TableWithReadOnly.createMany([
+          {
+            key: 'key',
+            // @ts-expect-error value is readOnly
+            value: 123,
+          },
+        ]),
+      ).toThrow('Trying to insert a readonly column');
+    });
+
     it('should do nothing and return empty array when empty array is given', async () => {
       expect(await User.createMany([])).toEqual([]);
     });
@@ -951,6 +979,25 @@ describe('create functions', () => {
   });
 
   describe('createFrom', () => {
+    it('should not allow using appReadOnly columns from select', () => {
+      const sub = Chat.find(1).select({ key: 'title', value: 'chat.idOfChat' });
+
+      expect(() => TableWithReadOnly.createFrom(sub)).toThrow(
+        'Trying to insert a readonly column',
+      );
+    });
+
+    it('should not allow using appReadOnly columns from values', () => {
+      const sub = Chat.find(1).select({ key: 'title' });
+
+      expect(() =>
+        TableWithReadOnly.createFrom(sub, {
+          // @ts-expect-error value is readOnly
+          value: 1,
+        }),
+      ).toThrow('Trying to insert a readonly column');
+    });
+
     it('should create records without additional data', () => {
       const sub = Chat.find(1).select({ chatId: 'idOfChat' });
       const q = Message.createFrom(sub);
@@ -1148,6 +1195,17 @@ describe('create functions', () => {
   });
 
   describe('createManyFrom', () => {
+    it('should not allow using appReadOnly columns from select', () => {
+      const sub = Chat.where({ title: 'title' }).select({
+        key: 'title',
+        value: 'chat.idOfChat',
+      });
+
+      expect(() => TableWithReadOnly.createManyFrom(sub)).toThrow(
+        'Trying to insert a readonly column',
+      );
+    });
+
     it('should create records from select', () => {
       const sub = Chat.where({ title: 'title' }).select({ chatId: 'idOfChat' });
       const query = Message.createManyFrom(sub);
@@ -1457,6 +1515,15 @@ describe('create functions', () => {
     });
 
     describe('set', () => {
+      it('should not allow using appReadOnly columns', () => {
+        expect(() =>
+          TableWithReadOnly.create({ key: '' }).onConflict('id').set({
+            // @ts-expect-error value is readOnly
+            value: '',
+          }),
+        ).toThrow('Trying to insert a readonly column');
+      });
+
       it('should accept object with values to update', () => {
         const q = User.all();
 

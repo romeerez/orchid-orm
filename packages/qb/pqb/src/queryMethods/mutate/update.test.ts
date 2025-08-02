@@ -10,7 +10,7 @@ import {
   UserInsert,
   Product,
   userColumnsSql,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import {
   assertType,
   expectSql,
@@ -18,10 +18,16 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
-import { RelationConfigBase } from '../relations';
-import { addQueryOn } from './join/join';
+import { RelationConfigBase } from '../../relations';
+import { addQueryOn } from '../join/join';
 import { PickQueryMeta } from 'orchid-core';
 import { Query } from 'pqb';
+
+const TableWithReadOnly = testDb('table', (t) => ({
+  id: t.identity().primaryKey(),
+  key: t.string(),
+  value: t.integer().readOnly(),
+}));
 
 describe('update', () => {
   useTestDatabase();
@@ -35,6 +41,16 @@ describe('update', () => {
     snakeName: 'new name',
     tailLength: 10,
   };
+
+  it('should not allow using appReadOnly columns', () => {
+    expect(() =>
+      TableWithReadOnly.find(1).update({
+        key: 'key',
+        // @ts-expect-error value is readOnly
+        value: 123,
+      }),
+    ).toThrow('Trying to update a readonly column');
+  });
 
   it('should not mutate query', () => {
     const q = User.all();
@@ -753,6 +769,18 @@ describe('update', () => {
 
   describe.each(['increment', 'decrement'] as const)('%s', (action) => {
     const sign = action === 'increment' ? '+' : '-';
+
+    it('should not allow using appReadOnly columns', () => {
+      // @ts-expect-error value is readOnly
+      expect(() => TableWithReadOnly.find(1)[action]('value')).toThrow(
+        'Trying to update a readonly column',
+      );
+
+      // @ts-expect-error value is readOnly
+      expect(() => TableWithReadOnly.find(1)[action]({ value: 1 })).toThrow(
+        'Trying to update a readonly column',
+      );
+    });
 
     it('should support bigint', () => {
       const table = testDb(

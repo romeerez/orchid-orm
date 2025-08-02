@@ -8,16 +8,17 @@ import { RecordString } from '../utils';
 // get columns object type where nullable columns or columns with a default are optional
 export type ColumnShapeInput<
   Shape extends QueryColumnsInit,
-  Optional extends keyof Shape = {
-    [K in keyof Shape]: Shape[K]['data']['isNullable'] extends true
+  AppReadOnly = {
+    [K in keyof Shape]: Shape[K]['data']['appReadOnly'] extends true
       ? K
-      : undefined extends Shape[K]['data']['default']
-      ? never
-      : K;
+      : never;
+  }[keyof Shape],
+  Optional extends keyof Shape = {
+    [K in keyof Shape]: Shape[K]['data']['optional'] extends true ? K : never;
   }[keyof Shape],
 > = {
-  [K in Exclude<keyof Shape, Optional>]: Shape[K]['inputType'];
-} & { [K in Optional]?: Shape[K]['inputType'] };
+  [K in Exclude<keyof Shape, AppReadOnly | Optional>]: Shape[K]['inputType'];
+} & { [K in Exclude<Optional, AppReadOnly>]?: Shape[K]['inputType'] };
 
 export type ColumnShapeInputPartial<Shape extends QueryColumnsInit> = {
   [K in keyof Shape]?: Shape[K]['inputType'];
@@ -90,6 +91,7 @@ export type NullableColumn<
 
 interface DataNullable {
   isNullable: true;
+  optional: true;
 }
 
 export interface OperatorsNullable<T> {
@@ -176,6 +178,8 @@ export type ColumnWithDefault<T extends PickColumnBaseData, Value> = {
           ? Value extends null
             ? never
             : Value
+          : K extends 'optional'
+          ? true
           : T['data'][K];
       }
     : T[K];
@@ -197,9 +201,9 @@ export type ColumnDefaultSelect<
     : T[K];
 };
 
-export interface ColumnDataReadonly {
+export interface ColumnDataAppReadOnly {
   data: {
-    readonly: true;
+    appReadOnly: true;
   };
 }
 
@@ -320,6 +324,9 @@ export interface ColumnDataBase {
   // name of the column in the database, if different from the code
   name?: string;
 
+  // true when is nullable or has a default
+  optional: true | undefined;
+
   // is null value allowed
   isNullable?: true;
 
@@ -381,16 +388,14 @@ export interface ColumnDataBase {
   // decimal and similar columns have to be casted to text to not loose precision.
   jsonCast?: string;
 
-  // hides the column from create and update.
-  readonly?: boolean;
+  // removes the column from update and create, it's for generated and computed columns
+  readOnly?: boolean;
+
+  // removes the column from update and create, but it is still allowed to be set in the hooks
+  appReadOnly: true | undefined;
 
   // postgres internal number modifier, it can be present on custom types.
   typmod?: number;
-
-  // true | undefined for yes, false for no
-  insertable?: boolean;
-  // true | undefined for yes, false for no
-  updatable?: boolean;
 }
 
 export interface ColumnDataCheckBase {
@@ -496,10 +501,12 @@ export interface QueryColumnInit extends QueryColumn {
     explicitSelect?: boolean;
     primaryKey?: string;
     unique?: string;
+    optional?: true;
     isNullable?: true;
     default?: unknown;
     name?: string;
-    readonly?: boolean;
+    readOnly?: boolean;
+    appReadOnly: true | undefined;
   };
 }
 
@@ -952,5 +959,36 @@ export abstract class ColumnTypeBase<
     value: Value,
   ): ColumnDefaultSelect<T, Value> {
     return setColumnData(this, 'explicitSelect', !value) as never;
+  }
+
+  /**
+   * Forbid the column to be used in [create](/guide/create-update-delete.html#create-insert) and [update](/guide/create-update-delete.html#update) methods.
+   *
+   * `readOnly` column is still can be set from a [hook](http://localhost:5173/guide/hooks.html#set-values-before-create-or-update).
+   *
+   * It can have a default.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     id: t.identity().primaryKey(),
+   *     column: t.string().default(() => 'default value'),
+   *     another: t.string().readOnly(),
+   *   }));
+   *
+   *   init(orm: typeof db) {
+   *     this.beforeSave(({ set }) => {
+   *       set({ another: 'value' });
+   *     });
+   *   }
+   * }
+   *
+   * // later in the code
+   * db.table.create({ column: 'value' }); // TS error, runtime error
+   * ```
+   */
+  readOnly<T extends PickColumnBaseData>(this: T): T & ColumnDataAppReadOnly {
+    return setColumnData(this, 'appReadOnly', true) as never;
   }
 }

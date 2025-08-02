@@ -8,7 +8,7 @@ import {
   userData,
   UserRecord,
   userTableColumnsSql,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
 describe('delete', () => {

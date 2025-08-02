@@ -366,40 +366,25 @@ describe('computed', () => {
 
     describe('create', () => {
       it('should not allow computed columns', () => {
-        const q = User.insert({
-          ...partialUserData,
-          // @ts-expect-error computed column should not be allowed
-          nameAndKey: 'value',
-        });
-
-        expectSql(
-          q.toSQL(),
-          `
-            INSERT INTO "user"("name", "password")
-            VALUES ($1, $2)
-          `,
-          [userData.name, userData.password],
-        );
+        expect(() =>
+          User.insert({
+            ...partialUserData,
+            // @ts-expect-error computed column should not be allowed
+            nameAndKey: 'value',
+          }),
+        ).toThrow('Trying to insert a readonly column');
       });
     });
 
     describe('update', () => {
       it('should not allow computed columns', () => {
-        const q = User.find(1).update({
-          name: 'name',
-          // @ts-expect-error computed column should not be allowed
-          nameAndKey: 'value',
-        });
-
-        expectSql(
-          q.toSQL(),
-          `
-            UPDATE "user"
-            SET "name" = $1
-            WHERE "user"."id" = $2
-          `,
-          ['name', 1],
-        );
+        expect(() =>
+          User.find(1).update({
+            name: 'name',
+            // @ts-expect-error computed column should not be allowed
+            nameAndKey: 'value',
+          }),
+        ).toThrow('Trying to update a readonly column');
       });
     });
   });

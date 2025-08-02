@@ -3,12 +3,12 @@ import {
   SetQueryKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
-} from '../query/query';
+} from '../../query/query';
 import {
   _clone,
   throwIfJoinLateral,
   throwIfNoWhere,
-} from '../query/queryUtils';
+} from '../../query/queryUtils';
 import {
   EmptyTuple,
   PickQueryMetaResult,

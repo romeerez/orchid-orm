@@ -148,7 +148,7 @@ export const applyComputedColumns = (
       const { data } = col;
       data.computed = item as Expression;
       data.explicitSelect = true;
-      data.readonly = true;
+      data.readOnly = true;
 
       addColumnParserToQuery(
         (q as unknown as PickQueryQ).q,

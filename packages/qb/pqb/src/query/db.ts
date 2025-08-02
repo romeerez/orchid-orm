@@ -58,7 +58,10 @@ import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
 } from '../columns/defaultSchemaConfig';
-import { enableSoftDelete, SoftDeleteOption } from '../queryMethods/softDelete';
+import {
+  enableSoftDelete,
+  SoftDeleteOption,
+} from '../queryMethods/mutate/softDelete';
 import {
   parseTableData,
   TableData,

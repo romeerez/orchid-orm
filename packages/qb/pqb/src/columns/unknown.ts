@@ -15,7 +15,7 @@ export class UnknownColumn<
     super(schema, schema.unknown() as never);
     // include this column when selecting *, unlike the parent VirtualColumn
     this.data.explicitSelect = undefined;
-    this.data.insertable = this.data.updatable = true;
+    this.data.appReadOnly = undefined;
   }
 }
 
