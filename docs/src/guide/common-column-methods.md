@@ -139,7 +139,7 @@ type IdentityOptions = {
 
 Forbid the column to be used in [create](/guide/create-update-delete.html#create-insert) and [update](/guide/create-update-delete.html#update) methods.
 
-`readOnly` column is still can be set from a [hook](http://localhost:5173/guide/hooks.html#set-values-before-create-or-update),
+`readOnly` column is still can be set from a [hook](/guide/hooks.html#set-values-before-create-or-update),
 or in [setOnCreate](#setoncreate), [setOnUpdate](#setonupdate), [setOnSave](#setonsave).
 
 `readOnly` column can be used together with a `default`.
