@@ -7,7 +7,7 @@ import {
   Updatable,
 } from './baseTable';
 import { orchidORM } from './orm';
-import { ColumnType, makeColumnTypes, Operators, Query, TextColumn } from 'pqb';
+import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
 import {
   BaseTable,
   db,
@@ -410,7 +410,7 @@ describe('baseTable', () => {
       });
 
       const { q } = db.table.baseQuery;
-      const query = {} as Query;
+      const query = { q: { updateData: [] } } as never;
 
       q.beforeCreate?.[0](query);
       expect(fns.beforeCreate).toHaveBeenCalledTimes(1);

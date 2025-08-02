@@ -254,17 +254,23 @@ describe('hooks', () => {
     }));
 
     it('should set a readonly value in beforeCreate', async () => {
-      const res = await User.beforeCreate(({ set }) => {
+      let cols: string[] | undefined;
+
+      const res = await User.beforeCreate(({ columns, set }) => {
+        cols = columns;
         set({ password: 'from hook' });
       }).create({ name: 'name' });
 
       expect(res.password).toBe('from hook');
+      expect(cols).toEqual(['name']);
     });
 
     it('should set a readonly value in beforeUpdate', async () => {
       const { id } = await User.create({ name: 'name' });
+      let cols: string[] | undefined;
 
-      const res = await User.beforeUpdate(({ set }) => {
+      const res = await User.beforeUpdate(({ columns, set }) => {
+        cols = columns;
         set({ password: 'from hook' });
       })
         .find(id)
@@ -272,14 +278,19 @@ describe('hooks', () => {
         .select('password');
 
       expect(res.password).toBe('from hook');
+      expect(cols).toEqual(['name']);
     });
 
     it('should set a readonly value in beforeSave', async () => {
-      const res = await User.beforeSave(({ set }) => {
+      let cols: string[] | undefined;
+
+      const res = await User.beforeSave(({ columns, set }) => {
+        cols = columns;
         set({ password: 'from hook' });
       }).create({ name: 'name' });
 
       expect(res.password).toBe('from hook');
+      expect(cols).toEqual(['name']);
     });
   });
 

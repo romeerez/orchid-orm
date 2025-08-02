@@ -9,6 +9,7 @@ import { RecordUnknown } from './utils';
 export class QueryHookUtils<T extends PickQueryInputType> {
   constructor(
     public query: IsQuery,
+    public columns: string[],
     private key: 'hookCreateSet' | 'hookUpdateSet',
   ) {}
 

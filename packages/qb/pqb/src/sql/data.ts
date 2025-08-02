@@ -285,7 +285,7 @@ export interface UpdateQueryDataObject {
 }
 
 export interface UpdatedAtDataInjector {
-  (data: UpdateQueryDataItem[]): UpdateQueryDataItem | void;
+  (data: UpdateQueryDataItem[]): UpdateQueryDataObject | void;
 }
 
 export type UpdateQueryDataItem = UpdateQueryDataObject | UpdatedAtDataInjector;

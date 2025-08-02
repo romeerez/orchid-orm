@@ -142,7 +142,7 @@ Forbid the column to be used in [create](/guide/create-update-delete.html#create
 `readOnly` column is still can be set from a [hook](http://localhost:5173/guide/hooks.html#set-values-before-create-or-update),
 or in [setOnCreate](#setoncreate), [setOnUpdate](#setonupdate), [setOnSave](#setonsave).
 
-It can have a default.
+`readOnly` column can be used together with a `default`.
 
 ```ts
 export class Table extends BaseTable {
@@ -150,12 +150,14 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     column: t.string().default(() => 'default value'),
-    another: t.string().readOnly(),
+    another: t.string().nullable().readOnly(),
   }));
 
   init(orm: typeof db) {
-    this.beforeSave(({ set }) => {
-      set({ another: 'value' });
+    this.beforeSave(({ columns, set }) => {
+      if (columns.include('column')) {
+        set({ another: 'value' });
+      }
     });
   }
 }
@@ -173,12 +175,19 @@ This works for [readOnly](#readonly) columns as well.
 
 If no value or undefined is returned, the hook won't have any effect.
 
+The callback accepts `columns` of type `string[]` that you can use to see what columns are being inserted or updated by the app code.
+
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    column: t.string().setOnCreate(() => 'value'),
+    some: t.number(),
+    column: t
+      .string()
+      .setOnCreate(({ columns }) =>
+        columns.include('some') ? 'value' : undefined,
+      ),
   }));
 }
 ```
@@ -187,17 +196,19 @@ export class Table extends BaseTable {
 
 [//]: # 'has JSDoc'
 
-Set a column value when updating a record.
-This works for [readOnly](#readonly) columns as well.
-
-If no value or undefined is returned, the hook won't have any effect.
+Acts like `setOnCreate` but for updating a record.
 
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    column: t.string().setOnUpdate(() => 'value'),
+    some: t.number(),
+    column: t
+      .string()
+      .setOnUpdate(({ columns }) =>
+        columns.include('some') ? 'value' : undefined,
+      ),
   }));
 }
 ```
@@ -206,17 +217,19 @@ export class Table extends BaseTable {
 
 [//]: # 'has JSDoc'
 
-Set a column value when creating or updating a record.
-This works for [readOnly](#readonly) columns as well.
-
-If no value or undefined is returned, the hook won't have any effect.
+Acts like `setOnCreate` but for both creating and updating a record.
 
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-    column: t.string().setOnSave(() => 'value'),
+    some: t.number(),
+    column: t
+      .string()
+      .setOnSave(({ columns }) =>
+        columns.include('some') ? 'value' : undefined,
+      ),
   }));
 }
 ```

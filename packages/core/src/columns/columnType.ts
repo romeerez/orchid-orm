@@ -510,19 +510,21 @@ export interface QueryColumns {
   [K: string]: QueryColumn;
 }
 
+interface QueryColumnData {
+  explicitSelect?: boolean;
+  primaryKey?: string;
+  unique?: string;
+  optional?: true;
+  isNullable?: true;
+  default?: unknown;
+  name?: string;
+  readOnly?: boolean;
+  appReadOnly: true | undefined;
+}
+
 export interface QueryColumnInit extends QueryColumn {
   inputType: unknown;
-  data: {
-    explicitSelect?: boolean;
-    primaryKey?: string;
-    unique?: string;
-    optional?: true;
-    isNullable?: true;
-    default?: unknown;
-    name?: string;
-    readOnly?: boolean;
-    appReadOnly: true | undefined;
-  };
+  data: QueryColumnData;
 }
 
 export interface QueryColumnsInit {
@@ -530,11 +532,7 @@ export interface QueryColumnsInit {
 }
 
 export type QueryColumnToNullable<C extends QueryColumn> = {
-  [K in keyof C]: K extends 'outputType'
-    ? C['outputType'] | null
-    : K extends 'queryType'
-    ? C['queryType'] | null
-    : C[K];
+  [K in keyof C]: K extends 'outputType' | 'queryType' ? C[K] | null : C[K];
 };
 
 export interface ColumnToCodeCtx {
@@ -981,7 +979,7 @@ export abstract class ColumnTypeBase<
    *
    * `readOnly` column is still can be set from a [hook](http://localhost:5173/guide/hooks.html#set-values-before-create-or-update).
    *
-   * It can have a default.
+   * `readOnly` column can be used together with a `default`.
    *
    * ```ts
    * export class Table extends BaseTable {
@@ -1003,8 +1001,8 @@ export abstract class ColumnTypeBase<
    * db.table.create({ column: 'value' }); // TS error, runtime error
    * ```
    */
-  readOnly<T extends PickColumnBaseData>(this: T): T & ColumnDataAppReadOnly {
-    return setColumnData(this, 'appReadOnly', true) as never;
+  readOnly<T>(this: T): T & ColumnDataAppReadOnly {
+    return setColumnData(this as never, 'appReadOnly', true as never) as never;
   }
 
   /**

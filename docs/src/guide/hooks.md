@@ -73,6 +73,8 @@ This works for all update and create methods, including
 
 In a case of batch create or update, the same value is set for all records.
 
+The callback accepts `columns` of type `string[]` that you can use to see what columns are being inserted or updated by the app code.
+
 ```ts
 class SomeTable extends BaseTable {
   readonly table = 'someTable';
@@ -81,17 +83,21 @@ class SomeTable extends BaseTable {
   }));
 
   init(orm: typeof db) {
-    this.beforeCreate(({ set }) => {
-      set({ one: 'value' });
+    this.beforeCreate(({ columns, set }) => {
+      // columns is `string[]` of the columns passed to create,
+      // they do not include defaults.
+      if (columns.includes('foo')) {
+        set({ one: 'value' });
+      }
     });
 
-    this.beforeUpdate(({ set }) => {
+    this.beforeUpdate(({ columns, set }) => {
       // use a function for sql
       set({ two: () => sql`value` });
     });
 
     // is set both when creating and updating.
-    this.beforeSave(({ set }) => {
+    this.beforeSave(({ columns, set }) => {
       set({ three: 'value' });
     });
   }

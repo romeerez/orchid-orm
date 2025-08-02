@@ -7,9 +7,11 @@ import {
   QueryHookUtils,
 } from 'orchid-core';
 import {
+  InsertQueryData,
   QueryAfterHook,
   QueryBeforeHook,
   QueryBeforeHookInternal,
+  UpdateQueryData,
 } from '../sql';
 import { PickQueryQ } from '../query/query';
 import { AfterCommitErrorHandler } from './transaction';
@@ -79,7 +81,11 @@ export const _queryHookBeforeCreate = <T extends PickQueryShape>(
   q: T,
   cb: QueryBeforeHook,
 ): T => {
-  return before(q, 'Create', (q) => cb(new QueryHookUtils(q, 'hookCreateSet')));
+  return before(q, 'Create', (q) =>
+    cb(
+      new QueryHookUtils(q, (q.q as InsertQueryData).columns, 'hookCreateSet'),
+    ),
+  );
 };
 
 export const _queryHookAfterCreate = <
@@ -108,7 +114,16 @@ export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
   q: T,
   cb: QueryBeforeHook,
 ): T => {
-  return before(q, 'Update', (q) => cb(new QueryHookUtils(q, 'hookUpdateSet')));
+  return before(q, 'Update', (q) => {
+    const columns: string[] = [];
+    for (const item of (q.q as UpdateQueryData).updateData) {
+      if (typeof item === 'object') {
+        columns.push(...Object.keys(item));
+      }
+    }
+
+    return cb(new QueryHookUtils(q, columns, 'hookUpdateSet'));
+  });
 };
 
 export const _queryHookAfterUpdate = <
@@ -137,11 +152,7 @@ export const _queryHookBeforeSave = <T extends PickQueryShape>(
   q: T,
   cb: QueryBeforeHook,
 ): T => {
-  return before(
-    before(q, 'Create', (q) => cb(new QueryHookUtils(q, 'hookCreateSet'))),
-    'Update',
-    (q) => cb(new QueryHookUtils(q, 'hookUpdateSet')),
-  );
+  return _queryHookBeforeUpdate(_queryHookBeforeCreate(q, cb), cb);
 };
 
 export const _queryHookAfterSave = <

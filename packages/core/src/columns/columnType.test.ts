@@ -29,10 +29,19 @@ describe('columnType', () => {
     useTestDatabase();
 
     it('should set values on create', async () => {
+      let createColumns: string[] | undefined;
+      let updateColumns: string[] | undefined;
+
       const User = testDb('user', (t) => ({
         id: t.identity().primaryKey(),
-        name: t.string().setOnCreate(() => 'set on create'),
-        password: t.string().setOnUpdate(() => 'set on update'),
+        name: t.string().setOnCreate(({ columns }) => {
+          createColumns = columns;
+          return 'set on create';
+        }),
+        password: t.string().setOnUpdate(({ columns }) => {
+          updateColumns = columns;
+          return 'set on update';
+        }),
         picture: t
           .string()
           .nullable()
@@ -48,6 +57,30 @@ describe('columnType', () => {
         password: 'password',
         picture: 'set on save',
       });
+
+      expect(createColumns).toEqual(['name', 'password']);
+      expect(updateColumns).toBe(undefined);
+    });
+
+    it('should set values on update', async () => {
+      let createColumns: string[] | undefined;
+      let updateColumns: string[] | undefined;
+
+      const User = testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string().setOnCreate(({ columns }) => {
+          createColumns = columns;
+          return 'set on create';
+        }),
+        password: t.string().setOnUpdate(({ columns }) => {
+          updateColumns = columns;
+          return 'set on update';
+        }),
+        picture: t
+          .string()
+          .nullable()
+          .setOnSave(() => 'set on save'),
+      }));
 
       const id = await testDb.query
         .get<number>`INSERT INTO "user"("name", "password") VALUES ('name', 'password') RETURNING "id"`;
@@ -65,6 +98,9 @@ describe('columnType', () => {
         password: 'set on update',
         picture: 'set on save',
       });
+
+      expect(createColumns).toBe(undefined);
+      expect(updateColumns).toEqual(['name', 'password', 'picture']);
     });
 
     it('should not override values when returning undefined', async () => {
