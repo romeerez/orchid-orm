@@ -1905,11 +1905,12 @@ describe('hasMany', () => {
           { ...messageData, ChatId: chatId, AuthorId: user1.Id },
         ]);
 
-        await db.user.find(user2.Id).update({
+        const count = await db.user.find(user2.Id).update({
           messages: {
             add: createdMessages.map((message) => ({ Id: message.Id })),
           },
         });
+        expect(count).toBe(1);
 
         const user1Messages = await db.user
           .queryRelated('messages', user1)
@@ -1990,11 +1991,12 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(UserId).update({
+        const count = await db.user.find(UserId).update({
           messages: {
             disconnect: [{ Text: 'message 1' }, { Text: 'message 2' }],
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.message.order('Text');
         expect(messages[0].AuthorId).toBe(null);
@@ -2018,11 +2020,12 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(UserId).update({
+        const count = await db.user.find(UserId).update({
           activeMessages: {
             disconnect: [{ Text: 'message 1' }, { Text: 'message 2' }],
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.message.order('Text');
         expect(messages[0].AuthorId).toBe(UserId);
@@ -2053,11 +2056,12 @@ describe('hasMany', () => {
           },
         ]);
 
-        await db.user.where({ Id: { in: userIds } }).update({
+        const count = await db.user.where({ Id: { in: userIds } }).update({
           messages: {
             disconnect: [{ Text: 'message 1' }, { Text: 'message 2' }],
           },
         });
+        expect(count).toBe(2);
 
         const messages = await db.message.order('Text');
         expect(messages[0].AuthorId).toBe(null);
@@ -2088,11 +2092,12 @@ describe('hasMany', () => {
           },
         ]);
 
-        await db.user.where({ Id: { in: userIds } }).update({
+        const count = await db.user.where({ Id: { in: userIds } }).update({
           activeMessages: {
             disconnect: [{ Text: 'message 1' }, { Text: 'message 2' }],
           },
         });
+        expect(count).toBe(2);
 
         const messages = await db.message.order('Text');
         expect(messages[0].AuthorId).toBe(userIds[0]);
@@ -2103,11 +2108,12 @@ describe('hasMany', () => {
       it('should ignore empty disconnect list', async () => {
         const id = await db.user.get('Id').create(userData);
 
-        await db.user.find(id).update({
+        const count = await db.user.find(id).update({
           messages: {
             disconnect: [],
           },
         });
+        expect(count).toBe(1);
       });
 
       describe('relation callbacks', () => {
@@ -2136,11 +2142,12 @@ describe('hasMany', () => {
             },
           });
 
-          await db.user.find(UserId).update({
+          const count = await db.user.find(UserId).update({
             messages: {
               disconnect: [{ Text: 'message 1' }, { Text: 'message 2' }],
             },
           });
+          expect(count).toBe(1);
 
           const ids = await db.message.select('Id');
 
@@ -2190,11 +2197,12 @@ describe('hasMany', () => {
             },
           ]);
 
-          await db.user.where({ Id: { in: UserIds } }).update({
+          const count = await db.user.where({ Id: { in: UserIds } }).update({
             messages: {
               disconnect: [{ Text: 'message 1' }, { Text: 'message 3' }],
             },
           });
+          expect(count).toBe(2);
 
           const ids = await db.message
             .where({ Text: { in: ['message 1', 'message 3'] } })
@@ -2222,11 +2230,12 @@ describe('hasMany', () => {
 
         await db.message.create({ ...messageData, ChatId, Text: 'message 3' });
 
-        await db.user.find(id).update({
+        const count = await db.user.find(id).update({
           messages: {
             set: { Text: { in: ['message 2', 'message 3'] } },
           },
         });
+        expect(count).toBe(1);
 
         const [message1, message2, message3] = await db.message.order({
           Text: 'ASC',
@@ -2256,11 +2265,12 @@ describe('hasMany', () => {
           Text: 'message 4',
         });
 
-        await db.user.find(id).update({
+        const count = await db.user.find(id).update({
           activeMessages: {
             set: { Text: { in: ['message 3', 'message 4'] } },
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.message.order({
           Text: 'ASC',
@@ -2284,11 +2294,12 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(id).update({
+        const count = await db.user.find(id).update({
           messages: {
             set: [],
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.message;
 
@@ -2307,11 +2318,12 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(id).update({
+        const count = await db.user.find(id).update({
           activeMessages: {
             set: [],
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.message;
 
@@ -2338,11 +2350,12 @@ describe('hasMany', () => {
         });
 
         // It would fail if tried to nullify post's UserId because it's non-nullable.
-        await db.user.find(user.Id).update({
+        const count = await db.user.find(user.Id).update({
           posts: {
             set: [{ Title: user.UserKey }],
           },
         });
+        expect(count).toBe(1);
 
         const posts = await db.post;
         expect(posts).toMatchObject([{ UserId: user.Id, Title: user.UserKey }]);
@@ -2372,11 +2385,12 @@ describe('hasMany', () => {
             Text: 'message 3',
           });
 
-          await db.user.find(id).update({
+          const count = await db.user.find(id).update({
             messages: {
               set: { Text: { in: ['message 2', 'message 3'] } },
             },
           });
+          expect(count).toBe(1);
 
           const ids = await db.message.pluck('Id');
 
@@ -2406,13 +2420,14 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           messages: {
             delete: {
               Text: { in: ['message 1', 'message 2'] },
             },
           },
         });
+        expect(count).toBe(1);
 
         expect(await db.message.count()).toBe(1);
 
@@ -2436,13 +2451,14 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           activeMessages: {
             delete: {
               Text: { in: ['message 1', 'message 2'] },
             },
           },
         });
+        expect(count).toBe(1);
 
         expect(await db.message.count()).toBe(2);
 
@@ -2476,11 +2492,12 @@ describe('hasMany', () => {
           },
         ]);
 
-        await db.user.where({ Id: { in: userIds } }).update({
+        const count = await db.user.where({ Id: { in: userIds } }).update({
           messages: {
             delete: [{ Text: 'message 1' }, { Text: 'message 2' }],
           },
         });
+        expect(count).toBe(2);
 
         expect(await db.message.count()).toBe(1);
 
@@ -2514,7 +2531,7 @@ describe('hasMany', () => {
           },
         ]);
 
-        await db.user.where({ Id: { in: userIds } }).update({
+        const count = await db.user.where({ Id: { in: userIds } }).update({
           activeMessages: {
             delete: [
               { Text: 'message 1' },
@@ -2523,6 +2540,7 @@ describe('hasMany', () => {
             ],
           },
         });
+        expect(count).toBe(2);
 
         expect(await db.message.count()).toBe(2);
 
@@ -2540,11 +2558,12 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           messages: {
             delete: [],
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.user
           .queryRelated('messages', { Id, UserKey: 'key' })
@@ -2573,11 +2592,12 @@ describe('hasMany', () => {
 
           const ids = await db.message.pluck('Id');
 
-          await db.user.find(Id).update({
+          const count = await db.user.find(Id).update({
             messages: {
               delete: [{ Text: 'message 1' }, { Text: 'message 2' }],
             },
           });
+          expect(count).toBe(1);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -2616,7 +2636,7 @@ describe('hasMany', () => {
 
           const ids = await db.message.pluck('Id');
 
-          await db.user.where({ Id: { in: UserIds } }).update({
+          const count = await db.user.where({ Id: { in: UserIds } }).update({
             messages: {
               delete: [
                 { Text: 'message 1' },
@@ -2626,6 +2646,7 @@ describe('hasMany', () => {
               ],
             },
           });
+          expect(count).toBe(2);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -2652,7 +2673,7 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           messages: {
             update: {
               where: {
@@ -2664,6 +2685,7 @@ describe('hasMany', () => {
             },
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.user
           .queryRelated('messages', { Id, UserKey: 'key' })
@@ -2686,7 +2708,7 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           activeMessages: {
             update: {
               where: {
@@ -2698,6 +2720,7 @@ describe('hasMany', () => {
             },
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.message.pluck('Text');
         expect(messages).toEqual(['message 1', 'message 2', 'updated']);
@@ -2724,7 +2747,7 @@ describe('hasMany', () => {
           },
         ]);
 
-        await db.user.where({ Id: { in: userIds } }).update({
+        const count = await db.user.where({ Id: { in: userIds } }).update({
           messages: {
             update: {
               where: {
@@ -2736,6 +2759,7 @@ describe('hasMany', () => {
             },
           },
         });
+        expect(count).toBe(2);
 
         const messages = await db.message.order('Id').pluck('Text');
         expect(messages).toEqual(['updated', 'message 2', 'updated']);
@@ -2762,7 +2786,7 @@ describe('hasMany', () => {
           },
         ]);
 
-        await db.user.where({ Id: { in: userIds } }).update({
+        const count = await db.user.where({ Id: { in: userIds } }).update({
           activeMessages: {
             update: {
               where: {
@@ -2774,6 +2798,7 @@ describe('hasMany', () => {
             },
           },
         });
+        expect(count).toBe(2);
 
         const messages = await db.message.pluck('Text');
         expect(messages).toEqual(['message 1', 'message 2', 'updated']);
@@ -2789,7 +2814,7 @@ describe('hasMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           messages: {
             update: {
               where: [],
@@ -2799,6 +2824,7 @@ describe('hasMany', () => {
             },
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.user
           .queryRelated('messages', { Id, UserKey: 'key' })
@@ -2827,7 +2853,7 @@ describe('hasMany', () => {
 
           const ids = await db.message.pluck('Id');
 
-          await db.user.find(Id).update({
+          const count = await db.user.find(Id).update({
             messages: {
               update: {
                 where: [{ Text: 'message 1' }, { Text: 'message 2' }],
@@ -2837,6 +2863,7 @@ describe('hasMany', () => {
               },
             },
           });
+          expect(count).toBe(1);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -2875,7 +2902,7 @@ describe('hasMany', () => {
 
           const ids = await db.message.select('Id');
 
-          await db.user.where({ Id: { in: UserIds } }).update({
+          const count = await db.user.where({ Id: { in: UserIds } }).update({
             messages: {
               update: {
                 where: [
@@ -2890,6 +2917,7 @@ describe('hasMany', () => {
               },
             },
           });
+          expect(count).toBe(2);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -2968,11 +2996,12 @@ describe('hasMany', () => {
       it('should ignore empty create list', async () => {
         const Id = await db.user.get('Id').create(userData);
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           messages: {
             create: [],
           },
         });
+        expect(count).toBe(1);
 
         const messages = await db.user.queryRelated('messages', {
           Id,
@@ -2991,7 +3020,7 @@ describe('hasMany', () => {
           const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const Id = await db.user.get('Id').create({ ...userData, Age: 1 });
 
-          await db.user.find(Id).update({
+          const count = await db.user.find(Id).update({
             messages: {
               create: [
                 { ...messageData, ChatId, Text: 'created 1' },
@@ -2999,6 +3028,7 @@ describe('hasMany', () => {
               ],
             },
           });
+          expect(count).toBe(1);
 
           const ids = await db.message.select('Id');
 
@@ -3642,7 +3672,7 @@ describe('hasMany through', () => {
                 AND EXISTS (
                   SELECT 1
                   FROM "user"
-                  WHERE 
+                  WHERE
                     EXISTS (
                       SELECT 1
                       FROM "chatUser"
@@ -3735,7 +3765,7 @@ describe('hasMany through', () => {
                   AND "user"."id" = "p"."user_id"
                   AND "user"."user_key" = "p"."profile_key"
                 )
-              ) "t"  
+              ) "t"
             ) "chats" ON true
           `,
           ['title'],

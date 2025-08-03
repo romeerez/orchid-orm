@@ -2004,11 +2004,12 @@ describe('hasAndBelongsToMany', () => {
 
         const createdChats = await db.chat.createMany([chatData, chatData]);
 
-        await db.user.find(userId).update({
+        const count = await db.user.find(userId).update({
           chats: {
             add: createdChats.map((chat) => ({ IdOfChat: chat.IdOfChat })),
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user.queryRelated('chats', {
           Id: userId,
@@ -2045,11 +2046,12 @@ describe('hasAndBelongsToMany', () => {
           activeChatData,
         ]);
 
-        await db.user.find(userId).update({
+        const count = await db.user.find(userId).update({
           activeChats: {
             add: createdChats.map((chat) => ({ IdOfChat: chat.IdOfChat })),
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user.queryRelated('activeChats', {
           Id: userId,
@@ -2066,11 +2068,12 @@ describe('hasAndBelongsToMany', () => {
 
         const createdChats = await db.chat.createMany([chatData, chatData]);
 
-        await db.user.whereIn('Id', [userId1, userId2]).update({
+        const count = await db.user.whereIn('Id', [userId1, userId2]).update({
           chats: {
             add: createdChats.map((chat) => ({ IdOfChat: chat.IdOfChat })),
           },
         });
+        expect(count).toBe(2);
 
         const [chats1, chats2] = await Promise.all([
           db.user.queryRelated('chats', {
@@ -2118,11 +2121,12 @@ describe('hasAndBelongsToMany', () => {
           activeChatData,
         ]);
 
-        await db.user.whereIn('Id', [userId1, userId2]).update({
+        const count = await db.user.whereIn('Id', [userId1, userId2]).update({
           activeChats: {
             add: createdChats.map((chat) => ({ IdOfChat: chat.IdOfChat })),
           },
         });
+        expect(count).toBe(2);
 
         const [chats1, chats2] = await Promise.all([
           db.user.queryRelated('activeChats', {
@@ -2161,11 +2165,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(userId).update({
+        const count = await db.user.find(userId).update({
           chats: {
             add: { Title: chatData.Title },
           },
         });
+        expect(count).toBe(1);
       });
     });
 
@@ -2183,11 +2188,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.where({ Id: userId }).update({
+        const count = await db.user.where({ Id: userId }).update({
           chats: {
             disconnect: [{ Title: 'chat 1' }, { Title: 'chat 2' }],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user.queryRelated('chats', {
           Id: userId,
@@ -2210,11 +2216,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.where({ Id: userId }).update({
+        const count = await db.user.where({ Id: userId }).update({
           activeChats: {
             disconnect: [{ Title: 'chat 1' }, { Title: 'chat 2' }],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user.queryRelated('chats', {
           Id: userId,
@@ -2232,11 +2239,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           chats: {
             disconnect: [],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user
           .queryRelated('chats', { Id, UserKey: 'key' })
@@ -2262,11 +2270,12 @@ describe('hasAndBelongsToMany', () => {
           Title: 'chat 3',
         });
 
-        await db.user.where({ Id }).update({
+        const count = await db.user.where({ Id }).update({
           chats: {
             set: [{ Title: 'chat 2' }, { Title: 'chat 3' }],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user
           .queryRelated('chats', { Id, UserKey: 'key' })
@@ -2298,7 +2307,7 @@ describe('hasAndBelongsToMany', () => {
           },
         ]);
 
-        await db.user.where({ Id }).update({
+        const count = await db.user.where({ Id }).update({
           activeChats: {
             set: [
               { Title: 'chat 2' },
@@ -2307,6 +2316,7 @@ describe('hasAndBelongsToMany', () => {
             ],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user
           .queryRelated('activeChats', { Id, UserKey: 'key' })
@@ -2327,11 +2337,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.where({ Id, UserKey: 'key' }).update({
+        const count = await db.user.where({ Id, UserKey: 'key' }).update({
           chats: {
             set: [],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user.queryRelated('chats', {
           Id,
@@ -2352,11 +2363,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.where({ Id, UserKey: 'key' }).update({
+        const count = await db.user.where({ Id, UserKey: 'key' }).update({
           activeChats: {
             set: [],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user
           .queryRelated('chats', {
@@ -2389,11 +2401,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           chats: {
             delete: [{ Title: 'chat 1' }, { Title: 'chat 2' }],
           },
         });
+        expect(count).toBe(1);
 
         expect(await db.chat.count()).toBe(2);
 
@@ -2415,11 +2428,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           activeChats: {
             delete: [{ Title: 'chat 1' }, { Title: 'chat 2' }],
           },
         });
+        expect(count).toBe(1);
 
         expect(await db.chat.count()).toBe(2);
 
@@ -2438,11 +2452,12 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           chats: {
             delete: [],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user
           .queryRelated('chats', { Id, UserKey: 'key' })
@@ -2475,7 +2490,8 @@ describe('hasAndBelongsToMany', () => {
 
           const ids = await db.chat.select('IdOfChat');
 
-          await db.user.find(id).update(data);
+          const count = await db.user.find(id).update(data);
+          expect(count).toBe(1);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -2508,7 +2524,10 @@ describe('hasAndBelongsToMany', () => {
 
           const ids = await db.chat.select('IdOfChat');
 
-          await db.user.where({ Id: { in: UserIds } }).update(data);
+          const count = await db.user
+            .where({ Id: { in: UserIds } })
+            .update(data);
+          expect(count).toBe(2);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -2537,7 +2556,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(id).update({
+        const count = await db.user.find(id).update({
           chats: {
             update: {
               where: {
@@ -2549,6 +2568,7 @@ describe('hasAndBelongsToMany', () => {
             },
           },
         });
+        expect(count).toBe(1);
 
         const titles = await db.chat.order('IdOfChat').pluck('Title');
         expect(titles).toEqual(['chat 1', 'updated', 'updated', 'chat 4']);
@@ -2573,7 +2593,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(id).update({
+        const count = await db.user.find(id).update({
           activeChats: {
             update: {
               where: {
@@ -2585,6 +2605,7 @@ describe('hasAndBelongsToMany', () => {
             },
           },
         });
+        expect(count).toBe(1);
 
         const titles = await db.chat.order('IdOfChat').pluck('Title');
         expect(titles).toEqual(['chat 1', 'chat 2', 'updated', 'chat 4']);
@@ -2598,7 +2619,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           chats: {
             update: {
               where: [],
@@ -2608,6 +2629,7 @@ describe('hasAndBelongsToMany', () => {
             },
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user
           .queryRelated('chats', { Id, UserKey: 'key' })
@@ -2638,7 +2660,8 @@ describe('hasAndBelongsToMany', () => {
             },
           });
 
-          await db.user.find(id).update(data);
+          const count = await db.user.find(id).update(data);
+          expect(count).toBe(1);
 
           const IdOfChat = await db.chat.get('IdOfChat');
 
@@ -2665,7 +2688,10 @@ describe('hasAndBelongsToMany', () => {
 
           resetMocks();
 
-          await db.user.where({ Id: { in: userIds } }).update(data);
+          const count = await db.user
+            .where({ Id: { in: userIds } })
+            .update(data);
+          expect(count).toBe(2);
 
           const ids = await db.chat.pluck('IdOfChat');
 
@@ -2685,7 +2711,7 @@ describe('hasAndBelongsToMany', () => {
           .pluck('Id')
           .createMany([userData, userData]);
 
-        await db.user.where({ Id: { in: userIds } }).update({
+        const count = await db.user.where({ Id: { in: userIds } }).update({
           chats: {
             create: [
               {
@@ -2699,6 +2725,7 @@ describe('hasAndBelongsToMany', () => {
             ],
           },
         });
+        expect(count).toBe(2);
 
         const firstUserChats = await db.user
           .queryRelated('chats', { Id: userIds[0], UserKey: 'key' })
@@ -2724,7 +2751,7 @@ describe('hasAndBelongsToMany', () => {
       it('should create many records and connect them, using `on`', async () => {
         const users = await db.user.createMany([userData, userData]);
 
-        await db.user
+        const count = await db.user
           .where({ Id: { in: users.map((user) => user.Id) } })
           .update({
             activeChats: {
@@ -2740,6 +2767,7 @@ describe('hasAndBelongsToMany', () => {
               ],
             },
           });
+        expect(count).toBe(2);
 
         const user1Chats = await db.user
           .queryRelated('chats', users[0])
@@ -2758,11 +2786,12 @@ describe('hasAndBelongsToMany', () => {
       it('should ignore empty list', async () => {
         const Id = await db.user.get('Id').create(userData);
 
-        await db.user.find(Id).update({
+        const count = await db.user.find(Id).update({
           chats: {
             create: [],
           },
         });
+        expect(count).toBe(1);
 
         const chats = await db.user.queryRelated('chats', {
           Id,
@@ -2786,7 +2815,8 @@ describe('hasAndBelongsToMany', () => {
         it('should invoke callbacks', async () => {
           const id = await db.user.get('Id').create(userData);
 
-          await db.user.find(id).update(data);
+          const count = await db.user.find(id).update(data);
+          expect(count).toBe(1);
 
           const ids = await db.chat.select('IdOfChat', 'ChatKey');
 
@@ -2802,7 +2832,10 @@ describe('hasAndBelongsToMany', () => {
 
           resetMocks();
 
-          await db.user.where({ Id: { in: userIds } }).update(data);
+          const count = await db.user
+            .where({ Id: { in: userIds } })
+            .update(data);
+          expect(count).toBe(2);
 
           const ids = await db.chat.select('IdOfChat', 'ChatKey');
 

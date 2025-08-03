@@ -172,27 +172,14 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
   return self as never;
 };
 
-// sets query type, `returnType`, casts type from Query to UpdateResult
-const update = <T extends UpdateSelf>(self: T): UpdateResult<T> => {
-  const q = (self as unknown as Query).q;
-  q.type = 'update';
-
-  if (!q.select) {
-    q.returningMany = !q.returnType || q.returnType === 'all';
-    q.returnType = 'valueOrThrow';
-    q.returning = true;
-  }
-
-  throwIfNoWhere(self as unknown as Query, 'update');
-
-  return self as never;
-};
-
 export const _queryUpdate = <T extends UpdateSelf>(
   query: T,
   arg: UpdateArg<T>,
 ): UpdateResult<T> => {
   const { q } = query as unknown as Query;
+
+  q.type = 'update';
+  const returnCount = !q.select;
 
   const set: RecordUnknown = { ...arg };
   pushQueryValueImmutable(query as unknown as Query, 'updateData', set);
@@ -279,7 +266,15 @@ export const _queryUpdate = <T extends UpdateSelf>(
     };
   }
 
-  return update(query);
+  if (returnCount) {
+    q.returningMany = !q.returnType || q.returnType === 'all';
+    q.returnType = 'valueOrThrow';
+    q.returning = true;
+  }
+
+  throwIfNoWhere(query as unknown as Query, 'update');
+
+  return query as never;
 };
 
 export const _queryUpdateOrThrow = <T extends UpdateSelf>(

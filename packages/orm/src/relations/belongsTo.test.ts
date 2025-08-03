@@ -1699,16 +1699,15 @@ describe('belongsTo', () => {
           .select('Id', 'UserId')
           .create({ Bio: 'bio', user: { create: userData } });
 
-        await db.profile
-          .select('UserId')
-          .find(Id)
-          .update({
-            user: {
-              update: {
-                Name: 'new name',
-              },
+        const updated = await db.profile.find(Id).update({
+          user: {
+            update: {
+              Name: 'new name',
             },
-          });
+          },
+        });
+
+        expect(updated).toBe(1);
 
         const user = await db.user.findBy({ Id: UserId });
         expect(user.Name).toBe('new name');
@@ -1719,16 +1718,15 @@ describe('belongsTo', () => {
           .select('Id', 'UserId')
           .create({ Bio: 'bio', user: { create: userData } });
 
-        await db.profile
-          .select('UserId')
-          .find(Id)
-          .update({
-            activeUser: {
-              update: {
-                Name: 'new name',
-              },
+        const count = await db.profile.find(Id).update({
+          activeUser: {
+            update: {
+              Name: 'new name',
             },
-          });
+          },
+        });
+
+        expect(count).toBe(1);
 
         const user = await db.user.findBy({ Id: UserId });
         expect(user.Name).toBe(userData.Name);
@@ -1740,7 +1738,7 @@ describe('belongsTo', () => {
           { Bio: 'bio', user: { create: userData } },
         ]);
 
-        await db.profile
+        const count = await db.profile
           .where({ Id: { in: profiles.map((profile) => profile.Id) } })
           .update({
             user: {
@@ -1749,6 +1747,8 @@ describe('belongsTo', () => {
               },
             },
           });
+
+        expect(count).toBe(2);
 
         const updatedNames = await db.user.pluck('Name').where({
           Id: { in: profiles.map((profile) => profile.UserId) },
@@ -1762,7 +1762,7 @@ describe('belongsTo', () => {
           { Bio: 'bio', user: { create: userData } },
         ]);
 
-        await db.profile
+        const count = await db.profile
           .where({ Id: { in: profiles.map((profile) => profile.Id) } })
           .update({
             activeUser: {
@@ -1771,6 +1771,8 @@ describe('belongsTo', () => {
               },
             },
           });
+
+        expect(count).toBe(2);
 
         const updatedNames = await db.user
           .pluck('Name')
@@ -1808,8 +1810,9 @@ describe('belongsTo', () => {
             .select('Id', 'UserId')
             .create(profileWithUserData);
 
-          await db.profile.find(Id).update(data);
+          const count = await db.profile.find(Id).update(data);
 
+          expect(count).toBe(1);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toBeCalledWith([{ Id: UserId }], expect.any(Db));
@@ -1822,10 +1825,11 @@ describe('belongsTo', () => {
             .select('Id', 'UserId')
             .createMany([profileWithUserData, profileWithUserData]);
 
-          await db.profile
+          const count = await db.profile
             .where({ Id: { in: profiles.map((p) => p.Id) } })
             .update(data);
 
+          expect(count).toBe(2);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toBeCalledWith(
@@ -1845,7 +1849,7 @@ describe('belongsTo', () => {
           },
         });
 
-        await db.profile.find(profile.Id).update({
+        const count = await db.profile.find(profile.Id).update({
           user: {
             upsert: {
               update: {
@@ -1855,6 +1859,8 @@ describe('belongsTo', () => {
             },
           },
         });
+
+        expect(count).toBe(1);
 
         const user = await db.profile.queryRelated('user', profile);
         expect(user?.Name).toBe('updated');
@@ -1953,7 +1959,7 @@ describe('belongsTo', () => {
               },
             },
           }),
-        ).toThrow();
+        ).toThrow('`upsert` option is not allowed in a batch update');
       });
 
       describe('relation callbacks', () => {
@@ -1988,8 +1994,9 @@ describe('belongsTo', () => {
 
           resetMocks();
 
-          await db.profile.find(Id).update(data);
+          const count = await db.profile.find(Id).update(data);
 
+          expect(count).toBe(1);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toBeCalledWith([{ Id: UserId }], expect.any(Db));
@@ -2002,9 +2009,10 @@ describe('belongsTo', () => {
 
           const Id = await db.profile.get('Id').create(profileData);
 
-          await db.profile.find(Id).update(data);
+          const count = await db.profile.find(Id).update(data);
 
-          expect(beforeUpdate).not.toBeCalled();
+          expect(count).toBe(1);
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).not.toBeCalled();
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -2115,8 +2123,9 @@ describe('belongsTo', () => {
             .get('Id')
             .create({ ...profileData, UserId });
 
-          await db.profile.find(Id).update(data);
+          const count = await db.profile.find(Id).update(data);
 
+          expect(count).toBe(1);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
@@ -2134,8 +2143,11 @@ describe('belongsTo', () => {
 
           resetMocks();
 
-          await db.profile.where({ Id: { in: ids } }).update(data);
+          const count = await db.profile
+            .where({ Id: { in: ids } })
+            .update(data);
 
+          expect(count).toBe(2);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
