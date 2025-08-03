@@ -572,8 +572,8 @@ ${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
 
     it('should add values to enum', async () => {
       await arrange({
-        prepareDb: prepareDb(['one']),
-        tables: [tableWithEnum(['one', 'two', 'three'])],
+        prepareDb: prepareDb(['one', 'four']),
+        tables: [tableWithEnum(['one', 'two', 'three', 'four'])],
       });
 
       await act();
@@ -590,8 +590,8 @@ change(async (db) => {
 
     it('should drop values from enum', async () => {
       await arrange({
-        prepareDb: prepareDb(['one', 'two', 'three']),
-        tables: [tableWithEnum(['one'])],
+        prepareDb: prepareDb(['one', 'two', 'three', 'four']),
+        tables: [tableWithEnum(['one', 'four'])],
       });
 
       await act();
@@ -627,10 +627,10 @@ ${green('+ add values to enum')} numbers: three, four`,
       );
     });
 
-    it('should do nothing if enum was not changed', async () => {
+    it('should do nothing if enum was not changed even if the order was changed', async () => {
       await arrange({
         prepareDb: prepareDb(['one', 'two', 'three']),
-        tables: [tableWithEnum(['one', 'two', 'three'])],
+        tables: [tableWithEnum(['one', 'three', 'two'])],
       });
 
       await act();

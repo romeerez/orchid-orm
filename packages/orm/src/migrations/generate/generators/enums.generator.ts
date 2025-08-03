@@ -142,28 +142,28 @@ const changeEnum = (
   const { values: codeValues, schema, name } = codeEnum;
 
   if (dbValues.length < codeValues.length) {
-    if (!dbValues.some((value, i) => value !== codeValues[i])) {
+    if (!dbValues.some((value) => !codeValues.includes(value))) {
       ast.push({
         type: 'enumValues',
         action: 'add',
         schema,
         name,
-        values: codeValues.slice(-(codeValues.length - dbValues.length)),
+        values: codeValues.filter((value) => !dbValues.includes(value)),
       });
       return;
     }
   } else if (dbValues.length > codeValues.length) {
-    if (!codeValues.some((value, i) => value !== dbValues[i])) {
+    if (!codeValues.some((value) => !dbValues.includes(value))) {
       ast.push({
         type: 'enumValues',
         action: 'drop',
         schema,
         name,
-        values: dbValues.slice(-(dbValues.length - codeValues.length)),
+        values: dbValues.filter((value) => !codeValues.includes(value)),
       });
       return;
     }
-  } else if (!dbValues.some((value, i) => value !== codeValues[i])) {
+  } else if (!dbValues.some((value) => !codeValues.includes(value))) {
     return;
   }
 
