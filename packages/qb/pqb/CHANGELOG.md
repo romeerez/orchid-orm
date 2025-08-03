@@ -1,5 +1,11 @@
 # pqb
 
+## 0.54.3
+
+### Patch Changes
+
+- 91021fc: Fix returning count in update when having nested update (#545)
+
 ## 0.54.2
 
 ### Patch Changes

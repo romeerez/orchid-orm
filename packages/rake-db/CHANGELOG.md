@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.25.16
+
+### Patch Changes
+
+- 908abd6: Replace spaces with dashes when generating migrations (#546)
+- 1c8d4c8: Prevent non-sequential migrations (#542)
+- Updated dependencies [91021fc]
+  - pqb@0.54.3
+
 ## 2.25.15
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.54.1
+
+### Patch Changes
+
+- 91021fc: Fix returning count in update when having nested update (#545)
+- d770b88: Fix migration gen to ignore a different order of enum values (#547)
+- Updated dependencies [91021fc]
+- Updated dependencies [908abd6]
+- Updated dependencies [1c8d4c8]
+  - pqb@0.54.3
+  - rake-db@2.25.16
+
 ## 1.54.0
 
 ### Minor Changes
