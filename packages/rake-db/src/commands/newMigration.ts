@@ -18,7 +18,10 @@ export const writeMigrationFile = async (
 ): Promise<void> => {
   await mkdir(config.migrationsPath, { recursive: true });
 
-  const filePath = path.resolve(config.migrationsPath, `${version}_${name}.ts`);
+  const filePath = path.resolve(
+    config.migrationsPath,
+    `${version}_${name.replaceAll(' ', '-')}.ts`,
+  );
   const importPath = getImportPath(
     filePath,
     path.join(config.basePath, config.dbScript),

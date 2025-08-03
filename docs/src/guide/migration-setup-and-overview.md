@@ -157,6 +157,7 @@ And now it's possible to use it from a command line:
 npm run db new create-a-table
 pnpm db new create-a-table
 yarn db new create-a-table
+pnpm db new "create a table" # spaces are replaced with dashes
 ```
 
 ## serial vs timestamp

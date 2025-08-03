@@ -106,6 +106,7 @@ describe('common', () => {
       expect(getFirstWordAndRest('fooBarBaz')).toEqual(['foo', 'barBaz']);
       expect(getFirstWordAndRest('foo-barBaz')).toEqual(['foo', 'barBaz']);
       expect(getFirstWordAndRest('foo_barBaz')).toEqual(['foo', 'barBaz']);
+      expect(getFirstWordAndRest('foo barBaz')).toEqual(['foo', 'barBaz']);
     });
 
     it('should return input when it is a single word', () => {
@@ -118,6 +119,7 @@ describe('common', () => {
       expect(getTextAfterTo('addColumnToTable')).toBe('table');
       expect(getTextAfterTo('add-column-to-table')).toBe('table');
       expect(getTextAfterTo('add_column_to_table')).toBe('table');
+      expect(getTextAfterTo('add column to table')).toBe('table');
     });
   });
 

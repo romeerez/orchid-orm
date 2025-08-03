@@ -11,9 +11,10 @@ export interface RakeDbCtx {
 export const getFirstWordAndRest = (
   input: string,
 ): [string] | [string, string] => {
-  const i = input.search(/(?=[A-Z])|[-_]/);
+  const i = input.search(/(?=[A-Z])|[-_ ]/);
   if (i !== -1) {
-    const restStart = input[i] === '-' || input[i] === '_' ? i + 1 : i;
+    const restStart =
+      input[i] === '-' || input[i] === '_' || input[i] === ' ' ? i + 1 : i;
     const rest = input.slice(restStart);
     return [input.slice(0, i), rest[0].toLowerCase() + rest.slice(1)];
   } else {
@@ -29,20 +30,21 @@ const getTextAfterRegExp = (
   let i = input.search(regex);
   if (i === -1) return;
 
-  if (input[i] === '-' || input[i] === '_') i++;
+  if (input[i] === '-' || input[i] === '_' || input[i] === ' ') i++;
   i += length;
 
-  const start = input[i] == '-' || input[i] === '_' ? i + 1 : i;
+  const start =
+    input[i] == '-' || input[i] === '_' || input[i] === ' ' ? i + 1 : i;
   const text = input.slice(start);
   return text[0].toLowerCase() + text.slice(1);
 };
 
 export const getTextAfterTo = (input: string): string | undefined => {
-  return getTextAfterRegExp(input, /(To|-to|_to)[A-Z-_]/, 2);
+  return getTextAfterRegExp(input, /(To|-to|_to| to)[A-Z-_ ]/, 2);
 };
 
 export const getTextAfterFrom = (input: string): string | undefined => {
-  return getTextAfterRegExp(input, /(From|-from|_from)[A-Z-_]/, 4);
+  return getTextAfterRegExp(input, /(From|-from|_from| from)[A-Z-_ ]/, 4);
 };
 
 // Join array of strings into a camelCased string.

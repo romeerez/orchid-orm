@@ -324,6 +324,7 @@ Optionally, provide a migration file name:
 
 ```shell
 pnpm db g create-some-tables
+pnpm db g "create some tables" # spaces are replaced with dashes
 ```
 
 It automatically calls `db up` to apply existing migrations when it starts.

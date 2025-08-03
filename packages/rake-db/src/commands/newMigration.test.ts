@@ -23,7 +23,10 @@ const testGenerate = async (args: string[], content: string) => {
 
   expect(mkdir).toHaveBeenCalledWith(migrationsPath, { recursive: true });
 
-  const filePath = path.resolve(migrationsPath, `0001_${name}.ts`);
+  const filePath = path.resolve(
+    migrationsPath,
+    `0001_${name.replaceAll(' ', '-')}.ts`,
+  );
   expect(writeFile).toHaveBeenCalledWith(filePath, content);
 
   expect(log.mock.calls).toEqual([[`Created ${pathToLog(filePath)}`]]);
@@ -44,7 +47,7 @@ describe('newMigration', () => {
 
   it('should create a file for create table migration', async () => {
     await testGenerate(
-      ['createTable'],
+      ['create table'],
       `import { change } from '../dbScript';
 
 change(async (db) => {
@@ -58,7 +61,7 @@ change(async (db) => {
 
   it('should create a file to change migration', async () => {
     await testGenerate(
-      ['changeTable'],
+      ['change table'],
       `import { change } from '../dbScript';
 
 change(async (db) => {
@@ -72,7 +75,7 @@ change(async (db) => {
 
   it('should create a file for add columns migration', async () => {
     await testGenerate(
-      ['addColumns'],
+      ['add columns'],
       `import { change } from '../dbScript';
 
 change(async (db) => {
@@ -86,7 +89,7 @@ change(async (db) => {
 
   it('should create a file for add columns migration with table', async () => {
     await testGenerate(
-      ['addColumnsToTable'],
+      ['add columns to table'],
       `import { change } from '../dbScript';
 
 change(async (db) => {
@@ -100,7 +103,7 @@ change(async (db) => {
 
   it('should create a file for remove columns migration with table', async () => {
     await testGenerate(
-      ['removeColumnsFromTable'],
+      ['remove columns from table'],
       `import { change } from '../dbScript';
 
 change(async (db) => {
@@ -114,7 +117,7 @@ change(async (db) => {
 
   it('should create a file for drop table migration', async () => {
     await testGenerate(
-      ['dropTable', 'id:integer.primaryKey', 'name:varchar(20).nullable'],
+      ['drop table', 'id:integer.primaryKey', 'name:varchar(20).nullable'],
       `import { change } from '../dbScript';
 
 change(async (db) => {
