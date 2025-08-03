@@ -181,6 +181,26 @@ describe('migrateOrRollback', () => {
   });
 
   describe('migrate', () => {
+    it('should fail on gaps in sequential migrations', async () => {
+      arrange({
+        files: [files[0], files[2]],
+      });
+
+      await expect(act(migrate)).rejects.toThrow(
+        `There is a gap between migrations ${files[0].path} and ${files[2].path}`,
+      );
+    });
+
+    it('should fail when there are equally numbered migrations', async () => {
+      arrange({
+        files: [files[0], files[0]],
+      });
+
+      await expect(act(migrate)).rejects.toThrow(
+        `Found migrations with the same number: ${files[0].path} and ${files[0].path}`,
+      );
+    });
+
     it('should work properly', async () => {
       const env = arrange({
         files: files.slice(0, 3),

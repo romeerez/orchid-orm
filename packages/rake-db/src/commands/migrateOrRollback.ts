@@ -322,6 +322,27 @@ const checkMigrationOrder = (
   { sequence, map }: RakeDbAppliedVersions,
   force?: boolean,
 ) => {
+  if (config.migrationId !== 'timestamp') {
+    let prev: MigrationItem = set.migrations[0];
+    for (let i = 1; i < set.migrations.length; i++) {
+      const file = set.migrations[i];
+
+      const version = +file.version;
+      const prevVersion = +prev.version;
+      if (version === prevVersion) {
+        throw new Error(
+          `Found migrations with the same number: ${prev.path} and ${file.path}`,
+        );
+      } else if (version - prevVersion > 1) {
+        throw new Error(
+          `There is a gap between migrations ${prev.path} and ${file.path}`,
+        );
+      }
+
+      prev = file;
+    }
+  }
+
   const last = sequence[sequence.length - 1];
   if (last) {
     for (const file of set.migrations) {
