@@ -5,7 +5,7 @@ import {
   PoolConnection,
   FieldPacket,
 } from 'mysql2/promise';
-import { AdapterBase, QueryResultRow, Sql } from 'orchid-core';
+import { AdapterBase, QueryResultRow, SingleSqlItem, Sql } from 'orchid-core';
 
 export type QueryResult<T extends QueryResultRow> = [
   (T & {
@@ -73,7 +73,7 @@ export class Adapter implements AdapterBase {
   }
 
   async transaction<Result>(
-    begin: Sql,
+    begin: SingleSqlItem,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
     const client = await this.pool.getConnection();
