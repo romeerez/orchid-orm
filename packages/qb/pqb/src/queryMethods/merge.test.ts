@@ -8,14 +8,6 @@ import {
 } from '../test-utils/test-utils';
 import { logParamToLogObject } from './log';
 import {
-  ColumnInfoQueryData,
-  DeleteQueryData,
-  InsertQueryData,
-  SelectQueryData,
-  TruncateQueryData,
-  UpdateQueryData,
-} from '../sql';
-import {
   assertType,
   expectSql,
   testZodColumnTypes as t,
@@ -310,215 +302,199 @@ describe('merge queries', () => {
 
   describe('queryData', () => {
     it('should merge query data', () => {
-      const q1 = User.clone();
-      const q2 = User.clone();
+      const query1 = User.clone();
+      const query2 = User.clone();
+      const q1 = query1.q;
+      const q2 = query2.q;
 
-      q1.q.shape = {
+      q1.shape = {
         number: t.integer(),
       };
-      q2.q.shape = {
+      q2.shape = {
         string: t.string(),
       };
-      q1.q.wrapInTransaction = false;
-      q2.q.wrapInTransaction = true;
-      q1.q.throwOnNotFound = false;
-      q2.q.throwOnNotFound = true;
-      q1.q.withShapes = { a: { shape: { id: t.integer() } } };
-      q2.q.withShapes = { b: { shape: { name: t.string() } } };
-      q1.q.schema = 'a';
-      q2.q.schema = 'b';
-      q1.q.as = 'a';
-      q2.q.as = 'b';
-      q1.q.from = testDb.sql`a`;
-      q2.q.from = testDb.sql`b`;
-      q1.q.coalesceValue = 'a';
-      q2.q.coalesceValue = 'b';
-      q1.q.parsers = { [getValueKey]: (x) => x, a: (x) => x };
-      q2.q.parsers = { [getValueKey]: (x) => x, b: (x) => x };
-      q1.q.notFoundDefault = 1;
-      q2.q.notFoundDefault = 2;
-      q1.q.defaults = { a: 1 };
-      q2.q.defaults = { b: 2 };
-      q1.q.before = [() => {}];
-      q2.q.before = [() => {}];
-      q1.q.log = logParamToLogObject(console, true);
-      q2.q.log = logParamToLogObject(console, true);
-      q1.q.logger = {
+      q1.wrapInTransaction = false;
+      q2.wrapInTransaction = true;
+      q1.throwOnNotFound = false;
+      q2.throwOnNotFound = true;
+      q1.withShapes = { a: { shape: { id: t.integer() } } };
+      q2.withShapes = { b: { shape: { name: t.string() } } };
+      q1.schema = 'a';
+      q2.schema = 'b';
+      q1.as = 'a';
+      q2.as = 'b';
+      q1.from = testDb.sql`a`;
+      q2.from = testDb.sql`b`;
+      q1.coalesceValue = 'a';
+      q2.coalesceValue = 'b';
+      q1.parsers = { [getValueKey]: (x) => x, a: (x) => x };
+      q2.parsers = { [getValueKey]: (x) => x, b: (x) => x };
+      q1.notFoundDefault = 1;
+      q2.notFoundDefault = 2;
+      q1.defaults = { a: 1 };
+      q2.defaults = { b: 2 };
+      q1.before = [() => {}];
+      q2.before = [() => {}];
+      q1.log = logParamToLogObject(console, true);
+      q2.log = logParamToLogObject(console, true);
+      q1.logger = {
         log() {},
         error() {},
         warn() {},
       };
-      q2.q.logger = console;
-      q1.q.type = 'update';
-      q2.q.type = 'insert';
+      q2.logger = console;
+      q1.type = 'update';
+      q2.type = 'insert';
 
       const computedA = new ComputedColumn('one', [], noop);
       const computedB = new ComputedColumn('one', [], noop);
-      q1.q.selectedComputeds = { a: computedA };
-      q2.q.selectedComputeds = { b: computedB };
+      q1.selectedComputeds = { a: computedA };
+      q2.selectedComputeds = { b: computedB };
 
-      const s1 = q1.q as unknown as SelectQueryData;
-      const s2 = q2.q as unknown as SelectQueryData;
-      s1.distinct = ['id'];
-      s2.distinct = ['name'];
-      s1.only = false;
-      s2.only = true;
-      s1.joinedShapes = { a: q1.q.shape };
-      s2.joinedShapes = { b: q2.q.shape };
-      s1.joinedParsers = { a: q1.q.parsers };
-      s2.joinedParsers = { b: q2.q.parsers };
-      s1.group = ['a'];
-      s2.group = ['b'];
+      q1.distinct = ['id'];
+      q2.distinct = ['name'];
+      q1.only = false;
+      q2.only = true;
+      q1.joinedShapes = { a: q1.shape };
+      q2.joinedShapes = { b: q2.shape };
+      q1.joinedParsers = { a: q1.parsers };
+      q2.joinedParsers = { b: q2.parsers };
+      q1.group = ['a'];
+      q2.group = ['b'];
 
       const sum = [User.sum('id').gt(1).q.expr as Expression];
       const avg = [User.avg('id').lt(10).q.expr as Expression];
-      s1.having = [sum];
-      s2.having = [avg];
+      q1.having = [sum];
+      q2.having = [avg];
 
-      s1.union = { b: User, u: [{ a: testDb.sql`a`, k: 'UNION' }] };
-      s2.union = { b: User, u: [{ a: testDb.sql`b`, k: 'EXCEPT' }] };
-      s1.order = [{ id: 'ASC' }];
-      s2.order = [{ name: 'DESC' }];
-      s1.limit = 1;
-      s2.limit = 2;
-      s1.offset = 1;
-      s2.offset = 2;
-      s1.for = { type: 'UPDATE' };
-      s2.for = { type: 'SHARE' };
-      s1.getColumn = t.integer();
-      s2.getColumn = t.string();
+      q1.union = { b: User, u: [{ a: testDb.sql`a`, k: 'UNION' }] };
+      q2.union = { b: User, u: [{ a: testDb.sql`b`, k: 'EXCEPT' }] };
+      q1.order = [{ id: 'ASC' }];
+      q2.order = [{ name: 'DESC' }];
+      q1.limit = 1;
+      q2.limit = 2;
+      q1.offset = 1;
+      q2.offset = 2;
+      q1.for = { type: 'UPDATE' };
+      q2.for = { type: 'SHARE' };
+      q1.getColumn = t.integer();
+      q2.getColumn = t.string();
 
-      const i1 = q1.q as unknown as InsertQueryData;
-      const i2 = q2.q as unknown as InsertQueryData;
-      i1.columns = ['id'];
-      i2.columns = ['name'];
-      i1.values = [[1]];
-      i2.values = [['name']];
-      i1.join = [{ type: 'a', args: { w: 'a', a: [emptyObject] } }];
-      i2.join = [{ type: 'b', args: { w: 'b', a: [emptyObject] } }];
-      i1.onConflict = {};
-      i2.onConflict = {
+      q1.columns = ['id'];
+      q2.columns = ['name'];
+      q1.values = [[1]];
+      q2.values = [['name']];
+      q1.join = [{ type: 'a', args: { w: 'a', a: [emptyObject] } }];
+      q2.join = [{ type: 'b', args: { w: 'b', a: [emptyObject] } }];
+      q1.onConflict = {};
+      q2.onConflict = {
         target: 'target',
         merge: 'merge',
       };
-      i1.beforeCreate = [() => {}];
-      i2.beforeCreate = [() => {}];
-      i1.afterCreate = [() => {}];
-      i2.afterCreate = [() => {}];
-      i1.afterCreateSelect = new Set(['one']);
-      i2.afterCreateSelect = new Set(['two']);
+      q1.beforeCreate = [() => {}];
+      q2.beforeCreate = [() => {}];
+      q1.afterCreate = [() => {}];
+      q2.afterCreate = [() => {}];
+      q1.afterCreateSelect = new Set(['one']);
+      q2.afterCreateSelect = new Set(['two']);
 
-      const u1 = q1.q as unknown as UpdateQueryData;
-      const u2 = q2.q as unknown as UpdateQueryData;
-      u1.updateData = [{ id: 1 }];
-      u2.updateData = [{ name: 'name' }];
-      u1.beforeUpdate = [() => {}];
-      u2.beforeUpdate = [() => {}];
-      i1.afterUpdate = [() => {}];
-      i2.afterUpdate = [() => {}];
-      i1.afterUpdateSelect = new Set(['one']);
-      i2.afterUpdateSelect = new Set(['two']);
+      q1.updateData = [{ id: 1 }];
+      q2.updateData = [{ name: 'name' }];
+      q1.beforeUpdate = [() => {}];
+      q2.beforeUpdate = [() => {}];
+      q1.afterUpdate = [() => {}];
+      q2.afterUpdate = [() => {}];
+      q1.afterUpdateSelect = new Set(['one']);
+      q2.afterUpdateSelect = new Set(['two']);
 
-      const d1 = q1.q as unknown as DeleteQueryData;
-      const d2 = q2.q as unknown as DeleteQueryData;
-      d1.beforeDelete = [() => {}];
-      d2.beforeDelete = [() => {}];
-      i1.afterDelete = [() => {}];
-      i2.afterDelete = [() => {}];
-      i1.afterDeleteSelect = new Set(['one']);
-      i2.afterDeleteSelect = new Set(['two']);
+      q1.beforeDelete = [() => {}];
+      q2.beforeDelete = [() => {}];
+      q1.afterDelete = [() => {}];
+      q2.afterDelete = [() => {}];
+      q1.afterDeleteSelect = new Set(['one']);
+      q2.afterDeleteSelect = new Set(['two']);
 
-      const t1 = q1.q as unknown as TruncateQueryData;
-      const t2 = q2.q as unknown as TruncateQueryData;
-      t1.restartIdentity = false;
-      t2.restartIdentity = true;
-      t1.cascade = false;
-      t2.cascade = true;
+      q1.restartIdentity = false;
+      q2.restartIdentity = true;
+      q1.cascade = false;
+      q2.cascade = true;
 
-      const c1 = q1.q as unknown as ColumnInfoQueryData;
-      const c2 = q2.q as unknown as ColumnInfoQueryData;
-      c1.column = 'id';
-      c2.column = 'name';
+      q1.column = 'id';
+      q2.column = 'name';
 
-      const { q } = q1.merge(q2);
+      const { q } = query1.merge(query2);
       expect(q.shape).toEqual({
-        number: q1.q.shape.number,
-        string: q2.q.shape.string,
+        number: q1.shape.number,
+        string: q2.shape.string,
       });
       expect(q.wrapInTransaction).toBe(true);
       expect(q.throwOnNotFound).toBe(true);
       expect(q.withShapes).toEqual({
-        ...q1.q.withShapes,
-        ...q2.q.withShapes,
+        ...q1.withShapes,
+        ...q2.withShapes,
       });
       expect(q.schema).toBe('b');
       expect(q.as).toBe('b');
       expect(q.from).toEqual(testDb.sql`b`);
       expect(q.coalesceValue).toBe('b');
       expect(q.parsers).toEqual({
-        ...q1.q.parsers,
-        ...q2.q.parsers,
+        ...q1.parsers,
+        ...q2.parsers,
       });
       expect(q.notFoundDefault).toBe(2);
       expect(q.defaults).toEqual({
-        ...q1.q.defaults,
-        ...q2.q.defaults,
+        ...q1.defaults,
+        ...q2.defaults,
       });
-      expect(q.before).toEqual([...q1.q.before, ...q2.q.before]);
-      expect(q.log).toBe(q2.q.log);
-      expect(q.logger).toBe(q2.q.logger);
-      expect(q.type).toBe(q2.q.type);
+      expect(q.before).toEqual([...q1.before, ...q2.before]);
+      expect(q.log).toBe(q2.log);
+      expect(q.logger).toBe(q2.logger);
+      expect(q.type).toBe(q2.type);
       expect(q.selectedComputeds).toEqual({
         a: computedA,
         b: computedB,
       });
 
-      const s = q as SelectQueryData;
-      expect(s.distinct).toEqual([...s1.distinct, ...s2.distinct]);
-      expect(s.only).toEqual(s2.only);
-      expect(s.joinedShapes).toEqual({
-        ...s1.joinedShapes,
-        ...s2.joinedShapes,
+      expect(q.distinct).toEqual([...q1.distinct, ...q2.distinct]);
+      expect(q.only).toEqual(q2.only);
+      expect(q.joinedShapes).toEqual({
+        ...q1.joinedShapes,
+        ...q2.joinedShapes,
       });
-      expect(s.joinedParsers).toEqual({
-        ...s1.joinedParsers,
-        ...s2.joinedParsers,
+      expect(q.joinedParsers).toEqual({
+        ...q1.joinedParsers,
+        ...q2.joinedParsers,
       });
-      expect(s.group).toEqual([...s1.group, ...s2.group]);
-      expect(s.having).toEqual([sum, avg]);
-      expect(s.union).toEqual({ b: User, u: [...s1.union.u, ...s2.union.u] });
-      expect(s.order).toEqual([...s1.order, ...s2.order]);
-      expect(s.limit).toEqual(s2.limit);
-      expect(s.offset).toEqual(s2.offset);
-      expect(s.for).toEqual(s2.for);
-      expect(s.getColumn).toEqual(s2.getColumn);
+      expect(q.group).toEqual([...q1.group, ...q2.group]);
+      expect(q.having).toEqual([sum, avg]);
+      expect(q.union).toEqual({ b: User, u: [...q1.union.u, ...q2.union.u] });
+      expect(q.order).toEqual([...q1.order, ...q2.order]);
+      expect(q.limit).toEqual(q2.limit);
+      expect(q.offset).toEqual(q2.offset);
+      expect(q.for).toEqual(q2.for);
+      expect(q.getColumn).toEqual(q2.getColumn);
 
-      const i = q as InsertQueryData;
-      expect(i.columns).toEqual([...i1.columns, ...i2.columns]);
-      expect(i.values).toEqual([...i1.values, ...i2.values]);
-      expect(i.join).toEqual([...i1.join, ...i2.join]);
-      expect(i.onConflict).toEqual(i2.onConflict);
-      expect(i.beforeCreate).toEqual([...i1.beforeCreate, ...i2.beforeCreate]);
-      expect(i.afterCreate).toEqual([...i1.afterCreate, ...i2.afterCreate]);
-      expect(i.afterCreateSelect).toEqual(new Set(['one', 'two']));
+      expect(q.columns).toEqual([...q1.columns, ...q2.columns]);
+      expect(q.values).toEqual([...q1.values, ...q2.values]);
+      expect(q.join).toEqual([...q1.join, ...q2.join]);
+      expect(q.onConflict).toEqual(q2.onConflict);
+      expect(q.beforeCreate).toEqual([...q1.beforeCreate, ...q2.beforeCreate]);
+      expect(q.afterCreate).toEqual([...q1.afterCreate, ...q2.afterCreate]);
+      expect(q.afterCreateSelect).toEqual(new Set(['one', 'two']));
 
-      const u = q as UpdateQueryData;
-      expect(u.updateData).toEqual([...u1.updateData, ...u2.updateData]);
-      expect(u.beforeUpdate).toEqual([...u1.beforeUpdate, ...u2.beforeUpdate]);
-      expect(i.afterUpdate).toEqual([...i1.afterUpdate, ...i2.afterUpdate]);
-      expect(i.afterUpdateSelect).toEqual(new Set(['one', 'two']));
+      expect(q.updateData).toEqual([...q1.updateData, ...q2.updateData]);
+      expect(q.beforeUpdate).toEqual([...q1.beforeUpdate, ...q2.beforeUpdate]);
+      expect(q.afterUpdate).toEqual([...q1.afterUpdate, ...q2.afterUpdate]);
+      expect(q.afterUpdateSelect).toEqual(new Set(['one', 'two']));
 
-      const d = q as DeleteQueryData;
-      expect(d.beforeDelete).toEqual([...d1.beforeDelete, ...d2.beforeDelete]);
-      expect(i.afterDelete).toEqual([...i1.afterDelete, ...i2.afterDelete]);
-      expect(i.afterDeleteSelect).toEqual(new Set(['one', 'two']));
+      expect(q.beforeDelete).toEqual([...q1.beforeDelete, ...q2.beforeDelete]);
+      expect(q.afterDelete).toEqual([...q1.afterDelete, ...q2.afterDelete]);
+      expect(q.afterDeleteSelect).toEqual(new Set(['one', 'two']));
 
-      const tr = q as TruncateQueryData;
-      expect(tr.restartIdentity).toBe(t2.restartIdentity);
-      expect(tr.cascade).toBe(t2.cascade);
+      expect(q.restartIdentity).toBe(q2.restartIdentity);
+      expect(q.cascade).toBe(q2.cascade);
 
-      const c = q as ColumnInfoQueryData;
-      expect(c.column).toBe(c2.column);
+      expect(q.column).toBe(q2.column);
     });
   });
 });

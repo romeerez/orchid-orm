@@ -5,7 +5,9 @@ import {
   ExpressionData,
   isExpression,
   PickOutputType,
+  PickQueryColumnTypes,
   PickQueryMeta,
+  PickQueryMetaResultRelationsWindowsColumnTypes,
   PickQueryShape,
   QueryColumn,
   QueryThen,
@@ -14,8 +16,6 @@ import {
 import { getSqlText, QueryData, ToSQLCtx } from '../sql';
 import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import {
-  PickQueryColumnTypes,
-  PickQueryMetaResultRelationsWindowsColumnTypes,
   Query,
   QueryMetaHasSelect,
   QueryOrExpressionBooleanOrNullResult,

@@ -1,10 +1,8 @@
-import {
-  PickQueryMetaResultReturnTypeWithDataWindowsThen,
-  PickQueryQ,
-} from '../query/query';
+import { PickQueryQ } from '../query/query';
 import { UnionSet } from '../sql';
 import {
   PickQueryMetaResult,
+  PickQueryMetaResultReturnTypeWithDataWindowsThen,
   QueryThenByQuery,
   RecordUnknown,
 } from 'orchid-core';

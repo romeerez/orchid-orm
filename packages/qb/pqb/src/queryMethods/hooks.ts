@@ -7,11 +7,9 @@ import {
   QueryHookUtils,
 } from 'orchid-core';
 import {
-  InsertQueryData,
   QueryAfterHook,
   QueryBeforeHook,
   QueryBeforeHookInternal,
-  UpdateQueryData,
 } from '../sql';
 import { PickQueryQ } from '../query/query';
 import { AfterCommitErrorHandler } from './transaction';
@@ -82,9 +80,7 @@ export const _queryHookBeforeCreate = <T extends PickQueryShape>(
   cb: QueryBeforeHook,
 ): T => {
   return before(q, 'Create', (q) =>
-    cb(
-      new QueryHookUtils(q, (q.q as InsertQueryData).columns, 'hookCreateSet'),
-    ),
+    cb(new QueryHookUtils(q, q.q.columns, 'hookCreateSet')),
   );
 };
 
@@ -116,7 +112,7 @@ export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
 ): T => {
   return before(q, 'Update', (q) => {
     const columns: string[] = [];
-    for (const item of (q.q as UpdateQueryData).updateData) {
+    for (const item of q.q.updateData) {
       if (typeof item === 'object') {
         columns.push(...Object.keys(item));
       }

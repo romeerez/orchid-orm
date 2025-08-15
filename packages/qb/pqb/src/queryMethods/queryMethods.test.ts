@@ -9,7 +9,7 @@ import {
   userColumnsSql,
   userTableColumnsSql,
 } from '../test-utils/test-utils';
-import { NotFoundError } from '../errors';
+import { NotFoundError } from 'orchid-core';
 import {
   assertType,
   expectSql,

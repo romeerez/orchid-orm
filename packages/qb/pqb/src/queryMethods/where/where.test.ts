@@ -9,8 +9,8 @@ import {
 } from '../../test-utils/test-utils';
 import { testWhere, testWhereExists } from './testWhere';
 import { assertType, expectSql, testDb } from 'test-utils';
-import { RelationConfigBase } from '../../relations';
 import { Query } from '../../query/query';
+import { RelationConfigBase } from 'orchid-core';
 
 describe('where', () => {
   it('should ignore undefined values', () => {

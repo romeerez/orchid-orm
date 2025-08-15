@@ -1,11 +1,11 @@
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
-import { ColumnInfoQueryData } from './data';
+import { QueryData } from './data';
 import { addValue } from 'orchid-core';
 
 export const pushColumnInfoSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: ColumnInfoQueryData,
+  query: QueryData,
 ) => {
   ctx.sql.push(
     `SELECT * FROM information_schema.columns WHERE table_name = ${addValue(

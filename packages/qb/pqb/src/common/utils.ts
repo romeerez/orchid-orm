@@ -1,17 +1,14 @@
 import { QueryData, ToSQLQuery } from '../sql';
 import type { Query } from '../query/query';
-import { PickQueryMetaTable } from '../query/query';
-import { Expression, PickQueryMeta, QueryColumn } from 'orchid-core';
-import { RelationConfigBase } from '../relations';
+import {
+  _setSubQueryAliases,
+  Expression,
+  isRelationQuery,
+  PickQueryMeta,
+  QueryColumn,
+} from 'orchid-core';
 import { _clone } from '../query/queryUtils';
 import { _chain } from '../queryMethods/chain';
-
-export type AliasOrTable<T extends PickQueryMetaTable> =
-  T['meta']['as'] extends string
-    ? T['meta']['as']
-    : T['table'] extends string
-    ? T['table']
-    : never;
 
 export type SelectableOrExpression<
   T extends PickQueryMeta = PickQueryMeta,
@@ -85,8 +82,9 @@ export const resolveSubQueryCallbackV2 = (
 
   arg.q = getClonedQueryData(q.q);
   arg.q.subQuery = 1;
-  arg.q.relChain = undefined;
-  arg.q.outerAliases = q.q.aliases;
+  // Deleting `with` because sub-query should duplicate WITH statements of the parent query in its SQL
+  arg.q.with = arg.q.relChain = undefined;
+  _setSubQueryAliases(arg);
 
   return cb(arg as Query);
 };
@@ -100,8 +98,5 @@ export const resolveSubQueryCallbackV2 = (
  * @param q - main query object
  * @param sub - sub-query query object
  */
-export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): Query => {
-  if (!('joinQuery' in sub)) return sub as never;
-
-  return (sub as unknown as RelationConfigBase).joinQuery(sub, q) as never;
-};
+export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): Query =>
+  (isRelationQuery(sub) ? sub.joinQuery(sub, q) : sub) as never;

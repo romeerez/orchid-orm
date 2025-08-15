@@ -89,6 +89,46 @@ db.book.update({
 });
 ```
 
+## selecting relations
+
+Selecting relations is supported in [create](#create) and [update](#update) methods, but not yet in [delete](#delete), [upsert](#upsert), [orCreate](#orcreate).
+
+`OrchidORM` wraps such queries in a transaction, so that the relations are selected within the same transaction.
+This way, selected result remains consistent with what the `create` and `update` operation did.
+
+```ts
+// example: creating multiple orders with their order items,
+// selecting both orders and order items data.
+db.order
+  .createMany([
+    {
+      ...order1Data,
+      orderItems: [{ ...orderItemData }],
+    },
+    {
+      ...order2Data,
+      orderItems: [{ ...orderItemData }],
+    },
+  ])
+  .select('*', {
+    orderItems: (q) => q.orderItems,
+  });
+
+// updating order, creating a new order item,
+// selecting both the order and all its items.
+db.order
+  .find(orderId)
+  .update({
+    column: 'value',
+    orderItems: {
+      create: [{ ...orderItemData }],
+    },
+  })
+  .select('*', {
+    orderItems: (q) => q.orderItems,
+  });
+```
+
 ## create
 
 We have `create` methods that return a full record by default, and `insert` methods that by default will return only a count of inserted rows.
@@ -563,6 +603,35 @@ db.table
   .create({
     lastName: 'override the last name',
   });
+```
+
+### values from `with`
+
+[//]: # 'has JSDoc avobe `with` method'
+
+You can use values returned from [with](/guide/advanced-queries.html#with) statements when creating records:
+
+```ts
+db.table
+  .with('created', () => db.someTable.create(data).select('one', 'two'))
+  .create({
+    column: (q) => q.from('created').get('one'),
+    otherColumn: (q) => q.from('created').get('two'),
+  });
+
+// A record in `with` is created once, its values are used to create two records
+db.table
+  .with('created', () => db.someTable.create(data).select('one', 'two'))
+  .createMany([
+    {
+      column: (q) => q.from('created').get('one'),
+      otherColumn: (q) => q.from('created').get('two'),
+    },
+    {
+      column: (q) => q.from('created').get('one'),
+      otherColumn: (q) => q.from('created').get('two'),
+    },
+  ]);
 ```
 
 ## update

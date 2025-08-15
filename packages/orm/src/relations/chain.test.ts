@@ -347,7 +347,7 @@ describe('relations chain', () => {
       });
     });
 
-    it('should support chaining with query features', async () => {
+    it('should support chaining with query query', async () => {
       const chatId = await db.chat.get('IdOfChat').create(chatData);
       await db.message.createMany([
         {

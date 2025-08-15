@@ -10,7 +10,7 @@ import {
   TransactionState,
 } from 'orchid-core';
 import { logParamToLogObject } from './log';
-import { OrchidOrmError } from '../errors';
+import { OrchidOrmError } from 'orchid-core';
 
 export const commitSql: SingleSqlItem = {
   text: 'COMMIT',

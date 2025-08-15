@@ -1,43 +1,7 @@
-import {
-  PickQueryMetaTableShape,
-  Query,
-  SetQueryTableAlias,
-} from '../query/query';
-import { RecordString } from 'orchid-core';
+import { _setQueryAs, AsQueryArg, SetQueryTableAlias } from 'orchid-core';
 import { _clone } from '../query/queryUtils';
 
-export type AsQueryArg = PickQueryMetaTableShape;
-
-export const _queryAs = <T extends AsQueryArg, As extends string>(
-  self: T,
-  as: As,
-): SetQueryTableAlias<T, As> => {
-  const { q } = self as unknown as Query;
-  q.as = as;
-  q.aliases = {
-    ...q.aliases!,
-    [as]: q.aliases ? _queryResolveAlias(q.aliases, as) : as,
-  };
-
-  return self as SetQueryTableAlias<T, As>;
-};
-
-export const _queryResolveAlias = (
-  aliases: RecordString,
-  as: string,
-): string => {
-  if (!aliases[as]) return as;
-
-  let suffix = 2;
-  let privateAs;
-  while (aliases[(privateAs = as + suffix)]) {
-    suffix++;
-  }
-
-  return privateAs;
-};
-
-export abstract class AsMethods {
+export abstract class QueryAsMethods {
   /**
    * Sets table alias:
    *
@@ -54,6 +18,6 @@ export abstract class AsMethods {
     this: T,
     as: As,
   ): SetQueryTableAlias<T, As> {
-    return _queryAs(_clone(this), as) as never;
+    return _setQueryAs(_clone(this), as) as never;
   }
 }

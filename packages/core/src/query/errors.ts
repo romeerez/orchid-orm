@@ -1,5 +1,7 @@
-import { Query } from './query/query';
-import { PickQueryShape, RecordUnknown } from 'orchid-core';
+import { QueryBase } from './query';
+import { queryColumnNameToKey } from './column-name-to-key';
+import { RecordUnknown } from '../utils';
+import { PickQueryShape } from './pick-query-types';
 
 export abstract class OrchidOrmError extends Error {}
 
@@ -13,9 +15,9 @@ export abstract class OrchidOrmError extends Error {}
  */
 export class NotFoundError extends OrchidOrmError {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
-  readonly #query: Query;
+  readonly #query: QueryBase;
 
-  constructor(query: Query, message = 'Record is not found') {
+  constructor(query: QueryBase, message = 'Record is not found') {
     super(message);
     this.#query = query;
   }
@@ -27,9 +29,9 @@ export class NotFoundError extends OrchidOrmError {
 
 export class OrchidOrmInternalError extends Error {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
-  readonly #query: Query;
+  readonly #query: QueryBase;
 
-  constructor(query: Query, message?: string, public data?: RecordUnknown) {
+  constructor(query: QueryBase, message?: string, public data?: RecordUnknown) {
     super(message);
     this.#query = query;
   }
@@ -109,7 +111,8 @@ export abstract class QueryError<
             item.startsWith('"') ? item.slice(1, -1) : item
           ) as keyof T['shape'];
 
-          const key = this.query.columnNameToKey(column as string) ?? column;
+          const key =
+            queryColumnNameToKey(this.query, column as string) ?? column;
           columns[key as keyof T['shape']] = true;
         });
       }
@@ -120,13 +123,13 @@ export abstract class QueryError<
 }
 
 export class MoreThanOneRowError extends OrchidOrmInternalError {
-  constructor(query: Query, message?: string) {
+  constructor(query: QueryBase, message?: string) {
     super(query, message);
   }
 }
 
 export class UnhandledTypeError extends OrchidOrmInternalError {
-  constructor(query: Query, value: never) {
+  constructor(query: QueryBase, value: never) {
     super(query, `Unhandled type: ${JSON.stringify(value)} received`);
   }
 }

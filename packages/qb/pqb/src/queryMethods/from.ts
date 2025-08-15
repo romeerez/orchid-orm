@@ -1,13 +1,5 @@
-import {
-  Query,
-  SelectableFromShape,
-  SetQueryTableAlias,
-  WithDataItems,
-  PickQueryQ,
-  PickQueryMetaTableShapeReturnTypeWithData,
-} from '../query/query';
-import { SelectQueryData, WithConfigs } from '../sql';
-import { AliasOrTable } from '../common/utils';
+import { Query, SelectableFromShape, PickQueryQ } from '../query/query';
+import { WithConfigs } from '../sql';
 import {
   PickQueryTableMetaResult,
   SQLQueryArgs,
@@ -18,6 +10,10 @@ import {
   ColumnsParsers,
   QueryThenByQuery,
   UnionToIntersection,
+  WithDataItems,
+  PickQueryMetaTableShapeReturnTypeWithData,
+  SetQueryTableAlias,
+  AliasOrTable,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
@@ -249,7 +245,7 @@ export class FromMethods {
    */
   only<T>(this: T, only = true): T {
     const q = _clone(this);
-    (q.q as SelectQueryData).only = only;
+    q.q.only = only;
     return q as T;
   }
 }

@@ -1,6 +1,6 @@
 import { Expression, PickQueryResult } from 'orchid-core';
 import { PickQueryQ, Query } from '../query/query';
-import { SelectQueryData, UnionItem, UnionKind } from '../sql';
+import { UnionItem, UnionKind } from '../sql';
 import { _clone } from '../query/queryUtils';
 
 // argument of `union`-like query methods.
@@ -35,8 +35,8 @@ export const _queryUnion = <T extends PickQueryResult>(
       } as UnionItem),
   );
 
-  const q = query.q as SelectQueryData;
-  const baseQ = (base as unknown as PickQueryQ).q as SelectQueryData;
+  const { q } = query;
+  const baseQ = (base as unknown as PickQueryQ).q;
 
   q.union = baseQ.union
     ? {

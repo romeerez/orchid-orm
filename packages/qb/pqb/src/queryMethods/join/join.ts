@@ -1,22 +1,19 @@
-import {
-  PickQueryMetaColumnTypes,
-  PickQueryMetaResultRelationsWithDataReturnType,
-  PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  PickQueryMetaShapeRelationsWithData,
-  PickQueryQ,
-  PickQueryRelationsWithData,
-  SelectableFromShape,
-  WithDataItem,
-} from '../../query/query';
+import { PickQueryQ, SelectableFromShape } from '../../query/query';
 import { _clone } from '../../query/queryUtils';
 import {
+  AliasOrTable,
   ColumnShapeInput,
   ColumnTypesBase,
   EmptyTuple,
   Expression,
   PickQueryMeta,
+  PickQueryMetaColumnTypes,
+  PickQueryMetaResultRelationsWithDataReturnType,
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaResultReturnType,
   PickQueryMetaShape,
+  PickQueryMetaShapeRelationsWithData,
+  PickQueryRelationsWithData,
   PickQueryTable,
   PickQueryTableMetaResult,
   PickQueryTableMetaResultShape,
@@ -28,14 +25,13 @@ import {
   QueryThenByQuery,
   SelectableBase,
   setObjectValueImmutable,
+  WithDataItem,
 } from 'orchid-core';
 import { _join, _joinLateral, _joinLateralProcessArg } from './_join';
-import { AliasOrTable } from '../../common/utils';
 import {
   ColumnsShapeToNullableObject,
   ColumnsShapeToObject,
 } from '../../columns';
-import { SelectQueryData } from '../../sql';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.
@@ -1166,7 +1162,7 @@ export class Join {
     setObjectValueImmutable(q, 'joinedShapes', as, shape);
     setObjectValueImmutable(q, 'joinedParsers', as, parsers);
 
-    pushOrNewArrayToObjectImmutable(q as SelectQueryData, 'join', {
+    pushOrNewArrayToObjectImmutable(q, 'join', {
       type: 'JOIN',
       args: { a: as, c: shape, d: data },
     });

@@ -1,11 +1,11 @@
+import { IsQuery } from './query';
 import {
-  IsQuery,
   PickQueryMetaReturnType,
   PickQueryShape,
   PickQueryTable,
   PickQueryTableMetaResult,
-  RecordUnknown,
-} from 'orchid-core';
+} from './pick-query-types';
+import { RecordUnknown } from '../utils';
 
 export interface RelationJoinQuery {
   (joiningQuery: IsQuery, baseQuery: IsQuery): IsQuery;
@@ -16,14 +16,17 @@ export interface RelationConfigQuery
     PickQueryShape,
     PickQueryTable {}
 
-export interface RelationConfigBase {
+export interface RelationConfigBase extends IsQuery {
   returnsOne: boolean;
   query: RelationConfigQuery;
   joinQuery: RelationJoinQuery;
   reverseJoin: RelationJoinQuery;
   params: unknown;
+
   queryRelated(params: unknown): unknown;
+
   modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
+
   maybeSingle: PickQueryMetaReturnType;
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
@@ -49,3 +52,8 @@ export interface RelationConfigDataForCreate {
 export interface RelationsBase {
   [K: string]: RelationConfigBase;
 }
+
+/* getters */
+
+export const isRelationQuery = (q: IsQuery): q is RelationConfigBase =>
+  'joinQuery' in q;

@@ -1,20 +1,20 @@
-import {
-  PickQueryQ,
-  PickQueryRelations,
-  PickQueryRelationQueries,
-  Query,
-} from '../../query/query';
+import { PickQueryQ, Query } from '../../query/query';
 import { JoinArgs, JoinFirstArg, JoinQueryBuilder } from './join';
 import {
   JoinedShapes,
   QueryDataJoinTo,
-  SelectQueryData,
   JoinItemArgs,
   SimpleJoinItemNonSubQueryArgs,
+  QueryData,
 } from '../../sql';
-import { RelationJoinQuery } from '../../relations';
 import { getIsJoinSubQuery } from '../../sql/join';
-import { IsQuery, returnArg } from 'orchid-core';
+import {
+  IsQuery,
+  PickQueryRelationQueries,
+  PickQueryRelations,
+  RelationJoinQuery,
+  returnArg,
+} from 'orchid-core';
 import { pushQueryArrayImmutable } from '../../query/queryUtils';
 
 /**
@@ -70,7 +70,7 @@ export const processJoinArgs = (
         handleResult: joinToQ.handleResult,
         returnType: 'all',
         logger: joinToQ.logger,
-      } as SelectQueryData;
+      } as QueryData;
       j.baseQuery = j as Query;
 
       const joinedShapes = {

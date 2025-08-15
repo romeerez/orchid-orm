@@ -1,5 +1,4 @@
 import {
-  PickQueryMetaResultRelationsWindows,
   PickQueryQ,
   Query,
   SelectableOrExpressionOfType,
@@ -10,6 +9,7 @@ import {
   emptyArray,
   Expression,
   PickQueryMeta,
+  PickQueryMetaResultRelationsWindows,
   QueryColumn,
   QueryColumnOfDataType,
 } from 'orchid-core';

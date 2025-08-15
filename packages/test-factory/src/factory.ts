@@ -18,7 +18,6 @@ import {
   DecimalColumn,
   DoublePrecisionColumn,
   EnumColumn,
-  getPrimaryKeys,
   InetColumn,
   IntegerColumn,
   IntervalColumn,
@@ -57,8 +56,10 @@ import {
   ColumnTypeBase,
   emptyObject,
   EmptyObject,
+  getPrimaryKeys,
   MaybePromise,
   PickQueryShape,
+  QueryBase,
   RecordUnknown,
   StringTypeData,
 } from 'orchid-core';
@@ -224,7 +225,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     pick[key] = true;
   }
 
-  for (const key of getPrimaryKeys(factory.table)) {
+  for (const key of getPrimaryKeys(factory.table as unknown as QueryBase)) {
     const item = factory.table.shape[key] as ColumnTypeBase;
 
     if ('identity' in item.data || item.dataType.includes('serial')) {

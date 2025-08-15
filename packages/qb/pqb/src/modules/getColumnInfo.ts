@@ -1,5 +1,4 @@
 import { SetQueryKind } from '../query/query';
-import { ColumnInfoQueryData } from '../sql';
 import {
   PickQueryMetaShape,
   QueryColumn,
@@ -86,7 +85,7 @@ export function getColumnInfo<
   q.q.returnType = 'all';
 
   if (column) {
-    (q.q as ColumnInfoQueryData).column = column as string;
+    q.q.column = column as string;
   }
 
   q.q.handleResult = (_, _t, result) => {

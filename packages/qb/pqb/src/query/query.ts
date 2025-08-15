@@ -1,28 +1,25 @@
 import { GetStringArg, QueryMetaHasWhere, QueryMethods } from '../queryMethods';
 import { QueryData } from '../sql';
-import { AliasOrTable } from '../common/utils';
 import { QueryBuilder } from './db';
-import { RelationsBase } from '../relations';
-import { QueryError, QueryErrorName } from '../errors';
 import {
   ColumnShapeOutput,
   EmptyObject,
   Expression,
+  IsQueries,
   OperatorsNullable,
   PickOutputType,
   PickQueryMeta,
   PickQueryMetaResult,
-  PickQueryMetaResultReturnType,
   PickQueryMetaReturnType,
   PickQueryResult,
   PickQueryResultReturnType,
-  PickQueryReturnType,
-  PickQueryShape,
-  PickQueryTable,
   PickType,
+  QueryBase,
   QueryCatch,
   QueryColumn,
   QueryColumns,
+  QueryError,
+  QueryErrorName,
   QueryInternalBase,
   QueryMetaBase,
   QueryOrExpression,
@@ -34,6 +31,8 @@ import {
   QueryThenShallowSimplifyOptional,
   RecordKeyTrue,
   RecordUnknown,
+  RelationsBase,
+  WithDataItems,
 } from 'orchid-core';
 import { ColumnType } from '../columns';
 import { TableData } from '../tableData';
@@ -83,10 +82,6 @@ export interface QueryInternal<
   tableData: TableData;
   // For customizing `now()` sql
   nowSQL?: string;
-  // access with `getPrimaryKeys` utility
-  primaryKeys?: string[];
-  // cache `columnNameToKey` method that's available on table instances
-  columnNameToKeyMap?: Map<string, string>;
   // for select, where, join callbacks: memoize a query extended with relations, so query.relName is a relation query
   callbackArg?: Query;
 }
@@ -101,23 +96,9 @@ export type SelectableFromShape<
   };
 };
 
-export interface WithDataItem {
-  table: string;
-  shape: QueryColumns;
-}
-
-export interface WithDataItems {
-  [K: string]: WithDataItem;
-}
-
-export interface Queries {
-  [K: string]: Query;
-}
-
-export interface Query extends QueryMethods<unknown> {
+export interface Query extends QueryBase, QueryMethods<unknown> {
   __isQuery: true;
   result: QueryColumns;
-  table?: string;
   withData: WithDataItems;
   baseQuery: Query;
   internal: QueryInternal;
@@ -125,36 +106,18 @@ export interface Query extends QueryMethods<unknown> {
   returnType: QueryReturnType;
   qb: QueryBuilder;
   columnTypes: unknown;
-  shape: QueryColumns;
   inputType: RecordUnknown;
   q: QueryData;
   then: QueryThen<unknown>;
   catch: QueryCatch;
   windows: EmptyObject;
   relations: RelationsBase;
-  relationQueries: Queries;
+  relationQueries: IsQueries;
   error: new (
     message: string,
     length: number,
     name: QueryErrorName,
   ) => QueryError;
-  columnNameToKey(name: string): string | undefined;
-}
-
-export interface PickQueryWithData {
-  withData: WithDataItems;
-}
-
-export interface PickQueryWindows {
-  windows: EmptyObject;
-}
-
-export interface PickQueryRelations {
-  relations: RelationsBase;
-}
-
-export interface PickQueryRelationQueries {
-  relationQueries: Queries;
 }
 
 export interface PickQueryQ {
@@ -169,133 +132,11 @@ export interface PickQueryBaseQuery {
   baseQuery: Query;
 }
 
-export interface PickQueryMetaRelations
-  extends PickQueryMeta,
-    PickQueryRelations {}
-
-export interface PickQueryMetaRelationsResult
-  extends PickQueryMetaRelations,
-    PickQueryResult {}
-
-export interface PickQueryMetaRelationsReturnType
-  extends PickQueryMetaRelationsResult,
-    PickQueryResultReturnType {}
-
-export interface PickQueryMetaShapeRelationsReturnType
-  extends PickQueryMetaRelationsReturnType,
-    PickQueryShape {}
-
-export interface PickQueryMetaRelationsResultReturnType
-  extends PickQueryMetaRelationsReturnType,
-    PickQueryResult {}
-
-export interface PickQueryMetaResultRelations
-  extends PickQueryResult,
-    PickQueryMeta,
-    PickQueryRelations {}
-
-export interface PickQueryMetaResultRelationsWindows
-  extends PickQueryMetaResultRelations,
-    PickQueryWindows {}
-
-export interface PickQueryColumnTypes {
-  columnTypes: unknown;
-}
-
-export interface PickQueryMetaColumnTypes
-  extends PickQueryMeta,
-    PickQueryColumnTypes {}
-
-export interface PickQueryMetaResultRelationsWindowsColumnTypes
-  extends PickQueryMetaResultRelationsWindows,
-    PickQueryColumnTypes {}
-
-export interface PickQueryWithDataColumnTypes
-  extends PickQueryWithData,
-    PickQueryColumnTypes {}
-
-export interface PickQueryResultColumnTypes
-  extends PickQueryResult,
-    PickQueryColumnTypes {}
-
-export interface PickQueryMetaWithDataColumnTypes
-  extends PickQueryMeta,
-    PickQueryWithData,
-    PickQueryColumnTypes {}
-
-export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
-
-export interface PickQueryMetaTableShape
-  extends PickQueryMetaTable,
-    PickQueryShape {}
-
-export interface PickQueryMetaWithData
-  extends PickQueryMeta,
-    PickQueryWithData {}
-
-export interface PickQueryRelationsWithData
-  extends PickQueryWithData,
-    PickQueryRelations {}
-
-export interface PickQueryMetaShapeRelationsWithData
-  extends PickQueryMeta,
-    PickQueryShape,
-    PickQueryRelations,
-    PickQueryWithData {}
-
-export interface PickQueryMetaResultRelationsWithDataReturnType
-  extends PickQueryMeta,
-    PickQueryResult,
-    PickQueryRelations,
-    PickQueryWithData,
-    PickQueryReturnType {}
-
-export interface PickQueryMetaTableShapeReturnTypeWithData
-  extends PickQueryMetaTableShape,
-    PickQueryReturnType,
-    PickQueryMetaWithData {}
-
-export interface PickQueryMetaResultRelationsWithDataReturnTypeShape
-  extends PickQueryMetaResultRelationsWithDataReturnType,
-    PickQueryShape {}
-
-export interface PickQueryMetaResultReturnTypeWithDataWindows
-  extends PickQueryMetaResultReturnType,
-    PickQueryWithData,
-    PickQueryWindows {}
-
-export interface PickQueryMetaResultReturnTypeWithDataWindowsThen
-  extends PickQueryMetaResultReturnTypeWithDataWindows {
-  then: unknown;
-}
-
-export interface PickQueryTableMetaResultReturnTypeWithDataWindowsThen
-  extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
-    PickQueryTable {}
-
 export interface PickQueryQAndInternal extends PickQueryQ, PickQueryInternal {}
 
 export interface PickQueryQAndBaseQuery
   extends PickQueryQ,
     PickQueryBaseQuery {}
-
-export interface PickQuerySinglePrimaryKey {
-  internal: {
-    singlePrimaryKey: unknown;
-  };
-}
-
-export interface PickQueryShapeSinglePrimaryKey
-  extends PickQueryShape,
-    PickQuerySinglePrimaryKey {}
-
-export interface PickQueryShapeResultSinglePrimaryKey
-  extends PickQueryShapeSinglePrimaryKey,
-    PickQueryResult {}
-
-export interface PickQueryShapeResultReturnTypeSinglePrimaryKey
-  extends PickQueryShapeResultSinglePrimaryKey,
-    PickQueryReturnType {}
 
 export type SelectableOfType<T extends PickQueryMeta, Type> = {
   [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends Type | null
@@ -663,29 +504,6 @@ export type SetQueryKindResult<
     ? Result
     : K extends 'then'
     ? QueryThenByQuery<T, Result>
-    : T[K];
-};
-
-export type SetQueryTableAlias<
-  T extends PickQueryMetaTableShape,
-  As extends string,
-> = {
-  [K in keyof T]: K extends 'meta'
-    ? {
-        [K in keyof T['meta'] | 'as']: K extends 'as'
-          ? As
-          : K extends 'selectable'
-          ? Omit<
-              T['meta']['selectable'],
-              `${AliasOrTable<T>}.${keyof T['shape'] & string}`
-            > & {
-              [K in keyof T['shape'] & string as `${As}.${K}`]: {
-                as: K;
-                column: T['shape'][K];
-              };
-            }
-          : T['meta'][K];
-      }
     : T[K];
 };
 

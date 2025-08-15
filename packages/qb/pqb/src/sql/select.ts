@@ -7,9 +7,13 @@ import {
   simpleColumnToSQL,
   tableColumnToSqlWithAs,
 } from './common';
-import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
+import {
+  isRelationQuery,
+  OrchidOrmInternalError,
+  UnhandledTypeError,
+} from 'orchid-core';
 import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
-import { CommonQueryData, QueryData, SelectQueryData } from './data';
+import { QueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
 import {
   addValue,
@@ -17,6 +21,7 @@ import {
   ColumnsShapeBase,
   ColumnTypeBase,
   ColumnTypesBase,
+  DelayedRelationSelect,
   Expression,
   HookSelect,
   HookSelectValue,
@@ -24,6 +29,7 @@ import {
   QueryColumns,
   RecordString,
   RecordUnknown,
+  setDelayedRelation,
 } from 'orchid-core';
 import { Query } from '../query/query';
 import { _queryGetOptional } from '../queryMethods/get.utils';
@@ -65,21 +71,22 @@ export const selectToSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: {
-    inCTE?: SelectQueryData['inCTE'];
-    select?: SelectQueryData['select'];
+    inCTE?: QueryData['inCTE'];
+    select?: QueryData['select'];
     selectAllColumns?: string[];
     selectAllShape?: RecordUnknown;
-    join?: SelectQueryData['join'];
+    join?: QueryData['join'];
     hookSelect?: HookSelect;
     shape: QueryColumns;
     parsers?: ColumnsParsers;
-    joinedShapes?: CommonQueryData['joinedShapes'];
+    joinedShapes?: QueryData['joinedShapes'];
   },
   quotedAs: string | undefined,
   hookSelect: HookSelect | undefined = query.hookSelect,
   aliases?: string[],
   skipCTE?: boolean,
   jsonList?: { [K: string]: ColumnTypeBase | undefined },
+  delayedRelationSelect?: DelayedRelationSelect,
 ): string => {
   if (query.inCTE && !skipCTE) {
     const { select } = makeReturningSql(
@@ -87,6 +94,7 @@ export const selectToSql = (
       table,
       query as never,
       quotedAs as never,
+      query.inCTE.delayedRelationSelect,
     );
 
     return query.inCTE.selectNum || !select
@@ -176,6 +184,8 @@ export const selectToSql = (
                   jsonList[as] = value.result.value as ColumnTypeBase;
                 }
                 aliases?.push(as);
+              } else if (delayedRelationSelect && isRelationQuery(value)) {
+                setDelayedRelation(delayedRelationSelect, as, value);
               } else {
                 pushSubQuerySql(ctx, query, value, as, list, quotedAs, aliases);
                 if (jsonList) {
@@ -294,7 +304,7 @@ export function selectedObjectToSQL(
 
 export const selectAllSql = (
   query: {
-    join?: SelectQueryData['join'];
+    join?: QueryData['join'];
     selectAllColumns?: string[];
     selectAllShape?: RecordUnknown;
     shape?: QueryColumns;
@@ -315,7 +325,7 @@ export const selectAllSql = (
 const pushSubQuerySql = (
   ctx: ToSQLCtx,
   mainQuery: {
-    joinedShapes?: CommonQueryData['joinedShapes'];
+    joinedShapes?: QueryData['joinedShapes'];
   },
   query: ToSQLQuery,
   as: string,

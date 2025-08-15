@@ -1,4 +1,4 @@
-import { QueryBaseCommon, Sql } from './query';
+import { QueryBaseCommon, Sql } from './query/query';
 import { emptyObject } from './utils';
 import { setTimeout } from 'timers/promises';
 import { QueryLogObject } from './log';

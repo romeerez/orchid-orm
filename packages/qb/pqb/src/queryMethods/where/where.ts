@@ -1,9 +1,5 @@
 import {
-  PickQueryMetaRelations,
-  PickQueryMetaRelationsResultReturnType,
-  PickQueryMetaShapeRelationsWithData,
   PickQueryQ,
-  PickQueryRelations,
   Query,
   QueryOrExpressionBooleanOrNullResult,
   QueryTake,
@@ -17,11 +13,16 @@ import {
 } from '../../query/queryUtils';
 import { JoinArgs, JoinFirstArg } from '../join/join';
 import {
+  _setSubQueryAliases,
   EmptyObject,
   Expression,
   IsQuery,
   MaybeArray,
   PickQueryMeta,
+  PickQueryMetaRelations,
+  PickQueryMetaRelationsResultReturnType,
+  PickQueryMetaShapeRelationsWithData,
+  PickQueryRelations,
   pushQueryValueImmutable,
   SQLQueryArgs,
 } from 'orchid-core';
@@ -217,7 +218,7 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
       qb.q = getClonedQueryData((q as unknown as PickQueryQ).q);
       qb.q.and = qb.q.or = qb.q.scopes = undefined;
       qb.q.subQuery = 1;
-      qb.q.outerAliases = qb.q.aliases;
+      _setSubQueryAliases(qb);
 
       args[i] = resolveSubQueryCallbackV2(qb, arg as never) as never;
     }

@@ -1,13 +1,14 @@
-import { DeleteQueryData } from '../sql';
 import {
+  _checkIfAliased,
   emptyObject,
   getValueKey,
   IsQuery,
   PickQueryResult,
   PickQueryResultReturnType,
+  QueryBase,
   RecordUnknown,
 } from 'orchid-core';
-import { OrchidOrmInternalError } from '../errors';
+import { OrchidOrmInternalError } from 'orchid-core';
 import {
   PickQueryQ,
   PickQueryQAndBaseQuery,
@@ -81,11 +82,7 @@ export const throwIfNoWhere = (q: PickQueryQ, method: string): void => {
 };
 
 export const throwIfJoinLateral = (q: PickQueryQ, method: string): void => {
-  if (
-    (q.q as DeleteQueryData).join?.some(
-      (x) => Array.isArray(x) || ('s' in x.args && x.args.s),
-    )
-  ) {
+  if (q.q.join?.some((x) => Array.isArray(x) || ('s' in x.args && x.args.s))) {
     throw new OrchidOrmInternalError(
       q as Query,
       `Cannot join a complex query in ${method}`,
@@ -138,27 +135,6 @@ export const extendQuery = <
   cloned.q = getClonedQueryData(q.q);
 
   return cloned as T & Methods;
-};
-
-export const getPrimaryKeys = (q: IsQuery) => {
-  return ((q as Query).internal.primaryKeys ??= collectPrimaryKeys(q));
-};
-
-const collectPrimaryKeys = (q: IsQuery): string[] => {
-  const primaryKeys = [];
-  const { shape } = (q as unknown as PickQueryQ).q;
-  for (const key in shape) {
-    if (shape[key].data.primaryKey) {
-      primaryKeys.push(key);
-    }
-  }
-
-  const pkey = (q as Query).internal.tableData.primaryKey;
-  if (pkey) {
-    primaryKeys.push(...pkey.columns);
-  }
-
-  return primaryKeys;
 };
 
 export const _queryAll = <T extends PickQueryResult>(
@@ -226,11 +202,11 @@ export const getFullColumnTable = (
   column: string,
   index: number,
   as: string | getValueKey | undefined,
-) => {
+): string => {
   const table = column.slice(0, index);
   return as &&
     table !== as &&
-    (q as unknown as PickQueryQ).q.aliases?.[table] === as
-    ? as
+    _checkIfAliased(q as QueryBase, table, as as string)
+    ? (as as string)
     : table;
 };

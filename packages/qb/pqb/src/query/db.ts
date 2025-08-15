@@ -22,7 +22,7 @@ import {
   getColumnTypes,
   makeColumnTypes,
 } from '../columns';
-import { NotFoundError, QueryError, QueryErrorName } from '../errors';
+import { NotFoundError, QueryError, QueryErrorName } from 'orchid-core';
 import {
   applyMixins,
   ColumnSchemaConfig,
@@ -595,25 +595,6 @@ export class Db<
     ...args: SQLQueryArgs
   ): Promise<QueryArraysResult<R>> {
     return performQuery<QueryArraysResult<R>>(this, args, 'arrays');
-  }
-
-  /**
-   * In snake case mode, or when columns have custom names,
-   * use this method to exchange a db column name to its runtime key.
-   */
-  columnNameToKey(name: string): string | undefined {
-    let map = this.internal.columnNameToKeyMap;
-    if (!map) {
-      this.internal.columnNameToKeyMap = map = new Map<string, string>();
-
-      const { shape } = this;
-      for (const key in this.shape) {
-        const column = shape[key];
-        map.set(column.data.name ?? key, key);
-      }
-    }
-
-    return map.get(name);
   }
 }
 

@@ -2,6 +2,7 @@ import { SelectableOrExpression } from '../common/utils';
 import { PickQueryDataShapeAndJoinedShapes, QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
 import {
+  _getQueryAliasOrName,
   ColumnsParsers,
   ColumnsShapeBase,
   ColumnTypeBase,
@@ -133,7 +134,7 @@ const columnWithDotToSql = (
       : column;
   }
 
-  const tableName = data.aliases?.[table] || table;
+  const tableName = _getQueryAliasOrName(data, table);
   const quoted = `"${table}"`;
 
   const col = (
@@ -206,7 +207,7 @@ export const tableColumnToSqlWithAs = (
     return column;
   }
 
-  const tableName = data.aliases?.[table] || table;
+  const tableName = _getQueryAliasOrName(data, table);
   const quoted = `"${table}"`;
 
   const col =

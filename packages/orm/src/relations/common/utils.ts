@@ -6,16 +6,20 @@ import {
   getQueryAs,
   JoinCallback,
   JoinQueryMethod,
-  PickQueryMetaRelations,
-  PickQueryRelations,
   pushQueryOnForOuter,
   Query,
-  RelationConfigBase,
   setQueryObjectValueImmutable,
   UpdateData,
   WhereArg,
 } from 'pqb';
-import { emptyObject, MaybeArray, RecordUnknown } from 'orchid-core';
+import {
+  emptyObject,
+  MaybeArray,
+  PickQueryMetaRelations,
+  PickQueryRelations,
+  RecordUnknown,
+  RelationConfigBase,
+} from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 import { BaseTableClass, ORMTableInput } from '../../baseTable';
@@ -171,8 +175,6 @@ export const hasRelationHandleUpdate = (
       (Array.isArray(value.create) && value.create.length === 0))
   )
     return;
-
-  selectIfNotSelected(q, primaryKeys);
 
   q.q.wrapInTransaction = true;
 

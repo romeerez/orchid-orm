@@ -3,7 +3,6 @@ import { Query } from '../query/query';
 import { selectToSql } from './select';
 import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
-  InsertQueryData,
   InsertQueryDataFromValues,
   InsertQueryDataObjectValues,
   QueryData,
@@ -11,10 +10,14 @@ import {
 import {
   addValue,
   ColumnTypeBase,
+  DelayedRelationSelect,
   Expression,
+  getPrimaryKeys,
   HookSelect,
   isExpression,
   MaybeArray,
+  newDelayedRelationSelect,
+  OrchidOrmInternalError,
   pushOrNewArray,
   pushQueryValueImmutable,
   RecordUnknown,
@@ -33,7 +36,7 @@ import { pushWithSql, withToSql } from './with';
 export const makeInsertSql = (
   ctx: ToSQLCtx,
   q: ToSQLQuery,
-  query: InsertQueryData,
+  query: QueryData,
   quotedAs: string,
 ): Sql => {
   let { columns } = query;
@@ -88,6 +91,10 @@ export const makeInsertSql = (
   const insertSql = `INSERT INTO ${quotedAs}${
     quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''
   }`;
+
+  // Save `hasNonSelect` prior passing `ctx` to `insertWith`'s `toSQL`,
+  // `insertWith` queries are applied only once, need to ignore if `ctx.hasNonSelect` is changed below.
+  const hasNonSelect = ctx.hasNonSelect;
 
   if ('from' in values && query.insertWith) {
     pushWithSql(ctx, Object.values(query.insertWith).flat());
@@ -161,6 +168,7 @@ export const makeInsertSql = (
   pushWhereStatementSql(ctx, q, query, quotedAs);
 
   let returning;
+  let delayedRelationSelect: DelayedRelationSelect | undefined;
   if (inCTE) {
     const select = inCTE.returning?.select;
     returning = {
@@ -169,7 +177,18 @@ export const makeInsertSql = (
       hookSelect: inCTE.returning?.hookSelect,
     };
   } else {
-    returning = makeReturningSql(ctx, q, query, quotedAs, 2);
+    delayedRelationSelect = q.q.selectRelation
+      ? newDelayedRelationSelect(q)
+      : undefined;
+
+    returning = makeReturningSql(
+      ctx,
+      q,
+      query,
+      quotedAs,
+      delayedRelationSelect,
+      2,
+    );
   }
 
   if (returning.select) ctx.sql.push('RETURNING', returning.select);
@@ -196,7 +215,7 @@ export const makeInsertSql = (
       );
     }
 
-    ctx.sql[valuesPos] = getSqlText(toSQL(q, { values: ctx.values }));
+    ctx.sql[valuesPos] = getSqlText(toSQL(q, ctx));
   } else {
     const valuesSql: string[] = [];
     let ctxValues = ctx.values;
@@ -267,6 +286,13 @@ export const makeInsertSql = (
     }
 
     if (batch) {
+      if (hasNonSelect) {
+        throw new OrchidOrmInternalError(
+          q,
+          `Cannot insert many records when having a non-select sub-query`,
+        );
+      }
+
       ctx.sql[valuesPos] =
         (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
       batch.push({
@@ -276,6 +302,7 @@ export const makeInsertSql = (
 
       return {
         hookSelect: returning.hookSelect,
+        delayedRelationSelect,
         batch,
       };
     } else {
@@ -290,6 +317,7 @@ export const makeInsertSql = (
 
   return {
     hookSelect: returning.hookSelect,
+    delayedRelationSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,
   };
@@ -539,6 +567,7 @@ export const makeReturningSql = (
   q: ToSQLQuery,
   data: QueryData,
   quotedAs: string,
+  delayedRelationSelect: DelayedRelationSelect | undefined,
   hookSelectI?: QueryDataHookSelectI,
   addHookSelectI?: QueryDataHookSelectI,
 ): { select?: string; hookSelect?: HookSelect } => {
@@ -549,6 +578,7 @@ export const makeReturningSql = (
         q,
         data,
         quotedAs,
+        delayedRelationSelect,
         2,
         hookSelectI,
       );
@@ -583,7 +613,12 @@ export const makeReturningSql = (
     addHookSelectI && data[hookSelectKeys[addHookSelectI]!];
 
   let tempSelect: HookSelect | undefined;
-  if (q.q.hookSelect || hookSelect || otherCTEHookSelect) {
+  if (
+    q.q.hookSelect ||
+    hookSelect ||
+    otherCTEHookSelect ||
+    q.q.selectRelation
+  ) {
     tempSelect = new Map(q.q.hookSelect);
 
     if (hookSelect) {
@@ -597,12 +632,31 @@ export const makeReturningSql = (
         tempSelect.set(column, { select: column });
       }
     }
+
+    if (q.q.selectRelation) {
+      for (const column of getPrimaryKeys(q)) {
+        tempSelect.set(column, { select: column });
+      }
+    }
   }
 
   let sql: string | undefined;
   if (tempSelect?.size || select?.length) {
-    sql = selectToSql(ctx, q, data, quotedAs, tempSelect, undefined, true);
+    sql = selectToSql(
+      ctx,
+      q,
+      data,
+      quotedAs,
+      tempSelect,
+      undefined,
+      true,
+      undefined,
+      delayedRelationSelect,
+    );
   }
 
-  return { select: sql, hookSelect: tempSelect };
+  return {
+    select: sql,
+    hookSelect: tempSelect,
+  };
 };

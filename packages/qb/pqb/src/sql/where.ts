@@ -17,12 +17,12 @@ import { getQueryAs, joinSubQuery } from '../common/utils';
 import { processJoinItem } from './join';
 import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import {
-  CommonQueryData,
   PickQueryDataShapeAndJoinedShapes,
   QueryData,
   QueryScopeData,
 } from './data';
 import {
+  _getQueryOuterAliases,
   addValue,
   ColumnsParsers,
   ColumnTypeBase,
@@ -32,26 +32,25 @@ import {
   MaybeArray,
   OperatorToSQL,
   QueryColumns,
-  RecordString,
+  QueryDataAliases,
   RecordUnknown,
   toArray,
 } from 'orchid-core';
 import { getSqlText } from './utils';
 import { selectToSql } from './select';
 
-interface QueryDataForWhere {
-  and?: CommonQueryData['and'];
-  or?: CommonQueryData['or'];
-  shape: CommonQueryData['shape'];
-  joinedShapes?: CommonQueryData['joinedShapes'];
+interface QueryDataForWhere extends QueryDataAliases {
+  and?: QueryData['and'];
+  or?: QueryData['or'];
+  shape: QueryData['shape'];
+  joinedShapes?: QueryData['joinedShapes'];
   scopes?: { [K: string]: QueryScopeData };
-  outerAliases?: CommonQueryData['outerAliases'];
+  outerAliases?: QueryData['outerAliases'];
   parsers?: ColumnsParsers;
-  aliases?: RecordString;
 }
 
 interface QueryDataWithLanguage extends QueryDataForWhere {
-  language?: CommonQueryData['language'];
+  language?: QueryData['language'];
 }
 
 export const pushWhereStatementSql = (
@@ -234,7 +233,7 @@ const processWhere = (
         const q: OnColumnToSQLQuery = item.useOuterAliases
           ? {
               joinedShapes: query.joinedShapes,
-              aliases: query.outerAliases,
+              aliases: _getQueryOuterAliases(query),
               shape: query.shape,
             }
           : query;

@@ -2,7 +2,7 @@ import {
   ColumnsParsers,
   overrideParserInQuery,
   setParserToQuery,
-} from './query';
+} from './query/query';
 import { noop } from './utils';
 
 describe('query', () => {

@@ -15,9 +15,14 @@ import { pushDeleteSql } from './delete';
 import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
-import { QueryData, SelectQueryData } from './data';
+import { QueryData } from './data';
 import { pushCopySql } from './copy';
-import { addValue, isExpression, Sql } from 'orchid-core';
+import {
+  addValue,
+  DelayedRelationSelect,
+  isExpression,
+  Sql,
+} from 'orchid-core';
 import { QueryBuilder } from '../query/db';
 import { getSqlText } from './utils';
 
@@ -28,15 +33,17 @@ interface ToSqlOptionsInternal extends ToSQLOptions {
   skipBatchCheck?: true;
 }
 
-export interface ToSQLCtx extends ToSqlOptionsInternal {
+export interface ToSQLCtx extends ToSqlOptionsInternal, ToSQLOptions {
   qb: QueryBuilder;
   q: QueryData;
   sql: string[];
   values: unknown[];
+  delayedRelationSelect?: DelayedRelationSelect;
 }
 
 export interface ToSQLOptions {
   values?: unknown[];
+  hasNonSelect?: boolean;
 }
 
 export interface ToSQLQuery {
@@ -69,11 +76,14 @@ export const toSQL = (
     values,
     aliasValue: options?.aliasValue,
     skipBatchCheck: options?.skipBatchCheck,
+    hasNonSelect: options?.hasNonSelect,
   };
 
   if (query.with) {
     pushWithSql(ctx, query.with);
   }
+
+  let result: Sql;
 
   let fromQuery: Query | undefined;
   if (query.type && query.type !== 'upsert') {
@@ -82,154 +92,156 @@ export const toSQL = (
 
     if (query.type === 'truncate') {
       pushTruncateSql(ctx, tableName, query);
-      return { text: sql.join(' '), values };
-    }
-
-    if (query.type === 'columnInfo') {
+      result = { text: sql.join(' '), values };
+    } else if (query.type === 'columnInfo') {
       pushColumnInfoSql(ctx, table, query);
-      return { text: sql.join(' '), values };
-    }
+      result = { text: sql.join(' '), values };
+    } else {
+      const quotedAs = `"${query.as || tableName}"`;
 
-    const quotedAs = `"${query.as || tableName}"`;
-
-    if (query.type === 'insert') {
-      return makeInsertSql(ctx, table, query, `"${tableName}"`);
-    }
-
-    if (query.type === 'update') {
-      return {
-        hookSelect: pushUpdateSql(ctx, table, query, quotedAs),
-        text: sql.join(' '),
-        values,
-      };
-    }
-
-    if (query.type === 'delete') {
-      return {
-        hookSelect: pushDeleteSql(ctx, table, query, quotedAs),
-        text: sql.join(' '),
-        values,
-      };
-    }
-
-    if (query.type === 'copy') {
-      pushCopySql(ctx, table, query, quotedAs);
-      return { text: sql.join(' '), values };
-    }
-  }
-
-  const quotedAs = (query.as || table.table) && `"${query.as || table.table}"`;
-
-  if (query.union) {
-    const s = getSqlText(toSQL(query.union.b, { values }));
-    sql.push(query.union.p ? s : `(${s})`);
-
-    for (const u of query.union.u) {
-      const s = isExpression(u.a)
-        ? u.a.toSQL(ctx, quotedAs)
-        : getSqlText(toSQL(u.a, { values }));
-      sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
-    }
-  } else {
-    sql.push('SELECT');
-
-    if (query.distinct) {
-      pushDistinctSql(ctx, table, query.distinct, quotedAs);
-    }
-
-    const aliases = query.group ? [] : undefined;
-    pushSelectSql(ctx, table, query, quotedAs, aliases);
-
-    fromQuery =
-      ((table.table || query.from) &&
-        pushFromAndAs(ctx, table, query, quotedAs)) ||
-      undefined;
-
-    if (query.join) {
-      // console.log(query.joinedForSelect);
-      pushJoinSql(
-        ctx,
-        table,
-        query as QueryData & { join: JoinItem[] },
-        quotedAs,
-      );
-    }
-
-    if (query.and || query.or || query.scopes) {
-      pushWhereStatementSql(ctx, table, query, quotedAs);
-    }
-
-    if (query.group) {
-      const group = query.group.map((item) => {
-        if (isExpression(item)) {
-          return item.toSQL(ctx, quotedAs);
-        } else {
-          const i = (aliases as string[]).indexOf(item as string);
-          return i !== -1
-            ? i + 1
-            : columnToSql(ctx, table.q, table.shape, item as string, quotedAs);
-        }
-      });
-      sql.push(`GROUP BY ${group.join(', ')}`);
-    }
-
-    if (query.having) pushHavingSql(ctx, query, quotedAs);
-
-    if (query.window) {
-      const window: string[] = [];
-      for (const item of query.window) {
-        for (const key in item) {
-          window.push(
-            `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
-          );
-        }
+      if (query.type === 'insert') {
+        result = makeInsertSql(ctx, table, query, `"${tableName}"`);
+      } else if (query.type === 'update') {
+        result = pushUpdateSql(ctx, table, query, quotedAs);
+      } else if (query.type === 'delete') {
+        result = pushDeleteSql(ctx, table, query, quotedAs);
+      } else if (query.type === 'copy') {
+        pushCopySql(ctx, table, query, quotedAs);
+        result = { text: sql.join(' '), values };
+      } else {
+        throw new Error(`Unsupported query type ${query.type}`);
       }
-      sql.push(`WINDOW ${window.join(', ')}`);
-    }
-  }
-
-  if (query.order) {
-    pushOrderBySql(ctx, query, quotedAs, query.order);
-  }
-
-  if (query.useFromLimitOffset) {
-    const q = fromQuery?.q as SelectQueryData;
-    if (q.limit) {
-      sql.push(`LIMIT ${addValue(values, q.limit)}`);
-    }
-    if (q.offset) {
-      sql.push(`OFFSET ${addValue(values, q.offset)}`);
     }
   } else {
-    pushLimitSQL(sql, values, query);
+    const quotedAs =
+      (query.as || table.table) && `"${query.as || table.table}"`;
 
-    if (query.offset && !query.returnsOne) {
-      sql.push(`OFFSET ${addValue(values, query.offset)}`);
+    if (query.union) {
+      const firstSql = toSQL(query.union.b, ctx);
+      ctx.delayedRelationSelect = firstSql.delayedRelationSelect;
+      const s = getSqlText(firstSql);
+      sql.push(query.union.p ? s : `(${s})`);
+
+      for (const u of query.union.u) {
+        const s = isExpression(u.a)
+          ? u.a.toSQL(ctx, quotedAs)
+          : getSqlText(toSQL(u.a, ctx));
+        sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
+      }
+    } else {
+      sql.push('SELECT');
+
+      if (query.distinct) {
+        pushDistinctSql(ctx, table, query.distinct, quotedAs);
+      }
+
+      const aliases = query.group ? [] : undefined;
+      pushSelectSql(ctx, table, query, quotedAs, aliases);
+
+      fromQuery =
+        ((table.table || query.from) &&
+          pushFromAndAs(ctx, table, query, quotedAs)) ||
+        undefined;
+
+      if (query.join) {
+        // console.log(query.joinedForSelect);
+        pushJoinSql(
+          ctx,
+          table,
+          query as QueryData & { join: JoinItem[] },
+          quotedAs,
+        );
+      }
+
+      if (query.and || query.or || query.scopes) {
+        pushWhereStatementSql(ctx, table, query, quotedAs);
+      }
+
+      if (query.group) {
+        const group = query.group.map((item) => {
+          if (isExpression(item)) {
+            return item.toSQL(ctx, quotedAs);
+          } else {
+            const i = (aliases as string[]).indexOf(item as string);
+            return i !== -1
+              ? i + 1
+              : columnToSql(
+                  ctx,
+                  table.q,
+                  table.shape,
+                  item as string,
+                  quotedAs,
+                );
+          }
+        });
+        sql.push(`GROUP BY ${group.join(', ')}`);
+      }
+
+      if (query.having) pushHavingSql(ctx, query, quotedAs);
+
+      if (query.window) {
+        const window: string[] = [];
+        for (const item of query.window) {
+          for (const key in item) {
+            window.push(
+              `"${key}" AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
+            );
+          }
+        }
+        sql.push(`WINDOW ${window.join(', ')}`);
+      }
     }
+
+    if (query.order) {
+      pushOrderBySql(ctx, query, quotedAs, query.order);
+    }
+
+    if (query.useFromLimitOffset) {
+      const q = fromQuery?.q as QueryData;
+      if (q.limit) {
+        sql.push(`LIMIT ${addValue(values, q.limit)}`);
+      }
+      if (q.offset) {
+        sql.push(`OFFSET ${addValue(values, q.offset)}`);
+      }
+    } else {
+      pushLimitSQL(sql, values, query);
+
+      if (query.offset && !query.returnsOne) {
+        sql.push(`OFFSET ${addValue(values, query.offset)}`);
+      }
+    }
+
+    if (query.for) {
+      sql.push('FOR', query.for.type);
+      const { tableNames } = query.for;
+      if (tableNames) {
+        sql.push(
+          'OF',
+          isExpression(tableNames)
+            ? tableNames.toSQL(ctx, quotedAs)
+            : tableNames.map((x) => `"${x}"`).join(', '),
+        );
+      }
+      if (query.for.mode) sql.push(query.for.mode);
+    }
+
+    result = {
+      text: sql.join(' '),
+      values,
+      hookSelect: query.hookSelect,
+      delayedRelationSelect: ctx.delayedRelationSelect,
+    };
   }
 
-  if (query.for) {
-    sql.push('FOR', query.for.type);
-    const { tableNames } = query.for;
-    if (tableNames) {
-      sql.push(
-        'OF',
-        isExpression(tableNames)
-          ? tableNames.toSQL(ctx, quotedAs)
-          : tableNames.map((x) => `"${x}"`).join(', '),
-      );
-    }
-    if (query.for.mode) sql.push(query.for.mode);
+  if (options && (query.type || ctx.hasNonSelect)) {
+    options.hasNonSelect = true;
   }
 
-  return { text: sql.join(' '), values, hookSelect: query.hookSelect };
+  return result;
 };
 
-export function pushLimitSQL(
-  sql: string[],
-  values: unknown[],
-  q: SelectQueryData,
-) {
+export function pushLimitSQL(sql: string[], values: unknown[], q: QueryData) {
   if (!q.returnsOne) {
     if (queryTypeWithLimitOne[q.returnType as string] && !q.returning) {
       sql.push(`LIMIT 1`);

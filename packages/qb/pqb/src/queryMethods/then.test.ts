@@ -1,5 +1,5 @@
 import { User, userData } from '../test-utils/test-utils';
-import { NotFoundError } from '../errors';
+import { NotFoundError } from 'orchid-core';
 import { assertType, testAdapter, testDb, useTestDatabase } from 'test-utils';
 import { noop, TransactionState } from 'orchid-core';
 

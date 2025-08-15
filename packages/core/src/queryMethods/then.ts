@@ -1,6 +1,7 @@
 import { ShallowSimplify } from '../utils';
-import { PickQueryReturnType, QueryReturnType } from '../query';
+import { QueryReturnType } from '../query/query';
 import { ColumnShapeOutput, QueryColumns } from '../columns';
+import { PickQueryReturnType } from '../query/pick-query-types';
 
 // This is a standard Promise['then'] method
 // copied from TS standard library because the original `then` is not decoupled from the Promise

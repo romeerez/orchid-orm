@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TransactionState } from './adapter';
+import { TransactionState } from '../adapter';
 import {
   EmptyObject,
   FnUnknownToUnknown,
@@ -7,8 +7,11 @@ import {
   pushOrNewArrayToObjectImmutable,
   RecordKeyTrue,
   RecordUnknown,
-} from './utils';
-import { QueryColumn, QueryColumns } from './columns';
+} from '../utils';
+import { QueryColumn, QueryColumns } from '../columns';
+import { DelayedRelationSelect } from './delayed-relational-select';
+import { QueryInternalColumnNameToKey } from './column-name-to-key';
+import { QueryDataBase } from './query-data';
 
 export type HookSelect = Map<string, HookSelectValue>;
 
@@ -21,6 +24,7 @@ export interface HookSelectValue {
 export interface SqlCommonOptions {
   // additional columns to select for `after` hooks
   hookSelect?: HookSelect;
+  delayedRelationSelect?: DelayedRelationSelect;
 }
 
 export interface SingleSqlItem {
@@ -73,9 +77,18 @@ export interface QueryMetaIsSubQuery {
   };
 }
 
+interface QueryInternalTableDataPrimaryKey {
+  columns: string[];
+  name?: string;
+}
+
+export interface QueryInternalTableDataBase {
+  primaryKey?: QueryInternalTableDataPrimaryKey;
+}
+
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
-export interface QueryInternalBase {
+export interface QueryInternalBase extends QueryInternalColumnNameToKey {
   runtimeDefaultColumns?: string[];
   transactionStorage: AsyncLocalStorage<TransactionState>;
   // Store scopes data, used for adding or removing a scope to the query.
@@ -86,6 +99,10 @@ export interface QueryInternalBase {
   noPrimaryKey: boolean;
   // table comment, for migration generator
   comment?: string;
+  // access with `getPrimaryKeys` utility
+  primaryKeys?: string[];
+  // primary keys, indexes, checks and constraints of the table
+  tableData: QueryInternalTableDataBase;
 }
 
 // Scopes data stored in table instance. Doesn't change after defining a table.
@@ -107,99 +124,27 @@ export type QueryReturnTypeAll = undefined | 'all';
 
 export type QueryReturnTypeOptional = 'one' | 'value';
 
-export interface PickQueryTable {
-  table?: string;
-}
-
-export interface PickQueryMeta {
-  meta: QueryMetaBase;
-}
-
-export interface PickQueryResult {
-  result: QueryColumns;
-}
-
-export interface PickQueryShape {
-  shape: QueryColumns;
-}
-
-export interface PickQueryReturnType {
-  returnType: QueryReturnType;
-}
-
-export interface PickQueryResultReturnType
-  extends PickQueryResult,
-    PickQueryReturnType {}
-
-export interface PickQueryMetaShape extends PickQueryMeta, PickQueryShape {}
-
-export interface PickQueryMetaResult extends PickQueryMeta, PickQueryResult {}
-
-export interface PickQueryResultUniqueColumns extends PickQueryResult {
-  internal: {
-    uniqueColumns: unknown;
-  };
-}
-
-export interface PickQueryResultReturnTypeUniqueColumns
-  extends PickQueryResultUniqueColumns,
-    PickQueryReturnType {}
-
-export interface PickQueryUniqueProperties {
-  internal: {
-    uniqueColumnNames: unknown;
-    uniqueColumnTuples: unknown;
-    uniqueConstraints: unknown;
-  };
-}
-
-export interface PickQueryMetaResultWindows extends PickQueryMetaResult {
-  windows: EmptyObject;
-}
-
-export interface PickQueryTableMetaResult
-  extends PickQueryTable,
-    PickQueryMetaResult {}
-
-export interface PickQueryInputType {
-  inputType: unknown;
-}
-
-export interface PickQueryTableMetaResultInputType
-  extends PickQueryTableMetaResult,
-    PickQueryInputType {}
-
-export interface PickQueryTableMetaShape
-  extends PickQueryTable,
-    PickQueryMetaShape {}
-
-export interface PickQueryTableMetaResultShape
-  extends PickQueryTableMetaResult,
-    PickQueryMetaShape {}
-
-export interface PickQueryMetaReturnType
-  extends PickQueryMeta,
-    PickQueryReturnType {}
-
-export interface PickQueryMetaResultReturnType
-  extends PickQueryMetaResult,
-    PickQueryReturnType {}
-
-export interface PickQueryMetaShapeResultReturnType
-  extends PickQueryMetaResultReturnType,
-    PickQueryShape {}
-
 export interface IsQuery {
   __isQuery: true;
+}
+
+export interface IsQueries {
+  [K: string]: IsQuery;
+}
+
+export interface QueryBase extends IsQuery {
+  internal: QueryInternalBase;
+  shape: QueryColumns;
+  q: QueryDataBase;
+  table?: string;
 }
 
 // It is a generic interface that covers any query:
 // both the table query objects
 // and the lightweight queries inside `where` and `on` callbacks
 export interface QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue>
-  extends IsQuery {
+  extends QueryBase {
   meta: QueryMetaBase<Scopes>;
-  internal: QueryInternalBase;
 }
 
 export interface SelectableBase {

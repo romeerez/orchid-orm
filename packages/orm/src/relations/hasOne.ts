@@ -10,12 +10,9 @@ import {
   CreateCtx,
   CreateData,
   CreateMethodsNames,
-  InsertQueryData,
   isQueryReturnsAll,
   PickQueryQ,
   Query,
-  RelationConfigBase,
-  RelationJoinQuery,
   SelectableFromShape,
   QueryTake,
   QueryTakeOptional,
@@ -23,7 +20,6 @@ import {
   UpdateData,
   VirtualColumn,
   WhereArg,
-  getPrimaryKeys,
 } from 'pqb';
 import { ORMTableInput, TableClass } from '../baseTable';
 import {
@@ -51,8 +47,11 @@ import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
   EmptyObject,
+  getPrimaryKeys,
   RecordString,
   RecordUnknown,
+  RelationConfigBase,
+  RelationJoinQuery,
 } from 'orchid-core';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
@@ -379,7 +378,7 @@ export const makeHasOneMethod = (
       return (query) => {
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
-        const q = (relationQuery as unknown as PickQueryQ).q as InsertQueryData;
+        const q = (relationQuery as unknown as PickQueryQ).q;
         q.values = { from: baseQuery };
       };
     },

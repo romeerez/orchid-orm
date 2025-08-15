@@ -1,15 +1,17 @@
 import { PickQueryQ, Query } from '../../query/query';
 import { CreateBelongsToData, CreateData } from './create';
-import { MoreThanOneRowError } from '../../errors';
+import { MoreThanOneRowError } from 'orchid-core';
 import {
   FnUnknownToUnknown,
+  newDelayedRelationSelect,
   PickQueryMetaResult,
+  QueryBase,
   RecordUnknown,
 } from 'orchid-core';
 import { _clone } from '../../query/queryUtils';
 import { queryFrom } from '../from';
 import { _queryUnion } from '../union';
-import { QueryAfterHook, SelectQueryData } from '../../sql';
+import { QueryAfterHook } from '../../sql';
 import { UpsertResult, UpsertThis } from 'pqb';
 
 // `orCreate` arg type.
@@ -25,7 +27,7 @@ export function orCreate<T extends PickQueryMetaResult>(
   mergeData?: unknown,
 ): UpsertResult<T> {
   const { q } = query as unknown as PickQueryQ;
-  (q as SelectQueryData).returnsOne = true;
+  q.returnsOne = true;
   if (!q.select) {
     q.returnType = 'void';
   }
@@ -58,6 +60,9 @@ export function orCreate<T extends PickQueryMetaResult>(
       const inCTE = {
         selectNum: !!(hasAfterCallback || hasAfterCommitCallback),
         targetHookSelect: hookSelect,
+        delayedRelationSelect: newDelayedRelationSelect(
+          query as unknown as QueryBase,
+        ),
       };
 
       q = q.clone();
@@ -68,7 +73,7 @@ export function orCreate<T extends PickQueryMetaResult>(
 
       let q2 = q.qb.with('f', q).with('c', c);
 
-      (q2.q as SelectQueryData).returnsOne = true;
+      q2.q.returnsOne = true;
       queryFrom(q2, 'f');
       q2 = _queryUnion(
         q2,

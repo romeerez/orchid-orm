@@ -1,11 +1,11 @@
 import { quoteSchemaAndTable } from './common';
 import { ToSQLCtx } from './toSQL';
-import { TruncateQueryData } from './data';
+import { QueryData } from './data';
 
 export const pushTruncateSql = (
   ctx: ToSQLCtx,
   table: string,
-  query: TruncateQueryData,
+  query: QueryData,
 ) => {
   ctx.sql.push('TRUNCATE', quoteSchemaAndTable(query.schema, table));
 

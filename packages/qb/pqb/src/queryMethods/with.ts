@@ -1,9 +1,5 @@
 import { WithItem, WithOptions } from '../sql';
-import {
-  PickQueryMetaWithDataColumnTypes,
-  PickQueryWithDataColumnTypes,
-  Query,
-} from '../query/query';
+import { Query } from '../query/query';
 import {
   _clone,
   saveAliasedShape,
@@ -18,6 +14,8 @@ import {
   RecordUnknown,
   pushOrNewArrayToObjectImmutable,
   pushQueryValueImmutable,
+  PickQueryMetaWithDataColumnTypes,
+  PickQueryWithDataColumnTypes,
 } from 'orchid-core';
 import { SqlMethod } from './sql';
 import { getShapeFromSelect } from './select';
@@ -120,10 +118,10 @@ export const moveQueryValueToWith = (
   q: Query,
   withStore: object,
   value: Query,
-  set: RecordUnknown,
-  key: string,
   withKey: string | number,
-) => {
+  set?: RecordUnknown,
+  key?: string,
+): string | undefined => {
   // if it is not a select query,
   // move it into `WITH` statement and select from it with a raw SQL
   if (value.q.type) {
@@ -139,8 +137,14 @@ export const moveQueryValueToWith = (
       withKey,
     );
 
-    set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
+    if (set) {
+      set[key as string] = new RawSQL(`(SELECT * FROM "${as}")`);
+    }
+
+    return as;
   }
+
+  return;
 };
 
 export class WithMethods {
@@ -221,6 +225,33 @@ export class WithMethods {
    *   .with('secondTable', db.secondTable)
    *   .join('secondTable', 'secondTable.someId', 'firstTable.id')
    *   .select('firstTable.column', 'secondTable.column');
+   * ```
+   *
+   * ## creating records using `with` values
+   *
+   * You can use values returned from `with` statements when creating records:
+   *
+   * ```ts
+   * db.table
+   *   .with('created', () => db.someTable.create(data).select('one', 'two'))
+   *   .create({
+   *     column: (q) => q.from('created').get('one'),
+   *     otherColumn: (q) => q.from('created').get('two'),
+   *   });
+   *
+   * // A record in `with` is created once, its values are used to create two records
+   * db.table
+   *   .with('created', () => db.someTable.create(data).select('one', 'two'))
+   *   .createMany([
+   *     {
+   *       column: (q) => q.from('created').get('one'),
+   *       otherColumn: (q) => q.from('created').get('two'),
+   *     },
+   *     {
+   *       column: (q) => q.from('created').get('one'),
+   *       otherColumn: (q) => q.from('created').get('two'),
+   *     },
+   *   ]);
    * ```
    */
   with<T extends PickQueryMetaWithDataColumnTypes, Name extends string, Q>(

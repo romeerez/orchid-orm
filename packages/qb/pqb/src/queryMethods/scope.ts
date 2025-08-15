@@ -1,5 +1,6 @@
 import {
   PickQueryMeta,
+  PickQueryMetaShapeRelationsWithData,
   QueryColumns,
   QueryMetaBase,
   setObjectValueImmutable,
@@ -7,10 +8,7 @@ import {
 import { QueryScopes } from '../sql';
 import { _clone } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
-import {
-  PickQueryMetaShapeRelationsWithData,
-  SelectableFromShape,
-} from '../query/query';
+import { SelectableFromShape } from '../query/query';
 
 interface ScopeArgumentQueryMeta<
   Table extends string | undefined,

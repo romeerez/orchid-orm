@@ -27,6 +27,7 @@ export {
   toSnakeCase,
   noop,
   emptyObject,
+  getFreeAlias,
 } from './utils';
 export type {
   RecordOptionalString,
@@ -59,11 +60,8 @@ export {
   pushQueryValueImmutable,
   getValueKey,
   applyTransforms,
-} from './query';
+} from './query/query';
 export type {
-  PickQueryResultReturnType,
-  PickQueryResultReturnTypeUniqueColumns,
-  PickQueryReturnType,
   QueryReturnTypeAll,
   QueryReturnTypeOptional,
   BatchParser,
@@ -73,21 +71,6 @@ export type {
   HookSelect,
   HookSelectValue,
   IsQuery,
-  PickQueryInputType,
-  PickQueryMeta,
-  PickQueryMetaResult,
-  PickQueryMetaResultReturnType,
-  PickQueryMetaResultWindows,
-  PickQueryMetaReturnType,
-  PickQueryMetaShape,
-  PickQueryResult,
-  PickQueryShape,
-  PickQueryTable,
-  PickQueryTableMetaResult,
-  PickQueryTableMetaResultInputType,
-  PickQueryTableMetaResultShape,
-  PickQueryTableMetaShape,
-  PickQueryUniqueProperties,
   QueryBaseCommon,
   QueryDataTransform,
   QueryInternalBase,
@@ -100,7 +83,9 @@ export type {
   SingleSqlItem,
   Sql,
   CoreQueryScopes,
-} from './query';
+  QueryBase,
+} from './query/query';
+export type { QueryDataBase } from './query/query-data';
 export {
   addCode,
   arrayDataToCode,
@@ -202,3 +187,101 @@ export { logColors } from './log';
 export type { QueryLogger, QueryLogObject, QueryLogOptions } from './log';
 export type { SQLQueryArgs } from './db';
 export { QueryHookUtils } from './hooks';
+export type { DelayedRelationSelect } from './query/delayed-relational-select';
+export { requirePrimaryKeys, getPrimaryKeys } from './query/primary-keys';
+export { queryColumnNameToKey } from './query/column-name-to-key';
+export {
+  OrchidOrmError,
+  NotFoundError,
+  OrchidOrmInternalError,
+  QueryError,
+  MoreThanOneRowError,
+  UnhandledTypeError,
+} from './query/errors';
+export type { QueryErrorName } from './query/errors';
+export {
+  newDelayedRelationSelect,
+  setDelayedRelation,
+} from './query/delayed-relational-select';
+export type { WithDataItems, WithDataItem } from './query/with';
+export type {
+  PickQueryMetaResultReturnType,
+  PickQueryMetaReturnType,
+  PickQueryTableMetaResultShape,
+  PickQueryTableMetaShape,
+  PickQueryTableMetaResultInputType,
+  PickQueryInputType,
+  PickQueryTableMetaResult,
+  PickQueryMetaResultWindows,
+  PickQueryUniqueProperties,
+  PickQueryResultReturnTypeUniqueColumns,
+  PickQueryMetaResult,
+  PickQueryMetaShape,
+  PickQueryResultReturnType,
+  PickQueryReturnType,
+  PickQueryShape,
+  PickQueryResult,
+  PickQueryMeta,
+  PickQueryTable,
+  PickQueryWindows,
+  PickQueryWithData,
+} from './query/pick-query-types';
+export type { IsQueries } from './query/query';
+export type {
+  RelationsBase,
+  RelationConfigDataForCreate,
+  RelationConfigBase,
+  RelationConfigQuery,
+  RelationJoinQuery,
+} from './query/relations';
+export { isRelationQuery } from './query/relations';
+export type {
+  PickQueryRelationQueries,
+  PickQueryRelations,
+  PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
+  PickQueryMetaResultReturnTypeWithDataWindowsThen,
+  PickQueryMetaResultReturnTypeWithDataWindows,
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  PickQueryMetaTableShapeReturnTypeWithData,
+  PickQueryMetaResultRelationsWithDataReturnType,
+  PickQueryMetaShapeRelationsWithData,
+  PickQueryRelationsWithData,
+  PickQueryMetaWithData,
+  PickQueryMetaTableShape,
+  PickQueryMetaTable,
+  PickQueryMetaWithDataColumnTypes,
+  PickQueryResultColumnTypes,
+  PickQueryWithDataColumnTypes,
+  PickQueryMetaResultRelationsWindowsColumnTypes,
+  PickQueryMetaColumnTypes,
+  PickQueryColumnTypes,
+  PickQueryMetaResultRelationsWindows,
+  PickQueryMetaResultRelations,
+  PickQueryMetaRelationsResultReturnType,
+  PickQueryMetaShapeRelationsReturnType,
+  PickQueryMetaRelationsReturnType,
+  PickQueryMetaRelationsResult,
+  PickQueryMetaRelations,
+  PickQueryShapeResultReturnTypeSinglePrimaryKey,
+  PickQueryShapeResultSinglePrimaryKey,
+  PickQueryShapeSinglePrimaryKey,
+  PickQuerySinglePrimaryKey,
+} from './query/pick-query-types';
+export {
+  _getQueryAs,
+  _getQueryFreeAlias,
+  _setQueryAs,
+  _setSubQueryAliases,
+  _checkIfAliased,
+  _applyRelationAliases,
+  _getQueryAliasOrName,
+  _getQueryOuterAliases,
+  _setQueryAlias,
+  _copyQueryAliasToQuery,
+} from './query/query-aliases';
+export type {
+  AsQueryArg,
+  AliasOrTable,
+  QueryDataAliases,
+  SetQueryTableAlias,
+} from './query/query-aliases';

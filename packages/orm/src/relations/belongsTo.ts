@@ -16,15 +16,11 @@ import {
   CreateMethodsNames,
   DeleteMethodsNames,
   getQueryAs,
-  InsertQueryData,
   isQueryReturnsAll,
   pushQueryOnForOuter,
   Query,
   QueryResult,
-  RelationConfigBase,
-  RelationJoinQuery,
   SelectableFromShape,
-  SelectQueryData,
   setQueryObjectValueImmutable,
   QueryTake,
   QueryTakeOptional,
@@ -34,7 +30,6 @@ import {
   UpdateData,
   VirtualColumn,
   WhereArg,
-  getPrimaryKeys,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -56,8 +51,11 @@ import {
   ColumnsShapeBase,
   emptyArray,
   EmptyObject,
+  getPrimaryKeys,
   pushQueryValueImmutable,
   RecordUnknown,
+  RelationConfigBase,
+  RelationJoinQuery,
 } from 'orchid-core';
 import { RelationRefsOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
@@ -210,6 +208,24 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       return index;
     });
 
+    // TODO: belongs nested creates can be done via a single query once hooks are called for sub queries
+    // const value = item[key] as NestedInsertOneItemCreate;
+    // if ('create' in value) {
+    //   const as = moveQueryValueToWith(
+    //     q,
+    //     (q.q.insertWith ??= {}),
+    //     _queryCreate(query.select(...primaryKeys), value.create as never),
+    //     rowIndex,
+    //   );
+    //
+    //   foreignKeys.map((foreignKey, i) => {
+    //     item[foreignKey] = new RawSQL(
+    //       `(SELECT "${primaryKeys[i]}" FROM "${as}")`,
+    //     );
+    //   });
+    //   return;
+    // }
+
     const store = ctx as unknown as {
       belongsTo?: Record<string, [number, number[], unknown][]>;
     };
@@ -237,7 +253,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
         relationData.map(([, , data]) => data as NestedInsertOneItem),
       );
 
-      const { values } = q.q as InsertQueryData;
+      const { values } = q.q;
       for (let i = 0, len = relationData.length; i < len; i++) {
         const [rowIndex, columnIndexes] = relationData[i];
         const row = (values as unknown[][])[rowIndex];
@@ -493,7 +509,8 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
       } else if (params.delete) {
         const selectQuery = (q as Query).clone();
         selectQuery.q.type = undefined;
-        (selectQuery.q as SelectQueryData).distinct = emptyArray;
+        selectQuery.q.distinct = emptyArray;
+        selectIfNotSelected(selectQuery, foreignKeys);
         idsForDelete = (await _queryRows(selectQuery)) as [
           unknown,
           ...unknown[],
@@ -506,7 +523,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
     const { upsert } = params;
     if (upsert || params.update || params.delete) {
-      selectIfNotSelected(q, foreignKeys);
+      // selectIfNotSelected(q, foreignKeys);
     }
 
     if (upsert) {
@@ -543,7 +560,6 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
           const collectData: RecordUnknown = {};
           state.collect = {
-            keys: primaryKeys,
             data: collectData,
           };
 
@@ -553,41 +569,45 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         }
       });
     } else if (params.delete || params.update) {
-      _queryHookAfterUpdate(q, [], async (data) => {
-        let ids: [unknown, ...unknown[]][] | undefined;
+      _queryHookAfterUpdate(
+        q,
+        params.update ? foreignKeys : emptyArray,
+        async (data) => {
+          let ids: [unknown, ...unknown[]][] | undefined;
 
-        if (params.delete) {
-          ids = idsForDelete;
-        } else {
-          ids = [];
-          for (const item of data) {
-            let row: unknown[] | undefined;
-            for (const foreignKey of foreignKeys) {
-              const id = (item as RecordUnknown)[foreignKey];
-              if (id === null) {
-                row = undefined;
-                break;
-              } else {
-                (row ??= []).push(id);
+          if (params.delete) {
+            ids = idsForDelete;
+          } else {
+            ids = [];
+            for (const item of data) {
+              let row: unknown[] | undefined;
+              for (const foreignKey of foreignKeys) {
+                const id = (item as RecordUnknown)[foreignKey];
+                if (id === null) {
+                  row = undefined;
+                  break;
+                } else {
+                  (row ??= []).push(id);
+                }
               }
+              if (row) ids.push(row as [unknown, ...unknown[]]);
             }
-            if (row) ids.push(row as [unknown, ...unknown[]]);
           }
-        }
 
-        if (!ids?.length) return;
+          if (!ids?.length) return;
 
-        const t = query.whereIn(
-          primaryKeys as [string, ...string[]],
-          ids as [unknown, ...unknown[]][],
-        );
+          const t = query.whereIn(
+            primaryKeys as [string, ...string[]],
+            ids as [unknown, ...unknown[]][],
+          );
 
-        if (params.delete) {
-          await _queryDelete(t);
-        } else {
-          await _queryUpdate(t, params.update as UpdateArg<Query>);
-        }
-      });
+          if (params.delete) {
+            await _queryDelete(t);
+          } else {
+            await _queryUpdate(t, params.update as UpdateArg<Query>);
+          }
+        },
+      );
     }
   }) as BelongsToNestedUpdate;
 };

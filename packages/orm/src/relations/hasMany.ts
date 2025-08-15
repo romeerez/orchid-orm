@@ -8,33 +8,32 @@ import {
   Query,
   WhereArg,
   WhereResult,
-  InsertQueryData,
   isQueryReturnsAll,
   VirtualColumn,
   CreateCtx,
   UpdateCtx,
   UpdateData,
   AddQueryDefaults,
-  RelationJoinQuery,
   _queryDefaults,
   _queryUpdateOrThrow,
   _queryUpdate,
   _queryCreateMany,
   _queryDelete,
-  PickQueryMetaRelations,
-  RelationConfigBase,
   PickQueryQ,
-  OrchidOrmInternalError,
   _queryWhere,
-  getPrimaryKeys,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
   EmptyObject,
+  getPrimaryKeys,
   MaybeArray,
   objectHasValues,
+  OrchidOrmInternalError,
+  PickQueryMetaRelations,
   RecordString,
   RecordUnknown,
+  RelationConfigBase,
+  RelationJoinQuery,
   toArray,
 } from 'orchid-core';
 import {
@@ -320,7 +319,7 @@ export const makeHasManyMethod = (
       return (query) => {
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
-        const q = (relationQuery as unknown as PickQueryQ).q as InsertQueryData;
+        const q = (relationQuery as unknown as PickQueryQ).q;
         q.values = { from: baseQuery };
       };
     },

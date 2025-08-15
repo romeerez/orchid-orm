@@ -6,8 +6,6 @@ export * from './query';
 export * from './queryMethods';
 export * from './quote';
 export * from './common/utils';
-export * from './errors';
-export * from './relations';
 export * from './columns/operators';
 export * from './common/fn';
 export * from './testTransaction';

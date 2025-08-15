@@ -402,3 +402,18 @@ export const addValue = (values: unknown[], value: unknown) => {
   values.push(value);
   return `$${values.length}`;
 };
+
+export const getFreeAlias = (
+  obj: RecordUnknown | undefined,
+  as: string,
+): string => {
+  if (obj?.[as]) {
+    let suffix = 2;
+    let name;
+    while (obj[(name = `${as}${suffix}`)]) {
+      suffix++;
+    }
+    as = name;
+  }
+  return as;
+};

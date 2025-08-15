@@ -447,6 +447,45 @@ describe('create functions', () => {
         [null],
       );
     });
+
+    it('should create using values from CTE', async () => {
+      const q = User.with('created1', () =>
+        User.create({ name: 'user 1', password: 'password 1' }).select('name'),
+      )
+        .with('created2', () =>
+          User.create({ name: 'user 2', password: 'password 2' }).select(
+            'password',
+          ),
+        )
+        .create({
+          name: (q) => q.from('created1').get('name'),
+          password: (q) => q.from('created2').get('password'),
+        })
+        .select('name', 'password');
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "created1" AS (
+            INSERT INTO "user"("name", "password") VALUES ($1, $2) RETURNING "user"."name"
+          ),
+          "created2" AS (
+            INSERT INTO "user"("name", "password") VALUES ($3, $4) RETURNING "user"."password"
+          )
+          INSERT INTO "user"("name", "password")
+          VALUES (
+            (SELECT "created1"."name" FROM "created1" LIMIT 1),
+            (SELECT "created2"."password" FROM "created2" LIMIT 1)
+          )
+          RETURNING "user"."name", "user"."password"
+        `,
+        ['user 1', 'password 1', 'user 2', 'password 2'],
+      );
+
+      const res = await q;
+
+      expect(res).toEqual({ name: 'user 1', password: 'password 2' });
+    });
   });
 
   describe('insert', () => {
@@ -932,6 +971,92 @@ describe('create functions', () => {
         );
       });
     });
+
+    it('should create many using values from CTE', async () => {
+      const q = User.with('created1', () =>
+        User.create({ name: 'user 1', password: 'password 1' }).select(
+          'name',
+          'password',
+        ),
+      )
+        .with('created2', () =>
+          User.create({ name: 'user 2', password: 'password 2' }).select(
+            'name',
+            'password',
+          ),
+        )
+        .createMany([
+          {
+            name: (q) => q.from('created1').get('name'),
+            password: (q) => q.from('created2').get('password'),
+          },
+          {
+            name: (q) => q.from('created2').get('name'),
+            password: (q) => q.from('created1').get('password'),
+          },
+        ])
+        .select('name', 'password');
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "created1" AS (
+            INSERT INTO "user"("name", "password") VALUES ($1, $2) RETURNING "user"."name", "user"."password"
+          ),
+          "created2" AS (
+            INSERT INTO "user"("name", "password") VALUES ($3, $4) RETURNING "user"."name", "user"."password"
+          )
+          INSERT INTO "user"("name", "password")
+          VALUES (
+            (SELECT "created1"."name" FROM "created1" LIMIT 1),
+            (SELECT "created2"."password" FROM "created2" LIMIT 1)
+          ), (
+            (SELECT "created2"."name" FROM "created2" LIMIT 1),
+            (SELECT "created1"."password" FROM "created1" LIMIT 1)
+          )
+          RETURNING "user"."name", "user"."password"
+        `,
+        ['user 1', 'password 1', 'user 2', 'password 2'],
+      );
+
+      const res = await q;
+
+      expect(res).toEqual([
+        { name: 'user 1', password: 'password 2' },
+        { name: 'user 2', password: 'password 1' },
+      ]);
+    });
+
+    it('should fail in batch mode when there is a non-select query in CTE', async () => {
+      const q = User.with('created', () =>
+        User.create({ name: 'user 1', password: 'password 1' }).select(
+          'name',
+          'password',
+        ),
+      )
+        .createMany([
+          {
+            name: 'first',
+            age: 20,
+            password: (q) => q.from('created').get('password'),
+          },
+          {
+            name: 'second',
+            age: 30,
+            password: (q) => q.from('created').get('password'),
+          },
+          {
+            name: 'third',
+            age: 40,
+            password: (q) => q.from('created').get('password'),
+          },
+        ])
+        .select('name', 'password');
+
+      expect(() => q.toSQL()).toThrow(
+        'Cannot insert many records when having a non-select sub-query',
+      );
+    });
   });
 
   describe('insertMany', () => {
@@ -1141,6 +1266,45 @@ describe('create functions', () => {
         `,
         ['name', 'password', 1],
       );
+    });
+
+    it('should create from select using values from CTE', async () => {
+      const idOfChat = await Chat.create(chatData).get('idOfChat');
+
+      const q = Message.with('user', () =>
+        User.create(userData).select('id', 'name'),
+      )
+        .createFrom(Chat.find(idOfChat).select({ chatId: 'idOfChat' }), {
+          authorId: (q) => q.from('user').get('id'),
+          text: (q) => q.from('user').get('name'),
+        })
+        .select('chatId', 'authorId', 'text');
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "user" AS (
+            INSERT INTO "user"("name", "password")
+            VALUES ($1, $2)
+            RETURNING "user"."id", "user"."name"
+          )
+          INSERT INTO "message"("chat_id", "author_id", "text")
+          SELECT "chat"."id_of_chat" "chatId", (SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)
+          FROM "chat"
+          WHERE "chat"."id_of_chat" = $3
+          LIMIT 1
+          RETURNING "message"."chat_id" "chatId", "message"."author_id" "authorId", "message"."text"
+        `,
+        [userData.name, userData.password, idOfChat],
+      );
+
+      const res = await q;
+
+      expect(res).toEqual({
+        chatId: idOfChat,
+        authorId: expect.any(Number),
+        text: userData.name,
+      });
     });
   });
 

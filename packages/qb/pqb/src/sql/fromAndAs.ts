@@ -1,7 +1,7 @@
 import { columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
 import { toSQL, ToSQLCtx } from './toSQL';
-import { QueryData, QueryDataFromItem, SelectQueryData } from './data';
+import { QueryData, QueryDataFromItem } from './data';
 import {
   addValue,
   isExpression,
@@ -17,7 +17,7 @@ let fromQuery: Query | undefined;
 export const pushFromAndAs = (
   ctx: ToSQLCtx,
   table: IsQuery,
-  data: SelectQueryData,
+  data: QueryData,
   quotedAs?: string,
 ): Query | undefined => {
   let sql = 'FROM ';
@@ -75,7 +75,7 @@ export const pushFromAndAs = (
 const getFrom = (
   ctx: ToSQLCtx,
   table: IsQuery,
-  data: SelectQueryData,
+  data: QueryData,
   quotedAs?: string,
 ) => {
   fromQuery = undefined;
@@ -98,7 +98,7 @@ const getFrom = (
 
 const fromToSql = (
   ctx: ToSQLCtx,
-  data: SelectQueryData,
+  data: QueryData,
   from: QueryDataFromItem,
   quotedAs?: string,
 ) => {
@@ -108,7 +108,7 @@ const fromToSql = (
     if (isExpression(from)) {
       sql = from.toSQL(ctx, quotedAs);
     } else {
-      only = (from.q as SelectQueryData).only;
+      only = from.q.only;
 
       if (!from.table) {
         sql = `(${getSqlText(toSQL(from, ctx))})`;
@@ -123,6 +123,15 @@ const fromToSql = (
       fromQuery = from;
     }
   } else {
+    if (data.with) {
+      for (const w of data.with) {
+        if (w?.n === from && w.q?.q.inCTE) {
+          ctx.delayedRelationSelect = w.q.q.inCTE.delayedRelationSelect;
+          break;
+        }
+      }
+    }
+
     sql = quoteSchemaAndTable(data.schema, from);
   }
 

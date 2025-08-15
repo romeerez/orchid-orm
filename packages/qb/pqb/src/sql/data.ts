@@ -19,6 +19,7 @@ import {
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
+  DelayedRelationSelect,
   Expression,
   ExpressionChain,
   HookSelect,
@@ -27,16 +28,16 @@ import {
   PickQueryInputType,
   PickQueryTable,
   QueryColumn,
+  QueryDataAliases,
+  QueryDataBase,
   QueryDataTransform,
   QueryHookUtils,
   QueryLogger,
   QueryLogObject,
   QueryReturnType,
-  RecordString,
   RecordUnknown,
+  RelationConfigBase,
 } from 'orchid-core';
-import { RelationConfigBase } from '../relations';
-
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
 import { ColumnsShape } from '../columns';
@@ -96,7 +97,16 @@ export interface HandleResult {
 
 export type WithItems = (WithItem | undefined)[];
 
-export interface CommonQueryData {
+export interface QueryData extends QueryDataBase {
+  type:
+    | undefined
+    | 'upsert'
+    | 'insert'
+    | 'update'
+    | 'delete'
+    | 'truncate'
+    | 'columnInfo'
+    | 'copy';
   adapter: Adapter;
   shape: ColumnsShape;
   patchResult?(
@@ -122,10 +132,9 @@ export interface CommonQueryData {
   joinedComputeds?: { [K: string]: ComputedColumns | undefined };
   joinedForSelect?: string;
   innerJoinLateral?: true;
-  // stores `aliases` of the parent query object when the current query object is withing a query callback.
-  outerAliases?: RecordString;
   schema?: string;
   select?: SelectItem[];
+  selectRelation?: boolean;
   selectCache?: { sql: string; aliases: string[] };
   selectAllColumns?: string[];
   /**
@@ -139,8 +148,6 @@ export interface CommonQueryData {
   getColumn?: QueryColumn;
   // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
-  as?: string;
-  aliases?: RecordString;
   from?: MaybeArray<QueryDataFromItem>;
   sources?: { [K: string]: QuerySourceItem };
   and?: WhereItem[];
@@ -227,8 +234,12 @@ export interface CommonQueryData {
 
   inCTE?: {
     selectNum: boolean;
-    returning?: { select?: string; hookSelect?: HookSelect };
+    returning?: {
+      select?: string;
+      hookSelect?: HookSelect;
+    };
     targetHookSelect: HookSelect;
+    delayedRelationSelect: DelayedRelationSelect;
   };
 
   // It is used by `joinQueryChainHOF` to customize the outer query of a chained relation.
@@ -237,10 +248,9 @@ export interface CommonQueryData {
   // `set` data for insert or update that was set from a `before*` hook
   hookCreateSet?: RecordUnknown[];
   hookUpdateSet?: RecordUnknown[];
-}
 
-export interface SelectQueryData extends CommonQueryData {
-  type: undefined | 'upsert';
+  /** select and upsert **/
+
   distinct?: SelectableOrExpression[];
   only?: boolean;
   join?: JoinItem[];
@@ -260,18 +270,33 @@ export interface SelectQueryData extends CommonQueryData {
     tableNames?: string[] | Expression;
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
-}
 
-export interface InsertQueryData extends CommonQueryData {
-  type: 'insert';
+  /** insert **/
+
   columns: string[];
   values: InsertQueryDataObjectValues | InsertQueryDataFromValues;
-  join?: JoinItem[];
   onConflict?: {
     target?: OnConflictTarget;
     set?: OnConflictSet;
     merge?: OnConflictMerge;
   };
+
+  /** update **/
+
+  updateData: UpdateQueryDataItem[];
+
+  /** truncate **/
+
+  restartIdentity?: boolean;
+  cascade?: boolean;
+
+  /** column info **/
+
+  column?: string;
+
+  /** copy **/
+
+  copy: CopyOptions;
 }
 
 export type InsertQueryDataObjectValues = unknown[][];
@@ -289,32 +314,6 @@ export interface UpdatedAtDataInjector {
 }
 
 export type UpdateQueryDataItem = UpdateQueryDataObject | UpdatedAtDataInjector;
-
-export interface UpdateQueryData extends CommonQueryData {
-  type: 'update';
-  updateData: UpdateQueryDataItem[];
-}
-
-export interface DeleteQueryData extends CommonQueryData {
-  type: 'delete';
-  join?: JoinItem[];
-}
-
-export interface TruncateQueryData extends CommonQueryData {
-  type: 'truncate';
-  restartIdentity?: boolean;
-  cascade?: boolean;
-}
-
-export interface ColumnInfoQueryData extends CommonQueryData {
-  type: 'columnInfo';
-  column?: string;
-}
-
-export interface CopyQueryData extends CommonQueryData {
-  type: 'copy';
-  copy: CopyOptions;
-}
 
 export type CopyOptions<Column = string> = {
   columns?: Column[];
@@ -338,21 +337,11 @@ export type CopyOptions<Column = string> = {
     }
 );
 
-export type QueryData =
-  | SelectQueryData
-  | InsertQueryData
-  | UpdateQueryData
-  | DeleteQueryData
-  | TruncateQueryData
-  | ColumnInfoQueryData
-  | CopyQueryData;
-
 export interface PickQueryDataShapeAndJoinedShapes {
   shape: ColumnsShapeBase;
   joinedShapes?: JoinedShapes;
 }
 
 export interface PickQueryDataShapeAndJoinedShapesAndAliases
-  extends PickQueryDataShapeAndJoinedShapes {
-  aliases?: RecordString;
-}
+  extends PickQueryDataShapeAndJoinedShapes,
+    QueryDataAliases {}

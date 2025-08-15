@@ -12,8 +12,6 @@ import {
   _queryTakeOptional,
   CreateData,
   Query,
-  RelationJoinQuery,
-  RelationsBase,
   VirtualColumn,
   WhereArg,
 } from 'pqb';
@@ -22,6 +20,8 @@ import {
   ColumnsShapeBase,
   IsQuery,
   RecordUnknown,
+  RelationJoinQuery,
+  RelationsBase,
 } from 'orchid-core';
 import { HasMany, makeHasManyMethod } from './hasMany';
 import {

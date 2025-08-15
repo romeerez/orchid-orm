@@ -4,7 +4,7 @@ import {
   queryTypeWithLimitOne,
   SetQueryReturnsColumnOptional,
 } from '../query/query';
-import { SelectQueryData, ToSQLCtx } from '../sql';
+import { ToSQLCtx } from '../sql';
 import {
   ColumnTypeBase,
   Expression,
@@ -85,7 +85,7 @@ export function queryJson<T>(
   );
 
   // to skip LIMIT 1
-  (q.q as SelectQueryData).returnsOne = true;
+  q.q.returnsOne = true;
 
   return q as never;
 }

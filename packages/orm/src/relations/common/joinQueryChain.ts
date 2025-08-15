@@ -5,9 +5,13 @@ import {
   getShapeFromSelect,
   Query,
   RawSQL,
-  RelationJoinQuery,
 } from 'pqb';
-import { ColumnsShapeBase, HookSelectValue, isExpression } from 'orchid-core';
+import {
+  ColumnsShapeBase,
+  HookSelectValue,
+  isExpression,
+  RelationJoinQuery,
+} from 'orchid-core';
 
 export const joinQueryChainHOF =
   (

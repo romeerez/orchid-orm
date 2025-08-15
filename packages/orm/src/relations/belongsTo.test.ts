@@ -1,4 +1,4 @@
-import { Db, NotFoundError, Query } from 'pqb';
+import { Db, Query } from 'pqb';
 import {
   BaseTable,
   chatData,
@@ -17,7 +17,7 @@ import {
 } from '../test-utils/orm.test-utils';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
-import { omit } from 'orchid-core';
+import { NotFoundError, omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = { db: db.$qb };
@@ -776,17 +776,50 @@ describe('belongsTo', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
-        const {
-          Id: messageId,
-          ChatId,
-          AuthorId,
-        } = await db.message.select('Id', 'ChatId', 'AuthorId').create({
+        const chatData = testData.createMessageChat();
+        const senderData = testData.createMessageSender();
+
+        const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
           createdAt: messageData.createdAt,
           updatedAt: messageData.updatedAt,
           Text: 'message',
-          chat: testData.createMessageChat(),
-          sender: testData.createMessageSender(),
+          chat: chatData,
+          sender: senderData,
         });
+
+        // TODO: belongs nested creates can be done via a single query once hooks are called for sub queries
+        // expectSql(
+        //   q.toSQL(),
+        //   `
+        //     WITH "q" AS (
+        //       INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
+        //       VALUES ($1, $2, $3, $4)
+        //       RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
+        //     ),
+        //     "q2" AS (
+        //       INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+        //       VALUES ($5, $6, $7, $8, $9)
+        //       RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
+        //     )
+        //     INSERT INTO "message"("created_at", "updated_at", "text", "chat_id", "message_key", "author_id")
+        //     VALUES (
+        //       $10, $11, $12,
+        //       (SELECT "IdOfChat" FROM "q"),
+        //       (SELECT "UserKey" FROM "q2"),
+        //       (SELECT "Id" FROM "q2")
+        //     )
+        //     RETURNING "message"."id" "Id", "message"."chat_id" "ChatId", "message"."author_id" "AuthorId"
+        //   `,
+        //   [
+        //     ...Object.values(chatData.create),
+        //     ...Object.values(senderData.create),
+        //     messageData.createdAt,
+        //     messageData.updatedAt,
+        //     'message',
+        //   ],
+        // );
+
+        const { Id: messageId, ChatId, AuthorId } = await q;
 
         await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
         await assert.chat({ ChatId, Title: 'chat' });
@@ -1869,25 +1902,28 @@ describe('belongsTo', () => {
       it('should create related record if it does not exist', async () => {
         const profile = await db.profile.create(profileData);
 
-        const updated = await db.profile
-          .selectAll()
-          .find(profile.Id)
-          .update({
-            user: {
-              upsert: {
-                update: {
-                  Name: 'updated',
-                },
-                create: {
-                  ...userData,
-                  Name: 'created',
-                },
+        const count = await db.profile.find(profile.Id).update({
+          user: {
+            upsert: {
+              update: {
+                Name: 'updated',
+              },
+              create: {
+                ...userData,
+                Name: 'created',
               },
             },
-          });
+          },
+        });
+        expect(count).toBe(1);
 
-        const user = await db.profile.queryRelated('user', updated);
-        expect(user?.Name).toBe('created');
+        const profiles = await db.profile.select('*', { user: (q) => q.user });
+        expect(profiles).toMatchObject([
+          {
+            Id: profile.Id,
+            user: { Name: 'created' },
+          },
+        ]);
       });
 
       it('should create related record if it does not exist with a data from a callback', async () => {

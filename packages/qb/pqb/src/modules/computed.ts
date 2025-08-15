@@ -12,6 +12,7 @@ import {
   QueryReturnType,
   RecordString,
   RecordUnknown,
+  RelationsBase,
 } from 'orchid-core';
 import { PickQueryQ, ReturnsQueryOrExpression } from '../query/query';
 import {
@@ -19,7 +20,6 @@ import {
   QueryBatchResult,
   SqlMethod,
 } from '../queryMethods';
-import { RelationsBase } from '../relations';
 import { addColumnParserToQuery, ColumnType, UnknownColumn } from '../columns';
 import { QueryData } from '../sql';
 import {

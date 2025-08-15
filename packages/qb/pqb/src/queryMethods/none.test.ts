@@ -1,6 +1,6 @@
 import { User, userData } from '../test-utils/test-utils';
 import { Adapter } from '../adapter';
-import { NotFoundError } from '../errors';
+import { NotFoundError } from 'orchid-core';
 import { assertType, useTestDatabase } from 'test-utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

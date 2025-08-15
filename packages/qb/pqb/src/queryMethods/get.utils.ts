@@ -1,5 +1,4 @@
 import {
-  PickQueryMetaTable,
   PickQueryQ,
   SetQueryReturnsColumnOptional,
   SetQueryReturnsColumnOrThrow,
@@ -11,6 +10,7 @@ import {
   getValueKey,
   IsQuery,
   PickQueryMeta,
+  PickQueryMetaTable,
   PickQueryShape,
   PickQueryTable,
   QueryColumn,

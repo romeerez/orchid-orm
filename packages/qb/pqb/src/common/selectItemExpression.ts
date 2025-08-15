@@ -1,5 +1,5 @@
 import { Expression, QueryColumn } from 'orchid-core';
-import { QueryData, SelectQueryData, ToSQLCtx, ToSQLQuery } from '../sql';
+import { QueryData, ToSQLCtx, ToSQLQuery } from '../sql';
 import { selectAllSql } from '../sql/select';
 import { columnToSql } from '../sql/common';
 
@@ -28,7 +28,7 @@ export class SelectItemExpression<
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     return typeof this.item === 'string'
       ? this.item === '*'
-        ? selectAllSql(this.q as SelectQueryData, quotedAs)
+        ? selectAllSql(this.q, quotedAs)
         : columnToSql(ctx, this.q, this.q.shape, this.item, quotedAs, true)
       : this.item.toSQL(ctx, quotedAs);
   }

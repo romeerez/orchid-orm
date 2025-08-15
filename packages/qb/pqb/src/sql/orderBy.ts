@@ -1,7 +1,7 @@
 import { OrderItem, OrderTsQueryConfig, SortDir } from './types';
 import { maybeSelectedColumnToSql } from './common';
 import { ToSQLCtx } from './toSQL';
-import { QueryData, SelectQueryData } from './data';
+import { QueryData } from './data';
 import { addValue, emptyObject } from 'orchid-core';
 import { isExpression } from 'orchid-core';
 
@@ -9,7 +9,7 @@ export const pushOrderBySql = (
   ctx: ToSQLCtx,
   data: QueryData,
   quotedAs: string | undefined,
-  order: Exclude<SelectQueryData['order'], undefined>,
+  order: Exclude<QueryData['order'], undefined>,
 ) => {
   ctx.sql.push(
     `ORDER BY ${order

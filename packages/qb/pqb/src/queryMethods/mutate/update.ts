@@ -1,12 +1,10 @@
 import {
-  PickQueryMetaResultRelationsWithDataReturnTypeShape,
   Query,
   SetQueryKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
 import { _clone, throwIfNoWhere } from '../../query/queryUtils';
-import { RelationConfigBase } from '../../relations';
 import { _queryWhereIn, WhereResult } from '../where/where';
 import { ToSQLQuery } from '../../sql';
 import { anyShape, VirtualColumn } from '../../columns';
@@ -20,10 +18,14 @@ import {
   pushQueryValueImmutable,
   QueryOrExpression,
   ColumnSchemaConfig,
+  requirePrimaryKeys,
+  QueryBase,
+  RelationConfigBase,
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
 } from 'orchid-core';
 import { QueryResult } from '../../adapter';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
-import { OrchidOrmInternalError } from '../../errors';
+import { OrchidOrmInternalError } from 'orchid-core';
 import { moveQueryValueToWith } from '../with';
 
 export interface UpdateSelf
@@ -115,7 +117,6 @@ export interface UpdateCtx {
 }
 
 export interface UpdateCtxCollect {
-  keys: string[];
   data: RecordUnknown;
 }
 
@@ -220,9 +221,9 @@ export const _queryUpdate = <T extends UpdateSelf>(
             query as unknown as Query,
             q,
             value,
+            'with',
             set,
             key,
-            'with',
           );
         } else {
           // encode if not a query object
@@ -235,26 +236,29 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
   const { queries } = ctx;
   if (queries) {
+    const primaryKeys = requirePrimaryKeys(
+      query as unknown as QueryBase,
+      'Cannot perform complex update on a table without primary keys',
+    );
+    const hookSelect = (q.hookSelect = new Map(q.hookSelect));
+    for (const column of primaryKeys) {
+      hookSelect.set(column, { select: column });
+    }
+
     q.patchResult = async (_, _h, queryResult) => {
       await Promise.all(queries.map(callWithThis, queryResult));
 
       if (ctx.collect) {
         const t = (query as unknown as Query).baseQuery.clone();
-        const { keys } = ctx.collect;
 
-        (
-          _queryWhereIn as unknown as (
-            q: Query,
-            keys: string[],
-            values: unknown[][],
-          ) => Query
-        )(
+        _queryWhereIn(
           t,
-          keys,
-          queryResult.rows.map((item) => keys.map((key) => item[key])),
+          true,
+          primaryKeys,
+          queryResult.rows.map((item) => primaryKeys.map((key) => item[key])),
         );
 
-        _queryUpdate(
+        await _queryUpdate(
           t as WhereResult<Query>,
           ctx.collect.data as UpdateData<WhereResult<Query>>,
         );

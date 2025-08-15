@@ -1,11 +1,13 @@
-import { IsQuery } from 'orchid-core';
-import { RelationConfigBase } from '../relations';
+import {
+  _applyRelationAliases,
+  IsQuery,
+  RelationConfigBase,
+} from 'orchid-core';
 import { Query } from '../query/query';
 import { _queryWhere } from './where/where';
-import { _queryResolveAlias } from './as';
 import { getQueryAs } from '../common/utils';
 import { _queryAll } from '../query/queryUtils';
-import { SelectQueryData } from 'pqb';
+import { QueryData } from '../sql/data';
 
 export const _chain = (
   fromQuery: IsQuery,
@@ -16,11 +18,11 @@ export const _chain = (
   const toTable = toQuery as Query;
 
   let query: Query;
-  let q: SelectQueryData;
+  let q: QueryData;
   if (self.q.subQuery) {
     query = toTable;
     query.q.subQuery = 2;
-    q = query.q as SelectQueryData;
+    q = query.q as QueryData;
 
     // once there is a hasMany or hasAndBelongsToMany in the chain,
     // the following belongTo and hasOne must also return multiple
@@ -30,7 +32,7 @@ export const _chain = (
       self.q.chainMultiple
     ) {
       q.returnType = q.returnsOne = q.limit = undefined;
-    } else if (!((rel.query as Query).q as SelectQueryData).returnsOne) {
+    } else if (!((rel.query as Query).q as QueryData).returnsOne) {
       q.chainMultiple = true;
     }
   } else {
@@ -42,7 +44,7 @@ export const _chain = (
       },
     ]);
 
-    q = query.q as SelectQueryData;
+    q = query.q as QueryData;
 
     q.returnType = q.returnsOne = q.limit = undefined;
   }
@@ -53,16 +55,7 @@ export const _chain = (
     q.relChain = [{ query: self, rel }];
   }
 
-  const aliases = self.q.as
-    ? { ...self.q.aliases }
-    : { ...self.q.aliases, [self.table as string]: self.table as string };
-
-  const relAliases = q.aliases!; // is always set for a relation
-  for (const as in relAliases) {
-    aliases[as] = _queryResolveAlias(aliases, as);
-  }
-  q.as = aliases[q.as!]; // `as` is always set for a relation;
-  q.aliases = aliases;
+  _applyRelationAliases(self, q);
 
   q.joinedShapes = {
     [getQueryAs(self)]: self.q.shape,

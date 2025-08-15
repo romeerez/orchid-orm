@@ -1,7 +1,7 @@
 import { Query } from '../query/query';
-import { SelectQueryData } from '../sql';
 import { Expression, IsQuery } from 'orchid-core';
 import { _clone, extendQuery } from '../query/queryUtils';
+import { QueryData } from '../sql';
 
 type ForQueryBuilder<Q> = Q & {
   noWait<T extends Q>(this: T): T;
@@ -11,13 +11,13 @@ type ForQueryBuilder<Q> = Q & {
 const forMethods = {
   noWait() {
     const q = _clone(this);
-    const data = q.q as SelectQueryData | undefined;
+    const data = q.q as QueryData | undefined;
     if (data?.for) data.for.mode = 'NO WAIT';
     return q as never;
   },
   skipLocked() {
     const q = _clone(this);
-    const data = q.q as SelectQueryData | undefined;
+    const data = q.q as QueryData | undefined;
     if (data?.for) data.for.mode = 'SKIP LOCKED';
     return q as never;
   },
@@ -26,12 +26,12 @@ const forMethods = {
 // Extends the query with `for` methods, the query is cloned, and sets `for` data.
 const forQueryBuilder = <T>(
   arg: T,
-  type: Exclude<SelectQueryData['for'], undefined>['type'],
+  type: Exclude<QueryData['for'], undefined>['type'],
   tableNames?: string[] | Expression,
 ): ForQueryBuilder<T> => {
   const q = extendQuery(arg as Query, forMethods);
 
-  (q.q as SelectQueryData).for = {
+  q.q.for = {
     type,
     tableNames,
   };

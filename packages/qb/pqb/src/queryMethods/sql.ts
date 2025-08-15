@@ -1,6 +1,10 @@
-import { DynamicSQLArg, QueryColumn, StaticSQLArgs } from 'orchid-core';
+import {
+  DynamicSQLArg,
+  PickQueryColumnTypes,
+  QueryColumn,
+  StaticSQLArgs,
+} from 'orchid-core';
 import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';
-import { PickQueryColumnTypes } from '../query/query';
 
 export class SqlMethod<ColumnTypes> {
   /**

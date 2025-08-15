@@ -14,10 +14,10 @@ import {
   messageData,
   userRowToJSON,
 } from '../test-utils/orm.test-utils';
-import { Db, NotFoundError, Query } from 'pqb';
+import { Db, Query } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
-import { omit } from 'orchid-core';
+import { NotFoundError, omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = {

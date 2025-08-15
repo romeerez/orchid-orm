@@ -18,14 +18,9 @@ import {
   getFullColumnTable,
   pushQueryArrayImmutable,
 } from '../query/queryUtils';
+import { QueryData, SelectAsValue, SelectItem, ToSQLQuery } from '../sql';
 import {
-  QueryData,
-  SelectAsValue,
-  SelectItem,
-  SelectQueryData,
-  ToSQLQuery,
-} from '../sql';
-import {
+  _copyQueryAliasToQuery,
   BatchParser,
   ColumnTypeBase,
   EmptyObject,
@@ -34,9 +29,11 @@ import {
   HookSelect,
   isExpression,
   IsQuery,
+  isRelationQuery,
   PickQueryMeta,
   PickQueryReturnType,
   pushQueryValueImmutable,
+  QueryBase,
   QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
@@ -44,6 +41,7 @@ import {
   QueryThenByReturnType,
   RecordString,
   RecordUnknown,
+  RelationsBase,
   setColumnData,
   setObjectValueImmutable,
   setParserToQuery,
@@ -56,10 +54,9 @@ import {
 } from '../common/utils';
 import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
-import { RelationsBase } from '../relations';
 import { parseRecord } from './then';
 import { _queryNone, isQueryNone } from './none';
-import { NotFoundError } from '../errors';
+import { NotFoundError } from 'orchid-core';
 
 import { processComputedBatches } from '../modules/computed';
 import {
@@ -648,12 +645,13 @@ export const processSelectArg = <T extends SelectSelf>(
   arg: SelectArg<T>,
   columnAs?: string | getValueKey,
 ): SelectItem | undefined | false => {
+  const query = q as unknown as Query;
+
   if (typeof arg === 'string') {
     return setParserForSelectedString(q as unknown as Query, arg, as, columnAs);
   }
 
   const selectAs: SelectAsValue = {};
-  let aliases: RecordString | undefined;
 
   for (const key in arg as unknown as SelectAsArg<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -669,15 +667,15 @@ export const processSelectArg = <T extends SelectSelf>(
         }
       }
 
-      if (!isExpression(value) && value.joinQuery) {
-        joinQuery = true;
+      if (!isExpression(value) && isRelationQuery(value)) {
+        query.q.selectRelation = joinQuery = true;
 
-        value = value.joinQuery(value, q);
+        value = value.joinQuery(value, q as unknown as IsQuery);
 
-        let query;
+        let subQuery;
         const { returnType, innerJoinLateral } = value.q;
         if (!returnType || returnType === 'all') {
-          query = value.json(false);
+          subQuery = value.json(false);
 
           // no need to coalesce in case of inner lateral join.
           if (!innerJoinLateral) {
@@ -685,7 +683,7 @@ export const processSelectArg = <T extends SelectSelf>(
           }
         } else if (returnType === 'pluck') {
           // no select in case of plucking a computed
-          query = value.q.select
+          subQuery = value.q.select
             ? value
                 .wrap(cloneQueryBaseUnscoped(value))
                 .jsonAgg(value.q.select[0])
@@ -702,27 +700,25 @@ export const processSelectArg = <T extends SelectSelf>(
                 };
               }
 
-              query = value;
+              subQuery = value;
             } else {
-              query = value.json(false);
+              subQuery = value.json(false);
             }
           } else {
-            query = value;
+            subQuery = value;
           }
         }
 
-        const asOverride = value.q.aliases[key] ?? key;
-
-        value.q.joinedForSelect = asOverride;
-
-        if (asOverride !== key) {
-          aliases = { ...(q as unknown as Query).q.aliases, [key]: asOverride };
-        }
+        value.q.joinedForSelect = _copyQueryAliasToQuery(
+          value,
+          q as unknown as QueryBase,
+          key,
+        );
 
         _joinLateral(
           q,
           innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
-          query,
+          subQuery,
           key,
           // no need for `ON p.r IS NOT NULL` check when joining a single record,
           // `JOIN` will handle it on itself.
@@ -732,8 +728,6 @@ export const processSelectArg = <T extends SelectSelf>(
         );
       }
     }
-
-    if (aliases) (q as unknown as Query).q.aliases = aliases;
 
     selectAs[key] = addParserForSelectItem(
       q as unknown as Query,
@@ -845,7 +839,7 @@ const selectColumn = (
 // so that outside of the sub-query the columns are named with app-side names,
 // while db column names are encapsulated inside the sub-query
 export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
-  const query = (q as Query).q as SelectQueryData;
+  const query = (q as Query).q;
   const { shape } = query;
   let select: SelectItem[] | undefined;
 
@@ -919,7 +913,7 @@ const addColumnToShapeFromSelect = (
   q: IsQuery,
   arg: string,
   shape: QueryColumns,
-  query: SelectQueryData,
+  query: QueryData,
   result: QueryColumns,
   isSubQuery?: boolean,
   key?: string,

@@ -1,7 +1,13 @@
 import { Query } from '../query/query';
-import { NotFoundError, QueryError } from '../errors';
+import { NotFoundError, QueryError } from 'orchid-core';
 import { QueryResult } from '../adapter';
-import { HandleResult, QueryAfterHook, QueryBeforeHookInternal } from '../sql';
+import {
+  HandleResult,
+  QueryAfterHook,
+  QueryBeforeHookInternal,
+  SelectAsValue,
+  SelectItem,
+} from '../sql';
 import pg from 'pg';
 import {
   AdapterBase,
@@ -11,11 +17,14 @@ import {
   ColumnParser,
   ColumnsParsers,
   emptyArray,
+  getFreeAlias,
   getValueKey,
   MaybePromise,
+  pick,
   QueryReturnType,
   RecordString,
   RecordUnknown,
+  requirePrimaryKeys,
   SingleSql,
   SingleSqlItem,
   Sql,
@@ -127,7 +136,10 @@ function maybeWrappedThen(
   }
 
   const trx = this.internal.transactionStorage.getStore();
-  if ((q.wrapInTransaction || afterHooks) && !trx) {
+  if (
+    (q.wrapInTransaction || (q.selectRelation && q.type) || afterHooks) &&
+    !trx
+  ) {
     return this.transaction(
       () =>
         new Promise((resolve, reject) => {
@@ -203,10 +215,12 @@ const then = async (
     }
 
     sql = q.toSQL();
-    const { hookSelect } = sql;
+    const { hookSelect, delayedRelationSelect } = sql;
     const { returnType = 'all' } = query;
     const tempReturnType =
-      hookSelect || (returnType === 'rows' && q.q.batchParsers)
+      hookSelect ||
+      (returnType === 'rows' && q.q.batchParsers) ||
+      delayedRelationSelect?.value
         ? 'all'
         : returnType;
 
@@ -383,6 +397,62 @@ const then = async (
       } else if (query.after) {
         const args = [result, q];
         await Promise.all(query.after.map(callAfterHook, args));
+      }
+    }
+
+    if (delayedRelationSelect?.value) {
+      const q = delayedRelationSelect.query as Query;
+
+      const primaryKeys = requirePrimaryKeys(
+        q,
+        'Cannot select a relation of a table that has no primary keys',
+      );
+      const selectQuery = q.clone();
+      selectQuery.q.type = selectQuery.q.returnType = undefined;
+
+      (selectQuery.q.and ??= []).push(pick(result, primaryKeys as never));
+
+      const relationsSelect = delayedRelationSelect.value as Record<
+        string,
+        Query
+      >;
+
+      let selectAs: SelectAsValue;
+      if (renames) {
+        selectAs = {};
+        for (const key in renames) {
+          if (key in relationsSelect) {
+            selectAs[renames[key]] = relationsSelect[key];
+          }
+        }
+      } else {
+        selectAs = { ...relationsSelect };
+      }
+
+      const select: SelectItem[] = [{ selectAs }];
+      const relationKeyAliases = primaryKeys.map((key) => {
+        if (key in selectAs) {
+          const as = getFreeAlias(selectAs, key);
+          selectAs[as] = key;
+          return as;
+        } else {
+          select.push(key);
+          return key;
+        }
+      });
+
+      selectQuery.q.select = select;
+
+      const relationsResult = (await selectQuery) as RecordUnknown[];
+      for (const row of result as RecordUnknown[]) {
+        const relationRow = relationsResult.find((relationRow) => {
+          return !primaryKeys.some(
+            (key, i) => relationRow[relationKeyAliases[i]] !== row[key],
+          );
+        });
+        if (relationRow) {
+          Object.assign(row, relationRow);
+        }
       }
     }
 

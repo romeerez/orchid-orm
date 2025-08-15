@@ -1,10 +1,10 @@
 import {
   IsQuery,
-  PickQueryInputType,
   pushQueryValueImmutable,
   QueryOrExpression,
-} from './query';
+} from './query/query';
 import { RecordUnknown } from './utils';
+import { PickQueryInputType } from './query/pick-query-types';
 
 export class QueryHookUtils<T extends PickQueryInputType> {
   constructor(

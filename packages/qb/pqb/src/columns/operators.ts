@@ -1,7 +1,5 @@
 import {
-  PickQueryColumnTypes,
   PickQueryQ,
-  PickQueryResultColumnTypes,
   Query,
   SetQueryReturnsColumnOrThrow,
 } from '../query/query';
@@ -17,7 +15,9 @@ import {
   IsQuery,
   MaybeArray,
   PickOutputTypeAndOperators,
+  PickQueryColumnTypes,
   PickQueryResult,
+  PickQueryResultColumnTypes,
   QueryColumn,
   RecordUnknown,
   setObjectValueImmutable,

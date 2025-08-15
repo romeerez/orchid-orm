@@ -1,7 +1,5 @@
 import {
-  PickQueryMetaResultReturnTypeWithDataWindowsThen,
   PickQueryQ,
-  PickQueryRelations,
   Query,
   SetQueryReturnsAll,
   QueryTake,
@@ -10,26 +8,18 @@ import {
   SetQueryReturnsRows,
   SetQueryReturnsVoid,
   SetQueryReturnsVoidKind,
-  SetQueryTableAlias,
-  WithDataItems,
-  PickQueryShapeResultReturnTypeSinglePrimaryKey,
-  PickQueryMetaShapeRelationsReturnType,
-  PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
 } from '../query/query';
 import {
-  AliasOrTable,
   getClonedQueryData,
   SelectableOrExpression,
   SelectableOrExpressions,
 } from '../common/utils';
 import {
   OrderTsQueryConfig,
-  SelectQueryData,
   SortDir,
   toSQL,
   ToSQLOptions,
   ToSQLQuery,
-  TruncateQueryData,
 } from '../sql';
 import {
   _clone,
@@ -39,7 +29,6 @@ import {
   _queryTake,
   _queryTakeOptional,
   pushQueryArrayImmutable,
-  setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
@@ -72,6 +61,9 @@ import { QueryGet } from './get';
 import { MergeQuery, MergeQueryMethods } from './merge';
 import { SqlMethod } from './sql';
 import {
+  _getQueryAs,
+  _setQueryAlias,
+  AliasOrTable,
   applyMixins,
   EmptyObject,
   Expression,
@@ -79,11 +71,16 @@ import {
   PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaResultReturnType,
+  PickQueryMetaResultReturnTypeWithDataWindowsThen,
   PickQueryMetaShape,
+  PickQueryMetaShapeRelationsReturnType,
+  PickQueryRelations,
   PickQueryResult,
   PickQueryResultReturnType,
   PickQueryResultReturnTypeUniqueColumns,
+  PickQueryShapeResultReturnTypeSinglePrimaryKey,
   PickQueryTableMetaResult,
+  PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
   PickQueryTableMetaShape,
   pushQueryValueImmutable,
   QueryColumns,
@@ -96,11 +93,13 @@ import {
   QueryThenShallowSimplifyArr,
   QueryThenShallowSimplifyOptional,
   RecordUnknown,
+  SetQueryTableAlias,
   Sql,
   SQLQueryArgs,
+  WithDataItems,
 } from 'orchid-core';
-import { AsMethods } from './as';
-import { OrchidOrmInternalError } from '../errors';
+import { QueryAsMethods } from './as';
+import { OrchidOrmInternalError } from 'orchid-core';
 import { TransformMethods } from './transform';
 import { QueryMap } from './map';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
@@ -358,7 +357,7 @@ interface SubQueryReturningSingle extends QueryMetaIsSubQuery {
 }
 
 export interface QueryMethods<ColumnTypes>
-  extends AsMethods,
+  extends QueryAsMethods,
     AggregateMethods,
     Select,
     FromMethods,
@@ -491,9 +490,7 @@ export class QueryMethods<ColumnTypes> {
       'pluck',
       select,
     );
-    (q.q as SelectQueryData).select = selected
-      ? [selected as never]
-      : undefined;
+    q.q.select = selected ? [selected as never] : undefined;
     return q as never;
   }
 
@@ -882,7 +879,7 @@ export class QueryMethods<ColumnTypes> {
       : number | undefined,
   ): T {
     const q = _clone(this);
-    (q.q as SelectQueryData).limit = arg as number;
+    q.q.limit = arg as number;
     return q as T;
   }
 
@@ -897,7 +894,7 @@ export class QueryMethods<ColumnTypes> {
    */
   offset<T extends IsQuery>(this: T, arg: number | undefined): T {
     const q = _clone(this);
-    (q.q as SelectQueryData).offset = arg;
+    q.q.offset = arg;
     return q as never;
   }
 
@@ -922,7 +919,7 @@ export class QueryMethods<ColumnTypes> {
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): SetQueryReturnsVoidKind<T, 'truncate'> {
     const query = _clone(this);
-    const q = query.q as TruncateQueryData;
+    const { q } = query;
     q.type = 'truncate';
     if (options?.restartIdentity) {
       q.restartIdentity = true;
@@ -1057,16 +1054,19 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {
-    const as =
+    const helperAs =
       (this as unknown as Query).q.as ||
       ((this as unknown as Query).table as string);
 
     return ((query: T, ...args: Args) => {
       const q = _clone(query);
+
       // alias the original table name inside the makeHelper with dynamic table name from the invoking code
-      if (q.q.as) {
-        setQueryObjectValueImmutable(q, 'aliases', as, q.q.as);
+      const as = _getQueryAs(q);
+      if (as) {
+        _setQueryAlias(q, as, helperAs);
       }
+
       return fn(q as never, ...args);
     }) as never;
   }
@@ -1282,7 +1282,7 @@ Object.assign(QueryMethods.prototype, QueryUpsert);
 Object.assign(QueryMethods.prototype, QueryOrCreate);
 
 applyMixins(QueryMethods, [
-  AsMethods,
+  QueryAsMethods,
   AggregateMethods,
   Select,
   FromMethods,

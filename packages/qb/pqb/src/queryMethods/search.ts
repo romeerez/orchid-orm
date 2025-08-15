@@ -26,7 +26,7 @@ import {
   setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
-import { OrchidOrmInternalError } from '../errors';
+import { OrchidOrmInternalError } from 'orchid-core';
 import { columnToSql } from '../sql/common';
 import { Operators } from '../columns/operators';
 

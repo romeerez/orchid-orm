@@ -10,6 +10,7 @@ import {
   QueryData,
 } from './data';
 import {
+  _getQueryAliasOrName,
   addValue,
   Expression,
   isExpression,
@@ -49,9 +50,10 @@ export const processJoinItem = (
     const { aliasValue } = ctx;
     ctx.aliasValue = true;
 
-    target = `(${getSqlText(args.l.toSQL(ctx))}) "${
-      query.aliases?.[args.a] || args.a
-    }"`;
+    target = `(${getSqlText(args.l.toSQL(ctx))}) "${_getQueryAliasOrName(
+      query,
+      args.a,
+    )}"`;
 
     on = `${args.i ? `"${args.a}".r IS NOT NULL` : 'true'}`;
 

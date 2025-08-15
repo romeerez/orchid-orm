@@ -1,23 +1,20 @@
-import {
-  PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  PickQueryQ,
-  PickQueryRelationsWithData,
-  Query,
-} from '../../query/query';
+import { PickQueryQ, Query } from '../../query/query';
 import {
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaShape,
+  PickQueryRelationsWithData,
   PickQueryTableMetaResult,
   pushQueryValueImmutable,
   QueryColumns,
   QueryMetaBase,
+  RelationConfigBase,
   setObjectValueImmutable,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
-import { RelationConfigBase } from '../../relations';
 import { _clone, throwIfJoinLateral } from '../../query/queryUtils';
 import {
   JoinArgs,

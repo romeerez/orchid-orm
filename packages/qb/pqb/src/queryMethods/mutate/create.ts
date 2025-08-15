@@ -1,5 +1,4 @@
 import {
-  PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryQ,
   Query,
   queryTypeWithLimitOne,
@@ -18,8 +17,7 @@ import {
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
-import { RelationConfigDataForCreate } from '../../relations';
-import { InsertQueryData, OnConflictMerge, ToSQLQuery } from '../../sql';
+import { OnConflictMerge, QueryData, ToSQLQuery } from '../../sql';
 import { anyShape, VirtualColumn } from '../../columns';
 import {
   Expression,
@@ -34,13 +32,15 @@ import {
   QueryColumns,
   ColumnTypeBase,
   QueryOrExpression,
+  RelationConfigDataForCreate,
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
 } from 'orchid-core';
 import { isSelectingCount } from '../aggregate';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
 import { _clone } from '../../query/queryUtils';
 import { Db } from '../../query';
 import { moveQueryValueToWith } from '../with';
-import { OrchidOrmInternalError } from '../../errors';
+import { OrchidOrmInternalError } from 'orchid-core';
 
 export interface CreateSelf
   extends IsQuery,
@@ -382,9 +382,9 @@ const processCreateItem = (
           q as Query,
           ((q as Query).q.insertWith ??= {}),
           value,
+          rowIndex,
           item,
           key,
-          rowIndex,
         );
       }
     }
@@ -510,11 +510,11 @@ const insert = (
     values,
   }: {
     columns: string[];
-    values: InsertQueryData['values'];
+    values: QueryData['values'];
   },
   many?: boolean,
 ) => {
-  const { q } = self as unknown as { q: InsertQueryData };
+  const { q } = self as unknown as { q: QueryData };
 
   if (!q.select?.length) {
     q.returning = true;
@@ -649,10 +649,10 @@ export const _queryInsert = <
   const ctx = createCtx();
   const obj = handleOneData(q, data, ctx) as {
     columns: string[];
-    values: InsertQueryData['values'];
+    values: QueryData['values'];
   };
 
-  const values = ((q as unknown as Query).q as InsertQueryData).values;
+  const values = (q as unknown as Query).q.values;
   if (values && 'from' in values) {
     obj.columns = getFromSelectColumns(q, values.from, obj);
     values.values = (obj.values as unknown[][])[0];
@@ -1165,7 +1165,7 @@ export class QueryCreate {
     arg?: Arg,
   ): IgnoreResult<T> {
     const q = _clone(this);
-    (q.q as InsertQueryData).onConflict = {
+    q.q.onConflict = {
       target: arg as never,
     };
 
@@ -1224,7 +1224,7 @@ export class OnConflictQueryBuilder<
       }
     }
 
-    ((this.query as unknown as Query).q as InsertQueryData).onConflict = {
+    (this.query as unknown as Query).q.onConflict = {
       target: this.onConflict as never,
       set: resolved || set,
     };
@@ -1275,7 +1275,7 @@ export class OnConflictQueryBuilder<
       | (keyof T['shape'])[]
       | { except: keyof T['shape'] | (keyof T['shape'])[] },
   ): T {
-    ((this.query as unknown as PickQueryQ).q as InsertQueryData).onConflict = {
+    (this.query as unknown as PickQueryQ).q.onConflict = {
       target: this.onConflict as never,
       merge: merge as OnConflictMerge,
     };

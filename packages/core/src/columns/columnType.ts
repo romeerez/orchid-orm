@@ -1,11 +1,12 @@
 import { Code } from './code';
 import { RawSQLBase } from '../raw';
-import { PickQueryInputType, QueryBaseCommon } from '../query';
+import { QueryBaseCommon } from '../query/query';
 import { OperatorBase } from './operators';
 import { ColumnTypeSchemaArg } from './columnSchema';
 import { RecordString } from '../utils';
 
 import { QueryHookUtils } from '../hooks';
+import { PickQueryInputType } from '../query/pick-query-types';
 
 // get columns object type where nullable columns or columns with a default are optional
 export type ColumnShapeInput<

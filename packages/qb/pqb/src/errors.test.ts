@@ -1,5 +1,5 @@
 import { UniqueTable, User } from './test-utils/test-utils';
-import { QueryError } from './errors';
+import { QueryError } from 'orchid-core';
 import { testDb, useTestDatabase } from 'test-utils';
 
 describe('errors', () => {

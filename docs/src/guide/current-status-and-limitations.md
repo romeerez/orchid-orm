@@ -2,17 +2,14 @@
 
 Despite thousands tests written, may have bugs, please drop an issue if you encounter a one.
 
-Supporting other than Postgres databases isn't planned.
-Because Postgres is a rabbit hole that has extensions for anything you can imagine:
-PostGis, extensions that can replace ElasticSearch, extensions for message queues that can replace tools such as SQS/RabbitMQ/BullMQ,
-and much, much more, it is way more exciting to grow ORM in a direction of making it as powerful as possible by further embracing Postgres ecosystem,
-than to spend many months on supporting databases with limited functionality.
+Supporting other than Postgres databases isn't planned: simply too much effort to support additional dbs,
+focusing on ORM features and Postgres-specific features and optimizations instead.
 
 It is limited to node-postgres only, supporting other Postgres adapters is in the plans.
 
 You can use OrchidORM for the app connected to multiple databases, but it cannot manage table relations spread across databases.
 
-Cannot select relations in create/update/delete returning clause.
+Can select relations in create and update, but it is not yet supported in delete, upsert.
 
 Supporting various useful extensions is in plans, but until implemented, you'll need to use raw SQL for this.
 OrchidORM is designed the way that you can combine its existing functionality, and add just pieces of custom SQL where it is needed.

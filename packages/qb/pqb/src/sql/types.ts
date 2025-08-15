@@ -1,15 +1,15 @@
 import { Query } from '../query/query';
-import { RelationConfigBase } from '../relations';
 import { SelectableOrExpression } from '../common/utils';
-import { SelectQueryData } from './data';
 import {
   ColumnTypesBase,
   Expression,
   IsQuery,
   MaybeArray,
   RecordUnknown,
+  RelationConfigBase,
   TemplateLiteralArgs,
 } from 'orchid-core';
+import { QueryData } from './data';
 
 // used in `from` logic to decide if convert query to sql or just write table name
 export const checkIfASimpleQuery = (q: Query) => {
@@ -22,11 +22,11 @@ export const checkIfASimpleQuery = (q: Query) => {
   )
     return false;
 
-  const keys = Object.keys(q.q) as (keyof SelectQueryData)[];
+  const keys = Object.keys(q.q) as (keyof QueryData)[];
   return !keys.some((key) => queryKeysOfNotSimpleQuery.includes(key));
 };
 
-const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
+const queryKeysOfNotSimpleQuery: (keyof QueryData)[] = [
   'with',
   'as',
   'from',

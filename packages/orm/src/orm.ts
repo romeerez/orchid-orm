@@ -258,5 +258,8 @@ export const orchidORM = <T extends TableClasses>(
     }
   }
 
+  const db = result as unknown as OrchidORM<T>;
+  db.$adapter;
+
   return result as unknown as OrchidORM<T>;
 };

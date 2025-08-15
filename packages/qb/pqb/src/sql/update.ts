@@ -2,19 +2,16 @@ import { quoteSchemaAndTable } from './common';
 import { makeReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { pushLimitSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
-import {
-  SelectQueryData,
-  UpdateQueryData,
-  UpdateQueryDataItem,
-  UpdateQueryDataObject,
-} from './data';
+import { QueryData, UpdateQueryDataItem, UpdateQueryDataObject } from './data';
 import {
   addValue,
+  DelayedRelationSelect,
   emptyObject,
-  HookSelect,
   isExpression,
+  newDelayedRelationSelect,
   pushOrNewArray,
   RecordUnknown,
+  Sql,
 } from 'orchid-core';
 import { Db } from '../query/db';
 import { joinSubQuery } from '../common/utils';
@@ -26,9 +23,9 @@ import { Query } from '../query/query';
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: UpdateQueryData,
+  query: QueryData,
   quotedAs: string,
-): HookSelect | undefined => {
+): Sql => {
   const quotedTable = quoteSchemaAndTable(
     query.schema,
     table.table || (query.from as string),
@@ -51,47 +48,65 @@ export const pushUpdateSql = (
     applySet(ctx, table, set, hookSet, emptyObject, quotedAs);
   }
 
+  let hookSelect;
+  const delayedRelationSelect: DelayedRelationSelect | undefined =
+    query.selectRelation ? newDelayedRelationSelect(table) : undefined;
+
   // if no values to set, make a `SELECT` query
   if (!set.length) {
     if (!query.select) {
       query.select = countSelect;
     }
 
-    const hookSelect = pushUpdateReturning(
+    hookSelect = pushUpdateReturning(
       ctx,
       table,
       query,
       quotedAs,
       'SELECT',
+      delayedRelationSelect,
     );
 
     ctx.sql.push(`FROM ${quotedTable}`);
     pushWhereStatementSql(ctx, table, query, quotedAs);
-    pushLimitSQL(ctx.sql, ctx.values, query as unknown as SelectQueryData);
+    pushLimitSQL(ctx.sql, ctx.values, query);
+  } else {
+    ctx.sql.push(`UPDATE ${quotedTable}`);
 
-    return hookSelect;
+    if (quotedTable !== quotedAs) {
+      ctx.sql.push(quotedAs);
+    }
+
+    ctx.sql.push('SET');
+    ctx.sql.push(set.join(', '));
+
+    pushWhereStatementSql(ctx, table, query, quotedAs);
+
+    hookSelect = pushUpdateReturning(
+      ctx,
+      table,
+      query,
+      quotedAs,
+      'RETURNING',
+      delayedRelationSelect,
+    );
   }
 
-  ctx.sql.push(`UPDATE ${quotedTable}`);
-
-  if (quotedTable !== quotedAs) {
-    ctx.sql.push(quotedAs);
-  }
-
-  ctx.sql.push('SET');
-  ctx.sql.push(set.join(', '));
-
-  pushWhereStatementSql(ctx, table, query, quotedAs);
-
-  return pushUpdateReturning(ctx, table, query, quotedAs, 'RETURNING');
+  return {
+    hookSelect,
+    delayedRelationSelect,
+    text: ctx.sql.join(' '),
+    values: ctx.values,
+  };
 };
 
 const pushUpdateReturning = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: UpdateQueryData,
+  query: QueryData,
   quotedAs: string,
   keyword: string,
+  delayedRelationSelect: DelayedRelationSelect | undefined,
 ) => {
   const { inCTE } = query;
   const { select, hookSelect } = makeReturningSql(
@@ -99,6 +114,7 @@ const pushUpdateReturning = (
     table,
     query,
     quotedAs,
+    delayedRelationSelect,
     1,
     inCTE && 2,
   );

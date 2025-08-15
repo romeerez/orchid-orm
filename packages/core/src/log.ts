@@ -1,4 +1,4 @@
-import { SingleSql } from './query';
+import { SingleSql } from './query/query';
 
 export interface QueryLogObject {
   colors: boolean;
