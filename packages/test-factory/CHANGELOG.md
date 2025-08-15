@@ -1,5 +1,14 @@
 # orchid-orm-test-factory
 
+## 1.0.56
+
+### Patch Changes
+
+- a354d61: Support selecting relations in insert and update (#383)
+- Updated dependencies [a354d61]
+  - pqb@0.55.0
+  - orchid-core@0.28.0
+
 ## 1.0.55
 
 ### Patch Changes

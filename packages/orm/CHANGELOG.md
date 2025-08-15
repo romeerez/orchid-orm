@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.55.0
+
+### Minor Changes
+
+- a354d61: Support selecting relations in insert and update (#383)
+
+### Patch Changes
+
+- Updated dependencies [a354d61]
+  - pqb@0.55.0
+  - orchid-core@0.28.0
+  - rake-db@2.25.17
+
 ## 1.54.1
 
 ### Patch Changes

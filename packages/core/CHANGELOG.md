@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.28.0
+
+### Minor Changes
+
+- a354d61: Support selecting relations in insert and update (#383)
+
 ## 0.27.2
 
 ### Patch Changes

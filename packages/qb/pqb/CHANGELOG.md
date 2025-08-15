@@ -1,5 +1,16 @@
 # pqb
 
+## 0.55.0
+
+### Minor Changes
+
+- a354d61: Support selecting relations in insert and update (#383)
+
+### Patch Changes
+
+- Updated dependencies [a354d61]
+  - orchid-core@0.28.0
+
 ## 0.54.3
 
 ### Patch Changes
