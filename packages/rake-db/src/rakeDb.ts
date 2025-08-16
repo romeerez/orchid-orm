@@ -8,11 +8,19 @@ import {
   toArray,
 } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
-import { migrate, redo, rollback } from './commands/migrateOrRollback';
+import {
+  fullMigrate,
+  fullRedo,
+  fullRollback,
+} from './commands/migrateOrRollback';
 import { newMigration } from './commands/newMigration';
 import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
-import { ChangeCallback, pushChange } from './migration/change';
+import {
+  ChangeCallback,
+  MigrationChange,
+  pushChange,
+} from './migration/change';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { listMigrationsStatuses } from './commands/listMigrationsStatuses';
 import {
@@ -74,11 +82,11 @@ export interface RakeDbResult {
  * Saves the given callback to an internal queue,
  * and also returns the callback in case you want to export it from migration.
  */
-interface RakeDbChangeFn<CT> {
-  (fn: ChangeCallback<CT>): ChangeCallback<CT>;
+export interface RakeDbChangeFn<CT> {
+  (fn: ChangeCallback<CT>): MigrationChange;
 }
 
-interface RakeDbChangeFnWithPromise<CT> extends RakeDbChangeFn<CT> {
+export interface RakeDbChangeFnWithPromise<CT> extends RakeDbChangeFn<CT> {
   promise: Promise<RakeDbResult>;
 }
 
@@ -107,7 +115,7 @@ export const rakeDb = ((
     throw err;
   });
 
-  return Object.assign(change, {
+  return Object.assign(makeChange(config), {
     promise,
   });
 }) as RakeDbFn;
@@ -119,7 +127,7 @@ rakeDb.lazy = ((
   const config = processRakeDbConfig(partialConfig);
 
   return {
-    change,
+    change: makeChange(config),
     run(
       args: string[],
       conf: Partial<RakeDbConfig<DefaultSchemaConfig, unknown>>,
@@ -129,13 +137,16 @@ rakeDb.lazy = ((
   };
 }) as never;
 
-function change(fn: ChangeCallback<unknown>) {
-  pushChange(fn);
-  return fn;
-}
+const makeChange =
+  (config: RakeDbConfig<ColumnSchemaConfig, unknown>) =>
+  (fn: ChangeCallback<unknown>) => {
+    const change: MigrationChange = { fn, config };
+    pushChange(change);
+    return change;
+  };
 
 export const rakeDbAliases: RecordOptionalString = {
-  migrate: 'up',
+  fullMigrate: 'up',
   rollback: 'down',
   s: 'status',
   rec: 'recurrent',
@@ -252,7 +263,7 @@ interface RakeDbCommands {
 
 const upCommand: RakeDbCommand = {
   run: (options, config, args) =>
-    migrate({}, options, config, args).then(() =>
+    fullMigrate({}, options, config, args).then(() =>
       runRecurrentMigrations(options, config),
     ),
   help: 'migrate pending migrations',
@@ -264,7 +275,7 @@ const upCommand: RakeDbCommand = {
 };
 
 const downCommand: RakeDbCommand = {
-  run: (options, config, args) => rollback({}, options, config, args),
+  run: (options, config, args) => fullRollback({}, options, config, args),
   help: 'rollback migrated migrations',
   helpArguments: {
     'no arguments': 'rollback one last migration',
@@ -309,7 +320,7 @@ export const rakeDbCommands: RakeDbCommands = {
   rollback: downCommand,
   redo: {
     run: (options, config, args) =>
-      redo({}, options, config, args).then(() =>
+      fullRedo({}, options, config, args).then(() =>
         runRecurrentMigrations(options, config),
       ),
     help: 'rollback and migrate, run recurrent',

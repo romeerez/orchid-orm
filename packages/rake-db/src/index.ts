@@ -1,16 +1,45 @@
-export * from './commands/createOrDrop';
-export * from './commands/newMigration';
-export * from './commands/migrateOrRollback';
-export * from './generate/dbStructure';
-export * from './generate/structureToAst';
-export * from './generate/astToMigration';
-export * from './migration/migration';
-export * from './migration/change';
-export * from './migration/migration.utils';
-export * from './rakeDb';
-export * from './ast';
-export * from './migration/manageMigratedVersions';
-export * from './config';
-export * from './common';
-export * from './colors';
-export * from './prompt';
+export { rakeDb } from './rakeDb';
+export type { RakeDbChangeFn, RakeDbChangeFnWithPromise } from './rakeDb';
+export {
+  getExcludeName,
+  getIndexName,
+  encodeColumnDefault,
+  getConstraintName,
+} from './migration/migration.utils';
+export { promptSelect } from './prompt';
+export { fullMigrate } from './commands/migrateOrRollback';
+export type { ChangeCallback } from './migration/change';
+export { introspectDbSchema } from './generate/dbStructure';
+export type {
+  DbStructure,
+  IntrospectedStructure,
+} from './generate/dbStructure';
+export { astToMigration } from './generate/astToMigration';
+export { rakeDbCommands } from './rakeDb';
+export { getSchemaAndTableFromName, concatSchemaAndName } from './common';
+export {
+  getDbStructureTableData,
+  tableToAst,
+  makeStructureToAstCtx,
+  structureToAst,
+  makeDomainsMap,
+  dbColumnToAst,
+  getDbTableColumnsChecks,
+  instantiateDbColumn,
+} from './generate/structureToAst';
+export type {
+  StructureToAstCtx,
+  StructureToAstTableData,
+} from './generate/structureToAst';
+export { makeFileVersion, writeMigrationFile } from './commands/newMigration';
+export { migrationConfigDefaults } from './config';
+export type {
+  AnyRakeDbConfig,
+  InputRakeDbConfigBase,
+  RakeDbConfig,
+} from './config';
+export type { RakeDbAst } from './ast';
+export { createMigrationInterface } from './migration/migration';
+export type { SilentQueries, DbMigration } from './migration/migration';
+export { saveMigratedVersion } from './migration/manageMigratedVersions';
+export { migrateFiles } from './migration/migrate/migrate';

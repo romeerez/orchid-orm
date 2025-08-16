@@ -1,10 +1,11 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { DbMigration, colors } from 'rake-db';
+import { DbMigration } from 'rake-db';
 import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import { colors } from 'orchid-core';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
-  migrate: jest.fn(),
+  fullMigrate: jest.fn(),
   promptSelect: jest.fn(),
 }));
 jest.mock('fs/promises', () => ({

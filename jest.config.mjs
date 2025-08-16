@@ -1,7 +1,7 @@
-import path from 'path'
+import path from 'path';
 import { fileURLToPath } from 'node:url';
 
-const rootDir = path.dirname(fileURLToPath(import.meta.url))
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
   rootDir: path.resolve('src'),

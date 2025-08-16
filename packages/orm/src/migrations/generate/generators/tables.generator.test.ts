@@ -5,11 +5,12 @@ import {
   defaultSchemaConfig,
   UnknownColumn,
 } from 'pqb';
-import { DbMigration, colors } from 'rake-db';
+import { DbMigration } from 'rake-db';
+import { colors } from 'orchid-core';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
-  migrate: jest.fn(),
+  fullMigrate: jest.fn(),
   promptSelect: jest.fn(),
 }));
 jest.mock('fs/promises', () => ({

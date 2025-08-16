@@ -30,6 +30,7 @@ import {
   UpdateData,
   VirtualColumn,
   WhereArg,
+  TableData,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -48,6 +49,7 @@ import {
 } from './common/utils';
 import {
   ColumnSchemaConfig,
+  ColumnShapeInputPartial,
   ColumnsShapeBase,
   emptyArray,
   EmptyObject,
@@ -66,13 +68,16 @@ export interface BelongsTo extends RelationThunkBase {
   options: BelongsToOptions;
 }
 
-export type BelongsToOptions<
+export interface BelongsToOptions<
   Columns extends ColumnsShapeBase = ColumnsShapeBase,
   Related extends TableClass = TableClass,
-> = RelationRefsOptions<
-  keyof Columns,
-  InstanceType<Related>['columns']['shape']
->;
+> {
+  required?: boolean;
+  columns: (keyof Columns)[];
+  references: (keyof InstanceType<Related>['columns']['shape'])[];
+  foreignKey?: boolean | TableData.References.Options;
+  on?: ColumnShapeInputPartial<InstanceType<Related>['columns']['shape']>;
+}
 
 export type BelongsToFKey<Relation extends RelationThunkBase> =
   Relation['options'] extends RelationRefsOptions

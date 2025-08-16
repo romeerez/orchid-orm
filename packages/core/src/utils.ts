@@ -417,3 +417,12 @@ export const getFreeAlias = (
   }
   return as;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const exhaustive = (_: never) => {
+  throw new Error('Condition was not exhaustive');
+};
+
+export const pluralize = (w: string, count: number, append = 's') => {
+  return count === 1 ? w : w + append;
+};

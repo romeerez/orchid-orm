@@ -20,7 +20,7 @@ import {
   promptSelect,
   AnyRakeDbConfig,
   createMigrationInterface,
-  migrate,
+  fullMigrate,
 } from 'rake-db';
 import { asMock, testColumnTypes } from 'test-utils';
 import { generate } from '../generate';
@@ -113,7 +113,7 @@ const arrange = async (arg: {
     });
   }
 
-  asMock(migrate).mockResolvedValue(adapters);
+  asMock(fullMigrate).mockResolvedValue(adapters);
 
   if (arg.selects) {
     for (const select of arg.selects) {

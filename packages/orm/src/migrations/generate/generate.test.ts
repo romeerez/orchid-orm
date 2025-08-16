@@ -7,7 +7,7 @@ jest.mock('rake-db', () => {
   const actual = jest.requireActual('../../../../rake-db/src');
   return {
     ...actual,
-    migrate: jest.fn(),
+    fullMigrate: jest.fn(),
     promptSelect: jest.fn(),
     introspectDbSchema: jest.fn((...args: unknown[]) =>
       actual.introspectDbSchema(...args),

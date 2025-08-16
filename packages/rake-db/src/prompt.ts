@@ -1,4 +1,4 @@
-import { colors } from './colors';
+import { colors } from '../../core/src/colors';
 
 const ESC = '\x1B';
 const CSI = `${ESC}[`;

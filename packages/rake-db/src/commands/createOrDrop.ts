@@ -1,6 +1,6 @@
 import { Adapter, AdapterOptions } from 'pqb';
 import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
-import { migrate } from './migrateOrRollback';
+import { fullMigrate } from './migrateOrRollback';
 import { getDatabaseAndUserFromOptions, RakeDbConfig } from '../config';
 import {
   setAdapterOptions,
@@ -152,5 +152,5 @@ export const resetDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
 ) => {
   await dropDb(options, config);
   await createDb(options, config);
-  await migrate({}, options, config);
+  await fullMigrate({}, options, config);
 };

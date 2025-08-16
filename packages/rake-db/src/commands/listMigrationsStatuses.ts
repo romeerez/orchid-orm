@@ -5,7 +5,7 @@ import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { pathToFileURL } from 'node:url';
 import { AnyRakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrationsSet';
-import { colors } from '../colors';
+import { colors } from '../../../core/src/colors';
 
 export const listMigrationsStatuses = async (
   options: AdapterOptions[],

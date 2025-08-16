@@ -36,17 +36,20 @@ let migrationsMap: RakeDbAppliedVersions = { map: {}, sequence: [] };
 const defaultConfig = {
   ...testConfig,
   import: (filePath: string) => {
-    pushChange(async (_, up) => {
-      const name = path.basename(filePath);
+    pushChange({
+      fn: async (_, up) => {
+        const name = path.basename(filePath);
 
-      const change = dbChanges.find(
-        (change) => change.name === name && change.up === up,
-      );
-      if (change) {
-        change.count++;
-      } else {
-        dbChanges.push({ name, up, count: 1 });
-      }
+        const change = dbChanges.find(
+          (change) => change.name === name && change.up === up,
+        );
+        if (change) {
+          change.count++;
+        } else {
+          dbChanges.push({ name, up, count: 1 });
+        }
+      },
+      config,
     });
   },
 } as AnyRakeDbConfig;

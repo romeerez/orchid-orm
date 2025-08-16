@@ -1,6 +1,10 @@
 import { rakeDb } from './rakeDb';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
-import { migrate, redo, rollback } from './commands/migrateOrRollback';
+import {
+  fullMigrate,
+  fullRedo,
+  fullRollback,
+} from './commands/migrateOrRollback';
 import { newMigration } from './commands/newMigration';
 import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
@@ -17,9 +21,9 @@ jest.mock('./commands/createOrDrop', () => ({
   resetDb: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('./commands/migrateOrRollback', () => ({
-  migrate: jest.fn(() => Promise.resolve()),
-  rollback: jest.fn(() => Promise.resolve()),
-  redo: jest.fn(() => Promise.resolve()),
+  fullMigrate: jest.fn(() => Promise.resolve()),
+  fullRollback: jest.fn(() => Promise.resolve()),
+  fullRedo: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('./commands/newMigration');
 jest.mock('./commands/recurrent');
@@ -70,7 +74,7 @@ describe('rakeDb', () => {
   it('should run migrations and recurrent on `up` command', async () => {
     await rakeDb(options, config, ['up', 'arg']).promise;
 
-    expect(migrate).toBeCalledWith(
+    expect(fullMigrate).toBeCalledWith(
       expect.any(Object),
       options,
       processedConfig,
@@ -83,7 +87,7 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['rollback', 'arg']).promise;
     await rakeDb(options, config, ['down', 'arg']).promise;
 
-    expect(asMock(rollback).mock.calls).toEqual([
+    expect(asMock(fullRollback).mock.calls).toEqual([
       [expect.any(Object), options, processedConfig, ['arg']],
       [expect.any(Object), options, processedConfig, ['arg']],
     ]);
@@ -92,9 +96,12 @@ describe('rakeDb', () => {
   it('should run redo and recurrent on `redo` command', async () => {
     await rakeDb(options, config, ['redo', 'arg']).promise;
 
-    expect(redo).toBeCalledWith(expect.any(Object), options, processedConfig, [
-      'arg',
-    ]);
+    expect(fullRedo).toBeCalledWith(
+      expect.any(Object),
+      options,
+      processedConfig,
+      ['arg'],
+    );
     expect(runRecurrentMigrations).toBeCalledWith(options, processedConfig);
   });
 
@@ -176,8 +183,8 @@ describe('rakeDb', () => {
     const fn = async () => {};
     const result = change(fn);
 
-    expect(getCurrentChanges()).toEqual([fn]);
-    expect(result).toBe(fn);
+    expect(getCurrentChanges()).toEqual([{ fn, config: expect.any(Object) }]);
+    expect(result.fn).toBe(fn);
   });
 
   describe('rakeDb.lazy', () => {
@@ -209,8 +216,8 @@ describe('rakeDb', () => {
       const fn = async () => {};
       const result = change(fn);
 
-      expect(getCurrentChanges()).toEqual([fn]);
-      expect(result).toBe(fn);
+      expect(getCurrentChanges()).toEqual([{ fn, config: expect.any(Object) }]);
+      expect(result.fn).toBe(fn);
 
       run(['custom']);
 
@@ -230,8 +237,8 @@ describe('rakeDb', () => {
       const fn = async () => {};
       const result = change(fn);
 
-      expect(getCurrentChanges()).toEqual([fn]);
-      expect(result).toBe(fn);
+      expect(getCurrentChanges()).toEqual([{ fn, config: expect.any(Object) }]);
+      expect(result.fn).toBe(fn);
 
       const log = jest.fn();
       run(['custom'], {

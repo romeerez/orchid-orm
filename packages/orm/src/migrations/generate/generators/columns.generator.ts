@@ -10,7 +10,6 @@ import {
   concatSchemaAndName,
   getSchemaAndTableFromName,
   promptSelect,
-  colors,
   AnyRakeDbConfig,
 } from 'rake-db';
 import {
@@ -27,6 +26,7 @@ import {
   deepCompare,
   RecordUnknown,
   toSnakeCase,
+  colors,
 } from 'orchid-core';
 import { ChangeTableData, CompareSql } from './tables.generator';
 import { AbortSignal } from '../generate';

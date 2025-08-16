@@ -1,9 +1,9 @@
 import {
   changeCache,
-  migrate,
+  fullMigrate,
   RAKE_DB_LOCK_KEY,
-  redo,
-  rollback,
+  fullRedo,
+  fullRollback,
 } from './migrateOrRollback';
 import {
   Adapter,
@@ -71,7 +71,7 @@ const config = testConfig;
 const change = (
   fn: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>,
 ) => {
-  pushChange(fn as unknown as ChangeCallback<unknown>);
+  pushChange({ fn: fn as never, config });
 };
 
 let migrationFiles: { path: string; version: string; load(): void }[] = [];
@@ -97,7 +97,7 @@ const arrange = <
 };
 
 const act = (
-  fn: typeof migrate | typeof rollback | typeof redo,
+  fn: typeof fullMigrate | typeof fullRollback | typeof fullRedo,
   args?: string[],
 ) => fn({}, options, currentConfig, args ?? []);
 
@@ -186,7 +186,7 @@ describe('migrateOrRollback', () => {
         files: [files[0], files[2]],
       });
 
-      await expect(act(migrate)).rejects.toThrow(
+      await expect(act(fullMigrate)).rejects.toThrow(
         `There is a gap between migrations ${files[0].path} and ${files[2].path}`,
       );
     });
@@ -196,7 +196,7 @@ describe('migrateOrRollback', () => {
         files: [files[0], files[0]],
       });
 
-      await expect(act(migrate)).rejects.toThrow(
+      await expect(act(fullMigrate)).rejects.toThrow(
         `Found migrations with the same number: ${files[0].path} and ${files[0].path}`,
       );
     });
@@ -216,7 +216,7 @@ describe('migrateOrRollback', () => {
         },
       });
 
-      await act(migrate);
+      await act(fullMigrate);
 
       assert.getMigrationsUp(env.config);
 
@@ -251,7 +251,7 @@ describe('migrateOrRollback', () => {
       transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
       asMock(createMigrationsTable).mockResolvedValueOnce(undefined);
 
-      await act(migrate);
+      await act(fullMigrate);
 
       assert.getMigrationsUp(config);
       expect(createMigrationsTable).toBeCalled();
@@ -281,14 +281,14 @@ describe('migrateOrRollback', () => {
         });
       });
 
-      await act(migrate);
+      await act(fullMigrate);
 
       expect(called).toEqual(['one', 'two']);
     });
 
     it('should use the returned `default` from `load` fn for a changes if it exists', async () => {
-      const changes1 = jest.fn();
-      const changes2 = jest.fn();
+      const changes1 = { fn: jest.fn() };
+      const changes2 = { fn: jest.fn() };
 
       arrange({
         files: [
@@ -309,15 +309,15 @@ describe('migrateOrRollback', () => {
         config,
       });
 
-      await act(migrate);
+      await act(fullMigrate);
 
-      expect(changes1).toBeCalled();
-      expect(changes2).toBeCalled();
+      expect(changes1.fn).toBeCalled();
+      expect(changes2.fn).toBeCalled();
     });
 
     it('should migrate array of changes returned in `default` from `load`', async () => {
-      const changes1 = jest.fn();
-      const changes2 = jest.fn();
+      const changes1 = { fn: jest.fn() };
+      const changes2 = { fn: jest.fn() };
 
       arrange({
         files: [
@@ -331,10 +331,10 @@ describe('migrateOrRollback', () => {
         versions: [],
       });
 
-      await act(migrate);
+      await act(fullMigrate);
 
-      expect(changes1).toBeCalled();
-      expect(changes2).toBeCalled();
+      expect(changes1.fn).toBeCalled();
+      expect(changes2.fn).toBeCalled();
     });
 
     it('should throw when `forceDefaultExports` is true and migration has no default export', async () => {
@@ -352,7 +352,7 @@ describe('migrateOrRollback', () => {
         },
       });
 
-      await expect(act(migrate)).rejects.toThrow(
+      await expect(act(fullMigrate)).rejects.toThrow(
         `Missing a default export in ${files[0].path} migration`,
       );
     });
@@ -363,7 +363,7 @@ describe('migrateOrRollback', () => {
         versions: ['0001', '0003'],
       });
 
-      await expect(act(migrate)).rejects.toThrow(
+      await expect(act(fullMigrate)).rejects.toThrow(
         `Cannot migrate 0002_file.ts because the higher position name was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
       );
     });
@@ -374,8 +374,11 @@ describe('migrateOrRollback', () => {
       const called: [version: number, dir: 'up' | 'down'][] = [];
       const load = (version: number) =>
         jest.fn(() => {
-          pushChange(async (_, up) => {
-            called.push([version, up ? 'up' : 'down']);
+          pushChange({
+            fn: async (_, up) => {
+              called.push([version, up ? 'up' : 'down']);
+            },
+            config,
           });
         });
 
@@ -400,7 +403,7 @@ describe('migrateOrRollback', () => {
         },
       });
 
-      await act(migrate, ['force']);
+      await act(fullMigrate, ['force']);
 
       expect(env.config.beforeChange).toBeCalled();
       expect(env.config.afterChange).toBeCalled();
@@ -438,7 +441,7 @@ describe('migrateOrRollback', () => {
         },
       });
 
-      await act(rollback);
+      await act(fullRollback);
 
       expect(env.config.beforeChange).toBeCalled();
       expect(env.config.afterChange).toBeCalled();
@@ -470,7 +473,7 @@ describe('migrateOrRollback', () => {
       transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
       asMock(createMigrationsTable).mockResolvedValueOnce(undefined);
 
-      await act(rollback);
+      await act(fullRollback);
 
       assert.getMigrationsDown(config);
       expect(createMigrationsTable).toBeCalled();
@@ -499,7 +502,7 @@ describe('migrateOrRollback', () => {
         });
       });
 
-      await act(rollback);
+      await act(fullRollback);
 
       expect(called).toEqual(['two', 'one']);
     });
@@ -549,7 +552,7 @@ describe('migrateOrRollback', () => {
         });
       }
 
-      await act(redo, ['0002']);
+      await act(fullRedo, ['0002']);
 
       expect(callbackCalls).toEqual([
         'beforeRollback',
@@ -616,7 +619,7 @@ describe('migrateOrRollback', () => {
         },
       });
 
-      await act(redo);
+      await act(fullRedo);
 
       assert.logs('reapplying', [
         { rolledBack: files[3] },
@@ -631,12 +634,12 @@ describe('migrateOrRollback', () => {
         path: 'file1',
         version: '0001',
         load() {
-          pushChange(top);
+          pushChange({ fn: top, config });
           async function top() {
             executed.push('top');
           }
 
-          pushChange(bottom);
+          pushChange({ fn: bottom, config });
           async function bottom() {
             executed.push('bottom');
           }
@@ -654,7 +657,7 @@ describe('migrateOrRollback', () => {
         },
       });
 
-      await act(redo);
+      await act(fullRedo);
 
       expect(executed).toEqual(['bottom', 'top', 'top', 'bottom']);
     });

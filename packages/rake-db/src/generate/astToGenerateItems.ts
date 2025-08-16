@@ -12,9 +12,10 @@ import {
   EnumColumn,
   TableData,
 } from 'pqb';
-import { exhaustive, getSchemaAndTableFromName } from '../common';
+import { getSchemaAndTableFromName } from '../common';
 import { ColumnTypeSchemaArg, toArray } from 'orchid-core';
 import { AnyRakeDbConfig } from 'rake-db';
+import { exhaustive } from '../../../core/src/utils';
 
 export interface GenerateItem {
   ast: RakeDbAst;

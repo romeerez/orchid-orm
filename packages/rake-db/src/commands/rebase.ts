@@ -6,9 +6,9 @@ import { getMigrations, MigrationItem } from '../migration/migrationsSet';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { RakeDbCtx } from '../common';
 import { RecordOptionalString } from 'orchid-core';
-import { redo } from './migrateOrRollback';
+import { fullRedo } from './migrateOrRollback';
 import { promptSelect } from '../prompt';
-import { colors } from '../colors';
+import { colors } from '../../../core/src/colors';
 
 interface RebaseFile extends MigrationItem {
   name: string;
@@ -199,7 +199,7 @@ export const rebase = async (
 
   set.migrations = migrationsDown;
 
-  await redo(
+  await fullRedo(
     ctx,
     options,
     {

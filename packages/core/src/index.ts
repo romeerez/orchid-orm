@@ -1,3 +1,4 @@
+export { colors } from './colors';
 export {
   backtickQuote,
   deepCompare,
@@ -28,6 +29,8 @@ export {
   noop,
   emptyObject,
   getFreeAlias,
+  exhaustive,
+  pluralize,
 } from './utils';
 export type {
   RecordOptionalString,

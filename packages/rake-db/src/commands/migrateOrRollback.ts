@@ -14,11 +14,14 @@ import {
 } from 'orchid-core';
 import { queryLock, RakeDbCtx, transaction } from '../common';
 import {
-  ChangeCallback,
   clearChanges,
   getCurrentChanges,
+  MigrationChange,
 } from '../migration/change';
-import { createMigrationInterface } from '../migration/migration';
+import {
+  createMigrationInterface,
+  SilentQueries,
+} from '../migration/migration';
 import {
   getMigratedVersionsMap,
   NoMigrationsTableError,
@@ -33,6 +36,7 @@ import { createMigrationsTable } from '../migration/migrationsTable';
 import {
   getMigrations,
   MigrationItem,
+  MigrationItemHasLoad,
   MigrationsSet,
 } from '../migration/migrationsSet';
 import { versionToString } from '../migration/migration.utils';
@@ -155,7 +159,7 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
  * @param config - specifies how to load migrations, callbacks, and logger
  * @param args - pass none or `all` to run all migrations, pass int for how many to migrate
  */
-export const migrate: MigrateFn = makeMigrateFn(
+export const fullMigrate: MigrateFn = makeMigrateFn(
   Infinity,
   true,
   (trx, config, set, versions, count, force) =>
@@ -166,9 +170,9 @@ export const migrate: MigrateFn = makeMigrateFn(
  * Will roll back one latest applied migration,
  * will apply `change` functions bottom-to-top.
  *
- * Takes the same options as {@link migrate}.
+ * Takes the same options as {@link fullMigrate}.
  */
-export const rollback: MigrateFn = makeMigrateFn(
+export const fullRollback: MigrateFn = makeMigrateFn(
   1,
   false,
   (trx, config, set, versions, count, force) =>
@@ -176,11 +180,11 @@ export const rollback: MigrateFn = makeMigrateFn(
 );
 
 /**
- * Calls {@link rollback} and then {@link migrate}.
+ * Calls {@link fullRollback} and then {@link fullMigrate}.
  *
- * Takes the same options as {@link migrate}.
+ * Takes the same options as {@link fullMigrate}.
  */
-export const redo: MigrateFn = makeMigrateFn(
+export const fullRedo: MigrateFn = makeMigrateFn(
   1,
   true,
   async (trx, config, set, versions, count, force) => {
@@ -287,7 +291,10 @@ export const migrateOrRollback = async (
       );
     }
 
-    await runMigration(trx, up, file, config);
+    const changes = await getChanges(file, config);
+    const adapter = await runMigration(trx, up, changes, config);
+    await changeMigratedVersion(adapter, up, file, config);
+
     (migrations ??= []).push(file);
 
     if (up) {
@@ -367,44 +374,48 @@ const checkMigrationOrder = (
 
 // Cache `change` functions of migrations. Key is a migration file name, value is array of `change` functions.
 // When migrating two or more databases, files are loaded just once due to this cache.
-export const changeCache: Record<
-  string,
-  ChangeCallback<unknown>[] | undefined
-> = {};
+export const changeCache: Record<string, MigrationChange[] | undefined> = {};
 
-/**
- * Process one migration file.
- * It performs a db transaction, loads `change` functions from a file, executes them in order specified by `up` parameter.
- * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
- */
-const runMigration = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  trx: TransactionAdapter,
-  up: boolean,
-  file: MigrationItem,
-  config: RakeDbConfig<SchemaConfig, CT>,
-) => {
+export const getChanges = async (
+  file: MigrationItemHasLoad,
+  config?: RakeDbConfig<ColumnSchemaConfig, unknown>,
+): Promise<MigrationChange[]> => {
   clearChanges();
 
-  let changes = changeCache[file.path];
+  let changes = file.path ? changeCache[file.path] : undefined;
   if (!changes) {
     const module = (await file.load()) as
       | {
-          default?: MaybeArray<ChangeCallback<unknown>>;
+          default?: MaybeArray<MigrationChange>;
         }
       | undefined;
 
     const exported = module?.default && toArray(module.default);
 
-    if (config.forceDefaultExports && !exported) {
+    if (config?.forceDefaultExports && !exported) {
       throw new RakeDbError(
         `Missing a default export in ${file.path} migration`,
       );
     }
 
     changes = exported || getCurrentChanges();
-    changeCache[file.path] = changes;
+    if (file.path) changeCache[file.path] = changes;
   }
 
+  return changes;
+};
+
+/**
+ * Process one migration file.
+ * It performs a db transaction, loads `change` functions from a file, executes them in order specified by `up` parameter.
+ * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
+ */
+export const runMigration = async <SchemaConfig extends ColumnSchemaConfig, CT>(
+  trx: TransactionAdapter,
+  up: boolean,
+  changes: MigrationChange[],
+  config: RakeDbConfig<SchemaConfig, CT>,
+): Promise<SilentQueries> => {
   const db = createMigrationInterface<SchemaConfig, CT>(trx, up, config);
 
   if (changes.length) {
@@ -414,12 +425,21 @@ const runMigration = async <SchemaConfig extends ColumnSchemaConfig, CT>(
     const to = up ? changes.length : -1;
     const step = up ? 1 : -1;
     for (let i = from; i !== to; i += step) {
-      await (changes[i] as unknown as ChangeCallback<CT>)(db, up);
+      await changes[i].fn(db, up);
     }
   }
 
+  return db.adapter;
+};
+
+const changeMigratedVersion = async (
+  adapter: SilentQueries,
+  up: boolean,
+  file: MigrationItem,
+  config: RakeDbConfig<ColumnSchemaConfig, unknown>,
+) => {
   await (up ? saveMigratedVersion : deleteMigratedVersion)(
-    db.adapter,
+    adapter,
     file.version,
     path.basename(file.path).slice(file.version.length + 1),
     config,

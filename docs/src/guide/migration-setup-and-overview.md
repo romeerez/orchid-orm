@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Migrations setup and overview
 
 Migrations allow you to evolve your database schema over time. This migration toolkit has several benefits over writing raw SQL migrations or using other tools:
@@ -250,6 +254,29 @@ result.args;
 `run` is a function to execute a command,
 it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)),
 optionally takes config overrides, returns a `Promise<void>`.
+
+### migrateFiles
+
+Useful in tests: use `migrateFiles` to apply only a given migrations.
+
+It works when using `rakeDb.lazy` for configuration, it won't work with `rakeDb`.
+
+This is a lightweight function that skips most of the normal migration command steps,
+all it does is it runs a given migrations.
+
+```ts
+import { migrateFiles } from 'rake-db';
+
+await migrateFiles(db, [
+  import('./0001_user_org_member'),
+  import('./0002_account_operator'),
+]);
+```
+
+`db` is `OrchidORM` instance returned by [orchidORM](/guide/orm-and-query-builder.html#setup).
+
+Unless the `migrateFiles` is called in a regular [transaction](/guide/transactions.html#transaction) or a [testTransaction](/guide/transactions.html#testtransaction),
+it wraps given migrations in a transaction.
 
 ## rakeDb
 

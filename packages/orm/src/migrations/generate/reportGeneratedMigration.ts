@@ -1,12 +1,8 @@
+import { AnyRakeDbConfig, RakeDbAst, getSchemaAndTableFromName } from 'rake-db';
 import {
-  AnyRakeDbConfig,
-  RakeDbAst,
   colors,
   exhaustive,
-  getSchemaAndTableFromName,
   pluralize,
-} from 'rake-db';
-import {
   addCode,
   Code,
   codeToString,

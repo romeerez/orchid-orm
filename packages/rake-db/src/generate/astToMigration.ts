@@ -23,9 +23,10 @@ import {
   singleQuote,
   toArray,
 } from 'orchid-core';
-import { exhaustive, quoteSchemaTable } from '../common';
+import { quoteSchemaTable } from '../common';
 import { AnyRakeDbConfig } from '../config';
 import { astToGenerateItems } from './astToGenerateItems';
+import { exhaustive } from '../../../core/src/utils';
 
 export const astToMigration = (
   currentSchema: string,

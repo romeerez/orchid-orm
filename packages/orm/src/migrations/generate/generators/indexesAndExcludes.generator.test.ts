@@ -1,10 +1,10 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { colors } from 'rake-db';
+import { colors } from 'orchid-core';
 import { TableData } from 'pqb';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
-  migrate: jest.fn(),
+  fullMigrate: jest.fn(),
   promptSelect: jest.fn(),
 }));
 jest.mock('fs/promises', () => ({

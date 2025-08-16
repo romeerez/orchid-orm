@@ -1,5 +1,5 @@
-import { RakeDbAst, promptSelect, colors } from 'rake-db';
-import { RawSQLBase } from 'orchid-core';
+import { RakeDbAst, promptSelect } from 'rake-db';
+import { RawSQLBase, colors } from 'orchid-core';
 import { Adapter, QueryResult } from 'pqb';
 import { AbortSignal } from '../generate';
 

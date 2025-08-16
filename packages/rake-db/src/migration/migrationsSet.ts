@@ -12,9 +12,8 @@ import { RakeDbCtx } from '../common';
 import { fileNamesToChangeMigrationIdMap } from '../commands/changeIds';
 import fs from 'fs/promises';
 
-export interface MigrationItem {
-  path: string;
-  version: string;
+export interface MigrationItemHasLoad {
+  path?: string;
 
   /**
    * Function that loads the migration content,
@@ -22,6 +21,11 @@ export interface MigrationItem {
    * Promise can return `{ default: x }` where `x` is a return of `change` or an array of such returns.
    */
   load(): Promise<unknown>;
+}
+
+export interface MigrationItem extends MigrationItemHasLoad {
+  path: string;
+  version: string;
 }
 
 export interface MigrationsSet {
