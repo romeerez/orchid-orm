@@ -177,9 +177,6 @@ importers:
       orchid-core:
         specifier: workspace:*
         version: link:../core
-      orchid-orm:
-        specifier: workspace:*
-        version: link:../orm
       pqb:
         specifier: workspace:*
         version: link:../qb/pqb
