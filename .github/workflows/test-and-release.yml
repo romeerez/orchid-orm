@@ -70,7 +70,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 9.5.0
+          version: 10.13.1
 
       - name: Setup pnpm config
         run: pnpm config set store-dir $PNPM_CACHE_FOLDER
