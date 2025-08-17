@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.26.0
+
+### Minor Changes
+
+- 26e65c2: Change rake-db to have explicit exports, and export a `migrateFiles` utility function (#548)
+
+### Patch Changes
+
+- Updated dependencies [26e65c2]
+  - orchid-core@0.28.1
+  - pqb@0.55.1
+
 ## 2.25.17
 
 ### Patch Changes
