@@ -1,5 +1,16 @@
 # pqb
 
+## 0.56.0
+
+### Minor Changes
+
+- ea7c374: Support porsager/postgres driver
+
+### Patch Changes
+
+- Updated dependencies [ea7c374]
+  - orchid-core@0.29.0
+
 ## 0.55.1
 
 ### Patch Changes

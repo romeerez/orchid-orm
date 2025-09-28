@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.29.0
+
+### Minor Changes
+
+- ea7c374: Support porsager/postgres driver
+
 ## 0.28.1
 
 ### Patch Changes

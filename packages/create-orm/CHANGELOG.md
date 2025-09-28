@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.4.0
+
+### Minor Changes
+
+- ea7c374: Support porsager/postgres driver
+
 ## 0.3.3
 
 ### Patch Changes
