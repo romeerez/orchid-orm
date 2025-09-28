@@ -1,5 +1,11 @@
 # pqb
 
+## 0.56.3
+
+### Patch Changes
+
+- d334b3c: Fix .get() to throw NotFound in sub queries (#561)
+
 ## 0.56.2
 
 ### Patch Changes

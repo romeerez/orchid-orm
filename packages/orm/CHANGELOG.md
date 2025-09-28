@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.56.3
+
+### Patch Changes
+
+- d334b3c: Fix .get() to throw NotFound in sub queries (#561)
+- Updated dependencies [d334b3c]
+  - pqb@0.56.3
+  - rake-db@2.27.3
+
 ## 1.56.2
 
 ### Patch Changes
