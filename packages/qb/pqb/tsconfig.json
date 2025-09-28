@@ -1,7 +1,7 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["./src", "bun.test.ts"],
+  "include": ["./src"],
   "compilerOptions": {
-    "types": ["@types/jest", "bun-types"]
+    "types": ["@types/jest"]
   }
 }

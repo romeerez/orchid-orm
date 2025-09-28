@@ -64,10 +64,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      # Install bun to run the bun-specific test in pqb
-      - name: Use Bun
-        uses: oven-sh/setup-bun@v1
-
       - uses: pnpm/action-setup@v2
         with:
           version: 10.13.1

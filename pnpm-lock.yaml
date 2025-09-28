@@ -165,9 +165,6 @@ importers:
         specifier: '>=3'
         version: 3.4.7
     devDependencies:
-      bun-types:
-        specifier: 1.0.5-canary.20231009T140142
-        version: 1.0.5-canary.20231009T140142
       test-utils:
         specifier: workspace:*
         version: link:../../test-utils
@@ -1246,9 +1243,6 @@ packages:
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
-
-  bun-types@1.0.5-canary.20231009T140142:
-    resolution: {integrity: sha512-5hT8WBXZ2ozdJt6s0nnnh4iQXn6xp9a7spbRYjapNxKjR3ckS5U2V347H3+XpaMVzc/a7D2I2KnKqIPO1R82kg==}
 
   call-bind@1.0.7:
     resolution: {integrity: sha512-GHTSNSYICQ7scH7sZ+M2rFopRoLh8t2bLSW6BbgrtLsahOIB5iyAVJf9GjWK3cYTDaMj4XdBpM1cA6pIS0Kv2w==}
@@ -4285,8 +4279,6 @@ snapshots:
       node-int64: 0.4.0
 
   buffer-from@1.1.2: {}
-
-  bun-types@1.0.5-canary.20231009T140142: {}
 
   call-bind@1.0.7:
     dependencies:

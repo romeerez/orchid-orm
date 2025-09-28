@@ -66,36 +66,12 @@ export class Then {
 let queryError: Error = undefined as unknown as Error;
 
 // `query.then` getter: it must be a getter to store the error with stacktrace prior to executing `await`.
-let getThen: (
+const getThen = function (
   this: Query,
-) => (this: Query, resolve?: Resolve, reject?: Reject) => Promise<unknown>;
-
-// workaround for the bun issue: https://github.com/romeerez/orchid-orm/issues/198
-if (process.versions.bun) {
-  getThen = function () {
-    queryError = new Error();
-
-    // In rake-db `then` might be called on a lightweight query object that has no `internal`.
-    if (!this.internal) return maybeWrappedThen;
-
-    // Value in the store exists only before the call of the returned function.
-    const trx = this.internal.transactionStorage.getStore();
-    if (!trx) return maybeWrappedThen;
-
-    return (resolve, reject) => {
-      // Here `transactionStorage.getStore()` tempReturnType undefined,
-      // need to set the `trx` value to the store to workaround the bug.
-      return this.internal.transactionStorage.run(trx, () => {
-        return maybeWrappedThen.call(this, resolve, reject);
-      });
-    };
-  };
-} else {
-  getThen = function () {
-    queryError = new Error();
-    return maybeWrappedThen;
-  };
-}
+): (this: Query, resolve?: Resolve, reject?: Reject) => Promise<unknown> {
+  queryError = new Error();
+  return maybeWrappedThen;
+};
 
 Object.defineProperty(Then.prototype, 'then', {
   configurable: true,
