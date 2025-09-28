@@ -549,7 +549,7 @@ await migrateFiles(db, [
 Unless the `migrateFiles` is called in a regular [transaction](/guide/transactions.html#transaction) or a [testTransaction](/guide/transactions.html#testtransaction),
 it wraps given migrations in a transaction.
 
-## makeConnectAndMigrate
+### makeConnectAndMigrate
 
 You can prepare a function beforehand, and then to run migrations dynamically from your app logic.
 
