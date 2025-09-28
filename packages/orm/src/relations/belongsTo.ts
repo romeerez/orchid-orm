@@ -529,7 +529,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
     const { upsert } = params;
     if (upsert || params.update || params.delete) {
-      // selectIfNotSelected(q, foreignKeys);
+      selectIfNotSelected(q, foreignKeys);
     }
 
     if (upsert) {

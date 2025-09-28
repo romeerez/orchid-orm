@@ -1,11 +1,16 @@
 import {
   Query,
   SetQueryReturnsOneKind,
+  SetQueryReturnsValueOrThrowKind,
   SetQueryReturnsVoidKind,
 } from '../../query/query';
 import { _queryUpdate, UpdateData, UpdateSelf } from './update';
 import { CreateBelongsToData, CreateData, CreateSelf } from './create';
-import { isObjectEmpty, PickQueryMetaResult, QueryMetaBase } from 'orchid-core';
+import {
+  isObjectEmpty,
+  PickQueryMetaResultReturnType,
+  QueryMetaBase,
+} from 'orchid-core';
 import { _clone } from '../../query/queryUtils';
 import { orCreate } from './orCreate';
 
@@ -16,9 +21,11 @@ type UpsertCreate<DataKey extends PropertyKey, CD> = {
 };
 
 // unless upsert query has a select, it returns void
-export type UpsertResult<T extends PickQueryMetaResult> =
+export type UpsertResult<T extends PickQueryMetaResultReturnType> =
   T['meta']['hasSelect'] extends true
-    ? SetQueryReturnsOneKind<T, 'upsert'>
+    ? T['returnType'] extends 'value' | 'valueOrThrow'
+      ? SetQueryReturnsValueOrThrowKind<T, 'upsert'>
+      : SetQueryReturnsOneKind<T, 'upsert'>
     : SetQueryReturnsVoidKind<T, 'upsert'>;
 
 // Require type of query object to query only one record

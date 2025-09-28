@@ -1,10 +1,12 @@
 import { PickQueryQ, Query } from '../../query/query';
 import { CreateBelongsToData, CreateData } from './create';
-import { MoreThanOneRowError } from 'orchid-core';
+import {
+  MoreThanOneRowError,
+  PickQueryMetaResultReturnType,
+} from 'orchid-core';
 import {
   FnUnknownToUnknown,
   newDelayedRelationSelect,
-  PickQueryMetaResult,
   QueryBase,
   RecordUnknown,
 } from 'orchid-core';
@@ -20,7 +22,7 @@ export type OrCreateArg<Data> = Data | (() => Data);
 
 // this is used by `upsert` and `orCreate` methods.
 // `updateData` and `mergeData` args are passed only by `upsert`.
-export function orCreate<T extends PickQueryMetaResult>(
+export function orCreate<T extends PickQueryMetaResultReturnType>(
   query: T,
   data: unknown | FnUnknownToUnknown,
   updateData?: unknown,

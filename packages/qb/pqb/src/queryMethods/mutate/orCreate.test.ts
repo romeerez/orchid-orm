@@ -1,4 +1,4 @@
-import { User, userData } from '../../test-utils/test-utils';
+import { User, userData, UserRecord } from '../../test-utils/test-utils';
 import {
   assertType,
   sql,
@@ -57,6 +57,8 @@ describe('orCreate', () => {
         name: 'created',
       });
 
+    assertType<typeof user, UserRecord>();
+
     expect(user.name).toBe(userData.name);
   });
 
@@ -70,6 +72,8 @@ describe('orCreate', () => {
         name: 'created',
       });
 
+    assertType<typeof created, number>();
+
     expect(created).toBe(id);
   });
 
@@ -82,6 +86,8 @@ describe('orCreate', () => {
         age: () => sql`28`,
       });
 
+    assertType<typeof user, UserRecord>();
+
     expect(user).toMatchObject({ name: 'created', age: 28 });
   });
 
@@ -92,6 +98,8 @@ describe('orCreate', () => {
         ...userData,
         name: 'created',
       }));
+
+    assertType<typeof user, UserRecord>();
 
     expect(user.name).toBe('created');
   });

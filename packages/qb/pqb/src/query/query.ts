@@ -353,6 +353,21 @@ export type SetQueryReturnsValueOrThrow<
 > = SetQueryReturnsColumnOrThrow<T, T['meta']['selectable'][Arg]['column']> &
   T['meta']['selectable'][Arg]['column']['operators'];
 
+export type SetQueryReturnsValueOrThrowKind<
+  T extends PickQueryMetaResult,
+  Kind extends string,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : K extends 'returnType'
+    ? 'valueOrThrow'
+    : K extends 'then'
+    ? QueryThen<T['result']['value']['outputType']>
+    : T[K];
+};
+
 export type SetQueryReturnsValueOptional<
   T extends PickQueryMeta,
   Arg extends GetStringArg<T>,

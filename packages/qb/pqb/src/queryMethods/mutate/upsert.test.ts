@@ -1,4 +1,4 @@
-import { User, userData } from '../../test-utils/test-utils';
+import { User, userData, UserRecord } from '../../test-utils/test-utils';
 import {
   assertType,
   sql,
@@ -95,6 +95,8 @@ describe('upsert', () => {
         create: userData,
       });
 
+    assertType<typeof user, UserRecord>();
+
     expect(user).toMatchObject({
       name: 'updated',
       age: 28,
@@ -121,6 +123,8 @@ describe('upsert', () => {
         },
       });
 
+    assertType<typeof user, UserRecord>();
+
     expect(user).toMatchObject({
       data: { name: 'created', tags: ['tag'] },
       age: 28,
@@ -129,6 +133,17 @@ describe('upsert', () => {
   });
 
   it('should create record and return a single value', async () => {
+    const id = await User.get('id').find(1).upsert({
+      update: {},
+      create: userData,
+    });
+
+    assertType<typeof id, number>();
+
+    expect(id).toEqual(expect.any(Number));
+  });
+
+  it('should create record and return a single value having get in the end', async () => {
     const id = await User.find(1)
       .upsert({
         update: {},
@@ -151,6 +166,8 @@ describe('upsert', () => {
         create: () => ({ ...userData, name: 'created' }),
       });
 
+    assertType<typeof user, UserRecord>();
+
     expect(user.name).toBe('created');
   });
 
@@ -160,6 +177,12 @@ describe('upsert', () => {
       name: t.text(),
       password: t.text(),
     }));
+
+    interface UserRecord {
+      id: number;
+      name: string;
+      password: string;
+    }
 
     it('should not create record if it exists', async () => {
       const { id } = await UserWithoutTimestamps.create(userData);
@@ -174,6 +197,8 @@ describe('upsert', () => {
           },
         });
 
+      assertType<typeof user, UserRecord>();
+
       expect(user.id).toBe(id);
     });
 
@@ -187,6 +212,8 @@ describe('upsert', () => {
             password: 'new password',
           },
         });
+
+      assertType<typeof user, UserRecord>();
 
       expect(user.name).toBe('created');
     });
@@ -218,6 +245,8 @@ describe('upsert', () => {
         }),
       });
 
+    assertType<typeof created, UserRecord>();
+
     expect(created).toMatchObject({
       name: 'name',
     });
@@ -238,6 +267,8 @@ describe('upsert', () => {
           password: 'password',
         },
       });
+
+    assertType<typeof created, UserRecord>();
 
     expect(created).toMatchObject({
       name: 'name',

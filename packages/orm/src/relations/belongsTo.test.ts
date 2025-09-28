@@ -2051,7 +2051,7 @@ describe('belongsTo', () => {
           const count = await db.profile.find(Id).update(data);
 
           expect(count).toBe(1);
-          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(beforeUpdate).toHaveBeenCalledTimes(0);
           expect(afterUpdate).not.toBeCalled();
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);

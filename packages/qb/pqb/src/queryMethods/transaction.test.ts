@@ -280,7 +280,7 @@ describe('transaction', () => {
 
       expect(result).toBe('ok');
 
-      await new Promise(queueMicrotask);
+      await new Promise(queueMicrotask as never);
 
       expect(catcher1).toBeCalledTimes(1);
       expect(catcher2).toBeCalledTimes(1);
@@ -341,7 +341,7 @@ describe('transaction', () => {
 
       expect(hook).not.toHaveBeenCalled();
 
-      await new Promise(queueMicrotask);
+      await new Promise(queueMicrotask as never);
 
       expect(hook).toHaveBeenCalled();
     });
@@ -392,7 +392,7 @@ describe('hooks with no test transaction', () => {
 
     expect(result).toBe(1);
 
-    await new Promise(queueMicrotask);
+    await new Promise(queueMicrotask as never);
 
     expect(catcher1).toBeCalledTimes(1);
     expect(catcher2).toBeCalledTimes(1);
