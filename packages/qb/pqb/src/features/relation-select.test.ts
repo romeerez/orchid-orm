@@ -1,5 +1,5 @@
 import { createBaseTable, orchidORMWithAdapter } from 'orchid-orm';
-import { sql, testDb, useTestDatabase } from 'test-utils';
+import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
 import { userData } from '../test-utils/test-utils';
 import { MAX_BINDING_PARAMS } from '../sql/constants';
 
@@ -83,6 +83,29 @@ describe('relation-select', () => {
           }),
       })
       .take();
+
+    assertType<typeof res, { user: { username: string } | undefined }>();
+
+    expect(res).toEqual({ user: { username: 'name' } });
+  });
+
+  // https://github.com/romeerez/orchid-orm/issues/565
+  it('should handle nested select of `get`', async () => {
+    await db.user.insert({
+      ...userData,
+      posts: { create: [{ title: 'title', body: 'body' }] },
+    });
+
+    const res = await db.post
+      .select({
+        user: (q) =>
+          q.user.select({
+            username: (q) => q.get('name'),
+          }),
+      })
+      .take();
+
+    assertType<typeof res, { user: { username: string } | undefined }>();
 
     expect(res).toEqual({ user: { username: 'name' } });
   });

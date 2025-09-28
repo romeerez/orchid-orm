@@ -667,7 +667,13 @@ export const processSelectArg = <T extends SelectSelf>(
         }
       }
 
-      if (!isExpression(value) && isRelationQuery(value)) {
+      if (
+        !isExpression(value) &&
+        isRelationQuery(value) &&
+        // `subQuery = 1` case is when callback returns the same query as it gets,
+        // for example `q => q.get('name')`.
+        (value as unknown as Query).q.subQuery !== 1
+      ) {
         query.q.selectRelation = joinQuery = true;
 
         value = value.joinQuery(value, q as unknown as IsQuery);
