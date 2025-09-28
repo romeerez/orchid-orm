@@ -16,15 +16,30 @@
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
     },
-    "./migrations": {
-      "require": "./dist/migrations.js",
-      "import": "./dist/migrations.mjs",
-      "types": "./dist/migrations.d.ts"
-    },
     "./codegen": {
       "require": "./codegen/index.js",
       "import": "./codegen/index.mjs",
       "types": "./codegen/index.d.ts"
+    },
+    "./node-postgres": {
+      "require": "./dist/node-postgres.js",
+      "import": "./dist/node-postgres.mjs",
+      "types": "./dist/node-postgres.d.ts"
+    },
+    "./postgres-js": {
+      "require": "./dist/postgres-js.js",
+      "import": "./dist/postgres-js.mjs",
+      "types": "./dist/postgres-js.d.ts"
+    },
+    "./migrations/node-postgres": {
+      "require": "./dist/migrations/node-postgres.js",
+      "import": "./dist/migrations/node-postgres.mjs",
+      "types": "./dist/migrations/node-postgres.d.ts"
+    },
+    "./migrations/postgres-js": {
+      "require": "./dist/migrations/postgres-js.js",
+      "import": "./dist/migrations/postgres-js.mjs",
+      "types": "./dist/migrations/postgres-js.d.ts"
     }
   },
   "files": [

@@ -1,4 +1,4 @@
-import { createBaseTable, orchidORM } from 'orchid-orm';
+import { createBaseTable, orchidORMWithAdapter } from 'orchid-orm';
 import { testDb, useTestDatabase } from 'test-utils';
 import { userData } from '../test-utils/test-utils';
 import { MAX_BINDING_PARAMS } from '../sql/constants';
@@ -40,7 +40,7 @@ class PostTable extends BaseTable {
   };
 }
 
-const db = orchidORM(
+const db = orchidORMWithAdapter(
   {
     db: testDb,
     log: false,

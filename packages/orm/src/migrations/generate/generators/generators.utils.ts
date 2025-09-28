@@ -1,6 +1,5 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import { RawSQLBase, colors } from 'orchid-core';
-import { Adapter, QueryResult } from 'pqb';
+import { RawSQLBase, colors, QueryResult, AdapterBase } from 'orchid-core';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
@@ -18,7 +17,7 @@ export interface TableExpression extends CompareExpression {
 
 export const compareSqlExpressions = async (
   tableExpressions: TableExpression[],
-  adapter: Adapter,
+  adapter: AdapterBase,
 ) => {
   if (tableExpressions.length) {
     let id = 1;
@@ -28,10 +27,10 @@ export const compareSqlExpressions = async (
         const values: unknown[] = [];
         let result: QueryResult | undefined;
         try {
-          const results = (await adapter.query({
+          const results = (await adapter.query(
             // It is important to run `CREATE TEMPORARY VIEW` and `DROP VIEW` on the same db connection,
             // that's why SQLs are combined into a single query.
-            text: [
+            [
               `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
                 .map(
                   ({ inDb, inCode }, i): string =>
@@ -49,7 +48,7 @@ export const compareSqlExpressions = async (
               `DROP VIEW ${viewName}`,
             ].join('; '),
             values,
-          })) as unknown as QueryResult[];
+          )) as unknown as QueryResult[];
           result = results[1];
         } catch {}
 

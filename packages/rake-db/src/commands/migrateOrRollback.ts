@@ -1,11 +1,6 @@
+import { createDbWithAdapter, DbResult } from 'pqb';
 import {
-  Adapter,
-  AdapterOptions,
-  createDb,
-  DbResult,
-  TransactionAdapter,
-} from 'pqb';
-import {
+  AdapterBase,
   ColumnSchemaConfig,
   emptyArray,
   MaybeArray,
@@ -45,18 +40,17 @@ export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 
 type MigrateFn = <SchemaConfig extends ColumnSchemaConfig, CT>(
   ctx: RakeDbCtx,
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: RakeDbConfig<SchemaConfig, CT>,
   args?: string[],
-  adapters?: Adapter[],
   dontClose?: boolean,
-) => Promise<Adapter[]>;
+) => Promise<void>;
 
 function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
   defaultCount: number,
   up: boolean,
   fn: (
-    trx: TransactionAdapter,
+    trx: AdapterBase,
     config: RakeDbConfig<SchemaConfig, CT>,
     set: MigrationsSet,
     versions: RakeDbAppliedVersions,
@@ -66,12 +60,11 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
 ): MigrateFn {
   return async (
     ctx: RakeDbCtx,
-    options,
+    adapters,
     config,
     args = [],
-    adapters = options.map((opts) => new Adapter(opts)),
     dontClose,
-  ): Promise<Adapter[]> => {
+  ): Promise<void> => {
     const set = await getMigrations(ctx, config, up);
 
     const arg = args[0];
@@ -86,9 +79,8 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
     }
 
     const conf = config;
-    const length = options.length;
+    const length = adapters.length;
     for (let i = 0; i < length; i++) {
-      const opts = options[i];
       const adapter = adapters[i];
 
       let migrations: MigrationItem[] | undefined;
@@ -141,13 +133,11 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
       }
 
       config.afterChangeCommit?.({
-        options: opts,
+        adapter,
         up,
         migrations: migrations as MigrationItem[],
       });
     }
-
-    return adapters;
   };
 }
 
@@ -208,10 +198,11 @@ export const fullRedo: MigrateFn = makeMigrateFn(
   },
 );
 
-const getDb = (adapter: Adapter) => createDb<ColumnSchemaConfig>({ adapter });
+const getDb = (adapter: AdapterBase) =>
+  createDbWithAdapter<ColumnSchemaConfig>({ adapter });
 
 export const migrateOrRollback = async (
-  trx: TransactionAdapter,
+  trx: AdapterBase,
   config: RakeDbConfig<ColumnSchemaConfig, unknown>,
   set: MigrationsSet,
   versions: RakeDbAppliedVersions,
@@ -283,11 +274,7 @@ export const migrateOrRollback = async (
       config.logger?.log(
         `${
           redo ? 'Reapplying migrations for' : up ? 'Migrating' : 'Rolling back'
-        } database ${
-          trx.config.connectionString
-            ? new URL(trx.config.connectionString).pathname.slice(1)
-            : trx.config.database
-        }\n`,
+        } database ${trx.getDatabase()}\n`,
       );
     }
 
@@ -411,7 +398,7 @@ export const getChanges = async (
  * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
  */
 export const runMigration = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  trx: TransactionAdapter,
+  trx: AdapterBase,
   up: boolean,
   changes: MigrationChange[],
   config: RakeDbConfig<SchemaConfig, CT>,

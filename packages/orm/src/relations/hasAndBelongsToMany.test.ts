@@ -1,4 +1,4 @@
-import { Db, Query, TransactionAdapter } from 'pqb';
+import { Db, Query } from 'pqb';
 import {
   Chat,
   chatData,
@@ -10,10 +10,10 @@ import {
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
-import { omit, RecordUnknown, Sql } from 'orchid-core';
-import { assertType, expectSql, now } from 'test-utils';
+import { omit, RecordUnknown } from 'orchid-core';
+import { assertType, expectSql, now, TestTransactionAdapter } from 'test-utils';
 import { createBaseTable } from '../baseTable';
-import { orchidORM } from '../orm';
+import { orchidORMWithAdapter } from '../orm';
 
 const ormParams = {
   db: db.$qb,
@@ -83,7 +83,10 @@ describe('hasAndBelongsToMany', () => {
       }));
     }
 
-    const db = orchidORM(ormParams, { post: PostTable, tag: TagTable });
+    const db = orchidORMWithAdapter(ormParams, {
+      post: PostTable,
+      tag: TagTable,
+    });
     expect(
       ((db.post.shape as RecordUnknown).tags as { joinTable: Query }).joinTable
         .internal.tableData.constraints,
@@ -1041,8 +1044,11 @@ describe('hasAndBelongsToMany', () => {
         });
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
-        const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
+        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const arraysSpy = jest.spyOn(
+          TestTransactionAdapter.prototype,
+          'arrays',
+        );
 
         const user = await q;
         const chatIds = await db.user
@@ -1050,13 +1056,23 @@ describe('hasAndBelongsToMany', () => {
           .order('IdOfChat')
           .pluck('IdOfChat');
 
-        const [createUserSql, createChatsSql] = querySpy.mock.calls.map(
-          (item) => item[0],
-        );
-        const createChatUserSql = arraysSpy.mock.calls[0][0];
+        const [createUserSqlCall, createChatsSqlCall] = querySpy.mock.calls;
+        const createUserSql = {
+          text: createUserSqlCall[0],
+          values: createUserSqlCall[1],
+        };
+        const createChatsSql = {
+          text: createChatsSqlCall[0],
+          values: createChatsSqlCall[1],
+        };
+        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        const createChatUserSql = {
+          text: createChatUserSqlCall[0],
+          values: createChatUserSqlCall[1],
+        };
 
         expectSql(
-          createUserSql as Sql,
+          createUserSql,
           `
           INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
@@ -1066,7 +1082,7 @@ describe('hasAndBelongsToMany', () => {
         );
 
         expectSql(
-          createChatsSql as Sql,
+          createChatsSql,
           `
           INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
@@ -1076,7 +1092,7 @@ describe('hasAndBelongsToMany', () => {
         );
 
         expectSql(
-          createChatUserSql as Sql,
+          createChatUserSql,
           `
           INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
@@ -1113,7 +1129,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
 
         const user = await q;
         await db.user
@@ -1121,10 +1137,14 @@ describe('hasAndBelongsToMany', () => {
           .order('IdOfChat')
           .pluck('IdOfChat');
 
-        const [_, createChatsSql] = querySpy.mock.calls.map((item) => item[0]);
+        const [_, createChatsSqlCall] = querySpy.mock.calls;
+        const createChatsSql = {
+          text: createChatsSqlCall[0],
+          values: createChatsSqlCall[1],
+        };
 
         expectSql(
-          createChatsSql as Sql,
+          createChatsSql,
           `
             INSERT INTO "chat"("active", "title", "chat_key", "updated_at", "created_at")
             VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
@@ -1171,19 +1191,32 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
-        const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
+        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const arraysSpy = jest.spyOn(
+          TestTransactionAdapter.prototype,
+          'arrays',
+        );
 
         const users = await q;
         const chatIds = await db.user.join('chats').pluck('chats.IdOfChat');
 
-        const [createUserSql, createChatsSql] = querySpy.mock.calls.map(
-          (item) => item[0],
-        );
-        const createChatUserSql = arraysSpy.mock.calls[0][0];
+        const [createUserSqlCall, createChatsSqlCall] = querySpy.mock.calls;
+        const createUserSql = {
+          text: createUserSqlCall[0],
+          values: createUserSqlCall[1],
+        };
+        const createChatsSql = {
+          text: createChatsSqlCall[0],
+          values: createChatsSqlCall[1],
+        };
+        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        const createChatUserSql = {
+          text: createChatUserSqlCall[0],
+          values: createChatUserSqlCall[1],
+        };
 
         expectSql(
-          createUserSql as Sql,
+          createUserSql,
           `
           INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
@@ -1204,7 +1237,7 @@ describe('hasAndBelongsToMany', () => {
         );
 
         expectSql(
-          createChatsSql as Sql,
+          createChatsSql,
           `
           INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
@@ -1231,7 +1264,7 @@ describe('hasAndBelongsToMany', () => {
         );
 
         expectSql(
-          createChatUserSql as Sql,
+          createChatUserSql,
           `
           INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
@@ -1294,14 +1327,14 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
 
         await q;
 
-        const [, createChatsSql] = querySpy.mock.calls.map((item) => item[0]);
+        const [, createChatsSqlCall] = querySpy.mock.calls;
 
         expectSql(
-          createChatsSql as Sql,
+          { text: createChatsSqlCall[0], values: createChatsSqlCall[1] },
           `
           INSERT INTO "chat"("active", "title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10), ($11, $12, $13, $14, $15), ($16, $17, $18, $19, $20)
@@ -1401,8 +1434,11 @@ describe('hasAndBelongsToMany', () => {
         });
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
-        const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
+        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const arraysSpy = jest.spyOn(
+          TestTransactionAdapter.prototype,
+          'arrays',
+        );
 
         const user = await q;
         const chatIds = await db.user
@@ -1410,13 +1446,19 @@ describe('hasAndBelongsToMany', () => {
           .order('IdOfChat')
           .pluck('IdOfChat');
 
-        const [createUserSql, ...findChatsSql] = querySpy.mock.calls.map(
-          (item) => item[0],
-        );
-        const createChatUserSql = arraysSpy.mock.calls[0][0];
+        const [createUserSqlCall, ...findChatsSqlCalls] = querySpy.mock.calls;
+        const createUserSql = {
+          text: createUserSqlCall[0],
+          values: createUserSqlCall[1],
+        };
+        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        const createChatUserSql = {
+          text: createChatUserSqlCall[0],
+          values: createChatUserSqlCall[1],
+        };
 
         expectSql(
-          createUserSql as Sql,
+          createUserSql,
           `
           INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
@@ -1425,10 +1467,10 @@ describe('hasAndBelongsToMany', () => {
           ['user 1', 'key', 'password', now, now],
         );
 
-        expect(findChatsSql.length).toBe(2);
-        findChatsSql.forEach((sql, i) => {
+        expect(findChatsSqlCalls.length).toBe(2);
+        findChatsSqlCalls.forEach((call, i) => {
           expectSql(
-            sql as Sql,
+            { text: call[0], values: call[1] },
             `
             SELECT "chats"."id_of_chat" "IdOfChat", "chats"."chat_key" "ChatKey"
             FROM "chat" "chats"
@@ -1440,7 +1482,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         expectSql(
-          createChatUserSql as Sql,
+          createChatUserSql,
           `
           INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
@@ -1551,19 +1593,30 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
-        const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
+        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const arraysSpy = jest.spyOn(
+          TestTransactionAdapter.prototype,
+          'arrays',
+        );
 
         const users = await q;
         const chatIds = await db.user.join('chats').pluck('chats.IdOfChat');
 
-        const [createUserSql, ...findChatsSql] = querySpy.mock.calls.map(
-          (item) => item[0],
-        );
-        const createChatUserSql = arraysSpy.mock.calls[0][0];
+        const createUserSqlCall = querySpy.mock.calls[0];
+        const findChatsSqlCalls = querySpy.mock.calls.slice(1);
+        const createUserSql = {
+          text: createUserSqlCall[0],
+          values: createUserSqlCall[1],
+        };
+
+        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        const createChatUserSql = {
+          text: createChatUserSqlCall[0],
+          values: createChatUserSqlCall[1],
+        };
 
         expectSql(
-          createUserSql as Sql,
+          createUserSql,
           `
           INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
@@ -1583,10 +1636,10 @@ describe('hasAndBelongsToMany', () => {
           ],
         );
 
-        expect(findChatsSql.length).toBe(4);
-        findChatsSql.forEach((sql, i) => {
+        expect(findChatsSqlCalls.length).toBe(4);
+        findChatsSqlCalls.forEach((call, i) => {
           expectSql(
-            sql as Sql,
+            { text: call[0], values: call[1] },
             `
             SELECT "chats"."id_of_chat" "IdOfChat", "chats"."chat_key" "ChatKey"
             FROM "chat" "chats"
@@ -1598,7 +1651,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         expectSql(
-          createChatUserSql as Sql,
+          createChatUserSql,
           `
           INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
@@ -2947,7 +3000,7 @@ describe('hasAndBelongsToMany', () => {
       };
     }
 
-    const local = orchidORM(
+    const local = orchidORMWithAdapter(
       { db: db.$qb },
       {
         post: PostTable,

@@ -1,10 +1,4 @@
-import {
-  Adapter,
-  ArrayColumn,
-  ColumnType,
-  DbStructureDomainsMap,
-  RawSQL,
-} from 'pqb';
+import { ArrayColumn, ColumnType, DbStructureDomainsMap, RawSQL } from 'pqb';
 import {
   RakeDbAst,
   getSchemaAndTableFromName,
@@ -13,6 +7,7 @@ import {
   instantiateDbColumn,
 } from 'rake-db';
 import {
+  AdapterBase,
   ColumnDataCheckBase,
   deepCompare,
   emptyArray,
@@ -47,7 +42,7 @@ export interface CodeDomain {
 
 export const processDomains = async (
   ast: RakeDbAst[],
-  adapter: Adapter,
+  adapter: AdapterBase,
   domainsMap: DbStructureDomainsMap,
   dbStructure: IntrospectedStructure,
   {

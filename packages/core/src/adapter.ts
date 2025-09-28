@@ -1,10 +1,8 @@
-import { QueryBaseCommon, Sql } from './query/query';
+import { QueryBaseCommon } from './query/query';
 import { emptyObject } from './utils';
 import { setTimeout } from 'timers/promises';
 import { QueryLogObject } from './log';
-
-// Input type of adapter query methods.
-export type QueryInput = string | { text: string; values?: unknown[] };
+import { QueryError } from './query/errors';
 
 /**
  * Generic result returning from query methods.
@@ -14,7 +12,24 @@ export interface QueryResultRow {
   [K: string]: any;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface QueryResult<T extends QueryResultRow = any> {
+  rowCount: number;
+  rows: T[];
+  fields: {
+    name: string;
+  }[];
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface QueryArraysResult<R extends any[] = any[]> {
+  rowCount: number;
+  rows: R[];
+  fields: { name: string }[];
+}
+
 export interface AdapterConfigBase {
+  databaseURL?: string;
   /**
    * This option may be useful in CI when database container has started, CI starts performing next steps,
    * migrations begin to apply though database may be not fully ready for connections yet.
@@ -88,36 +103,53 @@ interface AdapterConfigConnectRetryStrategy {
 // Interface of a database adapter to use for different databases.
 export interface AdapterBase {
   connectRetryConfig?: AdapterConfigConnectRetry;
+  schema?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  errorClass: new (...args: any[]) => Error;
+  assignError(to: QueryError, from: Error): void;
 
-  connect(): Promise<unknown>;
+  reconfigure(params: {
+    database?: string;
+    user?: string;
+    password?: string;
+    schema?: string;
+  }): AdapterBase;
+
+  getDatabase(): string;
+  getUser(): string;
+  getSchema(): string | undefined;
+  getHost(): string;
+
+  connect?(): Promise<unknown>;
 
   // make a query to get rows as objects
-  query(query: QueryInput): Promise<unknown>;
+  query<T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    values?: unknown[],
+  ): Promise<QueryResult<T>>;
   // make a query to get rows as array of column values
-  arrays(query: QueryInput): Promise<unknown>;
+  arrays<R extends any[] = any[]>(
+    text: string,
+    values?: unknown[],
+  ): Promise<QueryArraysResult<R>>;
   /**
    * Run a transaction
    *
-   * @param begin - SQL for `BEGIN`, it may be a `SAVEPOINT` instead of `BEGIN`
+   * @param options - optional transaction parameters
    * @param cb - callback will be called with a db client with a dedicated connection.
    */
-  transaction(
-    begin: Sql,
-    cb: (adapter: AdapterBase) => Promise<unknown>,
-  ): Promise<unknown>;
+  transaction<T>(
+    options: string | undefined,
+    cb: (adapter: AdapterBase) => Promise<T>,
+  ): Promise<T>;
   // close connection
   close(): Promise<void>;
-}
-
-// Database adapter type for transaction that contains a connected db client.
-export interface TransactionAdapterBase extends AdapterBase {
-  client: unknown;
 }
 
 // Wrapper type for transactions.
 export interface TransactionState {
   // Database adapter that is connected to a currently running transaction.
-  adapter: TransactionAdapterBase;
+  adapter: AdapterBase;
   // Number of transaction nesting.
   // Top transaction has id = 0, transaction inside of transaction will have id = 1, and so on.
   transactionId: number;
@@ -148,9 +180,8 @@ export interface AfterCommitStandaloneHook {
   (): unknown | Promise<unknown>;
 }
 
-export const setAdapterConnectRetry = <Result>(
+export const setConnectRetryConfig = (
   adapter: AdapterBase,
-  connect: () => Promise<Result>,
   config: AdapterConfigConnectRetryParam,
 ) => {
   adapter.connectRetryConfig = {
@@ -160,12 +191,20 @@ export const setAdapterConnectRetry = <Result>(
         ? config.strategy
         : defaultConnectRetryStrategy(config.strategy ?? emptyObject),
   };
+};
 
-  adapter.connect = async () => {
+export const wrapAdapterFnWithConnectRetry = <
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Fn extends (this: unknown, ...args: any[]) => Promise<unknown>,
+>(
+  adapter: AdapterBase,
+  fn: Fn,
+) => {
+  return async function (...args) {
     let attempt = 1;
     for (;;) {
       try {
-        return await connect();
+        return await fn.call(this, ...args);
       } catch (err) {
         const config = adapter.connectRetryConfig;
         if (
@@ -182,7 +221,7 @@ export const setAdapterConnectRetry = <Result>(
         attempt++;
       }
     }
-  };
+  } as Fn;
 };
 
 const defaultConnectRetryStrategy = (

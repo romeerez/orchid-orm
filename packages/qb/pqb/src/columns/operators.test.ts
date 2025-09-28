@@ -749,7 +749,7 @@ describe('operators', () => {
         useTestDatabase();
 
         it('should select json property', async () => {
-          await Snake.create({
+          await Snake.insert({
             ...snakeData,
             snakeData: { name: new Date().toISOString(), tags: ['one'] },
           });

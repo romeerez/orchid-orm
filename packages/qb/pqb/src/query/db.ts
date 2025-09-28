@@ -15,14 +15,19 @@ import {
   QueryMethods,
 } from '../queryMethods';
 import { QueryData, QueryScopes } from '../sql';
-import { Adapter, AdapterOptions, QueryArraysResult } from '../adapter';
 import {
   anyShape,
   DefaultColumnTypes,
   getColumnTypes,
   makeColumnTypes,
 } from '../columns';
-import { NotFoundError, QueryError, QueryErrorName } from 'orchid-core';
+import {
+  AdapterBase,
+  NotFoundError,
+  QueryArraysResult,
+  QueryError,
+  QueryErrorName,
+} from 'orchid-core';
 import {
   applyMixins,
   ColumnSchemaConfig,
@@ -124,22 +129,26 @@ export interface DbSharedOptions extends QueryLogOptions {
   generatorIgnore?: GeneratorIgnore;
 }
 
-export type DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes> = (
-  | { adapter: Adapter }
-  | Omit<AdapterOptions, 'log'>
-) &
-  DbSharedOptions & {
-    schemaConfig?: SchemaConfig;
-    // concrete column types or a callback for overriding standard column types
-    // this types will be used in tables to define their columns
-    columnTypes?:
-      | ColumnTypes
-      | ((t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes);
-    // when set to true, all columns will be translated to `snake_case` when querying database
-    snakeCase?: boolean;
-    // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
-    nowSQL?: string;
-  };
+export interface DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes>
+  extends DbSharedOptions {
+  schemaConfig?: SchemaConfig;
+  // concrete column types or a callback for overriding standard column types
+  // this types will be used in tables to define their columns
+  columnTypes?:
+    | ColumnTypes
+    | ((t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes);
+  // when set to true, all columns will be translated to `snake_case` when querying database
+  snakeCase?: boolean;
+  // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
+  nowSQL?: string;
+}
+
+export interface DbOptionsWithAdapter<
+  SchemaConfig extends ColumnSchemaConfig,
+  ColumnTypes,
+> extends DbOptions<SchemaConfig, ColumnTypes> {
+  adapter: AdapterBase;
+}
 
 // Options of `createDb`.
 export interface DbTableOptions<
@@ -270,7 +279,7 @@ export class Db<
   declare catch: QueryCatch;
 
   constructor(
-    public adapter: Adapter,
+    public adapter: AdapterBase,
     public qb: QueryBuilder,
     public table: Table = undefined as Table,
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
@@ -639,8 +648,8 @@ export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
 export interface DbResult<ColumnTypes>
   extends Db<string, never, never, never, never, never, ColumnTypes>,
     DbTableConstructor<ColumnTypes> {
-  adapter: Adapter;
-  close: Adapter['close'];
+  adapter: AdapterBase;
+  close: AdapterBase['close'];
   sql<T = unknown>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>, ColumnTypes>;
   sql<T = unknown>(
     ...args: [DynamicSQLArg<QueryColumn<T>>]
@@ -725,7 +734,7 @@ export interface DbResult<ColumnTypes>
  * })
  * ```
  */
-export const createDb = <
+export const createDbWithAdapter = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
   ColumnTypes = DefaultColumnTypes<SchemaConfig>,
 >({
@@ -735,8 +744,8 @@ export const createDb = <
   schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
   columnTypes: ctOrFn = makeColumnTypes(schemaConfig) as unknown as ColumnTypes,
   ...options
-}: DbOptions<SchemaConfig, ColumnTypes>): DbResult<ColumnTypes> => {
-  const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
+}: DbOptionsWithAdapter<SchemaConfig, ColumnTypes>): DbResult<ColumnTypes> => {
+  const { adapter } = options;
   const commonOptions = {
     log,
     logger,
@@ -808,7 +817,7 @@ export const createDb = <
 };
 
 export const _initQueryBuilder = (
-  adapter: Adapter,
+  adapter: AdapterBase,
   columnTypes: unknown,
   transactionStorage: AsyncLocalStorage<TransactionState>,
   commonOptions: DbTableOptions<unknown, undefined, QueryColumns>,

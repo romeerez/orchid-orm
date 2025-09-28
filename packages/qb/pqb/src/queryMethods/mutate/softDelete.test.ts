@@ -3,7 +3,7 @@ import {
   UserSoftDelete,
   userSoftDeleteColumnsSql,
 } from '../../test-utils/test-utils';
-import { createDb } from '../../query/db';
+import { createDbWithAdapter } from '../../query/db';
 
 describe('softDelete', () => {
   it('should ignore empty where object', () => {
@@ -50,7 +50,7 @@ describe('softDelete', () => {
   });
 
   it('should respect `nowSql` option', () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       snakeCase: true,
       adapter: testAdapter,
       columnTypes: testColumnTypes,

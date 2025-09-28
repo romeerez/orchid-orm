@@ -1,5 +1,4 @@
 import { PickQueryQ, Query } from '../query/query';
-import { Adapter, QueryResult } from '../adapter';
 import {
   HavingItem,
   JoinItem,
@@ -16,6 +15,7 @@ import {
 } from './types';
 import { SelectableOrExpression } from '../common/utils';
 import {
+  AdapterBase,
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
@@ -34,6 +34,7 @@ import {
   QueryHookUtils,
   QueryLogger,
   QueryLogObject,
+  QueryResult,
   QueryReturnType,
   RecordUnknown,
   RelationConfigBase,
@@ -107,7 +108,7 @@ export interface QueryData extends QueryDataBase {
     | 'truncate'
     | 'columnInfo'
     | 'copy';
-  adapter: Adapter;
+  adapter: AdapterBase;
   shape: ColumnsShape;
   patchResult?(
     q: Query,

@@ -9,7 +9,7 @@ import { defaultSchemaConfig } from 'pqb';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { getCallerFilePath, getStackTrace } from 'orchid-core';
-import { getDatabaseAndUserFromOptions, processRakeDbConfig } from './config';
+import { processRakeDbConfig } from './config';
 
 jest.mock('orchid-core', () => ({
   ...jest.requireActual('../../core/src'),
@@ -73,31 +73,6 @@ describe('common', () => {
           import: (path) => import(path),
         }),
       ).toThrow('Add a .ts suffix to the "some-path" when calling it');
-    });
-  });
-
-  describe('getDatabaseAndUserFromOptions', () => {
-    it('should return data from databaseURL', () => {
-      const result = getDatabaseAndUserFromOptions({
-        databaseURL: 'postgres://user:password@localhost:5432/dbname',
-      });
-
-      expect(result).toEqual({
-        database: 'dbname',
-        user: 'user',
-      });
-    });
-
-    it('should return data from options when no databaseURL', () => {
-      const result = getDatabaseAndUserFromOptions({
-        database: 'dbname',
-        user: 'user',
-      });
-
-      expect(result).toEqual({
-        database: 'dbname',
-        user: 'user',
-      });
     });
   });
 

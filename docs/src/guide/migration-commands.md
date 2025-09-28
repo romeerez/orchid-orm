@@ -373,7 +373,13 @@ Don't remove the `.rename-to-serial.json` or `renameMigrations` until the app is
 You can configure custom commands in such way:
 
 ```ts
-import { rakeDb } from 'orchid-orm/migrations'; // import from 'rake-db' when not using Orchid ORM
+// for porsager/postgres driver:
+import { rakeDb } from 'orchid-orm/migrations/postgres-js'; // when using ORM
+import { rakeDb } from 'rake-db/postgres-js'; // when using rake-db as a standalone tool
+// for node-postgres driver:
+import { rakeDb } from 'orchid-orm/migrations/node-postgres'; // when using ORM
+import { rakeDb } from 'rake-db/node-postgres'; // when using rake-db as a standalone tool
+
 import { createDb } from 'pqb';
 import { config } from './config';
 

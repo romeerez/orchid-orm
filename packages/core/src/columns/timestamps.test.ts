@@ -1,5 +1,10 @@
-import { createDb } from 'pqb';
-import { expectSql, now, testDb, useTestDatabase } from 'test-utils';
+import {
+  createTestDb,
+  expectSql,
+  now,
+  testDb,
+  useTestDatabase,
+} from 'test-utils';
 import { setDefaultNowFn } from './columnType';
 
 // now() should be customizable: https://github.com/romeerez/orchid-orm/issues/71
@@ -49,7 +54,7 @@ describe('timestamps methods', () => {
   });
 
   it('should use snake cased names when snakeCase set to true', () => {
-    const db = createDb({
+    const db = createTestDb({
       databaseURL: process.env.PG_URL,
       snakeCase: true,
     });
@@ -66,7 +71,7 @@ describe('timestamps methods', () => {
   });
 
   it('should not update updated_at column when updating snakeCase table with `updatedAt` provided in object', () => {
-    const db = createDb({
+    const db = createTestDb({
       databaseURL: process.env.PG_URL,
       snakeCase: true,
     });

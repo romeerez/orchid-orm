@@ -3,13 +3,5 @@
   "include": ["./src"],
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "orchid-core": ["../../core/src"],
-      "pqb": ["../../qb/pqb/src"],
-      "test-utils": ["../../test-utils/src"],
-      // is imported by test-utils that is imported by the valibot test
-      "schema-to-zod": ["../zod/src"]
-    }
   }
 }

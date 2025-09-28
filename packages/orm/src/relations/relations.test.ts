@@ -14,7 +14,7 @@ import {
   userData,
   useTestORM,
 } from '../test-utils/orm.test-utils';
-import { orchidORM } from '../orm';
+import { orchidORMWithAdapter } from '../orm';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = {
@@ -511,7 +511,7 @@ describe('relations', () => {
       }));
     }
 
-    const local = orchidORM({ db: db.$qb }, { user: UserTable });
+    const local = orchidORMWithAdapter({ db: db.$qb }, { user: UserTable });
 
     local.user.find(1).update({
       data: (q) => q.get('data').jsonSet('key', 'value'),
@@ -623,7 +623,7 @@ describe('relations', () => {
         };
       }
 
-      const db = orchidORM(ormParams, {
+      const db = orchidORMWithAdapter(ormParams, {
         user: UserTable,
         profile: ProfileTable,
       });

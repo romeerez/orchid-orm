@@ -5,7 +5,7 @@ import {
   userData,
   UserRecord,
 } from '../test-utils/test-utils';
-import { createDb } from '../query/db';
+import { createDbWithAdapter } from '../query/db';
 import { columnCode } from './code';
 import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from 'orchid-core';
 import {
@@ -23,7 +23,7 @@ import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
 import { z, ZodLiteral, ZodNumber } from 'zod/v4';
 import { assignDbDataToColumn } from './columnType.utils';
-import { zodSchemaConfig } from 'schema-to-zod';
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 
 describe('column type', () => {
   useTestDatabase();
@@ -209,7 +209,7 @@ describe('column type', () => {
       });
 
       it('should return column data as returned from db if not set', async () => {
-        const db = createDb({
+        const db = createDbWithAdapter({
           snakeCase: true,
           adapter: testAdapter,
         });
@@ -307,7 +307,7 @@ describe('column type', () => {
   });
 
   describe('as', () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       snakeCase: true,
       adapter: testAdapter,
       columnTypes: (t) => ({
@@ -323,7 +323,7 @@ describe('column type', () => {
       }),
     });
 
-    const dbZod = createDb({
+    const dbZod = createDbWithAdapter({
       snakeCase: true,
       adapter: testAdapter,
       schemaConfig: zodSchemaConfig,

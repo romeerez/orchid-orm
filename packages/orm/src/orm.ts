@@ -1,6 +1,4 @@
 import {
-  Adapter,
-  AdapterOptions,
   makeColumnTypes,
   Db,
   DbTableOptions,
@@ -29,6 +27,7 @@ import {
 } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import {
+  AdapterBase,
   ColumnSchemaConfig,
   ColumnsShapeBase,
   MaybeArray,
@@ -60,7 +59,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
    * @see import('pqb').Transaction.prototype.afterCommit
    */
   $afterCommit: typeof afterCommit;
-  $adapter: Adapter;
+  $adapter: AdapterBase;
   $qb: Db;
 
   /**
@@ -132,19 +131,20 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
   $close(): Promise<void>;
 };
 
-type OrchidOrmArg = true | null extends true
+export type OrchidOrmParam<Options> = true | null extends true
   ? 'Set strict: true to tsconfig'
-  : ({ db: Query } | { adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
-      DbSharedOptions;
+  : Options;
 
-export const orchidORM = <T extends TableClasses>(
+export const orchidORMWithAdapter = <T extends TableClasses>(
   {
     log,
     logger,
     autoPreparedStatements,
     noPrimaryKey = 'error',
     ...options
-  }: OrchidOrmArg,
+  }: OrchidOrmParam<
+    ({ db: Query } | { adapter: AdapterBase }) & DbSharedOptions
+  >,
   tables: T,
 ): OrchidORM<T> => {
   const commonOptions: QueryLogOptions & {
@@ -157,7 +157,7 @@ export const orchidORM = <T extends TableClasses>(
     noPrimaryKey,
   };
 
-  let adapter: Adapter;
+  let adapter: AdapterBase;
   let transactionStorage;
   let qb: Db;
   if ('db' in options) {
@@ -165,7 +165,7 @@ export const orchidORM = <T extends TableClasses>(
     transactionStorage = options.db.internal.transactionStorage;
     qb = options.db.qb as Db;
   } else {
-    adapter = 'adapter' in options ? options.adapter : new Adapter(options);
+    adapter = options.adapter;
 
     transactionStorage = new AsyncLocalStorage<TransactionState>();
 

@@ -8,7 +8,7 @@ import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
 } from 'pqb';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 import { ColumnSchemaConfig } from 'orchid-core';
 import { processRakeDbConfig, RakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
@@ -44,6 +44,7 @@ const warn = jest.fn();
 const log = jest.fn();
 
 const options = { databaseURL: 'file:path' };
+const adapter = new TestAdapter(options);
 
 class BaseTable {
   static getFilePath() {
@@ -88,7 +89,7 @@ describe('pull', () => {
   it('should log success message', async () => {
     structure.tables = [dbStructureMockFactory.table()];
 
-    await pullDbStructure(options, makeConfig());
+    await pullDbStructure(adapter, makeConfig());
 
     expect(log).toBeCalledWith('Database pulled successfully');
   });
@@ -96,7 +97,7 @@ describe('pull', () => {
   it('should write migration file with correct arguments', async () => {
     structure.tables = [dbStructureMockFactory.table()];
 
-    await pullDbStructure(options, config);
+    await pullDbStructure(adapter, config);
 
     const call = asMock(writeMigrationFile).mock.calls[0];
     expect(call[0]).toBe(config);
@@ -207,7 +208,7 @@ describe('pull', () => {
       ]),
     ];
 
-    await pullDbStructure(options, config);
+    await pullDbStructure(adapter, config);
     expectWritten(
       `import { change } from '../dbScript';
 
@@ -292,7 +293,7 @@ Append \`as\` method manually to this column to treat it as other column type`);
       }),
     ];
 
-    await pullDbStructure(options, config);
+    await pullDbStructure(adapter, config);
 
     expect(warn).toBeCalledWith(`Found unsupported types:
 - unknown1 is used for column public.table.column1
@@ -324,7 +325,7 @@ Append \`as\` method manually to these columns to treat them as other column typ
 
     const config = makeConfig({ snakeCase: true });
 
-    await pullDbStructure(options, config);
+    await pullDbStructure(adapter, config);
 
     expectWritten(
       `import { change } from '../dbScript';
@@ -361,12 +362,7 @@ change(async (db) => {
     ];
     structure.enums = [dbStructureMockFactory.enum()];
 
-    await pullDbStructure(
-      {
-        databaseURL: 'file:path',
-      },
-      makeConfig(),
-    );
+    await pullDbStructure(adapter, makeConfig());
 
     expectWritten(`import { change } from '../dbScript';
 

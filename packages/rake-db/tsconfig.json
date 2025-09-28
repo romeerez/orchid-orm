@@ -3,16 +3,5 @@
   "include": ["./src", "app"],
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "orchid-core": ["../core/src"],
-      "pqb": ["../qb/pqb/src"],
-      "orchid-orm/codegen": ["../orm/src/codegen"],
-      "orchid-orm": ["../orm/src"],
-      "orchid-orm/migrations": ["../orm/src/migrations"],
-      "rake-db": ["./src"],
-      "test-utils": ["../test-utils/src"],
-      "schema-to-zod": ["../schemaConfigs/zod/src"]
-    }
   }
 }

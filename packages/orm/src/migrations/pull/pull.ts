@@ -1,4 +1,4 @@
-import { Adapter, AdapterOptions, DbExtension } from 'pqb';
+import { DbExtension } from 'pqb';
 import {
   AnyRakeDbConfig,
   makeFileVersion,
@@ -8,7 +8,7 @@ import {
   SilentQueries,
   structureToAst,
 } from 'rake-db';
-import { pathToLog } from 'orchid-core';
+import { AdapterBase, pathToLog } from 'orchid-core';
 import fs from 'fs/promises';
 import path from 'node:path';
 import {
@@ -21,7 +21,7 @@ import { appCodeGenUpdateDbFile } from './appCodeGenerators/dbFile.appCodeGenera
 import { generate } from '../generate/generate';
 
 export const pull = async (
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: AnyRakeDbConfig,
 ) => {
   if (!config.dbPath || !config.baseTable) {
@@ -35,7 +35,6 @@ export const pull = async (
   const baseTablePath = config.baseTable.getFilePath();
   const baseTableExportedAs = config.baseTable.exportAs;
 
-  const adapters = options.map((opts) => new Adapter(opts));
   const [adapter] = adapters;
   const currentSchema = adapter.schema || 'public';
 
@@ -120,7 +119,7 @@ export const pull = async (
   );
 
   const version = await makeFileVersion({}, config);
-  await generate(options, config, ['pull'], { adapter, version });
+  await generate(adapters, config, ['pull'], { adapter, version });
 
   // save migrated version into all configured databases
   await Promise.all(

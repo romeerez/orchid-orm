@@ -1,4 +1,4 @@
-export { rakeDb } from './rakeDb';
+export { rakeDbWithAdapters } from './rakeDb';
 export type { RakeDbChangeFn, RakeDbChangeFnWithPromise } from './rakeDb';
 export {
   getExcludeName,

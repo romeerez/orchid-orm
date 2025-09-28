@@ -1,4 +1,4 @@
-import { orchidORM } from './orm';
+import { orchidORMWithAdapter } from './orm';
 import {
   BaseTable,
   chatData,
@@ -51,7 +51,7 @@ describe('orm', () => {
       );
     }
 
-    const local = orchidORM(
+    const local = orchidORMWithAdapter(
       { db: db.$qb },
       {
         table: Table,
@@ -68,7 +68,7 @@ describe('orm', () => {
   });
 
   it('should return object with provided adapter, close and transaction method, tables', () => {
-    const local = orchidORM(
+    const local = orchidORMWithAdapter(
       { db: db.$qb },
       {
         user: UserTable,
@@ -85,7 +85,7 @@ describe('orm', () => {
   });
 
   it('should return table which is a queryable interface', async () => {
-    const local = orchidORM(
+    const local = orchidORMWithAdapter(
       { db: db.$qb },
       {
         user: UserTable,
@@ -117,7 +117,7 @@ describe('orm', () => {
   });
 
   it('should be able to turn on autoPreparedStatements', () => {
-    const local = orchidORM(
+    const local = orchidORMWithAdapter(
       { db: db.$qb, autoPreparedStatements: true },
       {
         user: UserTable,

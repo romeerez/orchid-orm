@@ -20,7 +20,7 @@ import {
   userRowToJSON,
   postData,
 } from '../test-utils/orm.test-utils';
-import { orchidORM } from '../orm';
+import { orchidORMWithAdapter } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
@@ -76,7 +76,10 @@ describe('hasMany', () => {
       }));
     }
 
-    const db = orchidORM(ormParams, { user: UserTable, profile: ProfileTable });
+    const db = orchidORMWithAdapter(ormParams, {
+      user: UserTable,
+      profile: ProfileTable,
+    });
     expect(db.profile.internal.tableData.constraints).toEqual([
       {
         references: {
@@ -3147,7 +3150,7 @@ describe('hasMany through', () => {
       };
     }
 
-    const local = orchidORM(ormParams, {
+    const local = orchidORMWithAdapter(ormParams, {
       post: Post,
       tag: Tag,
       postTag: PostTag,
@@ -3180,7 +3183,7 @@ describe('hasMany through', () => {
     }
 
     expect(() => {
-      orchidORM(ormParams, {
+      orchidORMWithAdapter(ormParams, {
         post: Post,
         tag: Tag,
       });
@@ -3228,7 +3231,7 @@ describe('hasMany through', () => {
     }
 
     expect(() => {
-      orchidORM(ormParams, {
+      orchidORMWithAdapter(ormParams, {
         post: Post,
         tag: Tag,
         postTag: PostTag,

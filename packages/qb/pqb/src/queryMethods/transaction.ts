@@ -1,11 +1,11 @@
 import { PickQueryQAndInternal, Query } from '../query/query';
 import {
+  AdapterBase,
   AfterCommitHook,
   AfterCommitStandaloneHook,
   emptyArray,
   emptyObject,
   SingleSqlItem,
-  TransactionAdapterBase,
   TransactionAfterCommitHook,
   TransactionState,
 } from 'orchid-core';
@@ -284,7 +284,7 @@ export class Transaction {
     let trx = this.internal.transactionStorage.getStore();
     const transactionId = trx ? trx.transactionId + 1 : 0;
 
-    const callback = (adapter: TransactionAdapterBase) => {
+    const callback = (adapter: AdapterBase) => {
       if (log) log.afterQuery(sql, logData);
       if (log) logData = log.beforeQuery(commitSql);
 
@@ -306,21 +306,31 @@ export class Transaction {
     };
 
     if (!trx) {
-      sql.text = `BEGIN${
-        options.level ? ` ISOLATION LEVEL ${options.level}` : ''
-      }${
-        options.readOnly !== undefined
-          ? ` READ ${options.readOnly ? 'ONLY' : 'WRITE'}`
-          : ''
-      }${
-        options.deferrable !== undefined
-          ? ` ${options.deferrable ? '' : 'NOT '}DEFERRABLE`
-          : ''
-      }`;
-      if (log) logData = log.beforeQuery(sql);
+      let beginOptions: string | undefined = undefined;
+
+      if (options.level) {
+        beginOptions = `ISOLATION LEVEL ${options.level}`;
+      }
+
+      if (options.readOnly !== undefined) {
+        const add = `READ ${options.readOnly ? 'ONLY' : 'WRITE'}`;
+        if (beginOptions) beginOptions += ' ' + add;
+        else beginOptions = add;
+      }
+
+      if (options.deferrable !== undefined) {
+        const add = `${options.deferrable ? '' : 'NOT '}DEFERRABLE`;
+        if (beginOptions) beginOptions += ' ' + add;
+        else beginOptions = add;
+      }
+
+      if (log) {
+        sql.text = beginOptions ? `BEGIN ${beginOptions}` : 'BEGIN';
+        logData = log.beforeQuery(sql);
+      }
 
       const result = await this.q.adapter
-        .transaction(sql, callback)
+        .transaction(beginOptions, callback)
         .catch((err) => {
           if (log) log.afterQuery(rollbackSql, logData);
 
@@ -339,7 +349,7 @@ export class Transaction {
         if (log) logData = log.beforeQuery(sql);
 
         const { adapter } = trx;
-        await adapter.query(sql);
+        await adapter.arrays(sql.text, sql.values);
 
         let result;
         try {
@@ -347,14 +357,14 @@ export class Transaction {
         } catch (err) {
           sql.text = `ROLLBACK TO SAVEPOINT "${transactionId}"`;
           if (log) logData = log.beforeQuery(sql);
-          await adapter.query(sql);
+          await adapter.arrays(sql.text, sql.values);
           if (log) log.afterQuery(sql, logData);
           throw err;
         }
 
         sql.text = `RELEASE SAVEPOINT "${transactionId}"`;
         if (log) logData = log.beforeQuery(sql);
-        await adapter.query(sql);
+        await adapter.arrays(sql.text, sql.values);
         if (log) log.afterQuery(sql, logData);
 
         // transactionId is trx.testTransactionCount when only the test transactions are left,

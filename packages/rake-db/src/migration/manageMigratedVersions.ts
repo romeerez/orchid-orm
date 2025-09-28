@@ -1,7 +1,7 @@
-import { Adapter, TransactionAdapter } from 'pqb';
 import { RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
 import {
+  AdapterBase,
   ColumnSchemaConfig,
   RecordOptionalString,
   RecordString,
@@ -32,10 +32,10 @@ export const saveMigratedVersion = async <
   name: string,
   config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
-  await db.silentArrays({
-    text: `INSERT INTO "${config.migrationsTable}"(version, name) VALUES ($1, $2)`,
-    values: [version, name],
-  });
+  await db.silentArrays(
+    `INSERT INTO "${config.migrationsTable}"(version, name) VALUES ($1, $2)`,
+    [version, name],
+  );
 };
 
 export const deleteMigratedVersion = async <
@@ -47,10 +47,10 @@ export const deleteMigratedVersion = async <
   name: string,
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  const res = await db.silentArrays({
-    text: `DELETE FROM "${config.migrationsTable}" WHERE version = $1 AND name = $2`,
-    values: [version, name],
-  });
+  const res = await db.silentArrays(
+    `DELETE FROM "${config.migrationsTable}" WHERE version = $1 AND name = $2`,
+    [version, name],
+  );
 
   if (res.rowCount === 0) {
     throw new Error(`Migration ${version}_${name} was not found in db`);
@@ -69,7 +69,7 @@ export const getMigratedVersionsMap = async <
   CT,
 >(
   ctx: RakeDbCtx,
-  adapter: Adapter | TransactionAdapter,
+  adapter: AdapterBase,
   config: RakeDbConfig<SchemaConfig, CT>,
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
@@ -105,10 +105,10 @@ export const getMigratedVersionsMap = async <
 
       await Promise.all(
         result.rows.map(([version, name]) =>
-          adapter.arrays({
-            text: `UPDATE ${table} SET name = $2 WHERE version = $1`,
-            values: [version, name],
-          }),
+          adapter.arrays(`UPDATE ${table} SET name = $2 WHERE version = $1`, [
+            version,
+            name,
+          ]),
         ),
       );
 
@@ -135,7 +135,7 @@ export const getMigratedVersionsMap = async <
 
 async function renameMigrations(
   config: AnyRakeDbConfig,
-  trx: Adapter | TransactionAdapter,
+  trx: AdapterBase,
   versions: RecordString,
   renameTo: RakeDbRenameMigrations,
 ) {

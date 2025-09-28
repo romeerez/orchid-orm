@@ -5,15 +5,10 @@ import {
   fullRedo,
   fullRollback,
 } from './migrateOrRollback';
-import {
-  Adapter,
-  DefaultColumnTypes,
-  TransactionAdapter,
-  DefaultSchemaConfig,
-} from 'pqb';
-import { noop, pathToLog, Sql } from 'orchid-core';
+import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import { AdapterBase, noop, pathToLog, Sql } from 'orchid-core';
 import { ChangeCallback, pushChange } from '../migration/change';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter, TestTransactionAdapter } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
 import { AnyRakeDbConfig } from '../config';
 import { createMigrationsTable } from '../migration/migrationsTable';
@@ -28,6 +23,7 @@ jest.mock('../migration/migrationsTable', () => ({
 }));
 
 const options = [{ databaseURL: 'postgres://user@localhost/dbname' }];
+const adapters = options.map((opts) => new TestAdapter(opts));
 
 const makeFile = (version: number, load = jest.fn()) => ({
   path: `path/000${version}_file.ts`,
@@ -38,33 +34,34 @@ const makeFile = (version: number, load = jest.fn()) => ({
 
 const files = [makeFile(1), makeFile(2), makeFile(3), makeFile(4)];
 
-Adapter.prototype.transaction = (_, cb) => {
+TestAdapter.prototype.transaction = ((_, cb) => {
   return cb({
     query: transactionQueryMock,
     arrays: transactionQueryMock,
-    config: { database: 'db' },
-  } as unknown as TransactionAdapter);
-};
+    getDatabase: () => 'db',
+    getSchema: () => undefined,
+  } as never);
+}) as AdapterBase['transaction'];
 
 let migratedVersions: string[] = [];
-const queries: string[] = [];
-const transactionQueryMock = jest.fn().mockImplementation((q) => {
-  if (q === 'SELECT * FROM "schemaMigrations" ORDER BY version') {
+const queries: (string | { text: string; values: unknown[] })[] = [];
+const transactionQueryMock = jest.fn().mockImplementation(((text, values) => {
+  if (text === 'SELECT * FROM "schemaMigrations" ORDER BY version') {
     return {
       rows: migratedVersions.map((version) => [version, 'name']),
       fields: [{}, {}],
-    };
+    } as never;
   } else {
-    queries.push(q);
+    queries.push(values ? { text, values } : text);
     return {
       rows: [],
       fields: [{}, {}],
-    };
+    } as never;
   }
-});
+}) as AdapterBase['query']);
 
-TransactionAdapter.prototype.query = transactionQueryMock;
-TransactionAdapter.prototype.arrays = transactionQueryMock;
+TestTransactionAdapter.prototype.query = transactionQueryMock;
+TestTransactionAdapter.prototype.arrays = transactionQueryMock;
 
 const config = testConfig;
 
@@ -99,7 +96,7 @@ const arrange = <
 const act = (
   fn: typeof fullMigrate | typeof fullRollback | typeof fullRedo,
   args?: string[],
-) => fn({}, options, currentConfig, args ?? []);
+) => fn({}, adapters, currentConfig, args ?? []);
 
 const sql = (text: string, values: unknown[]) => ({
   text,

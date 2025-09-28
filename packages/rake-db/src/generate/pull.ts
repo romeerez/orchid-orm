@@ -1,19 +1,17 @@
-import { Adapter, AdapterOptions } from 'pqb';
 import { structureToAst, makeStructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
-import { ColumnSchemaConfig } from 'orchid-core';
+import { AdapterBase, ColumnSchemaConfig } from 'orchid-core';
 import { RakeDbConfig } from '../config';
 
 export const pullDbStructure = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
 >(
-  options: AdapterOptions,
+  adapter: AdapterBase,
   config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
-  const adapter = new Adapter(options);
   const currentSchema = adapter.schema || 'public';
 
   const ctx = makeStructureToAstCtx(config, currentSchema);

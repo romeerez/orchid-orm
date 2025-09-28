@@ -6,7 +6,7 @@ import {
   Selectable,
   Updatable,
 } from './baseTable';
-import { orchidORM } from './orm';
+import { orchidORMWithAdapter } from './orm';
 import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
 import {
   BaseTable,
@@ -26,7 +26,7 @@ import {
 } from 'test-utils';
 import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
 import { z } from 'zod/v4';
-import { zodSchemaConfig } from 'schema-to-zod';
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 
 jest.mock('orchid-core', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -85,7 +85,10 @@ describe('baseTable', () => {
         id: t.identity().primaryKey(),
       }));
     }
-    const orm = orchidORM({ adapter: testAdapter }, { table: Table });
+    const orm = orchidORMWithAdapter(
+      { adapter: testAdapter },
+      { table: Table },
+    );
 
     expect(orm.table.q.language).toBe('Ukrainian');
   });
@@ -131,7 +134,7 @@ describe('baseTable', () => {
         }));
       }
 
-      const { user } = orchidORM(
+      const { user } = orchidORMWithAdapter(
         { adapter: testAdapter },
         {
           user: UserTable,
@@ -155,7 +158,7 @@ describe('baseTable', () => {
         }));
       }
 
-      const { user } = orchidORM(
+      const { user } = orchidORMWithAdapter(
         { adapter: testAdapter },
         {
           user: UserTable,
@@ -189,7 +192,7 @@ describe('baseTable', () => {
         }));
       }
 
-      const { user } = orchidORM(
+      const { user } = orchidORMWithAdapter(
         { adapter: testAdapter },
         {
           user: UserTable,
@@ -213,7 +216,7 @@ describe('baseTable', () => {
         }));
       }
 
-      orchidORM(
+      orchidORMWithAdapter(
         {
           adapter: testAdapter,
         },
@@ -248,7 +251,7 @@ describe('baseTable', () => {
         }));
       }
 
-      const db = orchidORM(
+      const db = orchidORMWithAdapter(
         {
           adapter: testAdapter,
         },
@@ -277,7 +280,7 @@ describe('baseTable', () => {
         }));
       }
 
-      const db = orchidORM(
+      const db = orchidORMWithAdapter(
         {
           adapter: testAdapter,
         },
@@ -309,7 +312,7 @@ describe('baseTable', () => {
         }));
       }
 
-      const { user } = orchidORM(
+      const { user } = orchidORMWithAdapter(
         { adapter: testAdapter },
         {
           user: UserTable,
@@ -383,7 +386,7 @@ describe('baseTable', () => {
         }
       }
 
-      const db = orchidORM(
+      const db = orchidORMWithAdapter(
         { adapter: testAdapter },
         {
           table: Table,
@@ -454,7 +457,7 @@ describe('baseTable', () => {
     }
 
     // need to instantiate tables so that the relations add special virtual columns
-    orchidORM(
+    orchidORMWithAdapter(
       { db: db.$qb },
       {
         some: SomeTable,
@@ -632,7 +635,7 @@ describe('baseTable', () => {
       });
     }
 
-    const local = orchidORM({ db: db.$qb }, { user: UserTable });
+    const local = orchidORMWithAdapter({ db: db.$qb }, { user: UserTable });
 
     it('should have a default scope and be able to use defined scope', async () => {
       const q = local.user.scope('positiveId');
@@ -660,7 +663,7 @@ describe('baseTable', () => {
       readonly softDelete = true;
     }
 
-    const local = orchidORM({ db: db.$qb }, { user: UserTable });
+    const local = orchidORMWithAdapter({ db: db.$qb }, { user: UserTable });
 
     it('should filter records by `deletedAt`, add `includeDeleted` and `hardDelete`', () => {
       expectSql(

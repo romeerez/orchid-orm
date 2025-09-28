@@ -13,7 +13,6 @@ import {
   AnyRakeDbConfig,
 } from 'rake-db';
 import {
-  Adapter,
   ArrayColumn,
   ColumnType,
   DbStructureDomainsMap,
@@ -27,6 +26,7 @@ import {
   RecordUnknown,
   toSnakeCase,
   colors,
+  AdapterBase,
 } from 'orchid-core';
 import { ChangeTableData, CompareSql } from './tables.generator';
 import { AbortSignal } from '../generate';
@@ -41,7 +41,7 @@ type ColumnsToChange = Map<
 >;
 
 export const processColumns = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   config: AnyRakeDbConfig,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
@@ -252,7 +252,7 @@ const dropColumns = (
 };
 
 const changeColumns = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   config: AnyRakeDbConfig,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
@@ -330,7 +330,7 @@ const changeColumns = async (
 };
 
 const compareColumns = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   domainsMap: DbStructureDomainsMap,
   ast: RakeDbAst[],
   currentSchema: string,
@@ -488,7 +488,7 @@ const compareColumns = async (
 };
 
 const getTypeCasts = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   typeCastsCache: TypeCastsCache,
 ) => {
   let typeCasts = typeCastsCache.value;

@@ -5,7 +5,6 @@ import {
 } from './dbStructure';
 import { RakeDbAst } from '../ast';
 import {
-  Adapter,
   ArrayColumn,
   assignDbDataToColumn,
   ColumnFromDbParams,
@@ -23,6 +22,7 @@ import {
   TableData,
 } from 'pqb';
 import {
+  AdapterBase,
   ColumnSchemaConfig,
   singleQuote,
   TemplateLiteralArgs,
@@ -78,7 +78,7 @@ export const makeStructureToAstCtx = (
 
 export const structureToAst = async (
   ctx: StructureToAstCtx,
-  adapter: Adapter,
+  adapter: AdapterBase,
   config: AnyRakeDbConfig,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];

@@ -1,5 +1,4 @@
 import {
-  AdapterOptions,
   DbResult,
   DefaultColumnTypes,
   DefaultSchemaConfig,
@@ -8,6 +7,7 @@ import {
   NoPrimaryKeyOption,
 } from 'pqb';
 import {
+  AdapterBase,
   ColumnSchemaConfig,
   getStackTrace,
   MaybePromise,
@@ -19,7 +19,7 @@ import { MigrationItem } from './migration/migrationsSet';
 
 export interface CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> {
   (
-    options: AdapterOptions[],
+    adapters: AdapterBase[],
     config: RakeDbConfig<SchemaConfig, CT>,
     args: string[],
   ): void | Promise<void>;
@@ -80,7 +80,7 @@ export interface InputRakeDbConfigBase<
   commands?: Record<
     string,
     (
-      options: AdapterOptions[],
+      adapter: AdapterBase[],
       config: RakeDbConfig<SchemaConfig, CT>,
       args: string[],
     ) => void | Promise<void>
@@ -186,7 +186,7 @@ interface ChangeCallback {
 
 interface ChangeCommitCallback {
   (arg: {
-    options: AdapterOptions;
+    adapter: AdapterBase;
     up: boolean;
     migrations: MigrationItem[];
   }): void | Promise<void>;
@@ -323,21 +323,4 @@ export const processRakeDbConfig = <
   }
 
   return result as RakeDbConfig<SchemaConfig, CT>;
-};
-
-export const getDatabaseAndUserFromOptions = (
-  options: AdapterOptions,
-): { database: string; user: string } => {
-  if (options.databaseURL) {
-    const url = new URL(options.databaseURL);
-    return {
-      database: url.pathname.slice(1),
-      user: url.username,
-    };
-  } else {
-    return {
-      database: options.database as string,
-      user: options.user as string,
-    };
-  }
 };

@@ -2,8 +2,7 @@ import { changeIds, fileNamesToChangeMigrationId } from './changeIds';
 import { testConfig } from '../rake-db.test-utils';
 import { AnyRakeDbConfig, RakeDbMigrationId } from '../config';
 import { getMigrations } from '../migration/migrationsSet';
-import { asMock } from 'test-utils';
-import { Adapter } from 'pqb';
+import { asMock, TestAdapter } from 'test-utils';
 import fs from 'fs/promises';
 import path from 'path';
 import { generateTimeStamp } from './newMigration';
@@ -17,6 +16,7 @@ const options = [
   { databaseURL: 'postgres://user@localhost/dbname' },
   { databaseURL: 'postgres://user@localhost/dbname-test' },
 ];
+const adapters = options.map((opts) => new TestAdapter(opts));
 
 let config = testConfig;
 
@@ -51,10 +51,10 @@ const arrange = (arg: {
   asMock(generateTimeStamp).mockImplementation(() => `100${timestamp++}`);
 };
 
-const act = (arg: string) => changeIds(options, config, [arg]);
+const act = (arg: string) => changeIds(adapters, config, [arg]);
 
 const query = jest.fn();
-Adapter.prototype.arrays = query;
+TestAdapter.prototype.arrays = query;
 
 describe('changeIds', () => {
   beforeEach(jest.resetAllMocks);
@@ -152,14 +152,13 @@ describe('changeIds', () => {
 
     await act('serial');
 
-    expect(query).toBeCalledWith({
-      text:
-        `UPDATE "schemaMigrations" AS t SET version = v.version FROM (VALUES ` +
+    expect(query).toBeCalledWith(
+      `UPDATE "schemaMigrations" AS t SET version = v.version FROM (VALUES ` +
         `('111', $1, '0001'), ` +
         `('222', $2, '0002'), ` +
         `('333', $3, '0003')` +
         `) v(oldVersion, name, version) WHERE t.version = v.oldVersion`,
-      values: ['a.ts', 'b.ts', 'c.ts'],
-    });
+      ['a.ts', 'b.ts', 'c.ts'],
+    );
   });
 });

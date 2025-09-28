@@ -1,6 +1,6 @@
 import { assertType, expectSql, sql, testAdapter, testDb } from 'test-utils';
 import { BooleanColumn, ColumnType } from '../columns';
-import { createDb } from '../query/db';
+import { createDbWithAdapter } from '../query/db';
 import { ColumnTypeBase, emptyObject, Expression } from 'orchid-core';
 import { ToSQLCtx } from '../sql';
 import { User, userColumnsSql } from '../test-utils/test-utils';
@@ -8,7 +8,7 @@ import { User, userColumnsSql } from '../test-utils/test-utils';
 describe('sql', () => {
   it('should use column types in callback from a db instance', () => {
     const type = {} as unknown as ColumnType;
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       columnTypes: {
         type: () => type,

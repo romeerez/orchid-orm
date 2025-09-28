@@ -1,10 +1,15 @@
 import { FactoryConfig, ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable, Profile } from './test-utils';
 import { z, ZodObject, ZodRawShape } from 'zod/v4';
-import { orchidORM } from 'orchid-orm';
+import { orchidORMWithAdapter } from 'orchid-orm';
 import { ColumnsShape, makeColumnTypes, DefaultColumnTypes } from 'pqb';
-import { assertType, testAdapter, useTestDatabase } from 'test-utils';
-import { zodSchemaConfig, ZodSchemaConfig } from 'schema-to-zod';
+import {
+  assertType,
+  testAdapter,
+  testDbOptions,
+  useTestDatabase,
+} from 'test-utils';
+import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { faker } from '@faker-js/faker';
 
 const t = makeColumnTypes(zodSchemaConfig);
@@ -77,7 +82,7 @@ describe('factory', () => {
         columns = this.setColumns(() => columns);
       }
 
-      const db = orchidORM(
+      const db = orchidORMWithAdapter(
         { adapter: testAdapter },
         {
           table: Table,
@@ -209,7 +214,7 @@ describe('factory', () => {
       }));
     }
 
-    const db = orchidORM(
+    const db = orchidORMWithAdapter(
       { adapter: testAdapter },
       {
         table: Table,
@@ -296,7 +301,7 @@ describe('factory', () => {
         }));
       }
 
-      const db = orchidORM(
+      const db = orchidORMWithAdapter(
         {
           adapter: testAdapter,
         },
@@ -330,9 +335,12 @@ describe('factory', () => {
         }));
       }
 
-      const db = orchidORM(testAdapter, {
-        user: UserTable,
-      });
+      const db = orchidORMWithAdapter(
+        { ...testDbOptions, adapter: testAdapter },
+        {
+          user: UserTable,
+        },
+      );
 
       const factory = tableFactory(db.user);
 
@@ -707,7 +715,7 @@ describe('factory', () => {
     const gt = 10;
     const gte = 10;
 
-    const db = orchidORM(
+    const db = orchidORMWithAdapter(
       {
         adapter: testAdapter,
         log: false,

@@ -6,7 +6,7 @@ import {
   userData,
   useTestORM,
 } from './test-utils/orm.test-utils';
-import { orchidORM } from './orm';
+import { orchidORMWithAdapter } from './orm';
 import { pick } from 'orchid-core';
 import { assertType } from 'test-utils';
 
@@ -73,7 +73,7 @@ describe('computed', () => {
     };
   }
 
-  const local = orchidORM(
+  const local = orchidORMWithAdapter(
     { db: db.$qb },
     {
       user: UserTable,

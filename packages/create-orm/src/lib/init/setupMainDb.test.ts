@@ -14,7 +14,7 @@ describe('setupMainDb', () => {
     await initSteps.setupMainDb(testInitConfig);
 
     const call = writeFile.mock.calls.find(([to]) => to === dbPath);
-    expect(call?.[1]).toBe(`import { orchidORM } from 'orchid-orm';
+    expect(call?.[1]).toBe(`import { orchidORM } from 'orchid-orm/postgres-js';
 import { config } from './config';
 
 export const db = orchidORM(config.database, {
@@ -29,7 +29,7 @@ export const db = orchidORM(config.database, {
     });
 
     const call = writeFile.mock.calls.find(([to]) => to === dbPath);
-    expect(call?.[1]).toBe(`import { orchidORM } from 'orchid-orm';
+    expect(call?.[1]).toBe(`import { orchidORM } from 'orchid-orm/postgres-js';
 import { config } from './config';
 import { PostTable } from './tables/post.table';
 import { CommentTable } from './tables/comment.table';

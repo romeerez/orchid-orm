@@ -46,15 +46,18 @@ export type {
   ShallowSimplify,
   UnionToIntersection,
 } from './utils';
-export { setAdapterConnectRetry } from './adapter';
+export {
+  wrapAdapterFnWithConnectRetry,
+  setConnectRetryConfig,
+} from './adapter';
 export type {
+  QueryResult,
+  QueryArraysResult,
   AdapterBase,
   AdapterConfigBase,
   AfterCommitHook,
   AfterCommitStandaloneHook,
-  QueryInput,
   QueryResultRow,
-  TransactionAdapterBase,
   TransactionAfterCommitHook,
   TransactionState,
 } from './adapter';

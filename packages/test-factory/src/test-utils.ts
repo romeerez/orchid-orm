@@ -1,6 +1,6 @@
-import { createBaseTable, orchidORM, Selectable } from 'orchid-orm';
+import { createBaseTable, orchidORMWithAdapter, Selectable } from 'orchid-orm';
 import { testAdapter } from 'test-utils';
-import { zodSchemaConfig } from 'schema-to-zod';
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { z } from 'zod/v4';
 
 export const BaseTable = createBaseTable({
@@ -64,7 +64,7 @@ export class ProfileTable extends BaseTable {
   };
 }
 
-export const db = orchidORM(
+export const db = orchidORMWithAdapter(
   {
     adapter: testAdapter,
     log: false,

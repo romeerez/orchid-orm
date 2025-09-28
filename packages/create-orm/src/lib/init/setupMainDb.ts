@@ -17,7 +17,7 @@ import { CommentTable } from './tables/comment.table';`;
   const dbPath = join(config.dbDirPath, 'db.ts');
   await fs.writeFile(
     dbPath,
-    `import { orchidORM } from 'orchid-orm';
+    `import { orchidORM } from 'orchid-orm/postgres-js';
 import { config } from './config';${imports}
 
 export const db = orchidORM(config.database, {${tables}

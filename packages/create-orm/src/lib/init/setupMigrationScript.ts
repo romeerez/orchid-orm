@@ -12,7 +12,7 @@ export async function setupMigrationScript(config: InitConfig): Promise<void> {
 
   await fs.writeFile(
     filePath,
-    `import { rakeDb } from 'orchid-orm/migrations';
+    `import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 

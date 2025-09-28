@@ -9,7 +9,6 @@ jest.mock('../sql/constants', () => ({
 
 describe('then', () => {
   useTestDatabase();
-  afterAll(testDb.close);
 
   describe('catch', () => {
     it('should catch error', async () => {
@@ -109,20 +108,14 @@ describe('batch queries', () => {
     const result = await q;
 
     expect(queryArrays.mock.calls).toEqual([
-      [{ text: 'BEGIN' }],
       [
-        {
-          text: `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
-          values: [0, 1],
-        },
+        `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
+        [0, 1],
       ],
       [
-        {
-          text: `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
-          values: [2],
-        },
+        `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
+        [2],
       ],
-      [{ text: 'COMMIT' }],
     ]);
 
     expect(result).toEqual([0, 1, 2]);
@@ -151,16 +144,12 @@ describe('batch queries', () => {
 
     expect(queryArrays.mock.calls).toEqual([
       [
-        {
-          text: `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
-          values: [0, 1],
-        },
+        `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
+        [0, 1],
       ],
       [
-        {
-          text: `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
-          values: [2],
-        },
+        `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
+        [2],
       ],
     ]);
 

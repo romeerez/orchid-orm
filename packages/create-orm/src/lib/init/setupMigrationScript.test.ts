@@ -16,7 +16,8 @@ describe('setupMigrationScript', () => {
     const call = writeFile.mock.calls.find(
       ([to]) => to === migrationScriptPath,
     );
-    expect(call?.[1]).toBe(`import { rakeDb } from 'orchid-orm/migrations';
+    expect(call?.[1])
+      .toBe(`import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 
@@ -44,7 +45,8 @@ export const change = rakeDb(config.database, {
     const call = writeFile.mock.calls.find(
       ([to]) => to === migrationScriptPath,
     );
-    expect(call?.[1]).toBe(`import { rakeDb } from 'orchid-orm/migrations';
+    expect(call?.[1])
+      .toBe(`import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 

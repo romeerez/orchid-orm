@@ -1,15 +1,15 @@
 import { pull } from './pull';
-import {
-  Adapter,
-  AdapterOptions,
-  DefaultColumnTypes,
-  DefaultSchemaConfig,
-} from 'pqb';
+import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 import { testConfig } from '../migrations.test-utils';
 import { ChangeCallback, createMigrationInterface } from 'rake-db';
-import { ColumnSchemaConfig, noop } from 'orchid-core';
+import {
+  AdapterBase,
+  AdapterConfigBase,
+  ColumnSchemaConfig,
+  noop,
+} from 'orchid-core';
 import fs from 'fs/promises';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 import path from 'node:path';
 
 jest.mock('fs/promises', () => ({
@@ -20,15 +20,19 @@ jest.mock('fs/promises', () => ({
 }));
 jest.mock('../generate/generate');
 
-const options: AdapterOptions[] = [
+const options: AdapterConfigBase[] = [
   {
     databaseURL: `${process.env.PG_GENERATE_URL}-${process.env.JEST_WORKER_ID}`,
   },
 ];
 
+let adapters: AdapterBase[] = [];
+let closers: (() => Promise<void>)[] = [];
+
 let prepareDbTransactionPromise: Promise<void> | undefined;
-let resolvePrepareDbTransaction: (() => void) | undefined;
-let arrangedAdapters: Adapter[] | undefined;
+let resolvePrepareDbTransaction: ((err: Error) => void) | undefined;
+
+const rollbackErr = new Error('Rollback');
 
 const arrange = async ({
   prepareDb,
@@ -40,38 +44,43 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
   prepareDb?: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>;
   dbFile?: string;
 }) => {
-  const adapters = options.map((opts) => new Adapter(opts));
-  arrangedAdapters = [...adapters];
+  adapters = options.map((opts) => new TestAdapter(opts));
+  closers = adapters.map((adapter) => () => adapter.close());
 
   const adapter = adapters[0];
 
   if (prepareDb) {
     await new Promise<void>((resolve) => {
-      prepareDbTransactionPromise = adapter.transaction(
-        { text: 'BEGIN' },
-        (trx) =>
-          new Promise<void>(async (resolveTransaction) => {
-            Adapter.prototype.query = (...args) => trx.query(...args);
-            Adapter.prototype.arrays = (...args) => trx.arrays(...args);
+      prepareDbTransactionPromise = adapter
+        .transaction(
+          undefined,
+          (trx) =>
+            new Promise<void>(async (_, rejectTransaction) => {
+              TestAdapter.prototype.query = (...args) => trx.query(...args);
+              TestAdapter.prototype.arrays = (...args) => trx.arrays(...args);
 
-            // `generate` will attempt to close the adapter, but we need to keep it open in the test
-            trx.close = noop as () => Promise<void>;
+              // `generate` will attempt to close the adapter, but we need to keep it open in the test
+              trx.close = noop as () => Promise<void>;
 
-            adapters[0] = trx;
+              adapters[0] = trx;
 
-            const db = createMigrationInterface<
-              ColumnSchemaConfig,
-              DefaultColumnTypes<DefaultSchemaConfig>
-            >(trx, true, testConfig);
+              const db = createMigrationInterface<
+                ColumnSchemaConfig,
+                DefaultColumnTypes<DefaultSchemaConfig>
+              >(trx, true, testConfig);
 
-            await prepareDb(db, true);
+              await prepareDb(db, true);
 
-            resolve();
+              resolve();
 
-            resolvePrepareDbTransaction = resolveTransaction;
-          }),
-        { text: 'ROLLBACK' },
-      );
+              resolvePrepareDbTransaction = rejectTransaction;
+            }),
+        )
+        .catch((err) => {
+          if (err !== rollbackErr) {
+            throw err;
+          }
+        });
     });
   }
 
@@ -80,7 +89,7 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
   }
 };
 
-const act = () => pull(options, testConfig);
+const act = () => pull(adapters, testConfig);
 
 const assert = {
   tableFile(calls: [path: string, content: string][]) {
@@ -109,10 +118,10 @@ describe('pull', () => {
   beforeEach(jest.clearAllMocks);
 
   afterEach(async () => {
-    resolvePrepareDbTransaction?.();
+    resolvePrepareDbTransaction?.(rollbackErr);
     await Promise.all([
       prepareDbTransactionPromise,
-      ...(arrangedAdapters?.map((x) => x.close()) ?? []),
+      ...closers.map((close) => close()),
     ]);
   });
 
@@ -453,7 +462,7 @@ export const db = custom({ databaseURL: 'url' }, {
           },
         });
 
-        await pull([{ ...options, schema: 'custom' }], testConfig);
+        await pull([adapters[0].reconfigure({ schema: 'custom' })], testConfig);
 
         assert.dbFile([
           [

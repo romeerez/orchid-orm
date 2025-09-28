@@ -1,6 +1,5 @@
 import { introspectDbSchema } from './dbStructure';
 import {
-  Adapter,
   ArrayColumn,
   BigSerialColumn,
   CustomTypeColumn,
@@ -23,13 +22,13 @@ import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName, getExcludeName } from '../migration/migration.utils';
 import { isRawSQL, TemplateLiteralArgs } from 'orchid-core';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 import { testConfig } from '../rake-db.test-utils';
 
 jest.mock('./dbStructure');
 
-const adapter = new Adapter({ databaseURL: 'file:path' });
+const adapter = new TestAdapter({ databaseURL: 'file:path' });
 const query = jest.fn().mockImplementation(() => ({ rows: [] }));
 adapter.query = query;
 adapter.arrays = query;

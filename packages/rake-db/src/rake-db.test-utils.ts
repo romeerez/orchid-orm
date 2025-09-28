@@ -2,11 +2,11 @@ import { createMigrationInterface, DbMigration } from './migration/migration';
 import {
   DefaultColumnTypes,
   makeColumnTypes,
-  TransactionAdapter,
   DefaultSchemaConfig,
   defaultSchemaConfig,
 } from 'pqb';
 import {
+  AdapterBase,
   ColumnSchemaConfig,
   MaybeArray,
   noop,
@@ -46,7 +46,9 @@ export const getDb = () => {
   if (db) return db;
 
   db = createMigrationInterface(
-    {} as unknown as TransactionAdapter,
+    {
+      getSchema: () => undefined,
+    } as unknown as AdapterBase,
     true,
     testConfig,
   );

@@ -1,7 +1,7 @@
-import { QueryBase } from 'orchid-core';
+import { AdapterBase, QueryBase } from 'orchid-core';
 import { clearChanges } from '../change';
 import { getChanges, runMigration } from '../../commands/migrateOrRollback';
-import { Query, TransactionAdapter } from 'pqb';
+import { Query } from 'pqb';
 
 interface OrmParam {
   $qb: QueryBase;
@@ -14,7 +14,7 @@ export const migrateFiles = async (db: OrmParam, files: UnknownPromiseFns) => {
 
   await qb.ensureTransaction(async () => {
     const adapter = qb.internal.transactionStorage.getStore()
-      ?.adapter as TransactionAdapter;
+      ?.adapter as AdapterBase;
 
     for (const load of files) {
       clearChanges();
@@ -22,7 +22,7 @@ export const migrateFiles = async (db: OrmParam, files: UnknownPromiseFns) => {
       const changes = await getChanges({ load });
       const config = changes[0]?.config;
 
-      await runMigration(adapter as TransactionAdapter, true, changes, config);
+      await runMigration(adapter, true, changes, config);
     }
   });
 };

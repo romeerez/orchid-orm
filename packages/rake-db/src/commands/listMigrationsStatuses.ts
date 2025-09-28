@@ -1,19 +1,17 @@
 import { RakeDbCtx } from '../common';
 import path from 'path';
-import { Adapter, AdapterOptions } from 'pqb';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { pathToFileURL } from 'node:url';
 import { AnyRakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrationsSet';
 import { colors } from '../../../core/src/colors';
+import { AdapterBase } from 'orchid-core';
 
 export const listMigrationsStatuses = async (
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: AnyRakeDbConfig,
   args: string[],
 ) => {
-  const adapters = options.map((opts) => new Adapter(opts));
-
   const ctx: RakeDbCtx = {};
 
   const [{ migrations }, ...migrated] = await Promise.all([
@@ -36,15 +34,13 @@ export const listMigrationsStatuses = async (
   let maxVersionLength = 12;
   let maxNameLength = 4;
 
-  for (let i = 0; i < options.length; i++) {
+  for (let i = 0; i < adapters.length; i++) {
     const list = migrated[i];
     const key = Object.entries(list.map)
       .map(([version, up]) => `${version}${up ? 't' : 'f'}`)
       .join('');
 
-    const database =
-      options[i].database ||
-      new URL(options[i].databaseURL as string).pathname.slice(1);
+    const database = adapters[i].getDatabase();
 
     if (map[key]) {
       map[key].databases.push(database);

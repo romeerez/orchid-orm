@@ -28,7 +28,8 @@ const readFile = mockFn(fs, 'readFile');
 const writeFile = mockFn(fs, 'writeFile');
 
 const dependencies = `"dotenv": "^1.2.3",
-    "orchid-orm": "^1.2.3"`;
+    "orchid-orm": "^1.2.3",
+    "postgres": "^1.2.3"`;
 
 const devDependencies = `"@types/node": "^1.2.3",
     "typescript": "^1.2.3"`;
@@ -149,6 +150,7 @@ describe('setupPackageJSON', () => {
     "ko": "ko",
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
+    "postgres": "^1.2.3",
     ${
       validation === 'zod'
         ? '"orchid-orm-schema-to-zod": "^1.2.3"'

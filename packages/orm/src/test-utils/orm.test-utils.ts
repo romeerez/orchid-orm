@@ -1,6 +1,6 @@
 import { createBaseTable, DefaultSelect } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
-import { orchidORM } from '../orm';
+import { orchidORMWithAdapter } from '../orm';
 import { ColumnsShape, Query, testTransaction } from 'pqb';
 
 export const BaseTable = createBaseTable({
@@ -496,7 +496,7 @@ class CategoryTable extends BaseTable {
   };
 }
 
-export const db = orchidORM(
+export const db = orchidORMWithAdapter(
   {
     adapter: testAdapter,
     log: false,

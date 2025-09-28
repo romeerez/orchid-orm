@@ -1,5 +1,4 @@
-import { Adapter } from 'pqb';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
 import { createMigrationsTable } from './migrationsTable';
 
@@ -9,7 +8,7 @@ describe('migrationsTable', () => {
   describe('createMigrationsTable', () => {
     const mockedQuery = jest.fn();
 
-    const db = new Adapter({
+    const db = new TestAdapter({
       databaseURL: 'postgres://user:password@host:1234/db-name',
     });
     db.query = mockedQuery;

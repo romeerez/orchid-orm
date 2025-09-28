@@ -1,5 +1,42 @@
 # Breaking changes
 
+## orchid-orm 1.56
+
+Adding support for [postgres](https://github.com/porsager/postgres) db adapter!
+
+Previously, OrchidORM was directly using [node-postgres](https://node-postgres.com/) under the hood.
+
+To continue using `node-postgres`, update imports:
+
+```ts
+// no longer valid:
+import { orchidORM } from 'orchid-orm';
+import { rakeDb } from 'orchid-orm/migrations';
+import { createDb } from 'pqb';
+
+// change it to:
+import { orchidORM } from 'orchid-orm/node-postgres';
+import { rakeDb } from 'orchid-orm/migrations/node-postgres';
+import { createDb } from 'pqb/node-postgres';
+```
+
+You can switch to `postgres` by installing `pnpm i postgres` and updating the imports:
+
+```ts
+import { orchidORM } from 'orchid-orm/postgres-js';
+import { rakeDb } from 'orchid-orm/migrations/postgres-js';
+import { createDb } from 'pqb/postgres-js';
+```
+
+With `node-postgres` you can close db connection and query again, the connection will be opened automatically.
+But with `postgres-js` you can't no longer query the database after closing the connection.
+
+`postgres-js` has noticeable performance benefits when executing multiple queries in the same transaction simultaneously.
+
+Such as when performing a transaction with a single query, `node-postgres` does 3 round-trips: `BEGIN` + `SELECT 'some-sql'` + `COMMIT`,
+but `postgres-js` is able to utilize special postgres protocol called [pipeline mode](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html)
+to send all 3 SQLs at the same time.
+
 ## orchid-orm 1.54
 
 If you previously were passing `generated` or `computed` column values into `update` or `create`,

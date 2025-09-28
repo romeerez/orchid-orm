@@ -3,14 +3,13 @@ import { testConfig } from '../rake-db.test-utils';
 import { AnyRakeDbConfig } from '../config';
 import fs from 'fs/promises';
 import path from 'path';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 import {
   getMigratedVersionsMap,
   RakeDbAppliedVersions,
 } from '../migration/manageMigratedVersions';
 import { getMigrationVersionOrThrow } from '../migration/migrationsSet';
-import { RecordString } from 'orchid-core';
-import { Adapter } from 'pqb';
+import { AdapterBase, RecordString } from 'orchid-core';
 import { pushChange } from '../migration/change';
 import { promptSelect } from '../prompt';
 
@@ -18,7 +17,7 @@ jest.mock('fs/promises');
 jest.mock('../migration/manageMigratedVersions');
 jest.mock('../prompt');
 jest.mock('../common', () => ({
-  transaction(adapter: Adapter, fn: (adapter: Adapter) => unknown) {
+  transaction(adapter: AdapterBase, fn: (adapter: AdapterBase) => unknown) {
     return fn(adapter);
   },
   queryLock: () => {},
@@ -28,6 +27,8 @@ const options = [
   { databaseURL: 'postgres://user@localhost/dbname' },
   { databaseURL: 'postgres://user@localhost/dbname-test' },
 ];
+
+const adapters = options.map((opts) => new TestAdapter(opts));
 
 const dbChanges: { name: string; up: boolean; count: number }[] = [];
 
@@ -103,7 +104,7 @@ const arrange = (arg: {
   }
 };
 
-const act = () => rebase(options, config);
+const act = () => rebase(adapters, config);
 
 const assert = {
   moved(map: RecordString) {

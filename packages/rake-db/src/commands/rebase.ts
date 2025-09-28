@@ -1,11 +1,10 @@
-import { Adapter, AdapterOptions } from 'pqb';
 import { AnyRakeDbConfig } from '../config';
 import path from 'path';
 import fs from 'fs/promises';
 import { getMigrations, MigrationItem } from '../migration/migrationsSet';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { RakeDbCtx } from '../common';
-import { RecordOptionalString } from 'orchid-core';
+import { AdapterBase, RecordOptionalString } from 'orchid-core';
 import { fullRedo } from './migrateOrRollback';
 import { promptSelect } from '../prompt';
 import { colors } from '../../../core/src/colors';
@@ -16,7 +15,7 @@ interface RebaseFile extends MigrationItem {
 }
 
 export const rebase = async (
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: AnyRakeDbConfig,
 ) => {
   if (config.migrations) {
@@ -28,8 +27,6 @@ export const rebase = async (
       `Cannot rebase when the 'migrationId' is set to 'timestamp' in the config`,
     );
   }
-
-  const adapters = options.map((opts) => new Adapter(opts));
 
   const ctx: RakeDbCtx = {};
 
@@ -201,7 +198,7 @@ export const rebase = async (
 
   await fullRedo(
     ctx,
-    options,
+    adapters,
     {
       ...config,
       async afterRollback() {

@@ -1,7 +1,10 @@
-import { PickQueryShape, QueryColumn, toCamelCase } from 'orchid-core';
 import {
-  Adapter,
-  AdapterOptions,
+  AdapterBase,
+  PickQueryShape,
+  QueryColumn,
+  toCamelCase,
+} from 'orchid-core';
+import {
   ArrayColumn,
   ColumnsShape,
   ColumnType,
@@ -48,7 +51,7 @@ export interface CodeItems {
 }
 
 interface AfterPull {
-  adapter: Adapter;
+  adapter: AdapterBase;
   version: string;
 }
 
@@ -59,14 +62,14 @@ export interface DbInstance {
 export class AbortSignal extends Error {}
 
 export const generate = async (
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: AnyRakeDbConfig,
   args: string[],
   afterPull?: AfterPull,
 ): Promise<void> => {
   let { dbPath } = config;
   if (!dbPath || !config.baseTable) throw invalidConfig(config);
-  if (!options.length) throw new Error(`Database options must not be empty`);
+  if (!adapters.length) throw new Error(`Database options must not be empty`);
 
   if (!dbPath.endsWith('.ts')) dbPath += '.ts';
 
@@ -79,8 +82,12 @@ export const generate = async (
     up = args[1] === 'up';
   }
 
-  const { dbStructure, adapters } = await migrateAndPullStructures(
-    options,
+  if (afterPull) {
+    adapters = [afterPull.adapter];
+  }
+
+  const { dbStructure } = await migrateAndPullStructures(
+    adapters,
     config,
     afterPull,
   );
@@ -174,7 +181,7 @@ export const generate = async (
   }
 
   if (up) {
-    await fullMigrate({}, options, config, undefined, adapters);
+    await fullMigrate({}, adapters, config);
   } else if (!afterPull) {
     await closeAdapters(adapters);
   }
@@ -208,10 +215,12 @@ const getDbFromConfig = async (
 };
 
 const migrateAndPullStructures = async (
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: AnyRakeDbConfig,
   afterPull?: AfterPull,
-): Promise<{ dbStructure: IntrospectedStructure; adapters: Adapter[] }> => {
+): Promise<{
+  dbStructure: IntrospectedStructure;
+}> => {
   if (afterPull) {
     return {
       dbStructure: {
@@ -227,18 +236,10 @@ const migrateAndPullStructures = async (
         domains: [],
         collations: [],
       },
-      adapters: [afterPull.adapter],
     };
   }
 
-  const adapters = await fullMigrate(
-    {},
-    options,
-    config,
-    undefined,
-    undefined,
-    true,
-  );
+  await fullMigrate({}, adapters, config, undefined, true);
 
   const dbStructures = await Promise.all(
     adapters.map((adapter) => introspectDbSchema(adapter)),
@@ -249,7 +250,7 @@ const migrateAndPullStructures = async (
     compareDbStructures(dbStructure, dbStructures[i], i);
   }
 
-  return { dbStructure, adapters };
+  return { dbStructure };
 };
 
 const compareDbStructures = (
@@ -471,6 +472,6 @@ const processHasAndBelongsToManyColumn = (
   return;
 };
 
-const closeAdapters = (adapters: Adapter[]) => {
+const closeAdapters = (adapters: AdapterBase[]) => {
   return Promise.all(adapters.map((x) => x.close()));
 };

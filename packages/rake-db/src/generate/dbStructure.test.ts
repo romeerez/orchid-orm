@@ -1,9 +1,9 @@
-import { Adapter } from 'pqb';
 import { introspectDbSchema } from './dbStructure';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 import { StructureToAstTableData } from './structureToAst';
+import { TestAdapter } from 'test-utils';
 
-const adapter = new Adapter({
+const adapter = new TestAdapter({
   databaseURL: process.env.PG_URL,
 });
 

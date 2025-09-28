@@ -1,13 +1,13 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { rakeDb } from 'orchid-orm/migrations';
-import { AdapterOptions } from 'pqb';
 import { BaseTable } from './baseTable';
 import os from 'os';
+import { AdapterConfigBase } from 'orchid-core';
+import { testRakeDb } from 'test-utils';
 
 config({ path: path.resolve('..', '..', '.env') });
 
-const options: AdapterOptions[] = [];
+const options: AdapterConfigBase[] = [];
 
 const databaseURL = process.env.PG_URL;
 if (!databaseURL) {
@@ -31,7 +31,7 @@ if (['create', 'drop'].includes(command)) {
   }
 }
 
-export const change = rakeDb(options, {
+export const change = testRakeDb(options, {
   baseTable: BaseTable,
   migrationsPath: 'migrations',
   import: (path) => import(path),

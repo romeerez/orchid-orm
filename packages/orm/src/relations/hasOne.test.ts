@@ -15,7 +15,7 @@ import {
   userRowToJSON,
 } from '../test-utils/orm.test-utils';
 import { Db, Query } from 'pqb';
-import { orchidORM } from '../orm';
+import { orchidORMWithAdapter } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { NotFoundError, omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
@@ -71,7 +71,10 @@ describe('hasOne', () => {
       }));
     }
 
-    const db = orchidORM(ormParams, { user: UserTable, profile: ProfileTable });
+    const db = orchidORMWithAdapter(ormParams, {
+      user: UserTable,
+      profile: ProfileTable,
+    });
     expect(db.profile.internal.tableData.constraints).toEqual([
       {
         references: {
@@ -2215,7 +2218,7 @@ describe('hasOne', () => {
       }));
     }
 
-    const local = orchidORM(ormParams, {
+    const local = orchidORMWithAdapter(ormParams, {
       user: UserTable,
       profile: ProfileTable,
     });
@@ -2331,7 +2334,7 @@ describe('hasOne through', () => {
       };
     }
 
-    const local = orchidORM(ormParams, {
+    const local = orchidORMWithAdapter(ormParams, {
       post: Post,
       tag: Tag,
       postTag: PostTag,
@@ -2364,7 +2367,7 @@ describe('hasOne through', () => {
     }
 
     expect(() => {
-      orchidORM(ormParams, {
+      orchidORMWithAdapter(ormParams, {
         post: Post,
         tag: Tag,
       });
@@ -2418,7 +2421,7 @@ describe('hasOne through', () => {
     }
 
     expect(() => {
-      orchidORM(ormParams, {
+      orchidORMWithAdapter(ormParams, {
         post: Post,
         tag: Tag,
         postTag: PostTag,
@@ -3139,7 +3142,7 @@ describe('hasOne through', () => {
       };
     }
 
-    const local = orchidORM(ormParams, {
+    const local = orchidORMWithAdapter(ormParams, {
       user: UserTable,
       profile: ProfileTable,
       message: MessageTable,

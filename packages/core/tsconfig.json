@@ -3,12 +3,5 @@
   "include": ["./src"],
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "pqb": ["../qb/pqb/src"],
-      "orchid-core": ["src"],
-      "test-utils": ["../test-utils/src"],
-      "schema-to-zod": ["../schemaConfigs/zod/src"]
-    }
   }
 }

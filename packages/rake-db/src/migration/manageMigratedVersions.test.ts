@@ -6,8 +6,8 @@ import {
 } from './manageMigratedVersions';
 import { SilentQueries } from './migration';
 import { testConfig } from '../rake-db.test-utils';
-import { Adapter } from 'pqb';
 import { RakeDbCtx } from '../common';
+import { AdapterBase } from 'orchid-core';
 
 const config = testConfig;
 
@@ -27,10 +27,10 @@ describe('manageMigratedVersions', () => {
         config,
       );
 
-      expect(db.silentArrays).toBeCalledWith({
-        text: 'INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)',
-        values: ['123', 'name'],
-      });
+      expect(db.silentArrays).toBeCalledWith(
+        'INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)',
+        ['123', 'name'],
+      );
     });
   });
 
@@ -47,10 +47,10 @@ describe('manageMigratedVersions', () => {
         config,
       );
 
-      expect(db.silentArrays).toBeCalledWith({
-        text: 'DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2',
-        values: ['123', 'name'],
-      });
+      expect(db.silentArrays).toBeCalledWith(
+        'DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2',
+        ['123', 'name'],
+      );
     });
 
     it('should throw when version was not found', async () => {
@@ -77,7 +77,7 @@ describe('manageMigratedVersions', () => {
     const ctx: RakeDbCtx = {};
 
     const act = () =>
-      getMigratedVersionsMap(ctx, adapter as unknown as Adapter, config);
+      getMigratedVersionsMap(ctx, adapter as unknown as AdapterBase, config);
 
     it('should throw NoMigrationsTableError if no migration table', async () => {
       adapter.arrays.mockRejectedValueOnce(
@@ -116,16 +116,12 @@ describe('manageMigratedVersions', () => {
         ['SELECT * FROM "schemaMigrations" ORDER BY version'],
         ['ALTER TABLE "schemaMigrations" ADD COLUMN name TEXT'],
         [
-          {
-            text: 'UPDATE "schemaMigrations" SET name = $2 WHERE version = $1',
-            values: ['123', 'a'],
-          },
+          'UPDATE "schemaMigrations" SET name = $2 WHERE version = $1',
+          ['123', 'a'],
         ],
         [
-          {
-            text: 'UPDATE "schemaMigrations" SET name = $2 WHERE version = $1',
-            values: ['124', 'b'],
-          },
+          'UPDATE "schemaMigrations" SET name = $2 WHERE version = $1',
+          ['124', 'b'],
         ],
         ['ALTER TABLE "schemaMigrations" ALTER COLUMN name SET NOT NULL'],
       ]);

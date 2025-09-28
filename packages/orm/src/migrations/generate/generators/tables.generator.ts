@@ -1,5 +1,4 @@
 import {
-  Adapter,
   ColumnsShape,
   ColumnType,
   GeneratorIgnore,
@@ -34,6 +33,7 @@ import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
 import { ComposeMigrationParams } from '../composeMigration';
+import { AdapterBase } from 'orchid-core';
 
 export interface CompareSql {
   values: unknown[];
@@ -74,7 +74,7 @@ export interface TableShapes {
 export const processTables = async (
   ast: RakeDbAst[],
   domainsMap: DbStructureDomainsMap,
-  adapter: Adapter,
+  adapter: AdapterBase,
   dbStructure: IntrospectedStructure,
   config: AnyRakeDbConfig,
   {
@@ -245,7 +245,7 @@ const applyChangeTableSchemas = (
 };
 
 const applyChangeTables = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   changeTables: ChangeTableData[],
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
@@ -307,18 +307,20 @@ const applyChangeTables = async (
   }
 };
 
-const applyCompareSql = async (compareSql: CompareSql, adapter: Adapter) => {
+const applyCompareSql = async (
+  compareSql: CompareSql,
+  adapter: AdapterBase,
+) => {
   if (compareSql.expressions.length) {
     const {
       rows: [results],
-    } = await adapter.arrays({
-      text:
-        'SELECT ' +
+    } = await adapter.arrays(
+      'SELECT ' +
         compareSql.expressions
           .map((x) => `${x.inDb} = (${x.inCode})`)
           .join(', '),
-      values: compareSql.values,
-    });
+      compareSql.values,
+    );
 
     for (let i = 0; i < results.length; i++) {
       if (!results[i]) {
@@ -453,7 +455,7 @@ const makeTableShape = (table: CodeTable): ColumnsShape => {
 };
 
 const processTableChange = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,

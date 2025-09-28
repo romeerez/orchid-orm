@@ -3,13 +3,5 @@
   "include": ["./src"],
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "orchid-core": ["../core/src"],
-      "pqb": ["../qb/pqb/src"],
-      "rake-db": ["../rake-db/src"],
-      "schema-to-zod": ["../schemaConfigs/zod/src"],
-      "test-utils": ["../test-utils/src"]
-    }
   }
 }

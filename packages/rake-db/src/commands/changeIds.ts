@@ -2,8 +2,8 @@ import { AnyRakeDbConfig } from '../config';
 import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './newMigration';
-import { Adapter, AdapterOptions } from 'pqb';
 import { getMigrations } from '../migration/migrationsSet';
+import { AdapterBase } from 'orchid-core';
 
 export const fileNamesToChangeMigrationId = {
   serial: '.rename-to-serial.json',
@@ -15,7 +15,7 @@ export const fileNamesToChangeMigrationIdMap = Object.fromEntries(
 );
 
 export const changeIds = async (
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: AnyRakeDbConfig,
   [arg, digitsArg]: string[],
 ) => {
@@ -128,12 +128,13 @@ export const changeIds = async (
     }),
   );
 
-  await options.map((opts) => {
-    const adapter = new Adapter(opts);
-    renameMigrationVersionsInDb(config, adapter, values).then(() =>
-      adapter.close(),
-    );
-  });
+  await Promise.all(
+    adapters.map((adapter) => {
+      renameMigrationVersionsInDb(config, adapter, values).then(() =>
+        adapter.close(),
+      );
+    }),
+  );
 
   config.logger?.log(
     `Migration files were renamed, a config file ${
@@ -156,11 +157,11 @@ export type RenameMigrationVersionsValue = [
 
 export const renameMigrationVersionsInDb = async (
   config: AnyRakeDbConfig,
-  adapter: Adapter,
+  adapter: AdapterBase,
   values: RenameMigrationVersionsValue[],
 ) => {
-  await adapter.arrays({
-    text: `UPDATE "${
+  await adapter.arrays(
+    `UPDATE "${
       config.migrationsTable
     }" AS t SET version = v.version FROM (VALUES ${values
       .map(
@@ -170,6 +171,6 @@ export const renameMigrationVersionsInDb = async (
       .join(
         ', ',
       )}) v(oldVersion, name, version) WHERE t.version = v.oldVersion`,
-    values: values.map(([, name]) => name),
-  });
+    values.map(([, name]) => name),
+  );
 };

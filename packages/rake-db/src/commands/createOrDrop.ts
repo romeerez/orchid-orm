@@ -1,23 +1,17 @@
-import { Adapter, AdapterOptions } from 'pqb';
-import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
+import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
 import { fullMigrate } from './migrateOrRollback';
-import { getDatabaseAndUserFromOptions, RakeDbConfig } from '../config';
-import {
-  setAdapterOptions,
-  setAdminCredentialsToOptions,
-} from './createOrDrop.utils';
+import { RakeDbConfig } from '../config';
 import { createMigrationsTable } from '../migration/migrationsTable';
+import { promptConfirm, promptText } from '../prompt';
 
 const execute = async (
-  options: AdapterOptions,
+  adapter: AdapterBase,
   sql: string,
 ): Promise<
   'ok' | 'already' | 'forbidden' | 'ssl required' | { error: unknown }
 > => {
-  const db = new Adapter(options);
-
   try {
-    await db.query(sql);
+    await adapter.query(sql);
     return 'ok';
   } catch (error) {
     const err = error as RecordUnknown;
@@ -41,13 +35,13 @@ const execute = async (
       return { error };
     }
   } finally {
-    await db.close();
+    await adapter.close();
   }
 };
 
 const createOrDrop = async (
-  options: AdapterOptions,
-  adminOptions: AdapterOptions,
+  adapter: AdapterBase,
+  adminAdapter: AdapterBase,
   config: Pick<RakeDbConfig<ColumnSchemaConfig>, 'migrationsTable' | 'logger'>,
   args: {
     sql(params: { database: string; user: string }): string;
@@ -56,10 +50,13 @@ const createOrDrop = async (
     create?: boolean;
   },
 ) => {
-  const params = getDatabaseAndUserFromOptions(options);
+  const params = {
+    database: adapter.getDatabase(),
+    user: adapter.getUser(),
+  };
 
   const result = await execute(
-    setAdapterOptions(adminOptions, { database: 'postgres' }),
+    adminAdapter.reconfigure({ database: 'postgres' }),
     args.sql(params),
   );
   if (result === 'ok') {
@@ -76,9 +73,7 @@ const createOrDrop = async (
       args.create ? 'create' : 'drop'
     } database.`;
 
-    const host = adminOptions.databaseURL
-      ? new URL(adminOptions.databaseURL).hostname
-      : adminOptions.host;
+    const host = adminAdapter.getHost();
 
     const isLocal = host === 'localhost';
     if (!isLocal) {
@@ -87,13 +82,10 @@ const createOrDrop = async (
 
     config.logger?.log(message);
 
-    const updatedOptions = await setAdminCredentialsToOptions(
-      options,
-      args.create,
-    );
-    if (!updatedOptions) return;
+    const params = await askForAdminCredentials(args.create);
+    if (!params) return;
 
-    await createOrDrop(options, updatedOptions, config, args);
+    await createOrDrop(adapter, adminAdapter.reconfigure(params), config, args);
     return;
   } else {
     throw result.error;
@@ -101,18 +93,18 @@ const createOrDrop = async (
 
   if (!args.create) return;
 
-  const db = new Adapter(options);
+  const newlyConnectedAdapter = adapter.reconfigure({});
 
-  await createMigrationsTable(db, config);
-  await db.close();
+  await createMigrationsTable(newlyConnectedAdapter, config);
+  await newlyConnectedAdapter.close();
 };
 
 export const createDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  for (const opts of options) {
-    await createOrDrop(opts, opts, config, {
+  for (const adapter of adapters) {
+    await createOrDrop(adapter, adapter, config, {
       sql({ database, user }) {
         return `CREATE DATABASE "${database}"${user ? ` OWNER "${user}"` : ''}`;
       },
@@ -128,11 +120,11 @@ export const createDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
 };
 
 export const dropDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  for (const opts of options) {
-    await createOrDrop(opts, opts, config, {
+  for (const adapter of adapters) {
+    await createOrDrop(adapter, adapter, config, {
       sql({ database }) {
         return `DROP DATABASE "${database}"`;
       },
@@ -147,10 +139,40 @@ export const dropDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
 };
 
 export const resetDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ) => {
-  await dropDb(options, config);
-  await createDb(options, config);
-  await fullMigrate({}, options, config);
+  await dropDb(adapters, config);
+  await createDb(adapters, config);
+  await fullMigrate({}, adapters, config);
+};
+
+export const askForAdminCredentials = async (
+  create?: boolean,
+): Promise<{ user: string; password?: string } | undefined> => {
+  const ok = await promptConfirm({
+    message: `Would you like to share admin credentials to ${
+      create ? 'create' : 'drop'
+    } a database?`,
+  });
+
+  if (!ok) {
+    return;
+  }
+
+  const user = await promptText({
+    message: 'Enter admin user:',
+    default: 'postgres',
+    min: 1,
+  });
+
+  const password = await promptText({
+    message: 'Enter admin password:',
+    password: true,
+  });
+
+  return {
+    user,
+    password: password || undefined,
+  };
 };

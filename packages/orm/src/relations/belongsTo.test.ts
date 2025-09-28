@@ -15,7 +15,7 @@ import {
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
-import { orchidORM } from '../orm';
+import { orchidORMWithAdapter } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 import { NotFoundError, omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
@@ -69,7 +69,10 @@ describe('belongsTo', () => {
       };
     }
 
-    const db = orchidORM(ormParams, { user: UserTable, profile: ProfileTable });
+    const db = orchidORMWithAdapter(ormParams, {
+      user: UserTable,
+      profile: ProfileTable,
+    });
     expect(db.profile.internal.tableData.constraints).toEqual([
       {
         references: {
@@ -985,7 +988,7 @@ describe('belongsTo', () => {
             };
           }
 
-          const db = orchidORM(ormParams, {
+          const db = orchidORMWithAdapter(ormParams, {
             user: UserTable,
             profile: ProfileTable,
           });
@@ -2220,7 +2223,7 @@ describe('belongsTo', () => {
       };
     }
 
-    const db = orchidORM(ormParams, {
+    const db = orchidORMWithAdapter(ormParams, {
       user: UserTable,
       profile: ProfileTable,
     });
@@ -2297,7 +2300,7 @@ describe('belongsTo', () => {
       };
     }
 
-    const db = orchidORM(ormParams, { a: Table });
+    const db = orchidORMWithAdapter(ormParams, { a: Table });
 
     // @ts-expect-error cId or c is required
     db.a.create({

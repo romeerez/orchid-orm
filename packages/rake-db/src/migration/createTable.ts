@@ -5,7 +5,6 @@ import {
   getColumnTypes,
   NoPrimaryKeyOption,
   parseTableData,
-  QueryArraysResult,
   escapeString,
   TableData,
   TableDataFn,
@@ -42,6 +41,7 @@ import { NoPrimaryKey } from '../errors';
 import {
   emptyObject,
   MaybeArray,
+  QueryArraysResult,
   RecordUnknown,
   snakeCaseKey,
 } from 'orchid-core';

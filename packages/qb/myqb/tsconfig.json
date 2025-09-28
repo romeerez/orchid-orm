@@ -3,9 +3,5 @@
   "include": ["./src"],
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "orchid-core": ["../../core/src"]
-    }
   }
 }

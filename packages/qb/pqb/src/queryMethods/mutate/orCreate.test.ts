@@ -1,7 +1,11 @@
 import { User, userData } from '../../test-utils/test-utils';
-import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
-import { TransactionAdapter } from '../../adapter';
-import { QueryInput } from 'orchid-core';
+import {
+  assertType,
+  sql,
+  testDb,
+  TestTransactionAdapter,
+  useTestDatabase,
+} from 'test-utils';
 
 const TableWithReadOnly = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
@@ -11,14 +15,15 @@ const TableWithReadOnly = testDb('user', (t) => ({
 
 const emulateReturnNoRowsOnce = () => {
   // emulate the edge case when first query doesn't find the record, and then in CTE it appears
-  const { query } = TransactionAdapter.prototype;
-  TransactionAdapter.prototype.query = async function (
+  const { query } = TestTransactionAdapter.prototype;
+  TestTransactionAdapter.prototype.query = async function (
     this: unknown,
-    q: QueryInput,
+    text: string,
+    values?: unknown[],
   ) {
-    const result = await query.call(this, q);
+    const result = await query.call(this, text, values);
     result.rowCount = 0;
-    TransactionAdapter.prototype.query = query;
+    TestTransactionAdapter.prototype.query = query;
     return result;
   } as never;
 };

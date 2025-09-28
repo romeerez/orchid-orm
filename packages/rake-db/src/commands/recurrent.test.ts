@@ -1,9 +1,8 @@
 import { runRecurrentMigrations } from './recurrent';
 import { testConfig } from '../rake-db.test-utils';
 import { readdir, readFile, stat } from 'fs/promises';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 import { join } from 'path';
-import { Adapter } from 'pqb';
 
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
@@ -15,6 +14,7 @@ const options = [
   { databaseURL: 'postgres://user@localhost/one' },
   { databaseURL: 'postgres://user@localhost/two' },
 ];
+const adapters = options.map((opts) => new TestAdapter(opts));
 
 const log = testConfig.logger.log;
 
@@ -30,7 +30,7 @@ describe('recurrent', () => {
       }),
     );
 
-    await runRecurrentMigrations(options, testConfig);
+    await runRecurrentMigrations(adapters, testConfig);
 
     expect(readdir).toBeCalledTimes(1);
     expect(log).not.toBeCalled();
@@ -40,17 +40,17 @@ describe('recurrent', () => {
     asMock(readdir).mockRejectedValueOnce(new Error('error'));
 
     await expect(() =>
-      runRecurrentMigrations(options, testConfig),
+      runRecurrentMigrations(adapters, testConfig),
     ).rejects.toThrow('error');
   });
 
   it('should apply sql file', async () => {
-    Adapter.prototype.arrays = jest.fn();
-    Adapter.prototype.close = jest.fn();
+    TestAdapter.prototype.arrays = jest.fn();
+    TestAdapter.prototype.close = jest.fn();
 
     const db = {
-      adapter: { arrays: Adapter.prototype.arrays },
-      close: Adapter.prototype.close,
+      adapter: { arrays: TestAdapter.prototype.arrays },
+      close: TestAdapter.prototype.close,
     };
 
     asMock(readdir).mockResolvedValueOnce(['one.sql']);
@@ -62,7 +62,7 @@ describe('recurrent', () => {
 
     asMock(readFile).mockImplementation((path) => path);
 
-    await runRecurrentMigrations([options[0]], testConfig);
+    await runRecurrentMigrations([adapters[0]], testConfig);
 
     expect(readdir).toBeCalledWith(testConfig.recurrentPath);
 
@@ -89,8 +89,8 @@ describe('recurrent', () => {
     const query = jest.fn();
     const close = jest.fn();
 
-    Adapter.prototype.arrays = query;
-    Adapter.prototype.close = close;
+    TestAdapter.prototype.arrays = query;
+    TestAdapter.prototype.close = close;
 
     asMock(readdir).mockResolvedValueOnce([
       'dir',
@@ -121,7 +121,7 @@ describe('recurrent', () => {
 
     asMock(readFile).mockImplementation((path) => path);
 
-    await runRecurrentMigrations(options, testConfig);
+    await runRecurrentMigrations(adapters, testConfig);
 
     expect(readdir).toBeCalledWith(testConfig.recurrentPath);
     expect(readdir).toBeCalledWith(join(testConfig.recurrentPath, 'dir'));

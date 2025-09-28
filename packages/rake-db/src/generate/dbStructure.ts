@@ -1,6 +1,6 @@
-import { Adapter, SearchWeight } from 'pqb';
+import { SearchWeight } from 'pqb';
 import { RakeDbAst } from '../ast';
-import { EmptyObject, RecordUnknown } from 'orchid-core';
+import { AdapterBase, EmptyObject, RecordUnknown } from 'orchid-core';
 
 export namespace DbStructure {
   export interface TableNameAndSchemaName {
@@ -625,7 +625,7 @@ export interface IntrospectedStructure {
 }
 
 export async function introspectDbSchema(
-  db: Adapter,
+  db: AdapterBase,
 ): Promise<IntrospectedStructure> {
   const {
     rows: [{ version: versionString }],

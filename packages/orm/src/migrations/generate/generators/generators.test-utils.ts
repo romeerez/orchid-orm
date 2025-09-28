@@ -1,4 +1,5 @@
 import {
+  AdapterBase,
   ColumnSchemaConfig,
   ColumnsShapeBase,
   emptyArray,
@@ -6,15 +7,12 @@ import {
   noop,
 } from 'orchid-core';
 import {
-  Adapter,
-  AdapterOptions,
   DbSharedOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
   TableDataFn,
   TableDataItem,
 } from 'pqb';
-import { orchidORM } from '../../../orm';
 import {
   ChangeCallback,
   promptSelect,
@@ -22,7 +20,12 @@ import {
   createMigrationInterface,
   fullMigrate,
 } from 'rake-db';
-import { asMock, testColumnTypes } from 'test-utils';
+import {
+  asMock,
+  TestAdapter,
+  testColumnTypes,
+  testOrchidORM,
+} from 'test-utils';
 import { generate } from '../generate';
 import fs from 'fs/promises';
 import { testConfig } from '../../migrations.test-utils';
@@ -33,7 +36,7 @@ export const BaseTable = createBaseTable({
   snakeCase: true,
 });
 
-const defaultOptions: AdapterOptions[] = [
+const defaultOptions = [
   {
     // use a separate db for every jest worker because schema changes in one test can block other tests
     databaseURL: `${process.env.PG_GENERATE_URL}-${process.env.JEST_WORKER_ID}`,
@@ -41,15 +44,23 @@ const defaultOptions: AdapterOptions[] = [
 ];
 let options = defaultOptions;
 
+const makeAdapters = (): AdapterBase[] => {
+  return options.map((opts) => new TestAdapter(opts));
+};
+
+let adapters = makeAdapters();
+
 let config: AnyRakeDbConfig = testConfig;
 
 let prepareDbTransactionPromise: Promise<void> | undefined;
-let resolvePrepareDbTransaction: (() => void) | undefined;
-let arrangedAdapters: Adapter[] | undefined;
+let resolvePrepareDbTransaction: ((err: Error) => void) | undefined;
+let arrangedAdapters: AdapterBase[] | undefined;
+
+const rollbackError = new Error('Rollback');
 
 const arrange = async (arg: {
   config?: AnyRakeDbConfig;
-  options?: AdapterOptions[];
+  options?: { databaseURL: string }[];
   tables?: (typeof BaseTable)[];
   selects?: number[];
   dbOptions?: DbSharedOptions;
@@ -60,7 +71,7 @@ const arrange = async (arg: {
     ...(arg.config ?? testConfig),
     import: () =>
       Promise.resolve({
-        db: orchidORM(
+        db: testOrchidORM(
           {
             noPrimaryKey: 'ignore',
             ...arg.dbOptions,
@@ -81,35 +92,40 @@ const arrange = async (arg: {
 
   options = arg.options ?? defaultOptions;
 
-  const adapters = options.map((opts) => new Adapter(opts));
+  adapters = makeAdapters();
   arrangedAdapters = [...adapters];
 
   const { prepareDb } = arg;
   if (prepareDb) {
     await new Promise<void>((resolve) => {
       const adapter = adapters[0];
-      prepareDbTransactionPromise = adapter.transaction(
-        { text: 'BEGIN' },
-        (trx) =>
-          new Promise<void>(async (resolveTransaction) => {
-            // `generate` will attempt to close the adapter, but we need to keep it open in the test
-            trx.close = noop as () => Promise<void>;
+      prepareDbTransactionPromise = adapter
+        .transaction(
+          undefined,
+          (trx) =>
+            new Promise<void>(async (_, rejectTransaction) => {
+              // `generate` will attempt to close the adapter, but we need to keep it open in the test
+              trx.close = noop as () => Promise<void>;
 
-            adapters[0] = trx;
+              adapters[0] = trx;
 
-            const db = createMigrationInterface<
-              ColumnSchemaConfig,
-              DefaultColumnTypes<DefaultSchemaConfig>
-            >(trx, true, config);
+              const db = createMigrationInterface<
+                ColumnSchemaConfig,
+                DefaultColumnTypes<DefaultSchemaConfig>
+              >(trx, true, config);
 
-            await prepareDb(db, true);
+              await prepareDb(db, true);
 
-            resolve();
+              resolve();
 
-            resolvePrepareDbTransaction = resolveTransaction;
-          }),
-        { text: 'ROLLBACK' },
-      );
+              resolvePrepareDbTransaction = rejectTransaction;
+            }),
+        )
+        .catch((err) => {
+          if (err !== rollbackError) {
+            throw err;
+          }
+        });
     });
   }
 
@@ -122,7 +138,7 @@ const arrange = async (arg: {
   }
 };
 
-const act = () => generate(options, config, []);
+const act = () => generate(adapters, config, []);
 
 const assert = {
   migration(code?: string) {
@@ -150,12 +166,10 @@ const table = <Shape extends ColumnsShapeBase>(
 };
 
 export const useGeneratorsTestUtils = () => {
-  jest.setTimeout(10000);
-
   beforeEach(jest.clearAllMocks);
 
   afterEach(async () => {
-    resolvePrepareDbTransaction?.();
+    resolvePrepareDbTransaction?.(rollbackError);
     await Promise.all([
       prepareDbTransactionPromise,
       ...(arrangedAdapters?.map((x) => x.close()) ?? []),

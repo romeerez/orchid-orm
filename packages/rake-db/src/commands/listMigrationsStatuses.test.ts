@@ -2,13 +2,14 @@ import { listMigrationsStatuses } from './listMigrationsStatuses';
 import { testConfig } from '../rake-db.test-utils';
 import path from 'path';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
-import { asMock } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 import { getMigrations } from '../migration/migrationsSet';
 
 jest.mock('../migration/migrationsSet');
 jest.mock('../migration/manageMigratedVersions');
 
 const options = [{ databaseURL: 'postgres://user@localhost/dbname' }];
+const adapters = options.map((opts) => new TestAdapter(opts));
 
 describe('listMigrationsStatuses', () => {
   it('should log a list of migrations', async () => {
@@ -43,7 +44,7 @@ describe('listMigrationsStatuses', () => {
       sequence: ['0001', '0002'],
     });
 
-    await listMigrationsStatuses(options, config, []);
+    await listMigrationsStatuses(adapters, config, []);
 
     expect(config.logger.log).toBeCalledWith(` Database: dbname
 
@@ -87,7 +88,7 @@ describe('listMigrationsStatuses', () => {
       sequence: ['0001', '0002'],
     });
 
-    await listMigrationsStatuses(options, config, ['p']);
+    await listMigrationsStatuses(adapters, config, ['p']);
 
     expect(config.logger.log).toBeCalledWith(` Database: dbname
 

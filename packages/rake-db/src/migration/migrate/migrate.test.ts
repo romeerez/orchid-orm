@@ -1,7 +1,7 @@
-import { orchidORM, testTransaction } from 'orchid-orm';
+import { orchidORMWithAdapter, testTransaction } from 'orchid-orm';
 import { testAdapter } from 'test-utils';
 import { migrateFiles } from './migrate';
-import { rakeDb } from '../../rakeDb';
+import { rakeDbWithAdapters } from '../../rakeDb';
 
 const logger = {
   log: jest.fn(),
@@ -9,12 +9,12 @@ const logger = {
   error: jest.fn(),
 };
 
-export const { change } = rakeDb.lazy([], {
+export const { change } = rakeDbWithAdapters.lazy([], {
   log: { colors: false },
   logger,
 } as never);
 
-const db = orchidORM(
+const db = orchidORMWithAdapter(
   {
     adapter: testAdapter,
     log: { colors: false },

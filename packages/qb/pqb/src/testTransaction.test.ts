@@ -1,4 +1,4 @@
-import { testDb, useTestDatabase } from 'test-utils';
+import { testDb, testingWithPostgresJS, useTestDatabase } from 'test-utils';
 import { User, userData } from './test-utils/test-utils';
 import { testTransaction } from './testTransaction';
 
@@ -43,10 +43,13 @@ describe('testTransaction', () => {
     });
   });
 
-  it('should support starting and closing multiple times', async () => {
-    await testTransaction.start(testDb);
-    await testTransaction.close(testDb);
-    await testTransaction.start(testDb);
-    await testTransaction.close(testDb);
-  });
+  // Reopening a connection does not work with postgres-js
+  if (!testingWithPostgresJS) {
+    it('should support starting and closing multiple times', async () => {
+      await testTransaction.start(testDb);
+      await testTransaction.close(testDb);
+      await testTransaction.start(testDb);
+      await testTransaction.close(testDb);
+    });
+  }
 });

@@ -11,6 +11,7 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
   const pairs = await Promise.all([
     getLatestPackageVersion('dotenv', 'dependencies'),
     getLatestPackageVersion('orchid-orm', 'dependencies'),
+    getLatestPackageVersion('postgres', 'dependencies'),
     config.validation === 'zod'
       ? getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies')
       : config.validation === 'valibot'

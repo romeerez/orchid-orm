@@ -200,9 +200,9 @@ describe('queryMethods', () => {
 
   describe('rows', () => {
     it('returns array of rows', async () => {
-      const { rows: expected } = await testAdapter.arrays({
-        text: `SELECT ${userColumnsSql} FROM "user"`,
-      });
+      const { rows: expected } = await testAdapter.arrays(
+        `SELECT ${userColumnsSql} FROM "user"`,
+      );
 
       const received = await User.rows();
 

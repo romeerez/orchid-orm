@@ -1,5 +1,5 @@
-import { ColumnSchemaConfig } from 'orchid-core';
-import { Adapter, AdapterOptions, createDb, DbResult } from 'pqb';
+import { AdapterBase, ColumnSchemaConfig } from 'orchid-core';
+import { createDbWithAdapter, DbResult } from 'pqb';
 import { join } from 'path';
 import { readdir, stat, readFile } from 'fs/promises';
 import { RakeDbConfig } from '../config';
@@ -8,7 +8,7 @@ export const runRecurrentMigrations = async <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
 >(
-  options: AdapterOptions[],
+  adapters: AdapterBase[],
   config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
   let dbs: DbResult<unknown>[] | undefined;
@@ -18,7 +18,7 @@ export const runRecurrentMigrations = async <
     files++;
 
     // init dbs lazily
-    dbs ??= options.map((opts) => createDb({ adapter: new Adapter(opts) }));
+    dbs ??= adapters.map((adapter) => createDbWithAdapter({ adapter }));
 
     const sql = await readFile(path, 'utf-8');
     await Promise.all(

@@ -1,5 +1,10 @@
-import pg, { Client } from 'pg';
-import { assertType, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  TestAdapter,
+  testDb,
+  TestTransactionAdapter,
+  useTestDatabase,
+} from 'test-utils';
 import { User, userColumnsSql, userData } from '../test-utils/test-utils';
 import { noop } from 'orchid-core';
 import { AfterCommitError } from './transaction';
@@ -26,7 +31,8 @@ describe('transaction', () => {
   afterAll(testDb.close);
 
   it('should start and commit transaction', async () => {
-    const spy = jest.spyOn(pg.Client.prototype, 'query');
+    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+    const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
 
     const result = await testDb.transaction(async () => {
       const {
@@ -42,15 +48,16 @@ describe('transaction', () => {
 
     expect(result).toBe(3);
 
-    expect(
-      spy.mock.calls.map(
-        (call) => (call[0] as unknown as { text: string }).text,
-      ),
-    ).toEqual(['BEGIN', 'SELECT 1 AS a', 'SELECT 2 AS b', 'COMMIT']);
+    expect(transactionSpy).toBeCalledTimes(1);
+    expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
+      'SELECT 1 AS a',
+      'SELECT 2 AS b',
+    ]);
   });
 
   it('should rollback if error happens', async () => {
-    const spy = jest.spyOn(pg.Client.prototype, 'query');
+    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+    const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
 
     let error: Error | undefined;
 
@@ -62,15 +69,12 @@ describe('transaction', () => {
 
     expect(error?.message).toBe('error');
 
-    expect(
-      spy.mock.calls.map(
-        (call) => (call[0] as unknown as { text: string }).text,
-      ),
-    ).toEqual(['BEGIN', 'ROLLBACK']);
+    expect(transactionSpy).toBeCalledTimes(1);
+    expect(querySpy.mock.calls).toEqual([]);
   });
 
   it('should accept isolation level and options', async () => {
-    const spy = jest.spyOn(pg.Client.prototype, 'query');
+    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
 
     await testDb.transaction('REPEATABLE READ', async () => {});
     await testDb.transaction(
@@ -90,22 +94,16 @@ describe('transaction', () => {
       async () => {},
     );
 
-    expect(
-      spy.mock.calls.map(
-        (call) => (call[0] as unknown as { text: string }).text,
-      ),
-    ).toEqual([
-      'BEGIN ISOLATION LEVEL REPEATABLE READ',
-      'COMMIT',
-      'BEGIN ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE',
-      'COMMIT',
-      'BEGIN ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE',
-      'COMMIT',
+    expect(transactionSpy.mock.calls.map((call) => call[0])).toEqual([
+      'ISOLATION LEVEL REPEATABLE READ',
+      'ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE',
+      'ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE',
     ]);
   });
 
   it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
-    const query = jest.spyOn(Client.prototype, 'query');
+    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+    const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
 
     const result = await testDb.transaction(
       async () =>
@@ -114,21 +112,17 @@ describe('transaction', () => {
 
     expect(result).toBe(123);
 
-    expect(
-      query.mock.calls.map(
-        (call) => (call[0] as unknown as { text: string }).text,
-      ),
-    ).toEqual([
-      'BEGIN',
+    expect(transactionSpy).toBeCalledTimes(1);
+    expect(arraysSpy.mock.calls.map((call) => call[0])).toEqual([
       'SAVEPOINT "1"',
       'SELECT 123 LIMIT 1',
       'RELEASE SAVEPOINT "1"',
-      'COMMIT',
     ]);
   });
 
   it('should rollback a nested transaction with ROLLBACK TO SAVEPOINT', async () => {
-    const query = jest.spyOn(Client.prototype, 'query');
+    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+    const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
 
     await expect(() =>
       testDb.transaction(
@@ -139,25 +133,11 @@ describe('transaction', () => {
       ),
     ).rejects.toThrow('error');
 
-    expect(
-      query.mock.calls.map(
-        (call) => (call[0] as unknown as { text: string }).text,
-      ),
-    ).toEqual([
-      'BEGIN',
+    expect(transactionSpy).toBeCalledTimes(1);
+    expect(arraysSpy.mock.calls.map((call) => call[0])).toEqual([
       'SAVEPOINT "1"',
       'ROLLBACK TO SAVEPOINT "1"',
-      'ROLLBACK',
     ]);
-  });
-
-  it('should expose a `client` object of the database adapter', async () => {
-    let client: unknown;
-    await testDb.transaction(async () => {
-      client = testDb.internal.transactionStorage.getStore()?.adapter.client;
-    });
-
-    expect(client).toBeInstanceOf(Client);
   });
 
   describe('log option', () => {
@@ -180,7 +160,8 @@ describe('transaction', () => {
 
   describe('ensureTransaction', () => {
     it('should not start another transaction when already inside a transaction', async () => {
-      const spy = jest.spyOn(pg.Client.prototype, 'query');
+      const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+      const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
 
       const result = await testDb.transaction(async () => {
         return testDb.ensureTransaction(async () => {
@@ -197,15 +178,16 @@ describe('transaction', () => {
 
       expect(result).toBe(3);
 
-      expect(
-        spy.mock.calls.map(
-          (call) => (call[0] as unknown as { text: string }).text,
-        ),
-      ).toEqual(['BEGIN', 'SELECT 1 AS a', 'SELECT 2 AS b', 'COMMIT']);
+      expect(transactionSpy).toBeCalledTimes(1);
+      expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
+        'SELECT 1 AS a',
+        'SELECT 2 AS b',
+      ]);
     });
 
     it('should start a transaction if it was not started yet', async () => {
-      const spy = jest.spyOn(pg.Client.prototype, 'query');
+      const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+      const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
 
       const result = await testDb.ensureTransaction(async () => {
         const {
@@ -222,11 +204,11 @@ describe('transaction', () => {
 
       expect(result).toBe(3);
 
-      expect(
-        spy.mock.calls.map(
-          (call) => (call[0] as unknown as { text: string }).text,
-        ),
-      ).toEqual(['BEGIN', 'SELECT 1 AS a', 'SELECT 2 AS b', 'COMMIT']);
+      expect(transactionSpy).toHaveBeenCalledTimes(1);
+      expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
+        'SELECT 1 AS a',
+        'SELECT 2 AS b',
+      ]);
     });
   });
 

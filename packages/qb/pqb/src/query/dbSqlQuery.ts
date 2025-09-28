@@ -1,5 +1,7 @@
 import {
+  AdapterBase,
   isRawSQL,
+  QueryResult,
   QueryResultRow,
   RecordUnknown,
   Sql,
@@ -7,11 +9,9 @@ import {
   TemplateLiteralArgs,
 } from 'orchid-core';
 import {
-  Adapter,
   QueryBuilder,
   QueryData,
   QueryInternal,
-  QueryResult,
   templateLiteralToSQL,
 } from 'pqb';
 
@@ -97,7 +97,7 @@ export const performQuery = async <Result = QueryResult>(
   q: {
     qb: QueryBuilder;
     internal: QueryInternal;
-    adapter: Adapter;
+    adapter: AdapterBase;
     q: QueryData;
   },
   args: SQLQueryArgs,
@@ -129,13 +129,14 @@ export const performQuery = async <Result = QueryResult>(
   if (log) logData = log.beforeQuery(sql);
 
   try {
-    const result = (await (trx?.adapter || q.adapter)[method as 'query'](
-      sql,
-    )) as Promise<Result>;
+    const result = await (trx?.adapter || q.adapter)[method as 'query'](
+      sql.text,
+      sql.values,
+    );
 
     if (log) log.afterQuery(sql, logData);
 
-    return result;
+    return result as Result;
   } catch (err) {
     if (log) {
       log.onError(err as Error, sql, logData);

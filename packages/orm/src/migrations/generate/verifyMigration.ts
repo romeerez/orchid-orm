@@ -1,5 +1,4 @@
-import { ColumnSchemaConfig } from 'orchid-core';
-import { Adapter } from 'pqb';
+import { AdapterBase, ColumnSchemaConfig } from 'orchid-core';
 import {
   AnyRakeDbConfig,
   createMigrationInterface,
@@ -9,17 +8,20 @@ import {
 import { composeMigration, ComposeMigrationParams } from './composeMigration';
 import { AbortSignal } from './generate';
 
+const rollbackErr = new Error('Rollback');
+
 export const verifyMigration = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   config: AnyRakeDbConfig,
   migrationCode: string,
   generateMigrationParams: ComposeMigrationParams,
 ): Promise<string | false | undefined> => {
   const migrationFn = new Function('change', migrationCode);
 
-  return adapter.transaction(
-    { text: 'BEGIN' },
-    async (trx) => {
+  let code: string | false | undefined;
+
+  try {
+    await adapter.transaction(undefined, async (trx) => {
       const changeFns: ChangeCallback<unknown>[] = [];
       migrationFn((changeCb: ChangeCallback<unknown>) => {
         changeFns.push(changeCb);
@@ -42,7 +44,7 @@ export const verifyMigration = async (
 
       const dbStructure = await introspectDbSchema(trx);
       generateMigrationParams.verifying = true;
-      let code: string | undefined;
+
       try {
         code = await composeMigration(
           trx,
@@ -53,13 +55,19 @@ export const verifyMigration = async (
         );
       } catch (err) {
         if (err instanceof AbortSignal) {
-          return false;
+          code = false;
+          throw rollbackErr;
         }
         throw err;
       }
 
-      return code;
-    },
-    { text: 'ROLLBACK' },
-  );
+      throw rollbackErr;
+    });
+  } catch (err) {
+    if (err !== rollbackErr) {
+      throw err;
+    }
+  }
+
+  return code;
 };

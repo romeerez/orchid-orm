@@ -1,7 +1,7 @@
-import { orchidORM } from './orm';
+import { orchidORMWithAdapter } from './orm';
 import { createRepo } from './repo';
 import { BaseTable } from './test-utils/orm.test-utils';
-import { assertType, expectSql, testDbOptions } from 'test-utils';
+import { assertType, expectSql, testAdapter, testDbOptions } from 'test-utils';
 import { QueryReturnType } from 'orchid-core';
 
 class SomeTable extends BaseTable {
@@ -49,11 +49,14 @@ class AnotherTable extends BaseTable {
   }));
 }
 
-const db = orchidORM(testDbOptions, {
-  some: SomeTable,
-  other: OtherTable,
-  another: AnotherTable,
-});
+const db = orchidORMWithAdapter(
+  { ...testDbOptions, adapter: testAdapter },
+  {
+    some: SomeTable,
+    other: OtherTable,
+    another: AnotherTable,
+  },
+);
 
 describe('createRepo', () => {
   describe('queryMethods', () => {

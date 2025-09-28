@@ -1,4 +1,4 @@
-import { Adapter, QueryInternal } from 'pqb';
+import { QueryInternal } from 'pqb';
 import {
   AnyRakeDbConfig,
   RakeDbAst,
@@ -13,6 +13,7 @@ import { processDomains } from './generators/domains.generator';
 import { processEnums } from './generators/enums.generator';
 import { processTables } from './generators/tables.generator';
 import { CodeItems } from './generate';
+import { AdapterBase } from 'orchid-core';
 
 export interface ComposeMigrationParams {
   structureToAstCtx: StructureToAstCtx;
@@ -23,7 +24,7 @@ export interface ComposeMigrationParams {
 }
 
 export const composeMigration = async (
-  adapter: Adapter,
+  adapter: AdapterBase,
   config: AnyRakeDbConfig,
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,

@@ -30,7 +30,10 @@ The second argument is an object where keys are names and values are table class
 Returns an instance with tables and some specific functions prefixed with a `$` sign to not overlap with your tables.
 
 ```ts
-import { orchidORM } from 'orchid-orm';
+// for porsager/postgres driver:
+import { orchidORM } from 'orchid-orm/postgres-js';
+// for node-postgres driver:
+import { orchidORM } from 'orchid-orm/node-postgres';
 
 // import all tables
 import { UserTable } from './tables/user';
@@ -69,7 +72,10 @@ export const db = orchidORM(
 If needed, you can pass `Adapter` instance instead of connection options:
 
 ```ts
-import { orchidORM, Adapter } from 'orchid-orm';
+// for porsager/postgres driver:
+import { orchidORM, Adapter } from 'orchid-orm/postgres-js';
+// for node-postgres driver:
+import { orchidORM, Adapter } from 'orchid-orm/node-postgres';
 
 export const db = orchidORM(
   {
@@ -516,7 +522,10 @@ but everything that's not related to table relations should also work with `pqb`
 It is accepting the same options as `orchidORM` + options of `createBaseTable`:
 
 ```ts
-import { createDb } from 'orchid-orm';
+// for porsager/postgres driver:
+import { createDb } from 'pqb/postgres-js';
+// for node-postgres driver:
+import { createDb } from 'pqb/node-postgres';
 
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 // or

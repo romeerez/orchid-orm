@@ -22,8 +22,8 @@ import {
   QueryBase,
   RelationConfigBase,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  QueryResult,
 } from 'orchid-core';
-import { QueryResult } from '../../adapter';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
 import { OrchidOrmInternalError } from 'orchid-core';
 import { moveQueryValueToWith } from '../with';

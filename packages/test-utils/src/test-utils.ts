@@ -1,10 +1,9 @@
 import {
-  Adapter,
   makeColumnTypes,
-  createDb,
   testTransaction,
   defaultSchemaConfig,
   QueryData,
+  createDbWithAdapter,
 } from 'pqb';
 import {
   ColumnTypeBase,
@@ -14,9 +13,55 @@ import {
   Sql,
   toArray,
 } from 'orchid-core';
-import { zodSchemaConfig, ZodSchemaConfig } from 'schema-to-zod';
+import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
+import {
+  createDb as nodePostgresCreateDb,
+  NodePostgresAdapter,
+  NodePostgresTransactionAdapter,
+} from 'pqb/node-postgres';
+import { orchidORM as nodePostgresOrchidORM } from '../../orm/src/adapters/node-postgres';
+import { rakeDb as nodePostgresRakeDb } from '../../rake-db/src/adapters/node-postgres';
+import {
+  createDb as postgresJsCreateDb,
+  PostgresJsAdapter,
+  PostgresJsTransactionAdapter,
+} from 'pqb/postgres-js';
+import { orchidORM as postgresJsOrchidORM } from '../../orm/src/adapters/postgres-js';
+import { rakeDb as postgresJsRakeDb } from '../../rake-db/src/adapters/postgres-js';
 // is needed to get rid of TS portability error in zod column types
 import 'zod';
+
+export const testingWithPostgresJS = true;
+
+function setupNodePostgres() {
+  return {
+    TestAdapter: NodePostgresAdapter,
+    TestTransactionAdapter: NodePostgresTransactionAdapter,
+    createDb: nodePostgresCreateDb,
+    orchidORM: nodePostgresOrchidORM,
+    rakeDb: nodePostgresRakeDb,
+  };
+}
+
+function setupPostgresJs() {
+  return {
+    TestAdapter: PostgresJsAdapter,
+    TestTransactionAdapter: PostgresJsTransactionAdapter,
+    createDb: postgresJsCreateDb,
+    orchidORM: postgresJsOrchidORM,
+    rakeDb: postgresJsRakeDb,
+  };
+}
+
+const driverItems = testingWithPostgresJS
+  ? setupPostgresJs()
+  : setupNodePostgres();
+
+export const TestAdapter = driverItems.TestAdapter;
+export const TestTransactionAdapter = driverItems.TestTransactionAdapter;
+export const createTestDb = driverItems.createDb;
+export const testOrchidORM = driverItems.orchidORM;
+export const testRakeDb = driverItems.rakeDb;
 
 export type TestSchemaConfig = ZodSchemaConfig;
 
@@ -27,7 +72,7 @@ export const testDbOptions = {
 
 export const testSchemaConfig = zodSchemaConfig;
 
-export const testAdapter = new Adapter(testDbOptions);
+export const testAdapter = new TestAdapter(testDbOptions);
 
 export const columnTypes = makeColumnTypes(defaultSchemaConfig);
 
@@ -41,7 +86,7 @@ export const testColumnTypes = {
   },
 };
 
-export const testDb = createDb({
+export const testDb = createDbWithAdapter({
   snakeCase: true,
   adapter: testAdapter,
   columnTypes: testColumnTypes,
@@ -108,20 +153,16 @@ export const now = new Date();
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
 
+if ('afterAll' in global) {
+  afterAll(() => testTransaction.close(testDb));
+}
+
 export const useTestDatabase = () => {
-  beforeAll(async () => {
-    await testTransaction.start(testDb);
-  });
+  beforeAll(() => testTransaction.start(testDb));
 
-  beforeEach(async () => {
-    await testTransaction.start(testDb);
-  });
+  beforeEach(() => testTransaction.start(testDb));
 
-  afterEach(async () => {
-    await testTransaction.rollback(testDb);
-  });
+  afterEach(() => testTransaction.rollback(testDb));
 
-  afterAll(async () => {
-    await testTransaction.close(testDb);
-  });
+  afterAll(() => testTransaction.rollback(testDb));
 };

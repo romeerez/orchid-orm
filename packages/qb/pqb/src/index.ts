@@ -1,6 +1,5 @@
 export * from './columns';
 export * from './sql';
-export * from './adapter';
 export * from './sql/rawSql';
 export * from './query';
 export * from './queryMethods';

@@ -1,7 +1,12 @@
-import { createDb } from '../query/db';
+import { createDbWithAdapter } from '../query/db';
 import { userData } from '../test-utils/test-utils';
 import { logColors, noop } from 'orchid-core';
-import { testAdapter, testDbOptions, useTestDatabase } from 'test-utils';
+import {
+  createTestDb,
+  testAdapter,
+  testDbOptions,
+  useTestDatabase,
+} from 'test-utils';
 
 const hrtime = jest.spyOn(process, 'hrtime');
 hrtime.mockReturnValue([0, 0]);
@@ -21,13 +26,13 @@ describe('query log', () => {
   });
 
   it('should not have `log` query object by default', () => {
-    const db = createDb(testDbOptions);
+    const db = createTestDb(testDbOptions);
 
     expect(db('user').q.log).toBe(undefined);
   });
 
   it('should set `log` query object when configuring db instance', () => {
-    const db = createDb({
+    const db = createTestDb({
       ...testDbOptions,
       log: true,
     });
@@ -36,21 +41,21 @@ describe('query log', () => {
   });
 
   it('should set `log` query object for a table', () => {
-    const db = createDb(testDbOptions);
+    const db = createTestDb(testDbOptions);
     const table = db('user', undefined, undefined, { log: true });
 
     expect(table.q.log).toBeTruthy();
   });
 
   it('should set `log` query object with query method', () => {
-    const db = createDb(testDbOptions);
+    const db = createTestDb(testDbOptions);
     const table = db('user');
 
     expect(table.log().q.log).toBeTruthy();
   });
 
   it('should log elapsed time, sql and binding values', async () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       log: true,
       logger,
@@ -70,7 +75,7 @@ describe('query log', () => {
   });
 
   it('should log elapsed time, sql and binding values without colors', async () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       log: { colors: false },
       logger,
@@ -86,7 +91,7 @@ describe('query log', () => {
   });
 
   it('should log when using db.query', async () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       log: { colors: false },
       logger,
@@ -98,7 +103,7 @@ describe('query log', () => {
   });
 
   it('should log in red in case of error', async () => {
-    const db = createDb({ adapter: testAdapter, log: true, logger });
+    const db = createDbWithAdapter({ adapter: testAdapter, log: true, logger });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
 
@@ -114,7 +119,7 @@ describe('query log', () => {
   });
 
   it('should log in red in case of error without colors', async () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       log: { colors: false },
       logger,
@@ -130,7 +135,7 @@ describe('query log', () => {
   });
 
   it('should log when using db.query', async () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       log: { colors: false },
       logger,
@@ -144,7 +149,7 @@ describe('query log', () => {
   });
 
   it('should log successful transaction', async () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       log: { colors: false },
       logger,
@@ -162,7 +167,7 @@ describe('query log', () => {
   });
 
   it('should log failed transaction', async () => {
-    const db = createDb({
+    const db = createDbWithAdapter({
       adapter: testAdapter,
       log: { colors: false },
       logger,

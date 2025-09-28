@@ -1,9 +1,8 @@
-import { Adapter } from 'pqb';
 import { RakeDbConfig } from '../config';
-import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
+import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
 
 export const createMigrationsTable = async (
-  db: Adapter,
+  db: AdapterBase,
   config: Pick<RakeDbConfig<ColumnSchemaConfig>, 'migrationsTable' | 'logger'>,
 ) => {
   const { schema } = db;

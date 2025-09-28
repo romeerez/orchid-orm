@@ -1,5 +1,5 @@
-import { Adapter, EnumColumn, TransactionAdapter } from 'pqb';
-import { ColumnSchemaConfig, singleQuote } from 'orchid-core';
+import { EnumColumn } from 'pqb';
+import { AdapterBase, ColumnSchemaConfig, singleQuote } from 'orchid-core';
 import { TableQuery } from './migration/createTable';
 import { RAKE_DB_LOCK_KEY } from './commands/migrateOrRollback';
 import { MigrationsSet } from './migration/migrationsSet';
@@ -118,17 +118,12 @@ export const makePopulateEnumQuery = (
   };
 };
 
-// SQL to start a transaction
-const begin = {
-  text: 'BEGIN',
-};
-
 export const transaction = <T>(
-  adapter: Adapter,
-  fn: (trx: TransactionAdapter) => Promise<T>,
+  adapter: AdapterBase,
+  fn: (trx: AdapterBase) => Promise<T>,
 ): Promise<T> => {
-  return adapter.transaction(begin, fn);
+  return adapter.transaction<T>(undefined, fn);
 };
 
-export const queryLock = (trx: TransactionAdapter) =>
+export const queryLock = (trx: AdapterBase) =>
   trx.query(`SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`);

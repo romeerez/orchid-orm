@@ -1,8 +1,7 @@
 import {
-  Adapter,
   ColumnsShape,
   ColumnType,
-  createDb,
+  createDbWithAdapter,
   DbDomainArg,
   DbResult,
   EnumColumn,
@@ -12,19 +11,17 @@ import {
   TableData,
   TableDataFn,
   TableDataItem,
-  TransactionAdapter,
 } from 'pqb';
 import {
+  AdapterBase,
   ColumnSchemaConfig,
   emptyObject,
   MaybeArray,
-  QueryInput,
   QueryLogObject,
   RawSQLBase,
   RecordString,
   RecordUnknown,
   singleQuote,
-  SingleSql,
   toSnakeCase,
 } from 'orchid-core';
 import { createTable, CreateTableResult } from './createTable';
@@ -93,9 +90,9 @@ export type ColumnComment = { column: string; comment: string | null };
 // Database adapter methods to perform queries without logging
 export type SilentQueries = {
   // Query without logging
-  silentQuery: Adapter['query'];
+  silentQuery: AdapterBase['query'];
   // Query arrays without logging
-  silentArrays: Adapter['arrays'];
+  silentArrays: AdapterBase['arrays'];
 };
 
 // Combined queryable database instance and a migration interface
@@ -117,31 +114,31 @@ export const createMigrationInterface = <
   SchemaConfig extends ColumnSchemaConfig,
   CT,
 >(
-  tx: TransactionAdapter,
+  tx: AdapterBase,
   up: boolean,
   config: RakeDbConfig<SchemaConfig, CT>,
 ): DbMigration<CT> => {
-  const adapter = new TransactionAdapter(
-    tx,
-    tx.client,
-    tx.types,
-  ) as MigrationAdapter;
-  adapter.schema = adapter.adapter.schema ?? 'public';
+  const adapter = Object.create(tx) as MigrationAdapter;
+  adapter.schema = adapter.getSchema() ?? 'public';
 
   const { query, arrays } = adapter;
   const log = logParamToLogObject(config.logger || console, config.log);
 
-  adapter.query = ((q, types) => {
-    return wrapWithLog(log, q, () => query.call(adapter, q, types));
+  adapter.query = ((text, values) => {
+    return wrapWithLog(log, text, values, () =>
+      query.call(adapter, text, values),
+    );
   }) as typeof adapter.query;
 
-  adapter.arrays = ((q, types) => {
-    return wrapWithLog(log, q, () => arrays.call(adapter, q, types));
+  adapter.arrays = ((text, values) => {
+    return wrapWithLog(log, text, values, () =>
+      arrays.call(adapter, text, values),
+    );
   }) as typeof adapter.arrays;
 
   Object.assign(adapter, { silentQuery: query, silentArrays: arrays });
 
-  const db = createDb({
+  const db = createDbWithAdapter({
     adapter,
     columnTypes: config.columnTypes,
   }) as unknown as DbMigration<CT>;
@@ -159,7 +156,7 @@ export const createMigrationInterface = <
   });
 };
 
-export interface MigrationAdapter extends TransactionAdapter {
+export interface MigrationAdapter extends AdapterBase {
   schema: string;
 }
 
@@ -1406,24 +1403,23 @@ export class Migration<CT> {
  * If `log` object is specified, it will perform the query with logging.
  *
  * @param log - logger object
- * @param query - object with SQL text and values for a query
+ * @param text - SQL text
+ * @param values - SQL values
  * @param fn - function to call the original `query` or `arrays`
  */
 const wrapWithLog = async <Result>(
   log: QueryLogObject | undefined,
-  query: QueryInput,
+  text: string,
+  values: unknown[] | undefined,
   fn: () => Promise<Result>,
 ): Promise<Result> => {
   if (!log) {
     return fn();
   } else {
-    const sql = (
-      typeof query === 'string'
-        ? { text: query, values: [] }
-        : query.values
-        ? query
-        : { ...query, values: [] }
-    ) as SingleSql;
+    const sql = {
+      text,
+      values: values || [],
+    };
 
     const logData = log.beforeQuery(sql);
 
@@ -1722,7 +1718,9 @@ const queryExists = (
   db: Migration<unknown>,
   sql: { text: string; values: unknown[] },
 ): Promise<boolean> => {
-  return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);
+  return db.adapter
+    .query(sql.text, sql.values)
+    .then(({ rowCount }) => rowCount > 0);
 };
 
 export const renameType = async (

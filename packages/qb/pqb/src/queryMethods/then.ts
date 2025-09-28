@@ -1,6 +1,5 @@
 import { Query } from '../query/query';
-import { NotFoundError, QueryError } from 'orchid-core';
-import { QueryResult } from '../adapter';
+import { NotFoundError, QueryError, QueryResult } from 'orchid-core';
 import {
   HandleResult,
   QueryAfterHook,
@@ -8,7 +7,6 @@ import {
   SelectAsValue,
   SelectItem,
 } from '../sql';
-import pg from 'pg';
 import {
   AdapterBase,
   AfterCommitHook,
@@ -225,7 +223,7 @@ const then = async (
         : returnType;
 
     let result: unknown;
-    let queryResult;
+    let queryResult: QueryResult;
 
     if ('text' in sql) {
       if (query.autoPreparedStatements) {
@@ -262,38 +260,44 @@ const then = async (
 
       const queryMethod = queryMethodByReturnType[tempReturnType] as 'query';
 
-      if (!trx) {
+      const queryBatch = async (batch: SingleSql[]) => {
+        for (const item of batch) {
+          sql = item;
+
+          if (log) {
+            logData = log.beforeQuery(sql);
+          }
+
+          const result = await execQuery(adapter, queryMethod, sql);
+
+          if (queryResult) {
+            queryResult.rowCount += result.rowCount;
+            queryResult.rows.push(...result.rows);
+          } else {
+            queryResult = result;
+          }
+
+          if (log) {
+            log.afterQuery(sql, logData);
+          }
+        }
+
+        // set sql to be undefined to prevent logging on error in case if afterHooks throws
+        sql = undefined;
+      };
+
+      if (trx) {
+        await queryBatch(sql.batch);
+      } else {
+        const { batch } = sql;
+
         if (log) logData = log.beforeQuery(beginSql);
-        await adapter.arrays(beginSql);
-        if (log) log.afterQuery(beginSql, logData);
-      }
-
-      for (const item of sql.batch) {
-        sql = item;
-
-        if (log) {
-          logData = log.beforeQuery(sql);
-        }
-
-        const result = await execQuery(adapter, queryMethod, sql);
-
-        if (queryResult) {
-          queryResult.rowCount += result.rowCount;
-          queryResult.rows.push(...result.rows);
-        } else {
-          queryResult = result;
-        }
-
-        if (log) {
-          log.afterQuery(sql, logData);
-          // set sql to be undefined to prevent logging on error in case if afterHooks throws
-          sql = undefined;
-        }
-      }
-
-      if (!trx) {
-        if (log) logData = log.beforeQuery(commitSql);
-        await adapter.arrays(commitSql);
+        await adapter.transaction(undefined, async () => {
+          if (log) log.afterQuery(beginSql, logData);
+          const res = await queryBatch(batch);
+          if (log) logData = log.beforeQuery(commitSql);
+          return res;
+        });
         if (log) log.afterQuery(commitSql, logData);
       }
 
@@ -487,9 +491,9 @@ const then = async (
     return resolve ? resolve(result) : result;
   } catch (err) {
     let error;
-    if (err instanceof pg.DatabaseError) {
+    if (err instanceof adapter.errorClass) {
       error = new (q.error as unknown as new () => QueryError)();
-      assignError(error, err);
+      adapter.assignError(error, err);
       error.cause = localError;
     } else {
       error = err;
@@ -530,40 +534,16 @@ const execQuery = (
   method: 'query' | 'arrays',
   sql: SingleSql,
 ) => {
-  return (adapter[method as 'query'](sql) as Promise<QueryResult>).then(
-    (result) => {
-      if (result.rowCount && !result.rows.length) {
-        result.rows.length = result.rowCount;
-        result.rows.fill({});
-      }
+  return (
+    adapter[method as 'query'](sql.text, sql.values) as Promise<QueryResult>
+  ).then((result) => {
+    if (result.rowCount && !result.rows.length) {
+      result.rows.length = result.rowCount;
+      result.rows.fill({});
+    }
 
-      return result;
-    },
-  );
-};
-
-const assignError = (to: QueryError, from: pg.DatabaseError) => {
-  to.message = from.message;
-  (to as { length?: number }).length = from.length;
-  (to as { name?: string }).name = from.name;
-  to.severity = from.severity;
-  to.code = from.code;
-  to.detail = from.detail;
-  to.hint = from.hint;
-  to.position = from.position;
-  to.internalPosition = from.internalPosition;
-  to.internalQuery = from.internalQuery;
-  to.where = from.where;
-  to.schema = from.schema;
-  to.table = from.table;
-  to.column = from.column;
-  to.dataType = from.dataType;
-  to.constraint = from.constraint;
-  to.file = from.file;
-  to.line = from.line;
-  to.routine = from.routine;
-
-  return to;
+    return result;
+  });
 };
 
 export const handleResult: HandleResult = (

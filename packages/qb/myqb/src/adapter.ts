@@ -1,20 +1,5 @@
-import {
-  createPool,
-  Pool,
-  PoolOptions,
-  PoolConnection,
-  FieldPacket,
-} from 'mysql2/promise';
-import { AdapterBase, QueryResultRow, SingleSqlItem, Sql } from 'orchid-core';
-
-export type QueryResult<T extends QueryResultRow> = [
-  (T & {
-    constructor: {
-      name: 'RowDataPacket';
-    };
-  })[],
-  FieldPacket[],
-];
+import { createPool, Pool, PoolOptions, PoolConnection } from 'mysql2/promise';
+import { AdapterBase, QueryResult, QueryResultRow } from 'orchid-core';
 
 export type QueryInput = string | { text: string; values?: unknown[] };
 
@@ -58,27 +43,51 @@ export class Adapter implements AdapterBase {
     throw new Error(`Not implemented for MySQL`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async query<T extends QueryResultRow = any>(
+  reconfigure(_: {
+    database?: string;
+    user?: string;
+    password?: string;
+    schema?: string;
+  }): AdapterBase {
+    throw new Error('Not implemented for MySQL');
+  }
+
+  getDatabase(): string {
+    throw new Error('Not implemented for MySQL');
+  }
+
+  getUser(): string {
+    throw new Error('Not implemented for MySQL');
+  }
+
+  getSchema(): string {
+    throw new Error('Not implemented for MySQL');
+  }
+
+  getHost(): string {
+    throw new Error('Not implemented for MySQL');
+  }
+
+  async query<T extends QueryResultRow = QueryResultRow>(
     query: QueryInput,
   ): Promise<QueryResult<T>> {
-    return makeQuery<T>(this.pool, query);
+    return makeQuery<T>(this.pool, query) as never;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async arrays<T extends any[] = any[]>(
     query: QueryInput,
   ): Promise<QueryResult<T>> {
-    return queryArrays<T>(this.pool, query);
+    return queryArrays<T>(this.pool, query) as never;
   }
 
   async transaction<Result>(
-    begin: SingleSqlItem,
-    cb: (adapter: TransactionAdapter) => Promise<Result>,
+    options: string | undefined,
+    cb: (adapter: AdapterBase) => Promise<Result>,
   ): Promise<Result> {
     const client = await this.pool.getConnection();
     try {
-      await makeQuery(client, begin);
+      await makeQuery(client, options ? `BEGIN ${options}` : 'BEGIN');
       let result;
       try {
         result = await cb(new TransactionAdapter(this, client));
@@ -132,7 +141,7 @@ const queryArrays = <T extends any[]>(
   });
 };
 
-export class TransactionAdapter implements Adapter {
+export class TransactionAdapter implements AdapterBase {
   pool: Pool;
   config: PoolOptions;
 
@@ -145,23 +154,48 @@ export class TransactionAdapter implements Adapter {
     return Promise.resolve(this.client);
   }
 
+  reconfigure(params: {
+    database?: string;
+    user?: string;
+    password?: string;
+    schema?: string;
+  }): AdapterBase {
+    return this.adapter.reconfigure(params);
+  }
+
+  getDatabase(): string {
+    return this.adapter.getDatabase();
+  }
+
+  getUser(): string {
+    return this.adapter.getUser();
+  }
+
+  getSchema(): string {
+    return this.adapter.getSchema();
+  }
+
+  getHost(): string {
+    return this.adapter.getHost();
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async query<T extends QueryResultRow = any>(
+  async query<T extends QueryResultRow = QueryResultRow>(
     query: QueryInput,
   ): Promise<QueryResult<T>> {
-    return await makeQuery<T>(this.client, query);
+    return (await makeQuery<T>(this.client, query)) as never;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async arrays<R extends any[] = any[]>(
     query: QueryInput,
   ): Promise<QueryResult<R>> {
-    return await queryArrays<R>(this.client, query);
+    return (await queryArrays<R>(this.client, query)) as never;
   }
 
   async transaction<Result>(
-    _: Sql,
-    cb: (adapter: TransactionAdapter) => Promise<Result>,
+    _options: string | undefined,
+    cb: (adapter: AdapterBase) => Promise<Result>,
   ): Promise<Result> {
     return await cb(this);
   }
