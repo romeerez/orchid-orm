@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.27.1
+
+### Patch Changes
+
+- 913b15c: Support running migrations for dynamically specified databases with makeConnectAndMigrate (#562)
+- Updated dependencies [b003feb]
+- Updated dependencies [db77489]
+- Updated dependencies [fe746b0]
+- Updated dependencies [8b2547b]
+- Updated dependencies [07621c0]
+  - pqb@0.56.1
+
 ## 2.27.0
 
 ### Minor Changes

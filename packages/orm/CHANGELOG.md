@@ -1,5 +1,21 @@
 # orchid-orm
 
+## 1.56.1
+
+### Patch Changes
+
+- b003feb: Fix get().orCreate() result type (#563)
+- 913b15c: Support running migrations for dynamically specified databases with makeConnectAndMigrate (#562)
+- 07621c0: Add runtime validation to findBy and findByOptional (#564)
+- Updated dependencies [b003feb]
+- Updated dependencies [db77489]
+- Updated dependencies [fe746b0]
+- Updated dependencies [8b2547b]
+- Updated dependencies [913b15c]
+- Updated dependencies [07621c0]
+  - pqb@0.56.1
+  - rake-db@2.27.1
+
 ## 1.56.0
 
 ### Minor Changes

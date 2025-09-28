@@ -1,5 +1,15 @@
 # pqb
 
+## 0.56.1
+
+### Patch Changes
+
+- b003feb: Fix get().orCreate() result type (#563)
+- db77489: Fix `get` on a relation in a nested select (#565)
+- fe746b0: Fix nested select of relation when selecting SQL without specifying a column type (#566)
+- 8b2547b: Ignore empty objects in whereOneOf (#567)
+- 07621c0: Add runtime validation to findBy and findByOptional (#564)
+
 ## 0.56.0
 
 ### Minor Changes
