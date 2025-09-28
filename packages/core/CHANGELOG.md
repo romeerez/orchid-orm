@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.29.1
+
+### Patch Changes
+
+- 39331d2: Bump packages
+
 ## 0.29.0
 
 ### Minor Changes

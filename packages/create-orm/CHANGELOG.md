@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.4.1
+
+### Patch Changes
+
+- 39331d2: Bump packages
+
 ## 0.4.0
 
 ### Minor Changes

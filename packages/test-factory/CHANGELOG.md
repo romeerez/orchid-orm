@@ -1,5 +1,14 @@
 # orchid-orm-test-factory
 
+## 1.0.60
+
+### Patch Changes
+
+- 39331d2: Bump packages
+- Updated dependencies [39331d2]
+  - orchid-core@0.29.1
+  - pqb@0.56.2
+
 ## 1.0.59
 
 ### Patch Changes

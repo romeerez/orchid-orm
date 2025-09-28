@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.56.2
+
+### Patch Changes
+
+- 39331d2: Bump packages
+- Updated dependencies [39331d2]
+- Updated dependencies [b776b63]
+  - orchid-core@0.29.1
+  - pqb@0.56.2
+  - rake-db@2.27.2
+
 ## 1.56.1
 
 ### Patch Changes

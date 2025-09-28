@@ -1,5 +1,13 @@
 # pqb
 
+## 0.56.2
+
+### Patch Changes
+
+- 39331d2: Bump packages
+- Updated dependencies [39331d2]
+  - orchid-core@0.29.1
+
 ## 0.56.1
 
 ### Patch Changes
