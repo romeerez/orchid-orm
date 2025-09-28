@@ -78,6 +78,30 @@ describe('whereOneOf', () => {
       [1, 'a', 'b'],
     );
   });
+
+  it('should ignore empty objects', () => {
+    const q = User.whereOneOf({}, {});
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT ${userColumnsSql} FROM "user"
+      `,
+    );
+  });
+
+  it('should accept empty and non-empty objects', () => {
+    const q = User.whereOneOf({ id: 1 }, {});
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT ${userColumnsSql} FROM "user"
+        WHERE ("user"."id" = $1)
+      `,
+      [1],
+    );
+  });
 });
 
 describe('whereNotOneOf', () => {

@@ -133,11 +133,13 @@ const processAnds = (
   query: QueryDataForWhere,
   quotedAs?: string,
   parens?: boolean,
-): string => {
+): string | undefined => {
   const ands: string[] = [];
   for (const data of and) {
     processWhere(ands, ctx, table, query, data, quotedAs);
   }
+  if (!ands.length) return;
+
   const sql = ands.join(' AND ');
   return parens && ands.length > 1 ? `(${sql})` : sql;
 };
@@ -184,14 +186,16 @@ const processWhere = (
 
     if (key === 'AND') {
       const arr = toArray(value as MaybeArray<WhereItem>);
-      ands.push(processAnds(arr, ctx, table, query, quotedAs));
+      const sql = processAnds(arr, ctx, table, query, quotedAs);
+      if (sql) ands.push(sql);
     } else if (key === 'OR') {
       const arr = (value as MaybeArray<WhereItem>[]).map(toArray);
-      ands.push(
-        `(${arr
-          .map((and) => processAnds(and, ctx, table, query, quotedAs))
-          .join(' OR ')})`,
-      );
+      const sqls = arr.reduce<string[]>((acc, and) => {
+        const sql = processAnds(and, ctx, table, query, quotedAs);
+        if (sql) acc.push(sql);
+        return acc;
+      }, []);
+      if (sqls.length) ands.push(`(${sqls.join(' OR ')})`);
     } else if (key === 'NOT') {
       const arr = toArray(value as MaybeArray<WhereItem>);
       ands.push(`NOT ${processAnds(arr, ctx, table, query, quotedAs, true)}`);
