@@ -889,7 +889,7 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
               key,
             );
           } else if (isExpression(it)) {
-            result[key] = it.result.value as unknown as ColumnTypeBase;
+            result[key] = it.result.value || UnknownColumn.instance;
           } else if (it) {
             const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {

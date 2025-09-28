@@ -54,7 +54,7 @@ describe('select', () => {
   // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
   // and this: https://github.com/romeerez/orchid-orm/issues/310
   it('should handle nested sub selects', async () => {
-    await User.create(userData);
+    await User.insert(userData);
 
     const res = await User.select('*', {
       author: () =>

@@ -1,5 +1,5 @@
 import { createBaseTable, orchidORMWithAdapter } from 'orchid-orm';
-import { testDb, useTestDatabase } from 'test-utils';
+import { sql, testDb, useTestDatabase } from 'test-utils';
 import { userData } from '../test-utils/test-utils';
 import { MAX_BINDING_PARAMS } from '../sql/constants';
 
@@ -67,6 +67,25 @@ const setMaxBindingParams = (value: number) => {
 
 describe('relation-select', () => {
   useTestDatabase();
+
+  // https://github.com/romeerez/orchid-orm/issues/566
+  it('should handle nested sub select of sql', async () => {
+    await db.user.insert({
+      ...userData,
+      posts: { create: [{ title: 'title', body: 'body' }] },
+    });
+
+    const res = await db.post
+      .select({
+        user: (q) =>
+          q.user.select({
+            username: sql<string>`name`,
+          }),
+      })
+      .take();
+
+    expect(res).toEqual({ user: { username: 'name' } });
+  });
 
   describe('delayed relation select', () => {
     it('should work in create', async () => {
