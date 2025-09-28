@@ -216,72 +216,6 @@ interface RakeDbResult {
 Aliases of commands are resolved, so if this was run with `pnpm db migrate`, the command will be `up`.
 See full list of aliases in `rakeDbAliases` exported from the `rake-db` package.
 
-## rakeDb lazy
-
-`rakeDb` is designed to be launched with CLI, it will execute one command, and finish.
-
-But in some cases you might want to run it programmatically, and you can do it with `rakeDb.lazy`:
-
-```ts
-export const { change, run } = rakeDb.lazy(dbConfig, rakeDbConfig);
-
-// run a command programmatically:
-await run(['migrate']);
-
-// optionally, you can provide a partial `rakeDbConfig` to override some values,
-// here we override the logger.
-const result = await run(['migrate'], {
-  log: true,
-  logger: {
-    log(message: string): void {
-      console.log(message);
-    },
-    warn(message: string): void {
-      console.warn(message);
-    },
-    error(message: string): void {
-      console.error(message);
-    },
-  },
-});
-
-// the same result type as in "awaiting rakeDb" section above.
-result.options;
-result.config;
-result.args;
-```
-
-`rakeDb.lazy` is accepting the same options as `rakeDb`, and returns two functions.
-
-`change` is to be used in migrations to wrap database changes with it.
-
-`run` is a function to execute a command,
-it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)),
-optionally takes config overrides, returns a `Promise<void>`.
-
-### migrateFiles
-
-Useful in tests: use `migrateFiles` to apply only a given migrations.
-
-It works when using `rakeDb.lazy` for configuration, it won't work with `rakeDb`.
-
-This is a lightweight function that skips most of the normal migration command steps,
-all it does is it runs a given migrations.
-
-```ts
-import { migrateFiles } from 'rake-db';
-
-await migrateFiles(db, [
-  import('./0001_user_org_member'),
-  import('./0002_account_operator'),
-]);
-```
-
-`db` is `OrchidORM` instance returned by [orchidORM](/guide/orm-and-query-builder.html#setup).
-
-Unless the `migrateFiles` is called in a regular [transaction](/guide/transactions.html#transaction) or a [testTransaction](/guide/transactions.html#testtransaction),
-it wraps given migrations in a transaction.
-
 ## rakeDb
 
 `rakeDb` function in the setup script takes connection options, migration config, and command line arguments:
@@ -545,4 +479,99 @@ function dump(databaseURL: string) {
 
   console.log('Db structure was dumped to structure.sql');
 }
+```
+
+## run migrations from code
+
+### rakeDb lazy
+
+`rakeDb` is designed to be launched with CLI, it will execute one command, and finish.
+
+But in some cases you might want to run it programmatically, and you can do it with `rakeDb.lazy`:
+
+```ts
+export const { change, run } = rakeDb.lazy(dbConfig, rakeDbConfig);
+
+// run a command programmatically:
+await run(['migrate']);
+
+// optionally, you can provide a partial `rakeDbConfig` to override some values,
+// here we override the logger.
+const result = await run(['migrate'], {
+  log: true,
+  logger: {
+    log(message: string): void {
+      console.log(message);
+    },
+    warn(message: string): void {
+      console.warn(message);
+    },
+    error(message: string): void {
+      console.error(message);
+    },
+  },
+});
+
+// the same result type as in "awaiting rakeDb" section above.
+result.options;
+result.config;
+result.args;
+```
+
+`rakeDb.lazy` is accepting the same options as `rakeDb`, and returns two functions.
+
+`change` is to be used in migrations to wrap database changes with it.
+
+`run` is a function to execute a command,
+it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)),
+optionally takes config overrides, returns a `Promise<void>`.
+
+### migrateFiles
+
+Useful in tests: use `migrateFiles` to apply only a given migrations.
+
+It works when using `rakeDb.lazy` for configuration, it won't work with `rakeDb`.
+
+This is a lightweight function that skips most of the normal migration command steps,
+all it does is it runs a given migrations.
+
+```ts
+import { migrateFiles } from 'rake-db';
+
+await migrateFiles(db, [
+  import('./0001_user_org_member'),
+  import('./0002_account_operator'),
+]);
+```
+
+`db` is `OrchidORM` instance returned by [orchidORM](/guide/orm-and-query-builder.html#setup).
+
+Unless the `migrateFiles` is called in a regular [transaction](/guide/transactions.html#transaction) or a [testTransaction](/guide/transactions.html#testtransaction),
+it wraps given migrations in a transaction.
+
+## makeConnectAndMigrate
+
+You can prepare a function beforehand, and then to run migrations dynamically from your app logic.
+
+```ts
+// for porsager/postgres driver:
+import { makeConnectAndMigrate } from 'rake-db/postgres-js';
+// for node-postgres driver:
+import { makeConnectAndMigrate } from 'rake-db/node-postgres';
+
+const connectAndMigrate = makeConnectAndMigrate({
+  // minimal config for file-reading approach:
+  migrationsPath: './path/to/migrations',
+  import: (path) => import(path),
+
+  // alternatively, if you're using Vite:
+  migrations: import.meta.glob('./migrations/*.ts'),
+});
+
+// later in the app logic:
+connectAndMigrate({ databaseURL: givenURL });
+// supports array:
+connectAndMigrate([{ databaseURL: givenURL }, { databaseURL: otherURL }]);
+// runs all pending migrations by default, you can limit it with `count`:
+connectAndMigrate({ databaseURL: givenURL }, { count: 1 });
 ```

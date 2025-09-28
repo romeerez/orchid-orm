@@ -4,7 +4,11 @@ import {
   OrchidOrmParam,
   orchidORMWithAdapter,
 } from 'orchid-orm';
-import { PostgresJsAdapter, PostgresJsAdapterOptions } from 'pqb/postgres-js';
+import {
+  PostgresJsAdapter,
+  PostgresJsAdapterOptions,
+  createDb as cdb,
+} from 'pqb/postgres-js';
 import { DbSharedOptions } from 'pqb';
 
 export interface PostgresJsOrchidORMOptions
@@ -12,6 +16,8 @@ export interface PostgresJsOrchidORMOptions
     DbSharedOptions {}
 
 export const Adapter = PostgresJsAdapter;
+
+export const createDb = cdb;
 
 export const orchidORM = <T extends TableClasses>(
   options: OrchidOrmParam<PostgresJsOrchidORMOptions>,

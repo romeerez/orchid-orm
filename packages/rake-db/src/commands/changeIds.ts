@@ -1,4 +1,4 @@
-import { AnyRakeDbConfig } from '../config';
+import { AnyRakeDbConfig, PickMigrationsTable } from '../config';
 import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './newMigration';
@@ -156,7 +156,7 @@ export type RenameMigrationVersionsValue = [
 ];
 
 export const renameMigrationVersionsInDb = async (
-  config: AnyRakeDbConfig,
+  config: PickMigrationsTable,
   adapter: AdapterBase,
   values: RenameMigrationVersionsValue[],
 ) => {

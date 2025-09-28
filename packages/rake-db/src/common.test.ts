@@ -65,6 +65,7 @@ describe('common', () => {
         null,
         null,
         null,
+        null,
         { getFileName: () => 'some-path' },
       ]);
 

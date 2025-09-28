@@ -1,7 +1,21 @@
 import { AdapterBase, QueryBase } from 'orchid-core';
 import { clearChanges } from '../change';
-import { getChanges, runMigration } from '../../commands/migrateOrRollback';
-import { Query } from 'pqb';
+import {
+  getChanges,
+  migrate,
+  MigrateFnConfig,
+  runMigration,
+} from '../../commands/migrateOrRollback';
+import {
+  defaultSchemaConfig,
+  makeColumnTypes as defaultColumnTypes,
+  Query,
+} from 'pqb';
+import {
+  ensureMigrationsPath,
+  migrationConfigDefaults,
+  ensureBasePathAndDbScript,
+} from '../../config';
 
 interface OrmParam {
   $qb: QueryBase;
@@ -25,4 +39,29 @@ export const migrateFiles = async (db: OrmParam, files: UnknownPromiseFns) => {
       await runMigration(adapter, true, changes, config);
     }
   });
+};
+
+export const makeMigrateAdapter = (
+  config?: Partial<MigrateFnConfig>,
+): ((
+  adapter: AdapterBase,
+  params?: { count?: number; force?: boolean },
+) => Promise<void>) => {
+  const conf = ensureMigrationsPath(ensureBasePathAndDbScript(config || {}));
+
+  return async (adapter, params) => {
+    await migrate({
+      adapter,
+      ...params,
+      config: {
+        ...conf,
+        columnTypes:
+          conf.columnTypes || defaultColumnTypes(defaultSchemaConfig),
+        migrationId: conf.migrationId || migrationConfigDefaults.migrationId,
+        migrationsTable:
+          conf.migrationsTable || migrationConfigDefaults.migrationsTable,
+        import: conf.import || migrationConfigDefaults.import,
+      },
+    });
+  };
 };

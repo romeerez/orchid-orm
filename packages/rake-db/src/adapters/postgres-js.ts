@@ -5,6 +5,8 @@ import { RakeDbError } from '../errors';
 import { makeChange, RakeDbFn, runCommand } from '../rakeDb';
 import { PostgresJsAdapter, PostgresJsAdapterOptions } from 'pqb/postgres-js';
 import { DefaultSchemaConfig } from 'pqb';
+import { MigrateFnConfig } from '../commands/migrateOrRollback';
+import { makeMigrateAdapter } from '../migration/migrate/migrate';
 
 export const rakeDb = ((
   options,
@@ -53,3 +55,18 @@ rakeDb.lazy = ((
 
 const optionsToAdapters = (options: MaybeArray<PostgresJsAdapterOptions>) =>
   toArray(options).map((opts) => new PostgresJsAdapter(opts));
+
+export const makeConnectAndMigrate = (
+  config?: Partial<MigrateFnConfig>,
+): ((
+  options: MaybeArray<PostgresJsAdapterOptions>,
+  params?: { count?: number; force?: boolean },
+) => Promise<void>) => {
+  const migrateAdapter = makeMigrateAdapter(config);
+
+  return async (options, params) => {
+    for (const adapter of optionsToAdapters(options)) {
+      await migrateAdapter(adapter, params);
+    }
+  };
+};

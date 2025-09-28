@@ -149,7 +149,7 @@ function makeMigrateFn<SchemaConfig extends ColumnSchemaConfig, CT>(
  * @param config - specifies how to load migrations, callbacks, and logger
  * @param args - pass none or `all` to run all migrations, pass int for how many to migrate
  */
-export const fullMigrate: MigrateFn = makeMigrateFn(
+export const migrate: MigrateFn = makeMigrateFn(
   Infinity,
   true,
   (trx, config, set, versions, count, force) =>
@@ -160,9 +160,9 @@ export const fullMigrate: MigrateFn = makeMigrateFn(
  * Will roll back one latest applied migration,
  * will apply `change` functions bottom-to-top.
  *
- * Takes the same options as {@link fullMigrate}.
+ * Takes the same options as {@link migrate}.
  */
-export const fullRollback: MigrateFn = makeMigrateFn(
+export const rollback: MigrateFn = makeMigrateFn(
   1,
   false,
   (trx, config, set, versions, count, force) =>
@@ -170,11 +170,11 @@ export const fullRollback: MigrateFn = makeMigrateFn(
 );
 
 /**
- * Calls {@link fullRollback} and then {@link fullMigrate}.
+ * Calls {@link rollback} and then {@link migrate}.
  *
- * Takes the same options as {@link fullMigrate}.
+ * Takes the same options as {@link migrate}.
  */
-export const fullRedo: MigrateFn = makeMigrateFn(
+export const redo: MigrateFn = makeMigrateFn(
   1,
   true,
   async (trx, config, set, versions, count, force) => {

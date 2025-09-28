@@ -2,12 +2,7 @@ import { pull } from './pull';
 import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 import { testConfig } from '../migrations.test-utils';
 import { ChangeCallback, createMigrationInterface } from 'rake-db';
-import {
-  AdapterBase,
-  AdapterConfigBase,
-  ColumnSchemaConfig,
-  noop,
-} from 'orchid-core';
+import { AdapterBase, AdapterConfigBase, noop } from 'orchid-core';
 import fs from 'fs/promises';
 import { asMock, TestAdapter } from 'test-utils';
 import path from 'node:path';
@@ -65,7 +60,6 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
               adapters[0] = trx;
 
               const db = createMigrationInterface<
-                ColumnSchemaConfig,
                 DefaultColumnTypes<DefaultSchemaConfig>
               >(trx, true, testConfig);
 

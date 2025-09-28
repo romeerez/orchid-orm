@@ -2,14 +2,18 @@ import { RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
 import {
   AdapterBase,
-  ColumnSchemaConfig,
   RecordOptionalString,
   RecordString,
   RecordUnknown,
 } from 'orchid-core';
 import {
-  AnyRakeDbConfig,
-  RakeDbConfig,
+  PickBasePath,
+  PickImport,
+  PickMigrationId,
+  PickMigrations,
+  PickMigrationsPath,
+  PickMigrationsTable,
+  PickRenameMigrations,
   RakeDbRenameMigrations,
 } from '../config';
 import path from 'path';
@@ -23,14 +27,11 @@ import {
   RenameMigrationVersionsValue,
 } from '../commands/changeIds';
 
-export const saveMigratedVersion = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
+export const saveMigratedVersion = async (
   db: SilentQueries,
   version: string,
   name: string,
-  config: RakeDbConfig<SchemaConfig, CT>,
+  config: PickMigrationsTable,
 ): Promise<void> => {
   await db.silentArrays(
     `INSERT INTO "${config.migrationsTable}"(version, name) VALUES ($1, $2)`,
@@ -38,14 +39,11 @@ export const saveMigratedVersion = async <
   );
 };
 
-export const deleteMigratedVersion = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
+export const deleteMigratedVersion = async (
   db: SilentQueries,
   version: string,
   name: string,
-  config: RakeDbConfig<SchemaConfig, CT>,
+  config: PickMigrationsTable,
 ) => {
   const res = await db.silentArrays(
     `DELETE FROM "${config.migrationsTable}" WHERE version = $1 AND name = $2`,
@@ -64,13 +62,19 @@ export type RakeDbAppliedVersions = {
   sequence: number[];
 };
 
-export const getMigratedVersionsMap = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
+interface MigratedVersionsMapConfig
+  extends PickMigrationId,
+    PickMigrationsTable,
+    PickRenameMigrations,
+    PickMigrations,
+    PickBasePath,
+    PickImport,
+    PickMigrationsPath {}
+
+export const getMigratedVersionsMap = async (
   ctx: RakeDbCtx,
   adapter: AdapterBase,
-  config: RakeDbConfig<SchemaConfig, CT>,
+  config: MigratedVersionsMapConfig,
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
   try {
@@ -133,8 +137,10 @@ export const getMigratedVersionsMap = async <
   }
 };
 
+interface RenameMigrationsConfig extends PickMigrationId, PickMigrationsTable {}
+
 async function renameMigrations(
-  config: AnyRakeDbConfig,
+  config: RenameMigrationsConfig,
   trx: AdapterBase,
   versions: RecordString,
   renameTo: RakeDbRenameMigrations,

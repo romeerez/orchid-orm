@@ -1,9 +1,5 @@
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
-import {
-  fullMigrate,
-  fullRedo,
-  fullRollback,
-} from './commands/migrateOrRollback';
+import { migrate, redo, rollback } from './commands/migrateOrRollback';
 import { newMigration } from './commands/newMigration';
 import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
@@ -20,9 +16,9 @@ jest.mock('./commands/createOrDrop', () => ({
   resetDb: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('./commands/migrateOrRollback', () => ({
-  fullMigrate: jest.fn(() => Promise.resolve()),
-  fullRollback: jest.fn(() => Promise.resolve()),
-  fullRedo: jest.fn(() => Promise.resolve()),
+  migrate: jest.fn(() => Promise.resolve()),
+  rollback: jest.fn(() => Promise.resolve()),
+  redo: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('./commands/newMigration');
 jest.mock('./commands/recurrent');
@@ -78,7 +74,7 @@ describe('rakeDb', () => {
   it('should run migrations and recurrent on `up` command', async () => {
     await testRakeDb(options, config, ['up', 'arg']).promise;
 
-    expect(fullMigrate).toBeCalledWith(
+    expect(migrate).toBeCalledWith(
       expect.any(Object),
       expectedAdapters,
       processedConfig,
@@ -94,7 +90,7 @@ describe('rakeDb', () => {
     await testRakeDb(options, config, ['rollback', 'arg']).promise;
     await testRakeDb(options, config, ['down', 'arg']).promise;
 
-    expect(asMock(fullRollback).mock.calls).toEqual([
+    expect(asMock(rollback).mock.calls).toEqual([
       [expect.any(Object), expectedAdapters, processedConfig, ['arg']],
       [expect.any(Object), expectedAdapters, processedConfig, ['arg']],
     ]);
@@ -103,7 +99,7 @@ describe('rakeDb', () => {
   it('should run redo and recurrent on `redo` command', async () => {
     await testRakeDb(options, config, ['redo', 'arg']).promise;
 
-    expect(fullRedo).toBeCalledWith(
+    expect(redo).toBeCalledWith(
       expect.any(Object),
       expectedAdapters,
       processedConfig,

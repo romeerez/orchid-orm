@@ -1,5 +1,5 @@
 import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
-import { fullMigrate } from './migrateOrRollback';
+import { migrate } from './migrateOrRollback';
 import { RakeDbConfig } from '../config';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import { promptConfirm, promptText } from '../prompt';
@@ -144,7 +144,7 @@ export const resetDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
 ) => {
   await dropDb(adapters, config);
   await createDb(adapters, config);
-  await fullMigrate({}, adapters, config);
+  await migrate({}, adapters, config);
 };
 
 export const askForAdminCredentials = async (

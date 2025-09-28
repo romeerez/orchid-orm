@@ -7,10 +7,13 @@ import {
 import {
   NodePostgresAdapter,
   NodePostgresAdapterOptions,
+  createDb as cdb,
 } from 'pqb/node-postgres';
 import { DbSharedOptions } from 'pqb';
 
 export const Adapter = NodePostgresAdapter;
+
+export const createDb = cdb;
 
 export const orchidORM = <T extends TableClasses>(
   options: OrchidOrmParam<NodePostgresAdapterOptions & DbSharedOptions>,

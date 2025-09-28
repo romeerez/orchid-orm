@@ -1,6 +1,5 @@
 import {
   AdapterBase,
-  ColumnSchemaConfig,
   ColumnsShapeBase,
   emptyArray,
   MaybeArray,
@@ -18,7 +17,7 @@ import {
   promptSelect,
   AnyRakeDbConfig,
   createMigrationInterface,
-  fullMigrate,
+  migrate,
 } from 'rake-db';
 import {
   asMock,
@@ -110,7 +109,6 @@ const arrange = async (arg: {
               adapters[0] = trx;
 
               const db = createMigrationInterface<
-                ColumnSchemaConfig,
                 DefaultColumnTypes<DefaultSchemaConfig>
               >(trx, true, config);
 
@@ -129,7 +127,7 @@ const arrange = async (arg: {
     });
   }
 
-  asMock(fullMigrate).mockResolvedValue(adapters);
+  asMock(migrate).mockResolvedValue(adapters);
 
   if (arg.selects) {
     for (const select of arg.selects) {

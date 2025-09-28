@@ -7,7 +7,7 @@ import { sql } from '../../../test-utils/orm.test-utils';
 jest.mock('rake-db', () => {
   return {
     ...jest.requireActual('../../../../../rake-db/src'),
-    fullMigrate: jest.fn(),
+    migrate: jest.fn(),
     promptSelect: jest.fn(),
   };
 });

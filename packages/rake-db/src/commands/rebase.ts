@@ -5,7 +5,7 @@ import { getMigrations, MigrationItem } from '../migration/migrationsSet';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { RakeDbCtx } from '../common';
 import { AdapterBase, RecordOptionalString } from 'orchid-core';
-import { fullRedo } from './migrateOrRollback';
+import { redo } from './migrateOrRollback';
 import { promptSelect } from '../prompt';
 import { colors } from '../../../core/src/colors';
 
@@ -196,7 +196,7 @@ export const rebase = async (
 
   set.migrations = migrationsDown;
 
-  await fullRedo(
+  await redo(
     ctx,
     adapters,
     {

@@ -7,11 +7,7 @@ import {
   RecordString,
 } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
-import {
-  fullMigrate,
-  fullRedo,
-  fullRollback,
-} from './commands/migrateOrRollback';
+import { migrate, redo, rollback } from './commands/migrateOrRollback';
 import { newMigration } from './commands/newMigration';
 import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
@@ -145,7 +141,7 @@ export const makeChange =
   };
 
 export const rakeDbAliases: RecordOptionalString = {
-  fullMigrate: 'up',
+  migrate: 'up',
   rollback: 'down',
   s: 'status',
   rec: 'recurrent',
@@ -260,7 +256,7 @@ interface RakeDbCommands {
 
 const upCommand: RakeDbCommand = {
   run: (adapters, config, args) =>
-    fullMigrate({}, adapters, config, args).then(() =>
+    migrate({}, adapters, config, args).then(() =>
       runRecurrentMigrations(adapters, config),
     ),
   help: 'migrate pending migrations',
@@ -272,7 +268,7 @@ const upCommand: RakeDbCommand = {
 };
 
 const downCommand: RakeDbCommand = {
-  run: (adapters, config, args) => fullRollback({}, adapters, config, args),
+  run: (adapters, config, args) => rollback({}, adapters, config, args),
   help: 'rollback migrated migrations',
   helpArguments: {
     'no arguments': 'rollback one last migration',
@@ -317,7 +313,7 @@ export const rakeDbCommands: RakeDbCommands = {
   rollback: downCommand,
   redo: {
     run: (adapters, config, args) =>
-      fullRedo({}, adapters, config, args).then(() =>
+      redo({}, adapters, config, args).then(() =>
         runRecurrentMigrations(adapters, config),
       ),
     help: 'rollback and migrate, run recurrent',

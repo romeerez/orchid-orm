@@ -1,4 +1,4 @@
-import { AdapterBase, ColumnSchemaConfig } from 'orchid-core';
+import { AdapterBase } from 'orchid-core';
 import {
   AnyRakeDbConfig,
   createMigrationInterface,
@@ -30,11 +30,7 @@ export const verifyMigration = async (
       const { log } = config;
       config.log = false;
 
-      const db = createMigrationInterface<ColumnSchemaConfig, unknown>(
-        trx,
-        true,
-        config,
-      );
+      const db = createMigrationInterface(trx, true, config);
 
       config.log = log;
 

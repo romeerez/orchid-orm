@@ -39,7 +39,15 @@ export interface MigrationsSet {
 // `up` value determines sorting of files: `true` for ascending, `false` for descending.
 export const getMigrations = async (
   ctx: RakeDbCtx,
-  config: AnyRakeDbConfig,
+  config: Pick<
+    AnyRakeDbConfig,
+    | 'migrationId'
+    | 'renameMigrations'
+    | 'migrations'
+    | 'basePath'
+    | 'import'
+    | 'migrationsPath'
+  >,
   up: boolean,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
@@ -63,7 +71,10 @@ export const getMigrations = async (
 
 // Converts user-provided migrations object into array of migration items.
 function getMigrationsFromConfig(
-  config: AnyRakeDbConfig,
+  config: Pick<
+    AnyRakeDbConfig,
+    'migrationId' | 'renameMigrations' | 'migrations' | 'basePath'
+  >,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
@@ -105,7 +116,7 @@ export const sortMigrationsAsc = (
 
 // Scans files under `migrationsPath` to convert files into migration items.
 export async function getMigrationsFromFiles(
-  config: AnyRakeDbConfig,
+  config: Pick<AnyRakeDbConfig, 'migrationId' | 'migrationsPath' | 'import'>,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
@@ -199,7 +210,7 @@ export async function getMigrationsFromFiles(
 }
 
 const renameMigrationsMap = async (
-  config: AnyRakeDbConfig,
+  config: Pick<AnyRakeDbConfig, 'migrationsPath'>,
   fileName: string,
 ): Promise<RakeDbRenameMigrationsMap> => {
   const filePath = path.join(config.migrationsPath, fileName);
@@ -232,7 +243,7 @@ function checkExt(filePath: string): void {
 
 // Extract a 14-chars long timestamp from a beginning of a file name.
 export function getMigrationVersionOrThrow(
-  config: AnyRakeDbConfig,
+  config: Pick<AnyRakeDbConfig, 'migrationId'>,
   filePath: string,
 ): string {
   const name = path.basename(filePath);
@@ -252,7 +263,10 @@ To keep using timestamp ids, set \`migrationId\` option of rake-db to 'timestamp
   }
 }
 
-export function getMigrationVersion(config: AnyRakeDbConfig, name: string) {
+export function getMigrationVersion(
+  config: Pick<AnyRakeDbConfig, 'migrationId'>,
+  name: string,
+) {
   return (
     config.migrationId === 'timestamp'
       ? name.match(/^(\d{14})(_|\b)/)

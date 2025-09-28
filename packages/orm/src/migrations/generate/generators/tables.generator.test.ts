@@ -10,7 +10,7 @@ import { colors } from 'orchid-core';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
-  fullMigrate: jest.fn(),
+  migrate: jest.fn(),
   promptSelect: jest.fn(),
 }));
 jest.mock('fs/promises', () => ({

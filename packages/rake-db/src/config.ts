@@ -25,39 +25,83 @@ export interface CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> {
   ): void | Promise<void>;
 }
 
-interface RakeDbBaseConfig<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT = DefaultColumnTypes<DefaultSchemaConfig>,
-> extends QueryLogOptions {
-  schemaConfig: SchemaConfig;
-  migrationsPath: string;
-  migrationId: RakeDbMigrationId;
-  migrations?: ModuleExportsRecord;
-  renameMigrations?: RakeDbRenameMigrationsInput;
-  migrationsTable: string;
-  snakeCase: boolean;
-  language?: string;
-  commands: Record<string, CommandFn<SchemaConfig, CT>>;
-  noPrimaryKey?: NoPrimaryKeyOption;
-  baseTable?: RakeDbBaseTable<CT>;
-  // throw if a migration doesn't have a default export
-  forceDefaultExports?: boolean;
+export interface PickBasePath {
+  basePath: string;
+}
+
+export interface PickImport {
   import(path: string): Promise<unknown>;
+}
+
+export interface PickMigrationId {
+  migrationId: RakeDbMigrationId;
+}
+
+export interface PickMigrations {
+  migrations?: ModuleExportsRecord;
+}
+
+export interface PickMigrationsPath {
+  migrationsPath: string;
+}
+
+export interface PickOptionalMigrationsPath {
+  migrationsPath?: string;
+}
+
+export interface PickRenameMigrations {
+  renameMigrations?: RakeDbRenameMigrationsInput;
+}
+
+export interface PickMigrationsTable {
+  migrationsTable: string;
+}
+
+export interface PickMigrationCallbacks {
   beforeChange?: ChangeCallback;
   afterChange?: ChangeCallback;
-  afterChangeCommit?: ChangeCommitCallback;
   beforeMigrate?: MigrationCallback;
   afterMigrate?: MigrationCallback;
   beforeRollback?: MigrationCallback;
   afterRollback?: MigrationCallback;
 }
 
+export interface PickAfterChangeCommit {
+  afterChangeCommit?: ChangeCommitCallback;
+}
+
+export interface PickForceDefaultExports {
+  // throw if a migration doesn't have a default export
+  forceDefaultExports?: boolean;
+}
+
+interface RakeDbBaseConfig<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT = DefaultColumnTypes<DefaultSchemaConfig>,
+> extends QueryLogOptions,
+    PickImport,
+    PickMigrationId,
+    PickMigrationsPath,
+    PickMigrations,
+    PickRenameMigrations,
+    PickMigrationsTable,
+    PickMigrationCallbacks,
+    PickForceDefaultExports,
+    PickAfterChangeCommit {
+  schemaConfig: SchemaConfig;
+  snakeCase: boolean;
+  language?: string;
+  commands: Record<string, CommandFn<SchemaConfig, CT>>;
+  noPrimaryKey?: NoPrimaryKeyOption;
+  baseTable?: RakeDbBaseTable<CT>;
+}
+
 export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
   CT = DefaultColumnTypes<DefaultSchemaConfig>,
-> extends RakeDbBaseConfig<SchemaConfig, CT> {
+> extends RakeDbBaseConfig<SchemaConfig, CT>,
+    PickBasePath {
   columnTypes: CT;
-  basePath: string;
   dbScript: string;
   recurrentPath: string;
 }
@@ -65,13 +109,13 @@ export interface RakeDbConfig<
 export interface InputRakeDbConfigBase<
   SchemaConfig extends ColumnSchemaConfig,
   CT,
-> extends QueryLogOptions {
+> extends QueryLogOptions,
+    PickOptionalMigrationsPath {
   columnTypes?: CT | ((t: DefaultColumnTypes<DefaultSchemaConfig>) => CT);
   baseTable?: RakeDbBaseTable<CT>;
   schemaConfig?: SchemaConfig;
   basePath?: string;
   dbScript?: string;
-  migrationsPath?: string;
   migrationId?: 'serial' | RakeDbMigrationId;
   recurrentPath?: string;
   migrationsTable?: string;
@@ -246,8 +290,69 @@ export const migrationConfigDefaults: RakeDbBaseConfig<ColumnSchemaConfig> = {
   log: true,
   logger: console,
   import() {
-    throw new Error('Please define the `import` setting in `rakeDb` config');
+    throw new Error(
+      'Add `import: (path) => import(path),` setting to `rakeDb` config',
+    );
   },
+};
+
+export const ensureMigrationsPath = <
+  T extends {
+    migrationsPath?: string;
+    basePath: string;
+  },
+>(
+  config: T,
+): T & { migrationsPath: string } => {
+  if (!config.migrationsPath) {
+    config.migrationsPath = migrationConfigDefaults.migrationsPath;
+  }
+
+  if (!path.isAbsolute(config.migrationsPath)) {
+    config.migrationsPath = path.resolve(
+      config.basePath,
+      config.migrationsPath,
+    );
+  }
+
+  return config as never;
+};
+
+export const ensureBasePathAndDbScript = <
+  T extends {
+    basePath?: string;
+    dbScript?: string;
+  },
+>(
+  config: T,
+  intermediateCallers = 0,
+): T & { basePath: string; dbScript: string } => {
+  if (config.basePath && config.dbScript) return config as never;
+
+  // 0 is getStackTrace file, 1 is this function, 2 is a caller in rakeDb.ts, 3 is the user db script file.
+  // when called from processRakeDbConfig, 1 call is added.
+  // bundlers can bundle all files into a single file, or change file structure, so this must rely only on the caller index.
+  let filePath = getStackTrace()?.[3 + intermediateCallers].getFileName();
+  if (!filePath) {
+    throw new Error(
+      'Failed to determine path to db script. Please set basePath option of rakeDb',
+    );
+  }
+
+  if (filePath.startsWith('file://')) {
+    filePath = fileURLToPath(filePath);
+  }
+
+  const ext = path.extname(filePath);
+  if (ext !== '.ts' && ext !== '.js' && ext !== '.mjs') {
+    throw new Error(
+      `Add a .ts suffix to the "${path.basename(filePath)}" when calling it`,
+    );
+  }
+
+  config.basePath = path.dirname(filePath);
+  config.dbScript = path.basename(filePath);
+  return config as never;
 };
 
 export const processRakeDbConfig = <
@@ -260,43 +365,18 @@ export const processRakeDbConfig = <
     SchemaConfig,
     CT
   >;
-  if (!result.recurrentPath) {
-    result.recurrentPath = path.join(result.migrationsPath, 'recurrent');
-  }
 
   if (!result.log) {
     delete result.logger;
   }
 
-  if (!result.basePath || !result.dbScript) {
-    // 0 is getStackTrace file, 1 is this function, 2 is a caller in rakeDb.ts, 3 is the user db script file.
-    // bundlers can bundle all files into a single file, or change file structure, so this must rely only on the caller index.
-    let filePath = getStackTrace()?.[3].getFileName();
-    if (!filePath) {
-      throw new Error(
-        'Failed to determine path to db script. Please set basePath option of rakeDb',
-      );
-    }
+  ensureBasePathAndDbScript(result, 1);
+  ensureMigrationsPath(result);
 
-    if (filePath.startsWith('file://')) {
-      filePath = fileURLToPath(filePath);
-    }
-
-    const ext = path.extname(filePath);
-    if (ext !== '.ts' && ext !== '.js' && ext !== '.mjs') {
-      throw new Error(
-        `Add a .ts suffix to the "${path.basename(filePath)}" when calling it`,
-      );
-    }
-
-    result.basePath = path.dirname(filePath);
-    result.dbScript = path.basename(filePath);
-  }
-
-  if ('migrationsPath' in result && !path.isAbsolute(result.migrationsPath)) {
-    result.migrationsPath = path.resolve(
-      result.basePath,
-      result.migrationsPath,
+  if (!result.recurrentPath) {
+    result.recurrentPath = path.join(
+      result.migrationsPath as string,
+      'recurrent',
     );
   }
 

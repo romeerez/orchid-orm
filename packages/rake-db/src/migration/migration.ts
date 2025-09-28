@@ -18,6 +18,7 @@ import {
   emptyObject,
   MaybeArray,
   QueryLogObject,
+  QueryLogOptions,
   RawSQLBase,
   RecordString,
   RecordUnknown,
@@ -102,6 +103,10 @@ export type DbMigration<CT> = DbResult<CT> &
     adapter: SilentQueries;
   };
 
+export interface CreateMigrationInterfaceConfig<CT> extends QueryLogOptions {
+  columnTypes: CT;
+}
+
 /**
  * Creates a new `db` instance that is an instance of `pqb` with mixed in migration methods from the `Migration` class.
  * It overrides `query` and `array` db adapter methods to intercept SQL for the logging.
@@ -110,13 +115,10 @@ export type DbMigration<CT> = DbResult<CT> &
  * @param up - migrate or rollback
  * @param config - config of `rakeDb`
  */
-export const createMigrationInterface = <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
+export const createMigrationInterface = <CT>(
   tx: AdapterBase,
   up: boolean,
-  config: RakeDbConfig<SchemaConfig, CT>,
+  config: CreateMigrationInterfaceConfig<CT>,
 ): DbMigration<CT> => {
   const adapter = Object.create(tx) as MigrationAdapter;
   adapter.schema = adapter.getSchema() ?? 'public';

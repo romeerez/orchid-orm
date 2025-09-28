@@ -28,7 +28,10 @@ import {
 import { AnyRakeDbConfig } from '../config';
 import { TableQuery } from './createTable';
 
-export const versionToString = (config: AnyRakeDbConfig, version: number) =>
+export const versionToString = (
+  config: Pick<AnyRakeDbConfig, 'migrationId'>,
+  version: number,
+) =>
   config.migrationId === 'timestamp'
     ? `${version}`
     : `${version}`.padStart(config.migrationId.serial, '0');

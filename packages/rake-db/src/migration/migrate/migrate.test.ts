@@ -1,7 +1,9 @@
 import { orchidORMWithAdapter, testTransaction } from 'orchid-orm';
 import { testAdapter } from 'test-utils';
-import { migrateFiles } from './migrate';
+import { makeMigrateAdapter, migrateFiles } from './migrate';
 import { rakeDbWithAdapters } from '../../rakeDb';
+import { pathToFileURL } from 'node:url';
+import path from 'path';
 
 const logger = {
   log: jest.fn(),
@@ -23,13 +25,61 @@ const db = orchidORMWithAdapter(
   {},
 );
 
-describe('migrateFiles', () => {
-  afterAll(() => db.$close());
+afterEach(jest.clearAllMocks);
 
+afterAll(() => db.$close());
+
+describe('makeMigrateAdapter', () => {
+  it('should run migrations for adapter with default configs', async () => {
+    await db.$query`DELETE FROM "schemaMigrations"`;
+    jest.clearAllMocks();
+
+    const migrateAdapter = makeMigrateAdapter({
+      migrationsPath: './mock-migrations',
+      log: { colors: false },
+      logger,
+      import: (path) => import(path),
+    });
+
+    await migrateAdapter(testAdapter);
+
+    expect(logger.log.mock.calls).toEqual([
+      [
+        expect.stringContaining(
+          `Migrating database ${testAdapter.getDatabase()}`,
+        ),
+      ],
+      [expect.stringContaining(`SELECT 'test query 1'`)],
+      [
+        expect.stringContaining(
+          `Migrated ${pathToFileURL(
+            path.resolve(
+              __dirname,
+              './mock-migrations/1001_migrate.test.file1',
+            ),
+          )}`,
+        ),
+      ],
+      [expect.stringContaining(`SELECT 'test query 2'`)],
+      [
+        expect.stringContaining(
+          `Migrated ${pathToFileURL(
+            path.resolve(
+              __dirname,
+              './mock-migrations/1002_migrate.test.file2',
+            ),
+          )}`,
+        ),
+      ],
+    ]);
+  });
+});
+
+describe('migrateFiles', () => {
   it('should start a transaction for migrations', async () => {
     await migrateFiles(db, [
-      () => import('./migrate.test.file1'),
-      () => import('./migrate.test.file2'),
+      () => import('./mock-migrations/1001_migrate.test.file1'),
+      () => import('./mock-migrations/1002_migrate.test.file2'),
     ]);
 
     expect(logger.log.mock.calls).toEqual([
@@ -48,8 +98,8 @@ describe('migrateFiles', () => {
       jest.clearAllMocks();
 
       await migrateFiles(db, [
-        () => import('./migrate.test.file1'),
-        () => import('./migrate.test.file2'),
+        () => import('./mock-migrations/1001_migrate.test.file1'),
+        () => import('./mock-migrations/1002_migrate.test.file2'),
       ]);
 
       expect(logger.log.mock.calls).toEqual([

@@ -7,7 +7,7 @@ export {
   getConstraintName,
 } from './migration/migration.utils';
 export { promptSelect } from './prompt';
-export { fullMigrate } from './commands/migrateOrRollback';
+export { migrate } from './commands/migrateOrRollback';
 export type { ChangeCallback } from './migration/change';
 export { introspectDbSchema } from './generate/dbStructure';
 export type {
