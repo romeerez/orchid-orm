@@ -7,7 +7,11 @@ import {
   RecordString,
 } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
-import { migrate, redo, rollback } from './commands/migrateOrRollback';
+import {
+  migrateCommand,
+  redoCommand,
+  rollbackCommand,
+} from './commands/migrateOrRollback';
 import { newMigration } from './commands/newMigration';
 import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
@@ -256,7 +260,7 @@ interface RakeDbCommands {
 
 const upCommand: RakeDbCommand = {
   run: (adapters, config, args) =>
-    migrate({}, adapters, config, args).then(() =>
+    migrateCommand(adapters, config, args).then(() =>
       runRecurrentMigrations(adapters, config),
     ),
   help: 'migrate pending migrations',
@@ -268,7 +272,7 @@ const upCommand: RakeDbCommand = {
 };
 
 const downCommand: RakeDbCommand = {
-  run: (adapters, config, args) => rollback({}, adapters, config, args),
+  run: (adapters, config, args) => rollbackCommand(adapters, config, args),
   help: 'rollback migrated migrations',
   helpArguments: {
     'no arguments': 'rollback one last migration',
@@ -313,7 +317,7 @@ export const rakeDbCommands: RakeDbCommands = {
   rollback: downCommand,
   redo: {
     run: (adapters, config, args) =>
-      redo({}, adapters, config, args).then(() =>
+      redoCommand(adapters, config, args).then(() =>
         runRecurrentMigrations(adapters, config),
       ),
     help: 'rollback and migrate, run recurrent',

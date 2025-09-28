@@ -4,7 +4,7 @@ import {
   resetDb,
   askForAdminCredentials,
 } from './createOrDrop';
-import { migrate } from './migrateOrRollback';
+import { migrateAndClose } from './migrateOrRollback';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock, TestAdapter } from 'test-utils';
 import { MaybeArray, toArray } from 'orchid-core';
@@ -21,7 +21,7 @@ jest.mock('../migration/migrationsTable', () => ({
 }));
 
 jest.mock('./migrateOrRollback', () => ({
-  migrate: jest.fn(),
+  migrateAndClose: jest.fn(),
 }));
 
 const options = { database: 'dbname', user: 'user', password: 'password' };
@@ -239,7 +239,7 @@ describe('createOrDrop', () => {
         [`Database dbname successfully created`],
       ]);
       expect(createMigrationsTable).toHaveBeenCalled();
-      expect(migrate).toBeCalled();
+      expect(migrateAndClose).toBeCalled();
     });
   });
 

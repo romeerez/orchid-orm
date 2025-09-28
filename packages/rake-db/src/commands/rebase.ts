@@ -196,20 +196,24 @@ export const rebase = async (
 
   set.migrations = migrationsDown;
 
-  await redo(
-    ctx,
-    adapters,
-    {
-      ...config,
-      async afterRollback() {
-        set.migrations = migrationsUp;
-      },
-      async afterMigrate() {
-        set.migrations = migrationsDown;
-      },
+  const redoConfig = {
+    ...config,
+    async afterRollback() {
+      set.migrations = migrationsUp;
     },
-    ['all'],
-  );
+    async afterMigrate() {
+      set.migrations = migrationsDown;
+    },
+  };
+
+  for (const adapter of adapters) {
+    await redo({
+      ctx,
+      adapter,
+      config: redoConfig,
+    });
+    await adapter.close();
+  }
 
   for (let i = renames.length - 1; i >= 0; i--) {
     const [from, version] = renames[i];

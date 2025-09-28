@@ -25,6 +25,7 @@ import {
   makeFileVersion,
   makeStructureToAstCtx,
   migrate,
+  migrateAndClose,
   RakeDbAst,
   writeMigrationFile,
 } from 'rake-db';
@@ -181,7 +182,9 @@ export const generate = async (
   }
 
   if (up) {
-    await migrate({}, adapters, config);
+    for (const adapter of adapters) {
+      await migrateAndClose({ adapter, config });
+    }
   } else if (!afterPull) {
     await closeAdapters(adapters);
   }
@@ -239,7 +242,9 @@ const migrateAndPullStructures = async (
     };
   }
 
-  await migrate({}, adapters, config, undefined, true);
+  for (const adapter of adapters) {
+    await migrate({ adapter, config });
+  }
 
   const dbStructures = await Promise.all(
     adapters.map((adapter) => introspectDbSchema(adapter)),
