@@ -1,5 +1,5 @@
 import { orchidORMWithAdapter, testTransaction } from 'orchid-orm';
-import { testAdapter } from 'test-utils';
+import { TestAdapter, testAdapter, testDbOptions } from 'test-utils';
 import { makeMigrateAdapter, migrateFiles } from './migrate';
 import { rakeDbWithAdapters } from '../../rakeDb';
 import { pathToFileURL } from 'node:url';
@@ -41,7 +41,7 @@ describe('makeMigrateAdapter', () => {
       import: (path) => import(path),
     });
 
-    await migrateAdapter(testAdapter);
+    await migrateAdapter(new TestAdapter(testDbOptions));
 
     expect(logger.log.mock.calls).toEqual([
       [

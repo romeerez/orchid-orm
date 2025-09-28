@@ -2,7 +2,7 @@ import { AdapterBase, QueryBase } from 'orchid-core';
 import { clearChanges } from '../change';
 import {
   getChanges,
-  migrate,
+  migrateAndClose,
   MigrateFnConfig,
   runMigration,
 } from '../../commands/migrateOrRollback';
@@ -50,7 +50,7 @@ export const makeMigrateAdapter = (
   const conf = ensureMigrationsPath(ensureBasePathAndDbScript(config || {}));
 
   return async (adapter, params) => {
-    await migrate({
+    await migrateAndClose({
       adapter,
       ...params,
       config: {
