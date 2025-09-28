@@ -563,8 +563,13 @@ describe('relations', () => {
 
       const result = await q;
 
+      assertType<
+        typeof result,
+        { parent: { categoryName: string } | undefined }[]
+      >();
+
       expect(result).toEqual([
-        { parent: null },
+        { parent: undefined },
         { parent: { categoryName: 'one' } },
       ]);
     });

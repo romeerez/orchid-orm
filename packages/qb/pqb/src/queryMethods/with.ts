@@ -18,7 +18,7 @@ import {
   PickQueryWithDataColumnTypes,
 } from 'orchid-core';
 import { SqlMethod } from './sql';
-import { getShapeFromSelect } from './select';
+import { getShapeFromSelect } from './select/select';
 import { _queryUnion } from './union';
 import { RawSQL } from '../sql/rawSql';
 

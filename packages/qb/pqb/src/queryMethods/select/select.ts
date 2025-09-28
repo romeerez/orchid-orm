@@ -3,7 +3,7 @@ import {
   PickQueryQAndInternal,
   Query,
   QueryMetaHasSelect,
-} from '../query/query';
+} from '../../query/query';
 import {
   addColumnParserToQuery,
   ColumnsShapeToNullableObject,
@@ -11,14 +11,14 @@ import {
   ColumnsShapeToObjectArray,
   ColumnsShapeToPluck,
   UnknownColumn,
-} from '../columns';
-import { JSONTextColumn } from '../columns/json';
+} from '../../columns';
+import { JSONTextColumn } from '../../columns/json';
 import {
   _clone,
   getFullColumnTable,
   pushQueryArrayImmutable,
-} from '../query/queryUtils';
-import { QueryData, SelectAsValue, SelectItem, ToSQLQuery } from '../sql';
+} from '../../query/queryUtils';
+import { QueryData, SelectAsValue, SelectItem, ToSQLQuery } from '../../sql';
 import {
   _copyQueryAliasToQuery,
   BatchParser,
@@ -47,23 +47,23 @@ import {
   setParserToQuery,
   UnionToIntersection,
 } from 'orchid-core';
-import { _joinLateral } from './join/_join';
+import { _joinLateral } from '../join/_join';
 import {
   resolveSubQueryCallbackV2,
   SelectableOrExpression,
-} from '../common/utils';
-import { RawSQL } from '../sql/rawSql';
-import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
-import { parseRecord } from './then';
-import { _queryNone, isQueryNone } from './none';
+} from '../../common/utils';
+import { RawSQL } from '../../sql/rawSql';
+import { defaultSchemaConfig } from '../../columns/defaultSchemaConfig';
+import { parseRecord } from '../then';
+import { _queryNone, isQueryNone } from '../none';
 import { NotFoundError } from 'orchid-core';
 
-import { processComputedBatches } from '../modules/computed';
+import { processComputedBatches } from '../../modules/computed';
 import {
   applyBatchTransforms,
   finalizeNestedHookSelect,
-} from '../common/queryResultProcessing';
-import { cloneQueryBaseUnscoped } from './queryMethods.utils';
+} from '../../common/queryResultProcessing';
+import { cloneQueryBaseUnscoped } from '../queryMethods.utils';
 
 interface SelectSelf {
   shape: QueryColumns;
@@ -396,7 +396,15 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
       );
     }
 
-    if (query.hookSelect || query.parsers || query.transform) {
+    if (
+      query.hookSelect ||
+      query.parsers ||
+      query.transform ||
+      query.returnType === 'oneOrThrow' ||
+      query.returnType === 'valueOrThrow' ||
+      query.returnType === 'one' ||
+      query.returnType === 'value'
+    ) {
       pushQueryValueImmutable(q as unknown as Query, 'batchParsers', {
         path: [key],
         fn: (path, queryResult) => {
@@ -442,7 +450,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
                 if (returnType === 'one') {
                   for (const batch of batches) {
                     if (batch.data) parseRecord(parsers, batch.data);
-                    else batch.data = undefined; // null to undefined
+                    else batch.parent[batch.key] = batch.data = undefined; // null to undefined
                   }
                 } else {
                   for (const { data } of batches) {
@@ -452,7 +460,8 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
                 }
               } else if (returnType === 'one') {
                 for (const batch of batches) {
-                  if (!batch.data) batch.data = undefined; // null to undefined
+                  if (!batch.data)
+                    batch.parent[batch.key] = batch.data = undefined; // null to undefined
                 }
               } else {
                 for (const { data } of batches) {
@@ -484,26 +493,37 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             }
             case 'value':
             case 'valueOrThrow': {
+              const notNullable = !(
+                query.getColumn as ColumnTypeBase | undefined
+              )?.data.isNullable;
+
               const parse = query.parsers?.[getValueKey];
               if (parse) {
                 if (returnType === 'value') {
                   for (const item of batches) {
                     item.parent[item.key] = item.data =
-                      item.data === undefined
+                      item.data === null
                         ? query.notFoundDefault
                         : parse(item.data);
                   }
                 } else {
                   for (const item of batches) {
-                    if (item.data === undefined)
+                    if (notNullable && item.data === null) {
                       throw new NotFoundError(arg as Query);
+                    }
 
                     item.parent[item.key] = item.data = parse(item.data);
                   }
                 }
-              } else if (returnType !== 'value') {
+              } else if (returnType === 'value') {
+                for (const item of batches) {
+                  if (item.data === null) {
+                    item.parent[item.key] = item.data = query.notFoundDefault;
+                  }
+                }
+              } else if (notNullable) {
                 for (const { data } of batches) {
-                  if (data === undefined) throw new NotFoundError(arg as Query);
+                  if (data === null) throw new NotFoundError(arg as Query);
                 }
               }
 

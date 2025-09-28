@@ -14,7 +14,7 @@ import {
   setObjectValueImmutable,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
-import { getShapeFromSelect } from '../select';
+import { getShapeFromSelect } from '../select/select';
 import { _clone, throwIfJoinLateral } from '../../query/queryUtils';
 import {
   JoinArgs,

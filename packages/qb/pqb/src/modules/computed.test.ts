@@ -900,8 +900,25 @@ describe('computed', () => {
             }).takeOptional(),
         }).takeOptional();
 
+        assertType<
+          typeof res,
+          | {
+              user:
+                | {
+                    user:
+                      | {
+                          runtimeComputed: string;
+                          batchComputed: string;
+                        }
+                      | undefined;
+                  }
+                | undefined;
+            }
+          | undefined
+        >();
+
         expect(res).toEqual({
-          user: { user: null },
+          user: { user: undefined },
         });
       });
 

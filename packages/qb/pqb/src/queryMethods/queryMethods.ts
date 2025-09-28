@@ -32,7 +32,7 @@ import {
 } from '../query/queryUtils';
 import { Then } from './then';
 import { AggregateMethods } from './aggregate';
-import { addParserForSelectItem, Select } from './select';
+import { addParserForSelectItem, Select } from './select/select';
 import { FromMethods, FromQuerySelf } from './from';
 import { Join, JoinResultRequireMain, OnMethods } from './join/join';
 import { WithMethods } from './with';

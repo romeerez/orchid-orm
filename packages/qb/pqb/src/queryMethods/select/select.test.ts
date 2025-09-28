@@ -14,7 +14,7 @@ import {
   userData,
   UserRecord,
   userTableColumnsSql,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import {
   DateColumn,
   defaultSchemaConfig,
@@ -22,7 +22,7 @@ import {
   IntegerColumn,
   JSONTextColumn,
   VirtualColumn,
-} from '../columns';
+} from '../../columns';
 import { getShapeFromSelect } from './select';
 import {
   assertType,
@@ -33,7 +33,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { z } from 'zod/v4';
-import { EmptyObject } from 'orchid-core';
+import { EmptyObject, NotFoundError } from 'orchid-core';
 
 const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);
@@ -42,67 +42,11 @@ const insertUserAndProfile = async () => {
 
 const profileJsonBuildObjectSql = jsonBuildObjectAllSql(Profile, 'p');
 
+const ProfileNoParsers = Profile.clone();
+ProfileNoParsers.q.parsers = undefined;
+
 describe('select', () => {
   useTestDatabase();
-
-  it('should respect previous select', () => {
-    const q = User.select('id').select('name');
-
-    assertType<Awaited<typeof q>, { id: number; name: string }[]>();
-  });
-
-  // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
-  // and this: https://github.com/romeerez/orchid-orm/issues/310
-  it('should handle nested sub selects', async () => {
-    await User.insert(userData);
-
-    const res = await User.select('*', {
-      author: () =>
-        User.select({
-          count: () => User.count(),
-        }).takeOptional(),
-    });
-
-    assertType<
-      typeof res,
-      (UserRecord & { author: { count: number } | undefined })[]
-    >();
-  });
-
-  it('should combine multiple selects and give proper types', async () => {
-    const query = User.select('id').select({
-      count: () => User.count(),
-    });
-
-    const q = User.from(query).selectAll();
-
-    assertType<Awaited<typeof q>, { id: number; count: number }[]>();
-  });
-
-  it('table should have all columns selected if select was not applied', () => {
-    assertType<Awaited<typeof User>, UserRecord[]>();
-  });
-
-  it('should allow filtering by selected values', () => {
-    const q = User.select({
-      names: () => User.select('name'),
-      ids: () => Profile.select('id'),
-      name: () => User.get('name'),
-      count: () => User.count(),
-      expr: sql<boolean>`1`,
-    }).where({ name: 'la', count: 0 });
-
-    assertType<
-      Awaited<typeof q>,
-      {
-        names: { name: string }[];
-        ids: { id: number }[];
-        name: string;
-        count: number;
-        expr: boolean;
-      }[]
-    >();
-  });
 
   describe('select', () => {
     it('should select all columns with a *', () => {
@@ -715,15 +659,6 @@ describe('select', () => {
       );
     });
 
-    it('should support conditional query or raw expression', async () => {
-      const condition = true;
-      const q = User.select({
-        key: () => (condition ? User.exists() : sql<boolean>`false`),
-      });
-
-      assertType<Awaited<typeof q>, { key: boolean }[]>();
-    });
-
     it('should select joined columns', () => {
       const q = User.all();
       const query = q.join(Profile, 'profile.userId', '=', 'user.id').select({
@@ -831,87 +766,234 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should accept raw in a callback', () => {
-      const query = User.select({
-        one: () => sql`1`.type((t) => t.integer()),
-      });
-
-      assertType<Awaited<typeof query>, { one: number }[]>();
-
-      expect(getShapeFromSelect(query)).toEqual({
-        one: expect.any(IntegerColumn),
-      });
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT 1 "one" FROM "user"
-        `,
-      );
-    });
-
-    it('should select subquery', () => {
-      const q = User.all();
-      const query = q.select({ subquery: () => User.all() });
-
-      assertType<Awaited<typeof query>, { subquery: UserRecord[] }[]>();
-
-      expect(getShapeFromSelect(query)).toEqual({
-        subquery: expect.any(JSONTextColumn),
-      });
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT
-            (
-              SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
-              FROM (SELECT ${userColumnsSql} FROM "user") "t"
-            ) "subquery"
-          FROM "user"
-        `,
-      );
-      expectQueryNotMutated(q);
-    });
-
-    it('should select subquery for named columns', () => {
-      const q = Snake.select({ subquery: () => Snake.all() });
-
-      assertType<Awaited<typeof q>, { subquery: SnakeRecord[] }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT
-            (
-              SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
-              FROM (
-                SELECT ${snakeSelectAll}
-                FROM "snake"
-              ) "t"
-            ) "subquery"
-          FROM "snake"
-        `,
-      );
-    });
-
-    it('should properly select 3 levels deep select *', () => {
-      const q = User.select({
-        arr: () =>
-          User.select({
-            arr: () => User.select('*'),
-          }),
-      });
-
-      assertType<Awaited<typeof q>, { arr: { arr: UserRecord[] }[] }[]>();
-    });
-
     it('should support selecting column after selecting by object', () => {
       const q = User.select({
         count: sql<number>`count(*)`,
       }).select('name');
 
       assertType<Awaited<typeof q>, { count: number; name: string }[]>();
+    });
+
+    it('should respect previous select', () => {
+      const q = User.select('id').select('name');
+
+      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+    });
+
+    it('table should have all columns selected if select was not applied', () => {
+      assertType<Awaited<typeof User>, UserRecord[]>();
+    });
+
+    describe('select callback', () => {
+      it('should support conditional query or raw expression', async () => {
+        const condition = true;
+        const q = User.select({
+          key: () => (condition ? User.exists() : sql<boolean>`false`),
+        });
+
+        assertType<Awaited<typeof q>, { key: boolean }[]>();
+      });
+
+      it('should accept raw in a callback', () => {
+        const query = User.select({
+          one: () => sql`1`.type((t) => t.integer()),
+        });
+
+        assertType<Awaited<typeof query>, { one: number }[]>();
+
+        expect(getShapeFromSelect(query)).toEqual({
+          one: expect.any(IntegerColumn),
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT 1 "one" FROM "user"
+          `,
+        );
+      });
+
+      it('should select subquery', () => {
+        const q = User.all();
+        const query = q.select({ subquery: () => User.all() });
+
+        assertType<Awaited<typeof query>, { subquery: UserRecord[] }[]>();
+
+        expect(getShapeFromSelect(query)).toEqual({
+          subquery: expect.any(JSONTextColumn),
+        });
+
+        expectSql(
+          query.toSQL(),
+          `
+            SELECT
+              (
+                SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
+                FROM (SELECT ${userColumnsSql} FROM "user") "t"
+              ) "subquery"
+            FROM "user"
+          `,
+        );
+        expectQueryNotMutated(q);
+      });
+
+      it('should select subquery for named columns', () => {
+        const q = Snake.select({ subquery: () => Snake.all() });
+
+        assertType<Awaited<typeof q>, { subquery: SnakeRecord[] }[]>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT
+              (
+                SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
+                FROM (
+                  SELECT ${snakeSelectAll}
+                  FROM "snake"
+                ) "t"
+              ) "subquery"
+            FROM "snake"
+          `,
+        );
+      });
+
+      it('should properly select 3 levels deep select *', () => {
+        const q = User.select({
+          arr: () =>
+            User.select({
+              arr: () => User.select('*'),
+            }),
+        });
+
+        assertType<Awaited<typeof q>, { arr: { arr: UserRecord[] }[] }[]>();
+      });
+
+      // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
+      // and this: https://github.com/romeerez/orchid-orm/issues/310
+      it('should handle nested sub selects', async () => {
+        await User.insert(userData);
+
+        const res = await User.select('*', {
+          author: () =>
+            User.select({
+              count: () => User.count(),
+            }).takeOptional(),
+        });
+
+        assertType<
+          typeof res,
+          (UserRecord & { author: { count: number } | undefined })[]
+        >();
+      });
+
+      it('should combine multiple selects and give proper types', async () => {
+        const query = User.select('id').select({
+          count: () => User.count(),
+        });
+
+        const q = User.from(query).selectAll();
+
+        assertType<Awaited<typeof q>, { id: number; count: number }[]>();
+      });
+
+      it('should allow filtering by selected values', () => {
+        const q = User.select({
+          names: () => User.select('name'),
+          ids: () => Profile.select('id'),
+          name: () => User.get('name'),
+          count: () => User.count(),
+          expr: sql<boolean>`1`,
+        }).where({ name: 'la', count: 0 });
+
+        assertType<
+          Awaited<typeof q>,
+          {
+            names: { name: string }[];
+            ids: { id: number }[];
+            name: string;
+            count: number;
+            expr: boolean;
+          }[]
+        >();
+      });
+
+      it('should throw when sub query with `take` is not found', async () => {
+        await User.insert(userData);
+
+        await expect(() =>
+          User.select({ as: () => Profile.take() }),
+        ).rejects.toThrow(NotFoundError);
+      });
+
+      it('should return undefined when sub query with `takeOptional` is not found', async () => {
+        await User.insert(userData);
+
+        const res = await User.select({
+          withParsers: () => Profile.takeOptional(),
+          withoutParsers: () => ProfileNoParsers.takeOptional(),
+        });
+
+        assertType<
+          typeof res,
+          {
+            withParsers: ProfileRecord | undefined;
+            withoutParsers: ProfileRecord | undefined;
+          }[]
+        >();
+
+        expect(res).toEqual([
+          { withParsers: undefined, withoutParsers: undefined },
+        ]);
+      });
+
+      it('should throw when sub query with `get` is not found', async () => {
+        await User.insert(userData);
+
+        await expect(() =>
+          User.select({ as: () => Profile.get('id') }),
+        ).rejects.toThrow(NotFoundError);
+      });
+
+      it('should return undefined when sub query with `getOptional` is not found', async () => {
+        await User.insert(userData);
+
+        const res = await User.select({
+          withParsers: () => Profile.getOptional('createdAt'),
+          withoutParsers: () => ProfileNoParsers.getOptional('createdAt'),
+        });
+
+        assertType<
+          typeof res,
+          {
+            withParsers: Date | undefined;
+            withoutParsers: Date | undefined;
+          }[]
+        >();
+
+        expect(res).toEqual([
+          { withParsers: undefined, withoutParsers: undefined },
+        ]);
+      });
+
+      it('should not throw when not found for aggregations that can return null', async () => {
+        await User.insert(userData);
+
+        const res = await User.select({
+          withParsers: () => Profile.avg('id'),
+          withoutParsers: () => ProfileNoParsers.avg('id'),
+        });
+
+        assertType<
+          typeof res,
+          {
+            withParsers: number | null;
+            withoutParsers: number | null;
+          }[]
+        >();
+
+        expect(res).toEqual([{ withParsers: null, withoutParsers: null }]);
+      });
     });
   });
 

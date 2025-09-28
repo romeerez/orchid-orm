@@ -2247,10 +2247,18 @@ describe('belongsTo', () => {
         user: (q) => q.user,
       });
 
+      assertType<
+        typeof result,
+        {
+          Id: number;
+          user: { Id: number; Name: string; Password: string } | undefined;
+        }[]
+      >();
+
       expect(result).toEqual([
         {
           Id: id,
-          user: null,
+          user: undefined,
         },
       ]);
     });

@@ -13,7 +13,7 @@ export * from './json';
 export * from './log';
 export * from './merge';
 export * from './queryMethods';
-export * from './select';
+export * from './select/select';
 export * from './then';
 export * from './transaction';
 export * from './transform';

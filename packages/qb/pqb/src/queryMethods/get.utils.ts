@@ -18,7 +18,7 @@ import {
 import {
   addParserForRawExpression,
   setParserForSelectedString,
-} from './select';
+} from './select/select';
 import { getQueryAs } from '../common/utils';
 import { SelectItemExpression } from '../common/selectItemExpression';
 import { Operators, setQueryOperators } from '../columns/operators';

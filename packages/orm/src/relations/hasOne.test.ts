@@ -2235,10 +2235,18 @@ describe('hasOne', () => {
         profile: (q) => q.profile,
       });
 
+      assertType<
+        typeof result,
+        {
+          Id: number;
+          profile: { Id: number; UserId: number } | undefined;
+        }[]
+      >();
+
       expect(result).toEqual([
         {
           Id: id,
-          profile: null,
+          profile: undefined,
         },
       ]);
     });
@@ -3165,10 +3173,23 @@ describe('hasOne through', () => {
         profile: (q) => q.profile,
       });
 
+      assertType<
+        typeof result,
+        {
+          Id: number;
+          profile:
+            | {
+                Id: number;
+                UserId: number | null;
+              }
+            | undefined;
+        }[]
+      >();
+
       expect(result).toEqual([
         {
           Id: id,
-          profile: null,
+          profile: undefined,
         },
       ]);
     });

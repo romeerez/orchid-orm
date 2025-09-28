@@ -1,7 +1,7 @@
 import { createBaseTable, orchidORMWithAdapter } from 'orchid-orm';
 import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
-import { userData } from '../test-utils/test-utils';
-import { MAX_BINDING_PARAMS } from '../sql/constants';
+import { userData } from '../../test-utils/test-utils';
+import { MAX_BINDING_PARAMS } from '../../sql/constants';
 
 const BaseTable = createBaseTable({
   snakeCase: true,
@@ -51,7 +51,7 @@ const db = orchidORMWithAdapter(
   },
 );
 
-jest.mock('../sql/constants', () => ({
+jest.mock('../../sql/constants', () => ({
   // Behold the power of JS coercions
   MAX_BINDING_PARAMS: {
     value: 100,

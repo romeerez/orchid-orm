@@ -15,7 +15,7 @@ import {
   SetQueryTableAlias,
   AliasOrTable,
 } from 'orchid-core';
-import { getShapeFromSelect } from './select';
+import { getShapeFromSelect } from './select/select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { addColumnParserToQuery, anyShape, ColumnsShape } from '../columns';
 import { _clone } from '../query/queryUtils';
