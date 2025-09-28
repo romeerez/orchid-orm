@@ -546,6 +546,18 @@ describe('queryMethods', () => {
 
       expectQueryNotMutated(q);
     });
+
+    it('should throw on empty object', () => {
+      expect(() => User.findBy({} as never)).toThrow(
+        'findBy was called with empty object',
+      );
+    });
+
+    it('should throw on undefined', () => {
+      expect(() => User.findBy({ name: undefined as never })).toThrow(
+        'findBy was called with undefined value',
+      );
+    });
   });
 
   describe('findByOptional', () => {
@@ -576,6 +588,18 @@ describe('queryMethods', () => {
       );
 
       expectQueryNotMutated(q);
+    });
+
+    it('should throw on empty object', () => {
+      expect(() => User.findByOptional({} as never)).toThrow(
+        'findByOptional was called with empty object',
+      );
+    });
+
+    it('should throw on undefined', () => {
+      expect(() => User.findByOptional({ name: undefined as never })).toThrow(
+        'findByOptional was called with undefined value',
+      );
     });
   });
 

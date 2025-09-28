@@ -575,9 +575,10 @@ const nestedInsert = ({
       ][]) {
         for (const item of connect) {
           queries.push(
-            _queryFindBy(t.select(...throughPrimaryKeys), [
+            _queryFindBy(
+              t.select(...throughPrimaryKeys),
               item as never,
-            ]) as Query,
+            ) as Query,
           );
         }
       }
@@ -604,9 +605,10 @@ const nestedInsert = ({
       ][]) {
         for (const item of connectOrCreate) {
           queries.push(
-            _queryFindByOptional(t.select(...throughPrimaryKeys), [
+            _queryFindByOptional(
+              t.select(...throughPrimaryKeys),
               item.where as never,
-            ]) as Query,
+            ) as Query,
           );
         }
       }

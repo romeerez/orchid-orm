@@ -670,7 +670,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
   ): QueryTake<T> & QueryMetaHasWhere {
-    return _queryFindBy(_clone(this), [uniqueColumnValues] as never) as never;
+    return _queryFindBy(_clone(this), uniqueColumnValues as never) as never;
   }
 
   /**
@@ -690,9 +690,10 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
   ): QueryTakeOptional<T> & QueryMetaHasWhere {
-    return _queryFindByOptional(_clone(this), [
-      uniqueColumnValues,
-    ] as never) as never;
+    return _queryFindByOptional(
+      _clone(this),
+      uniqueColumnValues as never,
+    ) as never;
   }
 
   /**

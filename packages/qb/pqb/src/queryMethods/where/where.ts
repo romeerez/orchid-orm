@@ -18,6 +18,7 @@ import {
   Expression,
   IsQuery,
   MaybeArray,
+  OrchidOrmInternalError,
   PickQueryMeta,
   PickQueryMetaRelations,
   PickQueryMetaRelationsResultReturnType,
@@ -239,18 +240,44 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
 
 export const _queryFindBy = <T extends PickQueryMetaRelationsResultReturnType>(
   q: T,
-  args: WhereArgs<T>,
+  arg: WhereArg<T>,
 ): QueryTake<WhereResult<T>> => {
-  return _queryTake(_queryWhere(q, args));
+  validateFindBy(q, arg, 'findBy');
+  return _queryTake(_queryWhere(q, [arg]));
 };
 
 export const _queryFindByOptional = <
   T extends PickQueryMetaRelationsResultReturnType,
 >(
   q: T,
-  args: WhereArgs<T>,
+  arg: WhereArg<T>,
 ): QueryTakeOptional<WhereResult<T>> => {
-  return _queryTakeOptional(_queryWhere(q, args));
+  validateFindBy(q, arg, 'findByOptional');
+  return _queryTakeOptional(_queryWhere(q, [arg]));
+};
+
+const validateFindBy = (
+  q: unknown,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  arg: WhereArg<any>,
+  method: string,
+) => {
+  let nonEmpty: boolean | undefined;
+  for (const key in arg) {
+    nonEmpty = true;
+    if (arg[key as keyof typeof arg] === undefined) {
+      throw new OrchidOrmInternalError(
+        q as never,
+        `${method} was called with undefined value`,
+      );
+    }
+  }
+  if (!nonEmpty) {
+    throw new OrchidOrmInternalError(
+      q as never,
+      `${method} was called with empty object`,
+    );
+  }
 };
 
 /**
