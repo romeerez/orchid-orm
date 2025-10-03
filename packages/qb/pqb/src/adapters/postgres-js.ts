@@ -12,7 +12,7 @@ import {
   setConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
 } from 'orchid-core';
-import postgres, { Error, PostgresError, Row, RowList } from 'postgres';
+import postgres, { Error, Row, RowList } from 'postgres';
 import {
   DbOptions,
   DefaultColumnTypes,
@@ -110,7 +110,7 @@ export class PostgresJsAdapter implements AdapterBase {
   sql: postgres.Sql;
   schema?: string;
   config: PostgresJsAdapterOptions;
-  errorClass = PostgresError;
+  errorClass = postgres.PostgresError;
 
   constructor(config: PostgresJsAdapterOptions) {
     this.config = { ...config, types };
@@ -250,7 +250,7 @@ export class PostgresJsAdapter implements AdapterBase {
   }
 
   assignError(to: QueryError, dbError: Error) {
-    const from = dbError as PostgresError;
+    const from = dbError as postgres.PostgresError;
     to.message = from.message;
     to.severity = from.severity;
     to.code = from.code;
@@ -284,7 +284,7 @@ const arrays = <R extends any[] = any[]>(
 };
 
 export class PostgresJsTransactionAdapter implements AdapterBase {
-  errorClass = PostgresError;
+  errorClass = postgres.PostgresError;
 
   constructor(public adapter: PostgresJsAdapter, public sql: postgres.Sql) {}
 
