@@ -15,6 +15,16 @@
       "require": "./dist/index.js",
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
+    },
+    "./node-postgres": {
+      "require": "./dist/node-postgres.js",
+      "import": "./dist/node-postgres.mjs",
+      "types": "./dist/node-postgres.d.ts"
+    },
+    "./postgres-js": {
+      "require": "./dist/postgres-js.js",
+      "import": "./dist/postgres-js.mjs",
+      "types": "./dist/postgres-js.d.ts"
     }
   },
   "files": [
@@ -27,7 +37,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c ../../rollup.config.mjs",
+    "build": "rimraf ./dist/ && rollup -c ./rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
