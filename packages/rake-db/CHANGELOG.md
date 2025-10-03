@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.27.4
+
+### Patch Changes
+
+- 7d5e9bc: Export adapters from rake-db (#571)
+
 ## 2.27.3
 
 ### Patch Changes
