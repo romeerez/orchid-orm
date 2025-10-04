@@ -1103,11 +1103,11 @@ describe('create functions', () => {
     });
   });
 
-  describe('createFrom', () => {
+  describe('createOneFrom', () => {
     it('should not allow using appReadOnly columns from select', () => {
       const sub = Chat.find(1).select({ key: 'title', value: 'chat.idOfChat' });
 
-      expect(() => TableWithReadOnly.createFrom(sub)).toThrow(
+      expect(() => TableWithReadOnly.createOneFrom(sub)).toThrow(
         'Trying to insert a readonly column',
       );
     });
@@ -1116,7 +1116,7 @@ describe('create functions', () => {
       const sub = Chat.find(1).select({ key: 'title' });
 
       expect(() =>
-        TableWithReadOnly.createFrom(sub, {
+        TableWithReadOnly.createOneFrom(sub, {
           // @ts-expect-error value is readOnly
           value: 1,
         }),
@@ -1125,7 +1125,7 @@ describe('create functions', () => {
 
     it('should create records without additional data', () => {
       const sub = Chat.find(1).select({ chatId: 'idOfChat' });
-      const q = Message.createFrom(sub);
+      const q = Message.createOneFrom(sub);
 
       assertType<Awaited<typeof q>, MessageRecord>();
 
@@ -1146,7 +1146,7 @@ describe('create functions', () => {
     it('should a create record from select with additional data', () => {
       const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
-      const query = Message.createFrom(chat, {
+      const query = Message.createOneFrom(chat, {
         authorId: 1,
         text: () => sql`'text'`,
       });
@@ -1170,7 +1170,7 @@ describe('create functions', () => {
     it('should a create record from select with named columns', () => {
       const user = User.find(1).select({ snakeName: 'name' });
 
-      const query = Snake.createFrom(user, {
+      const query = Snake.createOneFrom(user, {
         tailLength: 5,
       });
 
@@ -1191,7 +1191,7 @@ describe('create functions', () => {
     });
 
     it('should add runtime defaults', () => {
-      const q = RuntimeDefaultTable.createFrom(
+      const q = RuntimeDefaultTable.createOneFrom(
         User.find(123).select('password'),
         {
           id: 456,
@@ -1214,7 +1214,7 @@ describe('create functions', () => {
 
     it('should not allow to create from query which returns multiple records', () => {
       expect(() =>
-        Message.createFrom(
+        Message.createOneFrom(
           // @ts-expect-error creating from multiple records is not allowed
           Chat.where({ id: { in: [1, 2] } }).select({ chatId: 'id' }),
           {
@@ -1232,7 +1232,7 @@ describe('create functions', () => {
 
       const sub = User.find(user.id).select('name', 'password');
 
-      const result = await User.createFrom(sub).select('name');
+      const result = await User.createOneFrom(sub).select('name');
 
       assertType<typeof result, { name: string }>();
 
@@ -1242,7 +1242,7 @@ describe('create functions', () => {
     it('should a create record from select with additional value returned from an insert sub query', () => {
       const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
-      const query = Message.createFrom(chat, {
+      const query = Message.createOneFrom(chat, {
         authorId: () => User.create(userData).get('id'),
         text: () => sql`'text'`,
       });
@@ -1274,7 +1274,7 @@ describe('create functions', () => {
       const q = Message.with('user', () =>
         User.create(userData).select('id', 'name'),
       )
-        .createFrom(Chat.find(idOfChat).select({ chatId: 'idOfChat' }), {
+        .createOneFrom(Chat.find(idOfChat).select({ chatId: 'idOfChat' }), {
           authorId: (q) => q.from('user').get('id'),
           text: (q) => q.from('user').get('name'),
         })
@@ -1308,13 +1308,13 @@ describe('create functions', () => {
     });
   });
 
-  describe('insertFrom', () => {
+  describe('insertOneFrom', () => {
     it('should return inserted row count by default', async () => {
       const authorId = await User.get('id').create(userData);
       const chatId = await Chat.get('idOfChat').create(chatData);
       const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
 
-      const q = Message.insertFrom(chat, { authorId, text: 'text' });
+      const q = Message.insertOneFrom(chat, { authorId, text: 'text' });
 
       const result = await q;
 
@@ -1328,7 +1328,7 @@ describe('create functions', () => {
       const chatId = await Chat.get('idOfChat').create(chatData);
       const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
 
-      const q = Message.select('text').insertFrom(chat, {
+      const q = Message.select('text').insertOneFrom(chat, {
         authorId,
         text: 'text',
       });
@@ -1345,7 +1345,7 @@ describe('create functions', () => {
       const chatId = await Chat.get('idOfChat').create(chatData);
       const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
 
-      const q = Message.pluck('text').insertFrom(chat, {
+      const q = Message.pluck('text').insertOneFrom(chat, {
         authorId,
         text: 'text',
       });
@@ -1358,21 +1358,21 @@ describe('create functions', () => {
     });
   });
 
-  describe('createManyFrom', () => {
+  describe('createForEachFrom', () => {
     it('should not allow using appReadOnly columns from select', () => {
       const sub = Chat.where({ title: 'title' }).select({
         key: 'title',
         value: 'chat.idOfChat',
       });
 
-      expect(() => TableWithReadOnly.createManyFrom(sub)).toThrow(
+      expect(() => TableWithReadOnly.createForEachFrom(sub)).toThrow(
         'Trying to insert a readonly column',
       );
     });
 
     it('should create records from select', () => {
       const sub = Chat.where({ title: 'title' }).select({ chatId: 'idOfChat' });
-      const query = Message.createManyFrom(sub);
+      const query = Message.createForEachFrom(sub);
 
       assertType<Awaited<typeof query>, MessageRecord[]>();
 
@@ -1391,7 +1391,7 @@ describe('create functions', () => {
 
     it('should a create record from select with named columns', () => {
       const sub = User.where({ name: 'name' }).select({ snakeName: 'name' });
-      const query = Snake.createManyFrom(sub);
+      const query = Snake.createForEachFrom(sub);
 
       assertType<Awaited<typeof query>, SnakeRecord[]>();
 
@@ -1413,7 +1413,7 @@ describe('create functions', () => {
 
       const sub = User.where({ id: user.id }).select('name', 'password');
 
-      const result = await User.createManyFrom(sub).select('name');
+      const result = await User.createForEachFrom(sub).select('name');
 
       assertType<typeof result, { name: string }[]>();
 
@@ -1421,7 +1421,7 @@ describe('create functions', () => {
     });
   });
 
-  describe('insertManyFrom', () => {
+  describe('insertForEachFrom', () => {
     it('should return inserted row count by default', async () => {
       const chatId = await Chat.get('idOfChat').create(chatData);
 
@@ -1429,7 +1429,7 @@ describe('create functions', () => {
         chatId: 'idOfChat',
         text: (q) => q.val('title'),
       });
-      const q = Message.insertManyFrom(sub);
+      const q = Message.insertForEachFrom(sub);
 
       const result = await q;
 
@@ -1446,7 +1446,7 @@ describe('create functions', () => {
         text: 'title',
       });
 
-      const q = Message.take().select('text').insertManyFrom(sub);
+      const q = Message.take().select('text').insertForEachFrom(sub);
 
       const result = await q;
 
@@ -1463,7 +1463,7 @@ describe('create functions', () => {
         text: 'title',
       });
 
-      const q = Message.get('text').insertManyFrom(sub);
+      const q = Message.get('text').insertForEachFrom(sub);
 
       const result = await q;
 

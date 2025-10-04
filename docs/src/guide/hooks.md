@@ -66,7 +66,7 @@ You can mark columns as [readOnly](/guide/common-column-methods.html#readonly) s
 they can be only set in the hooks.
 
 This works for all update and create methods, including
-[createFrom](/guide/create-update-delete.html#orcreate),
+[createOneFrom](/guide/create-update-delete.html#orcreate),
 [createMany](/guide/create-update-delete.html#createmany-insertmany),
 [orCreate](/guide/create-update-delete.html#orcreate),
 [upsert](/guide/create-update-delete.html#upsert).

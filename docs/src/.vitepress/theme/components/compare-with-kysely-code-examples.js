@@ -979,7 +979,7 @@ const result = await db
       `,
       orchid: `import { db } from './tables';
 
-const count = await db.person.insertManyFrom(
+const count = await db.person.insertForEachFrom(
   db.pet.select({
     firstName: 'pet.name',
     lastName: (q) => q.val('Petson'),

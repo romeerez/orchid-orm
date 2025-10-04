@@ -788,7 +788,7 @@ const nestedUpdate = (state: State) => {
     }
 
     /**
-     * Performs `insertManyFrom` on the joining table,
+     * Performs `insertForEachFrom` on the joining table,
      * based on a query to the related table with applied filters of `params.connect`,
      * joins the main table data using `joinData`.
      */
@@ -802,7 +802,7 @@ const nestedUpdate = (state: State) => {
 
       try {
         const count = await state.joinTableQuery
-          .insertManyFrom(
+          .insertForEachFrom(
             _querySelect(
               state.relatedTableQuery.whereOneOf(...relatedWheres) as Query,
               [

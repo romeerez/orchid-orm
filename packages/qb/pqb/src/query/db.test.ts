@@ -450,7 +450,7 @@ describe('db', () => {
 
       const createdFrom = await qb
         .from('user')
-        .createFrom(qb.from('user').select('name').take(), {
+        .createOneFrom(qb.from('user').select('name').take(), {
           password: userData.password,
         });
       assertType<typeof createdFrom, RecordUnknown>();
@@ -458,7 +458,7 @@ describe('db', () => {
 
       const insertedFrom = await qb
         .from('user')
-        .insertFrom(qb.from('user').select('name').take(), {
+        .insertOneFrom(qb.from('user').select('name').take(), {
           password: userData.password,
         });
       assertType<typeof insertedFrom, number>();
@@ -466,13 +466,13 @@ describe('db', () => {
 
       const createdManyFrom = await qb
         .from('user')
-        .createManyFrom(qb.from('user').select('name', 'password').limit(1));
+        .createForEachFrom(qb.from('user').select('name', 'password').limit(1));
       assertType<typeof createdManyFrom, RecordUnknown[]>();
       expect(createdManyFrom).toMatchObject([userData]);
 
       const insertedManyFrom = await qb
         .from('user')
-        .insertManyFrom(qb.from('user').select('name', 'password').limit(1));
+        .insertForEachFrom(qb.from('user').select('name', 'password').limit(1));
       assertType<typeof insertedManyFrom, number>();
       expect(insertedManyFrom).toBe(1);
     });

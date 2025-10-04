@@ -383,7 +383,7 @@ describe('hooks', () => {
       },
     );
 
-    it.each(['createFrom', 'insertFrom'] as const)(
+    it.each(['createOneFrom', 'insertOneFrom'] as const)(
       'should work for %s',
       async (method) => {
         tested[method] = true;
@@ -400,7 +400,7 @@ describe('hooks', () => {
       },
     );
 
-    it.each(['createFrom', 'insertFrom'] as const)(
+    it.each(['createOneFrom', 'insertOneFrom'] as const)(
       'should work for %s with a custom key',
       async (method) => {
         tested[method] = true;
@@ -418,7 +418,7 @@ describe('hooks', () => {
       },
     );
 
-    it.each(['createManyFrom', 'insertManyFrom'] as const)(
+    it.each(['createForEachFrom', 'insertForEachFrom'] as const)(
       'should work for %s',
       async (method) => {
         tested[method] = true;

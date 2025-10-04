@@ -585,9 +585,9 @@ db.table.join(db.otherTable, (q) =>
 ## joinData
 
 This method may be useful
-for combining with [createManyFrom](/guide/create-update-delete.html#createmanyfrom-insertmanyfrom).
+for combining with [createForEachFrom](/guide/create-update-delete.html#createForEachFrom-insertForEachFrom).
 
-`createManyFrom` creates multiple record based on a selecting query:
+`createForEachFrom` creates multiple record based on a selecting query:
 
 ```sql
 INSERT INTO t1(c1, c2)
@@ -601,7 +601,7 @@ Use `joinData` to insert a multiplication of selected records and the provided d
 ```ts
 const data = [{ column2: 'one' }, { column2: 'two' }, { column2: 'three' }];
 
-await db.table.createManyFrom(
+await db.table.createForEachFrom(
   db.otherTable
     .joinData('data', (t) => ({ column2: t.text() }), data)
     .select('otherTable.column1', 'data.column2'),

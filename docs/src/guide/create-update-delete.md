@@ -250,13 +250,13 @@ await db.table.createMany(
 However, this only works in the case shown above. This **won't** work if you're using the `createMany` in `with` statement,
 or if the insert is used as a sub-query in other query part.
 
-### createFrom, insertFrom
+### createOneFrom, insertFrom
 
 [//]: # 'has JSDoc'
 
-These methods are for creating a single record, for batch creating see [createManyFrom](#createManyFrom-insertManyFrom).
+These methods are for creating a single record, for batch creating see [createForEachFrom](#createForEachFrom-insertForEachFrom).
 
-`createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
+`createOneFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
 
 The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
 
@@ -268,7 +268,7 @@ Columns with runtime defaults (defined with a callback) are supported here.
 The value for such a column will be injected unless selected from a related table or provided in a data object.
 
 ```ts
-const oneRecord = await db.table.createFrom(
+const oneRecord = await db.table.createOneFrom(
   // In the select, key is a related table column, value is a column to insert as
   RelatedTable.select({ relatedId: 'id' }).findBy({ key: 'value' }),
   // optional argument:
@@ -293,16 +293,16 @@ LIMIT 1
 RETURNING *
 ```
 
-### createManyFrom, insertManyFrom
+### createForEachFrom, insertForEachFrom
 
 [//]: # 'has JSDoc'
 
-Similar to `createFrom`, but intended to create many records.
+Similar to `createOneFrom`, but intended to create many records.
 
-Unlike `createFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
+Unlike `createOneFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
 
 ```ts
-const manyRecords = await db.table.createManyFrom(
+const manyRecords = await db.table.createForEachFrom(
   RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
 );
 ```

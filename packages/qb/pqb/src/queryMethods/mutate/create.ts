@@ -54,7 +54,7 @@ export interface CreateSelf
   inputType: RecordUnknown;
 }
 
-// Type of argument for `create`, `createMany`, optional argument for `createFrom`,
+// Type of argument for `create`, `createMany`, optional argument for `createOneFrom`,
 // `defaults` use a Partial of it.
 //
 // It maps `inputType` of the table into object to accept a corresponding type,
@@ -422,7 +422,7 @@ const createCtx = (): CreateCtx => ({
 });
 
 /**
- * Processes arguments of `create`, `insert`, `createFrom` and `insertFrom` when it has data.
+ * Processes arguments of `create`, `insert`, `createOneFrom` and `insertOneFrom` when it has data.
  * Apply defaults that may be present on a query object to the data.
  * Maps data object into array of values, encodes values when the column has an encoder.
  *
@@ -505,7 +505,7 @@ const handleManyData = (
  *
  * @param self - query object.
  * @param columns - columns list of all values.
- * @param values - array of arrays matching columns, or can be an array of SQL expressions, or is a special object for `createFrom`.
+ * @param values - array of arrays matching columns, or can be an array of SQL expressions, or is a special object for `createOneFrom`.
  * @param many - whether it's for creating one or many.
  */
 const insert = (
@@ -561,7 +561,7 @@ const insert = (
  * @param q - the creating query
  * @param from - inner query to grab the columns from.
  * @param obj - optionally passed object with specific data, only available when creating a single record.
- * @param many - whether it's for `createManyFrom`. If no, throws if the inner query returns multiple records.
+ * @param many - whether it's for `createForEachFrom`. If no, throws if the inner query returns multiple records.
  */
 const getFromSelectColumns = (
   q: CreateSelf,
@@ -773,10 +773,10 @@ export type CreateMethodsNames =
   | 'insert'
   | 'createMany'
   | 'insertMany'
-  | 'createFrom'
-  | 'insertFrom'
-  | 'createManyFrom'
-  | 'insertManyFrom';
+  | 'createOneFrom'
+  | 'insertOneFrom'
+  | 'createForEachFrom'
+  | 'insertForEachFrom';
 
 export class QueryCreate {
   /**
@@ -908,9 +908,9 @@ export class QueryCreate {
   }
 
   /**
-   * These methods are for creating a single record, for batch creating see {@link createManyFrom}.
+   * These methods are for creating a single record, for batch creating see {@link createForEachFrom}.
    *
-   * `createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
+   * `createOneFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
    *
    * The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
    *
@@ -922,7 +922,7 @@ export class QueryCreate {
    * The value for such a column will be injected unless selected from a related table or provided in a data object.
    *
    * ```ts
-   * const oneRecord = await db.table.createFrom(
+   * const oneRecord = await db.table.createOneFrom(
    *   // In the select, key is a related table column, value is a column to insert as
    *   RelatedTable.select({ relatedId: 'id' }).findBy({ key: 'value' }),
    *   // optional argument:
@@ -950,7 +950,7 @@ export class QueryCreate {
    * @param query - query to create new records from
    * @param data - additionally you can set some columns
    */
-  createFrom<T extends CreateSelf, Q extends QueryReturningOne>(
+  createOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
@@ -959,12 +959,12 @@ export class QueryCreate {
   }
 
   /**
-   * Works exactly as {@link createFrom}, except that it returns inserted row count by default.
+   * Works exactly as {@link createOneFrom}, except that it returns inserted row count by default.
    *
    * @param query - query to create new records from
    * @param data - additionally you can set some columns
    */
-  insertFrom<T extends CreateSelf, Q extends QueryReturningOne>(
+  insertOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
     data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
@@ -973,19 +973,19 @@ export class QueryCreate {
   }
 
   /**
-   * Similar to `createFrom`, but intended to create many records.
+   * Similar to `createOneFrom`, but intended to create many records.
    *
-   * Unlike `createFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
+   * Unlike `createOneFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
    *
    * ```ts
-   * const manyRecords = await db.table.createManyFrom(
+   * const manyRecords = await db.table.createForEachFrom(
    *   RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
    * );
    * ```
    *
    * @param query - query to create new records from
    */
-  createManyFrom<T extends CreateSelf>(
+  createForEachFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
   ): CreateManyFromResult<T> {
@@ -993,11 +993,11 @@ export class QueryCreate {
   }
 
   /**
-   * Works exactly as {@link createManyFrom}, except that it returns inserted row count by default.
+   * Works exactly as {@link createForEachFrom}, except that it returns inserted row count by default.
    *
    * @param query - query to create new records from
    */
-  insertManyFrom<T extends CreateSelf>(
+  insertForEachFrom<T extends CreateSelf>(
     this: T,
     query: IsQuery,
   ): InsertManyFromResult<T> {

@@ -1,5 +1,16 @@
 # Breaking changes
 
+## orchid-orm 1.57
+
+Renamed:
+
+- `createFrom` -> `createOneFrom`
+- `createFromMany` -> `createForEachFrom`
+
+It is needed to introduce additional `createManyFrom` to create multiple records from a query that returns a single record, planning to add it soon.
+
+And to have `createManyForEachFrom` to create multiple records per every record returned from a query that returns multiple, not planning to add it for now.
+
 ## orchid-orm 1.56
 
 Adding support for [postgres](https://github.com/porsager/postgres) db adapter!
