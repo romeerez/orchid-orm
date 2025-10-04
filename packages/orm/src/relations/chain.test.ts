@@ -2468,6 +2468,31 @@ describe('relations chain', () => {
         items: [{ Tag: postTagData.Tag }],
       });
     });
+
+    it('should support insert', async () => {
+      const user = await db.user.create(userData);
+
+      const title = await db.user
+        .find(user.Id)
+        .chain('posts')
+        .insert(postData)
+        .get('Title');
+
+      expect(title).toBe(user.UserKey);
+    });
+
+    it.todo('should support insertMany');
+    // it.only('should support insertMany', async () => {
+    //   const user = await db.user.create(userData);
+    //
+    //   const titles = await db.user
+    //     .find(user.Id)
+    //     .chain('posts')
+    //     .insertMany([postData, postData])
+    //     .pluck('Title');
+    //
+    //   console.log(titles);
+    // });
   });
 
   describe('hasMany through hasMany', () => {

@@ -197,7 +197,7 @@ export const makeInsertSql = (
     const { from, values: v } = values as InsertQueryDataFromValues;
     const q = from.clone();
 
-    if (v) {
+    if (v?.length) {
       pushQueryValueImmutable(
         q,
         'select',
@@ -347,7 +347,7 @@ const processHookSet = (
 
   if ('from' in values) {
     const v = { ...values };
-    const newColumns: string[] = [];
+    const newColumns = new Set<string>();
     const originalSelect = v.from.q.select;
     if (originalSelect) {
       v.from = _clone(v.from);
@@ -355,13 +355,13 @@ const processHookSet = (
       for (const s of originalSelect) {
         if (typeof s === 'string' && !hookSet[s]) {
           select.push(s);
-          newColumns.push(s);
+          newColumns.add(s);
         } else if (typeof s === 'object' && 'selectAs' in s) {
           const filtered: SelectAsValue = {};
           for (const key in s.selectAs) {
             if (!hookSet[key]) {
               filtered[key] = s.selectAs[key];
-              newColumns.push(key);
+              newColumns.add(key);
             }
           }
           select.push({ selectAs: filtered });
@@ -376,8 +376,8 @@ const processHookSet = (
       const valuesColumns = columns.slice(-originalRow.length);
       row = [];
       valuesColumns.forEach((c, i) => {
-        if (!hookSet[c]) {
-          newColumns.push(c);
+        if (!hookSet[c] && !newColumns.has(c)) {
+          newColumns.add(c);
           row.push(originalRow[i]);
         }
       });
@@ -389,7 +389,7 @@ const processHookSet = (
 
     columns.forEach((column) => {
       if (column in hookSet) {
-        newColumns.push(column);
+        newColumns.add(column);
 
         const fromHook = {
           fromHook: encodeValue(
@@ -425,7 +425,7 @@ const processHookSet = (
       };
     }
 
-    return { columns: newColumns, values: v };
+    return { columns: [...newColumns], values: v };
   }
 
   columns.forEach((column, i) => {

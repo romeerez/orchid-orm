@@ -17,7 +17,12 @@ import {
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
-import { OnConflictMerge, QueryData, ToSQLQuery } from '../../sql';
+import {
+  InsertQueryDataObjectValues,
+  OnConflictMerge,
+  QueryData,
+  ToSQLQuery,
+} from '../../sql';
 import { anyShape, VirtualColumn } from '../../columns';
 import {
   Expression,
@@ -561,27 +566,42 @@ const insert = (
 const getFromSelectColumns = (
   q: CreateSelf,
   from: CreateSelf,
-  obj?: { columns: string[] },
+  obj?: {
+    columns: string[];
+    values: QueryData['values'];
+  },
   many?: boolean,
-) => {
+): {
+  columns: string[];
+  values: InsertQueryDataObjectValues;
+} => {
   if (!many && !queryTypeWithLimitOne[(from as Query).q.returnType as string]) {
     throw new Error(
       'Cannot create based on a query which returns multiple records',
     );
   }
 
-  const queryColumns: string[] = [];
+  const queryColumns = new Set<string>();
   (from as Query).q.select?.forEach((item) => {
     if (typeof item === 'string') {
       const index = item.indexOf('.');
-      queryColumns.push(index === -1 ? item : item.slice(index + 1));
+      queryColumns.add(index === -1 ? item : item.slice(index + 1));
     } else if (item && 'selectAs' in item) {
-      queryColumns.push(...Object.keys(item.selectAs));
+      for (const column in item.selectAs) {
+        queryColumns.add(column);
+      }
     }
   });
 
+  const values: unknown[] = [];
   if (obj?.columns) {
-    queryColumns.push(...obj.columns);
+    const objectValues = (obj.values as InsertQueryDataObjectValues)[0];
+    obj.columns.forEach((column, i) => {
+      if (!queryColumns.has(column)) {
+        queryColumns.add(column);
+        values.push(objectValues[i]);
+      }
+    });
   }
 
   for (const key of queryColumns) {
@@ -589,7 +609,10 @@ const getFromSelectColumns = (
     if (column) throwOnReadOnly(from, column, key);
   }
 
-  return queryColumns;
+  return {
+    columns: [...queryColumns],
+    values: [values],
+  };
 };
 
 /**
@@ -616,13 +639,13 @@ const insertFromQuery = <
 
   const obj = data && handleOneData(q, data, ctx);
 
-  const columns = getFromSelectColumns(q, from as never, obj, many);
+  const { columns, values } = getFromSelectColumns(q, from as never, obj, many);
 
   return insert(
     q,
     {
       columns,
-      values: { from, values: obj?.values[0] } as never,
+      values: { from, values: values[0] } as never,
     },
     many,
   );
@@ -647,14 +670,14 @@ export const _queryInsert = <
   data: CreateData<T, BT>,
 ): InsertResult<T, BT> => {
   const ctx = createCtx();
-  const obj = handleOneData(q, data, ctx) as {
+  let obj = handleOneData(q, data, ctx) as {
     columns: string[];
     values: QueryData['values'];
   };
 
   const values = (q as unknown as Query).q.values;
   if (values && 'from' in values) {
-    obj.columns = getFromSelectColumns(q, values.from, obj);
+    obj = getFromSelectColumns(q, values.from, obj);
     values.values = (obj.values as unknown[][])[0];
     obj.values = values;
   }
