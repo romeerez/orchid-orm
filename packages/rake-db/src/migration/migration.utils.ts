@@ -598,7 +598,7 @@ const getIndexOrExcludeMainOptions = <
   return {
     columns,
     include,
-    name: item.name || getName(tableName, columns),
+    name: item.options?.name || getName(tableName, columns),
   };
 };
 

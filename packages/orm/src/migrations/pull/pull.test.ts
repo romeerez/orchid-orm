@@ -132,14 +132,15 @@ describe('pull', () => {
           await db.createTable(
             'schema.one',
             (t) => ({
-              one: t.integer().index('one_idx'),
-              two: t.text().unique('two_idx'),
+              one: t.integer().index({ name: 'one_idx' }),
+              two: t.text().unique({ name: 'two_idx' }),
               snake_case: t.boolean(),
               numbers: t.enum('numbers'),
               domain: t.domain('domain'),
             }),
             (t) => [
-              t.unique(['one', 'two'], 'uniqueIdx', {
+              t.unique(['one', 'two'], {
+                name: 'uniqueIdx',
                 nullsNotDistinct: true,
               }),
               t.primaryKey(['one', 'two'], 'onePkey'),
@@ -167,15 +168,20 @@ export class OneTable extends BaseTable {
   readonly table = 'one';
   columns = this.setColumns(
     (t) => ({
-      one: t.integer().index('one_idx').check(t.sql\`(one = 69)\`),
-      two: t.text().unique('two_idx'),
+      one: t.integer().index({
+        name: 'one_idx',
+      }).check(t.sql\`(one = 69)\`),
+      two: t.text().unique({
+        name: 'two_idx',
+      }),
       snakeCase: t.name('snake_case').boolean(),
       numbers: t.enum('public.numbers', ['one', 'two']),
       domain: t.domain('public.domain').as(t.integer().nullable()),
     }),
     (t) => [
       t.primaryKey(['one', 'two'], 'onePkey'),
-      t.unique(['one', 'two'], 'uniqueIdx', {
+      t.unique(['one', 'two'], {
+        name: 'uniqueIdx',
         nullsNotDistinct: true,
       }),
       t.check(t.sql({ raw: '((one)::text <> two)' }), 'tableCheck'),

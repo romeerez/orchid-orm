@@ -11,6 +11,7 @@ import {
   pushColumnData,
   QueryBaseCommon,
   RawSQLValues,
+  RecordUnknown,
   setColumnData,
   StaticSQLArgs,
   TemplateLiteralArgs,
@@ -250,9 +251,7 @@ export abstract class ColumnType<
    *     // options are described below:
    *     name: t.text().index({ ...options }),
    *     // with a database-level name:
-   *     name: t.text().index('custom_index_name'),
-   *     // with name and options:
-   *     name: t.text().index('custom_index_name', { ...options }),
+   *     name: t.text().index({ name: 'custom_index_name', ...indexOptions }),
    *   }));
    * });
    * ```
@@ -261,6 +260,7 @@ export abstract class ColumnType<
    *
    * ```ts
    * type IndexOptions = {
+   *   name?: string,
    *   // NULLS NOT DISTINCT: availabe in Postgres 15+, makes sense only for unique index
    *   nullsNotDistinct?: true;
    *   // index algorithm to use such as GIST, GIN
@@ -288,13 +288,16 @@ export abstract class ColumnType<
    */
   index<T extends PickColumnData>(
     this: T,
-    ...args:
-      | [options?: TableData.Index.ColumnArg]
-      | [name: string, options?: TableData.Index.ColumnArg]
+    ...args: [options?: TableData.Index.ColumnArg]
   ): T {
+    const a = args as
+      | [options?: RecordUnknown]
+      | [name: string, options?: RecordUnknown];
+
     return pushColumnData(this, 'indexes', {
-      options: (typeof args[0] === 'string' ? args[1] : args[0]) ?? emptyObject,
-      name: typeof args[0] === 'string' ? args[0] : undefined,
+      options:
+        (typeof a[0] === 'string' ? { ...a[1], name: a[0] } : a[0]) ??
+        emptyObject,
     });
   }
 
@@ -402,33 +405,38 @@ export abstract class ColumnType<
    */
   searchIndex<T extends { data: ColumnType['data']; dataType: string }>(
     this: T,
-    ...args:
-      | [options?: TableData.Index.TsVectorColumnArg]
-      | [name: string, options?: TableData.Index.TsVectorColumnArg]
+    ...args: [options?: TableData.Index.TsVectorColumnArg]
   ): T {
+    const a = args as
+      | [options?: RecordUnknown]
+      | [name: string, options?: RecordUnknown];
+
     return pushColumnData(this, 'indexes', {
       options: {
-        ...(typeof args[0] === 'string' ? args[1] : args[0]),
+        ...(typeof a[0] === 'string' ? { ...a[1], name: a[0] } : a[0]),
         ...(this.dataType === 'tsvector'
           ? { using: 'GIN' }
           : { tsVector: true }),
       },
-      name: typeof args[0] === 'string' ? args[0] : undefined,
     });
   }
 
-  unique<T extends PickColumnData, Name extends string>(
+  unique<
+    T extends PickColumnData,
+    const Options extends TableData.Index.ColumnArg,
+  >(
     this: T,
-    ...args:
-      | [options?: TableData.Index.UniqueColumnArg]
-      | [name: Name, options?: TableData.Index.UniqueColumnArg]
-  ): UniqueColumn<T, Name> {
+    ...args: [options?: Options]
+  ): UniqueColumn<T, Options['name'] & string> {
+    const a = args as
+      | [options?: RecordUnknown]
+      | [name: string, options?: RecordUnknown];
+
     return pushColumnData(this, 'indexes', {
       options: {
-        ...(typeof args[0] === 'string' ? args[1] : args[0]),
+        ...(typeof a[0] === 'string' ? { ...a[1], name: a[0] } : a[0]),
         unique: true,
       },
-      name: typeof args[0] === 'string' ? args[0] : undefined,
     }) as never;
   }
 
@@ -479,14 +487,18 @@ export abstract class ColumnType<
    */
   exclude<T extends PickColumnData>(
     this: T,
-    ...args:
-      | [op: string, options?: TableData.Exclude.ColumnArg]
-      | [op: string, name: string, options?: TableData.Exclude.ColumnArg]
+    op: string,
+    ...args: [options?: TableData.Exclude.ColumnArg]
   ): T {
+    const a = args as
+      | [options?: RecordUnknown]
+      | [name: string, options?: RecordUnknown];
+
     return pushColumnData(this, 'excludes', {
-      with: args[0],
-      options: (typeof args[1] === 'string' ? args[2] : args[1]) ?? emptyObject,
-      name: typeof args[1] === 'string' ? args[1] : undefined,
+      with: op,
+      options:
+        (typeof a[0] === 'string' ? { ...a[1], name: a[0] } : a[0]) ??
+        emptyObject,
     });
   }
 

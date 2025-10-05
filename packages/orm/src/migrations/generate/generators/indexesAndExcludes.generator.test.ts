@@ -287,12 +287,18 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          naMe: t.text().index('from').exclude('=', 'exclude_from'),
+          naMe: t
+            .text()
+            .index({ name: 'from' })
+            .exclude('=', { name: 'exclude_from' }),
         }));
       },
       tables: [
         table((t) => ({
-          naMe: t.text().index('to').exclude('=', 'exclude_to'),
+          naMe: t
+            .text()
+            .index({ name: 'to' })
+            .exclude('=', { name: 'exclude_to' }),
         })),
       ],
     });
@@ -789,18 +795,16 @@ change(async (db) => {
             naMe: t.text(),
           }),
           (t) => [
-            t.index(
-              [{ column: 'iD' }, { column: 'naMe', ...columnOptions }],
-              'from',
-              indexOptions,
-            ),
+            t.index([{ column: 'iD' }, { column: 'naMe', ...columnOptions }], {
+              ...indexOptions,
+              name: 'from',
+            }),
             t.exclude(
               [
                 { column: 'iD', with: '=' },
                 { column: 'naMe', ...columnOptions, with: '=' },
               ],
-              'exclude_from',
-              excludeOptions,
+              { ...excludeOptions, name: 'exclude_from' },
             ),
           ],
         );
@@ -820,8 +824,7 @@ change(async (db) => {
                   ...columnOptions,
                 },
               ],
-              'to',
-              indexOptions,
+              { ...indexOptions, name: 'to' },
             ),
             t.exclude(
               [
@@ -832,8 +835,7 @@ change(async (db) => {
                   with: '=',
                 },
               ],
-              'exclude_to',
-              excludeOptions,
+              { ...excludeOptions, name: 'exclude_to' },
             ),
           ],
         ),
@@ -1085,8 +1087,8 @@ change(async (db) => {
                   expression: `'first' || i_d || na_me || act_ive`,
                 },
               ],
-              'first',
               {
+                name: 'first',
                 where: `na_me = 'first'`,
               },
             ),
@@ -1096,8 +1098,8 @@ change(async (db) => {
                   expression: `'second' || i_d || na_me || act_ive`,
                 },
               ],
-              'second',
               {
+                name: 'second',
                 where: `na_me = 'second'`,
               },
             ),
@@ -1124,8 +1126,8 @@ change(async (db) => {
                   expression: `'first'||i_d||na_me||act_ive`,
                 },
               ],
-              'first',
               {
+                name: 'first',
                 where: `na_me='first'`,
               },
             ),
@@ -1135,8 +1137,8 @@ change(async (db) => {
                   expression: `'second'||i_d||na_me||act_ive`,
                 },
               ],
-              'second',
               {
+                name: 'second',
                 where: `na_me='second'`,
               },
             ),
@@ -1174,7 +1176,7 @@ change(async (db) => {
                   expression: `(a_a || b_b) || c_c`,
                 },
               ],
-              'idx',
+              { name: 'idx' },
             ),
             t.exclude([
               {
@@ -1199,7 +1201,7 @@ change(async (db) => {
                   expression: `a_a||c_c||b_b`,
                 },
               ],
-              'idx',
+              { name: 'idx' },
             ),
             t.exclude([
               {
@@ -1225,7 +1227,9 @@ change(async (db) => {
             expression: '(((a_a || b_b) || c_c))',
           },
         ],
-        'idx',
+        {
+          name: 'idx',
+        },
       ),
     ),
     ...t.drop(
@@ -1245,7 +1249,9 @@ change(async (db) => {
             expression: 'a_a||c_c||b_b',
           },
         ],
-        'idx',
+        {
+          name: 'idx',
+        },
       ),
     ),
     ...t.add(

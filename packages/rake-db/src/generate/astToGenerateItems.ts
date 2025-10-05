@@ -303,8 +303,8 @@ const pushIndexOrExcludeKeys = (
     const getName = key === 'indexes' ? getIndexName : getExcludeName;
     for (const x of items) {
       keys.push(
-        x.name
-          ? `${schema}.${x.name}`
+        x.options.name
+          ? `${schema}.${x.options.name}`
           : getName(table, [{ column: change.column?.data.name ?? name }]),
       );
     }
@@ -322,7 +322,11 @@ const pushIndexesOrExcludesKeys = (
   if (arr) {
     const getName = key === 'indexes' ? getIndexName : getExcludeName;
     for (const x of arr) {
-      keys.push(x.name ? `${schema}.${x.name}` : getName(table, x.columns));
+      keys.push(
+        x.options.name
+          ? `${schema}.${x.options.name}`
+          : getName(table, x.columns),
+      );
     }
   }
 };

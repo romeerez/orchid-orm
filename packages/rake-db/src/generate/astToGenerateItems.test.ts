@@ -108,12 +108,12 @@ class SomeTableWithSchema extends SomeTable {
 describe('astToGenerateItem', () => {
   describe('table', () => {
     describe('keys', () => {
-      const assertTableKey = (key: string) =>
+      const assertTableKey = (...keys: string[]) =>
         assertKeys([
           `public.${
             ((result as TableGenerateItem)[0].ast as RakeDbAst.Table).name
           }`,
-          key,
+          ...keys,
         ]);
 
       it('should have a table name key', () => {
@@ -177,7 +177,7 @@ describe('astToGenerateItem', () => {
         it('should have a custom column index key', () => {
           arrangeTable({
             shape: {
-              name: t.string().index('indexName'),
+              name: t.string().index({ name: 'indexName' }),
             },
           });
 
@@ -206,8 +206,7 @@ describe('astToGenerateItem', () => {
             indexes: [
               {
                 columns: [],
-                options: {},
-                name: 'indexName',
+                options: { name: 'indexName' },
               },
             ],
           });
@@ -234,13 +233,15 @@ describe('astToGenerateItem', () => {
         it('should have a custom column exclude key', () => {
           arrangeTable({
             shape: {
+              // @ts-expect-error name as argument is deprecated
               name: t.string().exclude('=', 'excludeName'),
+              name2: t.string().exclude('=', { name: 'excludeName2' }),
             },
           });
 
           act();
 
-          assertTableKey('public.excludeName');
+          assertTableKey('public.excludeName', 'public.excludeName2');
         });
 
         it('should have a composite exclude key', () => {
@@ -266,8 +267,9 @@ describe('astToGenerateItem', () => {
             excludes: [
               {
                 columns: [],
-                options: {},
-                name: 'excludeName',
+                options: {
+                  name: 'excludeName',
+                },
               },
             ],
           });

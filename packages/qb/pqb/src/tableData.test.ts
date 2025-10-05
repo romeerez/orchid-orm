@@ -221,7 +221,7 @@ describe('tableData', () => {
       const table = testDb(
         'table',
         (t) => ({
-          id: t.identity().unique('uniq'),
+          id: t.identity().unique({ name: 'uniq' }),
         }),
         undefined,
         { noPrimaryKey: 'ignore' },
@@ -250,7 +250,7 @@ describe('tableData', () => {
           a: t.text(),
           b: t.text(),
         }),
-        (t) => t.unique(['a', 'b'], 'uniq'),
+        (t) => t.unique(['a', 'b'], { name: 'uniq' }),
         { noPrimaryKey: 'ignore' },
       );
 
@@ -275,13 +275,13 @@ describe('tableData', () => {
       const table = testDb(
         'table',
         (t) => ({
-          a: t.text().unique('a'),
-          b: t.text().unique('b'),
+          a: t.text().unique({ name: 'a' }),
+          b: t.text().unique({ name: 'b' }),
           c: t.text(),
         }),
         (t) => [
-          t.unique(['a', 'b'], 'a_and_b'),
-          t.unique(['b', 'c'], 'b_and_c'),
+          t.unique(['a', 'b'], { name: 'a_and_b' }),
+          t.unique(['b', 'c'], { name: 'b_and_c' }),
         ],
         { noPrimaryKey: 'ignore' },
       );

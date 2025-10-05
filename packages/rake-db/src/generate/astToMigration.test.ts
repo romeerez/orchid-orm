@@ -278,7 +278,9 @@ change(async (db) => {
           shape: {
             someId: t
               .integer()
+              // @ts-expect-error name as argument is deprecated
               .unique('indexName', { nullsNotDistinct: true })
+              // @ts-expect-error name as argument is deprecated
               .exclude('=', 'excludeName', { order: 'ASC' })
               .foreignKey('otherTable', 'otherId', {
                 name: 'fkey',
@@ -286,6 +288,10 @@ change(async (db) => {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE',
               }),
+            someId2: t
+              .integer()
+              .unique({ name: 'indexName', nullsNotDistinct: true })
+              .exclude('=', { name: 'excludeName', order: 'ASC' }),
           },
         },
       ]);
@@ -301,11 +307,19 @@ change(async (db) => {
       match: 'FULL',
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
-    }).unique('indexName', {
+    }).unique({
+      name: 'indexName',
       nullsNotDistinct: true,
     }).exclude('=', {
-      order: 'ASC',
       name: 'excludeName',
+      order: 'ASC',
+    }),
+    someId2: t.integer().unique({
+      name: 'indexName',
+      nullsNotDistinct: true,
+    }).exclude('=', {
+      name: 'excludeName',
+      order: 'ASC',
     }),
   }));
 });
@@ -324,8 +338,7 @@ change(async (db) => {
           indexes: [
             {
               columns: [{ column: 'id' }, { column: 'name' }],
-              options: { unique: true, nullsNotDistinct: true },
-              name: 'index',
+              options: { name: 'index', unique: true, nullsNotDistinct: true },
             },
           ],
           excludes: [
@@ -334,8 +347,10 @@ change(async (db) => {
                 { column: 'id', with: '=' },
                 { column: 'name', with: '!=' },
               ],
-              options: { where: 'whe' },
-              name: 'exclude',
+              options: {
+                name: 'exclude',
+                where: 'whe',
+              },
             },
           ],
           constraints: [
@@ -365,7 +380,8 @@ change(async (db) => {
     }),
     (t) => [
       t.primaryKey(['id', 'name'], 'pkey'),
-      t.unique(['id', 'name'], 'index', {
+      t.unique(['id', 'name'], {
+        name: 'index',
         nullsNotDistinct: true,
       }),
       t.exclude(
@@ -379,8 +395,8 @@ change(async (db) => {
             with: '!=',
           },
         ],
-        'exclude',
         {
+          name: 'exclude',
           where: 'whe',
         },
       ),
@@ -593,6 +609,7 @@ change(async (db) => {
           { expression: 'expression' },
         ],
         options: {
+          name: 'idx',
           unique: true,
           using: 'using',
           nullsNotDistinct: true,
@@ -605,7 +622,6 @@ change(async (db) => {
           tsVector: true,
           dropMode: 'CASCADE',
         },
-        name: 'idx',
       };
 
       const result = act([
@@ -643,9 +659,9 @@ change(async (db) => {
             expression: 'expression',
           },
         ],
-        'idx',
         {
           unique: true,
+          name: 'idx',
           using: 'using',
           nullsNotDistinct: true,
           include: ['include'],
@@ -672,9 +688,9 @@ change(async (db) => {
             expression: 'expression',
           },
         ],
-        'idx',
         {
           unique: true,
+          name: 'idx',
           using: 'using',
           nullsNotDistinct: true,
           include: ['include'],
@@ -709,6 +725,7 @@ change(async (db) => {
           },
         ],
         options: {
+          name: 'exc',
           using: 'using',
           include: ['include'],
           with: 'with',
@@ -716,7 +733,6 @@ change(async (db) => {
           where: 'where',
           dropMode: 'CASCADE',
         },
-        name: 'exc',
       };
 
       const result = act([
@@ -755,8 +771,8 @@ change(async (db) => {
             with: '&&',
           },
         ],
-        'exc',
         {
+          name: 'exc',
           using: 'using',
           include: ['include'],
           with: 'with',
@@ -781,8 +797,8 @@ change(async (db) => {
             with: '&&',
           },
         ],
-        'exc',
         {
+          name: 'exc',
           using: 'using',
           include: ['include'],
           with: 'with',

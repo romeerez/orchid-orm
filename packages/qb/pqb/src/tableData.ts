@@ -8,6 +8,7 @@ import {
   QueryColumn,
   QueryColumns,
   RawSQLBase,
+  RecordUnknown,
 } from 'orchid-core';
 import { SearchWeight } from './sql';
 import { sqlFn, SqlFn } from './sql/rawSql';
@@ -31,7 +32,6 @@ export namespace TableData {
 
   export interface ColumnIndex {
     options: Index.ColumnArg & Index.Options;
-    name?: string;
   }
 
   export interface ColumnExclude extends ColumnIndex {
@@ -41,13 +41,11 @@ export namespace TableData {
   export interface Index {
     columns: Index.ColumnOrExpressionOptions[];
     options: Index.Options;
-    name?: string;
   }
 
   export interface Exclude {
     columns: Exclude.ColumnOrExpressionOptions[];
     options: Exclude.Options;
-    name?: string;
   }
 
   export interface Constraint {
@@ -98,7 +96,8 @@ export namespace TableData {
       weight?: SearchWeight;
     }
 
-    export interface UniqueOptionsArg {
+    export interface UniqueOptionsArg<Name extends string = string> {
+      name?: Name;
       nullsNotDistinct?: boolean;
       using?: string;
       include?: MaybeArray<string>;
@@ -117,7 +116,9 @@ export namespace TableData {
     // all possible index options, excluding column/expression options
     export type Options = TsVectorArg;
 
-    export interface UniqueColumnArg extends ColumnOptions, UniqueOptionsArg {
+    export interface UniqueColumnArg<Name extends string = string>
+      extends ColumnOptions,
+        UniqueOptionsArg<Name> {
       expression?: string;
     }
 
@@ -155,6 +156,7 @@ export namespace TableData {
 
   export namespace Exclude {
     export interface Options {
+      name?: string;
       using?: string;
       include?: MaybeArray<string>;
       with?: string;
@@ -269,9 +271,7 @@ export interface TableDataMethods<Key extends PropertyKey> {
     Name extends string,
   >(
     columns: Columns,
-    ...args:
-      | [options?: TableData.Index.UniqueOptionsArg]
-      | [name?: Name, options?: TableData.Index.UniqueOptionsArg]
+    options?: TableData.Index.UniqueOptionsArg<Name>,
   ): {
     tableDataItem: true;
     columns: Columns extends (
@@ -289,16 +289,12 @@ export interface TableDataMethods<Key extends PropertyKey> {
 
   index(
     columns: (Key | TableData.Index.ColumnOrExpressionOptions<Key>)[],
-    ...args:
-      | [options?: TableData.Index.OptionsArg]
-      | [name?: string, options?: TableData.Index.OptionsArg]
+    options?: TableData.Index.OptionsArg,
   ): NonUniqDataItem;
 
   searchIndex(
     columns: (Key | TableData.Index.ColumnOrExpressionOptions<Key>)[],
-    ...args:
-      | [options?: TableData.Index.TsVectorArg]
-      | [name?: string, options?: TableData.Index.TsVectorArg]
+    options?: TableData.Index.TsVectorArg,
   ): NonUniqDataItem;
 
   /**
@@ -372,9 +368,7 @@ export interface TableDataMethods<Key extends PropertyKey> {
    */
   exclude(
     columns: TableData.Exclude.ColumnOrExpressionOptions<Key>[],
-    ...args:
-      | [options?: TableData.Exclude.Options]
-      | [name?: string, options?: TableData.Exclude.Options]
+    options?: TableData.Exclude.Options,
   ): NonUniqDataItem;
 
   foreignKey<
@@ -460,13 +454,12 @@ const makeIndex = (
     columns: (string | TableData.Index.ColumnOrExpressionOptions)[];
     options: TableData.Index.Options;
     unique?: boolean;
-    name?: string;
   };
 } => {
   if (typeof first === 'string') {
-    const options: OptionsArg = second ?? {};
+    const options: OptionsArg = { ...second, name: first };
     return {
-      index: { columns, options, name: first },
+      index: { columns, options },
     };
   } else {
     const options: OptionsArg = first ?? {};
@@ -480,23 +473,32 @@ export const tableDataMethods: TableDataMethods<string> = {
   primaryKey(columns, name) {
     return { primaryKey: { columns, name } } as never;
   },
-  unique(columns, ...[first, second]) {
+  unique(columns, ...args) {
+    const [first, second] = args as
+      | [options?: RecordUnknown]
+      | [name: string, options?: RecordUnknown];
     const input = makeIndex(columns, first, second);
     input.index.options.unique = true;
     return input as never;
   },
   index: makeIndex as never,
-  searchIndex(columns, ...[first, second]) {
+  searchIndex(columns, ...args) {
+    const [first, second] = args as
+      | [options?: RecordUnknown]
+      | [name: string, options?: RecordUnknown];
     const input = makeIndex(columns, first, second);
     input.index.options.using ??= 'gin';
     input.index.options.tsVector = true;
     return input as never;
   },
-  exclude(columns, ...[first, second]) {
+  exclude(columns, ...args) {
+    const [first, second] = args as
+      | [options?: RecordUnknown]
+      | [name: string, options?: RecordUnknown];
     if (typeof first === 'string') {
       const options: TableData.Exclude.Options = second ?? {};
       return {
-        exclude: { columns, options, name: first },
+        exclude: { columns, options: { ...options, name: first } },
       } as never;
     } else {
       const options: TableData.Exclude.Options = first ?? {};

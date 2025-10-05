@@ -146,6 +146,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
 
   const indexOptionsKeys: (undefined | keyof TableData.Index.Options)[] = [
     index.options.tsVector ? 'unique' : undefined,
+    'name',
     'using',
     'nullsNotDistinct',
     'include',
@@ -199,11 +200,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
       }
     }
 
-    code.push(['[', objects, hasOptions || index.name ? '],' : ']']);
-
-    if (index.name) {
-      addCode(code, `  ${singleQuote(index.name)},`);
-    }
+    code.push(['[', objects, hasOptions ? '],' : ']']);
   } else {
     addCode(
       code,
@@ -211,10 +208,6 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
         .map((it) => singleQuote((it as { column: string }).column))
         .join(', ')}]`,
     );
-
-    if (index.name) {
-      addCode(code, `, ${singleQuote(index.name)}`);
-    }
   }
 
   if (hasOptions) {
@@ -270,6 +263,7 @@ export const excludeInnerToCode = (
   const columnOptions = ['collate', 'opclass', 'order', 'with'] as const;
 
   const optionsKeys: (undefined | keyof TableData.Exclude.Options)[] = [
+    'name',
     'using',
     'include',
     'with',
@@ -300,11 +294,7 @@ export const excludeInnerToCode = (
     objects.push('{', props, '},');
   }
 
-  code.push(['[', objects, hasOptions || item.name ? '],' : ']']);
-
-  if (item.name) {
-    addCode(code, `  ${singleQuote(item.name)},`);
-  }
+  code.push(['[', objects, hasOptions ? '],' : ']']);
 
   if (hasOptions) {
     code.push(['{']);
@@ -477,15 +467,11 @@ export const columnIndexesToCode = (
   items: Exclude<ColumnData['indexes'], undefined>,
 ): Codes => {
   const code: Codes = [];
-  for (const { options, name } of items) {
-    addCode(
-      code,
-      `.${options.unique ? 'unique' : 'index'}(${
-        name ? `${singleQuote(name)}` : ''
-      }`,
-    );
+  for (const { options } of items) {
+    addCode(code, `.${options.unique ? 'unique' : 'index'}(`);
 
     const arr = [
+      options.name && `name: ${singleQuote(options.name)},`,
       options.collate && `collate: ${singleQuote(options.collate)},`,
       options.opclass && `opclass: ${singleQuote(options.opclass)},`,
       options.order && `order: ${singleQuote(options.order)},`,
@@ -503,7 +489,7 @@ export const columnIndexesToCode = (
     ].filter((x): x is string => !!x);
 
     if (arr.length) {
-      addCode(code, name ? `, {` : '{');
+      addCode(code, '{');
       addCode(code, arr);
       addCode(code, '}');
     }
@@ -517,14 +503,14 @@ export const columnExcludesToCode = (
   items: Exclude<ColumnData['excludes'], undefined>,
 ): Codes => {
   const code: Codes = [];
-  for (const { options, name, with: w } of items) {
+  for (const { options, with: w } of items) {
     addCode(code, `.exclude('${w}'`);
 
     const arr = [
+      options.name && `name: ${singleQuote(options.name)},`,
       options.collate && `collate: ${singleQuote(options.collate)},`,
       options.opclass && `opclass: ${singleQuote(options.opclass)},`,
       options.order && `order: ${singleQuote(options.order)},`,
-      name && `name: ${singleQuote(name)},`,
       options.using && `using: ${singleQuote(options.using)},`,
       options.include &&
         `include: ${

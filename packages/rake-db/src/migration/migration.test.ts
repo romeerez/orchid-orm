@@ -115,18 +115,38 @@ describe('migration', () => {
   describe('addIndex and dropIndex', () => {
     const testUpAndDown = makeTestUpAndDown('addIndex', 'dropIndex');
 
-    it('should use changeTable to add and drop an index', async () => {
+    it('should use changeTable to add and drop an index (deprecated name argument)', async () => {
       await testUpAndDown(
         (action) =>
           db[action](
             'table',
             ['iD', { column: 'naMe', order: 'DESC' }],
             'indexName',
+            // @ts-expect-error name as argument is deprecated
             {
               unique: true,
               nullsNotDistinct: true,
             },
           ),
+        () =>
+          expectSql(`
+            CREATE UNIQUE INDEX "indexName" ON "table" ("i_d", "na_me" DESC) NULLS NOT DISTINCT
+          `),
+        () =>
+          expectSql(`
+            DROP INDEX "indexName"
+          `),
+      );
+    });
+
+    it('should use changeTable to add and drop an index', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', ['iD', { column: 'naMe', order: 'DESC' }], {
+            name: 'indexName',
+            unique: true,
+            nullsNotDistinct: true,
+          }),
         () =>
           expectSql(`
             CREATE UNIQUE INDEX "indexName" ON "table" ("i_d", "na_me" DESC) NULLS NOT DISTINCT

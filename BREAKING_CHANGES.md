@@ -1,5 +1,21 @@
 # Breaking changes
 
+## orchid-orm 1.58
+
+For `index`, `unique`, other kinds of indexes, and `exclude`s:
+
+The index name now should be passed via options, not as an argument.
+
+```ts
+// changing FROM:
+t.index(['column'], 'indexName');
+// TO:
+t.index(['column'], { name: 'indexName' });
+```
+
+Passing name as an argument is still supported at runtime level (to make transition smoother),
+but it is unavailable on type level.
+
 ## orchid-orm 1.57
 
 Renamed:

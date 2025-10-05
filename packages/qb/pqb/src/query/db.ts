@@ -634,7 +634,9 @@ export interface DbTableConstructor<ColumnTypes> {
     ColumnTypes,
     Shape & ComputedColumnsFromOptions<Options['computed']>,
     MapTableScopesOption<Options>
-  >;
+  > & {
+    ko: Shape;
+  };
 }
 
 export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }

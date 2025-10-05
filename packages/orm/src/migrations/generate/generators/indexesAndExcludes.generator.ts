@@ -402,7 +402,7 @@ const collectCodeComparableItemsType = (
           ? toArray(codeItem.options.include).map(toSnakeCase)
           : toArray(codeItem.options.include),
       columns: codeItem.columns,
-      name: codeItem.name,
+      name: codeItem.options.name,
       columnKeys: codeItem.columnKeys,
       includeKeys: codeItem.includeKeys,
     });
@@ -605,8 +605,7 @@ const handleItemChange = (
       const column = changingColumns[dbColumn.column];
       if (column) {
         (column.from.data[key] ??= []).push({
-          options: dbItem,
-          name,
+          options: { ...dbItem, name },
           with: (key === 'indexes'
             ? undefined
             : (dbColumn as unknown as { with: string }).with) as never,
@@ -617,8 +616,7 @@ const handleItemChange = (
 
     (changeTableAst.drop[key] ??= []).push({
       columns: dbColumns,
-      options: dbItem,
-      name,
+      options: { ...dbItem, name },
     });
   } else if (rename) {
     delayedAst.push({

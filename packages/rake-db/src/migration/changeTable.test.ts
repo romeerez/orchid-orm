@@ -473,7 +473,23 @@ describe('changeTable', () => {
           (action) =>
             db.changeTable('table', (t) => ({
               withIndex: t[action](
+                // @ts-expect-error name as argument is deprecated
                 t.text().unique('indexName', {
+                  nullsNotDistinct: true,
+                  using: 'gin',
+                  collate: 'schema.collation',
+                  opclass: 'opclass',
+                  order: 'ASC',
+                  include: 'iD',
+                  with: 'fillfactor = 70',
+                  tablespace: 'tablespace',
+                  where: 'column = 123',
+                  expression: 'index expression',
+                }),
+              ),
+              withIndex2: t[action](
+                t.text().unique({
+                  name: 'indexName',
                   nullsNotDistinct: true,
                   using: 'gin',
                   collate: 'schema.collation',
@@ -490,7 +506,18 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `ALTER TABLE "table"
-                ADD COLUMN "with_index" text NOT NULL`,
+                ADD COLUMN "with_index" text NOT NULL,
+                ADD COLUMN "with_index2" text NOT NULL`,
+              toLine(`
+                CREATE UNIQUE INDEX "indexName"
+                  ON "table"
+                  USING gin ((index expression) COLLATE "schema"."collation" opclass ASC)
+                  INCLUDE ("i_d")
+                  NULLS NOT DISTINCT
+                  WITH (fillfactor = 70)
+                  TABLESPACE tablespace
+                  WHERE column = 123
+              `),
               toLine(`
                 CREATE UNIQUE INDEX "indexName"
                   ON "table"
@@ -505,7 +532,8 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `ALTER TABLE "table"
-                DROP COLUMN "with_index"`,
+                DROP COLUMN "with_index",
+                DROP COLUMN "with_index2"`,
               // index is dropped automatically with the column
             ]),
         );
@@ -545,7 +573,21 @@ describe('changeTable', () => {
           (action) =>
             db.changeTable('table', (t) => ({
               withExclude: t[action](
+                // @ts-expect-error name as argument is deprecated
                 t.text().exclude('&&', 'excludeName', {
+                  using: 'GIST',
+                  collate: 'col',
+                  opclass: 'opc',
+                  order: 'ASC',
+                  include: 'inc',
+                  with: 'wit',
+                  tablespace: 'tbs',
+                  where: 'whe',
+                }),
+              ),
+              withExclude2: t[action](
+                t.text().exclude('&&', {
+                  name: 'excludeName',
                   using: 'GIST',
                   collate: 'col',
                   opclass: 'opc',
@@ -560,7 +602,8 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `ALTER TABLE "table"
-                ADD COLUMN "with_exclude" text NOT NULL`,
+                ADD COLUMN "with_exclude" text NOT NULL,
+                ADD COLUMN "with_exclude2" text NOT NULL`,
               toLine(`
                 ALTER TABLE "table"
                 ADD CONSTRAINT "excludeName"
@@ -570,11 +613,21 @@ describe('changeTable', () => {
                 USING INDEX TABLESPACE tbs
                 WHERE whe
               `),
+              toLine(`
+                ALTER TABLE "table"
+                ADD CONSTRAINT "excludeName"
+                EXCLUDE USING GIST ("with_exclude2" COLLATE "col" opc ASC WITH &&)
+                INCLUDE ("inc")
+                WITH (wit)
+                USING INDEX TABLESPACE tbs
+                WHERE whe
+              `),
             ]),
           () =>
             expectSql([
               `ALTER TABLE "table"
-                DROP COLUMN "with_exclude"`,
+                DROP COLUMN "with_exclude",
+                DROP COLUMN "with_exclude2"`,
             ]),
         );
       });
@@ -773,20 +826,37 @@ describe('changeTable', () => {
                 t.index(
                   ['iD', { column: 'naMe', order: 'DESC' }],
                   'compositeIndexOnTable',
+                  // @ts-expect-error name as argument is deprecated
                   {
                     dropMode: 'CASCADE',
                   },
                 ),
               ),
+              ...t[action](
+                t.index(['iD', { column: 'naMe', order: 'DESC' }], {
+                  name: 'compositeIndexOnTable',
+                  dropMode: 'CASCADE',
+                }),
+              ),
             })),
           () =>
-            expectSql(`
-              CREATE INDEX "compositeIndexOnTable" ON "table" ("i_d", "na_me" DESC)
-            `),
+            expectSql([
+              `
+                CREATE INDEX "compositeIndexOnTable" ON "table" ("i_d", "na_me" DESC)
+              `,
+              `
+                CREATE INDEX "compositeIndexOnTable" ON "table" ("i_d", "na_me" DESC)
+              `,
+            ]),
           () =>
-            expectSql(`
-              DROP INDEX "compositeIndexOnTable" CASCADE
-            `),
+            expectSql([
+              `
+                DROP INDEX "compositeIndexOnTable" CASCADE
+              `,
+              `
+                DROP INDEX "compositeIndexOnTable" CASCADE
+              `,
+            ]),
         );
       });
 
@@ -798,24 +868,41 @@ describe('changeTable', () => {
                 t.unique(
                   ['iD', { column: 'naMe', order: 'DESC' }],
                   'compositeIndexOnTable',
+                  // @ts-expect-error name as argument is deprecated
                   {
                     nullsNotDistinct: true,
                     dropMode: 'CASCADE',
                   },
                 ),
               ),
+              ...t[action](
+                t.unique(['iD', { column: 'naMe', order: 'DESC' }], {
+                  name: 'compositeIndexOnTable',
+                  nullsNotDistinct: true,
+                  dropMode: 'CASCADE',
+                }),
+              ),
             })),
           () =>
-            expectSql(
+            expectSql([
               toLine(`
-              CREATE UNIQUE INDEX "compositeIndexOnTable"
-                ON "table" ("i_d", "na_me" DESC) NULLS NOT DISTINCT
-            `),
-            ),
+                CREATE UNIQUE INDEX "compositeIndexOnTable"
+                  ON "table" ("i_d", "na_me" DESC) NULLS NOT DISTINCT
+              `),
+              toLine(`
+                CREATE UNIQUE INDEX "compositeIndexOnTable"
+                  ON "table" ("i_d", "na_me" DESC) NULLS NOT DISTINCT
+              `),
+            ]),
           () =>
-            expectSql(`
-              DROP INDEX "compositeIndexOnTable" CASCADE
-            `),
+            expectSql([
+              `
+                DROP INDEX "compositeIndexOnTable" CASCADE
+              `,
+              `
+                DROP INDEX "compositeIndexOnTable" CASCADE
+              `,
+            ]),
         );
       });
     });
@@ -1097,7 +1184,31 @@ describe('changeTable', () => {
                     { expression: 'expr', with: '&&' },
                   ],
                   'excludeName',
+                  // @ts-expect-error name as argument is deprecated
                   {
+                    using: 'GIST',
+                    include: 'inc',
+                    with: 'wit',
+                    tablespace: 'tbs',
+                    where: 'whe',
+                    dropMode: 'CASCADE',
+                  },
+                ),
+              ),
+              ...t[action](
+                t.exclude(
+                  [
+                    {
+                      column: 'iD',
+                      with: '=',
+                      collate: 'col',
+                      opclass: 'opc',
+                      order: 'ASC',
+                    },
+                    { expression: 'expr', with: '&&' },
+                  ],
+                  {
+                    name: 'excludeName',
                     using: 'GIST',
                     include: 'inc',
                     with: 'wit',
@@ -1109,19 +1220,27 @@ describe('changeTable', () => {
               ),
             })),
           () =>
-            expectSql(
+            expectSql([
               toLine(`ALTER TABLE "table"
-              ADD CONSTRAINT "excludeName"
-              EXCLUDE USING GIST ("i_d" COLLATE "col" opc ASC WITH =, (expr) WITH &&)
-              INCLUDE ("inc")
-              WITH (wit)
-              USING INDEX TABLESPACE tbs
-              WHERE whe`),
-            ),
+                ADD CONSTRAINT "excludeName"
+                EXCLUDE USING GIST ("i_d" COLLATE "col" opc ASC WITH =, (expr) WITH &&)
+                INCLUDE ("inc")
+                WITH (wit)
+                USING INDEX TABLESPACE tbs
+                WHERE whe`),
+              toLine(`ALTER TABLE "table"
+                ADD CONSTRAINT "excludeName"
+                EXCLUDE USING GIST ("i_d" COLLATE "col" opc ASC WITH =, (expr) WITH &&)
+                INCLUDE ("inc")
+                WITH (wit)
+                USING INDEX TABLESPACE tbs
+                WHERE whe`),
+            ]),
           () =>
-            expectSql(
+            expectSql([
               `ALTER TABLE "table" DROP CONSTRAINT "excludeName" CASCADE`,
-            ),
+              `ALTER TABLE "table" DROP CONSTRAINT "excludeName" CASCADE`,
+            ]),
         );
       });
     });
@@ -1910,6 +2029,7 @@ describe('changeTable', () => {
               addIndexWithOptions: t.change(
                 t.integer(),
                 t.integer().unique({
+                  name: 'indexName',
                   collate: 'schema.collation',
                   opclass: 'opclass',
                   order: 'order',
@@ -1928,7 +2048,7 @@ describe('changeTable', () => {
             expectSql([
               `CREATE INDEX "table_add_index_idx" ON "table" ("add_index")`,
               toLine(`
-                CREATE UNIQUE INDEX "table_add_index_with_options_idx"
+                CREATE UNIQUE INDEX "indexName"
                   ON "table"
                   USING using ((index expression) COLLATE "schema"."collation" opclass order)
                   INCLUDE ("a_a", "b_b")
@@ -1941,7 +2061,7 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `DROP INDEX "table_add_index_idx"`,
-              `DROP INDEX "table_add_index_with_options_idx" CASCADE`,
+              `DROP INDEX "indexName" CASCADE`,
             ]),
         );
       });
@@ -1953,6 +2073,7 @@ describe('changeTable', () => {
               removeIndex: t.change(t.integer().index(), t.integer()),
               removeIndexWithOptions: t.change(
                 t.integer().unique({
+                  name: 'indexName',
                   collate: 'schema.collation',
                   opclass: 'opclass',
                   order: 'order',
@@ -1971,13 +2092,13 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `DROP INDEX "table_remove_index_idx"`,
-              `DROP INDEX "table_remove_index_with_options_idx" CASCADE`,
+              `DROP INDEX "indexName" CASCADE`,
             ]),
           () =>
             expectSql([
               `CREATE INDEX "table_remove_index_idx" ON "table" ("remove_index")`,
               toLine(`
-                CREATE UNIQUE INDEX "table_remove_index_with_options_idx"
+                CREATE UNIQUE INDEX "indexName"
                   ON "table"
                   USING using ((index expression) COLLATE "schema"."collation" opclass order)
                   INCLUDE ("a_a", "b_b")
@@ -1995,6 +2116,7 @@ describe('changeTable', () => {
           () =>
             db.changeTable('table', (t) => ({
               changeIndex: t.change(
+                // @ts-expect-error name as argument is deprecated
                 t.integer().index('from', {
                   collate: 'schema.from',
                   opclass: 'from',
@@ -2007,7 +2129,37 @@ describe('changeTable', () => {
                   where: 'from',
                   dropMode: 'CASCADE',
                 }),
+                // @ts-expect-error name as argument is deprecated
                 t.integer().unique('to', {
+                  collate: 'schema.to',
+                  opclass: 'to',
+                  order: 'to',
+                  nullsNotDistinct: true,
+                  using: 'to',
+                  include: ['cC', 'dD'],
+                  with: 'to',
+                  tablespace: 'to',
+                  where: 'to',
+                  dropMode: 'RESTRICT',
+                  expression: 'index expression',
+                }),
+              ),
+              changeIndex2: t.change(
+                t.integer().index({
+                  name: 'from',
+                  collate: 'schema.from',
+                  opclass: 'from',
+                  order: 'from',
+                  nullsNotDistinct: false,
+                  using: 'from',
+                  include: ['aA', 'bB'],
+                  with: 'from',
+                  tablespace: 'from',
+                  where: 'from',
+                  dropMode: 'CASCADE',
+                }),
+                t.integer().unique({
+                  name: 'to',
                   collate: 'schema.to',
                   opclass: 'to',
                   order: 'to',
@@ -2025,6 +2177,17 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `DROP INDEX "from" CASCADE`,
+              `DROP INDEX "from" CASCADE`,
+              toLine(`
+                CREATE UNIQUE INDEX "to"
+                  ON "table"
+                  USING to ((index expression) COLLATE "schema"."to" to to)
+                  INCLUDE ("c_c", "d_d")
+                  NULLS NOT DISTINCT
+                  WITH (to)
+                  TABLESPACE to
+                  WHERE to
+              `),
               toLine(`
                 CREATE UNIQUE INDEX "to"
                   ON "table"
@@ -2039,10 +2202,20 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `DROP INDEX "to" RESTRICT`,
+              `DROP INDEX "to" RESTRICT`,
               toLine(`
                 CREATE INDEX "from"
                   ON "table"
                   USING from ("change_index" COLLATE "schema"."from" from from)
+                  INCLUDE ("a_a", "b_b")
+                  WITH (from)
+                  TABLESPACE from
+                  WHERE from
+              `),
+              toLine(`
+                CREATE INDEX "from"
+                  ON "table"
+                  USING from ("change_index2" COLLATE "schema"."from" from from)
                   INCLUDE ("a_a", "b_b")
                   WITH (from)
                   TABLESPACE from
@@ -2086,7 +2259,23 @@ describe('changeTable', () => {
             db.changeTable('table', (t) => ({
               addExclude: t.change(
                 t.integer(),
+                // @ts-expect-error name as argument is deprecated
                 t.integer().exclude('&&', 'excludeName', {
+                  using: 'GIST',
+                  collate: 'col',
+                  opclass: 'opc',
+                  order: 'ASC',
+                  include: 'inc',
+                  with: 'wit',
+                  tablespace: 'tbs',
+                  where: 'whe',
+                  dropMode: 'CASCADE',
+                }),
+              ),
+              addExclude2: t.change(
+                t.integer(),
+                t.integer().exclude('&&', {
+                  name: 'excludeName',
                   using: 'GIST',
                   collate: 'col',
                   opclass: 'opc',
@@ -2100,7 +2289,7 @@ describe('changeTable', () => {
               ),
             })),
           () =>
-            expectSql(
+            expectSql([
               toLine(`
                 ALTER TABLE "table"
                 ADD CONSTRAINT "excludeName"
@@ -2110,13 +2299,25 @@ describe('changeTable', () => {
                 USING INDEX TABLESPACE tbs
                 WHERE whe
               `),
-            ),
+              toLine(`
+                ALTER TABLE "table"
+                ADD CONSTRAINT "excludeName"
+                EXCLUDE USING GIST ("add_exclude2" COLLATE "col" opc ASC WITH &&)
+                INCLUDE ("inc")
+                WITH (wit)
+                USING INDEX TABLESPACE tbs
+                WHERE whe
+              `),
+            ]),
           () =>
-            expectSql(
+            expectSql([
               toLine(`
                 ALTER TABLE "table" DROP CONSTRAINT "excludeName" CASCADE
               `),
-            ),
+              toLine(`
+                ALTER TABLE "table" DROP CONSTRAINT "excludeName" CASCADE
+              `),
+            ]),
         );
       });
     });

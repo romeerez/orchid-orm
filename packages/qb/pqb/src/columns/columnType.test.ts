@@ -606,6 +606,7 @@ describe('column type', () => {
     it('should have toCode', () => {
       expect(
         column
+          // @ts-expect-error name as argument is deprecated
           .index('name', {
             collate: 'collate',
             opclass: 'opclass',
@@ -618,8 +619,39 @@ describe('column type', () => {
           })
           .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
-        "t.column().index('name', {",
+        't.column().index({',
         [
+          `name: 'name',`,
+          `collate: 'collate',`,
+          `opclass: 'opclass',`,
+          `order: 'order',`,
+          `using: 'using',`,
+          `include: 'include',`,
+          `with: 'with',`,
+          `tablespace: 'tablespace',`,
+          `where: 'where',`,
+        ],
+        '})',
+      ]);
+
+      expect(
+        column
+          .index({
+            name: 'name',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            using: 'using',
+            include: 'include',
+            with: 'with',
+            tablespace: 'tablespace',
+            where: 'where',
+          })
+          .toCode(columnToCodeCtx, 'key'),
+      ).toEqual([
+        't.column().index({',
+        [
+          `name: 'name',`,
           `collate: 'collate',`,
           `opclass: 'opclass',`,
           `order: 'order',`,
@@ -644,6 +676,7 @@ describe('column type', () => {
     it('should handle options', () => {
       expect(
         column
+          // @ts-expect-error name as argument is deprecated
           .unique('name', {
             collate: 'collate',
             opclass: 'opclass',
@@ -656,8 +689,39 @@ describe('column type', () => {
           })
           .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
-        "t.column().unique('name', {",
+        't.column().unique({',
         [
+          `name: 'name',`,
+          `collate: 'collate',`,
+          `opclass: 'opclass',`,
+          `order: 'order',`,
+          `using: 'using',`,
+          `include: 'include',`,
+          `with: 'with',`,
+          `tablespace: 'tablespace',`,
+          `where: 'where',`,
+        ],
+        '})',
+      ]);
+
+      expect(
+        column
+          .unique({
+            name: 'name',
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            using: 'using',
+            include: 'include',
+            with: 'with',
+            tablespace: 'tablespace',
+            where: 'where',
+          })
+          .toCode(columnToCodeCtx, 'key'),
+      ).toEqual([
+        't.column().unique({',
+        [
+          `name: 'name',`,
           `collate: 'collate',`,
           `opclass: 'opclass',`,
           `order: 'order',`,

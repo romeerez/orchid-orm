@@ -389,11 +389,7 @@ const indexesOrExcludesToAst = <T>(
       item.columns.length > 1 ||
       item.columns.some((it) => 'expression' in it)
     ) {
-      const { name, ...options } = makeIndexOrExcludeOptions(
-        tableName,
-        item,
-        key,
-      );
+      const options = makeIndexOrExcludeOptions(tableName, item, key);
 
       acc.push({
         columns: item.columns.map((it, i) => ({
@@ -409,7 +405,6 @@ const indexesOrExcludesToAst = <T>(
           ...options,
           include: item.include?.map(toCamelCase),
         },
-        name,
       });
     }
     return acc;
@@ -683,12 +678,12 @@ const collectColumnIndexesOrExcludes = (
         ? (item as DbStructure.Exclude).exclude[0]
         : undefined) as never,
       options: {
+        name,
         collate: columnOptions.collate,
         opclass: columnOptions.opclass,
         order: columnOptions.order,
         ...itemOptions,
       },
-      name,
     });
   }
 };

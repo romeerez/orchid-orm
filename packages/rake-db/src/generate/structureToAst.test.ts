@@ -535,9 +535,9 @@ describe('structureToAst', () => {
         expect(ast.shape.name.data.indexes).toEqual([
           {
             options: {
+              name: 'index',
               nullsNotDistinct: true,
             },
-            name: 'index',
           },
         ]);
         expect(ast.indexes).toHaveLength(0);
@@ -591,6 +591,7 @@ describe('structureToAst', () => {
         expect(ast.shape.name.data.indexes).toEqual([
           {
             options: {
+              name: 'index',
               using: 'gist',
               unique: true,
               collate: 'en_US',
@@ -602,7 +603,6 @@ describe('structureToAst', () => {
               tablespace: 'tablespace',
               where: 'condition',
             },
-            name: 'index',
           },
         ]);
         expect(ast.indexes).toHaveLength(0);
@@ -628,13 +628,17 @@ describe('structureToAst', () => {
         expect(ast.indexes).toEqual([
           {
             columns: [{ column: 'id' }, { column: 'name' }],
-            options: {},
-            name: 'index',
+            options: {
+              name: 'index',
+            },
           },
           {
             columns: [{ column: 'id' }, { column: 'name' }],
-            options: { unique: true, nullsNotDistinct: true },
-            name: 'index',
+            options: {
+              name: 'index',
+              unique: true,
+              nullsNotDistinct: true,
+            },
           },
         ]);
       });
@@ -699,6 +703,7 @@ describe('structureToAst', () => {
               },
             ],
             options: {
+              name: 'index',
               using: 'gist',
               unique: true,
               nullsNotDistinct: true,
@@ -707,7 +712,6 @@ describe('structureToAst', () => {
               tablespace: 'tablespace',
               where: 'condition',
             },
-            name: 'index',
           },
         ]);
       });
@@ -726,8 +730,8 @@ describe('structureToAst', () => {
 
         expect(ast.shape.name.data.excludes).toEqual([
           {
-            name: 'exclude',
             options: {
+              name: 'exclude',
               nullsNotDistinct: true,
             },
             with: '=',
@@ -785,6 +789,7 @@ describe('structureToAst', () => {
         expect(ast.shape.name.data.excludes).toEqual([
           {
             options: {
+              name: 'exclude',
               using: 'gist',
               unique: true,
               collate: 'en_US',
@@ -796,7 +801,6 @@ describe('structureToAst', () => {
               tablespace: 'tablespace',
               where: 'condition',
             },
-            name: 'exclude',
             with: '=',
           },
         ]);
@@ -828,16 +832,20 @@ describe('structureToAst', () => {
               { column: 'id', with: '<>' },
               { column: 'name', with: '&&' },
             ],
-            options: {},
-            name: 'exclude',
+            options: {
+              name: 'exclude',
+            },
           },
           {
             columns: [
               { column: 'id', with: '<>' },
               { column: 'name', with: '&&' },
             ],
-            options: { unique: true, nullsNotDistinct: true },
-            name: 'exclude',
+            options: {
+              name: 'exclude',
+              unique: true,
+              nullsNotDistinct: true,
+            },
           },
         ]);
       });
@@ -907,6 +915,7 @@ describe('structureToAst', () => {
               },
             ],
             options: {
+              name: 'exclude',
               using: 'gist',
               unique: true,
               nullsNotDistinct: true,
@@ -915,7 +924,6 @@ describe('structureToAst', () => {
               tablespace: 'tablespace',
               where: 'condition',
             },
-            name: 'exclude',
           },
         ]);
       });

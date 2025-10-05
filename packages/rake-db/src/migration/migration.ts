@@ -484,16 +484,14 @@ export class Migration<CT> {
    *
    * @param tableName - name of the table to add the index for
    * @param columns - indexed columns
-   * @param args - index options, or an index name and then options
+   * @param args - index options
    */
   addIndex(
     tableName: string,
-    columns: (string | TableData.Index.ColumnOrExpressionOptions<string>)[],
-    ...args:
-      | [options?: TableData.Index.OptionsArg]
-      | [name?: string, options?: TableData.Index.OptionsArg]
+    columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+    ...args: [options?: TableData.Index.OptionsArg]
   ): Promise<void> {
-    return addIndex(this, this.up, tableName, columns, args);
+    return addIndex(this, this.up, tableName, columns, ...args);
   }
 
   /**
@@ -501,16 +499,14 @@ export class Migration<CT> {
    *
    * @param tableName - name of the table to add the index for
    * @param columns - indexed columns
-   * @param args - index options, or an index name and then options
+   * @param args - index options
    */
   dropIndex(
     tableName: string,
-    columns: (string | TableData.Index.ColumnOrExpressionOptions<string>)[],
-    ...args:
-      | [options?: TableData.Index.OptionsArg]
-      | [name?: string, options?: TableData.Index.OptionsArg]
+    columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+    ...args: [options?: TableData.Index.OptionsArg]
   ): Promise<void> {
-    return addIndex(this, !this.up, tableName, columns, args);
+    return addIndex(this, !this.up, tableName, columns, ...args);
   }
 
   /**
@@ -1458,10 +1454,8 @@ const addIndex = (
   migration: Migration<unknown>,
   up: boolean,
   tableName: string,
-  columns: (string | TableData.Index.ColumnOrExpressionOptions<string>)[],
-  args:
-    | [options?: TableData.Index.OptionsArg]
-    | [name?: string, options?: TableData.Index.OptionsArg],
+  columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+  ...args: [options?: TableData.Index.OptionsArg]
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.index(columns, ...args)),

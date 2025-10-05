@@ -273,9 +273,7 @@ change(async (db) => {
     // options are described below:
     name: t.text().index({ ...options }),
     // with a database-level name:
-    name: t.text().index('custom_index_name'),
-    // with name and options:
-    name: t.text().index('custom_index_name', { ...options }),
+    name: t.text().index({ name: 'custom_index_name', ...options }),
   }));
 });
 ```
@@ -284,6 +282,7 @@ Possible options are:
 
 ```ts
 interface IndexOptions {
+  name?: string;
   // NULLS NOT DISTINCT: availabe in Postgres 15+, makes sense only for unique index
   nullsNotDistinct?: true;
   // index algorithm to use such as GIST, GIN
@@ -331,6 +330,7 @@ The second argument is an optional object with index options:
 ```ts
 interface IndexOptions {
   // see the comments above for these options
+  name: string;
   using?: string;
   include?: MaybeArray<string>;
   nullsNotDistinct?: true;
@@ -354,9 +354,8 @@ change(async (db) => {
       name: t.text(),
     }),
     (t) => [
-      t.index(['id', { column: 'name', order: 'ASC' }], { ...options }),
-      // index name can be set before the options:
-      t.index(['id', { column: 'name', order: 'ASC' }], 'index_name', {
+      t.index(['id', { column: 'name', order: 'ASC' }], {
+        name: 'indexName',
         ...options,
       }),
     ],
@@ -388,10 +387,8 @@ change(async (db) => {
     }),
     (t) => [
       t.unique(['id', 'name']),
-      // with a name
-      t.unique(['id', 'name'], 'unique_index_name'),
-      // with name and options
-      t.unique(['id', 'name'], 'unique_index_name', { ...options }),
+      // with a name and options
+      t.unique(['id', 'name'], { name: 'unique_index_name', ...otherOptions }),
     ],
   );
 });
@@ -549,12 +546,10 @@ change(async (db) => {
   await db.createTable('table', (t) => ({
     // exclude rows with overlapping time ranges, && is for the `WITH` operator
     timeRange: t.type('tstzrange').exclude('&&'),
-    // with a database-level name:
-    timeRange: t.type('tstzrange').exclude('&&', 'no_overlap'),
-    // with options:
-    timeRange: t.type('tstzrange').exclude('&&', { ...options }),
-    // with name and options:
-    name: t.type('tstzrange').exclude('&&', 'no_overlap', { ...options }),
+    // with a database-level name and options:
+    timeRange: t
+      .type('tstzrange')
+      .exclude('&&', { name: 'no_overlap', ...otherOptions }),
   }));
 });
 ```
@@ -563,6 +558,7 @@ Possible options are:
 
 ```ts
 interface ExcludeColumnOptions {
+  name: string;
   // specify collation:
   collate?: string;
   // see `opclass` in the Postgres document for creating the index
