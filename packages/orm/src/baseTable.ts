@@ -80,7 +80,7 @@ import {
   HasAndBelongsToManyOptions,
   HasAndBelongsToManyQuery,
 } from './relations/hasAndBelongsToMany';
-import { HasMany, HasManyInfo } from './relations/hasMany';
+import { HasMany, HasManyInfo, HasManyQuery } from './relations/hasMany';
 
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {
@@ -162,7 +162,7 @@ export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
                     T,
                     K,
                     T['relations'][K],
-                    HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+                    HasManyQuery<T, K, RelationTableToQuery<T['relations'][K]>>
                   >
                 : T['relations'][K] extends HasAndBelongsToMany
                 ? HasAndBelongsToManyInfo<

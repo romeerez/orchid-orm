@@ -39,6 +39,7 @@ import { WithMethods } from './with';
 import { Union } from './union';
 import { JsonMethods } from './json';
 import { QueryCreate } from './mutate/create';
+import { QueryCreateFrom } from './mutate/createFrom';
 import { Update } from './mutate/update';
 import { Delete } from './mutate/delete';
 import { Transaction } from './transaction';
@@ -366,6 +367,7 @@ export interface QueryMethods<ColumnTypes>
     Union,
     JsonMethods,
     QueryCreate,
+    QueryCreateFrom,
     Update,
     Delete,
     Transaction,
@@ -1293,6 +1295,7 @@ applyMixins(QueryMethods, [
   Union,
   JsonMethods,
   QueryCreate,
+  QueryCreateFrom,
   Update,
   Delete,
   Transaction,

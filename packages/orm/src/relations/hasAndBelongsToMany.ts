@@ -5,7 +5,7 @@ import {
 } from './relations';
 import { ORMTableInput, TableClass } from '../baseTable';
 import {
-  _queryCreateFrom,
+  _queryCreateManyFrom,
   _queryCreateMany,
   _queryDefaults,
   _queryDelete,
@@ -429,29 +429,23 @@ export const makeHasAndBelongsToManyMethod = (
         relationQuery as Query,
         [],
         async (result: unknown[]) => {
-          if (result.length > 1) {
-            // TODO: currently this relies on `INSERT ... SELECT` that works only for 1 record
-            // consider using `WITH` to reuse id of main table for multiple related ids
-            throw new OrchidOrmInternalError(
-              relationQuery as Query,
-              'Creating multiple `hasAndBelongsToMany` records is not yet supported',
-            );
-          }
-
           const baseQuery = ref.q.clone();
           baseQuery.q.select = selectPrimaryKeysAsForeignKeys;
 
-          const data: RecordUnknown = {};
-          for (let i = 0; i < throughLen; i++) {
-            data[throughForeignKeys[i]] = (result[0] as RecordUnknown)[
-              throughPrimaryKeys[i]
-            ];
-          }
+          const data = result.map((resultRow) => {
+            const dataRow: RecordUnknown = {};
+            for (let i = 0; i < throughLen; i++) {
+              dataRow[throughForeignKeys[i]] = (resultRow as RecordUnknown)[
+                throughPrimaryKeys[i]
+              ];
+            }
+            return dataRow;
+          });
 
-          const createdCount = await _queryCreateFrom(
+          const createdCount = await _queryCreateManyFrom(
             subQuery.count(),
             baseQuery as Query & { returnType: 'one' | 'oneOrThrow' },
-            data as never,
+            data,
           );
 
           if ((createdCount as unknown as number) === 0) {

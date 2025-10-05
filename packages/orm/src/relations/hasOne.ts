@@ -56,6 +56,7 @@ import {
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
+import { CreateManyMethodsNames } from 'pqb/src/queryMethods/mutate/create';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -99,25 +100,31 @@ export type HasOnePopulate<
   ? Record<T['relations'][Name]['options']['references'][number], true>
   : never;
 
+export type HasOneQueryThrough<
+  T extends RelationConfigSelf,
+  Name extends string,
+  TableQuery extends Query,
+> = {
+  [K in keyof TableQuery]: K extends 'meta'
+    ? Omit<TableQuery['meta'], 'selectable'> & {
+        as: Name;
+        defaults: HasOnePopulate<T, Name>;
+        hasWhere: true;
+        selectable: SelectableFromShape<TableQuery['shape'], Name>;
+      }
+    : K extends 'join'
+    ? RelJoin
+    : K extends CreateMethodsNames
+    ? never
+    : TableQuery[K];
+};
+
 export type HasOneQuery<
   T extends RelationConfigSelf,
   Name extends string,
   TableQuery extends Query,
 > = T['relations'][Name]['options'] extends RelationThroughOptions
-  ? {
-      [K in keyof TableQuery]: K extends 'meta'
-        ? Omit<TableQuery['meta'], 'selectable'> & {
-            as: Name;
-            defaults: HasOnePopulate<T, Name>;
-            hasWhere: true;
-            selectable: SelectableFromShape<TableQuery['shape'], Name>;
-          }
-        : K extends 'join'
-        ? RelJoin
-        : K extends CreateMethodsNames
-        ? never
-        : TableQuery[K];
-    }
+  ? HasOneQueryThrough<T, Name, TableQuery>
   : {
       [K in keyof TableQuery]: K extends 'meta'
         ? Omit<TableQuery['meta'], 'selectable'> & {
@@ -128,6 +135,8 @@ export type HasOneQuery<
           }
         : K extends 'join'
         ? RelJoin
+        : K extends CreateManyMethodsNames
+        ? never
         : TableQuery[K];
     };
 
@@ -379,7 +388,8 @@ export const makeHasOneMethod = (
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
         const q = (relationQuery as unknown as PickQueryQ).q;
-        q.values = { from: baseQuery };
+        q.insertFrom = baseQuery;
+        q.values = [];
       };
     },
   };

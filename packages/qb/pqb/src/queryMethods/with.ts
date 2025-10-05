@@ -1,5 +1,5 @@
 import { WithItem, WithOptions } from '../sql';
-import { Query } from '../query/query';
+import { PickQueryQ, Query } from '../query/query';
 import {
   _clone,
   saveAliasedShape,
@@ -16,6 +16,7 @@ import {
   pushQueryValueImmutable,
   PickQueryMetaWithDataColumnTypes,
   PickQueryWithDataColumnTypes,
+  IsQuery,
 } from 'orchid-core';
 import { SqlMethod } from './sql';
 import { getShapeFromSelect } from './select/select';
@@ -89,8 +90,8 @@ export type WithSqlResult<
     : T[K];
 };
 
-const addWith = (
-  q: Query,
+export const _addWith = (
+  query: IsQuery,
   withStore: object,
   item: WithItem,
   key: string | number = 'with',
@@ -107,7 +108,8 @@ const addWith = (
     if (item.q.q.insertWith) {
       const values = Object.values(item.q.q.insertWith).flat();
       item.q.q.insertWith = undefined;
-      q.q.with = q.q.with ? [...q.q.with, ...values] : values;
+      const { q } = query as unknown as PickQueryQ;
+      q.with = q.with ? [...q.with, ...values] : values;
     }
   }
 
@@ -127,7 +129,7 @@ export const moveQueryValueToWith = (
   if (value.q.type) {
     const as = saveAliasedShape(q as Query, 'q', 'withShapes');
 
-    addWith(
+    _addWith(
       q,
       withStore,
       {
@@ -306,7 +308,7 @@ export class WithMethods {
       };
     }
 
-    addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
+    _addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
 
     const shape = getShapeFromSelect(query, true);
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
@@ -456,7 +458,7 @@ export class WithMethods {
       };
     }
 
-    addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
+    _addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
 
     return setQueryObjectValueImmutable(q, 'withShapes', name, withConfig);
   }

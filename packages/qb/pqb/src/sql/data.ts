@@ -275,7 +275,10 @@ export interface QueryData extends QueryDataBase {
   /** insert **/
 
   columns: string[];
-  values: InsertQueryDataObjectValues | InsertQueryDataFromValues;
+  insertFrom?: Query;
+  insertValuesAs?: string;
+  queryColumnsCount?: number;
+  values: InsertQueryDataObjectValues;
   onConflict?: {
     target?: OnConflictTarget;
     set?: OnConflictSet;
@@ -301,10 +304,6 @@ export interface QueryData extends QueryDataBase {
 }
 
 export type InsertQueryDataObjectValues = unknown[][];
-export type InsertQueryDataFromValues = {
-  from: Query;
-  values?: unknown[];
-};
 
 export interface UpdateQueryDataObject {
   [K: string]: Expression | { op: string; arg: unknown } | unknown;

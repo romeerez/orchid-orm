@@ -254,13 +254,16 @@ or if the insert is used as a sub-query in other query part.
 
 [//]: # 'has JSDoc'
 
-These methods are for creating a single record, for batch creating see [createForEachFrom](#createForEachFrom-insertForEachFrom).
+Inserts a single record based on a query that selects a single record.
 
-`createOneFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
+Performs a single SQL query based on `INSERT ... SELECT ... FROM`.
 
-The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
+See [createManyFrom](#createmanyfrom-insertmanyfrom) to insert multiple records based on a single record query,
+and [createForEachFrom](#createforeachfrom-insertforeachfrom) to insert a record per every one found by the query.
 
-The second optional argument is a data which will be merged with columns returned from the select query.
+The first argument is a query of a **single** record, it should have `find`, `take`, or similar.
+
+The second optional argument is a data which will be merged with columns returned by the query.
 
 The data for the second argument is the same as in [create](#create-insert).
 
@@ -269,8 +272,13 @@ The value for such a column will be injected unless selected from a related tabl
 
 ```ts
 const oneRecord = await db.table.createOneFrom(
-  // In the select, key is a related table column, value is a column to insert as
-  RelatedTable.select({ relatedId: 'id' }).findBy({ key: 'value' }),
+  db.relatedTable
+    // use select to map columns from one table to another
+    .select({
+      // relatedTable's id will be inserted as "relatedId"
+      relatedId: 'id',
+    })
+    .findBy({ key: 'value' }),
   // optional argument:
   {
     key: 'value',
@@ -282,7 +290,7 @@ const oneRecord = await db.table.createOneFrom(
 );
 ```
 
-The query above will produce such SQL:
+The query above will produce such a SQL (omitting `from*` values):
 
 ```sql
 INSERT INTO "table"("relatedId", "key")
@@ -293,13 +301,76 @@ LIMIT 1
 RETURNING *
 ```
 
+### createManyFrom, insertManyFrom
+
+[//]: # 'has JSDoc'
+
+Inserts multiple records based on a query that selects a single record.
+
+Performs a single SQL query based on `INSERT ... SELECT ... FROM`.
+
+See [createOneFrom](#createonefrom-insertfrom) to insert a single record based on a single record query,
+and [createForEachFrom](#createforeachfrom-insertforeachfrom) to insert a record per every one found by the query.
+
+The first argument is a query of a **single** record, it should have `find`, `take`, or similar.
+
+The second argument is array of objects to be merged with columns returned by the query.
+
+The data for the second argument is the same as in [createMany](#createmany-insertmany).
+
+Columns with runtime defaults (defined with a callback) are supported here.
+The value for such a column will be injected unless selected from a related table or provided in a data object.
+
+```ts
+const twoRecords = await db.table.createManyFrom(
+  db.relatedTable
+    // use select to map columns from one table to another
+    .select({
+      // relatedTable's id will be inserted as "relatedId"
+      relatedId: 'id',
+    })
+    .findBy({ key: 'value' }),
+  [
+    {
+      key: 'value 1',
+      // supports sql, nested select, create, update, delete queries
+      fromSql: () => sql`custom sql`,
+      fromQuery: () => db.otherTable.find(id).update(data).get('column'),
+      fromRelated: (q) => q.relatedTable.create(data).get('column'),
+    },
+    {
+      key: 'value 2',
+    },
+  ],
+);
+```
+
+The query above will produce such a SQL (omitting `from*` values):
+
+```sql
+WITH "relatedTable" AS (
+  SELECT "relatedTable"."id" AS "relatedId", 'value'
+  FROM "relatedTable"
+  WHERE "relatedTable"."key" = 'value'
+  LIMIT 1
+)
+INSERT INTO "table"("relatedId", "key")
+SELECT "relatedTable".*, v."key"::text
+FROM "relatedTable", (VALUES ('value1'), ('value2')) v("key")
+RETURNING *
+```
+
 ### createForEachFrom, insertForEachFrom
 
 [//]: # 'has JSDoc'
 
-Similar to `createOneFrom`, but intended to create many records.
+Inserts a single record per every record found in a given query.
 
-Unlike `createOneFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
+Performs a single SQL query based on `INSERT ... SELECT ... FROM`.
+
+Unlike [createOneFrom](#createonefrom-insertfrom), it doesn't accept second argument with data.
+
+Runtime defaults cannot work with it.
 
 ```ts
 const manyRecords = await db.table.createForEachFrom(

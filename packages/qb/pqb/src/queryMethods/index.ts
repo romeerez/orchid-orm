@@ -1,7 +1,29 @@
 export * from './aggregate';
 export * from './as';
 export * from './clear';
-export * from './mutate/create';
+export {
+  _queryCreate,
+  _queryInsert,
+  _queryCreateMany,
+  _queryInsertMany,
+  _queryDefaults,
+} from './mutate/create';
+export type {
+  CreateBelongsToData,
+  CreateCtx,
+  CreateSelf,
+  CreateData,
+  CreateMethodsNames,
+  AddQueryDefaults,
+} from './mutate/create';
+export {
+  _queryInsertOneFrom,
+  _queryCreateOneFrom,
+  _queryInsertManyFrom,
+  _queryCreateManyFrom,
+  _queryCreateForEachFrom,
+  _queryInsertForEachFrom,
+} from './mutate/createFrom';
 export * from './mutate/delete';
 export * from './for';
 export * from './from';

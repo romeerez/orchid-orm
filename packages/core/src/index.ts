@@ -29,6 +29,7 @@ export {
   noop,
   emptyObject,
   getFreeAlias,
+  getFreeSetAlias,
   exhaustive,
   pluralize,
 } from './utils';

@@ -1,6 +1,7 @@
 import {
   _checkIfAliased,
   emptyObject,
+  getFreeAlias,
   getValueKey,
   IsQuery,
   PickQueryResult,
@@ -98,14 +99,8 @@ export const saveAliasedShape = (
   key: 'joinedShapes' | 'withShapes',
 ): string => {
   const shapes = (q as Query).q[key];
-  if (shapes?.[as]) {
-    let suffix = 2;
-    let name;
-    while (shapes[(name = `${as}${suffix}`)]) {
-      suffix++;
-    }
-    as = name;
-  }
+
+  as = getFreeAlias(shapes, as);
 
   setQueryObjectValueImmutable(q as Query, key, as, emptyObject);
 

@@ -1,28 +1,18 @@
 import {
   PickQueryQ,
   Query,
-  queryTypeWithLimitOne,
   SetQueryKind,
   SetQueryKindResult,
-  SetQueryReturnsAllKind,
   SetQueryReturnsAllKindResult,
-  SetQueryReturnsColumnKind,
   SetQueryReturnsColumnKindResult,
   SetQueryReturnsColumnOptional,
-  SetQueryReturnsOneKind,
   SetQueryReturnsOneKindResult,
   QueryTakeOptional,
-  SetQueryReturnsPluckColumnKind,
   SetQueryReturnsPluckColumnKindResult,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
-import {
-  InsertQueryDataObjectValues,
-  OnConflictMerge,
-  QueryData,
-  ToSQLQuery,
-} from '../../sql';
+import { OnConflictMerge, QueryData, ToSQLQuery } from '../../sql';
 import { anyShape, VirtualColumn } from '../../columns';
 import {
   Expression,
@@ -34,11 +24,13 @@ import {
   isExpression,
   EmptyObject,
   IsQuery,
-  QueryColumns,
   ColumnTypeBase,
   QueryOrExpression,
   RelationConfigDataForCreate,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  _getQueryFreeAlias,
+  QueryBase,
+  _setQueryAlias,
 } from 'orchid-core';
 import { isSelectingCount } from '../aggregate';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
@@ -46,6 +38,11 @@ import { _clone } from '../../query/queryUtils';
 import { Db } from '../../query';
 import { moveQueryValueToWith } from '../with';
 import { OrchidOrmInternalError } from 'orchid-core';
+import {
+  CreateFromMethodNames,
+  CreateManyFromMethodNames,
+  getFromSelectColumns,
+} from './createFrom';
 
 export interface CreateSelf
   extends IsQuery,
@@ -173,14 +170,6 @@ export type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
   ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>;
 
-type CreateRawOrFromResult<T extends CreateSelf> = T extends { isCount: true }
-  ? SetQueryKind<T, 'create'>
-  : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsOneKind<T, 'create'>
-  : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumnKind<T, 'create'>
-  : SetQueryKind<T, 'create'>;
-
 // `insert` method output type
 // - query returns inserted row count by default.
 // - returns a record with selected columns if the query has a select.
@@ -197,15 +186,6 @@ type InsertResult<
     : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : SetQueryReturnsRowCount<T, 'create'>;
 
-type InsertRawOrFromResult<T extends CreateSelf> =
-  T['meta']['hasSelect'] extends true
-    ? T['returnType'] extends undefined | 'all'
-      ? SetQueryReturnsOneKind<T, 'create'>
-      : T['returnType'] extends 'pluck'
-      ? SetQueryReturnsColumnKind<T, 'create'>
-      : SetQueryKind<T, 'create'>
-    : SetQueryReturnsRowCount<T, 'create'>;
-
 // `createMany` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns a single record, forces it to return multiple.
@@ -217,16 +197,6 @@ type CreateManyResult<T extends CreateSelf, BT> = T extends { isCount: true }
   : T['returnType'] extends 'value' | 'valueOrThrow'
   ? SetQueryReturnsPluckColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>;
-
-type CreateManyFromResult<T extends CreateSelf> = T extends {
-  isCount: true;
-}
-  ? SetQueryKind<T, 'create'>
-  : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAllKind<T, 'create'>
-  : T['returnType'] extends 'value' | 'valueOrThrow'
-  ? SetQueryReturnsPluckColumnKind<T, 'create'>
-  : SetQueryKind<T, 'create'>;
 
 // `insertMany` method output type
 // - query returns inserted row count by default.
@@ -246,15 +216,6 @@ type InsertManyResult<
       >
     : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>
   : SetQueryReturnsRowCountMany<T, 'create'>;
-
-type InsertManyFromResult<T extends CreateSelf> =
-  T['meta']['hasSelect'] extends true
-    ? T['returnType'] extends 'one' | 'oneOrThrow'
-      ? SetQueryReturnsAllKind<T, 'create'>
-      : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetQueryReturnsPluckColumnKind<T, 'create'>
-      : SetQueryKind<T, 'create'>
-    : SetQueryReturnsRowCountMany<T, 'create'>;
 
 /**
  * When creating a record with a *belongs to* nested record,
@@ -329,7 +290,7 @@ interface RecordEncoder {
 // Function called by all `create` methods to override query select.
 // Clears select if query returning nothing or a count.
 // Otherwise, selects all if query doesn't have select.
-const createSelect = (q: Query) => {
+export const createSelect = (q: Query) => {
   if (q.q.returnType === 'void' || isSelectingCount(q)) {
     q.q.select = undefined;
   } else if (!q.q.select) {
@@ -405,7 +366,11 @@ const processCreateItem = (
   }
 };
 
-const throwOnReadOnly = (q: unknown, column: ColumnTypeBase, key: string) => {
+export const throwOnReadOnly = (
+  q: unknown,
+  column: ColumnTypeBase,
+  key: string,
+) => {
   if (column.data.appReadOnly || column.data.readOnly) {
     throw new OrchidOrmInternalError(
       q as Query,
@@ -416,7 +381,7 @@ const throwOnReadOnly = (q: unknown, column: ColumnTypeBase, key: string) => {
 };
 
 // Creates a new context of create query.
-const createCtx = (): CreateCtx => ({
+export const createCtx = (): CreateCtx => ({
   columns: new Map(),
   resultAll: undefined as unknown as RecordUnknown[],
 });
@@ -430,7 +395,7 @@ const createCtx = (): CreateCtx => ({
  * @param data - argument with data for create.
  * @param ctx - context of the create query.
  */
-const handleOneData = (
+export const handleOneData = (
   q: CreateSelf,
   data: RecordUnknown,
   ctx: CreateCtx,
@@ -466,7 +431,7 @@ const handleOneData = (
  * @param data - arguments with data for create.
  * @param ctx - context of the create query.
  */
-const handleManyData = (
+export const handleManyData = (
   q: CreateSelf,
   data: RecordUnknown[],
   ctx: CreateCtx,
@@ -505,19 +470,24 @@ const handleManyData = (
  *
  * @param self - query object.
  * @param columns - columns list of all values.
- * @param values - array of arrays matching columns, or can be an array of SQL expressions, or is a special object for `createOneFrom`.
+ * @param insertFrom - query of `createFrom` and alike
+ * @param values - array of arrays matching columns
  * @param many - whether it's for creating one or many.
+ * @param queryMany - whether is createForEachFrom
  */
-const insert = (
+export const insert = (
   self: CreateSelf,
   {
     columns,
+    insertFrom,
     values,
   }: {
+    insertFrom?: IsQuery;
     columns: string[];
     values: QueryData['values'];
   },
   many?: boolean,
+  queryMany?: boolean,
 ) => {
   const { q } = self as unknown as { q: QueryData };
 
@@ -530,6 +500,33 @@ const insert = (
   delete q.scopes;
 
   q.type = 'insert';
+
+  insertFrom = insertFrom ? (q.insertFrom = insertFrom as Query) : q.insertFrom;
+
+  if (insertFrom) {
+    if (q.insertFrom) {
+      const obj = getFromSelectColumns(
+        self,
+        q.insertFrom,
+        {
+          columns,
+          values,
+        },
+        queryMany,
+      );
+      columns = obj.columns;
+      values = obj.values;
+      q.queryColumnsCount = obj.queryColumnsCount;
+    }
+
+    if (values.length > 1) {
+      const insertValuesAs = _getQueryFreeAlias(q, 'v');
+      _setQueryAlias(self as unknown as QueryBase, 'v', insertValuesAs);
+
+      q.insertValuesAs = insertValuesAs;
+    }
+  }
+
   q.columns = columns;
   q.values = values;
 
@@ -547,108 +544,12 @@ const insert = (
       q.returnType = 'pluck';
     }
   } else if (!returnType || returnType === 'all') {
-    q.returnType = 'from' in values ? values.from.q.returnType : 'one';
+    q.returnType = insertFrom ? (insertFrom as Query).q.returnType : 'one';
   } else if (returnType === 'pluck') {
     q.returnType = 'valueOrThrow';
   }
 
   return self;
-};
-
-/**
- * Function to collect column names from the inner query of create `from` methods.
- *
- * @param q - the creating query
- * @param from - inner query to grab the columns from.
- * @param obj - optionally passed object with specific data, only available when creating a single record.
- * @param many - whether it's for `createForEachFrom`. If no, throws if the inner query returns multiple records.
- */
-const getFromSelectColumns = (
-  q: CreateSelf,
-  from: CreateSelf,
-  obj?: {
-    columns: string[];
-    values: QueryData['values'];
-  },
-  many?: boolean,
-): {
-  columns: string[];
-  values: InsertQueryDataObjectValues;
-} => {
-  if (!many && !queryTypeWithLimitOne[(from as Query).q.returnType as string]) {
-    throw new Error(
-      'Cannot create based on a query which returns multiple records',
-    );
-  }
-
-  const queryColumns = new Set<string>();
-  (from as Query).q.select?.forEach((item) => {
-    if (typeof item === 'string') {
-      const index = item.indexOf('.');
-      queryColumns.add(index === -1 ? item : item.slice(index + 1));
-    } else if (item && 'selectAs' in item) {
-      for (const column in item.selectAs) {
-        queryColumns.add(column);
-      }
-    }
-  });
-
-  const values: unknown[] = [];
-  if (obj?.columns) {
-    const objectValues = (obj.values as InsertQueryDataObjectValues)[0];
-    obj.columns.forEach((column, i) => {
-      if (!queryColumns.has(column)) {
-        queryColumns.add(column);
-        values.push(objectValues[i]);
-      }
-    });
-  }
-
-  for (const key of queryColumns) {
-    const column = q.shape[key] as ColumnTypeBase;
-    if (column) throwOnReadOnly(from, column, key);
-  }
-
-  return {
-    columns: [...queryColumns],
-    values: [values],
-  };
-};
-
-/**
- * Is used by all create from queries methods.
- * Collects columns and values from the inner query and optionally from the given data,
- * calls {@link insert} with a 'from' kind of create query.
- *
- * @param q - query object.
- * @param from - inner query from which to create new records.
- * @param many - whether creating many.
- * @param data - optionally passed custom data when creating a single record.
- */
-const insertFromQuery = <
-  T extends CreateSelf,
-  Q extends IsQuery,
-  Many extends boolean,
->(
-  q: T,
-  from: Q,
-  many: Many,
-  data?: RecordUnknown,
-) => {
-  const ctx = createCtx();
-
-  const obj = data && handleOneData(q, data, ctx);
-
-  const { columns, values } = getFromSelectColumns(q, from as never, obj, many);
-
-  return insert(
-    q,
-    {
-      columns,
-      values: { from, values: values[0] } as never,
-    },
-    many,
-  );
 };
 
 export const _queryCreate = <
@@ -666,23 +567,16 @@ export const _queryInsert = <
   T extends CreateSelf,
   BT extends CreateBelongsToData<T>,
 >(
-  q: T,
+  query: T,
   data: CreateData<T, BT>,
 ): InsertResult<T, BT> => {
   const ctx = createCtx();
-  let obj = handleOneData(q, data, ctx) as {
+  const obj = handleOneData(query, data, ctx) as {
     columns: string[];
     values: QueryData['values'];
   };
 
-  const values = (q as unknown as Query).q.values;
-  if (values && 'from' in values) {
-    obj = getFromSelectColumns(q, values.from, obj);
-    values.values = (obj.values as unknown[][])[0];
-    obj.values = values;
-  }
-
-  return insert(q, obj) as never;
+  return insert(query, obj) as never;
 };
 
 export const _queryCreateMany = <
@@ -709,49 +603,6 @@ export const _queryInsertMany = <
   return result;
 };
 
-interface QueryReturningOne extends IsQuery {
-  result: QueryColumns;
-  returnType: 'one' | 'oneOrThrow';
-}
-
-export const _queryCreateFrom = <
-  T extends CreateSelf,
-  Q extends QueryReturningOne,
->(
-  q: T,
-  query: Q,
-  data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-): CreateRawOrFromResult<T> => {
-  createSelect(q as unknown as Query);
-  return insertFromQuery(q, query, false, data as never) as never;
-};
-
-export const _queryInsertFrom = <
-  T extends CreateSelf,
-  Q extends QueryReturningOne,
->(
-  q: T,
-  query: Q,
-  data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-): InsertRawOrFromResult<T> => {
-  return insertFromQuery(q, query, false, data as never) as never;
-};
-
-export const _queryCreateManyFrom = <T extends CreateSelf>(
-  q: T,
-  query: IsQuery,
-): CreateManyFromResult<T> => {
-  createSelect(q as unknown as Query);
-  return insertFromQuery(q, query, true) as never;
-};
-
-export const _queryInsertManyFrom = <T extends CreateSelf>(
-  q: T,
-  query: IsQuery,
-): InsertManyFromResult<T> => {
-  return insertFromQuery(q, query, true) as never;
-};
-
 export const _queryDefaults = <
   T extends CreateSelf,
   Data extends Partial<CreateData<T, CreateBelongsToData<T>>>,
@@ -773,10 +624,12 @@ export type CreateMethodsNames =
   | 'insert'
   | 'createMany'
   | 'insertMany'
-  | 'createOneFrom'
-  | 'insertOneFrom'
-  | 'createForEachFrom'
-  | 'insertForEachFrom';
+  | CreateFromMethodNames;
+
+export type CreateManyMethodsNames =
+  | 'createMany'
+  | 'insertMany'
+  | CreateManyFromMethodNames;
 
 export class QueryCreate {
   /**
@@ -905,103 +758,6 @@ export class QueryCreate {
     data: CreateData<T, BT>[],
   ): InsertManyResult<T, BT> {
     return _queryInsertMany(_clone(this), data) as never;
-  }
-
-  /**
-   * These methods are for creating a single record, for batch creating see {@link createForEachFrom}.
-   *
-   * `createOneFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert by performing a single query.
-   *
-   * The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
-   *
-   * The second optional argument is a data which will be merged with columns returned from the select query.
-   *
-   * The data for the second argument is the same as in {@link create}.
-   *
-   * Columns with runtime defaults (defined with a callback) are supported here.
-   * The value for such a column will be injected unless selected from a related table or provided in a data object.
-   *
-   * ```ts
-   * const oneRecord = await db.table.createOneFrom(
-   *   // In the select, key is a related table column, value is a column to insert as
-   *   RelatedTable.select({ relatedId: 'id' }).findBy({ key: 'value' }),
-   *   // optional argument:
-   *   {
-   *     key: 'value',
-   *     // supports sql, nested select, create, update, delete queries
-   *     fromSql: () => sql`custom sql`,
-   *     fromQuery: () => db.otherTable.find(id).update(data).get('column'),
-   *     fromRelated: (q) => q.relatedTable.create(data).get('column'),
-   *   },
-   * );
-   * ```
-   *
-   * The query above will produce such SQL:
-   *
-   * ```sql
-   * INSERT INTO "table"("relatedId", "key")
-   * SELECT "relatedTable"."id" AS "relatedId", 'value'
-   * FROM "relatedTable"
-   * WHERE "relatedTable"."key" = 'value'
-   * LIMIT 1
-   * RETURNING *
-   * ```
-   *
-   * @param query - query to create new records from
-   * @param data - additionally you can set some columns
-   */
-  createOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
-    this: T,
-    query: Q,
-    data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-  ): CreateRawOrFromResult<T> {
-    return _queryCreateFrom(_clone(this) as never, query, data);
-  }
-
-  /**
-   * Works exactly as {@link createOneFrom}, except that it returns inserted row count by default.
-   *
-   * @param query - query to create new records from
-   * @param data - additionally you can set some columns
-   */
-  insertOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
-    this: T,
-    query: Q,
-    data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
-  ): InsertRawOrFromResult<T> {
-    return _queryInsertFrom(_clone(this) as never, query, data);
-  }
-
-  /**
-   * Similar to `createOneFrom`, but intended to create many records.
-   *
-   * Unlike `createOneFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
-   *
-   * ```ts
-   * const manyRecords = await db.table.createForEachFrom(
-   *   RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
-   * );
-   * ```
-   *
-   * @param query - query to create new records from
-   */
-  createForEachFrom<T extends CreateSelf>(
-    this: T,
-    query: IsQuery,
-  ): CreateManyFromResult<T> {
-    return _queryCreateManyFrom(_clone(this) as never, query);
-  }
-
-  /**
-   * Works exactly as {@link createForEachFrom}, except that it returns inserted row count by default.
-   *
-   * @param query - query to create new records from
-   */
-  insertForEachFrom<T extends CreateSelf>(
-    this: T,
-    query: IsQuery,
-  ): InsertManyFromResult<T> {
-    return _queryInsertManyFrom(_clone(this) as never, query);
   }
 
   /**

@@ -6,6 +6,7 @@ import { QueryUpsert } from './mutate/upsert';
 import { Delete } from './mutate/delete';
 import { noop } from 'orchid-core';
 import { QueryOrCreate } from './mutate/orCreate';
+import { QueryCreateFrom } from './mutate/createFrom';
 
 const hookSet = {
   beforeCreate: {
@@ -394,6 +395,7 @@ describe('hooks', () => {
         const res = await User[method](
           User.select('name', 'password').take(),
         ).select('*', 'password');
+
         expect(res).toMatchObject(hookSetCreateValues);
 
         assert.createHooksBeingCalled({ data: [depData] });
@@ -418,6 +420,36 @@ describe('hooks', () => {
       },
     );
 
+    it.each(['createManyFrom', 'insertManyFrom'] as const)(
+      'should work for %s',
+      async (method) => {
+        tested[method] = true;
+
+        await User.insert(userData);
+        jest.clearAllMocks();
+
+        const res = await User[method](User.select('name', 'password').take(), [
+          {
+            age: 42,
+            picture: 'picture',
+          },
+          {
+            age: 42,
+            picture: 'picture',
+          },
+        ]).select('*', 'password');
+
+        expect(res).toMatchObject([hookSetCreateValues, hookSetCreateValues]);
+
+        assert.createHooksBeingCalled({
+          data: [
+            { ...depData, age: 42 },
+            { ...depData, age: 42 },
+          ],
+        });
+      },
+    );
+
     it.each(['createForEachFrom', 'insertForEachFrom'] as const)(
       'should work for %s',
       async (method) => {
@@ -433,6 +465,7 @@ describe('hooks', () => {
           '*',
           'password',
         );
+
         expect(res).toMatchObject([hookSetCreateValues, hookSetCreateValues]);
 
         assert.createHooksBeingCalled({
@@ -624,9 +657,10 @@ describe('hooks', () => {
 
     expect(Object.keys(tested).sort()).toEqual(
       [
-        ...Object.getOwnPropertyNames(QueryCreate.prototype).filter(
-          (key) => !createExclude.includes(key),
-        ),
+        ...[
+          ...Object.getOwnPropertyNames(QueryCreate.prototype),
+          ...Object.getOwnPropertyNames(QueryCreateFrom.prototype),
+        ].filter((key) => !createExclude.includes(key)),
         ...Object.getOwnPropertyNames(Update.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),

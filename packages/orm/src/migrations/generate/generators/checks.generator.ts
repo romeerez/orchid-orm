@@ -1,4 +1,8 @@
-import { ColumnDataCheckBase, TemplateLiteralArgs } from 'orchid-core';
+import {
+  ColumnDataCheckBase,
+  getFreeSetAlias,
+  TemplateLiteralArgs,
+} from 'orchid-core';
 import { ColumnType, RawSQL, TableData } from 'pqb';
 import { DbStructure, RakeDbAst } from 'rake-db';
 import { ChangeTableData } from './tables.generator';
@@ -132,14 +136,7 @@ const collectCodeChecks = ({
 
     codeChecks.push(
       ...column.data.checks.map((check) => {
-        let name = check.name;
-        if (!name) {
-          name = baseName;
-          let n = 0;
-          while (names.has(name)) {
-            name = baseName + ++n;
-          }
-        }
+        const name = check.name || getFreeSetAlias(names, baseName, 1);
         names.add(name);
 
         return {
@@ -156,14 +153,7 @@ const collectCodeChecks = ({
       const { check } = constraint;
       if (check) {
         const baseName = `${codeTable.table}_check`;
-        let name = constraint.name;
-        if (!name) {
-          name = baseName;
-          let n = 0;
-          while (names.has(name)) {
-            name = baseName + ++n;
-          }
-        }
+        const name = constraint.name || getFreeSetAlias(names, baseName, 1);
         names.add(name);
 
         codeChecks.push({

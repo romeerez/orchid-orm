@@ -410,7 +410,23 @@ export const getFreeAlias = (
   if (obj?.[as]) {
     let suffix = 2;
     let name;
-    while (obj[(name = `${as}${suffix}`)]) {
+    while (obj[(name = as + suffix)]) {
+      suffix++;
+    }
+    as = name;
+  }
+  return as;
+};
+
+export const getFreeSetAlias = (
+  set: Set<string>,
+  as: string,
+  start = 2,
+): string => {
+  if (set.has(as)) {
+    let suffix = start;
+    let name;
+    while (set.has((name = as + suffix))) {
       suffix++;
     }
     as = name;

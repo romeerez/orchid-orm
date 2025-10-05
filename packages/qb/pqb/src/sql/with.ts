@@ -2,7 +2,7 @@ import { toSQL, ToSQLCtx } from './toSQL';
 import { WithOptions } from './types';
 import { emptyObject, Expression } from 'orchid-core';
 import { getSqlText } from './utils';
-import { WithItems } from 'pqb';
+import { QueryData, WithItems } from 'pqb';
 
 export const withToSql = (ctx: ToSQLCtx, items: WithItems) => {
   if (!items.length) return;
@@ -41,4 +41,20 @@ export const withToSql = (ctx: ToSQLCtx, items: WithItems) => {
 export const pushWithSql = (ctx: ToSQLCtx, items: WithItems) => {
   const sql = withToSql(ctx, items);
   if (sql) ctx.sql.push('WITH', sql);
+};
+
+export const pushOrAppendWithSql = (
+  ctx: ToSQLCtx,
+  query: QueryData,
+  items: WithItems,
+) => {
+  const sql = withToSql(ctx, items);
+  if (sql) {
+    if (query.with) {
+      ctx.sql[ctx.sql.length - 1] += ',';
+    } else {
+      ctx.sql.push('WITH');
+    }
+    ctx.sql.push(sql);
+  }
 };

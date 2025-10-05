@@ -2,11 +2,7 @@ import { pushWhereStatementSql } from './where';
 import { Query } from '../query/query';
 import { selectToSql } from './select';
 import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
-import {
-  InsertQueryDataFromValues,
-  InsertQueryDataObjectValues,
-  QueryData,
-} from './data';
+import { InsertQueryDataObjectValues, QueryData } from './data';
 import {
   addValue,
   ColumnTypeBase,
@@ -24,14 +20,14 @@ import {
   SingleSqlItem,
   Sql,
 } from 'orchid-core';
-import { joinSubQuery } from '../common/utils';
+import { getQueryAs, joinSubQuery } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
 import { OnConflictTarget, SelectAsValue, SelectItem } from './types';
 import { getSqlText } from './utils';
 import { MAX_BINDING_PARAMS } from './constants';
 import { _clone } from '../query/queryUtils';
-import { pushWithSql, withToSql } from './with';
+import { pushOrAppendWithSql, withToSql } from './with';
 
 export const makeInsertSql = (
   ctx: ToSQLCtx,
@@ -43,19 +39,20 @@ export const makeInsertSql = (
   const { shape, inCTE, hookCreateSet } = query;
   const QueryClass = ctx.qb.constructor as unknown as Db;
 
-  let values = query.values;
+  let { insertFrom, queryColumnsCount, values } = query;
 
   let hookSetSql: string | undefined;
   if (hookCreateSet) {
-    ({ hookSetSql, columns, values } = processHookSet(
-      ctx,
-      q,
-      values,
-      hookCreateSet,
-      columns,
-      QueryClass,
-      quotedAs,
-    ));
+    ({ hookSetSql, columns, insertFrom, queryColumnsCount, values } =
+      processHookSet(
+        ctx,
+        q,
+        values,
+        hookCreateSet,
+        columns,
+        QueryClass,
+        quotedAs,
+      ));
   }
 
   const quotedColumns = columns.map(
@@ -68,6 +65,7 @@ export const makeInsertSql = (
     for (const key of q.internal.runtimeDefaultColumns) {
       if (!columns.includes(key)) {
         const column = shape[key];
+        columns.push(key);
         quotedColumns.push(`"${column.data.name || key}"`);
         runtimeDefaults.push(column.data.runtimeDefault as () => unknown);
       }
@@ -96,8 +94,22 @@ export const makeInsertSql = (
   // `insertWith` queries are applied only once, need to ignore if `ctx.hasNonSelect` is changed below.
   const hasNonSelect = ctx.hasNonSelect;
 
-  if ('from' in values && query.insertWith) {
-    pushWithSql(ctx, Object.values(query.insertWith).flat());
+  let hasWith = !!query.with;
+  if (insertFrom) {
+    if (values.length < 2) {
+      if (query.insertWith) {
+        hasWith = true;
+        pushOrAppendWithSql(ctx, query, Object.values(query.insertWith).flat());
+      }
+    } else {
+      hasWith = true;
+      pushOrAppendWithSql(ctx, query, [
+        {
+          n: getQueryAs(insertFrom),
+          q: insertFrom,
+        },
+      ]);
+    }
   }
 
   const valuesPos = ctx.sql.length + 1;
@@ -193,30 +205,48 @@ export const makeInsertSql = (
 
   if (returning.select) ctx.sql.push('RETURNING', returning.select);
 
-  if ('from' in values) {
-    const { from, values: v } = values as InsertQueryDataFromValues;
-    const q = from.clone();
+  let insertManyFromValuesAs: string | undefined;
+  if (insertFrom) {
+    if (values.length < 2) {
+      const q = insertFrom.clone();
 
-    if (v?.length) {
-      pushQueryValueImmutable(
-        q,
-        'select',
-        new RawSQL(
-          encodeRow(
-            ctx,
-            ctx.values,
-            q,
-            QueryClass,
-            v,
-            runtimeDefaults,
-            quotedAs,
+      if (values[0]?.length) {
+        pushQueryValueImmutable(
+          q,
+          'select',
+          new RawSQL(
+            encodeRow(
+              ctx,
+              ctx.values,
+              q,
+              QueryClass,
+              values[0],
+              runtimeDefaults,
+              quotedAs,
+            ),
           ),
-        ),
-      );
-    }
+        );
+      }
 
-    ctx.sql[valuesPos] = getSqlText(toSQL(q, ctx));
-  } else {
+      ctx.sql[valuesPos] = getSqlText(toSQL(q, ctx));
+    } else {
+      insertManyFromValuesAs = query.insertValuesAs;
+      const queryAs = getQueryAs(insertFrom);
+      ctx.sql[valuesPos - 1] += ` SELECT "${queryAs}".*, ${columns
+        .slice(queryColumnsCount || 0)
+        .map((key) => {
+          const column = shape[key];
+          return column
+            ? `${insertManyFromValuesAs}."${column.data.name || key}"::${
+                column.dataType
+              }`
+            : `${insertManyFromValuesAs}."${key}"`;
+        })
+        .join(', ')} FROM "${queryAs}",`;
+    }
+  }
+
+  if (!insertFrom || insertManyFromValuesAs) {
     const valuesSql: string[] = [];
     let ctxValues = ctx.values;
     const restValuesLen = ctxValues.length;
@@ -225,6 +255,13 @@ export const makeInsertSql = (
     const { insertWith } = query;
     const { skipBatchCheck } = ctx;
     const withSqls: string[] = [];
+    const startingKeyword =
+      (insertManyFromValuesAs ? '(' : '') + (inCTE ? 'SELECT ' : 'VALUES ');
+    const valuesAppend = insertManyFromValuesAs
+      ? `) ${insertManyFromValuesAs}(${quotedColumns
+          .slice(queryColumnsCount || 0)
+          .join(', ')})`
+      : '';
 
     for (let i = 0; i < (values as InsertQueryDataObjectValues).length; i++) {
       const withes = insertWith?.[i];
@@ -255,13 +292,11 @@ export const makeInsertSql = (
 
         if (!skipBatchCheck) {
           // save current batch
-          if (withSqls.length) {
-            ctx.sql[valuesPos - 1] =
-              'WITH ' + withSqls.join(', ') + ' ' + insertSql;
-            withSqls.length = 0;
-          }
+          addWithSqls(ctx, hasWith, withSqls, valuesPos, insertSql);
+
           ctx.sql[valuesPos] =
-            (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+            startingKeyword + valuesSql.join(', ') + valuesAppend;
+
           ctxValues.length = currentValuesLen;
           batch = pushOrNewArray(batch, {
             text: ctx.sql.join(' '),
@@ -281,9 +316,7 @@ export const makeInsertSql = (
       valuesSql.push(encodedRow);
     }
 
-    if (withSqls.length) {
-      ctx.sql[valuesPos - 1] = 'WITH ' + withSqls.join(', ') + ' ' + insertSql;
-    }
+    addWithSqls(ctx, hasWith, withSqls, valuesPos, insertSql);
 
     if (batch) {
       if (hasNonSelect) {
@@ -294,7 +327,7 @@ export const makeInsertSql = (
       }
 
       ctx.sql[valuesPos] =
-        (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+        startingKeyword + valuesSql.join(', ') + valuesAppend;
       batch.push({
         text: ctx.sql.join(' '),
         values: ctxValues,
@@ -307,7 +340,7 @@ export const makeInsertSql = (
       };
     } else {
       ctx.sql[valuesPos] =
-        (inCTE ? 'SELECT ' : 'VALUES ') + valuesSql.join(', ');
+        startingKeyword + valuesSql.join(', ') + valuesAppend;
     }
 
     if (inCTE) {
@@ -323,10 +356,27 @@ export const makeInsertSql = (
   };
 };
 
+const addWithSqls = (
+  ctx: ToSQLCtx,
+  hasWith: boolean,
+  withSqls: string[],
+  valuesPos: number,
+  insertSql: string,
+) => {
+  if (withSqls.length) {
+    if (hasWith) {
+      ctx.sql[valuesPos - 2] += ',';
+    }
+    ctx.sql[valuesPos - 1] =
+      (hasWith ? '' : 'WITH ') + withSqls.join(', ') + ' ' + insertSql;
+    withSqls.length = 0;
+  }
+};
+
 const processHookSet = (
   ctx: ToSQLCtx,
   q: ToSQLQuery,
-  values: InsertQueryDataObjectValues | InsertQueryDataFromValues,
+  values: InsertQueryDataObjectValues,
   hookCreateSet: RecordUnknown[],
   columns: string[],
   QueryClass: Db,
@@ -334,7 +384,9 @@ const processHookSet = (
 ): {
   hookSetSql?: string | undefined;
   columns: string[];
-  values: InsertQueryDataObjectValues | InsertQueryDataFromValues;
+  insertFrom?: Query;
+  queryColumnsCount?: number;
+  values: InsertQueryDataObjectValues;
 } => {
   const hookSet: RecordUnknown = {};
   for (const item of hookCreateSet) {
@@ -345,12 +397,12 @@ const processHookSet = (
     (key) => !columns.includes(key),
   );
 
-  if ('from' in values) {
-    const v = { ...values };
+  let insertFrom = q.q.insertFrom;
+  if (insertFrom) {
     const newColumns = new Set<string>();
-    const originalSelect = v.from.q.select;
+    const originalSelect = insertFrom.q.select;
     if (originalSelect) {
-      v.from = _clone(v.from);
+      insertFrom = _clone(insertFrom);
       const select: SelectItem[] = [];
       for (const s of originalSelect) {
         if (typeof s === 'string' && !hookSet[s]) {
@@ -367,25 +419,33 @@ const processHookSet = (
           select.push({ selectAs: filtered });
         }
       }
-      v.from.q.select = select;
+      insertFrom.q.select = select;
     }
 
-    let row: unknown[];
-    if (v.values) {
-      const originalRow = v.values;
-      const valuesColumns = columns.slice(-originalRow.length);
-      row = [];
-      valuesColumns.forEach((c, i) => {
-        if (!hookSet[c] && !newColumns.has(c)) {
-          newColumns.add(c);
-          row.push(originalRow[i]);
-        }
+    if (values.length) {
+      const newValues: unknown[][] = [];
+
+      const valuesColumnsSet = new Set<string>();
+      values.forEach((originalRow, i) => {
+        const valuesColumns = columns.slice(-originalRow.length);
+        const row: unknown[] = [];
+        newValues[i] = row;
+        valuesColumns.forEach((c, i) => {
+          if (!hookSet[c] && !newColumns.has(c)) {
+            valuesColumnsSet.add(c);
+            row.push(originalRow[i]);
+          }
+        });
       });
-    } else {
-      row = [];
-    }
 
-    v.values = row;
+      for (const valueColumn of valuesColumnsSet) {
+        newColumns.add(valueColumn);
+      }
+
+      values = newValues;
+    } else {
+      values = [[]];
+    }
 
     columns.forEach((column) => {
       if (column in hookSet) {
@@ -401,31 +461,40 @@ const processHookSet = (
             quotedAs,
           ),
         };
-        row.push(fromHook);
+
+        for (const row of values) {
+          row.push(fromHook);
+        }
       }
     });
 
+    const queryColumnsCount = insertFrom.q.select?.length;
+
     if (addHookSetColumns) {
       for (const key of addHookSetColumns) {
-        row.push({
-          fromHook: encodeValue(
-            ctx,
-            ctx.values,
-            q,
-            QueryClass,
-            hookSet[key],
-            quotedAs,
-          ),
-        });
+        for (const row of values) {
+          row.push({
+            fromHook: encodeValue(
+              ctx,
+              ctx.values,
+              q,
+              QueryClass,
+              hookSet[key],
+              quotedAs,
+            ),
+          });
+        }
       }
 
       return {
         columns: [...newColumns, ...addHookSetColumns],
-        values: v,
+        insertFrom,
+        queryColumnsCount,
+        values,
       };
     }
 
-    return { columns: [...newColumns], values: v };
+    return { columns: [...newColumns], insertFrom, queryColumnsCount, values };
   }
 
   columns.forEach((column, i) => {

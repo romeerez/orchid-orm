@@ -8,6 +8,7 @@ import {
   tableColumnToSqlWithAs,
 } from './common';
 import {
+  getFreeAlias,
   isRelationQuery,
   OrchidOrmInternalError,
   UnhandledTypeError,
@@ -263,9 +264,7 @@ export const selectToSql = (
           continue;
         }
 
-        let i = 2;
-
-        while (selected[(name = `${column}${i}`)]) i++;
+        name = getFreeAlias(selected, column);
 
         item.as = name;
         item.temp = name;

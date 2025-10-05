@@ -21,6 +21,7 @@ import {
   _queryDelete,
   PickQueryQ,
   _queryWhere,
+  SelectableFromShape,
 } from 'pqb';
 import {
   ColumnSchemaConfig,
@@ -48,10 +49,16 @@ import {
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
   NestedUpdateManyItems,
+  RelJoin,
 } from './common/utils';
 import { RelationThroughOptions } from './common/options';
 import { defaultSchemaConfig } from 'pqb';
-import { HasOneOptions, HasOneParams, HasOnePopulate } from './hasOne';
+import {
+  HasOneOptions,
+  HasOneParams,
+  HasOnePopulate,
+  HasOneQueryThrough,
+} from './hasOne';
 import { ORMTableInput } from '../baseTable';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
@@ -59,6 +66,25 @@ export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
   options: HasOneOptions;
 }
+
+export type HasManyQuery<
+  T extends RelationConfigSelf,
+  Name extends string,
+  TableQuery extends Query,
+> = T['relations'][Name]['options'] extends RelationThroughOptions
+  ? HasOneQueryThrough<T, Name, TableQuery>
+  : {
+      [K in keyof TableQuery]: K extends 'meta'
+        ? Omit<TableQuery['meta'], 'selectable'> & {
+            as: Name;
+            defaults: HasOnePopulate<T, Name>;
+            hasWhere: true;
+            selectable: SelectableFromShape<TableQuery['shape'], Name>;
+          }
+        : K extends 'join'
+        ? RelJoin
+        : TableQuery[K];
+    };
 
 export interface HasManyInfo<
   T extends RelationConfigSelf,
@@ -320,7 +346,8 @@ export const makeHasManyMethod = (
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
         const q = (relationQuery as unknown as PickQueryQ).q;
-        q.values = { from: baseQuery };
+        q.insertFrom = baseQuery;
+        q.values = [];
       };
     },
   };

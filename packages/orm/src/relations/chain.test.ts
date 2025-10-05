@@ -938,6 +938,11 @@ describe('relations chain', () => {
           Bio: 'bio',
         });
       });
+
+      it('should not support createMany', async () => {
+        // @ts-expect-error createMany is not supported by hasOne
+        db.user.find(1).chain('profile').createMany([]);
+      });
     });
 
     describe('chained delete', () => {
@@ -2117,7 +2122,7 @@ describe('relations chain', () => {
       );
     });
 
-    describe('create based on a query', () => {
+    describe('chained create', () => {
       it('should have create based on a query', () => {
         const query = db.chat.find(1).chain('messages').create({
           Text: 'text',
@@ -2179,6 +2184,40 @@ describe('relations chain', () => {
         await db.chat.findOptional(1).chain('messages').takeOptional().create({
           Text: 'text',
         });
+      });
+
+      it('should support insert', async () => {
+        const user = await db.user.create(userData);
+
+        const title = await db.user
+          .find(user.Id)
+          .chain('posts')
+          .insert(postData)
+          .get('Title');
+
+        expect(title).toBe(user.UserKey);
+      });
+
+      it('should support createMany', async () => {
+        const user = await db.user.create(userData);
+
+        const res = await db.user
+          .find(user.Id)
+          .chain('posts')
+          .createMany([postData, postData]);
+
+        expect(res).toMatchObject([
+          {
+            UserId: user.Id,
+            Title: user.UserKey,
+            Body: postData.Body,
+          },
+          {
+            UserId: user.Id,
+            Title: user.UserKey,
+            Body: postData.Body,
+          },
+        ]);
       });
     });
 
@@ -2468,31 +2507,6 @@ describe('relations chain', () => {
         items: [{ Tag: postTagData.Tag }],
       });
     });
-
-    it('should support insert', async () => {
-      const user = await db.user.create(userData);
-
-      const title = await db.user
-        .find(user.Id)
-        .chain('posts')
-        .insert(postData)
-        .get('Title');
-
-      expect(title).toBe(user.UserKey);
-    });
-
-    it.todo('should support insertMany');
-    // it.only('should support insertMany', async () => {
-    //   const user = await db.user.create(userData);
-    //
-    //   const titles = await db.user
-    //     .find(user.Id)
-    //     .chain('posts')
-    //     .insertMany([postData, postData])
-    //     .pluck('Title');
-    //
-    //   console.log(titles);
-    // });
   });
 
   describe('hasMany through hasMany', () => {
@@ -2666,9 +2680,13 @@ describe('relations chain', () => {
       );
     });
 
-    it('should disable create', () => {
-      // @ts-expect-error hasMany with through option should not have chained create
-      db.profile.chain('chats').create(chatData);
+    describe('chained create', () => {
+      it('should have create methods disabled', () => {
+        // @ts-expect-error hasMany with through option should not have chained create
+        db.profile.chain('chats').create(chatData);
+        // @ts-expect-error hasMany with through option should not have chained createMany
+        db.profile.chain('chats').createMany([chatData, chatData]);
+      });
     });
 
     describe('chained delete', () => {
@@ -2809,9 +2827,13 @@ describe('relations chain', () => {
       );
     });
 
-    it('should disable create', () => {
-      // @ts-expect-error hasMany with through option should not have chained create
-      db.chat.chain('profiles').create(chatData);
+    describe('chained create', () => {
+      it('should disable create', () => {
+        // @ts-expect-error hasMany with through option should not have chained create
+        db.chat.chain('profiles').create(chatData);
+        // @ts-expect-error hasMany with through option should not have chained createMany
+        db.chat.chain('profiles').createMany([chatData, chatData]);
+      });
     });
 
     it('should have chained delete', () => {
@@ -3233,7 +3255,7 @@ describe('relations chain', () => {
       );
     });
 
-    describe('create based on a query', () => {
+    describe('chained create', () => {
       it('should create based on find query', async () => {
         const user = await db.user.create(userData);
 
@@ -3283,6 +3305,31 @@ describe('relations chain', () => {
         ).rejects.toThrow(
           'Cannot create based on a query which returns multiple records',
         );
+      });
+
+      it('supports createMany', async () => {
+        const user = await db.user.create(userData);
+
+        const data = [
+          {
+            Title: 'one',
+            ChatKey: 'two',
+          },
+          {
+            Title: 'three',
+            ChatKey: 'for',
+          },
+        ];
+
+        const chats = await db.user
+          .find(user.Id)
+          .chain('chats')
+          .createMany(data);
+
+        expect(chats).toMatchObject(data);
+
+        const ids = await db.user.queryRelated('chats', user).pluck('IdOfChat');
+        expect(ids).toEqual(chats.map((chat) => chat.IdOfChat));
       });
     });
 

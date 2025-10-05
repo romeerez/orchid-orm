@@ -2,7 +2,7 @@ import {
   PickQueryMetaTable,
   PickQueryMetaTableShape,
 } from './pick-query-types';
-import { RecordString } from '../utils';
+import { getFreeAlias, RecordString } from '../utils';
 import { QueryBase } from './query';
 import { QueryDataBase } from './query-data';
 
@@ -53,19 +53,7 @@ export type AsQueryArg = PickQueryMetaTableShape;
 export const _getQueryAs = (q: QueryBase): string | undefined => q.q.as;
 
 export const _getQueryFreeAlias = (q: QueryDataAliases, as: string): string =>
-  q.aliases ? getQueryDataFreeAlias(q.aliases, as) : as;
-
-const getQueryDataFreeAlias = (aliases: RecordString, as: string): string => {
-  if (!aliases[as]) return as;
-
-  let suffix = 2;
-  let privateAs;
-  while (aliases[(privateAs = as + suffix)]) {
-    suffix++;
-  }
-
-  return privateAs;
-};
+  q.aliases ? getFreeAlias(q.aliases, as) : as;
 
 export const _checkIfAliased = (
   q: QueryBase,
@@ -130,7 +118,7 @@ export const _applyRelationAliases = (
 
   const relAliases = relQueryData.aliases!; // is always set for a relation
   for (const as in relAliases) {
-    aliases[as] = getQueryDataFreeAlias(aliases, as);
+    aliases[as] = getFreeAlias(aliases, as);
   }
   relQueryData.as = aliases[relQueryData.as!]; // `as` is always set for a relation;
   relQueryData.aliases = aliases;
