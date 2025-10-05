@@ -409,14 +409,25 @@ await db.author.find(id).chain('books').create({
 await db.post.find(id).chain('tags').create({
   name: 'tag name',
 });
+
+// createMany is supported as well
+await db.post
+  .find(id)
+  .chain('tags')
+  .create([
+    {
+      name: 'first tag',
+    },
+    {
+      name: 'second tag',
+    },
+  ]);
 ```
 
 This is possible for `hasOne`, `hasMany`, and `hasAndBelongsToMany`, but this is disabled for `belongsTo` and `hasOne`/`hasMany` with the `through` option.
 
 This is only allowed to perform creation based on a query that returns one record,
 so you have to use methods `find`, `findBy`, `take`, or similar.
-
-`db.post.tags.create` or `db.post.where(...).tags.create` won't work because multiple posts are returned in these queries.
 
 Because the `create` method is designed to return a full record by default,
 in the case when a record is not found by the condition it will throw `NotFoundError`, even when using `findOptional`:
