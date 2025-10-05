@@ -1,5 +1,13 @@
 # orchid-core
 
+## 0.29.2
+
+### Patch Changes
+
+- 1d6636b: Add `createManyFrom` to create many records from a query
+
+  Support creating many records in a chain for `hasMany` and `hasAndBelongsToMany` (#560)
+
 ## 0.29.1
 
 ### Patch Changes

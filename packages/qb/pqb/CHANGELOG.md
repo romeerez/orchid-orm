@@ -1,5 +1,17 @@
 # pqb
 
+## 0.56.5
+
+### Patch Changes
+
+- 1d6636b: Add `createManyFrom` to create many records from a query
+
+  Support creating many records in a chain for `hasMany` and `hasAndBelongsToMany` (#560)
+
+- 35c8828: Rename `createFrom` to `createOneFrom`, rename `createFromMany` to `createForEachFrom`, it is related to the issue (#560)
+- Updated dependencies [1d6636b]
+  - orchid-core@0.29.2
+
 ## 0.56.4
 
 ### Patch Changes

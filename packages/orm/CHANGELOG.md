@@ -1,5 +1,23 @@
 # orchid-orm
 
+## 1.57.0
+
+### Minor Changes
+
+- 35c8828: Rename `createFrom` to `createOneFrom`, rename `createFromMany` to `createForEachFrom`, it is related to the issue (#560)
+
+### Patch Changes
+
+- 1d6636b: Add `createManyFrom` to create many records from a query
+
+  Support creating many records in a chain for `hasMany` and `hasAndBelongsToMany` (#560)
+
+- Updated dependencies [1d6636b]
+- Updated dependencies [35c8828]
+  - pqb@0.56.5
+  - orchid-core@0.29.2
+  - rake-db@2.27.6
+
 ## 1.56.5
 
 ### Patch Changes
