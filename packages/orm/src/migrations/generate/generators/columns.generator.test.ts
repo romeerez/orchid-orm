@@ -22,7 +22,7 @@ const { green, red, yellow } = colors;
 describe('columns', () => {
   const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
 
-  it('should ignore `parse` and `encode`', async () => {
+  it('should ignore `parse`, `parseNull`, `encode`, `as`', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
@@ -36,7 +36,8 @@ describe('columns', () => {
             .text()
             .parse(() => 1)
             .parseNull(() => 2)
-            .encode(() => 3),
+            .encode(() => 3)
+            .as(t.real()),
         })),
       ],
     });

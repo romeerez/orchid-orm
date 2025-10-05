@@ -643,7 +643,9 @@ export const columnCode = (
 
   if (data.isNullable) addCode(code, '.nullable()');
 
-  if (data.as) addCode(code, `.as(${data.as.toCode(ctx, key)})`);
+  if (data.as && !ctx.migration) {
+    addCode(code, `.as(${data.as.toCode(ctx, key)})`);
+  }
 
   if (
     data.default !== undefined &&
