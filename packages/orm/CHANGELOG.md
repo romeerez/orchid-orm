@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.57.1
+
+### Patch Changes
+
+- 5dd8632: Index, unique, exclude, other indexes: move `name` from being an argument to the options object (#572)
+- 8c49177: Remove `column.as(...)` from generated migrations (#573)
+- Updated dependencies [2f6c64b]
+- Updated dependencies [5dd8632]
+- Updated dependencies [8c49177]
+  - pqb@0.56.6
+  - rake-db@2.27.7
+
 ## 1.57.0
 
 ### Minor Changes

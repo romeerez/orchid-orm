@@ -1,5 +1,13 @@
 # pqb
 
+## 0.56.6
+
+### Patch Changes
+
+- 2f6c64b: Support raw SQL for values in jsonSet, jsonReplace, jsonInsert (#574)
+- 5dd8632: Index, unique, exclude, other indexes: move `name` from being an argument to the options object (#572)
+- 8c49177: Remove `column.as(...)` from generated migrations (#573)
+
 ## 0.56.5
 
 ### Patch Changes
