@@ -92,6 +92,8 @@ It can be used in all contexts on a single JSON value.
 ```ts
 await db.table.find(id).update({
   data: (q) => q.get('data').jsonSet(['path', 'to', 'value'], 'new value'),
+  // supports sql for the value
+  data: (q) => q.get('data').jsonSet(['path', 'to', 'value'], sql`'new value'`),
 });
 ```
 
@@ -104,6 +106,9 @@ so this function only has effect when the value already existed in the JSON.
 await db.table.find(id).update({
   // data.path.to.value will be updated only if it already was defined
   data: (q) => q.get('data').jsonReplace(['path', 'to', 'value'], 'new value'),
+  // supports sql for the value
+  data: (q) =>
+    q.get('data').jsonReplace(['path', 'to', 'value'], sql`'new value'`),
 });
 ```
 
@@ -126,6 +131,8 @@ It can be used in all contexts on a single JSON value.
 // update the record with data { tags: ['two'] } to have data { tags: ['one', 'two'] }
 await db.table.find(id).update({
   data: (q) => q.get('data').jsonInsert(['tags', 0], 'one'),
+  // supports sql for the value
+  data: (q) => q.get('data').jsonInsert(['tags', 0], sql`'one'`),
 });
 
 // add 'three' after 'two'

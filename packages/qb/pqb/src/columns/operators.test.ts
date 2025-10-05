@@ -5,8 +5,15 @@ import {
   snakeSelectAll,
   User,
   userColumnsSql,
+  UserData,
 } from '../test-utils/test-utils';
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  expectSql,
+  sql,
+  testDb,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('operators', () => {
   it('should ignore undefined values', () => {
@@ -552,6 +559,22 @@ describe('operators', () => {
         );
       });
 
+      it('should support sql', () => {
+        const q = User.get('data').jsonSet('name', sql`sql`);
+
+        assertType<Awaited<typeof q>, UserData | null>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT jsonb_set("user"."data", $1, to_jsonb(sql))
+            FROM "user"
+            LIMIT 1
+          `,
+          ['{name}'],
+        );
+      });
+
       it('should update with jsonSet', () => {
         const q = Snake.find(1).update({
           snakeData: (q) => q.get('snakeData').jsonSet('key', 'value'),
@@ -616,6 +639,22 @@ describe('operators', () => {
         );
       });
 
+      it('should support sql', () => {
+        const q = User.get('data').jsonReplace('name', sql`sql`);
+
+        assertType<Awaited<typeof q>, UserData | null>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT jsonb_set("user"."data", $1, to_jsonb(sql), false)
+            FROM "user"
+            LIMIT 1
+          `,
+          ['{name}'],
+        );
+      });
+
       it('should update with jsonReplace', () => {
         const q = Snake.find(1).update({
           snakeData: (q) => q.get('snakeData').jsonReplace('key', 'value'),
@@ -649,6 +688,22 @@ describe('operators', () => {
             LIMIT 1
           `,
           ['{key}', '"value"'],
+        );
+      });
+
+      it('should support sql', () => {
+        const q = User.get('data').jsonInsert('name', sql`sql`);
+
+        assertType<Awaited<typeof q>, UserData | null>();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT jsonb_insert("user"."data", $1, to_jsonb(sql))
+            FROM "user"
+            LIMIT 1
+          `,
+          ['{name}'],
         );
       });
 

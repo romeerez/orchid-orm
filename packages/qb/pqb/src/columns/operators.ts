@@ -406,6 +406,8 @@ export interface OperatorsJson extends Base<unknown> {
      * ```ts
      * await db.table.find(id).update({
      *   data: (q) => q.get('data').jsonSet(['path', 'to', 'value'], 'new value'),
+     *   // supports sql for the value
+     *   data: (q) => q.get('data').jsonSet(['path', 'to', 'value'], sql`'new value'`),
      * });
      * ```
      *
@@ -429,6 +431,9 @@ export interface OperatorsJson extends Base<unknown> {
      * await db.table.find(id).update({
      *   // data.path.to.value will be updated only if it already was defined
      *   data: (q) => q.get('data').jsonReplace(['path', 'to', 'value'], 'new value'),
+     *   // supports sql for the value
+     *   data: (q) =>
+     *     q.get('data').jsonReplace(['path', 'to', 'value'], sql`'new value'`),
      * });
      * ```
      *
@@ -460,6 +465,8 @@ export interface OperatorsJson extends Base<unknown> {
      * // update the record with data { tags: ['two'] } to have data { tags: ['one', 'two'] }
      * await db.table.find(id).update({
      *   data: (q) => q.get('data').jsonInsert(['tags', 0], 'one'),
+     *   // supports sql for the value
+     *   data: (q) => q.get('data').jsonInsert(['tags', 0], sql`'one'`),
      * });
      *
      * // add 'three' after 'two'
@@ -549,6 +556,24 @@ const quoteJsonValue = (
   return addValue(ctx.values, JSON.stringify(arg)) + '::jsonb';
 };
 
+const serializeJsonValue = (
+  arg: unknown,
+  ctx: ToSQLCtx,
+  quotedAs: string | undefined,
+): string => {
+  if (arg && typeof arg === 'object') {
+    if (isExpression(arg)) {
+      return 'to_jsonb(' + arg.toSQL(ctx, quotedAs) + ')';
+    }
+
+    if ('toSQL' in arg) {
+      return `to_jsonb((${getSqlText((arg as Query).toSQL(ctx))}))`;
+    }
+  }
+
+  return addValue(ctx.values, JSON.stringify(arg));
+};
+
 const json = {
   equals: make((key, value, ctx, quotedAs) =>
     value === null
@@ -609,24 +634,27 @@ const json = {
       `${key} <@ ${quoteValue(value, ctx, quotedAs)}`,
   ),
   jsonSet: makeVarArg(
-    (key, [path, value], ctx) =>
-      `jsonb_set(${key}, ${encodeJsonPath(ctx, path)}, ${addValue(
-        ctx.values,
-        JSON.stringify(value),
+    (key, [path, value], ctx, quotedAs) =>
+      `jsonb_set(${key}, ${encodeJsonPath(ctx, path)}, ${serializeJsonValue(
+        value,
+        ctx,
+        quotedAs,
       )})`,
   ),
   jsonReplace: makeVarArg(
-    (key, [path, value], ctx) =>
-      `jsonb_set(${key}, ${encodeJsonPath(ctx, path)}, ${addValue(
-        ctx.values,
-        JSON.stringify(value),
+    (key, [path, value], ctx, quotedAs) =>
+      `jsonb_set(${key}, ${encodeJsonPath(ctx, path)}, ${serializeJsonValue(
+        value,
+        ctx,
+        quotedAs,
       )}, false)`,
   ),
   jsonInsert: makeVarArg(
-    (key, [path, value, options], ctx) =>
-      `jsonb_insert(${key}, ${encodeJsonPath(ctx, path)}, ${addValue(
-        ctx.values,
-        JSON.stringify(value),
+    (key, [path, value, options], ctx, quotedAs) =>
+      `jsonb_insert(${key}, ${encodeJsonPath(ctx, path)}, ${serializeJsonValue(
+        value,
+        ctx,
+        quotedAs,
       )}${options?.after ? ', true' : ''})`,
   ),
   jsonRemove: makeVarArg(
