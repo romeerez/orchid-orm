@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.29.3
+
+### Patch Changes
+
+- d5154b4: Fix bundling of rake-db adapters to not include full rake-db into each adapter
+
 ## 0.29.2
 
 ### Patch Changes
