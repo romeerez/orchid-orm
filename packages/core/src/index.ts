@@ -161,6 +161,7 @@ export type {
   UniqueColumn,
   ColumnDataBase,
   ColumnShapeInputPartial,
+  ColumnDataAppReadOnly,
 } from './columns';
 export {
   ExpressionTypeMethod,

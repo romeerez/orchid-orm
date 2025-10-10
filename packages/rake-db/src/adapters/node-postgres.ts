@@ -1,15 +1,20 @@
-import { InputRakeDbConfig, processRakeDbConfig } from '../config';
-import { RakeDbConfig } from 'rake-db';
+import {
+  InputRakeDbConfig,
+  processRakeDbConfig,
+  RakeDbConfig,
+  RakeDbError,
+  makeChange,
+  RakeDbFn,
+  runCommand,
+  MigrateFnConfig,
+  makeMigrateAdapter,
+} from 'rake-db';
 import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
-import { RakeDbError } from '../errors';
-import { makeChange, RakeDbFn, runCommand } from '../rakeDb';
 import {
   NodePostgresAdapter,
   NodePostgresAdapterOptions,
 } from 'pqb/node-postgres';
 import { DefaultSchemaConfig } from 'pqb';
-import { MigrateFnConfig } from '../commands/migrateOrRollback';
-import { makeMigrateAdapter } from '../migration/migrate/migrate';
 
 export const rakeDb = ((
   options,

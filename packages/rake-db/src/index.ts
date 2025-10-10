@@ -1,5 +1,9 @@
-export { rakeDbWithAdapters } from './rakeDb';
-export type { RakeDbChangeFn, RakeDbChangeFnWithPromise } from './rakeDb';
+export { rakeDbWithAdapters, runCommand, makeChange } from './rakeDb';
+export type {
+  RakeDbChangeFn,
+  RakeDbChangeFnWithPromise,
+  RakeDbFn,
+} from './rakeDb';
 export {
   getExcludeName,
   getIndexName,
@@ -8,6 +12,7 @@ export {
 } from './migration/migration.utils';
 export { promptSelect } from './prompt';
 export { migrate, migrateAndClose } from './commands/migrateOrRollback';
+export type { MigrateFnConfig } from './commands/migrateOrRollback';
 export type { ChangeCallback } from './migration/change';
 export { introspectDbSchema } from './generate/dbStructure';
 export type {
@@ -32,14 +37,16 @@ export type {
   StructureToAstTableData,
 } from './generate/structureToAst';
 export { makeFileVersion, writeMigrationFile } from './commands/newMigration';
-export { migrationConfigDefaults } from './config';
+export { migrationConfigDefaults, processRakeDbConfig } from './config';
 export type {
   AnyRakeDbConfig,
   InputRakeDbConfigBase,
   RakeDbConfig,
+  InputRakeDbConfig,
 } from './config';
 export type { RakeDbAst } from './ast';
 export { createMigrationInterface } from './migration/migration';
 export type { SilentQueries, DbMigration } from './migration/migration';
 export { saveMigratedVersion } from './migration/manageMigratedVersions';
-export { migrateFiles } from './migration/migrate/migrate';
+export { migrateFiles, makeMigrateAdapter } from './migration/migrate/migrate';
+export { RakeDbError } from './errors';
