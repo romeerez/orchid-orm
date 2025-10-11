@@ -147,14 +147,6 @@ For full text search to store queries.
 t.tsquery(); // -> string
 ```
 
-## binary
-
-The bytea data type allows storage of binary strings, it is returned as a node.js Buffer object.
-
-```ts
-t.bytea(); // -> Buffer
-```
-
 ## date and time
 
 Datetime types can have [date operators](/guide/where.html#numeric-and-date-operators) in `WHERE` conditions.
@@ -468,6 +460,17 @@ t.macaddr(); // -> string, example: 08:00:2b:01:02:03
 
 // macaddr8    8 bytes    MAC addresses (EUI-64 format)
 t.macaddr8(); // -> string, example: 08:00:2b:ff:fe:01:02:03
+```
+
+## binary
+
+The bytea data type allows storage of binary strings.
+
+It has a default parser to parse strings like `\x74657874` to node.js Buffers.
+If you define a custom `parse`, the argument will be this string.
+
+```ts
+t.bytea(); // -> Buffer
 ```
 
 ## bit string

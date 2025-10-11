@@ -9,6 +9,7 @@ import {
 import { raw } from '../sql/rawSql';
 import { ColumnToCodeCtx } from 'orchid-core';
 import { User, userData } from '../test-utils/test-utils';
+import { z } from 'zod/v4';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',
@@ -167,6 +168,18 @@ describe('string columns', () => {
 
   describe('binary', () => {
     describe('bytea', () => {
+      it('is a string originally, if we remove the default parser', async () => {
+        const result = await testDb.get(
+          testDb.sql`'text'::bytea`.type(() =>
+            t.bytea().parse(z.string(), (str) => str),
+          ),
+        );
+
+        assertType<typeof result, string>();
+
+        expect(result).toBe('\\x' + Buffer.from('text').toString('hex'));
+      });
+
       it('should output Buffer', async () => {
         const result = await testDb.get(
           testDb.sql`'text'::bytea`.type(() => t.bytea()),
@@ -198,6 +211,26 @@ describe('string columns', () => {
 
           expect(bytea instanceof Buffer).toBe(true);
           expect(bytea.toString()).toBe('text');
+        });
+
+        // https://github.com/romeerez/orchid-orm/issues/557
+        it('should be decoded to a Buffer when sub-selected when having a noop parse', async () => {
+          await User.create(userData);
+
+          const {
+            sub: { bytea },
+          } = await User.take().select({
+            sub: () =>
+              User.take().select({
+                bytea: sql`'text'::bytea`.type(() =>
+                  t.bytea().parse(z.unknown(), (buf) => buf),
+                ),
+              }),
+          });
+
+          assertType<typeof bytea, string>();
+
+          expect(bytea).toBe('\\x' + Buffer.from('text').toString('hex'));
         });
       });
     });

@@ -174,9 +174,14 @@ const byteaParse = (val: unknown) =>
 // To store binary strings
 export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
+  string,
+  ReturnType<Schema['buffer']>,
+  OperatorsOrdinalText,
+  Buffer,
   Buffer,
   ReturnType<Schema['buffer']>,
-  OperatorsOrdinalText
+  string,
+  ReturnType<Schema['stringSchema']>
 > {
   dataType = 'bytea' as const;
   operators = Operators.ordinalText;

@@ -490,7 +490,12 @@ describe('valibot schema config', () => {
     it('should check Buffer', () => {
       const type = t.bytea();
 
-      assertAllTypes<typeof type, InstanceSchema<typeof Buffer>>();
+      assertType<(typeof type)['inputSchema'], InstanceSchema<typeof Buffer>>();
+      assertType<
+        (typeof type)['outputSchema'],
+        InstanceSchema<typeof Buffer>
+      >();
+      assertType<(typeof type)['querySchema'], StringSchema>();
 
       const buffer = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
       expectAllParse(type, buffer, buffer);

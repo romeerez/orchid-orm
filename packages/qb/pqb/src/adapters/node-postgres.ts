@@ -53,6 +53,7 @@ for (const key in types.builtins) {
   types.builtins.TIMESTAMP,
   types.builtins.TIMESTAMPTZ,
   types.builtins.CIRCLE,
+  types.builtins.BYTEA,
 ].forEach((id) => {
   delete defaultTypeParsers[id];
 });

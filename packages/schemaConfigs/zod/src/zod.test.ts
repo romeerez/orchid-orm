@@ -584,7 +584,9 @@ describe('zod schema config', () => {
     it('should check Buffer', () => {
       const type = t.bytea();
 
-      assertAllTypes<typeof type, ZodType<Buffer>>();
+      assertType<(typeof type)['inputSchema'], ZodType<Buffer>>();
+      assertType<(typeof type)['outputSchema'], ZodType<Buffer>>();
+      assertType<(typeof type)['querySchema'], ZodString>();
 
       const buffer = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
       expectAllParse(type, buffer, buffer);

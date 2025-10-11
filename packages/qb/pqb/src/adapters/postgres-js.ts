@@ -73,6 +73,12 @@ const wrapResult = (result: MaybeArray<RawResult>): QueryArraysResult<any> => {
 };
 
 const types: Record<string, Partial<postgres.PostgresType>> = {
+  bytea: {
+    to: 17,
+    from: 17 as never,
+    serialize: (x) => '\\x' + Buffer.from(x).toString('hex'),
+    // omit parse, let bytea return a string, so it remains consistent with when it's selected via JSON
+  },
   dateAndTimestampAsStrings: {
     to: 25,
     from: [1082, 1114, 1184],
