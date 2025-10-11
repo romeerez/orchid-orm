@@ -26,7 +26,12 @@ import {
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
 import { SearchWeightRecord } from '../sql';
-import { Operators, OperatorsNumber, OperatorsText } from './operators';
+import {
+  Operators,
+  OperatorsNumber,
+  OperatorsOrdinalText,
+  OperatorsText,
+} from './operators';
 import { setColumnDefaultParse } from './column.utils';
 import {
   defaultSchemaConfig,
@@ -37,14 +42,10 @@ export type TextColumnData = StringTypeData;
 
 export abstract class TextBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+  Ops = OperatorsText,
+> extends ColumnType<Schema, string, ReturnType<Schema['stringSchema']>, Ops> {
   declare data: TextColumnData;
-  operators = Operators.text;
+  operators = Operators.text as Ops;
 
   constructor(
     schema: Schema,
@@ -58,8 +59,9 @@ export abstract class TextBaseColumn<
 
 export abstract class LimitedTextBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends TextBaseColumn<Schema> {
+> extends TextBaseColumn<Schema, OperatorsOrdinalText> {
   declare data: TextColumnData & { maxChars?: number };
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema, limit?: number) {
     super(
@@ -147,9 +149,10 @@ const textColumnToCode = (
 // text	variable unlimited length
 export class TextColumn<
   Schema extends ColumnSchemaConfig,
-> extends TextBaseColumn<Schema> {
+> extends TextBaseColumn<Schema, OperatorsOrdinalText> {
   dataType = 'text' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
+  operators = Operators.ordinalText;
 
   private static _instance: TextColumn<DefaultSchemaConfig> | undefined;
   static get instance() {
@@ -173,10 +176,10 @@ export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   Buffer,
   ReturnType<Schema['buffer']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'bytea' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
     super(schema, schema.buffer() as never);
@@ -383,10 +386,10 @@ export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'inet' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
@@ -404,10 +407,10 @@ export class MacAddrColumn<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'macaddr' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
@@ -425,10 +428,10 @@ export class MacAddr8Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'macaddr8' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
@@ -446,10 +449,10 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
   ReturnType<Schema['bit']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'bit' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
   declare data: ColumnData & { length: number };
 
   constructor(schema: Schema, length: number) {
@@ -472,9 +475,14 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
 export class BitVaryingColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<Schema, string, ReturnType<Schema['bit']>, OperatorsText> {
+> extends ColumnType<
+  Schema,
+  string,
+  ReturnType<Schema['bit']>,
+  OperatorsOrdinalText
+> {
   dataType = 'varbit' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
   declare data: ColumnData & { length?: number };
 
   constructor(schema: Schema, length?: number) {
@@ -505,10 +513,10 @@ export class TsVectorColumn<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'tsvector' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema, public defaultLanguage = getDefaultLanguage()) {
     super(schema, schema.stringSchema() as never);
@@ -643,10 +651,10 @@ export class TsQueryColumn<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'tsquery' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
@@ -665,10 +673,10 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   Schema,
   string,
   ReturnType<Schema['uuid']>,
-  OperatorsText
+  OperatorsOrdinalText
 > {
   dataType = 'uuid' as const;
-  operators = Operators.text;
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
     super(schema, schema.uuid() as never);
@@ -720,9 +728,10 @@ export class XMLColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 // citext is a postgres extension
 export class CitextColumn<
   Schema extends ColumnSchemaConfig,
-> extends TextBaseColumn<Schema> {
+> extends TextBaseColumn<Schema, OperatorsOrdinalText> {
   dataType = 'citext' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
+  operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);

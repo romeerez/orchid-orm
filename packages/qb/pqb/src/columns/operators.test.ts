@@ -9,11 +9,14 @@ import {
 } from '../test-utils/test-utils';
 import {
   assertType,
+  columnTypes,
   expectSql,
   sql,
   testDb,
   useTestDatabase,
 } from 'test-utils';
+
+const t = columnTypes;
 
 describe('operators', () => {
   it('should ignore undefined values', () => {
@@ -1211,6 +1214,63 @@ describe('operators', () => {
         `,
         [now],
       );
+    });
+  });
+
+  describe('ordinal operators', () => {
+    /**
+     * To get a list of types that support `<`, `>`, `<=`, `>=`
+     *
+     * SELECT DISTINCT t.typname AS type_name
+     * FROM pg_type t
+     * JOIN pg_opclass c ON t.oid = c.opcintype
+     * JOIN pg_am am ON am.oid = c.opcmethod
+     * WHERE am.amname = 'btree'
+     * ORDER BY t.typname;
+     */
+    it(`should be available for various types`, () => {
+      for (const type of [
+        t.bit(1),
+        t.bitVarying(),
+        t.boolean(),
+        t.json(),
+        // arrays
+        t.array(t.string()),
+        t.bytea(),
+        // strings
+        t.enum('enum', ['value']),
+        t.citext(),
+        t.uuid(),
+        t.money(),
+        t.inet(),
+        t.macaddr(),
+        t.macaddr8(),
+        t.text(),
+        t.string(),
+        t.varchar(),
+        // dates
+        t.date(),
+        t.interval(),
+        t.time(),
+        t.timestamp(),
+        t.timestampNoTZ(),
+        // numbers
+        t.smallint(),
+        t.integer(),
+        t.bigint(),
+        t.numeric(),
+        t.decimal(),
+        t.real(),
+        t.doublePrecision(),
+        t.smallSerial(),
+        t.serial(),
+        t.bigSerial(),
+        // search
+        t.tsvector(),
+        t.tsquery(),
+      ]) {
+        expect(type.operators).toHaveProperty('lt');
+      }
     });
   });
 });

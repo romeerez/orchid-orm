@@ -197,24 +197,6 @@ interface OperatorsBooleanSelf extends OperatorsBoolean {
   result: { value: BooleanQueryColumn };
 }
 
-// Boolean type operators
-export interface OperatorsBoolean extends Base<boolean> {
-  and: Operator<OperatorsBooleanSelf, BooleanQueryColumn>;
-  or: Operator<OperatorsBooleanSelf, BooleanQueryColumn>;
-}
-
-const boolean = {
-  ...base,
-  and: make(
-    (key, value, ctx, quotedAs) =>
-      `${key} AND ${value.q.expr.toSQL(ctx, quotedAs)}`,
-  ),
-  or: make(
-    (key, value, ctx, quotedAs) =>
-      `(${key}) OR (${value.q.expr.toSQL(ctx, quotedAs)})`,
-  ),
-} as unknown as OperatorsBoolean;
-
 // Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
 interface Ord<Value> extends Base<Value> {
   lt: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
@@ -229,7 +211,7 @@ interface Ord<Value> extends Base<Value> {
 
 export type OperatorsNumber = Ord<number>;
 
-const numeric = {
+const ord = {
   ...base,
   lt: make(
     (key, value, ctx, quotedAs) =>
@@ -256,6 +238,24 @@ const numeric = {
       )}`,
   ),
 } as OperatorsNumber;
+
+// Boolean type operators
+export interface OperatorsBoolean extends Ord<boolean> {
+  and: Operator<OperatorsBooleanSelf, BooleanQueryColumn>;
+  or: Operator<OperatorsBooleanSelf, BooleanQueryColumn>;
+}
+
+const boolean = {
+  ...ord,
+  and: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} AND ${value.q.expr.toSQL(ctx, quotedAs)}`,
+  ),
+  or: make(
+    (key, value, ctx, quotedAs) =>
+      `(${key}) OR (${value.q.expr.toSQL(ctx, quotedAs)})`,
+  ),
+} as unknown as OperatorsBoolean;
 
 // Text type operators
 export interface OperatorsText extends Base<string> {
@@ -303,6 +303,13 @@ const text = {
       `${key} LIKE '%' || ${quoteLikeValue(value, ctx, quotedAs)}`,
   ),
 } as OperatorsText;
+
+export interface OperatorsOrdinalText extends Ord<string>, OperatorsText {}
+
+const ordinalText = {
+  ...ord,
+  ...text,
+} as OperatorsOrdinalText;
 
 interface JsonPathQueryOptions {
   vars?: RecordUnknown;
@@ -390,7 +397,7 @@ interface JsonPathQuery {
 }
 
 // JSON type operators
-export interface OperatorsJson extends Base<unknown> {
+export interface OperatorsJson extends Ord<unknown> {
   jsonPathQueryFirst: JsonPathQuery;
   jsonSupersetOf: Operator<unknown | IsQuery | Expression, BooleanQueryColumn>;
   jsonSubsetOf: Operator<unknown | IsQuery | Expression, BooleanQueryColumn>;
@@ -575,6 +582,7 @@ const serializeJsonValue = (
 };
 
 const json = {
+  ...ord,
   equals: make((key, value, ctx, quotedAs) =>
     value === null
       ? `nullif(${key}, 'null'::jsonb) IS NULL`
@@ -668,7 +676,7 @@ export type OperatorsDate = Ord<Date | string>;
 
 export type OperatorsTime = Ord<string>;
 
-export interface OperatorsArray<T> extends Base<T[]> {
+export interface OperatorsArray<T> extends Ord<T[]> {
   has: Operator<T | IsQuery | Expression, BooleanQueryColumn>;
   hasEvery: Operator<T[] | IsQuery | Expression, BooleanQueryColumn>;
   hasSome: Operator<T[] | IsQuery | Expression, BooleanQueryColumn>;
@@ -681,7 +689,7 @@ export interface OperatorsArray<T> extends Base<T[]> {
 }
 
 const array = {
-  ...base,
+  ...ord,
   has: make(
     (key, value, ctx, quotedAs) =>
       `${quoteValue(value, ctx, quotedAs)} = ANY(${key})`,
@@ -705,7 +713,7 @@ const array = {
       : Object.keys(value)
           .map((key) =>
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (numeric as any)[key]._op(expr, value[key], ctx, quotedAs),
+            (ord as any)[key]._op(expr, value[key], ctx, quotedAs),
           )
           .join(' AND ');
   }),
@@ -714,6 +722,7 @@ const array = {
 // `Operators` has operators grouped by types. To be used by column classes.
 export const Operators: {
   any: OperatorsAny;
+  ordinalText: OperatorsOrdinalText;
   boolean: OperatorsBoolean;
   number: OperatorsNumber;
   date: OperatorsDate;
@@ -724,9 +733,10 @@ export const Operators: {
 } = {
   any: base,
   boolean,
-  number: numeric,
-  date: numeric,
-  time: numeric,
+  ordinalText,
+  number: ord,
+  date: ord,
+  time: ord,
   text,
   json,
   array,

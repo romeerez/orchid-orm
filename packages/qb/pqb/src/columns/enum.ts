@@ -1,14 +1,14 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
 import { Code, ColumnToCodeCtx, ColumnTypeSchemaArg } from 'orchid-core';
-import { Operators, OperatorsAny } from './operators';
+import { Operators, OperatorsOrdinalText } from './operators';
 
 export class EnumColumn<
   Schema extends ColumnTypeSchemaArg,
   SchemaType extends Schema['type'],
   const T extends readonly string[],
-> extends ColumnType<Schema, T[number], SchemaType, OperatorsAny> {
-  operators = Operators.any;
+> extends ColumnType<Schema, T[number], SchemaType, OperatorsOrdinalText> {
+  operators = Operators.ordinalText;
   dataType = 'enum';
 
   constructor(

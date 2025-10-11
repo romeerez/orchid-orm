@@ -505,9 +505,9 @@ db.table.where({
 });
 ```
 
-### numeric and date operators
+### ordinal operators
 
-To compare numbers and dates:
+Ordinal operators are available for numbers, dates and timestamps, text types, booleans, bit types, arrays, `jsonb` type, and `tsvector`/`tsquery`.
 
 - `lt`: `<`, lower than;
 - `lte`: `<=`, lower than or equal to;
@@ -516,6 +516,7 @@ To compare numbers and dates:
 - `between`: for `BETWEEN ... AND`, it is inclusive, equivalent to `value1 <= target AND target <= value2`.
 
 Numeric types (int, decimal, double precision, etc.) are comparable with numbers,
+string-based types are comparable with strings,
 date types (date, timestamp) are comparable with `Date` object or `Data.toISOString()` formatted strings.
 
 ```ts
