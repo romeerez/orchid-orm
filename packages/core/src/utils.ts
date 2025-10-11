@@ -442,3 +442,10 @@ export const exhaustive = (_: never) => {
 export const pluralize = (w: string, count: number, append = 's') => {
   return count === 1 ? w : w + append;
 };
+
+export const isIterable = (x: unknown): x is Iterable<unknown> =>
+  !!(
+    x &&
+    typeof x === 'object' &&
+    typeof x[Symbol.iterator as never] === 'function'
+  );

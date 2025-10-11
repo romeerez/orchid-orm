@@ -249,28 +249,65 @@ describe('where sub query', () => {
   });
 });
 
-describe('empty whereIn', () => {
-  it('should resolve to none for a single column', async () => {
-    const res = await User.whereIn('id', []);
+describe('whereIn', () => {
+  describe('empty whereIn', () => {
+    it('should resolve to none for a single column', async () => {
+      const res = await User.whereIn('id', []);
 
-    expect(res).toEqual([]);
-  });
-
-  it('should resolve to none for multiple columns', async () => {
-    const res = await User.whereIn(['id', 'name'], []);
-
-    expect(res).toEqual([]);
-  });
-
-  it('should resolve to none for object argument', async () => {
-    const res = await User.whereIn({
-      id: [],
-      name: [],
+      expect(res).toEqual([]);
     });
 
-    expect(res).toEqual([]);
+    it('should resolve to none for multiple columns', async () => {
+      const res = await User.whereIn(['id', 'name'], []);
+
+      expect(res).toEqual([]);
+    });
+
+    it('should resolve to none for object argument', async () => {
+      const res = await User.whereIn({
+        id: [],
+        name: [],
+      });
+
+      expect(res).toEqual([]);
+    });
   });
 });
+
+describe.each`
+  method            | whereKey     | sql
+  ${'whereIn'}      | ${'in'}      | ${`SELECT FROM "user" WHERE (1=1) AND "user"."id" IN ($1)`}
+  ${'orWhereIn'}    | ${undefined} | ${`SELECT FROM "user" WHERE (1=1) OR "user"."id" IN ($1)`}
+  ${'whereNotIn'}   | ${'notIn'}   | ${`SELECT FROM "user" WHERE (1=1) AND NOT "user"."id" IN ($1)`}
+  ${'orWhereNotIn'} | ${undefined} | ${`SELECT FROM "user" WHERE (1=1) OR NOT "user"."id" IN ($1)`}
+`(
+  '%method',
+  ({
+    method,
+    whereKey,
+    sql,
+  }: {
+    method: 'whereIn' | 'orWhereIn' | 'whereNotIn' | 'orWhereNotIn';
+    whereKey?: 'in' | 'notIn';
+    sql: string;
+  }) => {
+    it('should support Set for a column param', () => {
+      const q = User.whereSql`1=1`[method]('id', new Set([1])).select();
+
+      expectSql(q.toSQL(), sql, [1]);
+    });
+
+    if (whereKey) {
+      it('should support Set for a column param', () => {
+        const q = User.whereSql`1=1`
+          .where({ id: { [whereKey]: new Set([1]) } })
+          .select();
+
+        expectSql(q.toSQL(), sql, [1]);
+      });
+    }
+  },
+);
 
 describe('orWhere', () => {
   it('should accept multiple args and it is equivalent to multiple calls', () => {

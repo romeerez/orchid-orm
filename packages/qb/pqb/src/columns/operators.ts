@@ -12,6 +12,7 @@ import {
   Expression,
   getValueKey,
   isExpression,
+  isIterable,
   IsQuery,
   MaybeArray,
   PickOutputTypeAndOperators,
@@ -123,8 +124,10 @@ const quoteValue = (
   IN?: boolean,
 ): string => {
   if (arg && typeof arg === 'object') {
-    if (IN && Array.isArray(arg)) {
-      return `(${arg.map((value) => addValue(ctx.values, value)).join(', ')})`;
+    if (IN && isIterable(arg)) {
+      return `(${(Array.isArray(arg) ? arg : [...arg])
+        .map((value) => addValue(ctx.values, value))
+        .join(', ')})`;
     }
 
     if (isExpression(arg)) {

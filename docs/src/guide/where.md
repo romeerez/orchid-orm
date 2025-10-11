@@ -319,8 +319,10 @@ When used with a single column it works equivalent to the `in` column operator:
 
 ```ts
 db.table.whereIn('column', [1, 2, 3]);
+db.table.whereIn('column', new Set([1, 2, 3]));
 // the same as:
-db.table.where({ column: [1, 2, 3] });
+db.table.where({ column: { in: [1, 2, 3] } });
+db.table.where({ column: { in: new Set([1, 2, 3]) } });
 ```
 
 `whereIn` can support a tuple of columns, that's what the `in` operator cannot support:
@@ -351,9 +353,9 @@ When empty set of values is given, `whereIn` will resolve into a [none](/guide/q
 
 ```ts
 // following queries resolves into `none`:
-db.table.where('id', []);
-db.table.where(['id', 'name'], []);
-db.table.where({ id: [] });
+db.table.whereIn('id', []);
+db.table.whereIn(['id', 'name'], []);
+db.table.whereIn({ id: [] });
 ```
 
 #### orWhereIn

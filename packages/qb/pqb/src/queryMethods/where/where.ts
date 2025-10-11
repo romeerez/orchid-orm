@@ -16,6 +16,7 @@ import {
   _setSubQueryAliases,
   EmptyObject,
   Expression,
+  isIterable,
   IsQuery,
   MaybeArray,
   OrchidOrmInternalError,
@@ -170,7 +171,7 @@ export type WhereInValues<
   Column,
 > = Column extends keyof T['meta']['selectable']
   ?
-      | T['meta']['selectable'][Column]['column']['queryType'][]
+      | Iterable<T['meta']['selectable'][Column]['column']['queryType']>
       | IsQuery
       | Expression
   :
@@ -188,7 +189,7 @@ export type WhereInValues<
 // Each key is a column name, value is array of column values, or a query returning single column, or a raw SQL expression.
 export type WhereInArg<T extends PickQueryMeta> = {
   [K in keyof T['meta']['selectable']]?:
-    | T['meta']['selectable'][K]['column']['queryType'][]
+    | Iterable<T['meta']['selectable'][K]['column']['queryType']>
     | IsQuery
     | Expression;
 };
@@ -377,11 +378,13 @@ export const _queryWhereIn = <T>(
   q: T,
   and: boolean,
   arg: unknown,
-  values: unknown[] | unknown[][] | IsQuery | Expression | undefined,
+  values: unknown[] | Iterable<unknown> | IsQuery | Expression | undefined,
   not?: boolean,
 ): WhereResult<T> => {
   let item;
   if (values) {
+    if (isIterable(values)) values = [...values];
+
     if ('length' in values && !values.length) {
       return _queryNone(q) as WhereResult<T>;
     }
@@ -397,10 +400,13 @@ export const _queryWhereIn = <T>(
       item = { [arg as string]: { in: values } };
     }
   } else {
-    item = {} as { [K: string]: { in: unknown[] } };
-    for (const key in arg as { [K: string]: unknown[] }) {
-      const values = (arg as { [K: string]: unknown[] })[key];
-      if ('length' in values && !values.length) {
+    item = {} as { [K: string]: { in: Iterable<unknown> } };
+    for (const key in arg as { [K: string]: Iterable<unknown> }) {
+      const values = (arg as { [K: string]: Iterable<unknown> })[key];
+      if (
+        ('length' in values && !values.length) ||
+        ('size' in values && !values.size)
+      ) {
         return _queryNone(q) as WhereResult<T>;
       }
 
@@ -994,8 +1000,10 @@ export class Where {
    *
    * ```ts
    * db.table.whereIn('column', [1, 2, 3]);
+   * db.table.whereIn('column', new Set([1, 2, 3]));
    * // the same as:
-   * db.table.where({ column: [1, 2, 3] });
+   * db.table.where({ column: { in: [1, 2, 3] } });
+   * db.table.where({ column: { in: new Set([1, 2, 3]) } });
    * ```
    *
    * `whereIn` can support a tuple of columns, that's what the `in` operator cannot support:
@@ -1026,9 +1034,9 @@ export class Where {
    *
    * ```ts
    * // following queries resolves into `none`:
-   * db.table.where('id', [])
-   * db.table.where(['id', 'name'], [])
-   * db.table.where({ id: [] })
+   * db.table.whereIn('id', [])
+   * db.table.whereIn(['id', 'name'], [])
+   * db.table.whereIn({ id: [] })
    * ```
    */
   whereIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(

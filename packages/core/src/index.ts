@@ -32,6 +32,7 @@ export {
   getFreeSetAlias,
   exhaustive,
   pluralize,
+  isIterable,
 } from './utils';
 export type {
   RecordOptionalString,
