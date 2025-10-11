@@ -29,8 +29,8 @@ describe('map', () => {
     });
 
     it('should ignore null for an aggregate', async () => {
-      const sum = await User.sum('age').map((sum) => {
-        assertType<typeof sum, number>();
+      const sum = await User.sum('age').map((sum, i, data) => {
+        assertType<typeof sum | typeof i | typeof data, number>();
         return 0;
       });
 
@@ -71,31 +71,69 @@ describe('map', () => {
     });
 
     it('should map multiple records', async () => {
-      const res = await User.select('name', 'createdAt').map((user) => ({
-        nameLength: user.name.length,
-        createdAt: user.createdAt,
-      }));
+      const res = await User.select('name', 'createdAt').map(function (
+        this: string,
+        user,
+        i,
+        data,
+      ) {
+        return {
+          nameLength: user.name.length,
+          createdAt: user.createdAt,
+          index: i,
+          names: data.map((user) => user.name),
+          self: this,
+        };
+      },
+      'self');
 
-      assertType<typeof res, { nameLength: number; createdAt: Date }[]>();
+      assertType<
+        typeof res,
+        {
+          nameLength: number;
+          createdAt: Date;
+          index: number;
+          names: string[];
+          self: string;
+        }[]
+      >();
 
       expect(res).toEqual([
-        { nameLength: userData.name.length, createdAt: expect.any(Date) },
+        {
+          nameLength: userData.name.length,
+          createdAt: expect.any(Date),
+          index: 0,
+          names: [userData.name],
+          self: 'self',
+        },
       ]);
     });
 
     it('should map a single record', async () => {
       const res = await User.select('name', 'createdAt')
         .take()
-        .map((user) => ({
+        .map((user, i, value) => ({
           nameLength: user.name.length,
           createdAt: user.createdAt,
+          i,
+          firstArgumentEqualsThird: user === value,
         }));
 
-      assertType<typeof res, { nameLength: number; createdAt: Date }>();
+      assertType<
+        typeof res,
+        {
+          nameLength: number;
+          createdAt: Date;
+          i: number;
+          firstArgumentEqualsThird: boolean;
+        }
+      >();
 
       expect(res).toEqual({
         nameLength: userData.name.length,
         createdAt: expect.any(Date),
+        i: 0,
+        firstArgumentEqualsThird: true,
       });
     });
 
@@ -185,12 +223,15 @@ describe('map', () => {
 
       it('should handle `valueOrThrow` query', async () => {
         const res = await User.select({
-          nested: () => User.get('name').map((name) => `${name} mapped`),
+          nested: () =>
+            User.get('name').map(function (this: string, name, i, data) {
+              return `${name} ${i} ${data} ${this} mapped`;
+            }, 'self'),
         });
 
         assertType<typeof res, { nested: string | null }[]>();
 
-        expect(res).toEqual([{ nested: 'name mapped' }]);
+        expect(res).toEqual([{ nested: 'name 0 name self mapped' }]);
       });
 
       it('should handle `pluck` query', async () => {

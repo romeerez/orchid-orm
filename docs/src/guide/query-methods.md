@@ -683,7 +683,10 @@ Use `map` to transform individual records of a query result. If the query return
 For an optional query result (`findOptional`, `getOptional`, etc.), `map` is **not** called for empty results.
 
 The same for aggregations such as `sum`, `avg`:
-the `map` is **not** called in cases when `sum` and `avg` return `null` (no records).
+the `map` is **not** called in cases when `sum` and `avg` return `null`.
+
+Callback arguments are the same as in the native `Array.map`.
+The 3rd argument is the query result, which may not be an array.
 
 For transforming the full result of a query or a sub-query,
 and to handle `null` values, consider using [transform](#transform) instead.

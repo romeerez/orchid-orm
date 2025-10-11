@@ -183,7 +183,10 @@ export type BatchParsers = BatchParser[];
 // result transformer: function for `transform`, object for `map`
 export type QueryDataTransform =
   | QueryDataTransformFn
-  | { map: FnUnknownToUnknown };
+  | {
+      map: (record: unknown, index: number, array: unknown) => unknown;
+      thisArg?: unknown;
+    };
 
 interface QueryDataTransformFn {
   (data: unknown, queryData: unknown): unknown;
@@ -243,9 +246,10 @@ export const applyTransforms = (
   for (const fn of fns) {
     if ('map' in fn) {
       if (!returnType || returnType === 'all' || returnType === 'pluck') {
-        result = (result as unknown[]).map(fn.map);
+        result = (result as unknown[]).map(fn.map, fn.thisArg);
       } else if (result !== undefined) {
-        result = result === null ? null : fn.map(result);
+        result =
+          result === null ? null : fn.map.call(fn.thisArg, result, 0, result);
       }
     } else {
       result = fn(result, queryData);

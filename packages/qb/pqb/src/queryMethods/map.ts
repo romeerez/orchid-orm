@@ -21,7 +21,7 @@ export class QueryMap {
    *
    * ```ts
    * // add a `titleLength` to every post
-   * const posts = await db.post.limit(10).map((post) => ({
+   * const posts = await db.post.limit(10).map((post, i) => ({
    *   ...post,
    *   titleLength: post.title.length,
    * }));
@@ -29,7 +29,7 @@ export class QueryMap {
    * posts[0].titleLength; // number
    *
    * // using the exact same `map` function to transform a single post
-   * const singlePost = await db.post.find(id).map((post) => ({
+   * const singlePost = await db.post.find(id).map((post, i) => ({
    *   ...post,
    *   titleLength: post.title.length,
    * }));
@@ -39,7 +39,7 @@ export class QueryMap {
    * // can be used in sub-queries
    * const postsWithComments = await db.post.select('title', {
    *   comments: (q) =>
-   *     q.comments.map((comment) => ({
+   *     q.comments.map((comment, i) => ({
    *       ...comment,
    *       truncatedContent: comment.content.slice(0, 100),
    *     })),
@@ -49,22 +49,22 @@ export class QueryMap {
    * ```
    *
    * @param fn - function to transform an individual record
+   * @param thisArg - same as in the native array map
    */
   map<T extends PickQueryReturnType, Result>(
     this: T,
     fn: // `| null` is the case of aggregations such as `sum`.
     T extends { returnType: 'valueOrThrow'; then: QueryThen<infer Data | null> }
-      ? (input: Data) => Result
-      : (
-          input: T['returnType'] extends QueryReturnTypeAll | 'pluck'
-            ? T extends { then: QueryThen<(infer Data)[]> }
-              ? Data
-              : never
-            : // `| undefined` is needed to remove undefined type from map's arg
-            T extends { then: QueryThen<infer Data | undefined> }
-            ? Data
-            : never,
-        ) => Result,
+      ? (input: Data, index: number, value: Data) => Result
+      : T['returnType'] extends QueryReturnTypeAll | 'pluck'
+      ? T extends { then: QueryThen<(infer Data)[]> }
+        ? (input: Data, index: number, arr: Data[]) => Result
+        : never
+      : // `| undefined` is needed to remove undefined type from map's arg
+      T extends { then: QueryThen<infer Data | undefined> }
+      ? (input: Data, index: number, value: Data) => Result
+      : never,
+    thisArg?: unknown,
   ): // When the map returns object, a query result is a map of key-value columns.
   // It's used to correctly infer type in case of a nested sub-query select with the map inside.
   Result extends RecordUnknown
@@ -121,6 +121,7 @@ export class QueryMap {
       } {
     return pushQueryValueImmutable(_clone(this), 'transform', {
       map: fn,
+      thisArg,
     }) as never;
   }
 }

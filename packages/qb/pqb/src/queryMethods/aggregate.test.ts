@@ -20,13 +20,13 @@ describe('aggregate', () => {
   useTestDatabase();
 
   it('should discard previous query extension when extending query with other type', () => {
-    const int = User.count();
-    assertType<typeof int.gt, typeof Operators.number.gt>();
+    const int = User.get('data');
+    assertType<typeof int.gt, typeof Operators.json.gt>();
     expect(int.gt).toEqual(expect.any(Function));
 
     const bool = int.gt(5);
-    // @ts-expect-error bool should not have gt method
-    bool.gt;
+    // @ts-expect-error bool should not have json methods
+    bool.jsonSet;
 
     // let number methods to remain in runtime,
     // because it's fewer things to perform and simplifies the internal logic
