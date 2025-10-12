@@ -299,24 +299,17 @@ export const setDataValue = <
   return cloned as T;
 };
 
-// types to be assigned to the column with .asType
-export interface ColumnDataTypes<
-  Type = unknown,
-  InputType = Type,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  InputSchema = any,
-  OutputType = Type,
-  OutputSchema = InputSchema,
-  QueryType = InputType,
-  QuerySchema = InputSchema,
-> {
-  type: Type;
-  inputType: InputType;
-  inputSchema: InputSchema;
-  outputType: OutputType;
-  outputSchema: OutputSchema;
-  queryType: QueryType;
-  querySchema: QuerySchema;
+export interface ColumnInputOutputQueryTypes {
+  inputType: unknown;
+  outputType: unknown;
+  queryType: unknown;
+}
+
+export interface ColumnInputOutputQueryTypesWithSchemas
+  extends ColumnInputOutputQueryTypes {
+  inputSchema: unknown;
+  outputSchema: unknown;
+  querySchema: unknown;
 }
 
 // base data of column
@@ -611,6 +604,7 @@ export abstract class ColumnTypeBase<
     this.parseNull = schema.parseNull;
     this.encode = schema.encode;
     this.asType = schema.asType;
+    this.narrowType = schema.narrowType;
     this.nullable = schema.nullable;
     this.error = schema.error;
     const name = consumeColumnName();
@@ -864,14 +858,30 @@ export abstract class ColumnTypeBase<
   }
 
   /**
-   * Mark the column as to have specific Typescript type.
-   * This can be used to narrow generic column types, such as narrow `string` to a string literal union.
+   * @deprecated use narrowType instead
+   */
+  asType: Schema['asType'];
+
+  /**
+   * Narrows TypeScript types for a column.
+   * For example, to narrow a `string` type to a union of string literals.
+   *
+   * When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowType` has the following syntax:
    *
    * ```ts
    * export class Table extends BaseTable {
    *   readonly table = 'table';
    *   columns = this.setColumns((t) => ({
-   *     size: t.text().asType((t) => t<'small' | 'medium' | 'large'>()),
+   *     size: t.string().narrowType((t) =>
+   *       t<{
+   *         // what types are accepted when creating/updating
+   *         input: 'small' | 'medium' | 'large';
+   *         // how types are retured from a database
+   *         output: 'small' | 'medium' | 'large';
+   *         // what types the column accepts in `where` and similar
+   *         query: 'small' | 'medium' | 'large';
+   *       }>(),
+   *     ),
    *   }));
    * }
    *
@@ -879,20 +889,35 @@ export abstract class ColumnTypeBase<
    * const size = await db.table.get('size');
    * ```
    *
-   * To alter the base, input, output and query types individually, pass them as generic parameters:
+   * - `input` is for `create`, `update` methods.
+   * - `output` is for the data that is loaded from a database and parsed if the column has `parse`.
+   * - `query` is used in `where` and other query methods, it should be compatible with the actual database column type.
+   *
+   * When integrating with a [validation library](/guide/columns-validation-methods), also provide validation schemas:
    *
    * ```ts
-   * const column = t
-   *   .text()
-   *   .asType((t) => t<Type, InputType, OutputType, QueryType>());
-   * ```
+   * const sizeSchema = z.union([
+   *   z.literal('small'),
+   *   z.literal('medium'),
+   *   z.literal('large'),
+   * ]);
    *
-   * - The first `Type` is the base one, used as a default for other types.
-   * - `InputType` is for `create`, `update` methods.
-   * - `OutputType` is for the data that is loaded from a database and parsed if the column has `parse`.
-   * - `QueryType` is used in `where` and other query methods, it should be compatible with the actual database column type.
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     size: t.text().narrowType({
+   *       input: sizeSchema,
+   *       output: sizeSchema,
+   *       query: sizeSchema,
+   *     }),
+   *   }));
+   * }
+   *
+   * // size will be typed as 'small' | 'medium' | 'large'
+   * const size = await db.table.get('size');
+   * ```
    */
-  asType: Schema['asType'];
+  narrowType: Schema['narrowType'];
 
   input<T extends { inputSchema: unknown }, InputSchema extends Schema['type']>(
     this: T,

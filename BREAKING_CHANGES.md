@@ -16,6 +16,10 @@ t.index(['column'], { name: 'indexName' });
 Passing name as an argument is still supported at runtime level (to make transition smoother),
 but it is unavailable on type level.
 
+---
+
+Deprecating `asType`, use `narrowType` instead.
+
 ## orchid-orm 1.57
 
 Renamed:

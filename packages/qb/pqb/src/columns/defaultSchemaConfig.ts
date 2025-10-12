@@ -1,5 +1,6 @@
 import {
   ColumnDataBase,
+  ColumnInputOutputQueryTypes,
   ColumnSchemaConfig,
   ColumnTypeBase,
   EncodeColumn,
@@ -51,6 +52,9 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
     fn: (input: Input) => unknown,
   ): EncodeColumn<T, unknown, Input>;
 
+  /**
+   * @deprecated use narrowType instead
+   */
   asType<
     T,
     Types extends {
@@ -68,6 +72,33 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
         inputType: Input;
         outputType: Output;
         queryType: Query;
+      },
+    ) => Types,
+  ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
+
+  narrowType<
+    T extends ColumnInputOutputQueryTypes,
+    Types extends ColumnInputOutputQueryTypes,
+  >(
+    this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _fn: (
+      type: <
+        Types extends {
+          input?: T['inputType'];
+          output?: T['outputType'];
+          query?: T['queryType'];
+        },
+      >() => {
+        inputType: undefined extends Types['input']
+          ? T['inputType']
+          : Types['input'];
+        outputType: undefined extends Types['output']
+          ? T['outputType']
+          : Types['output'];
+        queryType: undefined extends Types['query']
+          ? T['queryType']
+          : Types['query'];
       },
     ) => Types,
   ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
@@ -137,6 +168,9 @@ export const defaultSchemaConfig = {
     return setColumnData(this as PickColumnBaseData, 'encode', fn);
   },
   asType() {
+    return this as never;
+  },
+  narrowType() {
     return this as never;
   },
   dateAsNumber(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {

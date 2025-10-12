@@ -82,7 +82,7 @@ When you want to use a type defined in an extension, that is not directly suppor
 
 It will have input, output, and rest of TS types `unknown`.
 
-To make it typed, try [asType](/guide/common-column-methods#asType), and/or [encode](/guide/common-column-methods#encode), [decode](/guide/common-column-methods.html#decode).
+To make it typed, try [narrowType](/guide/common-column-methods#narrowType), and/or [encode](/guide/common-column-methods#encode), [decode](/guide/common-column-methods.html#decode).
 
 [//]: # 'TODO: explain this better'
 

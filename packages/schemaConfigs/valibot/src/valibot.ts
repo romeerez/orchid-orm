@@ -11,6 +11,8 @@ import {
   setDataValue,
   StringTypeData,
   ParseNullColumn,
+  ColumnInputOutputQueryTypesWithSchemas,
+  ColumnInputOutputQueryTypes,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -761,6 +763,12 @@ type PointSchemaValibot = ObjectSchema<{
 
 let pointSchema: PointSchemaValibot | undefined;
 
+interface NarrowTypeArg<T extends ColumnInputOutputQueryTypes> {
+  input?: { _types?: { output: T['inputType'] } };
+  output?: { _types?: { output: T['outputType'] } };
+  query?: { _types?: { output: T['queryType'] } };
+}
+
 export interface ValibotSchemaConfig {
   type: BaseSchema;
 
@@ -794,6 +802,9 @@ export interface ValibotSchemaConfig {
     fn: (input: In) => unknown,
   ): EncodeColumn<T, InputSchema, In>;
 
+  /**
+   * @deprecated use narrowType instead
+   */
   asType<
     T,
     Types extends AsTypeArg<BaseSchema>,
@@ -831,6 +842,40 @@ export interface ValibotSchemaConfig {
       ? Types['query'] extends BaseSchema
         ? Types['query']
         : TypeSchema
+      : T[K];
+  };
+
+  narrowType<
+    T extends ColumnInputOutputQueryTypesWithSchemas,
+    Types extends NarrowTypeArg<T>,
+  >(
+    this: T,
+    types: Types,
+  ): {
+    [K in keyof T]: K extends 'inputType'
+      ? Types['input'] extends BaseSchema
+        ? Output<Types['input']>
+        : T['inputType']
+      : K extends 'inputSchema'
+      ? Types['input'] extends BaseSchema
+        ? Types['input']
+        : T['inputSchema']
+      : K extends 'outputType'
+      ? Types['output'] extends BaseSchema
+        ? Output<Types['output']>
+        : T['outputType']
+      : K extends 'outputSchema'
+      ? Types['output'] extends BaseSchema
+        ? Types['output']
+        : T['outputSchema']
+      : K extends 'queryType'
+      ? Types['query'] extends BaseSchema
+        ? Output<Types['query']>
+        : T['querySchema']
+      : K extends 'querySchema'
+      ? Types['query'] extends BaseSchema
+        ? Types['query']
+        : T['querySchema']
       : T[K];
   };
 
@@ -950,6 +995,19 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   },
   asType(_types) {
     return this as never;
+  },
+  narrowType(types) {
+    const c = Object.create(this);
+    if (types.input) {
+      c.inputSchema = types.input;
+    }
+    if (types.output) {
+      c.outputSchema = types.output;
+    }
+    if (types.query) {
+      c.querySchema = types.query;
+    }
+    return c as never;
   },
   dateAsNumber() {
     return this.parse(number([]), Date.parse as never);

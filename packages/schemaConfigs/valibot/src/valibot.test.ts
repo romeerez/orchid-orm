@@ -26,6 +26,8 @@ import {
   ObjectSchema,
   OptionalSchema,
   UnionSchema,
+  literal,
+  LiteralSchema,
 } from 'valibot';
 
 const t = makeColumnTypes(valibotSchemaConfig);
@@ -919,6 +921,49 @@ describe('valibot schema config', () => {
 
       const dateValue = new Date();
       expect(parse(timestampAsDate.outputSchema, dateValue)).toEqual(dateValue);
+    });
+  });
+
+  describe('narrowType', () => {
+    it('accepts narrowed types', () => {
+      const column = t.text().narrowType({
+        input: literal('input'),
+        output: literal('output'),
+        query: literal('query'),
+      });
+
+      assertType<typeof column.inputType, 'input'>();
+      assertType<typeof column.inputSchema, LiteralSchema<'input'>>();
+      assertType<typeof column.outputType, 'output'>();
+      assertType<typeof column.outputSchema, LiteralSchema<'output'>>();
+      assertType<typeof column.queryType, 'query'>();
+      assertType<typeof column.querySchema, LiteralSchema<'query'>>();
+
+      expect(column.inputSchema.type).toBe('literal');
+      expect(column.outputSchema.type).toBe('literal');
+      expect(column.querySchema.type).toBe('literal');
+    });
+
+    it('does not accept non-compatible types', () => {
+      t.text().narrowType({
+        // @ts-expect-error non-compatible type
+        type: number(),
+      });
+
+      t.text().narrowType({
+        // @ts-expect-error non-compatible type
+        input: number(),
+      });
+
+      t.text().narrowType({
+        // @ts-expect-error non-compatible type
+        output: number(),
+      });
+
+      t.text().narrowType({
+        // @ts-expect-error non-compatible type
+        query: number(),
+      });
     });
   });
 

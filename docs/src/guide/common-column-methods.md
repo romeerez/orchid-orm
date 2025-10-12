@@ -432,20 +432,29 @@ const column = t
   .as(t.integer());
 ```
 
-## asType
+## narrowType
 
 [//]: # 'has JSDoc'
 
-Mark the column as to have specific Typescript type.
-This can be used to narrow generic column types, such as narrow `string` to a string literal union.
+Narrows TypeScript types for a column.
+For example, to narrow a `string` type to a union of string literals.
 
-If you don't specify `schemaConfig` option for a [validation library](/guide/columns-validation-methods), the syntax as follows:
+When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowType` has the following syntax:
 
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    size: t.string().asType((t) => t<'small' | 'medium' | 'large'>()),
+    size: t.string().narrowType((t) =>
+      t<{
+        // what types are accepted when creating/updating
+        input: 'small' | 'medium' | 'large';
+        // how types are retured from a database
+        output: 'small' | 'medium' | 'large';
+        // what types the column accepts in `where` and similar
+        query: 'small' | 'medium' | 'large';
+      }>(),
+    ),
   }));
 }
 
@@ -453,54 +462,32 @@ export class Table extends BaseTable {
 const size = await db.table.get('size');
 ```
 
-To alter the base, input, output and query types individually, pass them as generic parameters:
+- `input` is for `create`, `update` methods.
+- `output` is for the data that is loaded from a database and parsed if the column has `parse`.
+- `query` is used in `where` and other query methods, it should be compatible with the actual database column type.
+
+When integrating with a [validation library](/guide/columns-validation-methods), also provide validation schemas:
 
 ```ts
-const column = t
-  .text()
-  .asType((t) => t<Type, InputType, OutputType, QueryType>());
-```
+const sizeSchema = z.union([
+  z.literal('small'),
+  z.literal('medium'),
+  z.literal('large'),
+]);
 
-- The first `Type` is the base one, used as a default for other types.
-- `InputType` is for `create`, `update` methods.
-- `OutputType` is for the data that is loaded from a database and parsed if the column has `parse`.
-- `QueryType` is used in `where` and other query methods, it should be compatible with the actual database column type.
-
-If when using a [validation library](/guide/columns-validation-methods), also provide validation schemas:
-
-```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    size: t.text().asType({
-      type: z.union([
-        z.literal('small'),
-        z.literal('medium'),
-        z.literal('large'),
-      ]),
+    size: t.text().narrowType({
+      input: sizeSchema,
+      output: sizeSchema,
+      query: sizeSchema,
     }),
   }));
 }
 
 // size will be typed as 'small' | 'medium' | 'large'
 const size = await db.table.get('size');
-```
-
-The same schema will be assigned for input, output, and query.
-
-You can set different schemas for different purposes:
-
-```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    size: t.text().asType({
-      input: z.literal('input'),
-      output: z.literal('output'),
-      query: z.literal('query'),
-    }),
-  }));
-}
 ```
 
 ## timestamps

@@ -6,6 +6,7 @@ import {
   ZodBoolean,
   ZodDate,
   ZodEnum,
+  ZodLiteral,
   ZodNever,
   ZodNullable,
   ZodNumber,
@@ -1012,6 +1013,63 @@ describe('zod schema config', () => {
 
       const date = new Date();
       expect(timestampAsDate.outputSchema.parse(date)).toEqual(date);
+    });
+  });
+
+  describe('narrowType', () => {
+    it('accepts narrowed types', () => {
+      const column = t.text().narrowType({
+        input: z.literal('input'),
+        output: z.literal('output'),
+        query: z.literal('query'),
+      });
+
+      assertType<typeof column.inputType, 'input'>();
+      assertType<typeof column.inputSchema, ZodLiteral<'input'>>();
+      assertType<typeof column.outputType, 'output'>();
+      assertType<typeof column.outputSchema, ZodLiteral<'output'>>();
+      assertType<typeof column.queryType, 'query'>();
+      assertType<typeof column.querySchema, ZodLiteral<'query'>>();
+
+      expect(column.inputSchema).toBeInstanceOf(ZodLiteral);
+      expect(column.outputSchema).toBeInstanceOf(ZodLiteral);
+      expect(column.querySchema).toBeInstanceOf(ZodLiteral);
+    });
+
+    it('can set types and schemas without `type`', () => {
+      const column = t.text().narrowType({
+        input: z.literal('input'),
+        output: z.literal('output'),
+        query: z.literal('query'),
+      });
+
+      assertType<typeof column.inputType, 'input'>();
+      assertType<typeof column.inputSchema, ZodLiteral<'input'>>();
+      assertType<typeof column.outputType, 'output'>();
+      assertType<typeof column.outputSchema, ZodLiteral<'output'>>();
+      assertType<typeof column.queryType, 'query'>();
+      assertType<typeof column.querySchema, ZodLiteral<'query'>>();
+
+      expect(column.inputSchema).toBeInstanceOf(ZodLiteral);
+      expect(column.outputSchema).toBeInstanceOf(ZodLiteral);
+      expect(column.querySchema).toBeInstanceOf(ZodLiteral);
+    });
+
+    it('does not accept non-compatible types', () => {
+      t.text().narrowType({
+        // @ts-expect-error non-compatible type
+        input: z.number(),
+      });
+
+      t.text().narrowType({
+        // @ts-expect-error non-compatible type
+        output: z.number(),
+      });
+
+      t.text().narrowType({
+        // @ts-expect-error non-compatible type
+        query: z.number(),
+      });
     });
   });
 

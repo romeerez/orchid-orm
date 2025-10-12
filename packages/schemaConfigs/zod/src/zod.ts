@@ -15,6 +15,8 @@ import {
   ColumnDataBase,
   ParseNullColumn,
   RecordUnknown,
+  ColumnInputOutputQueryTypesWithSchemas,
+  ColumnInputOutputQueryTypes,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -600,6 +602,16 @@ type PointSchemaZod = ZodObject<{
 
 let pointSchema: PointSchemaZod | undefined;
 
+interface BareZodType {
+  _output: unknown;
+}
+
+interface NarrowTypeArg<T extends ColumnInputOutputQueryTypes> {
+  input?: { _output: T['inputType'] };
+  output?: { _output: T['outputType'] };
+  query?: { _output: T['queryType'] };
+}
+
 export interface ZodSchemaConfig {
   type: ZodTypeAny;
 
@@ -633,6 +645,9 @@ export interface ZodSchemaConfig {
     fn: (input: Input) => unknown,
   ): EncodeColumn<T, InputSchema, Input>;
 
+  /**
+   * @deprecated use narrowType instead
+   */
   asType<
     T,
     Types extends AsTypeArg<ZodTypeAny>,
@@ -670,6 +685,40 @@ export interface ZodSchemaConfig {
       ? Types['query'] extends ZodTypeAny
         ? Types['query']
         : TypeSchema
+      : T[K];
+  };
+
+  narrowType<
+    T extends ColumnInputOutputQueryTypesWithSchemas,
+    Types extends NarrowTypeArg<T>,
+  >(
+    this: T,
+    types: Types,
+  ): {
+    [K in keyof T]: K extends 'inputType'
+      ? Types['input'] extends BareZodType
+        ? Types['input']['_output']
+        : T['inputType']
+      : K extends 'inputSchema'
+      ? Types['input'] extends BareZodType
+        ? Types['input']
+        : T['inputSchema']
+      : K extends 'outputType'
+      ? Types['output'] extends BareZodType
+        ? Types['output']['_output']
+        : T['outputType']
+      : K extends 'outputSchema'
+      ? Types['output'] extends BareZodType
+        ? Types['output']
+        : T['outputSchema']
+      : K extends 'queryType'
+      ? Types['query'] extends BareZodType
+        ? Types['query']['_output']
+        : T['queryType']
+      : K extends 'querySchema'
+      ? Types['query'] extends BareZodType
+        ? Types['query']
+        : T['querySchema']
       : T[K];
   };
 
@@ -786,6 +835,19 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
   asType(_types) {
     return this as never;
+  },
+  narrowType(types) {
+    const c = Object.create(this);
+    if (types.input) {
+      c.inputSchema = types.input;
+    }
+    if (types.output) {
+      c.outputSchema = types.output;
+    }
+    if (types.query) {
+      c.querySchema = types.query;
+    }
+    return c as never;
   },
   dateAsNumber() {
     return this.parse(z.number(), Date.parse as never) as never;

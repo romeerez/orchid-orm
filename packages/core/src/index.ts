@@ -161,6 +161,8 @@ export type {
   TimestampHelpers,
   UniqueColumn,
   ColumnDataBase,
+  ColumnInputOutputQueryTypes,
+  ColumnInputOutputQueryTypesWithSchemas,
   ColumnShapeInputPartial,
   ColumnDataAppReadOnly,
 } from './columns';
