@@ -1,5 +1,14 @@
 # orchid-core
 
+## 0.29.4
+
+### Patch Changes
+
+- bf4bdb5: Support Set in whereIn and where({ column: { in: ... } }) (#559)
+- 3453ead: Fix bytea being parsed inconsistently in direct queries vs sub-queries (#557)
+- 3669e60: Add index arg to query map (#558)
+- 5549b53: Deprecated `asType`, use `narrowType` instead (#556)
+
 ## 0.29.3
 
 ### Patch Changes

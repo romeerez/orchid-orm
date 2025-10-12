@@ -1,5 +1,20 @@
 # pqb
 
+## 0.56.8
+
+### Patch Changes
+
+- 34b3b8c: Support orginal operators in all types where needed (#568)
+- bf4bdb5: Support Set in whereIn and where({ column: { in: ... } }) (#559)
+- 3453ead: Fix bytea being parsed inconsistently in direct queries vs sub-queries (#557)
+- 3669e60: Add index arg to query map (#558)
+- 5549b53: Deprecated `asType`, use `narrowType` instead (#556)
+- Updated dependencies [bf4bdb5]
+- Updated dependencies [3453ead]
+- Updated dependencies [3669e60]
+- Updated dependencies [5549b53]
+  - orchid-core@0.29.4
+
 ## 0.56.7
 
 ### Patch Changes

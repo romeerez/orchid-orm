@@ -1,5 +1,18 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.22
+
+### Patch Changes
+
+- 5549b53: Deprecated `asType`, use `narrowType` instead (#556)
+- Updated dependencies [34b3b8c]
+- Updated dependencies [bf4bdb5]
+- Updated dependencies [3453ead]
+- Updated dependencies [3669e60]
+- Updated dependencies [5549b53]
+  - pqb@0.56.8
+  - orchid-core@0.29.4
+
 ## 1.0.21
 
 ### Patch Changes
