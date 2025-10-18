@@ -602,7 +602,7 @@ type PointSchemaZod = ZodObject<{
 
 let pointSchema: PointSchemaZod | undefined;
 
-interface BareZodType {
+export interface BareZodType {
   _output: unknown;
 }
 
