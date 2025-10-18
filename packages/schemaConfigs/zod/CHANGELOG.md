@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.24
+
+### Patch Changes
+
+- a0b4cc1: Export `BareZodType` as it might fix the typing problem (#576)
+
 ## 1.0.23
 
 ### Patch Changes
