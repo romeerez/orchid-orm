@@ -262,6 +262,16 @@ type SelectResultColumnsAndObj<
     : T[K];
 };
 
+// To allow where-ing on a relation that returns a single value.
+// Where-ing is allowed because relation is joined and the value is not JSON-ed.
+
+// To allow where-ing on a relation that returns a single record.
+// Where-ing is allowed because relation is joined and the row is not JSON-ed unlike selecting multiple rows.
+interface AllowedRelationOneQueryForSelectable extends QueryMetaIsSubQuery {
+  result: QueryColumns;
+  returnType: 'value' | 'valueOrThrow' | 'one' | 'oneOrThrow';
+}
+
 // Add new 'selectable' types based on the select object argument.
 type SelectAsMeta<Obj> = {
   // type is better than interface here
@@ -269,29 +279,21 @@ type SelectAsMeta<Obj> = {
   hasSelect: true;
   selectable: UnionToIntersection<
     {
-      [K in keyof Obj]: Obj[K] extends (q: never) => {
-        result: QueryColumns;
-        returnType: infer R;
-      }
+      [K in keyof Obj]: Obj[K] extends ((
+        q: never,
+      ) => infer R extends AllowedRelationOneQueryForSelectable)
         ? {
-            [C in R extends 'value' | 'valueOrThrow'
+            [C in R['returnType'] extends 'value' | 'valueOrThrow'
               ? K
-              : keyof ReturnType<Obj[K]>['result'] as R extends
+              : keyof R['result'] as R['returnType'] extends
               | 'value'
               | 'valueOrThrow'
               ? K
               : `${K & string}.${C & string}`]: {
               as: C;
-              column: R extends 'value' | 'valueOrThrow'
-                ? ReturnType<Obj[K]>['result']['value']
-                : ReturnType<Obj[K]>['result'][C];
-            };
-          }
-        : Obj[K] extends Expression
-        ? {
-            [P in K]: {
-              as: K;
-              column: Obj[K]['result']['value'];
+              column: R['returnType'] extends 'value' | 'valueOrThrow'
+                ? R['result']['value']
+                : R['result'][C & keyof R['result']];
             };
           }
         : never;

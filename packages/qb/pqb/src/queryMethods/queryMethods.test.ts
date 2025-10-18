@@ -12,6 +12,7 @@ import {
 import { NotFoundError } from 'orchid-core';
 import {
   assertType,
+  db,
   expectSql,
   now,
   sql,
@@ -974,8 +975,11 @@ describe('queryMethods', () => {
     it('should disallow ordering by sub-selected json object or arrays', () => {
       User.select({
         obj: () => User.take(),
+      })
         // @ts-expect-error should disallow ordering by object
-      }).order('obj');
+        .order('obj.name')
+        // @ts-expect-error should disallow ordering by object
+        .order('obj');
 
       User.select({
         arr: () => User.all(),
@@ -991,6 +995,29 @@ describe('queryMethods', () => {
         `
           SELECT "user"."id" "name" FROM "user"
           ORDER BY "name" ASC
+        `,
+      );
+    });
+
+    it('should order by relation single record column, it is implicitly joined', () => {
+      const q = db.user
+        .select({
+          profile: (q) => q.profile.select('Bio'),
+        })
+        .order('profile.Bio');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT row_to_json("profile".*) "profile"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT "profile"."bio" "Bio"
+            FROM "profile"
+            WHERE "profile"."user_id" = "user"."id"
+              AND "profile"."profile_key" = "user"."user_key"
+          ) "profile" ON true
+          ORDER BY "profile"."Bio" ASC
         `,
       );
     });

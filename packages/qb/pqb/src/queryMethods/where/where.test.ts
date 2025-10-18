@@ -8,11 +8,48 @@ import {
   userTableColumnsSql,
 } from '../../test-utils/test-utils';
 import { testWhere, testWhereExists } from './testWhere';
-import { assertType, expectSql, testDb } from 'test-utils';
+import { assertType, db, expectSql, sql, testDb } from 'test-utils';
 import { Query } from '../../query/query';
 import { RelationConfigBase } from 'orchid-core';
 
 describe('where', () => {
+  it('should allow where-ing on a column of a selected relation', async () => {
+    db.user
+      .select({ profile: (q) => q.profile })
+      .where({ 'profile.Bio': 'bio' });
+  });
+
+  it('should allow where-ing on a column of a selected relation returning multiple', async () => {
+    db.user
+      .select({ messages: (q) => q.messages })
+      // @ts-expect-error forbidden
+      .where({ 'messages.Text': 'text' });
+  });
+
+  it('should not be able to operate on selected expressions', () => {
+    User.select({ selected: sql<number>`sql` }).where({
+      // @ts-expect-error forbidden
+      selected: 1,
+    });
+  });
+
+  it('should not be able to operate on selected records', () => {
+    User.select({ selected: () => User }).where({
+      // @ts-expect-error forbidden
+      'selected.id': 1,
+    });
+  });
+
+  it('should be able to operate on selected values of a relation', () => {
+    db.user
+      .select({
+        count: (q) => q.messages.count(),
+      })
+      .where({
+        count: 1,
+      });
+  });
+
   it('should ignore undefined values', () => {
     const q = User.where({ name: undefined });
     expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
