@@ -17,6 +17,7 @@ import {
   PickQueryTable,
   PickQueryTableMetaResult,
   PickQueryTableMetaResultShape,
+  PickQueryTableMetaShape,
   pushOrNewArrayToObjectImmutable,
   pushQueryValueImmutable,
   QueryColumns,
@@ -49,7 +50,8 @@ export type JoinFirstArg<T extends PickQueryRelationsWithData> =
   | keyof T['withData']
   | ((q: {
       [K in keyof T['relations']]: T['relations'][K]['query'];
-    }) => PickQueryTableMetaResult);
+    }) => PickQueryTableMetaResult)
+  | (() => PickQueryTableMetaResult);
 
 /**
  * Arguments of `join` methods (not `joinLateral`).
@@ -150,11 +152,6 @@ export type JoinResultRequireMain<T extends PickQueryMeta, JoinedSelectable> = {
 /**
  * Result of all `join` methods, not `joinLateral`.
  * Adds joined table columns from its 'result' to the 'selectable' of the query.
- *
- * @param T - query type to join to
- * @param Arg - first arg of join, see {@link JoinFirstArg}
- * @param RequireJoined - when false, joined table shape will be mapped to make all columns optional
- * @param RequireMain - when false, main table shape will be mapped to make all columns optional (for right and full join)
  */
 export type JoinResult<
   T extends PickQueryMetaResultReturnType,
@@ -205,7 +202,7 @@ export type JoinResult<
  * Calls {@link JoinResult} with either callback result, if join has a callback,
  * or with a query derived from the first join argument.
  */
-type JoinResultFromArgs<
+export type JoinResultFromArgs<
   T extends PickQueryMetaResultRelationsWithDataReturnType,
   Arg,
   Args,
@@ -238,12 +235,13 @@ type JoinResultFromArgs<
         }>,
         RequireJoined
       >
-    : Arg extends GenericJoinCallback
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Arg extends ((...args: any[]) => infer Q extends PickQueryTableMetaShape)
     ? JoinResultSelectable<
-        ReturnType<Arg>['shape'],
+        Q['shape'],
         AliasOrTable<{
-          table: ReturnType<Arg>['table'];
-          meta: ReturnType<Arg>['meta'];
+          table: Q['table'];
+          meta: Q['meta'];
         }>,
         RequireJoined
       >
@@ -262,7 +260,8 @@ type JoinResultFromArgs<
   RequireMain
 >;
 
-type GenericJoinCallback = (q: never) => PickQueryTableMetaResult;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GenericJoinCallback = (...args: any[]) => PickQueryTableMetaResult;
 type GenericJoinCallbackTuple = [GenericJoinCallback];
 
 /**
@@ -299,7 +298,7 @@ export type JoinLateralResult<
  * The resulting selectable receives all joined table columns prefixed with the table name or alias,
  * and a star prefixed with the table name or alias to select all joined columns.
  */
-type JoinResultSelectable<
+export type JoinResultSelectable<
   // Interestingly, accepting T and inlining T['result'] adds a LOT (~823k) instantiations
   Result extends QueryColumns,
   As extends string,

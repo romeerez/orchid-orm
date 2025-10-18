@@ -2,6 +2,7 @@ import { PickQueryQ, Query } from '../query/query';
 import {
   HavingItem,
   JoinItem,
+  JoinItemArgs,
   OnConflictMerge,
   OnConflictSet,
   OnConflictTarget,
@@ -149,6 +150,7 @@ export interface QueryData extends QueryDataBase {
   // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
   from?: MaybeArray<QueryDataFromItem>;
+  updateFrom?: JoinItemArgs;
   sources?: { [K: string]: QuerySourceItem };
   and?: WhereItem[];
   or?: WhereItem[][];

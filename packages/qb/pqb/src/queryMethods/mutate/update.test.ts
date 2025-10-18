@@ -13,6 +13,7 @@ import {
 } from '../../test-utils/test-utils';
 import {
   assertType,
+  db,
   expectSql,
   sql,
   testDb,
@@ -1029,17 +1030,192 @@ describe('update', () => {
     });
   });
 
-  // TODO:
-  // describe('update from', () => {
-  //   it('can update records in one table from another', async () => {
-  //     const res = User.updateTable(
-  //       (q) => Message.where({ authorId: q.ref('id') }),
-  //       {
-  //         text: (q) => q.ref('text'),
-  //       },
-  //     );
-  //
-  //     const hasWhere = res.meta.hasWhere;
-  //   });
-  // });
+  describe('updateFrom', () => {
+    it('should not throw on not found', async () => {
+      const res = await db.user
+        .updateFrom(() => db.user.as('u').find(0))
+        .set({ Name: 'name' });
+
+      expect(res).toBe(0);
+    });
+
+    it('updates from a table, merges where conditions, allows setting where on the from table after updateFrom', async () => {
+      const q = db.message
+        .updateFrom((q) => q.sender)
+        .where({
+          'sender.Id': 1,
+        })
+        .set({
+          Text: (q) => q.ref('sender.Name'),
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          UPDATE "message"
+          SET "text" = "sender"."name", "updated_at" = now()
+          FROM "user" "sender"
+          WHERE ("sender"."id" = $1)
+            AND ("message"."deleted_at" IS NULL)
+            AND "sender"."id" = "message"."author_id"
+            AND "sender"."user_key" = "message"."message_key"
+        `,
+        [1],
+      );
+    });
+
+    it('supports join', () => {
+      const q = db.message
+        .updateFrom(
+          () => db.user,
+          (q) => q.on('Id', 'message.AuthorId'),
+        )
+        .join('chat')
+        .where({
+          'user.Id': 1,
+          'chat.IdOfChat': 2,
+        })
+        .set({
+          Text: (q) => q.ref('user.Name'),
+          Active: (q) => q.ref('chat.Active'),
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          UPDATE "message"
+          SET
+            "text" = "user"."name",
+            "active" = "chat"."active",
+            "updated_at" = now()
+          FROM "user"
+          JOIN "chat" ON "chat"."id_of_chat" = "message"."chat_id" AND "chat"."chat_key" = "message"."message_key"
+          WHERE ("user"."id" = $1 AND "chat"."id_of_chat" = $2)
+            AND ("message"."deleted_at" IS NULL)
+            AND "user"."id" = "message"."author_id"
+        `,
+        [1, 2],
+      );
+    });
+
+    it('turns from into a subquery if it is complex, respects aliased columns', () => {
+      const q = db.message
+        .updateFrom(
+          () => db.user.select({ i: 'Id', n: 'Name' }),
+          (q) => q.on('i', 'message.AuthorId'),
+        )
+        .set({
+          Text: (q) => q.ref('user.n'),
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          UPDATE "message"
+          SET "text" = "user"."n", "updated_at" = now()
+          FROM (
+            SELECT "user"."id" "i", "user"."name" "n"
+            FROM "user"
+          ) "user"
+          WHERE ("message"."deleted_at" IS NULL)
+            AND "user"."i" = "message"."author_id"
+        `,
+      );
+    });
+
+    it('supports relation passed as a string and having a callback with conditions', () => {
+      const q = db.message
+        .updateFrom('sender', (q) =>
+          q.where({
+            'sender.updatedAt': q.ref('message.updatedAt'),
+          }),
+        )
+        .where({ 'sender.Id': 1 })
+        .set({
+          Text: (q) => q.ref('sender.Name'),
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          UPDATE "message"
+          SET "text" = "sender"."name", "updated_at" = now()
+          FROM "user" "sender"
+          WHERE ("sender"."id" = $1)
+            AND ("message"."deleted_at" IS NULL)
+            AND "sender"."id" = "message"."author_id"
+            AND "sender"."user_key" = "message"."message_key"
+            AND "sender"."updated_at" = "message"."updated_at"
+        `,
+        [1],
+      );
+    });
+
+    it('forbid referencing updating table in from clause', () => {
+      expect(() =>
+        db.message.updateFrom((q) =>
+          db.user
+            .select({ i: 'Id', n: 'Name' })
+            // @ts-expect-error `ref` is not available here on purpose
+            .where({ Id: q.ref('AuthorId') }),
+        ),
+      ).toThrow();
+    });
+
+    it('should support CTE', () => {
+      const q = db.message
+        .with('w', db.user.select({ i: 'Id', n: 'Name' }))
+        .updateFrom('w')
+        .where({
+          AuthorId: (q) => q.ref('w.i'),
+        })
+        .set({
+          Text: (q) => q.ref('w.n'),
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "w" AS (
+            SELECT "user"."id" "i", "user"."name" "n"
+            FROM "user"
+          )
+          UPDATE "message"
+          SET "text" = "w"."n", "updated_at" = now()
+          FROM "w"
+          WHERE ("message"."author_id" = "w"."i")
+            AND ("message"."deleted_at" IS NULL)
+        `,
+      );
+    });
+
+    it('should support CTE with a 2nd argument callback', () => {
+      const q = db.message
+        .with('w', db.user.select({ i: 'Id', n: 'Name' }))
+        .updateFrom('w', (q) => q.on('i', 'message.AuthorId'))
+        .where({
+          'w.n': 'name',
+        })
+        .set({
+          Text: (q) => q.ref('w.n'),
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "w" AS (
+            SELECT "user"."id" "i", "user"."name" "n"
+            FROM "user"
+          )
+          UPDATE "message"
+          SET "text" = "w"."n", "updated_at" = now()
+          FROM "w"
+          WHERE ("w"."n" = $1)
+            AND ("message"."deleted_at" IS NULL)
+            AND "w"."i" = "message"."author_id"
+        `,
+        ['name'],
+      );
+    });
+  });
 });

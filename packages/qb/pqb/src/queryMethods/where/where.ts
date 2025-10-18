@@ -438,6 +438,7 @@ const existsArgs = (
     preprocessJoinArg(self, q),
     args as never,
     false,
+    undefined,
     true,
   );
 

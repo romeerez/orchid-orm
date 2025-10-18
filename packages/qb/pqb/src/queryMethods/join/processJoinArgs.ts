@@ -12,10 +12,12 @@ import {
   IsQuery,
   PickQueryRelationQueries,
   PickQueryRelations,
+  QueryColumns,
   RelationJoinQuery,
   returnArg,
 } from 'orchid-core';
-import { pushQueryArrayImmutable } from '../../query/queryUtils';
+import { _clone, pushQueryArrayImmutable } from '../../query/queryUtils';
+import { ColumnsShape } from '../../columns/columnsSchema';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.
@@ -26,14 +28,18 @@ import { pushQueryArrayImmutable } from '../../query/queryUtils';
  * @param first - first join argument
  * @param args - rest join arguments
  * @param joinSubQuery - callee should find out whether first argument should result in a sub-queried join
+ * @param shape - aliased shape of a joined table, the one from `getShapeFromSelect`
  * @param whereExists - the lateral expression should be never wrapped into a sub query for `whereExist`
+ * @param forbidLateral - LATERAL with a query that references the main table is not available in `updateFrom`
  */
 export const processJoinArgs = (
   joinTo: Query,
   first: JoinFirstArg<never>,
   args: JoinArgs<Query, JoinFirstArg<Query>>,
   joinSubQuery: boolean,
+  shape: QueryColumns | undefined,
   whereExists?: boolean,
+  forbidLateral?: boolean,
 ): JoinItemArgs => {
   if (typeof first === 'string') {
     if (first in joinTo.relations) {
@@ -42,7 +48,7 @@ export const processJoinArgs = (
       const j = joinQuery(toQuery as never, joinTo) as Query;
       if (typeof args[0] === 'function') {
         const r = args[0](
-          makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo),
+          makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo, shape),
         ) as Query;
         return {
           j: j.merge(r),
@@ -88,6 +94,7 @@ export const processJoinArgs = (
               }
             : joinedShapes,
           joinTo,
+          shape,
         ),
       ) as Query;
 
@@ -101,7 +108,7 @@ export const processJoinArgs = (
 
   const args0 = args.length ? args[0] : returnArg;
   if (typeof args0 === 'function') {
-    const q = first as Query & {
+    let q = first as Query & {
       joinQueryAfterCallback?: RelationJoinQuery;
     };
 
@@ -115,14 +122,18 @@ export const processJoinArgs = (
         base,
         joinTo,
       ) as unknown as PickQueryQ;
-      if (query.and) {
-        pushQueryArrayImmutable(q, 'and', query.and);
-      }
-      if (query.or) {
-        pushQueryArrayImmutable(q, 'or', query.or);
-      }
-      if (query.scopes) {
-        q.q.scopes = { ...q.q.scopes, ...query.scopes };
+
+      if (query.and || query.or || query.scopes) {
+        q = _clone(q);
+        if (query.and) {
+          pushQueryArrayImmutable(q, 'and', query.and);
+        }
+        if (query.or) {
+          pushQueryArrayImmutable(q, 'or', query.or);
+        }
+        if (query.scopes) {
+          q.q.scopes = { ...q.q.scopes, ...query.scopes };
+        }
       }
     }
 
@@ -141,11 +152,16 @@ export const processJoinArgs = (
             }
           : joinedShapes,
         joinTo,
+        shape,
       ),
     ) as Query;
 
     joinSubQuery ||= getIsJoinSubQuery(r);
-    return { q: joinSubQuery ? q.merge(r) : q, r, s: joinSubQuery };
+    return {
+      q: joinSubQuery && !forbidLateral ? q.merge(r) : q,
+      r,
+      s: joinSubQuery,
+    };
   }
 
   return {
@@ -180,16 +196,21 @@ export const preprocessJoinArg = (
  * @param joinedQuery - the query that is joining
  * @param joinedShapes
  * @param joinTo
+ * @param shape - in `updateFrom` the columns of 2nd callback are aliased
  */
 const makeJoinQueryBuilder = (
   joinedQuery: IsQuery,
   joinedShapes: JoinedShapes | undefined,
   joinTo: QueryDataJoinTo,
+  shape: QueryColumns | undefined,
 ): JoinQueryBuilder<Query, Query> => {
   const q = (joinedQuery as Query).baseQuery.clone();
   q.baseQuery = q;
   q.q.as = (joinedQuery as Query).q.as;
   q.q.joinedShapes = joinedShapes;
   q.q.joinTo = joinTo;
+  if (shape) {
+    q.q.shape = shape as ColumnsShape;
+  }
   return q as never;
 };

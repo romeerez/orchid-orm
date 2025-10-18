@@ -303,6 +303,7 @@ export function selectedObjectToSQL(
 
 export const selectAllSql = (
   query: {
+    updateFrom?: unknown;
     join?: QueryData['join'];
     selectAllColumns?: string[];
     selectAllShape?: RecordUnknown;
@@ -315,7 +316,7 @@ export const selectAllSql = (
     Object.assign(jsonList, query.selectAllShape as ColumnTypesBase);
   }
 
-  return query.join?.length
+  return query.join?.length || query.updateFrom
     ? query.selectAllColumns?.map((item) => `${quotedAs}.${item}`).join(', ') ||
         `${quotedAs}.*`
     : query.selectAllColumns?.join(', ') || '*';

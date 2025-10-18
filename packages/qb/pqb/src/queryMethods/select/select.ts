@@ -31,7 +31,9 @@ import {
   IsQuery,
   isRelationQuery,
   PickQueryMeta,
+  PickQueryRelationsWithData,
   PickQueryReturnType,
+  PickQueryWithData,
   pushQueryValueImmutable,
   QueryBase,
   QueryColumns,
@@ -84,11 +86,12 @@ export type SelectArgs<T extends SelectSelf> = (
   | keyof T['meta']['selectable']
 )[];
 
-interface SubQueryAddition<T extends SelectSelf> extends QueryMetaIsSubQuery {
+interface SubQueryAddition<T extends PickQueryWithData>
+  extends QueryMetaIsSubQuery {
   withData: T['withData']; // to refer to the outside `.with` from a relation query
 }
 
-export type SelectAsFnArg<T extends SelectSelf> =
+export type SelectAsFnArg<T extends PickQueryRelationsWithData> =
   EmptyObject extends T['relations']
     ? T
     : {

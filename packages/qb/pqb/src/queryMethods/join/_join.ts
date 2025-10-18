@@ -29,34 +29,21 @@ import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
 import { ComputedColumns } from '../../modules/computed';
 import { addColumnParserToQuery } from '../../columns';
+import { JoinItemArgs } from 'pqb';
 
-/**
- * Generic function to construct all JOIN queries.
- * Add a shape of the joined table into `joinedShapes`.
- * Add column parsers of the joined table into `joinedParsers`.
- * Add join data into `join` of the query data.
- *
- * @param query - query object to join to
- * @param require - true for INNER kind of JOIN
- * @param type - SQL of the JOIN kind: JOIN, LEFT JOIN, RIGHT JOIN, etc.
- * @param first - the first argument of join: join target
- * @param args - rest join arguments: columns to join with, or a callback
- */
-export const _join = <
+export const _joinReturningArgs = <
   T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  R extends PickQueryTableMetaResult,
   RequireJoined extends boolean,
-  RequireMain extends boolean,
 >(
   query: T,
   require: RequireJoined,
-  type: string,
   first:
     | JoinFirstArg<never>
     // is used by `joinQueryChainHOF` in ORM
     | { _internalJoin: Query },
   args: JoinArgs<Query, JoinFirstArg<Query>>,
-): JoinResult<T, R, RequireMain> => {
+  forbidLateral?: boolean,
+): JoinItemArgs | undefined => {
   let joinKey: string | undefined;
   let shape: QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
@@ -74,7 +61,7 @@ export const _join = <
     }
 
     if (require && isQueryNone(first)) {
-      return _queryNone(query) as never;
+      return;
     }
 
     const q = first as Query;
@@ -127,10 +114,13 @@ export const _join = <
     first,
     args,
     joinSubQuery,
+    shape,
+    false,
+    forbidLateral,
   );
 
   if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
-    return _queryNone(query) as never;
+    return;
   } else if (joinKey && 's' in joinArgs && joinArgs.s) {
     const j =
       'j' in joinArgs
@@ -142,9 +132,14 @@ export const _join = <
     const jq = (j as unknown as PickQueryQ).q;
     if (jq.select || !jq.selectAllColumns) {
       const { q } = query as unknown as PickQueryQ;
-      const shape = getShapeFromSelect(j, true);
-      setObjectValueImmutable(q, 'joinedShapes', joinKey, shape);
 
+      // if 2nd argument callback is present, and it has select,
+      // re-assign the columns shape from it.
+      if ('r' in joinArgs && joinArgs.r) {
+        joinArgs.c = shape = getShapeFromSelect(j, true);
+      }
+
+      setObjectValueImmutable(q, 'joinedShapes', joinKey, shape);
       setObjectValueImmutable(q, 'joinedParsers', joinKey, jq.parsers);
 
       if (jq.batchParsers) {
@@ -176,6 +171,41 @@ export const _join = <
       batchParsers,
       computeds,
     );
+  }
+
+  return joinArgs;
+};
+
+/**
+ * Generic function to construct all JOIN queries.
+ * Add a shape of the joined table into `joinedShapes`.
+ * Add column parsers of the joined table into `joinedParsers`.
+ * Add join data into `join` of the query data.
+ *
+ * @param query - query object to join to
+ * @param require - true for INNER kind of JOIN
+ * @param type - SQL of the JOIN kind: JOIN, LEFT JOIN, RIGHT JOIN, etc.
+ * @param first - the first argument of join: join target
+ * @param args - rest join arguments: columns to join with, or a callback
+ */
+export const _join = <
+  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  R extends PickQueryTableMetaResult,
+  RequireJoined extends boolean,
+  RequireMain extends boolean,
+>(
+  query: T,
+  require: RequireJoined,
+  type: string,
+  first:
+    | JoinFirstArg<never>
+    // is used by `joinQueryChainHOF` in ORM
+    | { _internalJoin: Query },
+  args: JoinArgs<Query, JoinFirstArg<Query>>,
+): JoinResult<T, R, RequireMain> => {
+  const joinArgs = _joinReturningArgs(query, require, first, args);
+  if (!joinArgs) {
+    return _queryNone(query) as never;
   }
 
   pushQueryValueImmutable(query as never, 'join', {

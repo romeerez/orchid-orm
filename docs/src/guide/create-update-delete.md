@@ -843,6 +843,57 @@ try {
 }
 ```
 
+### updateFrom
+
+[//]: # 'has JSDoc'
+
+Use `updateFrom` to update records in one table based on a query result from another table or CTE.
+
+`updateFrom` accepts the same arguments as [join](http://localhost:5173/guide/join.html#join-1).
+
+```ts
+// save all author names to their books by using a relation name:
+db.books.updateFrom('author').set({ authorName: (q) => q.ref('author.name') });
+
+// update from authors that match the condition:
+db.books
+  .updateFrom((q) => q.author.where({ writingSkills: 'good' }))
+  .set({ authorName: (q) => q.ref('author.name') });
+
+// update from any table using custom `on` conditions:
+db.books
+  .updateFrom(
+    () => db.authors,
+    (q) => q.on('authors.id', 'books.authorId'),
+  )
+  .set({ authorName: (q) => q.ref('author.name') });
+
+// conditions after `updateFrom` can reference both tables:
+db.books
+  .updateFrom(() => db.authors)
+  .where({
+    'authors.id': (q) => q.ref('books.authorId'),
+  })
+  .set({ authorName: (q) => q.ref('author.name') });
+
+// can join and use another table in between `updateFrom` and `set`:
+db.books
+  .updateFrom('author')
+  .join('publisher')
+  .set({
+    authorName: (q) => q.ref('author.name'),
+    publisherName: (q) => q.ref('publisher.name'),
+  });
+
+// updating from a CTE
+db.books
+  .with('a', () =>
+    db.authors.where({ writingSkills: 'good' }).select('id', 'name').limit(10),
+  )
+  .updateFrom('a', (q) => q.on('a.id', 'books.authorId'))
+  .set({ authorName: (q) => q.ref('author.name') });
+```
+
 ## upsert
 
 [//]: # 'has JSDoc'

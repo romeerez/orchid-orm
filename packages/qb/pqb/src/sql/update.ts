@@ -1,6 +1,6 @@
 import { quoteSchemaAndTable } from './common';
 import { makeReturningSql } from './insert';
-import { pushWhereStatementSql } from './where';
+import { pushWhereStatementSql, whereToSql } from './where';
 import { pushLimitSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { QueryData, UpdateQueryDataItem, UpdateQueryDataObject } from './data';
 import {
@@ -19,6 +19,8 @@ import { selectToSql } from './select';
 import { countSelect } from './rawSql';
 import { getSqlText } from './utils';
 import { Query } from '../query/query';
+import { processJoinItem, pushJoinSql } from './join';
+import { JoinItem } from 'pqb';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -80,7 +82,40 @@ export const pushUpdateSql = (
     ctx.sql.push('SET');
     ctx.sql.push(set.join(', '));
 
-    pushWhereStatementSql(ctx, table, query, quotedAs);
+    const { updateFrom } = query;
+    let fromWhereSql: string | undefined;
+    if (updateFrom) {
+      const { target, on } = processJoinItem(
+        ctx,
+        table,
+        query,
+        updateFrom,
+        quotedAs,
+      );
+
+      ctx.sql.push(`FROM ${target}`);
+
+      fromWhereSql = on;
+
+      if (query.join) {
+        pushJoinSql(
+          ctx,
+          table,
+          query as QueryData & { join: JoinItem[] },
+          quotedAs,
+        );
+      }
+    }
+
+    const mainWhereSql = whereToSql(ctx, table, query, quotedAs);
+    const whereSql = mainWhereSql
+      ? fromWhereSql
+        ? mainWhereSql + ' AND ' + fromWhereSql
+        : mainWhereSql
+      : fromWhereSql;
+    if (whereSql) {
+      ctx.sql.push('WHERE', whereSql);
+    }
 
     hookSelect = pushUpdateReturning(
       ctx,

@@ -548,6 +548,43 @@ describe('hooks', () => {
         });
       },
     );
+
+    describe('updateFrom', () => {
+      tested.updateFrom = tested.set = true;
+
+      it('should not call afterUpdate hooks when did not update', async () => {
+        await User.updateFrom(() => User.as('u').findOptional(0)).set({
+          name: 'new name',
+        });
+
+        assert.hooksBeingCalled({
+          noDepsHooks: ['beforeQuery', 'beforeUpdate', 'beforeSave'],
+          depsHooks: ['afterQuery'],
+          data: [],
+        });
+      });
+
+      it('should work', async () => {
+        const id = await User.get('id').create(userData);
+        jest.clearAllMocks();
+
+        const res = await User.updateFrom(
+          () => User.as('u').find(id),
+          (q) => q.on('u.id', 'user.id'),
+        )
+          .set({
+            name: 'new name',
+            active: true,
+          })
+          .selectAll();
+
+        expect(res).toMatchObject([hookSetUpdateValues]);
+
+        assert.updateHooksBeingCalled({
+          data: [{ name: 'new name' }],
+        });
+      });
+    });
   });
 
   describe('upsert', () => {

@@ -5,6 +5,7 @@ import {
   Expression,
   IsQuery,
   MaybeArray,
+  QueryColumns,
   RecordUnknown,
   RelationConfigBase,
   TemplateLiteralArgs,
@@ -133,6 +134,9 @@ export type SimpleJoinItemNonSubQueryArgs =
 
 export type JoinItemArgs =
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c?: QueryColumns;
       // lateral join query
       l: Query;
       // as
@@ -141,6 +145,9 @@ export type JoinItemArgs =
       i?: boolean;
     }
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c?: QueryColumns;
       // relation query from `relation.joinQuery`
       j: IsQuery;
       // join a sub query, is not applicable in whereExists
@@ -149,6 +156,9 @@ export type JoinItemArgs =
       r?: IsQuery;
     }
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c?: QueryColumns;
       // `with` item name
       w: string;
       // callback result
@@ -157,18 +167,27 @@ export type JoinItemArgs =
       s: boolean;
     }
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c?: QueryColumns;
       // `with` item name
       w: string;
       // join arguments
       a: SimpleJoinItemNonSubQueryArgs;
     }
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c?: QueryColumns;
       // joining query
       q: IsQuery;
       // join a sub query, is not applicable in whereExists
       s: boolean;
     }
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c?: QueryColumns;
       // joining query
       q: IsQuery;
       // callback result
@@ -177,6 +196,9 @@ export type JoinItemArgs =
       s: boolean;
     }
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c?: QueryColumns;
       // joining query
       q: IsQuery;
       // join arguments
@@ -185,12 +207,13 @@ export type JoinItemArgs =
       s: boolean;
     }
   | {
+      // `updateFrom`: forbid LATERAL
+      u?: true;
+      c: ColumnTypesBase;
       // alias
       a: string;
       // array of values, item is a record
       d: RecordUnknown[];
-      // column types
-      c: ColumnTypesBase;
     };
 
 export interface JoinItem {

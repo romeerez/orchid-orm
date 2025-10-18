@@ -19,7 +19,6 @@ import {
   QueryOrExpression,
   ColumnSchemaConfig,
   requirePrimaryKeys,
-  QueryBase,
   RelationConfigBase,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   QueryResult,
@@ -27,6 +26,9 @@ import {
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
 import { OrchidOrmInternalError } from 'orchid-core';
 import { moveQueryValueToWith } from '../with';
+import { JoinArgs, JoinFirstArg, JoinResultFromArgs } from '../join/join';
+import { _joinReturningArgs } from '../join/_join';
+import { _queryNone } from '../none';
 
 export interface UpdateSelf
   extends PickQueryMetaResultRelationsWithDataReturnTypeShape {
@@ -174,20 +176,23 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
 };
 
 export const _queryUpdate = <T extends UpdateSelf>(
-  query: T,
+  updateSelf: T,
   arg: UpdateArg<T>,
 ): UpdateResult<T> => {
-  const { q } = query as unknown as Query;
+  const query = updateSelf as unknown as Query;
+  const { q } = query;
 
   q.type = 'update';
   const returnCount = !q.select;
 
-  const set: RecordUnknown = { ...(arg as UpdateData<T>) };
-  pushQueryValueImmutable(query as unknown as Query, 'updateData', set);
+  const set = { ...(arg as RecordUnknown) };
+  pushQueryValueImmutable(query, 'updateData', set);
 
   const { shape } = q;
 
   const ctx: UpdateCtx = {};
+
+  let selectQuery: Query | undefined;
 
   for (const key in arg) {
     const item = shape[key];
@@ -201,8 +206,13 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
       let value = set[key];
       if (typeof value === 'function') {
+        if (!selectQuery) {
+          selectQuery = query.clone();
+          selectQuery.q.type = undefined;
+        }
+
         value = resolveSubQueryCallbackV2(
-          (query as unknown as Query).baseQuery,
+          selectQuery,
           value as (q: ToSQLQuery) => ToSQLQuery,
         );
         if (value instanceof Db && value.q.type && value.q.subQuery) {
@@ -217,14 +227,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
       if (value !== null && value !== undefined && !isExpression(value)) {
         if (value instanceof Db) {
-          moveQueryValueToWith(
-            query as unknown as Query,
-            q,
-            value,
-            'with',
-            set,
-            key,
-          );
+          moveQueryValueToWith(query, q, value, 'with', set, key);
         } else {
           // encode if not a query object
           const encode = item?.data.encode;
@@ -237,7 +240,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
   const { queries } = ctx;
   if (queries) {
     const primaryKeys = requirePrimaryKeys(
-      query as unknown as QueryBase,
+      query,
       'Cannot perform complex update on a table without primary keys',
     );
     const hookSelect = (q.hookSelect = new Map(q.hookSelect));
@@ -249,7 +252,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
       await Promise.all(queries.map(callWithThis, queryResult));
 
       if (ctx.collect) {
-        const t = (query as unknown as Query).baseQuery.clone();
+        const t = query.baseQuery.clone();
 
         _queryWhereIn(
           t,
@@ -258,10 +261,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
           queryResult.rows.map((item) => primaryKeys.map((key) => item[key])),
         );
 
-        await _queryUpdate(
-          t as WhereResult<Query>,
-          ctx.collect.data as UpdateData<WhereResult<Query>>,
-        );
+        await _queryUpdate(t as WhereResult<Query>, ctx.collect.data as never);
 
         for (const row of queryResult.rows) {
           Object.assign(row, ctx.collect.data);
@@ -276,7 +276,10 @@ export const _queryUpdate = <T extends UpdateSelf>(
     q.returning = true;
   }
 
-  throwIfNoWhere(query as unknown as Query, 'update');
+  // assuming conditions are set by `updateFrom`
+  if (!q.updateFrom) {
+    throwIfNoWhere(query, 'update');
+  }
 
   return query as never;
 };
@@ -525,15 +528,88 @@ export class Update {
     return _queryUpdateOrThrow(_clone(this), arg as never) as never;
   }
 
-  // TODO:
-  // updateTable<Self extends SelectSelf, T extends UpdateSelf>(
-  //   this: Self,
-  //   table: (q: SelectAsFnArg<Self>) => T,
-  //   arg: UpdateData<T>,
-  // ): T {
-  //   console.log(table, arg);
-  //   return {} as never;
-  // }
+  /**
+   * Use `updateFrom` to update records in one table based on a query result from another table or CTE.
+   *
+   * `updateFrom` accepts the same arguments as {@link Query.join}.
+   *
+   * ```ts
+   * // save all author names to their books by using a relation name:
+   * db.books.updateFrom('author').set({ authorName: (q) => q.ref('author.name') });
+   *
+   * // update from authors that match the condition:
+   * db.books
+   *   .updateFrom((q) => q.author.where({ writingSkills: 'good' }))
+   *   .set({ authorName: (q) => q.ref('author.name') });
+   *
+   * // update from any table using custom `on` conditions:
+   * db.books
+   *   .updateFrom(
+   *     () => db.authors,
+   *     (q) => q.on('authors.id', 'books.authorId'),
+   *   )
+   *   .set({ authorName: (q) => q.ref('author.name') });
+   *
+   * // conditions after `updateFrom` can reference both tables:
+   * db.books
+   *   .updateFrom(() => db.authors)
+   *   .where({
+   *     'authors.id': (q) => q.ref('books.authorId'),
+   *   })
+   *   .set({ authorName: (q) => q.ref('author.name') });
+   *
+   * // can join and use another table in between `updateFrom` and `set`:
+   * db.books
+   *   .updateFrom('author')
+   *   .join('publisher')
+   *   .set({
+   *     authorName: (q) => q.ref('author.name'),
+   *     publisherName: (q) => q.ref('publisher.name'),
+   *   });
+   *
+   * // updating from a CTE
+   * db.books
+   *   .with('a', () =>
+   *     db.authors.where({ writingSkills: 'good' }).select('id', 'name').limit(10),
+   *   )
+   *   .updateFrom('a', (q) => q.on('a.id', 'books.authorId'))
+   *   .set({ authorName: (q) => q.ref('author.name') });
+   * ```
+   */
+  updateFrom<
+    T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(
+    this: T,
+    arg: Arg,
+    ...args: Args
+  ): JoinResultFromArgs<WhereResult<T>, Arg, Args, true, true> {
+    const q = _clone(this);
+
+    const joinArgs = _joinReturningArgs(
+      q,
+      true,
+      arg as never,
+      args as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      true,
+    );
+    if (!joinArgs) {
+      return _queryNone(q) as never;
+    }
+
+    joinArgs.u = true;
+    q.q.updateFrom = joinArgs;
+
+    return q as never;
+  }
+
+  /**
+   * Use after {@link updateFrom}
+   */
+  set<T extends UpdateSelf>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
+    return _queryUpdate(_clone(this), arg as never) as never;
+  }
 
   /**
    * Increments a column by `1`, returns a count of updated records by default.

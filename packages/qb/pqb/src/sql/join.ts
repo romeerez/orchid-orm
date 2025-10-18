@@ -45,6 +45,8 @@ export const processJoinItem = (
   let target: string;
   let on: string | undefined;
 
+  const forbidLateral = 'u' in args;
+
   // lateral
   if ('l' in args) {
     const { aliasValue } = ctx;
@@ -79,7 +81,7 @@ export const processJoinItem = (
     }
 
     if (r && s) {
-      target = `LATERAL ${subJoinToSql(ctx, j, quotedTable, joinAs, true)}`;
+      target = subJoinToSql(ctx, j, quotedTable, !forbidLateral, joinAs, true);
     } else {
       on = whereToSql(ctx, j, j.q, joinAs);
     }
@@ -94,7 +96,7 @@ export const processJoinItem = (
         r: Query;
       };
       if (s) {
-        target = `LATERAL ${subJoinToSql(ctx, r, target, target)}`;
+        target = subJoinToSql(ctx, r, target, !forbidLateral, target);
       } else {
         on = whereToSql(ctx, r as Query, r.q, target);
       }
@@ -153,15 +155,15 @@ export const processJoinItem = (
         r: Query;
       };
 
-      const res = getArgQueryTarget(ctx, q, s, s);
-      target = s ? `LATERAL ${res.target}` : res.target;
+      const res = getArgQueryTarget(ctx, q, s && !forbidLateral, s, s);
+      target = res.target;
       joinAs = res.joinAs;
 
-      if (!s) {
+      if (!s || forbidLateral) {
         on = whereToSql(ctx, r, r.q, `"${getQueryAs(r)}"`);
       }
     } else {
-      const res = getArgQueryTarget(ctx, q, s);
+      const res = getArgQueryTarget(ctx, q, false, s);
       target = res.target;
       joinAs = res.joinAs;
 
@@ -198,6 +200,7 @@ export const processJoinItem = (
 const getArgQueryTarget = (
   ctx: ToSQLCtx,
   first: Query,
+  lateral: boolean,
   joinSubQuery: boolean,
   cloned?: boolean,
 ) => {
@@ -213,7 +216,7 @@ const getArgQueryTarget = (
 
   if (joinSubQuery) {
     return {
-      target: subJoinToSql(ctx, first, joinAs, qAs, cloned),
+      target: subJoinToSql(ctx, first, joinAs, lateral, qAs, cloned),
       joinAs: addAs ? qAs : joinAs,
     };
   } else {
@@ -232,6 +235,7 @@ const subJoinToSql = (
   ctx: ToSQLCtx,
   jq: Query,
   innerAs: string,
+  lateral: boolean,
   outerAs?: string,
   cloned?: boolean,
 ) => {
@@ -240,7 +244,8 @@ const subJoinToSql = (
     jq.q.select = [new RawSQL(`${innerAs}.*`)];
   }
 
-  return `(${getSqlText(jq.toSQL(ctx))}) ${outerAs || innerAs}`;
+  const sql = `(${getSqlText(jq.toSQL(ctx))}) ${outerAs || innerAs}`;
+  return lateral ? `LATERAL ${sql}` : sql;
 };
 
 const processArgs = (
@@ -371,6 +376,25 @@ const skipQueryKeysForSubQuery: RecordBoolean = {
   aliases: true,
   defaults: true,
   transform: true,
+  throwOnNotFound: true,
+  before: true,
+  after: true,
+  beforeCreate: true,
+  afterCreate: true,
+  afterCreateCommit: true,
+  afterCreateSelect: true,
+  beforeUpdate: true,
+  afterUpdate: true,
+  afterUpdateCommit: true,
+  afterUpdateSelect: true,
+  beforeDelete: true,
+  afterDelete: true,
+  afterDeleteCommit: true,
+  afterDeleteSelect: true,
+  catchAfterCommitErrors: true,
+  log: true,
+  logger: true,
+  autoPreparedStatements: true,
 };
 
 export const getIsJoinSubQuery = (query: PickQueryQAndBaseQuery) => {
