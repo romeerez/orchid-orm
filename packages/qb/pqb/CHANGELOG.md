@@ -1,5 +1,11 @@
 # pqb
 
+## 0.56.9
+
+### Patch Changes
+
+- b097a78: Fix hasOne relation typing problem (#577)
+
 ## 0.56.8
 
 ### Patch Changes

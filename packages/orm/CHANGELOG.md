@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.57.4
+
+### Patch Changes
+
+- b097a78: Fix hasOne relation typing problem (#577)
+- Updated dependencies [b097a78]
+  - pqb@0.56.9
+  - rake-db@2.27.10
+
 ## 1.57.3
 
 ### Patch Changes
