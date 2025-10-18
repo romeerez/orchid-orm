@@ -58,6 +58,36 @@ describe('transform', () => {
 
       expect(sum).toEqual([{ sum: 0 }]);
     });
+
+    describe('none', () => {
+      it('should transform many records with none()', async () => {
+        const res = await User.none().transform((data) => ({ data }));
+
+        assertType<typeof res, { data: UserRecord[] }>();
+
+        expect(res).toEqual({ data: [] });
+      });
+
+      it('should transform single record with none()', async () => {
+        const res = await User.takeOptional()
+          .none()
+          .transform((record) => ({ record: !!record }));
+
+        assertType<typeof res, { record: boolean }>();
+
+        expect(res).toEqual({ record: false });
+      });
+
+      it('should transform a value with none()', async () => {
+        const res = await User.getOptional('name')
+          .none()
+          .transform((value) => ({ value: !!value }));
+
+        assertType<typeof res, { value: boolean }>();
+
+        expect(res).toEqual({ value: false });
+      });
+    });
   });
 
   describe('with data', () => {

@@ -1,5 +1,10 @@
 import { Query } from '../query/query';
-import { noop, pushQueryValueImmutable, QueryReturnType } from 'orchid-core';
+import {
+  applyTransforms,
+  noop,
+  pushQueryValueImmutable,
+  QueryReturnType,
+} from 'orchid-core';
 import { NotFoundError } from 'orchid-core';
 import { extendQuery } from '../query/queryUtils';
 import { RawSQL } from '../sql/rawSql';
@@ -29,7 +34,17 @@ export const noneMethods = {
     reject?: (err: unknown) => void,
   ) {
     try {
-      const result = noneResult(this, this.q, this.q.returnType);
+      let result = noneResult(this, this.q, this.q.returnType);
+
+      if (this.q.transform) {
+        result = applyTransforms(
+          this.q,
+          this.q.returnType,
+          this.q.transform,
+          result,
+        );
+      }
+
       resolve?.(result);
     } catch (err) {
       reject?.(err);
