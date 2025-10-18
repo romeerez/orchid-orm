@@ -54,9 +54,8 @@ import {
   RelationJoinQuery,
 } from 'orchid-core';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
-import { defaultSchemaConfig } from 'pqb';
+import { defaultSchemaConfig, CreateManyMethodsNames } from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
-import { CreateManyMethodsNames } from 'pqb/src/queryMethods/mutate/create';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';

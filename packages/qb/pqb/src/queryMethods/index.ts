@@ -15,6 +15,7 @@ export type {
   CreateData,
   CreateMethodsNames,
   AddQueryDefaults,
+  CreateManyMethodsNames,
 } from './mutate/create';
 export {
   _queryInsertOneFrom,
