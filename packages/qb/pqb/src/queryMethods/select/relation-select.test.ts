@@ -1,55 +1,13 @@
-import { createBaseTable, orchidORMWithAdapter } from 'orchid-orm';
-import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
-import { userData } from '../../test-utils/test-utils';
+import {
+  assertType,
+  db,
+  PostData,
+  ProfileData,
+  sql,
+  UserData,
+  useTestDatabase,
+} from 'test-utils';
 import { MAX_BINDING_PARAMS } from '../../sql/constants';
-
-const BaseTable = createBaseTable({
-  snakeCase: true,
-});
-
-class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.string(),
-    password: t.string(),
-  }));
-
-  relations = {
-    posts: this.hasMany(() => PostTable, {
-      columns: ['id'],
-      references: ['userId'],
-    }),
-  };
-}
-
-class PostTable extends BaseTable {
-  readonly table = 'post';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    title: t.string(),
-    userId: t.integer(),
-    body: t.text(),
-  }));
-
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      columns: ['userId'],
-      references: ['id'],
-    }),
-  };
-}
-
-const db = orchidORMWithAdapter(
-  {
-    db: testDb,
-    log: false,
-  },
-  {
-    post: PostTable,
-    user: UserTable,
-  },
-);
 
 jest.mock('../../sql/constants', () => ({
   // Behold the power of JS coercions
@@ -71,8 +29,8 @@ describe('relation-select', () => {
   // https://github.com/romeerez/orchid-orm/issues/566
   it('should handle nested sub select of sql', async () => {
     await db.user.insert({
-      ...userData,
-      posts: { create: [{ title: 'title', body: 'body' }] },
+      ...UserData,
+      posts: { create: [PostData] },
     });
 
     const res = await db.post
@@ -92,15 +50,15 @@ describe('relation-select', () => {
   // https://github.com/romeerez/orchid-orm/issues/565
   it('should handle nested select of `get`', async () => {
     await db.user.insert({
-      ...userData,
-      posts: { create: [{ title: 'title', body: 'body' }] },
+      ...UserData,
+      posts: { create: [PostData] },
     });
 
     const res = await db.post
       .select({
         user: (q) =>
           q.user.select({
-            username: (q) => q.get('name'),
+            username: (q) => q.get('Name'),
           }),
       })
       .take();
@@ -114,15 +72,14 @@ describe('relation-select', () => {
     it('should work in create', async () => {
       const res = await db.post
         .select({
-          user: (q) => q.user.select('name'),
+          user: (q) => q.user.select('Name'),
         })
         .insert({
-          title: 'post',
-          body: 'body',
-          user: { create: userData },
+          ...PostData,
+          user: { create: UserData },
         });
 
-      expect(res).toEqual({ user: { name: 'name' } });
+      expect(res).toEqual({ user: { Name: 'name' } });
     });
 
     it('should wrap queries in a transaction', async () => {
@@ -138,12 +95,11 @@ describe('relation-select', () => {
 
       await db.post
         .insert({
-          title: 'post',
-          body: 'body',
-          user: { create: userData },
+          ...PostData,
+          user: { create: UserData },
         })
         .select({
-          user: (q) => q.user.select('name'),
+          user: (q) => q.user.select('Name'),
         });
 
       expect(transaction).toHaveBeenCalledTimes(1);
@@ -151,46 +107,46 @@ describe('relation-select', () => {
 
     it('should work in update', async () => {
       const user = await db.user.create({
-        ...userData,
-        posts: { create: [{ title: 'post', body: 'body' }] },
+        ...UserData,
+        posts: { create: [PostData] },
       });
 
       const res = await db.user
-        .find(user.id)
-        .select('name', { posts: (q) => q.posts.select('title') })
+        .find(user.Id)
+        .select('Name', { posts: (q) => q.posts.select('Body') })
         .update({
-          name: 'new name',
+          Name: 'new name',
           posts: {
             update: {
-              where: { title: 'post' },
-              data: { title: 'new title' },
+              where: { Body: PostData.Body },
+              data: { Body: 'new content' },
             },
           },
         });
 
       expect(res).toEqual({
-        name: 'new name',
-        posts: [{ title: 'new title' }],
+        Name: 'new name',
+        posts: [{ Body: 'new content' }],
       });
     });
 
     it('should work in find or create when finding', async () => {
       const user = await db.user.create({
-        ...userData,
-        posts: { create: [{ title: 'post', body: 'body' }] },
+        ...UserData,
+        posts: { create: [PostData] },
       });
 
       const res = await db.user
-        .select('name', { posts: (q) => q.posts.select('title') })
-        .find(user.id)
+        .select('Name', { posts: (q) => q.posts.select('Body') })
+        .find(user.Id)
         .orCreate({
-          ...userData,
-          name: 'created',
+          ...UserData,
+          Name: 'created',
         });
 
       expect(res).toEqual({
-        name: 'name',
-        posts: [{ title: 'post' }],
+        Name: 'name',
+        posts: [{ Body: PostData.Body }],
       });
     });
 
@@ -199,28 +155,28 @@ describe('relation-select', () => {
 
     it('should work in upsert when updating', async () => {
       const user = await db.user.create({
-        ...userData,
-        posts: { create: [{ title: 'post', body: 'body' }] },
+        ...UserData,
+        posts: { create: [PostData] },
       });
 
       const res = await db.user
-        .find(user.id)
-        .select('name', {
-          posts: (q) => q.posts.select('title'),
+        .find(user.Id)
+        .select('Name', {
+          posts: (q) => q.posts.select('Body'),
         })
         .upsert({
           update: {
-            name: 'updated',
+            Name: 'updated',
           },
           create: {
-            ...userData,
-            name: 'created',
+            ...UserData,
+            Name: 'created',
           },
         });
 
       expect(res).toEqual({
-        name: 'updated',
-        posts: [{ title: 'post' }],
+        Name: 'updated',
+        posts: [{ Body: PostData.Body }],
       });
     });
 
@@ -248,55 +204,55 @@ describe('relation-select', () => {
       it('should work in a single insert', async () => {
         const res = await db.user
           .insert({
-            ...userData,
-            posts: { create: [{ title: 'post', body: 'body' }] },
+            ...UserData,
+            posts: { create: [PostData] },
           })
           .select({
-            id: (q) => q.posts.select('title'),
+            Id: (q) => q.posts.select('Body'),
           });
 
-        expect(res).toEqual({ id: [{ title: 'post' }] });
+        expect(res).toEqual({ Id: [{ Body: PostData.Body }] });
       });
 
       it('should work when inserting multiple', async () => {
         const res = await db.user
           .insertMany([
             {
-              ...userData,
-              posts: { create: [{ title: 'post 1', body: 'body' }] },
+              ...UserData,
+              posts: { create: [{ Body: 'post 1' }] },
             },
             {
-              ...userData,
-              posts: { create: [{ title: 'post 2', body: 'body' }] },
+              ...UserData,
+              posts: { create: [{ Body: 'post 2' }] },
             },
           ])
           .select({
-            id: (q) => q.posts.select('title'),
+            Id: (q) => q.posts.select('Body'),
           });
 
         expect(res).toEqual([
-          { id: [{ title: 'post 1' }] },
-          { id: [{ title: 'post 2' }] },
+          { Id: [{ Body: 'post 1' }] },
+          { Id: [{ Body: 'post 2' }] },
         ]);
       });
 
       describe('in a batch', () => {
         it('should work when inserting a batch', async () => {
-          setMaxBindingParams(3);
+          setMaxBindingParams(5);
 
           const q = db.user
             .insertMany([
               {
-                ...userData,
-                posts: { create: [{ title: 'post 1', body: 'body' }] },
+                ...UserData,
+                posts: { create: [{ Body: 'post 1' }] },
               },
               {
-                ...userData,
-                posts: { create: [{ title: 'post 2', body: 'body' }] },
+                ...UserData,
+                posts: { create: [{ Body: 'post 2' }] },
               },
             ])
             .select({
-              id: (q) => q.posts.select('title'),
+              Id: (q) => q.posts.select('Body'),
             });
 
           expect(q.toSQL()).toHaveProperty('batch');
@@ -304,8 +260,8 @@ describe('relation-select', () => {
           const res = await q;
 
           expect(res).toEqual([
-            { id: [{ title: 'post 1' }] },
-            { id: [{ title: 'post 2' }] },
+            { Id: [{ Body: 'post 1' }] },
+            { Id: [{ Body: 'post 2' }] },
           ]);
         });
       });

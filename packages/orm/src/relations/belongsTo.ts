@@ -23,7 +23,6 @@ import {
   setQueryObjectValueImmutable,
   QueryTake,
   QueryTakeOptional,
-  UpdateArg,
   UpdateCtx,
   UpdateCtxCollect,
   UpdateData,
@@ -549,7 +548,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
         const count = obj
           ? await _queryUpdate(
               query.findBy(obj as never),
-              upsert.update as UpdateArg<Query>,
+              upsert.update as UpdateData<Query>,
             )
           : 0;
 
@@ -610,7 +609,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           if (params.delete) {
             await _queryDelete(t);
           } else {
-            await _queryUpdate(t, params.update as UpdateArg<Query>);
+            await _queryUpdate(t, params.update as UpdateData<Query>);
           }
         },
       );

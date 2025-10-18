@@ -1,7 +1,12 @@
 import { orchidORMWithAdapter } from './orm';
 import { createRepo } from './repo';
-import { BaseTable } from './test-utils/orm.test-utils';
-import { assertType, expectSql, testAdapter, testDbOptions } from 'test-utils';
+import {
+  BaseTable,
+  assertType,
+  expectSql,
+  testAdapter,
+  testDbOptions,
+} from 'test-utils';
 import { QueryReturnType } from 'orchid-core';
 
 class SomeTable extends BaseTable {

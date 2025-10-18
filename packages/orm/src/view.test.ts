@@ -1,9 +1,5 @@
-import {
-  db,
-  profileData,
-  userData,
-  useTestORM,
-} from './test-utils/orm.test-utils';
+import { useTestORM } from './test-utils/orm.test-utils';
+import { db, ProfileData, UserData } from 'test-utils';
 
 describe('view', () => {
   useTestORM();
@@ -11,17 +7,17 @@ describe('view', () => {
   it('should be queryable just as normal table', async () => {
     await db.user.createMany([
       {
-        ...userData,
+        ...UserData,
         Active: false,
         profile: {
-          create: profileData,
+          create: ProfileData,
         },
       },
       {
-        ...userData,
+        ...UserData,
         Active: true,
         profile: {
-          create: profileData,
+          create: ProfileData,
         },
       },
     ]);

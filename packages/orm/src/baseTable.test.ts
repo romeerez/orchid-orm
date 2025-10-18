@@ -8,21 +8,19 @@ import {
 } from './baseTable';
 import { orchidORMWithAdapter } from './orm';
 import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
+import { useTestORM } from './test-utils/orm.test-utils';
+import path from 'path';
+import { getCallerFilePath, QueryHookUtils } from 'orchid-core';
 import {
   BaseTable,
   db,
   sql,
-  userData,
-  useTestORM,
-} from './test-utils/orm.test-utils';
-import path from 'path';
-import { getCallerFilePath, QueryHookUtils } from 'orchid-core';
-import {
   asMock,
   assertType,
   expectSql,
   testAdapter,
   testColumnTypes,
+  UserData,
 } from 'test-utils';
 import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
 import { z } from 'zod/v4';
@@ -35,7 +33,7 @@ jest.mock('orchid-core', () => {
   return {
     ...actual,
     getCallerFilePath: jest.fn(() =>
-      path.join(__dirname, 'test-utils', 'test-tables.ts'),
+      path.join(__dirname, 'test-utils', 'test-db.ts'),
     ),
   };
 });
@@ -65,7 +63,7 @@ describe('baseTable', () => {
 
   it('should support getFilePath to return a path where the baseTable is defined', () => {
     expect(BaseTable.getFilePath()).toBe(
-      path.join(__dirname, 'test-utils', 'test-tables.ts'),
+      path.join(__dirname, 'test-utils', 'test-db.ts'),
     );
   });
 
@@ -147,7 +145,7 @@ describe('baseTable', () => {
     });
 
     it('should return date as string by default', async () => {
-      await db.user.create(userData);
+      await db.user.create(UserData);
 
       const BaseTable = createBaseTable();
       class UserTable extends BaseTable {
@@ -172,7 +170,7 @@ describe('baseTable', () => {
     });
 
     it('should return date as Date when overridden', async () => {
-      await db.user.create(userData);
+      await db.user.create(UserData);
 
       const BaseTable = createBaseTable({
         snakeCase: true,

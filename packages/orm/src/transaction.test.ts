@@ -1,12 +1,13 @@
 import { noop } from 'orchid-core';
-import { line, TestAdapter, TestTransactionAdapter } from 'test-utils';
 import {
   db,
-  profileData,
-  profileSelectAll,
-  userData,
-  userSelectAll,
-} from './test-utils/orm.test-utils';
+  line,
+  ProfileData,
+  TestAdapter,
+  TestTransactionAdapter,
+  UserData,
+} from 'test-utils';
+import { profileSelectAll, userSelectAll } from './test-utils/orm.test-utils';
 
 describe('transaction', () => {
   beforeEach(jest.clearAllMocks);
@@ -23,8 +24,8 @@ describe('transaction', () => {
       await db[method](async () => {
         expect(db.$isInTransaction()).toBe(true);
 
-        await db.user.create(userData);
-        await db.profile.create(profileData);
+        await db.user.create(UserData);
+        await db.profile.create(ProfileData);
         throw new Error('Throw error to rollback');
       }).catch(noop);
 

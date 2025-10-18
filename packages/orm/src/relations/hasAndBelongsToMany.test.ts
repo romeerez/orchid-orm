@@ -1,17 +1,22 @@
 import { Db, Query } from 'pqb';
 import {
-  Chat,
-  chatData,
   chatSelectAll,
-  db,
-  User,
-  userData,
   useRelationCallback,
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { omit, RecordUnknown } from 'orchid-core';
-import { assertType, expectSql, now, TestTransactionAdapter } from 'test-utils';
+import {
+  Chat,
+  db,
+  User,
+  assertType,
+  expectSql,
+  now,
+  TestTransactionAdapter,
+  ChatData,
+  UserData,
+} from 'test-utils';
 import { createBaseTable } from '../baseTable';
 import { orchidORMWithAdapter } from '../orm';
 
@@ -19,7 +24,7 @@ const ormParams = {
   db: db.$qb,
 };
 
-const activeChatData = { ...chatData, Active: true };
+const activeChatData = { ...ChatData, Active: true };
 
 describe('hasAndBelongsToMany', () => {
   useTestORM();
@@ -129,9 +134,9 @@ describe('hasAndBelongsToMany', () => {
   describe('queryRelated', () => {
     it('should query related data', async () => {
       const userId = await db.user.get('Id').create({
-        ...userData,
+        ...UserData,
         chats: {
-          create: [chatData, chatData],
+          create: [ChatData, ChatData],
         },
       });
 
@@ -155,14 +160,14 @@ describe('hasAndBelongsToMany', () => {
 
       const messages = await q;
 
-      expect(messages).toMatchObject([chatData, chatData]);
+      expect(messages).toMatchObject([ChatData, ChatData]);
     });
 
     it('should query related data using `on`', async () => {
       const userId = await db.user.get('Id').create({
-        ...userData,
+        ...UserData,
         activeChats: {
-          create: [chatData, chatData],
+          create: [ChatData, ChatData],
         },
       });
 
@@ -187,7 +192,7 @@ describe('hasAndBelongsToMany', () => {
 
       const messages = await q;
 
-      expect(messages).toMatchObject([chatData, chatData]);
+      expect(messages).toMatchObject([ChatData, ChatData]);
     });
   });
 
@@ -983,7 +988,7 @@ describe('hasAndBelongsToMany', () => {
         Active?: boolean | null;
       }) {
         expect(user).toEqual({
-          ...omit(userData, ['Password']),
+          ...omit(UserData, ['Password']),
           Active,
           Age: null,
           Data: null,
@@ -1005,14 +1010,14 @@ describe('hasAndBelongsToMany', () => {
         Active?: boolean | null;
       }) {
         expect(chats[0]).toEqual({
-          ...chatData,
+          ...ChatData,
           IdOfChat: chats[0].IdOfChat,
           Title: title1,
           Active,
         });
 
         expect(chats[1]).toEqual({
-          ...chatData,
+          ...ChatData,
           IdOfChat: chats[1].IdOfChat,
           Title: title2,
           Active,
@@ -1027,16 +1032,16 @@ describe('hasAndBelongsToMany', () => {
     describe('nested create', () => {
       it('should support create', async () => {
         const q = db.user.select('Id', 'UserKey').create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           chats: {
             create: [
               {
-                ...chatData,
+                ...ChatData,
                 Title: 'chat 1',
               },
               {
-                ...chatData,
+                ...ChatData,
                 Title: 'chat 2',
               },
             ],
@@ -1112,16 +1117,16 @@ describe('hasAndBelongsToMany', () => {
 
       it('should support create using `on`', async () => {
         const q = db.user.select('Id', 'UserKey').create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeChats: {
             create: [
               {
-                ...chatData,
+                ...ChatData,
                 Title: 'chat 1',
               },
               {
-                ...chatData,
+                ...ChatData,
                 Title: 'chat 2',
               },
             ],
@@ -1157,32 +1162,32 @@ describe('hasAndBelongsToMany', () => {
       it('should support create many', async () => {
         const q = db.user.select('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             chats: {
               create: [
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 1',
                 },
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 2',
                 },
               ],
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             chats: {
               create: [
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 3',
                 },
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 4',
                 },
               ],
@@ -1293,32 +1298,32 @@ describe('hasAndBelongsToMany', () => {
       it('should support create many using `on`', async () => {
         const q = db.user.select('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             activeChats: {
               create: [
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 1',
                 },
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 2',
                 },
               ],
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             activeChats: {
               create: [
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 3',
                 },
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'chat 4',
                 },
               ],
@@ -1367,7 +1372,7 @@ describe('hasAndBelongsToMany', () => {
 
       it('should ignore empty create list', async () => {
         await db.user.create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [],
           },
@@ -1381,9 +1386,9 @@ describe('hasAndBelongsToMany', () => {
         );
 
         const data = {
-          ...userData,
+          ...UserData,
           chats: {
-            create: [chatData, chatData],
+            create: [ChatData, ChatData],
           },
         };
 
@@ -1414,12 +1419,12 @@ describe('hasAndBelongsToMany', () => {
     describe('nested connect', () => {
       it('should support connect', async () => {
         await db.chat.createMany([
-          { ...chatData, Title: 'chat 1' },
-          { ...chatData, Title: 'chat 2' },
+          { ...ChatData, Title: 'chat 1' },
+          { ...ChatData, Title: 'chat 2' },
         ]);
 
         const q = db.user.select('Id', 'UserKey').create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           chats: {
             connect: [
@@ -1502,12 +1507,12 @@ describe('hasAndBelongsToMany', () => {
 
       it('should fail to connect when `on` condition does not match', async () => {
         await db.chat.createMany([
-          { ...chatData, Title: 'chat 1' },
+          { ...ChatData, Title: 'chat 1' },
           { ...activeChatData, Title: 'chat 2' },
         ]);
 
         const q = db.user.select('Id', 'UserKey').create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeChats: {
             connect: [
@@ -1531,7 +1536,7 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         const q = db.user.select('Id', 'UserKey').create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeChats: {
             connect: [
@@ -1555,15 +1560,15 @@ describe('hasAndBelongsToMany', () => {
 
       it('should support connect many', async () => {
         await db.chat.createMany([
-          { ...chatData, Title: 'chat 1' },
-          { ...chatData, Title: 'chat 2' },
-          { ...chatData, Title: 'chat 3' },
-          { ...chatData, Title: 'chat 4' },
+          { ...ChatData, Title: 'chat 1' },
+          { ...ChatData, Title: 'chat 2' },
+          { ...ChatData, Title: 'chat 3' },
+          { ...ChatData, Title: 'chat 4' },
         ]);
 
         const q = db.user.select('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             chats: {
               connect: [
@@ -1577,7 +1582,7 @@ describe('hasAndBelongsToMany', () => {
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             chats: {
               connect: [
@@ -1679,13 +1684,13 @@ describe('hasAndBelongsToMany', () => {
 
       it('should fail to connect when `on` condition does not match', async () => {
         await db.chat.createMany([
-          { ...chatData, Title: 'chat 1' },
+          { ...ChatData, Title: 'chat 1' },
           { ...activeChatData, Title: 'chat 2' },
         ]);
 
         const q = db.user.select('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             activeChats: {
               connect: [
@@ -1696,7 +1701,7 @@ describe('hasAndBelongsToMany', () => {
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             activeChats: {
               connect: [
@@ -1721,7 +1726,7 @@ describe('hasAndBelongsToMany', () => {
 
         const [user1, user2] = await db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             activeChats: {
               connect: [
@@ -1735,7 +1740,7 @@ describe('hasAndBelongsToMany', () => {
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             activeChats: {
               connect: [
@@ -1759,7 +1764,7 @@ describe('hasAndBelongsToMany', () => {
 
       it('should ignore empty connect list', async () => {
         await db.user.create({
-          ...userData,
+          ...UserData,
           chats: {
             connect: [],
           },
@@ -1770,22 +1775,22 @@ describe('hasAndBelongsToMany', () => {
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
         const chatId = await db.chat.get('IdOfChat').create({
-          ...chatData,
+          ...ChatData,
           Title: 'chat 1',
         });
 
         const q = db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           chats: {
             connectOrCreate: [
               {
                 where: { Title: 'chat 1' },
-                create: { ...chatData, Title: 'chat 1' },
+                create: { ...ChatData, Title: 'chat 1' },
               },
               {
                 where: { Title: 'chat 2' },
-                create: { ...chatData, Title: 'chat 2' },
+                create: { ...ChatData, Title: 'chat 2' },
               },
             ],
           },
@@ -1807,13 +1812,13 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeChats: {
             connectOrCreate: [
               {
                 where: { Title: 'chat 1' },
-                create: { ...chatData, Title: 'chat 1' },
+                create: { ...ChatData, Title: 'chat 1' },
               },
             ],
           },
@@ -1825,18 +1830,18 @@ describe('hasAndBelongsToMany', () => {
 
       it('should create using `on`', async () => {
         const chatId = await db.chat.get('IdOfChat').create({
-          ...chatData,
+          ...ChatData,
           Title: 'chat 1',
         });
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeChats: {
             connectOrCreate: [
               {
                 where: { Title: 'chat 1' },
-                create: { ...chatData, Title: 'chat 1' },
+                create: { ...ChatData, Title: 'chat 1' },
               },
             ],
           },
@@ -1851,44 +1856,44 @@ describe('hasAndBelongsToMany', () => {
           .select('IdOfChat')
           .createMany([
             {
-              ...chatData,
+              ...ChatData,
               Title: 'chat 1',
             },
             {
-              ...chatData,
+              ...ChatData,
               Title: 'chat 4',
             },
           ]);
 
         const q = db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             chats: {
               connectOrCreate: [
                 {
                   where: { Title: 'chat 1' },
-                  create: { ...chatData, Title: 'chat 1' },
+                  create: { ...ChatData, Title: 'chat 1' },
                 },
                 {
                   where: { Title: 'chat 2' },
-                  create: { ...chatData, Title: 'chat 2' },
+                  create: { ...ChatData, Title: 'chat 2' },
                 },
               ],
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             chats: {
               connectOrCreate: [
                 {
                   where: { Title: 'chat 3' },
-                  create: { ...chatData, Title: 'chat 3' },
+                  create: { ...ChatData, Title: 'chat 3' },
                 },
                 {
                   where: { Title: 'chat 4' },
-                  create: { ...chatData, Title: 'chat 4' },
+                  create: { ...ChatData, Title: 'chat 4' },
                 },
               ],
             },
@@ -1925,11 +1930,11 @@ describe('hasAndBelongsToMany', () => {
               Title: 'chat 1',
             },
             {
-              ...chatData,
+              ...ChatData,
               Title: 'chat 2',
             },
             {
-              ...chatData,
+              ...ChatData,
               Title: 'chat 3',
             },
             {
@@ -1940,33 +1945,33 @@ describe('hasAndBelongsToMany', () => {
 
         const q = db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             activeChats: {
               connectOrCreate: [
                 {
                   where: { Title: 'chat 1' },
-                  create: { ...chatData, Title: 'chat 1' },
+                  create: { ...ChatData, Title: 'chat 1' },
                 },
                 {
                   where: { Title: 'chat 2' },
-                  create: { ...chatData, Title: 'chat 2' },
+                  create: { ...ChatData, Title: 'chat 2' },
                 },
               ],
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             activeChats: {
               connectOrCreate: [
                 {
                   where: { Title: 'chat 3' },
-                  create: { ...chatData, Title: 'chat 3' },
+                  create: { ...ChatData, Title: 'chat 3' },
                 },
                 {
                   where: { Title: 'chat 4' },
-                  create: { ...chatData, Title: 'chat 4' },
+                  create: { ...ChatData, Title: 'chat 4' },
                 },
               ],
             },
@@ -1996,7 +2001,7 @@ describe('hasAndBelongsToMany', () => {
 
       it('should ignore empty connectOrCreate list', async () => {
         await db.user.create({
-          ...userData,
+          ...UserData,
           chats: {
             connectOrCreate: [],
           },
@@ -2010,16 +2015,16 @@ describe('hasAndBelongsToMany', () => {
         );
 
         const data = {
-          ...userData,
+          ...UserData,
           chats: {
             connectOrCreate: [
               {
                 where: { Title: 'one' },
-                create: chatData,
+                create: ChatData,
               },
               {
                 where: { Title: 'two' },
-                create: chatData,
+                create: ChatData,
               },
             ],
           },
@@ -2053,9 +2058,9 @@ describe('hasAndBelongsToMany', () => {
   describe('update', () => {
     describe('add', () => {
       it('should connect many related records to one', async () => {
-        const userId = await db.user.get('Id').create(userData);
+        const userId = await db.user.get('Id').create(UserData);
 
-        const createdChats = await db.chat.createMany([chatData, chatData]);
+        const createdChats = await db.chat.createMany([ChatData, ChatData]);
 
         const count = await db.user.find(userId).update({
           chats: {
@@ -2073,10 +2078,10 @@ describe('hasAndBelongsToMany', () => {
       });
 
       it('should fail to connect when `on` condition does not match', async () => {
-        const userId = await db.user.get('Id').create(userData);
+        const userId = await db.user.get('Id').create(UserData);
 
         const createdChats = await db.chat.createMany([
-          chatData,
+          ChatData,
           activeChatData,
         ]);
 
@@ -2092,7 +2097,7 @@ describe('hasAndBelongsToMany', () => {
       });
 
       it('should connect many related records to one using `on`', async () => {
-        const userId = await db.user.get('Id').create(userData);
+        const userId = await db.user.get('Id').create(UserData);
 
         const createdChats = await db.chat.createMany([
           activeChatData,
@@ -2117,9 +2122,9 @@ describe('hasAndBelongsToMany', () => {
       it('should connect many related records to many', async () => {
         const [userId1, userId2] = await db.user
           .get('Id')
-          .createMany([userData, userData]);
+          .createMany([UserData, UserData]);
 
-        const createdChats = await db.chat.createMany([chatData, chatData]);
+        const createdChats = await db.chat.createMany([ChatData, ChatData]);
 
         const count = await db.user.whereIn('Id', [userId1, userId2]).update({
           chats: {
@@ -2146,10 +2151,10 @@ describe('hasAndBelongsToMany', () => {
       it('should faile to connect many related records to many when `on` condition does not match', async () => {
         const [userId1, userId2] = await db.user
           .get('Id')
-          .createMany([userData, userData]);
+          .createMany([UserData, UserData]);
 
         const createdChats = await db.chat.createMany([
-          chatData,
+          ChatData,
           activeChatData,
         ]);
 
@@ -2167,7 +2172,7 @@ describe('hasAndBelongsToMany', () => {
       it('should connect many related records to many using `on`', async () => {
         const [userId1, userId2] = await db.user
           .get('Id')
-          .createMany([userData, userData]);
+          .createMany([UserData, UserData]);
 
         const createdChats = await db.chat.createMany([
           activeChatData,
@@ -2197,7 +2202,7 @@ describe('hasAndBelongsToMany', () => {
       });
 
       it('should throw when no related records were found by a condition', async () => {
-        const userId = await db.user.get('Id').create(userData);
+        const userId = await db.user.get('Id').create(UserData);
 
         const q = db.user.find(userId).update({
           chats: {
@@ -2212,15 +2217,15 @@ describe('hasAndBelongsToMany', () => {
 
       it('should not throw when adding a record that was already connected', async () => {
         const userId = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
-            create: [chatData],
+            create: [ChatData],
           },
         });
 
         const count = await db.user.find(userId).update({
           chats: {
-            add: { Title: chatData.Title },
+            add: { Title: ChatData.Title },
           },
         });
         expect(count).toBe(1);
@@ -2230,13 +2235,13 @@ describe('hasAndBelongsToMany', () => {
     describe('disconnect', () => {
       it('should delete join table rows', async () => {
         const userId = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user',
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
-              { ...chatData, Title: 'chat 2' },
-              { ...chatData, Title: 'chat 3' },
+              { ...ChatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 2' },
+              { ...ChatData, Title: 'chat 3' },
             ],
           },
         });
@@ -2258,13 +2263,13 @@ describe('hasAndBelongsToMany', () => {
 
       it('should delete matching join table rows using `on`', async () => {
         const userId = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user',
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 1' },
               { ...activeChatData, Title: 'chat 2' },
-              { ...chatData, Title: 'chat 3' },
+              { ...ChatData, Title: 'chat 3' },
             ],
           },
         });
@@ -2286,9 +2291,9 @@ describe('hasAndBelongsToMany', () => {
 
       it('should ignore empty list', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
-            create: [{ ...chatData, Title: 'chat 1' }],
+            create: [{ ...ChatData, Title: 'chat 1' }],
           },
         });
 
@@ -2309,17 +2314,17 @@ describe('hasAndBelongsToMany', () => {
     describe('set', () => {
       it('should delete previous join records and create join records for matching related records', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
-              { ...chatData, Title: 'chat 2' },
+              { ...ChatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 2' },
             ],
           },
         });
 
         await db.chat.create({
-          ...chatData,
+          ...ChatData,
           Title: 'chat 3',
         });
 
@@ -2340,10 +2345,10 @@ describe('hasAndBelongsToMany', () => {
 
       it('should delete previous join records and create join records for matching related records', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 1' },
               { ...activeChatData, Title: 'chat 2' },
             ],
           },
@@ -2351,7 +2356,7 @@ describe('hasAndBelongsToMany', () => {
 
         await db.chat.createMany([
           {
-            ...chatData,
+            ...ChatData,
             Title: 'chat 3',
           },
           {
@@ -2381,11 +2386,11 @@ describe('hasAndBelongsToMany', () => {
 
       it('should delete all previous connections when empty array is given', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
-              { ...chatData, Title: 'chat 2' },
+              { ...ChatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 2' },
             ],
           },
         });
@@ -2407,10 +2412,10 @@ describe('hasAndBelongsToMany', () => {
 
       it('should not delete previous connections not matching `on` conditions', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 1' },
               { ...activeChatData, Title: 'chat 2' },
             ],
           },
@@ -2437,20 +2442,20 @@ describe('hasAndBelongsToMany', () => {
     describe('delete', () => {
       it('should delete related records', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
-              { ...chatData, Title: 'chat 2' },
-              { ...chatData, Title: 'chat 3' },
+              { ...ChatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 2' },
+              { ...ChatData, Title: 'chat 3' },
             ],
           },
         });
 
         await db.user.create({
-          ...userData,
+          ...UserData,
           chats: {
-            create: [{ ...chatData, Title: 'chat 4' }],
+            create: [{ ...ChatData, Title: 'chat 4' }],
           },
         });
 
@@ -2471,10 +2476,10 @@ describe('hasAndBelongsToMany', () => {
 
       it('should delete only matching related records using `on`', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 1' },
               { ...activeChatData, Title: 'chat 2' },
               { ...activeChatData, Title: 'chat 3' },
             ],
@@ -2499,9 +2504,9 @@ describe('hasAndBelongsToMany', () => {
 
       it('should ignore empty list', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
-            create: [{ ...chatData, Title: 'chat 1' }],
+            create: [{ ...ChatData, Title: 'chat 1' }],
           },
         });
 
@@ -2532,11 +2537,11 @@ describe('hasAndBelongsToMany', () => {
 
         it('should invoke callbacks', async () => {
           const id = await db.user.get('Id').create({
-            ...userData,
+            ...UserData,
             chats: {
               create: [
-                { ...chatData, Title: 'chat 1' },
-                { ...chatData, Title: 'chat 2' },
+                { ...ChatData, Title: 'chat 1' },
+                { ...ChatData, Title: 'chat 2' },
               ],
             },
           });
@@ -2556,20 +2561,20 @@ describe('hasAndBelongsToMany', () => {
 
           const UserIds = await db.user.pluck('Id').createMany([
             {
-              ...userData,
+              ...UserData,
               chats: {
                 create: [
-                  { ...chatData, Title: 'chat 1' },
-                  { ...chatData, Title: 'chat 3' },
+                  { ...ChatData, Title: 'chat 1' },
+                  { ...ChatData, Title: 'chat 3' },
                 ],
               },
             },
             {
-              ...userData,
+              ...UserData,
               chats: {
                 create: [
-                  { ...chatData, Title: 'chat 2' },
-                  { ...chatData, Title: 'chat 4' },
+                  { ...ChatData, Title: 'chat 2' },
+                  { ...ChatData, Title: 'chat 4' },
                 ],
               },
             },
@@ -2592,20 +2597,20 @@ describe('hasAndBelongsToMany', () => {
     describe('nested update', () => {
       it('should update related records', async () => {
         const id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
-              { ...chatData, Title: 'chat 2' },
-              { ...chatData, Title: 'chat 3' },
+              { ...ChatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 2' },
+              { ...ChatData, Title: 'chat 3' },
             ],
           },
         });
 
         await db.user.create({
-          ...userData,
+          ...UserData,
           chats: {
-            create: [{ ...chatData, Title: 'chat 4' }],
+            create: [{ ...ChatData, Title: 'chat 4' }],
           },
         });
 
@@ -2629,20 +2634,20 @@ describe('hasAndBelongsToMany', () => {
 
       it('should update related records using `on`', async () => {
         const id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
             create: [
-              { ...chatData, Title: 'chat 1' },
-              { ...chatData, Title: 'chat 2' },
+              { ...ChatData, Title: 'chat 1' },
+              { ...ChatData, Title: 'chat 2' },
               { ...activeChatData, Title: 'chat 3' },
             ],
           },
         });
 
         await db.user.create({
-          ...userData,
+          ...UserData,
           activeChats: {
-            create: [{ ...chatData, Title: 'chat 4' }],
+            create: [{ ...ChatData, Title: 'chat 4' }],
           },
         });
 
@@ -2666,9 +2671,9 @@ describe('hasAndBelongsToMany', () => {
 
       it('should ignore update with empty where list', async () => {
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           chats: {
-            create: [{ ...chatData, Title: 'chat 1' }],
+            create: [{ ...ChatData, Title: 'chat 1' }],
           },
         });
 
@@ -2707,9 +2712,9 @@ describe('hasAndBelongsToMany', () => {
 
         it('should invoke callbacks', async () => {
           const id = await db.user.get('Id').create({
-            ...userData,
+            ...UserData,
             chats: {
-              create: [{ ...chatData, Title: 'chat 1' }],
+              create: [{ ...ChatData, Title: 'chat 1' }],
             },
           });
 
@@ -2726,15 +2731,15 @@ describe('hasAndBelongsToMany', () => {
         it('should invoke callbacks in a batch update', async () => {
           const userIds = await db.user.pluck('Id').createMany([
             {
-              ...userData,
+              ...UserData,
               chats: {
-                create: [{ ...chatData, Title: 'chat 1' }],
+                create: [{ ...ChatData, Title: 'chat 1' }],
               },
             },
             {
-              ...userData,
+              ...UserData,
               chats: {
-                create: [{ ...chatData, Title: 'chat 2' }],
+                create: [{ ...ChatData, Title: 'chat 2' }],
               },
             },
           ]);
@@ -2762,17 +2767,17 @@ describe('hasAndBelongsToMany', () => {
       it('should create many records and connect them', async () => {
         const userIds = await db.user
           .pluck('Id')
-          .createMany([userData, userData]);
+          .createMany([UserData, UserData]);
 
         const count = await db.user.where({ Id: { in: userIds } }).update({
           chats: {
             create: [
               {
-                ...chatData,
+                ...ChatData,
                 Title: 'created 1',
               },
               {
-                ...chatData,
+                ...ChatData,
                 Title: 'created 2',
               },
             ],
@@ -2802,7 +2807,7 @@ describe('hasAndBelongsToMany', () => {
       });
 
       it('should create many records and connect them, using `on`', async () => {
-        const users = await db.user.createMany([userData, userData]);
+        const users = await db.user.createMany([UserData, UserData]);
 
         const count = await db.user
           .where({ Id: { in: users.map((user) => user.Id) } })
@@ -2810,11 +2815,11 @@ describe('hasAndBelongsToMany', () => {
             activeChats: {
               create: [
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'created 1',
                 },
                 {
-                  ...chatData,
+                  ...ChatData,
                   Title: 'created 2',
                 },
               ],
@@ -2837,7 +2842,7 @@ describe('hasAndBelongsToMany', () => {
       });
 
       it('should ignore empty list', async () => {
-        const Id = await db.user.get('Id').create(userData);
+        const Id = await db.user.get('Id').create(UserData);
 
         const count = await db.user.find(Id).update({
           chats: {
@@ -2861,12 +2866,12 @@ describe('hasAndBelongsToMany', () => {
 
         const data = {
           chats: {
-            create: [chatData, chatData],
+            create: [ChatData, ChatData],
           },
         };
 
         it('should invoke callbacks', async () => {
-          const id = await db.user.get('Id').create(userData);
+          const id = await db.user.get('Id').create(UserData);
 
           const count = await db.user.find(id).update(data);
           expect(count).toBe(1);
@@ -2881,7 +2886,7 @@ describe('hasAndBelongsToMany', () => {
         it('should invoke callbacks in a batch update', async () => {
           const userIds = await db.user
             .pluck('Id')
-            .createMany([userData, userData]);
+            .createMany([UserData, UserData]);
 
           resetMocks();
 

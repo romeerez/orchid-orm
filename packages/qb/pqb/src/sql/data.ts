@@ -24,7 +24,6 @@ import {
   ExpressionChain,
   HookSelect,
   MaybeArray,
-  MaybePromise,
   PickQueryInputType,
   PickQueryTable,
   QueryColumn,
@@ -93,7 +92,7 @@ export interface HandleResult {
     returnType: QueryReturnType,
     result: QueryResult,
     isSubQuery?: true,
-  ): MaybePromise<unknown>;
+  ): unknown;
 }
 
 export type WithItems = (WithItem | undefined)[];

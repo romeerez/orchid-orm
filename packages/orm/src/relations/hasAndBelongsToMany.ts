@@ -25,9 +25,8 @@ import {
   Query,
   SelectableFromShape,
   TableData,
-  UpdateArg,
-  UpdateCtx,
   UpdateData,
+  UpdateCtx,
   VirtualColumn,
   WhereArg,
 } from 'pqb';
@@ -777,7 +776,7 @@ const nestedUpdate = (state: State) => {
           }),
           [conditionsToWhereArg(params.update.where as WhereArg<Query>)],
         ),
-        params.update.data as UpdateArg<Query>,
+        params.update.data as UpdateData<Query>,
       );
     }
 

@@ -1,28 +1,31 @@
 import { Db, Query } from 'pqb';
 import {
-  BaseTable,
-  chatData,
-  db,
-  messageData,
   messageSelectAll,
-  Profile,
-  profileData,
   profileSelectAll,
-  User,
-  userData,
   useRelationCallback,
   userRowToJSON,
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
-import { assertType, expectSql } from 'test-utils';
+import {
+  BaseTable,
+  db,
+  Profile,
+  User,
+  assertType,
+  expectSql,
+  MessageData,
+  ChatData,
+  ProfileData,
+  UserData,
+} from 'test-utils';
 import { NotFoundError, omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = { db: db.$qb };
 
-const activeUserData = { ...userData, Active: true };
+const activeUserData = { ...UserData, Active: true };
 
 describe('belongsTo', () => {
   useTestORM();
@@ -96,9 +99,9 @@ describe('belongsTo', () => {
   describe('querying', () => {
     describe('queryRelated', () => {
       it('should query related data', async () => {
-        const user = await db.user.create(userData);
+        const user = await db.user.create(UserData);
         const profile = await db.profile.create({
-          ...profileData,
+          ...ProfileData,
           UserId: user.Id,
         });
 
@@ -121,7 +124,7 @@ describe('belongsTo', () => {
       it('should query related data using `on`', async () => {
         const user = await db.user.create(activeUserData);
         const profile = await db.profile.create({
-          ...profileData,
+          ...ProfileData,
           UserId: user.Id,
         });
 
@@ -682,26 +685,26 @@ describe('belongsTo', () => {
     const testData = {
       createMessageChat: (Title = 'chat') => ({
         create: {
-          ...chatData,
+          ...ChatData,
           Title,
         },
       }),
       createOrConnectMessageChat: (Title = 'chat') => ({
         connectOrCreate: {
           where: { Title },
-          create: { ...chatData, Title },
+          create: { ...ChatData, Title },
         },
       }),
       createMessageSender: (Name = 'user') => ({
         create: {
-          ...userData,
+          ...UserData,
           Name,
         },
       }),
       createOrConnectMessageSender: (Name = 'user') => ({
         connectOrCreate: {
           where: { Name },
-          create: { ...userData, Name },
+          create: { ...UserData, Name },
         },
       }),
     };
@@ -721,7 +724,7 @@ describe('belongsTo', () => {
         const message = await db.message.find(messageId);
         expect(message).toEqual({
           ...message,
-          ...messageData,
+          ...MessageData,
           ChatId,
           AuthorId,
           Text,
@@ -739,7 +742,7 @@ describe('belongsTo', () => {
         const chat = await db.chat.find(ChatId);
         expect(chat).toEqual({
           ...chat,
-          ...chatData,
+          ...ChatData,
           ...data,
         });
       },
@@ -759,7 +762,7 @@ describe('belongsTo', () => {
         const user = await db.user.find(AuthorId);
         expect(user).toEqual({
           ...user,
-          ...omit(userData, ['Password']),
+          ...omit(UserData, ['Password']),
           Age: null,
           Data: null,
           Picture: null,
@@ -783,8 +786,8 @@ describe('belongsTo', () => {
         const senderData = testData.createMessageSender();
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
-          createdAt: messageData.createdAt,
-          updatedAt: messageData.updatedAt,
+          createdAt: MessageData.createdAt,
+          updatedAt: MessageData.updatedAt,
           Text: 'message',
           chat: chatData,
           sender: senderData,
@@ -835,8 +838,8 @@ describe('belongsTo', () => {
           ChatId,
           AuthorId,
         } = await db.message.select('Id', 'ChatId', 'AuthorId').create({
-          createdAt: messageData.createdAt,
-          updatedAt: messageData.updatedAt,
+          createdAt: MessageData.createdAt,
+          updatedAt: MessageData.updatedAt,
           Text: 'message',
           activeChat: testData.createMessageChat(),
           activeSender: testData.createMessageSender(),
@@ -850,8 +853,8 @@ describe('belongsTo', () => {
       it('should support create in batch create', async () => {
         const q = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
           Array.from({ length: 2 }, (_, i) => ({
-            createdAt: messageData.createdAt,
-            updatedAt: messageData.updatedAt,
+            createdAt: MessageData.createdAt,
+            updatedAt: MessageData.updatedAt,
             Text: `message ${i + 1}`,
             chat: testData.createMessageChat(`chat ${i + 1}`),
             sender: testData.createMessageSender(`user ${i + 1}`),
@@ -882,8 +885,8 @@ describe('belongsTo', () => {
       it('should support create in batch create using `on`', async () => {
         const q = db.message.select('Id', 'ChatId', 'AuthorId').createMany(
           Array.from({ length: 2 }, (_, i) => ({
-            createdAt: messageData.createdAt,
-            updatedAt: messageData.updatedAt,
+            createdAt: MessageData.createdAt,
+            updatedAt: MessageData.updatedAt,
             Text: `message ${i + 1}`,
             activeChat: testData.createMessageChat(`chat ${i + 1}`),
             activeSender: testData.createMessageSender(`user ${i + 1}`),
@@ -916,10 +919,10 @@ describe('belongsTo', () => {
 
       it('should support nested create with a value from `with`', () => {
         const q = db.$qb
-          .with('user', db.user.create(userData))
+          .with('user', db.user.create(UserData))
           .with('profile', (q) =>
             db.profile.create({
-              ...profileData,
+              ...ProfileData,
               UserId: () => q.from('user').get('Id'),
             }),
           )
@@ -947,7 +950,7 @@ describe('belongsTo', () => {
             )
             SELECT * FROM "profile"
           `,
-          [...Object.values(userData), ...Object.values(profileData)],
+          [...Object.values(UserData), ...Object.values(ProfileData)],
         );
       });
 
@@ -993,7 +996,7 @@ describe('belongsTo', () => {
             profile: ProfileTable,
           });
 
-          const UserId = await db.user.get('Id').create(userData);
+          const UserId = await db.user.get('Id').create(UserData);
 
           const q = db.profile.create({
             Id: 1,
@@ -1031,7 +1034,7 @@ describe('belongsTo', () => {
         const data = {
           Text: 'text',
           chat: {
-            create: chatData,
+            create: ChatData,
           },
         };
 
@@ -1066,12 +1069,12 @@ describe('belongsTo', () => {
 
     describe('connect', () => {
       it('should support connect', async () => {
-        await db.chat.create({ ...chatData, Title: 'chat' });
-        await db.user.create({ ...userData, Name: 'user' });
+        await db.chat.create({ ...ChatData, Title: 'chat' });
+        await db.user.create({ ...UserData, Name: 'user' });
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
-          createdAt: messageData.createdAt,
-          updatedAt: messageData.updatedAt,
+          createdAt: MessageData.createdAt,
+          updatedAt: MessageData.updatedAt,
           Text: 'message',
           chat: {
             connect: { Title: 'chat' },
@@ -1089,12 +1092,12 @@ describe('belongsTo', () => {
       });
 
       it('should not connect when `on` condition does not match', async () => {
-        await db.chat.create({ ...chatData, Title: 'chat' });
-        await db.user.create({ ...userData, Name: 'user' });
+        await db.chat.create({ ...ChatData, Title: 'chat' });
+        await db.user.create({ ...UserData, Name: 'user' });
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
-          createdAt: messageData.createdAt,
-          updatedAt: messageData.updatedAt,
+          createdAt: MessageData.createdAt,
+          updatedAt: MessageData.updatedAt,
           Text: 'message',
           // ok
           chat: {
@@ -1113,18 +1116,18 @@ describe('belongsTo', () => {
 
       it('should support connect in batch create', async () => {
         await db.chat.createMany([
-          { ...chatData, Title: 'chat 1' },
-          { ...chatData, Title: 'chat 2' },
+          { ...ChatData, Title: 'chat 1' },
+          { ...ChatData, Title: 'chat 2' },
         ]);
         await db.user.createMany([
-          { ...userData, Name: 'user 1' },
-          { ...userData, Name: 'user 2' },
+          { ...UserData, Name: 'user 1' },
+          { ...UserData, Name: 'user 2' },
         ]);
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').createMany([
           {
-            createdAt: messageData.createdAt,
-            updatedAt: messageData.updatedAt,
+            createdAt: MessageData.createdAt,
+            updatedAt: MessageData.updatedAt,
             Text: 'message 1',
             chat: {
               connect: { Title: 'chat 1' },
@@ -1134,8 +1137,8 @@ describe('belongsTo', () => {
             },
           },
           {
-            createdAt: messageData.createdAt,
-            updatedAt: messageData.updatedAt,
+            createdAt: MessageData.createdAt,
+            updatedAt: MessageData.updatedAt,
             Text: 'message 2',
             chat: {
               connect: { Title: 'chat 2' },
@@ -1168,17 +1171,17 @@ describe('belongsTo', () => {
       });
 
       it('should not connect in batch create if `on` condition does not match', async () => {
-        await db.chat.create(chatData);
-        await db.user.create(userData);
+        await db.chat.create(ChatData);
+        await db.user.create(UserData);
 
         const q = db.message.createMany([
           {
-            ...messageData,
+            ...MessageData,
             chat: {
-              connect: { Title: chatData.Title },
+              connect: { Title: ChatData.Title },
             },
             activeSender: {
-              connect: { Name: userData.Name },
+              connect: { Name: UserData.Name },
             },
           },
         ]);
@@ -1192,13 +1195,13 @@ describe('belongsTo', () => {
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
         const chat = await db.chat.select('IdOfChat').create({
-          ...chatData,
+          ...ChatData,
           Title: 'chat',
         });
 
         const q = await db.message.select('Id', 'ChatId', 'AuthorId').create({
-          updatedAt: messageData.updatedAt,
-          createdAt: messageData.createdAt,
+          updatedAt: MessageData.updatedAt,
+          createdAt: MessageData.createdAt,
           Text: 'message',
           chat: testData.createOrConnectMessageChat(),
           sender: testData.createOrConnectMessageSender(),
@@ -1215,18 +1218,18 @@ describe('belongsTo', () => {
 
       it('should connect and create using `on`', async () => {
         const activeChat = await db.chat.select('IdOfChat').create({
-          ...chatData,
+          ...ChatData,
           Title: 'chat',
           Active: true,
         });
         const user = await db.user.select('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'name',
         });
 
         const q = await db.message.select('Id', 'ChatId', 'AuthorId').create({
-          updatedAt: messageData.updatedAt,
-          createdAt: messageData.createdAt,
+          updatedAt: MessageData.updatedAt,
+          createdAt: MessageData.createdAt,
           Text: 'message',
           activeChat: testData.createOrConnectMessageChat(),
           activeSender: testData.createOrConnectMessageSender(),
@@ -1244,11 +1247,11 @@ describe('belongsTo', () => {
 
       it('should support connect or create in batch create', async () => {
         const chat = await db.chat.select('IdOfChat').create({
-          ...chatData,
+          ...ChatData,
           Title: 'chat 1',
         });
         const user = await db.user.select('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user 2',
         });
 
@@ -1256,15 +1259,15 @@ describe('belongsTo', () => {
           .select('Id', 'ChatId', 'AuthorId')
           .createMany([
             {
-              updatedAt: messageData.updatedAt,
-              createdAt: messageData.createdAt,
+              updatedAt: MessageData.updatedAt,
+              createdAt: MessageData.createdAt,
               Text: 'message 1',
               chat: testData.createOrConnectMessageChat('chat 1'),
               sender: testData.createOrConnectMessageSender('user 1'),
             },
             {
-              updatedAt: messageData.updatedAt,
-              createdAt: messageData.createdAt,
+              updatedAt: MessageData.updatedAt,
+              createdAt: MessageData.createdAt,
               Text: 'message 2',
               chat: testData.createOrConnectMessageChat('chat 2'),
               sender: testData.createOrConnectMessageSender('user 2'),
@@ -1297,12 +1300,12 @@ describe('belongsTo', () => {
 
       it('should connect and create in batch using `on`', async () => {
         const activeChat = await db.chat.select('IdOfChat').create({
-          ...chatData,
+          ...ChatData,
           Title: 'chat',
           Active: true,
         });
         const user = await db.user.select('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user',
         });
 
@@ -1310,8 +1313,8 @@ describe('belongsTo', () => {
           .select('Id', 'ChatId', 'AuthorId')
           .createMany([
             {
-              updatedAt: messageData.updatedAt,
-              createdAt: messageData.createdAt,
+              updatedAt: MessageData.updatedAt,
+              createdAt: MessageData.createdAt,
               Text: 'message',
               activeChat: testData.createOrConnectMessageChat(),
               activeSender: testData.createOrConnectMessageSender(),
@@ -1339,7 +1342,7 @@ describe('belongsTo', () => {
           chat: {
             connectOrCreate: {
               where: { Title: 'title' },
-              create: chatData,
+              create: ChatData,
             },
           },
         };
@@ -1379,7 +1382,7 @@ describe('belongsTo', () => {
       it('should nullify foreignKey', async () => {
         const id = await db.profile
           .get('Id')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const profile = await db.profile
           .select('UserId')
@@ -1395,7 +1398,7 @@ describe('belongsTo', () => {
       it('should nullify even if `on` condition does not match, the will of disconnect prevails over `on`', async () => {
         const id = await db.profile
           .get('Id')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const profile = await db.profile
           .select('UserId')
@@ -1410,8 +1413,8 @@ describe('belongsTo', () => {
 
       it('should nullify foreignKey in batch update using `on`', async () => {
         const ids = await db.profile.pluck('Id').createMany([
-          { Bio: 'bio', user: { create: userData } },
-          { Bio: 'bio', user: { create: userData } },
+          { Bio: 'bio', user: { create: UserData } },
+          { Bio: 'bio', user: { create: UserData } },
         ]);
 
         const userIds = await db.profile
@@ -1428,11 +1431,11 @@ describe('belongsTo', () => {
 
     describe('set', () => {
       it('should set foreignKey of current record with provided primaryKey', async () => {
-        const firstUserId = await db.user.get('Id').create(userData);
+        const firstUserId = await db.user.get('Id').create(UserData);
         const id = await db.profile
           .get('Id')
-          .create({ ...profileData, UserId: firstUserId });
-        const user = await db.user.select('Id').create(userData);
+          .create({ ...ProfileData, UserId: firstUserId });
+        const user = await db.user.select('Id').create(UserData);
 
         const profile = await db.profile
           .selectAll()
@@ -1447,11 +1450,11 @@ describe('belongsTo', () => {
       });
 
       it('should fail to set when `on` condition does not match', async () => {
-        const firstUserId = await db.user.get('Id').create(userData);
+        const firstUserId = await db.user.get('Id').create(UserData);
         const id = await db.profile
           .get('Id')
-          .create({ ...profileData, UserId: firstUserId });
-        const user = await db.user.select('Id').create(userData);
+          .create({ ...ProfileData, UserId: firstUserId });
+        const user = await db.user.select('Id').create(UserData);
 
         const q = db.profile.find(id).update({
           activeUser: {
@@ -1465,12 +1468,12 @@ describe('belongsTo', () => {
       });
 
       it('should set foreignKey of current record from found related record', async () => {
-        const firstUserId = await db.user.get('Id').create(userData);
+        const firstUserId = await db.user.get('Id').create(UserData);
         const id = await db.profile
           .get('Id')
-          .create({ ...profileData, UserId: firstUserId });
+          .create({ ...ProfileData, UserId: firstUserId });
         const user = await db.user.select('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user',
         });
 
@@ -1487,12 +1490,12 @@ describe('belongsTo', () => {
       });
 
       it('should fail to set foreignKey of current record from found record if `on` condition does not match', async () => {
-        const firstUserId = await db.user.get('Id').create(userData);
+        const firstUserId = await db.user.get('Id').create(UserData);
         const id = await db.profile
           .get('Id')
-          .create({ ...profileData, UserId: firstUserId });
+          .create({ ...ProfileData, UserId: firstUserId });
         await db.user.select('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user',
         });
 
@@ -1508,12 +1511,12 @@ describe('belongsTo', () => {
       });
 
       it('should set foreignKey of current record with provided primaryKey in batch update', async () => {
-        const UserId = await db.user.get('Id').create(userData);
+        const UserId = await db.user.get('Id').create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId },
-          { ...profileData, UserId },
+          { ...ProfileData, UserId },
+          { ...ProfileData, UserId },
         ]);
-        const user = await db.user.select('Id').create(userData);
+        const user = await db.user.select('Id').create(UserData);
 
         const updatedUserIds = await db.profile
           .pluck('UserId')
@@ -1528,12 +1531,12 @@ describe('belongsTo', () => {
       });
 
       it('should fail to set foreignKey of current record in a batch update when `on` condition does not match', async () => {
-        const UserId = await db.user.get('Id').create(userData);
+        const UserId = await db.user.get('Id').create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId },
-          { ...profileData, UserId },
+          { ...ProfileData, UserId },
+          { ...ProfileData, UserId },
         ]);
-        const user = await db.user.select('Id').create(userData);
+        const user = await db.user.select('Id').create(UserData);
 
         const q = db.profile.where({ Id: { in: profileIds } }).update({
           activeUser: {
@@ -1547,13 +1550,13 @@ describe('belongsTo', () => {
       });
 
       it('should set foreignKey of current record from found related record in batch update', async () => {
-        const firstUserId = await db.user.get('Id').create(userData);
+        const firstUserId = await db.user.get('Id').create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId: firstUserId },
-          { ...profileData, UserId: firstUserId },
+          { ...ProfileData, UserId: firstUserId },
+          { ...ProfileData, UserId: firstUserId },
         ]);
         const user = await db.user.select('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user',
         });
 
@@ -1570,13 +1573,13 @@ describe('belongsTo', () => {
       });
 
       it('should fail to set foreignKey of current record in a batch update when `on` condition does not match', async () => {
-        const firstUserId = await db.user.get('Id').create(userData);
+        const firstUserId = await db.user.get('Id').create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId: firstUserId },
-          { ...profileData, UserId: firstUserId },
+          { ...ProfileData, UserId: firstUserId },
+          { ...ProfileData, UserId: firstUserId },
         ]);
         await db.user.select('Id').create({
-          ...userData,
+          ...UserData,
           Name: 'user',
         });
 
@@ -1595,7 +1598,7 @@ describe('belongsTo', () => {
       it('should nullify foreignKey and delete related record', async () => {
         const { Id, UserId } = await db.profile
           .select('Id', 'UserId')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const profile = await db.profile
           .select('UserId')
@@ -1615,7 +1618,7 @@ describe('belongsTo', () => {
       it('should nullify but not delete related record when `on` condition does not match', async () => {
         const { Id, UserId } = await db.profile
           .select('Id', 'UserId')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const profile = await db.profile
           .select('UserId')
@@ -1633,10 +1636,10 @@ describe('belongsTo', () => {
       });
 
       it('should nullify foreignKey and delete related record in batch update', async () => {
-        const user = await db.user.selectAll().create(userData);
+        const user = await db.user.selectAll().create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId: user.Id },
-          { ...profileData, UserId: user.Id },
+          { ...ProfileData, UserId: user.Id },
+          { ...ProfileData, UserId: user.Id },
         ]);
 
         const updatedUserIds = await db.profile
@@ -1655,10 +1658,10 @@ describe('belongsTo', () => {
       });
 
       it('should nullify but not delete related record in batch update when `on` condition does not match', async () => {
-        const user = await db.user.selectAll().create(userData);
+        const user = await db.user.selectAll().create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId: user.Id, Active: true },
-          { ...profileData, UserId: user.Id },
+          { ...ProfileData, UserId: user.Id, Active: true },
+          { ...ProfileData, UserId: user.Id },
         ]);
 
         const updatedUserIds = await db.profile
@@ -1685,7 +1688,7 @@ describe('belongsTo', () => {
         const profileWithUserData = {
           Bio: 'bio',
           user: {
-            create: userData,
+            create: UserData,
           },
         };
 
@@ -1733,7 +1736,7 @@ describe('belongsTo', () => {
       it('should update related record', async () => {
         const { Id, UserId } = await db.profile
           .select('Id', 'UserId')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const updated = await db.profile.find(Id).update({
           user: {
@@ -1752,7 +1755,7 @@ describe('belongsTo', () => {
       it('should not update related records when `on` condition does not match', async () => {
         const { Id, UserId } = await db.profile
           .select('Id', 'UserId')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const count = await db.profile.find(Id).update({
           activeUser: {
@@ -1765,13 +1768,13 @@ describe('belongsTo', () => {
         expect(count).toBe(1);
 
         const user = await db.user.findBy({ Id: UserId });
-        expect(user.Name).toBe(userData.Name);
+        expect(user.Name).toBe(UserData.Name);
       });
 
       it('should update related records in batch update', async () => {
         const profiles = await db.profile.select('Id', 'UserId').createMany([
-          { Bio: 'bio', user: { create: userData } },
-          { Bio: 'bio', user: { create: userData } },
+          { Bio: 'bio', user: { create: UserData } },
+          { Bio: 'bio', user: { create: UserData } },
         ]);
 
         const count = await db.profile
@@ -1794,8 +1797,8 @@ describe('belongsTo', () => {
 
       it('should update only matching by `on` condition records in a batch update', async () => {
         const profiles = await db.profile.select('Id', 'UserId').createMany([
-          { Bio: 'bio', user: { create: { ...userData, Active: true } } },
-          { Bio: 'bio', user: { create: userData } },
+          { Bio: 'bio', user: { create: { ...UserData, Active: true } } },
+          { Bio: 'bio', user: { create: UserData } },
         ]);
 
         const count = await db.profile
@@ -1817,7 +1820,7 @@ describe('belongsTo', () => {
           })
           .order('Id');
 
-        expect(updatedNames).toEqual(['new name', userData.Name]);
+        expect(updatedNames).toEqual(['new name', UserData.Name]);
       });
 
       describe('relation callbacks', () => {
@@ -1829,7 +1832,7 @@ describe('belongsTo', () => {
         const profileWithUserData = {
           Bio: 'bio',
           user: {
-            create: userData,
+            create: UserData,
           },
         };
 
@@ -1881,7 +1884,7 @@ describe('belongsTo', () => {
         const profile = await db.profile.create({
           Bio: 'bio',
           user: {
-            create: userData,
+            create: UserData,
           },
         });
 
@@ -1891,7 +1894,7 @@ describe('belongsTo', () => {
               update: {
                 Name: 'updated',
               },
-              create: userData,
+              create: UserData,
             },
           },
         });
@@ -1903,7 +1906,7 @@ describe('belongsTo', () => {
       });
 
       it('should create related record if it does not exist', async () => {
-        const profile = await db.profile.create(profileData);
+        const profile = await db.profile.create(ProfileData);
 
         const count = await db.profile.find(profile.Id).update({
           user: {
@@ -1912,7 +1915,7 @@ describe('belongsTo', () => {
                 Name: 'updated',
               },
               create: {
-                ...userData,
+                ...UserData,
                 Name: 'created',
               },
             },
@@ -1930,7 +1933,7 @@ describe('belongsTo', () => {
       });
 
       it('should create related record if it does not exist with a data from a callback', async () => {
-        const profile = await db.profile.create(profileData);
+        const profile = await db.profile.create(ProfileData);
 
         const updated = await db.profile
           .selectAll()
@@ -1942,7 +1945,7 @@ describe('belongsTo', () => {
                   Name: 'updated',
                 },
                 create: () => ({
-                  ...userData,
+                  ...UserData,
                   Name: 'created',
                 }),
               },
@@ -1957,7 +1960,7 @@ describe('belongsTo', () => {
         const profile = await db.profile.create({
           Bio: 'bio',
           user: {
-            create: userData,
+            create: UserData,
           },
         });
 
@@ -1971,7 +1974,7 @@ describe('belongsTo', () => {
                   Name: 'updated',
                 },
                 create: {
-                  ...userData,
+                  ...UserData,
                   Name: 'created',
                 },
               },
@@ -1992,7 +1995,7 @@ describe('belongsTo', () => {
                   Name: 'updated',
                 },
                 create: {
-                  ...userData,
+                  ...UserData,
                   Name: 'created',
                 },
               },
@@ -2016,7 +2019,7 @@ describe('belongsTo', () => {
               update: {
                 Name: 'new name',
               },
-              create: userData,
+              create: UserData,
             },
           },
         };
@@ -2027,7 +2030,7 @@ describe('belongsTo', () => {
             .create({
               Bio: 'bio',
               user: {
-                create: userData,
+                create: UserData,
               },
             });
 
@@ -2046,7 +2049,7 @@ describe('belongsTo', () => {
         it('should invoke create callbacks when creating', async () => {
           resetMocks();
 
-          const Id = await db.profile.get('Id').create(profileData);
+          const Id = await db.profile.get('Id').create(ProfileData);
 
           const count = await db.profile.find(Id).update(data);
 
@@ -2067,14 +2070,14 @@ describe('belongsTo', () => {
       it('should create new related record and update foreignKey', async () => {
         const profileId = await db.profile
           .get('Id')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const updated = await db.profile
           .selectAll()
           .find(profileId)
           .update({
             user: {
-              create: { ...userData, Name: 'created' },
+              create: { ...UserData, Name: 'created' },
             },
           });
 
@@ -2085,14 +2088,14 @@ describe('belongsTo', () => {
       it('should create new related record using `on` conditions and update foreignKey', async () => {
         const profileId = await db.profile
           .get('Id')
-          .create({ Bio: 'bio', user: { create: userData } });
+          .create({ Bio: 'bio', user: { create: UserData } });
 
         const updated = await db.profile
           .selectAll()
           .find(profileId)
           .update({
             activeUser: {
-              create: { ...userData, Name: 'created' },
+              create: { ...UserData, Name: 'created' },
             },
           });
 
@@ -2101,10 +2104,10 @@ describe('belongsTo', () => {
       });
 
       it('should create a new related record and update foreignKey in batch update', async () => {
-        const UserId = await db.user.get('Id').create(userData);
+        const UserId = await db.user.get('Id').create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId },
-          { ...profileData, UserId },
+          { ...ProfileData, UserId },
+          { ...ProfileData, UserId },
         ]);
 
         const updatedUserIds = await db.profile
@@ -2112,7 +2115,7 @@ describe('belongsTo', () => {
           .where({ Id: { in: profileIds } })
           .update({
             user: {
-              create: { ...userData, Name: 'created' },
+              create: { ...UserData, Name: 'created' },
             },
           });
 
@@ -2123,10 +2126,10 @@ describe('belongsTo', () => {
       });
 
       it('should create a new related record with `on` conditions and update foreignKey in batch update', async () => {
-        const UserId = await db.user.get('Id').create(userData);
+        const UserId = await db.user.get('Id').create(UserData);
         const profileIds = await db.profile.pluck('Id').createMany([
-          { ...profileData, UserId },
-          { ...profileData, UserId },
+          { ...ProfileData, UserId },
+          { ...ProfileData, UserId },
         ]);
 
         const updatedUserIds = await db.profile
@@ -2134,7 +2137,7 @@ describe('belongsTo', () => {
           .where({ Id: { in: profileIds } })
           .update({
             activeUser: {
-              create: { ...userData, Name: 'created' },
+              create: { ...UserData, Name: 'created' },
             },
           });
 
@@ -2152,15 +2155,15 @@ describe('belongsTo', () => {
 
         const data = {
           user: {
-            create: userData,
+            create: UserData,
           },
         };
 
         it('should invoke callbacks', async () => {
-          const UserId = await db.user.get('Id').create(userData);
+          const UserId = await db.user.get('Id').create(UserData);
           const Id = await db.profile
             .get('Id')
-            .create({ ...profileData, UserId });
+            .create({ ...ProfileData, UserId });
 
           const count = await db.profile.find(Id).update(data);
 
@@ -2174,10 +2177,10 @@ describe('belongsTo', () => {
         });
 
         it('should invoke callbacks in a batch update', async () => {
-          const UserId = await db.user.get('Id').create(userData);
+          const UserId = await db.user.get('Id').create(UserData);
           const ids = await db.profile.pluck('Id').createMany([
-            { ...profileData, UserId },
-            { ...profileData, UserId },
+            { ...ProfileData, UserId },
+            { ...ProfileData, UserId },
           ]);
 
           resetMocks();
@@ -2241,7 +2244,7 @@ describe('belongsTo', () => {
     it('should be selectable', async () => {
       const id = await db.profile
         .get('Id')
-        .create({ ...profileData, UserId: null });
+        .create({ ...ProfileData, UserId: null });
 
       const result = await db.profile.select('Id', {
         user: (q) => q.user,

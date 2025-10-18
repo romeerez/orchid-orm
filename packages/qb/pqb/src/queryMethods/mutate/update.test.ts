@@ -1028,4 +1028,18 @@ describe('update', () => {
       expect(res).toEqual([userData.name]);
     });
   });
+
+  // TODO:
+  // describe('update from', () => {
+  //   it('can update records in one table from another', async () => {
+  //     const res = User.updateTable(
+  //       (q) => Message.where({ authorId: q.ref('id') }),
+  //       {
+  //         text: (q) => q.ref('text'),
+  //       },
+  //     );
+  //
+  //     const hasWhere = res.meta.hasWhere;
+  //   });
+  // });
 });

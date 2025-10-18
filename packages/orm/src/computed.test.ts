@@ -1,14 +1,14 @@
+import { useTestORM } from './test-utils/orm.test-utils';
+import { orchidORMWithAdapter } from './orm';
+import { pick } from 'orchid-core';
 import {
   BaseTable,
   db,
-  profileData,
   sql,
-  userData,
-  useTestORM,
-} from './test-utils/orm.test-utils';
-import { orchidORMWithAdapter } from './orm';
-import { pick } from 'orchid-core';
-import { assertType } from 'test-utils';
+  assertType,
+  ProfileData,
+  UserData,
+} from 'test-utils';
 
 describe('computed', () => {
   useTestORM();
@@ -86,12 +86,12 @@ describe('computed', () => {
     const userId = String(
       await local.user
         .get('Id')
-        .insert(pick(userData, ['Name', 'Password', 'UserKey'])),
+        .insert(pick(UserData, ['Name', 'Password', 'UserKey'])),
     );
 
     profileId = String(
       await local.profile.get('Id').insert({
-        ProfileKey: profileData.ProfileKey,
+        ProfileKey: ProfileData.ProfileKey,
         UserId: userId,
         Bio: 'bio',
       }),
@@ -132,9 +132,9 @@ describe('computed', () => {
         {
           record: {
             Id: profileId,
-            sqlComputed: `bio ${userData.UserKey}`,
+            sqlComputed: `bio ${UserData.UserKey}`,
             sqlComputedDecimal: 1,
-            depSql: `bio ${userData.UserKey}dep`,
+            depSql: `bio ${UserData.UserKey}dep`,
             runtimeComputed: `${profileId} bio`,
             batchComputed: `${profileId} bio`,
           },
@@ -177,9 +177,9 @@ describe('computed', () => {
           records: [
             {
               Id: profileId,
-              sqlComputed: `bio ${userData.UserKey}`,
+              sqlComputed: `bio ${UserData.UserKey}`,
               sqlComputedDecimal: 1,
-              depSql: `bio ${userData.UserKey}dep`,
+              depSql: `bio ${UserData.UserKey}dep`,
               runtimeComputed: `${profileId} bio`,
               batchComputed: `${profileId} bio`,
             },
@@ -210,9 +210,9 @@ describe('computed', () => {
 
       expect(res).toEqual([
         {
-          sc: `bio ${userData.UserKey}`,
+          sc: `bio ${UserData.UserKey}`,
           scd: 1,
-          ds: `bio ${userData.UserKey}dep`,
+          ds: `bio ${UserData.UserKey}dep`,
           rc: `${profileId} bio`,
           bc: `${profileId} bio`,
         },

@@ -1,30 +1,33 @@
 import {
-  chatData,
   chatSelectAll,
-  db,
-  messageData,
   messageSelectAll,
-  Post,
-  postData,
   postSelectAll,
-  PostTag,
-  postTagData,
   postTagSelectAll,
   postTagSelectTableAll,
-  profileData,
   profileSelectAll,
-  tagData,
-  User,
-  userData,
   userJsonBuildObject,
   userSelectAll,
   userSelectAliasedAs,
   useTestORM,
   userSelectAs,
 } from '../test-utils/orm.test-utils';
-import { assertType, expectSql } from 'test-utils';
+import {
+  db,
+  Post,
+  PostTag,
+  User,
+  assertType,
+  expectSql,
+  TagData,
+  PostTagData,
+  PostData,
+  MessageData,
+  ChatData,
+  ProfileData,
+  UserData,
+} from 'test-utils';
 
-const activeUserData = { ...userData, Active: true };
+const activeUserData = { ...UserData, Active: true };
 
 describe('relations chain', () => {
   useTestORM();
@@ -131,7 +134,7 @@ describe('relations chain', () => {
   describe('belongsTo', () => {
     it('should handle chained query', async () => {
       await db.user.pluck('Id').createMany(
-        [userData, userData].map((data) => ({
+        [UserData, UserData].map((data) => ({
           ...data,
           profile: {
             create: {
@@ -145,7 +148,7 @@ describe('relations chain', () => {
       const query = db.profile
         .where({ Bio: 'bio' })
         .chain('user')
-        .where({ Name: userData.Name });
+        .where({ Name: UserData.Name });
 
       expectSql(
         query.toSQL(),
@@ -171,7 +174,7 @@ describe('relations chain', () => {
 
     it('should handle chained query with limit', async () => {
       await db.user.pluck('Id').createMany(
-        [userData, userData].map((data) => ({
+        [UserData, UserData].map((data) => ({
           ...data,
           profile: {
             create: {
@@ -186,7 +189,7 @@ describe('relations chain', () => {
         .where({ Bio: 'bio' })
         .chain('user')
         .limit(3)
-        .where({ Name: userData.Name });
+        .where({ Name: UserData.Name });
 
       expectSql(
         query.toSQL(),
@@ -227,7 +230,7 @@ describe('relations chain', () => {
       const query = db.profile
         .where({ Bio: 'bio' })
         .chain('activeUser')
-        .where({ Name: userData.Name });
+        .where({ Name: UserData.Name });
 
       expectSql(
         query.toSQL(),
@@ -328,13 +331,13 @@ describe('relations chain', () => {
 
     it('should disable create and delete, for `on` as well', () => {
       // @ts-expect-error belongsTo should not have chained create
-      db.profile.chain('user').create(userData);
+      db.profile.chain('user').create(UserData);
 
       // @ts-expect-error belongsTo should not have chained create
       db.profile.chain('user').find(1).delete();
 
       // @ts-expect-error belongsTo should not have chained create
-      db.profile.chain('activeUser').create(userData);
+      db.profile.chain('activeUser').create(UserData);
 
       // @ts-expect-error belongsTo should not have chained create
       db.profile.chain('activeUser').find(1).delete();
@@ -348,28 +351,28 @@ describe('relations chain', () => {
     });
 
     it('should support chaining with query query', async () => {
-      const chatId = await db.chat.get('IdOfChat').create(chatData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
       await db.message.createMany([
         {
-          ...messageData,
+          ...MessageData,
           Text: 'message c',
           Decimal: 1,
           sender: {
-            create: { ...userData, Name: 'user a' },
+            create: { ...UserData, Name: 'user a' },
           },
           ChatId: chatId,
         },
         {
-          ...messageData,
+          ...MessageData,
           Text: 'message c',
           Decimal: 2,
           sender: {
-            create: { ...userData, Name: 'user b' },
+            create: { ...UserData, Name: 'user b' },
           },
           ChatId: chatId,
         },
         {
-          ...messageData,
+          ...MessageData,
           Text: 'message b',
           Decimal: 3,
           sender: {
@@ -378,11 +381,11 @@ describe('relations chain', () => {
           ChatId: chatId,
         },
         {
-          ...messageData,
+          ...MessageData,
           Text: 'message a',
           Decimal: 4,
           sender: {
-            create: { ...userData, Name: 'user c' },
+            create: { ...UserData, Name: 'user c' },
           },
           ChatId: chatId,
         },
@@ -401,8 +404,8 @@ describe('relations chain', () => {
                 d: 'messages.Decimal',
               })
               .where({
-                'messages.MessageKey': messageData.MessageKey,
-                Name: { not: userData.Name },
+                'messages.MessageKey': MessageData.MessageKey,
+                Name: { not: UserData.Name },
               })
               .order({ Name: 'ASC', 'messages.createdAt': 'DESC' })
               .limit(2)
@@ -450,7 +453,7 @@ describe('relations chain', () => {
             ) "users" ON true
             LIMIT 1
           `,
-        [messageData.MessageKey, userData.Name, 2, 1],
+        [MessageData.MessageKey, UserData.Name, 2, 1],
       );
 
       const result = await q;
@@ -470,16 +473,16 @@ describe('relations chain', () => {
 
     it('should support chained select of a single record', async () => {
       await db.tag.create({
-        ...tagData,
+        ...TagData,
         postTags: {
           create: [
             {
-              ...postTagData,
+              ...PostTagData,
               post: {
                 create: {
-                  ...postData,
+                  ...PostData,
                   user: {
-                    create: userData,
+                    create: UserData,
                   },
                 },
               },
@@ -543,16 +546,16 @@ describe('relations chain', () => {
 
     it('should support chained select of a single record via where exists', async () => {
       await db.tag.create({
-        ...tagData,
+        ...TagData,
         postTags: {
           create: [
             {
-              ...postTagData,
+              ...PostTagData,
               post: {
                 create: {
-                  ...postData,
+                  ...PostData,
                   user: {
-                    create: userData,
+                    create: UserData,
                   },
                 },
               },
@@ -612,16 +615,16 @@ describe('relations chain', () => {
 
     it('should support chained select using `on`', async () => {
       await db.tag.create({
-        ...tagData,
+        ...TagData,
         postTags: {
           create: [
             {
-              ...postTagData,
+              ...PostTagData,
               post: {
                 create: {
-                  ...postData,
+                  ...PostData,
                   user: {
-                    create: { ...userData, Active: true },
+                    create: { ...UserData, Active: true },
                   },
                 },
               },
@@ -687,16 +690,16 @@ describe('relations chain', () => {
 
     it('should support chained select using `on` via where exists', async () => {
       await db.tag.create({
-        ...tagData,
+        ...TagData,
         postTags: {
           create: [
             {
-              ...postTagData,
+              ...PostTagData,
               post: {
                 create: {
-                  ...postData,
+                  ...PostData,
                   user: {
-                    create: { ...userData, Active: true },
+                    create: { ...UserData, Active: true },
                   },
                 },
               },
@@ -996,16 +999,16 @@ describe('relations chain', () => {
 
     it('should support chained select returning multiple', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         posts: {
           create: [
             {
-              ...postData,
+              ...PostData,
               Body: 'post 2',
               postTags: {
                 create: [
                   {
-                    ...postTagData,
+                    ...PostTagData,
                     Tag: 'tag 1',
                     tag: {
                       create: { Tag: 'tag 1' },
@@ -1015,12 +1018,12 @@ describe('relations chain', () => {
               },
             },
             {
-              ...postData,
+              ...PostData,
               Body: 'post 1',
               postTags: {
                 create: [
                   {
-                    ...postTagData,
+                    ...PostTagData,
                     Tag: 'tag 2',
                     tag: {
                       create: { Tag: 'tag 2' },
@@ -1085,16 +1088,16 @@ describe('relations chain', () => {
 
     it('should support chained select returning single', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         onePost: {
           create: {
-            ...postData,
+            ...PostData,
             postTags: {
               create: [
                 {
-                  ...postTagData,
+                  ...PostTagData,
                   tag: {
-                    create: tagData,
+                    create: TagData,
                   },
                 },
               ],
@@ -1145,16 +1148,16 @@ describe('relations chain', () => {
 
     it('should support chained select returning single via where exists', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         onePost: {
           create: {
-            ...postData,
+            ...PostData,
             postTags: {
               create: [
                 {
-                  ...postTagData,
+                  ...PostTagData,
                   tag: {
-                    create: tagData,
+                    create: TagData,
                   },
                 },
               ],
@@ -1200,18 +1203,18 @@ describe('relations chain', () => {
 
     it('should support chained select using `on`', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         onePost: {
           create: {
-            ...postData,
+            ...PostData,
             Active: true,
             postTags: {
               create: [
                 {
-                  ...postTagData,
+                  ...PostTagData,
                   Active: true,
                   tag: {
-                    create: tagData,
+                    create: TagData,
                   },
                 },
               ],
@@ -1259,18 +1262,18 @@ describe('relations chain', () => {
 
     it('should support chained select using `on` via where exists', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         onePost: {
           create: {
-            ...postData,
+            ...PostData,
             Active: true,
             postTags: {
               create: [
                 {
-                  ...postTagData,
+                  ...PostTagData,
                   Active: true,
                   tag: {
-                    create: tagData,
+                    create: TagData,
                   },
                 },
               ],
@@ -1483,7 +1486,7 @@ describe('relations chain', () => {
 
     it('should disable create', () => {
       // @ts-expect-error hasOne with through option should not have chained create
-      db.message.chain('profile').create(chatData);
+      db.message.chain('profile').create(ChatData);
     });
 
     it('should support chained delete', () => {
@@ -1548,15 +1551,15 @@ describe('relations chain', () => {
 
     it('should support chained select returning multiple', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         posts: {
           create: [
             {
-              ...postData,
+              ...PostData,
               Body: 'post 2',
               onePostTag: {
                 create: {
-                  ...postTagData,
+                  ...PostTagData,
                   Tag: 'tag 1',
                   tag: {
                     create: { Tag: 'tag 1' },
@@ -1565,11 +1568,11 @@ describe('relations chain', () => {
               },
             },
             {
-              ...postData,
+              ...PostData,
               Body: 'post 1',
               onePostTag: {
                 create: {
-                  ...postTagData,
+                  ...PostTagData,
                   Tag: 'tag 2',
                   tag: {
                     create: { Tag: 'tag 2' },
@@ -1633,13 +1636,13 @@ describe('relations chain', () => {
 
     it('should support chained select returning single', async () => {
       await db.message.create({
-        ...messageData,
-        chat: { create: chatData },
+        ...MessageData,
+        chat: { create: ChatData },
         sender: {
           create: {
-            ...userData,
-            profile: { create: profileData },
-            posts: { create: [postData] },
+            ...UserData,
+            profile: { create: ProfileData },
+            posts: { create: [PostData] },
           },
         },
       });
@@ -1683,18 +1686,18 @@ describe('relations chain', () => {
 
       assertType<typeof result, { item: { Body: string } | undefined }>();
 
-      expect(result).toEqual({ item: { Body: postData.Body } });
+      expect(result).toEqual({ item: { Body: PostData.Body } });
     });
 
     it('should support chained select returning single via where exists', async () => {
       await db.message.create({
-        ...messageData,
-        chat: { create: chatData },
+        ...MessageData,
+        chat: { create: ChatData },
         sender: {
           create: {
-            ...userData,
-            profile: { create: profileData },
-            posts: { create: [postData] },
+            ...UserData,
+            profile: { create: ProfileData },
+            posts: { create: [PostData] },
           },
         },
       });
@@ -1740,19 +1743,19 @@ describe('relations chain', () => {
 
       assertType<typeof result, { item: { Body: string } | undefined }>();
 
-      expect(result).toEqual({ item: { Body: postData.Body } });
+      expect(result).toEqual({ item: { Body: PostData.Body } });
     });
 
     it('should support chained select using `on`', async () => {
       await db.message.create({
-        ...messageData,
-        chat: { create: chatData },
+        ...MessageData,
+        chat: { create: ChatData },
         sender: {
           create: {
-            ...userData,
+            ...UserData,
             Active: true,
-            profile: { create: { ...profileData, Active: true } },
-            posts: { create: [{ ...postData, Active: true }] },
+            profile: { create: { ...ProfileData, Active: true } },
+            posts: { create: [{ ...PostData, Active: true }] },
           },
         },
       });
@@ -1804,19 +1807,19 @@ describe('relations chain', () => {
 
       assertType<typeof result, { item: { Body: string } | undefined }>();
 
-      expect(result).toEqual({ item: { Body: postData.Body } });
+      expect(result).toEqual({ item: { Body: PostData.Body } });
     });
 
     it('should support chained select using `on` via where exists', async () => {
       await db.message.create({
-        ...messageData,
-        chat: { create: chatData },
+        ...MessageData,
+        chat: { create: ChatData },
         sender: {
           create: {
-            ...userData,
+            ...UserData,
             Active: true,
-            profile: { create: { ...profileData, Active: true } },
-            posts: { create: [{ ...postData, Active: true }] },
+            profile: { create: { ...ProfileData, Active: true } },
+            posts: { create: [{ ...PostData, Active: true }] },
           },
         },
       });
@@ -1867,19 +1870,19 @@ describe('relations chain', () => {
 
       assertType<typeof result, { item: { Body: string } | undefined }>();
 
-      expect(result).toEqual({ item: { Body: postData.Body } });
+      expect(result).toEqual({ item: { Body: PostData.Body } });
     });
 
     it('should support chained select using `on`', async () => {
       await db.message.create({
-        ...messageData,
-        chat: { create: chatData },
+        ...MessageData,
+        chat: { create: ChatData },
         sender: {
           create: {
-            ...userData,
+            ...UserData,
             Active: true,
-            profile: { create: { ...profileData, Active: true } },
-            posts: { create: [{ ...postData, Active: true }] },
+            profile: { create: { ...ProfileData, Active: true } },
+            posts: { create: [{ ...PostData, Active: true }] },
           },
         },
       });
@@ -1932,19 +1935,19 @@ describe('relations chain', () => {
 
       assertType<typeof result, { item: { Body: string } | undefined }>();
 
-      expect(result).toEqual({ item: { Body: postData.Body } });
+      expect(result).toEqual({ item: { Body: PostData.Body } });
     });
 
     it('should support chained select using `on` via where exists', async () => {
       await db.message.create({
-        ...messageData,
-        chat: { create: chatData },
+        ...MessageData,
+        chat: { create: ChatData },
         sender: {
           create: {
-            ...userData,
+            ...UserData,
             Active: true,
-            profile: { create: { ...profileData, Active: true } },
-            posts: { create: [{ ...postData, Active: true }] },
+            profile: { create: { ...ProfileData, Active: true } },
+            posts: { create: [{ ...PostData, Active: true }] },
           },
         },
       });
@@ -1995,7 +1998,7 @@ describe('relations chain', () => {
 
       assertType<typeof result, { item: { Body: string } | undefined }>();
 
-      expect(result).toEqual({ item: { Body: postData.Body } });
+      expect(result).toEqual({ item: { Body: PostData.Body } });
     });
   });
 
@@ -2187,35 +2190,35 @@ describe('relations chain', () => {
       });
 
       it('should support insert', async () => {
-        const user = await db.user.create(userData);
+        const user = await db.user.create(UserData);
 
         const title = await db.user
           .find(user.Id)
           .chain('posts')
-          .insert(postData)
+          .insert(PostData)
           .get('Title');
 
         expect(title).toBe(user.UserKey);
       });
 
       it('should support createMany', async () => {
-        const user = await db.user.create(userData);
+        const user = await db.user.create(UserData);
 
         const res = await db.user
           .find(user.Id)
           .chain('posts')
-          .createMany([postData, postData]);
+          .createMany([PostData, PostData]);
 
         expect(res).toMatchObject([
           {
             UserId: user.Id,
             Title: user.UserKey,
-            Body: postData.Body,
+            Body: PostData.Body,
           },
           {
             UserId: user.Id,
             Title: user.UserKey,
-            Body: postData.Body,
+            Body: PostData.Body,
           },
         ]);
       });
@@ -2246,17 +2249,17 @@ describe('relations chain', () => {
 
     it('should support chained select', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         posts: {
           create: [
             {
-              ...postData,
+              ...PostData,
               postTags: {
                 create: [
                   {
-                    ...postTagData,
+                    ...PostTagData,
                     tag: {
-                      create: tagData,
+                      create: TagData,
                     },
                   },
                 ],
@@ -2309,23 +2312,23 @@ describe('relations chain', () => {
       assertType<typeof result, { items: { Tag: string; Body: string }[] }>();
 
       expect(result).toEqual({
-        items: [{ Tag: postTagData.Tag, Body: postData.Body }],
+        items: [{ Tag: PostTagData.Tag, Body: PostData.Body }],
       });
     });
 
     it('should support chained select via where exists', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         posts: {
           create: [
             {
-              ...postData,
+              ...PostData,
               postTags: {
                 create: [
                   {
-                    ...postTagData,
+                    ...PostTagData,
                     tag: {
-                      create: tagData,
+                      create: TagData,
                     },
                   },
                 ],
@@ -2369,23 +2372,23 @@ describe('relations chain', () => {
       assertType<typeof result, { items: { Tag: string }[] }>();
 
       expect(result).toEqual({
-        items: [{ Tag: postTagData.Tag }],
+        items: [{ Tag: PostTagData.Tag }],
       });
     });
 
     it('should support chained select respecting `on` conditions', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         activePosts: {
           create: [
             {
-              ...postData,
+              ...PostData,
               activePostTags: {
                 create: [
                   {
-                    ...postTagData,
+                    ...PostTagData,
                     tag: {
-                      create: tagData,
+                      create: TagData,
                     },
                   },
                 ],
@@ -2441,23 +2444,23 @@ describe('relations chain', () => {
       assertType<typeof result, { items: { Tag: string; Body: string }[] }>();
 
       expect(result).toEqual({
-        items: [{ Tag: postTagData.Tag, Body: postData.Body }],
+        items: [{ Tag: PostTagData.Tag, Body: PostData.Body }],
       });
     });
 
     it('should support chained select respecting `on` conditions via where exists', async () => {
       await db.user.create({
-        ...userData,
+        ...UserData,
         activePosts: {
           create: [
             {
-              ...postData,
+              ...PostData,
               activePostTags: {
                 create: [
                   {
-                    ...postTagData,
+                    ...PostTagData,
                     tag: {
-                      create: tagData,
+                      create: TagData,
                     },
                   },
                 ],
@@ -2504,7 +2507,7 @@ describe('relations chain', () => {
       assertType<typeof result, { items: { Tag: string }[] }>();
 
       expect(result).toEqual({
-        items: [{ Tag: postTagData.Tag }],
+        items: [{ Tag: PostTagData.Tag }],
       });
     });
   });
@@ -2683,9 +2686,9 @@ describe('relations chain', () => {
     describe('chained create', () => {
       it('should have create methods disabled', () => {
         // @ts-expect-error hasMany with through option should not have chained create
-        db.profile.chain('chats').create(chatData);
+        db.profile.chain('chats').create(ChatData);
         // @ts-expect-error hasMany with through option should not have chained createMany
-        db.profile.chain('chats').createMany([chatData, chatData]);
+        db.profile.chain('chats').createMany([ChatData, ChatData]);
       });
     });
 
@@ -2830,9 +2833,9 @@ describe('relations chain', () => {
     describe('chained create', () => {
       it('should disable create', () => {
         // @ts-expect-error hasMany with through option should not have chained create
-        db.chat.chain('profiles').create(chatData);
+        db.chat.chain('profiles').create(ChatData);
         // @ts-expect-error hasMany with through option should not have chained createMany
-        db.chat.chain('profiles').createMany([chatData, chatData]);
+        db.chat.chain('profiles').createMany([ChatData, ChatData]);
       });
     });
 
@@ -3257,7 +3260,7 @@ describe('relations chain', () => {
 
     describe('chained create', () => {
       it('should create based on find query', async () => {
-        const user = await db.user.create(userData);
+        const user = await db.user.create(UserData);
 
         const chat = await db.user.find(user.Id).chain('chats').create({
           Title: 'title',
@@ -3271,7 +3274,7 @@ describe('relations chain', () => {
       });
 
       it('should create based on find query using `on`', async () => {
-        const user = await db.user.create(userData);
+        const user = await db.user.create(UserData);
 
         const chat = await db.user.find(user.Id).chain('activeChats').create({
           Title: 'title',
@@ -3308,7 +3311,7 @@ describe('relations chain', () => {
       });
 
       it('supports createMany', async () => {
-        const user = await db.user.create(userData);
+        const user = await db.user.create(UserData);
 
         const data = [
           {

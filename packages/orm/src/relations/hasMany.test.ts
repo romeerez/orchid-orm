@@ -1,15 +1,6 @@
 import { Db, Query } from 'pqb';
 import {
-  Chat,
-  Message,
-  BaseTable,
-  Profile,
-  User,
-  db,
   useRelationCallback,
-  messageData,
-  chatData,
-  userData,
   chatSelectAll,
   messageSelectAll,
   profileSelectAll,
@@ -18,10 +9,22 @@ import {
   messageRowToJSON,
   messageJSONBuildObject,
   userRowToJSON,
-  postData,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
-import { assertType, expectSql } from 'test-utils';
+import {
+  Chat,
+  Message,
+  BaseTable,
+  Profile,
+  User,
+  db,
+  assertType,
+  expectSql,
+  PostData,
+  MessageData,
+  ChatData,
+  UserData,
+} from 'test-utils';
 import { omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
@@ -29,7 +32,7 @@ const ormParams = {
   db: db.$qb,
 };
 
-const activeMessageData = { ...messageData, Active: true };
+const activeMessageData = { ...MessageData, Active: true };
 
 describe('hasMany', () => {
   useTestORM();
@@ -102,12 +105,12 @@ describe('hasMany', () => {
 
   describe('queryRelated', () => {
     it('should query related records', async () => {
-      const userId = await db.user.get('Id').create(userData);
-      const ChatId = await db.chat.get('IdOfChat').create(chatData);
+      const userId = await db.user.get('Id').create(UserData);
+      const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
       await db.message.createMany([
-        { ...messageData, AuthorId: userId, ChatId },
-        { ...messageData, AuthorId: userId, ChatId },
+        { ...MessageData, AuthorId: userId, ChatId },
+        { ...MessageData, AuthorId: userId, ChatId },
       ]);
 
       const user = await db.user.find(userId);
@@ -126,15 +129,15 @@ describe('hasMany', () => {
 
       const messages = await q;
 
-      expect(messages).toMatchObject([messageData, messageData]);
+      expect(messages).toMatchObject([MessageData, MessageData]);
     });
 
     it('should query related records using `on`', async () => {
-      const userId = await db.user.get('Id').create(userData);
-      const ChatId = await db.chat.get('IdOfChat').create(chatData);
+      const userId = await db.user.get('Id').create(UserData);
+      const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
       await db.message.createMany([
-        { ...messageData, AuthorId: userId, ChatId },
+        { ...MessageData, AuthorId: userId, ChatId },
         { ...activeMessageData, AuthorId: userId, ChatId },
       ]);
 
@@ -532,12 +535,12 @@ describe('hasMany', () => {
 
   describe('select', () => {
     it('should be selectable', async () => {
-      const ChatId = await db.chat.get('IdOfChat').create(chatData);
-      const AuthorId = await db.user.get('Id').create(userData);
+      const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+      const AuthorId = await db.user.get('Id').create(UserData);
       const messageId = await db.message.get('Id').create({
         ChatId,
         AuthorId,
-        ...messageData,
+        ...MessageData,
       });
 
       const q = db.user.as('u').select('Id', {
@@ -556,7 +559,7 @@ describe('hasMany', () => {
               Decimal: null,
               DeletedAt: null,
               Active: null,
-              ...messageData,
+              ...MessageData,
               createdAt: expect.any(Date),
               updatedAt: expect.any(Date),
             },
@@ -590,8 +593,8 @@ describe('hasMany', () => {
     });
 
     it('should be selectable using `on`', async () => {
-      const ChatId = await db.chat.get('IdOfChat').create(chatData);
-      const AuthorId = await db.user.get('Id').create(userData);
+      const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+      const AuthorId = await db.user.get('Id').create(UserData);
       const messageId = await db.message.get('Id').create({
         ChatId,
         AuthorId,
@@ -935,7 +938,7 @@ describe('hasMany', () => {
     const assert = {
       user(user: User, Name: string, Active: boolean | null = null) {
         expect(user).toEqual({
-          ...omit(userData, ['Password']),
+          ...omit(UserData, ['Password']),
           Id: user.Id,
           Name,
           Active,
@@ -991,20 +994,20 @@ describe('hasMany', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           messages: {
             create: [
               {
-                ...messageData,
+                ...MessageData,
                 Text: 'message 1',
                 ChatId,
               },
               {
-                ...messageData,
+                ...MessageData,
                 Text: 'message 2',
                 ChatId,
               },
@@ -1025,20 +1028,20 @@ describe('hasMany', () => {
       });
 
       it('should support create using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeMessages: {
             create: [
               {
-                ...messageData,
+                ...MessageData,
                 Text: 'message 1',
                 ChatId,
               },
               {
-                ...messageData,
+                ...MessageData,
                 Text: 'message 2',
                 ChatId,
               },
@@ -1059,21 +1062,21 @@ describe('hasMany', () => {
       });
 
       it('should support create in batch create', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const user = await db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             messages: {
               create: [
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 1',
                   ChatId,
                 },
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 2',
                   ChatId,
                 },
@@ -1081,17 +1084,17 @@ describe('hasMany', () => {
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             messages: {
               create: [
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 3',
                   ChatId,
                 },
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 4',
                   ChatId,
                 },
@@ -1122,21 +1125,21 @@ describe('hasMany', () => {
       });
 
       it('should support create in batch create using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const user = await db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             activeMessages: {
               create: [
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 1',
                   ChatId,
                 },
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 2',
                   ChatId,
                 },
@@ -1144,17 +1147,17 @@ describe('hasMany', () => {
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             activeMessages: {
               create: [
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 3',
                   ChatId,
                 },
                 {
-                  ...messageData,
+                  ...MessageData,
                   Text: 'message 4',
                   ChatId,
                 },
@@ -1186,7 +1189,7 @@ describe('hasMany', () => {
 
       it('should ignore empty create list', async () => {
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           messages: {
             create: [],
@@ -1203,14 +1206,14 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
           await db.user.create({
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId },
-                { ...messageData, ChatId },
+                { ...MessageData, ChatId },
+                { ...MessageData, ChatId },
               ],
             },
           });
@@ -1225,24 +1228,24 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch create', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
           await db.user.createMany([
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
-                  { ...messageData, ChatId },
-                  { ...messageData, ChatId },
+                  { ...MessageData, ChatId },
+                  { ...MessageData, ChatId },
                 ],
               },
             },
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
-                  { ...messageData, ChatId },
-                  { ...messageData, ChatId },
+                  { ...MessageData, ChatId },
+                  { ...MessageData, ChatId },
                 ],
               },
             },
@@ -1259,11 +1262,11 @@ describe('hasMany', () => {
 
     describe('nested connect', () => {
       it('should support connect', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...UserData, Name: 'tmp' } },
             Text: 'message 1',
           },
           {
@@ -1274,7 +1277,7 @@ describe('hasMany', () => {
         ]);
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           messages: {
             connect: [
@@ -1301,11 +1304,11 @@ describe('hasMany', () => {
       });
 
       it('should support connect using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...UserData, Name: 'tmp' } },
             Text: 'message 1',
             Active: true,
           },
@@ -1318,7 +1321,7 @@ describe('hasMany', () => {
         ]);
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeMessages: {
             connect: [
@@ -1345,11 +1348,11 @@ describe('hasMany', () => {
       });
 
       it('should support connect in batch create', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...UserData, Name: 'tmp' } },
             Text: 'message 1',
           },
           {
@@ -1371,7 +1374,7 @@ describe('hasMany', () => {
 
         const user = await db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             messages: {
               connect: [
@@ -1385,7 +1388,7 @@ describe('hasMany', () => {
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             messages: {
               connect: [
@@ -1422,11 +1425,11 @@ describe('hasMany', () => {
       });
 
       it('should support connect in batch create using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...UserData, Name: 'tmp' } },
             Text: 'message 1',
             Active: true,
           },
@@ -1452,7 +1455,7 @@ describe('hasMany', () => {
 
         const user = await db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             activeMessages: {
               connect: [
@@ -1466,7 +1469,7 @@ describe('hasMany', () => {
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             activeMessages: {
               connect: [
@@ -1504,7 +1507,7 @@ describe('hasMany', () => {
 
       it('should ignore empty connect list', async () => {
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           messages: {
             connect: [],
@@ -1521,14 +1524,14 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const ids = await db.message.pluck('Id').createMany([
-            { ...messageData, ChatId },
-            { ...messageData, ChatId },
+            { ...MessageData, ChatId },
+            { ...MessageData, ChatId },
           ]);
 
           await db.user.create({
-            ...userData,
+            ...UserData,
             messages: {
               connect: [{ Id: ids[0] }, { Id: ids[1] }],
             },
@@ -1543,26 +1546,26 @@ describe('hasMany', () => {
         });
 
         it('should invoke callbacks in a batch create', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
           const ids = await db.message.pluck('Id').createMany([
-            { ...messageData, ChatId },
-            { ...messageData, ChatId },
-            { ...messageData, ChatId },
-            { ...messageData, ChatId },
+            { ...MessageData, ChatId },
+            { ...MessageData, ChatId },
+            { ...MessageData, ChatId },
+            { ...MessageData, ChatId },
           ]);
 
           resetMocks();
 
           await db.user.createMany([
             {
-              ...userData,
+              ...UserData,
               messages: {
                 connect: [{ Id: ids[0] }, { Id: ids[1] }],
               },
             },
             {
-              ...userData,
+              ...UserData,
               messages: {
                 connect: [{ Id: ids[2] }, { Id: ids[3] }],
               },
@@ -1585,25 +1588,25 @@ describe('hasMany', () => {
 
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const messageId = await db.message.get('Id').create({
           ChatId,
-          sender: { create: { ...userData, Name: 'tmp' } },
+          sender: { create: { ...UserData, Name: 'tmp' } },
           Text: 'message 1',
         });
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           messages: {
             connectOrCreate: [
               {
                 where: { Text: 'message 1' },
-                create: { ...messageData, ChatId, Text: 'message 1' },
+                create: { ...MessageData, ChatId, Text: 'message 1' },
               },
               {
                 where: { Text: 'message 2' },
-                create: { ...messageData, ChatId, Text: 'message 2' },
+                create: { ...MessageData, ChatId, Text: 'message 2' },
               },
             ],
           },
@@ -1624,51 +1627,51 @@ describe('hasMany', () => {
       });
 
       it('should support connect or create in batch create', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const [{ Id: message1Id }, { Id: message4Id }] = await db.message
           .select('Id')
           .createMany([
             {
               ChatId,
-              sender: { create: { ...userData, Name: 'tmp' } },
+              sender: { create: { ...UserData, Name: 'tmp' } },
               Text: 'message 1',
             },
             {
               ChatId,
-              sender: { create: { ...userData, Name: 'tmp' } },
+              sender: { create: { ...UserData, Name: 'tmp' } },
               Text: 'message 4',
             },
           ]);
 
         const users = await db.user.createMany([
           {
-            ...userData,
+            ...UserData,
             Name: 'user 1',
             messages: {
               connectOrCreate: [
                 {
                   where: { Text: 'message 1' },
-                  create: { ...messageData, ChatId, Text: 'message 1' },
+                  create: { ...MessageData, ChatId, Text: 'message 1' },
                 },
                 {
                   where: { Text: 'message 2' },
-                  create: { ...messageData, ChatId, Text: 'message 2' },
+                  create: { ...MessageData, ChatId, Text: 'message 2' },
                 },
               ],
             },
           },
           {
-            ...userData,
+            ...UserData,
             Name: 'user 2',
             messages: {
               connectOrCreate: [
                 {
                   where: { Text: 'message 3' },
-                  create: { ...messageData, ChatId, Text: 'message 3' },
+                  create: { ...MessageData, ChatId, Text: 'message 3' },
                 },
                 {
                   where: { Text: 'message 4' },
-                  create: { ...messageData, ChatId, Text: 'message 4' },
+                  create: { ...MessageData, ChatId, Text: 'message 4' },
                 },
               ],
             },
@@ -1700,33 +1703,33 @@ describe('hasMany', () => {
       });
 
       it('should connect or create using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const messageIds = await db.message.get('Id').createMany([
           {
             ChatId,
-            sender: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...UserData, Name: 'tmp' } },
             Text: 'message 1',
             Active: true,
           },
           {
             ChatId,
-            sender: { create: { ...userData, Name: 'tmp' } },
+            sender: { create: { ...UserData, Name: 'tmp' } },
             Text: 'message 2',
           },
         ]);
 
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           activeMessages: {
             connectOrCreate: [
               {
                 where: { Text: 'message 1' },
-                create: { ...messageData, ChatId, Text: 'created 1' },
+                create: { ...MessageData, ChatId, Text: 'created 1' },
               },
               {
                 where: { Text: 'message 2' },
-                create: { ...messageData, ChatId, Text: 'created 2' },
+                create: { ...MessageData, ChatId, Text: 'created 2' },
               },
             ],
           },
@@ -1750,7 +1753,7 @@ describe('hasMany', () => {
 
       it('should ignore empty connectOrCreate list', async () => {
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           Name: 'user 1',
           messages: {
             connectOrCreate: [],
@@ -1770,23 +1773,23 @@ describe('hasMany', () => {
         } = useRelationCallback(db.user.relations.messages, ['Id']);
 
         it('should invoke callbacks when connecting', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const ids = await db.message.pluck('Id').createMany([
-            { ...messageData, ChatId },
-            { ...messageData, ChatId },
+            { ...MessageData, ChatId },
+            { ...MessageData, ChatId },
           ]);
 
           await db.user.create({
-            ...userData,
+            ...UserData,
             messages: {
               connectOrCreate: [
                 {
                   where: { Id: ids[0] },
-                  create: messageData,
+                  create: MessageData,
                 },
                 {
                   where: { Id: ids[1] },
-                  create: messageData,
+                  create: MessageData,
                 },
               ],
             },
@@ -1813,21 +1816,21 @@ describe('hasMany', () => {
         });
 
         it('should invoke callbacks when creating', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
           resetMocks();
 
           await db.user.create({
-            ...userData,
+            ...UserData,
             messages: {
               connectOrCreate: [
                 {
                   where: { Id: 0 },
-                  create: { ...messageData, ChatId },
+                  create: { ...MessageData, ChatId },
                 },
                 {
                   where: { Id: 0 },
-                  create: { ...messageData, ChatId },
+                  create: { ...MessageData, ChatId },
                 },
               ],
             },
@@ -1841,41 +1844,41 @@ describe('hasMany', () => {
         });
 
         it('should invoke callbacks in a batch create', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const ids = await db.message.pluck('Id').createMany([
-            { ...messageData, ChatId },
-            { ...messageData, ChatId },
+            { ...MessageData, ChatId },
+            { ...MessageData, ChatId },
           ]);
 
           resetMocks();
 
           await db.user.createMany([
             {
-              ...userData,
+              ...UserData,
               messages: {
                 connectOrCreate: [
                   {
                     where: { Id: ids[0] },
-                    create: { ...messageData, ChatId },
+                    create: { ...MessageData, ChatId },
                   },
                   {
                     where: { Id: 0 },
-                    create: { ...messageData, ChatId },
+                    create: { ...MessageData, ChatId },
                   },
                 ],
               },
             },
             {
-              ...userData,
+              ...UserData,
               messages: {
                 connectOrCreate: [
                   {
                     where: { Id: ids[1] },
-                    create: { ...messageData, ChatId },
+                    create: { ...MessageData, ChatId },
                   },
                   {
                     where: { Id: 0 },
-                    create: { ...messageData, ChatId },
+                    create: { ...MessageData, ChatId },
                   },
                 ],
               },
@@ -1899,13 +1902,13 @@ describe('hasMany', () => {
   describe('update', () => {
     describe('add', () => {
       it('should connect many related records to one', async () => {
-        const chatId = await db.chat.get('IdOfChat').create(chatData);
+        const chatId = await db.chat.get('IdOfChat').create(ChatData);
 
-        const [user1, user2] = await db.user.createMany([userData, userData]);
+        const [user1, user2] = await db.user.createMany([UserData, UserData]);
 
         const createdMessages = await db.message.createMany([
-          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
-          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
+          { ...MessageData, ChatId: chatId, AuthorId: user1.Id },
+          { ...MessageData, ChatId: chatId, AuthorId: user1.Id },
         ]);
 
         const count = await db.user.find(user2.Id).update({
@@ -1927,13 +1930,13 @@ describe('hasMany', () => {
       });
 
       it('should fail to connect many related records to one when `on` condition does not match', async () => {
-        const chatId = await db.chat.get('IdOfChat').create(chatData);
+        const chatId = await db.chat.get('IdOfChat').create(ChatData);
 
-        const [user1, user2] = await db.user.createMany([userData, userData]);
+        const [user1, user2] = await db.user.createMany([UserData, UserData]);
 
         const createdMessages = await db.message.createMany([
-          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
-          { ...messageData, ChatId: chatId, AuthorId: user1.Id },
+          { ...MessageData, ChatId: chatId, AuthorId: user1.Id },
+          { ...MessageData, ChatId: chatId, AuthorId: user1.Id },
         ]);
 
         const q = db.user.find(user2.Id).update({
@@ -1957,7 +1960,7 @@ describe('hasMany', () => {
       });
 
       it('should throw when no related records were found by a condition', async () => {
-        const user = await db.user.create(userData);
+        const user = await db.user.create(UserData);
 
         const result = await db.user
           .find(user.Id)
@@ -1981,15 +1984,15 @@ describe('hasMany', () => {
       it('should nullify foreignKey', async () => {
         const ChatId = await db.chat
           .get('IdOfChat')
-          .create({ ...chatData, Title: 'chat 1' });
+          .create({ ...ChatData, Title: 'chat 1' });
 
         const UserId = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId: ChatId, Text: 'message 1' },
-              { ...messageData, ChatId: ChatId, Text: 'message 2' },
-              { ...messageData, ChatId: ChatId, Text: 'message 3' },
+              { ...MessageData, ChatId: ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId: ChatId, Text: 'message 2' },
+              { ...MessageData, ChatId: ChatId, Text: 'message 3' },
             ],
           },
         });
@@ -2010,15 +2013,15 @@ describe('hasMany', () => {
       it('should nullify foreignKey for matching records using `on`', async () => {
         const ChatId = await db.chat
           .get('IdOfChat')
-          .create({ ...chatData, Title: 'chat 1' });
+          .create({ ...ChatData, Title: 'chat 1' });
 
         const UserId = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId: ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId: ChatId, Text: 'message 1' },
               { ...activeMessageData, ChatId: ChatId, Text: 'message 2' },
-              { ...messageData, ChatId: ChatId, Text: 'message 3' },
+              { ...MessageData, ChatId: ChatId, Text: 'message 3' },
             ],
           },
         });
@@ -2039,21 +2042,21 @@ describe('hasMany', () => {
       it('should nullify foreignKey in batch update', async () => {
         const ChatId = await db.chat
           .get('IdOfChat')
-          .create({ ...chatData, Title: 'chat 1' });
+          .create({ ...ChatData, Title: 'chat 1' });
 
         const userIds = await db.user.pluck('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             messages: {
-              create: [{ ...messageData, ChatId: ChatId, Text: 'message 1' }],
+              create: [{ ...MessageData, ChatId: ChatId, Text: 'message 1' }],
             },
           },
           {
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId: ChatId, Text: 'message 2' },
-                { ...messageData, ChatId: ChatId, Text: 'message 3' },
+                { ...MessageData, ChatId: ChatId, Text: 'message 2' },
+                { ...MessageData, ChatId: ChatId, Text: 'message 3' },
               ],
             },
           },
@@ -2075,21 +2078,21 @@ describe('hasMany', () => {
       it('should nullify foreignKey in batch update for matching records using `on`', async () => {
         const ChatId = await db.chat
           .get('IdOfChat')
-          .create({ ...chatData, Title: 'chat 1' });
+          .create({ ...ChatData, Title: 'chat 1' });
 
         const userIds = await db.user.pluck('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             messages: {
-              create: [{ ...messageData, ChatId: ChatId, Text: 'message 1' }],
+              create: [{ ...MessageData, ChatId: ChatId, Text: 'message 1' }],
             },
           },
           {
-            ...userData,
+            ...UserData,
             messages: {
               create: [
                 { ...activeMessageData, ChatId: ChatId, Text: 'message 2' },
-                { ...messageData, ChatId: ChatId, Text: 'message 3' },
+                { ...MessageData, ChatId: ChatId, Text: 'message 3' },
               ],
             },
           },
@@ -2109,7 +2112,7 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty disconnect list', async () => {
-        const id = await db.user.get('Id').create(userData);
+        const id = await db.user.get('Id').create(UserData);
 
         const count = await db.user.find(id).update({
           messages: {
@@ -2126,18 +2129,18 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const UserId = await db.user.get('Id').create({
-            ...userData,
+            ...UserData,
             messages: {
               create: [
                 {
-                  ...messageData,
+                  ...MessageData,
                   ChatId,
                   Text: 'message 1',
                 },
                 {
-                  ...messageData,
+                  ...MessageData,
                   ChatId,
                   Text: 'message 2',
                 },
@@ -2162,19 +2165,19 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch update', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const UserIds = await db.user.pluck('Id').createMany([
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
                   {
-                    ...messageData,
+                    ...MessageData,
                     ChatId,
                     Text: 'message 1',
                   },
                   {
-                    ...messageData,
+                    ...MessageData,
                     ChatId,
                     Text: 'message 1',
                   },
@@ -2182,16 +2185,16 @@ describe('hasMany', () => {
               },
             },
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
                   {
-                    ...messageData,
+                    ...MessageData,
                     ChatId,
                     Text: 'message 3',
                   },
                   {
-                    ...messageData,
+                    ...MessageData,
                     ChatId,
                     Text: 'message 4',
                   },
@@ -2220,18 +2223,18 @@ describe('hasMany', () => {
 
     describe('set', () => {
       it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
-              { ...messageData, ChatId, Text: 'message 2' },
+              { ...MessageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 2' },
             ],
           },
         });
 
-        await db.message.create({ ...messageData, ChatId, Text: 'message 3' });
+        await db.message.create({ ...MessageData, ChatId, Text: 'message 3' });
 
         const count = await db.user.find(id).update({
           messages: {
@@ -2250,12 +2253,12 @@ describe('hasMany', () => {
       });
 
       it('should nullify foreignKey of previous related record and set foreignKey to new related record using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 1' },
               { ...activeMessageData, ChatId, Text: 'message 2' },
               { ...activeMessageData, ChatId, Text: 'message 3' },
             ],
@@ -2286,13 +2289,13 @@ describe('hasMany', () => {
       });
 
       it('should nullify all related records foreign keys when giving empty array', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
-              { ...messageData, ChatId, Text: 'message 2' },
+              { ...MessageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 2' },
             ],
           },
         });
@@ -2310,12 +2313,12 @@ describe('hasMany', () => {
       });
 
       it('should nullify matching related records foreign keys when giving empty array using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 1' },
               { ...activeMessageData, ChatId, Text: 'message 2' },
             ],
           },
@@ -2346,9 +2349,9 @@ describe('hasMany', () => {
 
       it('should not nullify the previous record when setting to the exact same record', async () => {
         const user = await db.user.create({
-          ...userData,
+          ...UserData,
           posts: {
-            create: [postData],
+            create: [PostData],
           },
         });
 
@@ -2371,19 +2374,19 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const id = await db.user.get('Id').create({
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'message 1' },
-                { ...messageData, ChatId, Text: 'message 2' },
+                { ...MessageData, ChatId, Text: 'message 1' },
+                { ...MessageData, ChatId, Text: 'message 2' },
               ],
             },
           });
 
           await db.message.create({
-            ...messageData,
+            ...MessageData,
             ChatId,
             Text: 'message 3',
           });
@@ -2410,15 +2413,15 @@ describe('hasMany', () => {
 
     describe('delete', () => {
       it('should delete related records', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
-              { ...messageData, ChatId, Text: 'message 2' },
-              { ...messageData, ChatId, Text: 'message 3' },
+              { ...MessageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 2' },
+              { ...MessageData, ChatId, Text: 'message 3' },
             ],
           },
         });
@@ -2441,15 +2444,15 @@ describe('hasMany', () => {
       });
 
       it('should delete matching related records using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 1' },
               { ...activeMessageData, ChatId, Text: 'message 2' },
-              { ...messageData, ChatId, Text: 'message 3' },
+              { ...MessageData, ChatId, Text: 'message 3' },
             ],
           },
         });
@@ -2475,21 +2478,21 @@ describe('hasMany', () => {
       });
 
       it('should delete related records in batch update', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const userIds = await db.user.pluck('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             messages: {
-              create: [{ ...messageData, ChatId, Text: 'message 1' }],
+              create: [{ ...MessageData, ChatId, Text: 'message 1' }],
             },
           },
           {
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'message 2' },
-                { ...messageData, ChatId, Text: 'message 3' },
+                { ...MessageData, ChatId, Text: 'message 2' },
+                { ...MessageData, ChatId, Text: 'message 3' },
               ],
             },
           },
@@ -2511,24 +2514,24 @@ describe('hasMany', () => {
       });
 
       it('should delete matching related records in batch update using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const userIds = await db.user.pluck('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'message 1' },
+                { ...MessageData, ChatId, Text: 'message 1' },
                 { ...activeMessageData, ChatId, Text: 'message 2' },
               ],
             },
           },
           {
-            ...userData,
+            ...UserData,
             messages: {
               create: [
                 { ...activeMessageData, ChatId, Text: 'message 3' },
-                { ...messageData, ChatId, Text: 'message 4' },
+                { ...MessageData, ChatId, Text: 'message 4' },
               ],
             },
           },
@@ -2552,12 +2555,12 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty delete list', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
-            create: [{ ...messageData, ChatId, Text: 'message 1' }],
+            create: [{ ...MessageData, ChatId, Text: 'message 1' }],
           },
         });
 
@@ -2581,14 +2584,14 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const Id = await db.user.get('Id').create({
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'message 1' },
-                { ...messageData, ChatId, Text: 'message 2' },
-                { ...messageData, ChatId, Text: 'message 3' },
+                { ...MessageData, ChatId, Text: 'message 1' },
+                { ...MessageData, ChatId, Text: 'message 2' },
+                { ...MessageData, ChatId, Text: 'message 3' },
               ],
             },
           });
@@ -2613,25 +2616,25 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch delete', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const UserIds = await db.user.pluck('Id').createMany([
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
-                  { ...messageData, ChatId, Text: 'message 1' },
-                  { ...messageData, ChatId, Text: 'message 2' },
-                  { ...messageData, ChatId, Text: 'message 3' },
+                  { ...MessageData, ChatId, Text: 'message 1' },
+                  { ...MessageData, ChatId, Text: 'message 2' },
+                  { ...MessageData, ChatId, Text: 'message 3' },
                 ],
               },
             },
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
-                  { ...messageData, ChatId, Text: 'message 4' },
-                  { ...messageData, ChatId, Text: 'message 5' },
-                  { ...messageData, ChatId, Text: 'message 6' },
+                  { ...MessageData, ChatId, Text: 'message 4' },
+                  { ...MessageData, ChatId, Text: 'message 5' },
+                  { ...MessageData, ChatId, Text: 'message 6' },
                 ],
               },
             },
@@ -2663,15 +2666,15 @@ describe('hasMany', () => {
 
     describe('nested update', () => {
       it('should update related records', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
-              { ...messageData, ChatId, Text: 'message 2' },
-              { ...messageData, ChatId, Text: 'message 3' },
+              { ...MessageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 2' },
+              { ...MessageData, ChatId, Text: 'message 3' },
             ],
           },
         });
@@ -2698,14 +2701,14 @@ describe('hasMany', () => {
       });
 
       it('should update matching related records using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
             create: [
-              { ...messageData, ChatId, Text: 'message 1' },
-              { ...messageData, ChatId, Text: 'message 2' },
+              { ...MessageData, ChatId, Text: 'message 1' },
+              { ...MessageData, ChatId, Text: 'message 2' },
               { ...activeMessageData, ChatId, Text: 'message 3' },
             ],
           },
@@ -2730,21 +2733,21 @@ describe('hasMany', () => {
       });
 
       it('should update related records in batch update', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const userIds = await db.user.pluck('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             messages: {
-              create: [{ ...messageData, ChatId, Text: 'message 1' }],
+              create: [{ ...MessageData, ChatId, Text: 'message 1' }],
             },
           },
           {
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'message 2' },
-                { ...messageData, ChatId, Text: 'message 3' },
+                { ...MessageData, ChatId, Text: 'message 2' },
+                { ...MessageData, ChatId, Text: 'message 3' },
               ],
             },
           },
@@ -2769,20 +2772,20 @@ describe('hasMany', () => {
       });
 
       it('should update matching related records in batch update using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const userIds = await db.user.pluck('Id').createMany([
           {
-            ...userData,
+            ...UserData,
             messages: {
-              create: [{ ...messageData, ChatId, Text: 'message 1' }],
+              create: [{ ...MessageData, ChatId, Text: 'message 1' }],
             },
           },
           {
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'message 2' },
+                { ...MessageData, ChatId, Text: 'message 2' },
                 { ...activeMessageData, ChatId, Text: 'message 3' },
               ],
             },
@@ -2808,12 +2811,12 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty update where list', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
         const Id = await db.user.get('Id').create({
-          ...userData,
+          ...UserData,
           messages: {
-            create: [{ ...messageData, ChatId, Text: 'message 1' }],
+            create: [{ ...MessageData, ChatId, Text: 'message 1' }],
           },
         });
 
@@ -2842,14 +2845,14 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const Id = await db.user.get('Id').create({
-            ...userData,
+            ...UserData,
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'message 1' },
-                { ...messageData, ChatId, Text: 'message 2' },
-                { ...messageData, ChatId, Text: 'message 3' },
+                { ...MessageData, ChatId, Text: 'message 1' },
+                { ...MessageData, ChatId, Text: 'message 2' },
+                { ...MessageData, ChatId, Text: 'message 3' },
               ],
             },
           });
@@ -2879,25 +2882,25 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch update', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
           const UserIds = await db.user.pluck('Id').createMany([
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
-                  { ...messageData, ChatId, Text: 'message 1' },
-                  { ...messageData, ChatId, Text: 'message 2' },
-                  { ...messageData, ChatId, Text: 'message 3' },
+                  { ...MessageData, ChatId, Text: 'message 1' },
+                  { ...MessageData, ChatId, Text: 'message 2' },
+                  { ...MessageData, ChatId, Text: 'message 3' },
                 ],
               },
             },
             {
-              ...userData,
+              ...UserData,
               messages: {
                 create: [
-                  { ...messageData, ChatId, Text: 'message 1' },
-                  { ...messageData, ChatId, Text: 'message 2' },
-                  { ...messageData, ChatId, Text: 'message 3' },
+                  { ...MessageData, ChatId, Text: 'message 1' },
+                  { ...MessageData, ChatId, Text: 'message 2' },
+                  { ...MessageData, ChatId, Text: 'message 3' },
                 ],
               },
             },
@@ -2931,8 +2934,8 @@ describe('hasMany', () => {
 
     describe('nested create', () => {
       it('should create new related records', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
-        const user = await db.user.create({ ...userData, Age: 1 });
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const user = await db.user.create({ ...UserData, Age: 1 });
 
         const updated = await db.user
           .select('Age')
@@ -2941,8 +2944,8 @@ describe('hasMany', () => {
           .update({
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'created 1' },
-                { ...messageData, ChatId, Text: 'created 2' },
+                { ...MessageData, ChatId, Text: 'created 1' },
+                { ...MessageData, ChatId, Text: 'created 2' },
               ],
             },
           });
@@ -2957,8 +2960,8 @@ describe('hasMany', () => {
       });
 
       it('should create new related records using `on`', async () => {
-        const ChatId = await db.chat.get('IdOfChat').create(chatData);
-        const user = await db.user.create({ ...userData, Age: 1 });
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const user = await db.user.create({ ...UserData, Age: 1 });
 
         const updated = await db.user
           .select('Age')
@@ -2967,8 +2970,8 @@ describe('hasMany', () => {
           .update({
             activeMessages: {
               create: [
-                { ...messageData, ChatId, Text: 'created 1' },
-                { ...messageData, ChatId, Text: 'created 2' },
+                { ...MessageData, ChatId, Text: 'created 1' },
+                { ...MessageData, ChatId, Text: 'created 2' },
               ],
             },
           });
@@ -2990,14 +2993,14 @@ describe('hasMany', () => {
           db.user.where({ Id: { in: [1, 2, 3] } }).update({
             messages: {
               // @ts-expect-error not allows in batch update
-              create: [{ ...messageData, ChatId: 1, Text: 'created 1' }],
+              create: [{ ...MessageData, ChatId: 1, Text: 'created 1' }],
             },
           }),
         ).toThrow('`create` option is not allowed in a batch update');
       });
 
       it('should ignore empty create list', async () => {
-        const Id = await db.user.get('Id').create(userData);
+        const Id = await db.user.get('Id').create(UserData);
 
         const count = await db.user.find(Id).update({
           messages: {
@@ -3020,14 +3023,14 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('IdOfChat').create(chatData);
-          const Id = await db.user.get('Id').create({ ...userData, Age: 1 });
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+          const Id = await db.user.get('Id').create({ ...UserData, Age: 1 });
 
           const count = await db.user.find(Id).update({
             messages: {
               create: [
-                { ...messageData, ChatId, Text: 'created 1' },
-                { ...messageData, ChatId, Text: 'created 2' },
+                { ...MessageData, ChatId, Text: 'created 1' },
+                { ...MessageData, ChatId, Text: 'created 2' },
               ],
             },
           });

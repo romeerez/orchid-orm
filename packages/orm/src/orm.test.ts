@@ -1,13 +1,14 @@
 import { orchidORMWithAdapter } from './orm';
+import { useTestORM } from './test-utils/orm.test-utils';
 import {
   BaseTable,
-  chatData,
   db,
-  messageData,
-  userData,
-  useTestORM,
-} from './test-utils/orm.test-utils';
-import { assertType, expectSql } from 'test-utils';
+  assertType,
+  expectSql,
+  MessageData,
+  ChatData,
+  UserData,
+} from 'test-utils';
 import { Selectable } from './baseTable';
 import { Db, raw } from 'pqb';
 
@@ -148,15 +149,15 @@ describe('orm', () => {
 
   describe('$from', () => {
     it('should have method `$from` with proper handling of type, where operators, parsers', async () => {
-      const ChatId = await db.chat.get('IdOfChat').create(chatData);
+      const ChatId = await db.chat.get('IdOfChat').create(ChatData);
       const [AuthorId1, AuthorId2] = await db.user
         .pluck('Id')
-        .insertMany([userData, userData]);
+        .insertMany([UserData, UserData]);
 
       await db.message.createMany([
-        { ...messageData, ChatId, AuthorId: AuthorId1 },
-        { ...messageData, ChatId, AuthorId: AuthorId2 },
-        { ...messageData, ChatId, AuthorId: AuthorId2 },
+        { ...MessageData, ChatId, AuthorId: AuthorId1 },
+        { ...MessageData, ChatId, AuthorId: AuthorId2 },
+        { ...MessageData, ChatId, AuthorId: AuthorId2 },
       ]);
 
       const inner = db.user.select('createdAt', {

@@ -65,7 +65,7 @@ import {
 } from '../../common/queryResultProcessing';
 import { cloneQueryBaseUnscoped } from '../queryMethods.utils';
 
-interface SelectSelf {
+export interface SelectSelf {
   shape: QueryColumns;
   relations: RelationsBase;
   result: QueryColumns;
@@ -88,26 +88,25 @@ interface SubQueryAddition<T extends SelectSelf> extends QueryMetaIsSubQuery {
   withData: T['withData']; // to refer to the outside `.with` from a relation query
 }
 
+export type SelectAsFnArg<T extends SelectSelf> =
+  EmptyObject extends T['relations']
+    ? T
+    : {
+        [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
+          ? T['relations'][K]['maybeSingle'] & SubQueryAddition<T>
+          : K extends keyof T
+          ? T[K]
+          : never;
+      };
+
 // .select method object argument.
 // Key is alias for selected item,
 // value can be a column, raw, or a function returning query or raw.
-interface SelectAsArg<T extends SelectSelf> {
+export interface SelectAsArg<T extends SelectSelf> {
   [K: string]:
     | keyof T['meta']['selectable']
     | Expression
-    | ((
-        q: EmptyObject extends T['relations']
-          ? T
-          : {
-              [K in
-                | keyof T['relations']
-                | keyof T]: K extends keyof T['relations']
-                ? T['relations'][K]['maybeSingle'] & SubQueryAddition<T>
-                : K extends keyof T
-                ? T[K]
-                : never;
-            },
-      ) => unknown);
+    | ((q: SelectAsFnArg<T>) => unknown);
 }
 
 type SelectAsFnReturnType =

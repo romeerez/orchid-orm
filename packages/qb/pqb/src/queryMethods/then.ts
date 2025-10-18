@@ -1,5 +1,10 @@
 import { Query } from '../query/query';
-import { NotFoundError, QueryError, QueryResult } from 'orchid-core';
+import {
+  DelayedRelationSelect,
+  NotFoundError,
+  QueryError,
+  QueryResult,
+} from 'orchid-core';
 import {
   HandleResult,
   QueryAfterHook,
@@ -18,7 +23,6 @@ import {
   getFreeAlias,
   getValueKey,
   MaybePromise,
-  pick,
   QueryReturnType,
   RecordString,
   RecordUnknown,
@@ -286,14 +290,6 @@ const then = async (
       result = query.handleResult(q, tempReturnType, queryResult!);
     }
 
-    if (
-      result &&
-      typeof result === 'object' &&
-      typeof (result as RecordUnknown).then === 'function'
-    ) {
-      result = await result;
-    }
-
     // TODO: move computeds after parsing
     let tempColumns: Set<string> | undefined;
     let renames: RecordString | undefined;
@@ -390,26 +386,23 @@ const then = async (
       const selectQuery = q.clone();
       selectQuery.q.type = selectQuery.q.returnType = undefined;
 
-      (selectQuery.q.and ??= []).push(pick(result, primaryKeys as never));
+      const matchSourceTableIds: RecordUnknown = {};
+      for (const pkey of primaryKeys) {
+        matchSourceTableIds[pkey] = {
+          in: (result as RecordUnknown[]).map((row) => row[pkey]),
+        };
+      }
+      (selectQuery.q.and ??= []).push(matchSourceTableIds);
 
       const relationsSelect = delayedRelationSelect.value as Record<
         string,
         Query
       >;
 
-      let selectAs: SelectAsValue;
-      if (renames) {
-        selectAs = {};
-        for (const key in renames) {
-          if (key in relationsSelect) {
-            selectAs[renames[key]] = relationsSelect[key];
-          }
-        }
-      } else {
-        selectAs = { ...relationsSelect };
-      }
+      const selectAs: SelectAsValue = { ...relationsSelect };
 
       const select: SelectItem[] = [{ selectAs }];
+
       const relationKeyAliases = primaryKeys.map((key) => {
         if (key in selectAs) {
           const as = getFreeAlias(selectAs, key);
@@ -434,7 +427,21 @@ const then = async (
           Object.assign(row, relationRow);
         }
       }
+
+      // when relation is loaded under the same key as a transient primary key:
+      // no need to rename it because the relation was already loaded under the key name.
+      if (renames) {
+        for (const key in relationsSelect) {
+          if (key in renames) {
+            delete renames[key];
+          }
+        }
+      }
     }
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const promise = parseBatch(q, queryResult!, delayedRelationSelect);
+    if (promise) await promise;
 
     // can be set by hooks or by computed columns
     if (hookSelect || tempReturnType !== returnType) {
@@ -535,8 +542,6 @@ export const handleResult: HandleResult = (
       if (q.q.throwOnNotFound && result.rows.length === 0)
         throw new NotFoundError(q);
 
-      const promise = parseBatch(q, result);
-
       const { rows } = result;
 
       if (parsers) {
@@ -545,39 +550,28 @@ export const handleResult: HandleResult = (
         }
       }
 
-      return promise ? promise.then(() => rows) : rows;
+      return rows;
     }
     case 'one': {
       const { rows } = result;
       if (!rows.length) return;
 
-      const promise = parseBatch(q, result);
-
       if (parsers) parseRecord(parsers, rows[0]);
 
-      return promise ? promise.then(() => rows[0]) : rows[0];
+      return rows[0];
     }
     case 'oneOrThrow': {
       const { rows } = result;
       if (!rows.length) throw new NotFoundError(q);
 
-      const promise = parseBatch(q, result);
-
       if (parsers) parseRecord(parsers, rows[0]);
 
-      return promise ? promise.then(() => rows[0]) : rows[0];
+      return rows[0];
     }
     case 'rows': {
       const { rows } = result;
 
-      const promise = parseBatch(q, result);
-      if (promise) {
-        return promise.then(() => {
-          if (parsers) parseRows(parsers, result.fields, rows);
-
-          return rows;
-        });
-      } else if (parsers) {
+      if (parsers) {
         parseRows(parsers, result.fields, rows);
       }
 
@@ -586,32 +580,12 @@ export const handleResult: HandleResult = (
     case 'pluck': {
       const { rows } = result;
 
-      const promise = parseBatch(q, result);
-
-      if (promise) {
-        return promise.then(() => {
-          parsePluck(parsers, isSubQuery, rows);
-
-          return rows;
-        });
-      }
-
       parsePluck(parsers, isSubQuery, rows);
 
       return rows;
     }
     case 'value': {
       const { rows } = result;
-
-      const promise = parseBatch(q, result);
-
-      if (promise) {
-        return promise.then(() => {
-          return rows[0]?.[0] !== undefined
-            ? parseValue(rows[0][0], parsers)
-            : q.q.notFoundDefault;
-        });
-      }
 
       return rows[0]?.[0] !== undefined
         ? parseValue(rows[0][0], parsers)
@@ -627,15 +601,6 @@ export const handleResult: HandleResult = (
 
       const { rows } = result;
 
-      const promise = parseBatch(q, result);
-
-      if (promise) {
-        return promise.then(() => {
-          if (rows[0]?.[0] === undefined) throw new NotFoundError(q);
-          return parseValue(rows[0][0], parsers);
-        });
-      }
-
       if (rows[0]?.[0] === undefined) throw new NotFoundError(q);
       return parseValue(rows[0][0], parsers);
     }
@@ -645,10 +610,19 @@ export const handleResult: HandleResult = (
   }
 };
 
-const parseBatch = (q: Query, queryResult: QueryResult): MaybePromise<void> => {
+const parseBatch = (
+  q: Query,
+  queryResult: QueryResult,
+  delayedRelationSelect?: DelayedRelationSelect,
+): MaybePromise<void> => {
   let promises: Promise<void>[] | undefined;
 
-  if (q.q.batchParsers) {
+  /**
+   * In case of delayedRelationSelect, the first query does insert/update/delete,
+   * it must not run batchParsers because it doesn't have the data yet.
+   * The second query loads data and performs batchParsers.
+   */
+  if (q.q.batchParsers && !delayedRelationSelect?.value) {
     for (const parser of q.q.batchParsers) {
       const res = parser.fn(parser.path, queryResult);
       if (res) (promises ??= []).push(res);

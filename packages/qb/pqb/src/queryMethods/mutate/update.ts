@@ -80,7 +80,7 @@ type UpdateRelationData<
 // not available when there are no conditions on the query.
 export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
-  : never;
+  : 'Update statement must have where conditions. To update all prefix `update` with `all()`';
 
 // `update` and `updateOrThrow` methods output type.
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
@@ -182,7 +182,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
   q.type = 'update';
   const returnCount = !q.select;
 
-  const set: RecordUnknown = { ...arg };
+  const set: RecordUnknown = { ...(arg as UpdateData<T>) };
   pushQueryValueImmutable(query as unknown as Query, 'updateData', set);
 
   const { shape } = q;
@@ -524,6 +524,16 @@ export class Update {
   ): UpdateResult<T> {
     return _queryUpdateOrThrow(_clone(this), arg as never) as never;
   }
+
+  // TODO:
+  // updateTable<Self extends SelectSelf, T extends UpdateSelf>(
+  //   this: Self,
+  //   table: (q: SelectAsFnArg<Self>) => T,
+  //   arg: UpdateData<T>,
+  // ): T {
+  //   console.log(table, arg);
+  //   return {} as never;
+  // }
 
   /**
    * Increments a column by `1`, returns a count of updated records by default.

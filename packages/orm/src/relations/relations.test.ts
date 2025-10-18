@@ -1,17 +1,20 @@
-import { assertType, expectSql } from 'test-utils';
 import {
+  assertType,
+  expectSql,
   BaseTable,
-  categorySelectAll,
-  chatData,
   db,
-  messageData,
+  Profile,
+  PostData,
+  MessageData,
+  ChatData,
+  ProfileData,
+  UserData,
+} from 'test-utils';
+import {
+  categorySelectAll,
   messageJSONBuildObject,
   messageSelectAll,
-  postData,
-  Profile,
-  profileData,
   profileSelectAll,
-  userData,
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
@@ -67,13 +70,13 @@ describe('relations', () => {
   });
 
   it('should handle sub query pluck', async () => {
-    const ChatId = await db.chat.get('IdOfChat').create(chatData);
-    const AuthorId = await db.user.get('Id').create(userData);
+    const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+    const AuthorId = await db.user.get('Id').create(UserData);
 
     const data = {
       ChatId,
       AuthorId,
-      ...messageData,
+      ...MessageData,
     };
 
     const ids = await db.message.pluck('Id').createMany([data, data]);
@@ -123,7 +126,7 @@ describe('relations', () => {
   });
 
   it('should handle sub query pluck with empty results', async () => {
-    await db.user.insert(userData);
+    await db.user.insert(UserData);
 
     const query = db.user
       .select({
@@ -139,13 +142,13 @@ describe('relations', () => {
     await db.message.create({
       Text: 'text',
       chat: {
-        create: chatData,
+        create: ChatData,
       },
       sender: {
         create: {
-          ...userData,
+          ...UserData,
           profile: {
-            create: profileData,
+            create: ProfileData,
           },
         },
       },
@@ -440,7 +443,7 @@ describe('relations', () => {
 
   describe('sub-select `none` queries', () => {
     it('should handle empty, undefined, null results', async () => {
-      await db.user.create({ ...userData, posts: { create: [postData] } });
+      await db.user.create({ ...UserData, posts: { create: [PostData] } });
 
       const q = db.user.select({
         posts: (q) => q.posts.whereIn('Id', []).select('Id'),
@@ -475,7 +478,7 @@ describe('relations', () => {
     });
 
     it('should throw when sub-query result is required', async () => {
-      await db.user.create({ ...userData, posts: { create: [postData] } });
+      await db.user.create({ ...UserData, posts: { create: [PostData] } });
 
       const one = db.user.select({
         firstPost: (q) => q.posts.whereIn('Id', []).select('Id').take(),
@@ -491,7 +494,7 @@ describe('relations', () => {
     });
 
     it('should return no records when sub-select is joined', async () => {
-      await db.user.create({ ...userData, posts: { create: [postData] } });
+      await db.user.create({ ...UserData, posts: { create: [PostData] } });
 
       const q = db.user.select({
         firstPost: (q) => q.posts.join().whereIn('Id', []).select('Id').take(),
@@ -653,7 +656,7 @@ describe('relations', () => {
 
   describe('map', () => {
     it('should not be called for a non-found relation', async () => {
-      await db.post.create({ ...postData, user: { create: userData } });
+      await db.post.create({ ...PostData, user: { create: UserData } });
 
       const res = await db.post.select({
         userName: (q) => q.user.where({ Id: 0 }).map((s) => s.Name),
