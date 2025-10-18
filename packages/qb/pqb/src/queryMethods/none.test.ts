@@ -1,4 +1,4 @@
-import { User, userData } from '../test-utils/test-utils';
+import { User, userData, UserRecord } from '../test-utils/test-utils';
 import { NotFoundError } from 'orchid-core';
 import { assertType, TestAdapter, useTestDatabase } from 'test-utils';
 
@@ -67,6 +67,41 @@ describe('none', () => {
     assertType<typeof result, boolean>();
 
     expect(result).toBe(false);
+  });
+
+  it('should return result in `then`', async () => {
+    const res = await User.none().then((res) => ({ res }));
+
+    assertType<typeof res, { res: UserRecord[] }>();
+
+    expect(res).toEqual({ res: [] });
+  });
+
+  it('supports catch argument in `then`', async () => {
+    const err = new Error();
+
+    const res = await User.none()
+      .transform(() => {
+        throw err;
+      })
+      .then(
+        () => null,
+        (err) => ({ err }),
+      );
+
+    expect(res).toEqual({ err });
+  });
+
+  it('supports `catch`', async () => {
+    const err = new Error();
+
+    const res = await User.none()
+      .transform(() => {
+        throw err;
+      })
+      .catch((err) => ({ err }));
+
+    expect(res).toEqual({ err });
   });
 
   describe('with db', () => {

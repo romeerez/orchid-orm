@@ -1,7 +1,6 @@
 import { Query } from '../query/query';
 import {
   applyTransforms,
-  noop,
   pushQueryValueImmutable,
   QueryReturnType,
 } from 'orchid-core';
@@ -45,13 +44,14 @@ export const noneMethods = {
         );
       }
 
-      resolve?.(result);
+      return resolve?.(result);
     } catch (err) {
-      reject?.(err);
+      return reject?.(err);
     }
   },
-  // `catch` returns a Promise, so it is chainable with then/catch.
-  catch: () => new Promise(noop),
+  catch(this: PromiseLike<unknown>, reject?: (err: unknown) => void) {
+    return this.then(undefined, reject);
+  },
 };
 
 export const _queryNone = <T>(q: T): T => {
