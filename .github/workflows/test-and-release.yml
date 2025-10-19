@@ -32,17 +32,18 @@ jobs:
         ports:
           - 5432:5432
 
-      mysql:
-        image: mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: password
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-        ports:
-          - 3306:3306
+      # not going to maintain `myqb` for the foreseeable future
+      # mysql:
+      #   image: mysql:latest
+      #   env:
+      #     MYSQL_ROOT_PASSWORD: password
+      #   options: >-
+      #     --health-cmd="mysqladmin ping"
+      #     --health-interval=10s
+      #     --health-timeout=5s
+      #     --health-retries=3
+      #   ports:
+      #     - 3306:3306
 
     steps:
       - name: Check out code
@@ -88,6 +89,9 @@ jobs:
 
       - name: Run tests
         run: pnpm test:ci
+
+      - name: Run and type-check build
+        run: pnpm build
 
       # This step will run changeset version, setting the step output to if there were changesets found
       - name: Version command

@@ -22,9 +22,9 @@
   ],
   "scripts": {
     "test": "jest --watch --verbose false",
-    "types": "tsc",
-    "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c ../../../rollup.config.mjs",
+    "_types": "tsc",
+    "_test:ci": "jest --coverage --coverageReporters json-summary",
+    "_build": "rimraf ./dist/ && rollup -c ../../../rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [

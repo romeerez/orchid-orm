@@ -159,6 +159,8 @@ export type {
   ColumnInputOutputQueryTypesWithSchemas,
   ColumnShapeInputPartial,
   ColumnDataAppReadOnly,
+  QueryColumnInit,
+  Timestamps,
 } from './columns';
 export {
   ExpressionTypeMethod,
@@ -294,13 +296,13 @@ export {
   setParserToQuery,
   getQueryParsers,
 } from './query/query-column-parsers';
-export {
+export type {
   BatchParsers,
   ColumnsParsers,
   BatchParser,
   ColumnParser,
 } from './query/query-column-parsers';
-export { HookSelectValue, HookSelect } from './query/hook-select';
+export type { HookSelectValue, HookSelect } from './query/hook-select';
 export {
   _addToHookSelect,
   _addToHookSelectWithTable,

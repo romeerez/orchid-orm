@@ -226,6 +226,36 @@ importers:
         specifier: workspace:*
         version: link:../../test-utils
 
+  packages/test-builds:
+    devDependencies:
+      orchid-core:
+        specifier: workspace:*
+        version: link:../core
+      orchid-orm:
+        specifier: workspace:*
+        version: link:../orm
+      orchid-orm-schema-to-zod:
+        specifier: workspace:*
+        version: link:../schemaConfigs/zod
+      orchid-orm-test-factory:
+        specifier: workspace:*
+        version: link:../test-factory
+      orchid-orm-valibot:
+        specifier: workspace:*
+        version: link:../schemaConfigs/valibot
+      pqb:
+        specifier: workspace:*
+        version: link:../qb/pqb
+      rake-db:
+        specifier: workspace:*
+        version: link:../rake-db
+      valibot:
+        specifier: ^0.29.0
+        version: 0.29.0
+      zod:
+        specifier: ^3.25.42
+        version: 3.25.42
+
   packages/test-factory:
     dependencies:
       '@faker-js/faker':
