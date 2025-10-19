@@ -38,6 +38,7 @@ import {
   QueryReturnType,
   RecordUnknown,
   RelationConfigBase,
+  Sql,
 } from 'orchid-core';
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
@@ -48,10 +49,12 @@ export interface RecordOfColumnsShapeBase {
 }
 
 export interface WithConfigs {
-  [K: string]: {
-    shape: ColumnsShapeBase;
-    computeds?: ComputedColumns;
-  };
+  [K: string]: WithConfig;
+}
+
+export interface WithConfig {
+  shape: ColumnsShapeBase;
+  computeds?: ComputedColumns;
 }
 
 // Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
@@ -92,6 +95,7 @@ export interface HandleResult {
     q: Query,
     returnType: QueryReturnType,
     result: QueryResult,
+    sql: Sql,
     isSubQuery?: true,
   ): unknown;
 }
@@ -162,14 +166,10 @@ export interface QueryData extends QueryDataBase {
   // from the inner query and apply it to the outer query for grouping-ordering reasons.
   useFromLimitOffset?: true;
   coalesceValue?: unknown | Expression;
-  parsers?: ColumnsParsers;
-  batchParsers?: BatchParsers;
   notFoundDefault?: unknown;
   defaults?: RecordUnknown;
-  // for runtime computed dependencies
-  hookSelect?: HookSelect;
   // available computed columns, this can be set when selecting from a `with` expression
-  computeds?: ComputedColumns;
+  runtimeComputeds?: ComputedColumns;
   // selected computed columns
   selectedComputeds?: ComputedColumns;
   // run functions before any query

@@ -22,6 +22,7 @@ export {
   quoteObjectKey,
   returnArg,
   setObjectValueImmutable,
+  spreadObjectValues,
   singleQuote,
   singleQuoteArray,
   toArray,
@@ -64,7 +65,6 @@ export type {
   TransactionState,
 } from './adapter';
 export {
-  setParserToQuery,
   pushQueryValueImmutable,
   getValueKey,
   applyTransforms,
@@ -72,12 +72,6 @@ export {
 export type {
   QueryReturnTypeAll,
   QueryReturnTypeOptional,
-  BatchParser,
-  BatchParsers,
-  ColumnParser,
-  ColumnsParsers,
-  HookSelect,
-  HookSelectValue,
   IsQuery,
   QueryBaseCommon,
   QueryDataTransform,
@@ -193,7 +187,7 @@ export type {
   QueryThenShallowSimplify,
   QueryThenShallowSimplifyArr,
   QueryThenShallowSimplifyOptional,
-} from './queryMethods';
+} from './query/then';
 export { logColors } from './log';
 export type { QueryLogger, QueryLogObject, QueryLogOptions } from './log';
 export type { SQLQueryArgs } from './db';
@@ -296,3 +290,18 @@ export type {
   QueryDataAliases,
   SetQueryTableAlias,
 } from './query/query-aliases';
+export {
+  setParserToQuery,
+  getQueryParsers,
+} from './query/query-column-parsers';
+export {
+  BatchParsers,
+  ColumnsParsers,
+  BatchParser,
+  ColumnParser,
+} from './query/query-column-parsers';
+export { HookSelectValue, HookSelect } from './query/hook-select';
+export {
+  _addToHookSelect,
+  _addToHookSelectWithTable,
+} from './query/hook-select';

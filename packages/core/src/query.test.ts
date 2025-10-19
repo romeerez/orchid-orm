@@ -1,9 +1,9 @@
+import { noop } from './utils';
 import {
   ColumnsParsers,
   overrideParserInQuery,
   setParserToQuery,
-} from './query/query';
-import { noop } from './utils';
+} from './query/query-column-parsers';
 
 describe('query', () => {
   describe.each`

@@ -133,6 +133,17 @@ export const setObjectValueImmutable = <T>(
   return q;
 };
 
+export const spreadObjectValues = (
+  q: object,
+  object: string,
+  value: RecordUnknown,
+) => {
+  (q as RecordUnknown)[object] = {
+    ...((q as RecordUnknown)[object] as RecordUnknown),
+    ...value,
+  };
+};
+
 /**
  * Push value into an array if it's defined, or return a new array with a single value.
  * @param arr - array to push into, or `undefined`

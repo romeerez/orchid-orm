@@ -3,6 +3,7 @@ import {
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
+  getQueryParsers,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaShape,
   PickQueryRelationsWithData,
@@ -72,9 +73,9 @@ export const _joinReturningArgs = <
     joinKey = q.q.as || q.table;
     if (joinKey) {
       shape = getShapeFromSelect(q, joinSubQuery && !!q.q.select);
-      parsers = q.q.parsers;
+      parsers = getQueryParsers(q);
       batchParsers = q.q.batchParsers;
-      computeds = q.q.computeds;
+      computeds = q.q.runtimeComputeds;
 
       if (joinSubQuery) {
         first = q.clone() as JoinFirstArg<Query>;
@@ -88,9 +89,9 @@ export const _joinReturningArgs = <
     if (relation) {
       shape = getShapeFromSelect(relation.query as never);
       const r = relation.query as Query;
-      parsers = r.q.parsers;
+      parsers = getQueryParsers(r);
       batchParsers = r.q.batchParsers;
-      computeds = r.q.computeds;
+      computeds = r.q.runtimeComputeds;
     } else {
       const w = (query as unknown as PickQueryQ).q.withShapes?.[joinKey];
       shape = w?.shape;
@@ -122,14 +123,15 @@ export const _joinReturningArgs = <
   if (require && 'r' in joinArgs && isQueryNone(joinArgs.r)) {
     return;
   } else if (joinKey && 's' in joinArgs && joinArgs.s) {
-    const j =
+    const j = (
       'j' in joinArgs
         ? joinArgs.r ?? joinArgs.j
         : 'r' in joinArgs
         ? joinArgs.r
-        : joinArgs.q;
+        : joinArgs.q
+    ) as Query;
 
-    const jq = (j as unknown as PickQueryQ).q;
+    const jq = j.q;
     if (jq.select || !jq.selectAllColumns) {
       const { q } = query as unknown as PickQueryQ;
 
@@ -140,7 +142,7 @@ export const _joinReturningArgs = <
       }
 
       setObjectValueImmutable(q, 'joinedShapes', joinKey, shape);
-      setObjectValueImmutable(q, 'joinedParsers', joinKey, jq.parsers);
+      setObjectValueImmutable(q, 'joinedParsers', joinKey, getQueryParsers(j));
 
       if (jq.batchParsers) {
         setObjectValueImmutable(
@@ -151,7 +153,12 @@ export const _joinReturningArgs = <
         );
       }
 
-      setObjectValueImmutable(q, 'joinedComputeds', joinKey, jq.computeds);
+      setObjectValueImmutable(
+        q,
+        'joinedComputeds',
+        joinKey,
+        jq.runtimeComputeds,
+      );
     } else {
       addAllShapesAndParsers(
         query,
@@ -337,7 +344,12 @@ export const _joinLateral = <
     const shape = getShapeFromSelect(arg, true);
     setObjectValueImmutable(q.q, 'joinedShapes', joinKey, shape);
 
-    setObjectValueImmutable(q.q, 'joinedParsers', joinKey, arg.q.parsers);
+    setObjectValueImmutable(
+      q.q,
+      'joinedParsers',
+      joinKey,
+      getQueryParsers(arg),
+    );
 
     if (arg.q.batchParsers) {
       setObjectValueImmutable(
@@ -350,7 +362,7 @@ export const _joinLateral = <
   }
 
   as ||= getQueryAs(arg);
-  setObjectValueImmutable(q.q, 'joinedComputeds', as, arg.q.computeds);
+  setObjectValueImmutable(q.q, 'joinedComputeds', as, arg.q.runtimeComputeds);
 
   pushQueryValueImmutable(q, 'join', {
     type: `${type} LATERAL`,

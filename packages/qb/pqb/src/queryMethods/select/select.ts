@@ -20,13 +20,15 @@ import {
 } from '../../query/queryUtils';
 import { QueryData, SelectAsValue, SelectItem, ToSQLQuery } from '../../sql';
 import {
+  _addToHookSelect,
+  _addToHookSelectWithTable,
   _copyQueryAliasToQuery,
   BatchParser,
   ColumnTypeBase,
   EmptyObject,
   Expression,
+  getQueryParsers,
   getValueKey,
-  HookSelect,
   isExpression,
   IsQuery,
   isRelationQuery,
@@ -47,6 +49,7 @@ import {
   setColumnData,
   setObjectValueImmutable,
   setParserToQuery,
+  spreadObjectValues,
   UnionToIntersection,
 } from 'orchid-core';
 import { _joinLateral } from '../join/_join';
@@ -386,7 +389,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
   columnAlias?: string,
   joinQuery?: boolean,
 ): string | Expression | Query | undefined => {
-  if (typeof arg === 'object' || typeof arg === 'function') {
+  if (typeof arg === 'object') {
     const { q: query } = arg as Query;
 
     if (query.batchParsers) {
@@ -400,9 +403,13 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
       );
     }
 
+    const parsers = isExpression(arg)
+      ? undefined
+      : getQueryParsers(arg as Query);
+
     if (
+      parsers ||
       query.hookSelect ||
-      query.parsers ||
       query.transform ||
       query.returnType === 'oneOrThrow' ||
       query.returnType === 'valueOrThrow' ||
@@ -437,7 +444,6 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
 
           switch (returnType) {
             case 'all': {
-              const { parsers } = query;
               if (parsers) {
                 for (const { data } of batches) {
                   for (const one of data) {
@@ -449,7 +455,6 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             }
             case 'one':
             case 'oneOrThrow': {
-              const { parsers } = query;
               if (parsers) {
                 if (returnType === 'one') {
                   for (const batch of batches) {
@@ -482,7 +487,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
               break;
             }
             case 'pluck': {
-              const parse = query.parsers?.pluck;
+              const parse = parsers?.pluck;
               if (parse) {
                 for (const { data } of batches) {
                   for (let i = 0; i < data.length; i++) {
@@ -501,7 +506,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
                 query.getColumn as ColumnTypeBase | undefined
               )?.data.isNullable;
 
-              const parse = query.parsers?.[getValueKey];
+              const parse = parsers?.[getValueKey];
               if (parse) {
                 if (returnType === 'value') {
                   for (const item of batches) {
@@ -821,10 +826,7 @@ export const setParserForSelectedString = (
   const computeds = q.joinedComputeds?.[table];
   if (computeds?.[column]) {
     const computed = computeds[column];
-    const map: HookSelect = (q.hookSelect = new Map(q.hookSelect));
-    for (const column of computed.deps) {
-      map.set(column, { select: `${table}.${column}` });
-    }
+    _addToHookSelectWithTable(query, computed.deps, table);
 
     setObjectValueImmutable(q, 'selectedComputeds', column, computed);
     return;
@@ -840,23 +842,25 @@ const selectColumn = (
   columnAs?: string | getValueKey,
   columnAlias?: string,
 ) => {
-  if (columnAs && q.parsers) {
-    const parser = q.parsers[key];
-    if (parser) setObjectValueImmutable(q, 'parsers', columnAs, parser);
-  }
-
-  if (q.computeds?.[key]) {
-    const computed = q.computeds[key];
-    const map: HookSelect = (query.q.hookSelect = new Map(query.q.hookSelect));
-    for (const key of computed.deps) {
-      map.set(key, { select: key });
+  if (key === '*') {
+    const { defaultParsers } = query.q;
+    if (defaultParsers) {
+      spreadObjectValues(query.q, 'parsers', defaultParsers);
     }
+  } else {
+    const parser = query.q.defaultParsers?.[key];
+    if (parser) setObjectValueImmutable(q, 'parsers', columnAs || key, parser);
 
-    query.q.selectedComputeds = {
-      ...query.q.selectedComputeds,
-      [columnAlias || key]: computed,
-    };
-    return;
+    if (q.runtimeComputeds?.[key]) {
+      const computed = q.runtimeComputeds[key];
+      _addToHookSelect(query, computed.deps);
+
+      query.q.selectedComputeds = {
+        ...query.q.selectedComputeds,
+        [columnAlias || key]: computed,
+      };
+      return;
+    }
   }
 
   return key;
@@ -1044,6 +1048,12 @@ export function _querySelect(q: Query, args: any[]): any {
   return pushQueryArrayImmutable(q, 'select', selectArgs);
 }
 
+export const _querySelectAll = (query: IsQuery) => {
+  const q = query as unknown as PickQueryQ;
+  q.q.select = ['*'];
+  q.q.parsers = q.q.defaultParsers;
+};
+
 export class Select {
   /**
    * Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
@@ -1147,7 +1157,7 @@ export class Select {
    */
   selectAll<T extends SelectSelf>(this: T): SelectResult<T, ['*']> {
     const q = _clone(this);
-    q.q.select = ['*'];
+    _querySelectAll(q);
     if (q.q.returning) {
       q.q.returnType = q.q.returningMany ? 'all' : 'oneOrThrow';
       q.q.returning = undefined;

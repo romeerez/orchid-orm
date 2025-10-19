@@ -588,7 +588,7 @@ export abstract class ColumnTypeBase<
 
   error: Schema['error'];
 
-  declare _parse: (input: unknown) => unknown;
+  _parse?: (input: unknown) => unknown;
 
   constructor(
     schema: ColumnTypeSchemaArg,

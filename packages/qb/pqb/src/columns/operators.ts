@@ -89,6 +89,7 @@ const make = (
   ) as never;
 };
 
+// is different from `make` by `(q.chain ??= []).push(_op, value -> args)`
 const makeVarArg = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _op: (key: string, args: any[], ctx: ToSQLCtx, quotedAs?: string) => string,

@@ -408,7 +408,7 @@ const pushSubQuerySql = (
     case 'pluck': {
       const { select } = query.q;
       const first = select?.[0];
-      if (!first && query.q.computeds?.[as]) {
+      if (!first && query.q.runtimeComputeds?.[as]) {
         query = queryJson(query) as unknown as typeof query;
       } else if (!first) {
         throw new OrchidOrmInternalError(
@@ -425,7 +425,7 @@ const pushSubQuerySql = (
     }
     case 'value':
     case 'valueOrThrow':
-      if (!query.q.returning && query.q.computeds?.[as]) {
+      if (!query.q.returning && query.q.runtimeComputeds?.[as]) {
         query = queryJson(query) as unknown as typeof query;
       }
       break;

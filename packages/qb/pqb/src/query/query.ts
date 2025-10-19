@@ -6,6 +6,7 @@ import {
   EmptyObject,
   Expression,
   IsQueries,
+  IsQuery,
   OperatorsNullable,
   PickOutputType,
   PickQueryMeta,
@@ -132,7 +133,10 @@ export interface PickQueryBaseQuery {
   baseQuery: Query;
 }
 
-export interface PickQueryQAndInternal extends PickQueryQ, PickQueryInternal {}
+export interface PickQueryQAndInternal
+  extends IsQuery,
+    PickQueryQ,
+    PickQueryInternal {}
 
 export interface PickQueryQAndBaseQuery
   extends PickQueryQ,

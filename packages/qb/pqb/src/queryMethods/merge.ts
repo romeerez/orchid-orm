@@ -60,6 +60,7 @@ type MergeQueryResult<
 const mergableObjects = new Set([
   'shape',
   'withShapes',
+  'defaultParsers',
   'parsers',
   'defaults',
   'joinedShapes',

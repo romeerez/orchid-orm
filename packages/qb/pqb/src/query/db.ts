@@ -298,16 +298,6 @@ export class Db<
       options.scopes || softDelete ? {} : emptyObject
     ) as QueryScopes;
 
-    this.internal = {
-      transactionStorage,
-      scopes,
-      snakeCase: options.snakeCase,
-      noPrimaryKey: options.noPrimaryKey === 'ignore',
-      comment: options.comment,
-      nowSQL: options.nowSQL,
-      tableData,
-    } as QueryInternal;
-
     this.baseQuery = this as Query;
     this.relations = {};
     this.relationQueries = {};
@@ -319,6 +309,7 @@ export class Db<
     let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
     let prepareSelectAll = false;
     let hasHookSetters: true | undefined;
+    let runtimeDefaultColumns: string[] | undefined;
     const { snakeCase } = options;
     for (const key in shape) {
       const column = shape[key] as unknown as ColumnTypeBase;
@@ -349,9 +340,8 @@ export class Db<
       }
 
       if (typeof column.data.default === 'function') {
-        const arr = this.internal.runtimeDefaultColumns;
-        if (!arr) this.internal.runtimeDefaultColumns = [key];
-        else arr.push(key);
+        if (!runtimeDefaultColumns) runtimeDefaultColumns = [key];
+        else runtimeDefaultColumns.push(key);
 
         if (!column.data.runtimeDefault) {
           const {
@@ -373,6 +363,17 @@ export class Db<
       }
     }
 
+    this.internal = {
+      runtimeDefaultColumns,
+      transactionStorage,
+      scopes,
+      snakeCase: options.snakeCase,
+      noPrimaryKey: options.noPrimaryKey === 'ignore',
+      comment: options.comment,
+      nowSQL: options.nowSQL,
+      tableData,
+    } as QueryInternal;
+
     this.q = {
       adapter,
       shape: shape as QueryColumnsInit,
@@ -380,7 +381,7 @@ export class Db<
       logger,
       log: logParamToLogObject(logger, options.log),
       autoPreparedStatements: options.autoPreparedStatements ?? false,
-      parsers: hasParsers ? parsers : undefined,
+      defaultParsers: hasParsers ? parsers : undefined,
       language: options.language,
       schema: options?.schema,
     } as QueryData;

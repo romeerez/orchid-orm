@@ -1,4 +1,5 @@
 import {
+  ColumnTypeBase,
   EmptyObject,
   Expression,
   FnUnknownToUnknown,
@@ -20,7 +21,7 @@ import {
   QueryBatchResult,
   SqlMethod,
 } from '../queryMethods';
-import { addColumnParserToQuery, ColumnType, UnknownColumn } from '../columns';
+import { ColumnType, UnknownColumn } from '../columns';
 import { QueryData } from '../sql';
 import {
   applyBatchTransforms,
@@ -127,8 +128,8 @@ export const applyComputedColumns = (
     if (typeof item === 'function') item = item.call(computed);
 
     if (item instanceof ComputedColumn) {
-      (q as unknown as PickQueryQ).q.computeds = {
-        ...(q as unknown as PickQueryQ).q.computeds,
+      (q as unknown as PickQueryQ).q.runtimeComputeds = {
+        ...(q as unknown as PickQueryQ).q.runtimeComputeds,
         [key]: item,
       };
     } else {
@@ -147,11 +148,10 @@ export const applyComputedColumns = (
       data.explicitSelect = true;
       data.readOnly = true;
 
-      addColumnParserToQuery(
-        (q as unknown as PickQueryQ).q,
-        key,
-        item.result.value,
-      );
+      const parse = (item.result.value as ColumnTypeBase)._parse;
+      if (parse) {
+        ((q as unknown as PickQueryQ).q.defaultParsers ??= {})[key] = parse;
+      }
     }
   }
 

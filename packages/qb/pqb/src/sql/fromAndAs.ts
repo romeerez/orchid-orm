@@ -11,6 +11,7 @@ import {
 } from 'orchid-core';
 import { getSqlText } from './utils';
 import { Query } from '../query/query';
+import { getQueryAs } from '../common/utils';
 
 let fromQuery: Query | undefined;
 
@@ -24,10 +25,6 @@ export const pushFromAndAs = (
 
   const from = getFrom(ctx, table, data, quotedAs);
   sql += from;
-
-  if (data.as && quotedAs && quotedAs !== from) {
-    sql += ` ${quotedAs}`;
-  }
 
   for (const as in data.sources) {
     const source = data.sources[as];
@@ -92,7 +89,13 @@ const getFrom = (
   }
 
   let sql = quoteSchemaAndTable(data.schema, (table as Query).table as string);
+
+  if (data.as && quotedAs && quotedAs !== sql) {
+    sql += ` ${quotedAs}`;
+  }
+
   if (data.only) sql = `ONLY ${sql}`;
+
   return sql;
 };
 
@@ -106,7 +109,7 @@ const fromToSql = (
   let sql;
   if (typeof from === 'object') {
     if (isExpression(from)) {
-      sql = from.toSQL(ctx, quotedAs);
+      sql = from.toSQL(ctx, quotedAs) + ' ' + quotedAs;
     } else {
       only = from.q.only;
 
@@ -115,7 +118,9 @@ const fromToSql = (
       }
       // if the query contains more than just schema return (SELECT ...)
       else if (!checkIfASimpleQuery(from)) {
-        sql = `(${getSqlText(toSQL(from, ctx))})`;
+        sql = `(${getSqlText(toSQL(from, ctx))}) ${
+          quotedAs || `"${getQueryAs(from)}"`
+        }`;
       } else {
         sql = quoteSchemaAndTable(from.q.schema, from.table);
       }

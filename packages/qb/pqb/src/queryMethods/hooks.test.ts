@@ -244,6 +244,32 @@ describe('hooks', () => {
 
   const tested: Record<string, boolean> = {};
 
+  describe('columns parsing', () => {
+    it('should parse columns selected by hooks', async () => {
+      const fn = jest.fn();
+
+      const createdAt = new Date();
+
+      const res = await UserTable.afterCreate(['updatedAt'], fn)
+        .insert({ ...userData, createdAt })
+        // selecting createdAt as updatedAt in attempt to confuse hook select
+        .select({ updatedAt: 'createdAt' });
+
+      const withoutQueryArg = fn.mock.calls.map((call) => call[0]);
+      expect(withoutQueryArg).toMatchObject([
+        [{ updatedAt: expect.any(Date) }],
+      ]);
+
+      // record has updatedAt = createdAt from above
+      expect(res.updatedAt.getTime()).toBe(createdAt.getTime());
+
+      // hookSelect was not confused: it received updatedAt
+      expect(createdAt.getTime()).not.toBe(
+        withoutQueryArg[0][0].updatedAt.getTime(),
+      );
+    });
+  });
+
   describe('set values in before hooks', () => {
     const User = testDb('user', (t) => ({
       id: t.identity().primaryKey(),

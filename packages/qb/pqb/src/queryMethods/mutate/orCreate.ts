@@ -37,8 +37,8 @@ export function orCreate<T extends PickQueryMetaResultReturnType>(
   const { handleResult } = q;
   let result: unknown;
   let created = false;
-  q.handleResult = (q, t, r, i) => {
-    return created ? result : handleResult(q, t, r, i);
+  q.handleResult = (q, t, r, s, i) => {
+    return created ? result : handleResult(q, t, r, s, i);
   };
 
   q.hookSelect = new Map(q.hookSelect);
@@ -87,7 +87,7 @@ export function orCreate<T extends PickQueryMetaResultReturnType>(
 
       let afterHooks: QueryAfterHook[] | undefined;
       let afterCommitHooks: QueryAfterHook[] | undefined;
-      q2.q.handleResult = (a, t, r, i) => {
+      q2.q.handleResult = (a, t, r, s, i) => {
         if (hasAfterCallback || hasAfterCommitCallback) {
           const fieldName = r.fields[0].name;
           if (r.rows[0][fieldName]) {
@@ -100,7 +100,7 @@ export function orCreate<T extends PickQueryMetaResultReturnType>(
           delete r.rows[0][fieldName];
         }
 
-        result = handleResult(a, t, r, i);
+        result = handleResult(a, t, r, s, i);
         return a.q.hookSelect
           ? (result as RecordUnknown[]).map((row) => ({ ...row }))
           : result;

@@ -43,6 +43,7 @@ import {
   CreateManyFromMethodNames,
   getFromSelectColumns,
 } from './createFrom';
+import { _querySelectAll } from '../select/select';
 
 export interface CreateSelf
   extends IsQuery,
@@ -294,7 +295,7 @@ export const createSelect = (q: Query) => {
   if (q.q.returnType === 'void' || isSelectingCount(q)) {
     q.q.select = undefined;
   } else if (!q.q.select) {
-    q.q.select = ['*'];
+    _querySelectAll(q);
     q.q.returning = true;
   }
 };

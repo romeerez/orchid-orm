@@ -5,64 +5,86 @@ import {
   Snake,
   User,
   userColumnsSql,
+  userData,
   UserRecord,
 } from '../test-utils/test-utils';
-import { expectSql, assertType, sql } from 'test-utils';
+import { expectSql, assertType, sql, useTestDatabase } from 'test-utils';
 import { WithOptions } from '../sql';
 
 const makeOptions = (
   select: string,
+  columns?: string[],
 ): { options: WithOptions; sql: string }[] => {
+  const sqlColumns = columns
+    ? `(${columns.map((column) => `"${column}"`).join(', ')})`
+    : '';
   return [
     {
       options: { columns: ['id', 'name'] },
-      sql: `WITH "w"("id", "name") AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      sql: `WITH "w"${
+        sqlColumns ? sqlColumns : `("id", "name")`
+      } AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
     },
     {
       options: { recursive: true },
-      sql: `WITH RECURSIVE "w" AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      sql: `WITH RECURSIVE "w"${sqlColumns} AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
     },
     {
       options: { materialized: true },
-      sql: `WITH "w" AS MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      sql: `WITH "w"${sqlColumns} AS MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
     },
     {
       options: { notMaterialized: true },
-      sql: `WITH "w" AS NOT MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      sql: `WITH "w"${sqlColumns} AS NOT MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
     },
   ];
 };
 
 const selectedOptions = makeOptions(userColumnsSql);
-const selectAllOptions = makeOptions('*');
 
 describe('with', () => {
-  it('should use a query, handle selection', () => {
-    const q = User.with('w', User.select({ i: 'id', n: 'name' })).from('w');
+  useTestDatabase();
 
-    assertType<Awaited<typeof q>, { i: number; n: string }[]>();
+  it('should use a query, handle selection, parse values', async () => {
+    const userId = await User.get('id').insert(userData);
+
+    const q = User.with('w', User.select({ i: 'id', u: 'updatedAt' })).from(
+      'w',
+    );
 
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT "user"."id" "i", "user"."name" "n" FROM "user") SELECT * FROM "w"
+        WITH "w" AS (SELECT "user"."id" "i", "user"."updated_at" "u" FROM "user") SELECT * FROM "w"
       `,
     );
+
+    const res = await q;
+
+    assertType<typeof res, { i: number; u: Date }[]>();
+
+    expect(res).toEqual([{ i: userId, u: expect.any(Date) }]);
   });
 
-  it('should use query builder callback', () => {
+  it('should use query builder callback', async () => {
+    await User.insert(userData);
+
     const q = User.with('w', (q) =>
-      q.select({ one: () => sql`1`.type((t) => t.integer()) }),
+      q.select({ one: () => sql`'1'`.type((t) => t.text().parse(parseInt)) }),
     ).from('w');
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "w" AS (SELECT '1' "one") SELECT * FROM "w"
+      `,
+    );
+
+    const res = await q;
 
     assertType<Awaited<typeof q>, { one: number }[]>();
 
-    expectSql(
-      q.toSQL(),
-      `
-        WITH "w" AS (SELECT 1 "one") SELECT * FROM "w"
-      `,
-    );
+    expect(res).toEqual([{ one: 1 }]);
   });
 
   it('should work with join', () => {
@@ -256,32 +278,41 @@ describe('withRecursive', () => {
 });
 
 describe('withSql', () => {
-  it('should use raw sql', () => {
+  useTestDatabase();
+
+  it('should use raw sql', async () => {
     const q = User.withSql(
       'w',
       (t) => ({
-        one: t.integer(),
+        one: t.text().parse(parseInt),
         two: t.text(),
       }),
-      () => sql`(VALUES (1, 'two')) t(one, two)`,
+      () => sql`(VALUES ('1', 'two'))`,
     ).from('w');
-
-    assertType<Awaited<typeof q>, { one: number; two: string }[]>();
 
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS ((VALUES (1, 'two')) t(one, two)) SELECT * FROM "w"
+        WITH "w"("one", "two") AS ((VALUES ('1', 'two'))) SELECT * FROM "w"
       `,
     );
+
+    const res = await q;
+
+    assertType<typeof res, { one: number; two: string }[]>();
+
+    expect(res).toEqual([{ one: 1, two: 'two' }]);
   });
 
   it('should support all with options', () => {
-    for (const { options: opts, sql: s } of selectAllOptions) {
+    for (const { options: opts, sql: s } of makeOptions('*', ['id', 'name'])) {
       const q = User.withSql(
         'w',
         opts,
-        () => ({}),
+        (t) => ({
+          id: t.integer(),
+          name: t.text(),
+        }),
         () => sql`SELECT * FROM "user"`,
       ).from('w');
 
@@ -301,7 +332,7 @@ describe('withSql', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "test" AS (select 1 as id)
+        WITH "test"("id") AS (select 1 as id)
         SELECT "test"."id"
         FROM "user"
         JOIN "test" ON true

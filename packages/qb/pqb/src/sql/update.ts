@@ -19,8 +19,7 @@ import { selectToSql } from './select';
 import { countSelect } from './rawSql';
 import { getSqlText } from './utils';
 import { Query } from '../query/query';
-import { processJoinItem, pushJoinSql } from './join';
-import { JoinItem } from 'pqb';
+import { processJoinItem } from './join';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -98,12 +97,29 @@ export const pushUpdateSql = (
       fromWhereSql = on;
 
       if (query.join) {
-        pushJoinSql(
-          ctx,
-          table,
-          query as QueryData & { join: JoinItem[] },
-          quotedAs,
-        );
+        const joinSet = query.join.length > 1 ? new Set<string>() : null;
+
+        for (const item of query.join) {
+          const { target, on } = processJoinItem(
+            ctx,
+            table,
+            query,
+            item.args,
+            quotedAs,
+          );
+
+          if (joinSet) {
+            const key = `${item.type}${target}${on}`;
+            if (joinSet.has(key)) continue;
+            joinSet.add(key);
+          }
+
+          ctx.sql.push(`${item.type} ${target} ON true`);
+
+          if (on) {
+            fromWhereSql = fromWhereSql ? fromWhereSql + ' AND ' + on : on;
+          }
+        }
       }
     }
 

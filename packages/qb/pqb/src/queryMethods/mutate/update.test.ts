@@ -13,10 +13,13 @@ import {
 } from '../../test-utils/test-utils';
 import {
   assertType,
+  ChatData,
   db,
   expectSql,
+  MessageData,
   sql,
   testDb,
+  UserData,
   useTestDatabase,
 } from 'test-utils';
 import { addQueryOn } from '../join/join';
@@ -1064,21 +1067,40 @@ describe('update', () => {
       );
     });
 
-    it('supports join', () => {
+    it('supports join', async () => {
+      const user = await db.user
+        .create({
+          ...UserData,
+          messages: {
+            create: [
+              {
+                ...MessageData,
+                chat: {
+                  create: ChatData,
+                },
+              },
+            ],
+          },
+        })
+        .select('Id', {
+          chatId: (q) => q.messages.get('messages.ChatId'),
+        });
+
       const q = db.message
         .updateFrom(
           () => db.user,
           (q) => q.on('Id', 'message.AuthorId'),
         )
-        .join('chat')
+        .join('chat', (q) => q.where({ Title: ChatData.Title }))
         .where({
-          'user.Id': 1,
-          'chat.IdOfChat': 2,
+          'user.Id': user.Id,
+          'chat.IdOfChat': user.chatId,
         })
         .set({
           Text: (q) => q.ref('user.Name'),
           Active: (q) => q.ref('chat.Active'),
-        });
+        })
+        .select('updatedAt');
 
       expectSql(
         q.toSQL(),
@@ -1089,13 +1111,21 @@ describe('update', () => {
             "active" = "chat"."active",
             "updated_at" = now()
           FROM "user"
-          JOIN "chat" ON "chat"."id_of_chat" = "message"."chat_id" AND "chat"."chat_key" = "message"."message_key"
-          WHERE ("user"."id" = $1 AND "chat"."id_of_chat" = $2)
+          JOIN "chat" ON true
+          WHERE ("user"."id" = $2 AND "chat"."id_of_chat" = $3)
             AND ("message"."deleted_at" IS NULL)
             AND "user"."id" = "message"."author_id"
+            AND "chat"."id_of_chat" = "message"."chat_id"
+            AND "chat"."chat_key" = "message"."message_key"
+            AND "chat"."title" = $1
+          RETURNING "message"."updated_at" "updatedAt"
         `,
-        [1, 2],
+        [ChatData.Title, user.Id, user.chatId],
       );
+
+      const res = await q;
+
+      expect(res).toEqual([{ updatedAt: expect.any(Date) }]);
     });
 
     it('turns from into a subquery if it is complex, respects aliased columns', () => {

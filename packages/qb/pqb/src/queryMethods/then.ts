@@ -1,6 +1,7 @@
 import { Query } from '../query/query';
 import {
   DelayedRelationSelect,
+  getQueryParsers,
   NotFoundError,
   QueryError,
   QueryResult,
@@ -192,7 +193,7 @@ const then = async (
       );
     }
 
-    sql = q.toSQL();
+    const localSql = (sql = q.toSQL());
     const { hookSelect, delayedRelationSelect } = sql;
     const { returnType = 'all' } = query;
     const tempReturnType =
@@ -234,7 +235,7 @@ const then = async (
         await query.patchResult(q, hookSelect, queryResult);
       }
 
-      result = query.handleResult(q, tempReturnType, queryResult);
+      result = query.handleResult(q, tempReturnType, queryResult, localSql);
     } else {
       // autoPreparedStatements in batch doesn't seem to make sense
 
@@ -287,7 +288,7 @@ const then = async (
       }
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      result = query.handleResult(q, tempReturnType, queryResult!);
+      result = query.handleResult(q, tempReturnType, queryResult!, localSql);
     }
 
     // TODO: move computeds after parsing
@@ -446,14 +447,26 @@ const then = async (
     // can be set by hooks or by computed columns
     if (hookSelect || tempReturnType !== returnType) {
       if (renames) {
-        for (const a in renames) {
-          for (const record of result as RecordUnknown[]) {
+        // to not mutate the original result because it's passed to hooks
+        const renamedResult = Array.from({
+          length: (result as RecordUnknown[]).length,
+        });
+
+        for (
+          let i = 0, len = (result as RecordUnknown[]).length;
+          i < len;
+          ++i
+        ) {
+          const record = (result as RecordUnknown[])[i];
+          const renamedRecord = (renamedResult[i] = { ...record });
+          for (const a in renames) {
             // TODO: no need to assign if the one or another is in `tempColumns`
-            const value = record[a];
-            record[a] = record[renames[a]];
-            record[renames[a]] = value;
+            renamedRecord[a] = record[renames[a]];
+            renamedRecord[renames[a]] = record[a];
           }
         }
+
+        result = renamedResult;
       }
 
       result = filterResult(
@@ -533,9 +546,10 @@ export const handleResult: HandleResult = (
   q,
   returnType,
   result,
+  sql,
   isSubQuery,
 ) => {
-  const { parsers } = q.q;
+  const parsers = getQueryParsers(q, sql.hookSelect);
 
   switch (returnType) {
     case 'all': {

@@ -313,7 +313,7 @@ export class WithMethods {
     const shape = getShapeFromSelect(query, true);
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
       shape: shape as ColumnsShapeBase,
-      computeds: query.q.computeds,
+      computeds: query.q.runtimeComputeds,
     });
   }
 
@@ -443,7 +443,7 @@ export class WithMethods {
     arg.q.withShapes = q.q.withShapes;
     let query = typeof baseFn === 'function' ? baseFn(arg) : baseFn;
     const shape = getShapeFromSelect(query, true) as ColumnsShapeBase;
-    const withConfig = { shape, computeds: query.q.computeds };
+    const withConfig = { shape, computeds: query.q.runtimeComputeds };
     (arg.q.withShapes ??= {})[name] = withConfig;
     const recursive = recursiveFn(arg);
 
@@ -541,17 +541,19 @@ export class WithMethods {
   withSql(this: PickQueryWithDataColumnTypes, name: string, ...args: any[]) {
     const q = _clone(this);
 
-    const [options, shape, sql] =
+    const [options, shapeFn, sql] =
       args.length === 2 ? [undefined, args[0], args[1]] : args;
+
+    const shape = shapeFn(this.columnTypes);
 
     pushQueryValueImmutable(q, 'with', {
       n: name,
-      o: options,
+      o: { ...options, columns: Object.keys(shape) },
       s: sql(q),
     });
 
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
-      shape: shape(this.columnTypes),
+      shape,
     });
   }
 }

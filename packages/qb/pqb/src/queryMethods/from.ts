@@ -1,10 +1,9 @@
 import { Query, SelectableFromShape, PickQueryQ } from '../query/query';
-import { WithConfigs } from '../sql';
+import { JoinedParsers, WithConfig, WithConfigs } from '../sql';
 import {
   PickQueryTableMetaResult,
   SQLQueryArgs,
   isExpression,
-  Expression,
   MaybeArray,
   PickQueryTableMetaResultInputType,
   ColumnsParsers,
@@ -14,17 +13,18 @@ import {
   PickQueryMetaTableShapeReturnTypeWithData,
   SetQueryTableAlias,
   AliasOrTable,
+  getQueryParsers,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select/select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
-import { addColumnParserToQuery, anyShape, ColumnsShape } from '../columns';
+import { anyShape, ColumnsShape } from '../columns';
 import { _clone } from '../query/queryUtils';
+import { getQueryAs } from '../common/utils';
 
 export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
 
 export type FromArg<T extends FromQuerySelf> =
   | PickQueryTableMetaResult
-  | Expression
   | Exclude<keyof T['withData'], symbol | number>;
 
 export type FromResult<
@@ -108,6 +108,13 @@ export type FromResult<
     }
   : T;
 
+const addWithParsers = (w: WithConfig, parsers: ColumnsParsers) => {
+  for (const key in w.shape) {
+    const { _parse } = w.shape[key];
+    if (_parse) parsers[key] = _parse;
+  }
+};
+
 export function queryFrom<
   T extends FromQuerySelf,
   Arg extends MaybeArray<FromArg<T>>,
@@ -117,43 +124,42 @@ export function queryFrom<
     data.as ||= arg;
     const w = data.withShapes?.[arg];
     data.shape = (w?.shape ?? anyShape) as ColumnsShape;
-    data.computeds = w?.computeds;
-  } else if (isExpression(arg)) {
-    data.as ||= 't';
+    data.runtimeComputeds = w?.computeds;
+
+    const parsers: ColumnsParsers = {};
+    data.defaultParsers = parsers;
+    if (w) addWithParsers(w, parsers);
   } else if (Array.isArray(arg)) {
     const { shape } = data;
-    let clonedParsers = false;
+
+    const joinedParsers: JoinedParsers = {};
+
     // TODO: batchParsers
     for (const item of arg) {
       if (typeof item === 'string') {
         const w = (data.withShapes as WithConfigs)[item];
 
         Object.assign(shape, w.shape);
-        if (w.computeds) data.computeds = { ...data.computeds, ...w.computeds };
+        if (w.computeds)
+          data.runtimeComputeds = { ...data.runtimeComputeds, ...w.computeds };
 
-        for (const key in w.shape) {
-          addColumnParserToQuery(
-            self as { parsers?: ColumnsParsers },
-            key,
-            w.shape[key],
-          );
-        }
+        const parsers: ColumnsParsers = {};
+        joinedParsers[item] = parsers;
+        addWithParsers(w, parsers);
       } else if (!isExpression(item)) {
         Object.assign(shape, getShapeFromSelect(item, true));
 
-        if (!clonedParsers) {
-          data.parsers = { ...data.parsers };
-          clonedParsers = true;
-        }
-
-        Object.assign(data.parsers!, item.q.parsers);
+        const key = getQueryAs(item);
+        joinedParsers[key] = getQueryParsers(item);
       }
     }
+
+    data.joinedParsers = joinedParsers;
   } else {
     const q = arg as Query;
     data.as ||= q.q.as || q.table || 't';
     data.shape = getShapeFromSelect(q, true) as ColumnsShape;
-    data.parsers = q.q.parsers;
+    data.defaultParsers = getQueryParsers(q);
     data.batchParsers = q.q.batchParsers;
   }
 

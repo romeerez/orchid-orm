@@ -1,6 +1,9 @@
 import {
+  Chat,
+  chatData,
   expectQueryNotMutated,
   Message,
+  messageData,
   messageTableColumnsSql,
   Profile,
   profileColumnsSql,
@@ -25,6 +28,12 @@ jest.mock('./_join', () => {
   };
 });
 
+const insertMessage = async () => {
+  const userId = await User.get('id').insert(userData);
+  const chatId = await Chat.get('idOfChat').insert(chatData);
+  await Message.insert({ ...messageData, authorId: userId, chatId });
+};
+
 it('should not accept wrong column as join arg', () => {
   // @ts-expect-error wrong message column
   User.join(Message, 'message.wrong', 'user.id');
@@ -33,20 +42,29 @@ it('should not accept wrong column as join arg', () => {
   User.join(Message, 'message.id', 'user.wrong');
 });
 
-it('should ignore duplicated joins', () => {
-  const q = User.join(Message, 'message.id', 'user.id').join(
-    Message,
-    'message.id',
-    'user.id',
-  );
+describe('using db', () => {
+  useTestDatabase();
 
-  expectSql(
-    q.toSQL(),
-    `
-      SELECT ${userTableColumnsSql} FROM "user"
-      JOIN "message" ON "message"."id" = "user"."id"
-    `,
-  );
+  it('should ignore duplicated joins', async () => {
+    await insertMessage();
+
+    const q = User.join(Message, 'message.authorId', 'user.id')
+      .join(Message, 'message.authorId', 'user.id')
+      .select('message.updatedAt');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "message"."updated_at" "updatedAt"
+        FROM "user"
+        JOIN "message" ON "message"."author_id" = "user"."id"
+      `,
+    );
+
+    const res = await q;
+
+    expect(res).toEqual([{ updatedAt: expect.any(Date) }]);
+  });
 });
 
 describe('join', () => {
@@ -607,6 +625,8 @@ describe('join callback with query builder', () => {
 });
 
 describe('implicit lateral joins', () => {
+  useTestDatabase();
+
   it(`should disallow selecting joined columns that weren't selected inside join`, () => {
     User.join(Message, (q) => q.on('authorId', 'user.id').select('text'))
       .select('message.text')
@@ -616,26 +636,34 @@ describe('implicit lateral joins', () => {
       );
   });
 
-  it('should work when joining a table', () => {
+  it('should work when joining a table', async () => {
+    await insertMessage();
+
     const q = User.join(Message, (q) =>
-      q.on('message.id', 'user.id').where({ text: 'text' }).limit(5).offset(10),
-    );
+      q
+        .on('message.authorId', 'user.id')
+        .where({ text: messageData.text })
+        .limit(5),
+    ).select('message.updatedAt');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userTableColumnsSql}
+        SELECT "message"."updated_at" "updatedAt"
         FROM "user"
         JOIN LATERAL (
           SELECT "message".*
           FROM "message"
-          WHERE "message"."id" = "user"."id" AND "message"."text" = $1
+          WHERE "message"."author_id" = "user"."id" AND "message"."text" = $1
           LIMIT $2
-          OFFSET $3
         ) "message" ON true
       `,
-      ['text', 5, 10],
+      [messageData.text, 5],
     );
+
+    const res = await q;
+
+    expect(res).toEqual([{ updatedAt: expect.any(Date) }]);
   });
 
   it('should work when joining a sub-query', () => {

@@ -23,6 +23,7 @@ const User = testDb(
     password: t.text(),
     userKey: t.text().nullable(),
     column: t.integer().nullable(),
+    updatedAt: t.timestamp().default(sql`now()`),
   }),
   undefined,
   {
@@ -700,12 +701,12 @@ describe('computed', () => {
       it('should select a computed column from a joined relation', async () => {
         const q = (Profile as Query)
           .join('user')
-          .select('user.runtimeComputed');
+          .select('user.runtimeComputed', 'user.updatedAt');
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."id", "user"."name"
+            SELECT "user"."updated_at" "updatedAt", "user"."id", "user"."name"
             FROM "profile"
             JOIN "user" ON ("profile"."user_id" = "user"."id")
           `,
@@ -713,24 +714,27 @@ describe('computed', () => {
 
         const res = await q;
         expect(res).toEqual([
-          { runtimeComputed: `${userId} ${userData.name}` },
+          {
+            runtimeComputed: `${userId} ${userData.name}`,
+            updatedAt: expect.any(Date),
+          },
         ]);
       });
 
       it('should select a computed from a joined sub-query', async () => {
         const q = Profile.join(
-          User.select('id', 'runtimeComputed'),
+          User.select('id', 'runtimeComputed', 'updatedAt'),
           'id',
           'userId',
-        ).select('user.runtimeComputed');
+        ).select('user.runtimeComputed', 'user.updatedAt');
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."id", "user"."name"
+            SELECT "user"."updatedAt", "user"."id", "user"."name"
             FROM "profile"
             JOIN (
-              SELECT "user"."id", "user"."name"
+              SELECT "user"."id", "user"."updated_at" "updatedAt", "user"."name"
               FROM "user"
             ) "user" ON "user"."id" = "profile"."user_id"
           `,
@@ -738,10 +742,16 @@ describe('computed', () => {
 
         const res = await q;
 
-        assertType<typeof res, { runtimeComputed: string }[]>();
+        assertType<
+          typeof res,
+          { runtimeComputed: string; updatedAt: Date }[]
+        >();
 
         expect(res).toEqual([
-          { runtimeComputed: `${userId} ${userData.name}` },
+          {
+            runtimeComputed: `${userId} ${userData.name}`,
+            updatedAt: expect.any(Date),
+          },
         ]);
       });
 

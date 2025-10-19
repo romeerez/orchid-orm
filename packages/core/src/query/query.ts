@@ -2,8 +2,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { TransactionState } from '../adapter';
 import {
   EmptyObject,
-  FnUnknownToUnknown,
-  MaybePromise,
   pushOrNewArrayToObjectImmutable,
   RecordKeyTrue,
   RecordUnknown,
@@ -12,18 +10,9 @@ import { QueryColumn, QueryColumns } from '../columns';
 import { DelayedRelationSelect } from './delayed-relational-select';
 import { QueryInternalColumnNameToKey } from './column-name-to-key';
 import { QueryDataBase } from './query-data';
+import { HasHookSelect } from './hook-select';
 
-export type HookSelect = Map<string, HookSelectValue>;
-
-export interface HookSelectValue {
-  select: string | { sql: string };
-  as?: string;
-  temp?: string;
-}
-
-export interface SqlCommonOptions {
-  // additional columns to select for `after` hooks
-  hookSelect?: HookSelect;
+export interface SqlCommonOptions extends HasHookSelect {
   delayedRelationSelect?: DelayedRelationSelect;
 }
 
@@ -159,27 +148,6 @@ export type getValueKey = typeof getValueKey;
 // this is for the case when using query.get('column') or query.count() - it returns anonymous value
 export const getValueKey = Symbol('get');
 
-// function to parse a single column after loading the data
-export type ColumnParser = FnUnknownToUnknown;
-
-// To parse all returned rows. Unlike column parser, can return a promise.
-export interface BatchParser {
-  path: string[];
-  fn: (path: string[], queryResult: { rows: unknown[] }) => MaybePromise<void>;
-}
-
-// set of value parsers
-// key is a name of a selected column,
-// or it can be a `getValueKey` to parse single values requested by the `.get()`, `.count()`, or similar methods
-export type ColumnsParsers = { [K in string | getValueKey]?: ColumnParser };
-
-// set of batch parsers
-// is only triggered when loading all,
-// or when using `hookSelect` or computed columns that convert response to `all` internally.
-// key is a name of a selected column,
-// or it can be a `getValueKey` to parse single values requested by the `.get()`, `.count()`, or similar methods
-export type BatchParsers = BatchParser[];
-
 // result transformer: function for `transform`, object for `map`
 export type QueryDataTransform =
   | QueryDataTransformFn
@@ -191,42 +159,6 @@ export type QueryDataTransform =
 interface QueryDataTransformFn {
   (data: unknown, queryData: unknown): unknown;
 }
-
-/**
- * generic utility to add a parser to the query object
- * @param query - the query object, it will be mutated
- * @param key - the name of the column in the data loaded by the query
- * @param parser - function to process the value of the column with.
- */
-export const setParserToQuery = (
-  query: { parsers?: ColumnsParsers },
-  key: string | getValueKey,
-  parser: ColumnParser,
-) => {
-  if (query.parsers) query.parsers[key] = parser;
-  else query.parsers = { [key]: parser };
-};
-
-/**
- * similar to setParserToQuery,
- * but if the parser for the column is already set,
- * this will wrap it with HOC to additionally parse with a provided function
- * @param query - the query object, it will be mutated
- * @param key - the name of the column in the data loaded by the query
- * @param parser - function to process the value of the column with.
- */
-export const overrideParserInQuery = (
-  query: { parsers?: ColumnsParsers },
-  key: string | getValueKey,
-  parser: ColumnParser,
-) => {
-  if (query.parsers) {
-    const existing = query.parsers[key];
-    query.parsers[key] = existing
-      ? (value: unknown) => parser(existing(value))
-      : parser;
-  } else query.parsers = { [key]: parser } as ColumnsParsers;
-};
 
 /**
  * See `transform` query method.

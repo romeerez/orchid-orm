@@ -2,6 +2,7 @@ import {
   expectQueryNotMutated,
   Profile,
   profileColumnsSql,
+  profileData,
   User,
   userColumnsSql,
   userData,
@@ -104,37 +105,62 @@ describe('from', () => {
 });
 
 describe('from multiple', () => {
-  it('should support multiple sources', () => {
+  useTestDatabase();
+
+  it('should support multiple sources, should properly parse', async () => {
+    const userId = await User.get('id').insert(userData);
+    await Profile.insert({ ...profileData, userId });
+
     const q = testDb
       .with('with1', (qb) =>
-        qb.select({ one: sql`1`.type((t) => t.integer()) }),
+        qb.select({ one: sql`'1'`.type((t) => t.text().parse(parseInt)) }),
       )
       .with('with2', (qb) =>
-        qb.select({ two: sql`1`.type((t) => t.integer()) }),
+        qb.select({ two: sql`'2'`.type((t) => t.text().parse(parseInt)) }),
       )
-      .from(['with1', 'with2', User, Profile])
-      .select('with1.one', 'with2.two', 'user.active', 'profile.bio');
-
-    assertType<
-      Awaited<typeof q>,
-      {
-        one: number;
-        two: number;
-        active: boolean | null;
-        bio: string | null;
-      }[]
-    >();
+      .from([
+        'with1',
+        'with2',
+        User.select('updatedAt'),
+        Profile.select('createdAt'),
+      ])
+      .select('with1.one', 'with2.two', 'user.updatedAt', 'profile.createdAt');
 
     expectSql(
       q.toSQL(),
       `
         WITH
-          "with1" AS (SELECT 1 "one"),
-          "with2" AS (SELECT 1 "two")
-        SELECT "with1"."one", "with2"."two", "user"."active", "profile"."bio"
-        FROM "with1", "with2", (SELECT ${userColumnsSql} FROM "user"), (SELECT ${profileColumnsSql} FROM "profile")
+          "with1" AS (SELECT '1' "one"),
+          "with2" AS (SELECT '2' "two")
+        SELECT "with1"."one", "with2"."two", "user"."updatedAt", "profile"."createdAt"
+        FROM
+          "with1",
+          "with2",
+          (SELECT "user"."updated_at" "updatedAt" FROM "user") "user",
+          (SELECT "profile"."created_at" "createdAt" FROM "profile") "profile"
       `,
     );
+
+    const res = await q;
+
+    assertType<
+      typeof res,
+      {
+        one: number;
+        two: number;
+        updatedAt: Date;
+        createdAt: Date;
+      }[]
+    >();
+
+    expect(res).toEqual([
+      {
+        one: 1,
+        two: 2,
+        updatedAt: expect.any(Date),
+        createdAt: expect.any(Date),
+      },
+    ]);
   });
 });
 

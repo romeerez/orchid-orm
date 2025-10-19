@@ -71,7 +71,7 @@ export const processJoinArgs = (
       j.table = first;
       j.q = {
         shape: w.shape,
-        computeds: w.computeds,
+        runtimeComputeds: w.computeds,
         adapter: joinToQ.adapter,
         handleResult: joinToQ.handleResult,
         returnType: 'all',

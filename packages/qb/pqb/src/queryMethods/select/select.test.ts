@@ -1,11 +1,15 @@
 import {
+  Chat,
+  chatData,
   expectQueryNotMutated,
   Message,
+  messageData,
   Product,
   Profile,
   profileData,
   ProfileRecord,
   Snake,
+  snakeData,
   SnakeRecord,
   snakeSelectAll,
   snakeSelectAllWithTable,
@@ -26,10 +30,12 @@ import {
 import { getShapeFromSelect } from './select';
 import {
   assertType,
+  db,
   expectSql,
   jsonBuildObjectAllSql,
   sql,
   testZodColumnTypes as t,
+  UserData,
   useTestDatabase,
 } from 'test-utils';
 import { z } from 'zod/v4';
@@ -45,26 +51,45 @@ const profileJsonBuildObjectSql = jsonBuildObjectAllSql(Profile, 'p');
 const ProfileNoParsers = Profile.clone();
 ProfileNoParsers.q.parsers = undefined;
 
+const createUserMessage = async () => {
+  const userId = await User.get('id').insert(userData);
+  const chatId = await Chat.get('idOfChat').insert(chatData);
+  const message = await Message.create({
+    ...messageData,
+    chatId,
+    authorId: userId,
+  });
+  return { message };
+};
+
 describe('select', () => {
   useTestDatabase();
 
   describe('select', () => {
-    it('should select all columns with a *', () => {
-      const query = User.join(Message, 'authorId', 'id').select('*');
+    it('should select and parse all columns with a *', async () => {
+      await createUserMessage();
 
-      assertType<Awaited<typeof query>, UserRecord[]>();
+      const q = User.join(Message, 'authorId', 'id').select('*');
 
-      expect(Object.keys(getShapeFromSelect(query))).toEqual(
+      expect(Object.keys(getShapeFromSelect(q))).toEqual(
         Object.keys(User.q.selectAllShape),
       );
 
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT ${userTableColumnsSql} FROM "user"
           JOIN "message" ON "message"."author_id" = "user"."id"
         `,
       );
+
+      const res = await q;
+
+      assertType<typeof res, UserRecord[]>();
+
+      expect(res).toMatchObject([
+        { name: userData.name, updatedAt: expect.any(Date) },
+      ]);
     });
 
     it('should omit virtual columns from getShapeFromSelect when selecting *', () => {
@@ -81,10 +106,11 @@ describe('select', () => {
       );
     });
 
-    it('should select all named columns with a *', () => {
-      const q = Snake.join(Message, 'authorId', 'tailLength').select('*');
+    it('should select all named columns with a *', async () => {
+      const { message } = await createUserMessage();
+      await Snake.create({ ...snakeData, tailLength: message.authorId });
 
-      assertType<Awaited<typeof q>, SnakeRecord[]>();
+      const q = Snake.join(Message, 'authorId', 'tailLength').select('*');
 
       expectSql(
         q.toSQL(),
@@ -93,23 +119,35 @@ describe('select', () => {
           JOIN "message" ON "message"."author_id" = "snake"."tail_length"
         `,
       );
+
+      const res = await q;
+
+      assertType<typeof res, SnakeRecord[]>();
+
+      expect(res).toMatchObject([{ updatedAt: expect.any(Date) }]);
     });
 
-    it('should select all table columns with * plus specified joined columns', () => {
-      const query = User.join(Message, 'authorId', 'id').select(
+    it('should select all table columns with * plus specified joined columns', async () => {
+      await createUserMessage();
+
+      const q = User.join(Message, 'authorId', 'id').select(
         '*',
         'message.text',
       );
 
-      assertType<Awaited<typeof query>, (UserRecord & { text: string })[]>();
-
       expectSql(
-        query.toSQL(),
+        q.toSQL(),
         `
           SELECT ${userTableColumnsSql}, "message"."text" FROM "user"
           JOIN "message" ON "message"."author_id" = "user"."id"
         `,
       );
+
+      const res = await q;
+
+      assertType<typeof res, (UserRecord & { text: string })[]>();
+
+      expect(res).toMatchObject([{ updatedAt: expect.any(Date) }]);
     });
 
     it('should be able to select nothing', async () => {
@@ -311,8 +349,6 @@ describe('select', () => {
           'p.bio': profileData.bio,
         });
 
-      assertType<Awaited<typeof q>, { p: ProfileRecord }[]>();
-
       expectSql(
         q.toSQL(),
         `
@@ -324,8 +360,11 @@ describe('select', () => {
         [profileData.bio],
       );
 
-      const data = await q;
-      expect(data).toEqual([
+      const res = await q;
+
+      assertType<typeof res, { p: ProfileRecord }[]>();
+
+      expect(res).toEqual([
         {
           p: {
             id: expect.any(Number),
@@ -349,8 +388,6 @@ describe('select', () => {
           'p.bio': profileData.bio,
         });
 
-      assertType<Awaited<typeof q>, { profile: ProfileRecord }[]>();
-
       expectSql(
         q.toSQL(),
         `
@@ -362,8 +399,11 @@ describe('select', () => {
         [profileData.bio],
       );
 
-      const data = await q;
-      expect(data).toEqual([
+      const res = await q;
+
+      assertType<Awaited<typeof res>, { profile: ProfileRecord }[]>();
+
+      expect(res).toEqual([
         {
           profile: {
             id: expect.any(Number),
@@ -383,8 +423,6 @@ describe('select', () => {
         'p.*',
       );
 
-      assertType<Awaited<typeof q>, { p: ProfileRecord | undefined }[]>();
-
       expectSql(
         q.toSQL(),
         `
@@ -394,8 +432,11 @@ describe('select', () => {
         `,
       );
 
-      const data = await q;
-      expect(data).toEqual([
+      const res = await q;
+
+      assertType<typeof res, { p: ProfileRecord | undefined }[]>();
+
+      expect(res).toEqual([
         {
           p: {
             id: expect.any(Number),
@@ -415,8 +456,6 @@ describe('select', () => {
         profile: 'p.*',
       });
 
-      assertType<Awaited<typeof q>, { profile: ProfileRecord | undefined }[]>();
-
       expectSql(
         q.toSQL(),
         `
@@ -426,8 +465,11 @@ describe('select', () => {
         `,
       );
 
-      const data = await q;
-      expect(data).toEqual([
+      const res = await q;
+
+      assertType<typeof res, { profile: ProfileRecord | undefined }[]>();
+
+      expect(res).toEqual([
         {
           profile: {
             id: expect.any(Number),
@@ -440,16 +482,13 @@ describe('select', () => {
       ]);
     });
 
-    it('should select right joined table as json', () => {
+    it('should select right joined table as json', async () => {
+      await insertUserAndProfile();
+
       const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
         'p.*',
       );
-
-      assertType<
-        Awaited<typeof q>,
-        { name: string | null; p: ProfileRecord }[]
-      >();
 
       expectSql(
         q.toSQL(),
@@ -459,39 +498,70 @@ describe('select', () => {
           RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
+
+      const res = await q;
+
+      assertType<typeof res, { name: string | null; p: ProfileRecord }[]>();
+
+      expect(res).toEqual([
+        {
+          name: 'name',
+          p: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
     });
 
-    it('should select right joined table as json with alias', () => {
+    it('should select right joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
       const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
         { profile: 'p.*' },
       );
 
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
+          FROM "user"
+          RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
+
+      const res = await q;
+
       assertType<
-        Awaited<typeof q>,
+        typeof res,
         { name: string | null; profile: ProfileRecord }[]
       >();
 
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-          RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-        `,
-      );
+      expect(res).toEqual([
+        {
+          name: 'name',
+          profile: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
     });
 
-    it('should select full joined table as json', () => {
+    it('should select full joined table as json', async () => {
+      await insertUserAndProfile();
+
       const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
         'p.*',
       );
-
-      assertType<
-        Awaited<typeof q>,
-        { name: string | null; p: ProfileRecord | undefined }[]
-      >();
 
       expectSql(
         q.toSQL(),
@@ -501,18 +571,35 @@ describe('select', () => {
           FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        { name: string | null; p: ProfileRecord | undefined }[]
+      >();
+
+      expect(res).toEqual([
+        {
+          name: 'name',
+          p: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
     });
 
-    it('should select full joined table as json with alias', () => {
+    it('should select full joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
       const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
         { profile: 'p.*' },
       );
-
-      assertType<
-        Awaited<typeof q>,
-        { name: string | null; profile: ProfileRecord | undefined }[]
-      >();
 
       expectSql(
         q.toSQL(),
@@ -522,6 +609,40 @@ describe('select', () => {
           FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        { name: string | null; profile: ProfileRecord | undefined }[]
+      >();
+
+      expect(res).toEqual([
+        {
+          name: 'name',
+          profile: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should not apply table column parsers to a selected expression with the same name as a table column', async () => {
+      await db.user.insert(UserData);
+
+      const q = db.user.take().select({
+        updatedAt: () => sql<boolean>`true`,
+      });
+
+      const res = await q;
+
+      assertType<typeof res, { updatedAt: boolean }>();
+
+      expect(res.updatedAt).toBe(true);
     });
 
     describe('loading records', () => {
@@ -858,15 +979,21 @@ describe('select', () => {
         );
       });
 
-      it('should properly select 3 levels deep select *', () => {
-        const q = User.select({
+      it('should properly select and parse 3 levels deep select *', async () => {
+        await User.insert(userData);
+
+        const res = await User.select({
           arr: () =>
             User.select({
               arr: () => User.select('*'),
             }),
         });
 
-        assertType<Awaited<typeof q>, { arr: { arr: UserRecord[] }[] }[]>();
+        assertType<typeof res, { arr: { arr: UserRecord[] }[] }[]>();
+
+        expect(res).toMatchObject([
+          { arr: [{ arr: [{ updatedAt: expect.any(Date) }] }] },
+        ]);
       });
 
       // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
@@ -885,6 +1012,10 @@ describe('select', () => {
           typeof res,
           (UserRecord & { author: { count: number } | undefined })[]
         >();
+
+        expect(res).toMatchObject([
+          { updatedAt: expect.any(Date), author: { count: 1 } },
+        ]);
       });
 
       it('should combine multiple selects and give proper types', async () => {
