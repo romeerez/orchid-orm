@@ -1,5 +1,12 @@
 # orchid-core
 
+## 0.29.5
+
+### Patch Changes
+
+- 4176cdc: Fix handling column parsing on conflictingly named columns and sub-selects (#549)
+- 21aaa51: Change `narrowType` to take a single type, add `narrowAllTypes` to take multiple (#556)
+
 ## 0.29.4
 
 ### Patch Changes

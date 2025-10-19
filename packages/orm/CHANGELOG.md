@@ -1,5 +1,25 @@
 # orchid-orm
 
+## 1.57.5
+
+### Patch Changes
+
+- d629a2c: Support `transform` on `none` queries (#554)
+- 62ec814: Add `updateFrom` to update records in one table from another (#555)
+- 4176cdc: Fix handling column parsing on conflictingly named columns and sub-selects (#549)
+- d579696: Improve `where` typing on selected expressions (#552)
+- fa8955e: Fix `none().then()` to pass the result properly (#553)
+- 21aaa51: Change `narrowType` to take a single type, add `narrowAllTypes` to take multiple (#556)
+- Updated dependencies [d629a2c]
+- Updated dependencies [62ec814]
+- Updated dependencies [4176cdc]
+- Updated dependencies [d579696]
+- Updated dependencies [fa8955e]
+- Updated dependencies [21aaa51]
+  - pqb@0.56.10
+  - orchid-core@0.29.5
+  - rake-db@2.27.11
+
 ## 1.57.4
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.25
+
+### Patch Changes
+
+- 21aaa51: Change `narrowType` to take a single type, add `narrowAllTypes` to take multiple (#556)
+- Updated dependencies [d629a2c]
+- Updated dependencies [62ec814]
+- Updated dependencies [4176cdc]
+- Updated dependencies [d579696]
+- Updated dependencies [fa8955e]
+- Updated dependencies [21aaa51]
+  - pqb@0.56.10
+  - orchid-core@0.29.5
+
 ## 1.0.24
 
 ### Patch Changes
