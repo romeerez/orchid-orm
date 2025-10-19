@@ -1017,27 +1017,43 @@ describe('zod schema config', () => {
   });
 
   describe('narrowType', () => {
-    it('accepts narrowed types', () => {
-      const column = t.text().narrowType({
-        input: z.literal('input'),
-        output: z.literal('output'),
-        query: z.literal('query'),
-      });
+    it('accepts narrowed type', () => {
+      const column = t.text().narrowType(z.literal('type'));
 
-      assertType<typeof column.inputType, 'input'>();
-      assertType<typeof column.inputSchema, ZodLiteral<'input'>>();
-      assertType<typeof column.outputType, 'output'>();
-      assertType<typeof column.outputSchema, ZodLiteral<'output'>>();
-      assertType<typeof column.queryType, 'query'>();
-      assertType<typeof column.querySchema, ZodLiteral<'query'>>();
+      assertType<
+        | typeof column.inputType
+        | typeof column.outputType
+        | typeof column.queryType,
+        'type'
+      >();
+      assertType<
+        | typeof column.inputSchema
+        | typeof column.inputSchema
+        | typeof column.outputSchema,
+        ZodLiteral<'type'>
+      >();
 
       expect(column.inputSchema).toBeInstanceOf(ZodLiteral);
       expect(column.outputSchema).toBeInstanceOf(ZodLiteral);
       expect(column.querySchema).toBeInstanceOf(ZodLiteral);
     });
 
-    it('can set types and schemas without `type`', () => {
-      const column = t.text().narrowType({
+    it('does not accept non-compatible type', () => {
+      // @ts-expect-error non-compatible type
+      t.text().narrowType(z.number());
+    });
+
+    it('can be set to a common denominator of columns where input type is different from output, such as timestamp', () => {
+      t.timestamp().narrowType(z.literal('string'));
+
+      // @ts-expect-error non-compatible type
+      t.timestamp().narrowType(z.date());
+    });
+  });
+
+  describe('narrowAllTypes', () => {
+    it('accepts narrowed types', () => {
+      const column = t.text().narrowAllTypes({
         input: z.literal('input'),
         output: z.literal('output'),
         query: z.literal('query'),
@@ -1056,17 +1072,17 @@ describe('zod schema config', () => {
     });
 
     it('does not accept non-compatible types', () => {
-      t.text().narrowType({
+      t.text().narrowAllTypes({
         // @ts-expect-error non-compatible type
         input: z.number(),
       });
 
-      t.text().narrowType({
+      t.text().narrowAllTypes({
         // @ts-expect-error non-compatible type
         output: z.number(),
       });
 
-      t.text().narrowType({
+      t.text().narrowAllTypes({
         // @ts-expect-error non-compatible type
         query: z.number(),
       });

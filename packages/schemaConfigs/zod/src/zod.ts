@@ -16,7 +16,6 @@ import {
   ParseNullColumn,
   RecordUnknown,
   ColumnInputOutputQueryTypesWithSchemas,
-  ColumnInputOutputQueryTypes,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -606,12 +605,6 @@ export interface BareZodType {
   _output: unknown;
 }
 
-interface NarrowTypeArg<T extends ColumnInputOutputQueryTypes> {
-  input?: { _output: T['inputType'] };
-  output?: { _output: T['outputType'] };
-  query?: { _output: T['queryType'] };
-}
-
 export interface ZodSchemaConfig {
   type: ZodTypeAny;
 
@@ -690,7 +683,25 @@ export interface ZodSchemaConfig {
 
   narrowType<
     T extends ColumnInputOutputQueryTypesWithSchemas,
-    Types extends NarrowTypeArg<T>,
+    Type extends { _output: T['inputType'] & T['outputType'] & T['queryType'] },
+  >(
+    this: T,
+    type: Type,
+  ): {
+    [K in keyof T]: K extends 'inputType' | 'outputType' | 'queryType'
+      ? Type['_output']
+      : K extends 'inputSchema' | 'outputSchema' | 'querySchema'
+      ? Type
+      : T[K];
+  };
+
+  narrowAllTypes<
+    T extends ColumnInputOutputQueryTypesWithSchemas,
+    Types extends {
+      input?: { _output: T['inputType'] };
+      output?: { _output: T['outputType'] };
+      query?: { _output: T['queryType'] };
+    },
   >(
     this: T,
     types: Types,
@@ -836,7 +847,12 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   asType(_types) {
     return this as never;
   },
-  narrowType(types) {
+  narrowType(type) {
+    const c = Object.create(this);
+    c.inputSchema = c.outputSchema = c.querySchema = type;
+    return c as never;
+  },
+  narrowAllTypes(types) {
     const c = Object.create(this);
     if (types.input) {
       c.inputSchema = types.input;

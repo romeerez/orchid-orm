@@ -18,7 +18,7 @@ but it is unavailable on type level.
 
 ---
 
-Deprecating `asType`, use `narrowType` instead.
+Deprecating `asType`, use `narrowType` or `narrowAllTypes` instead.
 
 ## orchid-orm 1.57
 

@@ -84,6 +84,23 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _fn: (
       type: <
+        Type extends T['inputType'] & T['outputType'] & T['queryType'],
+      >() => {
+        inputType: Type;
+        outputType: Type;
+        queryType: Type;
+      },
+    ) => Types,
+  ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
+
+  narrowAllTypes<
+    T extends ColumnInputOutputQueryTypes,
+    Types extends ColumnInputOutputQueryTypes,
+  >(
+    this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _fn: (
+      type: <
         Types extends {
           input?: T['inputType'];
           output?: T['outputType'];
@@ -171,6 +188,9 @@ export const defaultSchemaConfig = {
     return this as never;
   },
   narrowType() {
+    return this as never;
+  },
+  narrowAllTypes() {
     return this as never;
   },
   dateAsNumber(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {

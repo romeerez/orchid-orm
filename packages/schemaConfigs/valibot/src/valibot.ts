@@ -12,7 +12,6 @@ import {
   StringTypeData,
   ParseNullColumn,
   ColumnInputOutputQueryTypesWithSchemas,
-  ColumnInputOutputQueryTypes,
 } from 'orchid-core';
 import {
   ArrayColumn,
@@ -763,12 +762,6 @@ type PointSchemaValibot = ObjectSchema<{
 
 let pointSchema: PointSchemaValibot | undefined;
 
-interface NarrowTypeArg<T extends ColumnInputOutputQueryTypes> {
-  input?: { _types?: { output: T['inputType'] } };
-  output?: { _types?: { output: T['outputType'] } };
-  query?: { _types?: { output: T['queryType'] } };
-}
-
 export interface ValibotSchemaConfig {
   type: BaseSchema;
 
@@ -847,7 +840,29 @@ export interface ValibotSchemaConfig {
 
   narrowType<
     T extends ColumnInputOutputQueryTypesWithSchemas,
-    Types extends NarrowTypeArg<T>,
+    Type extends BaseSchema<
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any,
+      T['inputType'] & T['outputType'] & T['queryType']
+    >,
+  >(
+    this: T,
+    types: Type,
+  ): {
+    [K in keyof T]: K extends 'inputType' | 'outputType' | 'queryType'
+      ? Output<Type>
+      : K extends 'inputSchema' | 'outputSchema' | 'querySchema'
+      ? Type
+      : T[K];
+  };
+
+  narrowAllTypes<
+    T extends ColumnInputOutputQueryTypesWithSchemas,
+    Types extends {
+      input?: { _types?: { output: T['inputType'] } };
+      output?: { _types?: { output: T['outputType'] } };
+      query?: { _types?: { output: T['queryType'] } };
+    },
   >(
     this: T,
     types: Types,
@@ -996,7 +1011,12 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   asType(_types) {
     return this as never;
   },
-  narrowType(types) {
+  narrowType(type) {
+    const c = Object.create(this);
+    c.inputSchema = c.outputSchema = c.querySchema = type;
+    return c as never;
+  },
+  narrowAllTypes(types) {
     const c = Object.create(this);
     if (types.input) {
       c.inputSchema = types.input;

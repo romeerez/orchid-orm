@@ -25,6 +25,7 @@ export interface ColumnTypeSchemaArg {
   parseNull: unknown;
   asType: unknown;
   narrowType: unknown;
+  narrowAllTypes: unknown;
   error?: unknown;
 }
 

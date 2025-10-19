@@ -436,7 +436,8 @@ const column = t
 
 [//]: # 'has JSDoc'
 
-Narrows TypeScript types for a column.
+`narrowType` narrows TypeScript types of a column. It sets input, output, query type altogether.
+
 For example, to narrow a `string` type to a union of string literals.
 
 When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowType` has the following syntax:
@@ -445,7 +446,53 @@ When _not_ integrating with [validation libraries](/guide/columns-validation-met
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    size: t.string().narrowType((t) =>
+    size: t.string().narrowType((t) => t<'small' | 'medium' | 'large'>()),
+  }));
+}
+
+// size will be typed as 'small' | 'medium' | 'large'
+const size = await db.table.get('size');
+```
+
+- `input` is for `create`, `update` methods.
+- `output` is for the data that is loaded from a database and parsed if the column has `parse`.
+- `query` is used in `where` and other query methods, it should be compatible with the actual database column type.
+
+When integrating with a [validation library](/guide/columns-validation-methods), also provide validation schemas:
+
+```ts
+const sizeSchema = z.union([
+  z.literal('small'),
+  z.literal('medium'),
+  z.literal('large'),
+]);
+
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    size: t.text().narrowType(sizeSchema),
+  }));
+}
+
+// size will be typed as 'small' | 'medium' | 'large'
+const size = await db.table.get('size');
+```
+
+## narrowAllTypes
+
+[//]: # 'has JSDoc'
+
+Allows to narrow different TypeScript types of a column granularly.
+
+Use it when the column's input is different from output.
+
+When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowAllTypes` has the following syntax:
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    size: t.string().narrowAllTypes((t) =>
       t<{
         // what types are accepted when creating/updating
         input: 'small' | 'medium' | 'large';
@@ -478,7 +525,7 @@ const sizeSchema = z.union([
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    size: t.text().narrowType({
+    size: t.text().narrowAllTypes({
       input: sizeSchema,
       output: sizeSchema,
       query: sizeSchema,

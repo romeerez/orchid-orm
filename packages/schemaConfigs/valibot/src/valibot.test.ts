@@ -925,8 +925,43 @@ describe('valibot schema config', () => {
   });
 
   describe('narrowType', () => {
+    it('accepts narrowed type', () => {
+      const column = t.text().narrowType(literal('type'));
+
+      assertType<
+        | typeof column.inputType
+        | typeof column.outputType
+        | typeof column.queryType,
+        'type'
+      >();
+      assertType<
+        | typeof column.inputSchema
+        | typeof column.outputSchema
+        | typeof column.querySchema,
+        LiteralSchema<'type'>
+      >();
+
+      expect(column.inputSchema.type).toBe('literal');
+      expect(column.outputSchema.type).toBe('literal');
+      expect(column.querySchema.type).toBe('literal');
+    });
+
+    it('does not accept non-compatible type', () => {
+      // @ts-expect-error non-compatible type
+      t.text().narrowType(number());
+    });
+
+    it('can be set to a common denominator of columns where input type is different from output, such as timestamp', () => {
+      t.timestamp().narrowType(literal('string'));
+
+      // @ts-expect-error non-compatible type
+      t.timestamp().narrowType(date());
+    });
+  });
+
+  describe('narrowAllTypes', () => {
     it('accepts narrowed types', () => {
-      const column = t.text().narrowType({
+      const column = t.text().narrowAllTypes({
         input: literal('input'),
         output: literal('output'),
         query: literal('query'),
@@ -945,22 +980,22 @@ describe('valibot schema config', () => {
     });
 
     it('does not accept non-compatible types', () => {
-      t.text().narrowType({
+      t.text().narrowAllTypes({
         // @ts-expect-error non-compatible type
         type: number(),
       });
 
-      t.text().narrowType({
+      t.text().narrowAllTypes({
         // @ts-expect-error non-compatible type
         input: number(),
       });
 
-      t.text().narrowType({
+      t.text().narrowAllTypes({
         // @ts-expect-error non-compatible type
         output: number(),
       });
 
-      t.text().narrowType({
+      t.text().narrowAllTypes({
         // @ts-expect-error non-compatible type
         query: number(),
       });
