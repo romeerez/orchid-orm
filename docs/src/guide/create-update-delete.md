@@ -849,7 +849,7 @@ try {
 
 Use `updateFrom` to update records in one table based on a query result from another table or CTE.
 
-`updateFrom` accepts the same arguments as [join](http://localhost:5173/guide/join.html#join-1).
+`updateFrom` accepts the same arguments as [join](/guide/join.html#join-1).
 
 ```ts
 // save all author names to their books by using a relation name:
