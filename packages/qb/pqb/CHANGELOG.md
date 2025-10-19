@@ -1,5 +1,13 @@
 # pqb
 
+## 0.56.11
+
+### Patch Changes
+
+- 17d2ba6: Fix typing bundling typing issues and add safety measures for that (576)
+- Updated dependencies [17d2ba6]
+  - orchid-core@0.29.6
+
 ## 0.56.10
 
 ### Patch Changes

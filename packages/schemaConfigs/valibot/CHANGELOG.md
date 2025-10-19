@@ -1,5 +1,14 @@
 # orchid-orm-valibot
 
+## 0.3.80
+
+### Patch Changes
+
+- 17d2ba6: Fix typing bundling typing issues and add safety measures for that (576)
+- Updated dependencies [17d2ba6]
+  - orchid-core@0.29.6
+  - pqb@0.56.11
+
 ## 0.3.79
 
 ### Patch Changes

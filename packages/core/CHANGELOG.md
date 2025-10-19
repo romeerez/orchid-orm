@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.29.6
+
+### Patch Changes
+
+- 17d2ba6: Fix typing bundling typing issues and add safety measures for that (576)
+
 ## 0.29.5
 
 ### Patch Changes
