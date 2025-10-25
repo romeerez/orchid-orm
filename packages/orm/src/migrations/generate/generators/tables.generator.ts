@@ -25,7 +25,7 @@ import {
 import { processPrimaryKey } from './primaryKey.generator';
 import { processIndexesAndExcludes } from './indexesAndExcludes.generator';
 import {
-  getColumnDbType,
+  getColumnDbTypeQuoted,
   processColumns,
   TypeCastsCache,
 } from './columns.generator';
@@ -290,7 +290,7 @@ const applyChangeTables = async (
 
         const name = column.data.name ?? key;
         names.push(name);
-        types.push(getColumnDbType(column, currentSchema));
+        types.push(getColumnDbTypeQuoted(column, currentSchema));
       }
 
       const tableName = codeTable.table;

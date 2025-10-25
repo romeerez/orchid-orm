@@ -592,6 +592,16 @@ export const getColumnDbType = (
   }
 };
 
+export const getColumnDbTypeQuoted = (
+  column: ColumnTypeBase,
+  currentSchema: string,
+) => {
+  const [schema, type] = getSchemaAndTableFromName(
+    getColumnDbType(column, currentSchema),
+  );
+  return schema ? `"${schema}"."${type}"` : `"${type}"`;
+};
+
 const renameColumn = (columns: string[], from: string, to: string) => {
   for (let i = 0; i < columns.length; i++) {
     if (columns[i] === from) {

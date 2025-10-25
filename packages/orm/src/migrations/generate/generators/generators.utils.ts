@@ -1,5 +1,11 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import { RawSQLBase, colors, QueryResult, AdapterBase } from 'orchid-core';
+import {
+  RawSQLBase,
+  colors,
+  QueryResult,
+  AdapterBase,
+  noop,
+} from 'orchid-core';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
@@ -19,52 +25,50 @@ export const compareSqlExpressions = async (
   tableExpressions: TableExpression[],
   adapter: AdapterBase,
 ) => {
-  if (tableExpressions.length) {
-    let id = 1;
-    await Promise.all(
-      tableExpressions.map(async ({ source, compare, handle }) => {
-        const viewName = `orchidTmpView${id++}`;
-        const values: unknown[] = [];
-        let result: QueryResult | undefined;
-        try {
-          const results = (await adapter.query(
-            // It is important to run `CREATE TEMPORARY VIEW` and `DROP VIEW` on the same db connection,
-            // that's why SQLs are combined into a single query.
-            [
-              `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
+  if (!tableExpressions.length) return;
+
+  let id = 1;
+  await Promise.all(
+    tableExpressions.map(async ({ source, compare, handle }) => {
+      const viewName = `orchidTmpView${id++}`;
+      const values: unknown[] = [];
+
+      // It is important to run `CREATE TEMPORARY VIEW` and `DROP VIEW` on the same db connection,
+      // that's why SQLs are combined into a single query.
+      const combinedQueries = [
+        `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
+          .map(
+            ({ inDb, inCode }, i): string =>
+              `${inDb} AS "*inDb-${i}*", ${inCode
                 .map(
-                  ({ inDb, inCode }, i): string =>
-                    `${inDb} AS "*inDb-${i}*", ${inCode
-                      .map(
-                        (s, j) =>
-                          `(${
-                            typeof s === 'string' ? s : s.toSQL({ values })
-                          }) "*inCode-${i}-${j}*"`,
-                      )
-                      .join(', ')}`,
+                  (s, j) =>
+                    `(${
+                      typeof s === 'string' ? s : s.toSQL({ values })
+                    }) "*inCode-${i}-${j}*"`,
                 )
-                .join(', ')} FROM ${source})`,
-              `SELECT pg_get_viewdef('${viewName}') v`,
-              `DROP VIEW ${viewName}`,
-            ].join('; '),
-            values,
-          )) as unknown as QueryResult[];
-          result = results[1];
-        } catch {}
+                .join(', ')}`,
+          )
+          .join(', ')} FROM ${source})`,
+        `SELECT pg_get_viewdef('${viewName}') v`,
+        `DROP VIEW ${viewName}`,
+      ].join('; ');
 
-        if (!result) {
-          handle();
-          return;
-        }
+      const result = await adapter
+        .query(combinedQueries, values)
+        .then((res) => (res as unknown as QueryResult[])[1], noop);
 
-        const match = compareSqlExpressionResult(
-          result.rows[0].v,
-          compare[0].inCode,
-        );
-        handle(match);
-      }),
-    );
-  }
+      if (!result) {
+        handle();
+        return;
+      }
+
+      const match = compareSqlExpressionResult(
+        result.rows[0].v,
+        compare[0].inCode,
+      );
+      handle(match);
+    }),
+  );
 };
 
 export const compareSqlExpressionResult = (

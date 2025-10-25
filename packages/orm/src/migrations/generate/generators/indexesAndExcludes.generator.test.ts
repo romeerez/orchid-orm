@@ -1158,6 +1158,39 @@ change(async (db) => {
     assert.migration();
   });
 
+  it('should properly quote the enum name in the `where` expression', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('numbers', ['one', 'two', 'three']);
+
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            colUmn: t.enum('numbers'),
+          }),
+          (t) =>
+            t.unique(['colUmn'], {
+              where: `(col_umn = 'one'::"numbers")`,
+            }),
+        );
+      },
+      tables: [
+        table(
+          (t) => ({
+            colUmn: t.enum('numbers', ['one', 'two', 'three']),
+          }),
+          (t) =>
+            t.unique(['colUmn'], {
+              where: `(col_umn = 'one'::"numbers")`,
+            }),
+        ),
+      ],
+    });
+
+    assert.migration();
+  });
+
   it('should detect sql expression difference by calling db', async () => {
     await arrange({
       async prepareDb(db) {
