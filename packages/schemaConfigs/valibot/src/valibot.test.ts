@@ -957,6 +957,18 @@ describe('valibot schema config', () => {
       // @ts-expect-error non-compatible type
       t.timestamp().narrowType(date());
     });
+
+    it('should be supported on a generated column', () => {
+      const column = t.text().generated`SELECT 1`.narrowType(literal('type'));
+
+      assertType<typeof column.inputType, never>();
+      assertType<typeof column.outputType | typeof column.queryType, 'type'>();
+      assertType<typeof column.inputSchema, NeverSchema>();
+      assertType<
+        typeof column.outputSchema | typeof column.querySchema,
+        LiteralSchema<'type'>
+      >();
+    });
   });
 
   describe('narrowAllTypes', () => {

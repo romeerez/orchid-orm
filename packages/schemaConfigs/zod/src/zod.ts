@@ -31,6 +31,7 @@ import {
   IntegerColumn,
   JSONColumn,
   MoneyColumn,
+  PickColumnData,
   RealColumn,
   SerialColumn,
   setColumnEncode,
@@ -683,14 +684,26 @@ export interface ZodSchemaConfig {
 
   narrowType<
     T extends ColumnInputOutputQueryTypesWithSchemas,
-    Type extends { _output: T['inputType'] & T['outputType'] & T['queryType'] },
+    Type extends {
+      _output: T['inputType'] extends never
+        ? T['outputType'] & T['queryType']
+        : T['inputType'] & T['outputType'] & T['queryType'];
+    },
   >(
     this: T,
     type: Type,
   ): {
-    [K in keyof T]: K extends 'inputType' | 'outputType' | 'queryType'
+    [K in keyof T]: K extends 'inputType'
+      ? T['inputType'] extends never
+        ? never
+        : Type['_output']
+      : K extends 'outputType' | 'queryType'
       ? Type['_output']
-      : K extends 'inputSchema' | 'outputSchema' | 'querySchema'
+      : K extends 'inputSchema'
+      ? T['inputType'] extends never
+        ? ZodNever
+        : Type
+      : K extends 'outputSchema' | 'querySchema'
       ? Type
       : T[K];
   };
@@ -849,7 +862,11 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
   narrowType(type) {
     const c = Object.create(this);
-    c.inputSchema = c.outputSchema = c.querySchema = type;
+    if ((c as PickColumnData).data.generated) {
+      c.outputSchema = c.querySchema = type;
+    } else {
+      c.inputSchema = c.outputSchema = c.querySchema = type;
+    }
     return c as never;
   },
   narrowAllTypes(types) {

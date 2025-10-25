@@ -1049,6 +1049,18 @@ describe('zod schema config', () => {
       // @ts-expect-error non-compatible type
       t.timestamp().narrowType(z.date());
     });
+
+    it('should be supported on a generated column', () => {
+      const column = t.text().generated`SELECT 1`.narrowType(z.literal('type'));
+
+      assertType<typeof column.inputType, never>();
+      assertType<typeof column.outputType | typeof column.queryType, 'type'>();
+      assertType<typeof column.inputSchema, ZodNever>();
+      assertType<
+        typeof column.outputSchema | typeof column.querySchema,
+        ZodLiteral<'type'>
+      >();
+    });
   });
 
   describe('narrowAllTypes', () => {

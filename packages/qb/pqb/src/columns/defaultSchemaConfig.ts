@@ -84,9 +84,11 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _fn: (
       type: <
-        Type extends T['inputType'] & T['outputType'] & T['queryType'],
+        Type extends T['inputType'] extends T['outputType'] & T['queryType']
+          ? T['outputType'] & T['queryType'] // generated column case
+          : T['inputType'] & T['outputType'] & T['queryType'],
       >() => {
-        inputType: Type;
+        inputType: T['inputType'] extends never ? never : Type;
         outputType: Type;
         queryType: Type;
       },

@@ -35,6 +35,16 @@ describe('defaultSchemaConfig', () => {
   });
 
   describe('narrowType', () => {
+    it('should be supported on a generated column', () => {
+      const column = text.generated`SELECT 'text'`.narrowType((t) =>
+        t<'text'>(),
+      );
+
+      assertType<typeof column.inputType, never>();
+      assertType<typeof column.outputType, 'text'>();
+      assertType<typeof column.queryType, 'text'>();
+    });
+
     it('accepts narrowed types', () => {
       const column = text.narrowType((t) => t<'type'>());
 

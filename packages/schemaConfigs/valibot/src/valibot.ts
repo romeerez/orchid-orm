@@ -27,6 +27,7 @@ import {
   IntegerColumn,
   JSONColumn,
   MoneyColumn,
+  PickColumnData,
   RealColumn,
   SerialColumn,
   setColumnEncode,
@@ -843,15 +844,25 @@ export interface ValibotSchemaConfig {
     Type extends BaseSchema<
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       any,
-      T['inputType'] & T['outputType'] & T['queryType']
+      T['inputType'] extends never
+        ? T['outputType'] & T['queryType']
+        : T['inputType'] & T['outputType'] & T['queryType']
     >,
   >(
     this: T,
     types: Type,
   ): {
-    [K in keyof T]: K extends 'inputType' | 'outputType' | 'queryType'
+    [K in keyof T]: K extends 'inputType'
+      ? T['inputType'] extends never
+        ? never
+        : Output<Type>
+      : K extends 'outputType' | 'queryType'
       ? Output<Type>
-      : K extends 'inputSchema' | 'outputSchema' | 'querySchema'
+      : K extends 'inputSchema'
+      ? T['inputType'] extends never
+        ? NeverSchema
+        : Type
+      : K extends 'outputSchema' | 'querySchema'
       ? Type
       : T[K];
   };
@@ -1013,7 +1024,11 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   },
   narrowType(type) {
     const c = Object.create(this);
-    c.inputSchema = c.outputSchema = c.querySchema = type;
+    if ((c as PickColumnData).data.generated) {
+      c.outputSchema = c.querySchema = type;
+    } else {
+      c.inputSchema = c.outputSchema = c.querySchema = type;
+    }
     return c as never;
   },
   narrowAllTypes(types) {
