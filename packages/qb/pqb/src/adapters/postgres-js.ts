@@ -261,6 +261,9 @@ export class PostgresJsAdapter implements AdapterBase {
     to.severity = from.severity;
     to.code = from.code;
     to.detail = from.detail;
+    to.schema = from.schema_name;
+    to.table = from.table_name;
+    to.constraint = from.constraint_name;
     to.hint = from.hint;
     to.position = from.position;
     to.where = from.where;

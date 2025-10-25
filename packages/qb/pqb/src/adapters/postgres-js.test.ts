@@ -1,10 +1,13 @@
 import { PostgresJsAdapter } from './postgres-js';
-import { asMock, testDbOptions } from 'test-utils';
+import { asMock, testDb, testDbOptions } from 'test-utils';
 import { setTimeout } from 'timers/promises';
+import { QueryError } from 'orchid-core';
 
-const adapter = new PostgresJsAdapter({
+const testAdapter = new PostgresJsAdapter({
   databaseURL: process.env.PG_URL,
 });
+
+testDb.adapter = testAdapter;
 
 jest.mock('timers/promises', () => ({
   setTimeout: jest.fn(),
@@ -14,10 +17,10 @@ describe('postgres-js', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('queries', () => {
-    afterAll(() => adapter.close());
+    afterAll(() => testAdapter.close());
 
     it('should run query and close connection by calling .close()', async () => {
-      const res = await adapter.query('SELECT 1 as num');
+      const res = await testAdapter.query('SELECT 1 as num');
 
       expect(res).toMatchObject({
         rowCount: 1,
@@ -31,7 +34,7 @@ describe('postgres-js', () => {
     });
 
     it('should not parse certain types', async () => {
-      const res = await adapter.query(`
+      const res = await testAdapter.query(`
         SELECT
           now()::date as date,
           now()::timestamp as timestamp,
@@ -48,7 +51,7 @@ describe('postgres-js', () => {
     });
 
     it('should can query arrays', async () => {
-      const res = await adapter.arrays('SELECT 1 as num');
+      const res = await testAdapter.arrays('SELECT 1 as num');
 
       expect(res).toMatchObject({
         rowCount: 1,
@@ -63,9 +66,9 @@ describe('postgres-js', () => {
 
     describe('transaction', () => {
       it('executes a transaction', async () => {
-        const sqlSpy = jest.spyOn(adapter.sql, 'begin');
+        const sqlSpy = jest.spyOn(testAdapter.sql, 'begin');
 
-        const res = await adapter.transaction(undefined, async (trx) => {
+        const res = await testAdapter.transaction(undefined, async (trx) => {
           return trx.query('SELECT 1 as one');
         });
 
@@ -77,15 +80,50 @@ describe('postgres-js', () => {
       });
 
       it('executes a transaction with custom options', async () => {
-        const sqlSpy = jest.spyOn(adapter.sql, 'begin');
+        const sqlSpy = jest.spyOn(testAdapter.sql, 'begin');
 
-        const res = await adapter.transaction('read write', async (trx) => {
+        const res = await testAdapter.transaction('read write', async (trx) => {
           return trx.query('SELECT 1 as one');
         });
 
         expect(res.rows[0]).toEqual({ one: 1 });
 
         expect(sqlSpy.mock.calls.map((arr) => arr[0])).toEqual(['read write']);
+      });
+    });
+
+    it('should assign error properties', async () => {
+      let Id;
+      const dbErr = await testAdapter
+        .transaction(undefined, async (trx) => {
+          const res = await trx.query(
+            `INSERT INTO "user"("name", "password") VALUES ('name', 'password') RETURNING "id"`,
+          );
+          Id = res.rows[0].id;
+
+          await trx.query(
+            `INSERT INTO "user"("id", "name", "password") VALUES (${Id}, 'name', 'password') RETURNING "id"`,
+          );
+        })
+        .catch((err) => err);
+
+      class Err extends QueryError {}
+
+      const err = new Err({} as never);
+
+      testAdapter.assignError(err, dbErr);
+
+      expect(err).toMatchObject({
+        message: 'duplicate key value violates unique constraint "user_pkey"',
+        code: '23505',
+        detail: `Key (id)=(${Id}) already exists.`,
+        severity: 'ERROR',
+        schema: 'public',
+        table: 'user',
+        constraint: 'user_pkey',
+        file: 'nbtinsert.c',
+        line: '666',
+        routine: '_bt_check_unique',
       });
     });
   });
@@ -108,20 +146,20 @@ describe('postgres-js', () => {
     it('should support setting a default schema via url parameters', async () => {
       const url = new URL(testDbOptions.databaseURL as string);
       url.searchParams.set('schema', 'custom');
-      const adapter = new PostgresJsAdapter({
+      const testAdapter = new PostgresJsAdapter({
         ...testDbOptions,
         databaseURL: url.toString(),
       });
 
-      const res = await adapter.query('SHOW search_path');
+      const res = await testAdapter.query('SHOW search_path');
 
       expect(res.rows[0]).toEqual({ search_path: 'custom' });
 
-      await adapter.close();
+      await testAdapter.close();
     });
 
     it('should support setting a default schema via config', async () => {
-      const adapter = new PostgresJsAdapter({
+      const testAdapter = new PostgresJsAdapter({
         ...testDbOptions,
         databaseURL: testDbOptions.databaseURL,
         schema: 'custom',
@@ -130,11 +168,11 @@ describe('postgres-js', () => {
         },
       });
 
-      const res = await adapter.query('SHOW search_path');
+      const res = await testAdapter.query('SHOW search_path');
 
       expect(res.rows[0]).toEqual({ search_path: 'custom' });
 
-      await adapter.close();
+      await testAdapter.close();
     });
   });
 
@@ -142,16 +180,16 @@ describe('postgres-js', () => {
     const err = Object.assign(new Error(), { code: 'ECONNREFUSED' });
 
     it('should handle default connect retry strategy', async () => {
-      const adapter = new PostgresJsAdapter({
+      const testAdapter = new PostgresJsAdapter({
         databaseURL: testDbOptions.databaseURL,
         connectRetry: true,
       });
 
-      jest.spyOn(adapter.sql, 'unsafe').mockImplementation(() => {
+      jest.spyOn(testAdapter.sql, 'unsafe').mockImplementation(() => {
         throw err;
       });
 
-      await expect(() => adapter.query('SELECT 1')).rejects.toThrow(err);
+      await expect(() => testAdapter.query('SELECT 1')).rejects.toThrow(err);
 
       const attempts = 10;
       const delay = 50;
@@ -166,18 +204,18 @@ describe('postgres-js', () => {
     it('should use custom strategy', async () => {
       const strategy = jest.fn();
 
-      const adapter = new PostgresJsAdapter({
+      const testAdapter = new PostgresJsAdapter({
         connectRetry: {
           attempts: 3,
           strategy,
         },
       });
 
-      jest.spyOn(adapter.sql, 'unsafe').mockImplementation(() => {
+      jest.spyOn(testAdapter.sql, 'unsafe').mockImplementation(() => {
         throw err;
       });
 
-      await expect(() => adapter.query('SELECT 1')).rejects.toThrow(err);
+      await expect(() => testAdapter.query('SELECT 1')).rejects.toThrow(err);
 
       expect(strategy.mock.calls).toEqual([
         [1, 3],

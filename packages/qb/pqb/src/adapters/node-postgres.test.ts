@@ -2,7 +2,7 @@ import { asMock, testDbOptions } from 'test-utils';
 import { NodePostgresAdapter } from './node-postgres';
 import pg from 'pg';
 import { setTimeout } from 'timers/promises';
-import { RecordUnknown } from 'orchid-core';
+import { QueryError, RecordUnknown } from 'orchid-core';
 
 jest.mock('timers/promises', () => ({
   setTimeout: jest.fn(),
@@ -104,6 +104,41 @@ describe('adapter', () => {
           'SELECT 1 as one',
           'COMMIT',
         ]);
+      });
+    });
+
+    it('should assign error properties', async () => {
+      let Id;
+      const dbErr = await testAdapter
+        .transaction(undefined, async (trx) => {
+          const res = await trx.query(
+            `INSERT INTO "user"("name", "password") VALUES ('name', 'password') RETURNING "id"`,
+          );
+          Id = res.rows[0].id;
+
+          await trx.query(
+            `INSERT INTO "user"("id", "name", "password") VALUES (${Id}, 'name', 'password') RETURNING "id"`,
+          );
+        })
+        .catch((err) => err);
+
+      class Err extends QueryError {}
+
+      const err = new Err({} as never);
+
+      testAdapter.assignError(err, dbErr);
+
+      expect(err).toMatchObject({
+        message: 'duplicate key value violates unique constraint "user_pkey"',
+        code: '23505',
+        detail: `Key (id)=(${Id}) already exists.`,
+        severity: 'ERROR',
+        schema: 'public',
+        table: 'user',
+        constraint: 'user_pkey',
+        file: 'nbtinsert.c',
+        line: '666',
+        routine: '_bt_check_unique',
       });
     });
   });
