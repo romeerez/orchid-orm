@@ -5,7 +5,7 @@ import {
   snakeSelectAll,
   User,
   userColumnsSql,
-  UserData,
+  UserDataType,
 } from '../test-utils/test-utils';
 import {
   assertType,
@@ -565,7 +565,7 @@ describe('operators', () => {
       it('should support sql', () => {
         const q = User.get('data').jsonSet('name', sql`sql`);
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, UserDataType | null>();
 
         expectSql(
           q.toSQL(),
@@ -645,7 +645,7 @@ describe('operators', () => {
       it('should support sql', () => {
         const q = User.get('data').jsonReplace('name', sql`sql`);
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, UserDataType | null>();
 
         expectSql(
           q.toSQL(),
@@ -697,7 +697,7 @@ describe('operators', () => {
       it('should support sql', () => {
         const q = User.get('data').jsonInsert('name', sql`sql`);
 
-        assertType<Awaited<typeof q>, UserData | null>();
+        assertType<Awaited<typeof q>, UserDataType | null>();
 
         expectSql(
           q.toSQL(),
@@ -1159,7 +1159,7 @@ describe('operators', () => {
             SELECT ${snakeSelectAll} FROM "snake"
             WHERE "snake"."snake_data" ${sql} $1
           `,
-          [{ a: 'b' }],
+          [JSON.stringify({ a: 'b' })],
         );
       });
 

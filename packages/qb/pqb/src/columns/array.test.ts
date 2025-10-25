@@ -128,7 +128,7 @@ describe('array column', () => {
       ]);
     });
 
-    it('should have `containedIn` operator', () => {
+    it('should have `containedIn` operator', async () => {
       const q = table.where({ arr: { containedIn: [1, 2] } });
 
       expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" <@ $1`, [

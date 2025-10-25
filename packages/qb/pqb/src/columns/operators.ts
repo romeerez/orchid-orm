@@ -138,6 +138,10 @@ const quoteValue = (
     if ('toSQL' in arg) {
       return `(${getSqlText((arg as Query).toSQL(ctx))})`;
     }
+
+    if (!(arg instanceof Date) && !Array.isArray(arg)) {
+      arg = JSON.stringify(arg);
+    }
   }
 
   return addValue(ctx.values, arg);
