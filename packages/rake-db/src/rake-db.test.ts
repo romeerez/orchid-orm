@@ -25,8 +25,12 @@ jest.mock('./commands/migrateOrRollback', () => ({
   redoCommand: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('./commands/newMigration');
-jest.mock('./commands/recurrent');
-jest.mock('./generate/pull');
+jest.mock('./commands/recurrent', () => ({
+  runRecurrentMigrations: jest.fn(() => Promise.resolve()),
+}));
+jest.mock('./generate/pull', () => ({
+  pullDbStructure: jest.fn(() => Promise.resolve()),
+}));
 
 const options = [
   {
@@ -129,8 +133,8 @@ describe('rakeDb', () => {
     await testRakeDb(options, config, ['recurrent']).promise;
 
     expect(asMock(runRecurrentMigrations).mock.calls).toEqual([
-      [expectedAdapters, processedConfig, []],
-      [expectedAdapters, processedConfig, []],
+      [expectedAdapters, processedConfig],
+      [expectedAdapters, processedConfig],
     ]);
   });
 

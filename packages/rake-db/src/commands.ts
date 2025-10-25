@@ -1,4 +1,3 @@
-import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 import {
   AdapterBase,
   ColumnSchemaConfig,
@@ -6,143 +5,20 @@ import {
   RecordOptionalString,
   RecordString,
 } from 'orchid-core';
+import { AnyRakeDbConfig, RakeDbConfig } from './config';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
+import { runRecurrentMigrations } from './commands/recurrent';
 import {
   migrateCommand,
   redoCommand,
   rollbackCommand,
 } from './commands/migrateOrRollback';
-import { newMigration } from './commands/newMigration';
 import { pullDbStructure } from './generate/pull';
-import { RakeDbError } from './errors';
-import {
-  ChangeCallback,
-  MigrationChange,
-  pushChange,
-} from './migration/change';
-import { runRecurrentMigrations } from './commands/recurrent';
-import { listMigrationsStatuses } from './commands/listMigrationsStatuses';
-import {
-  AnyRakeDbConfig,
-  InputRakeDbConfig,
-  processRakeDbConfig,
-  RakeDbConfig,
-} from './config';
-import { changeIds } from './commands/changeIds';
+import { newMigration } from './commands/newMigration';
 import { rebase } from './commands/rebase';
-
-/**
- * Type of {@link rakeDbWithAdapters} function
- */
-export interface RakeDbFn<Options> {
-  <
-    SchemaConfig extends ColumnSchemaConfig,
-    CT = DefaultColumnTypes<DefaultSchemaConfig>,
-  >(
-    options: Options,
-    partialConfig: InputRakeDbConfig<SchemaConfig, CT>,
-    args?: string[],
-  ): RakeDbChangeFnWithPromise<CT>;
-
-  /**
-   * Unlike the original `rakeDb` that executes immediately,
-   * `rakeDb.lazy` returns the `run` function to be later called programmatically.
-   *
-   * @param options - array of connection adapters for migrating multiple dbs
-   * @param config - {@link RakeDbConfig}
-   * @returns `change` is to be used in migrations, `run` takes an array cli args to execute a command
-   */
-  lazy<
-    SchemaConfig extends ColumnSchemaConfig,
-    CT = DefaultColumnTypes<DefaultSchemaConfig>,
-  >(
-    options: Options,
-    config: InputRakeDbConfig<SchemaConfig, CT>,
-  ): {
-    change: RakeDbChangeFn<CT>;
-    run(
-      args: string[],
-      config?: Partial<RakeDbConfig<SchemaConfig, CT>>,
-    ): Promise<RakeDbResult>;
-  };
-}
-
-export interface RakeDbResult {
-  // database connection adapters
-  adapters: AdapterBase[];
-  // rake-db config
-  config: AnyRakeDbConfig;
-  // command and arguments passed to `rakeDb.lazy` or taken from process.argv
-  args: string[];
-}
-
-/**
- * Function to use in migrations to wrap database changes
- * Saves the given callback to an internal queue,
- * and also returns the callback in case you want to export it from migration.
- */
-export interface RakeDbChangeFn<CT> {
-  (fn: ChangeCallback<CT>): MigrationChange;
-}
-
-export interface RakeDbChangeFnWithPromise<CT> extends RakeDbChangeFn<CT> {
-  promise: Promise<RakeDbResult>;
-}
-
-/**
- * Function to configure and run `rakeDb`.
- *
- * @param options - {@link NodePostgresAdapterOptions} or an array of such options to migrate multiple dbs
- * @param config - {@link RakeDbConfig}
- * @param args - optionally provide an array of cli args. Default is `process.argv.slice(2)`.
- */
-export const rakeDbWithAdapters = ((
-  adapters,
-  partialConfig,
-  args = process.argv.slice(2),
-) => {
-  const config = processRakeDbConfig(partialConfig);
-  const promise = runCommand(
-    adapters,
-    config as unknown as RakeDbConfig<ColumnSchemaConfig>,
-    args,
-  ).catch((err) => {
-    if (err instanceof RakeDbError) {
-      config.logger?.error(err.message);
-      process.exit(1);
-    }
-    throw err;
-  });
-
-  return Object.assign(makeChange(config), {
-    promise,
-  });
-}) as RakeDbFn<AdapterBase[]>;
-
-rakeDbWithAdapters.lazy = ((
-  adapters: AdapterBase[],
-  partialConfig: InputRakeDbConfig<ColumnSchemaConfig, unknown>,
-) => {
-  const config = processRakeDbConfig(partialConfig);
-
-  return {
-    change: makeChange(config),
-    run(
-      args: string[],
-      conf: Partial<RakeDbConfig<DefaultSchemaConfig, unknown>>,
-    ) {
-      return runCommand(adapters, conf ? { ...config, ...conf } : config, args);
-    },
-  };
-}) as never;
-
-export const makeChange =
-  (config: RakeDbConfig<ColumnSchemaConfig, unknown>) =>
-  (fn: ChangeCallback<unknown>) => {
-    const change: MigrationChange = { fn, config };
-    pushChange(change);
-    return change;
-  };
+import { changeIds } from './commands/changeIds';
+import { listMigrationsStatuses } from './commands/listMigrationsStatuses';
+import { RakeDbResult } from './rake-db';
 
 export const rakeDbAliases: RecordOptionalString = {
   migrate: 'up',
@@ -249,6 +125,7 @@ interface RakeDbCommand {
     config: AnyRakeDbConfig,
     args: string[],
   ): MaybePromise<unknown>;
+
   help: string;
   helpArguments?: RecordString;
   helpAfter?: string;
@@ -258,11 +135,14 @@ interface RakeDbCommands {
   [K: string]: RakeDbCommand;
 }
 
+const close = (adapters: AdapterBase[]) =>
+  Promise.all(adapters.map((adapter) => adapter.close()));
+
 const upCommand: RakeDbCommand = {
   run: (adapters, config, args) =>
-    migrateCommand(adapters, config, args).then(() =>
-      runRecurrentMigrations(adapters, config),
-    ),
+    migrateCommand(adapters, config, args)
+      .then(() => runRecurrentMigrations(adapters, config))
+      .then(() => close(adapters)),
   help: 'migrate pending migrations',
   helpArguments: {
     'no arguments': 'migrate all pending',
@@ -272,7 +152,8 @@ const upCommand: RakeDbCommand = {
 };
 
 const downCommand: RakeDbCommand = {
-  run: (adapters, config, args) => rollbackCommand(adapters, config, args),
+  run: (adapters, config, args) =>
+    rollbackCommand(adapters, config, args).then(() => close(adapters)),
   help: 'rollback migrated migrations',
   helpArguments: {
     'no arguments': 'rollback one last migration',
@@ -291,7 +172,8 @@ const statusCommand: RakeDbCommand = {
 };
 
 const recurrentCommand: RakeDbCommand = {
-  run: runRecurrentMigrations,
+  run: (adapters, config) =>
+    runRecurrentMigrations(adapters, config).then(() => close(adapters)),
   help: 'run recurrent migrations',
 };
 
@@ -306,9 +188,9 @@ export const rakeDbCommands: RakeDbCommands = {
   },
   reset: {
     run: (adapters, config) =>
-      resetDb(adapters, config).then(() =>
-        runRecurrentMigrations(adapters, config),
-      ),
+      resetDb(adapters, config)
+        .then(() => runRecurrentMigrations(adapters, config))
+        .then(() => close(adapters)),
     help: 'drop, create and migrate databases',
   },
   up: upCommand,
@@ -317,13 +199,14 @@ export const rakeDbCommands: RakeDbCommands = {
   rollback: downCommand,
   redo: {
     run: (adapters, config, args) =>
-      redoCommand(adapters, config, args).then(() =>
-        runRecurrentMigrations(adapters, config),
-      ),
+      redoCommand(adapters, config, args)
+        .then(() => runRecurrentMigrations(adapters, config))
+        .then(() => close(adapters)),
     help: 'rollback and migrate, run recurrent',
   },
   pull: {
-    run: ([adapter], config) => pullDbStructure(adapter, config),
+    run: ([adapter], config) =>
+      pullDbStructure(adapter, config).then(() => close([adapter])),
     help: 'generate a combined migration for an existing database',
   },
   new: {
@@ -335,7 +218,8 @@ export const rakeDbCommands: RakeDbCommands = {
   rec: recurrentCommand,
   recurrent: recurrentCommand,
   rebase: {
-    run: rebase,
+    run: (adapters, config) =>
+      rebase(adapters, config).then(() => close(adapters)),
     help: 'move local migrations below the new ones from upstream',
   },
   'change-ids': {

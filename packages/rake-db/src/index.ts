@@ -1,9 +1,9 @@
-export { rakeDbWithAdapters, runCommand, makeChange } from './rakeDb';
+export { rakeDbWithAdapters, makeChange } from './rake-db';
 export type {
   RakeDbChangeFn,
   RakeDbChangeFnWithPromise,
   RakeDbFn,
-} from './rakeDb';
+} from './rake-db';
 export {
   getExcludeName,
   getIndexName,
@@ -20,7 +20,6 @@ export type {
   IntrospectedStructure,
 } from './generate/dbStructure';
 export { astToMigration } from './generate/astToMigration';
-export { rakeDbCommands } from './rakeDb';
 export { getSchemaAndTableFromName, concatSchemaAndName } from './common';
 export {
   getDbStructureTableData,
@@ -50,3 +49,5 @@ export type { SilentQueries, DbMigration } from './migration/migration';
 export { saveMigratedVersion } from './migration/manageMigratedVersions';
 export { migrateFiles, makeMigrateAdapter } from './migration/migrate/migrate';
 export { RakeDbError } from './errors';
+export { rakeDbCommands } from './commands';
+export { runCommand } from './commands';

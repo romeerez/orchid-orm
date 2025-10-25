@@ -35,8 +35,6 @@ export const rebase = async (
     ...adapters.map((adapter) => getMigratedVersionsMap(ctx, adapter, config)),
   ]);
 
-  await Promise.all(adapters.map((adapter) => adapter.close()));
-
   const files: RebaseFile[] = set.migrations.map((file) => ({
     ...file,
     name: path.basename(file.path),
@@ -212,7 +210,6 @@ export const rebase = async (
       adapter,
       config: redoConfig,
     });
-    await adapter.close();
   }
 
   for (let i = renames.length - 1; i >= 0; i--) {

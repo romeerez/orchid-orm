@@ -1,7 +1,7 @@
 import { orchidORMWithAdapter, testTransaction } from 'orchid-orm';
 import { TestAdapter, testAdapter, testDbOptions } from 'test-utils';
 import { makeMigrateAdapter, migrateFiles } from './migrate';
-import { rakeDbWithAdapters } from '../../rakeDb';
+import { rakeDbWithAdapters } from '../../rake-db';
 import { pathToFileURL } from 'node:url';
 import path from 'path';
 

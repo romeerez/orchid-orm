@@ -50,7 +50,6 @@ describe('recurrent', () => {
 
     const db = {
       adapter: { arrays: TestAdapter.prototype.arrays },
-      close: TestAdapter.prototype.close,
     };
 
     asMock(readdir).mockResolvedValueOnce(['one.sql']);
@@ -78,8 +77,6 @@ describe('recurrent', () => {
       join(testConfig.recurrentPath, 'one.sql'),
     ]);
 
-    expect(db.close).toBeCalled();
-
     expect(testConfig.logger.log).toBeCalledWith(
       `Applied 1 recurrent migration file`,
     );
@@ -87,10 +84,8 @@ describe('recurrent', () => {
 
   it('should read dir recursively, query each sql file', async () => {
     const query = jest.fn();
-    const close = jest.fn();
 
     TestAdapter.prototype.arrays = query;
-    TestAdapter.prototype.close = close;
 
     asMock(readdir).mockResolvedValueOnce([
       'dir',
@@ -148,8 +143,6 @@ describe('recurrent', () => {
       join(testConfig.recurrentPath, 'dir', 'inner.sql'),
       join(testConfig.recurrentPath, 'dir', 'inner.sql'),
     ]);
-
-    expect(close).toBeCalledTimes(2);
 
     expect(testConfig.logger.log).toBeCalledWith(
       `Applied 3 recurrent migration files`,

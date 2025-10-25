@@ -28,14 +28,10 @@ export const runRecurrentMigrations = async <
     );
   });
 
-  if (dbs) {
-    await Promise.all(dbs.map((db) => db.close()));
-
-    if (files > 0) {
-      config.logger?.log(
-        `Applied ${files} recurrent migration file${files > 1 ? 's' : ''}`,
-      );
-    }
+  if (files > 0) {
+    config.logger?.log(
+      `Applied ${files} recurrent migration file${files > 1 ? 's' : ''}`,
+    );
   }
 };
 

@@ -154,7 +154,6 @@ const makeMigrateCommand = (
 
     for (const adapter of adapters) {
       await migrateFn({ ctx: {}, adapter, config, count, force });
-      await adapter.close();
     }
   };
 };
