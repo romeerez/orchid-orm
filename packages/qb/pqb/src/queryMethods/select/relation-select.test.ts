@@ -1,6 +1,7 @@
 import {
   assertType,
   db,
+  expectSql,
   PostData,
   sql,
   UserData,
@@ -24,6 +25,73 @@ const setMaxBindingParams = (value: number) => {
 
 describe('relation-select', () => {
   useTestDatabase();
+
+  describe('deduplicating joins', () => {
+    it('should dedupe relation joins when selecting different gets from the same relation', async () => {
+      const q = db.user
+        .select({
+          one: (q) => q.profile.get('profile.Active'),
+          two: (q) => q.profile.get('profile.Bio'),
+        })
+        .where({
+          one: { gt: true },
+          two: { startsWith: 'two' },
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+        SELECT "one"."one" "one", "one"."two" "two"
+        FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT "profile"."active" "one", "profile"."bio" "two"
+          FROM "profile"
+          WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+        ) "one" ON true
+        WHERE "one"."one" > $1
+          AND "two"."two" ILIKE $2 || '%'
+      `,
+        [true, 'two'],
+      );
+    });
+
+    it('should alias tables in a recurrent select', () => {
+      const q = db.profile
+        .select({
+          user: (q) =>
+            q.user.select({
+              profile: (q) => q.profile.get('Active'),
+              bio: (q) => q.profile.get('Bio'),
+            }),
+        })
+        .where({
+          'user.profile': true,
+          'user.bio': 'bio',
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT row_to_json("user".*) "user"
+          FROM "profile"
+          LEFT JOIN LATERAL (
+            SELECT "profile2"."profile" "profile", "profile2"."bio" "bio"
+            FROM "user"
+            LEFT JOIN LATERAL (
+              SELECT "profile2"."active" "profile", "profile2"."bio" "bio"
+              FROM "profile" "profile2"
+              WHERE "profile2"."user_id" = "user"."id"
+                AND "profile2"."profile_key" = "user"."user_key"
+            ) "profile2" ON true
+            WHERE "user"."id" = "profile"."user_id"
+              AND "user"."user_key" = "profile"."profile_key"
+          ) "user" ON true
+          WHERE "user"."profile" = $1 AND "user"."bio" = $2
+        `,
+        [true, 'bio'],
+      );
+    });
+  });
 
   // https://github.com/romeerez/orchid-orm/issues/566
   it('should handle nested sub select of sql', async () => {

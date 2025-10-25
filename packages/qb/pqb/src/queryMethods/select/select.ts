@@ -744,13 +744,7 @@ export const processSelectArg = <T extends SelectSelf>(
           }
         }
 
-        value.q.joinedForSelect = _copyQueryAliasToQuery(
-          value,
-          q as unknown as QueryBase,
-          key,
-        );
-
-        _joinLateral(
+        const as = _joinLateral(
           q,
           innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
           subQuery,
@@ -761,6 +755,14 @@ export const processSelectArg = <T extends SelectSelf>(
             returnType !== 'one' &&
             returnType !== 'oneOrThrow',
         );
+
+        if (as) {
+          value.q.joinedForSelect = _copyQueryAliasToQuery(
+            value,
+            q as unknown as QueryBase,
+            as,
+          );
+        }
       }
     }
 
@@ -928,7 +930,9 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
             const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
               const type = it.q.getColumn;
-              result[key] = type || UnknownColumn.instance;
+              result[key] = type
+                ? mapSubSelectColumn(type as ColumnTypeBase, isSubQuery)
+                : UnknownColumn.instance;
             } else {
               result[key] = new JSONTextColumn(defaultSchemaConfig);
             }

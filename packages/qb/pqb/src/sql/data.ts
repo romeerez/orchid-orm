@@ -256,6 +256,7 @@ export interface QueryData extends QueryDataBase {
   distinct?: SelectableOrExpression[];
   only?: boolean;
   join?: JoinItem[];
+  joinValueDedup?: Map<string, { q: Query; a: string }>;
   group?: (string | Expression)[];
   having?: HavingItem[];
   window?: WindowItem[];

@@ -68,13 +68,11 @@ describe('create functions', () => {
       ).toThrow('Trying to insert a readonly column');
     });
 
-    it('should create one record with raw SQL for a column value', () => {
+    it('should create one record with raw SQL for a column value, should parse returned columns', async () => {
       const q = User.create({
         name: userData.name,
         password: () => sql<string>`'password'`,
       });
-
-      assertType<Awaited<typeof q>, UserRecord>();
 
       expectSql(
         q.toSQL(),
@@ -85,6 +83,12 @@ describe('create functions', () => {
         `,
         [userData.name],
       );
+
+      const res = await q;
+
+      assertType<typeof res, UserRecord>();
+
+      expect(res.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should support a query builder for a column', () => {
@@ -590,7 +594,7 @@ describe('create functions', () => {
       expect(await User.createMany([])).toEqual([]);
     });
 
-    it('should create many records with raw SQL for a column value', () => {
+    it('should create many records with raw SQL for a column value, should parse values', async () => {
       const q = User.createMany([
         {
           name: userData.name,
@@ -602,8 +606,6 @@ describe('create functions', () => {
         },
       ]);
 
-      assertType<Awaited<typeof q>, UserRecord[]>();
-
       expectSql(
         q.toSQL(),
         `
@@ -613,6 +615,15 @@ describe('create functions', () => {
         `,
         [userData.name, userData.password],
       );
+
+      const res = await q;
+
+      assertType<typeof res, UserRecord[]>();
+
+      expect(res).toMatchObject([
+        { updatedAt: expect.any(Date) },
+        { updatedAt: expect.any(Date) },
+      ]);
     });
 
     it('should create many records, returning inserted count', async () => {

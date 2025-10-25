@@ -41,10 +41,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("users".r, '[]') "users"
+          SELECT COALESCE("users"."users", '[]') "users"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(${userJsonBuildObject('t')}) r
+            SELECT json_agg(${userJsonBuildObject('t')}) "users"
             FROM (
               SELECT ${userSelectAliasedAs('t')}
               FROM (
@@ -77,10 +77,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("users".r, '[]') "users"
+          SELECT COALESCE("users"."users", '[]') "users"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(${userJsonBuildObject('t')}) r
+            SELECT json_agg(${userJsonBuildObject('t')}) "users"
             FROM (
               SELECT ${userSelectAll}
               FROM "user" "sender"
@@ -109,10 +109,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "users".r "users"
+          SELECT "users"."users" "users"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT sum("sender"."age") r
+            SELECT sum("sender"."age") "users"
             FROM "user" "sender"
             WHERE EXISTS (
               SELECT 1
@@ -416,7 +416,7 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-            SELECT COALESCE("users".r, '[]') "users"
+            SELECT COALESCE("users"."users", '[]') "users"
             FROM "chat"
             LEFT JOIN LATERAL (
               SELECT
@@ -424,7 +424,7 @@ describe('relations chain', () => {
                   'r', t."r",
                   't', t."t",
                   'd', t."d"::text
-                )) r
+                )) "users"
               FROM (
                 SELECT "t"."r", "t"."t", "t"."d"
                 FROM (
@@ -1049,10 +1049,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-            SELECT COALESCE("item".r, '[]') "item"
+            SELECT COALESCE("item"."item", '[]') "item"
             FROM "user"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
+              SELECT json_agg(row_to_json(t.*)) "item"
               FROM (
                 SELECT "t"."Tag", "t"."Body"
                 FROM (
@@ -1597,10 +1597,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("tags".r, '[]') "tags"
+          SELECT COALESCE("tags"."tags", '[]') "tags"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "tags"
             FROM (
               SELECT "t"."Tag", "t"."Body"
               FROM (
@@ -2282,10 +2282,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "t"."Tag", "t"."Body"
               FROM (
@@ -2347,10 +2347,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "postTags"."tag" "Tag"
               FROM "postTag" "postTags"
@@ -2411,10 +2411,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "t"."Tag", "t"."Body"
               FROM (
@@ -2479,10 +2479,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "activePostTags"."tag" "Tag"
               FROM "postTag" "activePostTags"
@@ -2924,10 +2924,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "t"."Body", "t"."Bio"
               FROM (
@@ -2970,10 +2970,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "posts"."body" "Body"
               FROM "post" "posts"
@@ -3018,10 +3018,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-            SELECT COALESCE("items".r, '[]') "items"
+            SELECT COALESCE("items"."items", '[]') "items"
             FROM "message"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
+              SELECT json_agg(row_to_json(t.*)) "items"
               FROM (
                 SELECT "t"."Body", "t"."Bio"
                 FROM (
@@ -3069,10 +3069,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-            SELECT COALESCE("items".r, '[]') "items"
+            SELECT COALESCE("items"."items", '[]') "items"
             FROM "message"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
+              SELECT json_agg(row_to_json(t.*)) "items"
               FROM (
                 SELECT "activePosts"."body" "Body"
                 FROM "post" "activePosts"
@@ -3410,10 +3410,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "t"."Tag", "t"."Name"
               FROM (
@@ -3454,10 +3454,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "postTags"."tag" "Tag"
               FROM "postTag" "postTags"
@@ -3500,10 +3500,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "t"."Tag", "t"."Name"
               FROM (
@@ -3547,10 +3547,10 @@ describe('relations chain', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("items".r, '[]') "items"
+          SELECT COALESCE("items"."items", '[]') "items"
           FROM "chat"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "items"
             FROM (
               SELECT "activePostTags"."tag" "Tag"
               FROM "postTag" "activePostTags"

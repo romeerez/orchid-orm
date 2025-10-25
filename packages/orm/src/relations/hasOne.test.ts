@@ -554,10 +554,10 @@ describe('hasOne', () => {
           `
             SELECT
               "u"."id" "Id",
-              COALESCE("hasProfile".r, false) "hasProfile"
+              COALESCE("hasProfile"."hasProfile", false) "hasProfile"
             FROM "user" "u"
             LEFT JOIN LATERAL (
-              SELECT true r
+              SELECT true "hasProfile"
               FROM "profile"
               WHERE "profile"."user_id" = "u"."id"
                 AND "profile"."profile_key" = "u"."user_key"
@@ -578,10 +578,10 @@ describe('hasOne', () => {
           `
             SELECT
               "u"."id" "Id",
-              COALESCE("hasProfile".r, false) "hasProfile"
+              COALESCE("hasProfile"."hasProfile", false) "hasProfile"
             FROM "user" "u"
             LEFT JOIN LATERAL (
-              SELECT true r
+              SELECT true "hasProfile"
               FROM "profile" "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "u"."id"
@@ -2952,10 +2952,10 @@ describe('hasOne through', () => {
         `
           SELECT
             "m"."id" "Id",
-            COALESCE("hasProfile".r, false) "hasProfile"
+            COALESCE("hasProfile"."hasProfile", false) "hasProfile"
           FROM "message" "m"
           LEFT JOIN LATERAL (
-            SELECT true r
+            SELECT true "hasProfile"
             FROM "profile"
             WHERE EXISTS (
               SELECT 1 FROM "user"  "sender"
@@ -2989,10 +2989,10 @@ describe('hasOne through', () => {
           SELECT row_to_json("profile".*) "profile"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT COALESCE("messages".r, '[]') "messages"
+            SELECT COALESCE("messages"."messages", '[]') "messages"
             FROM "profile"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
+              SELECT json_agg(row_to_json(t.*)) "messages"
               FROM (
                 SELECT row_to_json("profile2".*) "profile"
                 FROM "message" "messages"
@@ -3055,10 +3055,10 @@ describe('hasOne through', () => {
           SELECT row_to_json("profile".*) "profile"
           FROM "message"
           LEFT JOIN LATERAL (
-            SELECT COALESCE("messages".r, '[]') "messages"
+            SELECT COALESCE("messages"."messages", '[]') "messages"
             FROM "profile" "activeProfile"
             LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) r
+              SELECT json_agg(row_to_json(t.*)) "messages"
               FROM (
                 SELECT row_to_json("profile".*) "profile"
                 FROM "message" "messages"

@@ -558,10 +558,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            COALESCE("chats".r, '[]') "chats"
+            COALESCE("chats"."chats", '[]') "chats"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
               SELECT
                 "chats"."id_of_chat" "IdOfChat",
@@ -598,10 +598,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            COALESCE("chats".r, '[]') "chats"
+            COALESCE("chats"."chats", '[]') "chats"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
               SELECT
                 "activeChats"."id_of_chat" "IdOfChat",
@@ -633,10 +633,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            "chats".r "chats"
+            "chats"."chats" "chats"
           FROM "user" "u"
           JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
               SELECT "chats"."id_of_chat" "IdOfChat"
               FROM "chat" "chats"
@@ -648,7 +648,7 @@ describe('hasAndBelongsToMany', () => {
                   AND "chatUser"."user_key" = "u"."user_key"
               )
             ) "t"
-          ) "chats" ON "chats".r IS NOT NULL
+          ) "chats" ON "chats"."chats" IS NOT NULL
         `,
       );
     });
@@ -665,10 +665,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            "chatsCount".r "chatsCount"
+            "chatsCount"."chatsCount" "chatsCount"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT count(*) r
+            SELECT count(*) "chatsCount"
             FROM "chat" "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
@@ -694,10 +694,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            "chatsCount".r "chatsCount"
+            "chatsCount"."chatsCount" "chatsCount"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT count(*) r
+            SELECT count(*) "chatsCount"
             FROM "chat" "activeChats"
             WHERE "activeChats"."active" = $1
               AND EXISTS (
@@ -725,10 +725,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            COALESCE("titles".r, '[]') "titles"
+            COALESCE("titles"."titles", '[]') "titles"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg("t"."Title") r
+            SELECT json_agg("t"."Title") "titles"
             FROM (
               SELECT "chats"."title" "Title"
               FROM "chat" "chats"
@@ -757,10 +757,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            COALESCE("titles".r, '[]') "titles"
+            COALESCE("titles"."titles", '[]') "titles"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg("t"."Title") r
+            SELECT json_agg("t"."Title") "titles"
             FROM (
                    SELECT "activeChats"."title" "Title"
                    FROM "chat" "activeChats"
@@ -791,10 +791,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            COALESCE("hasChats".r, false) "hasChats"
+            COALESCE("hasChats"."hasChats", false) "hasChats"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT true r
+            SELECT true "hasChats"
             FROM "chat" "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
@@ -821,10 +821,10 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" "Id",
-            COALESCE("hasChats".r, false) "hasChats"
+            COALESCE("hasChats"."hasChats", false) "hasChats"
           FROM "user" "u"
           LEFT JOIN LATERAL (
-            SELECT true r
+            SELECT true "hasChats"
             FROM "chat" "activeChats"
             WHERE "activeChats"."active" = $1
               AND EXISTS (
@@ -855,20 +855,20 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("chats".r, '[]') "chats"
+          SELECT COALESCE("chats"."chats", '[]') "chats"
           FROM "user"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
-              SELECT COALESCE("users".r, '[]') "users"
+              SELECT COALESCE("users"."users", '[]') "users"
               FROM "chat" "chats"
               LEFT JOIN LATERAL (
-                SELECT json_agg(row_to_json(t.*)) r
+                SELECT json_agg(row_to_json(t.*)) "users"
                 FROM (
-                  SELECT COALESCE("chats2".r, '[]') "chats"
+                  SELECT COALESCE("chats2"."chats", '[]') "chats"
                   FROM "user" "users"
                   LEFT JOIN LATERAL (
-                    SELECT json_agg(row_to_json(t.*)) r
+                    SELECT json_agg(row_to_json(t.*)) "chats"
                     FROM (
                       SELECT ${chatSelectAll}
                       FROM "chat" "chats2"
@@ -920,20 +920,20 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE("activeChats".r, '[]') "activeChats"
+          SELECT COALESCE("activeChats"."activeChats", '[]') "activeChats"
           FROM "user" "activeUsers"
           LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) r
+            SELECT json_agg(row_to_json(t.*)) "activeChats"
             FROM (
-              SELECT COALESCE("activeUsers2".r, '[]') "activeUsers"
+              SELECT COALESCE("activeUsers2"."activeUsers", '[]') "activeUsers"
               FROM "chat" "activeChats"
               LEFT JOIN LATERAL (
-                SELECT json_agg(row_to_json(t.*)) r
+                SELECT json_agg(row_to_json(t.*)) "activeUsers"
                 FROM (
-                  SELECT COALESCE("activeChats2".r, '[]') "activeChats"
+                  SELECT COALESCE("activeChats2"."activeChats", '[]') "activeChats"
                   FROM "user" "activeUsers2"
                   LEFT JOIN LATERAL (
-                    SELECT json_agg(row_to_json(t.*)) r
+                    SELECT json_agg(row_to_json(t.*)) "activeChats"
                     FROM (
                       SELECT ${chatSelectAll}
                       FROM "chat" "activeChats2"
@@ -3020,10 +3020,10 @@ describe('hasAndBelongsToMany', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT COALESCE("tags".r, '[]') "tags"
+        SELECT COALESCE("tags"."tags", '[]') "tags"
         FROM "post"
         LEFT JOIN LATERAL (
-          SELECT json_agg(row_to_json(t.*)) r
+          SELECT json_agg(row_to_json(t.*)) "tags"
           FROM (
             SELECT "tag_id"  "tagId"
             FROM "tag" "tags"

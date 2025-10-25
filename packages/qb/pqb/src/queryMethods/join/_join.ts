@@ -21,7 +21,6 @@ import {
   JoinArgs,
   JoinArgToQuery,
   JoinFirstArg,
-  JoinLateralResult,
   JoinQueryBuilder,
   JoinResult,
 } from './join';
@@ -30,7 +29,8 @@ import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
 import { ComputedColumns } from '../../modules/computed';
 import { addColumnParserToQuery } from '../../columns';
-import { JoinItemArgs } from 'pqb';
+import { getSqlText } from '../../sql/utils';
+import { JoinItemArgs, SelectItem } from '../../sql/types';
 
 export const _joinReturningArgs = <
   T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -320,19 +320,13 @@ export const _joinLateralProcessArg = (
  * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
  * @param innerJoinLateral - add `ON p.r IS NOT NULL` check to have INNER JOIN like experience when sub-selecting arrays.
  */
-export const _joinLateral = <
-  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  Table extends string,
-  Meta extends QueryMetaBase,
-  Result extends QueryColumns,
-  RequireJoined extends boolean,
->(
-  self: T,
+export const _joinLateral = (
+  self: PickQueryMetaResultRelationsWithDataReturnTypeShape,
   type: string,
   arg: Query,
   as?: string,
   innerJoinLateral?: boolean,
-): JoinLateralResult<T, Table, Meta, Result, RequireJoined> => {
+): string | undefined => {
   const q = self as unknown as Query;
 
   arg.q.joinTo = q;
@@ -364,10 +358,41 @@ export const _joinLateral = <
   as ||= getQueryAs(arg);
   setObjectValueImmutable(q.q, 'joinedComputeds', as, arg.q.runtimeComputeds);
 
+  const joinArgs = {
+    l: arg,
+    a: as,
+    i: innerJoinLateral,
+  };
+
+  if (arg.q.returnType === 'value' || arg.q.returnType === 'valueOrThrow') {
+    const map = q.q.joinValueDedup ? new Map(q.q.joinValueDedup) : new Map();
+    q.q.joinValueDedup = map;
+
+    const select = (arg.q.select as SelectItem[])[0];
+    arg.q.select = [];
+    const dedupKey = getSqlText(arg.toSQL());
+
+    const existing = map.get(dedupKey);
+    if (existing) {
+      existing.q.q.select = [
+        {
+          selectAs: {
+            ...existing.q.q.select[0].selectAs,
+            [joinKey as string]: select as string,
+          },
+        },
+      ];
+      return existing.a;
+    } else {
+      arg.q.select = [{ selectAs: { [joinKey as string]: select as string } }];
+      map.set(dedupKey, { q: arg, a: as });
+    }
+  }
+
   pushQueryValueImmutable(q, 'join', {
     type: `${type} LATERAL`,
-    args: { l: arg, a: as, i: innerJoinLateral },
+    args: joinArgs,
   });
 
-  return q as never;
+  return joinKey;
 };

@@ -298,7 +298,7 @@ export function selectedObjectToSQL(
   item: Expression,
 ) {
   const sql = item.toSQL(ctx, quotedAs);
-  return ctx.aliasValue ? `${sql} r` : sql;
+  return ctx.aliasValue ? `${sql} "${quotedAs}"` : sql;
 }
 
 export const selectAllSql = (
@@ -377,14 +377,14 @@ const pushSubQuerySql = (
         break;
       }
       case 'all':
-      case 'pluck':
       case 'value':
+      case 'pluck':
       case 'rows':
-        sql = `"${query.q.joinedForSelect}".r`;
+        sql = `"${query.q.joinedForSelect}"."${as}"`;
         break;
       case 'valueOrThrow':
         if (query.q.returning) return;
-        sql = `"${query.q.joinedForSelect}".r`;
+        sql = `"${query.q.joinedForSelect}"."${as}"`;
         break;
       case 'void':
         return;

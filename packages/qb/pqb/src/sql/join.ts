@@ -57,7 +57,7 @@ export const processJoinItem = (
       args.a,
     )}"`;
 
-    on = `${args.i ? `"${args.a}".r IS NOT NULL` : 'true'}`;
+    on = `${args.i ? `"${args.a}"."${args.a}" IS NOT NULL` : 'true'}`;
 
     ctx.aliasValue = aliasValue;
   } else if ('j' in args) {

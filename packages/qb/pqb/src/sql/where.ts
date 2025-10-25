@@ -318,7 +318,7 @@ const processWhere = (
             quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
           } else {
             column = query.joinedShapes?.[key]?.value;
-            quotedColumn = `"${key}".r`;
+            quotedColumn = `"${key}"."${key}"`;
           }
 
           if (!column || !quotedColumn) {

@@ -69,7 +69,7 @@ export const columnToSql = (
   }
 
   if (!select && data.joinedShapes?.[column]) {
-    return `"${column}".r`;
+    return `"${column}"."${column}"`;
   }
 
   return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
@@ -93,7 +93,7 @@ export const maybeSelectedColumnToSql = (
     return columnWithDotToSql(ctx, data, data.shape, column, index, quotedAs);
   } else {
     if (data.joinedShapes?.[column]) {
-      return `"${column}".r`;
+      return `"${column}"."${column}"`;
     }
 
     if (data.select) {
@@ -201,7 +201,7 @@ export const tableColumnToSqlWithAs = (
         return makeRowToJson(table, shape, true) + ` "${as}"`;
       }
 
-      return `"${table}".r "${as}"`;
+      return `"${table}"."${table}" "${as}"`;
     }
 
     return column;
@@ -240,7 +240,7 @@ export const ownColumnToSqlWithAs = (
   if (!select && data.joinedShapes?.[column]) {
     if (jsonList) jsonList[as] = undefined;
 
-    return `"${column}".r "${as}"`;
+    return `"${column}"."${column}" "${as}"`;
   }
 
   const col = data.shape[column];

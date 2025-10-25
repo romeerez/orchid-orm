@@ -555,10 +555,10 @@ describe('belongsTo', () => {
           `
             SELECT
               "p"."id" "Id",
-              COALESCE("hasUser".r, false) "hasUser"
+              COALESCE("hasUser"."hasUser", false) "hasUser"
             FROM "profile" "p"
             LEFT JOIN LATERAL (
-              SELECT true r
+              SELECT true "hasUser"
               FROM "user"
               WHERE "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
@@ -579,10 +579,10 @@ describe('belongsTo', () => {
           `
             SELECT
               "p"."id" "Id",
-              COALESCE("hasUser".r, false) "hasUser"
+              COALESCE("hasUser"."hasUser", false) "hasUser"
             FROM "profile" "p"
             LEFT JOIN LATERAL (
-              SELECT true r
+              SELECT true "hasUser"
               FROM "user" "activeUser"
               WHERE "activeUser"."active" = $1
                 AND "activeUser"."id" = "p"."user_id"

@@ -1046,11 +1046,12 @@ export class Join {
     },
   ): JoinLateralResult<T, Table, Meta, Result, true> {
     const q = _clone(this);
-    return _joinLateral(
+    _joinLateral(
       q,
       'JOIN',
       _joinLateralProcessArg(q, arg as never, cb as never),
-    ) as never;
+    );
+    return q as never;
   }
 
   /**
@@ -1084,11 +1085,12 @@ export class Join {
     },
   ): JoinLateralResult<T, Table, Meta, Result, false> {
     const q = _clone(this);
-    return _joinLateral(
-      _clone(this),
+    _joinLateral(
+      q,
       'LEFT JOIN',
       _joinLateralProcessArg(q, arg as never, cb as never),
-    ) as never;
+    );
+    return q as never;
   }
 
   /**

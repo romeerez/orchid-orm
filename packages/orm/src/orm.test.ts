@@ -180,10 +180,10 @@ describe('orm', () => {
         SELECT
           "user"."created_at" "createdAt",
           "user"."name" "alias",
-          "messagesCount".r "messagesCount"
+          "messagesCount"."messagesCount" "messagesCount"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT count(*) r
+          SELECT count(*) "messagesCount"
           FROM "message" "messages"
           WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)

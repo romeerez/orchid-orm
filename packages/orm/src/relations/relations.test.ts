@@ -40,7 +40,7 @@ describe('relations', () => {
       `
         SELECT
           row_to_json("profile".*) "profile",
-          COALESCE("messages".r, '[]') "messages"
+          COALESCE("messages"."messages", '[]') "messages"
         FROM "user"
         LEFT JOIN LATERAL (
           SELECT ${profileSelectAll} FROM "profile"
@@ -49,7 +49,7 @@ describe('relations', () => {
             AND "profile"."profile_key" = "user"."user_key"
         ) "profile" ON true
         LEFT JOIN LATERAL (
-          SELECT json_agg(${messageJSONBuildObject('t')}) r
+          SELECT json_agg(${messageJSONBuildObject('t')}) "messages"
           FROM (
             SELECT ${messageSelectAll} FROM "message" "messages"
             WHERE ("messages"."text" = $2 AND "messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
@@ -92,11 +92,11 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT
-          COALESCE("ids".r, '[]') "ids",
-          COALESCE("dates".r, '[]') "dates"
+          COALESCE("ids"."ids", '[]') "ids",
+          COALESCE("dates"."dates", '[]') "dates"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT json_agg("t"."Id") r
+          SELECT json_agg("t"."Id") "ids"
           FROM (
             SELECT "messages"."id" "Id"
             FROM "message" "messages"
@@ -105,7 +105,7 @@ describe('relations', () => {
           ) "t"
         ) "ids" ON true
         LEFT JOIN LATERAL (
-          SELECT json_agg("t"."createdAt") r
+          SELECT json_agg("t"."createdAt") "dates"
           FROM (
             SELECT "messages"."created_at" "createdAt"
             FROM "message" "messages"
@@ -235,15 +235,15 @@ describe('relations', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "messagesCount".r "messagesCount"
+        SELECT "messagesCount"."messagesCount" "messagesCount"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT count(*) r
+          SELECT count(*) "messagesCount"
           FROM "message" "messages"
           WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "messagesCount" ON true
-        ORDER BY "messagesCount".r DESC
+        ORDER BY "messagesCount"."messagesCount" DESC
       `,
     );
   });
@@ -260,15 +260,15 @@ describe('relations', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "bio".r "bio"
+        SELECT "bio"."bio" "bio"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT "profile"."bio" r
+          SELECT "profile"."bio" "bio"
           FROM "profile"
           WHERE "profile"."user_id" = "user"."id"
             AND "profile"."profile_key" = "user"."user_key"
         ) "bio" ON true
-        ORDER BY "bio".r DESC
+        ORDER BY "bio"."bio" DESC
       `,
     );
   });
@@ -402,15 +402,15 @@ describe('relations', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "postsCount".r "postsCount"
+        SELECT "postsCount"."postsCount" "postsCount"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT count(*) r
+          SELECT count(*) "postsCount"
           FROM "post" "posts"
           WHERE "posts"."user_id" = "user"."id" AND "posts"."title" = "user"."user_key"
         ) "postsCount" ON true
-        WHERE "postsCount".r > $1
-        ORDER BY "postsCount".r DESC
+        WHERE "postsCount"."postsCount" > $1
+        ORDER BY "postsCount"."postsCount" DESC
       `,
       [10],
     );
@@ -537,10 +537,10 @@ describe('relations', () => {
       expectSql(
         q.toSQL(),
         `
-        SELECT COALESCE("posts".r, '[]') "posts"
+        SELECT COALESCE("posts"."posts", '[]') "posts"
         FROM "user"
         LEFT JOIN LATERAL (
-          SELECT json_agg(row_to_json(t.*)) r
+          SELECT json_agg(row_to_json(t.*)) "posts"
           FROM (
             SELECT "posts"."id" "Id", "posts"."title" "Title"
             FROM "post" "posts"
