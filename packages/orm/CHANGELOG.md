@@ -1,5 +1,21 @@
 # orchid-orm
 
+## 1.57.7
+
+### Patch Changes
+
+- 40a323d: Deduplicate joins when selecting multiple values of the same relation (#549)
+- 4bc4d08: Fix migrations gen for index where that references camelCase enum (#583)
+- be4bac3: Fix serializing JSON values with postgres.js for querying (#582)
+- Updated dependencies [40a323d]
+- Updated dependencies [60f9baa]
+- Updated dependencies [4bc4d08]
+- Updated dependencies [d77e2d4]
+- Updated dependencies [be4bac3]
+- Updated dependencies [a85cec0]
+  - pqb@0.56.12
+  - rake-db@2.27.13
+
 ## 1.57.6
 
 ### Patch Changes

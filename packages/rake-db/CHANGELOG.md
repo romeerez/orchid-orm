@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.27.13
+
+### Patch Changes
+
+- 60f9baa: Do not close db prematurely when migrating with postgres.js when having recurrent migrations (#581)
+- Updated dependencies [40a323d]
+- Updated dependencies [4bc4d08]
+- Updated dependencies [d77e2d4]
+- Updated dependencies [be4bac3]
+- Updated dependencies [a85cec0]
+  - pqb@0.56.12
+
 ## 2.27.12
 
 ### Patch Changes

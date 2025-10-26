@@ -1,5 +1,15 @@
 # pqb
 
+## 0.56.12
+
+### Patch Changes
+
+- 40a323d: Deduplicate joins when selecting multiple values of the same relation (#549)
+- 4bc4d08: Fix migrations gen for index where that references camelCase enum (#583)
+- d77e2d4: Support `narrowType` on generated columns (#580)
+- be4bac3: Fix serializing JSON values with postgres.js for querying (#582)
+- a85cec0: Assign constraint and other props to db error when using postgres.js (#584)
+
 ## 0.56.11
 
 ### Patch Changes
