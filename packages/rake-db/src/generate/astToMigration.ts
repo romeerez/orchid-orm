@@ -22,11 +22,11 @@ import {
   quoteObjectKey,
   singleQuote,
   toArray,
-} from 'orchid-core';
+  exhaustive,
+} from 'pqb';
 import { quoteSchemaTable } from '../common';
 import { AnyRakeDbConfig } from '../config';
 import { astToGenerateItems } from './astToGenerateItems';
-import { exhaustive } from '../../../core/src/utils';
 
 export const astToMigration = (
   currentSchema: string,

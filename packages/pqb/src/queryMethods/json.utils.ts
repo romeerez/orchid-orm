@@ -10,7 +10,7 @@ import {
   Expression,
   ExpressionData,
   QueryColumn,
-} from 'orchid-core';
+} from '../core';
 import { cloneQueryBaseUnscoped, queryWrap } from './queryMethods.utils';
 import { UnknownColumn } from '../columns';
 import { selectToSql } from '../sql/select';

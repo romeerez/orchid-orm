@@ -18,7 +18,7 @@ import {
   ColumnToCodeCtx,
   toSnakeCase,
   emptyArray,
-} from 'orchid-core';
+} from '../core';
 import { TableData } from '../tableData';
 
 export const isDefaultTimeStamp = (item: ColumnTypeBase) => {

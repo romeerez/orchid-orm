@@ -5,7 +5,7 @@ import {
   _setQueryAs,
   PickQueryTableMetaResult,
   SetQueryTableAlias,
-} from 'orchid-core';
+} from '../core';
 
 export function queryWrap<
   T extends PickQueryTableMetaResult,

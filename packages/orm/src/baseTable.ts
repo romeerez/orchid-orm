@@ -29,8 +29,6 @@ import {
   UniqueConstraints,
   raw,
   ComputedOptionsConfig,
-} from 'pqb';
-import {
   applyMixins,
   ColumnSchemaConfig,
   ColumnShapeInput,
@@ -56,7 +54,7 @@ import {
   snakeCaseKey,
   StaticSQLArgs,
   toSnakeCase,
-} from 'orchid-core';
+} from 'pqb';
 import {
   RelationConfigSelf,
   RelationTableToQuery,

@@ -1,5 +1,5 @@
 import { SetQueryReturnsColumnOptional } from '../query/query';
-import { QueryColumn } from 'orchid-core';
+import { QueryColumn } from '../core';
 import { queryJson } from './json.utils';
 
 export abstract class JsonMethods {

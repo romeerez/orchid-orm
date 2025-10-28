@@ -8,9 +8,9 @@ import {
   SingleSqlItem,
   TransactionAfterCommitHook,
   TransactionState,
-} from 'orchid-core';
+  OrchidOrmError,
+} from '../core';
 import { logParamToLogObject } from './log';
-import { OrchidOrmError } from 'orchid-core';
 
 export const commitSql: SingleSqlItem = {
   text: 'COMMIT',

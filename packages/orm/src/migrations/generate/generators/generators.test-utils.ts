@@ -1,16 +1,14 @@
 import {
-  AdapterBase,
-  ColumnsShapeBase,
-  emptyArray,
-  MaybeArray,
-  noop,
-} from 'orchid-core';
-import {
   DbSharedOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
   TableDataFn,
   TableDataItem,
+  AdapterBase,
+  ColumnsShapeBase,
+  emptyArray,
+  MaybeArray,
+  noop,
 } from 'pqb';
 import {
   ChangeCallback,

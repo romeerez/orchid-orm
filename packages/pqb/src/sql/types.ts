@@ -9,7 +9,7 @@ import {
   RecordUnknown,
   RelationConfigBase,
   TemplateLiteralArgs,
-} from 'orchid-core';
+} from '../core';
 import { QueryData } from './data';
 
 // used in `from` logic to decide if convert query to sql or just write table name

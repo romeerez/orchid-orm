@@ -1,6 +1,5 @@
-import { SearchWeight } from 'pqb';
+import { SearchWeight, AdapterBase, EmptyObject, RecordUnknown } from 'pqb';
 import { RakeDbAst } from '../ast';
-import { AdapterBase, EmptyObject, RecordUnknown } from 'orchid-core';
 
 export namespace DbStructure {
   export interface TableNameAndSchemaName {

@@ -11,6 +11,13 @@ import {
   defaultSchemaConfig,
   DbSharedOptions,
   _initQueryBuilder,
+  AdapterBase,
+  ColumnSchemaConfig,
+  ColumnsShapeBase,
+  MaybeArray,
+  QueryLogOptions,
+  RecordUnknown,
+  TransactionState,
 } from 'pqb';
 import {
   ORMTableInputToQueryBuilder,
@@ -26,15 +33,6 @@ import {
   afterCommit,
 } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import {
-  AdapterBase,
-  ColumnSchemaConfig,
-  ColumnsShapeBase,
-  MaybeArray,
-  QueryLogOptions,
-  RecordUnknown,
-  TransactionState,
-} from 'orchid-core';
 
 interface FromQuery extends Query {
   returnType: 'all';

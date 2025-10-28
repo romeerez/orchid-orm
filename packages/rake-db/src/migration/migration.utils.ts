@@ -4,8 +4,6 @@ import {
   DomainColumn,
   escapeForMigration,
   TableData,
-} from 'pqb';
-import {
   ColumnDataCheckBase,
   ColumnTypeBase,
   ForeignKeyTable,
@@ -15,7 +13,7 @@ import {
   toArray,
   toCamelCase,
   toSnakeCase,
-} from 'orchid-core';
+} from 'pqb';
 import { ColumnComment } from './migration';
 import {
   getSchemaAndTableFromName,

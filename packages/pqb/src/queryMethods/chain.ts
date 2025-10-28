@@ -1,8 +1,4 @@
-import {
-  _applyRelationAliases,
-  IsQuery,
-  RelationConfigBase,
-} from 'orchid-core';
+import { _applyRelationAliases, IsQuery, RelationConfigBase } from '../core';
 import { Query } from '../query/query';
 import { _queryWhere } from './where/where';
 import { getQueryAs } from '../common/utils';

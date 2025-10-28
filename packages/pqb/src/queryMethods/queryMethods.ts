@@ -98,9 +98,9 @@ import {
   Sql,
   SQLQueryArgs,
   WithDataItems,
-} from 'orchid-core';
+  OrchidOrmInternalError,
+} from '../core';
 import { QueryAsMethods } from './as';
-import { OrchidOrmInternalError } from 'orchid-core';
 import { TransformMethods } from './transform';
 import { QueryMap } from './map';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';

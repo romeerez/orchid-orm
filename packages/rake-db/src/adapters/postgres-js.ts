@@ -1,4 +1,3 @@
-import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import {
   RakeDbConfig,
   makeChange,
@@ -11,7 +10,12 @@ import {
   RakeDbError,
 } from 'rake-db';
 import { PostgresJsAdapter, PostgresJsAdapterOptions } from 'pqb/postgres-js';
-import { DefaultSchemaConfig } from 'pqb';
+import {
+  DefaultSchemaConfig,
+  ColumnSchemaConfig,
+  MaybeArray,
+  toArray,
+} from 'pqb';
 
 export const rakeDb = ((
   options,

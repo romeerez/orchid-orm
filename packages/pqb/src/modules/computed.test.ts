@@ -13,7 +13,7 @@ import {
   userData as partialUserData,
 } from '../test-utils/test-utils';
 import { Query } from '../query/query';
-import { NotFoundError } from 'orchid-core';
+import { NotFoundError } from '../core';
 
 const User = testDb(
   'user',

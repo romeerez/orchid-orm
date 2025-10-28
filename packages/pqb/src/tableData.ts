@@ -9,7 +9,7 @@ import {
   QueryColumns,
   RawSQLBase,
   RecordUnknown,
-} from 'orchid-core';
+} from './core';
 import { SearchWeight } from './sql';
 import { sqlFn, SqlFn } from './sql/rawSql';
 import OptionsArg = TableData.Index.OptionsArg;

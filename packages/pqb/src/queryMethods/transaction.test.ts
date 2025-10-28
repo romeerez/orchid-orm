@@ -6,7 +6,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { User, userColumnsSql, userData } from '../test-utils/test-utils';
-import { noop } from 'orchid-core';
+import { noop } from '../core';
 import { AfterCommitError } from './transaction';
 
 const afterCommitSampleError = {

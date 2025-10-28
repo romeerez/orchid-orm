@@ -22,7 +22,7 @@ import {
   ColumnToCodeCtx,
   quoteObjectKey,
   RecordString,
-} from 'orchid-core';
+} from '../core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
 import { SearchWeightRecord } from '../sql';

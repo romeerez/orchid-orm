@@ -22,7 +22,7 @@ import {
   QueryColumn,
   RecordUnknown,
   setObjectValueImmutable,
-} from 'orchid-core';
+} from '../core';
 import { BooleanQueryColumn } from '../queryMethods';
 import { addColumnParserToQuery } from './column.utils';
 

@@ -31,6 +31,16 @@ import {
   WhereArg,
 } from 'pqb';
 import {
+  addAutoForeignKey,
+  hasRelationHandleCreate,
+  hasRelationHandleUpdate,
+  NestedInsertManyConnect,
+  NestedInsertManyConnectOrCreate,
+  NestedInsertManyItems,
+  RelJoin,
+} from './common/utils';
+import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
+import {
   ColumnSchemaConfig,
   ColumnShapeInputPartial,
   ColumnsShapeBase,
@@ -47,18 +57,8 @@ import {
   RelationJoinQuery,
   toArray,
   toSnakeCase,
-} from 'orchid-core';
-import {
-  addAutoForeignKey,
-  hasRelationHandleCreate,
-  hasRelationHandleUpdate,
-  NestedInsertManyConnect,
-  NestedInsertManyConnectOrCreate,
-  NestedInsertManyItems,
-  RelJoin,
-} from './common/utils';
-import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
-import { defaultSchemaConfig } from 'pqb';
+  defaultSchemaConfig,
+} from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {

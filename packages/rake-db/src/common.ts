@@ -1,5 +1,4 @@
-import { EnumColumn } from 'pqb';
-import { AdapterBase, ColumnSchemaConfig, singleQuote } from 'orchid-core';
+import { EnumColumn, AdapterBase, ColumnSchemaConfig, singleQuote } from 'pqb';
 import { TableQuery } from './migration/createTable';
 import { RAKE_DB_LOCK_KEY } from './commands/migrateOrRollback';
 import { MigrationsSet } from './migration/migrationsSet';

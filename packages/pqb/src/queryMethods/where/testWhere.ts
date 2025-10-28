@@ -1,5 +1,5 @@
 import { Query } from '../../query/query';
-import { ColumnTypeBase, Sql } from 'orchid-core';
+import { ColumnTypeBase, Sql } from '../../core';
 import { expectSql, testDb } from 'test-utils';
 import { getSqlText } from '../../sql';
 import { userColumnsSql } from '../../test-utils/test-utils';

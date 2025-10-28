@@ -12,7 +12,7 @@ import {
   QueryColumn,
   QueryThen,
   ValExpression,
-} from 'orchid-core';
+} from '../core';
 import { getSqlText, QueryData, ToSQLCtx } from '../sql';
 import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import {

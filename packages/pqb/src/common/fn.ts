@@ -10,7 +10,7 @@ import {
   PickQueryMetaResultWindows,
   QueryColumn,
   toArray,
-} from 'orchid-core';
+} from '../core';
 import { SelectableOrExpression } from './utils';
 import { OrderItem, QueryData, ToSQLCtx, WhereItem } from '../sql';
 import { columnToSql, rawOrColumnToSql } from '../sql/common';

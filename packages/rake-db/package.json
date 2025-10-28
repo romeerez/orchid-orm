@@ -57,7 +57,6 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "orchid-core": "workspace:*",
     "pqb": "workspace:*",
     "prompts": "^2.4.2"
   },

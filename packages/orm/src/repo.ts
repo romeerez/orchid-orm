@@ -1,5 +1,11 @@
-import { getClonedQueryData, MergeQuery, Query, WhereResult } from 'pqb';
-import { QueryReturnType, RecordUnknown } from 'orchid-core';
+import {
+  getClonedQueryData,
+  MergeQuery,
+  Query,
+  WhereResult,
+  QueryReturnType,
+  RecordUnknown,
+} from 'pqb';
 
 type QueryMethods<T extends Query> = Record<
   string,

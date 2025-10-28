@@ -6,7 +6,7 @@ import {
   ColumnTypeBase,
   setColumnData,
   singleQuote,
-} from 'orchid-core';
+} from '../core';
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
 import { Operators, OperatorsAny } from './operators';

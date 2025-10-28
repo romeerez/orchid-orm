@@ -27,7 +27,7 @@ import {
   PickQueryRelations,
   pushQueryValueImmutable,
   SQLQueryArgs,
-} from 'orchid-core';
+} from '../../core';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
 import { preprocessJoinArg, processJoinArgs } from '../join/processJoinArgs';
 import { ExpressionMethods } from '../expressions';

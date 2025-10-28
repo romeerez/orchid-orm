@@ -1,6 +1,6 @@
 import { useTestORM } from './test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from './orm';
-import { pick } from 'orchid-core';
+import { pick } from 'pqb';
 import {
   BaseTable,
   db,

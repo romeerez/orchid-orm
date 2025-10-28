@@ -7,7 +7,7 @@ import {
   Sql,
   SQLQueryArgs,
   TemplateLiteralArgs,
-} from 'orchid-core';
+} from '../core';
 import {
   QueryBuilder,
   QueryData,

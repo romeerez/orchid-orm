@@ -13,7 +13,7 @@ import {
   QueryMetaBase,
   RelationConfigBase,
   setObjectValueImmutable,
-} from 'orchid-core';
+} from '../../core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select/select';
 import { _clone, throwIfJoinLateral } from '../../query/queryUtils';

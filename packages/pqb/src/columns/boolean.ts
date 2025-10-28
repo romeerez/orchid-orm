@@ -1,6 +1,6 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from 'orchid-core';
+import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from '../core';
 import { Operators, OperatorsBoolean } from './operators';
 import {
   defaultSchemaConfig,

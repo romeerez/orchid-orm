@@ -4,6 +4,7 @@ import {
   GeneratorIgnore,
   VirtualColumn,
   DbStructureDomainsMap,
+  AdapterBase,
 } from 'pqb';
 import {
   DbStructure,
@@ -33,7 +34,6 @@ import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
 import { ComposeMigrationParams } from '../composeMigration';
-import { AdapterBase } from 'orchid-core';
 
 export interface CompareSql {
   values: unknown[];

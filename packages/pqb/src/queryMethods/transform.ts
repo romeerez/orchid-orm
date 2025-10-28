@@ -3,7 +3,7 @@ import {
   pushQueryValueImmutable,
   QueryColumn,
   QueryThen,
-} from 'orchid-core';
+} from '../core';
 import { _clone } from '../query/queryUtils';
 import { QueryData } from '../sql';
 

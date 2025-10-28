@@ -14,7 +14,7 @@ import {
   PickQueryShape,
   PickQueryTable,
   QueryColumn,
-} from 'orchid-core';
+} from '../core';
 import {
   addParserForRawExpression,
   setParserForSelectedString,

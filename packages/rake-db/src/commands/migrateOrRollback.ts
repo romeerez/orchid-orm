@@ -1,5 +1,6 @@
-import { createDbWithAdapter, DbResult } from 'pqb';
 import {
+  createDbWithAdapter,
+  DbResult,
   AdapterBase,
   ColumnSchemaConfig,
   emptyArray,
@@ -7,7 +8,7 @@ import {
   pathToLog,
   QueryLogOptions,
   toArray,
-} from 'orchid-core';
+} from 'pqb';
 import { queryLock, RakeDbCtx, transaction } from '../common';
 import {
   clearChanges,

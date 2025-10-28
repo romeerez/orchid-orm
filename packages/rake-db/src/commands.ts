@@ -4,7 +4,7 @@ import {
   MaybePromise,
   RecordOptionalString,
   RecordString,
-} from 'orchid-core';
+} from 'pqb';
 import { AnyRakeDbConfig, RakeDbConfig } from './config';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { runRecurrentMigrations } from './commands/recurrent';

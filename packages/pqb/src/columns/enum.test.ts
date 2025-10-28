@@ -1,5 +1,5 @@
 import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
-import { ColumnToCodeCtx } from 'orchid-core';
+import { ColumnToCodeCtx } from '../core';
 import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 
 const ctx: ColumnToCodeCtx = {

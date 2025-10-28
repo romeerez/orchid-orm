@@ -6,7 +6,7 @@ import {
   useTestORM,
   userRowToJSON,
 } from '../test-utils/orm.test-utils';
-import { Db, Query } from 'pqb';
+import { Db, Query, NotFoundError, omit } from 'pqb';
 import { orchidORMWithAdapter } from '../orm';
 import {
   User,
@@ -20,7 +20,6 @@ import {
   ProfileData,
   UserData,
 } from 'test-utils';
-import { NotFoundError, omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = {

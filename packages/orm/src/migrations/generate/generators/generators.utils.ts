@@ -1,11 +1,5 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import {
-  RawSQLBase,
-  colors,
-  QueryResult,
-  AdapterBase,
-  noop,
-} from 'orchid-core';
+import { RawSQLBase, colors, QueryResult, AdapterBase, noop } from 'pqb';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {

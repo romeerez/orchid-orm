@@ -1,4 +1,4 @@
-import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from 'orchid-core';
+import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from '../core';
 import { ColumnType } from './columnType';
 import { Operators, OperatorsAny } from './operators';
 import { columnCode } from './code';

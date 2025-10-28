@@ -3,7 +3,7 @@ import {
   FnUnknownToUnknown,
   pushQueryValueImmutable,
   SQLQueryArgs,
-} from 'orchid-core';
+} from '../core';
 import { _clone } from '../query/queryUtils';
 
 // Function argument of `having`:

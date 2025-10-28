@@ -22,7 +22,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { MAX_BINDING_PARAMS } from '../../sql/constants';
-import { omit } from 'orchid-core';
+import { omit } from '../../core';
 
 const setMaxBindingParams = (value: number) => {
   (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;

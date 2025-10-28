@@ -12,7 +12,7 @@ import {
   PickColumnBaseData,
   Codes,
   ColumnToCodeCtx,
-} from 'orchid-core';
+} from '../core';
 import { columnCode, identityToCode } from './code';
 import { Operators, OperatorsNumber } from './operators';
 import { TableData } from '../tableData';

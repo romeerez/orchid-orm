@@ -3,8 +3,8 @@ import {
   applyTransforms,
   pushQueryValueImmutable,
   QueryReturnType,
-} from 'orchid-core';
-import { NotFoundError } from 'orchid-core';
+  NotFoundError,
+} from '../core';
 import { extendQuery } from '../query/queryUtils';
 import { RawSQL } from '../sql/rawSql';
 import { QueryData } from '../sql';

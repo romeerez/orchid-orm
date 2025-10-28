@@ -1,4 +1,4 @@
-import { emptyObject, QueryColumnsInit } from 'orchid-core';
+import { emptyObject, QueryColumnsInit } from '../core';
 import { UnknownColumn } from './unknown';
 
 export const anyShape = new Proxy(emptyObject, {

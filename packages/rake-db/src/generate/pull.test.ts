@@ -7,9 +7,9 @@ import {
   DefaultColumnTypes,
   defaultSchemaConfig,
   DefaultSchemaConfig,
+  ColumnSchemaConfig,
 } from 'pqb';
 import { asMock, TestAdapter } from 'test-utils';
-import { ColumnSchemaConfig } from 'orchid-core';
 import { processRakeDbConfig, RakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 

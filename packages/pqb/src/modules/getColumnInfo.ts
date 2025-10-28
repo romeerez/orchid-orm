@@ -3,7 +3,7 @@ import {
   PickQueryMetaShape,
   QueryColumn,
   QueryThenShallowSimplify,
-} from 'orchid-core';
+} from '../core';
 import { _clone } from '../query/queryUtils';
 
 /**

@@ -2,13 +2,7 @@ import { columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
 import { toSQL, ToSQLCtx } from './toSQL';
 import { QueryData, QueryDataFromItem } from './data';
-import {
-  addValue,
-  isExpression,
-  IsQuery,
-  isRawSQL,
-  MaybeArray,
-} from 'orchid-core';
+import { addValue, isExpression, IsQuery, isRawSQL, MaybeArray } from '../core';
 import { getSqlText } from './utils';
 import { Query } from '../query/query';
 import { getQueryAs } from '../common/utils';

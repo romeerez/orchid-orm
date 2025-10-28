@@ -39,7 +39,7 @@ import {
   RecordUnknown,
   RelationConfigBase,
   Sql,
-} from 'orchid-core';
+} from '../core';
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
 import { ColumnsShape } from '../columns';

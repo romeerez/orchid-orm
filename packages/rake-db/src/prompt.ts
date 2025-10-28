@@ -1,4 +1,4 @@
-import { colors } from '../../core/src/colors';
+import { colors } from 'pqb';
 
 const ESC = '\x1B';
 const CSI = `${ESC}[`;

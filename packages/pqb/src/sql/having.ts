@@ -1,6 +1,6 @@
 import { ToSQLCtx } from './toSQL';
 import { templateLiteralToSQL } from './rawSql';
-import { Expression, TemplateLiteralArgs } from 'orchid-core';
+import { Expression, TemplateLiteralArgs } from '../core';
 import { QueryData } from '../sql/data';
 
 export const pushHavingSql = (

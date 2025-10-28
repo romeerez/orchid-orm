@@ -6,9 +6,8 @@ import {
   getConstraintName,
   AnyRakeDbConfig,
 } from 'rake-db';
-import { ColumnType, TableData } from 'pqb';
+import { ColumnType, TableData, deepCompare, toSnakeCase } from 'pqb';
 import { ChangeTableData, TableShapes } from './tables.generator';
-import { deepCompare, toSnakeCase } from 'orchid-core';
 import { checkForColumnAddOrDrop } from './generators.utils';
 
 interface Constraint extends TableData.Constraint {

@@ -39,7 +39,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { z } from 'zod/v4';
-import { EmptyObject, NotFoundError } from 'orchid-core';
+import { EmptyObject, NotFoundError } from '../../core';
 
 const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);

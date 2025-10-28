@@ -1,7 +1,6 @@
 import { Migration } from './migration';
-import { RawSQLBase, singleQuote, SingleSql } from 'orchid-core';
+import { RawSQLBase, singleQuote, SingleSql, raw } from 'pqb';
 import { RakeDbAst } from '../ast';
-import { raw } from 'pqb';
 import { interpolateSqlValues } from './migration.utils';
 
 export const createView = async <CT>(

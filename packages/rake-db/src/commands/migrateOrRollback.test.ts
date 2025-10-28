@@ -5,8 +5,14 @@ import {
   redoCommand,
   rollbackCommand,
 } from './migrateOrRollback';
-import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
-import { AdapterBase, noop, pathToLog, Sql } from 'orchid-core';
+import {
+  AdapterBase,
+  noop,
+  pathToLog,
+  Sql,
+  DefaultColumnTypes,
+  DefaultSchemaConfig,
+} from 'pqb';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock, TestAdapter, TestTransactionAdapter } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';

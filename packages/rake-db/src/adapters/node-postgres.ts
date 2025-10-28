@@ -9,12 +9,16 @@ import {
   MigrateFnConfig,
   makeMigrateAdapter,
 } from 'rake-db';
-import { ColumnSchemaConfig, MaybeArray, toArray } from 'orchid-core';
 import {
   NodePostgresAdapter,
   NodePostgresAdapterOptions,
 } from 'pqb/node-postgres';
-import { DefaultSchemaConfig } from 'pqb';
+import {
+  DefaultSchemaConfig,
+  ColumnSchemaConfig,
+  MaybeArray,
+  toArray,
+} from 'pqb';
 
 export const rakeDb = ((
   options,

@@ -1,4 +1,4 @@
-import { isExpression, RecordUnknown } from 'orchid-core';
+import { isExpression, RecordUnknown } from '../core';
 import { _clone } from '../query/queryUtils';
 
 export type ClearStatement =

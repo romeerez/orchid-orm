@@ -4,7 +4,7 @@ import { QueryCreate } from './mutate/create';
 import { Update } from './mutate/update';
 import { QueryUpsert } from './mutate/upsert';
 import { Delete } from './mutate/delete';
-import { noop } from 'orchid-core';
+import { noop } from '../core';
 import { QueryOrCreate } from './mutate/orCreate';
 import { QueryCreateFrom } from './mutate/createFrom';
 

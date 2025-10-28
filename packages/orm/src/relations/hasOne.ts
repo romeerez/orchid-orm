@@ -43,7 +43,10 @@ import {
   NestedUpdateOneItem,
   RelJoin,
 } from './common/utils';
+import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import {
+  defaultSchemaConfig,
+  CreateManyMethodsNames,
   ColumnSchemaConfig,
   ColumnsShapeBase,
   EmptyObject,
@@ -52,9 +55,7 @@ import {
   RecordUnknown,
   RelationConfigBase,
   RelationJoinQuery,
-} from 'orchid-core';
-import { RelationRefsOptions, RelationThroughOptions } from './common/options';
-import { defaultSchemaConfig, CreateManyMethodsNames } from 'pqb';
+} from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasOne extends RelationThunkBase {

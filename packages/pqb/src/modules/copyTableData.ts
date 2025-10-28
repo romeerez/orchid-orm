@@ -1,6 +1,6 @@
 import { SetQueryKind } from '../query/query';
 import { CopyOptions } from '../sql';
-import { PickQueryMeta, PickQueryMetaShape, PickQueryShape } from 'orchid-core';
+import { PickQueryMeta, PickQueryMetaShape, PickQueryShape } from '../core';
 import { _clone } from '../query/queryUtils';
 
 // argument of the `copy` function can accept various options

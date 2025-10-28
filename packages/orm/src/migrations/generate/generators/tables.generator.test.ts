@@ -4,9 +4,9 @@ import {
   DefaultSchemaConfig,
   defaultSchemaConfig,
   UnknownColumn,
+  colors,
 } from 'pqb';
 import { DbMigration } from 'rake-db';
-import { colors } from 'orchid-core';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),

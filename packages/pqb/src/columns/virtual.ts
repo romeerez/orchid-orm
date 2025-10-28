@@ -1,7 +1,7 @@
 import { ColumnType } from './columnType';
 import { CreateCtx, CreateSelf, UpdateCtx, UpdateSelf } from '../queryMethods';
 import { Operators, OperatorsAny } from './operators';
-import { ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
+import { ColumnSchemaConfig, RecordUnknown } from '../core';
 
 export abstract class VirtualColumn<
   Schema extends ColumnSchemaConfig,

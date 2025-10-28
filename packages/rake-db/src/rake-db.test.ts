@@ -9,10 +9,9 @@ import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
 import { runRecurrentMigrations } from './commands/recurrent';
 import { asMock, assertType, TestAdapter, testRakeDb } from 'test-utils';
-import { noop } from 'orchid-core';
 import { clearChanges, getCurrentChanges } from './migration/change';
 import { processRakeDbConfig } from './config';
-import { DefaultSchemaConfig, IntegerColumn } from 'pqb';
+import { noop, DefaultSchemaConfig, IntegerColumn } from 'pqb';
 
 jest.mock('./commands/createOrDrop', () => ({
   createDb: jest.fn(() => Promise.resolve()),

@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import path from 'path';
 import { BaseTable } from './baseTable';
 import os from 'os';
-import { AdapterConfigBase } from 'orchid-core';
+import { AdapterConfigBase } from 'pqb';
 import { testRakeDb } from 'test-utils';
 
 config({ path: path.resolve('..', '..', '.env') });

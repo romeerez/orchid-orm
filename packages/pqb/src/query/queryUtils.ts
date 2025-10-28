@@ -8,8 +8,8 @@ import {
   PickQueryResultReturnType,
   QueryBase,
   RecordUnknown,
-} from 'orchid-core';
-import { OrchidOrmInternalError } from 'orchid-core';
+  OrchidOrmInternalError,
+} from '../core';
 import {
   PickQueryQ,
   PickQueryQAndBaseQuery,

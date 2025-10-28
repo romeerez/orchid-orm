@@ -7,7 +7,7 @@ import {
   sql,
 } from 'test-utils';
 import { raw } from '../sql/rawSql';
-import { ColumnToCodeCtx } from 'orchid-core';
+import { ColumnToCodeCtx } from '../core';
 import { User, userData } from '../test-utils/test-utils';
 import { z } from 'zod/v4';
 

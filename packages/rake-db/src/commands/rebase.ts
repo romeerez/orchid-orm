@@ -4,10 +4,9 @@ import fs from 'fs/promises';
 import { getMigrations, MigrationItem } from '../migration/migrationsSet';
 import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { RakeDbCtx } from '../common';
-import { AdapterBase, RecordOptionalString } from 'orchid-core';
+import { AdapterBase, RecordOptionalString, colors } from 'pqb';
 import { redo } from './migrateOrRollback';
 import { promptSelect } from '../prompt';
-import { colors } from '../../../core/src/colors';
 
 interface RebaseFile extends MigrationItem {
   name: string;

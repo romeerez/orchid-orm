@@ -5,7 +5,7 @@ import {
   testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
-import { ColumnToCodeCtx } from 'orchid-core';
+import { ColumnToCodeCtx } from '../core';
 import { z } from 'zod/v4';
 
 describe('array column', () => {

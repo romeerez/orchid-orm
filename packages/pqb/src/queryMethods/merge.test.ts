@@ -13,7 +13,7 @@ import {
   testZodColumnTypes as t,
   testDb,
 } from 'test-utils';
-import { emptyObject, Expression, getValueKey, noop } from 'orchid-core';
+import { emptyObject, Expression, getValueKey, noop } from '../core';
 import { ComputedColumn } from '../modules/computed';
 
 describe('merge queries', () => {

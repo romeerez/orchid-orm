@@ -2,8 +2,10 @@ import {
   ColumnDataCheckBase,
   getFreeSetAlias,
   TemplateLiteralArgs,
-} from 'orchid-core';
-import { ColumnType, RawSQL, TableData } from 'pqb';
+  ColumnType,
+  RawSQL,
+  TableData,
+} from 'pqb';
 import { DbStructure, RakeDbAst } from 'rake-db';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';

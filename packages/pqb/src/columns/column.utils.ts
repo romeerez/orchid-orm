@@ -4,7 +4,7 @@ import {
   getValueKey,
   QueryColumn,
   setObjectValueImmutable,
-} from 'orchid-core';
+} from '../core';
 import { ColumnType } from './columnType';
 import { DomainColumn } from './customType';
 import { EnumColumn } from './enum';

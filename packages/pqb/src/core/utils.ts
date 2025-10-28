@@ -336,7 +336,6 @@ export const getCallerFilePath = (
   stack = getStackTrace(),
 ): string | undefined => {
   if (stack) {
-    // file name of this file in orchid-core
     const coreLibFile = stack[0]?.getFileName();
     let i = 1;
     if (stack[1]?.getFileName() === coreLibFile) {

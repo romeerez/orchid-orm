@@ -12,7 +12,7 @@ import {
   pushOrNewArray,
   RecordUnknown,
   Sql,
-} from 'orchid-core';
+} from '../core';
 import { Db } from '../query/db';
 import { joinSubQuery } from '../common/utils';
 import { selectToSql } from './select';

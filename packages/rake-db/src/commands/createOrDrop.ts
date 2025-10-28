@@ -1,4 +1,4 @@
-import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
+import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'pqb';
 import { migrate } from './migrateOrRollback';
 import { RakeDbConfig } from '../config';
 import { createMigrationsTable } from '../migration/migrationsTable';

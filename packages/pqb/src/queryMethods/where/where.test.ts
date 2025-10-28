@@ -10,7 +10,7 @@ import {
 import { testWhere, testWhereExists } from './testWhere';
 import { assertType, db, expectSql, sql, testDb } from 'test-utils';
 import { Query } from '../../query/query';
-import { RelationConfigBase } from 'orchid-core';
+import { RelationConfigBase } from '../../core';
 
 describe('where', () => {
   describe('relation', () => {

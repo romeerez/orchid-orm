@@ -4,7 +4,7 @@ import {
   MaybeArray,
   QueryColumns,
   RecordUnknown,
-} from 'orchid-core';
+} from '../../core';
 import { _clone } from '../../query/queryUtils';
 import {
   CreateBelongsToData,

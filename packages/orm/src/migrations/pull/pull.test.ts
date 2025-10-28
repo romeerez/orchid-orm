@@ -1,8 +1,13 @@
 import { pull } from './pull';
-import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import {
+  DefaultColumnTypes,
+  DefaultSchemaConfig,
+  AdapterBase,
+  AdapterConfigBase,
+  noop,
+} from 'pqb';
 import { testConfig } from '../migrations.test-utils';
 import { ChangeCallback, createMigrationInterface } from 'rake-db';
-import { AdapterBase, AdapterConfigBase, noop } from 'orchid-core';
 import fs from 'fs/promises';
 import { asMock, TestAdapter } from 'test-utils';
 import path from 'node:path';

@@ -14,7 +14,7 @@ import {
   RecordString,
   RecordUnknown,
   RelationsBase,
-} from 'orchid-core';
+} from '../core';
 import { PickQueryQ, ReturnsQueryOrExpression } from '../query/query';
 import {
   ExpressionMethods,
@@ -28,7 +28,7 @@ import {
   finalizeNestedHookSelect,
 } from '../common/queryResultProcessing';
 
-declare module 'orchid-core' {
+declare module '../core' {
   interface ColumnDataBase {
     // SQL computed columns have an Expression in their data, which will be used for building SQL.
     computed?: Expression;

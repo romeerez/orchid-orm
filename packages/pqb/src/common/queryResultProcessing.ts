@@ -1,5 +1,5 @@
 import { QueryData } from '../sql';
-import { applyTransforms, QueryReturnType, RecordString } from 'orchid-core';
+import { applyTransforms, QueryReturnType, RecordString } from '../core';
 import { QueryBatchResult } from '../queryMethods';
 
 export const applyBatchTransforms = (

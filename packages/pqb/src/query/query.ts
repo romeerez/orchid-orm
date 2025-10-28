@@ -34,7 +34,7 @@ import {
   RecordUnknown,
   RelationsBase,
   WithDataItems,
-} from 'orchid-core';
+} from '../core';
 import { ColumnType } from '../columns';
 import { TableData } from '../tableData';
 

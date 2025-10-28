@@ -1,7 +1,7 @@
 import { makeConnectAndMigrate } from './node-postgres';
 import { makeMigrateAdapter } from '../migration/migrate/migrate';
 import { asMock } from 'test-utils';
-import { AdapterBase } from 'orchid-core';
+import { AdapterBase } from 'pqb';
 
 jest.mock('../migration/migrate/migrate', () => ({
   makeMigrateAdapter: jest.fn(),

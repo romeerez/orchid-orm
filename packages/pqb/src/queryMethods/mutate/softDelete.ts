@@ -6,7 +6,7 @@ import {
   QueryMetaBase,
   RecordUnknown,
   setObjectValueImmutable,
-} from 'orchid-core';
+} from '../../core';
 import { QueryScopes } from '../../sql';
 import {
   PickQueryBaseQuery,

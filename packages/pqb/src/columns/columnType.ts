@@ -17,7 +17,7 @@ import {
   TemplateLiteralArgs,
   templateLiteralSQLToCode,
   UniqueColumn,
-} from 'orchid-core';
+} from '../core';
 import { raw } from '../sql/rawSql';
 import { TableData } from '../tableData';
 

@@ -31,13 +31,13 @@ import {
   _getQueryFreeAlias,
   QueryBase,
   _setQueryAlias,
-} from 'orchid-core';
+  OrchidOrmInternalError,
+} from '../../core';
 import { isSelectingCount } from '../aggregate';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
 import { _clone } from '../../query/queryUtils';
 import { Db } from '../../query';
 import { moveQueryValueToWith } from '../with';
-import { OrchidOrmInternalError } from 'orchid-core';
 import {
   CreateFromMethodNames,
   CreateManyFromMethodNames,

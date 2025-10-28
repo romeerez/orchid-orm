@@ -12,7 +12,6 @@
     "test:ci": "turbo run test:ci --cache-dir=.turbo",
     "publish:ci": "changeset tag && pnpm publish -r --ignore-scripts",
     "db": "pnpm --filter rake-db db",
-    "core": "pnpm --filter orchid-core",
     "create-orm": "pnpm --filter create-orchid-orm",
     "orm": "pnpm --filter orchid-orm",
     "pqb": "pnpm --filter pqb",

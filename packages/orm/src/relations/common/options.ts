@@ -1,5 +1,4 @@
-import { TableData } from 'pqb';
-import { ColumnShapeInputPartial, ColumnsShapeBase } from 'orchid-core';
+import { TableData, ColumnShapeInputPartial, ColumnsShapeBase } from 'pqb';
 
 export interface RelationRefsOptions<
   Column extends PropertyKey = string,

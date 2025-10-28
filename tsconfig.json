@@ -6,7 +6,6 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "orchid-core": ["packages/core/src/index.ts"],
       "orchid-orm": ["packages/orm/src/index.ts"],
       "orchid-orm/node-postgres": ["packages/orm/src/adapters/node-postgres.ts"],
       "orchid-orm/postgres-js": ["packages/orm/src/adapters/postgres-js.ts"],

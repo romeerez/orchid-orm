@@ -1,4 +1,4 @@
-import { _setQueryAs, AsQueryArg, SetQueryTableAlias } from 'orchid-core';
+import { _setQueryAs, AsQueryArg, SetQueryTableAlias } from '../core';
 import { _clone } from '../query/queryUtils';
 
 export abstract class QueryAsMethods {

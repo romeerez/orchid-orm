@@ -22,9 +22,9 @@ import {
   RelationConfigBase,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   QueryResult,
-} from 'orchid-core';
+  OrchidOrmInternalError,
+} from '../../core';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
-import { OrchidOrmInternalError } from 'orchid-core';
 import { moveQueryValueToWith } from '../with';
 import { JoinArgs, JoinFirstArg, JoinResultFromArgs } from '../join/join';
 import { _joinReturningArgs } from '../join/_join';

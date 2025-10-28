@@ -20,7 +20,7 @@ import {
   SingleSqlItem,
   Sql,
   TableHook,
-} from 'orchid-core';
+} from '../core';
 import { getQueryAs, joinSubQuery } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';

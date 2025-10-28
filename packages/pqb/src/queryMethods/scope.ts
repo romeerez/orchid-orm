@@ -4,7 +4,7 @@ import {
   QueryColumns,
   QueryMetaBase,
   setObjectValueImmutable,
-} from 'orchid-core';
+} from '../core';
 import { QueryScopes } from '../sql';
 import { _clone } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';

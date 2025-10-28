@@ -22,8 +22,7 @@ import {
   PickQueryQ,
   _queryWhere,
   SelectableFromShape,
-} from 'pqb';
-import {
+  defaultSchemaConfig,
   ColumnSchemaConfig,
   EmptyObject,
   getPrimaryKeys,
@@ -36,7 +35,7 @@ import {
   RelationConfigBase,
   RelationJoinQuery,
   toArray,
-} from 'orchid-core';
+} from 'pqb';
 import {
   addAutoForeignKey,
   getSourceRelation,
@@ -52,7 +51,6 @@ import {
   RelJoin,
 } from './common/utils';
 import { RelationThroughOptions } from './common/options';
-import { defaultSchemaConfig } from 'pqb';
 import {
   HasOneOptions,
   HasOneParams,

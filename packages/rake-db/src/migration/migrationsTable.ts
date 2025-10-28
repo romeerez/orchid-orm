@@ -1,5 +1,5 @@
 import { RakeDbConfig } from '../config';
-import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'orchid-core';
+import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'pqb';
 
 export const createMigrationsTable = async (
   db: AdapterBase,

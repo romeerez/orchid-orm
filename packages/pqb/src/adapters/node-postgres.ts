@@ -11,7 +11,7 @@ import {
   returnArg,
   setConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
-} from 'orchid-core';
+} from '../core';
 import {
   DefaultColumnTypes,
   DefaultSchemaConfig,

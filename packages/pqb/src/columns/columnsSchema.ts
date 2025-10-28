@@ -1,6 +1,6 @@
 import { ColumnType } from './columnType';
 import { OperatorsAny } from './operators';
-import { QueryColumns, ShallowSimplify } from 'orchid-core';
+import { QueryColumns, ShallowSimplify } from '../core';
 
 export interface ColumnsShape {
   [K: string]: ColumnType;

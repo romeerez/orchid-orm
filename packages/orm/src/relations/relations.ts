@@ -14,15 +14,13 @@ import {
   Query,
   VirtualColumn,
   WhereArg,
-} from 'pqb';
-import {
   ColumnSchemaConfig,
   ColumnsShapeBase,
   IsQuery,
   RecordUnknown,
   RelationJoinQuery,
   RelationsBase,
-} from 'orchid-core';
+} from 'pqb';
 import { HasMany, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,

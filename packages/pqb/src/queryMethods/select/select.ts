@@ -51,7 +51,8 @@ import {
   setParserToQuery,
   spreadObjectValues,
   UnionToIntersection,
-} from 'orchid-core';
+  NotFoundError,
+} from '../../core';
 import { _joinLateral } from '../join/_join';
 import {
   resolveSubQueryCallbackV2,
@@ -61,7 +62,6 @@ import { RawSQL } from '../../sql/rawSql';
 import { defaultSchemaConfig } from '../../columns/defaultSchemaConfig';
 import { parseRecord } from '../then';
 import { _queryNone, isQueryNone } from '../none';
-import { NotFoundError } from 'orchid-core';
 
 import { processComputedBatches } from '../../modules/computed';
 import {

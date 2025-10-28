@@ -27,7 +27,7 @@ import {
   SelectableBase,
   setObjectValueImmutable,
   WithDataItem,
-} from 'orchid-core';
+} from '../../core';
 import { _join, _joinLateral, _joinLateralProcessArg } from './_join';
 import {
   ColumnsShapeToNullableObject,

@@ -1,5 +1,9 @@
-import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
-import { AdapterBase, ColumnSchemaConfig } from 'orchid-core';
+import {
+  DefaultColumnTypes,
+  DefaultSchemaConfig,
+  AdapterBase,
+  ColumnSchemaConfig,
+} from 'pqb';
 import { RakeDbError } from './errors';
 import {
   ChangeCallback,

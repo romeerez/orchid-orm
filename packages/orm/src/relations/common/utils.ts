@@ -11,15 +11,13 @@ import {
   setQueryObjectValueImmutable,
   UpdateData,
   WhereArg,
-} from 'pqb';
-import {
   emptyObject,
   MaybeArray,
   PickQueryMetaRelations,
   PickQueryRelations,
   RecordUnknown,
   RelationConfigBase,
-} from 'orchid-core';
+} from 'pqb';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 import { BaseTableClass, ORMTableInput } from '../../baseTable';

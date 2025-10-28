@@ -1,5 +1,5 @@
 import { VirtualColumn } from './virtual';
-import { ColumnSchemaConfig } from 'orchid-core';
+import { ColumnSchemaConfig } from '../core';
 import { RawSQL } from '../sql/rawSql';
 import { defaultSchemaConfig } from './defaultSchemaConfig';
 

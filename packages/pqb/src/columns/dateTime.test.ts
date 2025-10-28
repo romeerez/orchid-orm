@@ -9,7 +9,7 @@ import {
   testSchemaConfig,
   useTestDatabase,
 } from 'test-utils';
-import { ColumnToCodeCtx, ColumnTypeBase, TimeInterval } from 'orchid-core';
+import { ColumnToCodeCtx, ColumnTypeBase, TimeInterval } from '../core';
 import { z } from 'zod/v4';
 
 const ctx: ColumnToCodeCtx = {

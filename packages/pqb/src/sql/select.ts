@@ -12,7 +12,7 @@ import {
   isRelationQuery,
   OrchidOrmInternalError,
   UnhandledTypeError,
-} from 'orchid-core';
+} from '../core';
 import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
 import { QueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
@@ -30,7 +30,7 @@ import {
   RecordString,
   RecordUnknown,
   setDelayedRelation,
-} from 'orchid-core';
+} from '../core';
 import { Query } from '../query/query';
 import { _queryGetOptional } from '../queryMethods/get.utils';
 import { queryJson } from '../queryMethods/json.utils';

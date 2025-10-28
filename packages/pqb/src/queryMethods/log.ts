@@ -4,7 +4,7 @@ import {
   QueryLogger,
   QueryLogObject,
   QueryLogOptions,
-} from 'orchid-core';
+} from '../core';
 import { _clone } from '../query/queryUtils';
 
 const makeMessage = (

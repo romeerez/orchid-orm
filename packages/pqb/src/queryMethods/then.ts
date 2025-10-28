@@ -5,7 +5,7 @@ import {
   NotFoundError,
   QueryError,
   QueryResult,
-} from 'orchid-core';
+} from '../core';
 import {
   HandleResult,
   QueryAfterHook,
@@ -32,7 +32,7 @@ import {
   SingleSqlItem,
   Sql,
   TransactionState,
-} from 'orchid-core';
+} from '../core';
 import {
   isInUserTransaction,
   _runAfterCommitHooks,

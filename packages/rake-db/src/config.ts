@@ -5,14 +5,12 @@ import {
   defaultSchemaConfig,
   makeColumnTypes as defaultColumnTypes,
   NoPrimaryKeyOption,
-} from 'pqb';
-import {
   AdapterBase,
   ColumnSchemaConfig,
   getStackTrace,
   MaybePromise,
   QueryLogOptions,
-} from 'orchid-core';
+} from 'pqb';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrationsSet';

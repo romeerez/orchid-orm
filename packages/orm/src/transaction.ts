@@ -1,5 +1,9 @@
-import { Db, IsolationLevel, TransactionOptions } from 'pqb';
-import { AfterCommitStandaloneHook } from 'orchid-core';
+import {
+  Db,
+  IsolationLevel,
+  TransactionOptions,
+  AfterCommitStandaloneHook,
+} from 'pqb';
 
 export function transaction<Result>(
   this: { $qb: Db },

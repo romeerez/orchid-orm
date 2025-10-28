@@ -1,4 +1,3 @@
-import { AdapterBase, QueryBase } from 'orchid-core';
 import { clearChanges } from '../change';
 import {
   getChanges,
@@ -7,6 +6,8 @@ import {
   runMigration,
 } from '../../commands/migrateOrRollback';
 import {
+  AdapterBase,
+  QueryBase,
   defaultSchemaConfig,
   makeColumnTypes as defaultColumnTypes,
   Query,

@@ -20,15 +20,13 @@ import {
   raw,
   RawSQL,
   TableData,
-} from 'pqb';
-import {
   AdapterBase,
   ColumnSchemaConfig,
   singleQuote,
   TemplateLiteralArgs,
   toCamelCase,
   toSnakeCase,
-} from 'orchid-core';
+} from 'pqb';
 import {
   getConstraintName,
   getExcludeName,

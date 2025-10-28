@@ -23,7 +23,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { addQueryOn } from '../join/join';
-import { PickQueryMeta, RelationConfigBase } from 'orchid-core';
+import { PickQueryMeta, RelationConfigBase } from '../../core';
 import { Query } from 'pqb';
 
 const TableWithReadOnly = testDb('table', (t) => ({

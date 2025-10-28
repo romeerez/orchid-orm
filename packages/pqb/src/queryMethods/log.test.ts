@@ -1,6 +1,6 @@
 import { createDbWithAdapter } from '../query/db';
 import { userData } from '../test-utils/test-utils';
-import { logColors, noop } from 'orchid-core';
+import { logColors, noop } from '../core';
 import {
   createTestDb,
   testAdapter,

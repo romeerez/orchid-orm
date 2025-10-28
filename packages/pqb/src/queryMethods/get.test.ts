@@ -1,5 +1,5 @@
 import { Snake, snakeData, User, userData } from '../test-utils/test-utils';
-import { NotFoundError } from 'orchid-core';
+import { NotFoundError } from '../core';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
 describe('get', () => {

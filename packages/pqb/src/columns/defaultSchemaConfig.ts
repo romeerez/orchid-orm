@@ -10,7 +10,7 @@ import {
   ParseNullColumn,
   PickColumnBaseData,
   setColumnData,
-} from 'orchid-core';
+} from '../core';
 import { DateColumn, TimestampColumn, TimestampTZColumn } from './dateTime';
 import { EnumColumn } from './enum';
 import { ArrayColumn, ArrayColumnValue } from './array';

@@ -5,7 +5,7 @@ import {
   testDb,
   testSchemaConfig,
 } from 'test-utils';
-import { ColumnToCodeCtx } from 'orchid-core';
+import { ColumnToCodeCtx } from '../core';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',

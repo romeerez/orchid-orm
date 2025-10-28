@@ -9,7 +9,7 @@ import {
   ColumnToCodeCtx,
   toArray,
   toCamelCase,
-} from 'orchid-core';
+} from 'pqb';
 import { getColumnDbType } from './generators/columns.generator';
 import { fnOrTableToString } from './generators/foreignKeys.generator';
 

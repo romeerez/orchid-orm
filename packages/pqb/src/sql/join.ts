@@ -17,7 +17,7 @@ import {
   QueryColumns,
   RecordBoolean,
   RecordUnknown,
-} from 'orchid-core';
+} from '../core';
 import { RawSQL } from './rawSql';
 import { getSqlText } from './utils';
 import { getQueryAs } from '../common/utils';

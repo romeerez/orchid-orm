@@ -1,6 +1,6 @@
 import { RawSQL } from '../sql/rawSql';
 import { ColumnFromDbParams } from './columnType';
-import { ColumnTypeBase, RecordString, TemplateLiteralArgs } from 'orchid-core';
+import { ColumnTypeBase, RecordString, TemplateLiteralArgs } from '../core';
 
 const knownDefaults: RecordString = {
   current_timestamp: 'now()',

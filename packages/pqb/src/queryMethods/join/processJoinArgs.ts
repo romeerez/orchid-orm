@@ -15,7 +15,7 @@ import {
   QueryColumns,
   RelationJoinQuery,
   returnArg,
-} from 'orchid-core';
+} from '../../core';
 import { _clone, pushQueryArrayImmutable } from '../../query/queryUtils';
 import { ColumnsShape } from '../../columns/columnsSchema';
 

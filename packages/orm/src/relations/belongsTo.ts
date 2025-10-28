@@ -45,7 +45,9 @@ import {
   RelJoin,
   selectIfNotSelected,
 } from './common/utils';
+import { RelationRefsOptions } from './common/options';
 import {
+  defaultSchemaConfig,
   ColumnSchemaConfig,
   ColumnShapeInputPartial,
   ColumnsShapeBase,
@@ -57,9 +59,7 @@ import {
   RecordUnknown,
   RelationConfigBase,
   RelationJoinQuery,
-} from 'orchid-core';
-import { RelationRefsOptions } from './common/options';
-import { defaultSchemaConfig } from 'pqb';
+} from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface BelongsTo extends RelationThunkBase {

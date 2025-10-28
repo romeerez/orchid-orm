@@ -7,7 +7,7 @@ import {
 import { SilentQueries } from './migration';
 import { testConfig } from '../rake-db.test-utils';
 import { RakeDbCtx } from '../common';
-import { AdapterBase } from 'orchid-core';
+import { AdapterBase } from 'pqb';
 
 const config = testConfig;
 

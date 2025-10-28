@@ -1,8 +1,11 @@
 import { rakeDbCommands } from 'rake-db';
 import { generate } from './generate/generate';
 import { pull } from './pull/pull';
-import { ColumnSchemaConfig } from 'orchid-core';
-import { DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import {
+  DefaultColumnTypes,
+  DefaultSchemaConfig,
+  ColumnSchemaConfig,
+} from 'pqb';
 
 rakeDbCommands.g = rakeDbCommands.generate = {
   run: generate,

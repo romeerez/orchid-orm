@@ -26,7 +26,7 @@ import {
   Sql,
   HasCteHooks,
   CteTableHook,
-} from 'orchid-core';
+} from '../core';
 import { QueryBuilder } from '../query/db';
 import { getSqlText } from './utils';
 

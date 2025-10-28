@@ -1,4 +1,4 @@
-import { Sql } from 'orchid-core';
+import { Sql } from '../core';
 
 export const getSqlText = (sql: Sql) => {
   if ('text' in sql) return sql.text;

@@ -1,4 +1,4 @@
-import { AdapterBase } from 'orchid-core';
+import { AdapterBase } from 'pqb';
 import {
   AnyRakeDbConfig,
   createMigrationInterface,

@@ -4,7 +4,7 @@ import {
   RakeDbRenameMigrations,
   RakeDbRenameMigrationsMap,
 } from '../config';
-import { RecordString } from 'orchid-core';
+import { RecordString } from 'pqb';
 import { pathToFileURL } from 'node:url';
 import { Dirent } from 'node:fs';
 import { readdir } from 'fs/promises';

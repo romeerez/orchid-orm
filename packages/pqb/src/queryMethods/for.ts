@@ -1,5 +1,5 @@
 import { Query } from '../query/query';
-import { Expression, IsQuery } from 'orchid-core';
+import { Expression, IsQuery } from '../core';
 import { _clone, extendQuery } from '../query/queryUtils';
 import { QueryData } from '../sql';
 

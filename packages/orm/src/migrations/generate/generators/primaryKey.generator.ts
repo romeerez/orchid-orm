@@ -1,8 +1,7 @@
 import { AnyRakeDbConfig } from 'rake-db';
-import { ColumnType } from 'pqb';
+import { ColumnType, toArray, toSnakeCase } from 'pqb';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop } from './generators.utils';
-import { toArray, toSnakeCase } from 'orchid-core';
 
 export const processPrimaryKey = (
   config: AnyRakeDbConfig,

@@ -7,10 +7,16 @@ import {
   Updatable,
 } from './baseTable';
 import { orchidORMWithAdapter } from './orm';
-import { ColumnType, makeColumnTypes, Operators, TextColumn } from 'pqb';
+import {
+  ColumnType,
+  makeColumnTypes,
+  Operators,
+  TextColumn,
+  getCallerFilePath,
+  QueryHookUtils,
+} from 'pqb';
 import { useTestORM } from './test-utils/orm.test-utils';
 import path from 'path';
-import { getCallerFilePath, QueryHookUtils } from 'orchid-core';
 import {
   BaseTable,
   db,
@@ -26,10 +32,10 @@ import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
 import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 
-jest.mock('orchid-core', () => {
+jest.mock('../../pqb/src/core/utils', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require('path');
-  const actual = jest.requireActual('../../core/src');
+  const actual = jest.requireActual('../../pqb/src/core/utils');
   return {
     ...actual,
     getCallerFilePath: jest.fn(() =>

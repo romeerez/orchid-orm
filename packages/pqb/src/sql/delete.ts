@@ -3,8 +3,12 @@ import { makeReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { QueryData } from './data';
-import { isRelationQuery, newDelayedRelationSelect, Sql } from 'orchid-core';
-import { OrchidOrmInternalError } from 'orchid-core';
+import {
+  isRelationQuery,
+  newDelayedRelationSelect,
+  Sql,
+  OrchidOrmInternalError,
+} from '../core';
 import { Query } from '../query/query';
 
 export const pushDeleteSql = (

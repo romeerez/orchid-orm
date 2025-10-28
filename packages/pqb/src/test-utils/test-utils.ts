@@ -1,7 +1,7 @@
 import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
 import { expectSql, testDb } from 'test-utils';
-import { RecordUnknown } from 'orchid-core';
+import { RecordUnknown } from '../core';
 
 export type UserRecord = typeof User.outputType;
 export type UserInsert = typeof User.inputType;

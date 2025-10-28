@@ -1,6 +1,6 @@
 import { ToSQLCtx, toSubSqlText } from './toSQL';
 import { WithOptions } from './types';
-import { emptyObject, Expression } from 'orchid-core';
+import { emptyObject, Expression } from '../core';
 import { QueryData, WithItems } from 'pqb';
 
 export const withToSql = (ctx: ToSQLCtx, items: WithItems) => {

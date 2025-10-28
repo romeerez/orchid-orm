@@ -1,4 +1,4 @@
-import { Db, Query } from 'pqb';
+import { Db, Query, omit } from 'pqb';
 import {
   useRelationCallback,
   chatSelectAll,
@@ -25,7 +25,6 @@ import {
   ChatData,
   UserData,
 } from 'test-utils';
-import { omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = {

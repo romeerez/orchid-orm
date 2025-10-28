@@ -2,8 +2,7 @@ import { OrderItem, OrderTsQueryConfig, SortDir } from './types';
 import { maybeSelectedColumnToSql } from './common';
 import { ToSQLCtx } from './toSQL';
 import { QueryData } from './data';
-import { addValue, emptyObject } from 'orchid-core';
-import { isExpression } from 'orchid-core';
+import { addValue, emptyObject, isExpression } from '../core';
 
 export const pushOrderBySql = (
   ctx: ToSQLCtx,

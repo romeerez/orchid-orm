@@ -14,7 +14,7 @@ import {
   SQLQueryArgs,
   StaticSQLArgs,
   TemplateLiteralArgs,
-} from 'orchid-core';
+} from '../core';
 import { DefaultColumnTypes } from '../columns';
 import { ToSQLCtx } from './toSQL';
 

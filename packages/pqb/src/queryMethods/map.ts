@@ -6,7 +6,7 @@ import {
   QueryReturnTypeOptional,
   QueryThen,
   RecordUnknown,
-} from 'orchid-core';
+} from '../core';
 import { _clone } from '../query/queryUtils';
 
 export class QueryMap {

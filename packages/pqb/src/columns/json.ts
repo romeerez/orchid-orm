@@ -6,7 +6,7 @@ import {
   ColumnSchemaConfig,
   ColumnToCodeCtx,
   ColumnTypeSchemaArg,
-} from 'orchid-core';
+} from '../core';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,

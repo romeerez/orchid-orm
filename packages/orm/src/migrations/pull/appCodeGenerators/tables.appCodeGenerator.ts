@@ -1,6 +1,7 @@
-import { columnsShapeToCode, pushTableDataCode, TableData } from 'pqb';
-import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
 import {
+  columnsShapeToCode,
+  pushTableDataCode,
+  TableData,
   Code,
   codeToString,
   getImportPath,
@@ -8,7 +9,8 @@ import {
   singleQuote,
   toCamelCase,
   toPascalCase,
-} from 'orchid-core';
+} from 'pqb';
+import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
 import path from 'node:path';
 
 interface TableInfo {

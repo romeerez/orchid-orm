@@ -3,13 +3,11 @@ import { CreateBelongsToData, CreateData } from './create';
 import {
   MoreThanOneRowError,
   PickQueryMetaResultReturnType,
-} from 'orchid-core';
-import {
   FnUnknownToUnknown,
   newDelayedRelationSelect,
   QueryBase,
   RecordUnknown,
-} from 'orchid-core';
+} from '../../core';
 import { _clone } from '../../query/queryUtils';
 import { queryFrom } from '../from';
 import { _queryUnion } from '../union';

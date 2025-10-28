@@ -3,8 +3,6 @@ import {
   PickQueryShape,
   QueryColumn,
   toCamelCase,
-} from 'orchid-core';
-import {
   ArrayColumn,
   ColumnsShape,
   ColumnType,

@@ -1,11 +1,10 @@
-import { Db, Query } from 'pqb';
+import { Db, Query, omit, RecordUnknown } from 'pqb';
 import {
   chatSelectAll,
   useRelationCallback,
   userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
-import { omit, RecordUnknown } from 'orchid-core';
 import {
   Chat,
   db,

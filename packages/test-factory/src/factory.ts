@@ -48,8 +48,6 @@ import {
   VarCharColumn,
   VirtualColumn,
   XMLColumn,
-} from 'pqb';
-import {
   BaseNumberData,
   ColumnSchemaConfig,
   ColumnShapeOutput,
@@ -62,7 +60,7 @@ import {
   QueryBase,
   RecordUnknown,
   StringTypeData,
-} from 'orchid-core';
+} from 'pqb';
 import { faker } from '@faker-js/faker';
 import randexp from 'randexp';
 

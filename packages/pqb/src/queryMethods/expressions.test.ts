@@ -1,6 +1,6 @@
 import { Post, Profile, User, userColumnsSql } from '../test-utils/test-utils';
 import { assertType, expectSql, sql, testDb } from 'test-utils';
-import { Expression } from 'orchid-core';
+import { Expression } from '../core';
 
 describe('expressions', () => {
   describe('column', () => {

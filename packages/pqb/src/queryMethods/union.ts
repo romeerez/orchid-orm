@@ -1,4 +1,4 @@
-import { Expression, PickQueryResult } from 'orchid-core';
+import { Expression, PickQueryResult } from '../core';
 import { PickQueryQ, Query } from '../query/query';
 import { UnionItem, UnionKind } from '../sql';
 import { _clone } from '../query/queryUtils';

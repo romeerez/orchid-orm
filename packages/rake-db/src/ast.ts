@@ -1,11 +1,14 @@
-import { ColumnsShape, ColumnType, NoPrimaryKeyOption, TableData } from 'pqb';
-import { DropMode } from './migration/migration';
 import {
+  ColumnsShape,
+  ColumnType,
+  NoPrimaryKeyOption,
+  TableData,
   ColumnDataCheckBase,
   MaybeArray,
   RawSQLBase,
   RecordString,
-} from 'orchid-core';
+} from 'pqb';
+import { DropMode } from './migration/migration';
 
 export type RakeDbAst =
   | RakeDbAst.Table

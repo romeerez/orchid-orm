@@ -1,6 +1,6 @@
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
-import { Code, ColumnToCodeCtx, ColumnTypeSchemaArg } from 'orchid-core';
+import { Code, ColumnToCodeCtx, ColumnTypeSchemaArg } from '../core';
 import { Operators, OperatorsOrdinalText } from './operators';
 
 export class EnumColumn<

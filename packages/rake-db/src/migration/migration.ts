@@ -11,8 +11,6 @@ import {
   TableData,
   TableDataFn,
   TableDataItem,
-} from 'pqb';
-import {
   AdapterBase,
   ColumnSchemaConfig,
   emptyObject,
@@ -24,7 +22,7 @@ import {
   RecordUnknown,
   singleQuote,
   toSnakeCase,
-} from 'orchid-core';
+} from 'pqb';
 import { createTable, CreateTableResult } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {

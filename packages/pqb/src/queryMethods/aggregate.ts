@@ -12,7 +12,7 @@ import {
   PickQueryMetaResultRelationsWindows,
   QueryColumn,
   QueryColumnOfDataType,
-} from 'orchid-core';
+} from '../core';
 import {
   AggregateOptions,
   makeFnExpression,

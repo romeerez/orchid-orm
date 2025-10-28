@@ -5,7 +5,7 @@ import {
   PickQueryMetaResultReturnTypeWithDataWindowsThen,
   QueryThenByQuery,
   RecordUnknown,
-} from 'orchid-core';
+} from '../core';
 import { _clone } from '../query/queryUtils';
 
 export type MergeQuery<

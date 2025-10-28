@@ -5,7 +5,7 @@ import {
   pushQueryValueImmutable,
   QueryColumns,
   QueryHookUtils,
-} from 'orchid-core';
+} from '../core';
 import {
   QueryAfterHook,
   QueryBeforeHook,

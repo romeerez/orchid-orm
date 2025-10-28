@@ -9,7 +9,6 @@ import {
   userColumnsSql,
   userTableColumnsSql,
 } from '../test-utils/test-utils';
-import { NotFoundError } from 'orchid-core';
 import {
   assertType,
   db,
@@ -20,7 +19,7 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
-import { Sql } from 'orchid-core';
+import { Sql, NotFoundError } from '../core';
 import { QueryHelperResult } from './queryMethods';
 
 describe('queryMethods', () => {

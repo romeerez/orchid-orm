@@ -7,7 +7,7 @@ import {
 } from '../test-utils/test-utils';
 import { createDbWithAdapter } from '../query/db';
 import { columnCode } from './code';
-import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from 'orchid-core';
+import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from '../core';
 import {
   assertType,
   expectSql,

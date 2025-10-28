@@ -1,4 +1,4 @@
-import { noop } from 'orchid-core';
+import { noop } from 'pqb';
 import {
   db,
   line,

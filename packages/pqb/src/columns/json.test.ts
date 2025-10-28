@@ -1,4 +1,4 @@
-import { codeToString, ColumnToCodeCtx } from 'orchid-core';
+import { codeToString, ColumnToCodeCtx } from '../core';
 import { testZodColumnTypes as t } from 'test-utils';
 import { z } from 'zod/v4';
 

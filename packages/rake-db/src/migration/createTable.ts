@@ -9,6 +9,11 @@ import {
   TableData,
   TableDataFn,
   TableDataItem,
+  emptyObject,
+  MaybeArray,
+  QueryArraysResult,
+  RecordUnknown,
+  snakeCaseKey,
 } from 'pqb';
 import {
   ColumnComment,
@@ -38,13 +43,6 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
-import {
-  emptyObject,
-  MaybeArray,
-  QueryArraysResult,
-  RecordUnknown,
-  snakeCaseKey,
-} from 'orchid-core';
 
 export interface TableQuery {
   text: string;

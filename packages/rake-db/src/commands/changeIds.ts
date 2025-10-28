@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './newMigration';
 import { getMigrations } from '../migration/migrationsSet';
-import { AdapterBase } from 'orchid-core';
+import { AdapterBase } from 'pqb';
 
 export const fileNamesToChangeMigrationId = {
   serial: '.rename-to-serial.json',

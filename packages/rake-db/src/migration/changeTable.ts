@@ -9,8 +9,6 @@ import {
   UnknownColumn,
   DomainColumn,
   ArrayColumn,
-} from 'pqb';
-import {
   ColumnTypeBase,
   consumeColumnName,
   deepCompare,
@@ -23,7 +21,7 @@ import {
   snakeCaseKey,
   toArray,
   toSnakeCase,
-} from 'orchid-core';
+} from 'pqb';
 import {
   ChangeTableCallback,
   ChangeTableOptions,

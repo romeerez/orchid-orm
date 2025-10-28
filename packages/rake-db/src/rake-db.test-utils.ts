@@ -4,15 +4,13 @@ import {
   makeColumnTypes,
   DefaultSchemaConfig,
   defaultSchemaConfig,
-} from 'pqb';
-import {
   AdapterBase,
   ColumnSchemaConfig,
   MaybeArray,
   noop,
   QueryLogger,
   toArray,
-} from 'orchid-core';
+} from 'pqb';
 import { join } from 'path';
 import { migrationConfigDefaults, RakeDbConfig } from './config';
 

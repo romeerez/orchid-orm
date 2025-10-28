@@ -1,6 +1,6 @@
 import { DbMigration } from './migration';
 import { RakeDbConfig } from '../config';
-import { ColumnSchemaConfig } from 'orchid-core';
+import { ColumnSchemaConfig } from 'pqb';
 
 export interface MigrationChange {
   fn: ChangeCallback<unknown>;

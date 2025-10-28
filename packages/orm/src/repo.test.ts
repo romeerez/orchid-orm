@@ -7,7 +7,7 @@ import {
   testAdapter,
   testDbOptions,
 } from 'test-utils';
-import { QueryReturnType } from 'orchid-core';
+import { QueryReturnType } from 'pqb';
 
 class SomeTable extends BaseTable {
   readonly table = 'someTable';

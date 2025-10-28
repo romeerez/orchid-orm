@@ -4,15 +4,13 @@ import {
   defaultSchemaConfig,
   QueryData,
   createDbWithAdapter,
-} from 'pqb';
-import {
   ColumnTypeBase,
   MaybeArray,
   QueryColumns,
   SingleSqlItem,
   Sql,
   toArray,
-} from 'orchid-core';
+} from 'pqb';
 import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import {
   createDb as nodePostgresCreateDb,

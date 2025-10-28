@@ -1,4 +1,4 @@
-import { Db, Query } from 'pqb';
+import { Db, Query, NotFoundError, omit } from 'pqb';
 import {
   messageSelectAll,
   profileSelectAll,
@@ -20,7 +20,6 @@ import {
   ProfileData,
   UserData,
 } from 'test-utils';
-import { NotFoundError, omit } from 'orchid-core';
 import { createBaseTable } from '../baseTable';
 
 const ormParams = { db: db.$qb };

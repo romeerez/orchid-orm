@@ -9,9 +9,8 @@ import {
   Statement,
   VariableStatement,
 } from 'typescript';
-import { getImportPath, quoteObjectKey, singleQuote } from 'orchid-core';
 import { AppCodeGenTables } from './tables.appCodeGenerator';
-import { DbExtension } from 'pqb';
+import { DbExtension, getImportPath, quoteObjectKey, singleQuote } from 'pqb';
 import { RakeDbAst } from 'rake-db';
 
 // importing directly won't work after compiling

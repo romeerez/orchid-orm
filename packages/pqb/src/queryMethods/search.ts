@@ -12,7 +12,7 @@ import {
   PickQueryMeta,
   pushQueryValueImmutable,
   QueryColumn,
-} from 'orchid-core';
+} from '../core';
 import {
   OrderTsQueryConfig,
   QueryData,
@@ -26,7 +26,7 @@ import {
   setQueryObjectValueImmutable,
 } from '../query/queryUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
-import { OrchidOrmInternalError } from 'orchid-core';
+import { OrchidOrmInternalError } from '../core';
 import { columnToSql } from '../sql/common';
 import { Operators } from '../columns/operators';
 

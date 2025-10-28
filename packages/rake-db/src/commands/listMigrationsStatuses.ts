@@ -4,8 +4,7 @@ import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
 import { pathToFileURL } from 'node:url';
 import { AnyRakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrationsSet';
-import { colors } from '../../../core/src/colors';
-import { AdapterBase } from 'orchid-core';
+import { AdapterBase, colors } from 'pqb';
 
 export const listMigrationsStatuses = async (
   adapters: AdapterBase[],

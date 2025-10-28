@@ -1,4 +1,4 @@
-import { ColumnSchemaConfig, ColumnTypeBase } from 'orchid-core';
+import { ColumnSchemaConfig, ColumnTypeBase } from '../core';
 import { makeColumnTypes } from './columnTypes';
 import { ColumnType } from './columnType';
 

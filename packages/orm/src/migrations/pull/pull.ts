@@ -1,4 +1,4 @@
-import { DbExtension } from 'pqb';
+import { DbExtension, AdapterBase, pathToLog } from 'pqb';
 import {
   AnyRakeDbConfig,
   makeFileVersion,
@@ -8,7 +8,6 @@ import {
   SilentQueries,
   structureToAst,
 } from 'rake-db';
-import { AdapterBase, pathToLog } from 'orchid-core';
 import fs from 'fs/promises';
 import path from 'node:path';
 import {

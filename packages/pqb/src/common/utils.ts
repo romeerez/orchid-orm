@@ -6,7 +6,7 @@ import {
   isRelationQuery,
   PickQueryMeta,
   QueryColumn,
-} from 'orchid-core';
+} from '../core';
 import { _clone } from '../query/queryUtils';
 import { _chain } from '../queryMethods/chain';
 

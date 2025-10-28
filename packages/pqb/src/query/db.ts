@@ -27,8 +27,6 @@ import {
   QueryArraysResult,
   QueryError,
   QueryErrorName,
-} from 'orchid-core';
-import {
   applyMixins,
   ColumnSchemaConfig,
   ColumnShapeInput,
@@ -57,7 +55,7 @@ import {
   StaticSQLArgs,
   toSnakeCase,
   TransactionState,
-} from 'orchid-core';
+} from '../core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';

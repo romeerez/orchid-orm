@@ -43,7 +43,6 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "orchid-core": "workspace:*",
     "pqb": "workspace:*",
     "randexp": "^0.5.3"
   },

@@ -44,7 +44,6 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "orchid-core": "workspace:*",
     "pqb": "workspace:*",
     "valibot": "^0.29.0"
   },

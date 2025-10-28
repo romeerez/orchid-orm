@@ -5,14 +5,16 @@ import {
   DbStructure,
   getExcludeName,
 } from 'rake-db';
-import { ColumnType, SearchWeight, TableData } from 'pqb';
 import {
+  ColumnType,
+  SearchWeight,
+  TableData,
   deepCompare,
   MaybeArray,
   RecordUnknown,
   toArray,
   toSnakeCase,
-} from 'orchid-core';
+} from 'pqb';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';
 import { CodeTable } from '../generate';

@@ -35,7 +35,7 @@ import {
   QueryDataAliases,
   RecordUnknown,
   toArray,
-} from 'orchid-core';
+} from '../core';
 import { getSqlText } from './utils';
 import { selectToSql } from './select';
 

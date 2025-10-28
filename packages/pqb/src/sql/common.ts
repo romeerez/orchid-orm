@@ -10,7 +10,7 @@ import {
   QueryColumn,
   QueryColumns,
   RecordString,
-} from 'orchid-core';
+} from '../core';
 
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.

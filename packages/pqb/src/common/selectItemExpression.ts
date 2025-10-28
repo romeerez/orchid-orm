@@ -1,4 +1,4 @@
-import { Expression, QueryColumn } from 'orchid-core';
+import { Expression, QueryColumn } from '../core';
 import { QueryData, ToSQLCtx, ToSQLQuery } from '../sql';
 import { selectAllSql } from '../sql/select';
 import { columnToSql } from '../sql/common';

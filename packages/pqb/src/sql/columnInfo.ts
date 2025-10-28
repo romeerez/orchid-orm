@@ -1,6 +1,6 @@
 import { ToSQLCtx, ToSQLQuery } from './toSQL';
 import { QueryData } from './data';
-import { addValue } from 'orchid-core';
+import { addValue } from '../core';
 
 export const pushColumnInfoSql = (
   ctx: ToSQLCtx,

@@ -7,7 +7,7 @@ import {
 import { migrate } from './migrateOrRollback';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock, TestAdapter } from 'test-utils';
-import { MaybeArray, toArray } from 'orchid-core';
+import { MaybeArray, toArray } from 'pqb';
 import { createMigrationsTable } from '../migration/migrationsTable';
 import { promptConfirm, promptText } from '../prompt';
 

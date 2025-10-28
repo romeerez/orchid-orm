@@ -1,7 +1,7 @@
 import { assertType, expectSql, sql, testAdapter, testDb } from 'test-utils';
 import { BooleanColumn, ColumnType } from '../columns';
 import { createDbWithAdapter } from '../query/db';
-import { ColumnTypeBase, emptyObject, Expression } from 'orchid-core';
+import { ColumnTypeBase, emptyObject, Expression } from '../core';
 import { ToSQLCtx } from '../sql';
 import { User, userColumnsSql } from '../test-utils/test-utils';
 

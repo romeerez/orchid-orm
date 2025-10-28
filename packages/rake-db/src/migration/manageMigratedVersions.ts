@@ -5,7 +5,7 @@ import {
   RecordOptionalString,
   RecordString,
   RecordUnknown,
-} from 'orchid-core';
+} from 'pqb';
 import {
   PickBasePath,
   PickImport,

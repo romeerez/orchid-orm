@@ -7,7 +7,7 @@ import {
   dateDataToCode,
   joinTruthy,
   TimeInterval,
-} from 'orchid-core';
+} from '../core';
 import { columnCode } from './code';
 import { Operators, OperatorsDate, OperatorsTime } from './operators';
 

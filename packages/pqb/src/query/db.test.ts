@@ -12,7 +12,7 @@ import {
   testingWithPostgresJS,
   useTestDatabase,
 } from 'test-utils';
-import { QueryLogger, RecordUnknown, TransactionState } from 'orchid-core';
+import { QueryLogger, RecordUnknown, TransactionState } from '../core';
 import { raw } from '../sql/rawSql';
 import {
   DefaultSchemaConfig,

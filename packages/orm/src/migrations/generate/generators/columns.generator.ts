@@ -18,16 +18,14 @@ import {
   DbStructureDomainsMap,
   EnumColumn,
   getColumnBaseType,
-} from 'pqb';
-import { promptCreateOrRename } from './generators.utils';
-import {
   ColumnTypeBase,
   deepCompare,
   RecordUnknown,
   toSnakeCase,
   colors,
   AdapterBase,
-} from 'orchid-core';
+} from 'pqb';
+import { promptCreateOrRename } from './generators.utils';
 import { ChangeTableData, CompareSql } from './tables.generator';
 import { AbortSignal } from '../generate';
 

@@ -71,7 +71,6 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "orchid-core": "workspace:*",
     "pqb": "workspace:*",
     "rake-db": "workspace:*",
     "inflection": "*",

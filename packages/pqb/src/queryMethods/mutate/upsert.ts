@@ -10,7 +10,7 @@ import {
   isObjectEmpty,
   PickQueryMetaResultReturnType,
   QueryMetaBase,
-} from 'orchid-core';
+} from '../../core';
 import { _clone } from '../../query/queryUtils';
 import { orCreate } from './orCreate';
 

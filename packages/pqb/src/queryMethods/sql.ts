@@ -3,7 +3,7 @@ import {
   PickQueryColumnTypes,
   QueryColumn,
   StaticSQLArgs,
-} from 'orchid-core';
+} from '../core';
 import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';
 
 export class SqlMethod<ColumnTypes> {

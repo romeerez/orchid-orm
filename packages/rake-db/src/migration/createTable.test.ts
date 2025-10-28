@@ -1,7 +1,11 @@
 import { expectSql, getDb, resetDb, toLine } from '../rake-db.test-utils';
-import { makeColumnTypes, Db, defaultSchemaConfig } from 'pqb';
+import {
+  setDefaultLanguage,
+  makeColumnTypes,
+  Db,
+  defaultSchemaConfig,
+} from 'pqb';
 import { asMock, sql } from 'test-utils';
-import { setDefaultLanguage } from 'orchid-core';
 
 const db = getDb();
 

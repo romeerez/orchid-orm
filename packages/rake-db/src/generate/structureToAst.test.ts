@@ -17,11 +17,12 @@ import {
   DefaultSchemaConfig,
   defaultSchemaConfig,
   RawSQL,
+  isRawSQL,
+  TemplateLiteralArgs,
 } from 'pqb';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName, getExcludeName } from '../migration/migration.utils';
-import { isRawSQL, TemplateLiteralArgs } from 'orchid-core';
 import { asMock, TestAdapter } from 'test-utils';
 import { dbStructureMockFactory } from './dbStructure.mockFactory';
 import { testConfig } from '../rake-db.test-utils';

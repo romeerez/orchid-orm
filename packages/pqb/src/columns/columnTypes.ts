@@ -30,7 +30,7 @@ import {
   setDefaultNowFn,
   timestampHelpers,
   TimestampHelpers,
-} from 'orchid-core';
+} from '../core';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL, sqlFn, SqlFn } from '../sql/rawSql';
 import { TableData } from '../tableData';

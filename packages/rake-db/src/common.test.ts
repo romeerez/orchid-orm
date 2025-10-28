@@ -8,11 +8,11 @@ import {
 import { defaultSchemaConfig } from 'pqb';
 import path from 'path';
 import { asMock } from 'test-utils';
-import { getCallerFilePath, getStackTrace } from 'orchid-core';
+import { getCallerFilePath, getStackTrace } from 'pqb';
 import { processRakeDbConfig } from './config';
 
-jest.mock('orchid-core', () => ({
-  ...jest.requireActual('../../core/src'),
+jest.mock('../../pqb/src/core/utils', () => ({
+  ...jest.requireActual('../../pqb/src/core/utils'),
   getStackTrace: jest.fn(),
   getCallerFilePath: jest.fn(),
 }));

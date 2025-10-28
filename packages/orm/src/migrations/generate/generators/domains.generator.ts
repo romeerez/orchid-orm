@@ -1,4 +1,14 @@
-import { ArrayColumn, ColumnType, DbStructureDomainsMap, RawSQL } from 'pqb';
+import {
+  ArrayColumn,
+  ColumnType,
+  DbStructureDomainsMap,
+  RawSQL,
+  AdapterBase,
+  ColumnDataCheckBase,
+  deepCompare,
+  emptyArray,
+  TemplateLiteralArgs,
+} from 'pqb';
 import {
   RakeDbAst,
   getSchemaAndTableFromName,
@@ -6,13 +16,6 @@ import {
   IntrospectedStructure,
   instantiateDbColumn,
 } from 'rake-db';
-import {
-  AdapterBase,
-  ColumnDataCheckBase,
-  deepCompare,
-  emptyArray,
-  TemplateLiteralArgs,
-} from 'orchid-core';
 import { getColumnDbType } from './columns.generator';
 import {
   CompareExpression,

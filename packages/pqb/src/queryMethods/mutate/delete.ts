@@ -13,7 +13,7 @@ import {
   EmptyTuple,
   PickQueryMetaResult,
   PickQueryMetaResultReturnType,
-} from 'orchid-core';
+} from '../../core';
 
 export type DeleteMethodsNames = 'delete';
 

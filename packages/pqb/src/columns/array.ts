@@ -9,7 +9,7 @@ import {
   ColumnDataBase,
   Codes,
   ColumnToCodeCtx,
-} from 'orchid-core';
+} from '../core';
 import { columnCode } from './code';
 import { Operators, OperatorsArray } from './operators';
 import { setColumnDefaultParse } from './column.utils';

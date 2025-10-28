@@ -9,7 +9,7 @@ import {
   RakeDbAppliedVersions,
 } from '../migration/manageMigratedVersions';
 import { getMigrationVersionOrThrow } from '../migration/migrationsSet';
-import { AdapterBase, RecordString } from 'orchid-core';
+import { AdapterBase, RecordString } from 'pqb';
 import { pushChange } from '../migration/change';
 import { promptSelect } from '../prompt';
 

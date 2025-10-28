@@ -5,8 +5,7 @@ import {
   queryMock,
   toLine,
 } from '../rake-db.test-utils';
-import { raw } from 'pqb';
-import { singleQuote } from 'orchid-core';
+import { raw, singleQuote } from 'pqb';
 import { sql } from 'test-utils';
 
 const db = getDb();
