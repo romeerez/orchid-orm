@@ -20,6 +20,11 @@
       "types": "./dist/lib.d.ts"
     }
   },
+  "typesVersions": {
+    "*": {
+      "*": ["dist/*.d.ts"]
+    }
+  },
   "files": [
     "dist"
   ],

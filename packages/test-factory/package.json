@@ -17,6 +17,11 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "typesVersions": {
+    "*": {
+      "*": ["dist/*.d.ts"]
+    }
+  },
   "files": [
     "dist"
   ],
