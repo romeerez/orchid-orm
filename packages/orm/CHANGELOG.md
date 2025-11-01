@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.58.0
+
+### Minor Changes
+
+- 9606919: Rename `modify` to `useHelper`, add a simple `modify` instead (#587)
+
+### Patch Changes
+
+- Updated dependencies [9606919]
+  - pqb@0.57.0
+  - rake-db@2.27.15
+
 ## 1.57.8
 
 ### Patch Changes

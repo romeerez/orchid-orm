@@ -1,5 +1,11 @@
 # pqb
 
+## 0.57.0
+
+### Minor Changes
+
+- 9606919: Rename `modify` to `useHelper`, add a simple `modify` instead (#587)
+
 ## 0.56.13
 
 ### Patch Changes
