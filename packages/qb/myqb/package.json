@@ -1,6 +1,6 @@
 {
   "name": "myqb",
-  "version": "0.3.73",
+  "version": "0.3.74",
   "private": true,
   "description": "MySQL query builder",
   "repository": {
@@ -19,7 +19,9 @@
   },
   "typesVersions": {
     "*": {
-      "*": ["dist/*.d.ts"]
+      "*": [
+        "dist/*.d.ts"
+      ]
     }
   },
   "files": [

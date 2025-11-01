@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.4.2
+
+### Patch Changes
+
+- ae4a9ef: Include `typesVersions` package.json setting that is needed when user has moduleResolution: 'node' in their tsconfig
+
 ## 0.4.1
 
 ### Patch Changes

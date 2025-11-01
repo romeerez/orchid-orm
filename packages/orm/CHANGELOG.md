@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.58.1
+
+### Patch Changes
+
+- ae4a9ef: Include `typesVersions` package.json setting that is needed when user has moduleResolution: 'node' in their tsconfig
+- Updated dependencies [ae4a9ef]
+  - rake-db@2.27.16
+  - pqb@0.57.1
+  - orchid-core@0.29.7
+
 ## 1.58.0
 
 ### Minor Changes

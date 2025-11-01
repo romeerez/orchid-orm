@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.27.15",
+  "version": "2.27.16",
   "description": "Migrations tool for Postgresql DB",
   "homepage": "https://orchid-orm.netlify.app/guide/migration-setup-and-overview.html",
   "repository": {
@@ -29,7 +29,9 @@
   },
   "typesVersions": {
     "*": {
-      "*": ["dist/*.d.ts"]
+      "*": [
+        "dist/*.d.ts"
+      ]
     }
   },
   "files": [

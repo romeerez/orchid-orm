@@ -1,6 +1,6 @@
 {
   "name": "orchid-core",
-  "version": "0.29.6",
+  "version": "0.29.7",
   "description": "Orchid ORM core module",
   "homepage": "https://orchid-orm.netlify.app",
   "repository": {
@@ -19,7 +19,9 @@
   },
   "typesVersions": {
     "*": {
-      "*": ["dist/*.d.ts"]
+      "*": [
+        "dist/*.d.ts"
+      ]
     }
   },
   "files": [

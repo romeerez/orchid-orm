@@ -1,5 +1,14 @@
 # orchid-orm-test-factory
 
+## 1.0.73
+
+### Patch Changes
+
+- ae4a9ef: Include `typesVersions` package.json setting that is needed when user has moduleResolution: 'node' in their tsconfig
+- Updated dependencies [ae4a9ef]
+  - pqb@0.57.1
+  - orchid-core@0.29.7
+
 ## 1.0.72
 
 ### Patch Changes

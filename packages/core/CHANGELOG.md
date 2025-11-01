@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.29.7
+
+### Patch Changes
+
+- ae4a9ef: Include `typesVersions` package.json setting that is needed when user has moduleResolution: 'node' in their tsconfig
+
 ## 0.29.6
 
 ### Patch Changes
