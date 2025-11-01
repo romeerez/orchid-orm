@@ -1,5 +1,11 @@
 # pqb
 
+## 0.56.13
+
+### Patch Changes
+
+- 1e4401f: Fix regression in nested select when doing where over expression like `q.relation.count().gt(5)` (#588)
+
 ## 0.56.12
 
 ### Patch Changes
