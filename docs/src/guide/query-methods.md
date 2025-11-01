@@ -868,11 +868,35 @@ Main info such as table name, and column types, will not be overridden by `.merg
 but all other query data will be merged if possible (`select`, `where`, `join`, `with`, and many others),
 or will be used from provided query argument if not possible to merge (`as`, `onConflict`, returning one or many).
 
+## modify
+
+[//]: # 'has JSDoc'
+
+`modify` is useful when you'd like to modify the query based on some condition.
+
+```ts
+// parameters coming from outside
+const selectOneOrAnother = true;
+const filterBySomething = true;
+
+type ResultType =
+  | { id: number; one: string }[]
+  | { id: number; another: string }[];
+const result = await db.table
+  .select('id')
+  // conditional select results in a union type
+  .modify((q) => (includeName ? q.select('one') : q.select('another')))
+  // can use any query methods in modify
+  .modify((q) => (filterBySomething ? q.where({ something: true }) : q));
+```
+
 ## makeHelper
 
 [//]: # 'has JSDoc'
 
 Use `makeHelper` to make a query helper - a function where you can modify the query, and reuse this function across different places.
+
+The idea is similar to [modify](#modify), the difference is that `modify` is per query, and `makeHelper` can be reused.
 
 ```ts
 const defaultAuthorSelect = db.author.makeHelper((q) => {
@@ -920,11 +944,11 @@ type SelectQuery = QueryHelperResult<typeof selectHelper>;
 type Result = Awaited<QueryHelperResult<typeof selectHelper>>;
 ```
 
-## modify
+## useHelper
 
 [//]: # 'has JSDoc'
 
-`modify` allows modifying the query with helpers defined with [makeHelper](#makehelper):
+`useHelper` allows to use [makeHelper](#makehelper) in different queries:
 
 ```ts
 const helper = db.table.makeHelper((q) => {
@@ -932,9 +956,9 @@ const helper = db.table.makeHelper((q) => {
   return q.select('name').where({ active: true }).order({ createdAt: 'DESC' });
 });
 
-const record = await db.table.select('id').modify(helper).find(1);
+const record = await db.table.select('id').useHelper(helper).find(1);
 
-record.id; // id was selected before `modify`
+record.id; // id was selected before `useHelper`
 record.name; // name was selected by the function
 ```
 
@@ -942,15 +966,15 @@ When the helper result isn't certain, it will result in a union of all possibili
 Use this sparingly as it complicates dealing with the result.
 
 ```ts
-const helper = db.table.helper((q) => {
+const helper = db.table.makeHelper((q) => {
   if (Math.random() > 0.5) {
     return q.select('one');
   } else {
     return q.select('two');
   }
-};
+});
 
-const record = await db.table.modify(helper).find(1);
+const record = await db.table.useHelper(helper).find(1);
 
 // TS error: we don't know for sure if the `one` was selected.
 record.one;
@@ -970,7 +994,7 @@ const helper = db.table.makeHelper((q, select: 'id' | 'name') => {
   return q.select(select);
 });
 
-const record = await db.table.modify(helper, 'id').find(1);
+const record = await db.table.useHelper(helper, 'id').find(1);
 // record has type { id: number } | { name: string }
 if ('id' in record) {
   record.id;

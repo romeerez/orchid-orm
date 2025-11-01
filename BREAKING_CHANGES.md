@@ -2,6 +2,12 @@
 
 ## orchid-orm 1.58
 
+Rename `modify` that takes a helper made with `makeHelper` to `useHelper`.
+
+Add a new `modify` instead that takes a simple function parameter.
+
+---
+
 For `index`, `unique`, other kinds of indexes, and `exclude`s:
 
 The index name now should be passed via options, not as an argument.

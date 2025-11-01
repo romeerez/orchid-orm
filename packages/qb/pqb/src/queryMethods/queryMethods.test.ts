@@ -1115,20 +1115,20 @@ describe('queryMethods', () => {
     });
   });
 
-  describe('modify', () => {
+  describe('useHelper', () => {
     it('should have type error when applying a function for a wrong table', async () => {
       const modifier = User.makeHelper((q) => q.select('name'));
 
       // @ts-expect-error wrong table
-      Profile.modify(modifier);
+      Profile.useHelper(modifier);
     });
 
-    it('should modify a query', () => {
+    it('should modify a query by using a helper', () => {
       const modifier = User.makeHelper((q) =>
         q.select('name').where({ name: 'name' }),
       );
 
-      const q = User.select('id').modify(modifier);
+      const q = User.select('id').useHelper(modifier);
 
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
       assertType<typeof q.meta.hasWhere, true>();
@@ -1153,7 +1153,7 @@ describe('queryMethods', () => {
         }
       });
 
-      const q = User.select('id').modify(modifier, true);
+      const q = User.select('id').useHelper(modifier, true);
 
       assertType<
         Awaited<typeof q>,
@@ -1173,7 +1173,7 @@ describe('queryMethods', () => {
       const a = User.makeHelper((q) => q.where({ id: 1 }));
       const b = User.makeHelper((q) => q.where({ name: 'name' }));
 
-      const q = a(User.select('id')).where((q) => q.modify(b));
+      const q = a(User.select('id')).where((q) => q.useHelper(b));
 
       expectSql(
         q.toSQL(),
@@ -1181,6 +1181,72 @@ describe('queryMethods', () => {
           SELECT "user"."id"
           FROM "user"
           WHERE "user"."id" = $1 AND ("user"."name" = $2)
+        `,
+        [1, 'name'],
+      );
+    });
+  });
+
+  describe('modify', () => {
+    it('should modify a query', () => {
+      const q = User.select('id').modify((q) =>
+        q.select('name').where({ name: 'name' }),
+      );
+
+      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      assertType<typeof q.meta.hasWhere, true>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id", "user"."name"
+          FROM "user"
+          WHERE "user"."name" = $1
+        `,
+        ['name'],
+      );
+    });
+
+    it('should be able to return a union type of query', async () => {
+      const param = true;
+
+      const q = User.select('id').modify((q) => {
+        if (param) {
+          return q.select('name');
+        } else {
+          return q.select('age');
+        }
+      });
+
+      q.then((res) => res);
+
+      assertType<
+        Awaited<typeof q>,
+        { id: number; name: string }[] | { id: number; age: number | null }[]
+      >();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id", "user"."name"
+          FROM "user"
+        `,
+      );
+    });
+
+    it('should work inside a where function', async () => {
+      const q = User.select('id').modify((q) =>
+        q
+          .where({ id: 1 })
+          .modify((q) => q.modify((q) => q.where({ name: 'name' }))),
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id"
+          FROM "user"
+          WHERE "user"."id" = $1 AND "user"."name" = $2
         `,
         [1, 'name'],
       );

@@ -1005,6 +1005,8 @@ export class QueryMethods<ColumnTypes> {
   /**
    * Use `makeHelper` to make a query helper - a function where you can modify the query, and reuse this function across different places.
    *
+   * The idea is similar to {@link modify}, the difference is that `modify` is per query, and `makeHelper` can be reused.
+   *
    * ```ts
    * const defaultAuthorSelect = db.author.makeHelper((q) => {
    *   return q.select('firstName', 'lastName');
@@ -1075,7 +1077,7 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
-   * `modify` allows modifying the query with helpers defined with {@link makeHelper}:
+   * `useHelper` allows to use {@link makeHelper} in different queries:
    *
    * ```ts
    * const helper = db.table.makeHelper((q) => {
@@ -1083,9 +1085,9 @@ export class QueryMethods<ColumnTypes> {
    *   return q.select('name').where({ active: true }).order({ createdAt: 'DESC' });
    * });
    *
-   * const record = await db.table.select('id').modify(helper).find(1);
+   * const record = await db.table.select('id').useHelper(helper).find(1);
    *
-   * record.id; // id was selected before `modify`
+   * record.id; // id was selected before `useHelper`
    * record.name; // name was selected by the function
    * ```
    *
@@ -1093,7 +1095,7 @@ export class QueryMethods<ColumnTypes> {
    * Use this sparingly as it complicates dealing with the result.
    *
    * ```ts
-   * const helper = db.table((q) => {
+   * const helper = db.table.makeHelper((q) => {
    *   if (Math.random() > 0.5) {
    *     return q.select('one');
    *   } else {
@@ -1101,7 +1103,7 @@ export class QueryMethods<ColumnTypes> {
    *   }
    * });
    *
-   * const record = await db.table.modify(helper).find(1);
+   * const record = await db.table.useHelper(helper).find(1);
    *
    * // TS error: we don't know for sure if the `one` was selected.
    * record.one;
@@ -1121,16 +1123,16 @@ export class QueryMethods<ColumnTypes> {
    *   return q.select(select);
    * });
    *
-   * const record = await db.table.modify(helper, 'id').find(1);
+   * const record = await db.table.useHelper(helper, 'id').find(1);
    * // record has type { id: number } | { name: string }
    * if ('id' in record) {
    *   record.id;
    * }
    * ```
    *
-   * @param fn - function to modify the query with. The result type will be merged with the main query as if the `merge` method was used.
+   * @param fn - function to useHelper the query with. The result type will be merged with the main query as if the `merge` method was used.
    */
-  modify<
+  useHelper<
     T extends PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
     Fn extends IsQueryHelperForTable<T['table']>,
   >(
@@ -1142,6 +1144,31 @@ export class QueryMethods<ColumnTypes> {
     : Fn['result'] {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (fn as any)(this as never, ...args);
+  }
+
+  /**
+   * `modify` is useful when you'd like to modify the query based on some condition.
+   *
+   * ```ts
+   * // parameters coming from outside
+   * const selectOneOrAnother = true;
+   * const filterBySomething = true;
+   *
+   * type ResultType =
+   *   | { id: number; one: string }[]
+   *   | { id: number; another: string }[];
+   * const result = await db.table
+   *   .select('id')
+   *   // conditional select results in a union type
+   *   .modify((q) => (includeName ? q.select('one') : q.select('another')))
+   *   // can use any query methods in modify
+   *   .modify((q) => (filterBySomething ? q.where({ something: true }) : q));
+   * ```
+   *
+   * @param fn - accepts the current query as a parameters. Anything returned by the function will be the return type of the query.
+   */
+  modify<T, R>(this: T, fn: (q: T) => R): R {
+    return fn(this);
   }
 
   /**

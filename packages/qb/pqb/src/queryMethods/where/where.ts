@@ -115,13 +115,14 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
         [K in keyof T]: K extends
           | keyof Where
           | keyof ExpressionMethods
-          | 'table' // is needed for `modify`
+          | 'table' // is needed for `useHelper`
           | 'get'
           | 'columnTypes'
           | 'meta'
           | 'relations'
+          | 'useHelper'
           | 'modify'
-          // rest are required by `modify`
+          // rest are required by `useHelper`
           | 'result'
           | 'returnType'
           | 'withData'
@@ -137,13 +138,14 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
               (
                 | keyof Where
                 | keyof ExpressionMethods
-                | 'table' // is needed for `modify`
+                | 'table' // is needed for `useHelper`
                 | 'get'
                 | 'columnTypes'
                 | 'meta'
                 | 'relations'
+                | 'useHelper'
                 | 'modify'
-                // rest are required by `modify`
+                // rest are required by `useHelper`
                 | 'result'
                 | 'returnType'
                 | 'withData'
