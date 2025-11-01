@@ -13,17 +13,55 @@ import { Query } from '../../query/query';
 import { RelationConfigBase } from 'orchid-core';
 
 describe('where', () => {
-  it('should allow where-ing on a column of a selected relation', async () => {
-    db.user
-      .select({ profile: (q) => q.profile })
-      .where({ 'profile.Bio': 'bio' });
-  });
+  describe('relation', () => {
+    it('should allow where-ing on a column of a selected relation', async () => {
+      db.user
+        .select({ profile: (q) => q.profile })
+        .where({ 'profile.Bio': 'bio' });
+    });
 
-  it('should allow where-ing on a column of a selected relation returning multiple', async () => {
-    db.user
-      .select({ messages: (q) => q.messages })
-      // @ts-expect-error forbidden
-      .where({ 'messages.Text': 'text' });
+    it('should allow where-ing on a column of a selected relation returning multiple', async () => {
+      db.user
+        .select({ messages: (q) => q.messages })
+        // @ts-expect-error forbidden
+        .where({ 'messages.Text': 'text' });
+    });
+
+    it('should be able to operate on selected values of a relation', () => {
+      db.user
+        .select({
+          count: (q) => q.messages.count(),
+        })
+        .where({
+          count: 1,
+        });
+    });
+
+    it('should filter based a nested relation that has `aliasValue` true', () => {
+      const q = db.profile.select({
+        user: (q) => q.user.select().where((q) => q.messages.count().gt(5)),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT row_to_json("user".*) "user"
+          FROM "profile"
+          LEFT JOIN LATERAL (
+            SELECT FROM "user"
+            WHERE (
+              SELECT count(*) > $1 "messages"
+              FROM "message" "messages"
+              WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+                AND ("messages"."deleted_at" IS NULL)
+            )
+            AND "user"."id" = "profile"."user_id"
+            AND "user"."user_key" = "profile"."profile_key"
+          ) "user" ON true
+        `,
+        [5],
+      );
+    });
   });
 
   it('should not be able to operate on selected expressions', () => {
@@ -38,16 +76,6 @@ describe('where', () => {
       // @ts-expect-error forbidden
       'selected.id': 1,
     });
-  });
-
-  it('should be able to operate on selected values of a relation', () => {
-    db.user
-      .select({
-        count: (q) => q.messages.count(),
-      })
-      .where({
-        count: 1,
-      });
   });
 
   it('should ignore undefined values', () => {

@@ -23,7 +23,6 @@ import {
   ColumnTypeBase,
   ColumnTypesBase,
   DelayedRelationSelect,
-  Expression,
   HookSelect,
   HookSelectValue,
   isExpression,
@@ -218,7 +217,9 @@ export const selectToSql = (
             }
           }
         } else {
-          list.push(selectedObjectToSQL(ctx, quotedAs, item));
+          // selecting a single value from expression
+          const sql = item.toSQL(ctx, quotedAs);
+          list.push(ctx.aliasValue ? `${sql} ${quotedAs}` : sql);
           aliases?.push('');
         }
       }
@@ -291,15 +292,6 @@ export const selectToSql = (
     ? ''
     : selectAllSql(query, quotedAs, jsonList);
 };
-
-export function selectedObjectToSQL(
-  ctx: ToSQLCtx,
-  quotedAs: string | undefined,
-  item: Expression,
-) {
-  const sql = item.toSQL(ctx, quotedAs);
-  return ctx.aliasValue ? `${sql} "${quotedAs}"` : sql;
-}
 
 export const selectAllSql = (
   query: {
