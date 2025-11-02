@@ -1,7 +1,7 @@
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query/query';
 import { selectToSql } from './select';
-import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
+import { toSQL, ToSQLCtx, ToSQLQuery, toSubSqlText } from './toSQL';
 import { InsertQueryDataObjectValues, QueryData } from './data';
 import {
   addValue,
@@ -19,6 +19,7 @@ import {
   RecordUnknown,
   SingleSqlItem,
   Sql,
+  TableHook,
 } from 'orchid-core';
 import { getQueryAs, joinSubQuery } from '../common/utils';
 import { Db } from '../query/db';
@@ -34,6 +35,7 @@ export const makeInsertSql = (
   q: ToSQLQuery,
   query: QueryData,
   quotedAs: string,
+  isSubSql?: boolean,
 ): Sql => {
   let { columns } = query;
   const { shape, inCTE, hookCreateSet } = query;
@@ -179,31 +181,14 @@ export const makeInsertSql = (
 
   pushWhereStatementSql(ctx, q, query, quotedAs);
 
-  let returning;
   let delayedRelationSelect: DelayedRelationSelect | undefined;
-  if (inCTE) {
-    const select = inCTE.returning?.select;
-    returning = {
-      select:
-        inCTE.selectNum || !select ? (select ? '1, ' + select : '1') : select,
-      hookSelect: inCTE.returning?.hookSelect,
-    };
-  } else {
+  if (!inCTE) {
     delayedRelationSelect = q.q.selectRelation
       ? newDelayedRelationSelect(q)
       : undefined;
-
-    returning = makeReturningSql(
-      ctx,
-      q,
-      query,
-      quotedAs,
-      delayedRelationSelect,
-      2,
-    );
   }
 
-  if (returning.select) ctx.sql.push('RETURNING', returning.select);
+  const returningPos = ctx.sql.length;
 
   let insertManyFromValuesAs: string | undefined;
   if (insertFrom) {
@@ -298,6 +283,19 @@ export const makeInsertSql = (
             startingKeyword + valuesSql.join(', ') + valuesAppend;
 
           ctxValues.length = currentValuesLen;
+
+          const returning = makeInsertReturning(
+            ctx,
+            q,
+            query,
+            quotedAs,
+            delayedRelationSelect,
+            isSubSql,
+          );
+          if (returning.select) {
+            ctx.sql[returningPos] = 'RETURNING ' + returning.select;
+          }
+
           batch = pushOrNewArray(batch, {
             text: ctx.sql.join(' '),
             values: ctxValues,
@@ -333,8 +331,20 @@ export const makeInsertSql = (
         values: ctxValues,
       });
 
+      const returning = makeInsertReturning(
+        ctx,
+        q,
+        query,
+        quotedAs,
+        delayedRelationSelect,
+        isSubSql,
+      );
+      if (returning.select) {
+        ctx.sql[returningPos] = 'RETURNING ' + returning.select;
+      }
+
       return {
-        hookSelect: returning.hookSelect,
+        tableHook: returning.tableHook,
         delayedRelationSelect,
         batch,
       };
@@ -348,12 +358,56 @@ export const makeInsertSql = (
     }
   }
 
+  const returning = makeInsertReturning(
+    ctx,
+    q,
+    query,
+    quotedAs,
+    delayedRelationSelect,
+    isSubSql,
+  );
+  if (returning.select) {
+    ctx.sql[returningPos] = 'RETURNING ' + returning.select;
+  }
+
   return {
-    hookSelect: returning.hookSelect,
+    tableHook: returning.tableHook,
     delayedRelationSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,
   };
+};
+
+const makeInsertReturning = (
+  ctx: ToSQLCtx,
+  q: ToSQLQuery,
+  query: QueryData,
+  quotedAs: string,
+  delayedRelationSelect?: DelayedRelationSelect,
+  isSubSql?: boolean,
+) => {
+  const { inCTE } = query;
+  if (inCTE) {
+    const select = inCTE.returning?.select;
+    return {
+      select:
+        inCTE.selectNum || !select ? (select ? '1, ' + select : '1') : select,
+      tableHook: inCTE.returning?.hookSelect && {
+        select: inCTE.returning?.hookSelect,
+      },
+    };
+  } else {
+    return makeReturningSql(
+      ctx,
+      q,
+      query,
+      quotedAs,
+      delayedRelationSelect,
+      'Create',
+      undefined,
+      isSubSql,
+    );
+  }
 };
 
 const addWithSqls = (
@@ -610,7 +664,11 @@ const encodeValue = (
     if (value instanceof Expression) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof (QueryClass as never)) {
-      return `(${getSqlText(joinSubQuery(q, value as Query).toSQL(ctx))})`;
+      return `(${toSubSqlText(
+        joinSubQuery(q, value as Query),
+        (value as Query).q.as as string,
+        ctx,
+      )})`;
     } else if ('fromHook' in value) {
       return value.fromHook as string;
     }
@@ -619,17 +677,7 @@ const encodeValue = (
   return value === undefined ? 'DEFAULT' : addValue(values, value);
 };
 
-const hookSelectKeys = [
-  null,
-  'afterUpdateSelect' as const,
-  'afterCreateSelect' as const,
-  'afterDeleteSelect' as const,
-];
-
-type QueryDataHookSelectI =
-  | 1 // afterUpdateSelect
-  | 2 // afterCreateSelect
-  | 3; // afterDeleteSelect'
+type HookPurpose = 'Create' | 'Update' | 'Delete';
 
 export const makeReturningSql = (
   ctx: ToSQLCtx,
@@ -637,23 +685,26 @@ export const makeReturningSql = (
   data: QueryData,
   quotedAs: string,
   delayedRelationSelect: DelayedRelationSelect | undefined,
-  hookSelectI?: QueryDataHookSelectI,
-  addHookSelectI?: QueryDataHookSelectI,
-): { select?: string; hookSelect?: HookSelect } => {
+  hookPurpose?: HookPurpose,
+  addHookPurpose?: HookPurpose,
+  isSubSql?: boolean,
+): { select?: string; tableHook?: TableHook } => {
+  // inCTE is present only in upsert and orCreate
   if (data.inCTE) {
-    if (hookSelectI !== 2) {
+    if (hookPurpose !== 'Create') {
       const returning = makeReturningSql(
         ctx,
         q,
         data,
         quotedAs,
         delayedRelationSelect,
-        2,
-        hookSelectI,
+        'Create',
+        hookPurpose,
+        isSubSql,
       );
 
-      if (returning.hookSelect) {
-        for (const [key, value] of returning.hookSelect) {
+      if (returning.tableHook?.select) {
+        for (const [key, value] of returning.tableHook.select) {
           data.inCTE.targetHookSelect.set(key, value);
         }
       }
@@ -666,20 +717,21 @@ export const makeReturningSql = (
     }
   }
 
-  const hookSelect = hookSelectI && data[hookSelectKeys[hookSelectI]!];
+  const hookSelect = hookPurpose && data[`after${hookPurpose}Select`];
 
   const { select } = data;
-  if (
-    !q.q.hookSelect &&
-    !hookSelect?.size &&
-    !select?.length &&
-    !addHookSelectI
-  ) {
-    return { hookSelect: hookSelect && new Map() };
+  if (!q.q.hookSelect && !hookSelect?.size && !select?.length && !hookPurpose) {
+    const select = hookSelect && new Map();
+    return {
+      select: !isSubSql && ctx.cteHooks?.hasSelect ? 'NULL' : undefined,
+      tableHook: select && {
+        select,
+      },
+    };
   }
 
   const otherCTEHookSelect =
-    addHookSelectI && data[hookSelectKeys[addHookSelectI]!];
+    addHookPurpose && data[`after${addHookPurpose}Select`];
 
   let tempSelect: HookSelect | undefined;
   if (
@@ -718,14 +770,32 @@ export const makeReturningSql = (
       quotedAs,
       tempSelect,
       undefined,
+      undefined,
       true,
       undefined,
       delayedRelationSelect,
     );
   }
 
+  const after = hookPurpose && data[`after${hookPurpose}`];
+  const afterCommit = hookPurpose && data[`after${hookPurpose}Commit`];
+
   return {
-    select: sql,
-    hookSelect: tempSelect,
+    select:
+      !isSubSql && ctx.cteHooks?.hasSelect
+        ? sql
+          ? 'NULL, ' + sql
+          : 'NULL'
+        : sql,
+    tableHook: (tempSelect || after || afterCommit) && {
+      select: tempSelect,
+      after:
+        data.after && after
+          ? [...data.after, ...after]
+          : after
+          ? after
+          : data.after,
+      afterCommit,
+    },
   };
 };

@@ -26,6 +26,7 @@ export const pushUpdateSql = (
   table: ToSQLQuery,
   query: QueryData,
   quotedAs: string,
+  isSubSql?: boolean,
 ): Sql => {
   const quotedTable = quoteSchemaAndTable(
     query.schema,
@@ -49,7 +50,7 @@ export const pushUpdateSql = (
     applySet(ctx, table, set, hookSet, emptyObject, quotedAs);
   }
 
-  let hookSelect;
+  let tableHook;
   const delayedRelationSelect: DelayedRelationSelect | undefined =
     query.selectRelation ? newDelayedRelationSelect(table) : undefined;
 
@@ -59,13 +60,14 @@ export const pushUpdateSql = (
       query.select = countSelect;
     }
 
-    hookSelect = pushUpdateReturning(
+    tableHook = pushUpdateReturning(
       ctx,
       table,
       query,
       quotedAs,
       'SELECT',
       delayedRelationSelect,
+      isSubSql,
     );
 
     ctx.sql.push(`FROM ${quotedTable}`);
@@ -133,18 +135,19 @@ export const pushUpdateSql = (
       ctx.sql.push('WHERE', whereSql);
     }
 
-    hookSelect = pushUpdateReturning(
+    tableHook = pushUpdateReturning(
       ctx,
       table,
       query,
       quotedAs,
       'RETURNING',
       delayedRelationSelect,
+      isSubSql,
     );
   }
 
   return {
-    hookSelect,
+    tableHook,
     delayedRelationSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,
@@ -158,16 +161,18 @@ const pushUpdateReturning = (
   quotedAs: string,
   keyword: string,
   delayedRelationSelect: DelayedRelationSelect | undefined,
+  isSubSql?: boolean,
 ) => {
   const { inCTE } = query;
-  const { select, hookSelect } = makeReturningSql(
+  const { select, tableHook } = makeReturningSql(
     ctx,
     table,
     query,
     quotedAs,
     delayedRelationSelect,
-    1,
-    inCTE && 2,
+    'Update',
+    inCTE && 'Create',
+    isSubSql,
   );
 
   const s =
@@ -178,7 +183,7 @@ const pushUpdateReturning = (
       : select;
   if (s) ctx.sql.push(keyword, s);
 
-  return hookSelect;
+  return tableHook;
 };
 
 const processData = (

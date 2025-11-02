@@ -30,7 +30,8 @@ describe('map', () => {
 
     it('should ignore null for an aggregate', async () => {
       const sum = await User.sum('age').map((sum, i, data) => {
-        assertType<typeof sum | typeof i | typeof data, number>();
+        assertType<typeof i, number>();
+        assertType<typeof sum | typeof data, string>();
         return 0;
       });
 

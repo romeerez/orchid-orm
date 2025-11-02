@@ -39,6 +39,7 @@ class RowToJsonExpression extends Expression {
       q.q,
       `"${getQueryAs(q)}"`,
       q.q.hookSelect,
+      undefined,
       aliases,
       undefined,
       jsonList,

@@ -617,7 +617,7 @@ describe('update', () => {
           RETURNING "user"."name"
         )
         UPDATE "user"
-           SET "name" = (SELECT * FROM "q"),
+           SET "name" = (SELECT "q"."name" FROM "q"),
                "updated_at" = now()
         WHERE "user"."id" = $3
       `,
@@ -639,7 +639,7 @@ describe('update', () => {
           RETURNING "user"."name"
         )
         UPDATE "user"
-           SET "name" = (SELECT * FROM "q"),
+           SET "name" = (SELECT "q"."name" FROM "q"),
                "updated_at" = now()
         WHERE "user"."id" = $3
       `,
@@ -661,7 +661,7 @@ describe('update', () => {
           RETURNING "user"."name"
         )
         UPDATE "user"
-           SET "name" = (SELECT * FROM "q"),
+           SET "name" = (SELECT "q"."name" FROM "q"),
                "updated_at" = now()
         WHERE "user"."id" = $2
       `,

@@ -1,4 +1,35 @@
 import { IsQuery, QueryBase } from './query';
+import { ColumnsShapeBase } from '../columns';
+
+export interface HasCteHooks {
+  cteHooks?: CteHooks;
+}
+
+export interface CteHooks {
+  hasSelect: boolean;
+  tableHooks: CteTableHooks;
+}
+
+export interface CteTableHooks {
+  [K: string]: CteTableHook;
+}
+
+export interface CteTableHook {
+  shape: ColumnsShapeBase;
+  tableHook: TableHook;
+}
+
+export interface TableHook {
+  select?: HookSelect;
+  // TODO: unify types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  after?: ((data: unknown, query: any) => unknown | Promise<unknown>)[];
+  afterCommit?: ((
+    data: unknown,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    query: any,
+  ) => unknown | Promise<unknown>)[];
+}
 
 export type HookSelect = Map<string, HookSelectValue>;
 
@@ -6,6 +37,10 @@ export interface HookSelectValue {
   select: string | { sql: string };
   as?: string;
   temp?: string;
+}
+
+export interface HasTableHook {
+  tableHook?: TableHook;
 }
 
 export interface HasHookSelect {

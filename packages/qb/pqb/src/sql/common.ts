@@ -54,7 +54,7 @@ export const columnToSql = (
   column: string,
   quotedAs?: string,
   select?: true,
-) => {
+): string => {
   const index = column.indexOf('.');
   if (index !== -1) {
     return columnWithDotToSql(
@@ -87,7 +87,7 @@ export const maybeSelectedColumnToSql = (
   data: QueryData,
   column: string,
   quotedAs?: string,
-) => {
+): string => {
   const index = column.indexOf('.');
   if (index !== -1) {
     return columnWithDotToSql(ctx, data, data.shape, column, index, quotedAs);
@@ -122,7 +122,7 @@ const columnWithDotToSql = (
   index: number,
   quotedAs?: string,
   select?: true,
-) => {
+): string => {
   const table = column.slice(0, index);
   const key = column.slice(index + 1);
   if (key === '*') {
@@ -164,7 +164,7 @@ export const columnToSqlWithAs = (
   quotedAs?: string,
   select?: true,
   jsonList?: { [K: string]: ColumnTypeBase | undefined },
-) => {
+): string => {
   const index = column.indexOf('.');
   return index !== -1
     ? tableColumnToSqlWithAs(
@@ -191,7 +191,7 @@ export const tableColumnToSqlWithAs = (
   quotedAs?: string,
   select?: true,
   jsonList?: { [K: string]: ColumnTypeBase | undefined },
-) => {
+): string => {
   if (key === '*') {
     if (jsonList) jsonList[as] = undefined;
 
@@ -236,7 +236,7 @@ export const ownColumnToSqlWithAs = (
   quotedAs?: string,
   select?: true,
   jsonList?: { [K: string]: ColumnTypeBase | undefined },
-) => {
+): string => {
   if (!select && data.joinedShapes?.[column]) {
     if (jsonList) jsonList[as] = undefined;
 
@@ -268,7 +268,7 @@ export const ownColumnToSql = (
   data: QueryData,
   column: string,
   quotedAs?: string,
-) => {
+): string => {
   const name = data.shape[column]?.data.name;
   return `${quotedAs ? `${quotedAs}.` : ''}"${name || column}"${
     name && name !== column ? ` "${column}"` : ''
@@ -282,7 +282,7 @@ export const rawOrColumnToSql = (
   quotedAs: string | undefined,
   shape: QueryColumns = data.shape,
   select?: true,
-) => {
+): string => {
   return typeof expr === 'string'
     ? columnToSql(ctx, data, shape, expr, quotedAs, select)
     : (expr as Expression).toSQL(ctx, quotedAs);
@@ -291,7 +291,7 @@ export const rawOrColumnToSql = (
 export const quoteSchemaAndTable = (
   schema: string | undefined,
   table: string,
-) => {
+): string => {
   return schema ? `"${schema}"."${table}"` : `"${table}"`;
 };
 
@@ -299,7 +299,7 @@ export const makeRowToJson = (
   table: string,
   shape: ColumnsShapeBase,
   aliasName: boolean,
-) => {
+): string => {
   let isSimple = true;
   const list: string[] = [];
 

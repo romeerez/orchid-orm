@@ -403,7 +403,7 @@ describe('create functions', () => {
             RETURNING "user"."name"
           )
           INSERT INTO "user"("name", "password")
-          VALUES ((SELECT * FROM "q"), $3)
+          VALUES ((SELECT "q"."name" FROM "q"), $3)
           RETURNING ${userColumnsSql}
         `,
         ['name', 'password', 'password'],
@@ -842,8 +842,8 @@ describe('create functions', () => {
           )
           INSERT INTO "user"("name", "password")
           VALUES
-            ((SELECT * FROM "q"), $3),
-            ((SELECT * FROM "q2"), $6)
+            ((SELECT "q"."name" FROM "q"), $3),
+            ((SELECT "q2"."name" FROM "q2"), $6)
           RETURNING ${userColumnsSql}
         `,
         ['name', 'password', 'password', 'name', 'password', 'password'],
@@ -946,14 +946,14 @@ describe('create functions', () => {
                   4,
                 )}), "q5" AS (${insert(5)}) ` +
                 'INSERT INTO "tag"("tag") VALUES ' +
-                '((SELECT * FROM "q")), ((SELECT * FROM "q2")), ((SELECT * FROM "q3")), ' +
-                '((SELECT * FROM "q4")), ((SELECT * FROM "q5"))',
+                '((SELECT "q"."tag" FROM "q")), ((SELECT "q2"."tag" FROM "q2")), ((SELECT "q3"."tag" FROM "q3")), ' +
+                '((SELECT "q4"."tag" FROM "q4")), ((SELECT "q5"."tag" FROM "q5"))',
               values: ['0', '1', '2', '3', '4'],
             },
             {
               text: `WITH "q6" AS (${insert(
                 1,
-              )}) INSERT INTO "tag"("tag") VALUES ((SELECT * FROM "q6"))`,
+              )}) INSERT INTO "tag"("tag") VALUES ((SELECT "q6"."tag" FROM "q6"))`,
               values: ['5'],
             },
           ],

@@ -1,5 +1,5 @@
 import { Query, QueryInternal, queryTypeWithLimitOne } from '../query/query';
-import { columnToSql } from './common';
+import { columnToSql, makeRowToJson } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -19,18 +19,23 @@ import { QueryData } from './data';
 import { pushCopySql } from './copy';
 import {
   addValue,
+  ColumnsShapeBase,
+  ColumnTypeBase,
   DelayedRelationSelect,
   isExpression,
   Sql,
+  HasCteHooks,
+  CteTableHook,
 } from 'orchid-core';
 import { QueryBuilder } from '../query/db';
 import { getSqlText } from './utils';
 
-interface ToSqlOptionsInternal extends ToSQLOptions {
+interface ToSqlOptionsInternal extends ToSQLOptions, HasCteHooks {
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
   aliasValue?: true;
   // for insert batching logic: skip a batch check when is inside a WITH subquery
   skipBatchCheck?: true;
+  selectedCount?: number;
 }
 
 export interface ToSQLCtx extends ToSqlOptionsInternal, ToSQLOptions {
@@ -62,9 +67,52 @@ export interface ToSQLQuery {
   shape: Query['shape'];
 }
 
+export const toSubSqlText = (
+  q: ToSQLQuery,
+  cteName: string,
+  options: ToSqlOptionsInternal,
+): string => getSqlText(subToSql(q, cteName, options));
+
+const subToSql = (
+  q: ToSQLQuery,
+  cteName: string,
+  options: ToSqlOptionsInternal,
+): Sql => {
+  const sql = toSQL(q, options, true);
+  if (
+    sql.tableHook &&
+    (sql.tableHook.after || sql.tableHook.afterCommit) &&
+    !q.q.inCTE
+  ) {
+    const shape: ColumnsShapeBase = {};
+    if (sql.tableHook.select) {
+      for (const key of sql.tableHook.select.keys()) {
+        shape[key] = q.shape[key] as ColumnTypeBase;
+      }
+    }
+
+    const item: CteTableHook = {
+      shape,
+      tableHook: sql.tableHook,
+    };
+
+    if (options.cteHooks) {
+      if (sql.tableHook.select) options.cteHooks.hasSelect = true;
+      options.cteHooks.tableHooks[cteName] ??= item;
+    } else {
+      options.cteHooks = {
+        hasSelect: !!sql.tableHook.select,
+        tableHooks: { [cteName]: item },
+      };
+    }
+  }
+  return sql;
+};
+
 export const toSQL = (
   table: ToSQLQuery,
   options?: ToSqlOptionsInternal,
+  isSubSql?: boolean,
 ): Sql => {
   const query = table.q;
   const sql: string[] = [];
@@ -77,6 +125,7 @@ export const toSQL = (
     aliasValue: options?.aliasValue,
     skipBatchCheck: options?.skipBatchCheck,
     hasNonSelect: options?.hasNonSelect,
+    cteHooks: options?.cteHooks,
   };
 
   if (query.with) {
@@ -100,11 +149,11 @@ export const toSQL = (
       const quotedAs = `"${query.as || tableName}"`;
 
       if (query.type === 'insert') {
-        result = makeInsertSql(ctx, table, query, `"${tableName}"`);
+        result = makeInsertSql(ctx, table, query, `"${tableName}"`, isSubSql);
       } else if (query.type === 'update') {
-        result = pushUpdateSql(ctx, table, query, quotedAs);
+        result = pushUpdateSql(ctx, table, query, quotedAs, isSubSql);
       } else if (query.type === 'delete') {
-        result = pushDeleteSql(ctx, table, query, quotedAs);
+        result = pushDeleteSql(ctx, table, query, quotedAs, isSubSql);
       } else if (query.type === 'copy') {
         pushCopySql(ctx, table, query, quotedAs);
         result = { text: sql.join(' '), values };
@@ -136,7 +185,7 @@ export const toSQL = (
       }
 
       const aliases = query.group ? [] : undefined;
-      pushSelectSql(ctx, table, query, quotedAs, aliases);
+      pushSelectSql(ctx, table, query, quotedAs, isSubSql, aliases);
 
       fromQuery =
         ((table.table || query.from) &&
@@ -228,13 +277,34 @@ export const toSQL = (
     result = {
       text: sql.join(' '),
       values,
-      hookSelect: query.hookSelect,
+      tableHook: query.hookSelect && {
+        select: query.hookSelect,
+      },
       delayedRelationSelect: ctx.delayedRelationSelect,
     };
   }
 
   if (options && (query.type || ctx.hasNonSelect)) {
     options.hasNonSelect = true;
+  }
+
+  if (!isSubSql && ctx.cteHooks && 'text' in result) {
+    result.cteHooks = ctx.cteHooks;
+
+    if (ctx.cteHooks.hasSelect) {
+      result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
+        ctx.selectedCount || 0,
+      )}json_build_object(${Object.entries(ctx.cteHooks.tableHooks)
+        .map(
+          ([cteName, data]) =>
+            `'${cteName}', (SELECT json_agg(${makeRowToJson(
+              cteName,
+              data.shape,
+              false,
+            )}) FROM "${cteName}")`,
+        )
+        .join(', ')})`;
+    }
   }
 
   return result;

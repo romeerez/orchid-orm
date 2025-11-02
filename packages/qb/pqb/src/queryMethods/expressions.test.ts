@@ -59,6 +59,7 @@ describe('expressions', () => {
               id: q.ref('user.id'),
               name: q.ref('post.title'),
             })
+            .select('id')
             .take(),
       });
 
@@ -68,7 +69,7 @@ describe('expressions', () => {
           SELECT (
             SELECT row_to_json(t.*)
             FROM (
-              SELECT ${userColumnsSql}
+              SELECT "u"."id"
               FROM "user" "u"
               WHERE "u"."id" = "user"."id"
                 AND "u"."name" = "post"."title"

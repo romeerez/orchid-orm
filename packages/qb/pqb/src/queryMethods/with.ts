@@ -21,7 +21,6 @@ import {
 import { SqlMethod } from './sql';
 import { getShapeFromSelect } from './select/select';
 import { _queryUnion } from './union';
-import { RawSQL } from '../sql/rawSql';
 
 // `with` method options
 // - `columns`: true to get all columns from the query, or array of column names
@@ -140,7 +139,10 @@ export const moveQueryValueToWith = (
     );
 
     if (set) {
-      set[key as string] = new RawSQL(`(SELECT * FROM "${as}")`);
+      const sub = _clone(value.baseQuery);
+      sub.q.select = value.q.select;
+      sub.q.as = sub.q.from = as;
+      set[key as string] = sub;
     }
 
     return as;

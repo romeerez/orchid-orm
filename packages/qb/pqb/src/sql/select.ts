@@ -49,6 +49,7 @@ export const pushSelectSql = (
     selectCache?: QueryData['selectCache'];
   },
   quotedAs?: string,
+  isSubSql?: boolean,
   aliases?: string[],
 ) => {
   if (query.selectCache) {
@@ -61,6 +62,7 @@ export const pushSelectSql = (
       query,
       quotedAs,
       query.hookSelect,
+      isSubSql,
       aliases,
     );
     if (sql) ctx.sql.push(sql);
@@ -83,6 +85,7 @@ export const selectToSql = (
   },
   quotedAs: string | undefined,
   hookSelect: HookSelect | undefined = query.hookSelect,
+  isSubSql?: boolean,
   aliases?: string[],
   skipCTE?: boolean,
   jsonList?: { [K: string]: ColumnTypeBase | undefined },
@@ -284,6 +287,17 @@ export const selectToSql = (
       if (jsonList) jsonList[name] = col;
       list.push(sql);
     }
+  }
+
+  if (!isSubSql && ctx.cteHooks?.hasSelect) {
+    const count = (ctx.selectedCount =
+      list.length || query.selectAllColumns?.length || 0);
+
+    return count
+      ? (list.length
+          ? list.join(', ')
+          : selectAllSql(query, quotedAs, jsonList)) + ', NULL'
+      : '';
   }
 
   return list.length

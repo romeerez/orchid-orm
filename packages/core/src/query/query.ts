@@ -10,9 +10,9 @@ import { QueryColumn, QueryColumns } from '../columns';
 import { DelayedRelationSelect } from './delayed-relational-select';
 import { QueryInternalColumnNameToKey } from './column-name-to-key';
 import { QueryDataBase } from './query-data';
-import { HasHookSelect } from './hook-select';
+import { HasCteHooks, HasTableHook } from './hook-select';
 
-export interface SqlCommonOptions extends HasHookSelect {
+export interface SqlCommonOptions extends HasTableHook, HasCteHooks {
   delayedRelationSelect?: DelayedRelationSelect;
 }
 

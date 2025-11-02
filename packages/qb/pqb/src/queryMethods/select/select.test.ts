@@ -936,9 +936,9 @@ describe('select', () => {
 
       it('should select subquery', () => {
         const q = User.all();
-        const query = q.select({ subquery: () => User.all() });
+        const query = q.select({ subquery: () => User.select('id') });
 
-        assertType<Awaited<typeof query>, { subquery: UserRecord[] }[]>();
+        assertType<Awaited<typeof query>, { subquery: { id: number }[] }[]>();
 
         expect(getShapeFromSelect(query)).toEqual({
           subquery: expect.any(JSONTextColumn),
@@ -950,7 +950,7 @@ describe('select', () => {
             SELECT
               (
                 SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
-                FROM (SELECT ${userColumnsSql} FROM "user") "t"
+                FROM (SELECT "user"."id" FROM "user") "t"
               ) "subquery"
             FROM "user"
           `,

@@ -12,6 +12,7 @@ export const pushDeleteSql = (
   table: ToSQLQuery,
   query: QueryData,
   quotedAs: string,
+  isSubSql?: boolean,
 ): Sql => {
   const from = `"${table.table || query.from}"`;
   ctx.sql.push(`DELETE FROM ${from}`);
@@ -78,12 +79,14 @@ export const pushDeleteSql = (
     query,
     quotedAs,
     delayedRelationSelect,
-    3,
+    'Delete',
+    undefined,
+    isSubSql,
   );
   if (returning.select) ctx.sql.push('RETURNING', returning.select);
 
   return {
-    hookSelect: returning.hookSelect,
+    tableHook: returning.tableHook,
     delayedRelationSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,

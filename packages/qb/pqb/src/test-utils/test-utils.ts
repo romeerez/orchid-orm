@@ -12,7 +12,7 @@ export const User = testDb('user', (t) => ({
   password: t.text().select(false),
   picture: t.text().nullable(),
   data: t.json<UserDataType>().nullable(),
-  age: t.integer().nullable(),
+  age: t.decimal().parse(parseInt).nullable(),
   active: t.boolean().nullable(),
   ...t.timestamps(),
 }));

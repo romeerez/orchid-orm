@@ -34,7 +34,7 @@ describe('transform', () => {
 
     it('should transform null for an aggregate', async () => {
       const sum = await User.sum('age').transform((sum) => {
-        assertType<typeof sum, number | null>();
+        assertType<typeof sum, string | null>();
         return 0;
       });
 
@@ -49,7 +49,7 @@ describe('transform', () => {
       const sum = await User.select({
         sum: () =>
           User.sum('age').transform((sum) => {
-            assertType<typeof sum, number | null>();
+            assertType<typeof sum, string | null>();
             return 0;
           }),
       });
@@ -190,11 +190,13 @@ describe('transform', () => {
     });
 
     it('should transform nested aggregated value', async () => {
-      const result = await User.select({
+      const res = await User.select({
         sum: () => User.sum('age'),
       }).transform((x) => x);
 
-      expect(result).toEqual([{ sum: age }]);
+      assertType<typeof res, { sum: string | null }[]>();
+
+      expect(res).toEqual([{ sum: `${age}` }]);
     });
 
     it('should transform aggregated value', async () => {
@@ -202,7 +204,9 @@ describe('transform', () => {
         sum: () => User.sum('age').transform((x) => x),
       });
 
-      expect(res).toEqual([{ sum: age }]);
+      assertType<typeof res, { sum: string | null }[]>();
+
+      expect(res).toEqual([{ sum: `${age}` }]);
     });
 
     it('should transform a value loaded from the main query table', async () => {

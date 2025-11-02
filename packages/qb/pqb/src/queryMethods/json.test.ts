@@ -1,7 +1,6 @@
 import {
   expectQueryNotMutated,
   User,
-  userColumnsSql,
   UserSoftDelete,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
@@ -12,7 +11,7 @@ describe('json methods', () => {
   describe('json', () => {
     it('wraps a query with json functions', () => {
       const query = User.all();
-      const q = query.where({ id: 1 }).json();
+      const q = query.where({ id: 1 }).select('id').json();
 
       assertType<Awaited<typeof q>, string | undefined>();
 
@@ -21,7 +20,7 @@ describe('json methods', () => {
         `
           SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
           FROM (
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT "user"."id" FROM "user"
             WHERE "user"."id" = $1
           ) "t"
         `,
@@ -33,7 +32,7 @@ describe('json methods', () => {
 
     it('supports `take`', () => {
       const query = User.all();
-      const q = query.where({ id: 1 }).take().json();
+      const q = query.where({ id: 1 }).select('id').take().json();
 
       assertType<Awaited<typeof q>, string | undefined>();
 
@@ -42,7 +41,7 @@ describe('json methods', () => {
         `
           SELECT row_to_json(t.*)
           FROM (
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT "user"."id" FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
           ) "t"

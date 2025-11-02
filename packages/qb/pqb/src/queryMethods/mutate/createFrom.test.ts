@@ -190,7 +190,7 @@ describe('createFrom functions', () => {
             RETURNING "user"."id"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT "chat"."id_of_chat" "chatId", (SELECT * FROM "q"), 'text'
+          SELECT "chat"."id_of_chat" "chatId", (SELECT "q"."id" FROM "q"), 'text'
           FROM "chat"
           WHERE "chat"."id_of_chat" = $3
           LIMIT 1
@@ -501,7 +501,7 @@ describe('createFrom functions', () => {
             RETURNING "user"."id"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
-          (VALUES ((SELECT * FROM "q"), 'text 1'), ((SELECT * FROM "q2"), 'text 2')) v("author_id", "text")
+          (VALUES ((SELECT "q"."id" FROM "q"), 'text 1'), ((SELECT "q2"."id" FROM "q2"), 'text 2')) v("author_id", "text")
           RETURNING ${messageColumnsSql}
         `,
         [1, 'name', 'password', 'name', 'password'],

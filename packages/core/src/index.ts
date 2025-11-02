@@ -82,6 +82,7 @@ export type {
   QueryReturnType,
   SelectableBase,
   SingleSql,
+  BatchSql,
   SingleSqlItem,
   Sql,
   CoreQueryScopes,
@@ -302,7 +303,13 @@ export type {
   BatchParser,
   ColumnParser,
 } from './query/query-column-parsers';
-export type { HookSelectValue, HookSelect } from './query/hook-select';
+export type {
+  HookSelectValue,
+  HookSelect,
+  TableHook,
+  HasCteHooks,
+  CteTableHook,
+} from './query/hook-select';
 export {
   _addToHookSelect,
   _addToHookSelectWithTable,

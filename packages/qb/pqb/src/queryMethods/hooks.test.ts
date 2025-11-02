@@ -1,5 +1,5 @@
 import { expectSql, testDb, useTestDatabase } from 'test-utils';
-import { User as UserTable, userData } from '../test-utils/test-utils';
+import { User as UserNoHooks, userData } from '../test-utils/test-utils';
 import { QueryCreate } from './mutate/create';
 import { Update } from './mutate/update';
 import { QueryUpsert } from './mutate/upsert';
@@ -67,7 +67,7 @@ const hooksWithDeps = {
 
 const hookMap = { ...hooksWithNoDeps, ...hooksWithDeps };
 
-let User = UserTable;
+let User = UserNoHooks;
 
 for (const k in hookMap) {
   const key = k as keyof typeof hookMap;
@@ -124,10 +124,8 @@ const assert = {
     }
 
     for (const key of depsHooks) {
-      const calls = hookMap[key].fn.mock.calls;
-      expect(calls).toEqual([
-        [data.map((x) => expect.objectContaining(x)), expect.any(Object)],
-      ]);
+      const calls = hookMap[key].fn.mock.calls.map(([data]) => data);
+      expect(calls).toEqual([data.map((x) => expect.objectContaining(x))]);
     }
 
     if (depsHooksCalledTwice) {
@@ -158,6 +156,20 @@ const assert = {
     assert.hooksBeingCalled({
       noDepsHooks: ['beforeQuery'],
       withUtilsHooks: ['beforeCreate', 'beforeSave'],
+      depsHooks: [
+        'afterQuery',
+        'afterCreate',
+        'afterSave',
+        'afterCreateCommit',
+        'afterSaveCommit',
+      ],
+      data,
+    });
+  },
+  cteCreateHooksBeingCalled({ data }: { data: unknown[] }) {
+    assert.hooksBeingCalled({
+      noDepsHooks: [],
+      withUtilsHooks: [],
       depsHooks: [
         'afterQuery',
         'afterCreate',
@@ -250,7 +262,7 @@ describe('hooks', () => {
 
       const createdAt = new Date();
 
-      const res = await UserTable.afterCreate(['updatedAt'], fn)
+      const res = await UserNoHooks.afterCreate(['updatedAt'], fn)
         .insert({ ...userData, createdAt })
         // selecting createdAt as updatedAt in attempt to confuse hook select
         .select({ updatedAt: 'createdAt' });
@@ -385,7 +397,7 @@ describe('hooks', () => {
     it.each(['create', 'insert'] as const)(
       'should work for %s with empty set',
       async (method) => {
-        const res = await UserTable.beforeSave(({ set }) => {
+        const res = await UserNoHooks.beforeSave(({ set }) => {
           set(userData);
         })
           [method]({} as never)
@@ -499,6 +511,64 @@ describe('hooks', () => {
         });
       },
     );
+
+    describe('cte', () => {
+      it('should call cte hooks for create', async () => {
+        const createQuery = User.create({ ...userData, age: 1 }).select('id');
+
+        const res = await UserNoHooks.with('name', createQuery)
+          .from('name')
+          .select({ name: 'id' });
+
+        expect(res).toEqual([{ name: expect.any(Number) }]);
+
+        assert.cteCreateHooksBeingCalled({ data: [{ name: 'name', age: 1 }] });
+      });
+
+      it('should call cte hooks for createMany', async () => {
+        const createQuery = User.createMany([
+          { ...userData, age: 1 },
+          { ...userData, age: 1 },
+        ]).select('id');
+
+        const res = await UserNoHooks.with('name', createQuery)
+          .from('name')
+          .select({ name: 'id' });
+
+        expect(res).toEqual([
+          { name: expect.any(Number) },
+          { name: expect.any(Number) },
+        ]);
+
+        assert.cteCreateHooksBeingCalled({
+          data: [
+            { name: 'name', age: 1 },
+            { name: 'name', age: 1 },
+          ],
+        });
+      });
+
+      // TODO: in insert sql logic need to untangle WITH from INSERT,
+      //  so that INSERT can be wrapped in additional WITH that's needed for the UNION.
+      // TODO: every batch can have own returning, need to generate returning dynamically per batch
+      it.todo('should work for createOneFrom');
+      // it.only('should work for createOneFrom', async () => {
+      //   const q = Profile.insertMany([
+      //     {
+      //       ...profileData,
+      //       userId: () => User.create(userData).get('id'),
+      //     },
+      //     // {
+      //     //   ...userData,
+      //     //   name: () => User.create(userData).get('name'),
+      //     // },
+      //   ]);
+      //
+      //   console.log(q.toSQL().text);
+      //
+      //   await q;
+      // });
+    });
   });
 
   describe('update', () => {
@@ -629,7 +699,7 @@ describe('hooks', () => {
     });
 
     it('should work for upsert update', async () => {
-      const id = await UserTable.get('id').create(userData);
+      const id = await UserNoHooks.get('id').create(userData);
       jest.clearAllMocks();
 
       const res = await User.find(id)
@@ -644,7 +714,7 @@ describe('hooks', () => {
     });
 
     it('should properly update and not call after create hooks if it was updated in 2nd query', async () => {
-      const id = await UserTable.get('id').create(userData);
+      const id = await UserNoHooks.get('id').create(userData);
       jest.clearAllMocks();
 
       const q = User.find(id)
@@ -670,7 +740,7 @@ describe('hooks', () => {
     });
 
     it('should work for orCreate when the record is found', async () => {
-      const id = await UserTable.get('id').create(userData);
+      const id = await UserNoHooks.get('id').create(userData);
       jest.clearAllMocks();
 
       const res = await User.find(id)
