@@ -1,5 +1,11 @@
 # pqb
 
+## 0.57.2
+
+### Patch Changes
+
+- d66b05e: Improve insert typing when inserting belongsTo relations (#591)
+
 ## 0.57.1
 
 ### Patch Changes

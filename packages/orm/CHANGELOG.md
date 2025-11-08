@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.58.2
+
+### Patch Changes
+
+- d66b05e: Improve insert typing when inserting belongsTo relations (#591)
+- Updated dependencies [d66b05e]
+  - pqb@0.57.2
+  - rake-db@2.27.17
+
 ## 1.58.1
 
 ### Patch Changes
