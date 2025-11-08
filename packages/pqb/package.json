@@ -5,7 +5,7 @@
   "homepage": "https://orchid-orm.netlify.app/guide/orm-and-query-builder.html",
   "repository": {
     "type": "git",
-    "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/qb/pqb"
+    "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/pqb"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",

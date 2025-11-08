@@ -15,7 +15,6 @@
     "core": "pnpm --filter orchid-core",
     "create-orm": "pnpm --filter create-orchid-orm",
     "orm": "pnpm --filter orchid-orm",
-    "myqb": "pnpm --filter myqb",
     "pqb": "pnpm --filter pqb",
     "rake-db": "pnpm --filter rake-db",
     "zod": "pnpm --filter orchid-orm-schema-to-zod",

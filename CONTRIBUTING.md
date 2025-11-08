@@ -35,15 +35,6 @@ docker compose -f docker-compose.pg.yml up -d
 docker compose -f docker-compose.pg.yml down
 ```
 
-MySQL is optional, you can develop everything without it, except only for a `myqb` package. MySQL can be started with docker as well:
-
-```sh
-# start postgres
-docker compose -f docker-compose.mysql.yml up -d
-# stop it later
-docker compose -f docker-compose.mysql.yml down
-```
-
 Copy `.env.example` to `.env` and change the database URLs in it. Leave it unchanged if you're running a database with Docker.
 
 `PG_URL` will have tables for testing.
@@ -61,7 +52,7 @@ Apply db migrations with command:
 pnpm db migrate
 ```
 
-Run all tests in every package (`myqb` will fail without running MySQL):
+Run all tests in every package:
 
 ```sh
 pnpm check

@@ -30,17 +30,7 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - '5432:5432'
-      - '3306:3306'
       - '5433:5433'
-
-  # MySQL Does not work without changing configs.  Left here for posterity after hours lost.
-  # mysql:
-  #   image: 'mysql/mysql-server'
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: root
-  #     MYSQL_DATABASE: orchid-orm
-  #     MYSQL_USER: root
-  #   network_mode: service:postgres
 
   pgadmin:
     image: dpage/pgadmin4

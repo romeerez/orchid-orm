@@ -14,7 +14,6 @@ on:
 env:
   PG_URL: postgres://postgres:password@localhost:5432/orchid-orm
   PG_GENERATE_URL: postgres://postgres:password@localhost:5432/orchid-orm-generate
-  MYSQL_URL: mysql://root:password@localhost:3306/mysql
   PNPM_CACHE_FOLDER: .pnpm-store
 
 jobs:
@@ -31,19 +30,6 @@ jobs:
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
-
-      # not going to maintain `myqb` for the foreseeable future
-      # mysql:
-      #   image: mysql:latest
-      #   env:
-      #     MYSQL_ROOT_PASSWORD: password
-      #   options: >-
-      #     --health-cmd="mysqladmin ping"
-      #     --health-interval=10s
-      #     --health-timeout=5s
-      #     --health-retries=3
-      #   ports:
-      #     - 3306:3306
 
     steps:
       - name: Check out code

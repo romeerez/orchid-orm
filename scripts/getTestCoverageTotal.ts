@@ -26,7 +26,7 @@ const main = async () => {
       'core',
       'create-orm',
       'orm',
-      'qb/pqb',
+      'pqb',
       'rake-db',
       'schemaConfigs/zod',
       'schemaConfigs/valibot',

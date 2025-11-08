@@ -11,13 +11,13 @@ jest.mock('orchid-orm', () => require('./packages/orm/src'), {
   virtual: true,
 });
 
-jest.mock('pqb', () => require('./packages/qb/pqb/src'), {
+jest.mock('pqb', () => require('./packages/pqb/src'), {
   virtual: true,
 });
 
 jest.mock(
   'pqb/node-postgres',
-  () => require('./packages/qb/pqb/src/adapters/node-postgres'),
+  () => require('./packages/pqb/src/adapters/node-postgres'),
   {
     virtual: true,
   },
@@ -25,7 +25,7 @@ jest.mock(
 
 jest.mock(
   'pqb/postgres-js',
-  () => require('./packages/qb/pqb/src/adapters/postgres-js'),
+  () => require('./packages/pqb/src/adapters/postgres-js'),
   {
     virtual: true,
   },
