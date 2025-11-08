@@ -42,13 +42,6 @@
       "types": "./dist/migrations/postgres-js.d.ts"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "dist/*.d.ts"
-      ]
-    }
-  },
   "files": [
     "dist",
     "codegen"

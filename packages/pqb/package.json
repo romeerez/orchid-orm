@@ -27,13 +27,6 @@
       "types": "./dist/postgres-js.d.ts"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "dist/*.d.ts"
-      ]
-    }
-  },
   "files": [
     "dist"
   ],
