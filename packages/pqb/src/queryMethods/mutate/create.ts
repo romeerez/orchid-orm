@@ -63,13 +63,11 @@ export interface CreateSelf
 // or with `db.book.create({ author: authorData })`
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
-export type CreateData<
-  T extends CreateSelf,
-  BelongsToData = CreateBelongsToData<T>,
-> = EmptyObject extends T['relations']
-  ? // if no relations, don't load TS with extra calculations
-    CreateDataWithDefaults<T, keyof T['meta']['defaults']>
-  : CreateRelationsData<T, BelongsToData>;
+export type CreateData<T extends CreateSelf> =
+  EmptyObject extends T['relations']
+    ? // if no relations, don't load TS with extra calculations
+      CreateDataWithDefaults<T, keyof T['meta']['defaults']>
+    : CreateRelationsData<T>;
 
 type CreateDataWithDefaults<
   T extends CreateSelf,
@@ -101,14 +99,14 @@ export type CreateColumn<
 > = T['inputType'][K] | ((q: T) => QueryOrExpression<T['inputType'][K]>);
 
 // Combine data of the table with data that can be set for relations
-export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
+export type CreateRelationsData<T extends CreateSelf> =
   // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
   CreateDataWithDefaultsForRelations<
     T,
     keyof T['meta']['defaults'],
     T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
   > &
-    ([BelongsToData] extends [never] ? EmptyObject : BelongsToData) &
+    CreateBelongsToData<T> &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
     T['relations'][keyof T['relations']]['optionalDataForCreate'];
@@ -118,7 +116,7 @@ export type CreateRelationsData<T extends CreateSelf, BelongsToData> =
 export type CreateBelongsToData<T extends CreateSelf> = [
   T['relations'][keyof T['relations']]['dataForCreate'],
 ] extends [never]
-  ? never
+  ? EmptyObject
   : CreateRelationsDataOmittingFKeys<
       T,
       T['relations'][keyof T['relations']]['dataForCreate']
@@ -163,60 +161,51 @@ export type CreateRelationsDataOmittingFKeys<
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-export type CreateResult<T extends CreateSelf, BT> = T extends { isCount: true }
+export type CreateResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryKind<T, 'create'>
   : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T, BT>>
+  ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T>>
   : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
-  : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>;
+  ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T>>
+  : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>;
 
 // `insert` method output type
 // - query returns inserted row count by default.
 // - returns a record with selected columns if the query has a select.
 // - if the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-type InsertResult<
-  T extends CreateSelf,
-  BT,
-> = T['meta']['hasSelect'] extends true
+type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
   ? T['returnType'] extends undefined | 'all'
-    ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T, BT>>
+    ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T>>
     : T['returnType'] extends 'pluck'
-    ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
-    : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>
+    ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T>>
+    : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>
   : SetQueryReturnsRowCount<T, 'create'>;
 
 // `createMany` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns a single record, forces it to return multiple.
 // - otherwise, query result remains as is.
-type CreateManyResult<T extends CreateSelf, BT> = T extends { isCount: true }
-  ? SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>
+type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
+  ? SetQueryKindResult<T, 'create', NarrowCreateResult<T>>
   : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAllKindResult<T, 'create', NarrowCreateResult<T, BT>>
+  ? SetQueryReturnsAllKindResult<T, 'create', NarrowCreateResult<T>>
   : T['returnType'] extends 'value' | 'valueOrThrow'
-  ? SetQueryReturnsPluckColumnKindResult<T, 'create', NarrowCreateResult<T, BT>>
-  : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>;
+  ? SetQueryReturnsPluckColumnKindResult<T, 'create', NarrowCreateResult<T>>
+  : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>;
 
 // `insertMany` method output type
 // - query returns inserted row count by default.
 // - returns records with selected columns if the query has a select.
 // - if the query returns a single record, forces it to return multiple records.
-type InsertManyResult<
-  T extends CreateSelf,
-  BT,
-> = T['meta']['hasSelect'] extends true
-  ? T['returnType'] extends 'one' | 'oneOrThrow'
-    ? SetQueryReturnsAllKindResult<T, 'create', NarrowCreateResult<T, BT>>
-    : T['returnType'] extends 'value' | 'valueOrThrow'
-    ? SetQueryReturnsPluckColumnKindResult<
-        T,
-        'create',
-        NarrowCreateResult<T, BT>
-      >
-    : SetQueryKindResult<T, 'create', NarrowCreateResult<T, BT>>
-  : SetQueryReturnsRowCountMany<T, 'create'>;
+type InsertManyResult<T extends CreateSelf> =
+  T['meta']['hasSelect'] extends true
+    ? T['returnType'] extends 'one' | 'oneOrThrow'
+      ? SetQueryReturnsAllKindResult<T, 'create', NarrowCreateResult<T>>
+      : T['returnType'] extends 'value' | 'valueOrThrow'
+      ? SetQueryReturnsPluckColumnKindResult<T, 'create', NarrowCreateResult<T>>
+      : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>
+    : SetQueryReturnsRowCountMany<T, 'create'>;
 
 /**
  * When creating a record with a *belongs to* nested record,
@@ -224,25 +213,17 @@ type InsertManyResult<
  *
  * The same should work as well with any non-null columns passed to `create`, but it's to be implemented later.
  */
-type NarrowCreateResult<
-  T extends CreateSelf,
-  Bt,
-> = EmptyObject extends T['relations']
-  ? T['result']
-  : [
-      {
-        [K in keyof T['relations']]: T['relations'][K]['omitForeignKeyInCreate'];
-      }[keyof T['relations'] & keyof Bt],
-    ] extends [never]
-  ? T['result']
-  : {
-      [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
-        ? QueryColumn<
-            Exclude<T['result'][K]['type'], null>,
-            T['result'][K]['operators']
-          >
-        : T['result'][K];
-    };
+type NarrowCreateResult<T extends CreateSelf> =
+  EmptyObject extends T['relations']
+    ? T['result']
+    : {
+        [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
+          ? QueryColumn<
+              Exclude<T['result'][K]['type'], null>,
+              T['result'][K]['operators']
+            >
+          : T['result'][K];
+      };
 
 // `onConflictDoNothing()` method output type:
 // overrides query return type from 'oneOrThrow' to 'one', from 'valueOrThrow' to 'value',
@@ -553,24 +534,18 @@ export const insert = (
   return self;
 };
 
-export const _queryCreate = <
-  T extends CreateSelf,
-  BT extends CreateBelongsToData<T>,
->(
+export const _queryCreate = <T extends CreateSelf>(
   q: T,
-  data: CreateData<T, BT>,
-): CreateResult<T, BT> => {
+  data: CreateData<T>,
+): CreateResult<T> => {
   createSelect(q as unknown as Query);
   return _queryInsert(q, data) as never;
 };
 
-export const _queryInsert = <
-  T extends CreateSelf,
-  BT extends CreateBelongsToData<T>,
->(
+export const _queryInsert = <T extends CreateSelf>(
   query: T,
-  data: CreateData<T, BT>,
-): InsertResult<T, BT> => {
+  data: CreateData<T>,
+): InsertResult<T> => {
   const ctx = createCtx();
   const obj = handleOneData(query, data, ctx) as {
     columns: string[];
@@ -580,24 +555,18 @@ export const _queryInsert = <
   return insert(query, obj) as never;
 };
 
-export const _queryCreateMany = <
-  T extends CreateSelf,
-  BT extends CreateBelongsToData<T>,
->(
+export const _queryCreateMany = <T extends CreateSelf>(
   q: T,
-  data: CreateData<T, BT>[],
-): CreateManyResult<T, BT> => {
+  data: CreateData<T>[],
+): CreateManyResult<T> => {
   createSelect(q as unknown as Query);
   return _queryInsertMany(q, data as never) as never;
 };
 
-export const _queryInsertMany = <
-  T extends CreateSelf,
-  BT extends CreateBelongsToData<T>,
->(
+export const _queryInsertMany = <T extends CreateSelf>(
   q: T,
-  data: CreateData<T, BT>[],
-): InsertManyResult<T, BT> => {
+  data: CreateData<T>[],
+): InsertManyResult<T> => {
   const ctx = createCtx();
   let result = insert(q, handleManyData(q, data, ctx), true) as never;
   if (!data.length) result = (result as Query).none() as never;
@@ -606,7 +575,7 @@ export const _queryInsertMany = <
 
 export const _queryDefaults = <
   T extends CreateSelf,
-  Data extends Partial<CreateData<T, CreateBelongsToData<T>>>,
+  Data extends Partial<CreateData<T>>,
 >(
   q: T,
   data: Data,
@@ -682,10 +651,7 @@ export class QueryCreate {
    *
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.
    */
-  create<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
-    this: T,
-    data: CreateData<T, BT>,
-  ): CreateResult<T, BT> {
+  create<T extends CreateSelf>(this: T, data: CreateData<T>): CreateResult<T> {
     return _queryCreate(_clone(this), data) as never;
   }
 
@@ -694,10 +660,7 @@ export class QueryCreate {
    *
    * @param data - data for the record, may have values, raw SQL, queries, relation operations.
    */
-  insert<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
-    this: T,
-    data: CreateData<T, BT>,
-  ): InsertResult<T, BT> {
+  insert<T extends CreateSelf>(this: T, data: CreateData<T>): InsertResult<T> {
     return _queryInsert(_clone(this), data) as never;
   }
 
@@ -742,10 +705,10 @@ export class QueryCreate {
    *
    * @param data - array of records data, may have values, raw SQL, queries, relation operations
    */
-  createMany<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
+  createMany<T extends CreateSelf>(
     this: T,
-    data: CreateData<T, BT>[],
-  ): CreateManyResult<T, BT> {
+    data: CreateData<T>[],
+  ): CreateManyResult<T> {
     return _queryCreateMany(_clone(this), data) as never;
   }
 
@@ -754,10 +717,10 @@ export class QueryCreate {
    *
    * @param data - array of records data, may have values, raw SQL, queries, relation operations
    */
-  insertMany<T extends CreateSelf, BT extends CreateBelongsToData<T>>(
+  insertMany<T extends CreateSelf>(
     this: T,
-    data: CreateData<T, BT>[],
-  ): InsertManyResult<T, BT> {
+    data: CreateData<T>[],
+  ): InsertManyResult<T> {
     return _queryInsertMany(_clone(this), data) as never;
   }
 
@@ -783,10 +746,10 @@ export class QueryCreate {
    *
    * @param data - default values for `create` and `createMany` which will follow `defaults`
    */
-  defaults<
-    T extends CreateSelf,
-    Data extends Partial<CreateData<T, CreateBelongsToData<T>>>,
-  >(this: T, data: Data): AddQueryDefaults<T, { [K in keyof Data]: true }> {
+  defaults<T extends CreateSelf, Data extends Partial<CreateData<T>>>(
+    this: T,
+    data: Data,
+  ): AddQueryDefaults<T, { [K in keyof Data]: true }> {
     return _queryDefaults(_clone(this) as never, data as never);
   }
 

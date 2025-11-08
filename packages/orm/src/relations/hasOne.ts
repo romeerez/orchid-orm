@@ -6,7 +6,6 @@ import {
   _queryUpdateOrThrow,
   _queryWhere,
   AddQueryDefaults,
-  CreateBelongsToData,
   CreateCtx,
   CreateData,
   CreateMethodsNames,
@@ -146,11 +145,8 @@ export interface HasOneInfo<
   Rel extends HasOne,
   Q extends Query,
   CD = T['relations'][Name]['options'] extends RelationThroughOptions
-    ? CreateData<Q, CreateBelongsToData<Q>>
-    : CreateData<
-        AddQueryDefaults<Q, HasOnePopulate<T, Name>>,
-        CreateBelongsToData<Q>
-      >,
+    ? CreateData<Q>
+    : CreateData<AddQueryDefaults<Q, HasOnePopulate<T, Name>>>,
 > extends RelationConfigBase {
   returnsOne: true;
   query: Q;

@@ -7,7 +7,6 @@ import {
 } from '../../core';
 import { _clone } from '../../query/queryUtils';
 import {
-  CreateBelongsToData,
   createCtx,
   CreateData,
   createSelect,
@@ -196,7 +195,7 @@ export const _queryCreateOneFrom = <
 >(
   q: T,
   query: Q,
-  data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
+  data?: Omit<CreateData<T>, keyof Q['result']>,
 ): CreateRawOrFromResult<T> => {
   createSelect(q as unknown as Query);
   return insertFrom(q, query, false, false, data) as never;
@@ -208,7 +207,7 @@ export const _queryInsertOneFrom = <
 >(
   q: T,
   query: Q,
-  data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
+  data?: Omit<CreateData<T>, keyof Q['result']>,
 ): InsertRawOrFromResult<T> => {
   return insertFrom(q, query, false, false, data) as never;
 };
@@ -219,7 +218,7 @@ export const _queryCreateManyFrom = <
 >(
   q: T,
   query: Q,
-  data: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>[],
+  data: Omit<CreateData<T>, keyof Q['result']>[],
 ): CreateManyFromResult<T> => {
   createSelect(q as unknown as Query);
   return insertFrom(q, query, true, false, data) as never;
@@ -231,7 +230,7 @@ export const _queryInsertManyFrom = <
 >(
   q: T,
   query: Q,
-  data: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>[],
+  data: Omit<CreateData<T>, keyof Q['result']>[],
 ): InsertManyFromResult<T> => {
   return insertFrom(q, query, true, false, data) as never;
 };
@@ -306,7 +305,7 @@ export class QueryCreateFrom {
   createOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
+    data?: Omit<CreateData<T>, keyof Q['result']>,
   ): CreateRawOrFromResult<T> {
     return _queryCreateOneFrom(_clone(this) as never, query, data);
   }
@@ -320,7 +319,7 @@ export class QueryCreateFrom {
   insertOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data?: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>,
+    data?: Omit<CreateData<T>, keyof Q['result']>,
   ): InsertRawOrFromResult<T> {
     return _queryInsertOneFrom(_clone(this) as never, query, data);
   }
@@ -387,7 +386,7 @@ export class QueryCreateFrom {
   createManyFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>[],
+    data: Omit<CreateData<T>, keyof Q['result']>[],
   ): CreateManyFromResult<T> {
     return _queryCreateManyFrom(_clone(this) as never, query, data);
   }
@@ -401,7 +400,7 @@ export class QueryCreateFrom {
   insertManyFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data: Omit<CreateData<T, CreateBelongsToData<T>>, keyof Q['result']>[],
+    data: Omit<CreateData<T>, keyof Q['result']>[],
   ): InsertManyFromResult<T> {
     return _queryInsertManyFrom(_clone(this) as never, query, data);
   }

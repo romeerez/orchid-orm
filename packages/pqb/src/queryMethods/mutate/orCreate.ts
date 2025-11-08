@@ -1,5 +1,5 @@
 import { PickQueryQ, Query } from '../../query/query';
-import { CreateBelongsToData, CreateData } from './create';
+import { CreateData } from './create';
 import {
   MoreThanOneRowError,
   PickQueryMetaResultReturnType,
@@ -206,9 +206,9 @@ export interface QueryOrCreate {
    *
    * @param data - the same data as for `create`, it may be returned from a callback
    */
-  orCreate<T extends UpsertThis, BT extends CreateBelongsToData<T>>(
+  orCreate<T extends UpsertThis>(
     this: T,
-    data: OrCreateArg<CreateData<T, BT>>,
+    data: OrCreateArg<CreateData<T>>,
   ): UpsertResult<T>;
 }
 

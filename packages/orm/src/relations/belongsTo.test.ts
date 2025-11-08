@@ -927,7 +927,7 @@ describe('belongsTo', () => {
           )
           .from('profile');
 
-        assertType<Awaited<typeof q>, Profile[]>();
+        assertType<Awaited<typeof q>, (Profile & { UserId: number })[]>();
 
         expectSql(
           q.toSQL(),

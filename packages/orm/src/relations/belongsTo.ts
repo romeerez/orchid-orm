@@ -10,7 +10,6 @@ import {
   _queryRows,
   _queryUpdate,
   _queryWhere,
-  CreateBelongsToData,
   CreateCtx,
   CreateData,
   CreateMethodsNames,
@@ -141,7 +140,7 @@ export interface BelongsToInfo<
     | { delete: boolean }
     | { update: UpdateData<Q> }
     | {
-        create: CreateData<Q, CreateBelongsToData<Q>>;
+        create: CreateData<Q>;
       };
   // Only for records that update a single record:
   // - `upsert` to update or create the related record
@@ -150,13 +149,11 @@ export interface BelongsToInfo<
     | { set: WhereArg<Q> }
     | { delete: boolean }
     | { update: UpdateData<Q> }
-    | { create: CreateData<Q, CreateBelongsToData<Q>> }
+    | { create: CreateData<Q> }
     | {
         upsert: {
           update: UpdateData<Q>;
-          create:
-            | CreateData<Q, CreateBelongsToData<Q>>
-            | (() => CreateData<Q, CreateBelongsToData<Q>>);
+          create: CreateData<Q> | (() => CreateData<Q>);
         };
       };
 }

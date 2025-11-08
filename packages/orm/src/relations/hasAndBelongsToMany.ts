@@ -444,7 +444,7 @@ export const makeHasAndBelongsToManyMethod = (
           const createdCount = await _queryCreateManyFrom(
             subQuery.count(),
             baseQuery as Query & { returnType: 'one' | 'oneOrThrow' },
-            data,
+            data as never,
           );
 
           if ((createdCount as unknown as number) === 0) {

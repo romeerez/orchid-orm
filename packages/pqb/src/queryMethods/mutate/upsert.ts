@@ -5,7 +5,7 @@ import {
   SetQueryReturnsVoidKind,
 } from '../../query/query';
 import { _queryUpdate, UpdateData, UpdateSelf } from './update';
-import { CreateBelongsToData, CreateData, CreateSelf } from './create';
+import { CreateData, CreateSelf } from './create';
 import {
   isObjectEmpty,
   PickQueryMetaResultReturnType,
@@ -142,24 +142,18 @@ export interface QueryUpsert {
    *
    * @param data - `update` property for the data to update, `create` property for the data to create
    */
-  upsert<
-    T extends UpsertThis,
-    Update extends UpdateData<T>,
-    BT extends CreateBelongsToData<T>,
-  >(
+  upsert<T extends UpsertThis, Update extends UpdateData<T>>(
     this: T,
     data:
       | {
           update: Update;
-          create: CreateData<T, BT> | ((update: Update) => CreateData<T, BT>);
+          create: CreateData<T> | ((update: Update) => CreateData<T>);
         }
       | {
           data: Update;
           create:
-            | UpsertCreate<keyof Update, CreateData<T, BT>>
-            | ((
-                update: Update,
-              ) => UpsertCreate<keyof Update, CreateData<T, BT>>);
+            | UpsertCreate<keyof Update, CreateData<T>>
+            | ((update: Update) => UpsertCreate<keyof Update, CreateData<T>>);
         },
   ): UpsertResult<T>;
 }
