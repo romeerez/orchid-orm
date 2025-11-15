@@ -1,4 +1,4 @@
-import { IdentityColumn, IntegerColumn } from './number';
+import { IdentityColumn, IntegerColumn } from './column-types/number';
 import {
   BitColumn,
   BitVaryingColumn,
@@ -18,10 +18,10 @@ import {
   TsVectorColumn,
   UUIDColumn,
   XMLColumn,
-} from './string';
-import { IntervalColumn, TimeColumn } from './dateTime';
-import { BooleanColumn } from './boolean';
-import { JSONTextColumn } from './json';
+} from './column-types/string';
+import { IntervalColumn, TimeColumn } from './column-types/dateTime';
+import { BooleanColumn } from './column-types/boolean';
+import { JSONTextColumn } from './column-types/json';
 import {
   ColumnSchemaConfig,
   QueryColumnsInit,
@@ -34,7 +34,7 @@ import {
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL, sqlFn, SqlFn } from '../sql/rawSql';
 import { TableData } from '../tableData';
-import { PostgisGeographyPointColumn } from './postgis';
+import { PostgisGeographyPointColumn } from './column-types/postgis';
 
 export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
   types: ColumnTypes,

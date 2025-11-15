@@ -25,7 +25,6 @@ import {
   OrchidOrmInternalError,
 } from '../../core';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
-import { moveQueryValueToWith } from '../with';
 import { JoinArgs, JoinFirstArg, JoinResultFromArgs } from '../join/join';
 import { _joinReturningArgs } from '../join/_join';
 import { _queryNone } from '../none';
@@ -226,10 +225,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
       }
 
       if (value !== null && value !== undefined && !isExpression(value)) {
-        if (value instanceof Db) {
-          moveQueryValueToWith(query, q, value, 'with', set, key);
-        } else {
-          // encode if not a query object
+        if (!(value instanceof Db)) {
           const encode = item?.data.encode;
           if (encode) set[key] = encode(value);
         }

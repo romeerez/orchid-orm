@@ -1,5 +1,10 @@
 import { expectSql, testDb, useTestDatabase } from 'test-utils';
-import { User as UserNoHooks, userData } from '../test-utils/test-utils';
+import {
+  Profile,
+  profileData,
+  User as UserNoHooks,
+  userData,
+} from '../test-utils/test-utils';
 import { QueryCreate } from './mutate/create';
 import { Update } from './mutate/update';
 import { QueryUpsert } from './mutate/upsert';
@@ -31,38 +36,44 @@ const hookSetUpdateValues = {
 };
 
 const hooksWithNoDeps = {
-  beforeQuery: { fn: jest.fn() },
+  beforeQuery: { fn: jest.fn().mockName('beforeQuery') },
   beforeCreate: {
-    fn: jest.fn(({ set }) => {
-      set(hookSet.beforeCreate);
-    }),
+    fn: jest
+      .fn(({ set }) => {
+        set(hookSet.beforeCreate);
+      })
+      .mockName('beforeCreate'),
   },
   beforeUpdate: {
-    fn: jest.fn(({ set }) => {
-      set(hookSet.beforeUpdate);
-    }),
+    fn: jest
+      .fn(({ set }) => {
+        set(hookSet.beforeUpdate);
+      })
+      .mockName('beforeUpdate'),
   },
   beforeSave: {
-    fn: jest.fn(({ set }) => {
-      set(hookSet.beforeSave);
-    }),
+    fn: jest
+      .fn(({ set }) => {
+        set(hookSet.beforeSave);
+      })
+      .mockName('beforeSave'),
   },
-  beforeDelete: { fn: jest.fn() },
-  afterQuery: { fn: jest.fn() },
+  beforeDelete: { fn: jest.fn().mockName('beforeDelete') },
+  afterQuery: { fn: jest.fn().mockName('afterQuery') },
 };
 
 const deps: ('name' | 'age')[] = ['name', 'age'];
 const depData = { name: 'name', age: null };
 
 const hooksWithDeps = {
-  afterCreate: { deps, fn: jest.fn() },
-  afterUpdate: { deps, fn: jest.fn() },
-  afterSave: { deps, fn: jest.fn() },
-  afterDelete: { deps, fn: jest.fn() },
-  afterCreateCommit: { deps, fn: jest.fn() },
-  afterUpdateCommit: { deps, fn: jest.fn() },
-  afterSaveCommit: { deps, fn: jest.fn() },
-  afterDeleteCommit: { deps, fn: jest.fn() },
+  afterCreate: { deps, fn: jest.fn().mockName('afterCreate') },
+  afterUpdate: { deps, fn: jest.fn().mockName('afterUpdate') },
+  afterSave: { deps, fn: jest.fn().mockName('afterSave') },
+  afterDelete: { deps, fn: jest.fn().mockName('afterDelete') },
+  afterCreateCommit: { deps, fn: jest.fn().mockName('afterCreateCommit') },
+  afterUpdateCommit: { deps, fn: jest.fn().mockName('afterUpdateCommit') },
+  afterSaveCommit: { deps, fn: jest.fn().mockName('afterSaveCommit') },
+  afterDeleteCommit: { deps, fn: jest.fn().mockName('afterDeleteCommit') },
 };
 
 const hookMap = { ...hooksWithNoDeps, ...hooksWithDeps };
@@ -513,61 +524,169 @@ describe('hooks', () => {
     );
 
     describe('cte', () => {
-      it('should call cte hooks for create', async () => {
-        const createQuery = User.create({ ...userData, age: 1 }).select('id');
+      describe('create methods in cte', () => {
+        it('insert', async () => {
+          await testDb
+            .with('cte', User.insert({ ...userData, age: 123 }))
+            .from('cte');
 
-        const res = await UserNoHooks.with('name', createQuery)
-          .from('name')
-          .select({ name: 'id' });
+          assert.cteCreateHooksBeingCalled({
+            data: [{ name: 'name', age: 123 }],
+          });
+        });
 
-        expect(res).toEqual([{ name: expect.any(Number) }]);
+        it('create', async () => {
+          const createQuery = User.create({ ...userData, age: 1 }).select('id');
 
-        assert.cteCreateHooksBeingCalled({ data: [{ name: 'name', age: 1 }] });
-      });
+          const res = await UserNoHooks.with('name', createQuery)
+            .from('name')
+            .select({ name: 'id' });
 
-      it('should call cte hooks for createMany', async () => {
-        const createQuery = User.createMany([
-          { ...userData, age: 1 },
-          { ...userData, age: 1 },
-        ]).select('id');
+          expect(res).toEqual([{ name: expect.any(Number) }]);
 
-        const res = await UserNoHooks.with('name', createQuery)
-          .from('name')
-          .select({ name: 'id' });
+          assert.cteCreateHooksBeingCalled({
+            data: [{ name: 'name', age: 1 }],
+          });
+        });
 
-        expect(res).toEqual([
-          { name: expect.any(Number) },
-          { name: expect.any(Number) },
-        ]);
+        it('createMany', async () => {
+          const createQuery = User.createMany([
+            { ...userData, age: 1 },
+            { ...userData, age: 1 },
+          ]).select('id');
 
-        assert.cteCreateHooksBeingCalled({
-          data: [
+          const res = await UserNoHooks.with('name', createQuery)
+            .from('name')
+            .select({ name: 'id' });
+
+          expect(res).toEqual([
+            { name: expect.any(Number) },
+            { name: expect.any(Number) },
+          ]);
+
+          assert.cteCreateHooksBeingCalled({
+            data: [
+              { name: 'name', age: 1 },
+              { name: 'name', age: 1 },
+            ],
+          });
+        });
+
+        it('createOneFrom', async () => {
+          await UserNoHooks.insert({ ...userData, age: 123 });
+
+          const res = await testDb
+            .with(
+              'cte',
+              User.createOneFrom(User.select('name', 'password', 'age').take()),
+            )
+            .from('cte')
+            .select('name', 'age');
+
+          expect(res).toMatchObject([{ name: 'name', age: 123 }]);
+
+          assert.cteCreateHooksBeingCalled({
+            data: [{ name: 'name', age: 123 }],
+          });
+        });
+
+        it('createManyFrom', async () => {
+          await UserNoHooks.insert(userData);
+
+          const res = await testDb
+            .with(
+              'cte',
+              User.createManyFrom(User.select('name', 'password').take(), [
+                { age: 1 },
+                { age: 2 },
+              ]),
+            )
+            .from('cte')
+            .select('name', 'age');
+
+          expect(res).toMatchObject([
             { name: 'name', age: 1 },
+            { name: 'name', age: 2 },
+          ]);
+
+          assert.cteCreateHooksBeingCalled({
+            data: [
+              { name: 'name', age: 1 },
+              { name: 'name', age: 2 },
+            ],
+          });
+        });
+
+        it('createForEachFrom', async () => {
+          await UserNoHooks.insertMany([
+            { ...userData, age: 1 },
+            { ...userData, age: 2 },
+          ]);
+
+          const res = await testDb
+            .with(
+              'cte',
+              User.createForEachFrom(User.select('name', 'password', 'age')),
+            )
+            .from('cte')
+            .select('name', 'age');
+
+          expect(res).toMatchObject([
             { name: 'name', age: 1 },
-          ],
+            { name: 'name', age: 2 },
+          ]);
+
+          assert.cteCreateHooksBeingCalled({
+            data: [
+              { name: 'name', age: 1 },
+              { name: 'name', age: 2 },
+            ],
+          });
         });
       });
 
-      // TODO: in insert sql logic need to untangle WITH from INSERT,
-      //  so that INSERT can be wrapped in additional WITH that's needed for the UNION.
-      // TODO: every batch can have own returning, need to generate returning dynamically per batch
-      it.todo('should work for createOneFrom');
-      // it.only('should work for createOneFrom', async () => {
-      //   const q = Profile.insertMany([
-      //     {
-      //       ...profileData,
-      //       userId: () => User.create(userData).get('id'),
-      //     },
-      //     // {
-      //     //   ...userData,
-      //     //   name: () => User.create(userData).get('name'),
-      //     // },
-      //   ]);
-      //
-      //   console.log(q.toSQL().text);
-      //
-      //   await q;
-      // });
+      describe('nested create methods', () => {
+        it('create in create', async () => {
+          const res = await Profile.create({
+            ...profileData,
+            userId: () => User.create({ ...userData, age: 123 }).get('id'),
+          });
+
+          expect(res).toMatchObject({
+            ...profileData,
+            userId: expect.any(Number),
+          });
+
+          assert.cteCreateHooksBeingCalled({
+            data: [{ name: 'name', age: 123 }],
+          });
+        });
+
+        it('create in createMany', async () => {
+          const res = await Profile.createMany([
+            {
+              ...profileData,
+              userId: () => User.create({ ...userData, age: 20 }).get('id'),
+            },
+            {
+              ...profileData,
+              userId: () => User.create({ ...userData, age: 30 }).get('id'),
+            },
+          ]);
+
+          expect(res).toMatchObject([
+            { ...profileData, userId: expect.any(Number) },
+            { ...profileData, userId: expect.any(Number) },
+          ]);
+
+          assert.cteCreateHooksBeingCalled({
+            data: [
+              { name: 'name', age: 20 },
+              { name: 'name', age: 30 },
+            ],
+          });
+        });
+      });
     });
   });
 
@@ -738,10 +857,13 @@ describe('hooks', () => {
         data: [{ name: 'new name' }],
       });
     });
+  });
+
+  describe('orCreate', () => {
+    tested.orCreate = true;
 
     it('should work for orCreate when the record is found', async () => {
       const id = await UserNoHooks.get('id').create(userData);
-      jest.clearAllMocks();
 
       const res = await User.find(id)
         .orCreate(userData)
@@ -752,19 +874,31 @@ describe('hooks', () => {
     });
 
     it('should work for orCreate when the record is not found', async () => {
-      tested.orCreate = true;
-
       const res = await User.find(1).orCreate(userData).select('*', 'password');
       expect(res).toMatchObject(hookSetCreateValues);
 
       assert.createHooksBeingCalled({ data: [depData] });
     });
+
+    describe('cte', () => {
+      // TODO
+      it.todo('finds a record in cte');
+      // it.only('finds a record in cte', async () => {
+      //   const id = await UserNoHooks.get('id').create(userData);
+      //
+      //   const q = testDb
+      //     .with('cte', User.find(id).orCreate(userData))
+      //     .from('cte');
+      //
+      //   await q;
+      // });
+    });
   });
 
   describe('delete', () => {
-    it('should work for delete', async () => {
-      tested.delete = true;
+    tested.delete = true;
 
+    it('should work for delete', async () => {
       const id = await User.get('id').create(userData);
       jest.clearAllMocks();
 

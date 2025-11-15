@@ -7,7 +7,7 @@ import {
 } from '../core';
 import { ColumnType } from './columnType';
 import { DomainColumn } from './customType';
-import { EnumColumn } from './enum';
+import { EnumColumn } from './column-types/enum';
 
 export interface DbStructureDomainsMap {
   [K: string]: ColumnType;

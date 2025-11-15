@@ -501,7 +501,11 @@ describe('createFrom functions', () => {
             RETURNING "user"."id"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
-          (VALUES ((SELECT "q"."id" FROM "q"), 'text 1'), ((SELECT "q2"."id" FROM "q2"), 'text 2')) v("author_id", "text")
+          SELECT
+            "chat".*,
+            v."author_id"::int4,
+            v."text"::text
+          FROM "chat", (VALUES ((SELECT "q"."id" FROM "q"), 'text 1'), ((SELECT "q2"."id" FROM "q2"), 'text 2')) v("author_id", "text")
           RETURNING ${messageColumnsSql}
         `,
         [1, 'name', 'password', 'name', 'password'],
@@ -529,15 +533,15 @@ describe('createFrom functions', () => {
       expectSql(
         q.toSQL(),
         `
-          WITH "user" AS (
-            INSERT INTO "user"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "user"."id", "user"."name"
-          ), "chat" AS (
+          WITH "chat" AS (
             SELECT "chat"."id_of_chat" "chatId"
             FROM "chat"
             WHERE "chat"."id_of_chat" = $3
             LIMIT 1
+          ), "user" AS (
+            INSERT INTO "user"("name", "password")
+            VALUES ($1, $2)
+            RETURNING "user"."id", "user"."name"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
           SELECT "chat".*, v."author_id"::int4, v."text"::text

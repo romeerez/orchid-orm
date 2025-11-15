@@ -45,24 +45,6 @@ const queryKeysOfNotSimpleQuery: (keyof QueryData)[] = [
   'for',
 ];
 
-export interface WithItem {
-  // name
-  n: string;
-  // options
-  o?: WithOptions;
-  // query
-  q?: Query;
-  // sql
-  s?: Expression;
-}
-
-export interface WithOptions {
-  columns?: string[];
-  recursive?: true;
-  materialized?: true;
-  notMaterialized?: true;
-}
-
 export type SelectItem = string | SelectAs | Expression | undefined;
 
 export interface SelectAs {

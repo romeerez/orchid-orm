@@ -12,7 +12,7 @@ import { _clone } from '../../query/queryUtils';
 import { queryFrom } from '../from';
 import { _queryUnion } from '../union';
 import { QueryAfterHook } from '../../sql';
-import { UpsertResult, UpsertThis } from 'pqb';
+import { UpsertResult, UpsertThis } from './upsert';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -71,17 +71,12 @@ export function orCreate<T extends PickQueryMetaResultReturnType>(
       const c = q.create(data as CreateData<Query>);
       c.q.select = q.q.select;
 
-      let q2 = q.qb.with('f', q).with('c', c);
-
+      let q2 = _clone(q.qb);
       q2.q.returnsOne = true;
       queryFrom(q2, 'f');
-      q2 = _queryUnion(
-        q2,
-        [q.qb.from('c' as never)],
-        'UNION ALL',
-        true,
-        true,
-      ) as never;
+      q2 = _queryUnion(q2, [q.qb.from('c' as never)], 'UNION ALL', true, true)
+        .with('f', q)
+        .with('c', c) as never;
 
       let afterHooks: QueryAfterHook[] | undefined;
       let afterCommitHooks: QueryAfterHook[] | undefined;

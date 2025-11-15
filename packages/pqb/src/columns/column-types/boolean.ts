@@ -1,11 +1,12 @@
-import { ColumnType } from './columnType';
-import { columnCode } from './code';
-import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from '../core';
-import { Operators, OperatorsBoolean } from './operators';
+import { ColumnType } from '../columnType';
+import { columnCode } from '../code';
+import { ColumnSchemaConfig, ColumnToCodeCtx } from '../../core';
+import { Code } from '../code';
+import { Operators, OperatorsBoolean } from '../operators';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
-} from './defaultSchemaConfig';
+} from '../defaultSchemaConfig';
 
 // 1 byte, true or false
 export class BooleanColumn<

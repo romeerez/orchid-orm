@@ -7,14 +7,14 @@ import {
   userColumnsSql,
   userData,
   UserRecord,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import { expectSql, assertType, sql, useTestDatabase } from 'test-utils';
-import { WithOptions } from '../sql';
+import { CteOptions } from './cte.sql';
 
 const makeOptions = (
   select: string,
   columns?: string[],
-): { options: WithOptions; sql: string }[] => {
+): { options: CteOptions; sql: string }[] => {
   const sqlColumns = columns
     ? `(${columns.map((column) => `"${column}"`).join(', ')})`
     : '';
@@ -42,7 +42,7 @@ const makeOptions = (
 
 const selectedOptions = makeOptions(userColumnsSql);
 
-describe('with', () => {
+describe('cte', () => {
   useTestDatabase();
 
   it('should use a query, handle selection, parse values', async () => {

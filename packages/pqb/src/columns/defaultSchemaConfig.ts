@@ -11,10 +11,14 @@ import {
   PickColumnBaseData,
   setColumnData,
 } from '../core';
-import { DateColumn, TimestampColumn, TimestampTZColumn } from './dateTime';
-import { EnumColumn } from './enum';
-import { ArrayColumn, ArrayColumnValue } from './array';
-import { JSONColumn } from './json';
+import {
+  DateColumn,
+  TimestampColumn,
+  TimestampTZColumn,
+} from './column-types/dateTime';
+import { EnumColumn } from './column-types/enum';
+import { ArrayColumn, ArrayColumnValue } from './column-types/array';
+import { JSONColumn } from './column-types/json';
 import {
   BigIntColumn,
   BigSerialColumn,
@@ -25,14 +29,14 @@ import {
   SerialColumn,
   SmallIntColumn,
   SmallSerialColumn,
-} from './number';
+} from './column-types/number';
 import {
   CitextColumn,
   MoneyColumn,
   StringColumn,
   TextColumn,
   VarCharColumn,
-} from './string';
+} from './column-types/string';
 import { ColumnType } from './columnType';
 import { setColumnParse, setColumnParseNull } from './column.utils';
 

@@ -10,12 +10,10 @@ import {
   TableData,
   pushTableDataCode,
   excludeInnerToCode,
-} from 'pqb';
-import {
-  addCode,
-  backtickQuote,
-  Code,
   codeToString,
+  addCode,
+  Code,
+  backtickQuote,
   ColumnSchemaConfig,
   ColumnToCodeCtx,
   isRawSQL,

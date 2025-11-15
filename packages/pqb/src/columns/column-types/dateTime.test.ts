@@ -1,4 +1,4 @@
-import { userData } from '../test-utils/test-utils';
+import { userData } from '../../test-utils/test-utils';
 import { TimestampColumn, TimestampTZColumn } from './dateTime';
 import {
   assertType,
@@ -9,7 +9,7 @@ import {
   testSchemaConfig,
   useTestDatabase,
 } from 'test-utils';
-import { ColumnToCodeCtx, ColumnTypeBase, TimeInterval } from '../core';
+import { ColumnToCodeCtx, ColumnTypeBase, TimeInterval } from '../../core';
 import { z } from 'zod/v4';
 
 const ctx: ColumnToCodeCtx = {

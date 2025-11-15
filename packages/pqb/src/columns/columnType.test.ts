@@ -7,7 +7,8 @@ import {
 } from '../test-utils/test-utils';
 import { createDbWithAdapter } from '../query/db';
 import { columnCode } from './code';
-import { Code, ColumnSchemaConfig, ColumnToCodeCtx } from '../core';
+import { ColumnSchemaConfig, ColumnToCodeCtx } from '../core';
+import { Code } from './code';
 import {
   assertType,
   expectSql,

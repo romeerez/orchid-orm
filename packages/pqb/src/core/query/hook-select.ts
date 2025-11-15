@@ -15,6 +15,7 @@ export interface CteTableHooks {
 }
 
 export interface CteTableHook {
+  table: string;
   shape: ColumnsShapeBase;
   tableHook: TableHook;
 }

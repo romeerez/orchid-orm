@@ -36,8 +36,6 @@ import {
 import { isSelectingCount } from '../aggregate';
 import { resolveSubQueryCallbackV2 } from '../../common/utils';
 import { _clone } from '../../query/queryUtils';
-import { Db } from '../../query';
-import { moveQueryValueToWith } from '../with';
 import {
   CreateFromMethodNames,
   CreateManyFromMethodNames,
@@ -324,17 +322,6 @@ const processCreateItem = (
         q as unknown as ToSQLQuery,
         value as (q: ToSQLQuery) => ToSQLQuery,
       );
-
-      if (value && typeof value === 'object' && value instanceof Db) {
-        moveQueryValueToWith(
-          q as Query,
-          ((q as Query).q.insertWith ??= {}),
-          value,
-          rowIndex,
-          item,
-          key,
-        );
-      }
     }
 
     if (

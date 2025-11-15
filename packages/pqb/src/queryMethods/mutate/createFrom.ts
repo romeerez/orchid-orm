@@ -107,8 +107,6 @@ const insertFrom = (
       ? handleManyData(query, data, ctx)
       : handleOneData(query, data, ctx));
 
-  // query.q.insertWith ??= { withKey: { n: 'as', q: from } };
-
   return insert(
     query,
     {

@@ -1,5 +1,4 @@
 import {
-  Code,
   ColumnDataBase,
   ColumnSchemaConfig,
   ColumnToCodeCtx,
@@ -7,6 +6,7 @@ import {
   setColumnData,
   singleQuote,
 } from '../core';
+import { Code } from './code';
 import { ColumnType } from './columnType';
 import { columnCode } from './code';
 import { Operators, OperatorsAny } from './operators';

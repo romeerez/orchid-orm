@@ -1,37 +1,31 @@
-import { WithItem, WithOptions } from '../sql';
-import { PickQueryQ, Query } from '../query/query';
-import {
-  _clone,
-  saveAliasedShape,
-  setQueryObjectValueImmutable,
-} from '../query/queryUtils';
+import { Query } from '../query';
+import { _clone, setQueryObjectValueImmutable } from '../queryUtils';
 import {
   Expression,
   ColumnsShapeBase,
   EmptyObject,
   PickQueryResult,
   QueryColumns,
-  RecordUnknown,
   pushOrNewArrayToObjectImmutable,
   pushQueryValueImmutable,
   PickQueryMetaWithDataColumnTypes,
   PickQueryWithDataColumnTypes,
-  IsQuery,
-} from '../core';
-import { SqlMethod } from './sql';
-import { getShapeFromSelect } from './select/select';
-import { _queryUnion } from './union';
+} from '../../core';
+import { SqlMethod } from '../../queryMethods/sql';
+import { getShapeFromSelect } from '../../queryMethods/select/select';
+import { _queryUnion } from '../../queryMethods/union';
+import { CteItem, CteOptions } from './cte.sql';
 
 // `with` method options
 // - `columns`: true to get all columns from the query, or array of column names
 // - `materialized`, `notMaterialized`: adds corresponding SQL keyword
-export interface WithArgsOptions {
+export interface CteArgsOptions {
   columns?: string[] | boolean;
   materialized?: true;
   notMaterialized?: true;
 }
 
-export interface WithRecursiveOptions extends WithArgsOptions {
+export interface CteRecursiveOptions extends CteArgsOptions {
   union?:
     | 'UNION'
     | 'UNION ALL'
@@ -41,7 +35,7 @@ export interface WithRecursiveOptions extends WithArgsOptions {
     | 'EXCEPT ALL';
 }
 
-export interface WithQueryBuilder<T extends PickQueryWithDataColumnTypes>
+export interface CteQueryBuilder<T extends PickQueryWithDataColumnTypes>
   extends Query {
   sql: SqlMethod<T['columnTypes']>['sql'];
   relations: EmptyObject;
@@ -49,7 +43,7 @@ export interface WithQueryBuilder<T extends PickQueryWithDataColumnTypes>
 }
 
 // Adds a `withData` entry to a query
-export type WithResult<
+export type CteResult<
   T extends PickQueryMetaWithDataColumnTypes,
   Name extends string,
   Q extends PickQueryResult,
@@ -70,7 +64,7 @@ export type WithResult<
     : T[K];
 };
 
-export type WithSqlResult<
+export type CteSqlResult<
   T extends PickQueryWithDataColumnTypes,
   Name extends string,
   Shape extends QueryColumns,
@@ -89,69 +83,10 @@ export type WithSqlResult<
     : T[K];
 };
 
-export const _addWith = (
-  query: IsQuery,
-  withStore: object,
-  item: WithItem,
-  key: string | number = 'with',
-) => {
-  // WITH clause containing a data-modifying statement must be at the top level
-  if (item.q) {
-    item.q.q.with?.forEach((item, i, arr) => {
-      if (item?.q?.q.type) {
-        pushOrNewArrayToObjectImmutable(withStore, key, item);
-        arr[i] = undefined;
-      }
-    });
+const _addCte = (query: Query, item: CteItem) =>
+  pushOrNewArrayToObjectImmutable(query.q, 'with', item);
 
-    if (item.q.q.insertWith) {
-      const values = Object.values(item.q.q.insertWith).flat();
-      item.q.q.insertWith = undefined;
-      const { q } = query as unknown as PickQueryQ;
-      q.with = q.with ? [...q.with, ...values] : values;
-    }
-  }
-
-  pushOrNewArrayToObjectImmutable(withStore, key, item);
-};
-
-export const moveQueryValueToWith = (
-  q: Query,
-  withStore: object,
-  value: Query,
-  withKey: string | number,
-  set?: RecordUnknown,
-  key?: string,
-): string | undefined => {
-  // if it is not a select query,
-  // move it into `WITH` statement and select from it with a raw SQL
-  if (value.q.type) {
-    const as = saveAliasedShape(q as Query, 'q', 'withShapes');
-
-    _addWith(
-      q,
-      withStore,
-      {
-        n: as,
-        q: value,
-      },
-      withKey,
-    );
-
-    if (set) {
-      const sub = _clone(value.baseQuery);
-      sub.q.select = value.q.select;
-      sub.q.as = sub.q.from = as;
-      set[key as string] = sub;
-    }
-
-    return as;
-  }
-
-  return;
-};
-
-export class WithMethods {
+export class CteQuery {
   /**
    * Use `with` to add a Common Table Expression (CTE) to the query.
    *
@@ -261,8 +196,8 @@ export class WithMethods {
   with<T extends PickQueryMetaWithDataColumnTypes, Name extends string, Q>(
     this: T,
     name: Name,
-    query: Q | ((q: WithQueryBuilder<T>) => Q),
-  ): WithResult<T, Name, Q extends PickQueryResult ? Q : never>;
+    query: Q | ((q: CteQueryBuilder<T>) => Q),
+  ): CteResult<T, Name, Q extends PickQueryResult ? Q : never>;
   with<
     T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
@@ -270,28 +205,24 @@ export class WithMethods {
   >(
     this: T,
     name: Name,
-    options: WithArgsOptions,
-    query: Q | ((q: WithQueryBuilder<T>) => Q),
-  ): WithResult<T, Name, Q>;
+    options: CteArgsOptions,
+    query: Q | ((q: CteQueryBuilder<T>) => Q),
+  ): CteResult<T, Name, Q>;
   with(
     name: string,
     second:
-      | WithArgsOptions
+      | CteArgsOptions
       | PickQueryResult
-      | ((
-          q: WithQueryBuilder<PickQueryWithDataColumnTypes>,
-        ) => PickQueryResult),
+      | ((q: CteQueryBuilder<PickQueryWithDataColumnTypes>) => PickQueryResult),
     third?:
       | PickQueryResult
-      | ((
-          q: WithQueryBuilder<PickQueryWithDataColumnTypes>,
-        ) => PickQueryResult),
+      | ((q: CteQueryBuilder<PickQueryWithDataColumnTypes>) => PickQueryResult),
   ) {
     const q = _clone(this);
 
     // eslint-disable-next-line prefer-const
     let [options, queryArg] = third
-      ? [second as WithArgsOptions, third]
+      ? [second as CteArgsOptions, third]
       : [undefined, second];
 
     let query: Query;
@@ -310,7 +241,7 @@ export class WithMethods {
       };
     }
 
-    _addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
+    _addCte(q, { n: name, o: options as CteOptions, q: query });
 
     const shape = getShapeFromSelect(query, true);
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
@@ -406,11 +337,11 @@ export class WithMethods {
     T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
     Q extends PickQueryResult,
-    Result = WithResult<T, Name, Q>,
+    Result = CteResult<T, Name, Q>,
   >(
     this: T,
     name: Name,
-    base: Q | ((qb: WithQueryBuilder<T>) => Q),
+    base: Q | ((qb: CteQueryBuilder<T>) => Q),
     recursive: (qb: {
       [K in keyof Result]: K extends 'result' ? Q['result'] : Result[K];
     }) => PickQueryResult,
@@ -419,12 +350,12 @@ export class WithMethods {
     T extends PickQueryMetaWithDataColumnTypes,
     Name extends string,
     Q extends PickQueryResult,
-    Result = WithResult<T, Name, Q>,
+    Result = CteResult<T, Name, Q>,
   >(
     this: T,
     name: Name,
-    options: WithRecursiveOptions,
-    base: Q | ((qb: WithQueryBuilder<T>) => Q),
+    options: CteRecursiveOptions,
+    base: Q | ((qb: CteQueryBuilder<T>) => Q),
     recursive: (qb: {
       [K in keyof Result]: K extends 'result' ? Q['result'] : Result[K];
     }) => PickQueryResult,
@@ -436,7 +367,7 @@ export class WithMethods {
     let [options, baseFn, recursiveFn] = (
       args.length === 2 ? [{}, args[0], args[1]] : args
     ) as [
-      options: WithRecursiveOptions,
+      options: CteRecursiveOptions,
       base: Query | ((q: unknown) => Query),
       recursive: (q: unknown) => Query,
     ];
@@ -451,7 +382,7 @@ export class WithMethods {
 
     query = _queryUnion(query, [recursive], options.union ?? 'UNION ALL');
 
-    (options as WithOptions).recursive = true;
+    (options as CteOptions).recursive = true;
 
     if (options.columns === true) {
       options = {
@@ -460,7 +391,7 @@ export class WithMethods {
       };
     }
 
-    _addWith(q, q.q, { n: name, o: options as WithOptions, q: query });
+    _addCte(q, { n: name, o: options as CteOptions, q: query });
 
     return setQueryObjectValueImmutable(q, 'withShapes', name, withConfig);
   }
@@ -525,10 +456,10 @@ export class WithMethods {
   >(
     this: T,
     name: Name,
-    options: WithOptions,
+    options: CteOptions,
     shape: (t: T['columnTypes']) => Shape,
     expr: (q: T) => Expression,
-  ): WithSqlResult<T, Name, Shape>;
+  ): CteSqlResult<T, Name, Shape>;
   withSql<
     T extends PickQueryWithDataColumnTypes,
     Name extends string,
@@ -538,7 +469,7 @@ export class WithMethods {
     name: Name,
     shape: (t: T['columnTypes']) => Shape,
     expr: (q: T) => Expression,
-  ): WithSqlResult<T, Name, Shape>;
+  ): CteSqlResult<T, Name, Shape>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   withSql(this: PickQueryWithDataColumnTypes, name: string, ...args: any[]) {
     const q = _clone(this);

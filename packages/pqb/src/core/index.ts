@@ -90,16 +90,9 @@ export type {
 } from './query/query';
 export type { QueryDataBase } from './query/query-data';
 export {
-  addCode,
-  arrayDataToCode,
-  codeToString,
-  columnDefaultArgumentToCode,
-  columnErrorMessagesToCode,
   ColumnTypeBase,
-  dateDataToCode,
   getDefaultLanguage,
   makeColumnNullable,
-  numberDataToCode,
   pushColumnData,
   setColumnData,
   setCurrentColumnName,
@@ -107,7 +100,6 @@ export {
   setDefaultLanguage,
   setDefaultNowFn,
   snakeCaseKey,
-  stringDataToCode,
   timestampHelpers,
   consumeColumnName,
 } from './columns';
@@ -115,8 +107,6 @@ export type {
   ArrayMethodsData,
   AsTypeArg,
   BaseNumberData,
-  Code,
-  Codes,
   ColumnDataCheckBase,
   ColumnNameOfTable,
   ColumnSchemaConfig,

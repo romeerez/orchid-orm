@@ -428,6 +428,16 @@ export const getFreeAlias = (
   return as;
 };
 
+export const setFreeAlias = (
+  obj: RecordUnknown,
+  as: string,
+  value: unknown,
+): string => {
+  const key = getFreeAlias(obj, as);
+  obj[key] = value;
+  return key;
+};
+
 export const getFreeSetAlias = (
   set: Set<string>,
   as: string,

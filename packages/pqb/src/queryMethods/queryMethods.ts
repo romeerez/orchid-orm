@@ -35,7 +35,7 @@ import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select/select';
 import { FromMethods, FromQuerySelf } from './from';
 import { Join, JoinResultRequireMain, OnMethods } from './join/join';
-import { WithMethods } from './with';
+import { CteQuery } from '../query/cte/cte.query';
 import { Union } from './union';
 import { JsonMethods } from './json';
 import { QueryCreate } from './mutate/create';
@@ -363,7 +363,7 @@ export interface QueryMethods<ColumnTypes>
     Select,
     FromMethods,
     Join,
-    WithMethods,
+    CteQuery,
     Union,
     JsonMethods,
     QueryCreate,
@@ -1318,7 +1318,7 @@ applyMixins(QueryMethods, [
   FromMethods,
   Join,
   OnMethods,
-  WithMethods,
+  CteQuery,
   Union,
   JsonMethods,
   QueryCreate,

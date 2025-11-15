@@ -12,7 +12,7 @@ import {
   ColumnsShapeToPluck,
   UnknownColumn,
 } from '../../columns';
-import { JSONTextColumn } from '../../columns/json';
+import { JSONTextColumn } from '../../columns/column-types/json';
 import {
   _clone,
   getFullColumnTable,

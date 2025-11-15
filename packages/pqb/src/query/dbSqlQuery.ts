@@ -8,12 +8,10 @@ import {
   SQLQueryArgs,
   TemplateLiteralArgs,
 } from '../core';
-import {
-  QueryBuilder,
-  QueryData,
-  QueryInternal,
-  templateLiteralToSQL,
-} from 'pqb';
+import { QueryBuilder } from './db';
+import { QueryData } from '../sql/data';
+import { QueryInternal } from './query';
+import { templateLiteralToSQL } from '../sql/rawSql';
 
 export interface DbSqlQuery {
   <T extends QueryResultRow = QueryResultRow>(...args: SQLQueryArgs): Promise<
@@ -119,6 +117,7 @@ export const performQuery = async <Result = QueryResult>(
         q: q.q,
         sql: [],
         values,
+        selectedCount: 0,
       }),
       values,
     };

@@ -85,6 +85,7 @@ export interface QueryInternal<
   nowSQL?: string;
   // for select, where, join callbacks: memoize a query extended with relations, so query.relName is a relation query
   callbackArg?: Query;
+  selectAllCount: number;
 }
 
 export type SelectableFromShape<

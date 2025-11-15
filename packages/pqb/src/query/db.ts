@@ -308,6 +308,7 @@ export class Db<
     let prepareSelectAll = false;
     let hasHookSetters: true | undefined;
     let runtimeDefaultColumns: string[] | undefined;
+    let selectAllCount = 0;
     const { snakeCase } = options;
     for (const key in shape) {
       const column = shape[key] as unknown as ColumnTypeBase;
@@ -330,6 +331,8 @@ export class Db<
 
       if (column.data.explicitSelect) {
         prepareSelectAll = true;
+      } else {
+        selectAllCount++;
       }
 
       const { modifyQuery: mq } = column.data;
@@ -370,6 +373,7 @@ export class Db<
       comment: options.comment,
       nowSQL: options.nowSQL,
       tableData,
+      selectAllCount,
     } as QueryInternal;
 
     this.q = {

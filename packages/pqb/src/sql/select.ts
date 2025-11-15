@@ -112,6 +112,8 @@ export const selectToSql = (
 
   const list: string[] = [];
 
+  ctx.selectedCount = 0;
+
   if (query.select) {
     for (const item of query.select) {
       if (typeof item === 'string') {
@@ -126,8 +128,10 @@ export const selectToSql = (
             }
           }
 
-          sql = selectAllSql(query, quotedAs, jsonList);
+          sql = internalSelectAllSql(ctx, table, query, quotedAs, jsonList);
         } else {
+          ctx.selectedCount++;
+
           const index = item.indexOf('.');
           if (index !== -1) {
             const tableName = item.slice(0, index);
@@ -175,6 +179,8 @@ export const selectToSql = (
             [K: string]: SelectableOrExpression | ToSQLQuery;
           };
           for (const as in obj) {
+            ctx.selectedCount++;
+
             if (hookSelect) {
               (selected ??= {})[as] = true;
             }
@@ -221,6 +227,7 @@ export const selectToSql = (
           }
         } else {
           // selecting a single value from expression
+          ctx.selectedCount++;
           const sql = item.toSQL(ctx, quotedAs);
           list.push(ctx.aliasValue ? `${sql} ${quotedAs}` : sql);
           aliases?.push('');
@@ -285,29 +292,31 @@ export const selectToSql = (
       }
 
       if (jsonList) jsonList[name] = col;
+
+      ctx.selectedCount++;
       list.push(sql);
     }
   }
 
   if (!isSubSql && ctx.cteHooks?.hasSelect) {
-    const count = (ctx.selectedCount =
-      list.length || query.selectAllColumns?.length || 0);
-
-    return count
+    return ctx.selectedCount
       ? (list.length
           ? list.join(', ')
-          : selectAllSql(query, quotedAs, jsonList)) + ', NULL'
-      : '';
+          : internalSelectAllSql(ctx, table, query, quotedAs, jsonList)) +
+          ', NULL'
+      : 'NULL';
   }
 
   return list.length
     ? list.join(', ')
     : query.select
     ? ''
-    : selectAllSql(query, quotedAs, jsonList);
+    : internalSelectAllSql(ctx, table, query, quotedAs, jsonList);
 };
 
-export const selectAllSql = (
+const internalSelectAllSql = (
+  ctx: ToSQLCtx,
+  table: ToSQLQuery,
   query: {
     updateFrom?: unknown;
     join?: QueryData['join'];
@@ -322,6 +331,21 @@ export const selectAllSql = (
     Object.assign(jsonList, query.selectAllShape as ColumnTypesBase);
   }
 
+  ctx.selectedCount += table.internal.selectAllCount;
+
+  return selectAllSql(query, quotedAs);
+};
+
+export const selectAllSql = (
+  query: {
+    updateFrom?: unknown;
+    join?: QueryData['join'];
+    selectAllColumns?: string[];
+    selectAllShape?: RecordUnknown;
+    shape?: QueryColumns;
+  },
+  quotedAs?: string,
+) => {
   return query.join?.length || query.updateFrom
     ? query.selectAllColumns?.map((item) => `${quotedAs}.${item}`).join(', ') ||
         `${quotedAs}.*`

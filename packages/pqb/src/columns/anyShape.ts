@@ -1,5 +1,5 @@
 import { emptyObject, QueryColumnsInit } from '../core';
-import { UnknownColumn } from './unknown';
+import { UnknownColumn } from './column-types/unknown';
 
 export const anyShape = new Proxy(emptyObject, {
   get() {

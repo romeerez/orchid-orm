@@ -12,7 +12,6 @@ import {
   UnionItem,
   WhereItem,
   WindowItem,
-  WithItem,
 } from './types';
 import { SelectableOrExpression } from '../common/utils';
 import {
@@ -43,6 +42,7 @@ import {
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
 import { ColumnsShape } from '../columns';
+import { CteItem } from '../query/cte/cte.sql';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: ColumnsShapeBase;
@@ -100,7 +100,7 @@ export interface HandleResult {
   ): unknown;
 }
 
-export type WithItems = (WithItem | undefined)[];
+export type WithItems = CteItem[];
 
 export interface QueryData extends QueryDataBase {
   type:
@@ -126,9 +126,6 @@ export interface QueryData extends QueryDataBase {
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItems;
-  // Inserting lots of records may be automatically batched.
-  // For this case, the insert logic handles `with` statements on its own.
-  insertWith?: { [rowIndex: number]: WithItems };
   withShapes?: WithConfigs;
   joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;

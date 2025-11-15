@@ -7,7 +7,6 @@ import { windowToSql } from './window';
 import { pushJoinSql } from './join';
 import { pushWhereStatementSql } from './where';
 import { pushHavingSql } from './having';
-import { pushWithSql } from './with';
 import { pushFromAndAs } from './fromAndAs';
 import { makeInsertSql } from './insert';
 import { pushUpdateSql } from './update';
@@ -29,6 +28,8 @@ import {
 } from '../core';
 import { QueryBuilder } from '../query/db';
 import { getSqlText } from './utils';
+import { addWithToSql, ctesToSql, TopCTE } from '../query/cte/cte.sql';
+import { getQueryAs } from '../common/utils';
 
 interface ToSqlOptionsInternal extends ToSQLOptions, HasCteHooks {
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
@@ -36,6 +37,7 @@ interface ToSqlOptionsInternal extends ToSQLOptions, HasCteHooks {
   // for insert batching logic: skip a batch check when is inside a WITH subquery
   skipBatchCheck?: true;
   selectedCount?: number;
+  topCTE?: TopCTE;
 }
 
 export interface ToSQLCtx extends ToSqlOptionsInternal, ToSQLOptions {
@@ -44,6 +46,9 @@ export interface ToSQLCtx extends ToSqlOptionsInternal, ToSQLOptions {
   sql: string[];
   values: unknown[];
   delayedRelationSelect?: DelayedRelationSelect;
+  selectedCount: number;
+  topCTE?: TopCTE;
+  cteSqls?: string[];
 }
 
 export interface ToSQLOptions {
@@ -67,16 +72,21 @@ export interface ToSQLQuery {
   shape: Query['shape'];
 }
 
-export const toSubSqlText = (
+export const toCteSubSqlText = (
+  options: ToSqlOptionsInternal,
   q: ToSQLQuery,
   cteName: string,
+): string => getSqlText(subToSql(options, q, cteName));
+
+export const toSubSqlText = (
   options: ToSqlOptionsInternal,
-): string => getSqlText(subToSql(q, cteName, options));
+  q: ToSQLQuery,
+): string => getSqlText(subToSql(options, q, undefined));
 
 const subToSql = (
-  q: ToSQLQuery,
-  cteName: string,
   options: ToSqlOptionsInternal,
+  q: ToSQLQuery,
+  cteName?: string,
 ): Sql => {
   const sql = toSQL(q, options, true);
   if (
@@ -92,10 +102,12 @@ const subToSql = (
     }
 
     const item: CteTableHook = {
+      table: q.table!,
       shape,
       tableHook: sql.tableHook,
     };
 
+    cteName ??= getQueryAs(q);
     if (options.cteHooks) {
       if (sql.tableHook.select) options.cteHooks.hasSelect = true;
       options.cteHooks.tableHooks[cteName] ??= item;
@@ -126,11 +138,11 @@ export const toSQL = (
     skipBatchCheck: options?.skipBatchCheck,
     hasNonSelect: options?.hasNonSelect,
     cteHooks: options?.cteHooks,
+    selectedCount: 0,
+    topCTE: options?.topCTE,
   };
 
-  if (query.with) {
-    pushWithSql(ctx, query.with);
-  }
+  const cteSqls = query.with && ctesToSql(ctx, query.with);
 
   let result: Sql;
 
@@ -166,7 +178,7 @@ export const toSQL = (
       (query.as || table.table) && `"${query.as || table.table}"`;
 
     if (query.union) {
-      const firstSql = toSQL(query.union.b, ctx);
+      const firstSql = subToSql(ctx, query.union.b);
       ctx.delayedRelationSelect = firstSql.delayedRelationSelect;
       const s = getSqlText(firstSql);
       sql.push(query.union.p ? s : `(${s})`);
@@ -174,7 +186,7 @@ export const toSQL = (
       for (const u of query.union.u) {
         const s = isExpression(u.a)
           ? u.a.toSQL(ctx, quotedAs)
-          : getSqlText(toSQL(u.a, ctx));
+          : toSubSqlText(ctx, u.a);
         sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
       }
     } else {
@@ -305,6 +317,12 @@ export const toSQL = (
         )
         .join(', ')})`;
     }
+  }
+
+  if ('text' in result) addWithToSql(ctx, result, cteSqls, isSubSql);
+
+  if (options && ctx.topCTE) {
+    options.topCTE = ctx.topCTE;
   }
 
   return result;

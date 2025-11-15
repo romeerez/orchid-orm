@@ -1,4 +1,3 @@
-export * from './code';
 export * from './columnType';
 export * from './operators';
 export * from './columnDataTypes';

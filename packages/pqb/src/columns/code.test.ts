@@ -1,6 +1,11 @@
-import { columnsShapeToCode } from './code';
-import { codeToString, ColumnToCodeCtx } from '../core';
+import {
+  codeToString,
+  columnDefaultArgumentToCode,
+  columnsShapeToCode,
+} from './code';
+import { ColumnToCodeCtx } from '../core';
 import { testZodColumnTypes as t } from 'test-utils';
+import { RawSQL } from '../sql/rawSql';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',
@@ -9,6 +14,33 @@ const ctx: ColumnToCodeCtx = {
 };
 
 describe('code', () => {
+  describe('columnDefaultArgumentToCode', () => {
+    it('should handle string', () => {
+      expect(columnDefaultArgumentToCode('t', 'string')).toBe(`'string'`);
+    });
+
+    it('should JSON stringify other values', () => {
+      expect(columnDefaultArgumentToCode('t', [{ key: 'value' }])).toBe(
+        `[{"key":"value"}]`,
+      );
+    });
+
+    it('should handle raw SQL', () => {
+      expect(
+        columnDefaultArgumentToCode(
+          't',
+          new RawSQL('sql = $key', { key: 'value' }),
+        ),
+      ).toBe(`t.sql({ raw: 'sql = $key' }).values({"key":"value"})`);
+    });
+
+    it('should stringify function', () => {
+      expect(columnDefaultArgumentToCode('t', () => Math.random())).toBe(
+        `()=>Math.random()`,
+      );
+    });
+  });
+
   describe('codeToString', () => {
     const code = ['a', ['b', ['c', 'd'], 'e'], 'f'];
 

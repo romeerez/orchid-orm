@@ -343,11 +343,26 @@ const then = async (
     let cteAfterHooks: (() => unknown)[] | undefined;
     let cteAfterCommitHooks: (() => unknown)[] | undefined;
     if (localSql.cteHooks) {
+      const addedAfterHooks = new Set<(data: unknown, query: any) => unknown>();
+      const addedAfterCommitHooks = new Set<
+        (data: unknown, query: any) => unknown
+      >();
+
+      const dataPerTable = new Map<string, unknown[]>();
+
       for (const cteName in localSql.cteHooks.tableHooks) {
         const hook = localSql.cteHooks.tableHooks[cteName];
 
         const data = cteData?.[cteName];
+        let tableData = dataPerTable.get(hook.table);
         if (data) {
+          if (tableData) {
+            tableData.push(...data);
+          } else {
+            tableData = [...data];
+            dataPerTable.set(hook.table, tableData);
+          }
+
           let hasParsers: boolean | undefined;
           const parsers: ColumnsParsers = {};
           for (const key in hook.shape) {
@@ -362,22 +377,30 @@ const then = async (
               parseRecord(parsers, row);
             }
           }
+        } else {
+          tableData = [];
         }
 
         if (hook.tableHook.after) {
-          (cteAfterHooks ??= []).push(
-            ...hook.tableHook.after.map(
-              (fn) => () => fn(cteData?.[cteName], q),
-            ),
-          );
+          const arr = (cteAfterHooks ??= []);
+          for (const fn of hook.tableHook.after) {
+            const hookData = addedAfterHooks.has(fn);
+            if (!hookData) {
+              addedAfterHooks.add(fn);
+              arr.push(() => fn(tableData, q));
+            }
+          }
         }
 
         if (hook.tableHook.afterCommit) {
-          (cteAfterCommitHooks ??= []).push(
-            ...hook.tableHook.afterCommit.map(
-              (fn) => () => fn(cteData?.[cteName], q),
-            ),
-          );
+          const arr = (cteAfterCommitHooks ??= []);
+          for (const fn of hook.tableHook.afterCommit) {
+            const hookData = addedAfterCommitHooks.has(fn);
+            if (!hookData) {
+              addedAfterCommitHooks.add(fn);
+              arr.push(() => fn(tableData, q));
+            }
+          }
         }
       }
     }

@@ -4,13 +4,11 @@ import {
   ColumnType,
   GeneratedColumn,
   PickColumnData,
-} from './columnType';
+} from '../columnType';
 import { NumberColumnData } from './number';
 import {
-  Code,
   joinTruthy,
   StringTypeData,
-  stringDataToCode,
   PrimaryKeyColumn,
   getDefaultLanguage,
   RawSQLBase,
@@ -22,21 +20,22 @@ import {
   ColumnToCodeCtx,
   quoteObjectKey,
   RecordString,
-} from '../core';
-import { columnCode } from './code';
-import { RawSQL } from '../sql/rawSql';
-import { SearchWeightRecord } from '../sql';
+} from '../../core';
+import { Code, stringDataToCode } from '../code';
+import { columnCode } from '../code';
+import { RawSQL } from '../../sql/rawSql';
+import { SearchWeightRecord } from '../../sql';
 import {
   Operators,
   OperatorsNumber,
   OperatorsOrdinalText,
   OperatorsText,
-} from './operators';
-import { setColumnDefaultParse } from './column.utils';
+} from '../operators';
+import { setColumnDefaultParse } from '../column.utils';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
-} from './defaultSchemaConfig';
+} from '../defaultSchemaConfig';
 
 export type TextColumnData = StringTypeData;
 

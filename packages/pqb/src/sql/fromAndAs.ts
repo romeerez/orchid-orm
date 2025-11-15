@@ -124,7 +124,7 @@ const fromToSql = (
   } else {
     if (data.with) {
       for (const w of data.with) {
-        if (w?.n === from && w.q?.q.inCTE) {
+        if (w.n === from && w.q?.q.inCTE) {
           ctx.delayedRelationSelect = w.q.q.inCTE.delayedRelationSelect;
           break;
         }
