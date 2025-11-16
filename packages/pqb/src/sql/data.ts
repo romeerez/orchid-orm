@@ -19,7 +19,6 @@ import {
   BatchParsers,
   ColumnsParsers,
   ColumnsShapeBase,
-  DelayedRelationSelect,
   Expression,
   ExpressionChain,
   HookSelect,
@@ -105,6 +104,8 @@ export type WithItems = CteItem[];
 export interface QueryData extends QueryDataBase {
   type:
     | undefined
+    // the same as undefined, used only in SQL composer to override default value
+    | null
     | 'upsert'
     | 'insert'
     | 'update'
@@ -231,16 +232,6 @@ export interface QueryData extends QueryDataBase {
 
   chain?: ExpressionChain;
 
-  inCTE?: {
-    selectNum: boolean;
-    returning?: {
-      select?: string;
-      hookSelect?: HookSelect;
-    };
-    targetHookSelect: HookSelect;
-    delayedRelationSelect: DelayedRelationSelect;
-  };
-
   // It is used by `joinQueryChainHOF` to customize the outer query of a chained relation.
   outerQuery?: Query;
 
@@ -270,6 +261,13 @@ export interface QueryData extends QueryDataBase {
     tableNames?: string[] | Expression;
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
+
+  /** upsert **/
+
+  // upsert does 2 queries: simple find/update, then a union of find/update and insert.
+  // this signals SQL code to run the second query for the same query object.
+  upsertUpdate?: boolean;
+  upsertSecond?: boolean;
 
   /** insert **/
 

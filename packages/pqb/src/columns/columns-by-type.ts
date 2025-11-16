@@ -1,6 +1,7 @@
-import { ColumnSchemaConfig, ColumnTypeBase } from '../core';
-import { makeColumnTypes } from './columnTypes';
-import { ColumnType } from './columnType';
+import { ColumnTypeBase } from '../core';
+import { makeColumnTypes } from './column-types';
+import { ColumnType } from './column-type';
+import { ColumnSchemaConfig } from './column-schema';
 
 export interface ColumnsByType {
   [K: string]: () => ColumnTypeBase;

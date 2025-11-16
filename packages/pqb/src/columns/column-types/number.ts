@@ -1,11 +1,9 @@
-import { ColumnData, ColumnType } from '../columnType';
+import { ColumnData, ColumnType } from '../column-type';
 import {
   Expression,
   joinTruthy,
-  BaseNumberData,
   setColumnData,
   ColumnWithDefault,
-  ColumnSchemaConfig,
   PickColumnBaseData,
   ColumnToCodeCtx,
 } from '../../core';
@@ -13,6 +11,8 @@ import { Code, numberDataToCode, addCode, Codes } from '../code';
 import { columnCode, identityToCode } from '../code';
 import { Operators, OperatorsNumber } from '../operators';
 import { TableData } from '../../tableData';
+import { BaseNumberData } from '../column-data-types';
+import { ColumnSchemaConfig } from '../column-schema';
 
 export interface NumberColumnData extends BaseNumberData, ColumnData {
   identity?: TableData.Identity;

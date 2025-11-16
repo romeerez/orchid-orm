@@ -20,7 +20,7 @@ import {
   setParserForSelectedString,
 } from './select/select';
 import { getQueryAs } from '../common/utils';
-import { SelectItemExpression } from '../common/selectItemExpression';
+import { SelectItemExpression } from '../common/select-item-expression';
 import { Operators, setQueryOperators } from '../columns/operators';
 import { getFullColumnTable } from '../query/queryUtils';
 

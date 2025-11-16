@@ -317,6 +317,13 @@ export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
   }) as never;
 };
 
+/**
+ * Mutative {@link Where.prototype.whereNotExists}
+ */
+export const _queryWhereNotExists = (q: Query, arg: unknown, args: unknown) => {
+  return _queryWhereNot(q, existsArgs(q, arg as never, args as never)) as never;
+};
+
 export const _queryWhereOneOf = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArgs<T>,
@@ -1174,10 +1181,7 @@ export class Where {
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);
-    return _queryWhereNot(
-      q,
-      existsArgs(q, arg as never, args as never),
-    ) as never;
+    return _queryWhereNotExists(q, arg, args);
   }
 
   /**

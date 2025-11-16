@@ -1,9 +1,10 @@
-import { ColumnSchemaConfig, ColumnToCodeCtx } from '../../core';
+import { ColumnToCodeCtx } from '../../core';
 import { Code } from '../code';
-import { ColumnType } from '../columnType';
+import { ColumnType } from '../column-type';
 import { Operators, OperatorsAny } from '../operators';
 import { columnCode } from '../code';
 import { setColumnDefaultParse } from '../column.utils';
+import { ColumnSchemaConfig } from '../column-schema';
 
 const defaultSrid = 4326;
 

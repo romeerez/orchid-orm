@@ -28,7 +28,7 @@ export class SelectItemExpression<
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     return typeof this.item === 'string'
       ? this.item === '*'
-        ? selectAllSql(this.q, quotedAs)
+        ? selectAllSql(this.q, quotedAs).join(', ')
         : columnToSql(ctx, this.q, this.q.shape, this.item, quotedAs, true)
       : this.item.toSQL(ctx, quotedAs);
   }

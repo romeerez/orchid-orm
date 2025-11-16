@@ -97,7 +97,6 @@ import {
   SetQueryTableAlias,
   Sql,
   SQLQueryArgs,
-  WithDataItems,
   OrchidOrmInternalError,
 } from '../core';
 import { QueryAsMethods } from './as';
@@ -111,6 +110,7 @@ import { ExpressionMethods } from './expressions';
 import { _queryNone } from './none';
 import { _chain } from './chain';
 import { QueryOrCreate } from './mutate/orCreate';
+import { WithDataItems } from '../query/cte/cte.sql';
 
 // argument of the window method
 // it is an object where keys are name of windows

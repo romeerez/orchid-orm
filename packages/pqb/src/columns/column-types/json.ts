@@ -1,16 +1,13 @@
-import { ColumnType } from '../columnType';
+import { ColumnType } from '../column-type';
 import { columnCode } from '../code';
 import { Operators, OperatorsJson, OperatorsText } from '../operators';
-import {
-  ColumnSchemaConfig,
-  ColumnToCodeCtx,
-  ColumnTypeSchemaArg,
-} from '../../core';
+import { ColumnToCodeCtx } from '../../core';
 import { Code } from '../code';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
-} from '../defaultSchemaConfig';
+} from '../default-schema-config';
+import { ColumnSchemaConfig, ColumnTypeSchemaArg } from '../column-schema';
 
 const encode = (x: unknown) => (x === null ? x : JSON.stringify(x));
 

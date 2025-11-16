@@ -104,22 +104,15 @@ export {
   consumeColumnName,
 } from './columns';
 export type {
-  ArrayMethodsData,
   AsTypeArg,
-  BaseNumberData,
   ColumnDataCheckBase,
   ColumnNameOfTable,
-  ColumnSchemaConfig,
-  ColumnSchemaGetterColumns,
-  ColumnSchemaGetterTableClass,
   ColumnShapeInput,
   ColumnShapeOutput,
   ColumnsShapeBase,
   ColumnToCodeCtx,
   ColumnTypesBase,
-  ColumnTypeSchemaArg,
   ColumnWithDefault,
-  DateColumnData,
   DefaultSelectColumns,
   DefaultSelectOutput,
   EncodeColumn,
@@ -141,7 +134,6 @@ export type {
   QueryColumns,
   QueryColumnsInit,
   QueryColumnToNullable,
-  StringTypeData,
   TimeInterval,
   TimestampHelpers,
   UniqueColumn,
@@ -201,7 +193,6 @@ export {
   newDelayedRelationSelect,
   setDelayedRelation,
 } from './query/delayed-relational-select';
-export type { WithDataItems, WithDataItem } from './query/with';
 export type {
   PickQueryMetaResultReturnType,
   PickQueryMetaReturnType,

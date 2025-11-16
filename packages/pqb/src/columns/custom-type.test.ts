@@ -1,4 +1,4 @@
-import { CustomTypeColumn } from './customType';
+import { CustomTypeColumn } from './custom-type';
 import {
   assertType,
   testZodColumnTypes as t,

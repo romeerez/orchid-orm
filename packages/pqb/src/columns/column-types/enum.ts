@@ -1,8 +1,9 @@
-import { ColumnType } from '../columnType';
+import { ColumnType } from '../column-type';
 import { columnCode } from '../code';
-import { ColumnToCodeCtx, ColumnTypeSchemaArg } from '../../core';
+import { ColumnToCodeCtx } from '../../core';
 import { Code } from '../code';
 import { Operators, OperatorsOrdinalText } from '../operators';
+import { ColumnTypeSchemaArg } from '../column-schema';
 
 export class EnumColumn<
   Schema extends ColumnTypeSchemaArg,

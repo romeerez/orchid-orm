@@ -1,4 +1,4 @@
-import { ColumnType } from './columnType';
+import { ColumnType } from './column-type';
 import {
   profileData,
   User,
@@ -7,7 +7,7 @@ import {
 } from '../test-utils/test-utils';
 import { createDbWithAdapter } from '../query/db';
 import { columnCode } from './code';
-import { ColumnSchemaConfig, ColumnToCodeCtx } from '../core';
+import { ColumnToCodeCtx } from '../core';
 import { Code } from './code';
 import {
   assertType,
@@ -23,8 +23,9 @@ import {
 import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
 import { z, ZodLiteral, ZodNumber } from 'zod/v4';
-import { assignDbDataToColumn } from './columnType.utils';
+import { assignDbDataToColumn } from './column-type.utils';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+import { ColumnSchemaConfig } from './column-schema';
 
 describe('column type', () => {
   useTestDatabase();

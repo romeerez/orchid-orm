@@ -1,7 +1,6 @@
 import {
   ColumnDataBase,
   ColumnInputOutputQueryTypes,
-  ColumnSchemaConfig,
   ColumnTypeBase,
   EncodeColumn,
   MaybeArray,
@@ -15,7 +14,7 @@ import {
   DateColumn,
   TimestampColumn,
   TimestampTZColumn,
-} from './column-types/dateTime';
+} from './column-types/date-time';
 import { EnumColumn } from './column-types/enum';
 import { ArrayColumn, ArrayColumnValue } from './column-types/array';
 import { JSONColumn } from './column-types/json';
@@ -37,8 +36,9 @@ import {
   TextColumn,
   VarCharColumn,
 } from './column-types/string';
-import { ColumnType } from './columnType';
+import { ColumnType } from './column-type';
 import { setColumnParse, setColumnParseNull } from './column.utils';
+import { ColumnSchemaConfig } from './column-schema';
 
 export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   parse<T extends ColumnTypeBase, Output>(

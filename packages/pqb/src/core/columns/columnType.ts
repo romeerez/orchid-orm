@@ -1,7 +1,7 @@
 import { RawSQLBase } from '../raw';
 import { QueryBaseCommon } from '../query/query';
 import { OperatorBase } from './operators';
-import { ColumnTypeSchemaArg } from './columnSchema';
+import { ColumnTypeSchemaArg } from '../../columns/column-schema';
 import { RecordString } from '../utils';
 
 import { QueryHookUtils } from '../hooks';
@@ -38,11 +38,6 @@ export type DefaultSelectOutput<Shape extends QueryColumnsInit> = {
     | undefined
     ? never
     : K]: Shape[K]['outputType'];
-};
-
-// type of columns shape to use in `where` and other query methods
-export type ColumnShapeQueryType<Shape extends QueryColumns> = {
-  [K in keyof Shape]: Shape[K]['queryType'];
 };
 
 // base type of object with columns

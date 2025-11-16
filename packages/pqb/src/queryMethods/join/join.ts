@@ -26,13 +26,13 @@ import {
   QueryThenByQuery,
   SelectableBase,
   setObjectValueImmutable,
-  WithDataItem,
 } from '../../core';
 import { _join, _joinLateral, _joinLateralProcessArg } from './_join';
 import {
   ColumnsShapeToNullableObject,
   ColumnsShapeToObject,
 } from '../../columns';
+import { WithDataItem } from '../../query';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.

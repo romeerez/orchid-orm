@@ -19,11 +19,10 @@ import {
   UUIDColumn,
   XMLColumn,
 } from './column-types/string';
-import { IntervalColumn, TimeColumn } from './column-types/dateTime';
+import { IntervalColumn, TimeColumn } from './column-types/date-time';
 import { BooleanColumn } from './column-types/boolean';
 import { JSONTextColumn } from './column-types/json';
 import {
-  ColumnSchemaConfig,
   QueryColumnsInit,
   setCurrentColumnName,
   setDefaultLanguage,
@@ -31,10 +30,11 @@ import {
   timestampHelpers,
   TimestampHelpers,
 } from '../core';
-import { CustomTypeColumn, DomainColumn } from './customType';
+import { CustomTypeColumn, DomainColumn } from './custom-type';
 import { RawSQL, sqlFn, SqlFn } from '../sql/rawSql';
 import { TableData } from '../tableData';
 import { PostgisGeographyPointColumn } from './column-types/postgis';
+import { ColumnSchemaConfig } from './column-schema';
 
 export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
   types: ColumnTypes,

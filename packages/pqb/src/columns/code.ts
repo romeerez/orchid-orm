@@ -1,12 +1,10 @@
-import { ColumnData, ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './column-type';
 import {
-  BaseNumberData,
   ColumnDataBase,
   ColumnDataCheckBase,
   ColumnsShapeBase,
   ColumnToCodeCtx,
   ColumnTypeBase,
-  DateColumnData,
   emptyArray,
   emptyObject,
   isRawSQL,
@@ -17,7 +15,6 @@ import {
   RecordString,
   singleQuote,
   singleQuoteArray,
-  StringTypeData,
   toArray,
   toSnakeCase,
 } from '../core';
@@ -25,10 +22,13 @@ import { TableData } from '../tableData';
 import {
   arrayMethodNames,
   ArrayMethodsDataForBaseColumn,
+  BaseNumberData,
+  DateColumnData,
   dateMethodNames,
   numberMethodNames,
   stringMethodNames,
-} from '../core/columns';
+  StringTypeData,
+} from './column-data-types';
 
 // Type for composing code pieces for the code generation
 export type Code = string | Codes;

@@ -299,13 +299,14 @@ export const makeRowToJson = (
   table: string,
   shape: ColumnsShapeBase,
   aliasName: boolean,
+  includingExplicitSelect?: boolean,
 ): string => {
   let isSimple = true;
   const list: string[] = [];
 
   for (const key in shape) {
     const column = shape[key];
-    if (column.data.explicitSelect) {
+    if (!includingExplicitSelect && column.data.explicitSelect) {
       continue;
     }
 

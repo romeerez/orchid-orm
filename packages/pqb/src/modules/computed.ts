@@ -26,7 +26,7 @@ import { QueryData } from '../sql';
 import {
   applyBatchTransforms,
   finalizeNestedHookSelect,
-} from '../common/queryResultProcessing';
+} from '../common/query-result-processing';
 
 declare module '../core' {
   interface ColumnDataBase {

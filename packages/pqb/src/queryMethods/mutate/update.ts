@@ -7,7 +7,7 @@ import {
 import { _clone, throwIfNoWhere } from '../../query/queryUtils';
 import { _queryWhereIn, WhereResult } from '../where/where';
 import { ToSQLQuery } from '../../sql';
-import { anyShape, VirtualColumn } from '../../columns';
+import { anyShape, ColumnSchemaConfig, VirtualColumn } from '../../columns';
 import { Db } from '../../query/db';
 import {
   isExpression,
@@ -17,7 +17,6 @@ import {
   ColumnTypeBase,
   pushQueryValueImmutable,
   QueryOrExpression,
-  ColumnSchemaConfig,
   requirePrimaryKeys,
   RelationConfigBase,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,

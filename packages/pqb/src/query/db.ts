@@ -17,6 +17,7 @@ import {
 import { QueryData, QueryScopes } from '../sql';
 import {
   anyShape,
+  ColumnSchemaConfig,
   DefaultColumnTypes,
   getColumnTypes,
   makeColumnTypes,
@@ -28,7 +29,6 @@ import {
   QueryError,
   QueryErrorName,
   applyMixins,
-  ColumnSchemaConfig,
   ColumnShapeInput,
   ColumnShapeOutput,
   ColumnsParsers,
@@ -63,7 +63,7 @@ import { ScopeArgumentQuery } from '../queryMethods/scope';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
-} from '../columns/defaultSchemaConfig';
+} from '../columns/default-schema-config';
 import {
   enableSoftDelete,
   SoftDeleteOption,

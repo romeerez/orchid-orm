@@ -12,6 +12,7 @@ import {
   getPrimaryKeys,
   HookSelect,
   isExpression,
+  isRelationQuery,
   MaybeArray,
   newDelayedRelationSelect,
   OrchidOrmInternalError,
@@ -67,7 +68,7 @@ export const makeInsertSql = (
   isSubSql?: boolean,
 ): Sql => {
   let { columns } = query;
-  const { shape, inCTE, hookCreateSet } = query;
+  const { shape, hookCreateSet } = query;
   const QueryClass = ctx.qb.constructor as unknown as Db;
 
   let { insertFrom, queryColumnsCount, values } = query;
@@ -138,13 +139,16 @@ export const makeInsertSql = (
   ctx.sql.push(null as never, null as never);
 
   pushOnConflictSql(ctx, query, quotedAs, columns, quotedColumns);
-  pushWhereStatementSql(ctx, q, query, quotedAs);
 
-  if (!inCTE) {
-    sqlState.delayedRelationSelect = q.q.selectRelation
-      ? newDelayedRelationSelect(q)
-      : undefined;
+  const upsert = query.type === 'upsert';
+
+  if (upsert || (insertFrom && !isRelationQuery(q)) || query.onConflict) {
+    pushWhereStatementSql(ctx, q, query, quotedAs);
   }
+
+  sqlState.delayedRelationSelect = q.q.selectRelation
+    ? newDelayedRelationSelect(q)
+    : undefined;
 
   sqlState.returningPos = ctx.sql.length;
 
@@ -193,7 +197,7 @@ export const makeInsertSql = (
     const valuesSqlState = sqlState as InsertValuesSqlState;
     valuesSqlState.valuesSql = [];
     valuesSqlState.valuesPrepend =
-      (insertManyFromValuesAs ? '(' : '') + (inCTE ? 'SELECT ' : 'VALUES ');
+      (insertManyFromValuesAs ? '(' : '') + (upsert ? 'SELECT ' : 'VALUES ');
     valuesSqlState.valuesAppend = insertManyFromValuesAs
       ? `) ${insertManyFromValuesAs}(${quotedColumns
           .slice(queryColumnsCount || 0)
@@ -223,7 +227,7 @@ export const makeInsertSql = (
       );
       ctx.skipBatchCheck = skipBatchCheck;
 
-      if (!inCTE) encodedRow = '(' + encodedRow + ')';
+      if (!upsert) encodedRow = '(' + encodedRow + ')';
 
       if (ctxValues.length > MAX_BINDING_PARAMS) {
         if (ctxValues.length - currentValuesLen > MAX_BINDING_PARAMS) {
@@ -357,38 +361,6 @@ const pushOnConflictSql = (
   }
 };
 
-const makeInsertReturning = (
-  ctx: ToSQLCtx,
-  q: ToSQLQuery,
-  query: QueryData,
-  quotedAs: string,
-  delayedRelationSelect?: DelayedRelationSelect,
-  isSubSql?: boolean,
-): SelectAndTableHook => {
-  const { inCTE } = query;
-  if (inCTE) {
-    const select = inCTE.returning?.select;
-    return {
-      select:
-        inCTE.selectNum || !select ? (select ? '1, ' + select : '1') : select,
-      tableHook: inCTE.returning?.hookSelect && {
-        select: inCTE.returning?.hookSelect,
-      },
-    };
-  } else {
-    return makeReturningSql(
-      ctx,
-      q,
-      query,
-      quotedAs,
-      delayedRelationSelect,
-      'Create',
-      undefined,
-      isSubSql,
-    );
-  }
-};
-
 const applySqlState = (
   sqlState: InsertSqlState | InsertValuesSqlState,
 ): TableHook | undefined => {
@@ -409,18 +381,16 @@ const applySqlState = (
       sqlState.valuesPrepend +
       sqlState.valuesSql.join(', ') +
       sqlState.valuesAppend;
-
-    if (sqlState.query.inCTE) {
-      ctx.sql[1] += ' WHERE NOT EXISTS (SELECT 1 FROM "f")';
-    }
   }
 
-  const returning = makeInsertReturning(
+  const returning = makeReturningSql(
     ctx,
     sqlState.q,
     sqlState.query,
     sqlState.quotedAs,
     sqlState.delayedRelationSelect,
+    'Create',
+    undefined,
     true,
   );
 
@@ -680,9 +650,12 @@ const encodeValue = (
     if (value instanceof Expression) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof (QueryClass as never)) {
-      const query = moveMutativeQueryToCte(ctx, value as Query);
+      const { makeSql } = moveMutativeQueryToCte(
+        ctx,
+        joinSubQuery(q, value as Query),
+      );
 
-      return `(${toSubSqlText(ctx, joinSubQuery(q, query))})`;
+      return `(${makeSql(true)})`;
     } else if ('fromHook' in value) {
       return value.fromHook as string;
     }
@@ -703,41 +676,13 @@ export const makeReturningSql = (
   addHookPurpose?: HookPurpose,
   isSubSql?: boolean,
 ): SelectAndTableHook => {
-  // inCTE is present only in upsert and orCreate
-  if (data.inCTE) {
-    if (hookPurpose !== 'Create') {
-      const returning = makeReturningSql(
-        ctx,
-        q,
-        data,
-        quotedAs,
-        delayedRelationSelect,
-        'Create',
-        hookPurpose,
-        isSubSql,
-      );
-
-      if (returning.tableHook?.select) {
-        for (const [key, value] of returning.tableHook.select) {
-          data.inCTE.targetHookSelect.set(key, value);
-        }
-      }
-
-      return (data.inCTE.returning = returning);
-    }
-
-    if (data.inCTE.returning) {
-      return data.inCTE.returning;
-    }
-  }
-
   const hookSelect = hookPurpose && data[`after${hookPurpose}Select`];
 
   const { select } = data;
   if (!q.q.hookSelect && !hookSelect?.size && !select?.length && !hookPurpose) {
     const select = hookSelect && new Map();
     return {
-      select: undefined,
+      select: isSubSql && ctx.inCte ? 'NULL' : undefined,
       tableHook: select && {
         select,
       },
@@ -785,7 +730,6 @@ export const makeReturningSql = (
       tempSelect,
       isSubSql,
       undefined,
-      true,
       undefined,
       delayedRelationSelect,
     );
@@ -795,7 +739,7 @@ export const makeReturningSql = (
   const afterCommit = hookPurpose && data[`after${hookPurpose}Commit`];
 
   return {
-    select: sql,
+    select: sql || (isSubSql && ctx.inCte ? 'NULL' : undefined),
     tableHook: (tempSelect || after || afterCommit) && {
       select: tempSelect,
       after:

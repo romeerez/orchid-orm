@@ -11,8 +11,6 @@ import {
   returnArg,
   setConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
-} from '../core';
-import {
   DefaultColumnTypes,
   DefaultSchemaConfig,
   DbOptions,

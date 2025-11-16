@@ -1,4 +1,4 @@
-import { ColumnDataBase } from './columnType';
+import { ColumnDataBase } from '../core/columns/columnType';
 
 // method names for numeric columns and JSON types to generate methods' code
 export const numberMethodNames: Exclude<

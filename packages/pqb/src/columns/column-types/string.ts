@@ -4,16 +4,14 @@ import {
   ColumnType,
   GeneratedColumn,
   PickColumnData,
-} from '../columnType';
+} from '../column-type';
 import { NumberColumnData } from './number';
 import {
   joinTruthy,
-  StringTypeData,
   PrimaryKeyColumn,
   getDefaultLanguage,
   RawSQLBase,
   StaticSQLArgs,
-  ColumnSchemaConfig,
   PickColumnBaseData,
   setColumnData,
   toSnakeCase,
@@ -35,7 +33,9 @@ import { setColumnDefaultParse } from '../column.utils';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
-} from '../defaultSchemaConfig';
+} from '../default-schema-config';
+import { StringTypeData } from '../column-data-types';
+import { ColumnSchemaConfig } from '../column-schema';
 
 export type TextColumnData = StringTypeData;
 

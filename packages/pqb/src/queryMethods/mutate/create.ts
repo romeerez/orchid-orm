@@ -13,10 +13,9 @@ import {
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
 import { OnConflictMerge, QueryData, ToSQLQuery } from '../../sql';
-import { anyShape, VirtualColumn } from '../../columns';
+import { anyShape, ColumnSchemaConfig, VirtualColumn } from '../../columns';
 import {
   Expression,
-  ColumnSchemaConfig,
   RecordUnknown,
   PickQueryUniqueProperties,
   QueryColumn,
@@ -463,10 +462,6 @@ export const insert = (
   if (!q.select?.length) {
     q.returning = true;
   }
-
-  delete q.and;
-  delete q.or;
-  delete q.scopes;
 
   q.type = 'insert';
 

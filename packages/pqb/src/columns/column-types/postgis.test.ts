@@ -4,7 +4,7 @@ import {
   PostgisPoint,
   postgisTypmodToSql,
 } from './postgis';
-import { defaultSchemaConfig } from '../defaultSchemaConfig';
+import { defaultSchemaConfig } from '../default-schema-config';
 import { ColumnToCodeCtx } from '../../core';
 
 describe('postgis columns', () => {

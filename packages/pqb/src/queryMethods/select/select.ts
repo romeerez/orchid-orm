@@ -59,7 +59,7 @@ import {
   SelectableOrExpression,
 } from '../../common/utils';
 import { RawSQL } from '../../sql/rawSql';
-import { defaultSchemaConfig } from '../../columns/defaultSchemaConfig';
+import { defaultSchemaConfig } from '../../columns/default-schema-config';
 import { parseRecord } from '../then';
 import { _queryNone, isQueryNone } from '../none';
 
@@ -67,7 +67,7 @@ import { processComputedBatches } from '../../modules/computed';
 import {
   applyBatchTransforms,
   finalizeNestedHookSelect,
-} from '../../common/queryResultProcessing';
+} from '../../common/query-result-processing';
 import { cloneQueryBaseUnscoped } from '../queryMethods.utils';
 
 export interface SelectSelf {
@@ -874,7 +874,10 @@ const selectColumn = (
 // when isSubQuery is true, it will remove data.name of columns,
 // so that outside of the sub-query the columns are named with app-side names,
 // while db column names are encapsulated inside the sub-query
-export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
+export const getShapeFromSelect = (
+  q: IsQuery,
+  isSubQuery?: boolean,
+): QueryColumns => {
   const query = (q as Query).q;
   const { shape } = query;
   let select: SelectItem[] | undefined;
@@ -890,8 +893,11 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
 
   let result: QueryColumns;
   if (!select) {
-    // when no select, and it is a sub-query, return the table shape with unnamed columns
-    if (isSubQuery) {
+    if (query.type) {
+      // mutative queries with no select are returning nothing
+      result = {};
+    } else if (isSubQuery) {
+      // when no select, and it is a sub-query, return the table shape with unnamed columns
       result = {};
       for (const key in shape) {
         const column = shape[key];

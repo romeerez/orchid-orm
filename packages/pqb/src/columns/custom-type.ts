@@ -1,15 +1,15 @@
 import {
   ColumnDataBase,
-  ColumnSchemaConfig,
   ColumnToCodeCtx,
   ColumnTypeBase,
   setColumnData,
   singleQuote,
 } from '../core';
 import { Code } from './code';
-import { ColumnType } from './columnType';
+import { ColumnType } from './column-type';
 import { columnCode } from './code';
 import { Operators, OperatorsAny } from './operators';
+import { ColumnSchemaConfig } from './column-schema';
 
 // for a user-defined type, or for unsupported yet type from some module
 export class CustomTypeColumn<

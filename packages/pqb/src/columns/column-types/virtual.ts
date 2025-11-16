@@ -1,4 +1,4 @@
-import { ColumnType } from '../columnType';
+import { ColumnType } from '../column-type';
 import {
   CreateCtx,
   CreateSelf,
@@ -6,7 +6,8 @@ import {
   UpdateSelf,
 } from '../../queryMethods';
 import { Operators, OperatorsAny } from '../operators';
-import { ColumnSchemaConfig, RecordUnknown } from '../../core';
+import { RecordUnknown } from '../../core';
+import { ColumnSchemaConfig } from '../column-schema';
 
 export abstract class VirtualColumn<
   Schema extends ColumnSchemaConfig,

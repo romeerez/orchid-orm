@@ -39,7 +39,7 @@ import {
   TextColumn,
   XMLColumn,
 } from '../columns';
-import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
+import { defaultSchemaConfig } from '../columns/default-schema-config';
 import {
   _getSelectableColumn,
   _queryGetOptional,

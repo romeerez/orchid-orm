@@ -5,8 +5,8 @@ import {
   QueryColumn,
   setObjectValueImmutable,
 } from '../core';
-import { ColumnType } from './columnType';
-import { DomainColumn } from './customType';
+import { ColumnType } from './column-type';
+import { DomainColumn } from './custom-type';
 import { EnumColumn } from './column-types/enum';
 
 export interface DbStructureDomainsMap {

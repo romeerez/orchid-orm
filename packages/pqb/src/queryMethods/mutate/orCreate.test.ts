@@ -1,11 +1,10 @@
-import { User, userData, UserRecord } from '../../test-utils/test-utils';
 import {
-  assertType,
-  sql,
-  testDb,
-  TestTransactionAdapter,
-  useTestDatabase,
-} from 'test-utils';
+  emulateReturnNoRowsOnce,
+  User,
+  userData,
+  UserRecord,
+} from '../../test-utils/test-utils';
+import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
 
 const TableWithReadOnly = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
@@ -13,32 +12,17 @@ const TableWithReadOnly = testDb('user', (t) => ({
   password: t.integer().readOnly(),
 }));
 
-const emulateReturnNoRowsOnce = () => {
-  // emulate the edge case when first query doesn't find the record, and then in CTE it appears
-  const { query } = TestTransactionAdapter.prototype;
-  TestTransactionAdapter.prototype.query = async function (
-    this: unknown,
-    text: string,
-    values?: unknown[],
-  ) {
-    const result = await query.call(this, text, values);
-    result.rowCount = 0;
-    TestTransactionAdapter.prototype.query = query;
-    return result;
-  } as never;
-};
-
 describe('orCreate', () => {
   useTestDatabase();
 
   it('should not allow using appReadOnly columns in create', async () => {
-    await expect(() =>
+    expect(() =>
       TableWithReadOnly.find(1).orCreate({
         name: 'name',
         // @ts-expect-error password is readOnly
         password: 'password',
       }),
-    ).rejects.toThrow('Trying to insert a readonly column');
+    ).toThrow('Trying to insert a readonly column');
   });
 
   it('should return void by default', () => {
@@ -110,7 +94,7 @@ describe('orCreate', () => {
     const afterCreate = jest.fn();
     const afterCreateCommit = jest.fn();
 
-    emulateReturnNoRowsOnce();
+    emulateReturnNoRowsOnce('arrays');
 
     const res = await User.findBy({ name: 'name' })
       .orCreate(userData)
@@ -172,5 +156,27 @@ describe('orCreate', () => {
       ],
       expect.any(Object),
     );
+  });
+
+  describe('cte', () => {
+    it('should find a record when is nested in select', async () => {
+      const id = await User.get('id').insert(userData);
+
+      const res = await User.take().select({
+        id: () => User.get('id').find(id).orCreate(userData),
+      });
+
+      expect(res).toEqual({ id });
+    });
+
+    it('should create a record when is nested in select', async () => {
+      const res = await testDb.qb
+        .select({
+          id: () => User.get('id').find(0).orCreate(userData),
+        })
+        .take();
+
+      expect(res).toEqual({ id: expect.any(Number) });
+    });
   });
 });

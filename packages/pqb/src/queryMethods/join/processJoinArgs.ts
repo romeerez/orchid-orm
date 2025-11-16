@@ -17,7 +17,7 @@ import {
   returnArg,
 } from '../../core';
 import { _clone, pushQueryArrayImmutable } from '../../query/queryUtils';
-import { ColumnsShape } from '../../columns/columnsSchema';
+import { ColumnsShape } from '../../columns/columns-schema';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.

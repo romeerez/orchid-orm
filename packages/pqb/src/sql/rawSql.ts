@@ -1,5 +1,4 @@
 import {
-  ColumnSchemaConfig,
   DynamicSQLArg,
   emptyObject,
   Expression,
@@ -15,7 +14,7 @@ import {
   StaticSQLArgs,
   TemplateLiteralArgs,
 } from '../core';
-import { DefaultColumnTypes } from '../columns';
+import { ColumnSchemaConfig, DefaultColumnTypes } from '../columns';
 import { ToSQLCtx } from './toSQL';
 
 // reuse array to track which variables were used in the SQL, to throw when there are some unused.

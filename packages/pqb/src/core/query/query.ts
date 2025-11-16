@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TransactionState } from '../adapter';
+import { QueryResult, TransactionState } from '../adapter';
 import {
   EmptyObject,
   pushOrNewArrayToObjectImmutable,
@@ -21,6 +21,13 @@ export interface SingleSqlItem {
   text: string;
   // bind values passed along with SQL string
   values?: unknown[];
+  runAfterQuery?: RunAfterQuery;
+}
+
+// is executed immediately after querying SQL.
+// `then` early returns its result if `runAfterQuery` returns a result.
+export interface RunAfterQuery {
+  (queryResult: QueryResult): void | Promise<{ result: unknown }>;
 }
 
 export interface SingleSql extends SingleSqlItem, SqlCommonOptions {}

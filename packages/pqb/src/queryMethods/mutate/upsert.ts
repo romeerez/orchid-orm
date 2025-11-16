@@ -161,6 +161,7 @@ export interface QueryUpsert {
 export const QueryUpsert: QueryUpsert = {
   upsert(data) {
     const q = _clone(this);
+    q.q.upsertUpdate = true;
 
     let updateData;
     let mergeData;

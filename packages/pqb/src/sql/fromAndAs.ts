@@ -122,15 +122,6 @@ const fromToSql = (
       fromQuery = from;
     }
   } else {
-    if (data.with) {
-      for (const w of data.with) {
-        if (w.n === from && w.q?.q.inCTE) {
-          ctx.delayedRelationSelect = w.q.q.inCTE.delayedRelationSelect;
-          break;
-        }
-      }
-    }
-
     sql = quoteSchemaAndTable(data.schema, from);
   }
 

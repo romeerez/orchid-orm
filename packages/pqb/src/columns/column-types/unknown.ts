@@ -1,7 +1,7 @@
 import { VirtualColumn } from './virtual';
-import { ColumnSchemaConfig } from '../../core';
 import { RawSQL } from '../../sql/rawSql';
-import { defaultSchemaConfig } from '../defaultSchemaConfig';
+import { defaultSchemaConfig } from '../default-schema-config';
+import { ColumnSchemaConfig } from '../column-schema';
 
 // unknown column is used for the case of raw SQL when user doesn't specify a column
 export class UnknownColumn<

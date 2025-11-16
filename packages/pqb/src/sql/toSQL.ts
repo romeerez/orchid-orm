@@ -25,11 +25,20 @@ import {
   Sql,
   HasCteHooks,
   CteTableHook,
+  MoreThanOneRowError,
 } from '../core';
 import { QueryBuilder } from '../query/db';
 import { getSqlText } from './utils';
-import { addWithToSql, ctesToSql, TopCTE } from '../query/cte/cte.sql';
+import {
+  addWithToSql,
+  ctesToSql,
+  moveMutativeQueryToCte,
+  TopCTE,
+} from '../query/cte/cte.sql';
 import { getQueryAs } from '../common/utils';
+import { _clone } from '../query';
+import { _queryWhereNotExists } from '../queryMethods';
+import { RunAfterQuery } from '../core/query/query';
 
 interface ToSqlOptionsInternal extends ToSQLOptions, HasCteHooks {
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
@@ -49,6 +58,7 @@ export interface ToSQLCtx extends ToSqlOptionsInternal, ToSQLOptions {
   selectedCount: number;
   topCTE?: TopCTE;
   cteSqls?: string[];
+  inCte?: boolean;
 }
 
 export interface ToSQLOptions {
@@ -76,24 +86,23 @@ export const toCteSubSqlText = (
   options: ToSqlOptionsInternal,
   q: ToSQLQuery,
   cteName: string,
-): string => getSqlText(subToSql(options, q, cteName));
+  type: QueryData['type'],
+): string => getSqlText(subToSql(options, q, cteName, type));
 
 export const toSubSqlText = (
   options: ToSqlOptionsInternal,
   q: ToSQLQuery,
-): string => getSqlText(subToSql(options, q, undefined));
+  type?: QueryData['type'],
+): string => getSqlText(subToSql(options, q, undefined, type));
 
 const subToSql = (
   options: ToSqlOptionsInternal,
   q: ToSQLQuery,
   cteName?: string,
+  type = q.q.type,
 ): Sql => {
-  const sql = toSQL(q, options, true);
-  if (
-    sql.tableHook &&
-    (sql.tableHook.after || sql.tableHook.afterCommit) &&
-    !q.q.inCTE
-  ) {
+  const sql = queryTypeToSQL(q, type, options, true, !!cteName);
+  if (sql.tableHook && (sql.tableHook.after || sql.tableHook.afterCommit)) {
     const shape: ColumnsShapeBase = {};
     if (sql.tableHook.select) {
       for (const key of sql.tableHook.select.keys()) {
@@ -121,10 +130,15 @@ const subToSql = (
   return sql;
 };
 
-export const toSQL = (
+export const toSQL = (table: ToSQLQuery, options?: ToSqlOptionsInternal): Sql =>
+  queryTypeToSQL(table, table.q.type, options);
+
+const queryTypeToSQL = (
   table: ToSQLQuery,
+  type: QueryData['type'],
   options?: ToSqlOptionsInternal,
   isSubSql?: boolean,
+  inCte?: boolean,
 ): Sql => {
   const query = table.q;
   const sql: string[] = [];
@@ -140,6 +154,7 @@ export const toSQL = (
     cteHooks: options?.cteHooks,
     selectedCount: 0,
     topCTE: options?.topCTE,
+    inCte,
   };
 
   const cteSqls = query.with && ctesToSql(ctx, query.with);
@@ -147,33 +162,98 @@ export const toSQL = (
   let result: Sql;
 
   let fromQuery: Query | undefined;
-  if (query.type && query.type !== 'upsert') {
+  if (type && type !== 'upsert') {
     const tableName = table.table ?? query.as;
-    if (!tableName) throw new Error(`Table is missing for ${query.type}`);
+    if (!tableName) throw new Error(`Table is missing for ${type}`);
 
-    if (query.type === 'truncate') {
+    if (type === 'truncate') {
       pushTruncateSql(ctx, tableName, query);
       result = { text: sql.join(' '), values };
-    } else if (query.type === 'columnInfo') {
+    } else if (type === 'columnInfo') {
       pushColumnInfoSql(ctx, table, query);
       result = { text: sql.join(' '), values };
     } else {
       const quotedAs = `"${query.as || tableName}"`;
 
-      if (query.type === 'insert') {
+      if (type === 'insert') {
         result = makeInsertSql(ctx, table, query, `"${tableName}"`, isSubSql);
-      } else if (query.type === 'update') {
+      } else if (type === 'update') {
         result = pushUpdateSql(ctx, table, query, quotedAs, isSubSql);
-      } else if (query.type === 'delete') {
+      } else if (type === 'delete') {
         result = pushDeleteSql(ctx, table, query, quotedAs, isSubSql);
-      } else if (query.type === 'copy') {
+      } else if (type === 'copy') {
         pushCopySql(ctx, table, query, quotedAs);
         result = { text: sql.join(' '), values };
       } else {
-        throw new Error(`Unsupported query type ${query.type}`);
+        throw new Error(`Unsupported query type ${type}`);
       }
     }
   } else {
+    let runAfterQuery: RunAfterQuery | undefined;
+    let skipSelect: boolean | undefined;
+    if (type === 'upsert') {
+      if (isSubSql || query.upsertSecond) {
+        skipSelect = true;
+
+        const upsertOrCreate = _clone(table as Query);
+        const { as, makeSql: makeFirstSql } = moveMutativeQueryToCte(
+          ctx,
+          upsertOrCreate,
+          query.updateData ? 'u' : 'f',
+          query.updateData ? 'update' : null,
+        );
+
+        upsertOrCreate.q.and =
+          upsertOrCreate.q.or =
+          upsertOrCreate.q.scopes =
+            undefined;
+
+        _queryWhereNotExists(
+          upsertOrCreate,
+          upsertOrCreate.baseQuery.from(as),
+          [],
+        );
+
+        const { makeSql: makeSecondSql } = moveMutativeQueryToCte(
+          ctx,
+          upsertOrCreate,
+          'c',
+          'insert',
+        );
+
+        sql.push(makeFirstSql(), 'UNION ALL', makeSecondSql());
+      } else {
+        const second = _clone(table);
+        second.q.upsertSecond = true;
+        runAfterQuery = (queryResult) => {
+          if (queryResult.rowCount) {
+            second.q.upsertSecond = undefined;
+            if (queryResult.rowCount > 1) {
+              throw new MoreThanOneRowError(
+                second,
+                `Only one row was expected to find, found ${queryResult.rowCount} rows.`,
+              );
+            }
+            return;
+          }
+
+          return second
+            .then((result) => ({ result }))
+            .finally(() => {
+              second.q.upsertSecond = undefined;
+            });
+        };
+
+        if (query.updateData) {
+          const result = queryTypeToSQL(table, 'update', options, isSubSql);
+          if ('text' in result) {
+            result.runAfterQuery = runAfterQuery;
+          }
+          return result;
+        }
+      }
+    }
+
     const quotedAs =
       (query.as || table.table) && `"${query.as || table.table}"`;
 
@@ -189,7 +269,7 @@ export const toSQL = (
           : toSubSqlText(ctx, u.a);
         sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
       }
-    } else {
+    } else if (!skipSelect) {
       sql.push('SELECT');
 
       if (query.distinct) {
@@ -293,10 +373,11 @@ export const toSQL = (
         select: query.hookSelect,
       },
       delayedRelationSelect: ctx.delayedRelationSelect,
+      runAfterQuery,
     };
   }
 
-  if (options && (query.type || ctx.hasNonSelect)) {
+  if (options && (type || ctx.hasNonSelect)) {
     options.hasNonSelect = true;
   }
 
@@ -313,6 +394,7 @@ export const toSQL = (
               cteName,
               data.shape,
               false,
+              true,
             )}) FROM "${cteName}")`,
         )
         .join(', ')})`;

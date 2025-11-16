@@ -3,7 +3,6 @@ import {
   ColumnDataBase,
   ColumnNameOfTable,
   ColumnTypeBase,
-  ColumnTypeSchemaArg,
   emptyObject,
   ForeignKeyTable,
   PickColumnBaseData,
@@ -20,6 +19,7 @@ import {
 } from '../core';
 import { raw } from '../sql/rawSql';
 import { TableData } from '../tableData';
+import { ColumnTypeSchemaArg } from './column-schema';
 
 // type of data for ColumnType
 export interface ColumnData extends ColumnDataBase {

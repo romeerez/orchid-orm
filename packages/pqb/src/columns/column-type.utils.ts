@@ -1,5 +1,5 @@
 import { RawSQL } from '../sql/rawSql';
-import { ColumnFromDbParams } from './columnType';
+import { ColumnFromDbParams } from './column-type';
 import { ColumnTypeBase, RecordString, TemplateLiteralArgs } from '../core';
 
 const knownDefaults: RecordString = {

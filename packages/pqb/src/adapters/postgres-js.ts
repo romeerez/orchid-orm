@@ -1,7 +1,7 @@
+import postgres, { Error, Row, RowList } from 'postgres';
 import {
   AdapterBase,
   AdapterConfigBase,
-  ColumnSchemaConfig,
   emptyObject,
   MaybeArray,
   QueryArraysResult,
@@ -11,14 +11,12 @@ import {
   returnArg,
   setConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
-} from '../core';
-import postgres, { Error, Row, RowList } from 'postgres';
-import {
   DbOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
   createDbWithAdapter,
   DbResult,
+  ColumnSchemaConfig,
 } from 'pqb';
 
 export interface CreatePostgresJsDbOptions<

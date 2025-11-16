@@ -99,14 +99,19 @@ function maybeWrappedThen(
   let afterHooks: QueryAfterHook[] | undefined;
   let afterCommitHooks: QueryAfterHook[] | undefined;
   if (q.type) {
-    if (q.type === 'insert' || q.type === 'upsert') {
+    if (q.type === 'insert') {
       beforeHooks = q.beforeCreate;
       afterHooks = q.afterCreate;
       afterCommitHooks = q.afterCreateCommit;
-    } else if (q.type === 'update') {
+    } else if (
+      q.type === 'update' ||
+      (q.type === 'upsert' && q.upsertUpdate && q.updateData)
+    ) {
       beforeHooks = q.beforeUpdate;
-      afterHooks = q.afterUpdate;
-      afterCommitHooks = q.afterUpdateCommit;
+      if (!q.upsertSecond) {
+        afterHooks = q.afterUpdate;
+        afterCommitHooks = q.afterUpdateCommit;
+      }
     } else if (q.type === 'delete') {
       beforeHooks = q.beforeDelete;
       afterHooks = q.afterDelete;
@@ -219,11 +224,9 @@ const then = async (
         logData = log.beforeQuery(sql);
       }
 
-      queryResult = await execQuery(
-        adapter,
-        queryMethodByReturnType[tempReturnType],
-        sql,
-      );
+      const method = queryMethodByReturnType[tempReturnType];
+      queryResult = await execQuery(adapter, method, sql);
+      const { runAfterQuery } = sql;
 
       if (log) {
         log.afterQuery(sql, logData);
@@ -231,18 +234,10 @@ const then = async (
         sql = undefined;
       }
 
-      if (localSql.cteHooks?.hasSelect) {
-        const lastRowI = queryResult.rows.length - 1;
-        const lastFieldI = queryResult.fields.length - 1;
-
-        const fieldName = queryResult.fields[lastFieldI].name;
-        cteData = queryResult.rows[lastRowI][fieldName];
-        queryResult.fields.length = lastFieldI;
-        queryResult.rowCount--;
-        queryResult.rows.length = lastRowI;
-
-        for (const row of queryResult.rows) {
-          delete row[fieldName];
+      if (runAfterQuery) {
+        const r = await runAfterQuery(queryResult);
+        if (r) {
+          return resolve ? resolve(r.result) : r.result;
         }
       }
 
@@ -250,6 +245,28 @@ const then = async (
       // Useful for `upsert` and `orCreate`.
       if (query.patchResult) {
         await query.patchResult(q, tableHook?.select, queryResult);
+      }
+
+      if (localSql.cteHooks?.hasSelect) {
+        const lastRowI = queryResult.rows.length - 1;
+        const lastFieldI = queryResult.fields.length - 1;
+
+        const fieldName =
+          method === 'query' ? queryResult.fields[lastFieldI].name : lastFieldI;
+        cteData = queryResult.rows[lastRowI][fieldName];
+        queryResult.fields.length = lastFieldI;
+        queryResult.rowCount--;
+        queryResult.rows.length = lastRowI;
+
+        if (method === 'query') {
+          for (const row of queryResult.rows) {
+            delete row[fieldName];
+          }
+        } else {
+          for (const row of queryResult.rows) {
+            row.length = lastFieldI;
+          }
+        }
       }
 
       result = query.handleResult(q, tempReturnType, queryResult, localSql);
@@ -298,6 +315,9 @@ const then = async (
         });
         if (log) log.afterQuery(commitSql, logData);
       }
+
+      // runAfterQuery is not called because it's only for upsert,
+      // while this batch branch is for batch insert
 
       if (query.patchResult) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -354,8 +374,8 @@ const then = async (
         const hook = localSql.cteHooks.tableHooks[cteName];
 
         const data = cteData?.[cteName];
-        let tableData = dataPerTable.get(hook.table);
         if (data) {
+          let tableData = dataPerTable.get(hook.table);
           if (tableData) {
             tableData.push(...data);
           } else {
@@ -377,49 +397,48 @@ const then = async (
               parseRecord(parsers, row);
             }
           }
-        } else {
-          tableData = [];
-        }
 
-        if (hook.tableHook.after) {
-          const arr = (cteAfterHooks ??= []);
-          for (const fn of hook.tableHook.after) {
-            const hookData = addedAfterHooks.has(fn);
-            if (!hookData) {
-              addedAfterHooks.add(fn);
-              arr.push(() => fn(tableData, q));
+          if (hook.tableHook.after) {
+            const arr = (cteAfterHooks ??= []);
+            for (const fn of hook.tableHook.after) {
+              const hookData = addedAfterHooks.has(fn);
+              if (!hookData) {
+                addedAfterHooks.add(fn);
+                arr.push(() => fn(tableData, q));
+              }
             }
           }
-        }
 
-        if (hook.tableHook.afterCommit) {
-          const arr = (cteAfterCommitHooks ??= []);
-          for (const fn of hook.tableHook.afterCommit) {
-            const hookData = addedAfterCommitHooks.has(fn);
-            if (!hookData) {
-              addedAfterCommitHooks.add(fn);
-              arr.push(() => fn(tableData, q));
+          if (hook.tableHook.afterCommit) {
+            const arr = (cteAfterCommitHooks ??= []);
+            for (const fn of hook.tableHook.afterCommit) {
+              const hookData = addedAfterCommitHooks.has(fn);
+              if (!hookData) {
+                addedAfterCommitHooks.add(fn);
+                arr.push(() => fn(tableData, q));
+              }
             }
           }
         }
       }
     }
 
+    const queryAfter = !query.upsertSecond && query.after;
     const hasAfterHook =
       afterHooks ||
       afterCommitHooks ||
-      query.after ||
+      queryAfter ||
       cteAfterHooks ||
       cteAfterCommitHooks;
     if (hasAfterHook) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       if (queryResult!.rowCount) {
-        if (afterHooks || query.after || cteAfterHooks) {
+        if (afterHooks || queryAfter || cteAfterHooks) {
           const args = [result, q];
           await Promise.all(
             [
               ...(afterHooks || emptyArray),
-              ...(query.after || emptyArray),
+              ...(queryAfter || emptyArray),
               ...(cteAfterHooks || emptyArray),
             ].map(callAfterHook, args),
           );

@@ -1,4 +1,8 @@
-import { ColumnTypeBase, ColumnTypesBase, NullableColumn } from './columnType';
+import {
+  ColumnTypeBase,
+  ColumnTypesBase,
+  NullableColumn,
+} from '../core/columns/columnType';
 
 export interface ColumnSchemaGetterTableClass {
   prototype: {

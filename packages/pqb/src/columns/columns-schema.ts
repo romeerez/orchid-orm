@@ -1,4 +1,4 @@
-import { ColumnType } from './columnType';
+import { ColumnType } from './column-type';
 import { OperatorsAny } from './operators';
 import { QueryColumns, ShallowSimplify } from '../core';
 

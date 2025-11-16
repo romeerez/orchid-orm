@@ -1,8 +1,8 @@
 import { QueryColumns } from '../columns';
 import { EmptyObject } from '../utils';
 import { IsQueries, QueryMetaBase, QueryReturnType } from './query';
-import { WithDataItems } from './with';
 import { RelationsBase } from './relations';
+import { WithDataItems } from '../../query';
 
 export interface PickQueryTable {
   table?: string;

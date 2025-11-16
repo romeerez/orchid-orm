@@ -1,10 +1,23 @@
 import { emptyObject, RecordUnknown, setFreeAlias } from '../../core/utils';
 import { Expression } from '../../core/raw';
 import { Query } from '../query';
-import { toCteSubSqlText, ToSQLCtx } from '../../sql/toSQL';
-import { WithItems } from '../../sql/data';
+import { toCteSubSqlText, ToSQLCtx, toSubSqlText } from '../../sql/toSQL';
+import { QueryData, WithItems } from '../../sql/data';
 import { SingleSql, SingleSqlItem } from '../../core/query/query';
 import { _clone } from '../queryUtils';
+import { getQueryAs } from '../../common/utils';
+import { getShapeFromSelect } from '../../queryMethods/select/select';
+import { SelectItemExpression } from '../../common/select-item-expression';
+import { QueryColumns } from '../../core';
+
+export interface WithDataItem {
+  table: string;
+  shape: QueryColumns;
+}
+
+export interface WithDataItems {
+  [K: string]: WithDataItem;
+}
 
 export interface CteItem {
   // name
@@ -61,10 +74,14 @@ export const setTopCteSize = (ctx: ToSQLCtx, size?: TopCteSize) => {
 export const ctesToSql = (ctx: ToSQLCtx, ctes: WithItems): string[] =>
   ctes?.map((item) => cteToSql(ctx, item));
 
-export const cteToSql = (ctx: ToSQLCtx, item: CteItem): string => {
+export const cteToSql = (
+  ctx: ToSQLCtx,
+  item: CteItem,
+  type?: QueryData['type'],
+): string => {
   let inner: string;
   if (item.q) {
-    inner = toCteSubSqlText(ctx, item.q, item.n);
+    inner = toCteSubSqlText(ctx, item.q, item.n, type);
   } else {
     inner = (item.s as Expression).toSQL(ctx, `"${item.n}"`);
   }
@@ -81,22 +98,24 @@ export const cteToSql = (ctx: ToSQLCtx, item: CteItem): string => {
   }(${inner})`;
 };
 
-export const prependTopCte = (ctx: ToSQLCtx, q: Query, as?: string) =>
-  addTopCte('prepend', ctx, q, as);
-
-export const appendTopCte = (ctx: ToSQLCtx, q: Query, as?: string) =>
-  addTopCte('append', ctx, q, as);
+export const prependTopCte = (
+  ctx: ToSQLCtx,
+  q: Query,
+  as?: string,
+  type?: QueryData['type'],
+) => addTopCte('prepend', ctx, q, as, type);
 
 export const addTopCte = (
   key: 'prepend' | 'append',
   ctx: ToSQLCtx,
   q: Query,
   as?: string,
+  type?: QueryData['type'],
 ): string => {
   const topCTE = (ctx.topCTE ??= newTopCte(ctx));
 
   as ??= setFreeAlias(topCTE.names, 'q', true);
-  topCTE[key].push(cteToSql(ctx, { n: as, q }));
+  topCTE[key].push(cteToSql(ctx, { n: as, q }, type));
   return as;
 };
 
@@ -132,12 +151,68 @@ export const composeCteSingleSql = (ctx: ToSQLCtx): SingleSqlItem => {
   return result;
 };
 
-export const moveMutativeQueryToCte = (ctx: ToSQLCtx, query: Query): Query => {
-  if (!query.q.type) return query;
+export const moveMutativeQueryToCte = (
+  ctx: ToSQLCtx,
+  query: Query,
+  cteName?: string,
+  type = query.q.type,
+): { as: string; makeSql: (isSubSql?: boolean) => string } => {
+  if (!query.q.type) {
+    return {
+      as: getQueryAs(query),
+      makeSql: () => toSubSqlText(ctx, query, type),
+    };
+  }
 
-  const as = prependTopCte(ctx, query);
-  const select = _clone(query.baseQuery);
-  select.q.select = query.q.select;
-  select.q.as = select.q.from = as;
-  return select;
+  const { returnType } = query.q;
+
+  let valueAs: string | undefined;
+  if (
+    returnType === 'value' ||
+    returnType === 'valueOrThrow' ||
+    returnType === 'pluck'
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const first = query.q.select![0];
+    if (
+      first instanceof SelectItemExpression &&
+      typeof first.item === 'string'
+    ) {
+      valueAs = first.item;
+    } else {
+      query = _clone(query);
+      query.q.returnType = 'one';
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      query.q.select = [{ selectAs: { value: query.q.select![0] as never } }];
+      valueAs = 'value';
+    }
+  }
+
+  const as = prependTopCte(ctx, query, cteName, type);
+
+  return {
+    as,
+    // need to be called lazily for the upsert case because `ctx.cteHooks?.hasSelect` can change after the first query
+    makeSql(isSubSql) {
+      const list: string[] = [];
+
+      let selectedCount = 0;
+      if (valueAs) {
+        selectedCount = 1;
+        list.push(`"${as}"."${valueAs}"`);
+      } else if (returnType !== 'void') {
+        const shape = getShapeFromSelect(query, true);
+        const keys = Object.keys(shape);
+        selectedCount = keys.length;
+        list.push(...keys.map((key) => `"${as}"."${key}"`));
+      }
+
+      if (!isSubSql && ctx.cteHooks?.hasSelect) {
+        list.push('NULL::json');
+        ctx.selectedCount = selectedCount;
+      }
+
+      return 'SELECT ' + list.join(', ') + ` FROM "${as}"`;
+    },
+  };
 };

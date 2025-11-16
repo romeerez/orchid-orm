@@ -41,7 +41,6 @@ class RowToJsonExpression extends Expression {
       q.q.hookSelect,
       undefined,
       aliases,
-      undefined,
       jsonList,
     );
     q.q.selectCache = { sql: select, aliases };

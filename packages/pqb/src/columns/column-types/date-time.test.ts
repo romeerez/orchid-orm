@@ -1,5 +1,5 @@
 import { userData } from '../../test-utils/test-utils';
-import { TimestampColumn, TimestampTZColumn } from './dateTime';
+import { TimestampColumn, TimestampTZColumn } from './date-time';
 import {
   assertType,
   expectSql,

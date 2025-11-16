@@ -33,10 +33,10 @@ import {
   RecordKeyTrue,
   RecordUnknown,
   RelationsBase,
-  WithDataItems,
 } from '../core';
 import { ColumnType } from '../columns';
 import { TableData } from '../tableData';
+import { WithDataItems } from './cte/cte.sql';
 
 export interface DbExtension {
   name: string;

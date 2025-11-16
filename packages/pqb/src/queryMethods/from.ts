@@ -9,7 +9,6 @@ import {
   ColumnsParsers,
   QueryThenByQuery,
   UnionToIntersection,
-  WithDataItems,
   PickQueryMetaTableShapeReturnTypeWithData,
   SetQueryTableAlias,
   AliasOrTable,
@@ -20,6 +19,7 @@ import { sqlQueryArgsToExpression } from '../sql/rawSql';
 import { anyShape, ColumnsShape } from '../columns';
 import { _clone } from '../query/queryUtils';
 import { getQueryAs } from '../common/utils';
+import { WithDataItems } from '../query';
 
 export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
 

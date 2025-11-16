@@ -1,15 +1,11 @@
-import { ColumnData, ColumnType } from '../columnType';
-import {
-  ArrayMethodsData,
-  ColumnSchemaConfig,
-  ColumnTypeSchemaArg,
-  ColumnDataBase,
-  ColumnToCodeCtx,
-} from '../../core';
+import { ColumnData, ColumnType } from '../column-type';
+import { ColumnDataBase, ColumnToCodeCtx } from '../../core';
 import { addCode, Code, arrayDataToCode, Codes } from '../code';
 import { columnCode } from '../code';
 import { Operators, OperatorsArray } from '../operators';
 import { setColumnDefaultParse } from '../column.utils';
+import { ArrayMethodsData } from '../column-data-types';
+import { ColumnSchemaConfig, ColumnTypeSchemaArg } from '../column-schema';
 
 export interface ArrayColumnValue {
   type: unknown;
