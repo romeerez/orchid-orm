@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.58.3
+
+### Patch Changes
+
+- 66ca9fb: Prevent columns with runtime defaults being merged in onConflict (#593)
+- Updated dependencies [66ca9fb]
+  - pqb@0.57.3
+  - rake-db@2.27.18
+
 ## 1.58.2
 
 ### Patch Changes

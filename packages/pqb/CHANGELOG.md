@@ -1,5 +1,11 @@
 # pqb
 
+## 0.57.3
+
+### Patch Changes
+
+- 66ca9fb: Prevent columns with runtime defaults being merged in onConflict (#593)
+
 ## 0.57.2
 
 ### Patch Changes
