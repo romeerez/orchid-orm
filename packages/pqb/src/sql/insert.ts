@@ -7,11 +7,11 @@ import {
   addValue,
   ColumnTypeBase,
   DelayedRelationSelect,
+  emptyArray,
   Expression,
   getPrimaryKeys,
   HookSelect,
   isExpression,
-  MaybeArray,
   newDelayedRelationSelect,
   OrchidOrmInternalError,
   pushOrNewArray,
@@ -20,6 +20,7 @@ import {
   SingleSqlItem,
   Sql,
   TableHook,
+  toArray,
 } from '../core';
 import { getQueryAs, joinSubQuery } from '../common/utils';
 import { Db } from '../query/db';
@@ -62,14 +63,17 @@ export const makeInsertSql = (
   );
 
   let runtimeDefaults: (() => unknown)[] | undefined;
+  let runtimeDefaultColumns: string[] | undefined;
   if (q.internal.runtimeDefaultColumns) {
     runtimeDefaults = [];
+    runtimeDefaultColumns = [];
     for (const key of q.internal.runtimeDefaultColumns) {
       if (!columns.includes(key)) {
         const column = shape[key];
         columns.push(key);
         quotedColumns.push(`"${column.data.name || key}"`);
         runtimeDefaults.push(column.data.runtimeDefault as () => unknown);
+        runtimeDefaultColumns.push(key);
       }
     }
   }
@@ -149,7 +153,10 @@ export const makeInsertSql = (
           const name = shape[merge]?.data.name || merge;
           sql = `DO UPDATE SET "${name}" = excluded."${name}"`;
         } else if ('except' in merge) {
-          sql = mergeColumnsSql(columns, quotedColumns, target, merge.except);
+          sql = mergeColumnsSql(columns, quotedColumns, target, [
+            ...toArray(merge.except),
+            ...(runtimeDefaultColumns || emptyArray),
+          ]);
         } else {
           sql = `DO UPDATE SET ${merge.reduce((sql, item, i) => {
             const name = shape[item]?.data.name || item;
@@ -157,7 +164,12 @@ export const makeInsertSql = (
           }, '')}`;
         }
       } else {
-        sql = mergeColumnsSql(columns, quotedColumns, target);
+        sql = mergeColumnsSql(
+          columns,
+          quotedColumns,
+          target,
+          runtimeDefaultColumns,
+        );
       }
 
       ctx.sql.push(sql);
@@ -593,7 +605,7 @@ const mergeColumnsSql = (
   columns: string[],
   quotedColumns: string[],
   target: OnConflictTarget | undefined,
-  except?: MaybeArray<string>,
+  except?: string[],
 ): string => {
   const notExcluded: string[] = [];
 
