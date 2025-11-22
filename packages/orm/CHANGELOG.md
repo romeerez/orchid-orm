@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.58.4
+
+### Patch Changes
+
+- 8e59669: Fix selecting nested json when a record has only NULL values (#595)
+- ee81c12: Fix index recreation in migrations gen when adding a new enum type to the table (#590)
+- Updated dependencies [95c535e]
+- Updated dependencies [4163993]
+- Updated dependencies [8e59669]
+  - pqb@0.57.4
+  - rake-db@2.27.19
+
 ## 1.58.3
 
 ### Patch Changes

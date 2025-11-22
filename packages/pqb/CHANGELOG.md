@@ -1,5 +1,12 @@
 # pqb
 
+## 0.57.4
+
+### Patch Changes
+
+- 95c535e: Add 'catchUniqueError' helper (#592)
+- 8e59669: Fix selecting nested json when a record has only NULL values (#595)
+
 ## 0.57.3
 
 ### Patch Changes

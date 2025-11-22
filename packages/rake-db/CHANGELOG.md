@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.27.19
+
+### Patch Changes
+
+- 4163993: Support transaction: 'per-migration' config (#594)
+- Updated dependencies [95c535e]
+- Updated dependencies [8e59669]
+  - pqb@0.57.4
+
 ## 2.27.18
 
 ### Patch Changes
