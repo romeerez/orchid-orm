@@ -18,6 +18,49 @@ const { green, red, yellow } = colors;
 describe('enums', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should not recreate an index that is unrelated to the enum', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          deleted: t
+            .timestamp()
+            .nullable()
+            .index({ where: '"deleted" is null' })
+            .asDate(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          enum: t.enum('enum_name', ['a', 'b']),
+          deleted: t
+            .timestamp()
+            .nullable()
+            .index({ where: '"deleted" is null' })
+            .asDate(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createEnum('public.enum_name', ['a', 'b']);
+});
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    enum: t.add(t.enum('public.enum_name')),
+  }));
+});
+`);
+
+    assert.report(`${green('+ create enum')} enum_name: (a, b)
+${yellow('~ change table')} table:
+  ${green('+ add column')} enum public.enum_name`);
+  });
+
   it('should create a table with enum and a default value', async () => {
     await arrange({
       tables: [

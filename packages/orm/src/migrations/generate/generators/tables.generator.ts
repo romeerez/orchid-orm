@@ -33,7 +33,7 @@ import {
 import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
-import { ComposeMigrationParams } from '../composeMigration';
+import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
 
 export interface CompareSql {
   values: unknown[];
@@ -84,6 +84,7 @@ export const processTables = async (
     internal: { generatorIgnore },
     verifying,
   }: ComposeMigrationParams,
+  pendingDbTypes: PendingDbTypes,
 ): Promise<void> => {
   const createTables: CodeTable[] = collectCreateTables(
     tables,
@@ -127,6 +128,7 @@ export const processTables = async (
     compareSql,
     tableExpressions,
     verifying,
+    pendingDbTypes,
   );
 
   processForeignKeys(config, ast, changeTables, currentSchema, tableShapes);
@@ -256,6 +258,7 @@ const applyChangeTables = async (
   compareSql: CompareSql,
   tableExpressions: TableExpression[],
   verifying: boolean | undefined,
+  pendingDbTypes: PendingDbTypes,
 ): Promise<void> => {
   const compareExpressions: CompareExpression[] = [];
   const typeCastsCache: TypeCastsCache = {};
@@ -289,8 +292,11 @@ const applyChangeTables = async (
         if (!column.dataType) continue;
 
         const name = column.data.name ?? key;
-        names.push(name);
-        types.push(getColumnDbTypeQuoted(column, currentSchema));
+        const type = getColumnDbTypeQuoted(column, currentSchema);
+        if (!pendingDbTypes.set.has(type)) {
+          names.push(name);
+          types.push(type);
+        }
       }
 
       const tableName = codeTable.table;
