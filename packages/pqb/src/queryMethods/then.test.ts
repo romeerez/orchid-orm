@@ -1,10 +1,28 @@
 import { User, userData } from '../test-utils/test-utils';
-import { NotFoundError } from '../core';
-import { assertType, testAdapter, testDb, useTestDatabase } from 'test-utils';
+import { NotFoundError, QueryError } from '../core';
+import {
+  assertType,
+  db,
+  testAdapter,
+  testDb,
+  UserData,
+  useTestDatabase,
+} from 'test-utils';
 import { noop, TransactionState } from '../core';
+import { MAX_BINDING_PARAMS } from '../sql/constants';
+
+const setMaxBindingParams = (value: number) => {
+  (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;
+};
 
 jest.mock('../sql/constants', () => ({
-  MAX_BINDING_PARAMS: 2,
+  // Behold the power of JS coercions
+  MAX_BINDING_PARAMS: {
+    value: 10,
+    toString() {
+      return this.value;
+    },
+  },
 }));
 
 describe('then', () => {
@@ -32,6 +50,40 @@ describe('then', () => {
 
       expect(user.name).toBe(userData.name);
       expect(fn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('catchUniqueError', () => {
+    it('should catch unique error', async () => {
+      const Id = await db.user.get('Id').insert(UserData);
+
+      const catcher = jest.fn();
+
+      await db.user.insert({ ...UserData, Id }).catchUniqueError((err) => {
+        expect(err.columns).toEqual({ Id: true });
+        catcher(err);
+      });
+
+      expect(catcher).toBeCalledWith(expect.any(QueryError));
+    });
+
+    it('should not catch other errors', async () => {
+      const uniqueCatcher = jest.fn();
+      const anyCatcher = jest.fn();
+
+      const err = await User.select({
+        column: testDb.sql`koko`.type((t) => t.boolean()),
+      })
+        .catchUniqueError(uniqueCatcher)
+        .catch((err) => {
+          anyCatcher(err);
+          return err;
+        });
+
+      expect(uniqueCatcher).not.toBeCalled();
+      expect(anyCatcher).toBeCalled();
+
+      expect(err).toBeInstanceOf(QueryError);
     });
   });
 
@@ -80,6 +132,8 @@ describe('then', () => {
 
 describe('batch queries', () => {
   beforeAll(async () => {
+    setMaxBindingParams(2);
+
     await testAdapter.query(
       `CREATE TABLE IF NOT EXISTS "tmp.then" ( num INTEGER )`,
     );

@@ -62,6 +62,7 @@ export const makeMigrateAdapter = (
         migrationsTable:
           conf.migrationsTable || migrationConfigDefaults.migrationsTable,
         import: conf.import || migrationConfigDefaults.import,
+        transaction: conf.transaction || 'single',
       },
     });
   };

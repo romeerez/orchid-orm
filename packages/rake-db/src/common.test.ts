@@ -44,6 +44,7 @@ describe('common', () => {
         log: true,
         logger: console,
         commands: {},
+        transaction: 'single',
       });
     });
 

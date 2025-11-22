@@ -59,10 +59,24 @@ type Resolve = (result: any) => any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Reject = (error: any) => any;
 
-export class Then {
+export interface QueryCatchers {
+  catchUniqueError<T>(this: T, fn: (reason: QueryError) => unknown): T;
+}
+
+export class Then implements QueryCatchers {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   catch(this: Query, fn: (reason: any) => unknown) {
     return this.then(undefined, fn);
+  }
+
+  catchUniqueError(fn: (reason: QueryError) => unknown) {
+    return (this as unknown as Query).then(undefined, (err) => {
+      if (err instanceof QueryError && err.isUnique) {
+        fn(err);
+      } else {
+        throw err;
+      }
+    }) as never;
   }
 }
 
