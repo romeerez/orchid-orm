@@ -20,7 +20,9 @@ const tableRowToJSON = (table: Query) => {
   const cache: { [key: string]: string } = {};
   const jsonBuildObject = tableJsonBuildObject(table);
   return (t: string) =>
-    (cache[t] ??= `CASE WHEN "${t}".* IS NULL THEN NULL ELSE ${jsonBuildObject(
+    (cache[
+      t
+    ] ??= `CASE WHEN to_jsonb("${t}") IS NULL THEN NULL ELSE ${jsonBuildObject(
       `"${t}"`,
     )} END`);
 };

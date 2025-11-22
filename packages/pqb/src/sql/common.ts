@@ -322,7 +322,7 @@ export const makeRowToJson = (
 
   return isSimple
     ? `row_to_json("${table}".*)`
-    : `CASE WHEN "${table}".* IS NULL THEN NULL ELSE json_build_object(` +
+    : `CASE WHEN to_jsonb("${table}") IS NULL THEN NULL ELSE json_build_object(` +
         list.join(', ') +
         ') END';
 };

@@ -505,7 +505,7 @@ describe('relations chain', () => {
         q.toSQL(),
         `
             SELECT
-              CASE WHEN "item".* IS NULL THEN NULL
+              CASE WHEN to_jsonb("item") IS NULL THEN NULL
               ELSE
                 json_build_object(
                   'Name', "item"."Name",
@@ -574,7 +574,7 @@ describe('relations chain', () => {
         q.toSQL(),
         `
             SELECT
-              CASE WHEN "item".* IS NULL THEN NULL
+              CASE WHEN to_jsonb("item") IS NULL THEN NULL
               ELSE
                 json_build_object(
                   'Name', "item"."Name",
@@ -647,7 +647,7 @@ describe('relations chain', () => {
         q.toSQL(),
         `
             SELECT
-              CASE WHEN "item".* IS NULL THEN NULL
+              CASE WHEN to_jsonb("item") IS NULL THEN NULL
               ELSE
                 json_build_object(
                   'Name', "item"."Name",
@@ -718,7 +718,7 @@ describe('relations chain', () => {
         q.toSQL(),
         `
             SELECT
-              CASE WHEN "item".* IS NULL THEN NULL
+              CASE WHEN to_jsonb("item") IS NULL THEN NULL
               ELSE
                 json_build_object(
                   'Name', "item"."Name",
