@@ -126,3 +126,18 @@ export const transaction = <T>(
 
 export const queryLock = (trx: AdapterBase) =>
   trx.query(`SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`);
+
+export const getCliParam = (
+  args: string[] | undefined,
+  name: string,
+): string | undefined => {
+  if (args) {
+    const key = '--' + name;
+    for (let i = 0; i < args.length; i += 1) {
+      const arg = args[i];
+      if (arg === key) return args[i + 1];
+      else if (arg.startsWith(key)) return arg.slice(key.length + 1);
+    }
+  }
+  return;
+};

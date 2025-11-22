@@ -22,7 +22,7 @@ export const rakeDb = ((
   partialConfig,
   args = process.argv.slice(2),
 ) => {
-  const config = processRakeDbConfig(partialConfig);
+  const config = processRakeDbConfig(partialConfig, args);
 
   const promise = runCommand(
     optionsToAdapters(options),

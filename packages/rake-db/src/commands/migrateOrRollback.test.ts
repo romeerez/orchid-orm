@@ -40,7 +40,8 @@ const makeFile = (version: number, load = jest.fn()) => ({
 
 const files = [makeFile(1), makeFile(2), makeFile(3), makeFile(4)];
 
-TestAdapter.prototype.transaction = ((_, cb) => {
+TestAdapter.prototype.getDatabase = () => 'db';
+TestAdapter.prototype.transaction = jest.fn((_, cb) => {
   return cb({
     query: transactionQueryMock,
     arrays: transactionQueryMock,
@@ -66,8 +67,10 @@ const transactionQueryMock = jest.fn().mockImplementation(((text, values) => {
   }
 }) as AdapterBase['query']);
 
-TestTransactionAdapter.prototype.query = transactionQueryMock;
-TestTransactionAdapter.prototype.arrays = transactionQueryMock;
+TestAdapter.prototype.query = TestTransactionAdapter.prototype.query =
+  transactionQueryMock;
+TestAdapter.prototype.arrays = TestTransactionAdapter.prototype.arrays =
+  transactionQueryMock;
 
 const config = testConfig;
 
@@ -220,6 +223,8 @@ describe('migrateOrRollback', () => {
       });
 
       await act(migrateCommand);
+
+      expect(TestAdapter.prototype.transaction).toBeCalledTimes(1);
 
       assert.getMigrationsUp(env.config);
 
@@ -663,6 +668,41 @@ describe('migrateOrRollback', () => {
       await act(redoCommand);
 
       expect(executed).toEqual(['bottom', 'top', 'top', 'bottom']);
+    });
+  });
+
+  describe('transaction per migration', () => {
+    it('should wrap every migration into its own transaction', async () => {
+      const env = arrange({
+        files: files.slice(0, 3),
+        versions: ['0001'],
+        config: {
+          ...config,
+          basePath: __dirname,
+          transaction: 'per-migration',
+        },
+      });
+
+      await act(migrateCommand);
+
+      expect(TestAdapter.prototype.transaction).toBeCalledTimes(2);
+
+      assert.getMigrationsUp(env.config);
+
+      files.forEach((file, i) => {
+        if (i === 1 || i === 2) {
+          expect(file.load).toBeCalled();
+        } else {
+          expect(file.load).not.toBeCalled();
+        }
+      });
+
+      assert.queries([insertMigration(files[1]), insertMigration(files[2])]);
+
+      assert.logs('migrating', [
+        { migrated: files[1] },
+        { migrated: files[2] },
+      ]);
     });
   });
 });

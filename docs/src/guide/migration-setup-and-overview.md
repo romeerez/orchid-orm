@@ -22,6 +22,7 @@ It's allowed to have two migrations with the same name, but all the migrations m
 
 All changes are wrapped into a single transaction. If you have 3 pending migrations, and the last one throws an error,
 none of them will be applied.
+See [transaction per migration](/guide/migration-commands.html#transaction-per-migration) to change this strategy.
 
 The transaction beings with setting a lock ([pg_advisory_xact_lock](https://www.postgresql.org/docs/current/functions-admin.html)).
 If you're deploying a cluster of node.js applications, and each application tries to apply migrations at the same time,
@@ -131,6 +132,9 @@ export const change = rakeDb(config.database, {
   baseTable: BaseTable,
   // (when using it for ORM) path to ORM `db` instance, this is needed to automatically generate migrations.
   dbPath: './db',
+
+  // 'single' is the default (recommended), set to 'per-migration' to run every migration in its own transaction:
+  transaction: 'single',
 
   // custom commands can be defined as follows:
   commands: {
